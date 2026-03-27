@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "seasons")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchdays", "seasonDrivers"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchdays", "seasonDrivers", "teams"})
 public class Season {
 
     @Id
@@ -38,6 +38,13 @@ public class Season {
 
     @OneToMany(mappedBy = "season")
     private List<SeasonDriver> seasonDrivers = new ArrayList<>();
+
+    @ManyToMany
+    @JoinTable(name = "season_teams",
+            joinColumns = @JoinColumn(name = "season_id"),
+            inverseJoinColumns = @JoinColumn(name = "team_id"))
+    @OrderBy("shortName ASC")
+    private List<Team> teams = new ArrayList<>();
 
     public Season(String name) {
         this.name = name;

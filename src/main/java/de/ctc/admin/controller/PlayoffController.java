@@ -29,7 +29,6 @@ public class PlayoffController {
     private final PlayoffMatchupRepository playoffMatchupRepository;
     private final SeasonRepository seasonRepository;
     private final SeasonDriverRepository seasonDriverRepository;
-    private final TeamRepository teamRepository;
     private final MatchdayRepository matchdayRepository;
     private final RaceRepository raceRepository;
 
@@ -96,8 +95,8 @@ public class PlayoffController {
                 .filter(r -> r.getRoundIndex() == 0)
                 .findFirst().orElseThrow();
 
-        // Get all available teams
-        var teams = teamRepository.findAll();
+        // Get teams assigned to this season
+        var teams = playoff.getSeason().getTeams();
 
         // Find already-seeded team IDs
         Set<UUID> seededTeamIds = firstRound.getMatchups().stream()

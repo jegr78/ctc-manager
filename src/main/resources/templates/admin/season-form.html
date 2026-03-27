@@ -37,6 +37,41 @@
             </div>
         </form>
     </div>
+
+    <!-- Team-Zuordnung (nur beim Bearbeiten) -->
+    <div th:if="${season.id != null}" class="card">
+        <h2>Teams in dieser Saison</h2>
+        <table th:if="${!season.teams.isEmpty()}">
+            <thead>
+                <tr><th>Kürzel</th><th>Name</th><th>Aktionen</th></tr>
+            </thead>
+            <tbody>
+                <tr th:each="team : ${season.teams}">
+                    <td><strong th:text="${team.shortName}"></strong></td>
+                    <td th:text="${team.name}"></td>
+                    <td>
+                        <form th:action="@{/admin/seasons/{id}/remove-team(id=${season.id})}" method="post" style="display:inline">
+                            <input type="hidden" name="teamId" th:value="${team.id}">
+                            <button type="submit" class="btn btn-danger btn-sm">Entfernen</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div th:if="${season.teams.isEmpty()}" class="empty-state" style="padding:24px;">
+            <p>Noch keine Teams zugeordnet.</p>
+        </div>
+        <form th:action="@{/admin/seasons/{id}/add-team(id=${season.id})}" method="post"
+              style="margin-top:16px;display:flex;gap:8px;align-items:center;">
+            <select name="teamId" required>
+                <option value="">-- Team hinzufügen --</option>
+                <option th:each="t : ${allTeams}" th:value="${t.id}"
+                        th:text="${t.shortName + ' — ' + t.name}"
+                        th:if="${!season.teams.contains(t)}"></option>
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">Hinzufügen</button>
+        </form>
+    </div>
 </section>
 </body>
 </html>
