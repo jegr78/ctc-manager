@@ -53,21 +53,21 @@ public class TestDataService {
 
     private void seedSubTeams(List<Team> teams) {
         var clr = teams.stream().filter(t -> t.getShortName().equals("CLR")).findFirst().orElseThrow();
-        teamRepository.save(new Team("CLR 1", "CLR", clr));
-        teamRepository.save(new Team("CLR 2", "CLR", clr));
+        teamRepository.save(new Team("Community League Racing 1", "CLR 1", clr));
+        teamRepository.save(new Team("Community League Racing 2", "CLR 2", clr));
 
         var tnr = teams.stream().filter(t -> t.getShortName().equals("TNR")).findFirst().orElseThrow();
-        teamRepository.save(new Team("TNR A", "TNR", tnr));
-        teamRepository.save(new Team("TNR B", "TNR", tnr));
-        teamRepository.save(new Team("TNR C", "TNR", tnr));
+        teamRepository.save(new Team("The Neutrals Racing A", "TNR A", tnr));
+        teamRepository.save(new Team("The Neutrals Racing B", "TNR B", tnr));
+        teamRepository.save(new Team("The Neutrals Racing C", "TNR C", tnr));
 
         var ahr = teams.stream().filter(t -> t.getShortName().equals("AHR")).findFirst().orElseThrow();
-        teamRepository.save(new Team("AHR 1", "AHR", ahr));
-        teamRepository.save(new Team("AHR 2", "AHR", ahr));
+        teamRepository.save(new Team("Apex Hunter Racing 1", "AHR 1", ahr));
+        teamRepository.save(new Team("Apex Hunter Racing 2", "AHR 2", ahr));
 
         var p1r = teams.stream().filter(t -> t.getShortName().equals("P1R")).findFirst().orElseThrow();
-        teamRepository.save(new Team("P1Rx", "P1Rx", p1r));
-        teamRepository.save(new Team("P1R", "P1R", p1r));
+        teamRepository.save(new Team("Project One Racing X", "P1Rx", p1r));
+        teamRepository.save(new Team("Project One Racing", "P1R", p1r));
 
         log.info("Created sub-teams: CLR(2), TNR(3), AHR(2), P1R(2)");
     }
@@ -91,7 +91,7 @@ public class TestDataService {
         // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
         var s3a = new Season("Season 3 - 2025 - Group A");
         s3a.getTeams().addAll(List.of(
-                findTeam.apply("P1Rx", "P1Rx"),
+                findTeam.apply("P1Rx", "Project One Racing X"),
                 findTeam.apply("CLR", "Community League Racing"),
                 findTeam.apply("MRL", "Medway Racing League"),
                 findTeam.apply("TCR", "Tidgney Community Racing"),
@@ -102,27 +102,27 @@ public class TestDataService {
         // Season 3 - 2025 - Group B: P1R (sub-team), AHR, DTR, ART
         var s3b = new Season("Season 3 - 2025 - Group B");
         s3b.getTeams().addAll(List.of(
-                findTeam.apply("P1R", "P1R"),  // sub-team of P1R parent
+                findTeam.apply("P1R", "Project One Racing"),  // sub-team of P1R parent
                 findTeam.apply("AHR", "Apex Hunter Racing"),
                 findTeam.apply("DTR", "Dream Team Racing"),
                 findTeam.apply("ART", "Amigos Racing Team")
         ));
         seasonRepository.save(s3b);
 
-        // Season 4 - 2026: CLR 1, CLR 2, TNR A/B/C, DTR, MRL, ART, AHR 1/2, VEZ, GXR, TCR
+        // Season 4 - 2026: CLR 1/2, TNR A/B/C, DTR, MRL, ART, AHR 1/2, VEZ, GXR, TCR
         var s4 = new Season("Season 4 - 2026");
         s4.setActive(true);
         s4.getTeams().addAll(List.of(
-                findTeam.apply("CLR", "CLR 1"),
-                findTeam.apply("CLR", "CLR 2"),
-                findTeam.apply("TNR", "TNR A"),
-                findTeam.apply("TNR", "TNR B"),
-                findTeam.apply("TNR", "TNR C"),
+                findTeam.apply("CLR 1", "Community League Racing 1"),
+                findTeam.apply("CLR 2", "Community League Racing 2"),
+                findTeam.apply("TNR A", "The Neutrals Racing A"),
+                findTeam.apply("TNR B", "The Neutrals Racing B"),
+                findTeam.apply("TNR C", "The Neutrals Racing C"),
                 findTeam.apply("DTR", "Dream Team Racing"),
                 findTeam.apply("MRL", "Medway Racing League"),
                 findTeam.apply("ART", "Amigos Racing Team"),
-                findTeam.apply("AHR", "AHR 1"),
-                findTeam.apply("AHR", "AHR 2"),
+                findTeam.apply("AHR 1", "Apex Hunter Racing 1"),
+                findTeam.apply("AHR 2", "Apex Hunter Racing 2"),
                 findTeam.apply("VEZ", "VEZ Racing Team"),
                 findTeam.apply("GXR", "Gen-X Racing"),
                 findTeam.apply("TCR", "Tidgney Community Racing")
