@@ -176,12 +176,13 @@ public class PlayoffController {
         var legs = raceRepository.findByPlayoffMatchupId(matchupId);
         var playoff = matchup.getRound().getPlayoff();
 
-        // Eagerly initialize lazy fields for Thymeleaf
+        // Eagerly initialize all lazy fields accessed by Thymeleaf
         matchup.getRound().getLabel();
         if (matchup.getTeam1() != null) matchup.getTeam1().getShortName();
         if (matchup.getTeam2() != null) matchup.getTeam2().getShortName();
         if (matchup.getWinner() != null) matchup.getWinner().getShortName();
-        playoff.getSeason().getId();
+        playoff.getSeason().getName();
+        legs.forEach(leg -> leg.getResults().size());
 
         model.addAttribute("matchup", matchup);
         model.addAttribute("legs", legs);
