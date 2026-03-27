@@ -61,6 +61,11 @@ public class SeasonController {
         var season = seasonRepository.findById(id).orElseThrow();
         var team = teamRepository.findById(teamId).orElseThrow();
         if (!season.getTeams().contains(team)) {
+            // Auto-add parent team when adding a sub-team
+            if (team.isSubTeam() && !season.getTeams().contains(team.getParentTeam())) {
+                season.getTeams().add(team.getParentTeam());
+                log.info("Auto-added parent team {} to season {}", team.getParentTeam().getShortName(), season.getName());
+            }
             season.getTeams().add(team);
             seasonRepository.save(season);
             log.info("Added team {} to season {}", team.getShortName(), season.getName());
@@ -73,9 +78,35 @@ public class SeasonController {
     public String removeTeam(@PathVariable UUID id, @RequestParam UUID teamId,
                              RedirectAttributes redirectAttributes) {
         var season = seasonRepository.findById(id).orElseThrow();
+        var team = teamRepository.findById(teamId).orElseThrow();
+
+        // Prevent removing parent team while sub-teams still exist in season
+        if (!team.isSubTeam()) {
+            boolean hasSubs = season.getTeams().stream()
+                    .anyMatch(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(team.getId()));
+            if (hasSubs) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        "Cannot remove parent team " + team.getShortName() + " — remove its sub-teams first");
+                return "redirect:/admin/seasons/" + id + "/edit";
+            }
+        }
+
         season.getTeams().removeIf(t -> t.getId().equals(teamId));
+
+        // Auto-remove parent team if no more sub-teams in season
+        if (team.isSubTeam()) {
+            var parent = team.getParentTeam();
+            boolean hasOtherSubs = season.getTeams().stream()
+                    .anyMatch(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()));
+            if (!hasOtherSubs) {
+                season.getTeams().removeIf(t -> t.getId().equals(parent.getId()));
+                log.info("Auto-removed parent team {} from season {} (no sub-teams left)",
+                        parent.getShortName(), season.getName());
+            }
+        }
+
         seasonRepository.save(season);
-        log.info("Removed team {} from season {}", teamId, season.getName());
+        log.info("Removed team {} from season {}", team.getShortName(), season.getName());
         redirectAttributes.addFlashAttribute("successMessage", "Team removed");
         return "redirect:/admin/seasons/" + id + "/edit";
     }
