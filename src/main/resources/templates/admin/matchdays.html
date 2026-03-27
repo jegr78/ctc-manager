@@ -24,7 +24,7 @@
             <tbody>
                 <tr th:each="md : ${matchdays}">
                     <td th:text="${md.sortIndex}"></td>
-                    <td><strong th:text="${md.label}"></strong></td>
+                    <td><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="detail-link"><strong th:text="${md.label}"></strong></a></td>
                     <td th:text="${md.date}"></td>
                     <td th:text="${md.season.name}"></td>
                     <td th:text="${md.races.size()}"></td>

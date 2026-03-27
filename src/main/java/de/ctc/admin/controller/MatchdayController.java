@@ -1,6 +1,7 @@
 package de.ctc.admin.controller;
 
 import de.ctc.domain.model.Matchday;
+import de.ctc.domain.repository.MatchdayLineupRepository;
 import de.ctc.domain.repository.MatchdayRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ public class MatchdayController {
 
     private final MatchdayRepository matchdayRepository;
     private final SeasonRepository seasonRepository;
+    private final MatchdayLineupRepository matchdayLineupRepository;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
@@ -39,6 +41,15 @@ public class MatchdayController {
         }
         model.addAttribute("seasons", seasonRepository.findAll());
         return "admin/matchdays";
+    }
+
+    @GetMapping("/{id}")
+    public String detail(@PathVariable UUID id, Model model) {
+        var matchday = matchdayRepository.findById(id).orElseThrow();
+        var lineups = matchdayLineupRepository.findByMatchdayId(id);
+        model.addAttribute("matchday", matchday);
+        model.addAttribute("lineups", lineups);
+        return "admin/matchday-detail";
     }
 
     @GetMapping("/new")
