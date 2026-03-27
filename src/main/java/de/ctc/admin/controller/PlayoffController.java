@@ -177,10 +177,11 @@ public class PlayoffController {
         var playoff = matchup.getRound().getPlayoff();
 
         // Eagerly initialize lazy fields for Thymeleaf
+        matchup.getRound().getLabel();
         if (matchup.getTeam1() != null) matchup.getTeam1().getShortName();
         if (matchup.getTeam2() != null) matchup.getTeam2().getShortName();
         if (matchup.getWinner() != null) matchup.getWinner().getShortName();
-        playoff.getSeason().getName();
+        playoff.getSeason().getId();
 
         model.addAttribute("matchup", matchup);
         model.addAttribute("legs", legs);
