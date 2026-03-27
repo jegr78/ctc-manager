@@ -119,6 +119,11 @@ th {
 
 tr:hover { background: var(--bg-hover); }
 
+th.sortable:hover { color: var(--white); }
+th.sortable::after { content: ' \2195'; opacity: 0.3; }
+th.sortable[data-sort="asc"]::after { content: ' \2191'; opacity: 1; }
+th.sortable[data-sort="desc"]::after { content: ' \2193'; opacity: 1; }
+
 .actions { display: flex; gap: 8px; }
 
 .btn {
