@@ -18,8 +18,8 @@ Deutsch für Kommunikation und Dokumentation. Code und Kommentare auf Englisch.
 
 ## Spring Profiles
 
-- `dev` — H2 In-Memory (Entwicklung, Tests)
-- `local` — MariaDB lokal
+- `dev` — H2 In-Memory, Port 9090 (Entwicklung, Tests)
+- `local` — MariaDB lokal, Port 9091
 - `prod` — Cloud DB (Environment Variables)
 
 ## Package-Struktur

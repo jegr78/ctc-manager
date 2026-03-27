@@ -37,7 +37,7 @@ jobs:
             --ctc.site.output-dir=site-output &
           APP_PID=$!
           sleep 10
-          curl -s -X POST http://localhost:8080/admin/generate || true
+          curl -s -X POST http://localhost:9090/admin/generate || true
           sleep 5
           kill $APP_PID 2>/dev/null || true
 
