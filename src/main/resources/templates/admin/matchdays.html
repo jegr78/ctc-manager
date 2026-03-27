@@ -30,6 +30,7 @@
                     <td th:text="${md.races.size()}"></td>
                     <td class="actions">
                         <a th:href="@{/admin/matchdays/{id}/edit(id=${md.id})}" class="btn btn-secondary btn-sm">Edit</a>
+                        <a th:href="@{/admin/matchdays/{id}/lineup(id=${md.id})}" class="btn btn-secondary btn-sm">Lineup</a>
                         <a th:href="@{/admin/races(matchdayId=${md.id})}" class="btn btn-secondary btn-sm">Races</a>
                         <form th:action="@{/admin/matchdays/{id}/delete(id=${md.id})}" method="post" style="display:inline"
                               onsubmit="return confirm('Really delete this matchday?')">

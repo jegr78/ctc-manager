@@ -7,24 +7,64 @@
     <div class="card">
         <form th:action="@{/admin/teams/save}" th:object="${team}" method="post">
             <input type="hidden" th:field="*{id}">
+            <input type="hidden" th:field="*{parentTeam}">
             <div class="form-row">
                 <div class="form-group">
                     <label for="name">Name</label>
-                    <input type="text" id="name" th:field="*{name}" placeholder="e.g. The Neutrals Racing" required>
+                    <input type="text" id="name" th:field="*{name}" placeholder="e.g. Community League Racing" required>
                 </div>
                 <div class="form-group">
                     <label for="shortName">Short Name</label>
-                    <input type="text" id="shortName" th:field="*{shortName}" placeholder="e.g. TNR" required>
+                    <input type="text" id="shortName" th:field="*{shortName}" placeholder="e.g. CLR" required>
                 </div>
             </div>
             <div class="form-group">
                 <label for="logoUrl">Logo URL</label>
                 <input type="text" id="logoUrl" th:field="*{logoUrl}" placeholder="Optional">
             </div>
+            <div th:if="${team.parentTeam != null}" class="form-group">
+                <label>Parent Team</label>
+                <input type="text" th:value="${team.parentTeam.shortName + ' — ' + team.parentTeam.name}" disabled
+                       style="background:var(--bg);color:var(--text-dim);">
+            </div>
             <div class="actions" style="margin-top: 16px;">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/teams}" class="btn btn-secondary">Cancel</a>
             </div>
+        </form>
+    </div>
+
+    <!-- Sub-Teams section (only for parent teams when editing) -->
+    <div th:if="${team.id != null && team.parentTeam == null}" class="card">
+        <h2>Sub-Teams</h2>
+        <table th:if="${!team.subTeams.isEmpty()}">
+            <thead>
+                <tr><th>Short Name</th><th>Name</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                <tr th:each="sub : ${team.subTeams}">
+                    <td><strong th:text="${sub.shortName}"></strong></td>
+                    <td th:text="${sub.name}"></td>
+                    <td>
+                        <form th:action="@{/admin/teams/{id}/remove-sub-team(id=${team.id})}" method="post" style="display:inline"
+                              onsubmit="return confirm('Remove this sub-team?')">
+                            <input type="hidden" name="subTeamId" th:value="${sub.id}">
+                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div th:if="${team.subTeams.isEmpty()}" class="empty-state" style="padding:24px;">
+            <p>No sub-teams. This team competes directly.</p>
+        </div>
+        <form th:action="@{/admin/teams/{id}/add-sub-team(id=${team.id})}" method="post"
+              style="margin-top:16px;display:flex;gap:8px;align-items:center;">
+            <input type="text" name="subShortName" placeholder="Short name (e.g. CLR1)" required
+                   style="width:120px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;">
+            <input type="text" name="subName" placeholder="Full name (e.g. CLR 1)" required
+                   style="width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;">
+            <button type="submit" class="btn btn-primary btn-sm">Add Sub-Team</button>
         </form>
     </div>
 </section>
