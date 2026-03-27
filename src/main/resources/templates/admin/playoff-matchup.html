@@ -64,21 +64,13 @@
         <form th:action="@{/admin/playoffs/matchup/{id}/add-race(id=${matchup.id})}" method="post">
             <div class="form-row">
                 <div class="form-group">
-                    <label>Spieltag</label>
-                    <select name="matchdayId" required>
-                        <option value="">-- Spieltag wählen --</option>
-                        <option th:each="md : ${matchdays}" th:value="${md.id}"
-                                th:text="${md.label + (md.date != null ? ' (' + md.date + ')' : '')}"></option>
-                    </select>
-                </div>
-                <div class="form-group">
                     <label>Strecke</label>
                     <input type="text" name="track" placeholder="z.B. Tsukuba Circuit">
                 </div>
-            </div>
-            <div class="form-group">
-                <label>Auto</label>
-                <input type="text" name="car" placeholder="z.B. Mazda RX-Vision GT3">
+                <div class="form-group">
+                    <label>Auto</label>
+                    <input type="text" name="car" placeholder="z.B. Mazda RX-Vision GT3">
+                </div>
             </div>
             <button type="submit" class="btn btn-primary">Leg hinzufügen</button>
         </form>

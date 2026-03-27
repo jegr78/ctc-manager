@@ -2,6 +2,7 @@ package de.ctc.admin.controller;
 
 import de.ctc.admin.dto.PlayoffForm;
 import de.ctc.admin.dto.SeedForm;
+import de.ctc.domain.model.Matchday;
 import de.ctc.domain.model.Race;
 import de.ctc.domain.model.Season;
 import de.ctc.domain.repository.*;
@@ -158,17 +159,21 @@ public class PlayoffController {
         var legs = raceRepository.findByPlayoffMatchupId(matchupId);
         var playoff = matchup.getRound().getPlayoff();
 
+        // Eagerly initialize lazy fields for Thymeleaf
+        if (matchup.getTeam1() != null) matchup.getTeam1().getShortName();
+        if (matchup.getTeam2() != null) matchup.getTeam2().getShortName();
+        if (matchup.getWinner() != null) matchup.getWinner().getShortName();
+        playoff.getSeason().getName();
+
         model.addAttribute("matchup", matchup);
         model.addAttribute("legs", legs);
         model.addAttribute("playoff", playoff);
-        model.addAttribute("matchdays", matchdayRepository.findBySeasonIdOrderBySortIndexAsc(
-                playoff.getSeason().getId()));
         return "admin/playoff-matchup";
     }
 
+    @Transactional
     @PostMapping("/matchup/{matchupId}/add-race")
     public String addRace(@PathVariable UUID matchupId,
-                          @RequestParam UUID matchdayId,
                           @RequestParam(required = false) String track,
                           @RequestParam(required = false) String car,
                           RedirectAttributes redirectAttributes) {
@@ -178,7 +183,13 @@ public class PlayoffController {
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
 
-        var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
+        // Auto-create matchday for this playoff leg
+        var season = matchup.getRound().getPlayoff().getSeason();
+        int legNumber = raceRepository.findByPlayoffMatchupId(matchupId).size() + 1;
+        String label = matchup.getRound().getLabel() + " - Leg " + legNumber;
+        var matchday = new Matchday(season, label, 100 + matchup.getRound().getRoundIndex() * 10 + legNumber);
+        matchday = matchdayRepository.save(matchday);
+
         var race = new Race(matchday, matchup.getTeam1(), matchup.getTeam2());
         race.setTrack(track);
         race.setCar(car);

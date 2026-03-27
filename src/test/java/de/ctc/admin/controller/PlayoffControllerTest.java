@@ -31,7 +31,6 @@ class PlayoffControllerTest {
     @Autowired private SeasonDriverRepository seasonDriverRepository;
     @Autowired private PlayoffRepository playoffRepository;
     @Autowired private PlayoffService playoffService;
-    @Autowired private MatchdayRepository matchdayRepository;
 
     private Season season;
 
@@ -111,13 +110,10 @@ class PlayoffControllerTest {
         var playoff = playoffService.createPlayoff(season.getId(), "Matchup Test", 2, 4);
         var matchupId = playoff.getRounds().get(0).getMatchups().get(0).getId();
 
-        // Create a matchday for the matchup page
-        matchdayRepository.save(new Matchday(season, "HF Hinspiel", 1));
-
         mockMvc.perform(get("/admin/playoffs/matchup/" + matchupId))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/playoff-matchup"))
-                .andExpect(model().attributeExists("matchup", "legs", "playoff", "matchdays"));
+                .andExpect(model().attributeExists("matchup", "legs", "playoff"));
     }
 
     @Test
