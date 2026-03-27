@@ -44,7 +44,7 @@ class PlayoffServiceTest {
 
         // Create 8 teams with 2 drivers each
         teams = new java.util.ArrayList<>();
-        String[] names = {"TNR", "P1R", "CLR", "AHR", "VRX", "DTM", "NFS", "GTR"};
+        String[] names = {"TA1", "TB2", "TC3", "TD4", "TE5", "TF6", "TG7", "TH8"};
         for (String name : names) {
             var team = new Team(name + " Racing", name);
             team = teamRepository.save(team);
