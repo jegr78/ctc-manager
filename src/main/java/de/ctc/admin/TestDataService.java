@@ -72,22 +72,62 @@ public class TestDataService {
         log.info("Created sub-teams: CLR(2), TNR(3), AHR(2), P1R(2)");
     }
 
-    private void seedSeasons(List<Team> teams) {
-        var seasonNames = List.of(
-                "Season 1 - 2023 - Group A",
-                "Season 1 - 2023 - Group B",
-                "Season 2 - 2024",
-                "Season 3 - 2025 - Group A",
-                "Season 3 - 2025 - Group B",
-                "Season 4 - 2026"
-        );
+    private void seedSeasons(List<Team> parentTeams) {
+        var allTeams = teamRepository.findAll();
 
-        for (String name : seasonNames) {
+        // Helper to find teams by shortName (optionally sub-team by name)
+        java.util.function.BiFunction<String, String, Team> findTeam = (shortName, name) ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && (name == null || t.getName().equals(name)))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Team not found: " + shortName + "/" + name));
+
+        // Older seasons: all parent teams
+        for (String name : List.of("Season 1 - 2023 - Group A", "Season 1 - 2023 - Group B", "Season 2 - 2024")) {
             var season = new Season(name);
-            season.setActive(name.equals("Season 4 - 2026"));
-            season.getTeams().addAll(teams);
+            season.getTeams().addAll(parentTeams);
             seasonRepository.save(season);
         }
+
+        // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
+        var s3a = new Season("Season 3 - 2025 - Group A");
+        s3a.getTeams().addAll(List.of(
+                findTeam.apply("P1Rx", "P1Rx"),
+                findTeam.apply("CLR", "Community League Racing"),
+                findTeam.apply("MRL", "Medway Racing League"),
+                findTeam.apply("TCR", "Tidgney Community Racing"),
+                findTeam.apply("GXR", "Gen-X Racing")
+        ));
+        seasonRepository.save(s3a);
+
+        // Season 3 - 2025 - Group B: P1R (sub-team), AHR, DTR, ART
+        var s3b = new Season("Season 3 - 2025 - Group B");
+        s3b.getTeams().addAll(List.of(
+                findTeam.apply("P1R", "P1R"),  // sub-team of P1R parent
+                findTeam.apply("AHR", "Apex Hunter Racing"),
+                findTeam.apply("DTR", "Dream Team Racing"),
+                findTeam.apply("ART", "Amigos Racing Team")
+        ));
+        seasonRepository.save(s3b);
+
+        // Season 4 - 2026: CLR 1, CLR 2, TNR A/B/C, DTR, MRL, ART, AHR 1/2, VEZ, GXR, TCR
+        var s4 = new Season("Season 4 - 2026");
+        s4.setActive(true);
+        s4.getTeams().addAll(List.of(
+                findTeam.apply("CLR", "CLR 1"),
+                findTeam.apply("CLR", "CLR 2"),
+                findTeam.apply("TNR", "TNR A"),
+                findTeam.apply("TNR", "TNR B"),
+                findTeam.apply("TNR", "TNR C"),
+                findTeam.apply("DTR", "Dream Team Racing"),
+                findTeam.apply("MRL", "Medway Racing League"),
+                findTeam.apply("ART", "Amigos Racing Team"),
+                findTeam.apply("AHR", "AHR 1"),
+                findTeam.apply("AHR", "AHR 2"),
+                findTeam.apply("VEZ", "VEZ Racing Team"),
+                findTeam.apply("GXR", "Gen-X Racing"),
+                findTeam.apply("TCR", "Tidgney Community Racing")
+        ));
+        seasonRepository.save(s4);
     }
 
     private void seedDrivers() {
