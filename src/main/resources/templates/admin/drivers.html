@@ -23,7 +23,7 @@
             </thead>
             <tbody>
                 <tr th:each="driver : ${drivers}" class="driver-row">
-                    <td><strong th:text="${driver.psnId}"></strong></td>
+                    <td><a th:href="@{/admin/drivers/{id}(id=${driver.id})}" class="detail-link"><strong th:text="${driver.psnId}"></strong></a></td>
                     <td th:text="${driver.nickname}"></td>
                     <td>
                         <span th:if="${driver.active}" class="badge badge-active">Active</span>

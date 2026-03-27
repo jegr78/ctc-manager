@@ -55,4 +55,14 @@ class DriverControllerTest {
 
         assertFalse(driverRepository.findById(driver.getId()).isPresent());
     }
+
+    @Test
+    void shouldShowDriverDetail() throws Exception {
+        var driver = driverRepository.save(new Driver("detail_test_psn", "Detail Tester"));
+
+        mockMvc.perform(get("/admin/drivers/" + driver.getId()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/driver-detail"))
+                .andExpect(model().attributeExists("driver"));
+    }
 }
