@@ -1,0 +1,229 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg: #0a0a0a;
+    --bg-card: #111;
+    --bg-hover: #1a1a1a;
+    --border: #222;
+    --text: #e0e0e0;
+    --text-dim: #888;
+    --text-muted: #555;
+    --white: #fff;
+    --accent: #4fc3f7;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* Navigation */
+.nav {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+}
+
+.nav-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--white);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 2px;
+}
+
+.nav-logo { height: 32px; width: 32px; }
+
+.nav-links {
+    display: flex;
+    gap: 8px;
+}
+
+.nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+}
+
+.nav-links a:hover { color: var(--white); background: rgba(255,255,255,0.05); }
+
+/* Main */
+.main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px;
+}
+
+/* Hero */
+.hero {
+    text-align: center;
+    padding: 40px 0;
+    background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg) 100%);
+    margin: -32px -32px 32px;
+    padding: 48px 32px;
+}
+
+.hero-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.hero h1 {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--white);
+}
+
+.hero-sub {
+    color: var(--text-muted);
+    margin-top: 8px;
+    font-size: 14px;
+}
+
+/* Section */
+.section {
+    margin-bottom: 32px;
+}
+
+.section-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+/* Tables */
+.table-wrap {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th {
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+
+td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+tr:hover { background: var(--bg-hover); }
+
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.font-bold { font-weight: 700; }
+.text-white { color: var(--white); }
+.text-dim { color: var(--text-dim); }
+.text-lg { font-size: 16px; }
+
+/* Match Cards */
+.match-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.match-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+}
+
+.match-teams {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+}
+
+.match-team {
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.match-score {
+    background: var(--bg-hover);
+    padding: 4px 14px;
+    border-radius: 4px;
+    font-size: 15px;
+    color: var(--accent);
+}
+
+.match-score-draw { color: var(--text-dim); }
+
+.match-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+/* Team profile */
+.team-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.team-logo { width: 64px; height: 64px; border-radius: 8px; }
+
+/* Footer */
+.footer {
+    max-width: 1100px;
+    margin: 48px auto 0;
+    padding: 24px 32px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .nav { padding: 0 16px; }
+    .nav-inner { flex-direction: column; height: auto; padding: 12px 0; gap: 8px; }
+    .main { padding: 16px; }
+    .match-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 22px; }
+}

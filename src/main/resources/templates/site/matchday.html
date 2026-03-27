@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout(${matchday.label}, ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title" th:text="${matchday.label + ' — ' + season.name}"></h2>
+        <div class="match-grid">
+            <div class="match-card" th:each="race : ${races}">
+                <div class="match-teams">
+                    <span class="match-team text-white" th:text="${race.homeTeam.shortName}"></span>
+                    <span class="match-score" th:if="${!race.results.isEmpty()}">
+                        <span th:with="homeTotal=${race.results.stream().filter(r -> r.driver.seasonDrivers.stream().anyMatch(sd -> sd.team.id == race.homeTeam.id)).mapToInt(r -> r.pointsTotal).sum()},
+                                      awayTotal=${race.results.stream().filter(r -> r.driver.seasonDrivers.stream().anyMatch(sd -> sd.team.id == race.awayTeam.id)).mapToInt(r -> r.pointsTotal).sum()}"
+                              th:text="${homeTotal + ' : ' + awayTotal}"></span>
+                    </span>
+                    <span class="match-score match-score-draw" th:if="${race.results.isEmpty()}">vs</span>
+                    <span class="match-team" th:text="${race.awayTeam.shortName}"></span>
+                </div>
+                <div class="match-meta">
+                    <span th:text="${race.track ?: ''}"></span>
+                    <span th:if="${race.track != null && race.car != null}"> — </span>
+                    <span th:text="${race.car ?: ''}"></span>
+                </div>
+
+                <!-- Individual results -->
+                <div th:if="${!race.results.isEmpty()}" style="margin-top:16px;">
+                    <table style="font-size:13px;">
+                        <thead>
+                            <tr><th>Fahrer</th><th>Team</th><th class="text-center">Pos</th><th class="text-center">Quali</th><th class="text-center">FL</th><th class="text-right">Pkt</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="result : ${race.results}">
+                                <td class="font-bold" th:text="${result.driver.psnId}"></td>
+                                <td class="text-dim" th:text="${result.driver.seasonDrivers.stream().filter(sd -> sd.season.id == season.id).map(sd -> sd.team.shortName).findFirst().orElse('?')}"></td>
+                                <td class="text-center" th:text="${result.position}"></td>
+                                <td class="text-center" th:text="${result.qualiPosition}"></td>
+                                <td class="text-center" th:text="${result.fastestLap ? '⚡' : ''}"></td>
+                                <td class="text-right font-bold" th:text="${result.pointsTotal}"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

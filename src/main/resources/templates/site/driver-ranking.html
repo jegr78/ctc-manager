@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout('Fahrerwertung ' + ${season.name}, ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title" th:text="'Fahrerwertung — ' + ${season.name}"></h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th><th>Fahrer</th><th>Team</th>
+                        <th class="text-center">Rennen</th><th class="text-center">Beste</th>
+                        <th class="text-center">Schnitt</th><th class="text-right">Punkte</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r, i : ${driverRanking}">
+                        <td class="font-bold text-white" th:text="${i.count}"></td>
+                        <td class="font-bold text-white" th:text="${r.driver.psnId}"></td>
+                        <td class="text-dim" th:text="${r.team != null ? r.team.shortName : '-'}"></td>
+                        <td class="text-center" th:text="${r.racesCount}"></td>
+                        <td class="text-center" th:text="'P' + ${r.bestPosition}"></td>
+                        <td class="text-center" th:text="${#numbers.formatDecimal(r.averagePoints, 1, 1)}"></td>
+                        <td class="text-right font-bold text-white text-lg" th:text="${r.totalPoints}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>

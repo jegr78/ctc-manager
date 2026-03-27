@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout(${team.name}, ~{::section})}">
+<body>
+<section>
+    <div class="team-header">
+        <img th:if="${team.logoUrl}" th:src="${team.logoUrl}" class="team-logo" th:alt="${team.shortName}">
+        <div>
+            <h1 class="text-white" th:text="${team.shortName + ' — ' + team.name}"></h1>
+            <p class="text-dim" th:text="'Saison ' + ${season.name}"></p>
+        </div>
+    </div>
+
+    <div class="section" th:if="${standing != null}">
+        <h2 class="section-title">Bilanz</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Sp</th><th>S</th><th>U</th><th>N</th><th>PV</th><th class="text-right">Pkt</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td th:text="${standing.played}"></td>
+                        <td th:text="${standing.wins}"></td>
+                        <td th:text="${standing.draws}"></td>
+                        <td th:text="${standing.losses}"></td>
+                        <td th:text="${standing.pointsRatio}"></td>
+                        <td class="text-right font-bold text-white text-lg" th:text="${standing.points}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Seite generieren', ~{::section})}">
+<body>
+<section>
+    <h1>Statische Webseite generieren</h1>
+    <div class="card">
+        <p style="color:#666; margin-bottom:16px;">
+            Generiert alle HTML-Seiten der öffentlichen CTC-Webseite in das Output-Verzeichnis.
+            Die generierten Seiten können anschließend auf GitHub Pages deployed werden.
+        </p>
+        <form th:action="@{/admin/generate}" method="post">
+            <button type="submit" class="btn btn-success" style="font-size:16px; padding:12px 24px;">
+                Seite generieren
+            </button>
+        </form>
+    </div>
+</section>
+</body>
+</html>

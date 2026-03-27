@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'CTC - ' + ${title}">Community Team Cup</title>
+    <link rel="stylesheet" th:href="@{/assets/css/style.css}">
+</head>
+<body>
+    <nav class="nav">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-brand">
+                <img th:src="@{/assets/img/ctc-logo.svg}" alt="CTC" class="nav-logo" onerror="this.style.display='none'">
+                <span>COMMUNITY TEAM CUP</span>
+            </a>
+            <div class="nav-links">
+                <a href="index.html">Tabelle</a>
+                <a href="driver-ranking.html">Fahrerwertung</a>
+                <a href="archive.html">Archiv</a>
+            </div>
+        </div>
+    </nav>
+    <main class="main">
+        <div th:replace="${content}"></div>
+    </main>
+    <footer class="footer">
+        <p>Community Team Cup — Gran Turismo Racing League</p>
+    </footer>
+</body>
+</html>

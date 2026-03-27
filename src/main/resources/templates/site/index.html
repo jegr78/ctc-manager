@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout(${season != null ? season.name : 'Community Team Cup'}, ~{::section})}">
+<body>
+<section>
+    <div class="hero">
+        <div class="hero-label" th:if="${season}" th:text="'Saison ' + ${season.name}"></div>
+        <h1>COMMUNITY TEAM CUP</h1>
+        <p class="hero-sub">Gran Turismo — Team vs. Team Racing League</p>
+    </div>
+
+    <!-- Standings -->
+    <div class="section" th:if="${standings != null && !standings.isEmpty()}">
+        <h2 class="section-title">Teamtabelle</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th><th>Team</th><th class="text-center">Sp</th>
+                        <th class="text-center">S</th><th class="text-center">U</th><th class="text-center">N</th>
+                        <th class="text-center">PV</th><th class="text-right">Pkt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="s, i : ${standings}">
+                        <td class="font-bold text-white" th:text="${i.count}"></td>
+                        <td class="font-bold text-white" th:text="${s.team.shortName}"></td>
+                        <td class="text-center" th:text="${s.played}"></td>
+                        <td class="text-center" th:text="${s.wins}"></td>
+                        <td class="text-center" th:text="${s.draws}"></td>
+                        <td class="text-center" th:text="${s.losses}"></td>
+                        <td class="text-center text-dim" th:text="${s.pointsRatio}"></td>
+                        <td class="text-right font-bold text-white text-lg" th:text="${s.points}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Last Matchday -->
+    <div class="section" th:if="${lastMatchday != null}">
+        <h2 class="section-title" th:text="${lastMatchday.label}"></h2>
+        <div class="match-grid">
+            <div class="match-card" th:each="race : ${lastMatchdayRaces}">
+                <div class="match-teams">
+                    <span class="match-team text-white" th:text="${race.homeTeam.shortName}"></span>
+                    <span class="match-score"
+                          th:if="${!race.results.isEmpty()}"
+                          th:text="${race.results.stream().filter(r -> true).mapToInt(r -> r.pointsTotal).sum() > 0 ? 'vs' : 'vs'}">vs</span>
+                    <span class="match-team" th:text="${race.awayTeam.shortName}"></span>
+                </div>
+                <div class="match-meta">
+                    <span th:text="${race.track ?: ''}"></span>
+                    <span th:if="${race.track != null && race.car != null}"> — </span>
+                    <span th:text="${race.car ?: ''}"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>
