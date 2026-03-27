@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Race: ' + ${race.homeTeam.shortName} + ' vs ' + ${race.awayTeam.shortName}, ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <div>
+            <a th:href="@{/admin/races(matchdayId=${race.matchday.id})}" class="back-link">&larr; Back to Races</a>
+            <h1>
+                <span th:text="${race.homeTeam.shortName}"></span> vs
+                <span th:text="${race.awayTeam.shortName}"></span>
+            </h1>
+        </div>
+        <div class="actions">
+            <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-success">Results</a>
+            <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-primary">Edit</a>
+            <form th:action="@{/admin/races/{id}/delete(id=${race.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('Really delete this race?')">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="detail-fields">
+            <span class="label">Matchday</span>
+            <a th:href="@{/admin/matchdays/{id}(id=${race.matchday.id})}" class="detail-link" th:text="${race.matchday.label}"></a>
+            <span class="label">Home Team</span>
+            <a th:href="@{/admin/teams/{id}(id=${race.homeTeam.id})}" class="detail-link" th:text="${race.homeTeam.name}"></a>
+            <span class="label">Away Team</span>
+            <a th:href="@{/admin/teams/{id}(id=${race.awayTeam.id})}" class="detail-link" th:text="${race.awayTeam.name}"></a>
+            <span class="label">Track</span>
+            <span th:text="${race.track ?: '-'}"></span>
+            <span class="label">Car</span>
+            <span th:text="${race.car ?: '-'}"></span>
+            <span class="label">Playoff</span>
+            <span th:if="${race.playoffMatchup != null}">
+                <a th:href="@{/admin/playoffs/matchup/{id}(id=${race.playoffMatchup.id})}" class="detail-link" th:text="'Matchup #' + ${race.playoffMatchup.bracketPosition}"></a>
+            </span>
+            <span th:if="${race.playoffMatchup == null}">-</span>
+        </div>
+
+        <div class="detail-section">
+            <h2 th:text="'Results (' + ${race.results.size()} + ')'"></h2>
+            <div th:if="${!race.results.isEmpty()}">
+                <table>
+                    <thead>
+                        <tr><th>Pos</th><th>Driver</th><th>Quali</th><th>FL</th><th>Points</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="result : ${race.results}">
+                            <td th:text="${result.position}"></td>
+                            <td><a th:href="@{/admin/drivers/{id}(id=${result.driver.id})}" class="detail-link" th:text="${result.driver.psnId}"></a></td>
+                            <td th:text="${result.qualiPosition}"></td>
+                            <td th:text="${result.fastestLap ? '&#x2713;' : ''}"></td>
+                            <td th:text="${result.pointsTotal}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div th:if="${race.results.isEmpty()}" class="empty-state" style="padding:16px;"><p>No results yet.</p></div>
+        </div>
+    </div>
+</section>
+</body>
+</html>
