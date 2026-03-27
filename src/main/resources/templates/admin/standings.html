@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Tabelle', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Tabelle &amp; Fahrerwertung</h1>
+        <form method="get" th:action="@{/admin/standings}" style="display:inline-flex;gap:8px;align-items:center;">
+            <select name="seasonId" onchange="this.form.submit()">
+                <option value="">-- Saison wählen --</option>
+                <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
+                        th:selected="${selectedSeason != null && s.id == selectedSeason.id}"></option>
+            </select>
+        </form>
+    </div>
+
+    <div th:if="${selectedSeason == null}" class="card empty-state">
+        <p>Bitte eine Saison auswählen.</p>
+    </div>
+
+    <!-- Team Standings -->
+    <div th:if="${standings != null}" class="card">
+        <h2>Teamtabelle — <span th:text="${selectedSeason.name}"></span></h2>
+        <table th:if="${!standings.isEmpty()}">
+            <thead>
+                <tr><th>#</th><th>Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th>PV</th><th style="text-align:right">Pkt</th></tr>
+            </thead>
+            <tbody>
+                <tr th:each="standing, iter : ${standings}">
+                    <td th:text="${iter.count}"></td>
+                    <td><strong th:text="${standing.team.shortName}"></strong>
+                        <span style="color:#999" th:text="' ' + ${standing.team.name}"></span></td>
+                    <td th:text="${standing.played}"></td>
+                    <td th:text="${standing.wins}"></td>
+                    <td th:text="${standing.draws}"></td>
+                    <td th:text="${standing.losses}"></td>
+                    <td th:text="${standing.pointsRatio}"></td>
+                    <td style="text-align:right; font-weight:700; font-size:16px;" th:text="${standing.points}"></td>
+                </tr>
+            </tbody>
+        </table>
+        <div th:if="${standings.isEmpty()}" class="empty-state"><p>Noch keine Ergebnisse vorhanden.</p></div>
+    </div>
+
+    <!-- Driver Ranking -->
+    <div th:if="${driverRanking != null}" class="card" style="margin-top: 16px;">
+        <h2>Fahrerwertung — <span th:text="${selectedSeason.name}"></span></h2>
+        <table th:if="${!driverRanking.isEmpty()}">
+            <thead>
+                <tr><th>#</th><th>Fahrer</th><th>Team</th><th>Rennen</th><th>Beste Pos.</th><th>Schnitt</th><th style="text-align:right">Punkte</th></tr>
+            </thead>
+            <tbody>
+                <tr th:each="ranking, iter : ${driverRanking}">
+                    <td th:text="${iter.count}"></td>
+                    <td><strong th:text="${ranking.driver.psnId}"></strong></td>
+                    <td th:text="${ranking.team != null ? ranking.team.shortName : '-'}"></td>
+                    <td th:text="${ranking.racesCount}"></td>
+                    <td th:text="${ranking.bestPosition}"></td>
+                    <td th:text="${#numbers.formatDecimal(ranking.averagePoints, 1, 1)}"></td>
+                    <td style="text-align:right; font-weight:700; font-size:16px;" th:text="${ranking.totalPoints}"></td>
+                </tr>
+            </tbody>
+        </table>
+        <div th:if="${driverRanking.isEmpty()}" class="empty-state"><p>Noch keine Ergebnisse vorhanden.</p></div>
+    </div>
+</section>
+</body>
+</html>

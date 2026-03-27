@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'CTC Admin - ' + ${title}">CTC Admin</title>
+    <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-brand">⚡ CTC Admin</div>
+        <div class="navbar-links">
+            <a th:href="@{/admin/seasons}" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/admin/seasons') ? 'active' : ''}">Saisons</a>
+            <a th:href="@{/admin/teams}" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/admin/teams') ? 'active' : ''}">Teams</a>
+            <a th:href="@{/admin/drivers}" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/admin/drivers') ? 'active' : ''}">Fahrer</a>
+            <a th:href="@{/admin/matchdays}" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/admin/matchdays') ? 'active' : ''}">Spieltage</a>
+            <a th:href="@{/admin/races}" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/admin/races') ? 'active' : ''}">Rennen</a>
+            <span class="navbar-separator">|</span>
+            <a th:href="@{/admin/standings}" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/admin/standings') ? 'active' : ''}">Tabelle</a>
+            <a th:href="@{/admin/generate}" class="btn-generate">Seite generieren</a>
+        </div>
+    </nav>
+    <main class="container">
+        <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+        <div th:replace="${content}"></div>
+    </main>
+</body>
+</html>

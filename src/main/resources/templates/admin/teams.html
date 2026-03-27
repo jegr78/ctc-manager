@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Teams', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Teams</h1>
+        <a th:href="@{/admin/teams/new}" class="btn btn-primary">+ Neues Team</a>
+    </div>
+    <div class="card">
+        <table th:if="${!teams.isEmpty()}">
+            <thead>
+                <tr><th>Kürzel</th><th>Name</th><th>Logo</th><th>Aktionen</th></tr>
+            </thead>
+            <tbody>
+                <tr th:each="team : ${teams}">
+                    <td><strong th:text="${team.shortName}"></strong></td>
+                    <td th:text="${team.name}"></td>
+                    <td th:text="${team.logoUrl != null ? '✓' : '-'}"></td>
+                    <td class="actions">
+                        <a th:href="@{/admin/teams/{id}/edit(id=${team.id})}" class="btn btn-secondary btn-sm">Bearbeiten</a>
+                        <form th:action="@{/admin/teams/{id}/delete(id=${team.id})}" method="post" style="display:inline"
+                              onsubmit="return confirm('Team wirklich löschen?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Löschen</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div th:if="${teams.isEmpty()}" class="empty-state"><p>Noch keine Teams angelegt.</p></div>
+    </div>
+</section>
+</body>
+</html>

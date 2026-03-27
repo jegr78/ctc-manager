@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Rennen bearbeiten', ~{::section})}">
+<body>
+<section>
+    <h1 th:text="${raceForm.id != null ? 'Rennen bearbeiten' : 'Neues Rennen'}"></h1>
+    <div class="card">
+        <form th:action="@{/admin/races/save}" th:object="${raceForm}" method="post">
+            <input type="hidden" th:field="*{id}">
+            <div class="form-group">
+                <label for="matchdayId">Spieltag</label>
+                <select id="matchdayId" th:field="*{matchdayId}" required>
+                    <option value="">-- Spieltag wählen --</option>
+                    <option th:each="md : ${matchdays}" th:value="${md.id}"
+                            th:text="${md.season.name + ' — ' + md.label}"></option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="homeTeamId">Home Team</label>
+                    <select id="homeTeamId" th:field="*{homeTeamId}" required>
+                        <option value="">-- Team wählen --</option>
+                        <option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.shortName + ' - ' + t.name}"></option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="awayTeamId">Away Team</label>
+                    <select id="awayTeamId" th:field="*{awayTeamId}" required>
+                        <option value="">-- Team wählen --</option>
+                        <option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.shortName + ' - ' + t.name}"></option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="track">Strecke</label>
+                    <input type="text" id="track" th:field="*{track}" placeholder="z.B. Circuit de Barcelona-Catalunya">
+                </div>
+                <div class="form-group">
+                    <label for="car">Auto</label>
+                    <input type="text" id="car" th:field="*{car}" placeholder="z.B. Mazda RX-Vision GT3">
+                </div>
+            </div>
+            <div class="actions" style="margin-top: 16px;">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <a th:href="@{/admin/races}" class="btn btn-secondary">Abbrechen</a>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>

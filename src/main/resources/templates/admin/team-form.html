@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Team bearbeiten', ~{::section})}">
+<body>
+<section>
+    <h1 th:text="${team.id != null ? 'Team bearbeiten' : 'Neues Team'}"></h1>
+    <div class="card">
+        <form th:action="@{/admin/teams/save}" th:object="${team}" method="post">
+            <input type="hidden" th:field="*{id}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" th:field="*{name}" placeholder="z.B. The Neutrals Racing" required>
+                </div>
+                <div class="form-group">
+                    <label for="shortName">Kürzel</label>
+                    <input type="text" id="shortName" th:field="*{shortName}" placeholder="z.B. TNR" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="logoUrl">Logo URL</label>
+                <input type="text" id="logoUrl" th:field="*{logoUrl}" placeholder="Optional">
+            </div>
+            <div class="actions" style="margin-top: 16px;">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <a th:href="@{/admin/teams}" class="btn btn-secondary">Abbrechen</a>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>

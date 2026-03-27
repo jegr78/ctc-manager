@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Saisons', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Saisons</h1>
+        <a th:href="@{/admin/seasons/new}" class="btn btn-primary">+ Neue Saison</a>
+    </div>
+    <div class="card">
+        <table th:if="${!seasons.isEmpty()}">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Start</th>
+                    <th>Ende</th>
+                    <th>Status</th>
+                    <th>Aktionen</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="season : ${seasons}">
+                    <td th:text="${season.name}"></td>
+                    <td th:text="${season.startDate}"></td>
+                    <td th:text="${season.endDate}"></td>
+                    <td>
+                        <span th:if="${season.active}" class="badge badge-active">Aktiv</span>
+                        <span th:unless="${season.active}" class="badge badge-inactive">Inaktiv</span>
+                    </td>
+                    <td class="actions">
+                        <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="btn btn-secondary btn-sm">Bearbeiten</a>
+                        <form th:action="@{/admin/seasons/{id}/delete(id=${season.id})}" method="post" style="display:inline"
+                              onsubmit="return confirm('Saison wirklich löschen?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Löschen</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div th:if="${seasons.isEmpty()}" class="empty-state">
+            <p>Noch keine Saisons angelegt.</p>
+        </div>
+    </div>
+</section>
+</body>
+</html>

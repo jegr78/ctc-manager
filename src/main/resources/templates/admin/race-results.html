@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Ergebnisse', ~{::section})}">
+<body>
+<section>
+    <h1>
+        Ergebnisse: <span th:text="${race.homeTeam.shortName}"></span> vs <span th:text="${race.awayTeam.shortName}"></span>
+    </h1>
+    <p style="color:#666; margin-bottom:16px;">
+        <span th:text="${race.matchday.label}"></span> —
+        <span th:text="${race.track ?: 'Keine Strecke'}"></span> —
+        <span th:text="${race.car ?: 'Kein Auto'}"></span>
+    </p>
+
+    <div class="card">
+        <form th:action="@{/admin/races/{id}/results(id=${race.id})}" th:object="${raceForm}" method="post">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th>Fahrer (PSN ID)</th>
+                        <th>Position</th>
+                        <th>Quali</th>
+                        <th>FL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="result, iter : ${raceForm.results}">
+                        <td>
+                            <span th:text="${result.teamShortName}" style="font-weight:600"></span>
+                            <input type="hidden" th:name="'results[' + ${iter.index} + '].driverId'" th:value="${result.driverId}">
+                            <input type="hidden" th:name="'results[' + ${iter.index} + '].driverPsnId'" th:value="${result.driverPsnId}">
+                            <input type="hidden" th:name="'results[' + ${iter.index} + '].teamShortName'" th:value="${result.teamShortName}">
+                        </td>
+                        <td th:text="${result.driverPsnId}" style="font-weight:500"></td>
+                        <td>
+                            <input type="number" th:name="'results[' + ${iter.index} + '].position'"
+                                   th:value="${result.position}" min="1" max="12" style="width:60px" required>
+                        </td>
+                        <td>
+                            <input type="number" th:name="'results[' + ${iter.index} + '].qualiPosition'"
+                                   th:value="${result.qualiPosition}" min="1" max="12" style="width:60px" required>
+                        </td>
+                        <td>
+                            <input type="checkbox" th:name="'results[' + ${iter.index} + '].fastestLap'"
+                                   th:checked="${result.fastestLap}" value="true">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="actions" style="margin-top: 16px;">
+                <button type="submit" class="btn btn-primary">Ergebnisse speichern</button>
+                <a th:href="@{/admin/races(matchdayId=${race.matchday.id})}" class="btn btn-secondary">Zurück</a>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>
