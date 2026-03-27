@@ -58,8 +58,8 @@
         <div th:if="${legs.isEmpty()}" class="empty-state"><p>Noch keine Legs angelegt.</p></div>
     </div>
 
-    <!-- Add leg form -->
-    <div th:if="${matchup.winner == null && matchup.team1 != null && matchup.team2 != null}" class="card">
+    <!-- Add leg form (only if max legs not reached) -->
+    <div th:if="${matchup.winner == null && matchup.team1 != null && matchup.team2 != null && legs.size() < matchup.round.bestOfLegs}" class="card">
         <h2>Neues Leg hinzufügen</h2>
         <form th:action="@{/admin/playoffs/matchup/{id}/add-race(id=${matchup.id})}" method="post">
             <div class="form-row">

@@ -189,9 +189,17 @@ public class PlayoffController {
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
 
+        int existingLegs = raceRepository.findByPlayoffMatchupId(matchupId).size();
+        int maxLegs = matchup.getRound().getBestOfLegs();
+        if (existingLegs >= maxLegs) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Maximale Leg-Anzahl erreicht (" + maxLegs + ")");
+            return "redirect:/admin/playoffs/matchup/" + matchupId;
+        }
+
         // Auto-create matchday for this playoff leg
         var season = matchup.getRound().getPlayoff().getSeason();
-        int legNumber = raceRepository.findByPlayoffMatchupId(matchupId).size() + 1;
+        int legNumber = existingLegs + 1;
         String label = matchup.getRound().getLabel() + " - Leg " + legNumber;
         var matchday = new Matchday(season, label, 100 + matchup.getRound().getRoundIndex() * 10 + legNumber);
         matchday = matchdayRepository.save(matchday);
