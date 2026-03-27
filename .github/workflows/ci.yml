@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build and Unit/Integration Tests
+        run: ./mvnw verify -Dspring.profiles.active=dev
+
+      - name: Install Playwright Browsers
+        run: |
+          mvn dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=/tmp/cp.txt -q
+          java -cp "$(cat /tmp/cp.txt):target/test-classes:target/classes" com.microsoft.playwright.CLI install --with-deps chromium
+
+      - name: E2E Tests
+        run: ./mvnw verify -Pe2e -Dspring.profiles.active=dev
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+          retention-days: 7

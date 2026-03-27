@@ -1,0 +1,57 @@
+name: Deploy Site
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build
+        run: ./mvnw package -DskipTests -Dspring.profiles.active=dev
+
+      - name: Generate Static Site
+        run: |
+          java -jar target/ctc-manager-0.0.1-SNAPSHOT.jar \
+            --spring.profiles.active=dev \
+            --ctc.site.output-dir=site-output &
+          APP_PID=$!
+          sleep 10
+          curl -s -X POST http://localhost:8080/admin/generate || true
+          sleep 5
+          kill $APP_PID 2>/dev/null || true
+
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site-output
+
+  deploy:
+    needs: generate
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

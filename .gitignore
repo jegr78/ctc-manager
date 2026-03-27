@@ -35,5 +35,9 @@ build/
 ### Superpowers ###
 .superpowers/
 
+### Skills ###
+.agents/
+.playwright-cli/
+
 ### OS ###
 .DS_Store
