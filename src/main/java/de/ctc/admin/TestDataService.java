@@ -75,11 +75,17 @@ public class TestDataService {
     private void seedSeasons(List<Team> parentTeams) {
         var allTeams = teamRepository.findAll();
 
-        // Helper to find teams by shortName (optionally sub-team by name)
-        java.util.function.BiFunction<String, String, Team> findTeam = (shortName, name) ->
+        // Helper to find parent team (no parent) by shortName
+        java.util.function.Function<String, Team> findParent = (shortName) ->
                 allTeams.stream()
-                        .filter(t -> t.getShortName().equals(shortName) && (name == null || t.getName().equals(name)))
-                        .findFirst().orElseThrow(() -> new IllegalStateException("Team not found: " + shortName + "/" + name));
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Parent team not found: " + shortName));
+
+        // Helper to find sub-team by shortName (has parent)
+        java.util.function.Function<String, Team> findSub = (shortName) ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Sub-team not found: " + shortName));
 
         // Older seasons: all parent teams
         for (String name : List.of("Season 1 - 2023 - Group A", "Season 1 - 2023 - Group B", "Season 2 - 2024")) {
@@ -91,21 +97,22 @@ public class TestDataService {
         // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
         var s3a = new Season("Season 3 - 2025 - Group A");
         s3a.getTeams().addAll(List.of(
-                findTeam.apply("P1Rx", "Project One Racing X"),
-                findTeam.apply("CLR", "Community League Racing"),
-                findTeam.apply("MRL", "Medway Racing League"),
-                findTeam.apply("TCR", "Tidgney Community Racing"),
-                findTeam.apply("GXR", "Gen-X Racing")
+                findSub.apply("P1Rx"),
+                findParent.apply("CLR"),
+                findParent.apply("MRL"),
+                findParent.apply("TCR"),
+                findParent.apply("GXR")
         ));
         seasonRepository.save(s3a);
 
-        // Season 3 - 2025 - Group B: P1R (sub-team), AHR, DTR, ART
+        // Season 3 - 2025 - Group B: P1R parent + P1R sub-team, AHR, DTR, ART
         var s3b = new Season("Season 3 - 2025 - Group B");
         s3b.getTeams().addAll(List.of(
-                findTeam.apply("P1R", "Project One Racing"),  // sub-team of P1R parent
-                findTeam.apply("AHR", "Apex Hunter Racing"),
-                findTeam.apply("DTR", "Dream Team Racing"),
-                findTeam.apply("ART", "Amigos Racing Team")
+                findParent.apply("P1R"),
+                findSub.apply("P1R"),
+                findParent.apply("AHR"),
+                findParent.apply("DTR"),
+                findParent.apply("ART")
         ));
         seasonRepository.save(s3b);
 
@@ -113,19 +120,19 @@ public class TestDataService {
         var s4 = new Season("Season 4 - 2026");
         s4.setActive(true);
         s4.getTeams().addAll(List.of(
-                findTeam.apply("CLR 1", "Community League Racing 1"),
-                findTeam.apply("CLR 2", "Community League Racing 2"),
-                findTeam.apply("TNR A", "The Neutrals Racing A"),
-                findTeam.apply("TNR B", "The Neutrals Racing B"),
-                findTeam.apply("TNR C", "The Neutrals Racing C"),
-                findTeam.apply("DTR", "Dream Team Racing"),
-                findTeam.apply("MRL", "Medway Racing League"),
-                findTeam.apply("ART", "Amigos Racing Team"),
-                findTeam.apply("AHR 1", "Apex Hunter Racing 1"),
-                findTeam.apply("AHR 2", "Apex Hunter Racing 2"),
-                findTeam.apply("VEZ", "VEZ Racing Team"),
-                findTeam.apply("GXR", "Gen-X Racing"),
-                findTeam.apply("TCR", "Tidgney Community Racing")
+                findSub.apply("CLR 1"),
+                findSub.apply("CLR 2"),
+                findSub.apply("TNR A"),
+                findSub.apply("TNR B"),
+                findSub.apply("TNR C"),
+                findParent.apply("DTR"),
+                findParent.apply("MRL"),
+                findParent.apply("ART"),
+                findSub.apply("AHR 1"),
+                findSub.apply("AHR 2"),
+                findParent.apply("VEZ"),
+                findParent.apply("GXR"),
+                findParent.apply("TCR")
         ));
         seasonRepository.save(s4);
     }
