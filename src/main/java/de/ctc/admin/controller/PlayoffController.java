@@ -4,7 +4,6 @@ import de.ctc.admin.dto.PlayoffForm;
 import de.ctc.admin.dto.SeedForm;
 import de.ctc.domain.model.Race;
 import de.ctc.domain.model.Season;
-import de.ctc.domain.model.SeasonDriver;
 import de.ctc.domain.repository.*;
 import de.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +29,7 @@ public class PlayoffController {
     private final PlayoffMatchupRepository playoffMatchupRepository;
     private final SeasonRepository seasonRepository;
     private final SeasonDriverRepository seasonDriverRepository;
+    private final TeamRepository teamRepository;
     private final MatchdayRepository matchdayRepository;
     private final RaceRepository raceRepository;
 
@@ -96,12 +96,8 @@ public class PlayoffController {
                 .filter(r -> r.getRoundIndex() == 0)
                 .findFirst().orElseThrow();
 
-        // Get teams participating in this season
-        var seasonId = playoff.getSeason().getId();
-        var teams = seasonDriverRepository.findBySeasonId(seasonId).stream()
-                .map(SeasonDriver::getTeam)
-                .distinct()
-                .toList();
+        // Get all available teams
+        var teams = teamRepository.findAll();
 
         // Find already-seeded team IDs
         Set<UUID> seededTeamIds = firstRound.getMatchups().stream()

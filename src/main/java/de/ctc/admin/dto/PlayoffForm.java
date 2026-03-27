@@ -12,6 +12,6 @@ public class PlayoffForm {
     private UUID id;
     private UUID seasonId;
     private String name;
-    private int bestOfLegs = 2;
+    private int bestOfLegs = 1;
     private int numberOfTeams = 8;
 }
