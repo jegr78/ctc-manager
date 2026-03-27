@@ -22,6 +22,10 @@ Deutsch für Kommunikation und Dokumentation. Code und Kommentare auf Englisch.
 - `local` — MariaDB lokal, Port 9091
 - `prod` — Cloud DB (Environment Variables)
 
+## OSIV (Open Session in View)
+
+Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt bis zum Ende des HTTP-Requests offen, damit Thymeleaf lazy-geladene Felder rendern kann. Korrekt fuer diese Admin-Anwendung mit serverseitigem Rendering — kein Lazy-Init-Workaround in Controllern noetig.
+
 ## Package-Struktur
 
 - `de.ctc.domain.model` — JPA Entities

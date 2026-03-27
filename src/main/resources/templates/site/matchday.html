@@ -22,7 +22,7 @@
                 <div th:if="${race.hasResults}" style="margin-top:16px;">
                     <table style="font-size:13px;">
                         <thead>
-                            <tr><th>Fahrer</th><th>Team</th><th class="text-center">Pos</th><th class="text-center">Quali</th><th class="text-center">FL</th><th class="text-right">Pkt</th></tr>
+                            <tr><th>Driver</th><th>Team</th><th class="text-center">Pos</th><th class="text-center">Quali</th><th class="text-center">FL</th><th class="text-right">Pts</th></tr>
                         </thead>
                         <tbody>
                             <tr th:each="result : ${race.results}">

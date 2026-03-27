@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Spieltage', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Matchdays', ~{::section})}">
 <body>
 <section>
     <div class="toolbar">
-        <h1>Spieltage</h1>
+        <h1>Matchdays</h1>
         <div class="actions">
             <form method="get" th:action="@{/admin/matchdays}" style="display:inline-flex;gap:8px;align-items:center;">
                 <select name="seasonId" onchange="this.form.submit()">
-                    <option value="">-- Saison wählen --</option>
+                    <option value="">-- Select season --</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
                             th:selected="${s.id == selectedSeasonId}"></option>
                 </select>
             </form>
-            <a th:href="@{/admin/matchdays/new(seasonId=${selectedSeasonId})}" class="btn btn-primary">+ Neuer Spieltag</a>
+            <a th:href="@{/admin/matchdays/new(seasonId=${selectedSeasonId})}" class="btn btn-primary">+ New Matchday</a>
         </div>
     </div>
     <div class="card">
         <table th:if="${!matchdays.isEmpty()}">
             <thead>
-                <tr><th>#</th><th>Bezeichnung</th><th>Datum</th><th>Saison</th><th>Rennen</th><th>Aktionen</th></tr>
+                <tr><th>#</th><th>Label</th><th>Date</th><th>Season</th><th>Races</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <tr th:each="md : ${matchdays}">
@@ -29,17 +29,17 @@
                     <td th:text="${md.season.name}"></td>
                     <td th:text="${md.races.size()}"></td>
                     <td class="actions">
-                        <a th:href="@{/admin/matchdays/{id}/edit(id=${md.id})}" class="btn btn-secondary btn-sm">Bearbeiten</a>
-                        <a th:href="@{/admin/races(matchdayId=${md.id})}" class="btn btn-secondary btn-sm">Rennen</a>
+                        <a th:href="@{/admin/matchdays/{id}/edit(id=${md.id})}" class="btn btn-secondary btn-sm">Edit</a>
+                        <a th:href="@{/admin/races(matchdayId=${md.id})}" class="btn btn-secondary btn-sm">Races</a>
                         <form th:action="@{/admin/matchdays/{id}/delete(id=${md.id})}" method="post" style="display:inline"
-                              onsubmit="return confirm('Spieltag wirklich löschen?')">
-                            <button type="submit" class="btn btn-danger btn-sm">Löschen</button>
+                              onsubmit="return confirm('Really delete this matchday?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>
                     </td>
                 </tr>
             </tbody>
         </table>
-        <div th:if="${matchdays.isEmpty()}" class="empty-state"><p>Noch keine Spieltage angelegt.</p></div>
+        <div th:if="${matchdays.isEmpty()}" class="empty-state"><p>No matchdays created yet.</p></div>
     </div>
 </section>
 </body>

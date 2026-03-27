@@ -2,13 +2,21 @@ spring:
   application:
     name: ctc-manager
   jpa:
-    open-in-view: false
+    # OSIV: Hibernate-Session bleibt bis zum Ende des HTTP-Requests offen,
+    # damit Thymeleaf-Templates lazy-geladene Felder rendern koennen.
+    # Bewusste Entscheidung fuer diese Admin-Anwendung (kein REST-API).
+    open-in-view: true
     properties:
       hibernate:
         format_sql: true
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+logging:
+  level:
+    # OSIV-Warnung unterdruecken (bewusst aktiviert, siehe spring.jpa.open-in-view)
+    org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor: ERROR
 
 server:
   port: 8080

@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "races")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "results"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "results", "playoffMatchup"})
 public class Race {
 
     @Id
@@ -38,6 +38,10 @@ public class Race {
     private String track;
 
     private String car;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "playoff_matchup_id")
+    private PlayoffMatchup playoffMatchup;
 
     @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")

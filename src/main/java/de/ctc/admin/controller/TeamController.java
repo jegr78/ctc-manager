@@ -47,7 +47,7 @@ public class TeamController {
         }
         teamRepository.save(team);
         log.info("Saved team: {}", team.getShortName());
-        redirectAttributes.addFlashAttribute("successMessage", "Team gespeichert: " + team.getName());
+        redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + team.getName());
         return "redirect:/admin/teams";
     }
 
@@ -56,7 +56,7 @@ public class TeamController {
         var team = teamRepository.findById(id).orElseThrow();
         teamRepository.delete(team);
         log.info("Deleted team: {}", team.getShortName());
-        redirectAttributes.addFlashAttribute("successMessage", "Team gelöscht: " + team.getName());
+        redirectAttributes.addFlashAttribute("successMessage", "Team deleted: " + team.getName());
         return "redirect:/admin/teams";
     }
 }

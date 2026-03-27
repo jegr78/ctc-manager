@@ -22,7 +22,7 @@ public class StandingsService {
     private final ScoringService scoringService;
 
     public List<TeamStanding> calculateStandings(UUID seasonId) {
-        List<Race> races = raceRepository.findByMatchdaySeasonId(seasonId);
+        List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(seasonId);
         Map<UUID, TeamStanding> standingsMap = new HashMap<>();
 
         for (Team team : teamRepository.findAll()) {

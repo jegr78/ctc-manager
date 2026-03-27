@@ -6,22 +6,22 @@
     <div style="margin-bottom: 24px;">
         <h1 class="text-white" th:text="${driver.psnId}"></h1>
         <p class="text-dim" th:text="${driver.nickname}"></p>
-        <p class="text-dim" th:if="${team != null}" th:text="'Team: ' + ${team.shortName} + ' — ' + ${team.name} + ' (Saison ' + ${season.name} + ')'"></p>
+        <p class="text-dim" th:if="${team != null}" th:text="'Team: ' + ${team.shortName} + ' — ' + ${team.name} + ' (Season ' + ${season.name} + ')'"></p>
     </div>
 
     <div class="section" th:if="${results != null && !results.isEmpty()}">
-        <h2 class="section-title" th:text="'Rennhistorie — ' + ${season.name}"></h2>
+        <h2 class="section-title" th:text="'Race History — ' + ${season.name}"></h2>
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
-                        <th>Spieltag</th>
-                        <th>Gegner</th>
-                        <th>Strecke</th>
+                        <th>Matchday</th>
+                        <th>Opponent</th>
+                        <th>Track</th>
                         <th class="text-center">Pos</th>
                         <th class="text-center">Quali</th>
                         <th class="text-center">FL</th>
-                        <th class="text-right">Punkte</th>
+                        <th class="text-right">Points</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -43,11 +43,11 @@
     </div>
 
     <div class="section" style="margin-top: 24px;">
-        <h2 class="section-title">Statistiken</h2>
+        <h2 class="section-title">Statistics</h2>
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>Rennen</th><th>Gesamt</th><th>Schnitt</th><th>Beste Pos.</th></tr>
+                    <tr><th>Races</th><th>Total</th><th>Avg</th><th>Best Pos.</th></tr>
                 </thead>
                 <tbody>
                     <tr>

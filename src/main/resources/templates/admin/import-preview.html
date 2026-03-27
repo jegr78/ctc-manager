@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Import Vorschau', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Import Preview', ~{::section})}">
 <body>
 <section>
-    <h1>Import Vorschau</h1>
+    <h1>Import Preview</h1>
     <div class="card" style="margin-bottom:16px;">
-        <p><strong>Saison:</strong> <span th:text="${metadata.seasonName}"></span> |
-           <strong>Spieltag:</strong> <span th:text="${metadata.matchdayLabel}"></span> |
-           <strong>Strecke:</strong> <span th:text="${metadata.track ?: '-'}"></span> |
-           <strong>Auto:</strong> <span th:text="${metadata.car ?: '-'}"></span></p>
+        <p><strong>Season:</strong> <span th:text="${metadata.seasonName}"></span> |
+           <strong>Matchday:</strong> <span th:text="${metadata.matchdayLabel}"></span> |
+           <strong>Track:</strong> <span th:text="${metadata.track ?: '-'}"></span> |
+           <strong>Car:</strong> <span th:text="${metadata.car ?: '-'}"></span></p>
     </div>
 
     <!-- Errors -->
     <div th:if="${preview.hasErrors()}" class="alert alert-error" style="margin-bottom:16px;">
-        <strong>Fehler:</strong>
+        <strong>Errors:</strong>
         <ul style="margin:8px 0 0 16px;">
             <li th:each="error : ${preview.errors}" th:text="${error}"></li>
         </ul>
@@ -26,7 +26,7 @@
         <input type="hidden" name="car" th:value="${metadata.car}">
         <!-- File needs to be re-uploaded for execute -->
         <div class="form-group" style="margin-bottom:16px;">
-            <label for="file">CSV-Datei erneut auswählen (für den Import)</label>
+            <label for="file">Re-select CSV file (for import)</label>
             <input type="file" id="file" name="file" accept=".csv,.txt,.tsv" required>
         </div>
 
@@ -39,7 +39,7 @@
                         <th>Pos</th>
                         <th>Quali</th>
                         <th>FL</th>
-                        <th>Zuordnung</th>
+                        <th>Assignment</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -60,13 +60,13 @@
                                 <select th:name="'confirm_' + ${row.psnId}">
                                     <option th:value="${row.matchResult.driver.id}"
                                             th:text="${row.matchResult.driver.psnId + ' (' + #numbers.formatDecimal(row.matchResult.similarity * 100, 1, 0) + '%)'}"></option>
-                                    <option value="new">Neuen Fahrer anlegen</option>
+                                    <option value="new">Create new driver</option>
                                 </select>
                             </span>
                             <!-- No match -->
                             <span th:if="${row.matchResult.type.name() == 'NONE'}">
                                 <input type="hidden" th:name="'confirm_' + ${row.psnId}" value="new">
-                                <span class="badge" style="background:#fff3e0;color:#e65100;">Neu anlegen</span>
+                                <span class="badge" style="background:#fff3e0;color:#e65100;">Create new</span>
                             </span>
                         </td>
                     </tr>
@@ -75,8 +75,8 @@
         </div>
 
         <div class="actions" style="margin-top:16px;">
-            <button type="submit" class="btn btn-primary">Import ausführen</button>
-            <a th:href="@{/admin/import}" class="btn btn-secondary">Abbrechen</a>
+            <button type="submit" class="btn btn-primary">Execute Import</button>
+            <a th:href="@{/admin/import}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </section>

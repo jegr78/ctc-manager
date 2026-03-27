@@ -5,6 +5,7 @@ import de.ctc.domain.model.Season;
 import de.ctc.domain.repository.*;
 import de.ctc.sitegen.model.RaceView;
 import de.ctc.domain.service.DriverRankingService;
+import de.ctc.domain.service.PlayoffService;
 import de.ctc.domain.service.StandingsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +37,8 @@ public class SiteGeneratorService {
     private final RaceResultRepository raceResultRepository;
     private final StandingsService standingsService;
     private final DriverRankingService driverRankingService;
+    private final PlayoffService playoffService;
+    private final PlayoffRepository playoffRepository;
 
     @lombok.Setter
     @Value("${ctc.site.output-dir}")
@@ -63,6 +66,7 @@ public class SiteGeneratorService {
                 generateMatchdays(outPath, season, result);
                 generateTeamProfiles(outPath, season, result);
                 generateDriverProfiles(outPath, season, result);
+                generatePlayoffBracket(outPath, season, result);
             }
 
             // Generate archive
@@ -74,7 +78,7 @@ public class SiteGeneratorService {
             log.info("Site generation complete: {} pages", result.getPagesGenerated());
         } catch (IOException e) {
             log.error("Site generation failed", e);
-            result.addError("Generierung fehlgeschlagen: " + e.getMessage());
+            result.addError("Generation failed: " + e.getMessage());
         }
 
         return result;
@@ -190,6 +194,24 @@ public class SiteGeneratorService {
             writeTemplate("site/driver-profile", ctx, dir.resolve(slugify(driver.getPsnId()) + ".html"));
             result.incrementPages();
         }
+    }
+
+    private void generatePlayoffBracket(Path outPath, Season season, GenerationResult result) throws IOException {
+        var playoffOpt = playoffRepository.findBySeasonId(season.getId());
+        if (playoffOpt.isEmpty()) return;
+
+        var playoff = playoffOpt.get();
+        var bracket = playoffService.getBracketView(playoff.getId());
+
+        var ctx = new Context(Locale.GERMAN);
+        ctx.setVariable("season", season);
+        ctx.setVariable("playoff", playoff);
+        ctx.setVariable("bracket", bracket);
+
+        var dir = outPath.resolve("season").resolve(slugify(season.getName()));
+        Files.createDirectories(dir);
+        writeTemplate("site/playoff-bracket", ctx, dir.resolve("playoff.html"));
+        result.incrementPages();
     }
 
     private void generateArchive(Path outPath, List<Season> allSeasons, GenerationResult result) throws IOException {

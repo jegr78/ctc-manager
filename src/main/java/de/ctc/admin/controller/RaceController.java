@@ -122,7 +122,7 @@ public class RaceController {
         raceRepository.save(race);
         log.info("Saved race: {} vs {} ({})", homeTeam.getShortName(), awayTeam.getShortName(), matchday.getLabel());
         redirectAttributes.addFlashAttribute("successMessage",
-                "Rennen gespeichert: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName());
+                "Race saved: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName());
         return "redirect:/admin/races?matchdayId=" + form.getMatchdayId();
     }
 
@@ -155,7 +155,7 @@ public class RaceController {
         log.info("Saved results for {} vs {}: {} : {}",
                 race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName(), homeTotal, awayTotal);
         redirectAttributes.addFlashAttribute("successMessage",
-                "Ergebnisse gespeichert: " + race.getHomeTeam().getShortName() + " " + homeTotal +
+                "Results saved: " + race.getHomeTeam().getShortName() + " " + homeTotal +
                 " : " + awayTotal + " " + race.getAwayTeam().getShortName());
         return "redirect:/admin/races/" + id + "/results";
     }
@@ -166,7 +166,7 @@ public class RaceController {
         var matchdayId = race.getMatchday().getId();
         raceRepository.delete(race);
         log.info("Deleted race: {} vs {}", race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName());
-        redirectAttributes.addFlashAttribute("successMessage", "Rennen gelöscht");
+        redirectAttributes.addFlashAttribute("successMessage", "Race deleted");
         return "redirect:/admin/races?matchdayId=" + matchdayId;
     }
 

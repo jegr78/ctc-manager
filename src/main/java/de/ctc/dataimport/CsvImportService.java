@@ -64,7 +64,7 @@ public class CsvImportService {
 
         // Resolve season
         var season = seasonRepository.findByName(metadata.seasonName()).orElseThrow(
-                () -> new IllegalArgumentException("Saison nicht gefunden: " + metadata.seasonName()));
+                () -> new IllegalArgumentException("Season not found: " + metadata.seasonName()));
 
         // Resolve or create matchday
         var matchday = findOrCreateMatchday(season, metadata);
@@ -136,7 +136,7 @@ public class CsvImportService {
             return newDriver;
         }
 
-        result.addError("Fahrer konnte nicht zugeordnet werden: " + row.psnId());
+        result.addError("Driver could not be assigned: " + row.psnId());
         return null;
     }
 

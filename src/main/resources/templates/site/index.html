@@ -4,21 +4,21 @@
 <body>
 <section>
     <div class="hero">
-        <div class="hero-label" th:if="${season}" th:text="'Saison ' + ${season.name}"></div>
+        <div class="hero-label" th:if="${season}" th:text="'Season ' + ${season.name}"></div>
         <h1>COMMUNITY TEAM CUP</h1>
         <p class="hero-sub">Gran Turismo — Team vs. Team Racing League</p>
     </div>
 
     <!-- Standings -->
     <div class="section" th:if="${standings != null && !standings.isEmpty()}">
-        <h2 class="section-title">Teamtabelle</h2>
+        <h2 class="section-title">Team Standings</h2>
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
-                        <th>#</th><th>Team</th><th class="text-center">Sp</th>
-                        <th class="text-center">S</th><th class="text-center">U</th><th class="text-center">N</th>
-                        <th class="text-center">PV</th><th class="text-right">Pkt</th>
+                        <th>#</th><th>Team</th><th class="text-center">MP</th>
+                        <th class="text-center">W</th><th class="text-center">D</th><th class="text-center">L</th>
+                        <th class="text-center">PR</th><th class="text-right">Pts</th>
                     </tr>
                 </thead>
                 <tbody>

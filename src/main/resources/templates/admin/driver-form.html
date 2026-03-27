@@ -1,41 +1,41 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Fahrer bearbeiten', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Edit Driver', ~{::section})}">
 <body>
 <section>
-    <h1 th:text="${driver.id != null ? 'Fahrer bearbeiten' : 'Neuer Fahrer'}"></h1>
+    <h1 th:text="${driver.id != null ? 'Edit Driver' : 'New Driver'}"></h1>
     <div class="card">
         <form th:action="@{/admin/drivers/save}" th:object="${driver}" method="post">
             <input type="hidden" th:field="*{id}">
             <div class="form-row">
                 <div class="form-group">
                     <label for="psnId">PSN ID</label>
-                    <input type="text" id="psnId" th:field="*{psnId}" placeholder="z.B. AHR_Hills_93" required>
+                    <input type="text" id="psnId" th:field="*{psnId}" placeholder="e.g. AHR_Hills_93" required>
                 </div>
                 <div class="form-group">
                     <label for="nickname">Nickname</label>
-                    <input type="text" id="nickname" th:field="*{nickname}" placeholder="z.B. AHR_Hills_93" required>
+                    <input type="text" id="nickname" th:field="*{nickname}" placeholder="e.g. AHR_Hills_93" required>
                 </div>
             </div>
             <div class="form-group">
                 <div class="form-check">
                     <input type="checkbox" id="active" th:field="*{active}">
-                    <label for="active">Aktiv</label>
+                    <label for="active">Active</label>
                 </div>
             </div>
             <div class="actions" style="margin-top: 16px;">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <a th:href="@{/admin/drivers}" class="btn btn-secondary">Abbrechen</a>
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a th:href="@{/admin/drivers}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>
 
     <!-- Season assignments (only for existing drivers) -->
     <div th:if="${driver.id != null}" class="card" style="margin-top: 16px;">
-        <h2>Saisonzuordnungen</h2>
+        <h2>Season Assignments</h2>
         <table th:if="${seasonDrivers != null && !seasonDrivers.isEmpty()}" style="margin-bottom: 16px;">
             <thead>
-                <tr><th>Saison</th><th>Team</th></tr>
+                <tr><th>Season</th><th>Team</th></tr>
             </thead>
             <tbody>
                 <tr th:each="sd : ${seasonDrivers}">
@@ -45,26 +45,26 @@
             </tbody>
         </table>
         <div th:if="${seasonDrivers == null || seasonDrivers.isEmpty()}" style="margin-bottom: 16px; color: #999;">
-            Noch keiner Saison zugeordnet.
+            Not assigned to any season yet.
         </div>
         <form th:action="@{/admin/drivers/{id}/assign(id=${driver.id})}" method="post">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="seasonId">Saison</label>
+                    <label for="seasonId">Season</label>
                     <select id="seasonId" name="seasonId" required>
-                        <option value="">-- Saison wählen --</option>
+                        <option value="">-- Select season --</option>
                         <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"></option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="teamId">Team</label>
                     <select id="teamId" name="teamId" required>
-                        <option value="">-- Team wählen --</option>
+                        <option value="">-- Select team --</option>
                         <option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.shortName + ' - ' + t.name}"></option>
                     </select>
                 </div>
             </div>
-            <button type="submit" class="btn btn-success btn-sm">Zuordnung speichern</button>
+            <button type="submit" class="btn btn-success btn-sm">Save Assignment</button>
         </form>
     </div>
 </section>

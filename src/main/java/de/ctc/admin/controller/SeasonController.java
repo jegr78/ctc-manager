@@ -2,6 +2,7 @@ package de.ctc.admin.controller;
 
 import de.ctc.domain.model.Season;
 import de.ctc.domain.repository.SeasonRepository;
+import de.ctc.domain.repository.TeamRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class SeasonController {
 
     private final SeasonRepository seasonRepository;
+    private final TeamRepository teamRepository;
 
     @GetMapping
     public String list(Model model) {
@@ -37,6 +39,7 @@ public class SeasonController {
     public String edit(@PathVariable UUID id, Model model) {
         var season = seasonRepository.findById(id).orElseThrow();
         model.addAttribute("season", season);
+        model.addAttribute("allTeams", teamRepository.findAll());
         return "admin/season-form";
     }
 
@@ -48,8 +51,33 @@ public class SeasonController {
         }
         seasonRepository.save(season);
         log.info("Saved season: {}", season.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Saison gespeichert: " + season.getName());
+        redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
         return "redirect:/admin/seasons";
+    }
+
+    @PostMapping("/{id}/add-team")
+    public String addTeam(@PathVariable UUID id, @RequestParam UUID teamId,
+                          RedirectAttributes redirectAttributes) {
+        var season = seasonRepository.findById(id).orElseThrow();
+        var team = teamRepository.findById(teamId).orElseThrow();
+        if (!season.getTeams().contains(team)) {
+            season.getTeams().add(team);
+            seasonRepository.save(season);
+            log.info("Added team {} to season {}", team.getShortName(), season.getName());
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "Team added: " + team.getShortName());
+        return "redirect:/admin/seasons/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/remove-team")
+    public String removeTeam(@PathVariable UUID id, @RequestParam UUID teamId,
+                             RedirectAttributes redirectAttributes) {
+        var season = seasonRepository.findById(id).orElseThrow();
+        season.getTeams().removeIf(t -> t.getId().equals(teamId));
+        seasonRepository.save(season);
+        log.info("Removed team {} from season {}", teamId, season.getName());
+        redirectAttributes.addFlashAttribute("successMessage", "Team removed");
+        return "redirect:/admin/seasons/" + id + "/edit";
     }
 
     @PostMapping("/{id}/delete")
@@ -57,7 +85,7 @@ public class SeasonController {
         var season = seasonRepository.findById(id).orElseThrow();
         seasonRepository.delete(season);
         log.info("Deleted season: {}", season.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Saison gelöscht: " + season.getName());
+        redirectAttributes.addFlashAttribute("successMessage", "Season deleted: " + season.getName());
         return "redirect:/admin/seasons";
     }
 }
