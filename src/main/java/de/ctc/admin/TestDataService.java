@@ -116,18 +116,22 @@ public class TestDataService {
         ));
         seasonRepository.save(s3b);
 
-        // Season 4 - 2026: CLR 1/2, TNR A/B/C, DTR, MRL, ART, AHR 1/2, VEZ, GXR, TCR
+        // Season 4 - 2026: all parents with subs + standalone parents
         var s4 = new Season("Season 4 - 2026");
         s4.setActive(true);
         s4.getTeams().addAll(List.of(
+                findParent.apply("CLR"),
                 findSub.apply("CLR 1"),
                 findSub.apply("CLR 2"),
+                findParent.apply("TNR"),
                 findSub.apply("TNR A"),
                 findSub.apply("TNR B"),
                 findSub.apply("TNR C"),
+                findParent.apply("P1R"),
                 findParent.apply("DTR"),
                 findParent.apply("MRL"),
                 findParent.apply("ART"),
+                findParent.apply("AHR"),
                 findSub.apply("AHR 1"),
                 findSub.apply("AHR 2"),
                 findParent.apply("VEZ"),
