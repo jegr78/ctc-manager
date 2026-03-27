@@ -47,6 +47,16 @@ class DriverControllerTest {
     }
 
     @Test
+    void shouldShowDriverDetail() throws Exception {
+        var driver = driverRepository.save(new Driver("detail_test_psn", "Detail Tester"));
+
+        mockMvc.perform(get("/admin/drivers/" + driver.getId()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/driver-detail"))
+                .andExpect(model().attributeExists("driver"));
+    }
+
+    @Test
     void shouldDeleteDriver() throws Exception {
         var driver = driverRepository.save(new Driver("delete_driver", "Delete Driver"));
 
@@ -56,13 +66,4 @@ class DriverControllerTest {
         assertFalse(driverRepository.findById(driver.getId()).isPresent());
     }
 
-    @Test
-    void shouldShowDriverDetail() throws Exception {
-        var driver = driverRepository.save(new Driver("detail_test_psn", "Detail Tester"));
-
-        mockMvc.perform(get("/admin/drivers/" + driver.getId()))
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/driver-detail"))
-                .andExpect(model().attributeExists("driver"));
-    }
 }

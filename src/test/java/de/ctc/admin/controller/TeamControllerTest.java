@@ -47,12 +47,12 @@ class TeamControllerTest {
 
     @Test
     void shouldShowTeamDetail() throws Exception {
-        var team = teamRepository.save(new Team("Detail Racing", "DTR"));
+        var team = teamRepository.save(new Team("Detail Racing", "DTL"));
 
         mockMvc.perform(get("/admin/teams/" + team.getId()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/team-detail"))
-                .andExpect(model().attributeExists("team"));
+                .andExpect(model().attributeExists("team", "seasons"));
     }
 
     @Test
