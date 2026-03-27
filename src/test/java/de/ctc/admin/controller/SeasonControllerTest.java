@@ -83,4 +83,14 @@ class SeasonControllerTest {
 
         assertFalse(seasonRepository.findById(season.getId()).isPresent());
     }
+
+    @Test
+    void shouldShowSeasonDetail() throws Exception {
+        var season = seasonRepository.save(new Season("Detail Test"));
+
+        mockMvc.perform(get("/admin/seasons/" + season.getId()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/season-detail"))
+                .andExpect(model().attributeExists("season"));
+    }
 }
