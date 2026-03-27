@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Playoffs', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Playoffs</h1>
+        <div class="actions">
+            <form method="get" th:action="@{/admin/playoffs}" style="display:inline-flex;gap:8px;align-items:center;">
+                <select name="seasonId" onchange="this.form.submit()">
+                    <option value="">-- Saison wählen --</option>
+                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
+                            th:selected="${s.id == selectedSeasonId}"></option>
+                </select>
+            </form>
+            <a th:if="${selectedSeasonId != null && playoff == null}"
+               th:href="@{/admin/playoffs/new(seasonId=${selectedSeasonId})}" class="btn btn-primary">+ Neues Playoff</a>
+            <a th:if="${playoff != null}"
+               th:href="@{/admin/playoffs/{id}/seed(id=${playoff.id})}" class="btn btn-secondary">Setzliste</a>
+        </div>
+    </div>
+
+    <div th:if="${bracket != null}" class="card">
+        <h2 th:text="${bracket.name}"></h2>
+        <div class="bracket">
+            <div th:each="round : ${bracket.rounds}" class="bracket-round">
+                <div class="bracket-round-label" th:text="${round.label}"></div>
+                <div th:each="matchup : ${round.matchups}" class="bracket-matchup">
+                    <a th:href="@{/admin/playoffs/matchup/{id}(id=${matchup.matchupId})}" class="bracket-matchup-link">
+                        <div class="bracket-team" th:classappend="${matchup.winnerShortName == matchup.team1ShortName ? 'winner' : ''}">
+                            <span class="bracket-team-name" th:text="${matchup.team1ShortName != null ? matchup.team1ShortName : 'TBD'}"></span>
+                            <span class="bracket-team-score" th:if="${matchup.team1ShortName != null}" th:text="${matchup.team1AggregatePoints}"></span>
+                        </div>
+                        <div class="bracket-team" th:classappend="${matchup.winnerShortName == matchup.team2ShortName ? 'winner' : ''}">
+                            <span class="bracket-team-name" th:text="${matchup.team2ShortName != null ? matchup.team2ShortName : 'TBD'}"></span>
+                            <span class="bracket-team-score" th:if="${matchup.team2ShortName != null}" th:text="${matchup.team2AggregatePoints}"></span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${bracket == null && selectedSeasonId != null}" class="card">
+        <div class="empty-state"><p>Noch kein Playoff für diese Saison angelegt.</p></div>
+    </div>
+    <div th:if="${selectedSeasonId == null}" class="card">
+        <div class="empty-state"><p>Bitte eine Saison wählen.</p></div>
+    </div>
+</section>
+</body>
+</html>

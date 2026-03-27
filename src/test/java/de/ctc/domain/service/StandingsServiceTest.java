@@ -58,7 +58,7 @@ class StandingsServiceTest {
         var matchday = new Matchday(season, "Spieltag 1", 1);
         var race = createRaceWithResults(matchday, tnr, p1r, 70, 46);
 
-        when(raceRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race));
+        when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of(race));
         when(teamRepository.findAll()).thenReturn(List.of(tnr, p1r));
 
         var standings = standingsService.calculateStandings(season.getId());
@@ -93,7 +93,7 @@ class StandingsServiceTest {
         var matchday = new Matchday(season, "Spieltag 1", 1);
         var race = createRaceWithResults(matchday, clr, tnr, 54, 54);
 
-        when(raceRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race));
+        when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of(race));
         when(teamRepository.findAll()).thenReturn(List.of(clr, tnr));
 
         var standings = standingsService.calculateStandings(season.getId());
@@ -114,7 +114,7 @@ class StandingsServiceTest {
         var race1 = createRaceWithResults(md1, tnr, p1r, 70, 46);
         var race2 = createRaceWithResults(md2, clr, p1r, 80, 40);
 
-        when(raceRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race1, race2));
+        when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of(race1, race2));
         when(teamRepository.findAll()).thenReturn(List.of(tnr, p1r, clr));
 
         var standings = standingsService.calculateStandings(season.getId());
@@ -130,7 +130,7 @@ class StandingsServiceTest {
         var matchday = new Matchday(season, "Spieltag 1", 1);
         var race = createRaceWithResults(matchday, tnr, p1r, 70, 46);
 
-        when(raceRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(race));
+        when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of(race));
         when(teamRepository.findAll()).thenReturn(List.of(tnr, p1r, clr));
 
         var standings = standingsService.calculateStandings(season.getId());

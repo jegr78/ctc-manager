@@ -39,6 +39,10 @@ public class Race {
 
     private String car;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "playoff_matchup_id")
+    private PlayoffMatchup playoffMatchup;
+
     @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<RaceResult> results = new ArrayList<>();

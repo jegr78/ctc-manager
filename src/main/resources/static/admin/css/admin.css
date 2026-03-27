@@ -262,6 +262,79 @@ select option {
 
 .text-dim { color: var(--text-dim); }
 
+/* Bracket */
+.bracket {
+    display: flex;
+    gap: 48px;
+    align-items: center;
+    padding: 24px 0;
+    overflow-x: auto;
+}
+
+.bracket-round {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 200px;
+}
+
+.bracket-round-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.bracket-matchup {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.bracket-matchup:hover {
+    border-color: var(--accent);
+}
+
+.bracket-matchup-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.bracket-team {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.bracket-team + .bracket-team {
+    border-top: 1px solid var(--border);
+}
+
+.bracket-team.winner {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.bracket-team-name {
+    flex: 1;
+}
+
+.bracket-team-score {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+    text-align: right;
+}
+
 .empty-state {
     text-align: center;
     padding: 48px;

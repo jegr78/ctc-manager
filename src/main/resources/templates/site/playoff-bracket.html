@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout('Playoffs ' + ${season.name}, ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title" th:text="${bracket.name}"></h2>
+        <div class="bracket">
+            <div th:each="round : ${bracket.rounds}" class="bracket-round">
+                <div class="bracket-round-label" th:text="${round.label}"></div>
+                <div th:each="matchup : ${round.matchups}" class="bracket-matchup">
+                    <div class="bracket-team" th:classappend="${matchup.winnerShortName == matchup.team1ShortName ? 'winner' : ''}">
+                        <span class="bracket-team-name" th:text="${matchup.team1ShortName != null ? matchup.team1ShortName : 'TBD'}"></span>
+                        <span class="bracket-team-score" th:if="${matchup.team1ShortName != null}" th:text="${matchup.team1AggregatePoints}"></span>
+                    </div>
+                    <div class="bracket-team" th:classappend="${matchup.winnerShortName == matchup.team2ShortName ? 'winner' : ''}">
+                        <span class="bracket-team-name" th:text="${matchup.team2ShortName != null ? matchup.team2ShortName : 'TBD'}"></span>
+                        <span class="bracket-team-score" th:if="${matchup.team2ShortName != null}" th:text="${matchup.team2AggregatePoints}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

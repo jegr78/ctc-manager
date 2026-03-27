@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Playoff erstellen', ~{::section})}">
+<body>
+<section>
+    <h1>Neues Playoff</h1>
+    <div class="card">
+        <form th:action="@{/admin/playoffs/save}" th:object="${playoffForm}" method="post">
+            <div class="form-group">
+                <label>Saison</label>
+                <select th:field="*{seasonId}" required>
+                    <option value="">-- Saison wählen --</option>
+                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"></option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" th:field="*{name}" required placeholder="z.B. CTC 5 Playoffs">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Anzahl Teams</label>
+                    <select th:field="*{numberOfTeams}">
+                        <option value="4">4 Teams (HF + Finale)</option>
+                        <option value="8" selected>8 Teams (VF + HF + Finale)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Legs pro Matchup</label>
+                    <select th:field="*{bestOfLegs}">
+                        <option value="1">1 (Single)</option>
+                        <option value="2" selected>2 (Hin- &amp; Rückspiel)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="actions" style="margin-top:16px;">
+                <button type="submit" class="btn btn-primary">Playoff erstellen</button>
+                <a th:href="@{/admin/playoffs}" class="btn btn-secondary">Abbrechen</a>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>
