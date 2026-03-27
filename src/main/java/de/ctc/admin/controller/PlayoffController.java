@@ -32,27 +32,27 @@ public class PlayoffController {
     private final MatchdayRepository matchdayRepository;
     private final RaceRepository raceRepository;
 
+    @Transactional(readOnly = true)
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
-        model.addAttribute("seasons", seasonRepository.findAll());
+        var allSeasons = seasonRepository.findAll();
+        model.addAttribute("seasons", allSeasons);
 
-        if (seasonId != null) {
-            model.addAttribute("selectedSeasonId", seasonId);
-            playoffRepository.findBySeasonId(seasonId).ifPresent(playoff -> {
+        UUID effectiveSeasonId = seasonId;
+        if (effectiveSeasonId == null) {
+            effectiveSeasonId = allSeasons.stream()
+                    .filter(Season::isActive)
+                    .map(Season::getId)
+                    .findFirst().orElse(null);
+        }
+
+        if (effectiveSeasonId != null) {
+            model.addAttribute("selectedSeasonId", effectiveSeasonId);
+            playoffRepository.findBySeasonId(effectiveSeasonId).ifPresent(playoff -> {
+                playoff.getSeasons().size(); // eagerly init
                 model.addAttribute("playoff", playoff);
                 model.addAttribute("bracket", playoffService.getBracketView(playoff.getId()));
             });
-        } else {
-            seasonRepository.findAll().stream()
-                    .filter(Season::isActive)
-                    .findFirst()
-                    .ifPresent(season -> {
-                        model.addAttribute("selectedSeasonId", season.getId());
-                        playoffRepository.findBySeasonId(season.getId()).ifPresent(playoff -> {
-                            model.addAttribute("playoff", playoff);
-                            model.addAttribute("bracket", playoffService.getBracketView(playoff.getId()));
-                        });
-                    });
         }
 
         return "admin/playoff-bracket";
@@ -84,6 +84,24 @@ public class PlayoffController {
         }
     }
 
+    @PostMapping("/{id}/add-season")
+    public String addSeason(@PathVariable UUID id, @RequestParam UUID seasonId,
+                            RedirectAttributes redirectAttributes) {
+        playoffService.addSeasonToPlayoff(id, seasonId);
+        redirectAttributes.addFlashAttribute("successMessage", "Saison verknüpft");
+        return "redirect:/admin/playoffs?seasonId=" +
+                playoffRepository.findById(id).orElseThrow().getSeason().getId();
+    }
+
+    @PostMapping("/{id}/remove-season")
+    public String removeSeason(@PathVariable UUID id, @RequestParam UUID seasonId,
+                               RedirectAttributes redirectAttributes) {
+        playoffService.removeSeasonFromPlayoff(id, seasonId);
+        redirectAttributes.addFlashAttribute("successMessage", "Saison entfernt");
+        return "redirect:/admin/playoffs?seasonId=" +
+                playoffRepository.findById(id).orElseThrow().getSeason().getId();
+    }
+
     @Transactional(readOnly = true)
     @GetMapping("/{id}/seed")
     public String seed(@PathVariable UUID id, Model model) {
@@ -95,8 +113,8 @@ public class PlayoffController {
                 .filter(r -> r.getRoundIndex() == 0)
                 .findFirst().orElseThrow();
 
-        // Get teams assigned to this season
-        var teams = playoff.getSeason().getTeams();
+        // Get teams from all linked seasons (+ main season)
+        var teams = playoffService.getPlayoffTeams(id);
 
         // Find already-seeded team IDs
         Set<UUID> seededTeamIds = firstRound.getMatchups().stream()

@@ -44,6 +44,38 @@
         </div>
     </div>
 
+    <!-- Verknüpfte Saisons (Team-Quellen für Playoffs) -->
+    <div th:if="${playoff != null}" class="card">
+        <h2>Verknüpfte Saisons (Team-Quellen)</h2>
+        <p class="text-dim" style="margin-bottom:12px;">Teams aus diesen Saisons stehen in der Setzliste zur Verfügung.</p>
+        <table th:if="${!playoff.seasons.isEmpty()}">
+            <thead><tr><th>Saison</th><th>Aktionen</th></tr></thead>
+            <tbody>
+                <tr th:each="s : ${playoff.seasons}">
+                    <td th:text="${s.name}"></td>
+                    <td>
+                        <form th:action="@{/admin/playoffs/{id}/remove-season(id=${playoff.id})}" method="post" style="display:inline">
+                            <input type="hidden" name="seasonId" th:value="${s.id}">
+                            <button type="submit" class="btn btn-danger btn-sm">Entfernen</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div th:if="${playoff.seasons.isEmpty()}" class="empty-state" style="padding:16px;">
+            <p>Keine zusätzlichen Saisons verknüpft. Teams kommen nur aus der Haupt-Saison.</p>
+        </div>
+        <form th:action="@{/admin/playoffs/{id}/add-season(id=${playoff.id})}" method="post"
+              style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+            <select name="seasonId" required>
+                <option value="">-- Saison verknüpfen --</option>
+                <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
+                        th:if="${s.id != playoff.season.id && !playoff.seasons.contains(s)}"></option>
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm">Hinzufügen</button>
+        </form>
+    </div>
+
     <div th:if="${bracket == null && selectedSeasonId != null}" class="card">
         <div class="empty-state"><p>Noch kein Playoff für diese Saison angelegt.</p></div>
     </div>

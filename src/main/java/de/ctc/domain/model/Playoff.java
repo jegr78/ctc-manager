@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "playoffs")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"season", "rounds"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"season", "seasons", "rounds"})
 public class Playoff {
 
     @Id
@@ -32,6 +32,13 @@ public class Playoff {
 
     @Column(name = "best_of_legs", nullable = false)
     private int bestOfLegs = 2;
+
+    @ManyToMany
+    @JoinTable(name = "playoff_seasons",
+            joinColumns = @JoinColumn(name = "playoff_id"),
+            inverseJoinColumns = @JoinColumn(name = "season_id"))
+    @OrderBy("name ASC")
+    private List<Season> seasons = new ArrayList<>();
 
     @OneToMany(mappedBy = "playoff", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("roundIndex ASC")

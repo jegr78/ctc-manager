@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.stream.*;
 
 @Slf4j
 @Service
@@ -80,6 +80,44 @@ public class PlayoffService {
         log.info("Created playoff '{}' for season '{}' with {} teams, {} rounds",
                 name, season.getName(), numberOfTeams, numRounds);
         return playoff;
+    }
+
+    @Transactional
+    public void addSeasonToPlayoff(UUID playoffId, UUID seasonId) {
+        Playoff playoff = playoffRepository.findById(playoffId)
+                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+        Season season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new IllegalArgumentException("Season not found: " + seasonId));
+        if (!playoff.getSeasons().contains(season)) {
+            playoff.getSeasons().add(season);
+            playoffRepository.save(playoff);
+        }
+    }
+
+    @Transactional
+    public void removeSeasonFromPlayoff(UUID playoffId, UUID seasonId) {
+        Playoff playoff = playoffRepository.findById(playoffId)
+                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+        playoff.getSeasons().removeIf(s -> s.getId().equals(seasonId));
+        playoffRepository.save(playoff);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Team> getPlayoffTeams(UUID playoffId) {
+        Playoff playoff = playoffRepository.findById(playoffId)
+                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+        // Collect teams from all linked seasons, deduplicate by ID
+        Map<UUID, Team> teamMap = new LinkedHashMap<>();
+        for (Season season : playoff.getSeasons()) {
+            for (Team team : season.getTeams()) {
+                teamMap.putIfAbsent(team.getId(), team);
+            }
+        }
+        // Also include teams from the main season
+        for (Team team : playoff.getSeason().getTeams()) {
+            teamMap.putIfAbsent(team.getId(), team);
+        }
+        return new ArrayList<>(teamMap.values());
     }
 
     @Transactional
