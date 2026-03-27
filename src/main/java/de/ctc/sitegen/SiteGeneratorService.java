@@ -1,10 +1,9 @@
 package de.ctc.sitegen;
 
+import de.ctc.domain.model.Race;
 import de.ctc.domain.model.Season;
-import de.ctc.domain.repository.MatchdayRepository;
-import de.ctc.domain.repository.RaceRepository;
-import de.ctc.domain.repository.SeasonRepository;
-import de.ctc.domain.repository.TeamRepository;
+import de.ctc.domain.repository.*;
+import de.ctc.sitegen.model.RaceView;
 import de.ctc.domain.service.DriverRankingService;
 import de.ctc.domain.service.StandingsService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -32,12 +32,16 @@ public class SiteGeneratorService {
     private final MatchdayRepository matchdayRepository;
     private final RaceRepository raceRepository;
     private final TeamRepository teamRepository;
+    private final SeasonDriverRepository seasonDriverRepository;
+    private final RaceResultRepository raceResultRepository;
     private final StandingsService standingsService;
     private final DriverRankingService driverRankingService;
 
+    @lombok.Setter
     @Value("${ctc.site.output-dir}")
     private String outputDir;
 
+    @Transactional(readOnly = true)
     public GenerationResult generate() {
         var result = new GenerationResult();
         Path outPath = Path.of(outputDir);
@@ -58,6 +62,7 @@ public class SiteGeneratorService {
                 generateDriverRanking(outPath, season, result);
                 generateMatchdays(outPath, season, result);
                 generateTeamProfiles(outPath, season, result);
+                generateDriverProfiles(outPath, season, result);
             }
 
             // Generate archive
@@ -88,7 +93,8 @@ public class SiteGeneratorService {
             if (!matchdays.isEmpty()) {
                 var lastMatchday = matchdays.getLast();
                 ctx.setVariable("lastMatchday", lastMatchday);
-                ctx.setVariable("lastMatchdayRaces", raceRepository.findByMatchdayId(lastMatchday.getId()));
+                ctx.setVariable("lastMatchdayRaces", raceRepository.findByMatchdayId(lastMatchday.getId()).stream()
+                        .map(r -> toRaceView(r, activeSeason)).toList());
             }
         }
 
@@ -125,7 +131,9 @@ public class SiteGeneratorService {
             var ctx = new Context(Locale.GERMAN);
             ctx.setVariable("season", season);
             ctx.setVariable("matchday", matchday);
-            ctx.setVariable("races", raceRepository.findByMatchdayId(matchday.getId()));
+            var raceViews = raceRepository.findByMatchdayId(matchday.getId()).stream()
+                    .map(r -> toRaceView(r, season)).toList();
+            ctx.setVariable("races", raceViews);
 
             var dir = outPath.resolve("season").resolve(slugify(season.getName())).resolve("matchday");
             Files.createDirectories(dir);
@@ -157,6 +165,33 @@ public class SiteGeneratorService {
         }
     }
 
+    private void generateDriverProfiles(Path outPath, Season season, GenerationResult result) throws IOException {
+        var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
+
+        for (var sd : seasonDrivers) {
+            var driver = sd.getDriver();
+            var team = sd.getTeam();
+            var results = raceResultRepository.findByDriverId(driver.getId()).stream()
+                    .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
+                    .toList();
+
+            var ctx = new Context(Locale.GERMAN);
+            ctx.setVariable("season", season);
+            ctx.setVariable("driver", driver);
+            ctx.setVariable("team", team);
+            ctx.setVariable("results", results);
+            ctx.setVariable("totalRaces", results.size());
+            ctx.setVariable("totalPoints", results.stream().mapToInt(r -> r.getPointsTotal()).sum());
+            ctx.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) results.stream().mapToInt(r -> r.getPointsTotal()).sum() / results.size());
+            ctx.setVariable("bestPosition", results.stream().mapToInt(r -> r.getPosition()).min().orElse(0));
+
+            var dir = outPath.resolve("season").resolve(slugify(season.getName())).resolve("driver");
+            Files.createDirectories(dir);
+            writeTemplate("site/driver-profile", ctx, dir.resolve(slugify(driver.getPsnId()) + ".html"));
+            result.incrementPages();
+        }
+    }
+
     private void generateArchive(Path outPath, List<Season> allSeasons, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.GERMAN);
         ctx.setVariable("seasons", allSeasons);
@@ -165,6 +200,11 @@ public class SiteGeneratorService {
     }
 
     private void writeTemplate(String templateName, Context context, Path outputFile) throws IOException {
+        // Calculate relative path to assets from the output file location
+        Path outRoot = Path.of(outputDir);
+        Path relative = outputFile.getParent().relativize(outRoot.resolve("assets"));
+        context.setVariable("assetsPath", relative.toString());
+
         String html = templateEngine.process(templateName, context);
         Files.writeString(outputFile, html);
         log.debug("Generated: {}", outputFile);
@@ -203,6 +243,30 @@ public class SiteGeneratorService {
                 return FileVisitResult.CONTINUE;
             }
         });
+    }
+
+    private RaceView toRaceView(Race race, Season season) {
+        var homeTeamId = race.getHomeTeam().getId();
+        var results = race.getResults().stream()
+                .map(r -> {
+                    var teamShortName = r.getDriver().getSeasonDrivers().stream()
+                            .filter(sd -> sd.getSeason().getId().equals(season.getId()))
+                            .map(sd -> sd.getTeam().getShortName())
+                            .findFirst().orElse("?");
+                    return new RaceView.ResultView(r.getDriver().getPsnId(), teamShortName,
+                            r.getPosition(), r.getQualiPosition(), r.isFastestLap(), r.getPointsTotal());
+                })
+                .toList();
+
+        int homeTotal = results.stream()
+                .filter(r -> r.getTeamShortName().equals(race.getHomeTeam().getShortName()))
+                .mapToInt(RaceView.ResultView::getPointsTotal).sum();
+        int awayTotal = results.stream()
+                .filter(r -> r.getTeamShortName().equals(race.getAwayTeam().getShortName()))
+                .mapToInt(RaceView.ResultView::getPointsTotal).sum();
+
+        return new RaceView(race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName(),
+                race.getTrack(), race.getCar(), homeTotal, awayTotal, !race.getResults().isEmpty(), results);
     }
 
     private String slugify(String input) {

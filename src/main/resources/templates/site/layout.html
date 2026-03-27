@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="'CTC - ' + ${title}">Community Team Cup</title>
-    <link rel="stylesheet" th:href="@{/assets/css/style.css}">
+    <link rel="stylesheet" th:href="${assetsPath != null ? assetsPath + '/css/style.css' : '/assets/css/style.css'}">
 </head>
 <body>
     <nav class="nav">
         <div class="nav-inner">
             <a href="index.html" class="nav-brand">
-                <img th:src="@{/assets/img/ctc-logo.svg}" alt="CTC" class="nav-logo" onerror="this.style.display='none'">
+                <img th:src="${assetsPath != null ? assetsPath + '/img/ctc-logo-white.png' : '/assets/img/ctc-logo-white.png'}" alt="CTC" class="nav-logo">
                 <span>COMMUNITY TEAM CUP</span>
             </a>
             <div class="nav-links">

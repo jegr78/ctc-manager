@@ -15,7 +15,7 @@
                         <td class="font-bold text-white" th:text="${s.name}"></td>
                         <td class="text-dim">
                             <span th:if="${s.startDate}" th:text="${s.startDate}"></span>
-                            <span th:if="${s.startDate && s.endDate}"> — </span>
+                            <span th:if="${s.startDate != null and s.endDate != null}"> — </span>
                             <span th:if="${s.endDate}" th:text="${s.endDate}"></span>
                         </td>
                         <td>

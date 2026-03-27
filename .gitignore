@@ -37,7 +37,10 @@ build/
 
 ### Skills ###
 .agents/
+.claude/skills/
+.junie/
 .playwright-cli/
+skills-lock.json
 
 ### OS ###
 .DS_Store
