@@ -25,7 +25,7 @@ public class Team {
     private String name;
 
     @NotBlank
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String shortName;
 
     private String logoUrl;

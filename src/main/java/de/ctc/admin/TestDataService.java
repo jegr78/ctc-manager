@@ -29,6 +29,7 @@ public class TestDataService {
             return;
         }
         var teams = seedTeams();
+        seedSubTeams(teams);
         seedSeasons(teams);
         seedDrivers();
         log.info("Seed data created: {} teams, {} seasons, {} drivers",
@@ -48,6 +49,27 @@ public class TestDataService {
                 new Team("VEZ Racing Team", "VEZ"),
                 new Team("The Neutrals Racing", "TNR")
         ));
+    }
+
+    private void seedSubTeams(List<Team> teams) {
+        var clr = teams.stream().filter(t -> t.getShortName().equals("CLR")).findFirst().orElseThrow();
+        teamRepository.save(new Team("CLR 1", "CLR", clr));
+        teamRepository.save(new Team("CLR 2", "CLR", clr));
+
+        var tnr = teams.stream().filter(t -> t.getShortName().equals("TNR")).findFirst().orElseThrow();
+        teamRepository.save(new Team("TNR A", "TNR", tnr));
+        teamRepository.save(new Team("TNR B", "TNR", tnr));
+        teamRepository.save(new Team("TNR C", "TNR", tnr));
+
+        var ahr = teams.stream().filter(t -> t.getShortName().equals("AHR")).findFirst().orElseThrow();
+        teamRepository.save(new Team("AHR 1", "AHR", ahr));
+        teamRepository.save(new Team("AHR 2", "AHR", ahr));
+
+        var p1r = teams.stream().filter(t -> t.getShortName().equals("P1R")).findFirst().orElseThrow();
+        teamRepository.save(new Team("P1Rx", "P1Rx", p1r));
+        teamRepository.save(new Team("P1R", "P1R", p1r));
+
+        log.info("Created sub-teams: CLR(2), TNR(3), AHR(2), P1R(2)");
     }
 
     private void seedSeasons(List<Team> teams) {
