@@ -1,0 +1,244 @@
+package de.ctc.dataimport;
+
+import de.ctc.domain.model.*;
+import de.ctc.domain.repository.*;
+import de.ctc.domain.service.ScoringService;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class CsvImportService {
+
+    private final DriverMatchingService driverMatchingService;
+    private final DriverRepository driverRepository;
+    private final TeamRepository teamRepository;
+    private final SeasonRepository seasonRepository;
+    private final SeasonDriverRepository seasonDriverRepository;
+    private final MatchdayRepository matchdayRepository;
+    private final RaceRepository raceRepository;
+    private final ScoringService scoringService;
+
+    public ImportPreview parseAndPreview(InputStream csvStream, ImportMetadata metadata) throws IOException {
+        var preview = new ImportPreview(metadata);
+        var lines = readCsvLines(csvStream);
+
+        for (int i = 0; i < lines.size(); i++) {
+            var fields = lines.get(i);
+            if (fields.length < 5) {
+                preview.addError("Zeile " + (i + 2) + ": Zu wenige Spalten (erwartet: Team, PSN ID, Position, Quali, FL)");
+                continue;
+            }
+
+            var teamShortName = fields[0].trim();
+            var psnId = fields[1].trim();
+            var position = parseIntSafe(fields[2].trim(), "Position", i + 2, preview);
+            var qualiPosition = parseIntSafe(fields[3].trim(), "Quali", i + 2, preview);
+            var fastestLap = parseBooleanSafe(fields[4].trim());
+
+            if (position == null || qualiPosition == null) continue;
+
+            var matchResult = driverMatchingService.findDriver(psnId);
+            preview.addRow(new ImportRow(teamShortName, psnId, position, qualiPosition, fastestLap, matchResult));
+        }
+
+        return preview;
+    }
+
+    @Transactional
+    public ImportResult executeImport(ImportPreview preview, Map<String, UUID> confirmedMatches,
+                                      Set<String> createNewDrivers) {
+        var result = new ImportResult();
+        var metadata = preview.getMetadata();
+
+        // Resolve season
+        var season = seasonRepository.findByName(metadata.seasonName()).orElseThrow(
+                () -> new IllegalArgumentException("Saison nicht gefunden: " + metadata.seasonName()));
+
+        // Resolve or create matchday
+        var matchday = findOrCreateMatchday(season, metadata);
+
+        // Process each row
+        Map<String, List<ImportRow>> byTeamPair = groupByTeamPair(preview.getRows());
+
+        for (var entry : byTeamPair.entrySet()) {
+            var teamParts = entry.getKey().split("\\|");
+            var homeTeam = teamRepository.findByShortName(teamParts[0]).orElse(null);
+            var awayTeam = teamParts.length > 1 ? teamRepository.findByShortName(teamParts[1]).orElse(null) : null;
+
+            if (homeTeam == null) {
+                result.addError("Team nicht gefunden: " + teamParts[0]);
+                continue;
+            }
+            if (awayTeam == null && teamParts.length > 1) {
+                result.addError("Team nicht gefunden: " + teamParts[1]);
+                continue;
+            }
+
+            // Create race
+            var race = new Race(matchday, homeTeam, awayTeam != null ? awayTeam : homeTeam);
+            race.setTrack(metadata.track());
+            race.setCar(metadata.car());
+
+            for (var row : entry.getValue()) {
+                var driver = resolveDriver(row, confirmedMatches, createNewDrivers, result);
+                if (driver == null) continue;
+
+                // Ensure SeasonDriver exists
+                ensureSeasonDriver(season, driver, row.teamShortName());
+
+                var raceResult = new RaceResult(race, driver, row.position(), row.qualiPosition(), row.fastestLap());
+                scoringService.calculatePoints(raceResult);
+                race.getResults().add(raceResult);
+            }
+
+            raceRepository.save(race);
+            result.addImportedRace(homeTeam.getShortName() +
+                    (awayTeam != null ? " vs " + awayTeam.getShortName() : ""));
+        }
+
+        log.info("Import completed: {} races, {} new drivers, {} errors",
+                result.getImportedRaces().size(), result.getNewDriversCreated(), result.getErrors().size());
+        return result;
+    }
+
+    private Driver resolveDriver(ImportRow row, Map<String, UUID> confirmedMatches,
+                                  Set<String> createNewDrivers, ImportResult result) {
+        var matchResult = row.matchResult();
+
+        if (matchResult.type() == DriverMatchingService.MatchType.EXACT) {
+            return matchResult.driver();
+        }
+
+        if (matchResult.type() == DriverMatchingService.MatchType.FUZZY) {
+            var confirmedId = confirmedMatches.get(row.psnId());
+            if (confirmedId != null) {
+                return driverRepository.findById(confirmedId).orElse(null);
+            }
+        }
+
+        if (createNewDrivers.contains(row.psnId()) || matchResult.type() == DriverMatchingService.MatchType.NONE) {
+            var newDriver = new Driver(row.psnId(), row.psnId());
+            driverRepository.save(newDriver);
+            result.incrementNewDrivers();
+            log.info("Created new driver: {}", row.psnId());
+            return newDriver;
+        }
+
+        result.addError("Fahrer konnte nicht zugeordnet werden: " + row.psnId());
+        return null;
+    }
+
+    private void ensureSeasonDriver(Season season, Driver driver, String teamShortName) {
+        var existing = seasonDriverRepository.findBySeasonIdAndDriverId(season.getId(), driver.getId());
+        if (existing.isEmpty()) {
+            var team = teamRepository.findByShortName(teamShortName).orElse(null);
+            if (team != null) {
+                seasonDriverRepository.save(new SeasonDriver(season, driver, team));
+                log.debug("Created SeasonDriver: {} -> {} ({})", driver.getPsnId(), teamShortName, season.getName());
+            }
+        }
+    }
+
+    private Matchday findOrCreateMatchday(Season season, ImportMetadata metadata) {
+        return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
+                .filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
+                .findFirst()
+                .orElseGet(() -> {
+                    var maxIndex = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
+                            .mapToInt(Matchday::getSortIndex)
+                            .max().orElse(0);
+                    var md = new Matchday(season, metadata.matchdayLabel(), maxIndex + 1);
+                    return matchdayRepository.save(md);
+                });
+    }
+
+    private Map<String, List<ImportRow>> groupByTeamPair(List<ImportRow> rows) {
+        var teams = rows.stream().map(ImportRow::teamShortName).distinct().toList();
+        if (teams.size() == 2) {
+            return Map.of(teams.get(0) + "|" + teams.get(1), rows);
+        }
+        // Fallback: group all under first team
+        return Map.of(teams.isEmpty() ? "UNKNOWN" : teams.getFirst(), rows);
+    }
+
+    private List<String[]> readCsvLines(InputStream stream) throws IOException {
+        var lines = new ArrayList<String[]>();
+        try (var reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            String line;
+            boolean firstLine = true;
+            while ((line = reader.readLine()) != null) {
+                if (firstLine) {
+                    firstLine = false;
+                    if (line.toLowerCase().contains("team") || line.toLowerCase().contains("psn")) {
+                        continue; // Skip header
+                    }
+                }
+                if (line.isBlank()) continue;
+                lines.add(line.split("[,;\\t]", -1));
+            }
+        }
+        return lines;
+    }
+
+    private Integer parseIntSafe(String value, String fieldName, int lineNumber, ImportPreview preview) {
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            preview.addError("Zeile " + lineNumber + ": Ungültiger Wert für " + fieldName + ": " + value);
+            return null;
+        }
+    }
+
+    private boolean parseBooleanSafe(String value) {
+        return "true".equalsIgnoreCase(value) || "1".equals(value)
+                || "yes".equalsIgnoreCase(value) || "ja".equalsIgnoreCase(value)
+                || "x".equalsIgnoreCase(value) || "✓".equals(value);
+    }
+
+    public record ImportMetadata(String seasonName, String matchdayLabel, String track, String car) {}
+
+    public record ImportRow(String teamShortName, String psnId, int position, int qualiPosition,
+                            boolean fastestLap, DriverMatchingService.MatchResult matchResult) {}
+
+    @Getter
+    public static class ImportPreview {
+        private final ImportMetadata metadata;
+        private final List<ImportRow> rows = new ArrayList<>();
+        private final List<String> errors = new ArrayList<>();
+
+        public ImportPreview(ImportMetadata metadata) {
+            this.metadata = metadata;
+        }
+
+        public void addRow(ImportRow row) { rows.add(row); }
+        public void addError(String error) { errors.add(error); }
+
+        public boolean hasErrors() { return !errors.isEmpty(); }
+        public boolean hasFuzzyMatches() { return rows.stream().anyMatch(r -> r.matchResult().needsConfirmation()); }
+        public boolean hasNewDrivers() { return rows.stream().anyMatch(r -> !r.matchResult().isMatch()); }
+    }
+
+    @Getter
+    public static class ImportResult {
+        private final List<String> importedRaces = new ArrayList<>();
+        private final List<String> errors = new ArrayList<>();
+        private int newDriversCreated;
+
+        public void addImportedRace(String race) { importedRaces.add(race); }
+        public void addError(String error) { errors.add(error); }
+        public void incrementNewDrivers() { newDriversCreated++; }
+        public boolean hasErrors() { return !errors.isEmpty(); }
+    }
+}
