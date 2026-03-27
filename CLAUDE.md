@@ -45,6 +45,20 @@ Deutsch für Kommunikation und Dokumentation. Code und Kommentare auf Englisch.
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
+## Git-Workflow
+
+- **Default-Branch:** `master`
+- **Tooling:** `gh` CLI für alle GitHub-Operationen (PRs, Issues, etc.)
+- **Branching:** Für jedes Feature/Fix einen eigenen Branch erstellen
+  - Naming: `feature/<kurzbeschreibung>` oder `fix/<kurzbeschreibung>`
+  - Branch von `master` abzweigen
+- **Pull Requests:** Änderungen immer über PRs in `master` mergen, kein direkter Push
+  - `gh pr create` zum Erstellen
+  - `gh pr merge --squash` zum Mergen (saubere History)
+  - Nach Merge lokalen Branch aufräumen: `git switch master && git pull && git branch -d <branch>`
+- **Commits:** Aussagekräftige deutsche Commit-Messages
+- **Vor PR:** Tests mit `./mvnw verify` sicherstellen
+
 ## Design Spec
 
 `docs/superpowers/specs/2026-03-26-ctc-manager-design.md`
