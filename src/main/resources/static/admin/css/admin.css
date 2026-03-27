@@ -381,3 +381,44 @@ select option {
     padding: 48px;
     color: var(--text-dim);
 }
+
+/* Detail views */
+.detail-link {
+    color: var(--text);
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.25);
+    transition: color 0.15s, border-color 0.15s;
+}
+.detail-link:hover {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.detail-fields {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 12px 24px;
+    margin-bottom: 32px;
+}
+.detail-fields .label {
+    color: var(--text-dim);
+    font-size: 13px;
+    text-transform: uppercase;
+}
+
+.detail-section h2 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.back-link {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 13px;
+    transition: color 0.15s;
+}
+.back-link:hover {
+    color: var(--accent);
+}
