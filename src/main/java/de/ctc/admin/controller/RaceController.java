@@ -26,6 +26,7 @@ public class RaceController {
     private final TeamRepository teamRepository;
     private final DriverRepository driverRepository;
     private final SeasonDriverRepository seasonDriverRepository;
+    private final MatchdayLineupRepository matchdayLineupRepository;
     private final ScoringService scoringService;
 
     @GetMapping
@@ -68,31 +69,12 @@ public class RaceController {
 
         // If no results yet, pre-populate with drivers from both teams
         if (form.getResults().isEmpty()) {
+            var matchdayId = race.getMatchday().getId();
             var seasonId = race.getMatchday().getSeason().getId();
-            var homeDrivers = seasonDriverRepository.findBySeasonIdAndTeamId(seasonId, race.getHomeTeam().getId());
-            var awayDrivers = seasonDriverRepository.findBySeasonIdAndTeamId(seasonId, race.getAwayTeam().getId());
 
-            int pos = 1;
-            for (var sd : homeDrivers) {
-                var rf = new RaceResultForm();
-                rf.setDriverId(sd.getDriver().getId());
-                rf.setDriverPsnId(sd.getDriver().getPsnId());
-                rf.setTeamShortName(sd.getTeam().getShortName());
-                rf.setPosition(pos);
-                rf.setQualiPosition(pos);
-                form.getResults().add(rf);
-                pos++;
-            }
-            for (var sd : awayDrivers) {
-                var rf = new RaceResultForm();
-                rf.setDriverId(sd.getDriver().getId());
-                rf.setDriverPsnId(sd.getDriver().getPsnId());
-                rf.setTeamShortName(sd.getTeam().getShortName());
-                rf.setPosition(pos);
-                rf.setQualiPosition(pos);
-                form.getResults().add(rf);
-                pos++;
-            }
+            // Try MatchdayLineup first (for sub-teams), fall back to SeasonDriver
+            populateDrivers(form, matchdayId, seasonId, race.getHomeTeam());
+            populateDrivers(form, matchdayId, seasonId, race.getAwayTeam());
         }
 
         model.addAttribute("raceForm", form);
@@ -168,6 +150,39 @@ public class RaceController {
         log.info("Deleted race: {} vs {}", race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName());
         redirectAttributes.addFlashAttribute("successMessage", "Race deleted");
         return "redirect:/admin/races?matchdayId=" + matchdayId;
+    }
+
+    private void populateDrivers(RaceForm form, UUID matchdayId, UUID seasonId, de.ctc.domain.model.Team team) {
+        var lineupDrivers = matchdayLineupRepository.findByMatchdayIdAndTeamId(matchdayId, team.getId());
+
+        if (!lineupDrivers.isEmpty()) {
+            // Sub-team: use matchday lineup
+            int pos = form.getResults().size() + 1;
+            for (var lineup : lineupDrivers) {
+                var rf = new RaceResultForm();
+                rf.setDriverId(lineup.getDriver().getId());
+                rf.setDriverPsnId(lineup.getDriver().getPsnId());
+                rf.setTeamShortName(team.getShortName());
+                rf.setPosition(pos);
+                rf.setQualiPosition(pos);
+                form.getResults().add(rf);
+                pos++;
+            }
+        } else {
+            // Standalone team: use season driver assignment
+            var seasonDrivers = seasonDriverRepository.findBySeasonIdAndTeamId(seasonId, team.getId());
+            int pos = form.getResults().size() + 1;
+            for (var sd : seasonDrivers) {
+                var rf = new RaceResultForm();
+                rf.setDriverId(sd.getDriver().getId());
+                rf.setDriverPsnId(sd.getDriver().getPsnId());
+                rf.setTeamShortName(team.getShortName());
+                rf.setPosition(pos);
+                rf.setQualiPosition(pos);
+                form.getResults().add(rf);
+                pos++;
+            }
+        }
     }
 
     private boolean isHomeTeamDriver(RaceResult result, Race race) {

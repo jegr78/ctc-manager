@@ -8,26 +8,41 @@
         <a th:href="@{/admin/teams/new}" class="btn btn-primary">+ New Team</a>
     </div>
     <div class="card">
-        <table th:if="${!teams.isEmpty()}">
+        <table th:if="${!parentTeams.isEmpty()}">
             <thead>
                 <tr><th>Short Name</th><th>Name</th><th>Logo</th><th>Actions</th></tr>
             </thead>
             <tbody>
-                <tr th:each="team : ${teams}">
-                    <td><strong th:text="${team.shortName}"></strong></td>
-                    <td th:text="${team.name}"></td>
-                    <td th:text="${team.logoUrl != null ? '✓' : '-'}"></td>
-                    <td class="actions">
-                        <a th:href="@{/admin/teams/{id}/edit(id=${team.id})}" class="btn btn-secondary btn-sm">Edit</a>
-                        <form th:action="@{/admin/teams/{id}/delete(id=${team.id})}" method="post" style="display:inline"
-                              onsubmit="return confirm('Really delete this team?')">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                        </form>
-                    </td>
-                </tr>
+                <th:block th:each="team : ${parentTeams}">
+                    <tr>
+                        <td><strong th:text="${team.shortName}"></strong></td>
+                        <td th:text="${team.name}"></td>
+                        <td th:text="${team.logoUrl != null ? '✓' : '-'}"></td>
+                        <td class="actions">
+                            <a th:href="@{/admin/teams/{id}/edit(id=${team.id})}" class="btn btn-secondary btn-sm">Edit</a>
+                            <form th:action="@{/admin/teams/{id}/delete(id=${team.id})}" method="post" style="display:inline"
+                                  onsubmit="return confirm('Really delete this team?')">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    <tr th:each="sub : ${team.subTeams}" style="opacity:0.8;">
+                        <td style="padding-left:32px;" th:text="'↳ ' + ${sub.shortName}"></td>
+                        <td th:text="${sub.name}"></td>
+                        <td th:text="${sub.logoUrl != null ? '✓' : '-'}"></td>
+                        <td class="actions">
+                            <a th:href="@{/admin/teams/{id}/edit(id=${sub.id})}" class="btn btn-secondary btn-sm">Edit</a>
+                            <form th:action="@{/admin/teams/{pid}/remove-sub-team(pid=${team.id})}" method="post" style="display:inline"
+                                  onsubmit="return confirm('Remove this sub-team?')">
+                                <input type="hidden" name="subTeamId" th:value="${sub.id}">
+                                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                </th:block>
             </tbody>
         </table>
-        <div th:if="${teams.isEmpty()}" class="empty-state"><p>No teams created yet.</p></div>
+        <div th:if="${parentTeams.isEmpty()}" class="empty-state"><p>No teams created yet.</p></div>
     </div>
 </section>
 </body>

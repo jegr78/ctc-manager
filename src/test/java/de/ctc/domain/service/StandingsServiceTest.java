@@ -1,6 +1,7 @@
 package de.ctc.domain.service;
 
 import de.ctc.domain.model.*;
+import de.ctc.domain.repository.MatchdayLineupRepository;
 import de.ctc.domain.repository.RaceRepository;
 import de.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +26,9 @@ class StandingsServiceTest {
 
     @Mock
     private TeamRepository teamRepository;
+
+    @Mock
+    private MatchdayLineupRepository matchdayLineupRepository;
 
     @Spy
     private ScoringService scoringService;

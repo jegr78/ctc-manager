@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Matchday Lineup', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1 th:text="'Lineup — ' + ${matchday.label}"></h1>
+        <a th:href="@{/admin/matchdays(seasonId=${matchday.season.id})}" class="btn btn-secondary">Back to Matchdays</a>
+    </div>
+
+    <div th:if="${parentTeamsWithSubs.isEmpty()}" class="card">
+        <div class="empty-state">
+            <p>No teams with sub-teams in this season. Lineup assignment is only needed for teams with sub-teams.</p>
+        </div>
+    </div>
+
+    <form th:if="${!parentTeamsWithSubs.isEmpty()}"
+          th:action="@{/admin/matchdays/{id}/lineup(id=${matchday.id})}" method="post">
+
+        <div th:each="parent : ${parentTeamsWithSubs}" class="card" style="margin-bottom:16px;">
+            <h2 th:text="${parent.shortName + ' — ' + parent.name}"></h2>
+            <table>
+                <thead>
+                    <tr><th>PSN ID</th><th>Nickname</th><th>Sub-Team</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="sd : ${parentDriverMap.get(parent)}">
+                        <td><strong th:text="${sd.driver.psnId}"></strong></td>
+                        <td th:text="${sd.driver.nickname}"></td>
+                        <td>
+                            <select th:name="'driver_' + ${sd.driver.id}">
+                                <option value="">-- Not assigned --</option>
+                                <option th:each="sub : ${parentSubTeamMap.get(parent)}"
+                                        th:value="${sub.id}"
+                                        th:text="${sub.shortName}"
+                                        th:selected="${driverLineupMap.containsKey(sd.driver.id) && driverLineupMap.get(sd.driver.id).team.id == sub.id}">
+                                </option>
+                            </select>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">Save Lineup</button>
+        </div>
+    </form>
+</section>
+</body>
+</html>

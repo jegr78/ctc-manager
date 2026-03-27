@@ -3,6 +3,7 @@ package de.ctc.domain.service;
 import de.ctc.domain.model.Race;
 import de.ctc.domain.model.RaceResult;
 import de.ctc.domain.model.Team;
+import de.ctc.domain.repository.MatchdayLineupRepository;
 import de.ctc.domain.repository.RaceRepository;
 import de.ctc.domain.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class StandingsService {
 
     private final RaceRepository raceRepository;
     private final TeamRepository teamRepository;
+    private final MatchdayLineupRepository matchdayLineupRepository;
     private final ScoringService scoringService;
 
     public List<TeamStanding> calculateStandings(UUID seasonId) {
@@ -88,9 +90,18 @@ public class StandingsService {
     }
 
     private boolean isDriverInTeam(RaceResult result, UUID teamId, Race race) {
-        UUID matchdaySeasonId = race.getMatchday().getSeason().getId();
+        UUID matchdayId = race.getMatchday().getId();
+        UUID seasonId = race.getMatchday().getSeason().getId();
+
+        // Check MatchdayLineup first (for sub-teams)
+        var lineup = matchdayLineupRepository.findByMatchdayIdAndDriverId(matchdayId, result.getDriver().getId());
+        if (lineup.isPresent()) {
+            return lineup.get().getTeam().getId().equals(teamId);
+        }
+
+        // Fallback: SeasonDriver (standalone teams without sub-teams)
         return result.getDriver().getSeasonDrivers().stream()
-                .anyMatch(sd -> sd.getSeason().getId().equals(matchdaySeasonId)
+                .anyMatch(sd -> sd.getSeason().getId().equals(seasonId)
                         && sd.getTeam().getId().equals(teamId));
     }
 

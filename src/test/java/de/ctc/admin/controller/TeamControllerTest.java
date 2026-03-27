@@ -29,7 +29,7 @@ class TeamControllerTest {
         mockMvc.perform(get("/admin/teams"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/teams"))
-                .andExpect(model().attributeExists("teams"));
+                .andExpect(model().attributeExists("parentTeams"));
     }
 
     @Test

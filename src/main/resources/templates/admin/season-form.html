@@ -43,12 +43,17 @@
         <h2>Teams in this Season</h2>
         <table th:if="${!season.teams.isEmpty()}">
             <thead>
-                <tr><th>Short Name</th><th>Name</th><th>Actions</th></tr>
+                <tr><th>Short Name</th><th>Name</th><th>Type</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <tr th:each="team : ${season.teams}">
                     <td><strong th:text="${team.shortName}"></strong></td>
                     <td th:text="${team.name}"></td>
+                    <td>
+                        <span th:if="${team.subTeam}" class="badge badge-inactive"
+                              th:text="'Sub → ' + ${team.parentOrSelf.shortName}"></span>
+                        <span th:unless="${team.subTeam}" class="badge badge-active">Parent</span>
+                    </td>
                     <td>
                         <form th:action="@{/admin/seasons/{id}/remove-team(id=${season.id})}" method="post" style="display:inline">
                             <input type="hidden" name="teamId" th:value="${team.id}">
@@ -66,7 +71,7 @@
             <select name="teamId" required>
                 <option value="">-- Add team --</option>
                 <option th:each="t : ${allTeams}" th:value="${t.id}"
-                        th:text="${t.shortName + ' — ' + t.name}"
+                        th:text="${t.shortName + ' — ' + t.name + (t.subTeam ? ' (Sub of ' + t.parentOrSelf.shortName + ')' : '')}"
                         th:if="${!season.teams.contains(t)}"></option>
             </select>
             <button type="submit" class="btn btn-primary btn-sm">Add</button>

@@ -23,7 +23,13 @@ public class TeamController {
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("teams", teamRepository.findAll());
+        // Show parent teams first, sub-teams grouped under parents
+        var allTeams = teamRepository.findAll();
+        var parentTeams = allTeams.stream()
+                .filter(t -> t.getParentTeam() == null)
+                .sorted((a, b) -> a.getShortName().compareToIgnoreCase(b.getShortName()))
+                .toList();
+        model.addAttribute("parentTeams", parentTeams);
         return "admin/teams";
     }
 
@@ -49,6 +55,30 @@ public class TeamController {
         log.info("Saved team: {}", team.getShortName());
         redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + team.getName());
         return "redirect:/admin/teams";
+    }
+
+    @PostMapping("/{id}/add-sub-team")
+    public String addSubTeam(@PathVariable UUID id,
+                             @RequestParam String subName,
+                             @RequestParam String subShortName,
+                             RedirectAttributes redirectAttributes) {
+        var parent = teamRepository.findById(id).orElseThrow();
+        var subTeam = new Team(subName, subShortName, parent);
+        teamRepository.save(subTeam);
+        log.info("Added sub-team {} to {}", subShortName, parent.getShortName());
+        redirectAttributes.addFlashAttribute("successMessage", "Sub-team added: " + subShortName);
+        return "redirect:/admin/teams/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/remove-sub-team")
+    public String removeSubTeam(@PathVariable UUID id,
+                                @RequestParam UUID subTeamId,
+                                RedirectAttributes redirectAttributes) {
+        var subTeam = teamRepository.findById(subTeamId).orElseThrow();
+        teamRepository.delete(subTeam);
+        log.info("Removed sub-team {}", subTeam.getShortName());
+        redirectAttributes.addFlashAttribute("successMessage", "Sub-team removed: " + subTeam.getShortName());
+        return "redirect:/admin/teams/" + id + "/edit";
     }
 
     @PostMapping("/{id}/delete")

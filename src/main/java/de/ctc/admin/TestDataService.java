@@ -29,6 +29,7 @@ public class TestDataService {
             return;
         }
         var teams = seedTeams();
+        seedSubTeams(teams);
         seedSeasons(teams);
         seedDrivers();
         log.info("Seed data created: {} teams, {} seasons, {} drivers",
@@ -45,26 +46,99 @@ public class TestDataService {
                 new Team("Medway Racing League", "MRL"),
                 new Team("Gen-X Racing", "GXR"),
                 new Team("Dream Team Racing", "DTR"),
-                new Team("VEZ Racing Team", "VEZ")
+                new Team("VEZ Racing Team", "VEZ"),
+                new Team("The Neutrals Racing", "TNR")
         ));
     }
 
-    private void seedSeasons(List<Team> teams) {
-        var seasonNames = List.of(
-                "Season 1 - 2023 - Group A",
-                "Season 1 - 2023 - Group B",
-                "Season 2 - 2024",
-                "Season 3 - 2025 - Group A",
-                "Season 3 - 2025 - Group B",
-                "Season 4 - 2026"
-        );
+    private void seedSubTeams(List<Team> teams) {
+        var clr = teams.stream().filter(t -> t.getShortName().equals("CLR")).findFirst().orElseThrow();
+        teamRepository.save(new Team("Community League Racing 1", "CLR 1", clr));
+        teamRepository.save(new Team("Community League Racing 2", "CLR 2", clr));
 
-        for (String name : seasonNames) {
+        var tnr = teams.stream().filter(t -> t.getShortName().equals("TNR")).findFirst().orElseThrow();
+        teamRepository.save(new Team("The Neutrals Racing A", "TNR A", tnr));
+        teamRepository.save(new Team("The Neutrals Racing B", "TNR B", tnr));
+        teamRepository.save(new Team("The Neutrals Racing C", "TNR C", tnr));
+
+        var ahr = teams.stream().filter(t -> t.getShortName().equals("AHR")).findFirst().orElseThrow();
+        teamRepository.save(new Team("Apex Hunter Racing 1", "AHR 1", ahr));
+        teamRepository.save(new Team("Apex Hunter Racing 2", "AHR 2", ahr));
+
+        var p1r = teams.stream().filter(t -> t.getShortName().equals("P1R")).findFirst().orElseThrow();
+        teamRepository.save(new Team("Project One Racing X", "P1Rx", p1r));
+        teamRepository.save(new Team("Project One Racing", "P1R", p1r));
+
+        log.info("Created sub-teams: CLR(2), TNR(3), AHR(2), P1R(2)");
+    }
+
+    private void seedSeasons(List<Team> parentTeams) {
+        var allTeams = teamRepository.findAll();
+
+        // Helper to find parent team (no parent) by shortName
+        java.util.function.Function<String, Team> findParent = (shortName) ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Parent team not found: " + shortName));
+
+        // Helper to find sub-team by shortName (has parent)
+        java.util.function.Function<String, Team> findSub = (shortName) ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Sub-team not found: " + shortName));
+
+        // Older seasons: all parent teams
+        for (String name : List.of("Season 1 - 2023 - Group A", "Season 1 - 2023 - Group B", "Season 2 - 2024")) {
             var season = new Season(name);
-            season.setActive(name.equals("Season 4 - 2026"));
-            season.getTeams().addAll(teams);
+            season.getTeams().addAll(parentTeams);
             seasonRepository.save(season);
         }
+
+        // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
+        var s3a = new Season("Season 3 - 2025 - Group A");
+        s3a.getTeams().addAll(List.of(
+                findSub.apply("P1Rx"),
+                findParent.apply("CLR"),
+                findParent.apply("MRL"),
+                findParent.apply("TCR"),
+                findParent.apply("GXR")
+        ));
+        seasonRepository.save(s3a);
+
+        // Season 3 - 2025 - Group B: P1R parent + P1R sub-team, AHR, DTR, ART
+        var s3b = new Season("Season 3 - 2025 - Group B");
+        s3b.getTeams().addAll(List.of(
+                findParent.apply("P1R"),
+                findSub.apply("P1R"),
+                findParent.apply("AHR"),
+                findParent.apply("DTR"),
+                findParent.apply("ART")
+        ));
+        seasonRepository.save(s3b);
+
+        // Season 4 - 2026: all parents with subs + standalone parents
+        var s4 = new Season("Season 4 - 2026");
+        s4.setActive(true);
+        s4.getTeams().addAll(List.of(
+                findParent.apply("CLR"),
+                findSub.apply("CLR 1"),
+                findSub.apply("CLR 2"),
+                findParent.apply("TNR"),
+                findSub.apply("TNR A"),
+                findSub.apply("TNR B"),
+                findSub.apply("TNR C"),
+                findParent.apply("P1R"),
+                findParent.apply("DTR"),
+                findParent.apply("MRL"),
+                findParent.apply("ART"),
+                findParent.apply("AHR"),
+                findSub.apply("AHR 1"),
+                findSub.apply("AHR 2"),
+                findParent.apply("VEZ"),
+                findParent.apply("GXR"),
+                findParent.apply("TCR")
+        ));
+        seasonRepository.save(s4);
     }
 
     private void seedDrivers() {
@@ -175,6 +249,29 @@ public class TestDataService {
         driver("Sonny061288", "SonnyStyle");
         driver("VRT_Incredibile", "G.Pancaldi");
         driver("VRT_Pastinacalda", "G. Mantineo");
+
+        // TNR
+        driver("Chaz__CA", "TNR_Chaz");
+        driver("D-man371D-man", "TNR_D-Man");
+        driver("Deekuhn", "TNR_Deaky");
+        driver("Dirty_Donavan", "TNR_SimDudeSA");
+        driver("Fjneet90", "TNR_FJ");
+        driver("Ghostriderz16173", "TNR_Ghostrider16");
+        driver("GMZ_Alfred", "TNR_Alfred");
+        driver("LEVITIUS", "TNR_LEVITIUS");
+        driver("Lightning_Lorry", "TNR_Lawrence");
+        driver("LotariRacing", "TNR_Lotari");
+        driver("Mo_Flavor", "TNR_Mo Flavor");
+        driver("Nutcap_1", "TNR_Nutcap");
+        driver("panicpotato17", "TNR_panicpotato");
+        driver("Phantom_Steve111", "TNR_Phantom");
+        driver("RayCarter", "TNR_RayCarter");
+        driver("Savvy-Unchained", "TNR_SAVVY");
+        driver("sir_maggs", "TNR_sir-maggs");
+        driver("TNR_Capt_Slow", "TNR_Capt_Slow");
+        driver("TNR_SHAWN46", "TNR_SHAWN46");
+        driver("TNR_Wipperman537", "TNR_Wipperman");
+        driver("VIVSRC370", "TNR_SRC_VIV");
     }
 
     private void driver(String psnId, String nickname) {
