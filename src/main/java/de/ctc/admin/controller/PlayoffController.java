@@ -10,6 +10,7 @@ import de.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -84,6 +85,7 @@ public class PlayoffController {
         }
     }
 
+    @Transactional(readOnly = true)
     @GetMapping("/{id}/seed")
     public String seed(@PathVariable UUID id, Model model) {
         var playoff = playoffRepository.findById(id).orElseThrow();
@@ -136,6 +138,7 @@ public class PlayoffController {
                 playoffRepository.findById(id).orElseThrow().getSeason().getId();
     }
 
+    @Transactional(readOnly = true)
     @GetMapping("/matchup/{matchupId}")
     public String matchupDetail(@PathVariable UUID matchupId, Model model) {
         var matchup = playoffMatchupRepository.findById(matchupId).orElseThrow();
