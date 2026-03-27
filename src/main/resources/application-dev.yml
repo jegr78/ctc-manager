@@ -17,3 +17,7 @@ spring:
     show-sql: true
   flyway:
     locations: classpath:db/migration
+  web:
+    resources:
+      cache:
+        period: 0

@@ -29,7 +29,7 @@
                 <tr th:each="standing, iter : ${standings}">
                     <td th:text="${iter.count}"></td>
                     <td><strong th:text="${standing.team.shortName}"></strong>
-                        <span style="color:#999" th:text="' ' + ${standing.team.name}"></span></td>
+                        <span class="text-dim" th:text="' ' + ${standing.team.name}"></span></td>
                     <td th:text="${standing.played}"></td>
                     <td th:text="${standing.wins}"></td>
                     <td th:text="${standing.draws}"></td>

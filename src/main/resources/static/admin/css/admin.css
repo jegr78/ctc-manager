@@ -163,6 +163,21 @@ tr:hover { background: var(--bg-hover); }
     color: var(--text-label);
 }
 
+select {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg-input);
+    color: var(--white);
+    cursor: pointer;
+}
+
+select option {
+    background: var(--bg-input);
+    color: var(--white);
+}
+
 .form-group input,
 .form-group select,
 .form-group textarea {
@@ -244,6 +259,8 @@ tr:hover { background: var(--bg-hover); }
 .score-win { color: #66bb6a; }
 .score-draw { color: var(--text-dim); }
 .score-loss { color: #ef5350; }
+
+.text-dim { color: var(--text-dim); }
 
 .empty-state {
     text-align: center;
