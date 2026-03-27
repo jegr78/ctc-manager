@@ -86,10 +86,23 @@
 
     <!-- Determine winner -->
     <div th:if="${matchup.winner == null && !legs.isEmpty()}" class="card">
-        <form th:action="@{/admin/playoffs/matchup/{id}/determine-winner(id=${matchup.id})}" method="post"
-              onsubmit="return confirm('Gewinner endgültig festlegen?')">
-            <button type="submit" class="btn btn-success">Gewinner ermitteln</button>
-        </form>
+        <h2>Gewinner festlegen</h2>
+        <div class="actions" style="gap:16px;flex-wrap:wrap;align-items:center;">
+            <form th:action="@{/admin/playoffs/matchup/{id}/determine-winner(id=${matchup.id})}" method="post"
+                  onsubmit="return confirm('Gewinner automatisch nach Punkten ermitteln?')">
+                <button type="submit" class="btn btn-success">Automatisch ermitteln</button>
+            </form>
+            <span class="text-dim">oder manuell:</span>
+            <form th:action="@{/admin/playoffs/matchup/{id}/set-winner(id=${matchup.id})}" method="post"
+                  onsubmit="return confirm('Gewinner manuell festlegen?')">
+                <div class="actions" style="gap:8px;">
+                    <button type="submit" name="winnerTeamId" th:value="${matchup.team1.id}"
+                            class="btn btn-secondary" th:text="${matchup.team1.shortName}"></button>
+                    <button type="submit" name="winnerTeamId" th:value="${matchup.team2.id}"
+                            class="btn btn-secondary" th:text="${matchup.team2.shortName}"></button>
+                </div>
+            </form>
+        </div>
     </div>
 </section>
 </body>

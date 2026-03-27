@@ -187,4 +187,21 @@ public class PlayoffController {
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
     }
+
+    @PostMapping("/matchup/{matchupId}/set-winner")
+    public String setWinnerManually(@PathVariable UUID matchupId,
+                                    @RequestParam UUID winnerTeamId,
+                                    RedirectAttributes redirectAttributes) {
+        try {
+            playoffService.setWinnerManually(matchupId, winnerTeamId);
+            var matchup = playoffMatchupRepository.findById(matchupId).orElseThrow();
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Gewinner manuell festgelegt: " + matchup.getWinner().getShortName());
+            return "redirect:/admin/playoffs?seasonId=" +
+                    matchup.getRound().getPlayoff().getSeason().getId();
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Fehler: " + e.getMessage());
+            return "redirect:/admin/playoffs/matchup/" + matchupId;
+        }
+    }
 }
