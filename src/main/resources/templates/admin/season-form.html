@@ -1,49 +1,49 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Saison bearbeiten', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Edit Season', ~{::section})}">
 <body>
 <section>
-    <h1 th:text="${season.id != null ? 'Saison bearbeiten' : 'Neue Saison'}"></h1>
+    <h1 th:text="${season.id != null ? 'Edit Season' : 'New Season'}"></h1>
     <div class="card">
         <form th:action="@{/admin/seasons/save}" th:object="${season}" method="post">
             <input type="hidden" th:field="*{id}">
             <div class="form-row">
                 <div class="form-group">
                     <label for="name">Name</label>
-                    <input type="text" id="name" th:field="*{name}" placeholder="z.B. 2026" required>
+                    <input type="text" id="name" th:field="*{name}" placeholder="e.g. 2026" required>
                     <small th:if="${#fields.hasErrors('name')}" th:errors="*{name}" style="color:red"></small>
                 </div>
                 <div class="form-group">
                     <label>&nbsp;</label>
                     <div class="form-check">
                         <input type="checkbox" id="active" th:field="*{active}">
-                        <label for="active">Aktive Saison</label>
+                        <label for="active">Active Season</label>
                     </div>
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="startDate">Startdatum</label>
+                    <label for="startDate">Start Date</label>
                     <input type="date" id="startDate" th:field="*{startDate}">
                 </div>
                 <div class="form-group">
-                    <label for="endDate">Enddatum</label>
+                    <label for="endDate">End Date</label>
                     <input type="date" id="endDate" th:field="*{endDate}">
                 </div>
             </div>
             <div class="actions" style="margin-top: 16px;">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <a th:href="@{/admin/seasons}" class="btn btn-secondary">Abbrechen</a>
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a th:href="@{/admin/seasons}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>
 
-    <!-- Team-Zuordnung (nur beim Bearbeiten) -->
+    <!-- Team assignment (only when editing) -->
     <div th:if="${season.id != null}" class="card">
-        <h2>Teams in dieser Saison</h2>
+        <h2>Teams in this Season</h2>
         <table th:if="${!season.teams.isEmpty()}">
             <thead>
-                <tr><th>Kürzel</th><th>Name</th><th>Aktionen</th></tr>
+                <tr><th>Short Name</th><th>Name</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <tr th:each="team : ${season.teams}">
@@ -52,24 +52,24 @@
                     <td>
                         <form th:action="@{/admin/seasons/{id}/remove-team(id=${season.id})}" method="post" style="display:inline">
                             <input type="hidden" name="teamId" th:value="${team.id}">
-                            <button type="submit" class="btn btn-danger btn-sm">Entfernen</button>
+                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
                         </form>
                     </td>
                 </tr>
             </tbody>
         </table>
         <div th:if="${season.teams.isEmpty()}" class="empty-state" style="padding:24px;">
-            <p>Noch keine Teams zugeordnet.</p>
+            <p>No teams assigned yet.</p>
         </div>
         <form th:action="@{/admin/seasons/{id}/add-team(id=${season.id})}" method="post"
               style="margin-top:16px;display:flex;gap:8px;align-items:center;">
             <select name="teamId" required>
-                <option value="">-- Team hinzufügen --</option>
+                <option value="">-- Add team --</option>
                 <option th:each="t : ${allTeams}" th:value="${t.id}"
                         th:text="${t.shortName + ' — ' + t.name}"
                         th:if="${!season.teams.contains(t)}"></option>
             </select>
-            <button type="submit" class="btn btn-primary btn-sm">Hinzufügen</button>
+            <button type="submit" class="btn btn-primary btn-sm">Add</button>
         </form>
     </div>
 </section>

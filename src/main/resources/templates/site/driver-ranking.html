@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{site/layout :: layout('Fahrerwertung ' + ${season.name}, ~{::section})}">
+      th:replace="~{site/layout :: layout('Driver Ranking ' + ${season.name}, ~{::section})}">
 <body>
 <section>
     <div class="section">
-        <h2 class="section-title" th:text="'Fahrerwertung — ' + ${season.name}"></h2>
+        <h2 class="section-title" th:text="'Driver Ranking — ' + ${season.name}"></h2>
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
-                        <th>#</th><th>Fahrer</th><th>Team</th>
-                        <th class="text-center">Rennen</th><th class="text-center">Beste</th>
-                        <th class="text-center">Schnitt</th><th class="text-right">Punkte</th>
+                        <th>#</th><th>Driver</th><th>Team</th>
+                        <th class="text-center">Races</th><th class="text-center">Best</th>
+                        <th class="text-center">Avg</th><th class="text-right">Points</th>
                     </tr>
                 </thead>
                 <tbody>

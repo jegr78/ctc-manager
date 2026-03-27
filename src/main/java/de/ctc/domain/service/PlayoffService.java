@@ -170,7 +170,7 @@ public class PlayoffService {
         // #1: Explicit tie handling — ties are not silently resolved
         if (team1Total == team2Total) {
             throw new IllegalStateException(
-                    "Gleichstand (%d:%d) — Gewinner muss manuell festgelegt werden".formatted(team1Total, team2Total));
+                    "Tie (%d:%d) — Winner must be set manually".formatted(team1Total, team2Total));
         }
 
         Team winner = team1Total > team2Total ? matchup.getTeam1() : matchup.getTeam2();

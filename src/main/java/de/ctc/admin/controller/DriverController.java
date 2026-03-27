@@ -57,7 +57,7 @@ public class DriverController {
         }
         driverRepository.save(driver);
         log.info("Saved driver: {}", driver.getPsnId());
-        redirectAttributes.addFlashAttribute("successMessage", "Fahrer gespeichert: " + driver.getPsnId());
+        redirectAttributes.addFlashAttribute("successMessage", "Driver saved: " + driver.getPsnId());
         return "redirect:/admin/drivers";
     }
 
@@ -90,7 +90,7 @@ public class DriverController {
         var driver = driverRepository.findById(id).orElseThrow();
         driverRepository.delete(driver);
         log.info("Deleted driver: {}", driver.getPsnId());
-        redirectAttributes.addFlashAttribute("successMessage", "Fahrer gelöscht: " + driver.getPsnId());
+        redirectAttributes.addFlashAttribute("successMessage", "Driver deleted: " + driver.getPsnId());
         return "redirect:/admin/drivers";
     }
 }

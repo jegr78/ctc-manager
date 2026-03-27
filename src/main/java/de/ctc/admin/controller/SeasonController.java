@@ -51,7 +51,7 @@ public class SeasonController {
         }
         seasonRepository.save(season);
         log.info("Saved season: {}", season.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Saison gespeichert: " + season.getName());
+        redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
         return "redirect:/admin/seasons";
     }
 
@@ -65,7 +65,7 @@ public class SeasonController {
             seasonRepository.save(season);
             log.info("Added team {} to season {}", team.getShortName(), season.getName());
         }
-        redirectAttributes.addFlashAttribute("successMessage", "Team hinzugefügt: " + team.getShortName());
+        redirectAttributes.addFlashAttribute("successMessage", "Team added: " + team.getShortName());
         return "redirect:/admin/seasons/" + id + "/edit";
     }
 
@@ -76,7 +76,7 @@ public class SeasonController {
         season.getTeams().removeIf(t -> t.getId().equals(teamId));
         seasonRepository.save(season);
         log.info("Removed team {} from season {}", teamId, season.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Team entfernt");
+        redirectAttributes.addFlashAttribute("successMessage", "Team removed");
         return "redirect:/admin/seasons/" + id + "/edit";
     }
 
@@ -85,7 +85,7 @@ public class SeasonController {
         var season = seasonRepository.findById(id).orElseThrow();
         seasonRepository.delete(season);
         log.info("Deleted season: {}", season.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Saison gelöscht: " + season.getName());
+        redirectAttributes.addFlashAttribute("successMessage", "Season deleted: " + season.getName());
         return "redirect:/admin/seasons";
     }
 }

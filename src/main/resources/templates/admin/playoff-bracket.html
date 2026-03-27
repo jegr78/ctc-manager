@@ -8,15 +8,15 @@
         <div class="actions">
             <form method="get" th:action="@{/admin/playoffs}" style="display:inline-flex;gap:8px;align-items:center;">
                 <select name="seasonId" onchange="this.form.submit()">
-                    <option value="">-- Saison wählen --</option>
+                    <option value="">-- Select season --</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
                             th:selected="${s.id == selectedSeasonId}"></option>
                 </select>
             </form>
             <a th:if="${selectedSeasonId != null && playoff == null}"
-               th:href="@{/admin/playoffs/new(seasonId=${selectedSeasonId})}" class="btn btn-primary">+ Neues Playoff</a>
+               th:href="@{/admin/playoffs/new(seasonId=${selectedSeasonId})}" class="btn btn-primary">+ New Playoff</a>
             <a th:if="${playoff != null}"
-               th:href="@{/admin/playoffs/{id}/seed(id=${playoff.id})}" class="btn btn-secondary">Setzliste</a>
+               th:href="@{/admin/playoffs/{id}/seed(id=${playoff.id})}" class="btn btn-secondary">Seeding</a>
         </div>
     </div>
 
@@ -44,11 +44,11 @@
         </div>
     </div>
 
-    <!-- Runden-Konfiguration (Legs pro Runde) -->
+    <!-- Round Configuration (Legs per round) -->
     <div th:if="${playoff != null}" class="card">
-        <h2>Runden-Konfiguration</h2>
+        <h2>Round Configuration</h2>
         <table>
-            <thead><tr><th>Runde</th><th>Legs</th><th></th></tr></thead>
+            <thead><tr><th>Round</th><th>Legs</th><th></th></tr></thead>
             <tbody>
                 <tr th:each="round : ${playoff.rounds}">
                     <td th:text="${round.label}"></td>
@@ -57,53 +57,53 @@
                               style="display:inline-flex;gap:8px;align-items:center;">
                             <select name="bestOfLegs" onchange="this.form.submit()">
                                 <option value="1" th:selected="${round.bestOfLegs == 1}">1 (Single)</option>
-                                <option value="2" th:selected="${round.bestOfLegs == 2}">2 (Hin- &amp; Rückspiel)</option>
+                                <option value="2" th:selected="${round.bestOfLegs == 2}">2 (Home &amp; Away)</option>
                             </select>
                         </form>
                     </td>
-                    <td class="text-dim" th:text="${round.matchups.size() + ' Begegnungen'}"></td>
+                    <td class="text-dim" th:text="${round.matchups.size() + ' Matchups'}"></td>
                 </tr>
             </tbody>
         </table>
     </div>
 
-    <!-- Verknüpfte Saisons (Team-Quellen für Playoffs) -->
+    <!-- Linked Seasons (Team sources for Playoffs) -->
     <div th:if="${playoff != null}" class="card">
-        <h2>Verknüpfte Saisons (Team-Quellen)</h2>
-        <p class="text-dim" style="margin-bottom:12px;">Teams aus diesen Saisons stehen in der Setzliste zur Verfügung.</p>
+        <h2>Linked Seasons (Team Sources)</h2>
+        <p class="text-dim" style="margin-bottom:12px;">Teams from these seasons are available in the seeding.</p>
         <table th:if="${!playoff.seasons.isEmpty()}">
-            <thead><tr><th>Saison</th><th>Aktionen</th></tr></thead>
+            <thead><tr><th>Season</th><th>Actions</th></tr></thead>
             <tbody>
                 <tr th:each="s : ${playoff.seasons}">
                     <td th:text="${s.name}"></td>
                     <td>
                         <form th:action="@{/admin/playoffs/{id}/remove-season(id=${playoff.id})}" method="post" style="display:inline">
                             <input type="hidden" name="seasonId" th:value="${s.id}">
-                            <button type="submit" class="btn btn-danger btn-sm">Entfernen</button>
+                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
                         </form>
                     </td>
                 </tr>
             </tbody>
         </table>
         <div th:if="${playoff.seasons.isEmpty()}" class="empty-state" style="padding:16px;">
-            <p>Keine zusätzlichen Saisons verknüpft. Teams kommen nur aus der Haupt-Saison.</p>
+            <p>No additional seasons linked. Teams come only from the main season.</p>
         </div>
         <form th:action="@{/admin/playoffs/{id}/add-season(id=${playoff.id})}" method="post"
               style="margin-top:12px;display:flex;gap:8px;align-items:center;">
             <select name="seasonId" required>
-                <option value="">-- Saison verknüpfen --</option>
+                <option value="">-- Link season --</option>
                 <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
                         th:if="${s.id != playoff.season.id && !playoff.seasons.contains(s)}"></option>
             </select>
-            <button type="submit" class="btn btn-primary btn-sm">Hinzufügen</button>
+            <button type="submit" class="btn btn-primary btn-sm">Add</button>
         </form>
     </div>
 
     <div th:if="${bracket == null && selectedSeasonId != null}" class="card">
-        <div class="empty-state"><p>Noch kein Playoff für diese Saison angelegt.</p></div>
+        <div class="empty-state"><p>No playoff created for this season yet.</p></div>
     </div>
     <div th:if="${selectedSeasonId == null}" class="card">
-        <div class="empty-state"><p>Bitte eine Saison wählen.</p></div>
+        <div class="empty-state"><p>Please select a season.</p></div>
     </div>
 </section>
 </body>

@@ -1,36 +1,36 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Fahrer', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Drivers', ~{::section})}">
 <body>
 <section>
     <div class="toolbar">
-        <h1>Fahrer</h1>
-        <a th:href="@{/admin/drivers/new}" class="btn btn-primary">+ Neuer Fahrer</a>
+        <h1>Drivers</h1>
+        <a th:href="@{/admin/drivers/new}" class="btn btn-primary">+ New Driver</a>
     </div>
     <div class="card">
         <table th:if="${!drivers.isEmpty()}">
             <thead>
-                <tr><th>PSN ID</th><th>Nickname</th><th>Status</th><th>Aktionen</th></tr>
+                <tr><th>PSN ID</th><th>Nickname</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <tr th:each="driver : ${drivers}">
                     <td><strong th:text="${driver.psnId}"></strong></td>
                     <td th:text="${driver.nickname}"></td>
                     <td>
-                        <span th:if="${driver.active}" class="badge badge-active">Aktiv</span>
-                        <span th:unless="${driver.active}" class="badge badge-inactive">Inaktiv</span>
+                        <span th:if="${driver.active}" class="badge badge-active">Active</span>
+                        <span th:unless="${driver.active}" class="badge badge-inactive">Inactive</span>
                     </td>
                     <td class="actions">
-                        <a th:href="@{/admin/drivers/{id}/edit(id=${driver.id})}" class="btn btn-secondary btn-sm">Bearbeiten</a>
+                        <a th:href="@{/admin/drivers/{id}/edit(id=${driver.id})}" class="btn btn-secondary btn-sm">Edit</a>
                         <form th:action="@{/admin/drivers/{id}/delete(id=${driver.id})}" method="post" style="display:inline"
-                              onsubmit="return confirm('Fahrer wirklich löschen?')">
-                            <button type="submit" class="btn btn-danger btn-sm">Löschen</button>
+                              onsubmit="return confirm('Really delete this driver?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>
                     </td>
                 </tr>
             </tbody>
         </table>
-        <div th:if="${drivers.isEmpty()}" class="empty-state"><p>Noch keine Fahrer angelegt.</p></div>
+        <div th:if="${drivers.isEmpty()}" class="empty-state"><p>No drivers created yet.</p></div>
     </div>
 </section>
 </body>

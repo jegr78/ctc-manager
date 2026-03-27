@@ -10,13 +10,13 @@
             <span th:text="${matchup.team2 != null ? matchup.team2.shortName : 'TBD'}"></span>
         </h1>
         <div class="actions">
-            <a th:href="@{/admin/playoffs(seasonId=${playoff.season.id})}" class="btn btn-secondary">Zurück zum Bracket</a>
+            <a th:href="@{/admin/playoffs(seasonId=${playoff.season.id})}" class="btn btn-secondary">Back to Bracket</a>
         </div>
     </div>
 
     <!-- Winner badge -->
     <div th:if="${matchup.winner != null}" class="alert alert-success">
-        Gewinner: <strong th:text="${matchup.winner.shortName}"></strong>
+        Winner: <strong th:text="${matchup.winner.shortName}"></strong>
     </div>
 
     <!-- Legs table -->
@@ -26,13 +26,13 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>Strecke</th>
-                    <th>Auto</th>
+                    <th>Track</th>
+                    <th>Car</th>
                     <th th:text="${matchup.team1 != null ? matchup.team1.shortName : 'Team 1'}"></th>
                     <th></th>
                     <th th:text="${matchup.team2 != null ? matchup.team2.shortName : 'Team 2'}"></th>
-                    <th>Ergebnisse</th>
-                    <th>Aktionen</th>
+                    <th>Results</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -42,51 +42,51 @@
                     <td th:text="${leg.car ?: '-'}"></td>
                     <td colspan="3" style="text-align:center;">
                         <span th:if="${leg.results.isEmpty()}" class="text-dim">—</span>
-                        <span th:unless="${leg.results.isEmpty()}" th:text="${leg.results.size() + ' Fahrer'}"></span>
+                        <span th:unless="${leg.results.isEmpty()}" th:text="${leg.results.size() + ' Drivers'}"></span>
                     </td>
                     <td>
-                        <span th:if="${leg.results.isEmpty()}" class="badge badge-inactive">Offen</span>
+                        <span th:if="${leg.results.isEmpty()}" class="badge badge-inactive">Open</span>
                         <span th:unless="${leg.results.isEmpty()}" class="badge badge-active"
-                              th:text="${leg.results.size() + ' Ergebnisse'}"></span>
+                              th:text="${leg.results.size() + ' Results'}"></span>
                     </td>
                     <td class="actions">
-                        <a th:href="@{/admin/races/{id}/results(id=${leg.id})}" class="btn btn-secondary btn-sm">Ergebnisse</a>
+                        <a th:href="@{/admin/races/{id}/results(id=${leg.id})}" class="btn btn-secondary btn-sm">Results</a>
                     </td>
                 </tr>
             </tbody>
         </table>
-        <div th:if="${legs.isEmpty()}" class="empty-state"><p>Noch keine Legs angelegt.</p></div>
+        <div th:if="${legs.isEmpty()}" class="empty-state"><p>No legs created yet.</p></div>
     </div>
 
     <!-- Add leg form (only if max legs not reached) -->
     <div th:if="${matchup.winner == null && matchup.team1 != null && matchup.team2 != null && legs.size() < matchup.round.bestOfLegs}" class="card">
-        <h2>Neues Leg hinzufügen</h2>
+        <h2>Add New Leg</h2>
         <form th:action="@{/admin/playoffs/matchup/{id}/add-race(id=${matchup.id})}" method="post">
             <div class="form-row">
                 <div class="form-group">
-                    <label>Strecke</label>
-                    <input type="text" name="track" placeholder="z.B. Tsukuba Circuit">
+                    <label>Track</label>
+                    <input type="text" name="track" placeholder="e.g. Tsukuba Circuit">
                 </div>
                 <div class="form-group">
-                    <label>Auto</label>
-                    <input type="text" name="car" placeholder="z.B. Mazda RX-Vision GT3">
+                    <label>Car</label>
+                    <input type="text" name="car" placeholder="e.g. Mazda RX-Vision GT3">
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary">Leg hinzufügen</button>
+            <button type="submit" class="btn btn-primary">Add Leg</button>
         </form>
     </div>
 
     <!-- Determine winner -->
     <div th:if="${matchup.winner == null && !legs.isEmpty()}" class="card">
-        <h2>Gewinner festlegen</h2>
+        <h2>Set Winner</h2>
         <div class="actions" style="gap:16px;flex-wrap:wrap;align-items:center;">
             <form th:action="@{/admin/playoffs/matchup/{id}/determine-winner(id=${matchup.id})}" method="post"
-                  onsubmit="return confirm('Gewinner automatisch nach Punkten ermitteln?')">
-                <button type="submit" class="btn btn-success">Automatisch ermitteln</button>
+                  onsubmit="return confirm('Auto-determine winner by points?')">
+                <button type="submit" class="btn btn-success">Auto-determine</button>
             </form>
-            <span class="text-dim">oder manuell:</span>
+            <span class="text-dim">or manually:</span>
             <form th:action="@{/admin/playoffs/matchup/{id}/set-winner(id=${matchup.id})}" method="post"
-                  onsubmit="return confirm('Gewinner manuell festlegen?')">
+                  onsubmit="return confirm('Set winner manually?')">
                 <div class="actions" style="gap:8px;">
                     <button type="submit" name="winnerTeamId" th:value="${matchup.team1.id}"
                             class="btn btn-secondary" th:text="${matchup.team1.shortName}"></button>

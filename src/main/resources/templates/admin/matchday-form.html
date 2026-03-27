@@ -1,40 +1,40 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Spieltag bearbeiten', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Edit Matchday', ~{::section})}">
 <body>
 <section>
-    <h1 th:text="${matchday.id != null ? 'Spieltag bearbeiten' : 'Neuer Spieltag'}"></h1>
+    <h1 th:text="${matchday.id != null ? 'Edit Matchday' : 'New Matchday'}"></h1>
     <div class="card">
         <form th:action="@{/admin/matchdays/save}" th:object="${matchday}" method="post">
             <input type="hidden" th:field="*{id}">
             <input type="hidden" name="seasonId" th:value="${matchday.season != null ? matchday.season.id : ''}">
             <div class="form-group" th:if="${matchday.season == null}">
-                <label for="seasonSelect">Saison</label>
+                <label for="seasonSelect">Season</label>
                 <select id="seasonSelect" name="seasonId" required>
-                    <option value="">-- Saison wählen --</option>
+                    <option value="">-- Select season --</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"></option>
                 </select>
             </div>
             <div th:if="${matchday.season != null}" style="margin-bottom: 16px; color: #666;">
-                Saison: <strong th:text="${matchday.season.name}"></strong>
+                Season: <strong th:text="${matchday.season.name}"></strong>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="label">Bezeichnung</label>
-                    <input type="text" id="label" th:field="*{label}" placeholder="z.B. Spieltag 1, Playoff Halbfinale" required>
+                    <label for="label">Label</label>
+                    <input type="text" id="label" th:field="*{label}" placeholder="e.g. Matchday 1, Playoff Semifinal" required>
                 </div>
                 <div class="form-group">
-                    <label for="sortIndex">Sortierung</label>
+                    <label for="sortIndex">Sort Order</label>
                     <input type="number" id="sortIndex" th:field="*{sortIndex}" min="0" required>
                 </div>
             </div>
             <div class="form-group">
-                <label for="date">Datum</label>
+                <label for="date">Date</label>
                 <input type="date" id="date" th:field="*{date}">
             </div>
             <div class="actions" style="margin-top: 16px;">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <a th:href="@{/admin/matchdays}" class="btn btn-secondary">Abbrechen</a>
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a th:href="@{/admin/matchdays}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>

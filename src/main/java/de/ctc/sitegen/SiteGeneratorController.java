@@ -27,10 +27,10 @@ public class SiteGeneratorController {
 
         if (result.hasErrors()) {
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Generierung mit Fehlern: " + String.join(", ", result.getErrors()));
+                    "Generation with errors: " + String.join(", ", result.getErrors()));
         } else {
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Seite erfolgreich generiert: " + result.getPagesGenerated() + " Seiten");
+                    "Site generated successfully: " + result.getPagesGenerated() + " pages");
         }
 
         return "redirect:/admin/generate";

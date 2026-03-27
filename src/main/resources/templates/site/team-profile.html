@@ -7,16 +7,16 @@
         <img th:if="${team.logoUrl}" th:src="${team.logoUrl}" class="team-logo" th:alt="${team.shortName}">
         <div>
             <h1 class="text-white" th:text="${team.shortName + ' — ' + team.name}"></h1>
-            <p class="text-dim" th:text="'Saison ' + ${season.name}"></p>
+            <p class="text-dim" th:text="'Season ' + ${season.name}"></p>
         </div>
     </div>
 
     <div class="section" th:if="${standing != null}">
-        <h2 class="section-title">Bilanz</h2>
+        <h2 class="section-title">Record</h2>
         <div class="table-wrap">
             <table>
                 <thead>
-                    <tr><th>Sp</th><th>S</th><th>U</th><th>N</th><th>PV</th><th class="text-right">Pkt</th></tr>
+                    <tr><th>MP</th><th>W</th><th>D</th><th>L</th><th>PR</th><th class="text-right">Pts</th></tr>
                 </thead>
                 <tbody>
                     <tr>

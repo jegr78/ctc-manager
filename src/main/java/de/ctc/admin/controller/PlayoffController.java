@@ -77,11 +77,11 @@ public class PlayoffController {
             playoff.setStartDate(form.getStartDate());
             playoff.setEndDate(form.getEndDate());
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Playoff erstellt: " + playoff.getName());
+                    "Playoff created: " + playoff.getName());
             return "redirect:/admin/playoffs?seasonId=" + form.getSeasonId();
         } catch (Exception e) {
             log.error("Error creating playoff", e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Fehler: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/new?seasonId=" + form.getSeasonId();
         }
     }
@@ -103,7 +103,7 @@ public class PlayoffController {
     public String addSeason(@PathVariable UUID id, @RequestParam UUID seasonId,
                             RedirectAttributes redirectAttributes) {
         playoffService.addSeasonToPlayoff(id, seasonId);
-        redirectAttributes.addFlashAttribute("successMessage", "Saison verknüpft");
+        redirectAttributes.addFlashAttribute("successMessage", "Season linked");
         return "redirect:/admin/playoffs?seasonId=" +
                 playoffRepository.findById(id).orElseThrow().getSeason().getId();
     }
@@ -112,7 +112,7 @@ public class PlayoffController {
     public String removeSeason(@PathVariable UUID id, @RequestParam UUID seasonId,
                                RedirectAttributes redirectAttributes) {
         playoffService.removeSeasonFromPlayoff(id, seasonId);
-        redirectAttributes.addFlashAttribute("successMessage", "Saison entfernt");
+        redirectAttributes.addFlashAttribute("successMessage", "Season removed");
         return "redirect:/admin/playoffs?seasonId=" +
                 playoffRepository.findById(id).orElseThrow().getSeason().getId();
     }
@@ -160,7 +160,7 @@ public class PlayoffController {
                 playoffService.seedTeam(entry.getMatchupId(), entry.getTeamId(), entry.getSlot());
             }
         }
-        redirectAttributes.addFlashAttribute("successMessage", "Setzliste gespeichert");
+        redirectAttributes.addFlashAttribute("successMessage", "Seeding saved");
         return "redirect:/admin/playoffs?seasonId=" +
                 playoffRepository.findById(id).orElseThrow().getSeason().getId();
     }
@@ -185,7 +185,7 @@ public class PlayoffController {
                           RedirectAttributes redirectAttributes) {
         var matchup = playoffMatchupRepository.findById(matchupId).orElseThrow();
         if (!matchup.isReady()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Beide Teams muessen gesetzt sein");
+            redirectAttributes.addFlashAttribute("errorMessage", "Both teams must be set");
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
 
@@ -193,7 +193,7 @@ public class PlayoffController {
         int maxLegs = matchup.getRound().getBestOfLegs();
         if (existingLegs >= maxLegs) {
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Maximale Leg-Anzahl erreicht (" + maxLegs + ")");
+                    "Maximum number of legs reached (" + maxLegs + ")");
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
 
@@ -210,7 +210,7 @@ public class PlayoffController {
         race.setPlayoffMatchup(matchup);
         raceRepository.save(race);
 
-        redirectAttributes.addFlashAttribute("successMessage", "Leg hinzugefuegt");
+        redirectAttributes.addFlashAttribute("successMessage", "Leg added");
         return "redirect:/admin/playoffs/matchup/" + matchupId;
     }
 
@@ -220,11 +220,11 @@ public class PlayoffController {
             playoffService.determineWinner(matchupId);
             var matchup = playoffMatchupRepository.findById(matchupId).orElseThrow();
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Gewinner: " + matchup.getWinner().getShortName());
+                    "Winner: " + matchup.getWinner().getShortName());
             return "redirect:/admin/playoffs?seasonId=" +
                     matchup.getRound().getPlayoff().getSeason().getId();
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Fehler: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
     }
@@ -237,11 +237,11 @@ public class PlayoffController {
             playoffService.setWinnerManually(matchupId, winnerTeamId);
             var matchup = playoffMatchupRepository.findById(matchupId).orElseThrow();
             redirectAttributes.addFlashAttribute("successMessage",
-                    "Gewinner manuell festgelegt: " + matchup.getWinner().getShortName());
+                    "Winner set manually: " + matchup.getWinner().getShortName());
             return "redirect:/admin/playoffs?seasonId=" +
                     matchup.getRound().getPlayoff().getSeason().getId();
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Fehler: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
     }

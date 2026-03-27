@@ -6,38 +6,38 @@
     <h1>CSV Import</h1>
     <div class="card">
         <p style="color:#666; margin-bottom:16px;">
-            CSV-Format: <code>Team, PSN ID, Position, Quali, FL</code>
-            (Trennzeichen: Komma, Semikolon oder Tab)
+            CSV format: <code>Team, PSN ID, Position, Quali, FL</code>
+            (Separator: comma, semicolon or tab)
         </p>
         <form th:action="@{/admin/import/preview}" method="post" enctype="multipart/form-data">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="seasonName">Saison</label>
+                    <label for="seasonName">Season</label>
                     <select id="seasonName" name="seasonName" required>
-                        <option value="">-- Saison wählen --</option>
+                        <option value="">-- Select season --</option>
                         <option th:each="s : ${seasons}" th:value="${s.name}" th:text="${s.name}"></option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="matchdayLabel">Spieltag</label>
-                    <input type="text" id="matchdayLabel" name="matchdayLabel" placeholder="z.B. Spieltag 1" required>
+                    <label for="matchdayLabel">Matchday</label>
+                    <input type="text" id="matchdayLabel" name="matchdayLabel" placeholder="e.g. Matchday 1" required>
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label for="track">Strecke</label>
+                    <label for="track">Track</label>
                     <input type="text" id="track" name="track" placeholder="Optional">
                 </div>
                 <div class="form-group">
-                    <label for="car">Auto</label>
+                    <label for="car">Car</label>
                     <input type="text" id="car" name="car" placeholder="Optional">
                 </div>
             </div>
             <div class="form-group">
-                <label for="file">CSV-Datei</label>
+                <label for="file">CSV File</label>
                 <input type="file" id="file" name="file" accept=".csv,.txt,.tsv" required>
             </div>
-            <button type="submit" class="btn btn-primary">Vorschau</button>
+            <button type="submit" class="btn btn-primary">Preview</button>
         </form>
     </div>
 </section>

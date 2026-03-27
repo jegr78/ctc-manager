@@ -44,7 +44,7 @@ public class CsvImportController {
         } catch (Exception e) {
             log.error("Error parsing CSV", e);
             model.addAttribute("seasons", seasonRepository.findAll());
-            model.addAttribute("errorMessage", "Fehler beim Lesen der CSV: " + e.getMessage());
+            model.addAttribute("errorMessage", "Error reading CSV: " + e.getMessage());
             return "admin/import";
         }
     }
@@ -82,15 +82,15 @@ public class CsvImportController {
 
             if (result.hasErrors()) {
                 redirectAttributes.addFlashAttribute("errorMessage",
-                        "Import mit Fehlern: " + String.join(", ", result.getErrors()));
+                        "Import with errors: " + String.join(", ", result.getErrors()));
             } else {
                 redirectAttributes.addFlashAttribute("successMessage",
-                        "Import erfolgreich: " + result.getImportedRaces().size() + " Rennen, " +
-                        result.getNewDriversCreated() + " neue Fahrer");
+                        "Import successful: " + result.getImportedRaces().size() + " races, " +
+                        result.getNewDriversCreated() + " new drivers");
             }
         } catch (Exception e) {
             log.error("Error executing import", e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Fehler beim Import: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Import error: " + e.getMessage());
         }
         return "redirect:/admin/import";
     }

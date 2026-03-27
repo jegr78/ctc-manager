@@ -72,7 +72,7 @@ public class MatchdayController {
         matchday.setSeason(seasonRepository.findById(seasonId).orElseThrow());
         matchdayRepository.save(matchday);
         log.info("Saved matchday: {} (season {})", matchday.getLabel(), matchday.getSeason().getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Spieltag gespeichert: " + matchday.getLabel());
+        redirectAttributes.addFlashAttribute("successMessage", "Matchday saved: " + matchday.getLabel());
         return "redirect:/admin/matchdays?seasonId=" + seasonId;
     }
 
@@ -82,7 +82,7 @@ public class MatchdayController {
         var seasonId = matchday.getSeason().getId();
         matchdayRepository.delete(matchday);
         log.info("Deleted matchday: {}", matchday.getLabel());
-        redirectAttributes.addFlashAttribute("successMessage", "Spieltag gelöscht: " + matchday.getLabel());
+        redirectAttributes.addFlashAttribute("successMessage", "Matchday deleted: " + matchday.getLabel());
         return "redirect:/admin/matchdays?seasonId=" + seasonId;
     }
 }

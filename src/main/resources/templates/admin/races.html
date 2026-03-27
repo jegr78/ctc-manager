@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Rennen', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Races', ~{::section})}">
 <body>
 <section>
     <div class="toolbar">
         <h1>
-            <span th:if="${matchday != null}" th:text="'Rennen — ' + ${matchday.label} + ' (' + ${matchday.season.name} + ')'">Rennen</span>
-            <span th:if="${matchday == null}">Alle Rennen</span>
+            <span th:if="${matchday != null}" th:text="'Races — ' + ${matchday.label} + ' (' + ${matchday.season.name} + ')'">Races</span>
+            <span th:if="${matchday == null}">All Races</span>
         </h1>
-        <a th:href="@{/admin/races/new(matchdayId=${matchday?.id})}" class="btn btn-primary">+ Neues Rennen</a>
+        <a th:href="@{/admin/races/new(matchdayId=${matchday?.id})}" class="btn btn-primary">+ New Race</a>
     </div>
     <div class="card">
         <table th:if="${!races.isEmpty()}">
             <thead>
-                <tr><th>Home</th><th></th><th>Away</th><th>Strecke</th><th>Auto</th><th>Ergebnisse</th><th>Aktionen</th></tr>
+                <tr><th>Home</th><th></th><th>Away</th><th>Track</th><th>Car</th><th>Results</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <tr th:each="race : ${races}">
@@ -23,22 +23,22 @@
                     <td th:text="${race.track ?: '-'}"></td>
                     <td th:text="${race.car ?: '-'}"></td>
                     <td>
-                        <span th:if="${race.results.isEmpty()}" class="badge badge-inactive">Offen</span>
+                        <span th:if="${race.results.isEmpty()}" class="badge badge-inactive">Open</span>
                         <span th:unless="${race.results.isEmpty()}" class="badge badge-active"
-                              th:text="${race.results.size() + ' Ergebnisse'}"></span>
+                              th:text="${race.results.size() + ' Results'}"></span>
                     </td>
                     <td class="actions">
-                        <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-success btn-sm">Ergebnisse</a>
-                        <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-secondary btn-sm">Bearbeiten</a>
+                        <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-success btn-sm">Results</a>
+                        <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-secondary btn-sm">Edit</a>
                         <form th:action="@{/admin/races/{id}/delete(id=${race.id})}" method="post" style="display:inline"
-                              onsubmit="return confirm('Rennen wirklich löschen?')">
-                            <button type="submit" class="btn btn-danger btn-sm">Löschen</button>
+                              onsubmit="return confirm('Really delete this race?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>
                     </td>
                 </tr>
             </tbody>
         </table>
-        <div th:if="${races.isEmpty()}" class="empty-state"><p>Noch keine Rennen angelegt.</p></div>
+        <div th:if="${races.isEmpty()}" class="empty-state"><p>No races created yet.</p></div>
     </div>
 </section>
 </body>

@@ -78,7 +78,7 @@ public class SiteGeneratorService {
             log.info("Site generation complete: {} pages", result.getPagesGenerated());
         } catch (IOException e) {
             log.error("Site generation failed", e);
-            result.addError("Generierung fehlgeschlagen: " + e.getMessage());
+            result.addError("Generation failed: " + e.getMessage());
         }
 
         return result;
