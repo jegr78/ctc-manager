@@ -6,8 +6,11 @@
     <div class="toolbar">
         <h1>
             <span th:text="${matchup.round.label}"></span> —
-            <span th:text="${matchup.team1 != null ? matchup.team1.shortName : 'TBD'}"></span> vs
-            <span th:text="${matchup.team2 != null ? matchup.team2.shortName : 'TBD'}"></span>
+            <a th:if="${matchup.team1 != null}" th:href="@{/admin/teams/{id}(id=${matchup.team1.id})}" class="detail-link" th:text="${matchup.team1.shortName}"></a>
+            <span th:if="${matchup.team1 == null}">TBD</span>
+            vs
+            <a th:if="${matchup.team2 != null}" th:href="@{/admin/teams/{id}(id=${matchup.team2.id})}" class="detail-link" th:text="${matchup.team2.shortName}"></a>
+            <span th:if="${matchup.team2 == null}">TBD</span>
         </h1>
         <div class="actions">
             <a th:href="@{/admin/playoffs(seasonId=${playoff.season.id})}" class="btn btn-secondary">Back to Bracket</a>
@@ -50,6 +53,7 @@
                               th:text="${leg.results.size() + ' Results'}"></span>
                     </td>
                     <td class="actions">
+                        <a th:href="@{/admin/races/{id}(id=${leg.id})}" class="detail-link" style="margin-right:8px;">View</a>
                         <a th:href="@{/admin/races/{id}/results(id=${leg.id})}" class="btn btn-secondary btn-sm">Results</a>
                     </td>
                 </tr>

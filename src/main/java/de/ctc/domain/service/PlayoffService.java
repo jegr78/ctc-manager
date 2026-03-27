@@ -261,6 +261,7 @@ public class PlayoffService {
 
     private MatchupView buildMatchupView(PlayoffMatchup matchup, List<Race> legs, UUID seasonId) {
         UUID team1Id = matchup.getTeam1() != null ? matchup.getTeam1().getId() : null;
+        UUID team2Id = matchup.getTeam2() != null ? matchup.getTeam2().getId() : null;
 
         int team1Aggregate = 0;
         int team2Aggregate = 0;
@@ -290,6 +291,8 @@ public class PlayoffService {
         return new MatchupView(
                 matchup.getId(),
                 matchup.getBracketPosition(),
+                team1Id,
+                team2Id,
                 matchup.getTeam1() != null ? matchup.getTeam1().getShortName() : null,
                 matchup.getTeam2() != null ? matchup.getTeam2().getShortName() : null,
                 matchup.getTeam1() != null ? matchup.getTeam1().getLogoUrl() : null,
@@ -326,6 +329,8 @@ public class PlayoffService {
     public static class MatchupView {
         private final UUID matchupId;
         private final int bracketPosition;
+        private final UUID team1Id;
+        private final UUID team2Id;
         private final String team1ShortName;
         private final String team2ShortName;
         private final String team1LogoUrl;

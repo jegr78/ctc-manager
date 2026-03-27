@@ -30,11 +30,17 @@
                 <div th:each="matchup : ${round.matchups}" class="bracket-matchup">
                     <a th:href="@{/admin/playoffs/matchup/{id}(id=${matchup.matchupId})}" class="bracket-matchup-link">
                         <div class="bracket-team" th:classappend="${matchup.team1IsWinner ? 'winner' : ''}">
-                            <span class="bracket-team-name" th:text="${matchup.team1ShortName != null ? matchup.team1ShortName : 'TBD'}"></span>
+                            <span class="bracket-team-name">
+                                <a th:if="${matchup.team1Id != null}" th:href="@{/admin/teams/{id}(id=${matchup.team1Id})}" class="detail-link" th:text="${matchup.team1ShortName}"></a>
+                                <span th:if="${matchup.team1Id == null}">TBD</span>
+                            </span>
                             <span class="bracket-team-score" th:if="${matchup.team1ShortName != null}" th:text="${matchup.team1AggregatePoints}"></span>
                         </div>
                         <div class="bracket-team" th:classappend="${matchup.team2IsWinner ? 'winner' : ''}">
-                            <span class="bracket-team-name" th:text="${matchup.team2ShortName != null ? matchup.team2ShortName : 'TBD'}"></span>
+                            <span class="bracket-team-name">
+                                <a th:if="${matchup.team2Id != null}" th:href="@{/admin/teams/{id}(id=${matchup.team2Id})}" class="detail-link" th:text="${matchup.team2ShortName}"></a>
+                                <span th:if="${matchup.team2Id == null}">TBD</span>
+                            </span>
                             <span class="bracket-team-score" th:if="${matchup.team2ShortName != null}" th:text="${matchup.team2AggregatePoints}"></span>
                         </div>
                     </a>
