@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "races")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "results"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "results", "playoffMatchup"})
 public class Race {
 
     @Id

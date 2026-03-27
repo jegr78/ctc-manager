@@ -9,11 +9,11 @@
             <div th:each="round : ${bracket.rounds}" class="bracket-round">
                 <div class="bracket-round-label" th:text="${round.label}"></div>
                 <div th:each="matchup : ${round.matchups}" class="bracket-matchup">
-                    <div class="bracket-team" th:classappend="${matchup.winnerShortName == matchup.team1ShortName ? 'winner' : ''}">
+                    <div class="bracket-team" th:classappend="${matchup.team1IsWinner ? 'winner' : ''}">
                         <span class="bracket-team-name" th:text="${matchup.team1ShortName != null ? matchup.team1ShortName : 'TBD'}"></span>
                         <span class="bracket-team-score" th:if="${matchup.team1ShortName != null}" th:text="${matchup.team1AggregatePoints}"></span>
                     </div>
-                    <div class="bracket-team" th:classappend="${matchup.winnerShortName == matchup.team2ShortName ? 'winner' : ''}">
+                    <div class="bracket-team" th:classappend="${matchup.team2IsWinner ? 'winner' : ''}">
                         <span class="bracket-team-name" th:text="${matchup.team2ShortName != null ? matchup.team2ShortName : 'TBD'}"></span>
                         <span class="bracket-team-score" th:if="${matchup.team2ShortName != null}" th:text="${matchup.team2AggregatePoints}"></span>
                     </div>

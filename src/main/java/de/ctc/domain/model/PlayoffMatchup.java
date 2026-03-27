@@ -45,6 +45,7 @@ public class PlayoffMatchup {
     private PlayoffMatchup nextMatchup;
 
     @OneToMany(mappedBy = "playoffMatchup")
+    @OrderBy("id ASC")
     private List<Race> races = new ArrayList<>();
 
     public PlayoffMatchup(PlayoffRound round, int bracketPosition) {

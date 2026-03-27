@@ -10,6 +10,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -29,6 +31,7 @@ class PlayoffServiceTest {
     @Autowired private RaceRepository raceRepository;
     @Autowired private MatchdayRepository matchdayRepository;
     @Autowired private ScoringService scoringService;
+    @Autowired private EntityManager entityManager;
 
     private Season season;
     private List<Team> teams;
@@ -189,6 +192,53 @@ class PlayoffServiceTest {
             // bracketPosition 0 is even → winner goes to team1
             assertEquals(matchup.getWinner().getId(), finaleRefreshed.getTeam1().getId(),
                     "Winner should be advanced to finale as team1");
+        }
+    }
+
+    @Nested
+    class TieBreaking {
+
+        @Test
+        void shouldThrowOnTie() {
+            var playoff = playoffService.createPlayoff(season.getId(), "Tie Test", 1, 4);
+            var sf = playoff.getRounds().get(0).getMatchups();
+
+            playoffService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
+            playoffService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
+
+            var matchday = matchdayRepository.save(new Matchday(season, "HF", 1));
+            var race = new Race(matchday, teams.get(0), teams.get(1));
+            race.setPlayoffMatchup(playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow());
+            race = raceRepository.save(race);
+
+            // Give both teams identical total scores
+            var team0Drivers = seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), teams.get(0).getId());
+            var team1Drivers = seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), teams.get(1).getId());
+
+            // team0 drivers get positions 1,4 → 20+12=32
+            // team1 drivers get positions 2,3 → 17+14=31 ... not equal
+            // Instead: set pointsTotal explicitly to force a tie
+            int pos = 1;
+            for (var sd : team0Drivers) {
+                var rr = new RaceResult(race, sd.getDriver(), pos, pos, false);
+                scoringService.calculatePoints(rr);
+                rr.setPointsTotal(25); // force equal total
+                race.getResults().add(rr);
+                pos++;
+            }
+            for (var sd : team1Drivers) {
+                var rr = new RaceResult(race, sd.getDriver(), pos, pos, false);
+                scoringService.calculatePoints(rr);
+                rr.setPointsTotal(25); // force equal total
+                race.getResults().add(rr);
+                pos++;
+            }
+            raceRepository.save(race);
+            entityManager.flush();
+            entityManager.clear();
+
+            assertThrows(IllegalStateException.class, () ->
+                    playoffService.determineWinner(sf.get(0).getId()));
         }
     }
 

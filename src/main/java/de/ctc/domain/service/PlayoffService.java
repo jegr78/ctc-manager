@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,6 +32,11 @@ public class PlayoffService {
     public Playoff createPlayoff(UUID seasonId, String name, int bestOfLegs, int numberOfTeams) {
         if (numberOfTeams != 4 && numberOfTeams != 8) {
             throw new IllegalArgumentException("Number of teams must be 4 or 8, got: " + numberOfTeams);
+        }
+
+        // #7: Check for existing playoff
+        if (playoffRepository.findBySeasonId(seasonId).isPresent()) {
+            throw new IllegalArgumentException("Playoff already exists for this season");
         }
 
         Season season = seasonRepository.findById(seasonId)
@@ -110,27 +116,26 @@ public class PlayoffService {
             throw new IllegalStateException("No races found for matchup");
         }
 
+        UUID seasonId = matchup.getRound().getPlayoff().getSeason().getId();
         UUID team1Id = matchup.getTeam1().getId();
+
+        // #2: Use shared helper for point calculation
         int team1Total = 0;
         int team2Total = 0;
-
         for (Race leg : legs) {
             if (leg.getResults().isEmpty()) continue;
-
-            UUID seasonId = matchup.getRound().getPlayoff().getSeason().getId();
-            for (RaceResult result : leg.getResults()) {
-                boolean isTeam1 = result.getDriver().getSeasonDrivers().stream()
-                        .anyMatch(sd -> sd.getSeason().getId().equals(seasonId)
-                                && sd.getTeam().getId().equals(team1Id));
-                if (isTeam1) {
-                    team1Total += result.getPointsTotal();
-                } else {
-                    team2Total += result.getPointsTotal();
-                }
-            }
+            int[] totals = calculateTeamTotals(leg.getResults(), seasonId, team1Id);
+            team1Total += totals[0];
+            team2Total += totals[1];
         }
 
-        Team winner = team1Total >= team2Total ? matchup.getTeam1() : matchup.getTeam2();
+        // #1: Explicit tie handling — ties are not silently resolved
+        if (team1Total == team2Total) {
+            throw new IllegalStateException(
+                    "Gleichstand (%d:%d) — Gewinner muss manuell festgelegt werden".formatted(team1Total, team2Total));
+        }
+
+        Team winner = team1Total > team2Total ? matchup.getTeam1() : matchup.getTeam2();
         matchup.setWinner(winner);
         playoffMatchupRepository.save(matchup);
 
@@ -149,17 +154,46 @@ public class PlayoffService {
                 winner.getShortName(), team1Total, team2Total);
     }
 
+    @Transactional
+    public void setWinnerManually(UUID matchupId, UUID winnerTeamId) {
+        PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
+                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId));
+
+        Team winner = findTeam(winnerTeamId);
+        matchup.setWinner(winner);
+        playoffMatchupRepository.save(matchup);
+
+        if (matchup.getNextMatchup() != null) {
+            PlayoffMatchup next = matchup.getNextMatchup();
+            if (matchup.getBracketPosition() % 2 == 0) {
+                next.setTeam1(winner);
+            } else {
+                next.setTeam2(winner);
+            }
+            playoffMatchupRepository.save(next);
+        }
+
+        log.info("Matchup winner set manually: {}", winner.getShortName());
+    }
+
     @Transactional(readOnly = true)
     public PlayoffBracketView getBracketView(UUID playoffId) {
         Playoff playoff = playoffRepository.findById(playoffId)
                 .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
 
+        // #4: Fetch all races for this playoff in one query, then group by matchup ID
+        List<Race> allRaces = raceRepository.findByPlayoffMatchupRoundPlayoffId(playoffId);
+        Map<UUID, List<Race>> racesByMatchup = allRaces.stream()
+                .collect(Collectors.groupingBy(r -> r.getPlayoffMatchup().getId()));
+
+        UUID seasonId = playoff.getSeason().getId();
+
         List<RoundView> roundViews = new ArrayList<>();
         for (PlayoffRound round : playoff.getRounds()) {
             List<MatchupView> matchupViews = new ArrayList<>();
             for (PlayoffMatchup matchup : round.getMatchups()) {
-                List<Race> legs = raceRepository.findByPlayoffMatchupId(matchup.getId());
-                matchupViews.add(buildMatchupView(matchup, legs));
+                List<Race> legs = racesByMatchup.getOrDefault(matchup.getId(), List.of());
+                matchupViews.add(buildMatchupView(matchup, legs, seasonId));
             }
             roundViews.add(new RoundView(round.getLabel(), round.getRoundIndex(), matchupViews));
         }
@@ -167,8 +201,27 @@ public class PlayoffService {
         return new PlayoffBracketView(playoff.getId(), playoff.getName(), roundViews);
     }
 
-    private MatchupView buildMatchupView(PlayoffMatchup matchup, List<Race> legs) {
-        UUID seasonId = matchup.getRound().getPlayoff().getSeason().getId();
+    // #2: Shared helper — calculates [team1Points, team2Points] from race results
+    private int[] calculateTeamTotals(List<RaceResult> results, UUID seasonId, UUID team1Id) {
+        int team1Total = 0;
+        int team2Total = 0;
+        for (RaceResult result : results) {
+            if (isDriverInTeam(result, seasonId, team1Id)) {
+                team1Total += result.getPointsTotal();
+            } else {
+                team2Total += result.getPointsTotal();
+            }
+        }
+        return new int[]{team1Total, team2Total};
+    }
+
+    private boolean isDriverInTeam(RaceResult result, UUID seasonId, UUID teamId) {
+        return result.getDriver().getSeasonDrivers().stream()
+                .anyMatch(sd -> sd.getSeason().getId().equals(seasonId)
+                        && sd.getTeam().getId().equals(teamId));
+    }
+
+    private MatchupView buildMatchupView(PlayoffMatchup matchup, List<Race> legs, UUID seasonId) {
         UUID team1Id = matchup.getTeam1() != null ? matchup.getTeam1().getId() : null;
 
         int team1Aggregate = 0;
@@ -181,22 +234,20 @@ public class PlayoffService {
             int awayTotal = 0;
 
             if (!leg.getResults().isEmpty() && team1Id != null) {
-                for (RaceResult result : leg.getResults()) {
-                    boolean isTeam1 = result.getDriver().getSeasonDrivers().stream()
-                            .anyMatch(sd -> sd.getSeason().getId().equals(seasonId)
-                                    && sd.getTeam().getId().equals(team1Id));
-                    if (isTeam1) {
-                        homeTotal += result.getPointsTotal();
-                    } else {
-                        awayTotal += result.getPointsTotal();
-                    }
-                }
+                int[] totals = calculateTeamTotals(leg.getResults(), seasonId, team1Id);
+                homeTotal = totals[0];
+                awayTotal = totals[1];
                 team1Aggregate += homeTotal;
                 team2Aggregate += awayTotal;
             }
 
             legViews.add(new LegView(leg.getId(), i + 1, homeTotal, awayTotal, !leg.getResults().isEmpty()));
         }
+
+        // #3: Boolean fields instead of string comparison in templates
+        boolean team1IsWinner = matchup.getWinner() != null && team1Id != null
+                && matchup.getWinner().getId().equals(team1Id);
+        boolean team2IsWinner = matchup.getWinner() != null && !team1IsWinner && matchup.isComplete();
 
         return new MatchupView(
                 matchup.getId(),
@@ -207,7 +258,8 @@ public class PlayoffService {
                 matchup.getTeam2() != null ? matchup.getTeam2().getLogoUrl() : null,
                 team1Aggregate,
                 team2Aggregate,
-                matchup.getWinner() != null ? matchup.getWinner().getShortName() : null,
+                team1IsWinner,
+                team2IsWinner,
                 matchup.isComplete(),
                 legViews
         );
@@ -242,7 +294,8 @@ public class PlayoffService {
         private final String team2LogoUrl;
         private final int team1AggregatePoints;
         private final int team2AggregatePoints;
-        private final String winnerShortName;
+        private final boolean team1IsWinner;
+        private final boolean team2IsWinner;
         private final boolean complete;
         private final List<LegView> legs;
     }
