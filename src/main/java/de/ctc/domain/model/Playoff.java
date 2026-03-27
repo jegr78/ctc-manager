@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -30,8 +31,9 @@ public class Playoff {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "best_of_legs", nullable = false)
-    private int bestOfLegs = 2;
+    private LocalDate startDate;
+
+    private LocalDate endDate;
 
     @ManyToMany
     @JoinTable(name = "playoff_seasons",
@@ -44,9 +46,8 @@ public class Playoff {
     @OrderBy("roundIndex ASC")
     private List<PlayoffRound> rounds = new ArrayList<>();
 
-    public Playoff(Season season, String name, int bestOfLegs) {
+    public Playoff(Season season, String name) {
         this.season = season;
         this.name = name;
-        this.bestOfLegs = bestOfLegs;
     }
 }

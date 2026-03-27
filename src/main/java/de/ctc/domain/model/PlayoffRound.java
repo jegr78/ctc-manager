@@ -33,6 +33,9 @@ public class PlayoffRound {
     @Column(name = "round_index", nullable = false)
     private int roundIndex;
 
+    @Column(name = "best_of_legs", nullable = false)
+    private int bestOfLegs = 1;
+
     @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("bracketPosition ASC")
     private List<PlayoffMatchup> matchups = new ArrayList<>();

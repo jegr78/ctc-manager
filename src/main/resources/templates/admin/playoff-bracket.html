@@ -44,6 +44,29 @@
         </div>
     </div>
 
+    <!-- Runden-Konfiguration (Legs pro Runde) -->
+    <div th:if="${playoff != null}" class="card">
+        <h2>Runden-Konfiguration</h2>
+        <table>
+            <thead><tr><th>Runde</th><th>Legs</th><th></th></tr></thead>
+            <tbody>
+                <tr th:each="round : ${playoff.rounds}">
+                    <td th:text="${round.label}"></td>
+                    <td>
+                        <form th:action="@{/admin/playoffs/round/{id}/set-legs(id=${round.id})}" method="post"
+                              style="display:inline-flex;gap:8px;align-items:center;">
+                            <select name="bestOfLegs" onchange="this.form.submit()">
+                                <option value="1" th:selected="${round.bestOfLegs == 1}">1 (Single)</option>
+                                <option value="2" th:selected="${round.bestOfLegs == 2}">2 (Hin- &amp; Rückspiel)</option>
+                            </select>
+                        </form>
+                    </td>
+                    <td class="text-dim" th:text="${round.matchups.size() + ' Begegnungen'}"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
     <!-- Verknüpfte Saisons (Team-Quellen für Playoffs) -->
     <div th:if="${playoff != null}" class="card">
         <h2>Verknüpfte Saisons (Team-Quellen)</h2>

@@ -27,6 +27,7 @@ public class PlayoffController {
 
     private final PlayoffService playoffService;
     private final PlayoffRepository playoffRepository;
+    private final PlayoffRoundRepository playoffRoundRepository;
     private final PlayoffMatchupRepository playoffMatchupRepository;
     private final SeasonRepository seasonRepository;
     private final SeasonDriverRepository seasonDriverRepository;
@@ -51,6 +52,7 @@ public class PlayoffController {
             model.addAttribute("selectedSeasonId", effectiveSeasonId);
             playoffRepository.findBySeasonId(effectiveSeasonId).ifPresent(playoff -> {
                 playoff.getSeasons().size(); // eagerly init
+                playoff.getRounds().forEach(r -> r.getMatchups().size()); // eagerly init rounds+matchups
                 model.addAttribute("playoff", playoff);
                 model.addAttribute("bracket", playoffService.getBracketView(playoff.getId()));
             });
@@ -74,7 +76,9 @@ public class PlayoffController {
     public String save(@ModelAttribute PlayoffForm form, RedirectAttributes redirectAttributes) {
         try {
             var playoff = playoffService.createPlayoff(
-                    form.getSeasonId(), form.getName(), form.getBestOfLegs(), form.getNumberOfTeams());
+                    form.getSeasonId(), form.getName(), form.getNumberOfTeams());
+            playoff.setStartDate(form.getStartDate());
+            playoff.setEndDate(form.getEndDate());
             redirectAttributes.addFlashAttribute("successMessage",
                     "Playoff erstellt: " + playoff.getName());
             return "redirect:/admin/playoffs?seasonId=" + form.getSeasonId();
@@ -83,6 +87,19 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("errorMessage", "Fehler: " + e.getMessage());
             return "redirect:/admin/playoffs/new?seasonId=" + form.getSeasonId();
         }
+    }
+
+    @Transactional
+    @PostMapping("/round/{roundId}/set-legs")
+    public String setRoundLegs(@PathVariable UUID roundId, @RequestParam int bestOfLegs,
+                               RedirectAttributes redirectAttributes) {
+        var round = playoffRoundRepository.findById(roundId).orElseThrow();
+        round.setBestOfLegs(bestOfLegs);
+        playoffRoundRepository.save(round);
+        redirectAttributes.addFlashAttribute("successMessage",
+                round.getLabel() + ": " + bestOfLegs + " Leg(s)");
+        return "redirect:/admin/playoffs?seasonId=" +
+                round.getPlayoff().getSeason().getId();
     }
 
     @PostMapping("/{id}/add-season")

@@ -29,7 +29,7 @@ public class PlayoffService {
     );
 
     @Transactional
-    public Playoff createPlayoff(UUID seasonId, String name, int bestOfLegs, int numberOfTeams) {
+    public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams) {
         if (numberOfTeams != 4 && numberOfTeams != 8) {
             throw new IllegalArgumentException("Number of teams must be 4 or 8, got: " + numberOfTeams);
         }
@@ -42,7 +42,7 @@ public class PlayoffService {
         Season season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new IllegalArgumentException("Season not found: " + seasonId));
 
-        Playoff playoff = new Playoff(season, name, bestOfLegs);
+        Playoff playoff = new Playoff(season, name);
         playoff = playoffRepository.save(playoff);
 
         List<String> labels = DEFAULT_ROUND_LABELS.get(numberOfTeams);

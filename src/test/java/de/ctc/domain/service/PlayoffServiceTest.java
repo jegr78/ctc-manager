@@ -63,7 +63,7 @@ class PlayoffServiceTest {
 
         @Test
         void shouldCreate8TeamBracket() {
-            var playoff = playoffService.createPlayoff(season.getId(), "Test Playoffs", 2, 8);
+            var playoff = playoffService.createPlayoff(season.getId(), "Test Playoffs", 8);
 
             assertNotNull(playoff.getId());
             assertEquals(3, playoff.getRounds().size());
@@ -78,7 +78,7 @@ class PlayoffServiceTest {
 
         @Test
         void shouldCreate4TeamBracket() {
-            var playoff = playoffService.createPlayoff(season.getId(), "Small Playoffs", 1, 4);
+            var playoff = playoffService.createPlayoff(season.getId(), "Small Playoffs", 4);
 
             assertEquals(2, playoff.getRounds().size());
             assertEquals("Halbfinale", playoff.getRounds().get(0).getLabel());
@@ -90,7 +90,7 @@ class PlayoffServiceTest {
 
         @Test
         void shouldWireNextMatchupLinks() {
-            var playoff = playoffService.createPlayoff(season.getId(), "Test Playoffs", 2, 8);
+            var playoff = playoffService.createPlayoff(season.getId(), "Test Playoffs", 8);
 
             var qf = playoff.getRounds().get(0).getMatchups();
             var sf = playoff.getRounds().get(1).getMatchups();
@@ -115,7 +115,7 @@ class PlayoffServiceTest {
         @Test
         void shouldRejectInvalidTeamCount() {
             assertThrows(IllegalArgumentException.class, () ->
-                    playoffService.createPlayoff(season.getId(), "Bad", 2, 6));
+                    playoffService.createPlayoff(season.getId(), "Bad", 6));
         }
     }
 
@@ -124,7 +124,7 @@ class PlayoffServiceTest {
 
         @Test
         void shouldSeedTeamsIntoMatchups() {
-            var playoff = playoffService.createPlayoff(season.getId(), "Test", 2, 4);
+            var playoff = playoffService.createPlayoff(season.getId(), "Test", 4);
             var matchups = playoff.getRounds().get(0).getMatchups();
 
             playoffService.seedTeam(matchups.get(0).getId(), teams.get(0).getId(), 1);
@@ -142,7 +142,7 @@ class PlayoffServiceTest {
 
         @Test
         void shouldDetermineWinnerAndAdvance() {
-            var playoff = playoffService.createPlayoff(season.getId(), "Test", 2, 4);
+            var playoff = playoffService.createPlayoff(season.getId(), "Test", 4);
             var sf = playoff.getRounds().get(0).getMatchups();
 
             // Seed SF matchup 0
@@ -200,7 +200,7 @@ class PlayoffServiceTest {
 
         @Test
         void shouldThrowOnTie() {
-            var playoff = playoffService.createPlayoff(season.getId(), "Tie Test", 1, 4);
+            var playoff = playoffService.createPlayoff(season.getId(), "Tie Test", 4);
             var sf = playoff.getRounds().get(0).getMatchups();
 
             playoffService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
@@ -247,7 +247,7 @@ class PlayoffServiceTest {
 
         @Test
         void shouldReturnBracketView() {
-            var playoff = playoffService.createPlayoff(season.getId(), "View Test", 2, 4);
+            var playoff = playoffService.createPlayoff(season.getId(), "View Test", 4);
             var view = playoffService.getBracketView(playoff.getId());
 
             assertEquals("View Test", view.getName());

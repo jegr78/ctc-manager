@@ -76,8 +76,7 @@ class PlayoffControllerTest {
         mockMvc.perform(post("/admin/playoffs/save")
                         .param("seasonId", season.getId().toString())
                         .param("name", "Test Playoffs")
-                        .param("bestOfLegs", "2")
-                        .param("numberOfTeams", "4"))
+                                                .param("numberOfTeams", "4"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("successMessage"));
 
@@ -88,7 +87,7 @@ class PlayoffControllerTest {
 
     @Test
     void shouldShowSeedingPage() throws Exception {
-        var playoff = playoffService.createPlayoff(season.getId(), "Seed Test", 2, 4);
+        var playoff = playoffService.createPlayoff(season.getId(), "Seed Test", 4);
 
         mockMvc.perform(get("/admin/playoffs/" + playoff.getId() + "/seed"))
                 .andExpect(status().isOk())
@@ -98,7 +97,7 @@ class PlayoffControllerTest {
 
     @Test
     void shouldShowBracketWithPlayoff() throws Exception {
-        playoffService.createPlayoff(season.getId(), "Bracket Test", 2, 4);
+        playoffService.createPlayoff(season.getId(), "Bracket Test", 4);
 
         mockMvc.perform(get("/admin/playoffs").param("seasonId", season.getId().toString()))
                 .andExpect(status().isOk())
@@ -107,7 +106,7 @@ class PlayoffControllerTest {
 
     @Test
     void shouldShowMatchupDetail() throws Exception {
-        var playoff = playoffService.createPlayoff(season.getId(), "Matchup Test", 2, 4);
+        var playoff = playoffService.createPlayoff(season.getId(), "Matchup Test", 4);
         var matchupId = playoff.getRounds().get(0).getMatchups().get(0).getId();
 
         mockMvc.perform(get("/admin/playoffs/matchup/" + matchupId))
@@ -118,13 +117,12 @@ class PlayoffControllerTest {
 
     @Test
     void shouldRejectDuplicatePlayoff() throws Exception {
-        playoffService.createPlayoff(season.getId(), "First", 2, 4);
+        playoffService.createPlayoff(season.getId(), "First", 4);
 
         mockMvc.perform(post("/admin/playoffs/save")
                         .param("seasonId", season.getId().toString())
                         .param("name", "Second")
-                        .param("bestOfLegs", "2")
-                        .param("numberOfTeams", "4"))
+                                                .param("numberOfTeams", "4"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("errorMessage"));
     }
