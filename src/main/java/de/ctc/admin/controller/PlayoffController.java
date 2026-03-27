@@ -34,7 +34,6 @@ public class PlayoffController {
     private final MatchdayRepository matchdayRepository;
     private final RaceRepository raceRepository;
 
-    @Transactional(readOnly = true)
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
         var allSeasons = seasonRepository.findAll();
@@ -51,8 +50,6 @@ public class PlayoffController {
         if (effectiveSeasonId != null) {
             model.addAttribute("selectedSeasonId", effectiveSeasonId);
             playoffRepository.findBySeasonId(effectiveSeasonId).ifPresent(playoff -> {
-                playoff.getSeasons().size(); // eagerly init
-                playoff.getRounds().forEach(r -> r.getMatchups().size()); // eagerly init rounds+matchups
                 model.addAttribute("playoff", playoff);
                 model.addAttribute("bracket", playoffService.getBracketView(playoff.getId()));
             });
@@ -120,7 +117,6 @@ public class PlayoffController {
                 playoffRepository.findById(id).orElseThrow().getSeason().getId();
     }
 
-    @Transactional(readOnly = true)
     @GetMapping("/{id}/seed")
     public String seed(@PathVariable UUID id, Model model) {
         var playoff = playoffRepository.findById(id).orElseThrow();
@@ -169,20 +165,11 @@ public class PlayoffController {
                 playoffRepository.findById(id).orElseThrow().getSeason().getId();
     }
 
-    @Transactional(readOnly = true)
     @GetMapping("/matchup/{matchupId}")
     public String matchupDetail(@PathVariable UUID matchupId, Model model) {
         var matchup = playoffMatchupRepository.findById(matchupId).orElseThrow();
         var legs = raceRepository.findByPlayoffMatchupId(matchupId);
         var playoff = matchup.getRound().getPlayoff();
-
-        // Eagerly initialize all lazy fields accessed by Thymeleaf
-        matchup.getRound().getLabel();
-        if (matchup.getTeam1() != null) matchup.getTeam1().getShortName();
-        if (matchup.getTeam2() != null) matchup.getTeam2().getShortName();
-        if (matchup.getWinner() != null) matchup.getWinner().getShortName();
-        playoff.getSeason().getName();
-        legs.forEach(leg -> leg.getResults().size());
 
         model.addAttribute("matchup", matchup);
         model.addAttribute("legs", legs);

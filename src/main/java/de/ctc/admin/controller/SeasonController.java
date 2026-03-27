@@ -7,7 +7,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
@@ -36,12 +35,9 @@ public class SeasonController {
         return "admin/season-form";
     }
 
-    @Transactional(readOnly = true)
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
         var season = seasonRepository.findById(id).orElseThrow();
-        // Eagerly initialize teams for Thymeleaf (session closes before rendering)
-        season.getTeams().size();
         model.addAttribute("season", season);
         model.addAttribute("allTeams", teamRepository.findAll());
         return "admin/season-form";
