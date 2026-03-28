@@ -565,54 +565,6 @@ select option {
     gap: 2px;
 }
 
-/* Swiss rounds */
-.swiss-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
-}
-
-.swiss-matchup {
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-}
-
-.swiss-matchup.bye { opacity: 0.7; }
-
-.swiss-team {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 14px;
-    font-size: 14px;
-    color: var(--text);
-}
-
-.swiss-team + .swiss-team {
-    border-top: 1px solid var(--border);
-}
-
-.swiss-team.winner {
-    color: var(--accent);
-    font-weight: 700;
-}
-
-.swiss-score {
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    min-width: 28px;
-    text-align: right;
-}
-
-.swiss-team.winner .swiss-score {
-    background: var(--accent);
-    color: var(--bg);
-    padding: 2px 8px;
-    border-radius: 4px;
-}
-
 /* Quick Score */
 .quick-score-form {
     display: contents;

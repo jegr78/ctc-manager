@@ -44,7 +44,11 @@ public class FileStorageService {
     public void delete(String url) {
         if (url == null || !url.startsWith("/uploads/")) return;
 
-        Path file = uploadDir.resolve(url.substring("/uploads/".length()));
+        Path file = uploadDir.resolve(url.substring("/uploads/".length())).normalize();
+        if (!file.startsWith(uploadDir)) {
+            log.warn("Attempted path traversal in delete: {}", url);
+            return;
+        }
         try {
             Files.deleteIfExists(file);
             log.info("Deleted file: {}", file);

@@ -195,6 +195,10 @@ public class RaceController {
                            @RequestParam String name,
                            @RequestParam String url,
                            RedirectAttributes redirectAttributes) {
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Link must start with http:// or https://");
+            return "redirect:/admin/races/" + id;
+        }
         var race = raceRepository.findById(id).orElseThrow();
         var attachment = new RaceAttachment(race, AttachmentType.LINK, name, url);
         raceAttachmentRepository.save(attachment);
