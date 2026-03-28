@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Edit Track', ~{::section})}">
+<body>
+<section>
+    <h1 th:text="${trackForm.id != null ? 'Edit Track' : 'New Track'}"></h1>
+    <div class="card">
+        <form th:action="@{/admin/tracks/save}" th:object="${trackForm}" method="post">
+            <input type="hidden" th:field="*{id}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" th:field="*{name}" placeholder="e.g. Tsukuba Circuit" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="country">Country</label>
+                    <input type="text" id="country" th:field="*{country}" placeholder="e.g. Japan">
+                </div>
+            </div>
+            <div class="actions" style="margin-top: 16px;">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a th:href="@{/admin/tracks}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>
