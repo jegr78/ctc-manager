@@ -9,8 +9,8 @@
     </h1>
     <p class="text-dim" style="margin-bottom:16px;">
         <span th:text="${race.matchday.label}"></span> —
-        <span th:text="${race.track ?: 'No track'}"></span> —
-        <span th:text="${race.car ?: 'No car'}"></span>
+        <span th:text="${race.track?.name ?: 'No track'}"></span> —
+        <span th:text="${race.car?.displayName ?: 'No car'}"></span>
     </p>
 
     <div class="card">

@@ -39,7 +39,7 @@
                         <td><a th:href="@{/admin/teams/{id}(id=${race.homeTeam.id})}" class="detail-link" th:text="${race.homeTeam.shortName}"></a></td>
                         <td style="text-align:center;">vs</td>
                         <td><a th:href="@{/admin/teams/{id}(id=${race.awayTeam.id})}" class="detail-link" th:text="${race.awayTeam.shortName}"></a></td>
-                        <td th:text="${race.track ?: '-'}"></td>
+                        <td th:text="${race.track?.name ?: '-'}"></td>
                         <td th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                         <td>
                             <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link">

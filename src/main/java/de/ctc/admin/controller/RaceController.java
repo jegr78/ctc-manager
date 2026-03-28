@@ -33,6 +33,8 @@ public class RaceController {
     private final SeasonDriverRepository seasonDriverRepository;
     private final MatchdayLineupRepository matchdayLineupRepository;
     private final RaceAttachmentRepository raceAttachmentRepository;
+    private final CarRepository carRepository;
+    private final TrackRepository trackRepository;
     private final ScoringService scoringService;
     private final FileStorageService fileStorageService;
 
@@ -112,8 +114,16 @@ public class RaceController {
         race.setMatchday(matchday);
         race.setHomeTeam(homeTeam);
         race.setAwayTeam(awayTeam);
-        race.setTrack(form.getTrack());
-        race.setCar(form.getCar());
+        if (form.getTrackId() != null) {
+            race.setTrack(trackRepository.findById(form.getTrackId()).orElse(null));
+        } else {
+            race.setTrack(null);
+        }
+        if (form.getCarId() != null) {
+            race.setCar(carRepository.findById(form.getCarId()).orElse(null));
+        } else {
+            race.setCar(null);
+        }
         race.setDateTime(form.getDateTime());
 
         raceRepository.save(race);
@@ -278,8 +288,8 @@ public class RaceController {
         form.setMatchdayId(race.getMatchday().getId());
         form.setHomeTeamId(race.getHomeTeam().getId());
         form.setAwayTeamId(race.getAwayTeam().getId());
-        form.setTrack(race.getTrack());
-        form.setCar(race.getCar());
+        form.setTrackId(race.getTrack() != null ? race.getTrack().getId() : null);
+        form.setCarId(race.getCar() != null ? race.getCar().getId() : null);
         form.setDateTime(race.getDateTime());
 
         for (var result : race.getResults()) {

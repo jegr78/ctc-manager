@@ -70,8 +70,7 @@ class RaceControllerTest {
                         .param("matchdayId", matchday.getId().toString())
                         .param("homeTeamId", home.getId().toString())
                         .param("awayTeamId", away.getId().toString())
-                        .param("track", "Tsukuba Circuit")
-                        .param("car", "Mazda MX-5"))
+)
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races?matchdayId=" + matchday.getId()))
                 .andExpect(flash().attributeExists("successMessage"));

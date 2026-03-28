@@ -289,8 +289,11 @@ public class SiteGeneratorService {
                 .filter(r -> !r.getTeamShortName().equals(race.getHomeTeam().getShortName()))
                 .mapToInt(RaceView.ResultView::getPointsTotal).sum();
 
+        String trackName = race.getTrack() != null ? race.getTrack().getName() : null;
+        String carName = race.getCar() != null ? race.getCar().getDisplayName() : null;
+
         return new RaceView(race.getHomeTeam().getShortName(), awayShortName,
-                race.getTrack(), race.getCar(), homeTotal, awayTotal, !race.getResults().isEmpty(), results);
+                trackName, carName, homeTotal, awayTotal, !race.getResults().isEmpty(), results);
     }
 
     private String slugify(String input) {

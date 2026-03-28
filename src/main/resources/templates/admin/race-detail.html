@@ -30,9 +30,9 @@
             <span class="label">Away Team</span>
             <a th:href="@{/admin/teams/{id}(id=${race.awayTeam.id})}" class="detail-link" th:text="${race.awayTeam.name}"></a>
             <span class="label">Track</span>
-            <span th:text="${race.track ?: '-'}"></span>
+            <span th:text="${race.track?.name ?: '-'}"></span>
             <span class="label">Car</span>
-            <span th:text="${race.car ?: '-'}"></span>
+            <span th:text="${race.car?.displayName ?: '-'}"></span>
             <span class="label">Date &amp; Time</span>
             <span th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></span>
             <span class="label">Playoff</span>

@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "races")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "results", "playoffMatchup", "attachments"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "track", "car", "results", "playoffMatchup", "attachments"})
 public class Race {
 
     @Id
@@ -37,9 +37,13 @@ public class Race {
 
     private LocalDateTime dateTime;
 
-    private String track;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "track_id")
+    private Track track;
 
-    private String car;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "car_id")
+    private Car car;
 
     @Column(nullable = false)
     private boolean bye = false;

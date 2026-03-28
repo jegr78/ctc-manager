@@ -42,8 +42,8 @@
             <tbody>
                 <tr th:each="leg, iter : ${legs}">
                     <td th:text="${iter.count}"></td>
-                    <td th:text="${leg.track ?: '-'}"></td>
-                    <td th:text="${leg.car ?: '-'}"></td>
+                    <td th:text="${leg.track?.name ?: '-'}"></td>
+                    <td th:text="${leg.car?.displayName ?: '-'}"></td>
                     <td style="text-align:center;">
                         <span th:if="${leg.results.isEmpty()}" class="text-dim">—</span>
                         <span th:unless="${leg.results.isEmpty()}" th:text="${leg.results.size() + ' Drivers'}"></span>

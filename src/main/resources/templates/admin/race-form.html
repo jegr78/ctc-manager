@@ -31,16 +31,8 @@
                     </select>
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="track">Track</label>
-                    <input type="text" id="track" th:field="*{track}" placeholder="e.g. Circuit de Barcelona-Catalunya">
-                </div>
-                <div class="form-group">
-                    <label for="car">Car</label>
-                    <input type="text" id="car" th:field="*{car}" placeholder="e.g. Mazda RX-Vision GT3">
-                </div>
-            </div>
+            <input type="hidden" name="trackId" th:value="${raceForm.trackId}">
+            <input type="hidden" name="carId" th:value="${raceForm.carId}">
             <div class="form-group">
                 <label for="dateTime">Date &amp; Time</label>
                 <input type="datetime-local" id="dateTime" name="dateTime"
