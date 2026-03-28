@@ -746,6 +746,25 @@ select option {
     color: var(--text);
 }
 
+/* === Chip List (Tags) === */
+.chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--text);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .sidebar {
