@@ -57,8 +57,8 @@
                     <tr th:each="s : ${seasons}">
                         <td><a th:href="@{/admin/seasons/{id}(id=${s.id})}" class="detail-link" th:text="${s.name}"></a></td>
                         <td>
-                            <span th:if="${s.active}" class="badge badge-active">Active</span>
-                            <span th:unless="${s.active}" class="badge badge-inactive">Inactive</span>
+                            <span th:if="${s.active}" class="badge badge-active">● Active</span>
+                            <span th:unless="${s.active}" class="badge badge-inactive">○ Inactive</span>
                         </td>
                     </tr>
                 </tbody>

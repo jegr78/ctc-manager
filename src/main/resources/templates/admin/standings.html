@@ -27,13 +27,13 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th class="sortable" data-col="1" data-type="text">Team</th>
-                    <th class="sortable" data-col="2" data-type="num">MP</th>
-                    <th class="sortable" data-col="3" data-type="num">W</th>
-                    <th class="sortable" data-col="4" data-type="num">D</th>
-                    <th class="sortable" data-col="5" data-type="num">L</th>
+                    <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Team">Team</th>
+                    <th class="sortable" data-col="2" data-type="num" aria-label="Sort by Matches Played">MP</th>
+                    <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Wins">W</th>
+                    <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Draws">D</th>
+                    <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Losses">L</th>
                     <th>PR</th>
-                    <th class="sortable" data-col="7" data-type="num" style="text-align:right">Pts</th>
+                    <th class="sortable" data-col="7" data-type="num" aria-label="Sort by Points" style="text-align:right">Pts</th>
                 </tr>
             </thead>
             <tbody>
@@ -60,19 +60,19 @@
                 <h2 th:if="${isAlltime}" style="margin-bottom:0;">Driver Ranking — Alltime</h2>
                 <h2 th:unless="${isAlltime}" style="margin-bottom:0;">Driver Ranking — <span th:text="${selectedSeason.name}"></span></h2>
             </div>
-            <input type="text" id="driverSearch" placeholder="Search drivers..."
+            <input type="text" id="driverSearch" placeholder="Search drivers..." aria-label="Search drivers"
                    style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
         </div>
         <table th:if="${!driverRanking.isEmpty()}" id="driverRankingTable">
             <thead>
                 <tr>
                     <th>#</th>
-                    <th class="sortable" data-col="1" data-type="text">Driver</th>
-                    <th class="sortable" data-col="2" data-type="text">Team</th>
-                    <th class="sortable" data-col="3" data-type="num">Races</th>
-                    <th class="sortable" data-col="4" data-type="num">Best Pos.</th>
-                    <th class="sortable" data-col="5" data-type="num">Avg</th>
-                    <th class="sortable" data-col="6" data-type="num" style="text-align:right">Points</th>
+                    <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Driver">Driver</th>
+                    <th class="sortable" data-col="2" data-type="text" aria-label="Sort by Team">Team</th>
+                    <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Races">Races</th>
+                    <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Best Position">Best Pos.</th>
+                    <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Average Points">Avg</th>
+                    <th class="sortable" data-col="6" data-type="num" aria-label="Sort by Points" style="text-align:right">Points</th>
                 </tr>
             </thead>
             <tbody>
@@ -87,8 +87,8 @@
                 </tr>
             </tbody>
         </table>
-        <div id="noResults" style="display:none" class="empty-state"><p>No matching drivers found.</p></div>
-        <div class="pagination" id="pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+        <div id="noResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching drivers found.</p></div>
+        <div class="pagination" id="pagination" aria-label="Driver ranking pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
             <span id="pageInfo" class="text-dim"></span>
             <div class="actions">
                 <button id="prevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>

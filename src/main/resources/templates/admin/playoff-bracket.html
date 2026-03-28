@@ -22,7 +22,7 @@
 
     <div th:if="${bracket != null}" class="card">
         <h2 th:text="${bracket.name}"></h2>
-        <div class="bracket">
+        <div class="bracket" role="img" aria-label="Playoff bracket" tabindex="0">
             <th:block th:each="round, roundStat : ${bracket.rounds}">
             <div th:if="${!roundStat.first}" class="bracket-connector"></div>
             <div class="bracket-round">
