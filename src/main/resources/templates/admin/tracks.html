@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Tracks', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Tracks</h1>
+        <div class="actions">
+            <input type="text" id="trackSearch" placeholder="Search tracks..." aria-label="Search tracks"
+                   style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
+            <a th:href="@{/admin/tracks/new}" class="btn btn-primary">+ New Track</a>
+        </div>
+    </div>
+    <div class="card">
+        <table th:if="${!tracks.isEmpty()}" id="tracksTable">
+            <thead>
+                <tr>
+                    <th class="sortable" data-col="0" aria-label="Sort by Name">Name</th>
+                    <th class="sortable" data-col="1" aria-label="Sort by Country">Country</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="track : ${tracks}" class="track-row">
+                    <td th:text="${track.name}"></td>
+                    <td th:text="${track.country}"></td>
+                    <td class="actions">
+                        <a th:href="@{/admin/tracks/{id}/edit(id=${track.id})}" class="btn btn-secondary btn-sm">Edit</a>
+                        <form th:action="@{/admin/tracks/{id}/delete(id=${track.id})}" method="post"
+                              onsubmit="return confirm('Really delete this track?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="noResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching tracks found.</p></div>
+        <div class="pagination" id="pagination" aria-label="Tracks pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+            <span id="pageInfo" class="text-dim"></span>
+            <div class="actions">
+                <button id="prevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
+                <button id="nextPage" class="btn btn-secondary btn-sm">Next</button>
+            </div>
+        </div>
+        <div th:if="${tracks.isEmpty()}" class="empty-state"><p>No tracks created yet.</p></div>
+    </div>
+
+    <script th:inline="javascript">
+    (function() {
+        const PAGE_SIZE = 20;
+        const table = document.getElementById('tracksTable');
+        if (!table) return;
+
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('.track-row'));
+        const search = document.getElementById('trackSearch');
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        const noResults = document.getElementById('noResults');
+
+        let filteredRows = rows;
+        let currentPage = 0;
+        let sortCol = -1;
+        let sortAsc = true;
+
+        function render() {
+            const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+            currentPage = Math.min(currentPage, totalPages - 1);
+            const start = currentPage * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+
+            rows.forEach(r => r.style.display = 'none');
+            filteredRows.slice(start, end).forEach(r => r.style.display = '');
+
+            pageInfo.textContent = filteredRows.length + ' tracks — Page ' + (currentPage + 1) + ' of ' + totalPages;
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = currentPage >= totalPages - 1;
+            noResults.style.display = filteredRows.length === 0 ? '' : 'none';
+            table.style.display = filteredRows.length === 0 ? 'none' : '';
+        }
+
+        search.addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            filteredRows = rows.filter(r => r.textContent.toLowerCase().includes(q));
+            currentPage = 0;
+            render();
+        });
+
+        prevBtn.addEventListener('click', () => { currentPage--; render(); });
+        nextBtn.addEventListener('click', () => { currentPage++; render(); });
+
+        // Sortable columns
+        table.querySelectorAll('.sortable').forEach(th => {
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', function() {
+                const col = parseInt(this.dataset.col);
+                if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
+
+                table.querySelectorAll('.sortable').forEach(h => h.dataset.sort = '');
+                this.dataset.sort = sortAsc ? 'asc' : 'desc';
+
+                filteredRows.sort((a, b) => {
+                    const aVal = a.children[col].textContent.trim().toLowerCase();
+                    const bVal = b.children[col].textContent.trim().toLowerCase();
+                    return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                });
+                filteredRows.forEach(r => tbody.appendChild(r));
+                currentPage = 0;
+                render();
+            });
+        });
+
+        render();
+    })();
+    </script>
+</section>
+</body>
+</html>

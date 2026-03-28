@@ -208,8 +208,7 @@ public class PlayoffController {
         matchday = matchdayRepository.save(matchday);
 
         var race = new Race(matchday, matchup.getTeam1(), matchup.getTeam2());
-        race.setTrack(track);
-        race.setCar(car);
+        // TODO: resolve Track/Car entities from string parameters
         race.setDateTime(dateTime);
         race.setPlayoffMatchup(matchup);
         raceRepository.save(race);

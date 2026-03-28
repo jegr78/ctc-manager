@@ -46,6 +46,35 @@ CREATE TABLE season_teams (
     CONSTRAINT fk_st_team FOREIGN KEY (team_id) REFERENCES teams(id)
 );
 
+CREATE TABLE cars (
+    id UUID PRIMARY KEY,
+    manufacturer VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    CONSTRAINT uq_car UNIQUE (manufacturer, name)
+);
+
+CREATE TABLE tracks (
+    id UUID PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    country VARCHAR(100)
+);
+
+CREATE TABLE season_cars (
+    season_id UUID NOT NULL,
+    car_id UUID NOT NULL,
+    PRIMARY KEY (season_id, car_id),
+    CONSTRAINT fk_sc_season FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sc_car FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE
+);
+
+CREATE TABLE season_tracks (
+    season_id UUID NOT NULL,
+    track_id UUID NOT NULL,
+    PRIMARY KEY (season_id, track_id),
+    CONSTRAINT fk_st2_season FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
+    CONSTRAINT fk_st2_track FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+);
+
 CREATE TABLE matchdays (
     id UUID PRIMARY KEY,
     season_id UUID NOT NULL,
@@ -101,8 +130,8 @@ CREATE TABLE races (
     matchday_id UUID NOT NULL,
     home_team_id UUID NOT NULL,
     away_team_id UUID,
-    track VARCHAR(500),
-    car VARCHAR(500),
+    track_id UUID,
+    car_id UUID,
     playoff_matchup_id UUID,
     bye BOOLEAN DEFAULT FALSE NOT NULL,
     home_score INT,
@@ -111,6 +140,8 @@ CREATE TABLE races (
     CONSTRAINT fk_race_matchday FOREIGN KEY (matchday_id) REFERENCES matchdays(id),
     CONSTRAINT fk_race_home_team FOREIGN KEY (home_team_id) REFERENCES teams(id),
     CONSTRAINT fk_race_away_team FOREIGN KEY (away_team_id) REFERENCES teams(id),
+    CONSTRAINT fk_race_track FOREIGN KEY (track_id) REFERENCES tracks(id),
+    CONSTRAINT fk_race_car FOREIGN KEY (car_id) REFERENCES cars(id),
     CONSTRAINT fk_race_playoff_matchup FOREIGN KEY (playoff_matchup_id) REFERENCES playoff_matchups(id)
 );
 

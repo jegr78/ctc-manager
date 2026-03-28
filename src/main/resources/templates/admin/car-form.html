@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Edit Car', ~{::section})}">
+<body>
+<section>
+    <h1 th:text="${carForm.id != null ? 'Edit Car' : 'New Car'}"></h1>
+    <div class="card">
+        <form th:action="@{/admin/cars/save}" th:object="${carForm}" method="post">
+            <input type="hidden" th:field="*{id}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="manufacturer">Manufacturer</label>
+                    <input type="text" id="manufacturer" th:field="*{manufacturer}" placeholder="e.g. Mazda" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('manufacturer')}" th:errors="*{manufacturer}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" th:field="*{name}" placeholder="e.g. RX-Vision GT3 Concept" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+            </div>
+            <div class="actions" style="margin-top: 16px;">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a th:href="@{/admin/cars}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>

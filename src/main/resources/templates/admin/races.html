@@ -20,8 +20,8 @@
                     <td><a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link"><strong th:text="${race.homeTeam.shortName}"></strong></a></td>
                     <td style="text-align:center">vs</td>
                     <td><a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link"><strong th:text="${race.awayTeam.shortName}"></strong></a></td>
-                    <td th:text="${race.track ?: '-'}"></td>
-                    <td th:text="${race.car ?: '-'}"></td>
+                    <td th:text="${race.track?.name ?: '-'}"></td>
+                    <td th:text="${race.car?.displayName ?: '-'}"></td>
                     <td th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                     <td>
                         <span th:if="${race.results.isEmpty()}" class="badge badge-inactive">Open</span>

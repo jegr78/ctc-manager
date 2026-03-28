@@ -54,6 +54,26 @@
         </div>
 
         <div class="detail-section" style="margin-top:32px;">
+            <h2 th:text="'Car Pool (' + ${season.cars.size()} + ')'"></h2>
+            <div th:if="${!season.cars.isEmpty()}" class="chip-list">
+                <span th:each="car : ${season.cars}" class="chip"
+                      th:text="${car.manufacturer + ' — ' + car.name}"></span>
+            </div>
+            <div th:if="${season.cars.isEmpty()}" class="empty-state" style="padding:16px;"><p>No cars assigned. <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="detail-link">Edit season</a> to add cars.</p></div>
+        </div>
+
+        <div class="detail-section" style="margin-top:32px;">
+            <h2 th:text="'Track Pool (' + ${season.tracks.size()} + ')'"></h2>
+            <div th:if="${!season.tracks.isEmpty()}" class="chip-list">
+                <span th:each="track : ${season.tracks}" class="chip">
+                    <span th:text="${track.name}"></span>
+                    <span th:if="${track.country}" class="text-dim" th:text="' (' + ${track.country} + ')'"></span>
+                </span>
+            </div>
+            <div th:if="${season.tracks.isEmpty()}" class="empty-state" style="padding:16px;"><p>No tracks assigned. <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="detail-link">Edit season</a> to add tracks.</p></div>
+        </div>
+
+        <div class="detail-section" style="margin-top:32px;">
             <h2 th:text="'Matchdays (' + ${season.matchdays.size()} + ')'"></h2>
             <table th:if="${!season.matchdays.isEmpty()}">
                 <thead>

@@ -35,6 +35,8 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
         assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Import").setExact(true))).isVisible();
         assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Standings").setExact(true))).isVisible();
         assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Generate Site"))).isVisible();
+        assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Cars").setExact(true))).isVisible();
+        assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Tracks").setExact(true))).isVisible();
     }
 
     @Test
@@ -107,5 +109,35 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
 
         page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Races").setExact(true)).first().click();
         assertThat(page.locator("h1")).containsText("Races");
+
+        page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Cars").setExact(true)).first().click();
+        assertThat(page.locator("h1")).containsText("Cars");
+
+        page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Tracks").setExact(true)).first().click();
+        assertThat(page.locator("h1")).containsText("Tracks");
+    }
+
+    @Test
+    void shouldCreateCarAndShowInList() {
+        page.navigate(url("/admin/cars/new"));
+        page.getByRole(com.microsoft.playwright.options.AriaRole.TEXTBOX, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Manufacturer")).fill("Mazda");
+        page.getByRole(com.microsoft.playwright.options.AriaRole.TEXTBOX, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Name").setExact(true)).fill("RX-Vision GT3");
+        page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Save")).click();
+
+        assertThat(page).hasTitle("CTC Admin - Cars");
+        assertThat(page.locator(".alert-success")).containsText("Car saved");
+        assertThat(page.locator("table")).containsText("Mazda");
+    }
+
+    @Test
+    void shouldCreateTrackAndShowInList() {
+        page.navigate(url("/admin/tracks/new"));
+        page.getByRole(com.microsoft.playwright.options.AriaRole.TEXTBOX, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Name").setExact(true)).fill("Tsukuba Circuit");
+        page.getByRole(com.microsoft.playwright.options.AriaRole.TEXTBOX, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Country")).fill("Japan");
+        page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Save")).click();
+
+        assertThat(page).hasTitle("CTC Admin - Tracks");
+        assertThat(page.locator(".alert-success")).containsText("Track saved");
+        assertThat(page.locator("table")).containsText("Tsukuba Circuit");
     }
 }

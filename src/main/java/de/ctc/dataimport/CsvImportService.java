@@ -88,8 +88,9 @@ public class CsvImportService {
 
             // Create race
             var race = new Race(matchday, homeTeam, awayTeam != null ? awayTeam : homeTeam);
-            race.setTrack(metadata.track());
-            race.setCar(metadata.car());
+            // TODO: resolve Track/Car entities from metadata strings
+            // race.setTrack(...);
+            // race.setCar(...);
 
             for (var row : entry.getValue()) {
                 var driver = resolveDriver(row, confirmedMatches, createNewDrivers, result);

@@ -45,6 +45,12 @@ class SiteGeneratorServiceTest {
     private RaceRepository raceRepository;
 
     @Autowired
+    private CarRepository carRepository;
+
+    @Autowired
+    private TrackRepository trackRepository;
+
+    @Autowired
     private de.ctc.domain.service.ScoringService scoringService;
 
     @TempDir
@@ -86,9 +92,11 @@ class SiteGeneratorServiceTest {
         seasonDriverRepository.save(new SeasonDriver(season, driver4, p1r));
 
         var matchday = matchdayRepository.save(new Matchday(season, "Spieltag 1", 1));
+        var testTrack = trackRepository.save(new Track("Tsukuba " + uniqueSuffix, "Japan"));
+        var testCar = carRepository.save(new Car("Mazda " + uniqueSuffix, "RX-Vision GT3"));
         var race = new Race(matchday, tnr, p1r);
-        race.setTrack("Tsukuba");
-        race.setCar("Mazda RX-Vision GT3");
+        race.setTrack(testTrack);
+        race.setCar(testCar);
 
         var r1 = new RaceResult(race, driver1, 1, 1, false);
         var r2 = new RaceResult(race, driver2, 3, 3, false);
