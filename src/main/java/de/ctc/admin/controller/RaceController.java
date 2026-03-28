@@ -2,15 +2,19 @@ package de.ctc.admin.controller;
 
 import de.ctc.admin.dto.RaceForm;
 import de.ctc.admin.dto.RaceResultForm;
+import de.ctc.domain.model.AttachmentType;
 import de.ctc.domain.model.Race;
+import de.ctc.domain.model.RaceAttachment;
 import de.ctc.domain.model.RaceResult;
 import de.ctc.domain.repository.*;
+import de.ctc.domain.service.FileStorageService;
 import de.ctc.domain.service.ScoringService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.UUID;
@@ -27,7 +31,9 @@ public class RaceController {
     private final DriverRepository driverRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final MatchdayLineupRepository matchdayLineupRepository;
+    private final RaceAttachmentRepository raceAttachmentRepository;
     private final ScoringService scoringService;
+    private final FileStorageService fileStorageService;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID matchdayId, Model model) {
@@ -165,6 +171,51 @@ public class RaceController {
         redirectAttributes.addFlashAttribute("successMessage",
                 race.getHomeTeam().getShortName() + " " + homeScore + " : " + awayScore + " " + race.getAwayTeam().getShortName());
         return "redirect:" + (returnUrl != null ? returnUrl : "/admin/races");
+    }
+
+    @PostMapping("/{id}/attachments/upload")
+    public String uploadAttachment(@PathVariable UUID id,
+                                    @RequestParam("file") MultipartFile file,
+                                    RedirectAttributes redirectAttributes) {
+        var race = raceRepository.findById(id).orElseThrow();
+        try {
+            String url = fileStorageService.store(id, file);
+            var attachment = new RaceAttachment(race, AttachmentType.FILE, file.getOriginalFilename(), url);
+            raceAttachmentRepository.save(attachment);
+            redirectAttributes.addFlashAttribute("successMessage", "File uploaded: " + file.getOriginalFilename());
+        } catch (Exception e) {
+            log.error("Upload failed for race {}", id, e);
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/races/" + id;
+    }
+
+    @PostMapping("/{id}/attachments/link")
+    public String addLink(@PathVariable UUID id,
+                           @RequestParam String name,
+                           @RequestParam String url,
+                           RedirectAttributes redirectAttributes) {
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Link must start with http:// or https://");
+            return "redirect:/admin/races/" + id;
+        }
+        var race = raceRepository.findById(id).orElseThrow();
+        var attachment = new RaceAttachment(race, AttachmentType.LINK, name, url);
+        raceAttachmentRepository.save(attachment);
+        redirectAttributes.addFlashAttribute("successMessage", "Link added: " + name);
+        return "redirect:/admin/races/" + id;
+    }
+
+    @PostMapping("/attachments/{attachmentId}/delete")
+    public String deleteAttachment(@PathVariable UUID attachmentId, RedirectAttributes redirectAttributes) {
+        var attachment = raceAttachmentRepository.findById(attachmentId).orElseThrow();
+        UUID raceId = attachment.getRace().getId();
+        if (attachment.getType() == AttachmentType.FILE) {
+            fileStorageService.delete(attachment.getUrl());
+        }
+        raceAttachmentRepository.delete(attachment);
+        redirectAttributes.addFlashAttribute("successMessage", "Attachment deleted");
+        return "redirect:/admin/races/" + raceId;
     }
 
     @PostMapping("/{id}/delete")

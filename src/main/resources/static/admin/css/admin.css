@@ -519,52 +519,50 @@ select option {
     border-radius: 4px;
 }
 
-/* Swiss rounds */
-.swiss-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
+/* Attachments */
+.attachment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.swiss-matchup {
-    background: var(--bg-input);
+.attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    overflow: hidden;
 }
 
-.swiss-matchup.bye { opacity: 0.7; }
-
-.swiss-team {
+.attachment-preview {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 10px 14px;
-    font-size: 14px;
-    color: var(--text);
+    justify-content: center;
 }
 
-.swiss-team + .swiss-team {
-    border-top: 1px solid var(--border);
-}
-
-.swiss-team.winner {
-    color: var(--accent);
-    font-weight: 700;
-}
-
-.swiss-score {
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    min-width: 28px;
-    text-align: right;
-}
-
-.swiss-team.winner .swiss-score {
-    background: var(--accent);
-    color: var(--bg);
-    padding: 2px 8px;
+.attachment-thumb {
+    max-width: 48px;
+    max-height: 48px;
     border-radius: 4px;
+    object-fit: cover;
+}
+
+.attachment-icon {
+    font-size: 24px;
+    opacity: 0.5;
+}
+
+.attachment-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 /* Quick Score */

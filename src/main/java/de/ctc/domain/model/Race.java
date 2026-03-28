@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "races")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "results", "playoffMatchup"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "results", "playoffMatchup", "attachments"})
 public class Race {
 
     @Id
@@ -55,6 +55,10 @@ public class Race {
     @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<RaceResult> results = new ArrayList<>();
+
+    @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt DESC")
+    private List<RaceAttachment> attachments = new ArrayList<>();
 
     public Race(Matchday matchday, Team homeTeam, Team awayTeam) {
         this.matchday = matchday;
