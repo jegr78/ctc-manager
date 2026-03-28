@@ -43,6 +43,9 @@ build/
 .playwright-mcp/
 skills-lock.json
 
+### Docker ###
+.env
+
 ### OS ###
 .DS_Store
 uploads/

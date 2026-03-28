@@ -20,3 +20,8 @@ app:
 ctc:
   site:
     output-dir: /app/ctc-site-output
+
+management:
+  endpoint:
+    health:
+      show-details: always
