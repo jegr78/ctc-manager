@@ -7,21 +7,21 @@
     <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
 </head>
 <body>
-    <nav class="navbar">
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
         <div class="navbar-brand">
             <img th:src="@{/admin/img/ctc-logo-white.png}" alt="CTC" style="height:28px;width:28px;">
             CTC Admin
         </div>
         <div class="navbar-links">
-            <a th:href="@{/admin/seasons}">Seasons</a>
-            <a th:href="@{/admin/teams}">Teams</a>
-            <a th:href="@{/admin/drivers}">Drivers</a>
-            <a th:href="@{/admin/matchdays}">Matchdays</a>
-            <a th:href="@{/admin/races}">Races</a>
+            <a th:href="@{/admin/seasons}" th:classappend="${title.contains('Season') ? 'active' : ''}">Seasons</a>
+            <a th:href="@{/admin/teams}" th:classappend="${title.contains('Team') ? 'active' : ''}">Teams</a>
+            <a th:href="@{/admin/drivers}" th:classappend="${title.contains('Driver') ? 'active' : ''}">Drivers</a>
+            <a th:href="@{/admin/matchdays}" th:classappend="${title.contains('Matchday') ? 'active' : ''}">Matchdays</a>
+            <a th:href="@{/admin/races}" th:classappend="${title.contains('Race') ? 'active' : ''}">Races</a>
             <span class="navbar-separator">|</span>
-            <a th:href="@{/admin/import}">Import</a>
-            <a th:href="@{/admin/standings}">Standings</a>
-            <a th:href="@{/admin/playoffs}">Playoffs</a>
+            <a th:href="@{/admin/import}" th:classappend="${title.contains('Import') ? 'active' : ''}">Import</a>
+            <a th:href="@{/admin/standings}" th:classappend="${title.contains('Standing') ? 'active' : ''}">Standings</a>
+            <a th:href="@{/admin/playoffs}" th:classappend="${title.contains('Playoff') || title.contains('Matchup') ? 'active' : ''}">Playoffs</a>
             <a th:href="@{/admin/generate}" class="btn-generate">Generate Site</a>
         </div>
     </nav>

@@ -27,8 +27,8 @@
             <span th:text="${season.endDate ?: '-'}"></span>
             <span class="label">Status</span>
             <span>
-                <span th:if="${season.active}" class="badge badge-active">Active</span>
-                <span th:unless="${season.active}" class="badge badge-inactive">Inactive</span>
+                <span th:if="${season.active}" class="badge badge-active">● Active</span>
+                <span th:unless="${season.active}" class="badge badge-inactive">○ Inactive</span>
             </span>
         </div>
 
@@ -43,8 +43,8 @@
                         <td><a th:href="@{/admin/teams/{id}(id=${team.id})}" class="detail-link" th:text="${team.shortName}"></a></td>
                         <td th:text="${team.name}"></td>
                         <td>
-                            <span th:if="${team.isSubTeam()}" class="badge badge-active">Sub</span>
-                            <span th:unless="${team.isSubTeam()}" class="badge badge-inactive">Parent</span>
+                            <span th:if="${team.isSubTeam()}" class="badge badge-active">▸ Sub</span>
+                            <span th:unless="${team.isSubTeam()}" class="badge badge-inactive">◆ Parent</span>
                         </td>
                     </tr>
                 </tbody>

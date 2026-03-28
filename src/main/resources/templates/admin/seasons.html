@@ -24,8 +24,8 @@
                     <td th:text="${season.startDate}"></td>
                     <td th:text="${season.endDate}"></td>
                     <td>
-                        <span th:if="${season.active}" class="badge badge-active">Active</span>
-                        <span th:unless="${season.active}" class="badge badge-inactive">Inactive</span>
+                        <span th:if="${season.active}" class="badge badge-active">● Active</span>
+                        <span th:unless="${season.active}" class="badge badge-inactive">○ Inactive</span>
                     </td>
                     <td class="actions">
                         <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="btn btn-secondary btn-sm">Edit</a>

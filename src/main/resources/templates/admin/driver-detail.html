@@ -25,8 +25,8 @@
             <span th:text="${driver.nickname}"></span>
             <span class="label">Status</span>
             <span>
-                <span th:if="${driver.active}" class="badge badge-active">Active</span>
-                <span th:unless="${driver.active}" class="badge badge-inactive">Inactive</span>
+                <span th:if="${driver.active}" class="badge badge-active">● Active</span>
+                <span th:unless="${driver.active}" class="badge badge-inactive">○ Inactive</span>
             </span>
         </div>
 
