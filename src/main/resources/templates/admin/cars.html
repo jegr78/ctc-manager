@@ -15,13 +15,15 @@
         <table th:if="${!cars.isEmpty()}" id="carsTable">
             <thead>
                 <tr>
-                    <th class="sortable" data-col="0" aria-label="Sort by Manufacturer">Manufacturer</th>
-                    <th class="sortable" data-col="1" aria-label="Sort by Name">Name</th>
+                    <th style="width:60px"></th>
+                    <th class="sortable" data-col="1" aria-label="Sort by Manufacturer">Manufacturer</th>
+                    <th class="sortable" data-col="2" aria-label="Sort by Name">Name</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <tr th:each="car : ${cars}" class="car-row">
+                    <td style="width:60px"><img th:if="${car.imageUrl}" th:src="${car.imageUrl}" alt="" style="width:50px;height:auto;border-radius:4px;"></td>
                     <td th:text="${car.manufacturer}"></td>
                     <td th:text="${car.name}"></td>
                     <td class="actions">

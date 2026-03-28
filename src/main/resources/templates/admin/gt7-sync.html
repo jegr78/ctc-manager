@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('GT7 Sync', ~{::section})}">
+<body>
+<section>
+    <h1>GT7 Sync</h1>
+    <div class="card">
+        <p>Fetch the current GT7 car and track lists from <strong>gran-turismo.com</strong> and compare with the database.</p>
+        <p class="text-dim" style="margin-top:8px;">This will scrape the official GT7 car list and track list pages, compare the data with existing entries, and show you what's new.</p>
+        <form th:action="@{/admin/gt7-sync/preview}" method="post" style="margin-top:16px;" id="fetchForm">
+            <button type="submit" id="fetchBtn" class="btn btn-primary">Fetch &amp; Compare</button>
+        </form>
+    </div>
+
+    <!-- Fullscreen overlay shown during fetch -->
+    <div id="fetchOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:32px 48px;text-align:center;max-width:400px;">
+            <div style="margin-bottom:12px;color:var(--accent);font-weight:700;font-size:18px;">Fetching GT7 data...</div>
+            <div class="text-dim">Loading car and track lists from gran-turismo.com.<br>This may take a few seconds.</div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var form = document.getElementById('fetchForm');
+        var btn = document.getElementById('fetchBtn');
+        var overlay = document.getElementById('fetchOverlay');
+        form.addEventListener('submit', function() {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+            btn.textContent = 'Fetching...';
+            overlay.style.display = 'flex';
+        });
+    })();
+    </script>
+</section>
+</body>
+</html>

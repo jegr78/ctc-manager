@@ -1,0 +1,1 @@
+const n={tnr13:{id:"tnr13",name:"Ford"},tnr28:{id:"tnr28",name:"Nissan"},tnr38:{id:"tnr38",name:"Subaru"},tnr3:{id:"tnr3",name:"Alfa Romeo"},tnr10:{id:"tnr10",name:"Daihatsu"},tnr43:{id:"tnr43",name:"Toyota"},tnr151:{id:"tnr151",name:"Roadster Shop"}};export{n as Tuners};

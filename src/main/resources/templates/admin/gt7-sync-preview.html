@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('GT7 Sync Preview', ~{::section})}">
+<body>
+<section>
+    <h1>GT7 Sync Preview</h1>
+
+    <form th:action="@{/admin/gt7-sync/execute}" method="post">
+
+        <!-- Cars Section -->
+        <div class="card" style="margin-bottom:24px;">
+            <div class="toolbar" style="margin-bottom:16px;">
+                <div>
+                    <h2 style="font-size:18px;">Cars</h2>
+                    <p class="text-dim" style="margin-top:4px;">
+                        <span th:text="${preview.cars.size()}"></span> cars found &mdash;
+                        <strong th:text="${preview.newCarCount}"></strong> new,
+                        <span th:text="${preview.existingCarCount}"></span> existing
+                    </p>
+                </div>
+                <div class="actions">
+                    <input type="text" id="carSearch" placeholder="Search cars..." aria-label="Search cars"
+                           style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
+                    <button type="button" id="toggleCars" class="btn btn-secondary btn-sm">Deselect all new</button>
+                </div>
+            </div>
+
+            <table id="carsTable">
+                <thead>
+                    <tr>
+                        <th style="width:40px;"></th>
+                        <th style="width:60px;"></th>
+                        <th style="width:80px;">Status</th>
+                        <th>Manufacturer</th>
+                        <th>Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="car : ${preview.cars}" class="car-row"
+                        th:style="${car.status.name() == 'NEW' ? 'background:var(--success-bg)' : ''}">
+                        <td>
+                            <input th:if="${car.status.name() == 'NEW'}" type="checkbox"
+                                   name="selectedCars" th:value="${car.gt7Id}" checked class="car-check">
+                        </td>
+                        <td style="width:60px;">
+                            <img th:src="${car.imageUrl}" alt="" style="width:50px;height:auto;border-radius:4px;"
+                                 loading="lazy" onerror="this.style.display='none'">
+                        </td>
+                        <td>
+                            <span th:if="${car.status.name() == 'NEW'}" class="badge badge-active">NEW</span>
+                            <span th:if="${car.status.name() == 'EXISTS'}" class="badge" style="background:var(--bg-hover);color:var(--text-dim);">EXISTS</span>
+                        </td>
+                        <td th:text="${car.manufacturer}"></td>
+                        <td th:text="${car.name}"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div id="carNoResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching cars found.</p></div>
+            <div class="pagination" id="carPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+                <span id="carPageInfo" class="text-dim"></span>
+                <div class="actions">
+                    <button type="button" id="carPrevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
+                    <button type="button" id="carNextPage" class="btn btn-secondary btn-sm">Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tracks Section -->
+        <div class="card" style="margin-bottom:24px;">
+            <div class="toolbar" style="margin-bottom:16px;">
+                <div>
+                    <h2 style="font-size:18px;">Tracks</h2>
+                    <p class="text-dim" style="margin-top:4px;">
+                        <span th:text="${preview.tracks.size()}"></span> tracks found &mdash;
+                        <strong th:text="${preview.newTrackCount}"></strong> new,
+                        <span th:text="${preview.existingTrackCount}"></span> existing
+                    </p>
+                </div>
+                <div class="actions">
+                    <input type="text" id="trackSearch" placeholder="Search tracks..." aria-label="Search tracks"
+                           style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
+                    <button type="button" id="toggleTracks" class="btn btn-secondary btn-sm">Deselect all new</button>
+                </div>
+            </div>
+
+            <table id="tracksTable">
+                <thead>
+                    <tr>
+                        <th style="width:40px;"></th>
+                        <th style="width:80px;">Status</th>
+                        <th>Name</th>
+                        <th>Country</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="track : ${preview.tracks}" class="track-row"
+                        th:style="${track.status.name() == 'NEW' ? 'background:var(--success-bg)' : ''}">
+                        <td>
+                            <input th:if="${track.status.name() == 'NEW'}" type="checkbox"
+                                   name="selectedTracks" th:value="${track.name}" checked class="track-check">
+                        </td>
+                        <td>
+                            <span th:if="${track.status.name() == 'NEW'}" class="badge badge-active">NEW</span>
+                            <span th:if="${track.status.name() == 'EXISTS'}" class="badge" style="background:var(--bg-hover);color:var(--text-dim);">EXISTS</span>
+                        </td>
+                        <td th:text="${track.name}"></td>
+                        <td th:text="${track.country}"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div id="trackNoResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching tracks found.</p></div>
+            <div class="pagination" id="trackPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+                <span id="trackPageInfo" class="text-dim"></span>
+                <div class="actions">
+                    <button type="button" id="trackPrevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
+                    <button type="button" id="trackNextPage" class="btn btn-secondary btn-sm">Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="actions" style="margin-top:16px;">
+            <button type="submit" id="importBtn" class="btn btn-primary">Import Selected</button>
+            <a th:href="@{/admin/gt7-sync}" id="cancelLink" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+
+    <!-- Fullscreen overlay shown during import -->
+    <div id="importOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:none;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:32px 48px;text-align:center;max-width:400px;">
+            <div style="margin-bottom:12px;color:var(--accent);font-weight:700;font-size:18px;">Importing...</div>
+            <div class="text-dim">Downloading car and track data with images.<br>This may take a moment.</div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        function setupTable(config) {
+            var PAGE_SIZE = 50;
+            var table = document.getElementById(config.tableId);
+            if (!table) return;
+
+            var tbody = table.querySelector('tbody');
+            var rows = Array.from(tbody.querySelectorAll('.' + config.rowClass));
+            var search = document.getElementById(config.searchId);
+            var pageInfo = document.getElementById(config.pageInfoId);
+            var prevBtn = document.getElementById(config.prevBtnId);
+            var nextBtn = document.getElementById(config.nextBtnId);
+            var noResults = document.getElementById(config.noResultsId);
+            var toggleBtn = document.getElementById(config.toggleId);
+
+            var filteredRows = rows;
+            var currentPage = 0;
+            var allChecked = true;
+
+            function render() {
+                var totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+                currentPage = Math.min(currentPage, totalPages - 1);
+                var start = currentPage * PAGE_SIZE;
+                var end = start + PAGE_SIZE;
+
+                rows.forEach(function(r) { r.style.display = 'none'; });
+                filteredRows.slice(start, end).forEach(function(r) { r.style.display = ''; });
+
+                pageInfo.textContent = filteredRows.length + ' ' + config.label + ' \u2014 Page ' + (currentPage + 1) + ' of ' + totalPages;
+                prevBtn.disabled = currentPage === 0;
+                nextBtn.disabled = currentPage >= totalPages - 1;
+                noResults.style.display = filteredRows.length === 0 ? '' : 'none';
+                table.style.display = filteredRows.length === 0 ? 'none' : '';
+            }
+
+            search.addEventListener('input', function() {
+                var q = this.value.toLowerCase();
+                filteredRows = rows.filter(function(r) { return r.textContent.toLowerCase().includes(q); });
+                currentPage = 0;
+                render();
+            });
+
+            prevBtn.addEventListener('click', function() { currentPage--; render(); });
+            nextBtn.addEventListener('click', function() { currentPage++; render(); });
+
+            toggleBtn.addEventListener('click', function() {
+                allChecked = !allChecked;
+                var checks = table.querySelectorAll('.' + config.checkClass);
+                checks.forEach(function(cb) { cb.checked = allChecked; });
+                toggleBtn.textContent = allChecked ? 'Deselect all new' : 'Select all new';
+            });
+
+            render();
+        }
+
+        setupTable({
+            tableId: 'carsTable', rowClass: 'car-row', searchId: 'carSearch',
+            pageInfoId: 'carPageInfo', prevBtnId: 'carPrevPage', nextBtnId: 'carNextPage',
+            noResultsId: 'carNoResults', toggleId: 'toggleCars', checkClass: 'car-check', label: 'cars'
+        });
+
+        setupTable({
+            tableId: 'tracksTable', rowClass: 'track-row', searchId: 'trackSearch',
+            pageInfoId: 'trackPageInfo', prevBtnId: 'trackPrevPage', nextBtnId: 'trackNextPage',
+            noResultsId: 'trackNoResults', toggleId: 'toggleTracks', checkClass: 'track-check', label: 'tracks'
+        });
+
+        // Import button: disable on click, show centered overlay
+        var form = document.querySelector('form');
+        var importBtn = document.getElementById('importBtn');
+        var overlay = document.getElementById('importOverlay');
+        form.addEventListener('submit', function() {
+            importBtn.disabled = true;
+            importBtn.style.opacity = '0.5';
+            importBtn.style.pointerEvents = 'none';
+            importBtn.textContent = 'Importing...';
+            overlay.style.display = 'flex';
+        });
+    })();
+    </script>
+</section>
+</body>
+</html>

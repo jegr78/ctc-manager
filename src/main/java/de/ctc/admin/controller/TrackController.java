@@ -5,6 +5,7 @@ import de.ctc.domain.model.Track;
 import de.ctc.domain.repository.RaceRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TrackRepository;
+import de.ctc.domain.service.FileStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,8 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -25,6 +28,7 @@ public class TrackController {
     private final TrackRepository trackRepository;
     private final RaceRepository raceRepository;
     private final SeasonRepository seasonRepository;
+    private final FileStorageService fileStorageService;
 
     @GetMapping
     public String list(Model model) {
@@ -46,7 +50,26 @@ public class TrackController {
         form.setName(track.getName());
         form.setCountry(track.getCountry());
         model.addAttribute("trackForm", form);
+        model.addAttribute("track", track);
         return "admin/track-form";
+    }
+
+    @PostMapping("/{id}/image")
+    public String uploadImage(@PathVariable UUID id, @RequestParam MultipartFile image,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            var track = trackRepository.findById(id).orElseThrow();
+            if (track.getImageUrl() != null) {
+                fileStorageService.delete(track.getImageUrl());
+            }
+            String url = fileStorageService.storeImage("tracks", id, image);
+            track.setImageUrl(url);
+            trackRepository.save(track);
+            redirectAttributes.addFlashAttribute("successMessage", "Image updated");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Image upload failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tracks/" + id + "/edit";
     }
 
     @PostMapping("/save")

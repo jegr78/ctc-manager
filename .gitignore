@@ -40,6 +40,7 @@ build/
 .claude/skills/
 .junie/
 .playwright-cli/
+.playwright-mcp/
 skills-lock.json
 
 ### OS ###

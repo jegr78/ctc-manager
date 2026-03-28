@@ -5,6 +5,7 @@ import de.ctc.domain.model.Car;
 import de.ctc.domain.repository.CarRepository;
 import de.ctc.domain.repository.RaceRepository;
 import de.ctc.domain.repository.SeasonRepository;
+import de.ctc.domain.service.FileStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,8 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.UUID;
 
@@ -25,6 +28,7 @@ public class CarController {
     private final CarRepository carRepository;
     private final RaceRepository raceRepository;
     private final SeasonRepository seasonRepository;
+    private final FileStorageService fileStorageService;
 
     @GetMapping
     public String list(Model model) {
@@ -46,7 +50,26 @@ public class CarController {
         form.setManufacturer(car.getManufacturer());
         form.setName(car.getName());
         model.addAttribute("carForm", form);
+        model.addAttribute("car", car);
         return "admin/car-form";
+    }
+
+    @PostMapping("/{id}/image")
+    public String uploadImage(@PathVariable UUID id, @RequestParam MultipartFile image,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            var car = carRepository.findById(id).orElseThrow();
+            if (car.getImageUrl() != null) {
+                fileStorageService.delete(car.getImageUrl());
+            }
+            String url = fileStorageService.storeImage("cars", id, image);
+            car.setImageUrl(url);
+            carRepository.save(car);
+            redirectAttributes.addFlashAttribute("successMessage", "Image updated");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Image upload failed: " + e.getMessage());
+        }
+        return "redirect:/admin/cars/" + id + "/edit";
     }
 
     @PostMapping("/save")

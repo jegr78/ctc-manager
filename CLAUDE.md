@@ -19,6 +19,7 @@ Deutsch für Kommunikation und Dokumentation. Code und Kommentare auf Englisch.
 ## Spring Profiles
 
 - `dev` — H2 In-Memory, Port 9090 (Entwicklung, Tests)
+- `dev,demo` — Wie `dev`, importiert beim Start alle GT7-Autos und -Strecken (mit Bildern) fuer manuelles Testen
 - `local` — MariaDB lokal, Port 9091
 - `prod` — Cloud DB (Environment Variables)
 
@@ -35,12 +36,16 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
 - `de.ctc.admin.dto` — Form/Display DTOs
 - `de.ctc.sitegen` — Statische Seitengenerierung
 - `de.ctc.dataimport` — CSV/Bild-Import
+- `de.ctc.gt7sync` — GT7 Auto/Strecken-Scraping und Sync
 
 ## Befehle
 
 ```bash
 # Dev-Modus starten
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Dev-Modus mit GT7-Demodaten (Autos, Strecken, Bilder)
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,demo
 
 # Tests ausführen
 ./mvnw verify
