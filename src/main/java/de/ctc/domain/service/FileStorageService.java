@@ -16,8 +16,11 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
 
-    private static final Set<String> ALLOWED_TYPES = Set.of(
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
             "image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf");
+
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+            ".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf");
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -64,8 +67,15 @@ public class FileStorageService {
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new IllegalArgumentException("File too large (max 10 MB)");
         }
-        if (!ALLOWED_TYPES.contains(file.getContentType())) {
+        if (!ALLOWED_CONTENT_TYPES.contains(file.getContentType())) {
             throw new IllegalArgumentException("File type not allowed. Allowed: PNG, JPG, GIF, WebP, PDF");
+        }
+        String name = file.getOriginalFilename();
+        if (name != null) {
+            String ext = name.contains(".") ? name.substring(name.lastIndexOf('.')).toLowerCase() : "";
+            if (!ALLOWED_EXTENSIONS.contains(ext)) {
+                throw new IllegalArgumentException("File extension not allowed. Allowed: PNG, JPG, GIF, WebP, PDF");
+            }
         }
     }
 

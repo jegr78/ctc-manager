@@ -1,5 +1,5 @@
 CREATE TABLE race_attachments (
-    id UUID DEFAULT RANDOM_UUID() PRIMARY KEY,
+    id UUID PRIMARY KEY,
     race_id UUID NOT NULL,
     type VARCHAR(10) NOT NULL,
     name VARCHAR(255) NOT NULL,
