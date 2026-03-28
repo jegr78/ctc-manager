@@ -40,6 +40,13 @@ public class RaceController {
         return "admin/races";
     }
 
+    @GetMapping("/{id}")
+    public String detail(@PathVariable UUID id, Model model) {
+        var race = raceRepository.findById(id).orElseThrow();
+        model.addAttribute("race", race);
+        return "admin/race-detail";
+    }
+
     @GetMapping("/new")
     public String create(@RequestParam(required = false) UUID matchdayId, Model model) {
         var form = new RaceForm();

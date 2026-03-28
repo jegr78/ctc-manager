@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Season: ' + ${season.name}, ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <div>
+            <a th:href="@{/admin/seasons}" class="back-link">&larr; Back to Seasons</a>
+            <h1 th:text="${season.name}"></h1>
+        </div>
+        <div class="actions">
+            <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="btn btn-primary">Edit</a>
+            <form th:action="@{/admin/seasons/{id}/delete(id=${season.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('Really delete this season?')">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="detail-fields">
+            <span class="label">Name</span>
+            <span th:text="${season.name}"></span>
+            <span class="label">Start Date</span>
+            <span th:text="${season.startDate ?: '-'}"></span>
+            <span class="label">End Date</span>
+            <span th:text="${season.endDate ?: '-'}"></span>
+            <span class="label">Status</span>
+            <span>
+                <span th:if="${season.active}" class="badge badge-active">Active</span>
+                <span th:unless="${season.active}" class="badge badge-inactive">Inactive</span>
+            </span>
+        </div>
+
+        <div class="detail-section">
+            <h2 th:text="'Teams (' + ${season.teams.size()} + ')'"></h2>
+            <table th:if="${!season.teams.isEmpty()}">
+                <thead>
+                    <tr><th>Short Name</th><th>Name</th><th>Type</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="team : ${season.teams}">
+                        <td><a th:href="@{/admin/teams/{id}(id=${team.id})}" class="detail-link" th:text="${team.shortName}"></a></td>
+                        <td th:text="${team.name}"></td>
+                        <td>
+                            <span th:if="${team.isSubTeam()}" class="badge badge-active">Sub</span>
+                            <span th:unless="${team.isSubTeam()}" class="badge badge-inactive">Parent</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div th:if="${season.teams.isEmpty()}" class="empty-state" style="padding:16px;"><p>No teams assigned.</p></div>
+        </div>
+
+        <div class="detail-section" style="margin-top:32px;">
+            <h2 th:text="'Matchdays (' + ${season.matchdays.size()} + ')'"></h2>
+            <table th:if="${!season.matchdays.isEmpty()}">
+                <thead>
+                    <tr><th>#</th><th>Label</th><th>Date</th><th>Races</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="md : ${season.matchdays}">
+                        <td th:text="${md.sortIndex}"></td>
+                        <td><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="detail-link" th:text="${md.label}"></a></td>
+                        <td th:text="${md.date ?: '-'}"></td>
+                        <td th:text="${md.races.size()}"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div th:if="${season.matchdays.isEmpty()}" class="empty-state" style="padding:16px;"><p>No matchdays yet.</p></div>
+        </div>
+
+        <div th:if="${playoff != null}" class="detail-section" style="margin-top:32px;">
+            <h2>Playoff</h2>
+            <div class="detail-fields">
+                <span class="label">Name</span>
+                <a th:href="@{/admin/playoffs(seasonId=${season.id})}" class="detail-link" th:text="${playoff.name}"></a>
+                <span class="label">Rounds</span>
+                <span th:text="${playoff.rounds.size()}"></span>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

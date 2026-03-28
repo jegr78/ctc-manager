@@ -1,6 +1,7 @@
 package de.ctc.admin.controller;
 
 import de.ctc.domain.model.Team;
+import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class TeamController {
 
     private final TeamRepository teamRepository;
+    private final SeasonRepository seasonRepository;
 
     @GetMapping
     public String list(Model model) {
@@ -31,6 +33,15 @@ public class TeamController {
                 .toList();
         model.addAttribute("parentTeams", parentTeams);
         return "admin/teams";
+    }
+
+    @GetMapping("/{id}")
+    public String detail(@PathVariable UUID id, Model model) {
+        var team = teamRepository.findById(id).orElseThrow();
+        var seasons = seasonRepository.findByTeamsId(id);
+        model.addAttribute("team", team);
+        model.addAttribute("seasons", seasons);
+        return "admin/team-detail";
     }
 
     @GetMapping("/new")

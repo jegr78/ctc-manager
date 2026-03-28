@@ -1,6 +1,7 @@
 package de.ctc.admin.controller;
 
 import de.ctc.domain.model.Season;
+import de.ctc.domain.repository.PlayoffRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
 import jakarta.validation.Valid;
@@ -22,6 +23,16 @@ public class SeasonController {
 
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
+    private final PlayoffRepository playoffRepository;
+
+    @GetMapping("/{id}")
+    public String detail(@PathVariable UUID id, Model model) {
+        var season = seasonRepository.findById(id).orElseThrow();
+        var playoff = playoffRepository.findBySeasonId(id).orElse(null);
+        model.addAttribute("season", season);
+        model.addAttribute("playoff", playoff);
+        return "admin/season-detail";
+    }
 
     @GetMapping
     public String list(Model model) {

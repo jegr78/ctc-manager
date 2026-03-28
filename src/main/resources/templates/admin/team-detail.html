@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Team: ' + ${team.shortName}, ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <div>
+            <a th:href="@{/admin/teams}" class="back-link">&larr; Back to Teams</a>
+            <h1 th:text="${team.name}"></h1>
+        </div>
+        <div class="actions">
+            <a th:href="@{/admin/teams/{id}/edit(id=${team.id})}" class="btn btn-primary">Edit</a>
+            <form th:action="@{/admin/teams/{id}/delete(id=${team.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('Really delete this team?')">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="detail-fields">
+            <span class="label">Name</span>
+            <span th:text="${team.name}"></span>
+            <span class="label">Short Name</span>
+            <span th:text="${team.shortName}"></span>
+            <span class="label">Logo</span>
+            <span th:text="${team.logoUrl ?: '-'}"></span>
+            <span class="label">Parent Team</span>
+            <span th:if="${team.parentTeam != null}">
+                <a th:href="@{/admin/teams/{id}(id=${team.parentTeam.id})}" class="detail-link" th:text="${team.parentTeam.name}"></a>
+            </span>
+            <span th:if="${team.parentTeam == null}">-</span>
+        </div>
+
+        <div th:if="${team.hasSubTeams()}" class="detail-section">
+            <h2 th:text="'Sub-Teams (' + ${team.subTeams.size()} + ')'"></h2>
+            <table>
+                <thead>
+                    <tr><th>Short Name</th><th>Name</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="sub : ${team.subTeams}">
+                        <td><a th:href="@{/admin/teams/{id}(id=${sub.id})}" class="detail-link" th:text="${sub.shortName}"></a></td>
+                        <td th:text="${sub.name}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="detail-section" style="margin-top:32px;">
+            <h2 th:text="'Seasons (' + ${seasons.size()} + ')'"></h2>
+            <table th:if="${!seasons.isEmpty()}">
+                <thead>
+                    <tr><th>Name</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="s : ${seasons}">
+                        <td><a th:href="@{/admin/seasons/{id}(id=${s.id})}" class="detail-link" th:text="${s.name}"></a></td>
+                        <td>
+                            <span th:if="${s.active}" class="badge badge-active">Active</span>
+                            <span th:unless="${s.active}" class="badge badge-inactive">Inactive</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div th:if="${seasons.isEmpty()}" class="empty-state" style="padding:16px;"><p>Not assigned to any season.</p></div>
+        </div>
+
+        <div class="detail-section" style="margin-top:32px;">
+            <h2 th:text="'Drivers (' + ${team.seasonDrivers.size()} + ')'"></h2>
+            <table th:if="${!team.seasonDrivers.isEmpty()}">
+                <thead>
+                    <tr><th>PSN-ID</th><th>Nickname</th><th>Season</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="sd : ${team.seasonDrivers}">
+                        <td><a th:href="@{/admin/drivers/{id}(id=${sd.driver.id})}" class="detail-link" th:text="${sd.driver.psnId}"></a></td>
+                        <td th:text="${sd.driver.nickname}"></td>
+                        <td><a th:href="@{/admin/seasons/{id}(id=${sd.season.id})}" class="detail-link" th:text="${sd.season.name}"></a></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div th:if="${team.seasonDrivers.isEmpty()}" class="empty-state" style="padding:16px;"><p>No drivers assigned.</p></div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

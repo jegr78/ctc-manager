@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Driver: ' + ${driver.psnId}, ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <div>
+            <a th:href="@{/admin/drivers}" class="back-link">&larr; Back to Drivers</a>
+            <h1 th:text="${driver.nickname}"></h1>
+        </div>
+        <div class="actions">
+            <a th:href="@{/admin/drivers/{id}/edit(id=${driver.id})}" class="btn btn-primary">Edit</a>
+            <form th:action="@{/admin/drivers/{id}/delete(id=${driver.id})}" method="post" style="display:inline"
+                  onsubmit="return confirm('Really delete this driver?')">
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="detail-fields">
+            <span class="label">PSN-ID</span>
+            <span th:text="${driver.psnId}"></span>
+            <span class="label">Nickname</span>
+            <span th:text="${driver.nickname}"></span>
+            <span class="label">Status</span>
+            <span>
+                <span th:if="${driver.active}" class="badge badge-active">Active</span>
+                <span th:unless="${driver.active}" class="badge badge-inactive">Inactive</span>
+            </span>
+        </div>
+
+        <div class="detail-section">
+            <h2 th:text="'Season Assignments (' + ${driver.seasonDrivers.size()} + ')'"></h2>
+            <table th:if="${!driver.seasonDrivers.isEmpty()}">
+                <thead>
+                    <tr><th>Season</th><th>Team</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="sd : ${driver.seasonDrivers}">
+                        <td><a th:href="@{/admin/seasons/{id}(id=${sd.season.id})}" class="detail-link" th:text="${sd.season.name}"></a></td>
+                        <td><a th:href="@{/admin/teams/{id}(id=${sd.team.id})}" class="detail-link" th:text="${sd.team.shortName}"></a></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div th:if="${driver.seasonDrivers.isEmpty()}" class="empty-state" style="padding:16px;"><p>No season assignments.</p></div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

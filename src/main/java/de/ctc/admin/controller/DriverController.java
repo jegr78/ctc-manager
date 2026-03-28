@@ -34,6 +34,13 @@ public class DriverController {
         return "admin/drivers";
     }
 
+    @GetMapping("/{id}")
+    public String detail(@PathVariable UUID id, Model model) {
+        var driver = driverRepository.findById(id).orElseThrow();
+        model.addAttribute("driver", driver);
+        return "admin/driver-detail";
+    }
+
     @GetMapping("/new")
     public String create(Model model) {
         model.addAttribute("driver", new Driver());
