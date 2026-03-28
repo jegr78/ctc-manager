@@ -32,10 +32,12 @@ public class StandingsService {
         }
 
         for (Race race : races) {
-            if (race.getResults().isEmpty()) {
+            if (race.isBye()) {
+                var homeStanding = standingsMap.get(race.getHomeTeam().getId());
+                if (homeStanding != null) homeStanding.addWin();
                 continue;
             }
-
+            if (race.getResults().isEmpty()) continue;
             processRace(race, standingsMap);
         }
 
@@ -181,6 +183,7 @@ public class StandingsService {
         private int losses;
         private int pointsFor;
         private int pointsAgainst;
+        private int buchholz;
 
         public TeamStanding(Team team) {
             this.team = team;
@@ -191,6 +194,7 @@ public class StandingsService {
         public void addLoss() { losses++; }
         public void addPointsFor(int points) { pointsFor += points; }
         public void addPointsAgainst(int points) { pointsAgainst += points; }
+        public void setBuchholz(int buchholz) { this.buchholz = buchholz; }
 
         public Team getTeam() { return team; }
         public int getWins() { return wins; }
@@ -202,5 +206,7 @@ public class StandingsService {
         public int getPointsAgainst() { return pointsAgainst; }
         public int getPointDifference() { return pointsFor - pointsAgainst; }
         public String getPointsRatio() { return pointsFor + ":" + pointsAgainst; }
+        public int getBuchholz() { return buchholz; }
+        public String getMatchRecord() { return wins + " - " + losses + " - " + draws; }
     }
 }
