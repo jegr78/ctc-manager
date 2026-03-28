@@ -46,7 +46,7 @@
                     <td><strong th:text="${sub.shortName}"></strong></td>
                     <td th:text="${sub.name}"></td>
                     <td>
-                        <form th:action="@{/admin/teams/{id}/remove-sub-team(id=${team.id})}" method="post" style="display:inline"
+                        <form th:action="@{/admin/teams/{id}/remove-sub-team(id=${team.id})}" method="post"
                               onsubmit="return confirm('Remove this sub-team?')">
                             <input type="hidden" name="subTeamId" th:value="${sub.id}">
                             <button type="submit" class="btn btn-danger btn-sm">Remove</button>

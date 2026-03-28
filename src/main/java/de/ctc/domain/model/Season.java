@@ -42,7 +42,7 @@ public class Season {
     @OrderBy("sortIndex ASC")
     private List<Matchday> matchdays = new ArrayList<>();
 
-    @OneToMany(mappedBy = "season")
+    @OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SeasonDriver> seasonDrivers = new ArrayList<>();
 
     @ManyToMany

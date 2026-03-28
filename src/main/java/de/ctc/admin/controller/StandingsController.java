@@ -31,9 +31,12 @@ public class StandingsController {
         if (isAlltime) {
             model.addAttribute("standings", standingsService.calculateAlltimeStandings());
             model.addAttribute("driverRanking", driverRankingService.calculateAlltimeRanking());
-            model.addAttribute("isAlltime", true);
         } else {
-            UUID parsedId = seasonId != null && !seasonId.isBlank() ? UUID.fromString(seasonId) : null;
+            UUID parsedId = null;
+            if (seasonId != null && !seasonId.isBlank()) {
+                try { parsedId = UUID.fromString(seasonId); }
+                catch (IllegalArgumentException ignored) { }
+            }
             var season = parsedId != null
                     ? seasonRepository.findById(parsedId).orElse(null)
                     : seasonRepository.findByActiveTrue().orElse(null);
@@ -57,6 +60,7 @@ public class StandingsController {
             }
         }
 
+        model.addAttribute("isAlltime", isAlltime);
         model.addAttribute("seasons", seasonRepository.findAll());
         model.addAttribute("selectedSeasonId", seasonId);
         return "admin/standings";

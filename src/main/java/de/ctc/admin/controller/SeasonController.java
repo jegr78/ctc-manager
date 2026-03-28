@@ -200,8 +200,10 @@ public class SeasonController {
     }
 
     private boolean isHomeTeamDriver(RaceResult result, Race race) {
+        UUID seasonId = race.getMatchday().getSeason().getId();
         return result.getDriver().getSeasonDrivers().stream()
-                .anyMatch(sd -> sd.getTeam().getId().equals(race.getHomeTeam().getId())
-                        || sd.getTeam().getId().equals(race.getHomeTeam().getParentOrSelf().getId()));
+                .anyMatch(sd -> sd.getSeason().getId().equals(seasonId)
+                        && (sd.getTeam().getId().equals(race.getHomeTeam().getId())
+                            || sd.getTeam().getId().equals(race.getHomeTeam().getParentOrSelf().getId())));
     }
 }

@@ -12,6 +12,7 @@ import de.ctc.domain.service.ScoringService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -122,6 +123,7 @@ public class RaceController {
         return "redirect:/admin/races?matchdayId=" + form.getMatchdayId();
     }
 
+    @Transactional
     @PostMapping("/{id}/results")
     public String saveResults(@PathVariable UUID id, @ModelAttribute RaceForm form,
                               RedirectAttributes redirectAttributes) {
@@ -170,7 +172,9 @@ public class RaceController {
                 race.getHomeTeam().getShortName(), homeScore, awayScore, race.getAwayTeam().getShortName());
         redirectAttributes.addFlashAttribute("successMessage",
                 race.getHomeTeam().getShortName() + " " + homeScore + " : " + awayScore + " " + race.getAwayTeam().getShortName());
-        return "redirect:" + (returnUrl != null ? returnUrl : "/admin/races");
+        String safeUrl = (returnUrl != null && returnUrl.startsWith("/") && !returnUrl.startsWith("//"))
+                ? returnUrl : "/admin/races";
+        return "redirect:" + safeUrl;
     }
 
     @PostMapping("/{id}/attachments/upload")

@@ -9,14 +9,14 @@
 <body>
     <nav class="nav">
         <div class="nav-inner">
-            <a href="index.html" class="nav-brand">
+            <a th:href="${rootPath + '/index.html'}" class="nav-brand">
                 <img th:src="${assetsPath != null ? assetsPath + '/img/ctc-logo-white.png' : '/assets/img/ctc-logo-white.png'}" alt="CTC" class="nav-logo">
                 <span>COMMUNITY TEAM CUP</span>
             </a>
             <div class="nav-links">
-                <a href="index.html">Standings</a>
-                <a href="driver-ranking.html">Driver Ranking</a>
-                <a href="archive.html">Archive</a>
+                <a th:href="${rootPath + '/index.html'}">Standings</a>
+                <a th:href="${rootPath + '/driver-ranking.html'}">Driver Ranking</a>
+                <a th:href="${rootPath + '/archive.html'}">Archive</a>
             </div>
         </div>
     </nav>

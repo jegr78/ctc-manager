@@ -10,7 +10,7 @@
         </div>
         <div class="actions">
             <a th:href="@{/admin/teams/{id}/edit(id=${team.id})}" class="btn btn-primary">Edit</a>
-            <form th:action="@{/admin/teams/{id}/delete(id=${team.id})}" method="post" style="display:inline"
+            <form th:action="@{/admin/teams/{id}/delete(id=${team.id})}" method="post"
                   onsubmit="return confirm('Really delete this team?')">
                 <button type="submit" class="btn btn-danger">Delete</button>
             </form>

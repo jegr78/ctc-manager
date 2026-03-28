@@ -1,2 +1,0 @@
-ALTER TABLE races ADD COLUMN date_time TIMESTAMP;
-ALTER TABLE matchdays DROP COLUMN date;

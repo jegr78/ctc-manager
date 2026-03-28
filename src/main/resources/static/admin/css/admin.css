@@ -583,9 +583,10 @@ select option {
     font-variant-numeric: tabular-nums;
 }
 
-.quick-score-input:focus {
+.quick-score-input:focus-visible {
     border-color: var(--border-focus);
-    outline: none;
+    outline: 2px solid var(--border-focus);
+    outline-offset: 1px;
 }
 
 .quick-score-btn {

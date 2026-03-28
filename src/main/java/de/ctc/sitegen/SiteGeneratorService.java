@@ -10,7 +10,8 @@ import de.ctc.domain.service.StandingsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.TemplateEngine;
@@ -19,7 +20,6 @@ import org.thymeleaf.context.Context;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Locale;
 
@@ -222,10 +222,12 @@ public class SiteGeneratorService {
     }
 
     private void writeTemplate(String templateName, Context context, Path outputFile) throws IOException {
-        // Calculate relative path to assets from the output file location
+        // Calculate relative paths from the output file location
         Path outRoot = Path.of(outputDir);
-        Path relative = outputFile.getParent().relativize(outRoot.resolve("assets"));
-        context.setVariable("assetsPath", relative.toString());
+        Path relativeAssets = outputFile.getParent().relativize(outRoot.resolve("assets"));
+        Path relativeRoot = outputFile.getParent().relativize(outRoot);
+        context.setVariable("assetsPath", relativeAssets.toString().replace('\\', '/'));
+        context.setVariable("rootPath", relativeRoot.toString().replace('\\', '/'));
 
         String html = templateEngine.process(templateName, context);
         Files.writeString(outputFile, html);
@@ -233,38 +235,36 @@ public class SiteGeneratorService {
     }
 
     private void copyAssets(Path outPath, GenerationResult result) throws IOException {
-        var assetsSource = new ClassPathResource("static/site");
-        if (!assetsSource.exists()) {
-            log.warn("No static site assets found");
-            return;
-        }
-
         var assetsDir = outPath.resolve("assets");
         Files.createDirectories(assetsDir);
 
-        // Copy from classpath to output
-        var sourceUri = assetsSource.getURI();
-        if (sourceUri.getScheme().equals("file")) {
-            var sourcePath = Path.of(sourceUri);
-            copyDirectory(sourcePath, assetsDir);
-            log.debug("Copied assets to {}", assetsDir);
+        var resolver = new PathMatchingResourcePatternResolver();
+        Resource[] resources;
+        try {
+            resources = resolver.getResources("classpath:static/site/**/*");
+        } catch (IOException e) {
+            log.warn("No static site assets found: {}", e.getMessage());
+            return;
         }
-    }
 
-    private void copyDirectory(Path source, Path target) throws IOException {
-        Files.walkFileTree(source, new SimpleFileVisitor<>() {
-            @Override
-            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                Files.createDirectories(target.resolve(source.relativize(dir)));
-                return FileVisitResult.CONTINUE;
-            }
+        String prefix = "static/site/";
+        for (Resource resource : resources) {
+            if (!resource.isReadable()) continue;
 
-            @Override
-            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                Files.copy(file, target.resolve(source.relativize(file)), StandardCopyOption.REPLACE_EXISTING);
-                return FileVisitResult.CONTINUE;
+            String uri = resource.getURI().toString();
+            int idx = uri.indexOf(prefix);
+            if (idx < 0) continue;
+
+            String relativePath = uri.substring(idx + prefix.length());
+            if (relativePath.isEmpty()) continue;
+
+            Path target = assetsDir.resolve(relativePath);
+            Files.createDirectories(target.getParent());
+            try (InputStream is = resource.getInputStream()) {
+                Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING);
             }
-        });
+        }
+        log.debug("Copied assets to {}", assetsDir);
     }
 
     private RaceView toRaceView(Race race, Season season) {
@@ -280,14 +280,16 @@ public class SiteGeneratorService {
                 })
                 .toList();
 
+        String awayShortName = race.getAwayTeam() != null ? race.getAwayTeam().getShortName() : "Bye";
+
         int homeTotal = results.stream()
                 .filter(r -> r.getTeamShortName().equals(race.getHomeTeam().getShortName()))
                 .mapToInt(RaceView.ResultView::getPointsTotal).sum();
         int awayTotal = results.stream()
-                .filter(r -> r.getTeamShortName().equals(race.getAwayTeam().getShortName()))
+                .filter(r -> !r.getTeamShortName().equals(race.getHomeTeam().getShortName()))
                 .mapToInt(RaceView.ResultView::getPointsTotal).sum();
 
-        return new RaceView(race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName(),
+        return new RaceView(race.getHomeTeam().getShortName(), awayShortName,
                 race.getTrack(), race.getCar(), homeTotal, awayTotal, !race.getResults().isEmpty(), results);
     }
 

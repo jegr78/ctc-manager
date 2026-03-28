@@ -9,9 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -105,7 +103,9 @@ class SwissPairingServiceTest {
 
     @Test
     void shouldAvoidRematchesInSubsequentRounds() {
-        addTeams(6);
+        // Use 8 teams so rematches are fully avoidable in 2 rounds
+        // (each team has played 1 of 7 opponents, leaving 6 available)
+        addTeams(8);
 
         // Generate first round and add results
         var md1 = swissPairingService.generateNextRound(season.getId());
@@ -113,6 +113,7 @@ class SwissPairingServiceTest {
 
         // Record first round pairs
         var races1 = raceRepository.findByMatchdayId(md1.getId());
+        assertEquals(4, races1.size());
         Set<String> firstRoundPairs = new HashSet<>();
         for (var race : races1) {
             firstRoundPairs.add(pairKey(race.getHomeTeam().getId(), race.getAwayTeam().getId()));
@@ -121,6 +122,7 @@ class SwissPairingServiceTest {
         // Generate second round
         var md2 = swissPairingService.generateNextRound(season.getId());
         var races2 = raceRepository.findByMatchdayId(md2.getId());
+        assertEquals(4, races2.size());
 
         // No rematches
         for (var race : races2) {
@@ -131,6 +133,20 @@ class SwissPairingServiceTest {
     }
 
     @Test
+    void shouldBlockNextRoundWhenCurrentRoundIncomplete() {
+        addTeams(4);
+
+        // Generate round 1 but do NOT add results
+        swissPairingService.generateNextRound(season.getId());
+
+        // Attempting to generate round 2 should fail
+        var ex = assertThrows(IllegalStateException.class,
+                () -> swissPairingService.generateNextRound(season.getId()));
+        assertTrue(ex.getMessage().toLowerCase().contains("incomplete"),
+                "Expected message to contain 'incomplete', got: " + ex.getMessage());
+    }
+
+    @Test
     void shouldCalculateBuchholz() {
         addTeams(4);
 
@@ -138,7 +154,19 @@ class SwissPairingServiceTest {
         addDummyResults(md.getId());
 
         var buchholz = swissPairingService.calculateBuchholz(season.getId());
-        assertFalse(buchholz.isEmpty());
+
+        // 4 teams played 1 round -> 2 races, each team has exactly 1 opponent
+        assertEquals(4, buchholz.size());
+
+        // addDummyResults gives homeDriver 20 pts, awayDriver 10 pts
+        // -> homeTeam wins each race (3 standings points), awayTeam loses (0 points)
+        // Winners' Buchholz = opponent's standings points = 0
+        // Losers' Buchholz = opponent's standings points = 3
+        var values = new ArrayList<>(buchholz.values());
+        Collections.sort(values);
+        // Two teams have Buchholz 0 (winners, whose opponents scored 0 pts)
+        // Two teams have Buchholz 3 (losers, whose opponents scored 3 pts)
+        assertEquals(List.of(0, 0, 3, 3), values);
     }
 
     private void addTeams(int count) {
@@ -178,6 +206,9 @@ class SwissPairingServiceTest {
             ar.setQualiPosition(2);
             ar.setPointsTotal(10);
             race.getResults().add(ar);
+
+            race.setHomeScore(20);
+            race.setAwayScore(10);
 
             raceRepository.save(race);
         }

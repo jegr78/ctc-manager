@@ -3,6 +3,7 @@ package de.ctc.domain.service;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.MatchdayLineupRepository;
 import de.ctc.domain.repository.RaceRepository;
+import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,6 +28,9 @@ class StandingsServiceTest {
 
     @Mock
     private TeamRepository teamRepository;
+
+    @Mock
+    private SeasonRepository seasonRepository;
 
     @Mock
     private MatchdayLineupRepository matchdayLineupRepository;
@@ -62,8 +67,9 @@ class StandingsServiceTest {
         var matchday = new Matchday(season, "Spieltag 1", 1);
         var race = createRaceWithResults(matchday, tnr, p1r, 70, 46);
 
+        season.setTeams(new java.util.ArrayList<>(List.of(tnr, p1r)));
         when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of(race));
-        when(teamRepository.findAll()).thenReturn(List.of(tnr, p1r));
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
         var standings = standingsService.calculateStandings(season.getId());
 
@@ -97,8 +103,9 @@ class StandingsServiceTest {
         var matchday = new Matchday(season, "Spieltag 1", 1);
         var race = createRaceWithResults(matchday, clr, tnr, 54, 54);
 
+        season.setTeams(new java.util.ArrayList<>(List.of(clr, tnr)));
         when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of(race));
-        when(teamRepository.findAll()).thenReturn(List.of(clr, tnr));
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
         var standings = standingsService.calculateStandings(season.getId());
 
@@ -118,8 +125,9 @@ class StandingsServiceTest {
         var race1 = createRaceWithResults(md1, tnr, p1r, 70, 46);
         var race2 = createRaceWithResults(md2, clr, p1r, 80, 40);
 
+        season.setTeams(new java.util.ArrayList<>(List.of(tnr, p1r, clr)));
         when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of(race1, race2));
-        when(teamRepository.findAll()).thenReturn(List.of(tnr, p1r, clr));
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
         var standings = standingsService.calculateStandings(season.getId());
 
@@ -134,8 +142,9 @@ class StandingsServiceTest {
         var matchday = new Matchday(season, "Spieltag 1", 1);
         var race = createRaceWithResults(matchday, tnr, p1r, 70, 46);
 
+        season.setTeams(new java.util.ArrayList<>(List.of(tnr, p1r, clr)));
         when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of(race));
-        when(teamRepository.findAll()).thenReturn(List.of(tnr, p1r, clr));
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
         var standings = standingsService.calculateStandings(season.getId());
 

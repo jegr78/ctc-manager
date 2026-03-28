@@ -29,7 +29,7 @@
                     </td>
                     <td class="actions">
                         <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="btn btn-secondary btn-sm">Edit</a>
-                        <form th:action="@{/admin/seasons/{id}/delete(id=${season.id})}" method="post" style="display:inline"
+                        <form th:action="@{/admin/seasons/{id}/delete(id=${season.id})}" method="post"
                               onsubmit="return confirm('Really delete this season?')">
                             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>
