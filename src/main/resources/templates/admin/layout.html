@@ -13,15 +13,15 @@
             CTC Admin
         </div>
         <div class="navbar-links">
-            <a th:href="@{/admin/seasons}" th:attr="aria-current=${#httpServletRequest.requestURI.contains('/admin/seasons') ? 'page' : null}">Seasons</a>
-            <a th:href="@{/admin/teams}" th:attr="aria-current=${#httpServletRequest.requestURI.contains('/admin/teams') ? 'page' : null}">Teams</a>
-            <a th:href="@{/admin/drivers}" th:attr="aria-current=${#httpServletRequest.requestURI.contains('/admin/drivers') ? 'page' : null}">Drivers</a>
-            <a th:href="@{/admin/matchdays}" th:attr="aria-current=${#httpServletRequest.requestURI.contains('/admin/matchdays') ? 'page' : null}">Matchdays</a>
-            <a th:href="@{/admin/races}" th:attr="aria-current=${#httpServletRequest.requestURI.contains('/admin/races') ? 'page' : null}">Races</a>
+            <a th:href="@{/admin/seasons}" th:classappend="${title.contains('Season') ? 'active' : ''}">Seasons</a>
+            <a th:href="@{/admin/teams}" th:classappend="${title.contains('Team') ? 'active' : ''}">Teams</a>
+            <a th:href="@{/admin/drivers}" th:classappend="${title.contains('Driver') ? 'active' : ''}">Drivers</a>
+            <a th:href="@{/admin/matchdays}" th:classappend="${title.contains('Matchday') ? 'active' : ''}">Matchdays</a>
+            <a th:href="@{/admin/races}" th:classappend="${title.contains('Race') ? 'active' : ''}">Races</a>
             <span class="navbar-separator">|</span>
-            <a th:href="@{/admin/import}" th:attr="aria-current=${#httpServletRequest.requestURI.contains('/admin/import') ? 'page' : null}">Import</a>
-            <a th:href="@{/admin/standings}" th:attr="aria-current=${#httpServletRequest.requestURI.contains('/admin/standings') ? 'page' : null}">Standings</a>
-            <a th:href="@{/admin/playoffs}" th:attr="aria-current=${#httpServletRequest.requestURI.contains('/admin/playoffs') ? 'page' : null}">Playoffs</a>
+            <a th:href="@{/admin/import}" th:classappend="${title.contains('Import') ? 'active' : ''}">Import</a>
+            <a th:href="@{/admin/standings}" th:classappend="${title.contains('Standing') ? 'active' : ''}">Standings</a>
+            <a th:href="@{/admin/playoffs}" th:classappend="${title.contains('Playoff') || title.contains('Matchup') ? 'active' : ''}">Playoffs</a>
             <a th:href="@{/admin/generate}" class="btn-generate">Generate Site</a>
         </div>
     </nav>
