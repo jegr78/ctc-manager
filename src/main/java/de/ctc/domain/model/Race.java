@@ -41,6 +41,10 @@ public class Race {
     @Column(nullable = false)
     private boolean bye = false;
 
+    private Integer homeScore;
+
+    private Integer awayScore;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "playoff_matchup_id")
     private PlayoffMatchup playoffMatchup;

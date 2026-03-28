@@ -149,6 +149,23 @@ public class RaceController {
         return "redirect:/admin/races/" + id + "/results";
     }
 
+    @PostMapping("/{id}/quick-score")
+    public String quickScore(@PathVariable UUID id,
+                              @RequestParam int homeScore,
+                              @RequestParam int awayScore,
+                              @RequestParam(required = false) String returnUrl,
+                              RedirectAttributes redirectAttributes) {
+        var race = raceRepository.findById(id).orElseThrow();
+        race.setHomeScore(homeScore);
+        race.setAwayScore(awayScore);
+        raceRepository.save(race);
+        log.info("Quick score: {} {} : {} {}",
+                race.getHomeTeam().getShortName(), homeScore, awayScore, race.getAwayTeam().getShortName());
+        redirectAttributes.addFlashAttribute("successMessage",
+                race.getHomeTeam().getShortName() + " " + homeScore + " : " + awayScore + " " + race.getAwayTeam().getShortName());
+        return "redirect:" + (returnUrl != null ? returnUrl : "/admin/races");
+    }
+
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         var race = raceRepository.findById(id).orElseThrow();

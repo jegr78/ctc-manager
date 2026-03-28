@@ -37,6 +37,10 @@ public class StandingsService {
                 if (homeStanding != null) homeStanding.addWin();
                 continue;
             }
+            if (race.getHomeScore() != null && race.getAwayScore() != null) {
+                processQuickScore(race, standingsMap);
+                continue;
+            }
             if (race.getResults().isEmpty()) continue;
             processRace(race, standingsMap);
         }
@@ -101,6 +105,32 @@ public class StandingsService {
 
         TeamStanding homeStanding = standingsMap.get(homeParent.getId());
         TeamStanding awayStanding = standingsMap.get(awayParent.getId());
+
+        if (homeStanding == null || awayStanding == null) return;
+
+        homeStanding.addPointsFor(homeTotal);
+        homeStanding.addPointsAgainst(awayTotal);
+        awayStanding.addPointsFor(awayTotal);
+        awayStanding.addPointsAgainst(homeTotal);
+
+        if (homeTotal > awayTotal) {
+            homeStanding.addWin();
+            awayStanding.addLoss();
+        } else if (homeTotal < awayTotal) {
+            homeStanding.addLoss();
+            awayStanding.addWin();
+        } else {
+            homeStanding.addDraw();
+            awayStanding.addDraw();
+        }
+    }
+
+    private void processQuickScore(Race race, Map<UUID, TeamStanding> standingsMap) {
+        int homeTotal = race.getHomeScore();
+        int awayTotal = race.getAwayScore();
+
+        TeamStanding homeStanding = standingsMap.get(race.getHomeTeam().getId());
+        TeamStanding awayStanding = standingsMap.get(race.getAwayTeam().getId());
 
         if (homeStanding == null || awayStanding == null) return;
 

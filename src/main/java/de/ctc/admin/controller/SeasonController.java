@@ -150,14 +150,18 @@ public class SeasonController {
         Map<UUID, int[]> raceScores = new HashMap<>();
         for (var md : season.getMatchdays()) {
             for (var race : md.getRaces()) {
-                if (race.isBye() || race.getResults().isEmpty()) continue;
-                int homeTotal = race.getResults().stream()
-                        .filter(r -> isHomeTeamDriver(r, race))
-                        .mapToInt(RaceResult::getPointsTotal).sum();
-                int awayTotal = race.getResults().stream()
-                        .filter(r -> !isHomeTeamDriver(r, race))
-                        .mapToInt(RaceResult::getPointsTotal).sum();
-                raceScores.put(race.getId(), new int[]{homeTotal, awayTotal});
+                if (race.isBye()) continue;
+                if (race.getHomeScore() != null && race.getAwayScore() != null) {
+                    raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
+                } else if (!race.getResults().isEmpty()) {
+                    int homeTotal = race.getResults().stream()
+                            .filter(r -> isHomeTeamDriver(r, race))
+                            .mapToInt(RaceResult::getPointsTotal).sum();
+                    int awayTotal = race.getResults().stream()
+                            .filter(r -> !isHomeTeamDriver(r, race))
+                            .mapToInt(RaceResult::getPointsTotal).sum();
+                    raceScores.put(race.getId(), new int[]{homeTotal, awayTotal});
+                }
             }
         }
 

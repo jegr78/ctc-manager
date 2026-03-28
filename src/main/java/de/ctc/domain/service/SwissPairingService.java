@@ -42,7 +42,9 @@ public class SwissPairingService {
             var lastMatchday = matchdays.get(matchdays.size() - 1);
             var lastRaces = raceRepository.findByMatchdayId(lastMatchday.getId());
             boolean allComplete = lastRaces.stream()
-                    .allMatch(r -> r.isBye() || !r.getResults().isEmpty());
+                    .allMatch(r -> r.isBye()
+                            || !r.getResults().isEmpty()
+                            || (r.getHomeScore() != null && r.getAwayScore() != null));
             if (!allComplete) {
                 throw new IllegalStateException("Current round has incomplete races");
             }
@@ -219,6 +221,8 @@ public class SwissPairingService {
 
         var lastMatchday = season.getMatchdays().get(season.getMatchdays().size() - 1);
         return lastMatchday.getRaces().stream()
-                .allMatch(r -> r.isBye() || !r.getResults().isEmpty());
+                .allMatch(r -> r.isBye()
+                        || !r.getResults().isEmpty()
+                        || (r.getHomeScore() != null && r.getAwayScore() != null));
     }
 }
