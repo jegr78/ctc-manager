@@ -57,7 +57,7 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
   - Naming: `feature/<kurzbeschreibung>` oder `fix/<kurzbeschreibung>`
   - Branch von `master` abzweigen
 - **Pull Requests:** Änderungen immer über PRs in `master` mergen, kein direkter Push
-  - `gh pr create` zum Erstellen
+  - `gh pr create --assignee jegr78` zum Erstellen (immer jegr78 zuweisen)
   - `gh pr merge --squash` zum Mergen (saubere History)
   - Nach Merge lokalen Branch aufräumen: `git switch master && git pull && git branch -d <branch>`
 - **Commits:** Aussagekräftige deutsche Commit-Messages
