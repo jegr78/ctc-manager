@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -33,6 +34,8 @@ public class Race {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "away_team_id")
     private Team awayTeam;
+
+    private LocalDateTime dateTime;
 
     private String track;
 

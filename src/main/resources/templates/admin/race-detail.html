@@ -33,6 +33,8 @@
             <span th:text="${race.track ?: '-'}"></span>
             <span class="label">Car</span>
             <span th:text="${race.car ?: '-'}"></span>
+            <span class="label">Date &amp; Time</span>
+            <span th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></span>
             <span class="label">Playoff</span>
             <span th:if="${race.playoffMatchup != null}">
                 <a th:href="@{/admin/playoffs/matchup/{id}(id=${race.playoffMatchup.id})}" class="detail-link" th:text="'Matchup #' + ${race.playoffMatchup.bracketPosition}"></a>

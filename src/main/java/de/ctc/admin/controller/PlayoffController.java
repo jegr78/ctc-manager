@@ -15,6 +15,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -182,6 +183,7 @@ public class PlayoffController {
     public String addRace(@PathVariable UUID matchupId,
                           @RequestParam(required = false) String track,
                           @RequestParam(required = false) String car,
+                          @RequestParam(required = false) LocalDateTime dateTime,
                           RedirectAttributes redirectAttributes) {
         var matchup = playoffMatchupRepository.findById(matchupId).orElseThrow();
         if (!matchup.isReady()) {
@@ -207,6 +209,7 @@ public class PlayoffController {
         var race = new Race(matchday, matchup.getTeam1(), matchup.getTeam2());
         race.setTrack(track);
         race.setCar(car);
+        race.setDateTime(dateTime);
         race.setPlayoffMatchup(matchup);
         raceRepository.save(race);
 

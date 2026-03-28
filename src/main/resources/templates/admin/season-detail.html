@@ -57,13 +57,12 @@
             <h2 th:text="'Matchdays (' + ${season.matchdays.size()} + ')'"></h2>
             <table th:if="${!season.matchdays.isEmpty()}">
                 <thead>
-                    <tr><th>#</th><th>Label</th><th>Date</th><th>Races</th></tr>
+                    <tr><th>#</th><th>Label</th><th>Races</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="md : ${season.matchdays}">
                         <td th:text="${md.sortIndex}"></td>
                         <td><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="detail-link" th:text="${md.label}"></a></td>
-                        <td th:text="${md.date ?: '-'}"></td>
                         <td th:text="${md.races.size()}"></td>
                     </tr>
                 </tbody>

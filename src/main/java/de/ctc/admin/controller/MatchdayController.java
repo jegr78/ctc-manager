@@ -76,6 +76,7 @@ public class MatchdayController {
                        @RequestParam UUID seasonId,
                        RedirectAttributes redirectAttributes,
                        Model model) {
+        matchday.setSeason(seasonRepository.findById(seasonId).orElse(null));
         if (result.hasErrors()) {
             model.addAttribute("seasons", seasonRepository.findAll());
             return "admin/matchday-form";
@@ -83,7 +84,6 @@ public class MatchdayController {
         if (matchday.getId() != null) {
             var existing = matchdayRepository.findById(matchday.getId()).orElseThrow();
             existing.setLabel(matchday.getLabel());
-            existing.setDate(matchday.getDate());
             existing.setSortIndex(matchday.getSortIndex());
             existing.setSeason(seasonRepository.findById(seasonId).orElseThrow());
             matchdayRepository.save(existing);

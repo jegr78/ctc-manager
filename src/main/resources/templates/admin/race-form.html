@@ -41,6 +41,12 @@
                     <input type="text" id="car" th:field="*{car}" placeholder="e.g. Mazda RX-Vision GT3">
                 </div>
             </div>
+            <div class="form-group">
+                <label for="dateTime">Date &amp; Time</label>
+                <input type="datetime-local" id="dateTime" name="dateTime"
+                       th:value="${raceForm.dateTime != null ? raceForm.dateTime.toString().substring(0, 16) : ''}">
+                <small class="text-dim">When this match takes place</small>
+            </div>
             <div class="actions" style="margin-top: 16px;">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/races}" class="btn btn-secondary">Cancel</a>

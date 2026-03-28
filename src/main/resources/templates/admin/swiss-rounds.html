@@ -48,6 +48,9 @@
                                 <button type="submit" class="quick-score-btn">Save</button>
                             </form>
                         </th:block>
+                        <div th:if="${race.dateTime != null}" class="text-dim" style="text-align:center;font-size:12px;padding:4px;">
+                            <span th:text="${#temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm')}"></span>
+                        </div>
                     </div>
                     <div th:if="${race.bye}" class="swiss-matchup bye">
                         <div class="swiss-team winner">

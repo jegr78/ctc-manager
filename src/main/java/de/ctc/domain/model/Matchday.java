@@ -2,13 +2,11 @@ package de.ctc.domain.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -22,7 +20,6 @@ public class Matchday {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "season_id", nullable = false)
     private Season season;
@@ -30,8 +27,6 @@ public class Matchday {
     @NotBlank
     @Column(nullable = false)
     private String label;
-
-    private LocalDate date;
 
     @Column(nullable = false)
     private int sortIndex;
