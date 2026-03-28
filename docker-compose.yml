@@ -1,0 +1,42 @@
+services:
+  db:
+    image: mariadb:11
+    environment:
+      MARIADB_DATABASE: ctcdb
+      MARIADB_USER: ctc
+      MARIADB_PASSWORD: ctc
+      MARIADB_ROOT_PASSWORD: root
+    volumes:
+      - ctc-db-data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  app:
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8080:8080"
+    volumes:
+      - ctc-uploads:/app/uploads
+      - ctc-site-output:/app/ctc-site-output
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  ctc-db-data:
+  ctc-uploads:
+  ctc-site-output:
