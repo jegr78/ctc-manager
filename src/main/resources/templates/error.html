@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTC Admin - Error</title>
+    <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
+</head>
+<body>
+    <nav class="navbar" role="navigation" aria-label="Main navigation">
+        <div class="navbar-brand">
+            <img th:src="@{/admin/img/ctc-logo-white.png}" alt="CTC" style="height:28px;width:28px;">
+            CTC Admin
+        </div>
+        <div class="navbar-links">
+            <a th:href="@{/admin/seasons}">Seasons</a>
+        </div>
+    </nav>
+    <main class="container">
+        <div class="card" style="margin-top:32px;">
+            <h1 style="color:#ef5350;">
+                <span th:text="${status}">500</span> — <span th:text="${error}">Error</span>
+            </h1>
+            <p th:if="${message}" th:text="${message}" style="margin-top:12px;font-size:16px;"></p>
+            <div class="detail-fields" style="margin-top:24px;">
+                <span class="label">Status</span>
+                <span th:text="${status}"></span>
+                <span class="label">Path</span>
+                <span th:text="${path}"></span>
+                <span class="label">Timestamp</span>
+                <span th:text="${timestamp}"></span>
+            </div>
+            <details th:if="${trace}" style="margin-top:16px;">
+                <summary style="cursor:pointer;color:var(--text-dim);font-size:14px;">Stack Trace</summary>
+                <pre style="margin-top:8px;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;overflow-x:auto;color:var(--text-dim);white-space:pre-wrap;word-break:break-all;"
+                     th:text="${trace}"></pre>
+            </details>
+            <div class="actions" style="margin-top:24px;">
+                <a href="javascript:history.back()" class="btn btn-secondary">Back</a>
+                <a th:href="@{/admin/seasons}" class="btn btn-primary">Home</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
