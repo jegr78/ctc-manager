@@ -23,12 +23,21 @@
     <div th:if="${standings != null}" class="card">
         <h2 th:if="${isAlltime}">Team Standings — Alltime</h2>
         <h2 th:unless="${isAlltime}">Team Standings — <span th:text="${selectedSeason.name}"></span></h2>
-        <table th:if="${!standings.isEmpty()}">
+        <table th:if="${!standings.isEmpty()}" id="standingsTable">
             <thead>
-                <tr><th>#</th><th>Team</th><th>MP</th><th>W</th><th>D</th><th>L</th><th>PR</th><th style="text-align:right">Pts</th></tr>
+                <tr>
+                    <th>#</th>
+                    <th class="sortable" data-col="1" data-type="text">Team</th>
+                    <th class="sortable" data-col="2" data-type="num">MP</th>
+                    <th class="sortable" data-col="3" data-type="num">W</th>
+                    <th class="sortable" data-col="4" data-type="num">D</th>
+                    <th class="sortable" data-col="5" data-type="num">L</th>
+                    <th>PR</th>
+                    <th class="sortable" data-col="7" data-type="num" style="text-align:right">Pts</th>
+                </tr>
             </thead>
             <tbody>
-                <tr th:each="standing, iter : ${standings}">
+                <tr th:each="standing, iter : ${standings}" class="data-row">
                     <td th:text="${iter.count}"></td>
                     <td><strong th:text="${standing.team.shortName}"></strong>
                         <span class="text-dim" th:text="' ' + ${standing.team.name}"></span></td>
@@ -46,14 +55,28 @@
 
     <!-- Driver Ranking -->
     <div th:if="${driverRanking != null}" class="card" style="margin-top: 16px;">
-        <h2 th:if="${isAlltime}">Driver Ranking — Alltime</h2>
-        <h2 th:unless="${isAlltime}">Driver Ranking — <span th:text="${selectedSeason.name}"></span></h2>
-        <table th:if="${!driverRanking.isEmpty()}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div>
+                <h2 th:if="${isAlltime}" style="margin-bottom:0;">Driver Ranking — Alltime</h2>
+                <h2 th:unless="${isAlltime}" style="margin-bottom:0;">Driver Ranking — <span th:text="${selectedSeason.name}"></span></h2>
+            </div>
+            <input type="text" id="driverSearch" placeholder="Search drivers..."
+                   style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
+        </div>
+        <table th:if="${!driverRanking.isEmpty()}" id="driverRankingTable">
             <thead>
-                <tr><th>#</th><th>Driver</th><th>Team</th><th>Races</th><th>Best Pos.</th><th>Avg</th><th style="text-align:right">Points</th></tr>
+                <tr>
+                    <th>#</th>
+                    <th class="sortable" data-col="1" data-type="text">Driver</th>
+                    <th class="sortable" data-col="2" data-type="text">Team</th>
+                    <th class="sortable" data-col="3" data-type="num">Races</th>
+                    <th class="sortable" data-col="4" data-type="num">Best Pos.</th>
+                    <th class="sortable" data-col="5" data-type="num">Avg</th>
+                    <th class="sortable" data-col="6" data-type="num" style="text-align:right">Points</th>
+                </tr>
             </thead>
             <tbody>
-                <tr th:each="ranking, iter : ${driverRanking}">
+                <tr th:each="ranking, iter : ${driverRanking}" class="data-row">
                     <td th:text="${iter.count}"></td>
                     <td><strong th:text="${ranking.driver.psnId}"></strong></td>
                     <td th:text="${ranking.team != null ? ranking.team.shortName : '-'}"></td>
@@ -64,8 +87,110 @@
                 </tr>
             </tbody>
         </table>
+        <div id="noResults" style="display:none" class="empty-state"><p>No matching drivers found.</p></div>
+        <div class="pagination" id="pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+            <span id="pageInfo" class="text-dim"></span>
+            <div class="actions">
+                <button id="prevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
+                <button id="nextPage" class="btn btn-secondary btn-sm">Next</button>
+            </div>
+        </div>
         <div th:if="${driverRanking.isEmpty()}" class="empty-state"><p>No results yet.</p></div>
     </div>
+
+    <script th:inline="javascript">
+    (function() {
+        // Reusable sort function for tables with .sortable columns
+        function initSortableTable(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            const tbody = table.querySelector('tbody');
+
+            table.querySelectorAll('.sortable').forEach(th => {
+                let sortAsc = true;
+                let lastSorted = false;
+                th.style.cursor = 'pointer';
+                th.addEventListener('click', function() {
+                    const col = parseInt(this.dataset.col);
+                    const type = this.dataset.type || 'text';
+
+                    if (lastSorted) { sortAsc = !sortAsc; } else {
+                        table.querySelectorAll('.sortable').forEach(h => h._lastSorted = false);
+                        sortAsc = type === 'num' ? false : true; // numbers: descending first
+                    }
+                    lastSorted = true;
+                    this._lastSorted = true;
+
+                    table.querySelectorAll('.sortable').forEach(h => h.dataset.sort = '');
+                    this.dataset.sort = sortAsc ? 'asc' : 'desc';
+
+                    const rows = Array.from(tbody.querySelectorAll('.data-row'));
+                    rows.sort((a, b) => {
+                        const aText = a.children[col].textContent.trim();
+                        const bText = b.children[col].textContent.trim();
+                        if (type === 'num') {
+                            const aNum = parseFloat(aText) || 0;
+                            const bNum = parseFloat(bText) || 0;
+                            return sortAsc ? aNum - bNum : bNum - aNum;
+                        }
+                        return sortAsc ? aText.localeCompare(bText) : bText.localeCompare(aText);
+                    });
+                    rows.forEach(r => tbody.appendChild(r));
+
+                    // Re-number rank column
+                    rows.forEach((r, i) => { r.children[0].textContent = i + 1; });
+                });
+            });
+        }
+
+        initSortableTable('standingsTable');
+        initSortableTable('driverRankingTable');
+
+        // Driver Ranking: Search + Pagination
+        const drTable = document.getElementById('driverRankingTable');
+        if (!drTable) return;
+
+        const PAGE_SIZE = 20;
+        const tbody = drTable.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('.data-row'));
+        const search = document.getElementById('driverSearch');
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        const noResults = document.getElementById('noResults');
+
+        let filteredRows = rows;
+        let currentPage = 0;
+
+        function render() {
+            const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE));
+            currentPage = Math.min(currentPage, totalPages - 1);
+            const start = currentPage * PAGE_SIZE;
+            const end = start + PAGE_SIZE;
+
+            rows.forEach(r => r.style.display = 'none');
+            filteredRows.slice(start, end).forEach(r => r.style.display = '');
+
+            pageInfo.textContent = filteredRows.length + ' drivers — Page ' + (currentPage + 1) + ' of ' + totalPages;
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = currentPage >= totalPages - 1;
+            noResults.style.display = filteredRows.length === 0 ? '' : 'none';
+            drTable.style.display = filteredRows.length === 0 ? 'none' : '';
+        }
+
+        search.addEventListener('input', function() {
+            const q = this.value.toLowerCase();
+            filteredRows = rows.filter(r => r.textContent.toLowerCase().includes(q));
+            currentPage = 0;
+            render();
+        });
+
+        prevBtn.addEventListener('click', () => { currentPage--; render(); });
+        nextBtn.addEventListener('click', () => { currentPage++; render(); });
+
+        render();
+    })();
+    </script>
 </section>
 </body>
 </html>
