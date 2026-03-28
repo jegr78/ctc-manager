@@ -32,17 +32,12 @@
 
         <div class="detail-section">
             <h2 th:text="'Season Assignments (' + ${driver.seasonDrivers.size()} + ')'"></h2>
-            <table th:if="${!driver.seasonDrivers.isEmpty()}">
-                <thead>
-                    <tr><th>Season</th><th>Team</th></tr>
-                </thead>
-                <tbody>
-                    <tr th:each="sd : ${driver.seasonDrivers}">
-                        <td><a th:href="@{/admin/seasons/{id}(id=${sd.season.id})}" class="detail-link" th:text="${sd.season.name}"></a></td>
-                        <td><a th:href="@{/admin/teams/{id}(id=${sd.team.id})}" class="detail-link" th:text="${sd.team.shortName}"></a></td>
-                    </tr>
-                </tbody>
-            </table>
+            <div th:if="${!driver.seasonDrivers.isEmpty()}" class="chip-list">
+                <span th:each="sd : ${driver.seasonDrivers}" class="chip">
+                    <span th:text="${sd.season.name}"></span>
+                    <span class="text-dim" th:text="' — ' + ${sd.team.shortName}"></span>
+                </span>
+            </div>
             <div th:if="${driver.seasonDrivers.isEmpty()}" class="empty-state" style="padding:16px;"><p>No season assignments.</p></div>
         </div>
     </div>

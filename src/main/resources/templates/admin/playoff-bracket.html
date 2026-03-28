@@ -77,20 +77,15 @@
     <div th:if="${playoff != null}" class="card">
         <h2>Linked Seasons (Team Sources)</h2>
         <p class="text-dim" style="margin-bottom:12px;">Teams from these seasons are available in the seeding.</p>
-        <table th:if="${!playoff.seasons.isEmpty()}">
-            <thead><tr><th>Season</th><th>Actions</th></tr></thead>
-            <tbody>
-                <tr th:each="s : ${playoff.seasons}">
-                    <td th:text="${s.name}"></td>
-                    <td>
-                        <form th:action="@{/admin/playoffs/{id}/remove-season(id=${playoff.id})}" method="post">
-                            <input type="hidden" name="seasonId" th:value="${s.id}">
-                            <button type="submit" class="btn btn-danger btn-sm">Remove</button>
-                        </form>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div th:if="${!playoff.seasons.isEmpty()}" class="chip-list">
+            <span th:each="s : ${playoff.seasons}" class="chip" style="gap:8px;">
+                <a th:href="@{/admin/seasons/{id}(id=${s.id})}" th:text="${s.name}" style="color:var(--text);text-decoration:none;"></a>
+                <form th:action="@{/admin/playoffs/{id}/remove-season(id=${playoff.id})}" method="post" style="display:inline;">
+                    <input type="hidden" name="seasonId" th:value="${s.id}">
+                    <button type="submit" class="btn btn-danger btn-sm" style="padding:2px 8px;font-size:11px;">Remove</button>
+                </form>
+            </span>
+        </div>
         <div th:if="${playoff.seasons.isEmpty()}" class="empty-state" style="padding:16px;">
             <p>No additional seasons linked. Teams come only from the main season.</p>
         </div>

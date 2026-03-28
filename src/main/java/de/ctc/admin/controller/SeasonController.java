@@ -19,9 +19,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Controller
@@ -154,49 +152,57 @@ public class SeasonController {
     }
 
     @PostMapping("/{id}/cars/add")
-    public String addCar(@PathVariable UUID id, @RequestParam UUID carId,
-                         RedirectAttributes redirectAttributes) {
+    public String addCars(@PathVariable UUID id, @RequestParam List<UUID> carIds,
+                          RedirectAttributes redirectAttributes) {
         var season = seasonRepository.findById(id).orElseThrow();
-        var car = carRepository.findById(carId).orElseThrow();
-        if (!season.getCars().contains(car)) {
-            season.getCars().add(car);
-            seasonRepository.save(season);
+        int added = 0;
+        for (UUID carId : carIds) {
+            var car = carRepository.findById(carId).orElse(null);
+            if (car != null && !season.getCars().contains(car)) {
+                season.getCars().add(car);
+                added++;
+            }
         }
-        redirectAttributes.addFlashAttribute("successMessage", "Car added to pool");
-        return "redirect:/admin/seasons/" + id + "/edit";
+        if (added > 0) seasonRepository.save(season);
+        redirectAttributes.addFlashAttribute("successMessage", added + " car(s) added to pool");
+        return "redirect:/admin/seasons/" + id + "/edit#carPool";
     }
 
     @PostMapping("/{id}/cars/remove")
-    public String removeCar(@PathVariable UUID id, @RequestParam UUID carId,
-                            RedirectAttributes redirectAttributes) {
+    public String removeCars(@PathVariable UUID id, @RequestParam List<UUID> carIds,
+                             RedirectAttributes redirectAttributes) {
         var season = seasonRepository.findById(id).orElseThrow();
-        season.getCars().removeIf(c -> c.getId().equals(carId));
+        season.getCars().removeIf(c -> carIds.contains(c.getId()));
         seasonRepository.save(season);
-        redirectAttributes.addFlashAttribute("successMessage", "Car removed from pool");
-        return "redirect:/admin/seasons/" + id + "/edit";
+        redirectAttributes.addFlashAttribute("successMessage", carIds.size() + " car(s) removed from pool");
+        return "redirect:/admin/seasons/" + id + "/edit#carPool";
     }
 
     @PostMapping("/{id}/tracks/add")
-    public String addTrack(@PathVariable UUID id, @RequestParam UUID trackId,
-                           RedirectAttributes redirectAttributes) {
+    public String addTracks(@PathVariable UUID id, @RequestParam List<UUID> trackIds,
+                            RedirectAttributes redirectAttributes) {
         var season = seasonRepository.findById(id).orElseThrow();
-        var track = trackRepository.findById(trackId).orElseThrow();
-        if (!season.getTracks().contains(track)) {
-            season.getTracks().add(track);
-            seasonRepository.save(season);
+        int added = 0;
+        for (UUID trackId : trackIds) {
+            var track = trackRepository.findById(trackId).orElse(null);
+            if (track != null && !season.getTracks().contains(track)) {
+                season.getTracks().add(track);
+                added++;
+            }
         }
-        redirectAttributes.addFlashAttribute("successMessage", "Track added to pool");
-        return "redirect:/admin/seasons/" + id + "/edit";
+        if (added > 0) seasonRepository.save(season);
+        redirectAttributes.addFlashAttribute("successMessage", added + " track(s) added to pool");
+        return "redirect:/admin/seasons/" + id + "/edit#trackPool";
     }
 
     @PostMapping("/{id}/tracks/remove")
-    public String removeTrack(@PathVariable UUID id, @RequestParam UUID trackId,
-                              RedirectAttributes redirectAttributes) {
+    public String removeTracks(@PathVariable UUID id, @RequestParam List<UUID> trackIds,
+                               RedirectAttributes redirectAttributes) {
         var season = seasonRepository.findById(id).orElseThrow();
-        season.getTracks().removeIf(t -> t.getId().equals(trackId));
+        season.getTracks().removeIf(t -> trackIds.contains(t.getId()));
         seasonRepository.save(season);
-        redirectAttributes.addFlashAttribute("successMessage", "Track removed from pool");
-        return "redirect:/admin/seasons/" + id + "/edit";
+        redirectAttributes.addFlashAttribute("successMessage", trackIds.size() + " track(s) removed from pool");
+        return "redirect:/admin/seasons/" + id + "/edit#trackPool";
     }
 
     @PostMapping("/{id}/delete")
