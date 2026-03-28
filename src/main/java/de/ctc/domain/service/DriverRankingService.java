@@ -51,6 +51,40 @@ public class DriverRankingService {
         return rankings;
     }
 
+    public List<DriverRanking> calculateAlltimeRanking() {
+        List<RaceResult> results = raceResultRepository.findByRacePlayoffMatchupIsNull();
+        List<SeasonDriver> allSeasonDrivers = seasonDriverRepository.findAll();
+
+        // For each driver, find their most recent team (by season name), resolved to parent
+        Map<UUID, Team> driverTeamMap = allSeasonDrivers.stream()
+                .collect(Collectors.groupingBy(sd -> sd.getDriver().getId()))
+                .entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> e.getValue().stream()
+                                .max(Comparator.comparing(sd -> sd.getSeason().getName()))
+                                .map(sd -> sd.getTeam().getParentOrSelf())
+                                .orElse(null)));
+
+        Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
+
+        for (RaceResult result : results) {
+            UUID driverId = result.getDriver().getId();
+            DriverRanking ranking = rankingMap.computeIfAbsent(driverId,
+                    id -> new DriverRanking(result.getDriver(), driverTeamMap.get(id)));
+            ranking.addResult(result);
+        }
+
+        List<DriverRanking> rankings = new ArrayList<>(rankingMap.values());
+        rankings.sort(Comparator
+                .<DriverRanking, Integer>comparing(DriverRanking::getTotalPoints, Comparator.reverseOrder())
+                .thenComparing(DriverRanking::getRacesCount)
+                .thenComparing(DriverRanking::getAveragePoints, Comparator.reverseOrder()));
+
+        log.debug("Calculated alltime driver ranking: {} drivers", rankings.size());
+        return rankings;
+    }
+
     public static class DriverRanking {
         private final Driver driver;
         private final Team team;

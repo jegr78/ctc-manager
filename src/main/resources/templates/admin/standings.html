@@ -8,19 +8,21 @@
         <form method="get" th:action="@{/admin/standings}" style="display:inline-flex;gap:8px;align-items:center;">
             <select name="seasonId" onchange="this.form.submit()">
                 <option value="">-- Select season --</option>
+                <option value="alltime" th:selected="${isAlltime}">Alltime</option>
                 <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
                         th:selected="${selectedSeason != null && s.id == selectedSeason.id}"></option>
             </select>
         </form>
     </div>
 
-    <div th:if="${selectedSeason == null}" class="card empty-state">
+    <div th:if="${selectedSeason == null && !isAlltime}" class="card empty-state">
         <p>Please select a season.</p>
     </div>
 
     <!-- Team Standings -->
     <div th:if="${standings != null}" class="card">
-        <h2>Team Standings — <span th:text="${selectedSeason.name}"></span></h2>
+        <h2 th:if="${isAlltime}">Team Standings — Alltime</h2>
+        <h2 th:unless="${isAlltime}">Team Standings — <span th:text="${selectedSeason.name}"></span></h2>
         <table th:if="${!standings.isEmpty()}">
             <thead>
                 <tr><th>#</th><th>Team</th><th>MP</th><th>W</th><th>D</th><th>L</th><th>PR</th><th style="text-align:right">Pts</th></tr>
@@ -44,7 +46,8 @@
 
     <!-- Driver Ranking -->
     <div th:if="${driverRanking != null}" class="card" style="margin-top: 16px;">
-        <h2>Driver Ranking — <span th:text="${selectedSeason.name}"></span></h2>
+        <h2 th:if="${isAlltime}">Driver Ranking — Alltime</h2>
+        <h2 th:unless="${isAlltime}">Driver Ranking — <span th:text="${selectedSeason.name}"></span></h2>
         <table th:if="${!driverRanking.isEmpty()}">
             <thead>
                 <tr><th>#</th><th>Driver</th><th>Team</th><th>Races</th><th>Best Pos.</th><th>Avg</th><th style="text-align:right">Points</th></tr>

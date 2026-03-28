@@ -17,4 +17,6 @@ public interface RaceRepository extends JpaRepository<Race, UUID> {
     List<Race> findByPlayoffMatchupId(UUID matchupId);
 
     List<Race> findByPlayoffMatchupRoundPlayoffId(UUID playoffId);
+
+    List<Race> findByPlayoffMatchupIsNull();
 }

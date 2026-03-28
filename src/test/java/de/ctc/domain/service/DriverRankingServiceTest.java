@@ -160,6 +160,86 @@ class DriverRankingServiceTest {
         assertEquals(panicpotato.getId(), rankings.get(0).getDriver().getId());
     }
 
+    @Test
+    void shouldCalculateAlltimeRankingAcrossSeasons() {
+        var season2 = new Season("2025");
+        season2.setId(UUID.randomUUID());
+
+        var sd1 = new SeasonDriver(season, panicpotato, tnr);
+        var sd2 = new SeasonDriver(season2, panicpotato, tnr);
+
+        var race1 = new Race();
+        race1.setId(UUID.randomUUID());
+        var race2 = new Race();
+        race2.setId(UUID.randomUUID());
+
+        var result1 = createResult(race1, panicpotato, 23, 1);
+        var result2 = createResult(race2, panicpotato, 17, 2);
+
+        when(raceResultRepository.findByRacePlayoffMatchupIsNull())
+                .thenReturn(List.of(result1, result2));
+        when(seasonDriverRepository.findAll())
+                .thenReturn(List.of(sd1, sd2));
+
+        var rankings = driverRankingService.calculateAlltimeRanking();
+
+        assertEquals(1, rankings.size());
+        assertEquals(40, rankings.get(0).getTotalPoints());
+        assertEquals(2, rankings.get(0).getRacesCount());
+        assertEquals(1, rankings.get(0).getBestPosition());
+    }
+
+    @Test
+    void shouldShowMostRecentTeamInAlltime() {
+        var season2 = new Season("2025");
+        season2.setId(UUID.randomUUID());
+
+        var p1r = new Team("Project One Racing", "P1R");
+        p1r.setId(UUID.randomUUID());
+
+        // panicpotato was in P1R in 2025, TNR in 2026
+        var sd1 = new SeasonDriver(season2, panicpotato, p1r);
+        var sd2 = new SeasonDriver(season, panicpotato, tnr);
+
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var result = createResult(race, panicpotato, 23, 1);
+
+        when(raceResultRepository.findByRacePlayoffMatchupIsNull())
+                .thenReturn(List.of(result));
+        when(seasonDriverRepository.findAll())
+                .thenReturn(List.of(sd1, sd2));
+
+        var rankings = driverRankingService.calculateAlltimeRanking();
+
+        // Season "2026" > "2025" alphabetically, so TNR is most recent
+        assertEquals(tnr, rankings.get(0).getTeam());
+    }
+
+    @Test
+    void shouldResolveSubTeamToParentInAlltime() {
+        var clr = new Team("Community League Racing", "CLR");
+        clr.setId(UUID.randomUUID());
+        var clr1 = new Team("CLR 1", "CLR 1", clr);
+        clr1.setId(UUID.randomUUID());
+
+        var sd = new SeasonDriver(season, panicpotato, clr1);
+
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var result = createResult(race, panicpotato, 23, 1);
+
+        when(raceResultRepository.findByRacePlayoffMatchupIsNull())
+                .thenReturn(List.of(result));
+        when(seasonDriverRepository.findAll())
+                .thenReturn(List.of(sd));
+
+        var rankings = driverRankingService.calculateAlltimeRanking();
+
+        // Should show parent CLR, not sub-team CLR 1
+        assertEquals(clr, rankings.get(0).getTeam());
+    }
+
     private RaceResult createResult(Race race, Driver driver, int totalPoints, int position) {
         var result = new RaceResult();
         result.setRace(race);
