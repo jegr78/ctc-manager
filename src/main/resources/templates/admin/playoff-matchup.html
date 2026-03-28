@@ -34,6 +34,7 @@
                     <th th:text="${matchup.team1 != null ? matchup.team1.shortName : 'Team 1'}"></th>
                     <th></th>
                     <th th:text="${matchup.team2 != null ? matchup.team2.shortName : 'Team 2'}"></th>
+                    <th>Date</th>
                     <th>Results</th>
                     <th>Actions</th>
                 </tr>
@@ -43,6 +44,7 @@
                     <td th:text="${iter.count}"></td>
                     <td th:text="${leg.track ?: '-'}"></td>
                     <td th:text="${leg.car ?: '-'}"></td>
+                    <td th:text="${leg.dateTime != null ? #temporals.format(leg.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                     <td colspan="3" style="text-align:center;">
                         <span th:if="${leg.results.isEmpty()}" class="text-dim">—</span>
                         <span th:unless="${leg.results.isEmpty()}" th:text="${leg.results.size() + ' Drivers'}"></span>
@@ -75,6 +77,11 @@
                     <label>Car</label>
                     <input type="text" name="car" placeholder="e.g. Mazda RX-Vision GT3">
                 </div>
+            </div>
+            <div class="form-group">
+                <label for="dateTime">Date &amp; Time</label>
+                <input type="datetime-local" id="dateTime" name="dateTime">
+                <small class="text-dim">When this leg takes place</small>
             </div>
             <button type="submit" class="btn btn-primary">Add Leg</button>
         </form>

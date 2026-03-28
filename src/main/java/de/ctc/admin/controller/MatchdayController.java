@@ -83,7 +83,6 @@ public class MatchdayController {
         if (matchday.getId() != null) {
             var existing = matchdayRepository.findById(matchday.getId()).orElseThrow();
             existing.setLabel(matchday.getLabel());
-            existing.setDate(matchday.getDate());
             existing.setSortIndex(matchday.getSortIndex());
             existing.setSeason(seasonRepository.findById(seasonId).orElseThrow());
             matchdayRepository.save(existing);

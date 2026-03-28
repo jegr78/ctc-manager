@@ -13,7 +13,7 @@
     <div class="card">
         <table th:if="${!races.isEmpty()}">
             <thead>
-                <tr><th>Home</th><th></th><th>Away</th><th>Track</th><th>Car</th><th>Results</th><th>Actions</th></tr>
+                <tr><th>Home</th><th></th><th>Away</th><th>Track</th><th>Car</th><th>Date</th><th>Results</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <tr th:each="race : ${races}">
@@ -22,6 +22,7 @@
                     <td><a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link"><strong th:text="${race.awayTeam.shortName}"></strong></a></td>
                     <td th:text="${race.track ?: '-'}"></td>
                     <td th:text="${race.car ?: '-'}"></td>
+                    <td th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                     <td>
                         <span th:if="${race.results.isEmpty()}" class="badge badge-inactive">Open</span>
                         <span th:unless="${race.results.isEmpty()}" class="badge badge-active"

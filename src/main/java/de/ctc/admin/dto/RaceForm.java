@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -17,5 +18,6 @@ public class RaceForm {
     private UUID awayTeamId;
     private String track;
     private String car;
+    private LocalDateTime dateTime;
     private List<RaceResultForm> results = new ArrayList<>();
 }

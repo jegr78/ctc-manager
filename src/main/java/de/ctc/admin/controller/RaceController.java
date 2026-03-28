@@ -107,6 +107,7 @@ public class RaceController {
         race.setAwayTeam(awayTeam);
         race.setTrack(form.getTrack());
         race.setCar(form.getCar());
+        race.setDateTime(form.getDateTime());
 
         raceRepository.save(race);
         log.info("Saved race: {} vs {} ({})", homeTeam.getShortName(), awayTeam.getShortName(), matchday.getLabel());
@@ -224,6 +225,7 @@ public class RaceController {
         form.setAwayTeamId(race.getAwayTeam().getId());
         form.setTrack(race.getTrack());
         form.setCar(race.getCar());
+        form.setDateTime(race.getDateTime());
 
         for (var result : race.getResults()) {
             var rf = new RaceResultForm();

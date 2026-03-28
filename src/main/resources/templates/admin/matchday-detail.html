@@ -24,8 +24,6 @@
             <span th:text="${matchday.label}"></span>
             <span class="label">Sort Index</span>
             <span th:text="${matchday.sortIndex}"></span>
-            <span class="label">Date</span>
-            <span th:text="${matchday.date ?: '-'}"></span>
             <span class="label">Season</span>
             <a th:href="@{/admin/seasons/{id}(id=${matchday.season.id})}" class="detail-link" th:text="${matchday.season.name}"></a>
         </div>
@@ -34,7 +32,7 @@
             <h2 th:text="'Races (' + ${matchday.races.size()} + ')'"></h2>
             <table th:if="${!matchday.races.isEmpty()}">
                 <thead>
-                    <tr><th>Home</th><th></th><th>Away</th><th>Track</th><th>Results</th></tr>
+                    <tr><th>Home</th><th></th><th>Away</th><th>Track</th><th>Date</th><th>Results</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="race : ${matchday.races}">
@@ -42,6 +40,7 @@
                         <td style="text-align:center;">vs</td>
                         <td><a th:href="@{/admin/teams/{id}(id=${race.awayTeam.id})}" class="detail-link" th:text="${race.awayTeam.shortName}"></a></td>
                         <td th:text="${race.track ?: '-'}"></td>
+                        <td th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                         <td>
                             <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link">
                                 <span th:if="${race.results.isEmpty()}" class="badge badge-inactive">Open</span>

@@ -19,13 +19,12 @@
     <div class="card">
         <table th:if="${!matchdays.isEmpty()}">
             <thead>
-                <tr><th>#</th><th>Label</th><th>Date</th><th>Season</th><th>Races</th><th>Actions</th></tr>
+                <tr><th>#</th><th>Label</th><th>Season</th><th>Races</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <tr th:each="md : ${matchdays}">
                     <td th:text="${md.sortIndex}"></td>
                     <td><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="detail-link"><strong th:text="${md.label}"></strong></a></td>
-                    <td th:text="${md.date}"></td>
                     <td th:text="${md.season.name}"></td>
                     <td th:text="${md.races.size()}"></td>
                     <td class="actions">
