@@ -23,8 +23,26 @@ public class Gt7SyncService {
     private final FileStorageService fileStorageService;
 
     public Gt7SyncPreview fetchAndPreview() throws IOException {
-        var scrapedCars = scraperService.scrapeCars();
-        var scrapedTracks = scraperService.scrapeTracks();
+        // Fetch cars and tracks in parallel
+        var carsFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            try { return scraperService.scrapeCars(); }
+            catch (IOException e) { throw new java.io.UncheckedIOException(e); }
+        });
+        var tracksFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            try { return scraperService.scrapeTracks(); }
+            catch (IOException e) { throw new java.io.UncheckedIOException(e); }
+        });
+
+        List<Gt7ScraperService.ScrapedCar> scrapedCars;
+        List<Gt7ScraperService.ScrapedTrack> scrapedTracks;
+        try {
+            scrapedCars = carsFuture.join();
+            scrapedTracks = tracksFuture.join();
+        } catch (java.util.concurrent.CompletionException e) {
+            if (e.getCause() instanceof IOException ioe) throw ioe;
+            if (e.getCause() instanceof java.io.UncheckedIOException uioe) throw uioe.getCause();
+            throw new IOException("Failed to fetch GT7 data", e.getCause());
+        }
 
         var carEntries = scrapedCars.stream().map(sc -> {
             boolean exists = carRepository.existsByGt7Id(sc.gt7Id())
@@ -76,7 +94,7 @@ public class Gt7SyncService {
         }
 
         if (!selectedTrackNames.isEmpty()) {
-            var scrapedTracks = scraperService.scrapeTracks();
+            var scrapedTracks = scraperService.scrapeTracks(true);
             var selectedTracks = scrapedTracks.stream()
                     .filter(st -> selectedTrackNames.contains(st.name()))
                     .toList();

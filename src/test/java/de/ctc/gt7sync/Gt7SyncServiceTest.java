@@ -115,7 +115,7 @@ class Gt7SyncServiceTest {
 
     @Test
     void shouldImportOnlySelectedTracks() throws IOException {
-        when(scraperService.scrapeTracks()).thenReturn(SCRAPED_TRACKS);
+        when(scraperService.scrapeTracks(true)).thenReturn(SCRAPED_TRACKS);
         when(trackRepository.existsByName(anyString())).thenReturn(false);
         var savedTrack = new Track("Deep Forest Raceway", "Switzerland");
         savedTrack.setId(UUID.randomUUID());

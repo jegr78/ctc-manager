@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.Objects;
 import java.util.regex.*;
 
 @Slf4j
@@ -39,21 +40,31 @@ public class Gt7ScraperService {
         return parseCarsJs(carsJs, manufacturerMap);
     }
 
+    /**
+     * Scrape tracks without resolving image URLs (fast, for preview).
+     */
     public List<ScrapedTrack> scrapeTracks() throws IOException {
+        return scrapeTracks(false);
+    }
+
+    /**
+     * Scrape tracks, optionally resolving image URLs (slow, requires ~41 extra HTTP requests).
+     */
+    public List<ScrapedTrack> scrapeTracks(boolean resolveImages) throws IOException {
         String html = Jsoup.connect(TRACKS_PAGE).get().html();
         String indexJsPath = extractScriptSrc(html, "/common/dist/gt7/tracklist/assets/index-");
 
         String indexJs = fetchText(BASE_URL + indexJsPath);
         String tracksChunkName = extractPattern(indexJs, "\"\\.\\/?(tracks\\.gb-[^\"]+\\.js)\"");
 
-        // Build baseId → image chunk filename mapping from index JS
-        Map<String, String> imageChunkMap = extractBaseIdChunks(indexJs);
-
         String tracksJs = fetchText(BASE_URL + "/common/dist/gt7/tracklist/assets/" + tracksChunkName);
         var tracks = parseTracksJs(tracksJs);
 
-        // Resolve image URLs by fetching each baseId's chunk
-        return resolveTrackImages(tracks, imageChunkMap);
+        if (resolveImages) {
+            Map<String, String> imageChunkMap = extractBaseIdChunks(indexJs);
+            return resolveTrackImagesParallel(tracks, imageChunkMap);
+        }
+        return tracks;
     }
 
     /**
@@ -71,27 +82,40 @@ public class Gt7ScraperService {
     }
 
     /**
-     * Resolve track image URLs by fetching individual baseId JS chunks.
+     * Resolve track image URLs by fetching baseId JS chunks in parallel.
      * Each chunk exports a PNG path like: const t="/common/dist/gt7/tracklist/assets/xxx.png";
      */
-    private List<ScrapedTrack> resolveTrackImages(List<ScrapedTrack> tracks, Map<String, String> imageChunkMap) {
-        var result = new ArrayList<ScrapedTrack>();
-        for (var track : tracks) {
-            String imageUrl = null;
-            if (track.baseId() != null && imageChunkMap.containsKey(track.baseId())) {
-                try {
-                    String chunkJs = fetchText(BASE_URL + "/common/dist/gt7/tracklist/assets/" + imageChunkMap.get(track.baseId()));
-                    Matcher m = Pattern.compile("\"(/common/dist/gt7/tracklist/assets/[^\"]+\\.png)\"").matcher(chunkJs);
-                    if (m.find()) {
-                        imageUrl = BASE_URL + m.group(1);
+    private List<ScrapedTrack> resolveTrackImagesParallel(List<ScrapedTrack> tracks, Map<String, String> imageChunkMap) {
+        // Collect unique baseIds that need resolving
+        var baseIdsToResolve = tracks.stream()
+                .map(ScrapedTrack::baseId)
+                .filter(Objects::nonNull)
+                .filter(imageChunkMap::containsKey)
+                .distinct()
+                .toList();
+
+        // Fetch all chunks in parallel
+        var imageUrlMap = new java.util.concurrent.ConcurrentHashMap<String, String>();
+        var futures = baseIdsToResolve.stream().map(baseId ->
+                java.util.concurrent.CompletableFuture.runAsync(() -> {
+                    try {
+                        String chunkJs = fetchText(BASE_URL + "/common/dist/gt7/tracklist/assets/" + imageChunkMap.get(baseId));
+                        Matcher m = Pattern.compile("\"(/common/dist/gt7/tracklist/assets/[^\"]+\\.png)\"").matcher(chunkJs);
+                        if (m.find()) {
+                            imageUrlMap.put(baseId, BASE_URL + m.group(1));
+                        }
+                    } catch (Exception e) {
+                        log.warn("Failed to resolve image for baseId {}: {}", baseId, e.getMessage());
                     }
-                } catch (Exception e) {
-                    log.warn("Failed to resolve image for track {}: {}", track.name(), e.getMessage());
-                }
-            }
-            result.add(new ScrapedTrack(track.id(), track.name(), track.country(), track.baseId(), imageUrl));
-        }
-        return result;
+                })
+        ).toArray(java.util.concurrent.CompletableFuture[]::new);
+
+        java.util.concurrent.CompletableFuture.allOf(futures).join();
+        log.info("Resolved {} track images in parallel", imageUrlMap.size());
+
+        return tracks.stream()
+                .map(t -> new ScrapedTrack(t.id(), t.name(), t.country(), t.baseId(), imageUrlMap.get(t.baseId())))
+                .toList();
     }
 
     /**
