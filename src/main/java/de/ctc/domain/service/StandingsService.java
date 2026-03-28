@@ -50,6 +50,75 @@ public class StandingsService {
         return standings;
     }
 
+    public List<TeamStanding> calculateAlltimeStandings() {
+        List<Race> races = raceRepository.findByPlayoffMatchupIsNull();
+        Map<UUID, TeamStanding> standingsMap = new HashMap<>();
+
+        for (Team team : teamRepository.findAll()) {
+            Team parent = team.getParentOrSelf();
+            standingsMap.putIfAbsent(parent.getId(), new TeamStanding(parent));
+        }
+
+        for (Race race : races) {
+            if (race.getResults().isEmpty()) continue;
+
+            Team homeParent = race.getHomeTeam().getParentOrSelf();
+            Team awayParent = race.getAwayTeam().getParentOrSelf();
+
+            // Skip intra-parent races (e.g. CLR 1 vs CLR 2)
+            if (homeParent.getId().equals(awayParent.getId())) continue;
+
+            processAlltimeRace(race, standingsMap, homeParent, awayParent);
+        }
+
+        List<TeamStanding> standings = new ArrayList<>(standingsMap.values());
+        standings.removeIf(s -> s.getPlayed() == 0);
+        standings.sort(Comparator
+                .<TeamStanding, Integer>comparing(TeamStanding::getPoints, Comparator.reverseOrder())
+                .thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
+                .thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+
+        log.debug("Calculated alltime standings: {} teams", standings.size());
+        return standings;
+    }
+
+    private void processAlltimeRace(Race race, Map<UUID, TeamStanding> standingsMap,
+                                     Team homeParent, Team awayParent) {
+        UUID homeTeamId = race.getHomeTeam().getId();
+        UUID awayTeamId = race.getAwayTeam().getId();
+
+        List<RaceResult> homeResults = race.getResults().stream()
+                .filter(r -> isDriverInTeam(r, homeTeamId, race))
+                .toList();
+        List<RaceResult> awayResults = race.getResults().stream()
+                .filter(r -> isDriverInTeam(r, awayTeamId, race))
+                .toList();
+
+        int homeTotal = scoringService.calculateTeamTotal(homeResults);
+        int awayTotal = scoringService.calculateTeamTotal(awayResults);
+
+        TeamStanding homeStanding = standingsMap.get(homeParent.getId());
+        TeamStanding awayStanding = standingsMap.get(awayParent.getId());
+
+        if (homeStanding == null || awayStanding == null) return;
+
+        homeStanding.addPointsFor(homeTotal);
+        homeStanding.addPointsAgainst(awayTotal);
+        awayStanding.addPointsFor(awayTotal);
+        awayStanding.addPointsAgainst(homeTotal);
+
+        if (homeTotal > awayTotal) {
+            homeStanding.addWin();
+            awayStanding.addLoss();
+        } else if (homeTotal < awayTotal) {
+            homeStanding.addLoss();
+            awayStanding.addWin();
+        } else {
+            homeStanding.addDraw();
+            awayStanding.addDraw();
+        }
+    }
+
     private void processRace(Race race, Map<UUID, TeamStanding> standingsMap) {
         UUID homeTeamId = race.getHomeTeam().getId();
         UUID awayTeamId = race.getAwayTeam().getId();

@@ -13,4 +13,6 @@ public interface RaceResultRepository extends JpaRepository<RaceResult, UUID> {
     List<RaceResult> findByDriverId(UUID driverId);
 
     List<RaceResult> findByRaceMatchdaySeasonId(UUID seasonId);
+
+    List<RaceResult> findByRacePlayoffMatchupIsNull();
 }

@@ -144,14 +144,92 @@ class StandingsServiceTest {
         assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(clr.getId())));
     }
 
+    @Test
+    void shouldCalculateAlltimeStandingsAcrossSeasons() {
+        var season2 = new Season("2025");
+        season2.setId(UUID.randomUUID());
+
+        var md1 = new Matchday(season, "Spieltag 1", 1);
+        var md2 = new Matchday(season2, "Spieltag 1", 1);
+
+        // Season 2026: TNR beats P1R 70:46
+        var race1 = createRaceWithResults(md1, tnr, p1r, 70, 46);
+        // Season 2025: CLR beats TNR 60:50
+        var race2 = createRaceWithResults(md2, clr, tnr, 60, 50);
+
+        when(raceRepository.findByPlayoffMatchupIsNull()).thenReturn(List.of(race1, race2));
+        when(teamRepository.findAll()).thenReturn(List.of(tnr, p1r, clr));
+
+        var standings = standingsService.calculateAlltimeStandings();
+
+        assertEquals(3, standings.size());
+
+        var tnrStanding = standings.stream()
+                .filter(s -> s.getTeam().getId().equals(tnr.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(1, tnrStanding.getWins());
+        assertEquals(1, tnrStanding.getLosses());
+        // 1W + 1L = 3pts
+        assertEquals(3, tnrStanding.getPoints());
+    }
+
+    @Test
+    void shouldMergeSubTeamsUnderParentInAlltime() {
+        var clr1 = new Team("CLR 1", "CLR 1", clr);
+        clr1.setId(UUID.randomUUID());
+        var clr2 = new Team("CLR 2", "CLR 2", clr);
+        clr2.setId(UUID.randomUUID());
+
+        var md = new Matchday(season, "Spieltag 1", 1);
+        // CLR 1 beats TNR 70:46
+        var race = createRaceWithResults(md, clr1, tnr, 70, 46);
+
+        when(raceRepository.findByPlayoffMatchupIsNull()).thenReturn(List.of(race));
+        when(teamRepository.findAll()).thenReturn(List.of(tnr, clr, clr1, clr2));
+
+        var standings = standingsService.calculateAlltimeStandings();
+
+        // CLR 1 should be merged under CLR
+        var clrStanding = standings.stream()
+                .filter(s -> s.getTeam().getId().equals(clr.getId()))
+                .findFirst().orElseThrow();
+        assertEquals(1, clrStanding.getWins());
+        assertEquals(70, clrStanding.getPointsFor());
+
+        // No separate CLR 1 or CLR 2 entries
+        assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(clr1.getId())));
+        assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(clr2.getId())));
+    }
+
+    @Test
+    void shouldSkipIntraParentRacesInAlltime() {
+        var clr1 = new Team("CLR 1", "CLR 1", clr);
+        clr1.setId(UUID.randomUUID());
+        var clr2 = new Team("CLR 2", "CLR 2", clr);
+        clr2.setId(UUID.randomUUID());
+
+        var md = new Matchday(season, "Spieltag 1", 1);
+        // CLR 1 vs CLR 2 — same parent, should be skipped
+        var race = createRaceWithResults(md, clr1, clr2, 70, 46);
+
+        when(raceRepository.findByPlayoffMatchupIsNull()).thenReturn(List.of(race));
+        when(teamRepository.findAll()).thenReturn(List.of(clr, clr1, clr2));
+
+        var standings = standingsService.calculateAlltimeStandings();
+
+        // CLR should have 0 games (intra-parent race skipped)
+        assertTrue(standings.isEmpty());
+    }
+
     private Race createRaceWithResults(Matchday matchday, Team home, Team away,
                                         int homeTotal, int awayTotal) {
         var race = new Race(matchday, home, away);
         race.setId(UUID.randomUUID());
 
         // Create 6 drivers per team with distributed points
-        var homeDrivers = createTeamDrivers(home, season, 6);
-        var awayDrivers = createTeamDrivers(away, season, 6);
+        var raceSeason = matchday.getSeason();
+        var homeDrivers = createTeamDrivers(home, raceSeason, 6);
+        var awayDrivers = createTeamDrivers(away, raceSeason, 6);
 
         int[] homePoints = distributePoints(homeTotal, 6);
         int[] awayPoints = distributePoints(awayTotal, 6);

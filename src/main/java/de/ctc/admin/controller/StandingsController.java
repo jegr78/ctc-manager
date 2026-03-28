@@ -22,18 +22,28 @@ public class StandingsController {
     private final SeasonRepository seasonRepository;
 
     @GetMapping
-    public String standings(@RequestParam(required = false) UUID seasonId, Model model) {
-        var season = seasonId != null
-                ? seasonRepository.findById(seasonId).orElse(null)
-                : seasonRepository.findByActiveTrue().orElse(null);
+    public String standings(@RequestParam(required = false) String seasonId, Model model) {
+        boolean isAlltime = "alltime".equals(seasonId);
 
-        if (season != null) {
-            model.addAttribute("standings", standingsService.calculateStandings(season.getId()));
-            model.addAttribute("driverRanking", driverRankingService.calculateRanking(season.getId()));
-            model.addAttribute("selectedSeason", season);
+        if (isAlltime) {
+            model.addAttribute("standings", standingsService.calculateAlltimeStandings());
+            model.addAttribute("driverRanking", driverRankingService.calculateAlltimeRanking());
+            model.addAttribute("isAlltime", true);
+        } else {
+            UUID parsedId = seasonId != null && !seasonId.isBlank() ? UUID.fromString(seasonId) : null;
+            var season = parsedId != null
+                    ? seasonRepository.findById(parsedId).orElse(null)
+                    : seasonRepository.findByActiveTrue().orElse(null);
+
+            if (season != null) {
+                model.addAttribute("standings", standingsService.calculateStandings(season.getId()));
+                model.addAttribute("driverRanking", driverRankingService.calculateRanking(season.getId()));
+                model.addAttribute("selectedSeason", season);
+            }
         }
 
         model.addAttribute("seasons", seasonRepository.findAll());
+        model.addAttribute("selectedSeasonId", seasonId);
         return "admin/standings";
     }
 }
