@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -30,8 +29,6 @@ public class Matchday {
     @NotBlank
     @Column(nullable = false)
     private String label;
-
-    private LocalDate date;
 
     @Column(nullable = false)
     private int sortIndex;
