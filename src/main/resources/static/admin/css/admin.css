@@ -647,6 +647,59 @@ select option {
     background: rgba(79, 195, 247, 0.2);
 }
 
+/* === Transfer Picker (Dual List) === */
+.transfer-picker {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.transfer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.transfer-filter {
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+    color: var(--white);
+    font-size: 13px;
+    width: 160px;
+}
+
+.transfer-items {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+}
+
+.transfer-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text);
+}
+
+.transfer-item:last-child {
+    border-bottom: none;
+}
+
+.transfer-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .sidebar {

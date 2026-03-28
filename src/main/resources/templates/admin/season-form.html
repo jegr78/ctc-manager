@@ -98,6 +98,104 @@
             <button type="submit" class="btn btn-primary btn-sm">Add</button>
         </form>
     </div>
+
+    <!-- Car Pool (only when editing) -->
+    <div th:if="${season.id != null}" class="card" style="margin-top: 16px;">
+        <h2 th:text="'Car Pool (' + ${season.cars.size()} + ')'">Car Pool</h2>
+        <div class="transfer-picker">
+            <div class="transfer-list">
+                <div class="transfer-header">
+                    <span class="text-dim">Available</span>
+                    <input type="text" id="availableCarsFilter" placeholder="Filter..." class="transfer-filter">
+                </div>
+                <div class="transfer-items" id="availableCars">
+                    <div th:each="car : ${allCars}" th:if="${!season.cars.contains(car)}" class="transfer-item">
+                        <span th:text="${car.manufacturer + ' — ' + car.name}"></span>
+                        <form th:action="@{/admin/seasons/{id}/cars/add(id=${season.id})}" method="post">
+                            <input type="hidden" name="carId" th:value="${car.id}">
+                            <button type="submit" class="btn btn-primary btn-sm">&rarr;</button>
+                        </form>
+                    </div>
+                    <div th:if="${allCars.isEmpty()}" class="transfer-empty">No cars available. Create cars first.</div>
+                </div>
+            </div>
+            <div class="transfer-list">
+                <div class="transfer-header">
+                    <span class="text-dim" th:text="'Assigned (' + ${season.cars.size()} + ')'">Assigned</span>
+                    <input type="text" id="assignedCarsFilter" placeholder="Filter..." class="transfer-filter">
+                </div>
+                <div class="transfer-items" id="assignedCars">
+                    <div th:each="car : ${season.cars}" class="transfer-item">
+                        <span th:text="${car.manufacturer + ' — ' + car.name}"></span>
+                        <form th:action="@{/admin/seasons/{id}/cars/remove(id=${season.id})}" method="post">
+                            <input type="hidden" name="carId" th:value="${car.id}">
+                            <button type="submit" class="btn btn-danger btn-sm">&larr;</button>
+                        </form>
+                    </div>
+                    <div th:if="${season.cars.isEmpty()}" class="transfer-empty">No cars assigned yet.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Track Pool (only when editing) -->
+    <div th:if="${season.id != null}" class="card" style="margin-top: 16px;">
+        <h2 th:text="'Track Pool (' + ${season.tracks.size()} + ')'">Track Pool</h2>
+        <div class="transfer-picker">
+            <div class="transfer-list">
+                <div class="transfer-header">
+                    <span class="text-dim">Available</span>
+                    <input type="text" id="availableTracksFilter" placeholder="Filter..." class="transfer-filter">
+                </div>
+                <div class="transfer-items" id="availableTracks">
+                    <div th:each="track : ${allTracks}" th:if="${!season.tracks.contains(track)}" class="transfer-item">
+                        <span th:text="${track.name}"></span>
+                        <form th:action="@{/admin/seasons/{id}/tracks/add(id=${season.id})}" method="post">
+                            <input type="hidden" name="trackId" th:value="${track.id}">
+                            <button type="submit" class="btn btn-primary btn-sm">&rarr;</button>
+                        </form>
+                    </div>
+                    <div th:if="${allTracks.isEmpty()}" class="transfer-empty">No tracks available. Create tracks first.</div>
+                </div>
+            </div>
+            <div class="transfer-list">
+                <div class="transfer-header">
+                    <span class="text-dim" th:text="'Assigned (' + ${season.tracks.size()} + ')'">Assigned</span>
+                    <input type="text" id="assignedTracksFilter" placeholder="Filter..." class="transfer-filter">
+                </div>
+                <div class="transfer-items" id="assignedTracks">
+                    <div th:each="track : ${season.tracks}" class="transfer-item">
+                        <span th:text="${track.name}"></span>
+                        <form th:action="@{/admin/seasons/{id}/tracks/remove(id=${season.id})}" method="post">
+                            <input type="hidden" name="trackId" th:value="${track.id}">
+                            <button type="submit" class="btn btn-danger btn-sm">&larr;</button>
+                        </form>
+                    </div>
+                    <div th:if="${season.tracks.isEmpty()}" class="transfer-empty">No tracks assigned yet.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        function setupFilter(inputId, containerId) {
+            var input = document.getElementById(inputId);
+            var container = document.getElementById(containerId);
+            if (!input || !container) return;
+            input.addEventListener('input', function() {
+                var q = this.value.toLowerCase();
+                container.querySelectorAll('.transfer-item').forEach(function(item) {
+                    item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
+                });
+            });
+        }
+        setupFilter('availableCarsFilter', 'availableCars');
+        setupFilter('assignedCarsFilter', 'assignedCars');
+        setupFilter('availableTracksFilter', 'availableTracks');
+        setupFilter('assignedTracksFilter', 'assignedTracks');
+    })();
+    </script>
 </section>
 </body>
 </html>

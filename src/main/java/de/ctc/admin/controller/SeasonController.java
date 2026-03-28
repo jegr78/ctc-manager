@@ -4,9 +4,11 @@ import de.ctc.domain.model.Race;
 import de.ctc.domain.model.RaceResult;
 import de.ctc.domain.model.Season;
 import de.ctc.domain.model.SeasonFormat;
+import de.ctc.domain.repository.CarRepository;
 import de.ctc.domain.repository.PlayoffRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
+import de.ctc.domain.repository.TrackRepository;
 import de.ctc.domain.service.SwissPairingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,8 @@ public class SeasonController {
 
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
+    private final CarRepository carRepository;
+    private final TrackRepository trackRepository;
     private final PlayoffRepository playoffRepository;
     private final SwissPairingService swissPairingService;
 
@@ -59,6 +63,8 @@ public class SeasonController {
         var season = seasonRepository.findById(id).orElseThrow();
         model.addAttribute("season", season);
         model.addAttribute("allTeams", teamRepository.findAll());
+        model.addAttribute("allCars", carRepository.findAllByOrderByManufacturerAscNameAsc());
+        model.addAttribute("allTracks", trackRepository.findAllByOrderByNameAsc());
         return "admin/season-form";
     }
 
@@ -144,6 +150,52 @@ public class SeasonController {
         seasonRepository.save(season);
         log.info("Removed team {} from season {}", team.getShortName(), season.getName());
         redirectAttributes.addFlashAttribute("successMessage", "Team removed");
+        return "redirect:/admin/seasons/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/cars/add")
+    public String addCar(@PathVariable UUID id, @RequestParam UUID carId,
+                         RedirectAttributes redirectAttributes) {
+        var season = seasonRepository.findById(id).orElseThrow();
+        var car = carRepository.findById(carId).orElseThrow();
+        if (!season.getCars().contains(car)) {
+            season.getCars().add(car);
+            seasonRepository.save(season);
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "Car added to pool");
+        return "redirect:/admin/seasons/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/cars/remove")
+    public String removeCar(@PathVariable UUID id, @RequestParam UUID carId,
+                            RedirectAttributes redirectAttributes) {
+        var season = seasonRepository.findById(id).orElseThrow();
+        season.getCars().removeIf(c -> c.getId().equals(carId));
+        seasonRepository.save(season);
+        redirectAttributes.addFlashAttribute("successMessage", "Car removed from pool");
+        return "redirect:/admin/seasons/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/tracks/add")
+    public String addTrack(@PathVariable UUID id, @RequestParam UUID trackId,
+                           RedirectAttributes redirectAttributes) {
+        var season = seasonRepository.findById(id).orElseThrow();
+        var track = trackRepository.findById(trackId).orElseThrow();
+        if (!season.getTracks().contains(track)) {
+            season.getTracks().add(track);
+            seasonRepository.save(season);
+        }
+        redirectAttributes.addFlashAttribute("successMessage", "Track added to pool");
+        return "redirect:/admin/seasons/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/tracks/remove")
+    public String removeTrack(@PathVariable UUID id, @RequestParam UUID trackId,
+                              RedirectAttributes redirectAttributes) {
+        var season = seasonRepository.findById(id).orElseThrow();
+        season.getTracks().removeIf(t -> t.getId().equals(trackId));
+        seasonRepository.save(season);
+        redirectAttributes.addFlashAttribute("successMessage", "Track removed from pool");
         return "redirect:/admin/seasons/" + id + "/edit";
     }
 
