@@ -7,4 +7,6 @@ import java.util.*;
 public interface CarRepository extends JpaRepository<Car, UUID> {
     List<Car> findAllByOrderByManufacturerAscNameAsc();
     boolean existsByManufacturerAndName(String manufacturer, String name);
+    Optional<Car> findByGt7Id(String gt7Id);
+    boolean existsByGt7Id(String gt7Id);
 }

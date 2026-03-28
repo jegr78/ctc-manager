@@ -80,6 +80,29 @@ public class FileStorageService {
         }
     }
 
+    public String storeFromUrl(String subDir, UUID entityId, String sourceUrl, String filename) throws IOException {
+        Path dir = uploadDir.resolve(subDir).resolve(entityId.toString());
+        Files.createDirectories(dir);
+        String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitize(filename);
+        Path target = dir.resolve(safeName);
+        try (var in = java.net.URI.create(sourceUrl).toURL().openStream()) {
+            Files.copy(in, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+        log.info("Downloaded file: {} from {}", target, sourceUrl);
+        return "/uploads/" + subDir + "/" + entityId + "/" + safeName;
+    }
+
+    public String storeImage(String subDir, UUID entityId, MultipartFile file) throws IOException {
+        validate(file);
+        Path dir = uploadDir.resolve(subDir).resolve(entityId.toString());
+        Files.createDirectories(dir);
+        String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitize(file.getOriginalFilename());
+        Path target = dir.resolve(safeName);
+        file.transferTo(target);
+        log.info("Stored image: {} ({} bytes)", target, file.getSize());
+        return "/uploads/" + subDir + "/" + entityId + "/" + safeName;
+    }
+
     private String sanitize(String filename) {
         if (filename == null) return "file";
         return filename.replaceAll("[^a-zA-Z0-9._-]", "_");

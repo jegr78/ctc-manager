@@ -24,6 +24,23 @@
             </div>
         </form>
     </div>
+    <div th:if="${trackForm.id != null}" class="card" style="margin-top: 16px;">
+        <h2>Image</h2>
+        <div th:if="${track != null && track.imageUrl != null}" style="margin-bottom: 12px;">
+            <img th:src="${track.imageUrl}" alt="" style="max-width:200px;border-radius:6px;">
+        </div>
+        <div th:if="${track == null || track.imageUrl == null}" class="empty-state" style="padding:16px;"><p>No image yet.</p></div>
+        <form th:action="@{/admin/tracks/{id}/image(id=${trackForm.id})}" method="post" enctype="multipart/form-data" style="margin-top:8px;">
+            <div style="display:flex;gap:8px;align-items:flex-end;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <input type="file" name="image" accept="image/png,image/jpeg,image/webp,image/gif" required
+                           style="padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
+                    <small class="text-dim" style="display:block;margin-top:2px;">PNG, JPG, WebP, GIF. Max 10 MB.</small>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+            </div>
+        </form>
+    </div>
 </section>
 </body>
 </html>

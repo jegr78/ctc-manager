@@ -18,6 +18,12 @@ public class Car {
     @NotBlank @Column(nullable = false)
     private String name;
 
+    @Column(name = "gt7_id")
+    private String gt7Id;
+
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     public Car(String manufacturer, String name) {
         this.manufacturer = manufacturer;
         this.name = name;

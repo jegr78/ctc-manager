@@ -50,13 +50,18 @@ CREATE TABLE cars (
     id UUID PRIMARY KEY,
     manufacturer VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
+    gt7_id VARCHAR(20),
+    image_url VARCHAR(500),
     CONSTRAINT uq_car UNIQUE (manufacturer, name)
 );
+
+CREATE INDEX idx_cars_gt7id ON cars(gt7_id);
 
 CREATE TABLE tracks (
     id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
-    country VARCHAR(100)
+    country VARCHAR(100),
+    image_url VARCHAR(500)
 );
 
 CREATE TABLE season_cars (
