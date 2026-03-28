@@ -1,3 +1,11 @@
+@font-face {
+    font-family: 'Conthrax';
+    src: url('../fonts/ConthraxSb.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
@@ -42,6 +50,7 @@ body {
     gap: 12px;
     text-decoration: none;
     color: var(--white);
+    font-family: 'Conthrax', sans-serif;
     font-weight: 700;
     font-size: 16px;
     letter-spacing: 2px;
@@ -92,6 +101,7 @@ body {
 }
 
 .hero h1 {
+    font-family: 'Conthrax', sans-serif;
     font-size: 28px;
     font-weight: 800;
     letter-spacing: 3px;
@@ -110,6 +120,7 @@ body {
 }
 
 .section-title {
+    font-family: 'Conthrax', sans-serif;
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 2px;

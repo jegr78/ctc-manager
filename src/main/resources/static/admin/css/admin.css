@@ -1,3 +1,11 @@
+@font-face {
+    font-family: 'Conthrax';
+    src: url('../fonts/ConthraxSb.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
@@ -26,6 +34,11 @@ body {
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
+}
+
+h1, h2, .sidebar-brand span {
+    font-family: 'Conthrax', sans-serif;
+    letter-spacing: 0.5px;
 }
 
 /* === Sidebar Layout === */
@@ -119,8 +132,8 @@ body {
     padding: 24px 32px;
 }
 
-h1 { font-size: 24px; margin-bottom: 16px; color: var(--white); }
-h2 { font-size: 20px; margin-bottom: 12px; color: var(--white); }
+h1 { font-size: 22px; margin-bottom: 16px; color: var(--white); }
+h2 { font-size: 16px; margin-bottom: 12px; color: var(--white); }
 h3 { font-size: 16px; margin-bottom: 8px; color: var(--white); }
 
 .alert {
@@ -763,6 +776,19 @@ select option {
     border-radius: 20px;
     font-size: 13px;
     color: var(--text);
+}
+
+a.chip {
+    text-decoration: none;
+    transition: border-color 0.15s, color 0.15s;
+}
+a.chip:hover {
+    border-color: var(--accent);
+    color: var(--white);
+}
+.chip .badge {
+    margin-left: 6px;
+    font-size: 11px;
 }
 
 /* Responsive */

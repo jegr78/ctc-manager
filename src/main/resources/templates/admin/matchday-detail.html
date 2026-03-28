@@ -55,17 +55,12 @@
 
         <div th:if="${!lineups.isEmpty()}" class="detail-section" style="margin-top:32px;">
             <h2 th:text="'Lineup (' + ${lineups.size()} + ' assignments)'"></h2>
-            <table>
-                <thead>
-                    <tr><th>Driver</th><th>Sub-Team</th></tr>
-                </thead>
-                <tbody>
-                    <tr th:each="lineup : ${lineups}">
-                        <td><a th:href="@{/admin/drivers/{id}(id=${lineup.driver.id})}" class="detail-link" th:text="${lineup.driver.psnId}"></a></td>
-                        <td><a th:href="@{/admin/teams/{id}(id=${lineup.team.id})}" class="detail-link" th:text="${lineup.team.shortName}"></a></td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="chip-list">
+                <span th:each="lu : ${lineups}" class="chip">
+                    <span th:text="${lu.driver.psnId}"></span>
+                    <span th:if="${lu.team != null}" class="text-dim" th:text="' (' + ${lu.team.shortName} + ')'"></span>
+                </span>
+            </div>
         </div>
     </div>
 </section>
