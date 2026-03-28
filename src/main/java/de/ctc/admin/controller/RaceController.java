@@ -18,7 +18,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Controller
@@ -61,6 +64,14 @@ public class RaceController {
         var form = new RaceForm();
         if (matchdayId != null) {
             form.setMatchdayId(matchdayId);
+            var md = matchdayRepository.findById(matchdayId).orElse(null);
+            if (md != null) {
+                var season = md.getSeason();
+                model.addAttribute("seasonCars", season.getCars());
+                model.addAttribute("seasonTracks", season.getTracks());
+                model.addAttribute("usedCarIds", Set.of());
+                model.addAttribute("usedTrackIds", Set.of());
+            }
         }
         model.addAttribute("raceForm", form);
         model.addAttribute("matchdays", matchdayRepository.findAll());
@@ -75,6 +86,11 @@ public class RaceController {
         model.addAttribute("raceForm", form);
         model.addAttribute("matchdays", matchdayRepository.findAll());
         model.addAttribute("teams", teamRepository.findAll());
+        var season = race.getMatchday().getSeason();
+        model.addAttribute("seasonCars", season.getCars());
+        model.addAttribute("seasonTracks", season.getTracks());
+        model.addAttribute("usedCarIds", getUsedCarIds(season.getId(), race.getHomeTeam().getId(), race.getId()));
+        model.addAttribute("usedTrackIds", getUsedTrackIds(season.getId(), race.getHomeTeam().getId(), race.getId()));
         return "admin/race-form";
     }
 
@@ -125,6 +141,35 @@ public class RaceController {
             race.setCar(null);
         }
         race.setDateTime(form.getDateTime());
+
+        // Pool validation
+        var season = matchday.getSeason();
+        if (race.getCar() != null && !season.getCars().contains(race.getCar())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Car is not in this season's pool");
+            return "redirect:/admin/races/" + (form.getId() != null ? form.getId() + "/edit" : "new?matchdayId=" + form.getMatchdayId());
+        }
+        if (race.getTrack() != null && !season.getTracks().contains(race.getTrack())) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Track is not in this season's pool");
+            return "redirect:/admin/races/" + (form.getId() != null ? form.getId() + "/edit" : "new?matchdayId=" + form.getMatchdayId());
+        }
+
+        // Uniqueness validation
+        if (race.getCar() != null) {
+            var usedCarIds = getUsedCarIds(season.getId(), homeTeam.getId(), form.getId());
+            if (usedCarIds.contains(race.getCar().getId())) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        homeTeam.getShortName() + " has already used " + race.getCar().getDisplayName() + " this season");
+                return "redirect:/admin/races/" + (form.getId() != null ? form.getId() + "/edit" : "new?matchdayId=" + form.getMatchdayId());
+            }
+        }
+        if (race.getTrack() != null) {
+            var usedTrackIds = getUsedTrackIds(season.getId(), homeTeam.getId(), form.getId());
+            if (usedTrackIds.contains(race.getTrack().getId())) {
+                redirectAttributes.addFlashAttribute("errorMessage",
+                        homeTeam.getShortName() + " has already used " + race.getTrack().getName() + " this season");
+                return "redirect:/admin/races/" + (form.getId() != null ? form.getId() + "/edit" : "new?matchdayId=" + form.getMatchdayId());
+            }
+        }
 
         raceRepository.save(race);
         log.info("Saved race: {} vs {} ({})", homeTeam.getShortName(), awayTeam.getShortName(), matchday.getLabel());
@@ -240,6 +285,37 @@ public class RaceController {
         log.info("Deleted race: {} vs {}", race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName());
         redirectAttributes.addFlashAttribute("successMessage", "Race deleted");
         return "redirect:/admin/races?matchdayId=" + matchdayId;
+    }
+
+    @GetMapping("/used-selections")
+    @ResponseBody
+    public Map<String, Set<UUID>> usedSelections(
+            @RequestParam UUID seasonId,
+            @RequestParam UUID homeTeamId,
+            @RequestParam(required = false) UUID excludeRaceId) {
+        return Map.of(
+                "usedCarIds", getUsedCarIds(seasonId, homeTeamId, excludeRaceId),
+                "usedTrackIds", getUsedTrackIds(seasonId, homeTeamId, excludeRaceId));
+    }
+
+    private Set<UUID> getUsedCarIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
+        return raceRepository.findByMatchdaySeasonId(seasonId).stream()
+                .filter(r -> !r.isBye())
+                .filter(r -> r.getHomeTeam().getId().equals(homeTeamId))
+                .filter(r -> excludeRaceId == null || !r.getId().equals(excludeRaceId))
+                .filter(r -> r.getCar() != null)
+                .map(r -> r.getCar().getId())
+                .collect(Collectors.toSet());
+    }
+
+    private Set<UUID> getUsedTrackIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
+        return raceRepository.findByMatchdaySeasonId(seasonId).stream()
+                .filter(r -> !r.isBye())
+                .filter(r -> r.getHomeTeam().getId().equals(homeTeamId))
+                .filter(r -> excludeRaceId == null || !r.getId().equals(excludeRaceId))
+                .filter(r -> r.getTrack() != null)
+                .map(r -> r.getTrack().getId())
+                .collect(Collectors.toSet());
     }
 
     private void populateDrivers(RaceForm form, UUID matchdayId, UUID seasonId, de.ctc.domain.model.Team team) {

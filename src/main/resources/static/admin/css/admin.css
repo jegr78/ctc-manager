@@ -700,6 +700,52 @@ select option {
     font-size: 13px;
 }
 
+/* === Searchable Dropdown === */
+.searchable-dropdown {
+    position: relative;
+}
+
+.searchable-dropdown .dropdown-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.searchable-dropdown .dropdown-list {
+    display: none;
+    position: absolute;
+    z-index: 100;
+    width: 100%;
+    max-height: 250px;
+    overflow-y: auto;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.searchable-dropdown .dropdown-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.searchable-dropdown .dropdown-item:hover {
+    background: var(--bg-hover);
+    color: var(--white);
+}
+
+.searchable-dropdown .dropdown-item.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.searchable-dropdown .dropdown-item.disabled:hover {
+    background: transparent;
+    color: var(--text);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .sidebar {

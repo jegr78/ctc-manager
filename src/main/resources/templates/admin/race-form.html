@@ -12,6 +12,7 @@
                 <select id="matchdayId" th:field="*{matchdayId}" required>
                     <option value="">-- Select matchday --</option>
                     <option th:each="md : ${matchdays}" th:value="${md.id}"
+                            th:attr="data-season-id=${md.season.id}"
                             th:text="${md.season.name + ' — ' + md.label}"></option>
                 </select>
             </div>
@@ -31,8 +32,50 @@
                     </select>
                 </div>
             </div>
-            <input type="hidden" name="trackId" th:value="${raceForm.trackId}">
-            <input type="hidden" name="carId" th:value="${raceForm.carId}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="trackSearch">Track</label>
+                    <div class="searchable-dropdown" id="trackDropdown"
+                         th:if="${seasonTracks != null && !seasonTracks.isEmpty()}">
+                        <input type="text" id="trackSearch" placeholder="Search tracks..."
+                               autocomplete="off" class="dropdown-input">
+                        <input type="hidden" name="trackId" th:value="${raceForm.trackId}" id="trackId">
+                        <div class="dropdown-list" id="trackList">
+                            <div th:each="t : ${seasonTracks}"
+                                 class="dropdown-item"
+                                 th:classappend="${usedTrackIds != null && usedTrackIds.contains(t.id)} ? 'disabled' : ''"
+                                 th:attr="data-id=${t.id},data-label=${t.name}"
+                                 th:text="${t.name + (t.country != null ? ' (' + t.country + ')' : '')}">
+                            </div>
+                        </div>
+                    </div>
+                    <div th:if="${seasonTracks == null || seasonTracks.isEmpty()}" class="text-dim"
+                         style="font-size:13px;margin-top:4px;">
+                        No tracks assigned to this season yet.
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="carSearch">Car</label>
+                    <div class="searchable-dropdown" id="carDropdown"
+                         th:if="${seasonCars != null && !seasonCars.isEmpty()}">
+                        <input type="text" id="carSearch" placeholder="Search cars..."
+                               autocomplete="off" class="dropdown-input">
+                        <input type="hidden" name="carId" th:value="${raceForm.carId}" id="carId">
+                        <div class="dropdown-list" id="carList">
+                            <div th:each="c : ${seasonCars}"
+                                 class="dropdown-item"
+                                 th:classappend="${usedCarIds != null && usedCarIds.contains(c.id)} ? 'disabled' : ''"
+                                 th:attr="data-id=${c.id},data-label=${c.manufacturer + ' — ' + c.name}"
+                                 th:text="${c.manufacturer + ' — ' + c.name}">
+                            </div>
+                        </div>
+                    </div>
+                    <div th:if="${seasonCars == null || seasonCars.isEmpty()}" class="text-dim"
+                         style="font-size:13px;margin-top:4px;">
+                        No cars assigned to this season yet.
+                    </div>
+                </div>
+            </div>
             <div class="form-group">
                 <label for="dateTime">Date &amp; Time</label>
                 <input type="datetime-local" id="dateTime" name="dateTime"
@@ -45,6 +88,7 @@
             </div>
         </form>
     </div>
+    <script th:src="@{/admin/js/searchable-dropdown.js}"></script>
 </section>
 </body>
 </html>
