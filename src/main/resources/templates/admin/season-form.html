@@ -24,11 +24,11 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="startDate">Start Date</label>
-                    <input type="date" id="startDate" th:field="*{startDate}">
+                    <input type="date" id="startDate" name="startDate" th:value="${season.startDate != null ? season.startDate.toString() : ''}">
                 </div>
                 <div class="form-group">
                     <label for="endDate">End Date</label>
-                    <input type="date" id="endDate" th:field="*{endDate}">
+                    <input type="date" id="endDate" name="endDate" th:value="${season.endDate != null ? season.endDate.toString() : ''}">
                 </div>
             </div>
             <div class="form-row">
