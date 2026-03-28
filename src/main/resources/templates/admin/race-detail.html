@@ -63,6 +63,63 @@
             <div th:if="${race.results.isEmpty()}" class="empty-state" style="padding:16px;"><p>No results yet.</p></div>
         </div>
     </div>
+
+    <!-- Attachments -->
+    <div class="card">
+        <h2 th:text="'Attachments (' + ${race.attachments.size()} + ')'"></h2>
+
+        <!-- Existing attachments -->
+        <div th:if="${!race.attachments.isEmpty()}" class="attachment-list">
+            <div th:each="att : ${race.attachments}" class="attachment-item">
+                <div class="attachment-preview">
+                    <img th:if="${att.image}" th:src="${att.url}" alt="" class="attachment-thumb">
+                    <span th:if="${att.type.name() == 'LINK'}" class="attachment-icon">&#x1F517;</span>
+                    <span th:if="${att.type.name() == 'FILE' && !att.image}" class="attachment-icon">&#x1F4CE;</span>
+                </div>
+                <div class="attachment-info">
+                    <a th:if="${att.type.name() == 'LINK'}" th:href="${att.url}" target="_blank" rel="noopener" class="detail-link" th:text="${att.name}"></a>
+                    <a th:if="${att.type.name() == 'FILE'}" th:href="${att.url}" target="_blank" class="detail-link" th:text="${att.name}"></a>
+                    <span class="text-dim" style="font-size:12px;"
+                          th:text="${att.type.name() == 'LINK' ? att.url : ''} + ' ' + (#temporals.format(att.createdAt, 'dd.MM.yyyy HH:mm'))"></span>
+                </div>
+                <form th:action="@{/admin/races/attachments/{aid}/delete(aid=${att.id})}" method="post" style="display:inline;"
+                      onsubmit="return confirm('Delete this attachment?')">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </div>
+        </div>
+        <div th:if="${race.attachments.isEmpty()}" class="empty-state" style="padding:16px;">
+            <p>No attachments yet. Upload files or add links below.</p>
+        </div>
+
+        <!-- Upload form -->
+        <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap;">
+            <form th:action="@{/admin/races/{id}/attachments/upload(id=${race.id})}" method="post" enctype="multipart/form-data"
+                  style="display:flex;gap:8px;align-items:flex-end;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Upload File</label>
+                    <input type="file" name="file" required accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+                           style="padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
+                    <small class="text-dim" style="display:block;margin-top:2px;">PNG, JPG, WebP, GIF, PDF. Max 10 MB</small>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Upload</button>
+            </form>
+
+            <form th:action="@{/admin/races/{id}/attachments/link(id=${race.id})}" method="post"
+                  style="display:flex;gap:8px;align-items:flex-end;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label>Add Link</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" name="name" placeholder="Title" required
+                               style="width:120px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
+                        <input type="url" name="url" placeholder="https://..." required
+                               style="width:200px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Add</button>
+            </form>
+        </div>
+    </div>
 </section>
 </body>
 </html>

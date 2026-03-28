@@ -1,6 +1,16 @@
+app:
+  upload-dir: uploads
+
 spring:
   application:
     name: ctc-manager
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  web:
+    resources:
+      static-locations: classpath:/static/,file:./uploads/
   jpa:
     # OSIV: Hibernate-Session bleibt bis zum Ende des HTTP-Requests offen,
     # damit Thymeleaf-Templates lazy-geladene Felder rendern koennen.
