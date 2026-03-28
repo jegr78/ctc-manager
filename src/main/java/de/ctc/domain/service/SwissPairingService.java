@@ -54,7 +54,7 @@ public class SwissPairingService {
         var matchday = new Matchday(season, "Round " + roundNumber, roundNumber);
         matchday = matchdayRepository.save(matchday);
 
-        List<Team> teams = new ArrayList<>(season.getTeams());
+        List<Team> teams = getEligibleTeams(season);
         List<Race> pairings;
 
         if (currentRound == 0) {
@@ -190,6 +190,22 @@ public class SwissPairingService {
                 .filter(Race::isBye)
                 .map(r -> r.getHomeTeam().getId())
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * Returns teams eligible for matches: filters out parent teams
+     * that have sub-teams in the season (only sub-teams compete).
+     */
+    private List<Team> getEligibleTeams(Season season) {
+        List<Team> allTeams = season.getTeams();
+        Set<UUID> parentIdsWithSubs = allTeams.stream()
+                .filter(Team::isSubTeam)
+                .map(t -> t.getParentTeam().getId())
+                .collect(Collectors.toSet());
+
+        return allTeams.stream()
+                .filter(t -> !parentIdsWithSubs.contains(t.getId()))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public Map<UUID, Integer> calculateBuchholz(UUID seasonId) {
