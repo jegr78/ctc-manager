@@ -86,7 +86,20 @@ public class Gt7SyncService {
                     continue;
                 }
                 var track = new Track(st.name(), st.country());
-                trackRepository.save(track);
+                track = trackRepository.save(track);
+
+                // Download image if available
+                if (st.imageUrl() != null) {
+                    try {
+                        String localPath = fileStorageService.storeFromUrl("tracks", track.getId(),
+                                st.imageUrl(), st.id() + ".png");
+                        track.setImageUrl(localPath);
+                        trackRepository.save(track);
+                    } catch (Exception e) {
+                        log.warn("Failed to download image for track {}: {}", st.name(), e.getMessage());
+                        errors.add("Image download failed for " + st.name());
+                    }
+                }
                 tracksImported++;
             }
         }

@@ -122,10 +122,18 @@
 
         <!-- Action Buttons -->
         <div class="actions" style="margin-top:16px;">
-            <button type="submit" class="btn btn-primary">Import Selected</button>
-            <a th:href="@{/admin/gt7-sync}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" id="importBtn" class="btn btn-primary">Import Selected</button>
+            <a th:href="@{/admin/gt7-sync}" id="cancelLink" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
+
+    <!-- Fullscreen overlay shown during import -->
+    <div id="importOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:none;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:32px 48px;text-align:center;max-width:400px;">
+            <div style="margin-bottom:12px;color:var(--accent);font-weight:700;font-size:18px;">Importing...</div>
+            <div class="text-dim">Downloading car and track data with images.<br>This may take a moment for the first import.</div>
+        </div>
+    </div>
 
     <script>
     (function() {
@@ -193,6 +201,18 @@
             tableId: 'tracksTable', rowClass: 'track-row', searchId: 'trackSearch',
             pageInfoId: 'trackPageInfo', prevBtnId: 'trackPrevPage', nextBtnId: 'trackNextPage',
             noResultsId: 'trackNoResults', toggleId: 'toggleTracks', checkClass: 'track-check', label: 'tracks'
+        });
+
+        // Import button: disable on click, show centered overlay
+        var form = document.querySelector('form');
+        var importBtn = document.getElementById('importBtn');
+        var overlay = document.getElementById('importOverlay');
+        form.addEventListener('submit', function() {
+            importBtn.disabled = true;
+            importBtn.style.opacity = '0.5';
+            importBtn.style.pointerEvents = 'none';
+            importBtn.textContent = 'Importing...';
+            overlay.style.display = 'flex';
         });
     })();
     </script>

@@ -33,8 +33,8 @@ class Gt7SyncServiceTest {
     );
 
     private static final List<ScrapedTrack> SCRAPED_TRACKS = List.of(
-            new ScrapedTrack("0457d4", "Deep Forest Raceway", "Switzerland", "c81494"),
-            new ScrapedTrack("12ceac", "Nurburgring Nordschleife", "Germany", "246f6d")
+            new ScrapedTrack("0457d4", "Deep Forest Raceway", "Switzerland", "c81494", "https://example.com/track1.png"),
+            new ScrapedTrack("12ceac", "Nurburgring Nordschleife", "Germany", "246f6d", "https://example.com/track2.png")
     );
 
     @Test
@@ -117,13 +117,17 @@ class Gt7SyncServiceTest {
     void shouldImportOnlySelectedTracks() throws IOException {
         when(scraperService.scrapeTracks()).thenReturn(SCRAPED_TRACKS);
         when(trackRepository.existsByName(anyString())).thenReturn(false);
-        when(trackRepository.save(any(Track.class))).thenAnswer(inv -> inv.getArgument(0));
+        var savedTrack = new Track("Deep Forest Raceway", "Switzerland");
+        savedTrack.setId(UUID.randomUUID());
+        when(trackRepository.save(any(Track.class))).thenReturn(savedTrack);
+        when(fileStorageService.storeFromUrl(eq("tracks"), any(UUID.class), anyString(), anyString()))
+                .thenReturn("/uploads/tracks/img.png");
 
         var result = syncService.executeSync(List.of(), List.of("Deep Forest Raceway"));
 
         assertThat(result.tracksImported()).isEqualTo(1);
         assertThat(result.carsImported()).isEqualTo(0);
-        verify(trackRepository, times(1)).save(any(Track.class));
+        verify(trackRepository, times(2)).save(any(Track.class)); // save + save with imageUrl
     }
 
     @Test
