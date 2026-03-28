@@ -707,6 +707,19 @@ select option {
     border-bottom: none;
 }
 
+.transfer-selectable {
+    cursor: pointer;
+}
+
+.transfer-selectable:hover {
+    background: var(--bg-hover);
+}
+
+.transfer-selectable input[type="checkbox"] {
+    margin-right: 8px;
+    accent-color: var(--accent);
+}
+
 .transfer-empty {
     padding: 16px;
     text-align: center;
