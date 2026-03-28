@@ -44,11 +44,16 @@
                     <td th:text="${iter.count}"></td>
                     <td th:text="${leg.track ?: '-'}"></td>
                     <td th:text="${leg.car ?: '-'}"></td>
-                    <td th:text="${leg.dateTime != null ? #temporals.format(leg.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
-                    <td colspan="3" style="text-align:center;">
+                    <td style="text-align:center;">
                         <span th:if="${leg.results.isEmpty()}" class="text-dim">—</span>
                         <span th:unless="${leg.results.isEmpty()}" th:text="${leg.results.size() + ' Drivers'}"></span>
                     </td>
+                    <td></td>
+                    <td style="text-align:center;">
+                        <span th:if="${leg.results.isEmpty()}" class="text-dim">—</span>
+                        <span th:unless="${leg.results.isEmpty()}" th:text="${leg.results.size() + ' Drivers'}"></span>
+                    </td>
+                    <td th:text="${leg.dateTime != null ? #temporals.format(leg.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                     <td>
                         <span th:if="${leg.results.isEmpty()}" class="badge badge-inactive">Open</span>
                         <span th:unless="${leg.results.isEmpty()}" class="badge badge-active"

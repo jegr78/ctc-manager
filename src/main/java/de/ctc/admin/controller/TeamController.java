@@ -81,6 +81,10 @@ public class TeamController {
                              @RequestParam String subName,
                              @RequestParam String subShortName,
                              RedirectAttributes redirectAttributes) {
+        if (subName.isBlank() || subShortName.isBlank()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Name and short name must not be blank");
+            return "redirect:/admin/teams/" + id + "/edit";
+        }
         var parent = teamRepository.findById(id).orElseThrow();
         var subTeam = new Team(subName, subShortName, parent);
         teamRepository.save(subTeam);

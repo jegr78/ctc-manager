@@ -15,7 +15,7 @@
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"></option>
                 </select>
             </div>
-            <div th:if="${matchday.season != null}" style="margin-bottom: 16px; color: #666;">
+            <div th:if="${matchday.season != null}" class="text-dim" style="margin-bottom: 16px;">
                 Season: <strong th:text="${matchday.season.name}"></strong>
             </div>
             <div class="form-row">

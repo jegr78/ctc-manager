@@ -198,6 +198,13 @@ public class PlayoffService {
                 .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId));
 
         Team winner = findTeam(winnerTeamId);
+
+        boolean isParticipant = (matchup.getTeam1() != null && matchup.getTeam1().getId().equals(winnerTeamId))
+                || (matchup.getTeam2() != null && matchup.getTeam2().getId().equals(winnerTeamId));
+        if (!isParticipant) {
+            throw new IllegalArgumentException("Winner must be one of the matchup participants");
+        }
+
         matchup.setWinner(winner);
         playoffMatchupRepository.save(matchup);
 

@@ -53,7 +53,7 @@
         </table>
 
         <!-- Swiss standings table -->
-        <table th:if="${selectedSeason != null && selectedSeason.format.name() == 'SWISS' && !standings.isEmpty()}" id="standingsTable">
+        <table th:if="${selectedSeason != null && selectedSeason.format.name() == 'SWISS' && !standings.isEmpty()}" id="swissStandingsTable">
             <thead>
                 <tr>
                     <th>#</th>
@@ -171,6 +171,7 @@
         }
 
         initSortableTable('standingsTable');
+        initSortableTable('swissStandingsTable');
         initSortableTable('driverRankingTable');
 
         // Driver Ranking: Search + Pagination

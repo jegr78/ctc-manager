@@ -5,6 +5,7 @@ import de.ctc.domain.model.RaceResult;
 import de.ctc.domain.model.Team;
 import de.ctc.domain.repository.MatchdayLineupRepository;
 import de.ctc.domain.repository.RaceRepository;
+import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +21,7 @@ public class StandingsService {
 
     private final RaceRepository raceRepository;
     private final TeamRepository teamRepository;
+    private final SeasonRepository seasonRepository;
     private final MatchdayLineupRepository matchdayLineupRepository;
     private final ScoringService scoringService;
 
@@ -27,7 +29,9 @@ public class StandingsService {
         List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(seasonId);
         Map<UUID, TeamStanding> standingsMap = new HashMap<>();
 
-        for (Team team : teamRepository.findAll()) {
+        var season = seasonRepository.findById(seasonId).orElse(null);
+        var teams = (season != null) ? season.getTeams() : teamRepository.findAll();
+        for (Team team : teams) {
             standingsMap.put(team.getId(), new TeamStanding(team));
         }
 
@@ -66,10 +70,16 @@ public class StandingsService {
         }
 
         for (Race race : races) {
+            if (race.isBye()) {
+                var homeStanding = standingsMap.get(race.getHomeTeam().getParentOrSelf().getId());
+                if (homeStanding != null) homeStanding.addWin();
+                continue;
+            }
             if (race.getResults().isEmpty()) continue;
 
             Team homeParent = race.getHomeTeam().getParentOrSelf();
-            Team awayParent = race.getAwayTeam().getParentOrSelf();
+            Team awayParent = race.getAwayTeam() != null ? race.getAwayTeam().getParentOrSelf() : null;
+            if (awayParent == null) continue;
 
             // Skip intra-parent races (e.g. CLR 1 vs CLR 2)
             if (homeParent.getId().equals(awayParent.getId())) continue;

@@ -31,7 +31,7 @@
                     <td class="actions">
                         <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-success btn-sm">Results</a>
                         <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-secondary btn-sm">Edit</a>
-                        <form th:action="@{/admin/races/{id}/delete(id=${race.id})}" method="post" style="display:inline"
+                        <form th:action="@{/admin/races/{id}/delete(id=${race.id})}" method="post"
                               onsubmit="return confirm('Really delete this race?')">
                             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>

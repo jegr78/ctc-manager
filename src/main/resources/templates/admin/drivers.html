@@ -31,7 +31,7 @@
                     </td>
                     <td class="actions">
                         <a th:href="@{/admin/drivers/{id}/edit(id=${driver.id})}" class="btn btn-secondary btn-sm">Edit</a>
-                        <form th:action="@{/admin/drivers/{id}/delete(id=${driver.id})}" method="post" style="display:inline"
+                        <form th:action="@{/admin/drivers/{id}/delete(id=${driver.id})}" method="post"
                               onsubmit="return confirm('Really delete this driver?')">
                             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>

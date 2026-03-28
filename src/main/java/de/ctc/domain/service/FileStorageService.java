@@ -71,11 +71,12 @@ public class FileStorageService {
             throw new IllegalArgumentException("File type not allowed. Allowed: PNG, JPG, GIF, WebP, PDF");
         }
         String name = file.getOriginalFilename();
-        if (name != null) {
-            String ext = name.contains(".") ? name.substring(name.lastIndexOf('.')).toLowerCase() : "";
-            if (!ALLOWED_EXTENSIONS.contains(ext)) {
-                throw new IllegalArgumentException("File extension not allowed. Allowed: PNG, JPG, GIF, WebP, PDF");
-            }
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Filename is required");
+        }
+        String ext = name.contains(".") ? name.substring(name.lastIndexOf('.')).toLowerCase() : "";
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new IllegalArgumentException("File extension not allowed. Allowed: PNG, JPG, GIF, WebP, PDF");
         }
     }
 

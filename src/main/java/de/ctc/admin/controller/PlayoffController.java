@@ -77,6 +77,7 @@ public class PlayoffController {
                     form.getSeasonId(), form.getName(), form.getNumberOfTeams());
             playoff.setStartDate(form.getStartDate());
             playoff.setEndDate(form.getEndDate());
+            playoffRepository.save(playoff);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Playoff created: " + playoff.getName());
             return "redirect:/admin/playoffs?seasonId=" + form.getSeasonId();

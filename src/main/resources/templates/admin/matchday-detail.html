@@ -11,7 +11,7 @@
         <div class="actions">
             <a th:href="@{/admin/matchdays/{id}/lineup(id=${matchday.id})}" class="btn btn-secondary">Lineup</a>
             <a th:href="@{/admin/matchdays/{id}/edit(id=${matchday.id})}" class="btn btn-primary">Edit</a>
-            <form th:action="@{/admin/matchdays/{id}/delete(id=${matchday.id})}" method="post" style="display:inline"
+            <form th:action="@{/admin/matchdays/{id}/delete(id=${matchday.id})}" method="post"
                   onsubmit="return confirm('Really delete this matchday?')">
                 <button type="submit" class="btn btn-danger">Delete</button>
             </form>

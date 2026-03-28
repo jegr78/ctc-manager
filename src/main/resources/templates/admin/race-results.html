@@ -3,10 +3,11 @@
       th:replace="~{admin/layout :: layout('Results', ~{::section})}">
 <body>
 <section>
+    <a th:href="@{/admin/races/{id}(id=${race.id})}" class="back-link">&larr; Back to Race</a>
     <h1>
         Results: <span th:text="${race.homeTeam.shortName}"></span> vs <span th:text="${race.awayTeam.shortName}"></span>
     </h1>
-    <p style="color:#666; margin-bottom:16px;">
+    <p class="text-dim" style="margin-bottom:16px;">
         <span th:text="${race.matchday.label}"></span> —
         <span th:text="${race.track ?: 'No track'}"></span> —
         <span th:text="${race.car ?: 'No car'}"></span>

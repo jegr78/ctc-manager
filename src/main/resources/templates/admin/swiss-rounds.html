@@ -10,7 +10,7 @@
         </div>
         <div class="actions">
             <span class="text-dim" th:text="'Round ' + ${currentRound} + ' of ' + ${season.totalRounds}"></span>
-            <form th:if="${canGenerateNext}" th:action="@{/admin/seasons/{id}/swiss/generate(id=${season.id})}" method="post" style="display:inline;">
+            <form th:if="${canGenerateNext}" th:action="@{/admin/seasons/{id}/swiss/generate(id=${season.id})}" method="post">
                 <button type="submit" class="btn btn-primary">Generate Next Round</button>
             </form>
         </div>

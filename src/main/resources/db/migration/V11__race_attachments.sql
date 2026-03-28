@@ -1,9 +1,0 @@
-CREATE TABLE race_attachments (
-    id UUID PRIMARY KEY,
-    race_id UUID NOT NULL,
-    type VARCHAR(10) NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    url VARCHAR(1000) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_ra_race FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE
-);

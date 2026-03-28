@@ -57,11 +57,18 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
   - Naming: `feature/<kurzbeschreibung>` oder `fix/<kurzbeschreibung>`
   - Branch von `master` abzweigen
 - **Pull Requests:** Änderungen immer über PRs in `master` mergen, kein direkter Push
-  - `gh pr create` zum Erstellen
+  - `gh pr create --assignee jegr78` zum Erstellen (immer jegr78 zuweisen)
   - `gh pr merge --squash` zum Mergen (saubere History)
   - Nach Merge lokalen Branch aufräumen: `git switch master && git pull && git branch -d <branch>`
 - **Commits:** Aussagekräftige deutsche Commit-Messages
-- **Vor PR:** Tests mit `./mvnw verify` sicherstellen
+- **Vor PR:**
+  1. Tests lokal mit `./mvnw verify` sicherstellen
+  2. Code-Review der eigenen Änderungen durchführen (superpowers:code-reviewer)
+  3. Gefundene Issues beheben und erneut testen
+- **Nach PR:**
+  1. CI-Build prüfen: `gh run list --branch <branch>` / `gh run view <run-id>`
+  2. Bei CI-Failure: Logs analysieren (`gh run view --log-failed`), fixen, pushen
+  3. PR darf erst gemergt werden wenn CI grün ist
 
 ## Design Spec
 

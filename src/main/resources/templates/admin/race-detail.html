@@ -14,7 +14,7 @@
         <div class="actions">
             <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-success">Results</a>
             <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-primary">Edit</a>
-            <form th:action="@{/admin/races/{id}/delete(id=${race.id})}" method="post" style="display:inline"
+            <form th:action="@{/admin/races/{id}/delete(id=${race.id})}" method="post"
                   onsubmit="return confirm('Really delete this race?')">
                 <button type="submit" class="btn btn-danger">Delete</button>
             </form>
@@ -82,7 +82,7 @@
                     <span class="text-dim" style="font-size:12px;"
                           th:text="${att.type.name() == 'LINK' ? att.url : ''} + ' ' + (#temporals.format(att.createdAt, 'dd.MM.yyyy HH:mm'))"></span>
                 </div>
-                <form th:action="@{/admin/races/attachments/{aid}/delete(aid=${att.id})}" method="post" style="display:inline;"
+                <form th:action="@{/admin/races/attachments/{aid}/delete(aid=${att.id})}" method="post"
                       onsubmit="return confirm('Delete this attachment?')">
                     <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                 </form>

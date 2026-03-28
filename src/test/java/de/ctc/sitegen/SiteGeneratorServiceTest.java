@@ -71,6 +71,10 @@ class SiteGeneratorServiceTest {
         var tnr = teamRepository.save(new Team("The Neutrals Racing " + uniqueSuffix, "GTNR" + uniqueSuffix));
         var p1r = teamRepository.save(new Team("Project One Racing " + uniqueSuffix, "GP1R" + uniqueSuffix));
 
+        season.getTeams().add(tnr);
+        season.getTeams().add(p1r);
+        seasonRepository.save(season);
+
         var driver1 = driverRepository.save(new Driver("gen_panic_" + uniqueSuffix, "panicpotato"));
         var driver2 = driverRepository.save(new Driver("gen_levit_" + uniqueSuffix, "LEVITIUS"));
         var driver3 = driverRepository.save(new Driver("gen_valky_" + uniqueSuffix, "P1R_Valkyrie"));
