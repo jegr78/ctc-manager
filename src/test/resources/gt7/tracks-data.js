@@ -1,0 +1,1 @@
+const e={"0457d4":{baseId:"c81494",id:"0457d4",nameLong:"Deep Forest Raceway",countryName:"Switzerland"},"101516":{baseId:"fe330b",id:"101516",nameLong:"Autódromo de Interlagos",countryName:"Brazil"},"12ceac":{baseId:"246f6d",id:"12ceac",nameLong:"Nürburgring Nordschleife",countryName:"Germany"}};export{e as TrackList};

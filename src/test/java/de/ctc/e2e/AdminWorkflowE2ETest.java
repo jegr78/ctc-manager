@@ -37,6 +37,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
         assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Generate Site"))).isVisible();
         assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Cars").setExact(true))).isVisible();
         assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Tracks").setExact(true))).isVisible();
+        assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("GT7 Sync"))).isVisible();
     }
 
     @Test
@@ -127,6 +128,14 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
         assertThat(page).hasTitle("CTC Admin - Cars");
         assertThat(page.locator(".alert-success")).containsText("Car saved");
         assertThat(page.locator("table")).containsText("Mazda");
+    }
+
+    @Test
+    void shouldShowGt7SyncPage() {
+        page.navigate(url("/admin/gt7-sync"));
+        assertThat(page.locator("h1")).containsText("GT7 Sync");
+        assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
+                new com.microsoft.playwright.Page.GetByRoleOptions().setName("Fetch & Compare"))).isVisible();
     }
 
     @Test
