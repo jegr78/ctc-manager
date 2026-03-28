@@ -62,7 +62,15 @@ public class DriverController {
         if (result.hasErrors()) {
             return "admin/driver-form";
         }
-        driverRepository.save(driver);
+        if (driver.getId() != null) {
+            var existing = driverRepository.findById(driver.getId()).orElseThrow();
+            existing.setPsnId(driver.getPsnId());
+            existing.setNickname(driver.getNickname());
+            existing.setActive(driver.isActive());
+            driverRepository.save(existing);
+        } else {
+            driverRepository.save(driver);
+        }
         log.info("Saved driver: {}", driver.getPsnId());
         redirectAttributes.addFlashAttribute("successMessage", "Driver saved: " + driver.getPsnId());
         return "redirect:/admin/drivers";

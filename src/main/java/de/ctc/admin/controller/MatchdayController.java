@@ -80,9 +80,18 @@ public class MatchdayController {
             model.addAttribute("seasons", seasonRepository.findAll());
             return "admin/matchday-form";
         }
-        matchday.setSeason(seasonRepository.findById(seasonId).orElseThrow());
-        matchdayRepository.save(matchday);
-        log.info("Saved matchday: {} (season {})", matchday.getLabel(), matchday.getSeason().getName());
+        if (matchday.getId() != null) {
+            var existing = matchdayRepository.findById(matchday.getId()).orElseThrow();
+            existing.setLabel(matchday.getLabel());
+            existing.setDate(matchday.getDate());
+            existing.setSortIndex(matchday.getSortIndex());
+            existing.setSeason(seasonRepository.findById(seasonId).orElseThrow());
+            matchdayRepository.save(existing);
+        } else {
+            matchday.setSeason(seasonRepository.findById(seasonId).orElseThrow());
+            matchdayRepository.save(matchday);
+        }
+        log.info("Saved matchday: {} (season {})", matchday.getLabel(), seasonId);
         redirectAttributes.addFlashAttribute("successMessage", "Matchday saved: " + matchday.getLabel());
         return "redirect:/admin/matchdays?seasonId=" + seasonId;
     }
