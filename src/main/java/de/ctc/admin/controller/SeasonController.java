@@ -68,12 +68,26 @@ public class SeasonController {
         if (result.hasErrors()) {
             return "admin/season-form";
         }
-        if (season.getFormat() == SeasonFormat.LEAGUE) {
-            season.setTotalRounds(null);
+        if (season.getId() != null) {
+            // Update existing: load and merge only form fields to preserve relationships
+            var existing = seasonRepository.findById(season.getId()).orElseThrow();
+            existing.setName(season.getName());
+            existing.setStartDate(season.getStartDate());
+            existing.setEndDate(season.getEndDate());
+            existing.setActive(season.isActive());
+            existing.setFormat(season.getFormat());
+            existing.setTotalRounds(season.getFormat() == SeasonFormat.SWISS ? season.getTotalRounds() : null);
+            seasonRepository.save(existing);
+            log.info("Updated season: {}", existing.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + existing.getName());
+        } else {
+            if (season.getFormat() == SeasonFormat.LEAGUE) {
+                season.setTotalRounds(null);
+            }
+            seasonRepository.save(season);
+            log.info("Created season: {}", season.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
         }
-        seasonRepository.save(season);
-        log.info("Saved season: {}", season.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
         return "redirect:/admin/seasons";
     }
 
