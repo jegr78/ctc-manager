@@ -32,10 +32,16 @@ public class StandingsService {
         }
 
         for (Race race : races) {
-            if (race.getResults().isEmpty()) {
+            if (race.isBye()) {
+                var homeStanding = standingsMap.get(race.getHomeTeam().getId());
+                if (homeStanding != null) homeStanding.addWin();
                 continue;
             }
-
+            if (race.getHomeScore() != null && race.getAwayScore() != null) {
+                processQuickScore(race, standingsMap);
+                continue;
+            }
+            if (race.getResults().isEmpty()) continue;
             processRace(race, standingsMap);
         }
 
@@ -119,6 +125,32 @@ public class StandingsService {
         }
     }
 
+    private void processQuickScore(Race race, Map<UUID, TeamStanding> standingsMap) {
+        int homeTotal = race.getHomeScore();
+        int awayTotal = race.getAwayScore();
+
+        TeamStanding homeStanding = standingsMap.get(race.getHomeTeam().getId());
+        TeamStanding awayStanding = standingsMap.get(race.getAwayTeam().getId());
+
+        if (homeStanding == null || awayStanding == null) return;
+
+        homeStanding.addPointsFor(homeTotal);
+        homeStanding.addPointsAgainst(awayTotal);
+        awayStanding.addPointsFor(awayTotal);
+        awayStanding.addPointsAgainst(homeTotal);
+
+        if (homeTotal > awayTotal) {
+            homeStanding.addWin();
+            awayStanding.addLoss();
+        } else if (homeTotal < awayTotal) {
+            homeStanding.addLoss();
+            awayStanding.addWin();
+        } else {
+            homeStanding.addDraw();
+            awayStanding.addDraw();
+        }
+    }
+
     private void processRace(Race race, Map<UUID, TeamStanding> standingsMap) {
         UUID homeTeamId = race.getHomeTeam().getId();
         UUID awayTeamId = race.getAwayTeam().getId();
@@ -181,6 +213,7 @@ public class StandingsService {
         private int losses;
         private int pointsFor;
         private int pointsAgainst;
+        private int buchholz;
 
         public TeamStanding(Team team) {
             this.team = team;
@@ -191,6 +224,7 @@ public class StandingsService {
         public void addLoss() { losses++; }
         public void addPointsFor(int points) { pointsFor += points; }
         public void addPointsAgainst(int points) { pointsAgainst += points; }
+        public void setBuchholz(int buchholz) { this.buchholz = buchholz; }
 
         public Team getTeam() { return team; }
         public int getWins() { return wins; }
@@ -202,5 +236,7 @@ public class StandingsService {
         public int getPointsAgainst() { return pointsAgainst; }
         public int getPointDifference() { return pointsFor - pointsAgainst; }
         public String getPointsRatio() { return pointsFor + ":" + pointsAgainst; }
+        public int getBuchholz() { return buchholz; }
+        public String getMatchRecord() { return wins + " - " + losses + " - " + draws; }
     }
 }

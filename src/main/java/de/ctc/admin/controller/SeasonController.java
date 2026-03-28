@@ -1,9 +1,13 @@
 package de.ctc.admin.controller;
 
+import de.ctc.domain.model.Race;
+import de.ctc.domain.model.RaceResult;
 import de.ctc.domain.model.Season;
+import de.ctc.domain.model.SeasonFormat;
 import de.ctc.domain.repository.PlayoffRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
+import de.ctc.domain.service.SwissPairingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +17,8 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -24,6 +30,7 @@ public class SeasonController {
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
     private final PlayoffRepository playoffRepository;
+    private final SwissPairingService swissPairingService;
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
@@ -31,6 +38,7 @@ public class SeasonController {
         var playoff = playoffRepository.findBySeasonId(id).orElse(null);
         model.addAttribute("season", season);
         model.addAttribute("playoff", playoff);
+        model.addAttribute("isSwiss", season.getFormat() == SeasonFormat.SWISS);
         return "admin/season-detail";
     }
 
@@ -60,9 +68,26 @@ public class SeasonController {
         if (result.hasErrors()) {
             return "admin/season-form";
         }
-        seasonRepository.save(season);
-        log.info("Saved season: {}", season.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
+        if (season.getId() != null) {
+            // Update existing: load and merge only form fields to preserve relationships
+            var existing = seasonRepository.findById(season.getId()).orElseThrow();
+            existing.setName(season.getName());
+            existing.setStartDate(season.getStartDate());
+            existing.setEndDate(season.getEndDate());
+            existing.setActive(season.isActive());
+            existing.setFormat(season.getFormat());
+            existing.setTotalRounds(season.getFormat() == SeasonFormat.SWISS ? season.getTotalRounds() : null);
+            seasonRepository.save(existing);
+            log.info("Updated season: {}", existing.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + existing.getName());
+        } else {
+            if (season.getFormat() == SeasonFormat.LEAGUE) {
+                season.setTotalRounds(null);
+            }
+            seasonRepository.save(season);
+            log.info("Created season: {}", season.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
+        }
         return "redirect:/admin/seasons";
     }
 
@@ -129,5 +154,54 @@ public class SeasonController {
         log.info("Deleted season: {}", season.getName());
         redirectAttributes.addFlashAttribute("successMessage", "Season deleted: " + season.getName());
         return "redirect:/admin/seasons";
+    }
+
+    @GetMapping("/{id}/swiss")
+    public String swissRounds(@PathVariable UUID id, Model model) {
+        var season = seasonRepository.findById(id).orElseThrow();
+
+        // Calculate race scores for display
+        Map<UUID, int[]> raceScores = new HashMap<>();
+        for (var md : season.getMatchdays()) {
+            for (var race : md.getRaces()) {
+                if (race.isBye()) continue;
+                if (race.getHomeScore() != null && race.getAwayScore() != null) {
+                    raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
+                } else if (!race.getResults().isEmpty()) {
+                    int homeTotal = race.getResults().stream()
+                            .filter(r -> isHomeTeamDriver(r, race))
+                            .mapToInt(RaceResult::getPointsTotal).sum();
+                    int awayTotal = race.getResults().stream()
+                            .filter(r -> !isHomeTeamDriver(r, race))
+                            .mapToInt(RaceResult::getPointsTotal).sum();
+                    raceScores.put(race.getId(), new int[]{homeTotal, awayTotal});
+                }
+            }
+        }
+
+        model.addAttribute("season", season);
+        model.addAttribute("raceScores", raceScores);
+        model.addAttribute("currentRound", swissPairingService.getCurrentRound(id));
+        model.addAttribute("canGenerateNext",
+                swissPairingService.isCurrentRoundComplete(id)
+                && (season.getTotalRounds() == null || season.getMatchdays().size() < season.getTotalRounds()));
+        return "admin/swiss-rounds";
+    }
+
+    @PostMapping("/{id}/swiss/generate")
+    public String generateSwissRound(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            swissPairingService.generateNextRound(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Next round generated successfully");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/seasons/" + id + "/swiss";
+    }
+
+    private boolean isHomeTeamDriver(RaceResult result, Race race) {
+        return result.getDriver().getSeasonDrivers().stream()
+                .anyMatch(sd -> sd.getTeam().getId().equals(race.getHomeTeam().getId())
+                        || sd.getTeam().getId().equals(race.getHomeTeam().getParentOrSelf().getId()));
     }
 }

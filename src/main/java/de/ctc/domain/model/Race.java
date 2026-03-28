@@ -30,14 +30,20 @@ public class Race {
     @JoinColumn(name = "home_team_id", nullable = false)
     private Team homeTeam;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "away_team_id", nullable = false)
+    @JoinColumn(name = "away_team_id")
     private Team awayTeam;
 
     private String track;
 
     private String car;
+
+    @Column(nullable = false)
+    private boolean bye = false;
+
+    private Integer homeScore;
+
+    private Integer awayScore;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "playoff_matchup_id")

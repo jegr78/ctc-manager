@@ -62,7 +62,15 @@ public class TeamController {
         if (result.hasErrors()) {
             return "admin/team-form";
         }
-        teamRepository.save(team);
+        if (team.getId() != null) {
+            var existing = teamRepository.findById(team.getId()).orElseThrow();
+            existing.setName(team.getName());
+            existing.setShortName(team.getShortName());
+            existing.setLogoUrl(team.getLogoUrl());
+            teamRepository.save(existing);
+        } else {
+            teamRepository.save(team);
+        }
         log.info("Saved team: {}", team.getShortName());
         redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + team.getName());
         return "redirect:/admin/teams";

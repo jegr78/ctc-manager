@@ -469,6 +469,147 @@ select option {
     outline-offset: 2px;
 }
 
+/* Swiss rounds */
+.swiss-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.swiss-matchup {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.swiss-matchup.bye {
+    opacity: 0.7;
+}
+
+.swiss-team {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.swiss-team + .swiss-team {
+    border-top: 1px solid var(--border);
+}
+
+.swiss-team.winner {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.swiss-score {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+    text-align: right;
+}
+
+.swiss-team.winner .swiss-score {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* Swiss rounds */
+.swiss-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.swiss-matchup {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.swiss-matchup.bye { opacity: 0.7; }
+
+.swiss-team {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.swiss-team + .swiss-team {
+    border-top: 1px solid var(--border);
+}
+
+.swiss-team.winner {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.swiss-score {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+    text-align: right;
+}
+
+.swiss-team.winner .swiss-score {
+    background: var(--accent);
+    color: var(--bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* Quick Score */
+.quick-score-form {
+    display: contents;
+}
+
+.quick-score-input {
+    width: 56px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-card);
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.quick-score-input:focus {
+    border-color: var(--border-focus);
+    outline: none;
+}
+
+.quick-score-btn {
+    display: block;
+    width: 100%;
+    padding: 6px;
+    border: none;
+    background: rgba(79, 195, 247, 0.1);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-top: 1px solid var(--border);
+    transition: background 0.15s;
+}
+
+.quick-score-btn:hover {
+    background: rgba(79, 195, 247, 0.2);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
     .form-row { grid-template-columns: 1fr; }

@@ -24,13 +24,35 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="startDate">Start Date</label>
-                    <input type="date" id="startDate" th:field="*{startDate}">
+                    <input type="date" id="startDate" name="startDate" th:value="${season.startDate != null ? season.startDate.toString() : ''}">
                 </div>
                 <div class="form-group">
                     <label for="endDate">End Date</label>
-                    <input type="date" id="endDate" th:field="*{endDate}">
+                    <input type="date" id="endDate" name="endDate" th:value="${season.endDate != null ? season.endDate.toString() : ''}">
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="format">Format</label>
+                    <select id="format" th:field="*{format}">
+                        <option value="LEAGUE">League</option>
+                        <option value="SWISS">Swiss</option>
+                    </select>
+                </div>
+                <div class="form-group" id="totalRoundsGroup">
+                    <label for="totalRounds">Total Rounds</label>
+                    <input type="number" id="totalRounds" th:field="*{totalRounds}" min="1" max="20" placeholder="e.g. 8">
+                </div>
+            </div>
+            <script>
+            (function() {
+                var fmt = document.getElementById('format');
+                var trg = document.getElementById('totalRoundsGroup');
+                function toggle() { trg.style.display = fmt.value === 'SWISS' ? '' : 'none'; }
+                fmt.addEventListener('change', toggle);
+                toggle();
+            })();
+            </script>
             <div class="actions" style="margin-top: 16px;">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/seasons}" class="btn btn-secondary">Cancel</a>

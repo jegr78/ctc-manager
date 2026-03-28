@@ -1,8 +1,10 @@
 package de.ctc.admin.controller;
 
+import de.ctc.domain.model.SeasonFormat;
 import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.service.DriverRankingService;
 import de.ctc.domain.service.StandingsService;
+import de.ctc.domain.service.SwissPairingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -20,6 +22,7 @@ public class StandingsController {
     private final StandingsService standingsService;
     private final DriverRankingService driverRankingService;
     private final SeasonRepository seasonRepository;
+    private final SwissPairingService swissPairingService;
 
     @GetMapping
     public String standings(@RequestParam(required = false) String seasonId, Model model) {
@@ -36,7 +39,19 @@ public class StandingsController {
                     : seasonRepository.findByActiveTrue().orElse(null);
 
             if (season != null) {
-                model.addAttribute("standings", standingsService.calculateStandings(season.getId()));
+                if (season.getFormat() == SeasonFormat.SWISS) {
+                    var buchholzMap = swissPairingService.calculateBuchholz(season.getId());
+                    var standingsList = standingsService.calculateStandings(season.getId());
+                    standingsList.forEach(s -> s.setBuchholz(buchholzMap.getOrDefault(s.getTeam().getId(), 0)));
+                    standingsList.sort(java.util.Comparator
+                            .<StandingsService.TeamStanding, Integer>comparing(StandingsService.TeamStanding::getPoints, java.util.Comparator.reverseOrder())
+                            .thenComparing(StandingsService.TeamStanding::getBuchholz, java.util.Comparator.reverseOrder())
+                            .thenComparing(StandingsService.TeamStanding::getPointDifference, java.util.Comparator.reverseOrder())
+                            .thenComparing(StandingsService.TeamStanding::getPointsFor, java.util.Comparator.reverseOrder()));
+                    model.addAttribute("standings", standingsList);
+                } else {
+                    model.addAttribute("standings", standingsService.calculateStandings(season.getId()));
+                }
                 model.addAttribute("driverRanking", driverRankingService.calculateRanking(season.getId()));
                 model.addAttribute("selectedSeason", season);
             }

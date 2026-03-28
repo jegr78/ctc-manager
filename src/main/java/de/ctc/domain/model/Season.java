@@ -32,6 +32,12 @@ public class Season {
     @Column(nullable = false)
     private boolean active = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SeasonFormat format = SeasonFormat.LEAGUE;
+
+    private Integer totalRounds;
+
     @OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortIndex ASC")
     private List<Matchday> matchdays = new ArrayList<>();
