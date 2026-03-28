@@ -45,7 +45,7 @@ public class Gt7SyncController {
                     selectedCars != null ? selectedCars : List.of(),
                     selectedTracks != null ? selectedTracks : List.of());
 
-            String msg = result.carsImported() + " cars and " + result.tracksImported() + " tracks imported";
+            String msg = result.carsImported() + " cars and " + result.tracksImported() + " tracks imported in " + result.durationSeconds() + "s";
             if (!result.errors().isEmpty()) {
                 msg += " (" + result.errors().size() + " warnings)";
             }

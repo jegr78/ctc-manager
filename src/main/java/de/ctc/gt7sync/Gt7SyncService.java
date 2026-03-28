@@ -62,10 +62,13 @@ public class Gt7SyncService {
 
     @Transactional
     public SyncResult executeSync(List<String> selectedCarGt7Ids, List<String> selectedTrackNames) throws IOException {
-        var errors = new ArrayList<String>();
+        long startTime = System.currentTimeMillis();
+        var errors = java.util.Collections.synchronizedList(new ArrayList<String>());
         int carsImported = 0;
         int tracksImported = 0;
 
+        // Phase 1: Create all car entities (fast, DB only)
+        var carsToDownload = new ArrayList<CarImageTask>();
         if (!selectedCarGt7Ids.isEmpty()) {
             var scrapedCars = scraperService.scrapeCars();
             var selectedCars = scrapedCars.stream()
@@ -80,19 +83,13 @@ public class Gt7SyncService {
                 var car = new Car(sc.manufacturer(), sc.name());
                 car.setGt7Id(sc.gt7Id());
                 car = carRepository.save(car);
-
-                try {
-                    String localPath = fileStorageService.storeFromUrl("cars", car.getId(), sc.imageUrl(), sc.gt7Id() + ".png");
-                    car.setImageUrl(localPath);
-                    carRepository.save(car);
-                } catch (Exception e) {
-                    log.warn("Failed to download image for car {}: {}", sc.gt7Id(), e.getMessage());
-                    errors.add("Image download failed for " + sc.manufacturer() + " " + sc.name());
-                }
+                carsToDownload.add(new CarImageTask(car, sc.imageUrl(), sc.gt7Id()));
                 carsImported++;
             }
         }
 
+        // Phase 2: Create all track entities (fast, DB only)
+        var tracksToDownload = new ArrayList<TrackImageTask>();
         if (!selectedTrackNames.isEmpty()) {
             var scrapedTracks = scraperService.scrapeTracks(true);
             var selectedTracks = scrapedTracks.stream()
@@ -105,25 +102,53 @@ public class Gt7SyncService {
                 }
                 var track = new Track(st.name(), st.country());
                 track = trackRepository.save(track);
-
-                // Download image if available
                 if (st.imageUrl() != null) {
-                    try {
-                        String localPath = fileStorageService.storeFromUrl("tracks", track.getId(),
-                                st.imageUrl(), st.id() + ".png");
-                        track.setImageUrl(localPath);
-                        trackRepository.save(track);
-                    } catch (Exception e) {
-                        log.warn("Failed to download image for track {}: {}", st.name(), e.getMessage());
-                        errors.add("Image download failed for " + st.name());
-                    }
+                    tracksToDownload.add(new TrackImageTask(track, st.imageUrl(), st.id()));
                 }
                 tracksImported++;
             }
         }
 
-        return new SyncResult(carsImported, tracksImported, errors);
+        // Phase 3: Download all images in parallel
+        var allFutures = new ArrayList<java.util.concurrent.CompletableFuture<Void>>();
+
+        for (var task : carsToDownload) {
+            allFutures.add(java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    String localPath = fileStorageService.storeFromUrl("cars", task.car.getId(), task.imageUrl, task.gt7Id + ".png");
+                    task.car.setImageUrl(localPath);
+                    carRepository.save(task.car);
+                } catch (Exception e) {
+                    log.warn("Image download failed for car {}: {}", task.gt7Id, e.getMessage());
+                    errors.add("Image download failed for " + task.car.getManufacturer() + " " + task.car.getName());
+                }
+            }));
+        }
+
+        for (var task : tracksToDownload) {
+            allFutures.add(java.util.concurrent.CompletableFuture.runAsync(() -> {
+                try {
+                    String localPath = fileStorageService.storeFromUrl("tracks", task.track.getId(), task.imageUrl, task.trackId + ".png");
+                    task.track.setImageUrl(localPath);
+                    trackRepository.save(task.track);
+                } catch (Exception e) {
+                    log.warn("Image download failed for track {}: {}", task.track.getName(), e.getMessage());
+                    errors.add("Image download failed for " + task.track.getName());
+                }
+            }));
+        }
+
+        java.util.concurrent.CompletableFuture.allOf(allFutures.toArray(new java.util.concurrent.CompletableFuture[0])).join();
+
+        long durationSeconds = (System.currentTimeMillis() - startTime) / 1000;
+        log.info("GT7 sync completed in {}s: {} cars, {} tracks, {} errors",
+                durationSeconds, carsImported, tracksImported, errors.size());
+
+        return new SyncResult(carsImported, tracksImported, errors, durationSeconds);
     }
 
-    public record SyncResult(int carsImported, int tracksImported, List<String> errors) {}
+    private record CarImageTask(Car car, String imageUrl, String gt7Id) {}
+    private record TrackImageTask(Track track, String imageUrl, String trackId) {}
+
+    public record SyncResult(int carsImported, int tracksImported, List<String> errors, long durationSeconds) {}
 }
