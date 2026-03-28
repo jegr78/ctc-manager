@@ -23,7 +23,8 @@
     <div th:if="${standings != null}" class="card">
         <h2 th:if="${isAlltime}">Team Standings — Alltime</h2>
         <h2 th:unless="${isAlltime}">Team Standings — <span th:text="${selectedSeason.name}"></span></h2>
-        <table th:if="${!standings.isEmpty()}" id="standingsTable">
+        <!-- League standings table -->
+        <table th:if="${!standings.isEmpty() && (selectedSeason == null || selectedSeason.format.name() != 'SWISS')}" id="standingsTable">
             <thead>
                 <tr>
                     <th>#</th>
@@ -50,6 +51,32 @@
                 </tr>
             </tbody>
         </table>
+
+        <!-- Swiss standings table -->
+        <table th:if="${selectedSeason != null && selectedSeason.format.name() == 'SWISS' && !standings.isEmpty()}" id="standingsTable">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Team">Team</th>
+                    <th>Match W-L-T</th>
+                    <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Score">Score</th>
+                    <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Buchholz">Buchholz</th>
+                    <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Points Difference" style="text-align:right">Pts Diff</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="standing, iter : ${standings}" class="data-row">
+                    <td th:text="${iter.count}"></td>
+                    <td><strong th:text="${standing.team.shortName}"></strong>
+                        <span class="text-dim" th:text="' ' + ${standing.team.name}"></span></td>
+                    <td th:text="${standing.matchRecord}"></td>
+                    <td th:text="${standing.points + '.0'}"></td>
+                    <td th:text="${standing.buchholz}"></td>
+                    <td style="text-align:right; font-weight:700;" th:text="${(standing.pointDifference > 0 ? '+' : '') + standing.pointDifference}"></td>
+                </tr>
+            </tbody>
+        </table>
+
         <div th:if="${standings.isEmpty()}" class="empty-state"><p>No results yet.</p></div>
     </div>
 

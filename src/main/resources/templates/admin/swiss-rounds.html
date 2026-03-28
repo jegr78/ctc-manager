@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Swiss Rounds', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <div>
+            <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="back-link">&larr; Back to Season</a>
+            <h1 th:text="'Swiss Rounds — ' + ${season.name}"></h1>
+        </div>
+        <div class="actions">
+            <span class="text-dim" th:text="'Round ' + ${currentRound} + ' of ' + ${season.totalRounds}"></span>
+            <form th:if="${canGenerateNext}" th:action="@{/admin/seasons/{id}/swiss/generate(id=${season.id})}" method="post" style="display:inline;">
+                <button type="submit" class="btn btn-primary">Generate Next Round</button>
+            </form>
+        </div>
+    </div>
+
+    <th:block th:each="md, iter : ${season.matchdays}">
+        <div class="card">
+            <h2 th:text="${md.label}"></h2>
+            <div th:if="${!md.races.isEmpty()}" class="swiss-grid">
+                <th:block th:each="race : ${md.races}">
+                    <div th:if="${!race.bye}" class="swiss-matchup">
+                        <div class="swiss-team" th:classappend="${race.results.isEmpty() ? '' : (raceScores[race.id] != null && raceScores[race.id][0] > raceScores[race.id][1] ? 'winner' : '')}">
+                            <span th:text="${race.homeTeam.shortName}"></span>
+                            <span class="swiss-score" th:if="${raceScores[race.id] != null}" th:text="${raceScores[race.id][0]}"></span>
+                        </div>
+                        <div class="swiss-team" th:classappend="${race.results.isEmpty() ? '' : (raceScores[race.id] != null && raceScores[race.id][1] > raceScores[race.id][0] ? 'winner' : '')}">
+                            <span th:text="${race.awayTeam.shortName}"></span>
+                            <span class="swiss-score" th:if="${raceScores[race.id] != null}" th:text="${raceScores[race.id][1]}"></span>
+                        </div>
+                    </div>
+                    <div th:if="${race.bye}" class="swiss-matchup bye">
+                        <div class="swiss-team winner">
+                            <span th:text="${race.homeTeam.shortName}"></span>
+                            <span class="swiss-score">BYE</span>
+                        </div>
+                    </div>
+                </th:block>
+            </div>
+            <div th:if="${md.races.isEmpty()}" class="empty-state" style="padding:16px;"><p>matches pending</p></div>
+        </div>
+    </th:block>
+
+    <!-- Show pending rounds -->
+    <th:block th:if="${season.totalRounds != null}">
+        <div th:each="i : ${#numbers.sequence(season.matchdays.size() + 1, season.totalRounds)}" class="card">
+            <h2 th:text="'Round ' + ${i}"></h2>
+            <div class="empty-state" style="padding:16px;color:var(--accent);"><p>matches pending</p></div>
+        </div>
+    </th:block>
+</section>
+</body>
+</html>
