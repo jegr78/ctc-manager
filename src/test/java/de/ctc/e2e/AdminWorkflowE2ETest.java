@@ -68,7 +68,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
         page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Save")).click();
 
         assertThat(page).hasTitle("CTC Admin - Drivers");
-        assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.CELL, new com.microsoft.playwright.Page.GetByRoleOptions().setName("e2e_driver").setExact(true))).isVisible();
+        assertThat(page.getByRole(com.microsoft.playwright.options.AriaRole.LINK, new com.microsoft.playwright.Page.GetByRoleOptions().setName("e2e_driver").setExact(true))).isVisible();
         assertThat(page.locator(".alert-success")).containsText("Driver saved");
     }
 
