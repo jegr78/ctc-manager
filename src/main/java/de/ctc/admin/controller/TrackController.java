@@ -3,6 +3,7 @@ package de.ctc.admin.controller;
 import de.ctc.admin.dto.TrackForm;
 import de.ctc.domain.model.Track;
 import de.ctc.domain.repository.RaceRepository;
+import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TrackRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class TrackController {
 
     private final TrackRepository trackRepository;
     private final RaceRepository raceRepository;
+    private final SeasonRepository seasonRepository;
 
     @GetMapping
     public String list(Model model) {
@@ -53,13 +55,19 @@ public class TrackController {
         if (result.hasErrors()) {
             return "admin/track-form";
         }
-        if (trackForm.getId() != null) {
-            var existing = trackRepository.findById(trackForm.getId()).orElseThrow();
-            existing.setName(trackForm.getName());
-            existing.setCountry(trackForm.getCountry());
-            trackRepository.save(existing);
-        } else {
-            trackRepository.save(new Track(trackForm.getName(), trackForm.getCountry()));
+        try {
+            if (trackForm.getId() != null) {
+                var existing = trackRepository.findById(trackForm.getId()).orElseThrow();
+                existing.setName(trackForm.getName());
+                existing.setCountry(trackForm.getCountry());
+                trackRepository.save(existing);
+            } else {
+                trackRepository.save(new Track(trackForm.getName(), trackForm.getCountry()));
+            }
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "A track with this name already exists");
+            return "redirect:/admin/tracks" + (trackForm.getId() != null ? "/" + trackForm.getId() + "/edit" : "/new");
         }
         log.info("Saved track: {}", trackForm.getName());
         redirectAttributes.addFlashAttribute("successMessage",
@@ -70,9 +78,12 @@ public class TrackController {
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         var track = trackRepository.findById(id).orElseThrow();
-        if (raceRepository.existsByTrackId(id)) {
+        boolean usedInRace = raceRepository.existsByTrackId(id);
+        boolean usedInPool = seasonRepository.findAll().stream()
+                .anyMatch(s -> s.getTracks().contains(track));
+        if (usedInRace || usedInPool) {
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Cannot delete track: still used in a race.");
+                    "Cannot delete: track is used in a race or assigned to a season pool");
             return "redirect:/admin/tracks";
         }
         trackRepository.delete(track);

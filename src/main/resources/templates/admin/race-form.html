@@ -53,6 +53,14 @@
                          style="font-size:13px;margin-top:4px;">
                         No tracks assigned to this season yet.
                     </div>
+                    <div th:if="${usedTrackIds != null && !usedTrackIds.isEmpty()}"
+                         style="margin-top:8px;padding:10px 12px;background:var(--bg-input);border-radius:var(--radius-sm);border-left:3px solid var(--accent);">
+                        <div style="font-size:11px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Already used this season</div>
+                        <div style="font-size:13px;color:var(--text-dim);">
+                            <span th:each="t : ${seasonTracks}" th:if="${usedTrackIds.contains(t.id)}"
+                                  th:text="${t.name}" style="display:inline-block;margin-right:8px;"></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="carSearch">Car</label>
@@ -73,6 +81,14 @@
                     <div th:if="${seasonCars == null || seasonCars.isEmpty()}" class="text-dim"
                          style="font-size:13px;margin-top:4px;">
                         No cars assigned to this season yet.
+                    </div>
+                    <div th:if="${usedCarIds != null && !usedCarIds.isEmpty()}"
+                         style="margin-top:8px;padding:10px 12px;background:var(--bg-input);border-radius:var(--radius-sm);border-left:3px solid var(--accent);">
+                        <div style="font-size:11px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Already used this season</div>
+                        <div style="font-size:13px;color:var(--text-dim);">
+                            <span th:each="c : ${seasonCars}" th:if="${usedCarIds.contains(c.id)}"
+                                  th:text="${c.displayName}" style="display:inline-block;margin-right:8px;"></span>
+                        </div>
                     </div>
                 </div>
             </div>

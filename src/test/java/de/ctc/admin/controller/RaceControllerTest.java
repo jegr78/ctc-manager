@@ -39,6 +39,12 @@ class RaceControllerTest {
     @Autowired
     private DriverRepository driverRepository;
 
+    @Autowired
+    private CarRepository carRepository;
+
+    @Autowired
+    private TrackRepository trackRepository;
+
     private Season season;
     private Matchday matchday;
     private Team home;
@@ -199,5 +205,93 @@ class RaceControllerTest {
                 .andExpect(flash().attributeExists("successMessage"));
 
         assertFalse(raceRepository.findById(race.getId()).isPresent());
+    }
+
+    // --- GET /admin/races/used-selections ---
+
+    @Test
+    void shouldReturnUsedSelectionsAsJson() throws Exception {
+        var car = carRepository.save(new Car("Toyota", "GR Supra"));
+        season.getCars().add(car);
+        seasonRepository.save(season);
+        race.setCar(car);
+        raceRepository.save(race);
+
+        mockMvc.perform(get("/admin/races/used-selections")
+                        .param("seasonId", season.getId().toString())
+                        .param("homeTeamId", home.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.usedCarIds").isArray())
+                .andExpect(jsonPath("$.usedCarIds[0]").value(car.getId().toString()))
+                .andExpect(jsonPath("$.usedTrackIds").isArray());
+    }
+
+    @Test
+    void shouldReturnUsedSelectionsExcludingCurrentRace() throws Exception {
+        var car = carRepository.save(new Car("Nissan", "GT-R"));
+        season.getCars().add(car);
+        seasonRepository.save(season);
+        race.setCar(car);
+        raceRepository.save(race);
+
+        mockMvc.perform(get("/admin/races/used-selections")
+                        .param("seasonId", season.getId().toString())
+                        .param("homeTeamId", home.getId().toString())
+                        .param("excludeRaceId", race.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.usedCarIds").isEmpty());
+    }
+
+    // --- Uniqueness validation ---
+
+    @Test
+    void shouldRejectDuplicateCarForSameHomeTeam() throws Exception {
+        var car = carRepository.save(new Car("Honda", "NSX"));
+        season.getCars().add(car);
+        seasonRepository.save(season);
+        race.setCar(car);
+        raceRepository.save(race);
+
+        // Create a second matchday for the second race
+        var matchday2 = matchdayRepository.save(new Matchday(season, "RT Matchday 2", 2));
+
+        mockMvc.perform(post("/admin/races/save")
+                        .param("matchdayId", matchday2.getId().toString())
+                        .param("homeTeamId", home.getId().toString())
+                        .param("awayTeamId", away.getId().toString())
+                        .param("carId", car.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("errorMessage",
+                        home.getShortName() + " has already used " + car.getDisplayName() + " this season"));
+    }
+
+    // --- Pool validation ---
+
+    @Test
+    void shouldRejectCarNotInSeasonPool() throws Exception {
+        var car = carRepository.save(new Car("Ferrari", "488"));
+        // Intentionally NOT adding car to season pool
+
+        mockMvc.perform(post("/admin/races/save")
+                        .param("matchdayId", matchday.getId().toString())
+                        .param("homeTeamId", home.getId().toString())
+                        .param("awayTeamId", away.getId().toString())
+                        .param("carId", car.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("errorMessage", "Car is not in this season's pool"));
+    }
+
+    @Test
+    void shouldRejectTrackNotInSeasonPool() throws Exception {
+        var track = trackRepository.save(new Track("Silverstone", "UK"));
+        // Intentionally NOT adding track to season pool
+
+        mockMvc.perform(post("/admin/races/save")
+                        .param("matchdayId", matchday.getId().toString())
+                        .param("homeTeamId", home.getId().toString())
+                        .param("awayTeamId", away.getId().toString())
+                        .param("trackId", track.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("errorMessage", "Track is not in this season's pool"));
     }
 }

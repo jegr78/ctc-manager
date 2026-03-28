@@ -4,6 +4,7 @@ import de.ctc.admin.dto.CarForm;
 import de.ctc.domain.model.Car;
 import de.ctc.domain.repository.CarRepository;
 import de.ctc.domain.repository.RaceRepository;
+import de.ctc.domain.repository.SeasonRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,7 @@ public class CarController {
 
     private final CarRepository carRepository;
     private final RaceRepository raceRepository;
+    private final SeasonRepository seasonRepository;
 
     @GetMapping
     public String list(Model model) {
@@ -53,13 +55,19 @@ public class CarController {
         if (result.hasErrors()) {
             return "admin/car-form";
         }
-        if (carForm.getId() != null) {
-            var existing = carRepository.findById(carForm.getId()).orElseThrow();
-            existing.setManufacturer(carForm.getManufacturer());
-            existing.setName(carForm.getName());
-            carRepository.save(existing);
-        } else {
-            carRepository.save(new Car(carForm.getManufacturer(), carForm.getName()));
+        try {
+            if (carForm.getId() != null) {
+                var existing = carRepository.findById(carForm.getId()).orElseThrow();
+                existing.setManufacturer(carForm.getManufacturer());
+                existing.setName(carForm.getName());
+                carRepository.save(existing);
+            } else {
+                carRepository.save(new Car(carForm.getManufacturer(), carForm.getName()));
+            }
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "A car with this manufacturer and name already exists");
+            return "redirect:/admin/cars" + (carForm.getId() != null ? "/" + carForm.getId() + "/edit" : "/new");
         }
         log.info("Saved car: {} {}", carForm.getManufacturer(), carForm.getName());
         redirectAttributes.addFlashAttribute("successMessage",
@@ -70,9 +78,12 @@ public class CarController {
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         var car = carRepository.findById(id).orElseThrow();
-        if (raceRepository.existsByCarId(id)) {
+        boolean usedInRace = raceRepository.existsByCarId(id);
+        boolean usedInPool = seasonRepository.findAll().stream()
+                .anyMatch(s -> s.getCars().contains(car));
+        if (usedInRace || usedInPool) {
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Cannot delete car: still used in a race.");
+                    "Cannot delete: car is used in a race or assigned to a season pool");
             return "redirect:/admin/cars";
         }
         carRepository.delete(car);
