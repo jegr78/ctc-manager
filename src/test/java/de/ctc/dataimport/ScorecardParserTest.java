@@ -103,7 +103,7 @@ class ScorecardParserTest {
 
             // Verify team assignment
             var team1Rows = preview.getRows().stream()
-                    .filter(r -> "AHR_1".equals(r.teamShortName())).toList();
+                    .filter(r -> "AHR 1".equals(r.teamShortName())).toList();
             var team2Rows = preview.getRows().stream()
                     .filter(r -> "TCR".equals(r.teamShortName())).toList();
             assertEquals(6, team1Rows.size());
@@ -126,7 +126,7 @@ class ScorecardParserTest {
             assertFalse(preview.hasErrors());
 
             var team1Rows = preview.getRows().stream()
-                    .filter(r -> "AHR_1".equals(r.teamShortName())).toList();
+                    .filter(r -> "AHR 1".equals(r.teamShortName())).toList();
             var team2Rows = preview.getRows().stream()
                     .filter(r -> "TCR".equals(r.teamShortName())).toList();
             assertEquals(4, team1Rows.size());
@@ -143,7 +143,7 @@ class ScorecardParserTest {
         }
 
         @Test
-        void shouldReplaceSpacesWithUnderscores() {
+        void shouldPreserveTeamNameWithSpaces() {
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("AHR 1"));
             sheetData.add(driverRow("driver1", 1, 1, Boolean.FALSE));
@@ -152,7 +152,7 @@ class ScorecardParserTest {
             var preview = parser.parse(sheetData, metadata);
 
             assertEquals(1, preview.getRows().size());
-            assertEquals("AHR_1", preview.getRows().getFirst().teamShortName());
+            assertEquals("AHR 1", preview.getRows().getFirst().teamShortName());
         }
 
         @Test

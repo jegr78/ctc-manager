@@ -75,8 +75,8 @@ public class CsvImportService {
 
         for (var entry : byTeamPair.entrySet()) {
             var teamParts = entry.getKey().split("\\|");
-            var homeTeam = teamRepository.findByShortName(teamParts[0]).orElse(null);
-            var awayTeam = teamParts.length > 1 ? teamRepository.findByShortName(teamParts[1]).orElse(null) : null;
+            var homeTeam = findTeamFlexible(teamParts[0]);
+            var awayTeam = teamParts.length > 1 ? findTeamFlexible(teamParts[1]) : null;
 
             if (homeTeam == null) {
                 result.addError("Team nicht gefunden: " + teamParts[0]);
@@ -153,12 +153,40 @@ public class CsvImportService {
     private void ensureSeasonDriver(Season season, Driver driver, String teamShortName) {
         var existing = seasonDriverRepository.findBySeasonIdAndDriverId(season.getId(), driver.getId());
         if (existing.isEmpty()) {
-            var team = teamRepository.findByShortName(teamShortName).orElse(null);
+            var team = findTeamFlexible(teamShortName);
             if (team != null) {
                 seasonDriverRepository.save(new SeasonDriver(season, driver, team));
                 log.debug("Created SeasonDriver: {} -> {} ({})", driver.getPsnId(), teamShortName, season.getName());
             }
         }
+    }
+
+    /**
+     * Finds a team by short name with flexible matching:
+     * 1. Exact match
+     * 2. Case-insensitive match
+     * 3. Normalized match (spaces ↔ underscores)
+     */
+    private Team findTeamFlexible(String shortName) {
+        // 1. Exact match
+        var exact = teamRepository.findByShortName(shortName);
+        if (exact.isPresent()) return exact.get();
+
+        // 2. Case-insensitive
+        var caseInsensitive = teamRepository.findByShortNameIgnoreCase(shortName);
+        if (caseInsensitive.isPresent()) return caseInsensitive.get();
+
+        // 3. Try with spaces replaced by underscores and vice versa
+        var withUnderscores = shortName.replace(" ", "_");
+        var withSpaces = shortName.replace("_", " ");
+
+        var alt1 = teamRepository.findByShortNameIgnoreCase(withUnderscores);
+        if (alt1.isPresent()) return alt1.get();
+
+        var alt2 = teamRepository.findByShortNameIgnoreCase(withSpaces);
+        if (alt2.isPresent()) return alt2.get();
+
+        return null;
     }
 
     private Matchday findOrCreateMatchday(Season season, ImportMetadata metadata) {

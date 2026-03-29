@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface TeamRepository extends JpaRepository<Team, UUID> {
 
     Optional<Team> findByShortName(String shortName);
+
+    Optional<Team> findByShortNameIgnoreCase(String shortName);
 }

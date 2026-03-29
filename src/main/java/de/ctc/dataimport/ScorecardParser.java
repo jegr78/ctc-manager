@@ -44,7 +44,7 @@ public class ScorecardParser {
 
             // Check if this is a header row (team block start)
             if (isHeaderRow(row)) {
-                currentTeam = normalizeTeamName(cellToString(row.get(0)));
+                currentTeam = cleanTeamName(cellToString(row.get(0)));
                 inTeamBlock = true;
                 log.debug("Team-Block erkannt: '{}' in Zeile {}", currentTeam, i + 1);
                 continue;
@@ -82,12 +82,9 @@ public class ScorecardParser {
         return "overall".equalsIgnoreCase(colA.trim());
     }
 
-    /**
-     * Normalizes team name: replaces spaces with underscores for matching against DB shortNames.
-     */
-    private String normalizeTeamName(String teamName) {
+    private String cleanTeamName(String teamName) {
         if (teamName == null) return "";
-        return teamName.trim().replace(" ", "_");
+        return teamName.trim();
     }
 
     private void parseDriverRow(List<Object> row, String teamShortName, int rowNumber, ImportPreview preview) {
