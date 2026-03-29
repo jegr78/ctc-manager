@@ -39,15 +39,10 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
 - `de.ctc.dataimport` — CSV/Bild-Import
 - `de.ctc.gt7sync` — GT7 Auto/Strecken-Scraping und Sync
 
-## Score-Aggregation
+## Architektur-Prinzipien
 
-Wenn Race-Results gespeichert werden (Controller, Import, Service), muessen die Scores auf dem uebergeordneten Match/PlayoffMatchup aggregiert werden:
-
-```java
-scoringService.aggregateMatchScores(race);
-```
-
-Keine Fallback-Berechnungen in Templates — Scores muessen konsistent auf Match/PlayoffMatchup liegen.
+- **Keine Fallback-Berechnungen:** Wenn abgeleitete Daten fehlen, keine Workarounds in Templates oder Controllern einbauen. Stattdessen Datenmodell und Service-Architektur analysieren und die Ursache beheben — Daten muessen an der richtigen Stelle konsistent geschrieben werden.
+- **Thymeleaf Templates schlank halten:** Keine komplexe Logik (SpEL-Expressions, Collection-Projektionen, verschachtelte Bedingungen) in Templates. Berechnungen und Datenaufbereitung gehoeren in den Controller oder Service — Templates nur fuer Darstellung.
 
 ## Befehle
 
