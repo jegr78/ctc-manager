@@ -28,6 +28,7 @@ public class CsvImportService {
     private final SeasonDriverRepository seasonDriverRepository;
     private final MatchdayRepository matchdayRepository;
     private final RaceRepository raceRepository;
+    private final PlayoffMatchupRepository playoffMatchupRepository;
     private final ScoringService scoringService;
 
     public ImportPreview parseAndPreview(InputStream csvStream, ImportMetadata metadata) throws IOException {
@@ -91,6 +92,14 @@ public class CsvImportService {
             // TODO: resolve Track/Car entities from metadata strings
             // race.setTrack(...);
             // race.setCar(...);
+
+            // Link to playoff matchup if applicable
+            if (metadata.isPlayoff()) {
+                var matchup = playoffMatchupRepository.findById(metadata.playoffMatchupId())
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Playoff-Matchup nicht gefunden: " + metadata.playoffMatchupId()));
+                race.setPlayoffMatchup(matchup);
+            }
 
             for (var row : entry.getValue()) {
                 var driver = resolveDriver(row, confirmedMatches, createNewDrivers, result);
@@ -208,7 +217,16 @@ public class CsvImportService {
                 || "x".equalsIgnoreCase(value) || "✓".equals(value);
     }
 
-    public record ImportMetadata(String seasonName, String matchdayLabel, String track, String car) {}
+    public record ImportMetadata(String seasonName, String matchdayLabel, String track, String car,
+                                    UUID playoffMatchupId) {
+        public ImportMetadata(String seasonName, String matchdayLabel, String track, String car) {
+            this(seasonName, matchdayLabel, track, car, null);
+        }
+
+        public boolean isPlayoff() {
+            return playoffMatchupId != null;
+        }
+    }
 
     public record ImportRow(String teamShortName, String psnId, int position, int qualiPosition,
                             boolean fastestLap, DriverMatchingService.MatchResult matchResult) {}
