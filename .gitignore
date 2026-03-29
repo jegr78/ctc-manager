@@ -43,6 +43,10 @@ build/
 .playwright-mcp/
 skills-lock.json
 
+### Google Credentials ###
+*-credentials.json
+service-account*.json
+
 ### Docker ###
 .env
 
