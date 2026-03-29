@@ -129,6 +129,9 @@ public class CsvImportService {
                 race.setPlayoffMatchup(matchup);
             }
 
+            // Save race early to get ID for RaceLineup references
+            race = raceRepository.save(race);
+
             for (var row : entry.getValue()) {
                 var driver = resolveDriver(row, confirmedMatches, createNewDrivers, result);
                 if (driver == null) continue;
