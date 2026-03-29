@@ -39,6 +39,16 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
 - `de.ctc.dataimport` — CSV/Bild-Import
 - `de.ctc.gt7sync` — GT7 Auto/Strecken-Scraping und Sync
 
+## Score-Aggregation
+
+Wenn Race-Results gespeichert werden (Controller, Import, Service), muessen die Scores auf dem uebergeordneten Match/PlayoffMatchup aggregiert werden:
+
+```java
+scoringService.aggregateMatchScores(race);
+```
+
+Keine Fallback-Berechnungen in Templates — Scores muessen konsistent auf Match/PlayoffMatchup liegen.
+
 ## Befehle
 
 ```bash
