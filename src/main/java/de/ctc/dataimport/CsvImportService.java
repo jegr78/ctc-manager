@@ -118,6 +118,7 @@ public class CsvImportService {
             }
 
             raceRepository.save(race);
+            scoringService.aggregateMatchScores(race);
             result.addImportedRace(homeTeam.getShortName() +
                     (awayTeam != null ? " vs " + awayTeam.getShortName() : ""));
         }
