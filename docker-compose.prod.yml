@@ -1,0 +1,23 @@
+services:
+  app:
+    image: ctc-manager:latest
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ctc-uploads:/app/uploads
+      - ctc-site-output:/app/ctc-site-output
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  ctc-uploads:
+  ctc-site-output:

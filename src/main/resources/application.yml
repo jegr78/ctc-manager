@@ -32,3 +32,10 @@ server:
 ctc:
   site:
     output-dir: ${user.home}/ctc-site-output
+
+# Actuator Health-Endpoint (fuer Docker Healthchecks)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health

@@ -1,0 +1,27 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mariadb://db:3306/ctcdb
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: ctc
+    password: ctc
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  flyway:
+    locations: classpath:db/migration
+
+app:
+  upload-dir: /app/uploads
+
+ctc:
+  site:
+    output-dir: /app/ctc-site-output
+
+management:
+  endpoint:
+    health:
+      show-details: always

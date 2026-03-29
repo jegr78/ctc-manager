@@ -21,6 +21,7 @@ Deutsch für Kommunikation und Dokumentation. Code und Kommentare auf Englisch.
 - `dev` — H2 In-Memory, Port 9090 (Entwicklung, Tests)
 - `dev,demo` — Wie `dev`, importiert beim Start alle GT7-Autos und -Strecken (mit Bildern) fuer manuelles Testen
 - `local` — MariaDB lokal, Port 9091
+- `docker` — MariaDB im Docker-Netzwerk (Host `db`), Port 8080
 - `prod` — Cloud DB (Environment Variables)
 
 ## OSIV (Open Session in View)
@@ -52,6 +53,16 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
 
 # Local mit MariaDB
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+
+# Docker: Lokale Umgebung (App + MariaDB)
+docker compose up --build -d
+docker compose down
+
+# Docker: Nur Image bauen
+docker compose build
+
+# Docker: Produktion (externe DB, .env konfigurieren)
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## Git-Workflow
