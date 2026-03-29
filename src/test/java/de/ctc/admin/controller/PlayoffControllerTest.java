@@ -1,5 +1,6 @@
 package de.ctc.admin.controller;
 
+import de.ctc.TestHelper;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
 import de.ctc.domain.service.PlayoffService;
@@ -31,12 +32,13 @@ class PlayoffControllerTest {
     @Autowired private SeasonDriverRepository seasonDriverRepository;
     @Autowired private PlayoffRepository playoffRepository;
     @Autowired private PlayoffService playoffService;
+    @Autowired private TestHelper testHelper;
 
     private Season season;
 
     @BeforeEach
     void setUp() {
-        season = new Season("Playoff Controller Test " + UUID.randomUUID().toString().substring(0, 8));
+        season = testHelper.createSeason("Playoff Controller Test " + UUID.randomUUID().toString().substring(0, 8));
         season.setActive(true);
         season = seasonRepository.save(season);
 

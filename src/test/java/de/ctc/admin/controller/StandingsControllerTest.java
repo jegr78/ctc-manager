@@ -1,5 +1,6 @@
 package de.ctc.admin.controller;
 
+import de.ctc.TestHelper;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,23 +27,23 @@ class StandingsControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private SeasonRepository seasonRepository;
     @Autowired private TeamRepository teamRepository;
+    @Autowired private TestHelper testHelper;
 
     private Season activeSeason;
     private Season inactiveSeason;
 
     @BeforeEach
     void setUp() {
-        // Deactivate any existing active seasons from other tests / Flyway data
         seasonRepository.findByActiveTrue().ifPresent(s -> {
             s.setActive(false);
             seasonRepository.save(s);
         });
 
-        activeSeason = new Season("Standings Active " + UUID.randomUUID().toString().substring(0, 8));
+        activeSeason = testHelper.createSeason("Standings Active " + UUID.randomUUID().toString().substring(0, 8));
         activeSeason.setActive(true);
         activeSeason = seasonRepository.save(activeSeason);
 
-        inactiveSeason = new Season("Standings Inactive " + UUID.randomUUID().toString().substring(0, 8));
+        inactiveSeason = testHelper.createSeason("Standings Inactive " + UUID.randomUUID().toString().substring(0, 8));
         inactiveSeason.setActive(false);
         inactiveSeason = seasonRepository.save(inactiveSeason);
 
@@ -85,7 +86,6 @@ class StandingsControllerTest {
 
     @Test
     void shouldShowSelectSeasonStateWhenNoActiveSeasonAndNoParam() throws Exception {
-        // Deactivate the active season so no fallback exists
         activeSeason.setActive(false);
         seasonRepository.save(activeSeason);
 
@@ -99,7 +99,7 @@ class StandingsControllerTest {
 
     @Test
     void shouldShowStandingsForSwissSeason() throws Exception {
-        var swissSeason = new Season("Swiss Season " + UUID.randomUUID().toString().substring(0, 8));
+        var swissSeason = testHelper.createSeason("Swiss Season " + UUID.randomUUID().toString().substring(0, 8));
         swissSeason.setFormat(SeasonFormat.SWISS);
         swissSeason = seasonRepository.save(swissSeason);
 
