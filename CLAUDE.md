@@ -86,6 +86,13 @@ docker compose -f docker-compose.prod.yml up -d
   2. Bei CI-Failure: Logs analysieren (`gh run view --log-failed`), fixen, pushen
   3. PR darf erst gemergt werden wenn CI grün ist
 
+## Entwicklungsansatz
+
+- **TDD (Test-Driven Development):** Tests zuerst schreiben, dann Implementierung. Red → Green → Refactor.
+- **BDD (Behavior-Driven Development):** Playwright E2E Tests beschreiben das erwartete Verhalten aus Nutzersicht.
+- Reihenfolge bei neuen Features: Unit Tests → Implementierung → Integration Tests → E2E Tests
+- Superpowers-Skill `superpowers:test-driven-development` nutzen
+
 ## Design Spec
 
 `docs/superpowers/specs/2026-03-26-ctc-manager-design.md`
