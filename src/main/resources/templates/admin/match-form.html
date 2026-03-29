@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Neues Match', ~{::section})}">
+      th:replace="~{admin/layout :: layout('New Match', ~{::section})}">
 <body>
 <section>
-    <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="back-link">&larr; Zurueck zu [[${matchday.label}]]</a>
-    <h1>Neues Match</h1>
+    <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="back-link">&larr; Back to [[${matchday.label}]]</a>
+    <h1>New Match</h1>
 
     <form th:action="@{/admin/matches/save}" method="post">
         <input type="hidden" name="matchdayId" th:value="${matchday.id}">
@@ -14,14 +14,14 @@
                 <div class="form-group">
                     <label for="homeTeamId">Home Team *</label>
                     <select id="homeTeamId" name="homeTeamId" required>
-                        <option value="">-- Auswählen --</option>
+                        <option value="">-- Select --</option>
                         <option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.shortName + ' — ' + t.name}"></option>
                     </select>
                 </div>
                 <div class="form-group" id="awayTeamGroup">
                     <label for="awayTeamId">Away Team</label>
                     <select id="awayTeamId" name="awayTeamId">
-                        <option value="">-- Auswählen --</option>
+                        <option value="">-- Select --</option>
                         <option th:each="t : ${teams}" th:value="${t.id}" th:text="${t.shortName + ' — ' + t.name}"></option>
                     </select>
                 </div>
@@ -29,12 +29,12 @@
 
             <div class="form-check" style="margin-bottom:16px;">
                 <input type="checkbox" id="bye" name="bye" value="true">
-                <label for="bye">Freilos (Bye)</label>
+                <label for="bye">Bye</label>
             </div>
 
             <div class="actions">
-                <button type="submit" class="btn btn-primary">Erstellen</button>
-                <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="btn btn-secondary">Abbrechen</a>
+                <button type="submit" class="btn btn-primary">Create</button>
+                <a th:href="@{/admin/matchdays/{id}(id=${matchday.id})}" class="btn btn-secondary">Cancel</a>
             </div>
         </div>
     </form>

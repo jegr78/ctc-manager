@@ -41,7 +41,7 @@ public class RaceScoringController {
     public String save(@ModelAttribute RaceScoring scoring, RedirectAttributes redirectAttributes) {
         if (!scoring.isValid()) {
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Punktewerte muessen monoton fallend sein (gleiche Werte erlaubt)");
+                    "Points must be monotonically decreasing (equal values allowed)");
             return "redirect:/admin/race-scorings" + (scoring.getId() != null ? "/" + scoring.getId() + "/edit" : "/new");
         }
 
@@ -72,7 +72,7 @@ public class RaceScoringController {
         } catch (Exception e) {
             log.warn("Cannot delete race scoring {}: {}", scoring.getName(), e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Kann nicht geloescht werden — wird noch von einer Season referenziert");
+                    "Cannot delete — still referenced by a season");
         }
         return "redirect:/admin/race-scorings";
     }

@@ -55,7 +55,7 @@
                             <span th:unless="${match.awayScore != null}" style="font-size:20px; font-weight:700; color:var(--text-dim);">–</span>
                         </div>
                         <div th:if="${match.bye}" style="padding:0 16px;">
-                            <span style="font-size:13px; color:var(--text-dim); font-style:italic;">Freilos</span>
+                            <span style="font-size:13px; color:var(--text-dim); font-style:italic;">Bye</span>
                         </div>
                         <div th:unless="${match.bye}" style="flex:1; font-weight:600; color:var(--white);" th:text="${match.awayTeam?.shortName}"></div>
                         <div th:if="${match.bye}" style="flex:1;"></div>
@@ -63,7 +63,7 @@
                             <span th:if="${matchday.season.legs > 1}" class="badge"
                                   th:classappend="${match.races.size() >= matchday.season.legs ? 'badge-active' : 'badge-inactive'}"
                                   th:text="${match.races.size() + '/' + matchday.season.legs + ' Legs'}"></span>
-                            <span th:if="${matchday.season.legs <= 1 && match.homeScore == null && !match.bye}" class="badge badge-inactive">Offen</span>
+                            <span th:if="${matchday.season.legs <= 1 && match.homeScore == null && !match.bye}" class="badge badge-inactive">Open</span>
                         </div>
                     </div>
 

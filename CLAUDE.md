@@ -14,7 +14,7 @@ Spring Boot 4.x Admin-Anwendung zur Verwaltung der CTC Rennliga. Generiert eine 
 
 ## Sprache
 
-Deutsch für Kommunikation und Dokumentation. Code und Kommentare auf Englisch.
+Deutsch für Kommunikation und Dokumentation. Code, Kommentare und UI-Texte auf Englisch.
 
 ## Spring Profiles
 

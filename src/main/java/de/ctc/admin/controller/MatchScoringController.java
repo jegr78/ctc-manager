@@ -66,7 +66,7 @@ public class MatchScoringController {
         } catch (Exception e) {
             log.warn("Cannot delete match scoring {}: {}", scoring.getName(), e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Kann nicht geloescht werden — wird noch von einer Season referenziert");
+                    "Cannot delete — still referenced by a season");
         }
         return "redirect:/admin/match-scorings";
     }

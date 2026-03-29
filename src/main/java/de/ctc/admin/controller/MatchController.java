@@ -71,7 +71,7 @@ public class MatchController {
 
         if (match.getRaces().size() >= maxLegs) {
             redirectAttributes.addFlashAttribute("errorMessage",
-                    "Maximum Legs erreicht (" + maxLegs + ")");
+                    "Maximum legs reached (" + maxLegs + ")");
             return "redirect:/admin/matchdays/" + matchday.getId();
         }
 
@@ -84,7 +84,7 @@ public class MatchController {
         log.info("Added leg {} for match {} vs {}",
                 match.getRaces().size(), match.getHomeTeam().getShortName(),
                 match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "bye");
-        redirectAttributes.addFlashAttribute("successMessage", "Leg hinzugefuegt");
+        redirectAttributes.addFlashAttribute("successMessage", "Leg added");
         return "redirect:/admin/matchdays/" + matchday.getId();
     }
 
@@ -95,7 +95,7 @@ public class MatchController {
         matchRepository.delete(match);
         log.info("Deleted match: {} vs {}", match.getHomeTeam().getShortName(),
                 match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "bye");
-        redirectAttributes.addFlashAttribute("successMessage", "Match geloescht");
+        redirectAttributes.addFlashAttribute("successMessage", "Match deleted");
         return "redirect:/admin/matchdays/" + matchdayId;
     }
 }

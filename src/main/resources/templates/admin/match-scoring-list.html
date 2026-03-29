@@ -5,12 +5,12 @@
 <section>
     <div class="toolbar">
         <h1>Match-Scorings</h1>
-        <a th:href="@{/admin/match-scorings/new}" class="btn btn-primary">+ Neu</a>
+        <a th:href="@{/admin/match-scorings/new}" class="btn btn-primary">+ New</a>
     </div>
     <div class="card">
         <table th:if="${!scorings.isEmpty()}">
             <thead>
-                <tr><th>Name</th><th style="text-align:center">Sieg</th><th style="text-align:center">Unentschieden</th><th style="text-align:center">Niederlage</th><th>Actions</th></tr>
+                <tr><th>Name</th><th style="text-align:center">Win</th><th style="text-align:center">Draw</th><th style="text-align:center">Loss</th><th>Actions</th></tr>
             </thead>
             <tbody>
                 <tr th:each="s : ${scorings}">
@@ -21,14 +21,14 @@
                     <td class="actions">
                         <a th:href="@{/admin/match-scorings/{id}/edit(id=${s.id})}" class="btn btn-secondary btn-sm">Edit</a>
                         <form th:action="@{/admin/match-scorings/{id}/delete(id=${s.id})}" method="post"
-                              onsubmit="return confirm('Wirklich loeschen?')">
+                              onsubmit="return confirm('Really delete this scoring?')">
                             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                         </form>
                     </td>
                 </tr>
             </tbody>
         </table>
-        <div th:if="${scorings.isEmpty()}" class="empty-state"><p>Keine Match-Scorings vorhanden.</p></div>
+        <div th:if="${scorings.isEmpty()}" class="empty-state"><p>No match scorings created yet.</p></div>
     </div>
 </section>
 </body>

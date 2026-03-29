@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout(${scoring.id != null ? 'Race-Scoring bearbeiten' : 'Neues Race-Scoring'}, ~{::section})}">
+      th:replace="~{admin/layout :: layout(${scoring.id != null ? 'Edit Race-Scoring' : 'New Race-Scoring'}, ~{::section})}">
 <body>
 <section>
-    <a th:href="@{/admin/race-scorings}" class="back-link">&larr; Zurueck</a>
-    <h1 th:text="${scoring.id != null ? 'Race-Scoring bearbeiten' : 'Neues Race-Scoring'}"></h1>
+    <a th:href="@{/admin/race-scorings}" class="back-link">&larr; Back</a>
+    <h1 th:text="${scoring.id != null ? 'Edit Race-Scoring' : 'New Race-Scoring'}"></h1>
 
     <form th:action="@{/admin/race-scorings/save}" method="post" id="scoringForm">
         <input type="hidden" name="id" th:value="${scoring.id}">
@@ -19,13 +19,13 @@
                 <!-- Left: Race Points -->
                 <div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <label style="margin-bottom:0;">Rennpunkte</label>
+                        <label style="margin-bottom:0;">Race Points</label>
                         <span class="text-dim" id="racePointsCount"></span>
                     </div>
                     <div id="racePointsRows" style="background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden;"></div>
                     <div style="display:flex; gap:8px; margin-top:8px;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="addRow('racePoints')">+ Hinzufuegen</button>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="removeRow('racePoints')">Entfernen</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addRow('racePoints')">+ Add</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeRow('racePoints')">Remove</button>
                     </div>
                     <input type="hidden" name="racePoints" id="racePointsHidden">
                 </div>
@@ -34,32 +34,32 @@
                 <div>
                     <div style="margin-bottom:20px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                            <label style="margin-bottom:0;">Qualifying-Punkte</label>
+                            <label style="margin-bottom:0;">Qualifying Points</label>
                             <span class="text-dim" id="qualiPointsCount"></span>
                         </div>
                         <div id="qualiPointsRows" style="background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden;"></div>
                         <div style="display:flex; gap:8px; margin-top:8px;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="addRow('qualiPoints')">+ Hinzufuegen</button>
-                            <button type="button" class="btn btn-danger btn-sm" onclick="removeRow('qualiPoints')">Entfernen</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="addRow('qualiPoints')">+ Add</button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="removeRow('qualiPoints')">Remove</button>
                         </div>
-                        <div class="text-dim" style="font-size:12px; margin-top:4px;">Leer = keine Quali-Punkte</div>
+                        <div class="text-dim" style="font-size:12px; margin-top:4px;">Empty = no qualifying points</div>
                         <input type="hidden" name="qualiPoints" id="qualiPointsHidden">
                     </div>
 
                     <div class="form-group">
-                        <label for="fastestLapPoints">Schnellste Runde (Punkte)</label>
+                        <label for="fastestLapPoints">Fastest Lap (Points)</label>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <input type="number" id="fastestLapPoints" name="fastestLapPoints"
                                    th:value="${scoring.fastestLapPoints}" min="0" style="width:80px; text-align:right;">
-                            <span class="text-dim" style="font-size:12px;">0 = deaktiviert</span>
+                            <span class="text-dim" style="font-size:12px;">0 = disabled</span>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div style="display:flex; gap:8px; margin-top:16px;">
-                <button type="submit" class="btn btn-primary">Speichern</button>
-                <a th:href="@{/admin/race-scorings}" class="btn btn-secondary">Abbrechen</a>
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a th:href="@{/admin/race-scorings}" class="btn btn-secondary">Cancel</a>
             </div>
         </div>
     </form>

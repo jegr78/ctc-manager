@@ -37,13 +37,13 @@ class ScoringE2ETest extends PlaywrightConfig {
     @Test
     void shouldCreateRaceScoring() {
         page.navigate(url("/admin/race-scorings/new"));
-        assertThat(page.locator("h1")).containsText("Neues Race-Scoring");
+        assertThat(page.locator("h1")).containsText("New Race-Scoring");
 
         page.fill("#name", "E2E Test Scoring");
         // Add 3 race point positions
-        page.click("text=+ Hinzufuegen");
-        page.click("text=+ Hinzufuegen");
-        page.click("text=+ Hinzufuegen");
+        page.click("text=+ Add");
+        page.click("text=+ Add");
+        page.click("text=+ Add");
 
         // Set values in race points inputs
         var raceInputs = page.locator("#racePointsRows input[type=number]");
@@ -52,7 +52,7 @@ class ScoringE2ETest extends PlaywrightConfig {
         raceInputs.nth(2).fill("5");
 
         page.fill("#fastestLapPoints", "1");
-        page.click("text=Speichern");
+        page.click("text=Save");
 
         assertThat(page.locator(".alert-success")).containsText("Race-Scoring saved");
         assertThat(page.locator("table")).containsText("E2E Test Scoring");
@@ -69,13 +69,13 @@ class ScoringE2ETest extends PlaywrightConfig {
     @Test
     void shouldCreateMatchScoring() {
         page.navigate(url("/admin/match-scorings/new"));
-        assertThat(page.locator("h1")).containsText("Neues Match-Scoring");
+        assertThat(page.locator("h1")).containsText("New Match-Scoring");
 
         page.fill("#name", "E2E Match 2-1-0");
         page.fill("#pointsWin", "2");
         page.fill("#pointsDraw", "1");
         page.fill("#pointsLoss", "0");
-        page.click("text=Speichern");
+        page.click("text=Save");
 
         assertThat(page.locator(".alert-success")).containsText("Match-Scoring saved");
         assertThat(page.locator("table")).containsText("E2E Match 2-1-0");
@@ -87,9 +87,9 @@ class ScoringE2ETest extends PlaywrightConfig {
         page.fill("#name", "Invalid Scoring");
 
         // Add positions with non-monotonic values: 10, 20, 5
-        page.click("text=+ Hinzufuegen");
-        page.click("text=+ Hinzufuegen");
-        page.click("text=+ Hinzufuegen");
+        page.click("text=+ Add");
+        page.click("text=+ Add");
+        page.click("text=+ Add");
 
         var raceInputs = page.locator("#racePointsRows input[type=number]");
         raceInputs.nth(0).fill("10");
@@ -97,8 +97,8 @@ class ScoringE2ETest extends PlaywrightConfig {
         raceInputs.nth(2).fill("5");
 
         page.fill("#fastestLapPoints", "0");
-        page.click("text=Speichern");
+        page.click("text=Save");
 
-        assertThat(page.locator(".alert-error")).containsText("monoton fallend");
+        assertThat(page.locator(".alert-error")).containsText("monotonically decreasing");
     }
 }
