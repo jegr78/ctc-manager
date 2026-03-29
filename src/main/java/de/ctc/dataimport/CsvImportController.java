@@ -36,12 +36,10 @@ public class CsvImportController {
     public String preview(@RequestParam("file") MultipartFile file,
                           @RequestParam String seasonName,
                           @RequestParam String matchdayLabel,
-                          @RequestParam(required = false) String track,
-                          @RequestParam(required = false) String car,
                           @RequestParam(required = false) UUID playoffMatchupId,
                           Model model) {
         try {
-            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car, playoffMatchupId);
+            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId);
             var preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
 
             model.addAttribute("preview", preview);
@@ -61,15 +59,13 @@ public class CsvImportController {
     public String previewSheet(@RequestParam String sheetUrl,
                                @RequestParam String seasonName,
                                @RequestParam String matchdayLabel,
-                               @RequestParam(required = false) String track,
-                               @RequestParam(required = false) String car,
                                @RequestParam(required = false) UUID playoffMatchupId,
                                Model model) {
         try {
             var spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
             var sheetData = googleSheetsService.readRange(spreadsheetId, "A:H");
 
-            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car, playoffMatchupId);
+            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId);
             var preview = scorecardParser.parse(sheetData, metadata);
 
             model.addAttribute("preview", preview);
@@ -89,8 +85,6 @@ public class CsvImportController {
     @PostMapping("/execute")
     public String execute(@RequestParam String seasonName,
                           @RequestParam String matchdayLabel,
-                          @RequestParam(required = false) String track,
-                          @RequestParam(required = false) String car,
                           @RequestParam(required = false) UUID playoffMatchupId,
                           @RequestParam(required = false, defaultValue = "csv") String source,
                           @RequestParam(required = false) String sheetUrl,
@@ -98,7 +92,7 @@ public class CsvImportController {
                           @RequestParam(required = false) Map<String, String> allParams,
                           RedirectAttributes redirectAttributes) {
         try {
-            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car, playoffMatchupId);
+            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId);
 
             // Re-parse from original source
             CsvImportService.ImportPreview preview;

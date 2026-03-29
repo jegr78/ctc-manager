@@ -69,18 +69,6 @@
             </div>
         </div>
 
-        <!-- Shared: Track and Car -->
-        <div class="form-row">
-            <div class="form-group">
-                <label for="track">Track</label>
-                <input type="text" id="track" name="track" placeholder="Optional">
-            </div>
-            <div class="form-group">
-                <label for="car">Car</label>
-                <input type="text" id="car" name="car" placeholder="Optional">
-            </div>
-        </div>
-
         <!-- CSV Upload Panel -->
         <div id="panelCsv">
             <p class="text-dim" style="margin-bottom:12px;">
@@ -150,7 +138,7 @@
 
         // Sync shared fields into form before submit
         function syncFields(form) {
-            var fields = ['seasonName', 'matchdayLabel', 'track', 'car', 'playoffMatchupId'];
+            var fields = ['seasonName', 'matchdayLabel', 'playoffMatchupId'];
             fields.forEach(function(name) {
                 var source = document.getElementById(name);
                 if (!source) return;
