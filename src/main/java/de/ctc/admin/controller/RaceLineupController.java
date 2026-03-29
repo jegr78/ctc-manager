@@ -31,41 +31,49 @@ public class RaceLineupController {
         var race = raceRepository.findById(raceId).orElseThrow();
         var season = race.getMatchday().getSeason();
         var existingLineups = raceLineupRepository.findByRaceId(raceId);
-
         var seasonTeams = season.getTeams();
-        var parentTeamsWithSubs = seasonTeams.stream()
-                .filter(Team::isSubTeam)
-                .map(Team::getParentOrSelf)
-                .distinct()
-                .sorted(Comparator.comparing(Team::getShortName))
+
+        var raceTeams = java.util.stream.Stream.of(race.getHomeTeam(), race.getAwayTeam())
+                .filter(Objects::nonNull)
                 .toList();
 
-        var parentDriverMap = new LinkedHashMap<Team, List<SeasonDriver>>();
-        var parentSubTeamMap = new LinkedHashMap<Team, List<Team>>();
-        var driverSubTeamMap = new HashMap<UUID, UUID>();
-
-        for (var parent : parentTeamsWithSubs) {
-            var drivers = seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), parent.getId());
-            parentDriverMap.put(parent, drivers);
-
-            var subTeams = seasonTeams.stream()
-                    .filter(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()))
-                    .sorted(Comparator.comparing(Team::getShortName))
-                    .toList();
-            parentSubTeamMap.put(parent, subTeams);
-        }
+        // For each race team: collect available drivers and sub-team options
+        var teamEntries = new ArrayList<LineupTeamEntry>();
+        var driverAssignments = new HashMap<UUID, UUID>();
 
         for (var lineup : existingLineups) {
-            driverSubTeamMap.put(lineup.getDriver().getId(), lineup.getTeam().getId());
+            driverAssignments.put(lineup.getDriver().getId(), lineup.getTeam().getId());
+        }
+
+        for (var team : raceTeams) {
+            if (team.isSubTeam()) {
+                // Sub-team: show all drivers from all sub-teams of the parent with sub-team dropdown
+                var parent = team.getParentOrSelf();
+                if (teamEntries.stream().anyMatch(e -> e.team().getId().equals(parent.getId()))) continue;
+
+                var subTeams = seasonTeams.stream()
+                        .filter(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()))
+                        .sorted(Comparator.comparing(Team::getShortName))
+                        .toList();
+                // Drivers are registered at sub-team level, collect from all sub-teams
+                var drivers = subTeams.stream()
+                        .flatMap(sub -> seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), sub.getId()).stream())
+                        .toList();
+                teamEntries.add(new LineupTeamEntry(parent, drivers, subTeams, true));
+            } else {
+                // Standalone team: show team's drivers with checkbox
+                var drivers = seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), team.getId());
+                teamEntries.add(new LineupTeamEntry(team, drivers, List.of(), false));
+            }
         }
 
         model.addAttribute("race", race);
-        model.addAttribute("parentTeamsWithSubs", parentTeamsWithSubs);
-        model.addAttribute("parentDriverMap", parentDriverMap);
-        model.addAttribute("parentSubTeamMap", parentSubTeamMap);
-        model.addAttribute("driverSubTeamMap", driverSubTeamMap);
+        model.addAttribute("teamEntries", teamEntries);
+        model.addAttribute("driverAssignments", driverAssignments);
         return "admin/race-lineup";
     }
+
+    public record LineupTeamEntry(Team team, List<SeasonDriver> drivers, List<Team> subTeams, boolean hasSubTeams) {}
 
     @Transactional
     @PostMapping("/{raceId}/lineup")
@@ -77,6 +85,7 @@ public class RaceLineupController {
         var existing = raceLineupRepository.findByRaceId(raceId);
         raceLineupRepository.deleteAll(existing);
 
+        // driver_{driverId} = teamId (from dropdown or checkbox; blank = not assigned)
         int count = 0;
         for (var entry : params.entrySet()) {
             if (!entry.getKey().startsWith("driver_") || entry.getValue().isBlank()) continue;

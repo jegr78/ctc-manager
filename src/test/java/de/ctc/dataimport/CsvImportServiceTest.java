@@ -125,10 +125,11 @@ class CsvImportServiceTest {
     }
 
     @Test
-    void executeImport_withStandaloneTeams_doesNotCreateRaceLineup() {
+    void executeImport_withStandaloneTeams_createsRaceLineup() {
         setupCommonMocks();
         when(teamRepository.findByShortName("BRV")).thenReturn(Optional.of(standaloneTeam1));
         when(teamRepository.findByShortName("CRL")).thenReturn(Optional.of(standaloneTeam2));
+        when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
 
         var metadata = new CsvImportService.ImportMetadata("Season 1", null, null, null, null, matchday.getId());
         var row1 = new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
@@ -143,8 +144,8 @@ class CsvImportServiceTest {
         var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
 
         assertThat(result.hasErrors()).isFalse();
-        assertThat(result.getLineupCount()).isEqualTo(0);
-        verify(raceLineupRepository, never()).save(any());
+        assertThat(result.getLineupCount()).isEqualTo(2);
+        verify(raceLineupRepository, times(2)).save(any());
     }
 
     @Test

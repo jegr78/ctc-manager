@@ -53,8 +53,14 @@ public class MatchdayController {
     public String detail(@PathVariable UUID id, Model model) {
         var matchday = matchdayRepository.findById(id).orElseThrow();
         var lineups = raceLineupRepository.findByRaceMatchdayId(id);
+        // Group lineups by team for display
+        var lineupsByTeam = lineups.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        lu -> lu.getTeam().getShortName(),
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()));
         model.addAttribute("matchday", matchday);
-        model.addAttribute("lineups", lineups);
+        model.addAttribute("lineupsByTeam", lineupsByTeam);
         return "admin/matchday-detail";
     }
 

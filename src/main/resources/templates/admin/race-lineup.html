@@ -8,34 +8,43 @@
         <a th:href="@{/admin/races/{id}(id=${race.id})}" class="btn btn-secondary">Back to Race</a>
     </div>
 
-    <div th:if="${parentTeamsWithSubs.isEmpty()}" class="card">
-        <div class="empty-state">
-            <p>No teams with sub-teams in this season. Lineup assignment is only needed for teams with sub-teams.</p>
-        </div>
-    </div>
+    <form th:action="@{/admin/races/{id}/lineup(id=${race.id})}" method="post">
 
-    <form th:if="${!parentTeamsWithSubs.isEmpty()}"
-          th:action="@{/admin/races/{id}/lineup(id=${race.id})}" method="post">
-
-        <div th:each="parent : ${parentTeamsWithSubs}" class="card" style="margin-bottom:16px;">
-            <h2 th:text="${parent.shortName + ' — ' + parent.name}"></h2>
-            <table>
+        <div th:each="entry : ${teamEntries}" class="card" style="margin-bottom:16px;">
+            <h2 th:text="${entry.team.shortName + ' — ' + entry.team.name}"></h2>
+            <div th:if="${entry.drivers.isEmpty()}" class="empty-state" style="padding:16px;">
+                <p>No drivers registered for this team.</p>
+            </div>
+            <table th:if="${!entry.drivers.isEmpty()}">
                 <thead>
-                    <tr><th>PSN ID</th><th>Nickname</th><th>Sub-Team</th></tr>
+                    <tr>
+                        <th>PSN ID</th>
+                        <th>Nickname</th>
+                        <th th:if="${entry.hasSubTeams}">Sub-Team</th>
+                        <th th:unless="${entry.hasSubTeams}" style="text-align:center;">In Lineup</th>
+                    </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="sd : ${parentDriverMap.get(parent)}">
+                    <tr th:each="sd : ${entry.drivers}">
                         <td><strong th:text="${sd.driver.psnId}"></strong></td>
                         <td th:text="${sd.driver.nickname}"></td>
-                        <td>
+                        <!-- Sub-team: dropdown -->
+                        <td th:if="${entry.hasSubTeams}">
                             <select th:name="'driver_' + ${sd.driver.id}">
                                 <option value="">-- Not assigned --</option>
-                                <option th:each="sub : ${parentSubTeamMap.get(parent)}"
+                                <option th:each="sub : ${entry.subTeams}"
                                         th:value="${sub.id}"
                                         th:text="${sub.shortName}"
-                                        th:selected="${driverSubTeamMap.get(sd.driver.id) == sub.id}">
+                                        th:selected="${driverAssignments.get(sd.driver.id) == sub.id}">
                                 </option>
                             </select>
+                        </td>
+                        <!-- Standalone: checkbox -->
+                        <td th:unless="${entry.hasSubTeams}" style="text-align:center;">
+                            <input type="checkbox"
+                                   th:name="'driver_' + ${sd.driver.id}"
+                                   th:value="${entry.team.id}"
+                                   th:checked="${driverAssignments.containsKey(sd.driver.id)}">
                         </td>
                     </tr>
                 </tbody>

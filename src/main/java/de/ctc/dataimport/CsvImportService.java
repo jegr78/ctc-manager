@@ -143,9 +143,9 @@ public class CsvImportService {
                 scoringService.calculatePoints(raceResult, season.getRaceScoring());
                 race.getResults().add(raceResult);
 
-                // Create RaceLineup for sub-teams
+                // Create RaceLineup for all teams
                 var resolvedTeam = findTeamFlexible(row.teamShortName());
-                if (resolvedTeam != null && resolvedTeam.isSubTeam()) {
+                if (resolvedTeam != null) {
                     var existingLineup = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId());
                     if (existingLineup.isEmpty()) {
                         raceLineupRepository.save(new RaceLineup(race, driver, resolvedTeam));

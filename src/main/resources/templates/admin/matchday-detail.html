@@ -94,13 +94,15 @@
             <div th:if="${matchday.matches.isEmpty()}" class="empty-state" style="padding:16px;"><p>No matches yet.</p></div>
         </div>
 
-        <div th:if="${!lineups.isEmpty()}" class="detail-section" style="margin-top:32px;">
-            <h2 th:text="'Lineup (' + ${lineups.size()} + ' assignments)'"></h2>
-            <div class="chip-list">
-                <span th:each="lu : ${lineups}" class="chip">
-                    <span th:text="${lu.driver.psnId}"></span>
-                    <span th:if="${lu.team != null}" class="text-dim" th:text="' (' + ${lu.team.shortName} + ')'"></span>
-                </span>
+        <div th:if="${!lineupsByTeam.isEmpty()}" class="detail-section" style="margin-top:32px;">
+            <h2>Lineup</h2>
+            <div th:each="entry : ${lineupsByTeam}" style="margin-bottom:12px;">
+                <h3 th:text="${entry.key}" style="margin-bottom:4px;"></h3>
+                <div class="chip-list">
+                    <span th:each="lu : ${entry.value}" class="chip">
+                        <span th:text="${lu.driver.psnId}"></span>
+                    </span>
+                </div>
             </div>
         </div>
     </div>
