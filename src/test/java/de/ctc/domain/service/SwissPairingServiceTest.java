@@ -18,31 +18,31 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class SwissPairingServiceTest {
 
-    @Autowired
-    private SwissPairingService swissPairingService;
-
-    @Autowired
-    private SeasonRepository seasonRepository;
-
-    @Autowired
-    private RaceRepository raceRepository;
-
-    @Autowired
-    private TeamRepository teamRepository;
-
-    @Autowired
-    private DriverRepository driverRepository;
-
-    @Autowired
-    private SeasonDriverRepository seasonDriverRepository;
+    @Autowired private SwissPairingService swissPairingService;
+    @Autowired private SeasonRepository seasonRepository;
+    @Autowired private RaceRepository raceRepository;
+    @Autowired private MatchRepository matchRepository;
+    @Autowired private TeamRepository teamRepository;
+    @Autowired private DriverRepository driverRepository;
+    @Autowired private SeasonDriverRepository seasonDriverRepository;
+    @Autowired private RaceScoringRepository raceScoringRepository;
+    @Autowired private MatchScoringRepository matchScoringRepository;
 
     private Season season;
 
     @BeforeEach
     void setUp() {
-        season = new Season("Swiss Test " + UUID.randomUUID().toString().substring(0, 4));
+        var uniqueSuffix = UUID.randomUUID().toString().substring(0, 4);
+        var raceScoring = raceScoringRepository.save(
+                new RaceScoring("Swiss RS " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
+        var matchScoring = matchScoringRepository.save(
+                new MatchScoring("Swiss MS " + uniqueSuffix, 3, 1, 0));
+
+        season = new Season("Swiss Test " + uniqueSuffix);
         season.setFormat(SeasonFormat.SWISS);
         season.setTotalRounds(5);
+        season.setRaceScoring(raceScoring);
+        season.setMatchScoring(matchScoring);
         season = seasonRepository.save(season);
     }
 
@@ -92,8 +92,16 @@ class SwissPairingServiceTest {
 
     @Test
     void shouldRejectNonSwissSeason() {
-        var leagueSeason = new Season("League Test " + UUID.randomUUID().toString().substring(0, 4));
+        var uniqueSuffix = UUID.randomUUID().toString().substring(0, 4);
+        var raceScoring = raceScoringRepository.save(
+                new RaceScoring("League RS " + uniqueSuffix, "20,17,14", null, 0));
+        var matchScoring = matchScoringRepository.save(
+                new MatchScoring("League MS " + uniqueSuffix, 3, 1, 0));
+
+        var leagueSeason = new Season("League Test " + uniqueSuffix);
         leagueSeason.setFormat(SeasonFormat.LEAGUE);
+        leagueSeason.setRaceScoring(raceScoring);
+        leagueSeason.setMatchScoring(matchScoring);
         leagueSeason = seasonRepository.save(leagueSeason);
 
         UUID id = leagueSeason.getId();
@@ -103,15 +111,11 @@ class SwissPairingServiceTest {
 
     @Test
     void shouldAvoidRematchesInSubsequentRounds() {
-        // Use 8 teams so rematches are fully avoidable in 2 rounds
-        // (each team has played 1 of 7 opponents, leaving 6 available)
         addTeams(8);
 
-        // Generate first round and add results
         var md1 = swissPairingService.generateNextRound(season.getId());
         addDummyResults(md1.getId());
 
-        // Record first round pairs
         var races1 = raceRepository.findByMatchdayId(md1.getId());
         assertEquals(4, races1.size());
         Set<String> firstRoundPairs = new HashSet<>();
@@ -119,12 +123,10 @@ class SwissPairingServiceTest {
             firstRoundPairs.add(pairKey(race.getHomeTeam().getId(), race.getAwayTeam().getId()));
         }
 
-        // Generate second round
         var md2 = swissPairingService.generateNextRound(season.getId());
         var races2 = raceRepository.findByMatchdayId(md2.getId());
         assertEquals(4, races2.size());
 
-        // No rematches
         for (var race : races2) {
             String pair = pairKey(race.getHomeTeam().getId(), race.getAwayTeam().getId());
             assertFalse(firstRoundPairs.contains(pair),
@@ -136,10 +138,8 @@ class SwissPairingServiceTest {
     void shouldBlockNextRoundWhenCurrentRoundIncomplete() {
         addTeams(4);
 
-        // Generate round 1 but do NOT add results
         swissPairingService.generateNextRound(season.getId());
 
-        // Attempting to generate round 2 should fail
         var ex = assertThrows(IllegalStateException.class,
                 () -> swissPairingService.generateNextRound(season.getId()));
         assertTrue(ex.getMessage().toLowerCase().contains("incomplete"),
@@ -155,17 +155,10 @@ class SwissPairingServiceTest {
 
         var buchholz = swissPairingService.calculateBuchholz(season.getId());
 
-        // 4 teams played 1 round -> 2 races, each team has exactly 1 opponent
         assertEquals(4, buchholz.size());
 
-        // addDummyResults gives homeDriver 20 pts, awayDriver 10 pts
-        // -> homeTeam wins each race (3 standings points), awayTeam loses (0 points)
-        // Winners' Buchholz = opponent's standings points = 0
-        // Losers' Buchholz = opponent's standings points = 3
         var values = new ArrayList<>(buchholz.values());
         Collections.sort(values);
-        // Two teams have Buchholz 0 (winners, whose opponents scored 0 pts)
-        // Two teams have Buchholz 3 (losers, whose opponents scored 3 pts)
         assertEquals(List.of(0, 0, 3, 3), values);
     }
 
@@ -207,8 +200,11 @@ class SwissPairingServiceTest {
             ar.setPointsTotal(10);
             race.getResults().add(ar);
 
-            race.setHomeScore(20);
-            race.setAwayScore(10);
+            // Set scores on the Match
+            if (race.getMatch() != null) {
+                race.getMatch().setHomeScore(20);
+                race.getMatch().setAwayScore(10);
+            }
 
             raceRepository.save(race);
         }

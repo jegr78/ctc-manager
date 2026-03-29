@@ -1,11 +1,7 @@
 package de.ctc.admin;
 
-import de.ctc.domain.model.Driver;
-import de.ctc.domain.model.Season;
-import de.ctc.domain.model.Team;
-import de.ctc.domain.repository.DriverRepository;
-import de.ctc.domain.repository.SeasonRepository;
-import de.ctc.domain.repository.TeamRepository;
+import de.ctc.domain.model.*;
+import de.ctc.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +17,8 @@ public class TestDataService {
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
     private final DriverRepository driverRepository;
+    private final RaceScoringRepository raceScoringRepository;
+    private final MatchScoringRepository matchScoringRepository;
 
     @Transactional
     public void seed() {
@@ -28,12 +26,24 @@ public class TestDataService {
             log.debug("Seed data already present, skipping");
             return;
         }
+        var scorings = seedScorings();
         var teams = seedTeams();
         seedSubTeams(teams);
-        seedSeasons(teams);
+        seedSeasons(teams, scorings);
         seedDrivers();
         log.info("Seed data created: {} teams, {} seasons, {} drivers",
                 teamRepository.count(), seasonRepository.count(), driverRepository.count());
+    }
+
+    private record ScoringDefaults(RaceScoring raceScoring, MatchScoring matchScoring) {}
+
+    private ScoringDefaults seedScorings() {
+        var raceScoring = raceScoringRepository.save(
+                new RaceScoring("CTC Standard", "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
+        var matchScoring = matchScoringRepository.save(
+                new MatchScoring("Standard 3-1-0", 3, 1, 0));
+        log.info("Created default scoring presets: {} / {}", raceScoring.getName(), matchScoring.getName());
+        return new ScoringDefaults(raceScoring, matchScoring);
     }
 
     private List<Team> seedTeams() {
@@ -72,7 +82,7 @@ public class TestDataService {
         log.info("Created sub-teams: CLR(2), TNR(3), AHR(2), P1R(2)");
     }
 
-    private void seedSeasons(List<Team> parentTeams) {
+    private void seedSeasons(List<Team> parentTeams, ScoringDefaults scorings) {
         var allTeams = teamRepository.findAll();
 
         // Helper to find parent team (no parent) by shortName
@@ -89,13 +99,13 @@ public class TestDataService {
 
         // Older seasons: all parent teams
         for (String name : List.of("Season 1 - 2023 - Group A", "Season 1 - 2023 - Group B", "Season 2 - 2024")) {
-            var season = new Season(name);
+            var season = createSeason(name, scorings);
             season.getTeams().addAll(parentTeams);
             seasonRepository.save(season);
         }
 
         // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
-        var s3a = new Season("Season 3 - 2025 - Group A");
+        var s3a = createSeason("Season 3 - 2025 - Group A", scorings);
         s3a.getTeams().addAll(List.of(
                 findSub.apply("P1Rx"),
                 findParent.apply("CLR"),
@@ -106,7 +116,7 @@ public class TestDataService {
         seasonRepository.save(s3a);
 
         // Season 3 - 2025 - Group B: P1R parent + P1R sub-team, AHR, DTR, ART
-        var s3b = new Season("Season 3 - 2025 - Group B");
+        var s3b = createSeason("Season 3 - 2025 - Group B", scorings);
         s3b.getTeams().addAll(List.of(
                 findParent.apply("P1R"),
                 findSub.apply("P1R"),
@@ -117,7 +127,7 @@ public class TestDataService {
         seasonRepository.save(s3b);
 
         // Season 4 - 2026: all parents with subs + standalone parents
-        var s4 = new Season("Season 4 - 2026");
+        var s4 = createSeason("Season 4 - 2026", scorings);
         s4.setActive(true);
         s4.getTeams().addAll(List.of(
                 findParent.apply("CLR"),
@@ -139,6 +149,13 @@ public class TestDataService {
                 findParent.apply("TCR")
         ));
         seasonRepository.save(s4);
+    }
+
+    private Season createSeason(String name, ScoringDefaults scorings) {
+        var season = new Season(name);
+        season.setRaceScoring(scorings.raceScoring());
+        season.setMatchScoring(scorings.matchScoring());
+        return season;
     }
 
     private void seedDrivers() {

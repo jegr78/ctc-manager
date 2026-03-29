@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Match-Scorings', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Match-Scorings</h1>
+        <a th:href="@{/admin/match-scorings/new}" class="btn btn-primary">+ New</a>
+    </div>
+    <div class="card">
+        <table th:if="${!scorings.isEmpty()}">
+            <thead>
+                <tr><th>Name</th><th style="text-align:center">Win</th><th style="text-align:center">Draw</th><th style="text-align:center">Loss</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                <tr th:each="s : ${scorings}">
+                    <td><strong th:text="${s.name}"></strong></td>
+                    <td style="text-align:center; color:#66bb6a; font-weight:700;" th:text="${s.pointsWin}"></td>
+                    <td style="text-align:center; color:var(--text-label); font-weight:700;" th:text="${s.pointsDraw}"></td>
+                    <td style="text-align:center; color:#ef5350; font-weight:700;" th:text="${s.pointsLoss}"></td>
+                    <td class="actions">
+                        <a th:href="@{/admin/match-scorings/{id}/edit(id=${s.id})}" class="btn btn-secondary btn-sm">Edit</a>
+                        <form th:action="@{/admin/match-scorings/{id}/delete(id=${s.id})}" method="post"
+                              onsubmit="return confirm('Really delete this scoring?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div th:if="${scorings.isEmpty()}" class="empty-state"><p>No match scorings created yet.</p></div>
+    </div>
+</section>
+</body>
+</html>

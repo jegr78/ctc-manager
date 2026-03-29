@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "seasons")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchdays", "seasonDrivers", "teams", "cars", "tracks"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchdays", "seasonDrivers", "teams", "cars", "tracks", "raceScoring", "matchScoring"})
 public class Season {
 
     @Id
@@ -37,6 +37,17 @@ public class Season {
     private SeasonFormat format = SeasonFormat.LEAGUE;
 
     private Integer totalRounds;
+
+    @Column(nullable = false)
+    private int legs = 1;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "race_scoring_id", nullable = false)
+    private RaceScoring raceScoring;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "match_scoring_id", nullable = false)
+    private MatchScoring matchScoring;
 
     @OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortIndex ASC")

@@ -1,14 +1,7 @@
 package de.ctc.admin.controller;
 
-import de.ctc.domain.model.Race;
-import de.ctc.domain.model.RaceResult;
-import de.ctc.domain.model.Season;
-import de.ctc.domain.model.SeasonFormat;
-import de.ctc.domain.repository.CarRepository;
-import de.ctc.domain.repository.PlayoffRepository;
-import de.ctc.domain.repository.SeasonRepository;
-import de.ctc.domain.repository.TeamRepository;
-import de.ctc.domain.repository.TrackRepository;
+import de.ctc.domain.model.*;
+import de.ctc.domain.repository.*;
 import de.ctc.domain.service.SwissPairingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +25,8 @@ public class SeasonController {
     private final CarRepository carRepository;
     private final TrackRepository trackRepository;
     private final PlayoffRepository playoffRepository;
+    private final RaceScoringRepository raceScoringRepository;
+    private final MatchScoringRepository matchScoringRepository;
     private final SwissPairingService swissPairingService;
 
     @GetMapping("/{id}")
@@ -53,6 +48,7 @@ public class SeasonController {
     @GetMapping("/new")
     public String create(Model model) {
         model.addAttribute("season", new Season());
+        addScoringLists(model);
         return "admin/season-form";
     }
 
@@ -63,17 +59,20 @@ public class SeasonController {
         model.addAttribute("allTeams", teamRepository.findAll());
         model.addAttribute("allCars", carRepository.findAllByOrderByManufacturerAscNameAsc());
         model.addAttribute("allTracks", trackRepository.findAllByOrderByNameAsc());
+        addScoringLists(model);
         return "admin/season-form";
     }
 
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute Season season, BindingResult result,
-                       RedirectAttributes redirectAttributes) {
+                       @RequestParam UUID raceScoring,
+                       @RequestParam UUID matchScoring,
+                       RedirectAttributes redirectAttributes, Model model) {
         if (result.hasErrors()) {
+            addScoringLists(model);
             return "admin/season-form";
         }
         if (season.getId() != null) {
-            // Update existing: load and merge only form fields to preserve relationships
             var existing = seasonRepository.findById(season.getId()).orElseThrow();
             existing.setName(season.getName());
             existing.setStartDate(season.getStartDate());
@@ -81,6 +80,9 @@ public class SeasonController {
             existing.setActive(season.isActive());
             existing.setFormat(season.getFormat());
             existing.setTotalRounds(season.getFormat() == SeasonFormat.SWISS ? season.getTotalRounds() : null);
+            existing.setLegs(season.getLegs());
+            existing.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
+            existing.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
             seasonRepository.save(existing);
             log.info("Updated season: {}", existing.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + existing.getName());
@@ -88,6 +90,8 @@ public class SeasonController {
             if (season.getFormat() == SeasonFormat.LEAGUE) {
                 season.setTotalRounds(null);
             }
+            season.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
+            season.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
             seasonRepository.save(season);
             log.info("Created season: {}", season.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
@@ -263,5 +267,10 @@ public class SeasonController {
                 .anyMatch(sd -> sd.getSeason().getId().equals(seasonId)
                         && (sd.getTeam().getId().equals(race.getHomeTeam().getId())
                             || sd.getTeam().getId().equals(race.getHomeTeam().getParentOrSelf().getId())));
+    }
+
+    private void addScoringLists(Model model) {
+        model.addAttribute("allRaceScorings", raceScoringRepository.findAll());
+        model.addAttribute("allMatchScorings", matchScoringRepository.findAll());
     }
 }

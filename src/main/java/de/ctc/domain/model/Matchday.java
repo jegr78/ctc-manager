@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "matchdays")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"season", "races"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"season", "matches", "races"})
 public class Matchday {
 
     @Id
@@ -30,6 +30,9 @@ public class Matchday {
 
     @Column(nullable = false)
     private int sortIndex;
+
+    @OneToMany(mappedBy = "matchday", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Match> matches = new ArrayList<>();
 
     @OneToMany(mappedBy = "matchday", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Race> races = new ArrayList<>();

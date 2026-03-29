@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Race-Scorings', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Race-Scorings</h1>
+        <a th:href="@{/admin/race-scorings/new}" class="btn btn-primary">+ New</a>
+    </div>
+    <div class="card">
+        <table th:if="${!scorings.isEmpty()}">
+            <thead>
+                <tr><th>Name</th><th>Race Points</th><th>Quali</th><th>FL</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                <tr th:each="s : ${scorings}">
+                    <td><strong th:text="${s.name}"></strong></td>
+                    <td class="text-dim" th:text="${s.racePoints}"></td>
+                    <td class="text-dim" th:text="${s.qualiPoints != null ? s.qualiPoints : '—'}"></td>
+                    <td th:text="${s.fastestLapPoints}"></td>
+                    <td class="actions">
+                        <a th:href="@{/admin/race-scorings/{id}/edit(id=${s.id})}" class="btn btn-secondary btn-sm">Edit</a>
+                        <form th:action="@{/admin/race-scorings/{id}/delete(id=${s.id})}" method="post"
+                              onsubmit="return confirm('Really delete this scoring?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div th:if="${scorings.isEmpty()}" class="empty-state"><p>No race scorings created yet.</p></div>
+    </div>
+</section>
+</body>
+</html>

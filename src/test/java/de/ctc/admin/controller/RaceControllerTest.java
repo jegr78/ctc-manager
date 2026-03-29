@@ -37,6 +37,9 @@ class RaceControllerTest {
     private RaceRepository raceRepository;
 
     @Autowired
+    private MatchRepository matchRepository;
+
+    @Autowired
     private DriverRepository driverRepository;
 
     @Autowired
@@ -44,6 +47,12 @@ class RaceControllerTest {
 
     @Autowired
     private TrackRepository trackRepository;
+
+    @Autowired
+    private RaceScoringRepository raceScoringRepository;
+
+    @Autowired
+    private MatchScoringRepository matchScoringRepository;
 
     private Season season;
     private Matchday matchday;
@@ -53,11 +62,20 @@ class RaceControllerTest {
 
     @BeforeEach
     void setUp() {
-        season = seasonRepository.save(new Season("Race Test Season"));
+        var rs = raceScoringRepository.save(new RaceScoring("RT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
+        var ms = matchScoringRepository.save(new MatchScoring("RT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
+        var s = new Season("Race Test Season");
+        s.setRaceScoring(rs);
+        s.setMatchScoring(ms);
+        season = seasonRepository.save(s);
         matchday = matchdayRepository.save(new Matchday(season, "RT Matchday", 1));
         home = teamRepository.save(new Team("Home Racing", "HRC"));
         away = teamRepository.save(new Team("Away Racing", "ARC"));
-        race = raceRepository.save(new Race(matchday, home, away));
+        var match = matchRepository.save(new Match(matchday, home, away));
+        var r = new Race();
+        r.setMatchday(matchday);
+        r.setMatch(match);
+        race = raceRepository.save(r);
     }
 
     @Test

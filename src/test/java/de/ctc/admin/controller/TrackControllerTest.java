@@ -39,6 +39,15 @@ class TrackControllerTest {
     @Autowired
     private TeamRepository teamRepository;
 
+    @Autowired
+    private MatchRepository matchRepository;
+
+    @Autowired
+    private RaceScoringRepository raceScoringRepository;
+
+    @Autowired
+    private MatchScoringRepository matchScoringRepository;
+
     private Track track;
 
     @BeforeEach
@@ -127,11 +136,19 @@ class TrackControllerTest {
 
     @Test
     void shouldNotDeleteTrackWhenReferencedByRace() throws Exception {
-        var season = seasonRepository.save(new Season("Track Test Season"));
+        var rs = raceScoringRepository.save(new RaceScoring("TT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0));
+        var ms = matchScoringRepository.save(new MatchScoring("TT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
+        var s = new Season("Track Test Season");
+        s.setRaceScoring(rs);
+        s.setMatchScoring(ms);
+        var season = seasonRepository.save(s);
         var matchday = matchdayRepository.save(new Matchday(season, "TT Matchday", 1));
         var home = teamRepository.save(new Team("Home Team", "HOM"));
         var away = teamRepository.save(new Team("Away Team", "AWY"));
-        var race = new Race(matchday, home, away);
+        var match = matchRepository.save(new Match(matchday, home, away));
+        var race = new Race();
+        race.setMatchday(matchday);
+        race.setMatch(match);
         race.setTrack(track);
         raceRepository.save(race);
 

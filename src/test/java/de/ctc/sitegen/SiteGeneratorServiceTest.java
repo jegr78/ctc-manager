@@ -51,6 +51,15 @@ class SiteGeneratorServiceTest {
     private TrackRepository trackRepository;
 
     @Autowired
+    private MatchRepository matchRepository;
+
+    @Autowired
+    private RaceScoringRepository raceScoringRepository;
+
+    @Autowired
+    private MatchScoringRepository matchScoringRepository;
+
+    @Autowired
     private de.ctc.domain.service.ScoringService scoringService;
 
     @TempDir
@@ -70,8 +79,15 @@ class SiteGeneratorServiceTest {
             }
         });
 
+        var raceScoring = raceScoringRepository.save(
+                new RaceScoring("Gen RS " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
+        var matchScoring = matchScoringRepository.save(
+                new MatchScoring("Gen MS " + uniqueSuffix, 3, 1, 0));
+
         season = new Season("Gen Test " + uniqueSuffix);
         season.setActive(true);
+        season.setRaceScoring(raceScoring);
+        season.setMatchScoring(matchScoring);
         seasonRepository.save(season);
 
         var tnr = teamRepository.save(new Team("The Neutrals Racing " + uniqueSuffix, "GTNR" + uniqueSuffix));
@@ -94,7 +110,10 @@ class SiteGeneratorServiceTest {
         var matchday = matchdayRepository.save(new Matchday(season, "Spieltag 1", 1));
         var testTrack = trackRepository.save(new Track("Tsukuba " + uniqueSuffix, "Japan"));
         var testCar = carRepository.save(new Car("Mazda " + uniqueSuffix, "RX-Vision GT3"));
-        var race = new Race(matchday, tnr, p1r);
+        var match = matchRepository.save(new Match(matchday, tnr, p1r));
+        var race = new Race();
+        race.setMatchday(matchday);
+        race.setMatch(match);
         race.setTrack(testTrack);
         race.setCar(testCar);
 
@@ -102,15 +121,20 @@ class SiteGeneratorServiceTest {
         var r2 = new RaceResult(race, driver2, 3, 3, false);
         var r3 = new RaceResult(race, driver3, 2, 2, true);
         var r4 = new RaceResult(race, driver4, 4, 4, false);
-        scoringService.calculatePoints(r1);
-        scoringService.calculatePoints(r2);
-        scoringService.calculatePoints(r3);
-        scoringService.calculatePoints(r4);
+        scoringService.calculatePoints(r1, raceScoring);
+        scoringService.calculatePoints(r2, raceScoring);
+        scoringService.calculatePoints(r3, raceScoring);
+        scoringService.calculatePoints(r4, raceScoring);
         race.getResults().add(r1);
         race.getResults().add(r2);
         race.getResults().add(r3);
         race.getResults().add(r4);
         raceRepository.save(race);
+
+        // Set match scores
+        match.setHomeScore(r1.getPointsTotal() + r2.getPointsTotal());
+        match.setAwayScore(r3.getPointsTotal() + r4.getPointsTotal());
+        matchRepository.save(match);
 
         // Override output dir for test
         siteGeneratorService.setOutputDir(tempDir.toString());

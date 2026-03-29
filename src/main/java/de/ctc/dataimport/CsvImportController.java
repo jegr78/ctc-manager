@@ -21,6 +21,7 @@ public class CsvImportController {
 
     private final CsvImportService csvImportService;
     private final SeasonRepository seasonRepository;
+    private final de.ctc.domain.repository.MatchdayRepository matchdayRepository;
     private final GoogleSheetsService googleSheetsService;
     private final ScorecardParser scorecardParser;
     private final PlayoffMatchupRepository playoffMatchupRepository;
@@ -43,9 +44,11 @@ public class CsvImportController {
             var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId, matchdayId);
             var preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
 
+            csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
             model.addAttribute("source", "csv");
+            addMatchdayName(model, metadata);
             addCommonAttributes(model);
             return "admin/import-preview";
         } catch (Exception e) {
@@ -70,10 +73,12 @@ public class CsvImportController {
             var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId, matchdayId);
             var preview = scorecardParser.parse(sheetData, metadata);
 
+            csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
             model.addAttribute("source", "sheet");
             model.addAttribute("sheetUrl", sheetUrl);
+            addMatchdayName(model, metadata);
             addCommonAttributes(model);
             return "admin/import-preview";
         } catch (Exception e) {
@@ -92,6 +97,7 @@ public class CsvImportController {
                           @RequestParam(required = false, defaultValue = "csv") String source,
                           @RequestParam(required = false) String sheetUrl,
                           @RequestParam(required = false) MultipartFile file,
+                          @RequestParam(required = false, defaultValue = "false") boolean overwrite,
                           @RequestParam(required = false) Map<String, String> allParams,
                           RedirectAttributes redirectAttributes) {
         try {
@@ -128,7 +134,7 @@ public class CsvImportController {
                 }
             }
 
-            var result = csvImportService.executeImport(preview, confirmedMatches, createNewDrivers);
+            var result = csvImportService.executeImport(preview, confirmedMatches, createNewDrivers, overwrite);
 
             if (result.hasErrors()) {
                 redirectAttributes.addFlashAttribute("errorMessage",
@@ -143,6 +149,13 @@ public class CsvImportController {
             redirectAttributes.addFlashAttribute("errorMessage", "Import error: " + e.getMessage());
         }
         return "redirect:/admin/import";
+    }
+
+    private void addMatchdayName(Model model, CsvImportService.ImportMetadata metadata) {
+        if (metadata.hasMatchdayId()) {
+            matchdayRepository.findById(metadata.matchdayId())
+                    .ifPresent(md -> model.addAttribute("matchdayName", md.getLabel()));
+        }
     }
 
     private void addCommonAttributes(Model model) {

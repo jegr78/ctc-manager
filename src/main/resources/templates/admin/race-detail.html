@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Race: ' + ${race.homeTeam.shortName} + ' vs ' + ${race.awayTeam.shortName}, ~{::section})}">
+      th:replace="~{admin/layout :: layout('Race: ' + ${race.homeTeam.shortName} + ' vs ' + ${race.awayTeam?.shortName ?: 'Bye'}, ~{::section})}">
 <body>
 <section>
     <div class="toolbar">
@@ -8,7 +8,7 @@
             <a th:href="@{/admin/races(matchdayId=${race.matchday.id})}" class="back-link">&larr; Back to Races</a>
             <h1>
                 <span th:text="${race.homeTeam.shortName}"></span> vs
-                <span th:text="${race.awayTeam.shortName}"></span>
+                <span th:text="${race.awayTeam?.shortName ?: 'Bye'}"></span>
             </h1>
         </div>
         <div class="actions">
@@ -21,25 +21,66 @@
         </div>
     </div>
 
+    <!-- Score Banner -->
+    <div th:if="${homeTotal != null}" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:24px; margin-bottom:16px; display:flex; align-items:center; justify-content:center; gap:32px;">
+        <div style="text-align:center; flex:1;"
+             th:with="isWinner=${homeTotal > awayTotal}, isLoser=${homeTotal < awayTotal}">
+            <div style="font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin-bottom:4px;">Home</div>
+            <div style="font-size:16px; font-weight:600; margin-bottom:8px;"
+                 th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--white);')}"
+                 th:text="${race.homeTeam.shortName}"></div>
+            <div style="font-size:36px; font-weight:700; font-variant-numeric:tabular-nums; margin-bottom:6px;"
+                 th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--text-label);')}"
+                 th:text="${homeTotal}"></div>
+            <div style="height:22px;">
+                <span th:if="${isWinner}" style="background:rgba(102,187,106,0.15); color:#66bb6a; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; letter-spacing:0.5px;">WIN</span>
+                <span th:if="${isLoser}" style="font-size:11px; color:var(--text-dim); letter-spacing:0.5px;">LOSS</span>
+            </div>
+        </div>
+
+        <div style="font-size:24px; color:var(--text-dim); font-weight:300;">:</div>
+
+        <div style="text-align:center; flex:1;"
+             th:with="isWinner=${awayTotal > homeTotal}, isLoser=${awayTotal < homeTotal}">
+            <div style="font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin-bottom:4px;">Away</div>
+            <div style="font-size:16px; font-weight:600; margin-bottom:8px;"
+                 th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--white);')}"
+                 th:text="${race.awayTeam?.shortName}"></div>
+            <div style="font-size:36px; font-weight:700; font-variant-numeric:tabular-nums; margin-bottom:6px;"
+                 th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--text-label);')}"
+                 th:text="${awayTotal}"></div>
+            <div style="height:22px;">
+                <span th:if="${isWinner}" style="background:rgba(102,187,106,0.15); color:#66bb6a; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; letter-spacing:0.5px;">WIN</span>
+                <span th:if="${isLoser}" style="font-size:11px; color:var(--text-dim); letter-spacing:0.5px;">LOSS</span>
+            </div>
+        </div>
+
+        <div th:if="${homeTotal == awayTotal}" style="position:absolute;">
+            <span style="background:rgba(255,255,255,0.1); color:var(--text-label); padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; letter-spacing:0.5px;">DRAW</span>
+        </div>
+    </div>
+
     <div class="card">
         <div class="detail-fields">
             <span class="label">Matchday</span>
             <a th:href="@{/admin/matchdays/{id}(id=${race.matchday.id})}" class="detail-link" th:text="${race.matchday.label}"></a>
-            <span class="label">Home Team</span>
-            <a th:href="@{/admin/teams/{id}(id=${race.homeTeam.id})}" class="detail-link" th:text="${race.homeTeam.name}"></a>
-            <span class="label">Away Team</span>
-            <a th:href="@{/admin/teams/{id}(id=${race.awayTeam.id})}" class="detail-link" th:text="${race.awayTeam.name}"></a>
+            <span class="label">Season</span>
+            <a th:href="@{/admin/seasons/{id}(id=${race.matchday.season.id})}" class="detail-link" th:text="${race.matchday.season.name}"></a>
             <span class="label">Track</span>
             <span th:text="${race.track?.name ?: '-'}"></span>
             <span class="label">Car</span>
             <span th:text="${race.car?.displayName ?: '-'}"></span>
             <span class="label">Date &amp; Time</span>
             <span th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></span>
-            <span class="label">Playoff</span>
+            <span class="label">Context</span>
             <span th:if="${race.playoffMatchup != null}">
-                <a th:href="@{/admin/playoffs/matchup/{id}(id=${race.playoffMatchup.id})}" class="detail-link" th:text="'Matchup #' + ${race.playoffMatchup.bracketPosition}"></a>
+                <a th:href="@{/admin/playoffs/matchup/{id}(id=${race.playoffMatchup.id})}" class="detail-link">
+                    <span style="background:rgba(79,195,247,0.1); color:var(--accent); padding:2px 8px; border-radius:12px; font-size:12px; font-weight:600;">Playoff</span>
+                    <span th:text="' Matchup #' + ${race.playoffMatchup.bracketPosition}"></span>
+                </a>
             </span>
-            <span th:if="${race.playoffMatchup == null}">-</span>
+            <span th:if="${race.match != null && race.playoffMatchup == null}">Regular Season Match</span>
+            <span th:if="${race.match == null && race.playoffMatchup == null}">-</span>
         </div>
 
         <div class="detail-section">
@@ -47,15 +88,21 @@
             <div th:if="${!race.results.isEmpty()}">
                 <table>
                     <thead>
-                        <tr><th>Pos</th><th>Driver</th><th>Quali</th><th>FL</th><th>Points</th></tr>
+                        <tr><th>Pos</th><th>Team</th><th>Driver</th><th style="text-align:center;">Quali</th><th style="text-align:right;">Race</th><th style="text-align:right;">Quali</th><th style="text-align:right;">FL</th><th style="text-align:right;">Total</th></tr>
                     </thead>
                     <tbody>
                         <tr th:each="result : ${race.results}">
-                            <td th:text="${result.position}"></td>
+                            <td style="font-variant-numeric:tabular-nums;" th:text="${result.position}"></td>
+                            <td>
+                                <span style="font-size:12px; font-weight:600;"
+                                      th:text="${driverTeamMap != null ? driverTeamMap[result.driver.id] : '?'}"></span>
+                            </td>
                             <td><a th:href="@{/admin/drivers/{id}(id=${result.driver.id})}" class="detail-link" th:text="${result.driver.psnId}"></a></td>
-                            <td th:text="${result.qualiPosition}"></td>
-                            <td th:text="${result.fastestLap ? '&#x2713;' : ''}"></td>
-                            <td th:text="${result.pointsTotal}"></td>
+                            <td style="text-align:center; font-variant-numeric:tabular-nums;" th:text="${result.qualiPosition}"></td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums;" th:text="${result.pointsRace}"></td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums; color:var(--text-dim);" th:text="${result.pointsQuali > 0 ? result.pointsQuali : '-'}"></td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums; color:var(--text-dim);" th:text="${result.pointsFl > 0 ? result.pointsFl : '-'}"></td>
+                            <td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:700;" th:text="${result.pointsTotal}"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -68,7 +115,6 @@
     <div class="card">
         <h2 th:text="'Attachments (' + ${race.attachments.size()} + ')'"></h2>
 
-        <!-- Existing attachments -->
         <div th:if="${!race.attachments.isEmpty()}" class="attachment-list">
             <div th:each="att : ${race.attachments}" class="attachment-item">
                 <div class="attachment-preview">
@@ -79,8 +125,10 @@
                 <div class="attachment-info">
                     <a th:if="${att.type.name() == 'LINK'}" th:href="${att.url}" target="_blank" rel="noopener" class="detail-link" th:text="${att.name}"></a>
                     <a th:if="${att.type.name() == 'FILE'}" th:href="${att.url}" target="_blank" class="detail-link" th:text="${att.name}"></a>
-                    <span class="text-dim" style="font-size:12px;"
-                          th:text="${att.type.name() == 'LINK' ? att.url : ''} + ' ' + (#temporals.format(att.createdAt, 'dd.MM.yyyy HH:mm'))"></span>
+                    <span class="text-dim" style="font-size:12px;">
+                        <span th:if="${att.type.name() == 'LINK'}" th:text="${att.url}"></span>
+                        <span th:text="${att.createdAt != null ? #temporals.format(att.createdAt, 'dd.MM.yyyy HH:mm') : ''}"></span>
+                    </span>
                 </div>
                 <form th:action="@{/admin/races/attachments/{aid}/delete(aid=${att.id})}" method="post"
                       onsubmit="return confirm('Delete this attachment?')">
@@ -92,7 +140,6 @@
             <p>No attachments yet. Upload files or add links below.</p>
         </div>
 
-        <!-- Upload form -->
         <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap;">
             <form th:action="@{/admin/races/{id}/attachments/upload(id=${race.id})}" method="post" enctype="multipart/form-data"
                   style="display:flex;gap:8px;align-items:flex-end;">

@@ -6,6 +6,7 @@ import de.ctc.domain.model.AttachmentType;
 import de.ctc.domain.model.Race;
 import de.ctc.domain.model.RaceAttachment;
 import de.ctc.domain.model.RaceResult;
+import de.ctc.domain.model.Match;
 import de.ctc.domain.repository.*;
 import de.ctc.domain.service.FileStorageService;
 import de.ctc.domain.service.ScoringService;
@@ -30,7 +31,9 @@ import java.util.stream.Collectors;
 public class RaceController {
 
     private final RaceRepository raceRepository;
+    private final MatchRepository matchRepository;
     private final MatchdayRepository matchdayRepository;
+    private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
     private final DriverRepository driverRepository;
     private final SeasonDriverRepository seasonDriverRepository;
@@ -42,13 +45,30 @@ public class RaceController {
     private final FileStorageService fileStorageService;
 
     @GetMapping
-    public String list(@RequestParam(required = false) UUID matchdayId, Model model) {
+    public String list(@RequestParam(required = false) UUID matchdayId,
+                       @RequestParam(required = false) UUID seasonId,
+                       Model model) {
         if (matchdayId != null) {
             model.addAttribute("races", raceRepository.findByMatchdayId(matchdayId));
             model.addAttribute("matchday", matchdayRepository.findById(matchdayId).orElse(null));
+        } else if (seasonId != null) {
+            model.addAttribute("races", raceRepository.findByMatchdaySeasonId(seasonId));
+            model.addAttribute("selectedSeasonId", seasonId);
         } else {
             model.addAttribute("races", raceRepository.findAll());
         }
+        // Build score map from match/playoff scores
+        var raceScores = new java.util.HashMap<java.util.UUID, int[]>();
+        var races = (java.util.List<de.ctc.domain.model.Race>) model.getAttribute("races");
+        if (races != null) {
+            for (var race : races) {
+                if (race.getHomeScore() != null && race.getAwayScore() != null) {
+                    raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
+                }
+            }
+        }
+        model.addAttribute("raceScores", raceScores);
+        model.addAttribute("seasons", seasonRepository.findAll());
         return "admin/races";
     }
 
@@ -56,6 +76,29 @@ public class RaceController {
     public String detail(@PathVariable UUID id, Model model) {
         var race = raceRepository.findById(id).orElseThrow();
         model.addAttribute("race", race);
+
+        if (!race.getResults().isEmpty() && race.getHomeTeam() != null) {
+            int homeTotal = race.getResults().stream()
+                    .filter(r -> isHomeTeamDriver(r, race))
+                    .mapToInt(de.ctc.domain.model.RaceResult::getPointsTotal).sum();
+            int awayTotal = race.getResults().stream()
+                    .filter(r -> !isHomeTeamDriver(r, race))
+                    .mapToInt(de.ctc.domain.model.RaceResult::getPointsTotal).sum();
+            model.addAttribute("homeTotal", homeTotal);
+            model.addAttribute("awayTotal", awayTotal);
+
+            // Build driver→team map for template
+            var seasonId = race.getMatchday().getSeason().getId();
+            var driverTeamMap = new java.util.HashMap<java.util.UUID, String>();
+            for (var result : race.getResults()) {
+                var teamName = result.getDriver().getSeasonDrivers().stream()
+                        .filter(sd -> sd.getSeason().getId().equals(seasonId))
+                        .map(sd -> sd.getTeam().getShortName())
+                        .findFirst().orElse("?");
+                driverTeamMap.put(result.getDriver().getId(), teamName);
+            }
+            model.addAttribute("driverTeamMap", driverTeamMap);
+        }
         return "admin/race-detail";
     }
 
@@ -111,6 +154,7 @@ public class RaceController {
 
         model.addAttribute("raceForm", form);
         model.addAttribute("race", race);
+        model.addAttribute("raceScoring", race.getMatchday().getSeason().getRaceScoring());
         return "admin/race-results";
     }
 
@@ -128,8 +172,17 @@ public class RaceController {
         }
 
         race.setMatchday(matchday);
-        race.setHomeTeam(homeTeam);
-        race.setAwayTeam(awayTeam);
+
+        // Ensure race has a Match for team assignment
+        Match match = race.getMatch();
+        if (match == null) {
+            match = new Match(matchday, homeTeam, awayTeam);
+            match = matchRepository.save(match);
+            race.setMatch(match);
+        } else {
+            match.setHomeTeam(homeTeam);
+            match.setAwayTeam(awayTeam);
+        }
         if (form.getTrackId() != null) {
             race.setTrack(trackRepository.findById(form.getTrackId()).orElse(null));
         } else {
@@ -192,24 +245,21 @@ public class RaceController {
 
             var driver = driverRepository.findById(rf.getDriverId()).orElseThrow();
             var result = new RaceResult(race, driver, rf.getPosition(), rf.getQualiPosition(), rf.isFastestLap());
-            scoringService.calculatePoints(result);
+            scoringService.calculatePoints(result, race.getMatchday().getSeason().getRaceScoring());
             race.getResults().add(result);
         }
 
         raceRepository.save(race);
+        scoringService.aggregateMatchScores(race);
 
-        int homeTotal = race.getResults().stream()
-                .filter(r -> isHomeTeamDriver(r, race))
-                .mapToInt(RaceResult::getPointsTotal).sum();
-        int awayTotal = race.getResults().stream()
-                .filter(r -> !isHomeTeamDriver(r, race))
-                .mapToInt(RaceResult::getPointsTotal).sum();
+        var homeScore = race.getHomeScore() != null ? race.getHomeScore() : 0;
+        var awayScore = race.getAwayScore() != null ? race.getAwayScore() : 0;
 
         log.info("Saved results for {} vs {}: {} : {}",
-                race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName(), homeTotal, awayTotal);
+                race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName(), homeScore, awayScore);
         redirectAttributes.addFlashAttribute("successMessage",
-                "Results saved: " + race.getHomeTeam().getShortName() + " " + homeTotal +
-                " : " + awayTotal + " " + race.getAwayTeam().getShortName());
+                "Results saved: " + race.getHomeTeam().getShortName() + " " + homeScore +
+                " : " + awayScore + " " + race.getAwayTeam().getShortName());
         return "redirect:/admin/races/" + id + "/results";
     }
 
@@ -220,8 +270,10 @@ public class RaceController {
                               @RequestParam(required = false) String returnUrl,
                               RedirectAttributes redirectAttributes) {
         var race = raceRepository.findById(id).orElseThrow();
-        race.setHomeScore(homeScore);
-        race.setAwayScore(awayScore);
+        if (race.getMatch() != null) {
+            race.getMatch().setHomeScore(homeScore);
+            race.getMatch().setAwayScore(awayScore);
+        }
         raceRepository.save(race);
         log.info("Quick score: {} {} : {} {}",
                 race.getHomeTeam().getShortName(), homeScore, awayScore, race.getAwayTeam().getShortName());
