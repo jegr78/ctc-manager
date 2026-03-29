@@ -2,11 +2,16 @@ package de.ctc.admin.controller;
 
 import de.ctc.admin.dto.PlayoffForm;
 import de.ctc.admin.dto.SeedForm;
-import de.ctc.domain.model.Match;
 import de.ctc.domain.model.Matchday;
 import de.ctc.domain.model.Race;
 import de.ctc.domain.model.Season;
-import de.ctc.domain.repository.*;
+import de.ctc.domain.repository.MatchdayRepository;
+import de.ctc.domain.repository.PlayoffMatchupRepository;
+import de.ctc.domain.repository.PlayoffRepository;
+import de.ctc.domain.repository.PlayoffRoundRepository;
+import de.ctc.domain.repository.RaceRepository;
+import de.ctc.domain.repository.SeasonDriverRepository;
+import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +39,6 @@ public class PlayoffController {
     private final SeasonRepository seasonRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final MatchdayRepository matchdayRepository;
-    private final MatchRepository matchRepository;
     private final RaceRepository raceRepository;
 
     @GetMapping
@@ -209,13 +213,9 @@ public class PlayoffController {
         var matchday = new Matchday(season, label, 100 + matchup.getRound().getRoundIndex() * 10 + legNumber);
         matchday = matchdayRepository.save(matchday);
 
-        var match = new Match(matchday, matchup.getTeam1(), matchup.getTeam2());
-        match = matchRepository.save(match);
-
+        // Playoff-Races gehoeren direkt zum PlayoffMatchup, nicht zu einem Match
         var race = new Race();
         race.setMatchday(matchday);
-        race.setMatch(match);
-        // TODO: resolve Track/Car entities from string parameters
         race.setDateTime(dateTime);
         race.setPlayoffMatchup(matchup);
         raceRepository.save(race);

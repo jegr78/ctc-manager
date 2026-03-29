@@ -64,9 +64,16 @@ public class RaceScoringController {
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         var scoring = raceScoringRepository.findById(id).orElseThrow();
-        raceScoringRepository.delete(scoring);
-        log.info("Deleted race scoring: {}", scoring.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Race-Scoring deleted");
+        try {
+            raceScoringRepository.delete(scoring);
+            raceScoringRepository.flush();
+            log.info("Deleted race scoring: {}", scoring.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "Race-Scoring deleted");
+        } catch (Exception e) {
+            log.warn("Cannot delete race scoring {}: {}", scoring.getName(), e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Kann nicht geloescht werden — wird noch von einer Season referenziert");
+        }
         return "redirect:/admin/race-scorings";
     }
 }

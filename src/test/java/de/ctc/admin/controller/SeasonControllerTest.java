@@ -58,8 +58,11 @@ class SeasonControllerTest {
 
     @Test
     void shouldRejectBlankName() throws Exception {
+        var season = testHelper.createSeason("Dummy Blank");
         mockMvc.perform(post("/admin/seasons/save")
-                        .param("name", ""))
+                        .param("name", "")
+                        .param("raceScoring", season.getRaceScoring().getId().toString())
+                        .param("matchScoring", season.getMatchScoring().getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/season-form"));
     }

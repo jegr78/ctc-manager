@@ -58,9 +58,16 @@ public class MatchScoringController {
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         var scoring = matchScoringRepository.findById(id).orElseThrow();
-        matchScoringRepository.delete(scoring);
-        log.info("Deleted match scoring: {}", scoring.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Match-Scoring deleted");
+        try {
+            matchScoringRepository.delete(scoring);
+            matchScoringRepository.flush();
+            log.info("Deleted match scoring: {}", scoring.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "Match-Scoring deleted");
+        } catch (Exception e) {
+            log.warn("Cannot delete match scoring {}: {}", scoring.getName(), e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Kann nicht geloescht werden — wird noch von einer Season referenziert");
+        }
         return "redirect:/admin/match-scorings";
     }
 }

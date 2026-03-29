@@ -50,7 +50,18 @@ public class RaceScoring {
         return parseCsv(qualiPoints);
     }
 
+    public boolean canParse() {
+        try {
+            getRacePointsArray();
+            getQualiPointsArray();
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     public boolean isValid() {
+        if (!canParse()) return false;
         return isMonotonicallyDecreasing(getRacePointsArray())
                 && isMonotonicallyDecreasing(getQualiPointsArray());
     }
@@ -58,6 +69,7 @@ public class RaceScoring {
     private static int[] parseCsv(String csv) {
         return Arrays.stream(csv.split(","))
                 .map(String::trim)
+                .filter(s -> !s.isEmpty())
                 .mapToInt(Integer::parseInt)
                 .toArray();
     }

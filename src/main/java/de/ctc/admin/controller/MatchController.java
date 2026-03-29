@@ -78,6 +78,7 @@ public class MatchController {
         var race = new Race();
         race.setMatchday(matchday);
         race.setMatch(match);
+        match.getRaces().add(race);
         raceRepository.save(race);
 
         log.info("Added leg {} for match {} vs {}",

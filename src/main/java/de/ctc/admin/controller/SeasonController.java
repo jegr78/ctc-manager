@@ -65,8 +65,8 @@ public class SeasonController {
 
     @PostMapping("/save")
     public String save(@Valid @ModelAttribute Season season, BindingResult result,
-                       @RequestParam(required = false) UUID raceScoring,
-                       @RequestParam(required = false) UUID matchScoring,
+                       @RequestParam UUID raceScoring,
+                       @RequestParam UUID matchScoring,
                        RedirectAttributes redirectAttributes, Model model) {
         if (result.hasErrors()) {
             addScoringLists(model);
@@ -81,12 +81,8 @@ public class SeasonController {
             existing.setFormat(season.getFormat());
             existing.setTotalRounds(season.getFormat() == SeasonFormat.SWISS ? season.getTotalRounds() : null);
             existing.setLegs(season.getLegs());
-            if (raceScoring != null) {
-                existing.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
-            }
-            if (matchScoring != null) {
-                existing.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
-            }
+            existing.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
+            existing.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
             seasonRepository.save(existing);
             log.info("Updated season: {}", existing.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + existing.getName());
@@ -94,12 +90,8 @@ public class SeasonController {
             if (season.getFormat() == SeasonFormat.LEAGUE) {
                 season.setTotalRounds(null);
             }
-            if (raceScoring != null) {
-                season.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
-            }
-            if (matchScoring != null) {
-                season.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
-            }
+            season.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
+            season.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
             seasonRepository.save(season);
             log.info("Created season: {}", season.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
