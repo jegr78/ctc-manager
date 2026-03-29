@@ -197,15 +197,15 @@ CREATE TABLE race_results (
     CONSTRAINT uk_race_driver UNIQUE (race_id, driver_id)
 );
 
-CREATE TABLE matchday_lineups (
+CREATE TABLE race_lineups (
     id UUID PRIMARY KEY,
-    matchday_id UUID NOT NULL,
+    race_id UUID NOT NULL,
     driver_id UUID NOT NULL,
     team_id UUID NOT NULL,
-    CONSTRAINT fk_ml_matchday FOREIGN KEY (matchday_id) REFERENCES matchdays(id),
-    CONSTRAINT fk_ml_driver FOREIGN KEY (driver_id) REFERENCES drivers(id),
-    CONSTRAINT fk_ml_team FOREIGN KEY (team_id) REFERENCES teams(id),
-    CONSTRAINT uk_matchday_driver UNIQUE (matchday_id, driver_id)
+    CONSTRAINT fk_rl_race FOREIGN KEY (race_id) REFERENCES races(id),
+    CONSTRAINT fk_rl_driver FOREIGN KEY (driver_id) REFERENCES drivers(id),
+    CONSTRAINT fk_rl_team FOREIGN KEY (team_id) REFERENCES teams(id),
+    CONSTRAINT uk_race_lineup_driver UNIQUE (race_id, driver_id)
 );
 
 CREATE TABLE race_attachments (

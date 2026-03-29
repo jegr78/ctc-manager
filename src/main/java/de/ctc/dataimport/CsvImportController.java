@@ -140,9 +140,12 @@ public class CsvImportController {
                 redirectAttributes.addFlashAttribute("errorMessage",
                         "Import with errors: " + String.join(", ", result.getErrors()));
             } else {
-                redirectAttributes.addFlashAttribute("successMessage",
-                        "Import successful: " + result.getImportedRaces().size() + " races, " +
-                        result.getNewDriversCreated() + " new drivers");
+                var msg = "Import successful: " + result.getImportedRaces().size() + " races, " +
+                        result.getNewDriversCreated() + " new drivers";
+                if (result.getLineupCount() > 0) {
+                    msg += ", " + result.getLineupCount() + " lineup entries";
+                }
+                redirectAttributes.addFlashAttribute("successMessage", msg);
             }
         } catch (Exception e) {
             log.error("Error executing import", e);

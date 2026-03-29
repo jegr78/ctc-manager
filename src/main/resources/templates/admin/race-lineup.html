@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Race Lineup', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1 th:text="'Lineup — ' + ${race.homeTeam.shortName} + ' vs ' + ${race.awayTeam?.shortName ?: 'Bye'}"></h1>
+        <a th:href="@{/admin/races/{id}(id=${race.id})}" class="btn btn-secondary">Back to Race</a>
+    </div>
+
+    <form th:action="@{/admin/races/{id}/lineup(id=${race.id})}" method="post">
+
+        <div th:each="entry : ${teamEntries}" class="card" style="margin-bottom:16px;">
+            <h2 th:text="${entry.team.shortName + ' — ' + entry.team.name}"></h2>
+            <div th:if="${entry.drivers.isEmpty()}" class="empty-state" style="padding:16px;">
+                <p>No drivers registered for this team.</p>
+            </div>
+            <table th:if="${!entry.drivers.isEmpty()}">
+                <thead>
+                    <tr>
+                        <th>PSN ID</th>
+                        <th>Nickname</th>
+                        <th th:if="${entry.hasSubTeams}">Sub-Team</th>
+                        <th th:unless="${entry.hasSubTeams}" style="text-align:center;">In Lineup</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="sd : ${entry.drivers}">
+                        <td><strong th:text="${sd.driver.psnId}"></strong></td>
+                        <td th:text="${sd.driver.nickname}"></td>
+                        <!-- Sub-team: dropdown -->
+                        <td th:if="${entry.hasSubTeams}">
+                            <select th:name="'driver_' + ${sd.driver.id}">
+                                <option value="">-- Not assigned --</option>
+                                <option th:each="sub : ${entry.subTeams}"
+                                        th:value="${sub.id}"
+                                        th:text="${sub.shortName}"
+                                        th:selected="${driverAssignments.get(sd.driver.id) == sub.id}">
+                                </option>
+                            </select>
+                        </td>
+                        <!-- Standalone: checkbox -->
+                        <td th:unless="${entry.hasSubTeams}" style="text-align:center;">
+                            <input type="checkbox"
+                                   th:name="'driver_' + ${sd.driver.id}"
+                                   th:value="${entry.team.id}"
+                                   th:checked="${driverAssignments.containsKey(sd.driver.id)}">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="actions">
+            <button type="submit" class="btn btn-primary">Save Lineup</button>
+        </div>
+    </form>
+</section>
+</body>
+</html>
