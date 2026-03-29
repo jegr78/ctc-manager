@@ -53,12 +53,18 @@ public class ScoringService {
         if (race.getResults().isEmpty()) return;
 
         if (race.getMatch() != null && race.getMatch().getHomeTeam() != null) {
-            // For multi-leg: sum across all legs of the match
             Match match = race.getMatch();
+            UUID hId = match.getHomeTeam().getId();
+
+            // Collect all legs — use match.getRaces() but ensure current race is included
+            var legs = new java.util.ArrayList<>(match.getRaces());
+            if (legs.stream().noneMatch(r -> r.getId() != null && r.getId().equals(race.getId()))) {
+                legs.add(race);
+            }
+
             int matchHome = 0, matchAway = 0;
-            for (Race leg : match.getRaces()) {
+            for (Race leg : legs) {
                 if (leg.getResults().isEmpty()) continue;
-                UUID hId = match.getHomeTeam().getId();
                 matchHome += leg.getResults().stream()
                         .filter(r -> isDriverInTeam(r, hId))
                         .mapToInt(RaceResult::getPointsTotal).sum();
@@ -68,17 +74,23 @@ public class ScoringService {
             }
             match.setHomeScore(matchHome);
             match.setAwayScore(matchAway);
-            log.debug("Aggregated match scores: {} {} : {} {}",
+            log.info("Aggregated match scores: {} {} : {} {}",
                     match.getHomeTeam().getShortName(), matchHome, matchAway,
                     match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "?");
         }
 
         if (race.getPlayoffMatchup() != null && race.getPlayoffMatchup().getTeam1() != null) {
             PlayoffMatchup matchup = race.getPlayoffMatchup();
+            UUID t1Id = matchup.getTeam1().getId();
+
+            var legs = new java.util.ArrayList<>(matchup.getRaces());
+            if (legs.stream().noneMatch(r -> r.getId() != null && r.getId().equals(race.getId()))) {
+                legs.add(race);
+            }
+
             int mHome = 0, mAway = 0;
-            for (Race leg : matchup.getRaces()) {
+            for (Race leg : legs) {
                 if (leg.getResults().isEmpty()) continue;
-                UUID t1Id = matchup.getTeam1().getId();
                 mHome += leg.getResults().stream()
                         .filter(r -> isDriverInTeam(r, t1Id))
                         .mapToInt(RaceResult::getPointsTotal).sum();
