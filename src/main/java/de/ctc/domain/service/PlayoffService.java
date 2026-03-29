@@ -167,8 +167,13 @@ public class PlayoffService {
             team2Total += totals[1];
         }
 
+        // Store aggregated scores on matchup
+        matchup.setHomeScore(team1Total);
+        matchup.setAwayScore(team2Total);
+
         // #1: Explicit tie handling — ties are not silently resolved
         if (team1Total == team2Total) {
+            playoffMatchupRepository.save(matchup);
             throw new IllegalStateException(
                     "Tie (%d:%d) — Winner must be set manually".formatted(team1Total, team2Total));
         }
