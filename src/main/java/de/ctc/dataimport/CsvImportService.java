@@ -32,6 +32,7 @@ public class CsvImportService {
     private final RaceRepository raceRepository;
     private final PlayoffMatchupRepository playoffMatchupRepository;
     private final ScoringService scoringService;
+    private final RaceLineupRepository raceLineupRepository;
 
     public ImportPreview parseAndPreview(InputStream csvStream, ImportMetadata metadata) throws IOException {
         var preview = new ImportPreview(metadata);
@@ -138,6 +139,16 @@ public class CsvImportService {
                 var raceResult = new RaceResult(race, driver, row.position(), row.qualiPosition(), row.fastestLap());
                 scoringService.calculatePoints(raceResult, season.getRaceScoring());
                 race.getResults().add(raceResult);
+
+                // Create RaceLineup for sub-teams
+                var resolvedTeam = findTeamFlexible(row.teamShortName());
+                if (resolvedTeam != null && resolvedTeam.isSubTeam()) {
+                    var existingLineup = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId());
+                    if (existingLineup.isEmpty()) {
+                        raceLineupRepository.save(new RaceLineup(race, driver, resolvedTeam));
+                        result.incrementLineupCount();
+                    }
+                }
             }
 
             raceRepository.save(race);
@@ -356,10 +367,12 @@ public class CsvImportService {
         private final List<String> importedRaces = new ArrayList<>();
         private final List<String> errors = new ArrayList<>();
         private int newDriversCreated;
+        private int lineupCount;
 
         public void addImportedRace(String race) { importedRaces.add(race); }
         public void addError(String error) { errors.add(error); }
         public void incrementNewDrivers() { newDriversCreated++; }
+        public void incrementLineupCount() { lineupCount++; }
         public boolean hasErrors() { return !errors.isEmpty(); }
     }
 }
