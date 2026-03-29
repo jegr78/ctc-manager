@@ -89,8 +89,15 @@ public class CsvImportService {
                 continue;
             }
 
-            // Create match and race
+            // Duplicate check: same home vs away on this matchday
             var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
+            if (matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+                    matchday.getId(), homeTeam.getId(), effectiveAwayTeam.getId())) {
+                result.addError("Match already exists: " + homeTeam.getShortName() +
+                        " vs " + effectiveAwayTeam.getShortName() + " on " + matchday.getLabel());
+                continue;
+            }
+
             var match = new Match(matchday, homeTeam, effectiveAwayTeam);
             match = matchRepository.save(match);
             var race = new Race();

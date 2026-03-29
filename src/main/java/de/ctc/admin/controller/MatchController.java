@@ -44,6 +44,15 @@ public class MatchController {
         var homeTeam = teamRepository.findById(homeTeamId).orElseThrow();
         var awayTeam = bye ? null : (awayTeamId != null ? teamRepository.findById(awayTeamId).orElse(null) : null);
 
+        // Duplicate check
+        if (!bye && awayTeam != null &&
+                matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+                        matchdayId, homeTeam.getId(), awayTeam.getId())) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Match already exists: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName());
+            return "redirect:/admin/matchdays/" + matchdayId;
+        }
+
         var match = new Match(matchday, homeTeam, awayTeam);
         match.setBye(bye);
         match = matchRepository.save(match);
