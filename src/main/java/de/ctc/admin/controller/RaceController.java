@@ -37,7 +37,7 @@ public class RaceController {
     private final TeamRepository teamRepository;
     private final DriverRepository driverRepository;
     private final SeasonDriverRepository seasonDriverRepository;
-    private final MatchdayLineupRepository matchdayLineupRepository;
+    private final RaceLineupRepository raceLineupRepository;
     private final RaceAttachmentRepository raceAttachmentRepository;
     private final CarRepository carRepository;
     private final TrackRepository trackRepository;
@@ -144,12 +144,12 @@ public class RaceController {
 
         // If no results yet, pre-populate with drivers from both teams
         if (form.getResults().isEmpty()) {
-            var matchdayId = race.getMatchday().getId();
+            var raceId = race.getId();
             var seasonId = race.getMatchday().getSeason().getId();
 
-            // Try MatchdayLineup first (for sub-teams), fall back to SeasonDriver
-            populateDrivers(form, matchdayId, seasonId, race.getHomeTeam());
-            populateDrivers(form, matchdayId, seasonId, race.getAwayTeam());
+            // Try RaceLineup first (for sub-teams), fall back to SeasonDriver
+            populateDrivers(form, raceId, seasonId, race.getHomeTeam());
+            populateDrivers(form, raceId, seasonId, race.getAwayTeam());
         }
 
         model.addAttribute("raceForm", form);
@@ -370,17 +370,21 @@ public class RaceController {
                 .collect(Collectors.toSet());
     }
 
-    private void populateDrivers(RaceForm form, UUID matchdayId, UUID seasonId, de.ctc.domain.model.Team team) {
-        var lineupDrivers = matchdayLineupRepository.findByMatchdayIdAndTeamId(matchdayId, team.getId());
+    private void populateDrivers(RaceForm form, UUID raceId, UUID seasonId, de.ctc.domain.model.Team team) {
+        var allLineups = raceLineupRepository.findByRaceId(raceId);
+        var lineupDrivers = allLineups.stream()
+                .filter(lu -> lu.getTeam().getId().equals(team.getId())
+                        || lu.getTeam().getParentOrSelf().getId().equals(team.getId()))
+                .toList();
 
         if (!lineupDrivers.isEmpty()) {
-            // Sub-team: use matchday lineup
+            // Sub-team: use race lineup
             int pos = form.getResults().size() + 1;
             for (var lineup : lineupDrivers) {
                 var rf = new RaceResultForm();
                 rf.setDriverId(lineup.getDriver().getId());
                 rf.setDriverPsnId(lineup.getDriver().getPsnId());
-                rf.setTeamShortName(team.getShortName());
+                rf.setTeamShortName(lineup.getTeam().getShortName());
                 rf.setPosition(pos);
                 rf.setQualiPosition(pos);
                 form.getResults().add(rf);

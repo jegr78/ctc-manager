@@ -3,8 +3,8 @@ package de.ctc.admin.controller;
 import de.ctc.admin.dto.CreateMatchdayRequest;
 import de.ctc.admin.dto.MatchdayDto;
 import de.ctc.domain.model.Matchday;
-import de.ctc.domain.repository.MatchdayLineupRepository;
 import de.ctc.domain.repository.MatchdayRepository;
+import de.ctc.domain.repository.RaceLineupRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class MatchdayController {
 
     private final MatchdayRepository matchdayRepository;
     private final SeasonRepository seasonRepository;
-    private final MatchdayLineupRepository matchdayLineupRepository;
+    private final RaceLineupRepository raceLineupRepository;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
@@ -52,7 +52,7 @@ public class MatchdayController {
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
         var matchday = matchdayRepository.findById(id).orElseThrow();
-        var lineups = matchdayLineupRepository.findByMatchdayId(id);
+        var lineups = raceLineupRepository.findByRaceMatchdayId(id);
         model.addAttribute("matchday", matchday);
         model.addAttribute("lineups", lineups);
         return "admin/matchday-detail";

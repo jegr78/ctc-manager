@@ -1,6 +1,6 @@
 package de.ctc.admin.controller;
 
-import de.ctc.domain.model.MatchdayLineup;
+import de.ctc.domain.model.RaceLineup;
 import de.ctc.domain.model.SeasonDriver;
 import de.ctc.domain.model.Team;
 import de.ctc.domain.repository.*;
@@ -13,27 +13,25 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Controller
-@RequestMapping("/admin/matchdays")
+@RequestMapping("/admin/races")
 @RequiredArgsConstructor
-public class MatchdayLineupController {
+public class RaceLineupController {
 
-    private final MatchdayRepository matchdayRepository;
-    private final MatchdayLineupRepository matchdayLineupRepository;
+    private final RaceRepository raceRepository;
+    private final RaceLineupRepository raceLineupRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final TeamRepository teamRepository;
     private final DriverRepository driverRepository;
 
-    @GetMapping("/{matchdayId}/lineup")
-    public String lineup(@PathVariable UUID matchdayId, Model model) {
-        var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
-        var season = matchday.getSeason();
-        var existingLineups = matchdayLineupRepository.findByMatchdayId(matchdayId);
+    @GetMapping("/{raceId}/lineup")
+    public String lineup(@PathVariable UUID raceId, Model model) {
+        var race = raceRepository.findById(raceId).orElseThrow();
+        var season = race.getMatchday().getSeason();
+        var existingLineups = raceLineupRepository.findByRaceId(raceId);
 
-        // Find parent teams that have sub-teams in this season
         var seasonTeams = season.getTeams();
         var parentTeamsWithSubs = seasonTeams.stream()
                 .filter(Team::isSubTeam)
@@ -42,11 +40,9 @@ public class MatchdayLineupController {
                 .sorted(Comparator.comparing(Team::getShortName))
                 .toList();
 
-        // For each parent team, get drivers (from SeasonDriver)
-        // and sub-teams available in this season
         var parentDriverMap = new LinkedHashMap<Team, List<SeasonDriver>>();
         var parentSubTeamMap = new LinkedHashMap<Team, List<Team>>();
-        var driverLineupMap = new HashMap<UUID, MatchdayLineup>();
+        var driverSubTeamMap = new HashMap<UUID, UUID>();
 
         for (var parent : parentTeamsWithSubs) {
             var drivers = seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), parent.getId());
@@ -60,29 +56,27 @@ public class MatchdayLineupController {
         }
 
         for (var lineup : existingLineups) {
-            driverLineupMap.put(lineup.getDriver().getId(), lineup);
+            driverSubTeamMap.put(lineup.getDriver().getId(), lineup.getTeam().getId());
         }
 
-        model.addAttribute("matchday", matchday);
+        model.addAttribute("race", race);
         model.addAttribute("parentTeamsWithSubs", parentTeamsWithSubs);
         model.addAttribute("parentDriverMap", parentDriverMap);
         model.addAttribute("parentSubTeamMap", parentSubTeamMap);
-        model.addAttribute("driverLineupMap", driverLineupMap);
-        return "admin/matchday-lineup";
+        model.addAttribute("driverSubTeamMap", driverSubTeamMap);
+        return "admin/race-lineup";
     }
 
     @Transactional
-    @PostMapping("/{matchdayId}/lineup")
-    public String saveLineup(@PathVariable UUID matchdayId,
+    @PostMapping("/{raceId}/lineup")
+    public String saveLineup(@PathVariable UUID raceId,
                              @RequestParam Map<String, String> params,
                              RedirectAttributes redirectAttributes) {
-        var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
+        var race = raceRepository.findById(raceId).orElseThrow();
 
-        // Delete existing lineups for this matchday
-        var existing = matchdayLineupRepository.findByMatchdayId(matchdayId);
-        matchdayLineupRepository.deleteAll(existing);
+        var existing = raceLineupRepository.findByRaceId(raceId);
+        raceLineupRepository.deleteAll(existing);
 
-        // Process form params: driver_{driverId} = teamId
         int count = 0;
         for (var entry : params.entrySet()) {
             if (!entry.getKey().startsWith("driver_") || entry.getValue().isBlank()) continue;
@@ -93,12 +87,12 @@ public class MatchdayLineupController {
             var driver = driverRepository.findById(driverId).orElseThrow();
             var team = teamRepository.findById(teamId).orElseThrow();
 
-            matchdayLineupRepository.save(new MatchdayLineup(matchday, driver, team));
+            raceLineupRepository.save(new RaceLineup(race, driver, team));
             count++;
         }
 
-        log.info("Saved {} lineup entries for matchday {}", count, matchday.getLabel());
+        log.info("Saved {} lineup entries for race {}", count, raceId);
         redirectAttributes.addFlashAttribute("successMessage", "Lineup saved: " + count + " drivers assigned");
-        return "redirect:/admin/matchdays/" + matchdayId + "/lineup";
+        return "redirect:/admin/races/" + raceId + "/lineup";
     }
 }

@@ -2,7 +2,6 @@ package de.ctc.domain.service;
 
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.MatchRepository;
-import de.ctc.domain.repository.MatchdayLineupRepository;
 import de.ctc.domain.repository.RaceRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
@@ -36,9 +35,6 @@ class StandingsServiceTest {
 
     @Mock
     private SeasonRepository seasonRepository;
-
-    @Mock
-    private MatchdayLineupRepository matchdayLineupRepository;
 
     @Spy
     private ScoringService scoringService;

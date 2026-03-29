@@ -13,6 +13,7 @@
         </div>
         <div class="actions">
             <a th:href="@{/admin/races/{id}/results(id=${race.id})}" class="btn btn-success">Results</a>
+            <a th:href="@{/admin/races/{id}/lineup(id=${race.id})}" class="btn btn-secondary">Lineup</a>
             <a th:href="@{/admin/races/{id}/edit(id=${race.id})}" class="btn btn-primary">Edit</a>
             <form th:action="@{/admin/races/{id}/delete(id=${race.id})}" method="post"
                   onsubmit="return confirm('Really delete this race?')">

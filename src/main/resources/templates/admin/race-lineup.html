@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Matchday Lineup', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Race Lineup', ~{::section})}">
 <body>
 <section>
     <div class="toolbar">
-        <h1 th:text="'Lineup — ' + ${matchday.label}"></h1>
-        <a th:href="@{/admin/matchdays(seasonId=${matchday.season.id})}" class="btn btn-secondary">Back to Matchdays</a>
+        <h1 th:text="'Lineup — ' + ${race.homeTeam.shortName} + ' vs ' + ${race.awayTeam?.shortName ?: 'Bye'}"></h1>
+        <a th:href="@{/admin/races/{id}(id=${race.id})}" class="btn btn-secondary">Back to Race</a>
     </div>
 
     <div th:if="${parentTeamsWithSubs.isEmpty()}" class="card">
@@ -15,7 +15,7 @@
     </div>
 
     <form th:if="${!parentTeamsWithSubs.isEmpty()}"
-          th:action="@{/admin/matchdays/{id}/lineup(id=${matchday.id})}" method="post">
+          th:action="@{/admin/races/{id}/lineup(id=${race.id})}" method="post">
 
         <div th:each="parent : ${parentTeamsWithSubs}" class="card" style="margin-bottom:16px;">
             <h2 th:text="${parent.shortName + ' — ' + parent.name}"></h2>
@@ -33,7 +33,7 @@
                                 <option th:each="sub : ${parentSubTeamMap.get(parent)}"
                                         th:value="${sub.id}"
                                         th:text="${sub.shortName}"
-                                        th:selected="${driverLineupMap.containsKey(sd.driver.id) && driverLineupMap.get(sd.driver.id).team.id == sub.id}">
+                                        th:selected="${driverSubTeamMap.get(sd.driver.id) == sub.id}">
                                 </option>
                             </select>
                         </td>

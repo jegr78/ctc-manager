@@ -10,9 +10,9 @@ import lombok.ToString;
 import java.util.UUID;
 
 @Entity
-@Table(name = "matchday_lineups")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "driver", "team"})
-public class MatchdayLineup {
+@Table(name = "race_lineups")
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"race", "driver", "team"})
+public class RaceLineup {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -20,8 +20,8 @@ public class MatchdayLineup {
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "matchday_id", nullable = false)
-    private Matchday matchday;
+    @JoinColumn(name = "race_id", nullable = false)
+    private Race race;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
@@ -33,8 +33,8 @@ public class MatchdayLineup {
     @JoinColumn(name = "team_id", nullable = false)
     private Team team;
 
-    public MatchdayLineup(Matchday matchday, Driver driver, Team team) {
-        this.matchday = matchday;
+    public RaceLineup(Race race, Driver driver, Team team) {
+        this.race = race;
         this.driver = driver;
         this.team = team;
     }
