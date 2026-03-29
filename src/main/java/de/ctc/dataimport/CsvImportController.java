@@ -21,6 +21,7 @@ public class CsvImportController {
 
     private final CsvImportService csvImportService;
     private final SeasonRepository seasonRepository;
+    private final de.ctc.domain.repository.MatchdayRepository matchdayRepository;
     private final GoogleSheetsService googleSheetsService;
     private final ScorecardParser scorecardParser;
     private final PlayoffMatchupRepository playoffMatchupRepository;
@@ -47,6 +48,7 @@ public class CsvImportController {
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
             model.addAttribute("source", "csv");
+            addMatchdayName(model, metadata);
             addCommonAttributes(model);
             return "admin/import-preview";
         } catch (Exception e) {
@@ -76,6 +78,7 @@ public class CsvImportController {
             model.addAttribute("metadata", metadata);
             model.addAttribute("source", "sheet");
             model.addAttribute("sheetUrl", sheetUrl);
+            addMatchdayName(model, metadata);
             addCommonAttributes(model);
             return "admin/import-preview";
         } catch (Exception e) {
@@ -146,6 +149,13 @@ public class CsvImportController {
             redirectAttributes.addFlashAttribute("errorMessage", "Import error: " + e.getMessage());
         }
         return "redirect:/admin/import";
+    }
+
+    private void addMatchdayName(Model model, CsvImportService.ImportMetadata metadata) {
+        if (metadata.hasMatchdayId()) {
+            matchdayRepository.findById(metadata.matchdayId())
+                    .ifPresent(md -> model.addAttribute("matchdayName", md.getLabel()));
+        }
     }
 
     private void addCommonAttributes(Model model) {

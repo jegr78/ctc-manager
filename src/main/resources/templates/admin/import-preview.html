@@ -6,7 +6,7 @@
     <h1>Import Preview</h1>
     <div class="card" style="margin-bottom:16px;">
         <p><strong>Season:</strong> <span th:text="${metadata.seasonName}"></span> |
-           <strong>Matchday:</strong> <span th:text="${metadata.matchdayLabel}"></span></p>
+           <strong>Matchday:</strong> <span th:text="${matchdayName ?: metadata.matchdayLabel ?: '-'}"></span></p>
     </div>
 
     <!-- Errors -->
