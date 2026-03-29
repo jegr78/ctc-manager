@@ -47,8 +47,23 @@
         <div id="regularFields">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="matchdayLabel">Matchday</label>
-                    <input type="text" id="matchdayLabel" name="matchdayLabel" placeholder="e.g. Matchday 1">
+                    <label for="matchdayId">Matchday</label>
+                    <select id="matchdayId" name="matchdayId" disabled>
+                        <option value="">-- Select matchday --</option>
+                    </select>
+                    <a href="#" id="newMatchdayToggle" style="display:none;color:var(--accent);font-size:13px;margin-top:6px;text-decoration:none;cursor:pointer;"
+                       onclick="toggleNewMatchday(event)">+ New Matchday</a>
+                    <div id="newMatchdayPanel" style="display:none;margin-top:8px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);">
+                        <div class="form-row" style="align-items:end;gap:8px;">
+                            <div class="form-group" style="flex:1;">
+                                <label for="newMatchdayLabel" style="font-size:13px;">Label</label>
+                                <input type="text" id="newMatchdayLabel" placeholder="e.g. Matchday 7">
+                            </div>
+                            <button type="button" class="btn btn-primary" onclick="createMatchday()" style="height:38px;">Create</button>
+                        </div>
+                        <div id="newMatchdayError" style="display:none;color:var(--danger);font-size:13px;margin-top:4px;"></div>
+                        <div id="newMatchdayHint" style="display:none;color:var(--text-dim);font-size:13px;margin-top:4px;">No matchdays yet for this season.</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -123,22 +138,146 @@
         function switchImportType(type) {
             var regularFields = document.getElementById('regularFields');
             var playoffFields = document.getElementById('playoffFields');
-            var matchdayInput = document.getElementById('matchdayLabel');
+            var matchdaySelect = document.getElementById('matchdayId');
 
             if (type === 'regular') {
                 regularFields.style.display = '';
                 playoffFields.style.display = 'none';
-                matchdayInput.required = true;
             } else {
                 regularFields.style.display = 'none';
                 playoffFields.style.display = '';
-                matchdayInput.required = false;
             }
+        }
+
+        // Load matchdays when season changes
+        function loadMatchdays() {
+            var seasonName = document.getElementById('seasonName').value;
+            var matchdaySelect = document.getElementById('matchdayId');
+            var toggle = document.getElementById('newMatchdayToggle');
+            var panel = document.getElementById('newMatchdayPanel');
+            var hint = document.getElementById('newMatchdayHint');
+
+            if (!seasonName) {
+                matchdaySelect.disabled = true;
+                // Reset to default option
+                while (matchdaySelect.options.length > 1) {
+                    matchdaySelect.remove(1);
+                }
+                matchdaySelect.selectedIndex = 0;
+                toggle.style.display = 'none';
+                panel.style.display = 'none';
+                return;
+            }
+
+            fetch('/admin/matchdays/by-season?seasonName=' + encodeURIComponent(seasonName))
+                .then(function(r) { return r.json(); })
+                .then(function(matchdays) {
+                    // Clear existing options except the first placeholder
+                    while (matchdaySelect.options.length > 1) {
+                        matchdaySelect.remove(1);
+                    }
+                    matchdaySelect.selectedIndex = 0;
+                    matchdays.forEach(function(md) {
+                        var opt = document.createElement('option');
+                        opt.value = md.id;
+                        opt.textContent = md.label;
+                        opt.dataset.sortIndex = md.sortIndex;
+                        matchdaySelect.appendChild(opt);
+                    });
+                    matchdaySelect.disabled = false;
+                    toggle.style.display = '';
+
+                    // Auto-expand creation panel if no matchdays exist
+                    if (matchdays.length === 0) {
+                        panel.style.display = '';
+                        hint.style.display = '';
+                        matchdaySelect.disabled = true;
+                        toggle.textContent = '- Cancel';
+                    } else {
+                        panel.style.display = 'none';
+                        hint.style.display = 'none';
+                    }
+                })
+                .catch(function() {
+                    matchdaySelect.options[0].textContent = 'Error loading matchdays';
+                });
+        }
+
+        function toggleNewMatchday(event) {
+            event.preventDefault();
+            var panel = document.getElementById('newMatchdayPanel');
+            var toggle = document.getElementById('newMatchdayToggle');
+            var select = document.getElementById('matchdayId');
+            var error = document.getElementById('newMatchdayError');
+            var hint = document.getElementById('newMatchdayHint');
+
+            if (panel.style.display === 'none') {
+                panel.style.display = '';
+                toggle.textContent = '- Cancel';
+                select.disabled = true;
+                select.value = '';
+                document.getElementById('newMatchdayLabel').focus();
+            } else {
+                panel.style.display = 'none';
+                toggle.textContent = '+ New Matchday';
+                select.disabled = false;
+                error.style.display = 'none';
+                hint.style.display = 'none';
+                document.getElementById('newMatchdayLabel').value = '';
+            }
+        }
+
+        function createMatchday() {
+            var seasonName = document.getElementById('seasonName').value;
+            var label = document.getElementById('newMatchdayLabel').value.trim();
+            var error = document.getElementById('newMatchdayError');
+
+            if (!label) {
+                error.textContent = 'Label must not be empty';
+                error.style.display = '';
+                return;
+            }
+
+            fetch('/admin/matchdays/create-inline', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({seasonName: seasonName, label: label})
+            })
+            .then(function(r) {
+                if (r.ok) return r.json();
+                if (r.status === 409) throw new Error('Matchday already exists');
+                throw new Error('Error creating matchday');
+            })
+            .then(function(md) {
+                var select = document.getElementById('matchdayId');
+                var opt = document.createElement('option');
+                opt.value = md.id;
+                opt.textContent = md.label;
+                opt.dataset.sortIndex = md.sortIndex;
+                select.appendChild(opt);
+                select.value = md.id;
+                select.disabled = false;
+
+                // Collapse panel
+                document.getElementById('newMatchdayPanel').style.display = 'none';
+                document.getElementById('newMatchdayToggle').textContent = '+ New Matchday';
+                document.getElementById('newMatchdayLabel').value = '';
+                document.getElementById('newMatchdayHint').style.display = 'none';
+                error.style.display = 'none';
+
+                // Brief visual confirmation
+                select.style.borderColor = 'var(--accent)';
+                setTimeout(function() { select.style.borderColor = ''; }, 1500);
+            })
+            .catch(function(e) {
+                error.textContent = e.message;
+                error.style.display = '';
+            });
         }
 
         // Sync shared fields into form before submit
         function syncFields(form) {
-            var fields = ['seasonName', 'matchdayLabel', 'playoffMatchupId'];
+            var fields = ['seasonName', 'matchdayId', 'playoffMatchupId'];
             fields.forEach(function(name) {
                 var source = document.getElementById(name);
                 if (!source) return;
@@ -167,6 +306,9 @@
                 syncFields(this);
             });
         }
+
+        // Season change triggers matchday loading
+        document.getElementById('seasonName').addEventListener('change', loadMatchdays);
 
         // Set initial state
         switchImportType('regular');
