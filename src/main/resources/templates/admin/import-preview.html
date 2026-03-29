@@ -24,6 +24,7 @@
         <input type="hidden" name="matchdayLabel" th:value="${metadata.matchdayLabel}">
         <input type="hidden" name="track" th:value="${metadata.track}">
         <input type="hidden" name="car" th:value="${metadata.car}">
+        <input type="hidden" name="playoffMatchupId" th:if="${metadata.playoffMatchupId}" th:value="${metadata.playoffMatchupId}">
         <!-- File needs to be re-uploaded for execute -->
         <div class="form-group" style="margin-bottom:16px;">
             <label for="file">Re-select CSV file (for import)</label>

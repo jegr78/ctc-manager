@@ -1,5 +1,7 @@
 package de.ctc.dataimport;
 
+import de.ctc.domain.repository.PlayoffMatchupRepository;
+import de.ctc.domain.repository.PlayoffRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +21,14 @@ public class CsvImportController {
 
     private final CsvImportService csvImportService;
     private final SeasonRepository seasonRepository;
+    private final GoogleSheetsService googleSheetsService;
+    private final ScorecardParser scorecardParser;
+    private final PlayoffMatchupRepository playoffMatchupRepository;
+    private final PlayoffRepository playoffRepository;
 
     @GetMapping
     public String showImportForm(Model model) {
-        model.addAttribute("seasons", seasonRepository.findAll());
+        addCommonAttributes(model);
         return "admin/import";
     }
 
@@ -32,19 +38,47 @@ public class CsvImportController {
                           @RequestParam String matchdayLabel,
                           @RequestParam(required = false) String track,
                           @RequestParam(required = false) String car,
+                          @RequestParam(required = false) UUID playoffMatchupId,
                           Model model) {
         try {
-            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car);
+            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car, playoffMatchupId);
             var preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
 
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
-            model.addAttribute("seasons", seasonRepository.findAll());
+            addCommonAttributes(model);
             return "admin/import-preview";
         } catch (Exception e) {
             log.error("Error parsing CSV", e);
-            model.addAttribute("seasons", seasonRepository.findAll());
+            addCommonAttributes(model);
             model.addAttribute("errorMessage", "Error reading CSV: " + e.getMessage());
+            return "admin/import";
+        }
+    }
+
+    @PostMapping("/preview-sheet")
+    public String previewSheet(@RequestParam String sheetUrl,
+                               @RequestParam String seasonName,
+                               @RequestParam String matchdayLabel,
+                               @RequestParam(required = false) String track,
+                               @RequestParam(required = false) String car,
+                               @RequestParam(required = false) UUID playoffMatchupId,
+                               Model model) {
+        try {
+            var spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
+            var sheetData = googleSheetsService.readRange(spreadsheetId, "A1:H50");
+
+            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car, playoffMatchupId);
+            var preview = scorecardParser.parse(sheetData, metadata);
+
+            model.addAttribute("preview", preview);
+            model.addAttribute("metadata", metadata);
+            addCommonAttributes(model);
+            return "admin/import-preview";
+        } catch (Exception e) {
+            log.error("Error reading Google Sheet", e);
+            addCommonAttributes(model);
+            model.addAttribute("errorMessage", "Error reading Google Sheet: " + e.getMessage());
             return "admin/import";
         }
     }
@@ -54,11 +88,12 @@ public class CsvImportController {
                           @RequestParam String matchdayLabel,
                           @RequestParam(required = false) String track,
                           @RequestParam(required = false) String car,
+                          @RequestParam(required = false) UUID playoffMatchupId,
                           @RequestParam("file") MultipartFile file,
                           @RequestParam(required = false) Map<String, String> allParams,
                           RedirectAttributes redirectAttributes) {
         try {
-            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car);
+            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car, playoffMatchupId);
             var preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
 
             // Collect confirmed fuzzy matches and new driver decisions
@@ -93,5 +128,37 @@ public class CsvImportController {
             redirectAttributes.addFlashAttribute("errorMessage", "Import error: " + e.getMessage());
         }
         return "redirect:/admin/import";
+    }
+
+    private void addCommonAttributes(Model model) {
+        model.addAttribute("seasons", seasonRepository.findAll());
+        model.addAttribute("sheetsAvailable", googleSheetsService.isAvailable());
+
+        // Load playoff matchups for all seasons that have playoffs
+        List<PlayoffMatchupDto> matchups = new ArrayList<>();
+        for (var season : seasonRepository.findAll()) {
+            playoffRepository.findBySeasonId(season.getId()).ifPresent(playoff -> {
+                var playoffMatchups = playoffMatchupRepository.findByRoundPlayoffId(playoff.getId());
+                for (var matchup : playoffMatchups) {
+                    if (matchup.isReady()) {
+                        matchups.add(new PlayoffMatchupDto(
+                                matchup.getId(),
+                                season.getName(),
+                                matchup.getRound().getLabel(),
+                                matchup.getTeam1().getShortName(),
+                                matchup.getTeam2().getShortName()
+                        ));
+                    }
+                }
+            });
+        }
+        model.addAttribute("playoffMatchups", matchups);
+    }
+
+    public record PlayoffMatchupDto(UUID id, String seasonName, String roundLabel,
+                                     String team1, String team2) {
+        public String displayLabel() {
+            return roundLabel + ": " + team1 + " vs " + team2;
+        }
     }
 }
