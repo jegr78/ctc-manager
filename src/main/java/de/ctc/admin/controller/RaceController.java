@@ -203,7 +203,7 @@ public class RaceController {
 
             var driver = driverRepository.findById(rf.getDriverId()).orElseThrow();
             var result = new RaceResult(race, driver, rf.getPosition(), rf.getQualiPosition(), rf.isFastestLap());
-            scoringService.calculatePoints(result);
+            scoringService.calculatePoints(result, race.getMatchday().getSeason().getRaceScoring());
             race.getResults().add(result);
         }
 

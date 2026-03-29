@@ -113,7 +113,7 @@ public class CsvImportService {
                 ensureSeasonDriver(season, driver, row.teamShortName());
 
                 var raceResult = new RaceResult(race, driver, row.position(), row.qualiPosition(), row.fastestLap());
-                scoringService.calculatePoints(raceResult);
+                scoringService.calculatePoints(raceResult, season.getRaceScoring());
                 race.getResults().add(raceResult);
             }
 

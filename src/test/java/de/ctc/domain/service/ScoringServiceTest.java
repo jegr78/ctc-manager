@@ -3,6 +3,7 @@ package de.ctc.domain.service;
 import de.ctc.domain.model.Driver;
 import de.ctc.domain.model.Race;
 import de.ctc.domain.model.RaceResult;
+import de.ctc.domain.model.RaceScoring;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,67 +23,21 @@ class ScoringServiceTest {
         scoringService = new ScoringService();
     }
 
-    @Nested
-    class RacePointsTest {
-
-        @ParameterizedTest
-        @CsvSource({
-            "1, 20", "2, 17", "3, 14", "4, 12", "5, 10", "6, 8",
-            "7, 7", "8, 6", "9, 5", "10, 4", "11, 3", "12, 2"
-        })
-        void shouldReturnCorrectRacePoints(int position, int expectedPoints) {
-            assertEquals(expectedPoints, scoringService.calculateRacePoints(position));
-        }
-
-        @Test
-        void shouldThrowForInvalidPosition() {
-            assertThrows(IllegalArgumentException.class, () -> scoringService.calculateRacePoints(0));
-            assertThrows(IllegalArgumentException.class, () -> scoringService.calculateRacePoints(13));
-        }
+    // Standard scoring preset matching current hardcoded values
+    private static RaceScoring standardScoring() {
+        return new RaceScoring("CTC Standard", "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2);
     }
 
     @Nested
-    class QualiPointsTest {
-
-        @ParameterizedTest
-        @CsvSource({
-            "1, 3", "2, 2", "3, 1", "4, 0", "5, 0", "12, 0"
-        })
-        void shouldReturnCorrectQualiPoints(int position, int expectedPoints) {
-            assertEquals(expectedPoints, scoringService.calculateQualiPoints(position));
-        }
+    class CalculatePointsWithScoringTest {
 
         @Test
-        void shouldThrowForInvalidQualiPosition() {
-            assertThrows(IllegalArgumentException.class, () -> scoringService.calculateQualiPoints(0));
-            assertThrows(IllegalArgumentException.class, () -> scoringService.calculateQualiPoints(13));
-        }
-    }
-
-    @Nested
-    class FastestLapPointsTest {
-
-        @Test
-        void shouldReturn2ForFastestLap() {
-            assertEquals(2, scoringService.calculateFastestLapPoints(true));
-        }
-
-        @Test
-        void shouldReturn0ForNoFastestLap() {
-            assertEquals(0, scoringService.calculateFastestLapPoints(false));
-        }
-    }
-
-    @Nested
-    class CalculatePointsTest {
-
-        @Test
-        void shouldCalculateAllPointsForResult() {
-            // panicpotato17: Position 1, Quali 1, no FL -> 20 + 3 + 0 = 23
+        void shouldCalculateWithStandardScoring() {
+            var scoring = standardScoring();
             var driver = new Driver("panicpotato17", "panicpotato17");
             var result = new RaceResult(new Race(), driver, 1, 1, false);
 
-            scoringService.calculatePoints(result);
+            scoringService.calculatePoints(result, scoring);
 
             assertEquals(20, result.getPointsRace());
             assertEquals(3, result.getPointsQuali());
@@ -91,12 +46,12 @@ class ScoringServiceTest {
         }
 
         @Test
-        void shouldCalculatePointsWithFastestLap() {
-            // P1R_Jake: Position 11, Quali 2, FL -> 3 + 2 + 2 = 7
+        void shouldCalculateWithFastestLap() {
+            var scoring = standardScoring();
             var driver = new Driver("P1R_Jake", "P1R_Jake");
             var result = new RaceResult(new Race(), driver, 11, 2, true);
 
-            scoringService.calculatePoints(result);
+            scoringService.calculatePoints(result, scoring);
 
             assertEquals(3, result.getPointsRace());
             assertEquals(2, result.getPointsQuali());
@@ -105,7 +60,35 @@ class ScoringServiceTest {
         }
 
         @Test
-        void shouldCalculatePointsForList() {
+        void shouldCalculateWithLegacyScoring() {
+            var scoring = new RaceScoring("Legacy", "15,12,10,8,6,4,3,2,1", null, 0);
+            var driver = new Driver("driver1", "Driver 1");
+            var result = new RaceResult(new Race(), driver, 1, 1, true);
+
+            scoringService.calculatePoints(result, scoring);
+
+            assertEquals(15, result.getPointsRace());
+            assertEquals(0, result.getPointsQuali()); // no quali points
+            assertEquals(0, result.getPointsFl());     // FL disabled
+            assertEquals(15, result.getPointsTotal());
+        }
+
+        @Test
+        void shouldReturnZeroForPositionBeyondScale() {
+            var scoring = new RaceScoring("Short", "10,5", "3", 0);
+            var driver = new Driver("driver1", "Driver 1");
+            var result = new RaceResult(new Race(), driver, 3, 2, false);
+
+            scoringService.calculatePoints(result, scoring);
+
+            assertEquals(0, result.getPointsRace());  // position 3 not in scale
+            assertEquals(0, result.getPointsQuali());  // quali pos 2 not in scale (only 1 entry)
+            assertEquals(0, result.getPointsTotal());
+        }
+
+        @Test
+        void shouldCalculateListWithScoring() {
+            var scoring = standardScoring();
             var driver1 = new Driver("driver1", "Driver 1");
             var driver2 = new Driver("driver2", "Driver 2");
             var race = new Race();
@@ -114,7 +97,7 @@ class ScoringServiceTest {
                     new RaceResult(race, driver2, 12, 12, false)
             );
 
-            scoringService.calculatePoints(results);
+            scoringService.calculatePoints(results, scoring);
 
             assertEquals(23, results.get(0).getPointsTotal());
             assertEquals(2, results.get(1).getPointsTotal());
@@ -126,7 +109,6 @@ class ScoringServiceTest {
 
         @Test
         void shouldSumTeamResults() {
-            // TNR A example: 70 total
             var race = new Race();
             var results = List.of(
                     createResultWithTotal(race, "LEVITIUS", 11),
