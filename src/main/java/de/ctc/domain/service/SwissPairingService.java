@@ -1,6 +1,7 @@
 package de.ctc.domain.service;
 
 import de.ctc.domain.model.*;
+import de.ctc.domain.repository.MatchRepository;
 import de.ctc.domain.repository.MatchdayRepository;
 import de.ctc.domain.repository.RaceRepository;
 import de.ctc.domain.repository.SeasonRepository;
@@ -19,6 +20,7 @@ public class SwissPairingService {
 
     private final SeasonRepository seasonRepository;
     private final RaceRepository raceRepository;
+    private final MatchRepository matchRepository;
     private final MatchdayRepository matchdayRepository;
     private final StandingsService standingsService;
 
@@ -108,9 +110,7 @@ public class SwissPairingService {
         if (unpaired.size() % 2 != 0) {
             Team byeTeam = selectByeTeam(unpaired, byeTeams);
             unpaired.remove(byeTeam);
-            var byeRace = new Race(matchday, byeTeam, null);
-            byeRace.setBye(true);
-            pairings.add(byeRace);
+            pairings.add(createRaceWithMatch(matchday, byeTeam, null, true));
         }
 
         // Pair teams: iterate through sorted list, pair with next available opponent
@@ -134,7 +134,7 @@ public class SwissPairingService {
                 log.warn("Swiss pairing: forced rematch {} vs {}", team1.getShortName(), opponent.getShortName());
             }
 
-            pairings.add(new Race(matchday, team1, opponent));
+            pairings.add(createRaceWithMatch(matchday, team1, opponent, false));
         }
 
         return pairings;
@@ -157,16 +157,24 @@ public class SwissPairingService {
         // Handle bye for odd number
         if (teams.size() % 2 != 0) {
             Team byeTeam = teams.remove(teams.size() - 1);
-            var byeRace = new Race(matchday, byeTeam, null);
-            byeRace.setBye(true);
-            pairings.add(byeRace);
+            pairings.add(createRaceWithMatch(matchday, byeTeam, null, true));
         }
 
         for (int i = 0; i < teams.size(); i += 2) {
-            pairings.add(new Race(matchday, teams.get(i), teams.get(i + 1)));
+            pairings.add(createRaceWithMatch(matchday, teams.get(i), teams.get(i + 1), false));
         }
 
         return pairings;
+    }
+
+    private Race createRaceWithMatch(Matchday matchday, Team homeTeam, Team awayTeam, boolean bye) {
+        var match = new Match(matchday, homeTeam, awayTeam);
+        match.setBye(bye);
+        match = matchRepository.save(match);
+        var race = new Race();
+        race.setMatchday(matchday);
+        race.setMatch(match);
+        return race;
     }
 
     public Map<UUID, Set<UUID>> getPlayedOpponents(UUID seasonId) {

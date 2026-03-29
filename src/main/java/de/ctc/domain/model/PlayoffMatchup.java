@@ -44,6 +44,10 @@ public class PlayoffMatchup {
     @JoinColumn(name = "next_matchup_id")
     private PlayoffMatchup nextMatchup;
 
+    private Integer homeScore;
+
+    private Integer awayScore;
+
     @OneToMany(mappedBy = "playoffMatchup")
     @OrderBy("dateTime ASC NULLS LAST")
     private List<Race> races = new ArrayList<>();

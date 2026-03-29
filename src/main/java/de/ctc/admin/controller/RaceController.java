@@ -6,6 +6,7 @@ import de.ctc.domain.model.AttachmentType;
 import de.ctc.domain.model.Race;
 import de.ctc.domain.model.RaceAttachment;
 import de.ctc.domain.model.RaceResult;
+import de.ctc.domain.model.Match;
 import de.ctc.domain.repository.*;
 import de.ctc.domain.service.FileStorageService;
 import de.ctc.domain.service.ScoringService;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
 public class RaceController {
 
     private final RaceRepository raceRepository;
+    private final MatchRepository matchRepository;
     private final MatchdayRepository matchdayRepository;
     private final TeamRepository teamRepository;
     private final DriverRepository driverRepository;
@@ -128,8 +130,17 @@ public class RaceController {
         }
 
         race.setMatchday(matchday);
-        race.setHomeTeam(homeTeam);
-        race.setAwayTeam(awayTeam);
+
+        // Ensure race has a Match for team assignment
+        Match match = race.getMatch();
+        if (match == null) {
+            match = new Match(matchday, homeTeam, awayTeam);
+            match = matchRepository.save(match);
+            race.setMatch(match);
+        } else {
+            match.setHomeTeam(homeTeam);
+            match.setAwayTeam(awayTeam);
+        }
         if (form.getTrackId() != null) {
             race.setTrack(trackRepository.findById(form.getTrackId()).orElse(null));
         } else {
@@ -220,8 +231,10 @@ public class RaceController {
                               @RequestParam(required = false) String returnUrl,
                               RedirectAttributes redirectAttributes) {
         var race = raceRepository.findById(id).orElseThrow();
-        race.setHomeScore(homeScore);
-        race.setAwayScore(awayScore);
+        if (race.getMatch() != null) {
+            race.getMatch().setHomeScore(homeScore);
+            race.getMatch().setAwayScore(awayScore);
+        }
         raceRepository.save(race);
         log.info("Quick score: {} {} : {} {}",
                 race.getHomeTeam().getShortName(), homeScore, awayScore, race.getAwayTeam().getShortName());

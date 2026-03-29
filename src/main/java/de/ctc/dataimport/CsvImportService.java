@@ -1,6 +1,7 @@
 package de.ctc.dataimport;
 
 import de.ctc.domain.model.*;
+import de.ctc.domain.model.Match;
 import de.ctc.domain.repository.*;
 import de.ctc.domain.service.ScoringService;
 import lombok.Getter;
@@ -27,6 +28,7 @@ public class CsvImportService {
     private final SeasonRepository seasonRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final MatchdayRepository matchdayRepository;
+    private final MatchRepository matchRepository;
     private final RaceRepository raceRepository;
     private final PlayoffMatchupRepository playoffMatchupRepository;
     private final ScoringService scoringService;
@@ -87,11 +89,13 @@ public class CsvImportService {
                 continue;
             }
 
-            // Create race
-            var race = new Race(matchday, homeTeam, awayTeam != null ? awayTeam : homeTeam);
-            // TODO: resolve Track/Car entities from metadata strings
-            // race.setTrack(...);
-            // race.setCar(...);
+            // Create match and race
+            var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
+            var match = new Match(matchday, homeTeam, effectiveAwayTeam);
+            match = matchRepository.save(match);
+            var race = new Race();
+            race.setMatchday(matchday);
+            race.setMatch(match);
 
             // Link to playoff matchup if applicable
             if (metadata.isPlayoff()) {

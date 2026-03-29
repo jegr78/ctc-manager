@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "races")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "track", "car", "results", "playoffMatchup", "attachments"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "match", "track", "car", "results", "playoffMatchup", "attachments"})
 public class Race {
 
     @Id
@@ -26,14 +26,9 @@ public class Race {
     @JoinColumn(name = "matchday_id", nullable = false)
     private Matchday matchday;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "home_team_id", nullable = false)
-    private Team homeTeam;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "away_team_id")
-    private Team awayTeam;
+    @JoinColumn(name = "match_id")
+    private Match match;
 
     private LocalDateTime dateTime;
 
@@ -44,13 +39,6 @@ public class Race {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "car_id")
     private Car car;
-
-    @Column(nullable = false)
-    private boolean bye = false;
-
-    private Integer homeScore;
-
-    private Integer awayScore;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "playoff_matchup_id")
@@ -64,9 +52,32 @@ public class Race {
     @OrderBy("createdAt DESC")
     private List<RaceAttachment> attachments = new ArrayList<>();
 
-    public Race(Matchday matchday, Team homeTeam, Team awayTeam) {
-        this.matchday = matchday;
-        this.homeTeam = homeTeam;
-        this.awayTeam = awayTeam;
+    // Convenience delegation methods — resolve teams from Match or PlayoffMatchup
+    public Team getHomeTeam() {
+        if (match != null) return match.getHomeTeam();
+        if (playoffMatchup != null) return playoffMatchup.getTeam1();
+        return null;
+    }
+
+    public Team getAwayTeam() {
+        if (match != null) return match.getAwayTeam();
+        if (playoffMatchup != null) return playoffMatchup.getTeam2();
+        return null;
+    }
+
+    public boolean isBye() {
+        return match != null && match.isBye();
+    }
+
+    public Integer getHomeScore() {
+        if (match != null) return match.getHomeScore();
+        if (playoffMatchup != null) return playoffMatchup.getHomeScore();
+        return null;
+    }
+
+    public Integer getAwayScore() {
+        if (match != null) return match.getAwayScore();
+        if (playoffMatchup != null) return playoffMatchup.getAwayScore();
+        return null;
     }
 }
