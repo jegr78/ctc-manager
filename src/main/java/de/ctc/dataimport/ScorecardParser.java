@@ -1,0 +1,150 @@
+package de.ctc.dataimport;
+
+import de.ctc.dataimport.CsvImportService.ImportMetadata;
+import de.ctc.dataimport.CsvImportService.ImportPreview;
+import de.ctc.dataimport.CsvImportService.ImportRow;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ScorecardParser {
+
+    private final DriverMatchingService driverMatchingService;
+
+    /**
+     * Parses raw Google Sheets data (List of rows, each row a List of cell values)
+     * into an ImportPreview. Detects team blocks dynamically by looking for header rows
+     * where column B contains "Position".
+     */
+    public ImportPreview parse(List<List<Object>> sheetData, ImportMetadata metadata) {
+        var preview = new ImportPreview(metadata);
+
+        if (sheetData == null || sheetData.isEmpty()) {
+            preview.addError("Sheet-Daten sind leer");
+            return preview;
+        }
+
+        String currentTeam = null;
+        boolean inTeamBlock = false;
+
+        for (int i = 0; i < sheetData.size(); i++) {
+            var row = sheetData.get(i);
+
+            // Skip empty rows
+            if (row == null || row.isEmpty()) {
+                inTeamBlock = false;
+                currentTeam = null;
+                continue;
+            }
+
+            // Check if this is a header row (team block start)
+            if (isHeaderRow(row)) {
+                currentTeam = cleanTeamName(cellToString(row.get(0)));
+                inTeamBlock = true;
+                log.debug("Team-Block erkannt: '{}' in Zeile {}", currentTeam, i + 1);
+                continue;
+            }
+
+            // Check if this is the "Overall" summary row (team block end)
+            if (isOverallRow(row)) {
+                log.debug("Overall-Zeile in Zeile {} — Team-Block '{}' beendet", i + 1, currentTeam);
+                inTeamBlock = false;
+                currentTeam = null;
+                continue;
+            }
+
+            // If we're inside a team block, parse driver row
+            if (inTeamBlock && currentTeam != null) {
+                parseDriverRow(row, currentTeam, i + 1, preview);
+            }
+        }
+
+        log.info("Scorecard geparst: {} Fahrer-Zeilen, {} Fehler",
+                preview.getRows().size(), preview.getErrors().size());
+        return preview;
+    }
+
+    private boolean isHeaderRow(List<Object> row) {
+        if (row.size() < 4) {
+            return false;
+        }
+        var colB = cellToString(row.get(1));
+        return "position".equalsIgnoreCase(colB.trim());
+    }
+
+    private boolean isOverallRow(List<Object> row) {
+        var colA = cellToString(row.get(0));
+        return "overall".equalsIgnoreCase(colA.trim());
+    }
+
+    private String cleanTeamName(String teamName) {
+        if (teamName == null) return "";
+        return teamName.trim();
+    }
+
+    private void parseDriverRow(List<Object> row, String teamShortName, int rowNumber, ImportPreview preview) {
+        if (row.size() < 4) {
+            preview.addError("Zeile " + rowNumber + ": Zu wenige Spalten (erwartet mindestens 4: PSN-ID, Position, Quali, FL)");
+            return;
+        }
+
+        var psnId = cellToString(row.get(0)).trim();
+        if (psnId.isEmpty()) {
+            preview.addError("Zeile " + rowNumber + ": PSN-ID ist leer");
+            return;
+        }
+
+        var positionStr = cellToString(row.get(1)).trim();
+        var qualiStr = cellToString(row.get(2)).trim();
+
+        Integer position = parseIntSafe(positionStr, "Position", rowNumber, preview);
+        Integer qualiPosition = parseIntSafe(qualiStr, "Quali", rowNumber, preview);
+
+        if (position == null || qualiPosition == null) {
+            return;
+        }
+
+        boolean fastestLap = parseFastestLap(row.get(3));
+
+        var matchResult = driverMatchingService.findDriver(psnId);
+        preview.addRow(new ImportRow(teamShortName, psnId, position, qualiPosition, fastestLap, matchResult));
+
+        log.debug("Fahrer geparst: {} (Team: {}, P{}, Q{}, FL: {})",
+                psnId, teamShortName, position, qualiPosition, fastestLap);
+    }
+
+    private Integer parseIntSafe(String value, String fieldName, int rowNumber, ImportPreview preview) {
+        try {
+            // Handle decimal strings from Sheets API (e.g. "2.0")
+            if (value.contains(".")) {
+                return (int) Double.parseDouble(value);
+            }
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            preview.addError("Zeile " + rowNumber + ": Ungültiger Wert für " + fieldName + ": " + value);
+            return null;
+        }
+    }
+
+    /**
+     * Parses the fastest-lap cell. Google Sheets checkboxes arrive as Boolean;
+     * other sources may send String representations.
+     */
+    private boolean parseFastestLap(Object cell) {
+        if (cell instanceof Boolean b) {
+            return b;
+        }
+        var str = cellToString(cell);
+        return "true".equalsIgnoreCase(str.trim());
+    }
+
+    private String cellToString(Object cell) {
+        if (cell == null) return "";
+        return cell.toString();
+    }
+}

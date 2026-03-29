@@ -1,45 +1,176 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('CSV Import', ~{::section})}">
+      th:replace="~{admin/layout :: layout('Import', ~{::section})}">
 <body>
 <section>
-    <h1>CSV Import</h1>
-    <div class="card">
-        <p class="text-dim" style="margin-bottom:16px;">
-            CSV format: <code>Team, PSN ID, Position, Quali, FL</code>
-            (Separator: comma, semicolon or tab)
-        </p>
-        <form th:action="@{/admin/import/preview}" method="post" enctype="multipart/form-data">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="seasonName">Season</label>
-                    <select id="seasonName" name="seasonName" required>
-                        <option value="">-- Select season --</option>
-                        <option th:each="s : ${seasons}" th:value="${s.name}" th:text="${s.name}"></option>
-                    </select>
+    <h1>Import</h1>
+
+    <!-- Source Tabs -->
+    <div style="display:flex;gap:0;margin-bottom:0;">
+        <button id="tabCsv" class="btn btn-primary" onclick="switchSource('csv')"
+                style="border-radius:6px 6px 0 0;border-bottom:none;">CSV Upload</button>
+        <button th:if="${sheetsAvailable}" id="tabSheet" class="btn btn-secondary" onclick="switchSource('sheet')"
+                style="border-radius:6px 6px 0 0;border-bottom:none;">Google Sheet</button>
+    </div>
+
+    <div class="card" style="border-radius:0 6px 6px 6px;">
+
+        <!-- Shared metadata fields -->
+        <div class="form-row">
+            <div class="form-group">
+                <label for="seasonName">Season</label>
+                <select id="seasonName" name="seasonName" required form="importForm">
+                    <option value="">-- Select season --</option>
+                    <option th:each="s : ${seasons}" th:value="${s.name}" th:text="${s.name}"></option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Import Type Toggle -->
+        <div class="form-row" style="margin-bottom:12px;">
+            <div class="form-group">
+                <label>Import Type</label>
+                <div style="display:flex;gap:12px;">
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                        <input type="radio" name="importType" value="regular" checked
+                               onchange="switchImportType('regular')"> Regular Season
+                    </label>
+                    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                        <input type="radio" name="importType" value="playoff"
+                               onchange="switchImportType('playoff')"> Playoff
+                    </label>
                 </div>
+            </div>
+        </div>
+
+        <!-- Regular Season: Matchday -->
+        <div id="regularFields">
+            <div class="form-row">
                 <div class="form-group">
                     <label for="matchdayLabel">Matchday</label>
-                    <input type="text" id="matchdayLabel" name="matchdayLabel" placeholder="e.g. Matchday 1" required>
+                    <input type="text" id="matchdayLabel" name="matchdayLabel" placeholder="e.g. Matchday 1">
                 </div>
             </div>
+        </div>
+
+        <!-- Playoff: Matchup Dropdown -->
+        <div id="playoffFields" style="display:none;">
             <div class="form-row">
                 <div class="form-group">
-                    <label for="track">Track</label>
-                    <input type="text" id="track" name="track" placeholder="Optional">
+                    <label for="playoffMatchupId">Playoff Matchup</label>
+                    <select id="playoffMatchupId" name="playoffMatchupId">
+                        <option value="">-- Select matchup --</option>
+                        <option th:each="m : ${playoffMatchups}"
+                                th:value="${m.id}"
+                                th:data-season="${m.seasonName}"
+                                th:text="${m.displayLabel()}"></option>
+                    </select>
                 </div>
+            </div>
+        </div>
+
+        <!-- CSV Upload Panel -->
+        <div id="panelCsv">
+            <p class="text-dim" style="margin-bottom:12px;">
+                CSV format: <code>Team, PSN ID, Position, Quali, FL</code>
+                (Separator: comma, semicolon or tab)
+            </p>
+            <form id="csvForm" th:action="@{/admin/import/preview}" method="post" enctype="multipart/form-data">
                 <div class="form-group">
-                    <label for="car">Car</label>
-                    <input type="text" id="car" name="car" placeholder="Optional">
+                    <label for="file">CSV File</label>
+                    <input type="file" id="file" name="file" accept=".csv,.txt,.tsv" required>
                 </div>
-            </div>
-            <div class="form-group">
-                <label for="file">CSV File</label>
-                <input type="file" id="file" name="file" accept=".csv,.txt,.tsv" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Preview</button>
-        </form>
+                <button type="submit" class="btn btn-primary">Preview</button>
+            </form>
+        </div>
+
+        <!-- Google Sheet Panel -->
+        <div id="panelSheet" style="display:none;" th:if="${sheetsAvailable}">
+            <p class="text-dim" style="margin-bottom:12px;">
+                Paste a Google Sheets URL. The sheet must be shared with the service account.
+            </p>
+            <form id="sheetForm" th:action="@{/admin/import/preview-sheet}" method="post">
+                <div class="form-group">
+                    <label for="sheetUrl">Google Sheet URL</label>
+                    <input type="url" id="sheetUrl" name="sheetUrl"
+                           placeholder="https://docs.google.com/spreadsheets/d/..." required>
+                </div>
+                <button type="submit" class="btn btn-primary">Preview</button>
+            </form>
+        </div>
     </div>
+
+    <script th:inline="javascript">
+        function switchSource(source) {
+            var csvBtn = document.getElementById('tabCsv');
+            var sheetBtn = document.getElementById('tabSheet');
+            var csvPanel = document.getElementById('panelCsv');
+            var sheetPanel = document.getElementById('panelSheet');
+
+            if (source === 'csv') {
+                csvBtn.className = 'btn btn-primary';
+                if (sheetBtn) sheetBtn.className = 'btn btn-secondary';
+                csvPanel.style.display = '';
+                if (sheetPanel) sheetPanel.style.display = 'none';
+            } else {
+                csvBtn.className = 'btn btn-secondary';
+                if (sheetBtn) sheetBtn.className = 'btn btn-primary';
+                csvPanel.style.display = 'none';
+                if (sheetPanel) sheetPanel.style.display = '';
+            }
+        }
+
+        function switchImportType(type) {
+            var regularFields = document.getElementById('regularFields');
+            var playoffFields = document.getElementById('playoffFields');
+            var matchdayInput = document.getElementById('matchdayLabel');
+
+            if (type === 'regular') {
+                regularFields.style.display = '';
+                playoffFields.style.display = 'none';
+                matchdayInput.required = true;
+            } else {
+                regularFields.style.display = 'none';
+                playoffFields.style.display = '';
+                matchdayInput.required = false;
+            }
+        }
+
+        // Sync shared fields into form before submit
+        function syncFields(form) {
+            var fields = ['seasonName', 'matchdayLabel', 'playoffMatchupId'];
+            fields.forEach(function(name) {
+                var source = document.getElementById(name);
+                if (!source) return;
+                // Remove existing hidden field if present
+                var existing = form.querySelector('input[name="' + name + '"], select[name="' + name + '"]');
+                if (!existing) {
+                    var hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = name;
+                    hidden.value = source.value;
+                    form.appendChild(hidden);
+                } else if (existing.tagName === 'INPUT' && existing.type === 'hidden') {
+                    existing.value = source.value;
+                }
+            });
+        }
+
+        // Hook into form submissions
+        document.getElementById('csvForm').addEventListener('submit', function() {
+            syncFields(this);
+        });
+
+        var sheetForm = document.getElementById('sheetForm');
+        if (sheetForm) {
+            sheetForm.addEventListener('submit', function() {
+                syncFields(this);
+            });
+        }
+
+        // Set initial state
+        switchImportType('regular');
+    </script>
 </section>
 </body>
 </html>

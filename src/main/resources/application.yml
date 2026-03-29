@@ -28,6 +28,11 @@ logging:
 server:
   port: 8080
 
+# Google Sheets Integration
+google:
+  sheets:
+    credentials-path: ""
+
 # Statische Seitengenerierung
 ctc:
   site:

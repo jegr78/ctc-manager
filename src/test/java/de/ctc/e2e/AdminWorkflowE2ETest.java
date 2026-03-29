@@ -85,7 +85,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     @Test
     void shouldShowImportPage() {
         page.navigate(url("/admin/import"));
-        assertThat(page.locator("h1")).containsText("CSV Import");
+        assertThat(page.locator("h1")).containsText("Import");
     }
 
     @Test
