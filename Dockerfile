@@ -22,7 +22,7 @@ FROM eclipse-temurin:25-jre
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 
 # Non-root User erstellen
-RUN groupadd -r ctc && useradd -r -g ctc -u 1000 ctc
+RUN groupadd -r ctc && useradd -r -g ctc ctc
 
 WORKDIR /app
 
