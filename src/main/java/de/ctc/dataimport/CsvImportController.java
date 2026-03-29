@@ -46,6 +46,7 @@ public class CsvImportController {
 
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
+            model.addAttribute("source", "csv");
             addCommonAttributes(model);
             return "admin/import-preview";
         } catch (Exception e) {
@@ -66,13 +67,15 @@ public class CsvImportController {
                                Model model) {
         try {
             var spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
-            var sheetData = googleSheetsService.readRange(spreadsheetId, "A1:H50");
+            var sheetData = googleSheetsService.readRange(spreadsheetId, "A:H");
 
             var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car, playoffMatchupId);
             var preview = scorecardParser.parse(sheetData, metadata);
 
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
+            model.addAttribute("source", "sheet");
+            model.addAttribute("sheetUrl", sheetUrl);
             addCommonAttributes(model);
             return "admin/import-preview";
         } catch (Exception e) {
@@ -89,12 +92,27 @@ public class CsvImportController {
                           @RequestParam(required = false) String track,
                           @RequestParam(required = false) String car,
                           @RequestParam(required = false) UUID playoffMatchupId,
-                          @RequestParam("file") MultipartFile file,
+                          @RequestParam(required = false, defaultValue = "csv") String source,
+                          @RequestParam(required = false) String sheetUrl,
+                          @RequestParam(required = false) MultipartFile file,
                           @RequestParam(required = false) Map<String, String> allParams,
                           RedirectAttributes redirectAttributes) {
         try {
             var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, track, car, playoffMatchupId);
-            var preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
+
+            // Re-parse from original source
+            CsvImportService.ImportPreview preview;
+            if ("sheet".equals(source) && sheetUrl != null && !sheetUrl.isBlank()) {
+                var spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
+                var sheetData = googleSheetsService.readRange(spreadsheetId, "A:H");
+                preview = scorecardParser.parse(sheetData, metadata);
+            } else {
+                if (file == null || file.isEmpty()) {
+                    redirectAttributes.addFlashAttribute("errorMessage", "No CSV file provided");
+                    return "redirect:/admin/import";
+                }
+                preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
+            }
 
             // Collect confirmed fuzzy matches and new driver decisions
             Map<String, UUID> confirmedMatches = new HashMap<>();

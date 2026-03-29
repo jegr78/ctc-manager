@@ -107,9 +107,9 @@ public class GoogleSheetsService {
                 throw new IllegalStateException(
                         "Google Sheets credentials not configured or file not found");
             }
-            try {
+            try (var credentialsStream = new FileInputStream(credentialsPath)) {
                 GoogleCredentials credentials = GoogleCredentials
-                        .fromStream(new FileInputStream(credentialsPath))
+                        .fromStream(credentialsStream)
                         .createScoped(SheetsScopes.SPREADSHEETS_READONLY);
 
                 sheetsClient = new Sheets.Builder(

@@ -25,10 +25,16 @@
         <input type="hidden" name="track" th:value="${metadata.track}">
         <input type="hidden" name="car" th:value="${metadata.car}">
         <input type="hidden" name="playoffMatchupId" th:if="${metadata.playoffMatchupId}" th:value="${metadata.playoffMatchupId}">
-        <!-- File needs to be re-uploaded for execute -->
-        <div class="form-group" style="margin-bottom:16px;">
+        <input type="hidden" name="source" th:value="${source ?: 'csv'}">
+        <input type="hidden" name="sheetUrl" th:if="${sheetUrl}" th:value="${sheetUrl}">
+
+        <!-- File re-upload only needed for CSV source -->
+        <div class="form-group" style="margin-bottom:16px;" th:if="${source == null or source == 'csv'}">
             <label for="file">Re-select CSV file (for import)</label>
             <input type="file" id="file" name="file" accept=".csv,.txt,.tsv" required>
+        </div>
+        <div th:if="${source == 'sheet'}" class="text-dim" style="margin-bottom:16px;">
+            <p>Source: Google Sheet</p>
         </div>
 
         <div class="card">
