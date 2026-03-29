@@ -39,6 +39,15 @@ class CarControllerTest {
     @Autowired
     private TeamRepository teamRepository;
 
+    @Autowired
+    private MatchRepository matchRepository;
+
+    @Autowired
+    private RaceScoringRepository raceScoringRepository;
+
+    @Autowired
+    private MatchScoringRepository matchScoringRepository;
+
     private Car car;
 
     @BeforeEach
@@ -127,11 +136,21 @@ class CarControllerTest {
 
     @Test
     void shouldNotDeleteCarWhenReferencedByRace() throws Exception {
-        var season = seasonRepository.save(new Season("Car Test Season"));
+        var rs = new RaceScoring("CT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0);
+        rs = raceScoringRepository.save(rs);
+        var ms = new MatchScoring("CT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0);
+        ms = matchScoringRepository.save(ms);
+        var s = new Season("Car Test Season");
+        s.setRaceScoring(rs);
+        s.setMatchScoring(ms);
+        var season = seasonRepository.save(s);
         var matchday = matchdayRepository.save(new Matchday(season, "CT Matchday", 1));
         var home = teamRepository.save(new Team("Home Team", "HOM"));
         var away = teamRepository.save(new Team("Away Team", "AWY"));
-        var race = new Race(matchday, home, away);
+        var match = matchRepository.save(new Match(matchday, home, away));
+        var race = new Race();
+        race.setMatchday(matchday);
+        race.setMatch(match);
         race.setCar(car);
         raceRepository.save(race);
 

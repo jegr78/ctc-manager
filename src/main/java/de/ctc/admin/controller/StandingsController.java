@@ -29,7 +29,7 @@ public class StandingsController {
         boolean isAlltime = "alltime".equals(seasonId);
 
         if (isAlltime) {
-            model.addAttribute("standings", standingsService.calculateAlltimeStandings());
+            model.addAttribute("standings", java.util.List.of());
             model.addAttribute("driverRanking", driverRankingService.calculateAlltimeRanking());
         } else {
             UUID parsedId = null;

@@ -29,6 +29,11 @@
                     <a th:href="@{/admin/tracks}" th:classappend="${title.contains('Track') ? 'active' : ''}">Tracks</a>
                 </div>
                 <div class="sidebar-group">
+                    <span class="sidebar-group-label">Regelwerk</span>
+                    <a th:href="@{/admin/race-scorings}" th:classappend="${title.contains('Race-Scoring') ? 'active' : ''}">Race-Scorings</a>
+                    <a th:href="@{/admin/match-scorings}" th:classappend="${title.contains('Match-Scoring') ? 'active' : ''}">Match-Scorings</a>
+                </div>
+                <div class="sidebar-group">
                     <span class="sidebar-group-label">Tools</span>
                     <a th:href="@{/admin/standings}" th:classappend="${title.contains('Standing') ? 'active' : ''}">Standings</a>
                     <a th:href="@{/admin/import}" th:classappend="${title.contains('Import') ? 'active' : ''}">Import</a>

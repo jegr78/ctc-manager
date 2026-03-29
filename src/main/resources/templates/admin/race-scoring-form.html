@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${scoring.id != null ? 'Race-Scoring bearbeiten' : 'Neues Race-Scoring'}, ~{::section})}">
+<body>
+<section>
+    <a th:href="@{/admin/race-scorings}" class="back-link">&larr; Zurueck</a>
+    <h1 th:text="${scoring.id != null ? 'Race-Scoring bearbeiten' : 'Neues Race-Scoring'}"></h1>
+
+    <form th:action="@{/admin/race-scorings/save}" method="post" id="scoringForm">
+        <input type="hidden" name="id" th:value="${scoring.id}">
+
+        <div class="card">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" th:value="${scoring.name}" required>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+                <!-- Left: Race Points -->
+                <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <label style="margin-bottom:0;">Rennpunkte</label>
+                        <span class="text-dim" id="racePointsCount"></span>
+                    </div>
+                    <div id="racePointsRows" style="background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden;"></div>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addRow('racePoints')">+ Hinzufuegen</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeRow('racePoints')">Entfernen</button>
+                    </div>
+                    <input type="hidden" name="racePoints" id="racePointsHidden">
+                </div>
+
+                <!-- Right: Quali + FL -->
+                <div>
+                    <div style="margin-bottom:20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <label style="margin-bottom:0;">Qualifying-Punkte</label>
+                            <span class="text-dim" id="qualiPointsCount"></span>
+                        </div>
+                        <div id="qualiPointsRows" style="background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden;"></div>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="addRow('qualiPoints')">+ Hinzufuegen</button>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="removeRow('qualiPoints')">Entfernen</button>
+                        </div>
+                        <div class="text-dim" style="font-size:12px; margin-top:4px;">Leer = keine Quali-Punkte</div>
+                        <input type="hidden" name="qualiPoints" id="qualiPointsHidden">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fastestLapPoints">Schnellste Runde (Punkte)</label>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="number" id="fastestLapPoints" name="fastestLapPoints"
+                                   th:value="${scoring.fastestLapPoints}" min="0" style="width:80px; text-align:right;">
+                            <span class="text-dim" style="font-size:12px;">0 = deaktiviert</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:16px;">
+                <button type="submit" class="btn btn-primary">Speichern</button>
+                <a th:href="@{/admin/race-scorings}" class="btn btn-secondary">Abbrechen</a>
+            </div>
+        </div>
+    </form>
+
+    <script th:inline="javascript">
+        const initialRacePoints = /*[[${scoring.racePoints}]]*/ '';
+        const initialQualiPoints = /*[[${scoring.qualiPoints}]]*/ '';
+
+        function createRowElement(type, idx, value) {
+            var row = document.createElement('div');
+            row.style.cssText = 'display:flex; align-items:center; padding:6px 10px; border-bottom:1px solid var(--border);';
+
+            var label = document.createElement('div');
+            label.style.cssText = 'width:30px; font-size:13px; color:var(--accent); font-weight:600; text-align:center;';
+            label.textContent = idx;
+
+            var input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.value = value || '0';
+            input.style.cssText = 'flex:1; background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:5px 8px; color:var(--white); font-weight:600; text-align:right;';
+            input.addEventListener('change', function() { collectValues(type); });
+
+            row.appendChild(label);
+            row.appendChild(input);
+            return row;
+        }
+
+        function initRows(type, csv) {
+            var container = document.getElementById(type + 'Rows');
+            container.replaceChildren();
+            if (!csv || csv.trim() === '') { updateCount(type); return; }
+            csv.split(',').forEach(function(val, i) {
+                container.appendChild(createRowElement(type, i + 1, val.trim()));
+            });
+            updateCount(type);
+        }
+
+        function addRow(type) {
+            var container = document.getElementById(type + 'Rows');
+            var lastVal = 0;
+            if (container.children.length > 0) {
+                var lastInput = container.lastElementChild.querySelector('input');
+                lastVal = parseInt(lastInput.value) || 0;
+            }
+            container.appendChild(createRowElement(type, container.children.length + 1, lastVal));
+            collectValues(type);
+            updateCount(type);
+        }
+
+        function removeRow(type) {
+            var container = document.getElementById(type + 'Rows');
+            if (container.children.length > 0) {
+                container.removeChild(container.lastElementChild);
+                collectValues(type);
+                updateCount(type);
+            }
+        }
+
+        function collectValues(type) {
+            var container = document.getElementById(type + 'Rows');
+            var inputs = container.querySelectorAll('input[type=number]');
+            var values = [];
+            inputs.forEach(function(input) { values.push(input.value); });
+            document.getElementById(type + 'Hidden').value = values.join(',');
+        }
+
+        function updateCount(type) {
+            var container = document.getElementById(type + 'Rows');
+            document.getElementById(type + 'Count').textContent = container.children.length + ' Pos.';
+        }
+
+        initRows('racePoints', initialRacePoints);
+        initRows('qualiPoints', initialQualiPoints);
+        collectValues('racePoints');
+        collectValues('qualiPoints');
+
+        document.getElementById('scoringForm').addEventListener('submit', function() {
+            collectValues('racePoints');
+            collectValues('qualiPoints');
+        });
+    </script>
+</section>
+</body>
+</html>
