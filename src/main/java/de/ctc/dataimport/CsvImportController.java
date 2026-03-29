@@ -43,6 +43,7 @@ public class CsvImportController {
             var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId, matchdayId);
             var preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
 
+            csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
             model.addAttribute("source", "csv");
@@ -70,6 +71,7 @@ public class CsvImportController {
             var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId, matchdayId);
             var preview = scorecardParser.parse(sheetData, metadata);
 
+            csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
             model.addAttribute("source", "sheet");
@@ -92,6 +94,7 @@ public class CsvImportController {
                           @RequestParam(required = false, defaultValue = "csv") String source,
                           @RequestParam(required = false) String sheetUrl,
                           @RequestParam(required = false) MultipartFile file,
+                          @RequestParam(required = false, defaultValue = "false") boolean overwrite,
                           @RequestParam(required = false) Map<String, String> allParams,
                           RedirectAttributes redirectAttributes) {
         try {
@@ -128,7 +131,7 @@ public class CsvImportController {
                 }
             }
 
-            var result = csvImportService.executeImport(preview, confirmedMatches, createNewDrivers);
+            var result = csvImportService.executeImport(preview, confirmedMatches, createNewDrivers, overwrite);
 
             if (result.hasErrors()) {
                 redirectAttributes.addFlashAttribute("errorMessage",

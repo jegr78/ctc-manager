@@ -61,7 +61,7 @@ public class CsvImportService {
 
     @Transactional
     public ImportResult executeImport(ImportPreview preview, Map<String, UUID> confirmedMatches,
-                                      Set<String> createNewDrivers) {
+                                      Set<String> createNewDrivers, boolean overwriteExisting) {
         var result = new ImportResult();
         var metadata = preview.getMetadata();
 
@@ -89,13 +89,29 @@ public class CsvImportService {
                 continue;
             }
 
-            // Duplicate check: same home vs away on this matchday
             var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
+
+            // Duplicate check: same home vs away on this matchday
             if (matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
                     matchday.getId(), homeTeam.getId(), effectiveAwayTeam.getId())) {
-                result.addError("Match already exists: " + homeTeam.getShortName() +
-                        " vs " + effectiveAwayTeam.getShortName() + " on " + matchday.getLabel());
-                continue;
+                if (overwriteExisting) {
+                    // Delete existing match (cascades to races + results)
+                    var existing = matchRepository.findByMatchdayId(matchday.getId()).stream()
+                            .filter(m -> m.getHomeTeam().getId().equals(homeTeam.getId())
+                                    && m.getAwayTeam() != null
+                                    && m.getAwayTeam().getId().equals(effectiveAwayTeam.getId()))
+                            .findFirst();
+                    existing.ifPresent(m -> {
+                        matchRepository.delete(m);
+                        matchRepository.flush();
+                        log.info("Overwriting existing match: {} vs {} on {}",
+                                homeTeam.getShortName(), effectiveAwayTeam.getShortName(), matchday.getLabel());
+                    });
+                } else {
+                    result.addError("Match already exists: " + homeTeam.getShortName() +
+                            " vs " + effectiveAwayTeam.getShortName() + " on " + matchday.getLabel());
+                    continue;
+                }
             }
 
             var match = new Match(matchday, homeTeam, effectiveAwayTeam);
@@ -285,11 +301,43 @@ public class CsvImportService {
     public record ImportRow(String teamShortName, String psnId, int position, int qualiPosition,
                             boolean fastestLap, DriverMatchingService.MatchResult matchResult) {}
 
+    public boolean checkDuplicate(ImportPreview preview) {
+        var metadata = preview.getMetadata();
+        var season = seasonRepository.findByName(metadata.seasonName()).orElse(null);
+        if (season == null) return false;
+
+        de.ctc.domain.model.Matchday matchday;
+        if (metadata.hasMatchdayId()) {
+            matchday = matchdayRepository.findById(metadata.matchdayId()).orElse(null);
+        } else {
+            matchday = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
+                    .filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
+                    .findFirst().orElse(null);
+        }
+        if (matchday == null) return false;
+
+        var teams = preview.getRows().stream().map(ImportRow::teamShortName).distinct().toList();
+        if (teams.size() < 2) return false;
+
+        var homeTeam = findTeamFlexible(teams.get(0));
+        var awayTeam = findTeamFlexible(teams.get(1));
+        if (homeTeam == null || awayTeam == null) return false;
+
+        boolean exists = matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+                matchday.getId(), homeTeam.getId(), awayTeam.getId());
+        if (exists) {
+            preview.setDuplicateDetected(true);
+        }
+        return exists;
+    }
+
     @Getter
     public static class ImportPreview {
         private final ImportMetadata metadata;
         private final List<ImportRow> rows = new ArrayList<>();
         private final List<String> errors = new ArrayList<>();
+        @lombok.Setter
+        private boolean duplicateDetected;
 
         public ImportPreview(ImportMetadata metadata) {
             this.metadata = metadata;

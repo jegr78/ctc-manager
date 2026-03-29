@@ -17,6 +17,12 @@
         </ul>
     </div>
 
+    <!-- Duplicate Warning -->
+    <div th:if="${preview.duplicateDetected}" class="alert alert-error" style="margin-bottom:16px; border-color:#ffa726; background:rgba(255,167,38,0.1); color:#ffa726;">
+        <strong>Duplicate detected:</strong> A match with the same teams already exists on this matchday.
+        You can overwrite the existing data or cancel.
+    </div>
+
     <form th:action="@{/admin/import/execute}" method="post" enctype="multipart/form-data">
         <input type="hidden" name="seasonName" th:value="${metadata.seasonName}">
         <input type="hidden" name="matchdayId" th:if="${metadata.matchdayId}" th:value="${metadata.matchdayId}">
@@ -79,7 +85,9 @@
         </div>
 
         <div class="actions" style="margin-top:16px;">
-            <button type="submit" class="btn btn-primary">Execute Import</button>
+            <button th:unless="${preview.duplicateDetected}" type="submit" class="btn btn-primary">Execute Import</button>
+            <button th:if="${preview.duplicateDetected}" type="submit" name="overwrite" value="true" class="btn btn-danger"
+                    onclick="return confirm('This will overwrite the existing match results. Continue?')">Overwrite Existing</button>
             <a th:href="@{/admin/import}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
