@@ -24,3 +24,7 @@ spring:
     resources:
       cache:
         period: 0
+
+google:
+  sheets:
+    credentials-path: google-credentials.json
