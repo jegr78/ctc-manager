@@ -190,6 +190,11 @@ public class CsvImportService {
     }
 
     private Matchday findOrCreateMatchday(Season season, ImportMetadata metadata) {
+        if (metadata.hasMatchdayId()) {
+            return matchdayRepository.findById(metadata.matchdayId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Matchday nicht gefunden: " + metadata.matchdayId()));
+        }
         return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
                 .filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
                 .findFirst()
@@ -246,13 +251,22 @@ public class CsvImportService {
     }
 
     public record ImportMetadata(String seasonName, String matchdayLabel, String track, String car,
-                                    UUID playoffMatchupId) {
+                                    UUID playoffMatchupId, UUID matchdayId) {
         public ImportMetadata(String seasonName, String matchdayLabel, String track, String car) {
-            this(seasonName, matchdayLabel, track, car, null);
+            this(seasonName, matchdayLabel, track, car, null, null);
+        }
+
+        public ImportMetadata(String seasonName, String matchdayLabel, String track, String car,
+                              UUID playoffMatchupId) {
+            this(seasonName, matchdayLabel, track, car, playoffMatchupId, null);
         }
 
         public boolean isPlayoff() {
             return playoffMatchupId != null;
+        }
+
+        public boolean hasMatchdayId() {
+            return matchdayId != null;
         }
     }
 

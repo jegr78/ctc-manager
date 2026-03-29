@@ -19,7 +19,8 @@
 
     <form th:action="@{/admin/import/execute}" method="post" enctype="multipart/form-data">
         <input type="hidden" name="seasonName" th:value="${metadata.seasonName}">
-        <input type="hidden" name="matchdayLabel" th:value="${metadata.matchdayLabel}">
+        <input type="hidden" name="matchdayId" th:if="${metadata.matchdayId}" th:value="${metadata.matchdayId}">
+        <input type="hidden" name="matchdayLabel" th:if="${metadata.matchdayLabel}" th:value="${metadata.matchdayLabel}">
         <input type="hidden" name="playoffMatchupId" th:if="${metadata.playoffMatchupId}" th:value="${metadata.playoffMatchupId}">
         <input type="hidden" name="source" th:value="${source ?: 'csv'}">
         <input type="hidden" name="sheetUrl" th:if="${sheetUrl}" th:value="${sheetUrl}">
