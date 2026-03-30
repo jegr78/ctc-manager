@@ -104,10 +104,17 @@ public class TeamCardService {
     }
 
     public List<String> generateAllCards(Season season) throws IOException {
+        var seasonTeamIds = season.getSeasonTeams().stream()
+                .map(st -> st.getTeam().getId())
+                .collect(java.util.stream.Collectors.toSet());
+
         var paths = new ArrayList<String>();
         for (var seasonTeam : season.getSeasonTeams()) {
             var team = seasonTeam.getTeam();
-            if (!team.hasSubTeams()) {
+            // Skip parent teams that have sub-teams in THIS season
+            boolean hasSubTeamsInSeason = team.getSubTeams().stream()
+                    .anyMatch(sub -> seasonTeamIds.contains(sub.getId()));
+            if (!hasSubTeamsInSeason) {
                 paths.add(generateCard(seasonTeam));
             }
         }
