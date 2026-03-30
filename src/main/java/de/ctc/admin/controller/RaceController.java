@@ -132,9 +132,12 @@ public class RaceController {
             hasAwayCard = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), race.getAwayTeam().getId())
                     .map(st -> teamCardService.cardExists(st)).orElse(false);
         }
-        model.addAttribute("canGenerateLineup", hasLineup && hasHomeCard && hasAwayCard);
+        boolean lineupExists = race.getAttachments().stream()
+                .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/lineup.png"));
+        model.addAttribute("canGenerateLineup", hasLineup && hasHomeCard && hasAwayCard && !lineupExists);
         model.addAttribute("lineupMissing", !hasLineup);
         model.addAttribute("cardsMissing", !hasHomeCard || !hasAwayCard);
+        model.addAttribute("lineupExists", lineupExists);
 
         return "admin/race-detail";
     }

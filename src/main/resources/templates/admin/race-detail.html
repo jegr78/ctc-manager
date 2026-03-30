@@ -28,7 +28,7 @@
             <button type="submit" class="btn btn-primary">Generate Lineup Graphic</button>
         </form>
     </div>
-    <div th:if="${!canGenerateLineup}" style="margin-bottom:16px;display:flex;justify-content:flex-end;align-items:center;gap:8px;">
+    <div th:if="${!canGenerateLineup && !lineupExists}" style="margin-bottom:16px;display:flex;justify-content:flex-end;align-items:center;gap:8px;">
         <button class="btn btn-secondary" disabled style="opacity:0.5;">
             Generate Lineup Graphic
         </button>
