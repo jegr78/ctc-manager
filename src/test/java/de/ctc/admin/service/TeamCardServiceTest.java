@@ -40,6 +40,26 @@ class TeamCardServiceTest {
     }
 
     @Test
+    void computeGradientColor_picksDarkestColor() {
+        // Dark blue is darkest (lowest luminance)
+        assertThat(service.computeGradientColor("#1a1a2e", "#e0e0e0", "#ff6600"))
+                .isEqualTo("#1a1a2e");
+    }
+
+    @Test
+    void computeGradientColor_picksDarkestFromBrightSet() {
+        // Red (#ff0000) has lower luminance than yellow (#ffff00) and cyan (#00ffff)
+        assertThat(service.computeGradientColor("#ffff00", "#00ffff", "#ff0000"))
+                .isEqualTo("#ff0000");
+    }
+
+    @Test
+    void computeGradientColor_handlesNullColors() {
+        assertThat(service.computeGradientColor("#336699", null, null))
+                .isEqualTo("#336699");
+    }
+
+    @Test
     void cardExists_returnsFalseWhenNoFile() {
         var season = new Season("Season 4");
         season.setId(UUID.randomUUID());

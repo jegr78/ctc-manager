@@ -72,9 +72,14 @@ public class TeamCardService {
         ctx.setVariable("rating", seasonTeam.getRating());
         ctx.setVariable("points", points);
         ctx.setVariable("record", record);
-        ctx.setVariable("primaryColor", seasonTeam.getEffectivePrimaryColor());
-        ctx.setVariable("secondaryColor", seasonTeam.getEffectiveSecondaryColor());
-        ctx.setVariable("accentColor", seasonTeam.getEffectiveAccentColor());
+        String primaryColor = seasonTeam.getEffectivePrimaryColor();
+        String secondaryColor = seasonTeam.getEffectiveSecondaryColor();
+        String accentColor = seasonTeam.getEffectiveAccentColor();
+
+        ctx.setVariable("primaryColor", primaryColor);
+        ctx.setVariable("secondaryColor", secondaryColor);
+        ctx.setVariable("accentColor", accentColor);
+        ctx.setVariable("gradientColor", computeGradientColor(primaryColor, secondaryColor, accentColor));
         ctx.setVariable("logoBase64", logoBase64);
         ctx.setVariable("fontBase64", fontBase64);
 
@@ -138,6 +143,29 @@ public class TeamCardService {
 
     private String sanitizeFilename(String name) {
         return name.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    String computeGradientColor(String primary, String secondary, String accent) {
+        String darkest = primary;
+        double darkestLuminance = relativeLuminance(primary);
+        for (String color : new String[]{secondary, accent}) {
+            if (color != null) {
+                double lum = relativeLuminance(color);
+                if (lum < darkestLuminance) {
+                    darkestLuminance = lum;
+                    darkest = color;
+                }
+            }
+        }
+        return darkest != null ? darkest : "#111111";
+    }
+
+    private double relativeLuminance(String hex) {
+        if (hex == null || hex.length() < 7) return 1.0;
+        int r = Integer.parseInt(hex.substring(1, 3), 16);
+        int g = Integer.parseInt(hex.substring(3, 5), 16);
+        int b = Integer.parseInt(hex.substring(5, 7), 16);
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     private String encodeLogoBase64(String logoUrl) {
