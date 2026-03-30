@@ -69,6 +69,14 @@ public class TestDataService {
         ));
     }
 
+    private Team subTeam(String name, String shortName, Team parent) {
+        var t = new Team(name, shortName, parent);
+        t.setPrimaryColor(parent.getPrimaryColor());
+        t.setSecondaryColor(parent.getSecondaryColor());
+        t.setAccentColor(parent.getAccentColor());
+        return t;
+    }
+
     private Team team(String name, String shortName, String primary, String secondary, String accent) {
         var t = new Team(name, shortName);
         t.setPrimaryColor(primary);
@@ -79,21 +87,21 @@ public class TestDataService {
 
     private void seedSubTeams(List<Team> teams) {
         var clr = teams.stream().filter(t -> t.getShortName().equals("CLR")).findFirst().orElseThrow();
-        teamRepository.save(new Team("Community League Racing 1", "CLR 1", clr));
-        teamRepository.save(new Team("Community League Racing 2", "CLR 2", clr));
+        teamRepository.save(subTeam("Community League Racing 1", "CLR 1", clr));
+        teamRepository.save(subTeam("Community League Racing 2", "CLR 2", clr));
 
         var tnr = teams.stream().filter(t -> t.getShortName().equals("TNR")).findFirst().orElseThrow();
-        teamRepository.save(new Team("The Neutrals Racing A", "TNR A", tnr));
-        teamRepository.save(new Team("The Neutrals Racing B", "TNR B", tnr));
-        teamRepository.save(new Team("The Neutrals Racing C", "TNR C", tnr));
+        teamRepository.save(subTeam("The Neutrals Racing A", "TNR A", tnr));
+        teamRepository.save(subTeam("The Neutrals Racing B", "TNR B", tnr));
+        teamRepository.save(subTeam("The Neutrals Racing C", "TNR C", tnr));
 
         var ahr = teams.stream().filter(t -> t.getShortName().equals("AHR")).findFirst().orElseThrow();
-        teamRepository.save(new Team("Apex Hunter Racing 1", "AHR 1", ahr));
-        teamRepository.save(new Team("Apex Hunter Racing 2", "AHR 2", ahr));
+        teamRepository.save(subTeam("Apex Hunter Racing 1", "AHR 1", ahr));
+        teamRepository.save(subTeam("Apex Hunter Racing 2", "AHR 2", ahr));
 
         var p1r = teams.stream().filter(t -> t.getShortName().equals("P1R")).findFirst().orElseThrow();
-        teamRepository.save(new Team("Project One Racing X", "P1Rx", p1r));
-        teamRepository.save(new Team("Project One Racing", "P1R", p1r));
+        teamRepository.save(subTeam("Project One Racing X", "P1Rx", p1r));
+        teamRepository.save(subTeam("Project One Racing", "P1R", p1r));
 
         log.info("Created sub-teams: CLR(2), TNR(3), AHR(2), P1R(2)");
     }
