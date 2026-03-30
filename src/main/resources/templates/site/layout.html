@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" th:href="${assetsPath + '/img/ctc-logo-white.png'}">
+    <link rel="apple-touch-icon" sizes="180x180" th:href="${assetsPath + '/img/ctc-logo-white.png'}">
     <title th:text="'CTC - ' + ${title}">Community Team Cup</title>
     <link rel="stylesheet" th:href="${assetsPath != null ? assetsPath + '/css/style.css' : '/assets/css/style.css'}">
 </head>
@@ -13,6 +15,12 @@
                 <img th:src="${assetsPath != null ? assetsPath + '/img/ctc-logo-white.png' : '/assets/img/ctc-logo-white.png'}" alt="CTC" class="nav-logo">
                 <span>COMMUNITY TEAM CUP</span>
             </a>
+            <input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-label="Toggle navigation">
+            <label for="nav-toggle" class="nav-toggle-label">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </label>
             <div class="nav-links">
                 <a th:href="${rootPath + '/index.html'}">Standings</a>
                 <a th:href="${rootPath + '/driver-ranking.html'}">Driver Ranking</a>

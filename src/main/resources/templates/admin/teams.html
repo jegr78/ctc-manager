@@ -8,6 +8,7 @@
         <a th:href="@{/admin/teams/new}" class="btn btn-primary">+ New Team</a>
     </div>
     <div class="card">
+        <div class="table-scroll">
         <table th:if="${!parentTeams.isEmpty()}">
             <thead>
                 <tr><th>Short Name</th><th>Name</th><th>Logo</th><th>Actions</th></tr>
@@ -42,6 +43,7 @@
                 </th:block>
             </tbody>
         </table>
+        </div>
         <div th:if="${parentTeams.isEmpty()}" class="empty-state"><p>No teams created yet.</p></div>
     </div>
 </section>

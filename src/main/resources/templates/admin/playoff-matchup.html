@@ -25,6 +25,7 @@
     <!-- Legs table -->
     <div class="card">
         <h2>Legs</h2>
+        <div class="table-scroll">
         <table th:if="${!legs.isEmpty()}">
             <thead>
                 <tr>
@@ -66,6 +67,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
         <div th:if="${legs.isEmpty()}" class="empty-state"><p>No legs created yet.</p></div>
     </div>
 

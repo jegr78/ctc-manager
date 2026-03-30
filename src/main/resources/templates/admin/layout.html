@@ -3,14 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" th:href="@{/admin/img/favicon.svg}">
+    <link rel="apple-touch-icon" sizes="180x180" th:href="@{/admin/img/apple-touch-icon.png}">
     <title th:text="'CTC Admin - ' + ${title}">CTC Admin</title>
     <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
 </head>
 <body>
     <div class="app-layout">
-        <aside class="sidebar">
+        <div class="sidebar-overlay"></div>
+        <button class="sidebar-toggle" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+        </button>
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">
-                <img th:src="@{/admin/img/ctc-logo-white.png}" alt="CTC" style="height:28px;width:28px;">
+                <img th:src="@{/admin/img/ctc-logo-white.png}" alt="CTC" class="sidebar-logo">
                 <span>CTC Admin</span>
             </div>
             <nav aria-label="Main navigation">
@@ -50,5 +58,7 @@
             </div>
         </main>
     </div>
+    <script th:src="@{/admin/js/sidebar-toggle.js}"></script>
+    <script th:src="@{/admin/js/searchable-dropdown.js}"></script>
 </body>
 </html>

@@ -19,8 +19,8 @@
                     <span th:text="${race.car ?: ''}"></span>
                 </div>
 
-                <div th:if="${race.hasResults}" style="margin-top:16px;">
-                    <table style="font-size:13px;">
+                <div th:if="${race.hasResults}" class="match-results">
+                    <table>
                         <thead>
                             <tr><th>Driver</th><th>Team</th><th class="text-center">Pos</th><th class="text-center">Quali</th><th class="text-center">FL</th><th class="text-right">Pts</th></tr>
                         </thead>

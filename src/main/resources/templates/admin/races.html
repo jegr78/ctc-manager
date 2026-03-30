@@ -27,6 +27,7 @@
     </div>
 
     <div class="card">
+        <div class="table-scroll">
         <table th:if="${!races.isEmpty()}" id="racesTable">
             <thead>
                 <tr>
@@ -84,6 +85,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
         <div th:if="${races.isEmpty()}" class="empty-state"><p>No races found.</p></div>
     </div>
 
