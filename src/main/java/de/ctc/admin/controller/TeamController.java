@@ -9,6 +9,7 @@ import de.ctc.domain.repository.RaceLineupRepository;
 import de.ctc.domain.repository.SeasonDriverRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
+import de.ctc.domain.service.FileStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.UUID;
@@ -30,6 +32,7 @@ public class TeamController {
     private final SeasonRepository seasonRepository;
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonDriverRepository seasonDriverRepository;
+    private final FileStorageService fileStorageService;
 
     @GetMapping
     public String list(Model model) {
@@ -172,7 +175,9 @@ public class TeamController {
             var existing = teamRepository.findById(team.getId()).orElseThrow();
             existing.setName(team.getName());
             existing.setShortName(team.getShortName());
-            existing.setLogoUrl(team.getLogoUrl());
+            existing.setPrimaryColor(team.getPrimaryColor());
+            existing.setSecondaryColor(team.getSecondaryColor());
+            existing.setAccentColor(team.getAccentColor());
             teamRepository.save(existing);
         } else {
             teamRepository.save(team);
@@ -180,6 +185,24 @@ public class TeamController {
         log.info("Saved team: {}", team.getShortName());
         redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + team.getName());
         return "redirect:/admin/teams";
+    }
+
+    @PostMapping("/{id}/logo")
+    public String uploadLogo(@PathVariable UUID id, @RequestParam MultipartFile logo,
+                             RedirectAttributes redirectAttributes) {
+        try {
+            var team = teamRepository.findById(id).orElseThrow();
+            if (team.getLogoUrl() != null) {
+                fileStorageService.delete(team.getLogoUrl());
+            }
+            String url = fileStorageService.storeImage("teams", id, logo);
+            team.setLogoUrl(url);
+            teamRepository.save(team);
+            redirectAttributes.addFlashAttribute("successMessage", "Logo updated");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
+        }
+        return "redirect:/admin/teams/" + id + "/edit";
     }
 
     @PostMapping("/{id}/add-sub-team")

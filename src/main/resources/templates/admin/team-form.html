@@ -18,10 +18,6 @@
                     <input type="text" id="shortName" th:field="*{shortName}" placeholder="e.g. CLR" required>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="logoUrl">Logo URL</label>
-                <input type="text" id="logoUrl" th:field="*{logoUrl}" placeholder="Optional">
-            </div>
             <div th:if="${team.parentTeam != null}" class="form-group">
                 <label>Parent Team</label>
                 <input type="text" th:value="${team.parentTeam.shortName + ' — ' + team.parentTeam.name}" disabled
@@ -30,6 +26,68 @@
             <div class="actions" style="margin-top: 16px;">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/teams}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Brand Colors -->
+    <div class="card" style="margin-top:16px;">
+        <h2>Brand Colors</h2>
+        <form th:action="@{/admin/teams/save}" th:object="${team}" method="post">
+            <input type="hidden" th:field="*{id}">
+            <input type="hidden" th:field="*{parentTeam}">
+            <input type="hidden" th:field="*{name}">
+            <input type="hidden" th:field="*{shortName}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Primary Color</label>
+                    <div class="color-pair" style="display:flex;gap:8px;align-items:center;">
+                        <input type="color" th:value="${team.primaryColor ?: '#333333'}"
+                               style="width:48px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);cursor:pointer;">
+                        <input type="text" th:field="*{primaryColor}" placeholder="#333333"
+                               pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:100px;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Secondary Color</label>
+                    <div class="color-pair" style="display:flex;gap:8px;align-items:center;">
+                        <input type="color" th:value="${team.secondaryColor ?: '#555555'}"
+                               style="width:48px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);cursor:pointer;">
+                        <input type="text" th:field="*{secondaryColor}" placeholder="#555555"
+                               pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:100px;">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Accent Color</label>
+                    <div class="color-pair" style="display:flex;gap:8px;align-items:center;">
+                        <input type="color" th:value="${team.accentColor ?: '#4fc3f7'}"
+                               style="width:48px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);cursor:pointer;">
+                        <input type="text" th:field="*{accentColor}" placeholder="#4fc3f7"
+                               pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:100px;">
+                    </div>
+                </div>
+            </div>
+            <div class="actions" style="margin-top:16px;">
+                <button type="submit" class="btn btn-primary">Save Colors</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Logo Upload (only when editing) -->
+    <div th:if="${team.id != null}" class="card" style="margin-top:16px;">
+        <h2>Logo</h2>
+        <div th:if="${team.logoUrl != null}" style="margin-bottom:12px;">
+            <img th:src="${team.logoUrl}" alt="" style="max-width:150px;border-radius:6px;background:#222;padding:8px;">
+        </div>
+        <div th:if="${team.logoUrl == null}" class="empty-state" style="padding:16px;"><p>No logo yet.</p></div>
+        <form th:action="@{/admin/teams/{id}/logo(id=${team.id})}" method="post" enctype="multipart/form-data" style="margin-top:8px;">
+            <div style="display:flex;gap:8px;align-items:flex-end;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" required
+                           style="padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
+                    <small class="text-dim" style="display:block;margin-top:2px;">PNG, JPG, WebP, GIF. Max 10 MB.</small>
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Upload</button>
             </div>
         </form>
     </div>
