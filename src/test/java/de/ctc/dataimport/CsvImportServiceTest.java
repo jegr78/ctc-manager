@@ -2,7 +2,14 @@ package de.ctc.dataimport;
 
 import de.ctc.domain.model.*;
 import de.ctc.domain.model.Match;
-import de.ctc.domain.repository.*;
+import de.ctc.domain.repository.DriverRepository;
+import de.ctc.domain.repository.MatchRepository;
+import de.ctc.domain.repository.MatchdayRepository;
+import de.ctc.domain.repository.PlayoffMatchupRepository;
+import de.ctc.domain.repository.RaceLineupRepository;
+import de.ctc.domain.repository.RaceRepository;
+import de.ctc.domain.repository.SeasonDriverRepository;
+import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.service.ScoringService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +31,6 @@ class CsvImportServiceTest {
 
     @Mock private DriverMatchingService driverMatchingService;
     @Mock private DriverRepository driverRepository;
-    @Mock private TeamRepository teamRepository;
     @Mock private SeasonRepository seasonRepository;
     @Mock private SeasonDriverRepository seasonDriverRepository;
     @Mock private MatchdayRepository matchdayRepository;
@@ -72,6 +78,9 @@ class CsvImportServiceTest {
         standaloneTeam2 = new Team("Charlie Racing", "CRL");
         standaloneTeam2.setId(UUID.randomUUID());
 
+        // Default: all teams assigned to season
+        season.setTeams(List.of(subTeam1, subTeam2, standaloneTeam1, standaloneTeam2));
+
         driver1 = new Driver("driver1_psn", "Driver One");
         driver1.setId(UUID.randomUUID());
 
@@ -97,10 +106,44 @@ class CsvImportServiceTest {
     }
 
     @Test
+    void executeImport_withDuplicateShortName_usesSeasonTeamScope() {
+        // Parent and sub-team share the same shortName "P1R"
+        var parentTeam = new Team("Project One Racing", "P1R");
+        parentTeam.setId(UUID.randomUUID());
+        var subTeamSameName = new Team("Project One Racing", "P1R", parentTeam);
+        subTeamSameName.setId(UUID.randomUUID());
+
+        // Only the sub-team is assigned to the season
+        season.setTeams(List.of(subTeamSameName));
+
+        setupCommonMocks();
+        when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+
+        var metadata = new CsvImportService.ImportMetadata("Season 1", null, null, null, null, matchday.getId());
+        var row1 = new CsvImportService.ImportRow("P1R", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1));
+        var row2 = new CsvImportService.ImportRow("P1R", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2));
+
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(row1);
+        preview.addRow(row2);
+
+        var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
+
+        assertThat(result.hasErrors()).isFalse();
+
+        // Verify the sub-team (season-scoped) was used, not the parent
+        var lineupCaptor = ArgumentCaptor.forClass(RaceLineup.class);
+        verify(raceLineupRepository, times(2)).save(lineupCaptor.capture());
+        assertThat(lineupCaptor.getAllValues()).allSatisfy(rl ->
+                assertThat(rl.getTeam().getId()).isEqualTo(subTeamSameName.getId()));
+
+    }
+
+    @Test
     void executeImport_withSubTeams_createsRaceLineup() {
         setupCommonMocks();
-        when(teamRepository.findByShortName("AHR_1")).thenReturn(Optional.of(subTeam1));
-        when(teamRepository.findByShortName("AHR_2")).thenReturn(Optional.of(subTeam2));
         when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
 
         var metadata = new CsvImportService.ImportMetadata("Season 1", null, null, null, null, matchday.getId());
@@ -127,8 +170,6 @@ class CsvImportServiceTest {
     @Test
     void executeImport_withStandaloneTeams_createsRaceLineup() {
         setupCommonMocks();
-        when(teamRepository.findByShortName("BRV")).thenReturn(Optional.of(standaloneTeam1));
-        when(teamRepository.findByShortName("CRL")).thenReturn(Optional.of(standaloneTeam2));
         when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
 
         var metadata = new CsvImportService.ImportMetadata("Season 1", null, null, null, null, matchday.getId());
@@ -151,8 +192,6 @@ class CsvImportServiceTest {
     @Test
     void executeImport_withExistingLineup_doesNotDuplicate() {
         setupCommonMocks();
-        when(teamRepository.findByShortName("AHR_1")).thenReturn(Optional.of(subTeam1));
-        when(teamRepository.findByShortName("AHR_2")).thenReturn(Optional.of(subTeam2));
 
         // driver1 already has a lineup entry, driver2 does not
         when(raceLineupRepository.findByRaceIdAndDriverId(any(), eq(driver1.getId())))

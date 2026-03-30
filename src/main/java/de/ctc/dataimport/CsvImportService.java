@@ -2,7 +2,14 @@ package de.ctc.dataimport;
 
 import de.ctc.domain.model.*;
 import de.ctc.domain.model.Match;
-import de.ctc.domain.repository.*;
+import de.ctc.domain.repository.DriverRepository;
+import de.ctc.domain.repository.MatchRepository;
+import de.ctc.domain.repository.MatchdayRepository;
+import de.ctc.domain.repository.PlayoffMatchupRepository;
+import de.ctc.domain.repository.RaceLineupRepository;
+import de.ctc.domain.repository.RaceRepository;
+import de.ctc.domain.repository.SeasonDriverRepository;
+import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.service.ScoringService;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +31,6 @@ public class CsvImportService {
 
     private final DriverMatchingService driverMatchingService;
     private final DriverRepository driverRepository;
-    private final TeamRepository teamRepository;
     private final SeasonRepository seasonRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final MatchdayRepository matchdayRepository;
@@ -74,12 +80,13 @@ public class CsvImportService {
         var matchday = findOrCreateMatchday(season, metadata);
 
         // Process each row
+        var seasonTeams = season.getTeams();
         Map<String, List<ImportRow>> byTeamPair = groupByTeamPair(preview.getRows());
 
         for (var entry : byTeamPair.entrySet()) {
             var teamParts = entry.getKey().split("\\|");
-            var homeTeam = findTeamFlexible(teamParts[0]);
-            var awayTeam = teamParts.length > 1 ? findTeamFlexible(teamParts[1]) : null;
+            var homeTeam = findTeamFlexible(teamParts[0], seasonTeams);
+            var awayTeam = teamParts.length > 1 ? findTeamFlexible(teamParts[1], seasonTeams) : null;
 
             if (homeTeam == null) {
                 result.addError("Team nicht gefunden: " + teamParts[0]);
@@ -144,7 +151,7 @@ public class CsvImportService {
                 race.getResults().add(raceResult);
 
                 // Create RaceLineup for all teams
-                var resolvedTeam = findTeamFlexible(row.teamShortName());
+                var resolvedTeam = findTeamFlexible(row.teamShortName(), seasonTeams);
                 if (resolvedTeam != null) {
                     var existingLineup = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId());
                     if (existingLineup.isEmpty()) {
@@ -195,7 +202,7 @@ public class CsvImportService {
     private void ensureSeasonDriver(Season season, Driver driver, String teamShortName) {
         var existing = seasonDriverRepository.findBySeasonIdAndDriverId(season.getId(), driver.getId());
         if (existing.isEmpty()) {
-            var team = findTeamFlexible(teamShortName);
+            var team = findTeamFlexible(teamShortName, season.getTeams());
             if (team != null) {
                 seasonDriverRepository.save(new SeasonDriver(season, driver, team));
                 log.debug("Created SeasonDriver: {} -> {} ({})", driver.getPsnId(), teamShortName, season.getName());
@@ -204,30 +211,25 @@ public class CsvImportService {
     }
 
     /**
-     * Finds a team by short name with flexible matching:
-     * 1. Exact match
-     * 2. Case-insensitive match
-     * 3. Normalized match (spaces ↔ underscores)
+     * Finds a team by short name within the season's assigned teams.
+     * Flexible matching: exact → case-insensitive → normalized (spaces ↔ underscores).
      */
-    private Team findTeamFlexible(String shortName) {
-        // 1. Exact match
-        var exact = teamRepository.findByShortName(shortName);
-        if (exact.isPresent()) return exact.get();
-
+    private Team findTeamFlexible(String shortName, List<Team> seasonTeams) {
+        // 1. Exact match within season teams
+        for (var team : seasonTeams) {
+            if (team.getShortName().equals(shortName)) return team;
+        }
         // 2. Case-insensitive
-        var caseInsensitive = teamRepository.findByShortNameIgnoreCase(shortName);
-        if (caseInsensitive.isPresent()) return caseInsensitive.get();
-
-        // 3. Try with spaces replaced by underscores and vice versa
+        for (var team : seasonTeams) {
+            if (team.getShortName().equalsIgnoreCase(shortName)) return team;
+        }
+        // 3. Normalized (spaces ↔ underscores)
         var withUnderscores = shortName.replace(" ", "_");
         var withSpaces = shortName.replace("_", " ");
-
-        var alt1 = teamRepository.findByShortNameIgnoreCase(withUnderscores);
-        if (alt1.isPresent()) return alt1.get();
-
-        var alt2 = teamRepository.findByShortNameIgnoreCase(withSpaces);
-        if (alt2.isPresent()) return alt2.get();
-
+        for (var team : seasonTeams) {
+            var sn = team.getShortName();
+            if (sn.equalsIgnoreCase(withUnderscores) || sn.equalsIgnoreCase(withSpaces)) return team;
+        }
         return null;
     }
 
@@ -333,8 +335,9 @@ public class CsvImportService {
         var teams = preview.getRows().stream().map(ImportRow::teamShortName).distinct().toList();
         if (teams.size() < 2) return false;
 
-        var homeTeam = findTeamFlexible(teams.get(0));
-        var awayTeam = findTeamFlexible(teams.get(1));
+        var seasonTeams = season.getTeams();
+        var homeTeam = findTeamFlexible(teams.get(0), seasonTeams);
+        var awayTeam = findTeamFlexible(teams.get(1), seasonTeams);
         if (homeTeam == null || awayTeam == null) return false;
 
         boolean exists = matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
