@@ -161,6 +161,7 @@ h3 { font-size: 16px; margin-bottom: 8px; color: var(--white); }
 
 table {
     width: 100%;
+    min-width: 600px;
     border-collapse: collapse;
     font-size: 14px;
 }
@@ -201,6 +202,7 @@ th.sortable[data-sort="desc"]::after { content: ' \2193'; opacity: 1; }
     font-weight: 500;
     cursor: pointer;
     text-decoration: none;
+    white-space: nowrap;
     transition: all 0.2s;
 }
 
