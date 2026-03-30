@@ -137,33 +137,32 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
 
     @Test
     void shouldShowTeamDetailWithDriversGroupedBySeason() {
+        // T-ALF (Test Alpha Racing) hat Fahrer in Test-Season 2026 und 2025
         page.navigate(url("/admin/teams"));
-        page.locator("a:has-text('P1R')").first().click();
+        page.locator("a:has-text('T-ALF')").first().click();
 
-        assertThat(page.locator("h1")).containsText("Project One Racing");
+        assertThat(page.locator("h1")).containsText("Test Alpha Racing");
         assertThat(page.locator("h2:has-text('Seasons & Drivers')")).isVisible();
 
-        // Test-Season 2026 Header sichtbar (collapsed accordion)
-        var seasonHeader = page.locator(".season-header:has-text('Test-Season 2026')");
+        var seasonHeader = page.locator(".season-header:has-text('Test-Season 2026')").first();
         assertThat(seasonHeader).isVisible();
         assertThat(seasonHeader).containsText("Drivers");
 
-        // Accordion oeffnen und Fahrer pruefen
-        seasonHeader.click();
-        assertThat(page.locator("text=Test_P1R_1")).isVisible();
+        // Fahrer im DOM vorhanden (Accordion muss nicht offen sein)
+        assertThat(page.locator("details.season-accordion:has-text('Test-Season 2026')")).containsText("Test_Alpha_1");
+        assertThat(page.locator("details.season-accordion:has-text('Test-Season 2026')")).containsText("Test_Alpha_2");
     }
 
     @Test
     void shouldShowTeamDetailWithSubTeamDriverGroups() {
+        // T-BRV (Test Bravo Racing) hat Sub-Teams T-BRV 1 + T-BRV 2
         page.navigate(url("/admin/teams"));
-        page.locator("a:has-text('CLR')").first().click();
+        page.locator("a:has-text('T-BRV')").first().click();
 
-        assertThat(page.locator("h1")).containsText("Community League Racing");
+        assertThat(page.locator("h1")).containsText("Test Bravo Racing");
 
-        // Accordion oeffnen
         page.locator(".season-header:has-text('Test-Season 2026')").click();
 
-        // CLR hat Sub-Teams CLR 1 + CLR 2 aus seedRaceLineups
         assertThat(page.locator(".team-group-label").first()).isVisible();
         assertThat(page.locator(".badge-sub").first()).isVisible();
         assertThat(page.locator(".chip").first()).isVisible();
@@ -171,10 +170,10 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
 
     @Test
     void shouldShowMultipleSeasonAccordions() {
+        // T-ALF hat Lineups in Test-Season 2026 + Test-Season 2025
         page.navigate(url("/admin/teams"));
-        page.locator("a:has-text('P1R')").first().click();
+        page.locator("a:has-text('T-ALF')").first().click();
 
-        // P1R hat Lineups in Test-Season 2026 + Test-Season 2025 (via P1Rx)
         var allAccordions = page.locator("details.season-accordion");
         assertThat(allAccordions.first()).isVisible();
 
