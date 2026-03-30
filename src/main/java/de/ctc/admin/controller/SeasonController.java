@@ -27,6 +27,7 @@ public class SeasonController {
     private final PlayoffRepository playoffRepository;
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
+    private final SeasonTeamRepository seasonTeamRepository;
     private final SwissPairingService swissPairingService;
 
     @GetMapping("/{id}")
@@ -153,6 +154,19 @@ public class SeasonController {
         log.info("Removed team {} from season {}", team.getShortName(), season.getName());
         redirectAttributes.addFlashAttribute("successMessage", "Team removed");
         return "redirect:/admin/seasons/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/update-rating")
+    public String updateRating(@PathVariable UUID id,
+                               @RequestParam UUID seasonTeamId,
+                               @RequestParam(required = false) Integer rating,
+                               RedirectAttributes redirectAttributes) {
+        var seasonTeam = seasonTeamRepository.findById(seasonTeamId).orElseThrow();
+        seasonTeam.setRating(rating);
+        seasonTeamRepository.save(seasonTeam);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Rating updated: " + seasonTeam.getTeam().getShortName());
+        return "redirect:/admin/seasons/" + id;
     }
 
     @PostMapping("/{id}/cars/add")

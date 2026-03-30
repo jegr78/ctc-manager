@@ -42,6 +42,38 @@
                 </a>
             </div>
             <div th:if="${season.teams.isEmpty()}" class="empty-state" style="padding:16px;"><p>No teams assigned.</p></div>
+            <div th:if="${!season.seasonTeams.isEmpty()}" style="margin-top:16px;">
+                <h3>Ratings</h3>
+                <table>
+                    <thead>
+                        <tr><th>Team</th><th>Rating</th><th>Colors</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="st : ${season.seasonTeams}">
+                            <td>
+                                <a th:href="@{/admin/teams/{id}(id=${st.team.id})}" th:text="${st.team.shortName}"></a>
+                            </td>
+                            <td>
+                                <form th:action="@{/admin/seasons/{id}/update-rating(id=${season.id})}" method="post"
+                                      style="display:flex;gap:4px;align-items:center;">
+                                    <input type="hidden" name="seasonTeamId" th:value="${st.id}">
+                                    <input type="number" name="rating" th:value="${st.rating}" min="0" max="99"
+                                           style="width:60px;padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
+                                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                </form>
+                            </td>
+                            <td>
+                                <div th:if="${st.team.primaryColor != null}" style="display:flex;gap:2px;">
+                                    <span th:style="'display:inline-block;width:16px;height:16px;border-radius:3px;background:' + ${st.effectivePrimaryColor}"></span>
+                                    <span th:style="'display:inline-block;width:16px;height:16px;border-radius:3px;background:' + ${st.effectiveSecondaryColor}"></span>
+                                    <span th:style="'display:inline-block;width:16px;height:16px;border-radius:3px;background:' + ${st.effectiveAccentColor}"></span>
+                                </div>
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="detail-section" style="margin-top:32px;">
