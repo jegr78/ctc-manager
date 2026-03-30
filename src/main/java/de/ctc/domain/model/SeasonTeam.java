@@ -40,18 +40,26 @@ public class SeasonTeam {
     }
 
     public String getEffectivePrimaryColor() {
-        return primaryColor != null ? primaryColor : team.getPrimaryColor();
+        if (primaryColor != null) return primaryColor;
+        if (team.getPrimaryColor() != null) return team.getPrimaryColor();
+        return team.isSubTeam() ? team.getParentTeam().getPrimaryColor() : null;
     }
 
     public String getEffectiveSecondaryColor() {
-        return secondaryColor != null ? secondaryColor : team.getSecondaryColor();
+        if (secondaryColor != null) return secondaryColor;
+        if (team.getSecondaryColor() != null) return team.getSecondaryColor();
+        return team.isSubTeam() ? team.getParentTeam().getSecondaryColor() : null;
     }
 
     public String getEffectiveAccentColor() {
-        return accentColor != null ? accentColor : team.getAccentColor();
+        if (accentColor != null) return accentColor;
+        if (team.getAccentColor() != null) return team.getAccentColor();
+        return team.isSubTeam() ? team.getParentTeam().getAccentColor() : null;
     }
 
     public String getEffectiveLogoUrl() {
-        return logoUrl != null ? logoUrl : team.getLogoUrl();
+        if (logoUrl != null) return logoUrl;
+        if (team.getLogoUrl() != null) return team.getLogoUrl();
+        return team.isSubTeam() ? team.getParentTeam().getLogoUrl() : null;
     }
 }

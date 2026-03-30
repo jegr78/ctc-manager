@@ -16,6 +16,11 @@ class SeasonTeamTest {
         return team;
     }
 
+    private Team subTeamOf(Team parent) {
+        Team sub = new Team("Alpha Sub 1", "ALF 1", parent);
+        return sub;
+    }
+
     @Nested
     class GetEffectivePrimaryColorTest {
 
@@ -32,6 +37,15 @@ class SeasonTeamTest {
         void shouldFallbackToTeamColorWhenNoOverride() {
             Team team = teamWithColors("#FF0000", null, null, null);
             SeasonTeam seasonTeam = new SeasonTeam(null, team);
+
+            assertEquals("#FF0000", seasonTeam.getEffectivePrimaryColor());
+        }
+
+        @Test
+        void shouldFallbackToParentTeamColorForSubTeam() {
+            Team parent = teamWithColors("#FF0000", null, null, null);
+            Team sub = subTeamOf(parent);
+            SeasonTeam seasonTeam = new SeasonTeam(null, sub);
 
             assertEquals("#FF0000", seasonTeam.getEffectivePrimaryColor());
         }
