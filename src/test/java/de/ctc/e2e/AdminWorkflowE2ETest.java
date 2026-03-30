@@ -166,17 +166,26 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     }
 
     @Test
-    void shouldCollapseAndExpandSeasonAccordion() {
+    void shouldShowMultipleSeasonAccordions() {
         page.navigate(url("/admin/teams"));
         page.locator("a:has-text('P1R')").first().click();
 
-        var collapsedSeason = page.locator("details.season-accordion:not([open]):has-text('Season 3')");
-        assertThat(collapsedSeason).isVisible();
+        // P1R has drivers in Season 4 (active) and Season 3 Group A (via P1Rx)
+        // Plus seasons without drivers (S1A, S1B, S2, S3B)
+        var allAccordions = page.locator("details.season-accordion");
+        assertThat(allAccordions.first()).isVisible();
 
-        collapsedSeason.locator(".season-header").click();
+        // At least 2 season accordions (Season 4 + Season 3 Group A with drivers)
+        org.junit.jupiter.api.Assertions.assertTrue(allAccordions.count() >= 2,
+                "Expected at least 2 season accordions, got " + allAccordions.count());
 
-        assertThat(collapsedSeason.locator(".season-drivers")).isVisible();
-        assertThat(collapsedSeason.locator(".chip").first()).isVisible();
+        // Active season (Season 4) should be open
+        var openAccordion = page.locator("details.season-accordion[open]");
+        assertThat(openAccordion).isVisible();
+        assertThat(openAccordion.locator(".season-header")).containsText("Season 4");
+
+        // Season 3 Group A should have P1Rx drivers
+        assertThat(page.locator("text=Season 3 - 2025 - Group A")).isVisible();
     }
 
     @Test

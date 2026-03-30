@@ -79,16 +79,14 @@
                     </div>
                 </details>
             </div>
-            <!-- Seasons ohne Fahrer (nicht in seasonDriverGroups enthalten) -->
-            <div th:if="${!seasonDriverGroups.isEmpty()}" th:with="groupedSeasonIds=${seasonDriverGroups.![season.id]}">
-                <div th:each="s : ${seasons}" th:if="${!groupedSeasonIds.contains(s.id)}">
-                    <details class="season-accordion">
-                        <summary class="season-header">
-                            <a th:href="@{/admin/seasons/{id}(id=${s.id})}" th:text="${s.name}" class="season-header-title"></a>
-                            <span class="text-dim">(0 Drivers)</span>
-                        </summary>
-                    </details>
-                </div>
+            <!-- Seasons ohne Fahrer -->
+            <div th:each="s : ${seasonsWithoutDrivers}">
+                <details class="season-accordion">
+                    <summary class="season-header">
+                        <a th:href="@{/admin/seasons/{id}(id=${s.id})}" th:text="${s.name}" class="season-header-title"></a>
+                        <span class="text-dim">(0 Drivers)</span>
+                    </summary>
+                </details>
             </div>
         </div>
     </div>

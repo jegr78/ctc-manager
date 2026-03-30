@@ -66,7 +66,7 @@ class TeamControllerTest {
         mockMvc.perform(get("/admin/teams/" + team.getId()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/team-detail"))
-                .andExpect(model().attributeExists("team", "seasons", "seasonDriverGroups"));
+                .andExpect(model().attributeExists("team", "seasons", "seasonDriverGroups", "seasonsWithoutDrivers"));
     }
 
     @Test

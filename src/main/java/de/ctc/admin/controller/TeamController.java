@@ -84,9 +84,18 @@ public class TeamController {
                 })
                 .toList();
 
+        // Seasons ohne Fahrer (nicht in seasonDriverGroups enthalten)
+        var groupedSeasonIds = seasonDriverGroups.stream()
+                .map(g -> g.season().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        var seasonsWithoutDrivers = seasons.stream()
+                .filter(s -> !groupedSeasonIds.contains(s.getId()))
+                .toList();
+
         model.addAttribute("team", team);
         model.addAttribute("seasons", seasons);
         model.addAttribute("seasonDriverGroups", seasonDriverGroups);
+        model.addAttribute("seasonsWithoutDrivers", seasonsWithoutDrivers);
         return "admin/team-detail";
     }
 
