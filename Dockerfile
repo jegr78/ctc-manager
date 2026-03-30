@@ -36,8 +36,10 @@ RUN mkdir -p /app/uploads /app/ctc-site-output && chown -R ctc:ctc /app
 COPY --from=build --chown=ctc:ctc /build/target/ctc-manager-*.jar /app/ctc-manager.jar
 
 # Playwright Chromium-Browser installieren (fuer Team Card Generierung)
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
 RUN java -cp /app/ctc-manager.jar -Dloader.main=com.microsoft.playwright.CLI \
-    org.springframework.boot.loader.launch.PropertiesLauncher install chromium
+    org.springframework.boot.loader.launch.PropertiesLauncher install chromium \
+    && chown -R ctc:ctc /app/.playwright
 
 USER ctc
 
