@@ -1,6 +1,11 @@
 package de.ctc.admin.controller;
 
+import de.ctc.domain.model.Driver;
+import de.ctc.domain.model.SeasonDriver;
 import de.ctc.domain.model.Team;
+import de.ctc.domain.repository.DriverRepository;
+import de.ctc.domain.repository.SeasonDriverRepository;
+import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +28,15 @@ class TeamControllerTest {
 
     @Autowired
     private TeamRepository teamRepository;
+
+    @Autowired
+    private SeasonDriverRepository seasonDriverRepository;
+
+    @Autowired
+    private SeasonRepository seasonRepository;
+
+    @Autowired
+    private DriverRepository driverRepository;
 
     @Test
     void shouldListTeams() throws Exception {
@@ -52,7 +66,36 @@ class TeamControllerTest {
         mockMvc.perform(get("/admin/teams/" + team.getId()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/team-detail"))
-                .andExpect(model().attributeExists("team", "seasons"));
+                .andExpect(model().attributeExists("team", "seasons", "seasonDriverGroups"));
+    }
+
+    @Test
+    void shouldShowTeamDetailWithGroupedDrivers() throws Exception {
+        var parent = teamRepository.save(new Team("Grouped Racing", "GRP"));
+        var sub = teamRepository.save(new Team("Grouped Racing A", "GRP A", parent));
+
+        var season = seasonRepository.findByActiveTrue().orElseThrow();
+
+        var driver1 = driverRepository.save(new Driver("grp_driver1", "GRP Driver 1"));
+        var driver2 = driverRepository.save(new Driver("grp_driver2", "GRP Driver 2"));
+        seasonDriverRepository.save(new SeasonDriver(season, driver1, parent));
+        seasonDriverRepository.save(new SeasonDriver(season, driver2, sub));
+
+        mockMvc.perform(get("/admin/teams/" + parent.getId()))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("seasonDriverGroups"))
+                .andExpect(model().attribute("seasonDriverGroups",
+                        org.hamcrest.Matchers.hasSize(1)));
+    }
+
+    @Test
+    void shouldShowTeamDetailWithEmptyDriverGroups() throws Exception {
+        var team = teamRepository.save(new Team("Empty Racing", "EMP"));
+
+        mockMvc.perform(get("/admin/teams/" + team.getId()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("seasonDriverGroups",
+                        org.hamcrest.Matchers.hasSize(0)));
     }
 
     @Test

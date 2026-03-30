@@ -1,6 +1,9 @@
 package de.ctc.admin.controller;
 
+import de.ctc.admin.dto.SeasonDriverGroupDto;
+import de.ctc.domain.model.SeasonDriver;
 import de.ctc.domain.model.Team;
+import de.ctc.domain.repository.SeasonDriverRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
 import jakarta.validation.Valid;
@@ -22,6 +25,7 @@ public class TeamController {
 
     private final TeamRepository teamRepository;
     private final SeasonRepository seasonRepository;
+    private final SeasonDriverRepository seasonDriverRepository;
 
     @GetMapping
     public String list(Model model) {
@@ -39,8 +43,50 @@ public class TeamController {
     public String detail(@PathVariable UUID id, Model model) {
         var team = teamRepository.findById(id).orElseThrow();
         var seasons = seasonRepository.findByTeamsId(id);
+
+        // Alle relevanten Team-IDs (dieses Team + Sub-Teams)
+        var teamIds = new java.util.ArrayList<UUID>();
+        teamIds.add(id);
+        team.getSubTeams().forEach(sub -> teamIds.add(sub.getId()));
+
+        // Alle SeasonDrivers fuer diese Teams laden und gruppieren
+        var allSeasonDrivers = seasonDriverRepository.findByTeamIdIn(teamIds);
+
+        var seasonDriverGroups = allSeasonDrivers.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        SeasonDriver::getSeason,
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.groupingBy(
+                                SeasonDriver::getTeam,
+                                java.util.LinkedHashMap::new,
+                                java.util.stream.Collectors.toList()
+                        )
+                ))
+                .entrySet().stream()
+                .sorted((a, b) -> {
+                    // Active season first, then by name descending
+                    if (a.getKey().isActive() != b.getKey().isActive()) {
+                        return a.getKey().isActive() ? -1 : 1;
+                    }
+                    return b.getKey().getName().compareTo(a.getKey().getName());
+                })
+                .map(entry -> {
+                    var sortedByTeam = new java.util.LinkedHashMap<Team, java.util.List<SeasonDriver>>();
+                    entry.getValue().entrySet().stream()
+                            .sorted(java.util.Comparator.comparing(e -> e.getKey().getShortName()))
+                            .forEach(e -> {
+                                var sortedDrivers = e.getValue().stream()
+                                        .sorted(java.util.Comparator.comparing(sd -> sd.getDriver().getPsnId()))
+                                        .toList();
+                                sortedByTeam.put(e.getKey(), sortedDrivers);
+                            });
+                    return new SeasonDriverGroupDto(entry.getKey(), sortedByTeam);
+                })
+                .toList();
+
         model.addAttribute("team", team);
         model.addAttribute("seasons", seasons);
+        model.addAttribute("seasonDriverGroups", seasonDriverGroups);
         return "admin/team-detail";
     }
 
