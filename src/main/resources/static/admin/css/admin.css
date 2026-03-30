@@ -812,6 +812,99 @@ a.chip:hover {
     font-size: 11px;
 }
 
+/* === Season Accordion (Team Detail) === */
+.season-accordion {
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.season-accordion summary {
+    list-style: none;
+}
+.season-accordion summary::-webkit-details-marker {
+    display: none;
+}
+
+.season-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--bg-input);
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+    transition: background 0.15s;
+}
+.season-header:hover {
+    background: var(--bg-hover);
+}
+.season-header::before {
+    content: '';
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid var(--text-dim);
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+}
+details[open] > .season-header::before {
+    transform: rotate(90deg);
+}
+
+.season-header-title {
+    font-weight: 600;
+    color: var(--white);
+    text-decoration: none;
+}
+a.season-header-title:hover {
+    color: var(--accent);
+}
+
+.season-drivers {
+    padding: 12px 16px 16px;
+}
+
+.team-driver-group {
+    margin-bottom: 12px;
+}
+.team-driver-group:last-child {
+    margin-bottom: 0;
+}
+
+.team-group-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    padding-left: 4px;
+}
+.team-group-label a {
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: color 0.15s;
+}
+.team-group-label a:hover {
+    color: var(--accent);
+}
+
+.badge-sub {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 6px;
+    font-size: 10px;
+    border-radius: var(--radius-lg);
+    background: #1a2a3a;
+    color: var(--accent);
+}
+
 /* === Mobile Sidebar === */
 .sidebar-toggle {
     display: none;
