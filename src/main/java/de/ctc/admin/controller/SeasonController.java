@@ -2,6 +2,7 @@ package de.ctc.admin.controller;
 
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
+import de.ctc.domain.service.FileStorageService;
 import de.ctc.domain.service.SwissPairingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.*;
@@ -28,6 +30,7 @@ public class SeasonController {
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
     private final SeasonTeamRepository seasonTeamRepository;
+    private final FileStorageService fileStorageService;
     private final SwissPairingService swissPairingService;
 
     @GetMapping("/{id}")
@@ -156,16 +159,37 @@ public class SeasonController {
         return "redirect:/admin/seasons/" + id + "/edit";
     }
 
-    @PostMapping("/{id}/update-rating")
-    public String updateRating(@PathVariable UUID id,
-                               @RequestParam UUID seasonTeamId,
-                               @RequestParam(required = false) Integer rating,
-                               RedirectAttributes redirectAttributes) {
+    @PostMapping("/{id}/update-season-team")
+    public String updateSeasonTeam(@PathVariable UUID id,
+                                   @RequestParam UUID seasonTeamId,
+                                   @RequestParam(required = false) Integer rating,
+                                   @RequestParam(required = false) String primaryColor,
+                                   @RequestParam(required = false) String secondaryColor,
+                                   @RequestParam(required = false) String accentColor,
+                                   @RequestParam(required = false) MultipartFile logoOverride,
+                                   RedirectAttributes redirectAttributes) {
         var seasonTeam = seasonTeamRepository.findById(seasonTeamId).orElseThrow();
         seasonTeam.setRating(rating);
+        seasonTeam.setPrimaryColor(primaryColor != null && !primaryColor.isBlank() ? primaryColor : null);
+        seasonTeam.setSecondaryColor(secondaryColor != null && !secondaryColor.isBlank() ? secondaryColor : null);
+        seasonTeam.setAccentColor(accentColor != null && !accentColor.isBlank() ? accentColor : null);
+
+        if (logoOverride != null && !logoOverride.isEmpty()) {
+            try {
+                if (seasonTeam.getLogoUrl() != null) {
+                    fileStorageService.delete(seasonTeam.getLogoUrl());
+                }
+                String url = fileStorageService.storeImage("season-teams", seasonTeamId, logoOverride);
+                seasonTeam.setLogoUrl(url);
+            } catch (Exception e) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
+                return "redirect:/admin/seasons/" + id;
+            }
+        }
+
         seasonTeamRepository.save(seasonTeam);
         redirectAttributes.addFlashAttribute("successMessage",
-                "Rating updated: " + seasonTeam.getTeam().getShortName());
+                "Updated: " + seasonTeam.getTeam().getShortName());
         return "redirect:/admin/seasons/" + id;
     }
 
