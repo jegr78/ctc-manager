@@ -2,6 +2,8 @@ package de.ctc.admin.controller;
 
 import de.ctc.admin.dto.RaceForm;
 import de.ctc.admin.dto.RaceResultForm;
+import de.ctc.admin.service.LineupGraphicService;
+import de.ctc.admin.service.TeamCardService;
 import de.ctc.domain.model.AttachmentType;
 import de.ctc.domain.model.Race;
 import de.ctc.domain.model.RaceAttachment;
@@ -12,6 +14,12 @@ import de.ctc.domain.service.FileStorageService;
 import de.ctc.domain.service.ScoringService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
@@ -19,6 +27,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -43,6 +55,12 @@ public class RaceController {
     private final TrackRepository trackRepository;
     private final ScoringService scoringService;
     private final FileStorageService fileStorageService;
+    private final LineupGraphicService lineupGraphicService;
+    private final TeamCardService teamCardService;
+    private final SeasonTeamRepository seasonTeamRepository;
+
+    @Value("${app.upload-dir:uploads}")
+    private String uploadDir;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID matchdayId,
@@ -101,6 +119,26 @@ public class RaceController {
             }
             model.addAttribute("driverTeamMap", driverTeamMap);
         }
+
+        // Check if lineup graphic can be generated
+        var lineups = raceLineupRepository.findByRaceId(race.getId());
+        boolean hasLineup = !lineups.isEmpty();
+        boolean hasHomeCard = false;
+        boolean hasAwayCard = false;
+        if (race.getMatch() != null && race.getHomeTeam() != null && race.getAwayTeam() != null) {
+            var season = race.getMatchday().getSeason();
+            hasHomeCard = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), race.getHomeTeam().getId())
+                    .map(st -> teamCardService.cardExists(st)).orElse(false);
+            hasAwayCard = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), race.getAwayTeam().getId())
+                    .map(st -> teamCardService.cardExists(st)).orElse(false);
+        }
+        boolean lineupExists = race.getAttachments().stream()
+                .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/lineup.png"));
+        model.addAttribute("canGenerateLineup", hasLineup && hasHomeCard && hasAwayCard && !lineupExists);
+        model.addAttribute("lineupMissing", !hasLineup);
+        model.addAttribute("cardsMissing", !hasHomeCard || !hasAwayCard);
+        model.addAttribute("lineupExists", lineupExists);
+
         return "admin/race-detail";
     }
 
@@ -329,6 +367,50 @@ public class RaceController {
         raceAttachmentRepository.delete(attachment);
         redirectAttributes.addFlashAttribute("successMessage", "Attachment deleted");
         return "redirect:/admin/races/" + raceId;
+    }
+
+    @PostMapping("/{id}/generate-lineup")
+    public String generateLineup(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        var race = raceRepository.findById(id).orElseThrow();
+        try {
+            String url = lineupGraphicService.generateLineup(race);
+            String attachmentName = race.getMatchday().getLabel() + "-"
+                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Lineups";
+            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
+            raceAttachmentRepository.save(attachment);
+            redirectAttributes.addFlashAttribute("successMessage", "Lineup graphic generated");
+        } catch (Exception e) {
+            log.error("Lineup generation failed for race {}", id, e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Generation failed: " + e.getMessage());
+        }
+        return "redirect:/admin/races/" + id;
+    }
+
+    @GetMapping("/attachments/{attachmentId}/download")
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable UUID attachmentId) {
+        var attachment = raceAttachmentRepository.findById(attachmentId).orElseThrow();
+        if (attachment.getType() != AttachmentType.FILE) {
+            return ResponseEntity.badRequest().build();
+        }
+        String url = attachment.getUrl();
+        Path file = Paths.get(uploadDir).toAbsolutePath().normalize()
+                .resolve(url.substring("/uploads/".length()));
+        if (!Files.exists(file)) {
+            return ResponseEntity.notFound().build();
+        }
+        String contentType = "application/octet-stream";
+        try { contentType = Files.probeContentType(file); } catch (IOException ignored) {}
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + attachment.getName() + getExtension(file) + "\"")
+                .body(new FileSystemResource(file));
+    }
+
+    private String getExtension(Path file) {
+        String name = file.getFileName().toString();
+        int dot = name.lastIndexOf('.');
+        return dot >= 0 ? name.substring(dot) : "";
     }
 
     @PostMapping("/{id}/delete")

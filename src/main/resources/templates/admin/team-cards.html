@@ -16,7 +16,6 @@
                 </select>
             </form>
             <div style="display:flex;gap:8px;margin-left:auto;">
-                <a th:href="@{/admin/tools/team-cards/template}" class="btn btn-secondary">Edit Template</a>
                 <form th:if="${season != null}" th:action="@{/admin/tools/team-cards/generate-all}" method="post" style="display:flex;margin:0;" id="generateAllForm">
                     <input type="hidden" name="seasonId" th:value="${season.id}">
                     <button type="submit" id="generateAllBtn" class="btn btn-secondary" style="align-self:stretch;">Generate All</button>
