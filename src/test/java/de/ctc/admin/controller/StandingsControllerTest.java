@@ -49,8 +49,8 @@ class StandingsControllerTest {
 
         var teamA = teamRepository.save(new Team("Alpha Racing", "ALP"));
         var teamB = teamRepository.save(new Team("Bravo Racing", "BRV"));
-        activeSeason.getTeams().add(teamA);
-        activeSeason.getTeams().add(teamB);
+        activeSeason.addTeam(teamA);
+        activeSeason.addTeam(teamB);
         seasonRepository.save(activeSeason);
     }
 

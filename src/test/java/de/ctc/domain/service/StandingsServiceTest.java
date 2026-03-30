@@ -78,7 +78,8 @@ class StandingsServiceTest {
             var matchday = new Matchday(season, "Spieltag 1", 1);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
-            season.setTeams(new java.util.ArrayList<>(List.of(tnr, p1r)));
+            season.addTeam(tnr);
+            season.addTeam(p1r);
             when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
@@ -105,7 +106,8 @@ class StandingsServiceTest {
             var matchday = new Matchday(season, "Spieltag 1", 1);
             var match = createMatchWithScore(matchday, clr, tnr, 54, 54);
 
-            season.setTeams(new java.util.ArrayList<>(List.of(clr, tnr)));
+            season.addTeam(clr);
+            season.addTeam(tnr);
             when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
@@ -127,7 +129,8 @@ class StandingsServiceTest {
             var matchday = new Matchday(season, "Spieltag 1", 1);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
-            season.setTeams(new java.util.ArrayList<>(List.of(tnr, p1r)));
+            season.addTeam(tnr);
+            season.addTeam(p1r);
             when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
@@ -144,7 +147,7 @@ class StandingsServiceTest {
             byeMatch.setId(UUID.randomUUID());
             byeMatch.setBye(true);
 
-            season.setTeams(new java.util.ArrayList<>(List.of(tnr)));
+            season.addTeam(tnr);
             when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(byeMatch));
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
@@ -163,7 +166,9 @@ class StandingsServiceTest {
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
             var match2 = createMatchWithScore(md2, clr, p1r, 80, 40);
 
-            season.setTeams(new java.util.ArrayList<>(List.of(tnr, p1r, clr)));
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            season.addTeam(clr);
             when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match1, match2));
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
@@ -180,7 +185,9 @@ class StandingsServiceTest {
             var matchday = new Matchday(season, "Spieltag 1", 1);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
-            season.setTeams(new java.util.ArrayList<>(List.of(tnr, p1r, clr)));
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            season.addTeam(clr);
             when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
@@ -197,7 +204,8 @@ class StandingsServiceTest {
             match.setId(UUID.randomUUID());
             // No scores set
 
-            season.setTeams(new java.util.ArrayList<>(List.of(tnr, p1r)));
+            season.addTeam(tnr);
+            season.addTeam(p1r);
             when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 

@@ -107,10 +107,10 @@ public class SeasonController {
         if (!season.getTeams().contains(team)) {
             // Auto-add parent team when adding a sub-team
             if (team.isSubTeam() && !season.getTeams().contains(team.getParentTeam())) {
-                season.getTeams().add(team.getParentTeam());
+                season.addTeam(team.getParentTeam());
                 log.info("Auto-added parent team {} to season {}", team.getParentTeam().getShortName(), season.getName());
             }
-            season.getTeams().add(team);
+            season.addTeam(team);
             seasonRepository.save(season);
             log.info("Added team {} to season {}", team.getShortName(), season.getName());
         }
@@ -135,7 +135,7 @@ public class SeasonController {
             }
         }
 
-        season.getTeams().removeIf(t -> t.getId().equals(teamId));
+        season.removeTeamById(teamId);
 
         // Auto-remove parent team if no more sub-teams in season
         if (team.isSubTeam()) {
@@ -143,7 +143,7 @@ public class SeasonController {
             boolean hasOtherSubs = season.getTeams().stream()
                     .anyMatch(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()));
             if (!hasOtherSubs) {
-                season.getTeams().removeIf(t -> t.getId().equals(parent.getId()));
+                season.removeTeam(parent);
                 log.info("Auto-removed parent team {} from season {} (no sub-teams left)",
                         parent.getShortName(), season.getName());
             }

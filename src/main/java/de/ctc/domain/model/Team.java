@@ -30,6 +30,12 @@ public class Team {
 
     private String logoUrl;
 
+    private String primaryColor;
+
+    private String secondaryColor;
+
+    private String accentColor;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_team_id")
     private Team parentTeam;

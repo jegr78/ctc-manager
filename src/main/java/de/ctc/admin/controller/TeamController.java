@@ -46,7 +46,7 @@ public class TeamController {
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
         var team = teamRepository.findById(id).orElseThrow();
-        var seasons = seasonRepository.findByTeamsId(id);
+        var seasons = seasonRepository.findBySeasonTeamsTeamId(id);
 
         // Alle relevanten Team-IDs (dieses Team + Sub-Teams)
         var teamIds = new java.util.ArrayList<UUID>();
