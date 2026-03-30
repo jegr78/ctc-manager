@@ -44,16 +44,16 @@
                     <tr><th>Variable</th><th>Description</th></tr>
                 </thead>
                 <tbody>
-                    <tr><td><code th:text="'${rating}'"></code></td><td>Team rating (Integer or null)</td></tr>
-                    <tr><td><code th:text="'${teamName}'"></code></td><td>Team display name</td></tr>
-                    <tr><td><code th:text="'${subTeamLabel}'"></code></td><td>Sub-team suffix (e.g. "A", "1") or null</td></tr>
-                    <tr><td><code th:text="'${points}'"></code></td><td>Current season points</td></tr>
-                    <tr><td><code th:text="'${record}'"></code></td><td>W - L - D record</td></tr>
-                    <tr><td><code th:text="'${primaryColor}'"></code></td><td>Primary color hex</td></tr>
-                    <tr><td><code th:text="'${secondaryColor}'"></code></td><td>Secondary color hex</td></tr>
-                    <tr><td><code th:text="'${accentColor}'"></code></td><td>Accent color hex</td></tr>
-                    <tr><td><code th:text="'${logoBase64}'"></code></td><td>Logo as data URI (or null)</td></tr>
-                    <tr><td><code th:text="'${fontBase64}'"></code></td><td>Conthrax font as data URI</td></tr>
+                    <tr><td><code>rating</code></td><td>Team rating (Integer or null)</td></tr>
+                    <tr><td><code>teamName</code></td><td>Team display name</td></tr>
+                    <tr><td><code>subTeamLabel</code></td><td>Sub-team suffix (e.g. "A", "1") or null</td></tr>
+                    <tr><td><code>points</code></td><td>Current season points</td></tr>
+                    <tr><td><code>record</code></td><td>W - L - D record</td></tr>
+                    <tr><td><code>primaryColor</code></td><td>Primary color hex</td></tr>
+                    <tr><td><code>secondaryColor</code></td><td>Secondary color hex</td></tr>
+                    <tr><td><code>accentColor</code></td><td>Accent color hex</td></tr>
+                    <tr><td><code>logoBase64</code></td><td>Logo as data URI (or null)</td></tr>
+                    <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
                 </tbody>
             </table>
 
@@ -61,8 +61,8 @@
                 <strong>Tips</strong>
                 <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
                     <li>Card size is 1080x1920px (Story format)</li>
-                    <li>Use <code>th:inline="text"</code> in <code>&lt;style&gt;</code> for CSS variables</li>
-                    <li>Use <code>[[${'{'}variableName{'}'}]]</code> for inline text output in CSS</li>
+                    <li>Use <code>th:inline=&quot;text&quot;</code> in <code>&lt;style&gt;</code> for CSS variables</li>
+                    <li>Use <code>[[...]]</code> syntax for inline text output in CSS (e.g. <code>[[primaryColor]]</code>)</li>
                     <li>Use <code>th:text</code>, <code>th:if</code>, <code>th:src</code> in HTML</li>
                     <li>Changes apply to all future card generations</li>
                     <li>Generate a card after saving to see the result</li>
