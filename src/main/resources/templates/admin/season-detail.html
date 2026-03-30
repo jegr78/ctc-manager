@@ -34,33 +34,43 @@
         </div>
 
         <div class="detail-section">
-            <h2 th:text="'Teams (' + ${season.teams.size()} + ')'"></h2>
-            <div th:if="${!season.teams.isEmpty()}" class="chip-list">
-                <a th:each="team : ${season.teams}" th:href="@{/admin/teams/{id}(id=${team.id})}" class="chip">
-                    <span th:text="${team.shortName + ' — ' + team.name}"></span>
-                    <span th:if="${team.isSubTeam()}" class="badge badge-active" style="margin-left:6px;font-size:11px;">Sub</span>
-                </a>
-            </div>
-            <div th:if="${season.teams.isEmpty()}" class="empty-state" style="padding:16px;"><p>No teams assigned.</p></div>
-            <div th:if="${!season.seasonTeams.isEmpty()}" style="margin-top:16px;">
-                <h3>Ratings</h3>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
-                    <div th:each="st : ${season.seasonTeams}" style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--bg-hover);border-radius:6px;">
-                        <div th:if="${st.effectivePrimaryColor != null}" style="display:flex;gap:2px;margin-right:2px;">
-                            <span th:style="'display:inline-block;width:10px;height:10px;border-radius:2px;background:' + ${st.effectivePrimaryColor}"></span>
-                            <span th:style="'display:inline-block;width:10px;height:10px;border-radius:2px;background:' + ${st.effectiveSecondaryColor}"></span>
-                            <span th:style="'display:inline-block;width:10px;height:10px;border-radius:2px;background:' + ${st.effectiveAccentColor}"></span>
-                        </div>
-                        <a th:href="@{/admin/teams/{id}(id=${st.team.id})}" th:text="${st.team.shortName}" style="color:var(--white);font-weight:500;font-size:13px;text-decoration:none;"></a>
-                        <form th:action="@{/admin/seasons/{id}/update-rating(id=${season.id})}" method="post"
-                              style="display:flex;gap:3px;align-items:center;margin:0;">
-                            <input type="hidden" name="seasonTeamId" th:value="${st.id}">
-                            <input type="number" name="rating" th:value="${st.rating}" min="0" max="99" placeholder="—"
-                                   style="width:44px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg-input);color:var(--white);font-size:12px;text-align:center;">
-                            <button type="submit" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;padding:2px;">&#10003;</button>
-                        </form>
-                    </div>
-                </div>
+            <h2 th:text="'Teams (' + ${season.seasonTeams.size()} + ')'"></h2>
+            <div th:if="${season.seasonTeams.isEmpty()}" class="empty-state" style="padding:16px;"><p>No teams assigned.</p></div>
+            <div th:if="${!season.seasonTeams.isEmpty()}" class="table-scroll">
+                <table style="min-width:auto;">
+                    <thead>
+                        <tr>
+                            <th>Colors</th>
+                            <th>Team</th>
+                            <th>Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="st : ${season.seasonTeams}">
+                            <td style="width:60px;">
+                                <div th:if="${st.effectivePrimaryColor != null}" style="display:flex;gap:3px;">
+                                    <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectivePrimaryColor}"></span>
+                                    <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectiveSecondaryColor}"></span>
+                                    <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectiveAccentColor}"></span>
+                                </div>
+                            </td>
+                            <td>
+                                <a th:href="@{/admin/teams/{id}(id=${st.team.id})}"
+                                   th:text="${st.team.shortName + ' — ' + st.team.name}"></a>
+                                <span th:if="${st.team.isSubTeam()}" class="badge badge-active" style="margin-left:6px;font-size:11px;">Sub</span>
+                            </td>
+                            <td style="width:120px;">
+                                <form th:action="@{/admin/seasons/{id}/update-rating(id=${season.id})}" method="post"
+                                      style="display:flex;gap:4px;align-items:center;margin:0;">
+                                    <input type="hidden" name="seasonTeamId" th:value="${st.id}">
+                                    <input type="number" name="rating" th:value="${st.rating}" min="0" max="99" placeholder="—"
+                                           style="width:50px;padding:3px 6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;text-align:center;">
+                                    <button type="submit" class="btn btn-primary btn-sm" style="padding:3px 8px;font-size:12px;">Save</button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
