@@ -22,6 +22,24 @@
         </div>
     </div>
 
+    <!-- Generate Lineup -->
+    <div th:if="${canGenerateLineup}" style="margin-bottom:16px;">
+        <form th:action="@{/admin/races/{id}/generate-lineup(id=${race.id})}" method="post" style="display:inline;">
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;">
+                Generate Lineup Graphic
+            </button>
+        </form>
+    </div>
+    <div th:if="${!canGenerateLineup}" style="margin-bottom:16px;">
+        <button class="btn btn-secondary" disabled style="width:100%;padding:12px;font-size:15px;opacity:0.5;">
+            Generate Lineup Graphic
+        </button>
+        <small class="text-dim" style="display:block;margin-top:4px;">
+            <span th:if="${lineupMissing}">No lineup assigned for this race.</span>
+            <span th:if="${cardsMissing}">Team cards must be generated first.</span>
+        </small>
+    </div>
+
     <!-- Score Banner -->
     <div th:if="${homeTotal != null}" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:24px; margin-bottom:16px; display:flex; align-items:center; justify-content:center; gap:32px;">
         <div style="text-align:center; flex:1;"
@@ -131,10 +149,15 @@
                         <span th:text="${att.createdAt != null ? #temporals.format(att.createdAt, 'dd.MM.yyyy HH:mm') : ''}"></span>
                     </span>
                 </div>
-                <form th:action="@{/admin/races/attachments/{aid}/delete(aid=${att.id})}" method="post"
-                      onsubmit="return confirm('Delete this attachment?')">
-                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                </form>
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <a th:if="${att.type.name() == 'FILE'}"
+                       th:href="@{/admin/races/attachments/{aid}/download(aid=${att.id})}"
+                       class="btn btn-secondary btn-sm">Download</a>
+                    <form th:action="@{/admin/races/attachments/{aid}/delete(aid=${att.id})}" method="post"
+                          onsubmit="return confirm('Delete this attachment?')">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </div>
             </div>
         </div>
         <div th:if="${race.attachments.isEmpty()}" class="empty-state" style="padding:16px;">
