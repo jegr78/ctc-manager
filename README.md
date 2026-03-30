@@ -24,6 +24,7 @@
 - **Data Import** — CSV upload and Google Sheets scorecard import with driver matching preview
 - **GT7 Sync** — Scrape cars and tracks (with images) from gran-turismo.com
 - **Static Site Generation** — Generate a complete static website for GitHub Pages
+- **Team Cards** — Generate 1080x1920 team card PNGs with colors, logo, rating and standings
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
 
@@ -42,6 +43,44 @@
 # Docker (App + MariaDB, port 8080)
 docker compose up --build -d
 ```
+
+## Playwright Setup (Team Cards + E2E Tests)
+
+Playwright needs a Chromium browser installed locally for team card generation and E2E tests.
+
+### Install Chromium
+
+```bash
+# All platforms (macOS, Linux, Windows) — via Maven:
+./mvnw exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
+```
+
+This downloads the Chromium binary to the platform-specific cache directory:
+
+| Platform | Cache Location |
+|----------|---------------|
+| macOS | `~/Library/Caches/ms-playwright/` |
+| Linux | `~/.cache/ms-playwright/` |
+| Windows | `%LOCALAPPDATA%\ms-playwright\` |
+
+### Linux: Additional OS Dependencies
+
+On Linux (Debian/Ubuntu), Chromium requires native libraries:
+
+```bash
+# Install dependencies (via Playwright)
+./mvnw exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install-deps chromium"
+
+# Or manually (Debian/Ubuntu)
+sudo apt-get install -y libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 \
+    libgbm1 libpango-1.0-0 libcairo2 libasound2t64 libxshmfence1
+```
+
+macOS and Windows include these dependencies natively — no extra setup needed.
+
+### Docker
+
+The Dockerfile handles Chromium installation automatically during the build.
 
 ## Documentation
 

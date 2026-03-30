@@ -30,6 +30,9 @@ Deutsch für Kommunikation und Dokumentation. Code, Kommentare und UI-Texte auf 
 # Local mit MariaDB
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
+# Playwright Chromium installieren (fuer Team Card Generierung + E2E Tests)
+./mvnw exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
+
 # Docker: Lokale Umgebung (App + MariaDB)
 docker compose up --build -d
 docker compose down
