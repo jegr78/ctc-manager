@@ -87,14 +87,16 @@ public class RaceController {
             model.addAttribute("homeTotal", homeTotal);
             model.addAttribute("awayTotal", awayTotal);
 
-            // Build driver→team map for template
+            // Build driver→team map: RaceLineup first (sub-team), fallback to SeasonDriver
             var seasonId = race.getMatchday().getSeason().getId();
             var driverTeamMap = new java.util.HashMap<java.util.UUID, String>();
             for (var result : race.getResults()) {
-                var teamName = result.getDriver().getSeasonDrivers().stream()
-                        .filter(sd -> sd.getSeason().getId().equals(seasonId))
-                        .map(sd -> sd.getTeam().getShortName())
-                        .findFirst().orElse("?");
+                var teamName = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), result.getDriver().getId())
+                        .map(rl -> rl.getTeam().getShortName())
+                        .orElseGet(() -> result.getDriver().getSeasonDrivers().stream()
+                                .filter(sd -> sd.getSeason().getId().equals(seasonId))
+                                .map(sd -> sd.getTeam().getShortName())
+                                .findFirst().orElse("?"));
                 driverTeamMap.put(result.getDriver().getId(), teamName);
             }
             model.addAttribute("driverTeamMap", driverTeamMap);
