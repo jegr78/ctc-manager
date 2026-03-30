@@ -99,6 +99,41 @@ class TeamControllerTest {
     }
 
     @Test
+    void shouldIncludeSubTeamDriversInParentDetail() throws Exception {
+        var parent = teamRepository.save(new Team("Parent Inc", "PIN"));
+        var sub = teamRepository.save(new Team("Parent Inc A", "PIN A", parent));
+
+        var season = seasonRepository.findByActiveTrue().orElseThrow();
+        var d1 = driverRepository.save(new Driver("pin_parent1", "Parent Driver"));
+        var d2 = driverRepository.save(new Driver("pin_sub1", "Sub Driver"));
+        seasonDriverRepository.save(new SeasonDriver(season, d1, parent));
+        seasonDriverRepository.save(new SeasonDriver(season, d2, sub));
+
+        mockMvc.perform(get("/admin/teams/" + parent.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("pin_parent1")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("pin_sub1")));
+    }
+
+    @Test
+    void shouldShowOnlyOwnDriversForSubTeam() throws Exception {
+        var parent = teamRepository.save(new Team("Own Inc", "OWN"));
+        var sub = teamRepository.save(new Team("Own Inc A", "OWN A", parent));
+
+        var season = seasonRepository.findByActiveTrue().orElseThrow();
+        var d1 = driverRepository.save(new Driver("own_parent1", "Parent Only"));
+        var d2 = driverRepository.save(new Driver("own_sub1", "Sub Only"));
+        seasonDriverRepository.save(new SeasonDriver(season, d1, parent));
+        seasonDriverRepository.save(new SeasonDriver(season, d2, sub));
+
+        mockMvc.perform(get("/admin/teams/" + sub.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("own_sub1")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("own_parent1"))));
+    }
+
+    @Test
     void shouldDeleteTeam() throws Exception {
         var team = teamRepository.save(new Team("Delete Racing", "DLR"));
 
