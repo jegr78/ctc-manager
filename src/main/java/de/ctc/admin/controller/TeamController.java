@@ -1,9 +1,10 @@
 package de.ctc.admin.controller;
 
 import de.ctc.admin.dto.SeasonDriverGroupDto;
-import de.ctc.domain.model.SeasonDriver;
+import de.ctc.domain.model.Driver;
+import de.ctc.domain.model.RaceLineup;
 import de.ctc.domain.model.Team;
-import de.ctc.domain.repository.SeasonDriverRepository;
+import de.ctc.domain.repository.RaceLineupRepository;
 import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
 import jakarta.validation.Valid;
@@ -25,7 +26,7 @@ public class TeamController {
 
     private final TeamRepository teamRepository;
     private final SeasonRepository seasonRepository;
-    private final SeasonDriverRepository seasonDriverRepository;
+    private final RaceLineupRepository raceLineupRepository;
 
     @GetMapping
     public String list(Model model) {
@@ -49,37 +50,37 @@ public class TeamController {
         teamIds.add(id);
         team.getSubTeams().forEach(sub -> teamIds.add(sub.getId()));
 
-        // Alle SeasonDrivers fuer diese Teams laden und gruppieren
-        var allSeasonDrivers = seasonDriverRepository.findByTeamIdIn(teamIds);
+        // RaceLineups als Datenquelle: nur Fahrer die tatsaechlich gefahren sind
+        var allLineups = raceLineupRepository.findByTeamIdIn(teamIds);
 
-        var seasonDriverGroups = allSeasonDrivers.stream()
+        // Gruppieren: Season → Team → eindeutige Drivers
+        var seasonDriverGroups = allLineups.stream()
                 .collect(java.util.stream.Collectors.groupingBy(
-                        SeasonDriver::getSeason,
+                        lu -> lu.getRace().getMatchday().getSeason(),
                         java.util.LinkedHashMap::new,
                         java.util.stream.Collectors.groupingBy(
-                                SeasonDriver::getTeam,
+                                RaceLineup::getTeam,
                                 java.util.LinkedHashMap::new,
-                                java.util.stream.Collectors.toList()
+                                java.util.stream.Collectors.mapping(
+                                        RaceLineup::getDriver,
+                                        java.util.stream.Collectors.toCollection(
+                                                () -> new java.util.TreeSet<>(
+                                                        java.util.Comparator.comparing(Driver::getPsnId)))
+                                )
                         )
                 ))
                 .entrySet().stream()
                 .sorted((a, b) -> {
-                    // Active season first, then by name descending
                     if (a.getKey().isActive() != b.getKey().isActive()) {
                         return a.getKey().isActive() ? -1 : 1;
                     }
                     return b.getKey().getName().compareTo(a.getKey().getName());
                 })
                 .map(entry -> {
-                    var sortedByTeam = new java.util.LinkedHashMap<Team, java.util.List<SeasonDriver>>();
+                    var sortedByTeam = new java.util.LinkedHashMap<Team, java.util.List<Driver>>();
                     entry.getValue().entrySet().stream()
                             .sorted(java.util.Comparator.comparing(e -> e.getKey().getShortName()))
-                            .forEach(e -> {
-                                var sortedDrivers = e.getValue().stream()
-                                        .sorted(java.util.Comparator.comparing(sd -> sd.getDriver().getPsnId()))
-                                        .toList();
-                                sortedByTeam.put(e.getKey(), sortedDrivers);
-                            });
+                            .forEach(e -> sortedByTeam.put(e.getKey(), new java.util.ArrayList<>(e.getValue())));
                     return new SeasonDriverGroupDto(entry.getKey(), sortedByTeam);
                 })
                 .toList();

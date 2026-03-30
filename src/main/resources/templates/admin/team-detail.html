@@ -70,10 +70,10 @@
                                 <span th:if="${entry.key.isSubTeam()}" class="badge badge-sub">Sub</span>
                             </div>
                             <div class="chip-list">
-                                <a th:each="sd : ${entry.value}"
-                                   th:href="@{/admin/drivers/{id}(id=${sd.driver.id})}"
+                                <a th:each="driver : ${entry.value}"
+                                   th:href="@{/admin/drivers/{id}(id=${driver.id})}"
                                    class="chip"
-                                   th:text="${sd.driver.psnId}"></a>
+                                   th:text="${driver.psnId}"></a>
                             </div>
                         </div>
                     </div>

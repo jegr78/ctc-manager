@@ -1,12 +1,7 @@
 package de.ctc.admin.controller;
 
-import de.ctc.domain.model.Driver;
-import de.ctc.domain.model.SeasonDriver;
-import de.ctc.domain.model.Team;
-import de.ctc.domain.repository.DriverRepository;
-import de.ctc.domain.repository.SeasonDriverRepository;
-import de.ctc.domain.repository.SeasonRepository;
-import de.ctc.domain.repository.TeamRepository;
+import de.ctc.domain.model.*;
+import de.ctc.domain.repository.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -30,13 +25,22 @@ class TeamControllerTest {
     private TeamRepository teamRepository;
 
     @Autowired
-    private SeasonDriverRepository seasonDriverRepository;
-
-    @Autowired
     private SeasonRepository seasonRepository;
 
     @Autowired
     private DriverRepository driverRepository;
+
+    @Autowired
+    private MatchdayRepository matchdayRepository;
+
+    @Autowired
+    private MatchRepository matchRepository;
+
+    @Autowired
+    private RaceRepository raceRepository;
+
+    @Autowired
+    private RaceLineupRepository raceLineupRepository;
 
     @Test
     void shouldListTeams() throws Exception {
@@ -75,11 +79,21 @@ class TeamControllerTest {
         var sub = teamRepository.save(new Team("Grouped Racing A", "GRP A", parent));
 
         var season = seasonRepository.findByActiveTrue().orElseThrow();
+        var matchday = matchdayRepository.save(new Matchday(season, "GRP MD", 99));
+        var match = new Match();
+        match.setMatchday(matchday);
+        match.setHomeTeam(parent);
+        match.setAwayTeam(sub);
+        matchRepository.save(match);
+        var race = new Race();
+        race.setMatchday(matchday);
+        race.setMatch(match);
+        raceRepository.save(race);
 
-        var driver1 = driverRepository.save(new Driver("grp_driver1", "GRP Driver 1"));
-        var driver2 = driverRepository.save(new Driver("grp_driver2", "GRP Driver 2"));
-        seasonDriverRepository.save(new SeasonDriver(season, driver1, parent));
-        seasonDriverRepository.save(new SeasonDriver(season, driver2, sub));
+        var d1 = driverRepository.save(new Driver("grp_driver1", "GRP Driver 1"));
+        var d2 = driverRepository.save(new Driver("grp_driver2", "GRP Driver 2"));
+        raceLineupRepository.save(new RaceLineup(race, d1, parent));
+        raceLineupRepository.save(new RaceLineup(race, d2, sub));
 
         mockMvc.perform(get("/admin/teams/" + parent.getId()))
                 .andExpect(status().isOk())
@@ -104,10 +118,21 @@ class TeamControllerTest {
         var sub = teamRepository.save(new Team("Parent Inc A", "PIN A", parent));
 
         var season = seasonRepository.findByActiveTrue().orElseThrow();
+        var matchday = matchdayRepository.save(new Matchday(season, "PIN MD", 98));
+        var match = new Match();
+        match.setMatchday(matchday);
+        match.setHomeTeam(parent);
+        match.setAwayTeam(sub);
+        matchRepository.save(match);
+        var race = new Race();
+        race.setMatchday(matchday);
+        race.setMatch(match);
+        raceRepository.save(race);
+
         var d1 = driverRepository.save(new Driver("pin_parent1", "Parent Driver"));
         var d2 = driverRepository.save(new Driver("pin_sub1", "Sub Driver"));
-        seasonDriverRepository.save(new SeasonDriver(season, d1, parent));
-        seasonDriverRepository.save(new SeasonDriver(season, d2, sub));
+        raceLineupRepository.save(new RaceLineup(race, d1, parent));
+        raceLineupRepository.save(new RaceLineup(race, d2, sub));
 
         mockMvc.perform(get("/admin/teams/" + parent.getId()))
                 .andExpect(status().isOk())
@@ -121,10 +146,21 @@ class TeamControllerTest {
         var sub = teamRepository.save(new Team("Own Inc A", "OWN A", parent));
 
         var season = seasonRepository.findByActiveTrue().orElseThrow();
+        var matchday = matchdayRepository.save(new Matchday(season, "OWN MD", 97));
+        var match = new Match();
+        match.setMatchday(matchday);
+        match.setHomeTeam(parent);
+        match.setAwayTeam(sub);
+        matchRepository.save(match);
+        var race = new Race();
+        race.setMatchday(matchday);
+        race.setMatch(match);
+        raceRepository.save(race);
+
         var d1 = driverRepository.save(new Driver("own_parent1", "Parent Only"));
         var d2 = driverRepository.save(new Driver("own_sub1", "Sub Only"));
-        seasonDriverRepository.save(new SeasonDriver(season, d1, parent));
-        seasonDriverRepository.save(new SeasonDriver(season, d2, sub));
+        raceLineupRepository.save(new RaceLineup(race, d1, parent));
+        raceLineupRepository.save(new RaceLineup(race, d2, sub));
 
         mockMvc.perform(get("/admin/teams/" + sub.getId()))
                 .andExpect(status().isOk())
