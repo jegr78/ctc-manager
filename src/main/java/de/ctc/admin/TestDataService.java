@@ -375,106 +375,94 @@ public class TestDataService {
     }
 
     private void seedRaceLineups() {
+        var scorings = new ScoringDefaults(
+                raceScoringRepository.findAll().getFirst(),
+                matchScoringRepository.findAll().getFirst());
+
+        // Eigene Test-Saisons — isoliert von echten Saisons
+        var testSeason1 = createSeason("Test-Season 2026", scorings);
+        var testSeason2 = createSeason("Test-Season 2025", scorings);
+
+        // Test-Teams: P1R (standalone) + CLR mit Sub-Teams + DTR (standalone)
         var allTeams = teamRepository.findAll();
-        var allDrivers = driverRepository.findAll();
-
-        java.util.function.Function<String, Team> findParent = shortName ->
+        java.util.function.BiFunction<String, Boolean, Team> findTeam = (shortName, isParent) ->
                 allTeams.stream()
-                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
+                        .filter(t -> t.getShortName().equals(shortName)
+                                && (isParent ? t.getParentTeam() == null : t.getParentTeam() != null))
                         .findFirst().orElseThrow();
-        java.util.function.Function<String, Team> findSub = shortName ->
-                allTeams.stream()
-                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
-                        .findFirst().orElseThrow();
-        java.util.function.Function<String, Driver> findDriver = psnId ->
-                allDrivers.stream()
-                        .filter(d -> d.getPsnId().equals(psnId))
-                        .findFirst().orElseThrow();
+        var p1r = findTeam.apply("P1R", true);
+        var clr = findTeam.apply("CLR", true);
+        var clr1 = findTeam.apply("CLR 1", false);
+        var clr2 = findTeam.apply("CLR 2", false);
+        var dtr = findTeam.apply("DTR", true);
+        var p1rx = findTeam.apply("P1Rx", false);
 
-        var s4 = seasonRepository.findByName("Season 4 - 2026").orElseThrow();
-        var s3a = seasonRepository.findByName("Season 3 - 2025 - Group A").orElseThrow();
+        testSeason1.getTeams().addAll(List.of(p1r, clr, clr1, clr2, dtr));
+        seasonRepository.save(testSeason1);
+        testSeason2.getTeams().addAll(List.of(p1r, p1rx, clr));
+        seasonRepository.save(testSeason2);
 
-        // Season 4: P1R vs DTR (standalone teams)
-        var md1 = matchdayRepository.save(new Matchday(s4, "MD 1", 1));
+        // Test-Fahrer (eigene, keine echten Fahrer)
+        var td1 = driver("Test_P1R_1", "Test P1R Driver 1");
+        var td2 = driver("Test_P1R_2", "Test P1R Driver 2");
+        var td3 = driver("Test_CLR1_1", "Test CLR1 Driver 1");
+        var td4 = driver("Test_CLR1_2", "Test CLR1 Driver 2");
+        var td5 = driver("Test_CLR2_1", "Test CLR2 Driver 1");
+        var td6 = driver("Test_CLR2_2", "Test CLR2 Driver 2");
+        var td7 = driver("Test_DTR_1", "Test DTR Driver 1");
+        var td8 = driver("Test_DTR_2", "Test DTR Driver 2");
+        var td9 = driver("Test_P1Rx_1", "Test P1Rx Driver 1");
+        var td10 = driver("Test_P1Rx_2", "Test P1Rx Driver 2");
+
+        // Test-Season Active: P1R vs DTR
+        var md1 = matchdayRepository.save(new Matchday(testSeason1, "Test MD 1", 1));
         var match1 = new Match();
         match1.setMatchday(md1);
-        match1.setHomeTeam(findParent.apply("P1R"));
-        match1.setAwayTeam(findParent.apply("DTR"));
+        match1.setHomeTeam(p1r);
+        match1.setAwayTeam(dtr);
         matchRepository.save(match1);
         var race1 = new Race();
         race1.setMatchday(md1);
         race1.setMatch(match1);
         raceRepository.save(race1);
+        raceLineupRepository.save(new RaceLineup(race1, td1, p1r));
+        raceLineupRepository.save(new RaceLineup(race1, td2, p1r));
+        raceLineupRepository.save(new RaceLineup(race1, td7, dtr));
+        raceLineupRepository.save(new RaceLineup(race1, td8, dtr));
 
-        for (String psnId : List.of("France-k88", "P1R_Jake", "P1R_SLAMMER", "P1R_OldBanger",
-                "YT_Sorte13", "Unfazed__be")) {
-            raceLineupRepository.save(new RaceLineup(race1, findDriver.apply(psnId), findParent.apply("P1R")));
-        }
-        for (String psnId : List.of("DTR_Butzen-Katz", "DTR_H1PPYH33D", "DTR_Kierin",
-                "DTR_M3guy", "DTR_MoominPappa", "DTR_Rosdwerg")) {
-            raceLineupRepository.save(new RaceLineup(race1, findDriver.apply(psnId), findParent.apply("DTR")));
-        }
-
-        // Season 4: CLR 1 vs TNR A (sub-teams)
+        // Test-Season Active: CLR 1 vs CLR 2 (sub-teams)
         var match2 = new Match();
         match2.setMatchday(md1);
-        match2.setHomeTeam(findSub.apply("CLR 1"));
-        match2.setAwayTeam(findSub.apply("TNR A"));
+        match2.setHomeTeam(clr1);
+        match2.setAwayTeam(clr2);
         matchRepository.save(match2);
         var race2 = new Race();
         race2.setMatchday(md1);
         race2.setMatch(match2);
         raceRepository.save(race2);
+        raceLineupRepository.save(new RaceLineup(race2, td3, clr1));
+        raceLineupRepository.save(new RaceLineup(race2, td4, clr1));
+        raceLineupRepository.save(new RaceLineup(race2, td5, clr2));
+        raceLineupRepository.save(new RaceLineup(race2, td6, clr2));
 
-        for (String psnId : List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
-                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28")) {
-            raceLineupRepository.save(new RaceLineup(race2, findDriver.apply(psnId), findSub.apply("CLR 1")));
-        }
-        for (String psnId : List.of("Chaz__CA", "D-man371D-man", "Deekuhn",
-                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173")) {
-            raceLineupRepository.save(new RaceLineup(race2, findDriver.apply(psnId), findSub.apply("TNR A")));
-        }
-
-        // Season 4: CLR 2 vs TNR B (sub-teams)
+        // Test-Season Closed: P1Rx vs CLR (multi-season test)
+        var md2 = matchdayRepository.save(new Matchday(testSeason2, "Test MD 1", 1));
         var match3 = new Match();
-        match3.setMatchday(md1);
-        match3.setHomeTeam(findSub.apply("CLR 2"));
-        match3.setAwayTeam(findSub.apply("TNR B"));
+        match3.setMatchday(md2);
+        match3.setHomeTeam(p1rx);
+        match3.setAwayTeam(clr);
         matchRepository.save(match3);
         var race3 = new Race();
-        race3.setMatchday(md1);
+        race3.setMatchday(md2);
         race3.setMatch(match3);
         raceRepository.save(race3);
+        raceLineupRepository.save(new RaceLineup(race3, td9, p1rx));
+        raceLineupRepository.save(new RaceLineup(race3, td10, p1rx));
 
-        for (String psnId : List.of("IEquinoXe-", "kurt_666_", "lemonysqueez",
-                "RA_F1nalized__", "RA_Shred", "RA_Yannis73")) {
-            raceLineupRepository.save(new RaceLineup(race3, findDriver.apply(psnId), findSub.apply("CLR 2")));
-        }
-        for (String psnId : List.of("LEVITIUS", "Lightning_Lorry", "LotariRacing",
-                "Mo_Flavor", "Nutcap_1", "panicpotato17")) {
-            raceLineupRepository.save(new RaceLineup(race3, findDriver.apply(psnId), findSub.apply("TNR B")));
-        }
-
-        // Season 3 Group A: P1Rx vs CLR (multi-season test)
-        var md3a = matchdayRepository.save(new Matchday(s3a, "MD 1", 1));
-        var match3a = new Match();
-        match3a.setMatchday(md3a);
-        match3a.setHomeTeam(findSub.apply("P1Rx"));
-        match3a.setAwayTeam(findParent.apply("CLR"));
-        matchRepository.save(match3a);
-        var race3a = new Race();
-        race3a.setMatchday(md3a);
-        race3a.setMatch(match3a);
-        raceRepository.save(race3a);
-
-        for (String psnId : List.of("France-k88", "P1R_Jake", "P1R_SLAMMER", "P1R_OldBanger")) {
-            raceLineupRepository.save(new RaceLineup(race3a, findDriver.apply(psnId), findSub.apply("P1Rx")));
-        }
-
-        log.info("Created race lineups for {} races", raceRepository.count());
+        log.info("Created test races: {} races, {} lineups", raceRepository.count(), raceLineupRepository.count());
     }
 
-    private void driver(String psnId, String nickname) {
-        driverRepository.save(new Driver(psnId, nickname));
+    private Driver driver(String psnId, String nickname) {
+        return driverRepository.save(new Driver(psnId, nickname));
     }
 }

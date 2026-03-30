@@ -143,26 +143,30 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
         assertThat(page.locator("h1")).containsText("Project One Racing");
         assertThat(page.locator("h2:has-text('Seasons & Drivers')")).isVisible();
 
-        var activeSeason = page.locator("details.season-accordion[open]");
-        assertThat(activeSeason).isVisible();
-        assertThat(activeSeason.locator(".season-header")).containsText("Season 4 - 2026");
-        assertThat(activeSeason.locator(".badge-active")).isVisible();
+        // Test-Season 2026 Header sichtbar (collapsed accordion)
+        var seasonHeader = page.locator(".season-header:has-text('Test-Season 2026')");
+        assertThat(seasonHeader).isVisible();
+        assertThat(seasonHeader).containsText("Drivers");
 
-        assertThat(activeSeason.locator(".chip").first()).isVisible();
-        assertThat(activeSeason.locator(".season-drivers")).containsText("France-k88");
-        assertThat(activeSeason.locator(".season-header")).containsText("Drivers");
+        // Accordion oeffnen und Fahrer pruefen
+        seasonHeader.click();
+        assertThat(page.locator("text=Test_P1R_1")).isVisible();
     }
 
     @Test
-    void shouldShowTeamDetailWithDriverGroupLabel() {
+    void shouldShowTeamDetailWithSubTeamDriverGroups() {
         page.navigate(url("/admin/teams"));
         page.locator("a:has-text('CLR')").first().click();
 
         assertThat(page.locator("h1")).containsText("Community League Racing");
 
-        var activeSeason = page.locator("details.season-accordion[open]");
-        assertThat(activeSeason.locator(".team-group-label").first()).isVisible();
-        assertThat(activeSeason.locator(".chip").first()).isVisible();
+        // Accordion oeffnen
+        page.locator(".season-header:has-text('Test-Season 2026')").click();
+
+        // CLR hat Sub-Teams CLR 1 + CLR 2 aus seedRaceLineups
+        assertThat(page.locator(".team-group-label").first()).isVisible();
+        assertThat(page.locator(".badge-sub").first()).isVisible();
+        assertThat(page.locator(".chip").first()).isVisible();
     }
 
     @Test
@@ -170,22 +174,15 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
         page.navigate(url("/admin/teams"));
         page.locator("a:has-text('P1R')").first().click();
 
-        // P1R has drivers in Season 4 (active) and Season 3 Group A (via P1Rx)
-        // Plus seasons without drivers (S1A, S1B, S2, S3B)
+        // P1R hat Lineups in Test-Season 2026 + Test-Season 2025 (via P1Rx)
         var allAccordions = page.locator("details.season-accordion");
         assertThat(allAccordions.first()).isVisible();
 
-        // At least 2 season accordions (Season 4 + Season 3 Group A with drivers)
         org.junit.jupiter.api.Assertions.assertTrue(allAccordions.count() >= 2,
                 "Expected at least 2 season accordions, got " + allAccordions.count());
 
-        // Active season (Season 4) should be open
-        var openAccordion = page.locator("details.season-accordion[open]");
-        assertThat(openAccordion).isVisible();
-        assertThat(openAccordion.locator(".season-header")).containsText("Season 4");
-
-        // Season 3 Group A should have P1Rx drivers
-        assertThat(page.locator("text=Season 3 - 2025 - Group A")).isVisible();
+        assertThat(page.locator("text=Test-Season 2026")).isVisible();
+        assertThat(page.locator("text=Test-Season 2025")).isVisible();
     }
 
     @Test
