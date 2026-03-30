@@ -23,18 +23,16 @@
     </div>
 
     <!-- Generate Lineup -->
-    <div th:if="${canGenerateLineup}" style="margin-bottom:16px;">
-        <form th:action="@{/admin/races/{id}/generate-lineup(id=${race.id})}" method="post" style="display:inline;">
-            <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;font-size:15px;">
-                Generate Lineup Graphic
-            </button>
+    <div th:if="${canGenerateLineup}" style="margin-bottom:16px;display:flex;justify-content:flex-end;">
+        <form th:action="@{/admin/races/{id}/generate-lineup(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-primary">Generate Lineup Graphic</button>
         </form>
     </div>
-    <div th:if="${!canGenerateLineup}" style="margin-bottom:16px;">
-        <button class="btn btn-secondary" disabled style="width:100%;padding:12px;font-size:15px;opacity:0.5;">
+    <div th:if="${!canGenerateLineup}" style="margin-bottom:16px;display:flex;justify-content:flex-end;align-items:center;gap:8px;">
+        <button class="btn btn-secondary" disabled style="opacity:0.5;">
             Generate Lineup Graphic
         </button>
-        <small class="text-dim" style="display:block;margin-top:4px;">
+        <small class="text-dim">
             <span th:if="${lineupMissing}">No lineup assigned for this race.</span>
             <span th:if="${cardsMissing}">Team cards must be generated first.</span>
         </small>

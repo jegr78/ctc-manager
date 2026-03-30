@@ -371,7 +371,9 @@ public class RaceController {
         var race = raceRepository.findById(id).orElseThrow();
         try {
             String url = lineupGraphicService.generateLineup(race);
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, "Lineup", url);
+            String attachmentName = race.getMatchday().getLabel() + "-"
+                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Lineups";
+            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
             raceAttachmentRepository.save(attachment);
             redirectAttributes.addFlashAttribute("successMessage", "Lineup graphic generated");
         } catch (Exception e) {
