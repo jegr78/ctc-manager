@@ -187,13 +187,13 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     @Test
     void shouldSaveTemplateAndGenerateAllCards() {
         // Navigate to template editor
-        page.navigate(url("/admin/tools/team-cards/template"));
-        assertThat(page.locator("h1")).containsText("Card Template Editor");
+        page.navigate(url("/admin/tools/template-editors?tab=team-cards"));
+        assertThat(page.locator("h1")).containsText("Template Editors");
 
         // Save the template (default content, just hit save)
         page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
                 new com.microsoft.playwright.Page.GetByRoleOptions().setName("Save Template")).click();
-        assertThat(page.locator(".alert-success")).containsText("Template saved");
+        assertThat(page.locator(".alert-success")).containsText("Team card template saved");
 
         // Navigate to team cards page (active season auto-selected)
         page.navigate(url("/admin/tools/team-cards"));
@@ -210,11 +210,11 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
         assertThat(page.locator(".card img").first()).isVisible();
 
         // Reset template back to default (confirm dialog)
-        page.navigate(url("/admin/tools/team-cards/template"));
+        page.navigate(url("/admin/tools/template-editors?tab=team-cards"));
         page.onDialog(dialog -> dialog.accept());
         page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
                 new com.microsoft.playwright.Page.GetByRoleOptions().setName("Reset")).click();
-        assertThat(page.locator(".alert-success")).containsText("Template reset");
+        assertThat(page.locator(".alert-success")).containsText("Team card template reset");
     }
 
     @Test

@@ -1000,3 +1000,40 @@ a.season-header-title:hover {
         font-size: 18px;
     }
 }
+
+/* Template Editor */
+.tab-btn {
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--white);
+}
+
+.tab-btn.tab-active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.template-textarea {
+    flex: 1;
+    min-height: 600px;
+    padding: 12px;
+    border: none;
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: none;
+    tab-size: 4;
+    white-space: pre;
+    overflow: auto;
+}
