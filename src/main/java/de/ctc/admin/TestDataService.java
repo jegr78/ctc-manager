@@ -19,6 +19,11 @@ public class TestDataService {
     private final DriverRepository driverRepository;
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
+    private final SeasonDriverRepository seasonDriverRepository;
+    private final MatchdayRepository matchdayRepository;
+    private final MatchRepository matchRepository;
+    private final RaceRepository raceRepository;
+    private final RaceLineupRepository raceLineupRepository;
 
     @Transactional
     public void seed() {
@@ -31,8 +36,11 @@ public class TestDataService {
         seedSubTeams(teams);
         seedSeasons(teams, scorings);
         seedDrivers();
-        log.info("Seed data created: {} teams, {} seasons, {} drivers",
-                teamRepository.count(), seasonRepository.count(), driverRepository.count());
+        seedSeasonDrivers();
+        seedRaceLineups();
+        log.info("Seed data created: {} teams, {} seasons, {} drivers, {} race-lineups",
+                teamRepository.count(), seasonRepository.count(), driverRepository.count(),
+                raceLineupRepository.count());
     }
 
     private record ScoringDefaults(RaceScoring raceScoring, MatchScoring matchScoring) {}
@@ -291,7 +299,160 @@ public class TestDataService {
         driver("VIVSRC370", "TNR_SRC_VIV");
     }
 
-    private void driver(String psnId, String nickname) {
-        driverRepository.save(new Driver(psnId, nickname));
+    private void seedSeasonDrivers() {
+        var allTeams = teamRepository.findAll();
+        var allDrivers = driverRepository.findAll();
+        var allSeasons = seasonRepository.findAll();
+
+        java.util.function.Function<String, Team> findParent = shortName ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Parent team not found: " + shortName));
+
+        java.util.function.Function<String, Team> findSub = shortName ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Sub-team not found: " + shortName));
+
+        java.util.function.Function<String, Driver> findDriver = psnId ->
+                allDrivers.stream()
+                        .filter(d -> d.getPsnId().equals(psnId))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Driver not found: " + psnId));
+
+        java.util.function.Function<String, Season> findSeason = name ->
+                allSeasons.stream()
+                        .filter(s -> s.getName().equals(name))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Season not found: " + name));
+
+        // Season 4 - 2026
+        var s4 = findSeason.apply("Season 4 - 2026");
+
+        for (String psnId : List.of("France-k88", "P1R_Jake", "P1R_SLAMMER", "P1R_OldBanger",
+                "YT_Sorte13", "Unfazed__be", "P1R_Valkyrie", "motorstormhero")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("P1R")));
+        }
+        // Sub-Team-Zuordnungen werden NICHT geseeded — die kommen aus dem Import
+        // (ensureSeasonDriver aktualisiert das Team bei erneutem Import)
+        // Hier nur Parent-Team-Zuordnungen als Platzhalter fuer Entwicklung ohne Import
+        for (String psnId : List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
+                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28",
+                "IEquinoXe-", "kurt_666_", "lemonysqueez",
+                "RA_F1nalized__", "RA_Shred", "RA_Yannis73")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("CLR")));
+        }
+        for (String psnId : List.of("Chaz__CA", "D-man371D-man", "Deekuhn",
+                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173", "GMZ_Alfred",
+                "LEVITIUS", "Lightning_Lorry", "LotariRacing",
+                "Mo_Flavor", "Nutcap_1", "panicpotato17", "Phantom_Steve111",
+                "RayCarter", "Savvy-Unchained", "sir_maggs",
+                "TNR_Capt_Slow", "TNR_SHAWN46", "TNR_Wipperman537")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("TNR")));
+        }
+        for (String psnId : List.of("AHR_Hills_93", "AHR_j_mac", "AHR-PezzzaGT",
+                "AHR-Tankbro", "danfn22016", "grey_roc", "Jacko_GT7", "JackPlayz_01",
+                "Lemonz7836", "miggldeehiggins", "OFFICIAL_001",
+                "PnR-Proton", "remir201", "Saittam-46", "stevedp81", "stigimoss", "Tracer-tel")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("AHR")));
+        }
+        for (String psnId : List.of("TCR_Rapid_GT", "TCR_Sheltie", "TCR_Sonic", "TCR_Tidgney",
+                "Etlits", "Hogston_GT", "TCR_Bracing1", "TCR_White-tiger", "bmataz", "YtrRytonlad28")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("TCR")));
+        }
+        for (String psnId : List.of("DTR_Butzen-Katz", "DTR_H1PPYH33D", "DTR_Kierin", "DTR_M3guy",
+                "DTR_MoominPappa", "DTR_Rosdwerg", "is250dec", "Jaristoteles", "mugelina", "Sionetica")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("DTR")));
+        }
+
+        // Season 3 - 2025 - Group A (multi-season testing)
+        var s3a = findSeason.apply("Season 3 - 2025 - Group A");
+        for (String psnId : List.of("France-k88", "P1R_Jake", "P1R_SLAMMER", "P1R_OldBanger")) {
+            seasonDriverRepository.save(new SeasonDriver(s3a, findDriver.apply(psnId), findSub.apply("P1Rx")));
+        }
+
+        log.info("Created season-driver assignments: s4={}, s3a={}",
+                seasonDriverRepository.findBySeasonId(s4.getId()).size(),
+                seasonDriverRepository.findBySeasonId(s3a.getId()).size());
+    }
+
+    private void seedRaceLineups() {
+        var scorings = new ScoringDefaults(
+                raceScoringRepository.findAll().getFirst(),
+                matchScoringRepository.findAll().getFirst());
+
+        // === Komplett isolierte Testdaten (kein Bezug zu echten Teams/Fahrern) ===
+
+        // Test-Teams
+        var testAlpha = teamRepository.save(new Team("Test Alpha Racing", "T-ALF"));
+        var testBravo = teamRepository.save(new Team("Test Bravo Racing", "T-BRV"));
+        var testBravo1 = teamRepository.save(new Team("Test Bravo Racing 1", "T-BRV 1", testBravo));
+        var testBravo2 = teamRepository.save(new Team("Test Bravo Racing 2", "T-BRV 2", testBravo));
+
+        // Test-Fahrer
+        var tda1 = driver("Test_Alpha_1", "Test Alpha Driver 1");
+        var tda2 = driver("Test_Alpha_2", "Test Alpha Driver 2");
+        var tdb1 = driver("Test_Bravo1_1", "Test Bravo1 Driver 1");
+        var tdb2 = driver("Test_Bravo1_2", "Test Bravo1 Driver 2");
+        var tdb3 = driver("Test_Bravo2_1", "Test Bravo2 Driver 1");
+        var tdb4 = driver("Test_Bravo2_2", "Test Bravo2 Driver 2");
+
+        // Test-Season 2026: T-ALF vs T-BRV 1, T-ALF vs T-BRV 2
+        var testSeason1 = createSeason("Test-Season 2026", scorings);
+        testSeason1.getTeams().addAll(List.of(testAlpha, testBravo, testBravo1, testBravo2));
+        seasonRepository.save(testSeason1);
+
+        var md1 = matchdayRepository.save(new Matchday(testSeason1, "Test MD 1", 1));
+
+        var match1 = new Match();
+        match1.setMatchday(md1);
+        match1.setHomeTeam(testAlpha);
+        match1.setAwayTeam(testBravo1);
+        matchRepository.save(match1);
+        var race1 = new Race();
+        race1.setMatchday(md1);
+        race1.setMatch(match1);
+        raceRepository.save(race1);
+        raceLineupRepository.save(new RaceLineup(race1, tda1, testAlpha));
+        raceLineupRepository.save(new RaceLineup(race1, tda2, testAlpha));
+        raceLineupRepository.save(new RaceLineup(race1, tdb1, testBravo1));
+        raceLineupRepository.save(new RaceLineup(race1, tdb2, testBravo1));
+
+        var match2 = new Match();
+        match2.setMatchday(md1);
+        match2.setHomeTeam(testAlpha);
+        match2.setAwayTeam(testBravo2);
+        matchRepository.save(match2);
+        var race2 = new Race();
+        race2.setMatchday(md1);
+        race2.setMatch(match2);
+        raceRepository.save(race2);
+        raceLineupRepository.save(new RaceLineup(race2, tda1, testAlpha));
+        raceLineupRepository.save(new RaceLineup(race2, tda2, testAlpha));
+        raceLineupRepository.save(new RaceLineup(race2, tdb3, testBravo2));
+        raceLineupRepository.save(new RaceLineup(race2, tdb4, testBravo2));
+
+        // Test-Season 2025: T-ALF vs T-BRV (multi-season test)
+        var testSeason2 = createSeason("Test-Season 2025", scorings);
+        testSeason2.getTeams().addAll(List.of(testAlpha, testBravo));
+        seasonRepository.save(testSeason2);
+
+        var md2 = matchdayRepository.save(new Matchday(testSeason2, "Test MD 1", 1));
+        var match3 = new Match();
+        match3.setMatchday(md2);
+        match3.setHomeTeam(testAlpha);
+        match3.setAwayTeam(testBravo);
+        matchRepository.save(match3);
+        var race3 = new Race();
+        race3.setMatchday(md2);
+        race3.setMatch(match3);
+        raceRepository.save(race3);
+        raceLineupRepository.save(new RaceLineup(race3, tda1, testAlpha));
+        raceLineupRepository.save(new RaceLineup(race3, tda2, testAlpha));
+
+        log.info("Created test data: {} test-teams, {} test-drivers, {} races, {} lineups",
+                4, 6, raceRepository.count(), raceLineupRepository.count());
+    }
+
+    private Driver driver(String psnId, String nickname) {
+        return driverRepository.save(new Driver(psnId, nickname));
     }
 }

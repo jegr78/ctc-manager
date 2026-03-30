@@ -16,4 +16,6 @@ public interface RaceLineupRepository extends JpaRepository<RaceLineup, UUID> {
     Optional<RaceLineup> findByRaceIdAndDriverId(UUID raceId, UUID driverId);
 
     List<RaceLineup> findByRaceMatchdayId(UUID matchdayId);
+
+    List<RaceLineup> findByTeamIdIn(List<UUID> teamIds);
 }

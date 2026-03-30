@@ -136,6 +136,55 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     }
 
     @Test
+    void shouldShowTeamDetailWithDriversGroupedBySeason() {
+        // T-ALF (Test Alpha Racing) hat Fahrer in Test-Season 2026 und 2025
+        page.navigate(url("/admin/teams"));
+        page.locator("a:has-text('T-ALF')").first().click();
+
+        assertThat(page.locator("h1")).containsText("Test Alpha Racing");
+        assertThat(page.locator("h2:has-text('Seasons & Drivers')")).isVisible();
+
+        var seasonHeader = page.locator(".season-header:has-text('Test-Season 2026')").first();
+        assertThat(seasonHeader).isVisible();
+        assertThat(seasonHeader).containsText("Drivers");
+
+        // Fahrer im DOM vorhanden (Accordion muss nicht offen sein)
+        assertThat(page.locator("details.season-accordion:has-text('Test-Season 2026')")).containsText("Test_Alpha_1");
+        assertThat(page.locator("details.season-accordion:has-text('Test-Season 2026')")).containsText("Test_Alpha_2");
+    }
+
+    @Test
+    void shouldShowTeamDetailWithSubTeamDriverGroups() {
+        // T-BRV (Test Bravo Racing) hat Sub-Teams T-BRV 1 + T-BRV 2
+        page.navigate(url("/admin/teams"));
+        page.locator("a:has-text('T-BRV')").first().click();
+
+        assertThat(page.locator("h1")).containsText("Test Bravo Racing");
+
+        page.locator(".season-header:has-text('Test-Season 2026')").click();
+
+        assertThat(page.locator(".team-group-label").first()).isVisible();
+        assertThat(page.locator(".badge-sub").first()).isVisible();
+        assertThat(page.locator(".chip").first()).isVisible();
+    }
+
+    @Test
+    void shouldShowMultipleSeasonAccordions() {
+        // T-ALF hat Lineups in Test-Season 2026 + Test-Season 2025
+        page.navigate(url("/admin/teams"));
+        page.locator("a:has-text('T-ALF')").first().click();
+
+        var allAccordions = page.locator("details.season-accordion");
+        assertThat(allAccordions.first()).isVisible();
+
+        org.junit.jupiter.api.Assertions.assertTrue(allAccordions.count() >= 2,
+                "Expected at least 2 season accordions, got " + allAccordions.count());
+
+        assertThat(page.locator("text=Test-Season 2026")).isVisible();
+        assertThat(page.locator("text=Test-Season 2025")).isVisible();
+    }
+
+    @Test
     void shouldShowGt7SyncPage() {
         page.navigate(url("/admin/gt7-sync"));
         assertThat(page.locator("h1")).containsText("GT7 Sync");
