@@ -69,4 +69,24 @@ public class Team {
     public Team getParentOrSelf() {
         return parentTeam != null ? parentTeam : this;
     }
+
+    public String getEffectivePrimaryColor() {
+        if (primaryColor != null) return primaryColor;
+        return parentTeam != null ? parentTeam.getPrimaryColor() : null;
+    }
+
+    public String getEffectiveSecondaryColor() {
+        if (secondaryColor != null) return secondaryColor;
+        return parentTeam != null ? parentTeam.getSecondaryColor() : null;
+    }
+
+    public String getEffectiveAccentColor() {
+        if (accentColor != null) return accentColor;
+        return parentTeam != null ? parentTeam.getAccentColor() : null;
+    }
+
+    public String getEffectiveLogoUrl() {
+        if (logoUrl != null) return logoUrl;
+        return parentTeam != null ? parentTeam.getLogoUrl() : null;
+    }
 }

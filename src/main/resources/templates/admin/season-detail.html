@@ -56,7 +56,7 @@
                                 </div>
                             </td>
                             <td>
-                                <a th:href="@{/admin/teams/{id}(id=${st.team.id})}"
+                                <a th:href="@{/admin/teams/{id}(id=${st.team.id})}" class="detail-link"
                                    th:text="${st.team.shortName + ' — ' + st.team.name}"></a>
                                 <span th:if="${st.team.isSubTeam()}" class="badge badge-active" style="margin-left:6px;font-size:11px;">Sub</span>
                             </td>
