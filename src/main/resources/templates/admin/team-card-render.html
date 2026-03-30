@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style th:inline="text">
+        @font-face {
+            font-family: 'Conthrax';
+            src: url([[${fontBase64}]]) format('woff2');
+            font-weight: 600;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1080px;
+            height: 1920px;
+            overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif;
+            color: white;
+            position: relative;
+        }
+
+        .background {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg,
+                [[${secondaryColor}]] 0%,
+                #111111 100%);
+        }
+
+        .glow-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg,
+                [[${primaryColor}]]40 0%,
+                transparent 40%);
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            padding: 120px 60px 160px;
+        }
+
+        .rating-circle {
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            border: 8px solid [[${accentColor}]];
+            background: rgba(50, 50, 50, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 80px;
+        }
+
+        .rating-number {
+            font-size: 120px;
+            font-weight: 600;
+            letter-spacing: -4px;
+        }
+
+        .logo-container {
+            width: 320px;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 60px;
+        }
+
+        .logo-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .team-name {
+            font-size: 52px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 8px;
+            line-height: 1.1;
+        }
+
+        .sub-team-label {
+            font-size: 40px;
+            color: [[${accentColor}]];
+            margin-bottom: 80px;
+        }
+
+        .stats {
+            margin-top: auto;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 32px;
+            color: [[${accentColor}]];
+            letter-spacing: 6px;
+            font-weight: 600;
+        }
+
+        .stat-value {
+            font-size: 72px;
+            font-weight: 600;
+            margin-bottom: 40px;
+        }
+
+        .record-value {
+            font-size: 48px;
+            font-weight: 600;
+            letter-spacing: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="glow-overlay"></div>
+    <div class="content">
+        <div class="rating-circle">
+            <span class="rating-number" th:text="${rating != null ? rating : '—'}"></span>
+        </div>
+        <div class="logo-container">
+            <img th:if="${logoBase64 != null}" th:src="${logoBase64}" alt="">
+            <span th:if="${logoBase64 == null}" style="font-size:48px;opacity:0.3;">No Logo</span>
+        </div>
+        <div class="team-name" th:text="${teamName}"></div>
+        <div class="sub-team-label" th:if="${subTeamLabel != null}" th:text="${subTeamLabel}"></div>
+        <div th:if="${subTeamLabel == null}" style="margin-bottom:80px;"></div>
+        <div class="stats">
+            <div class="stat-label">POINTS</div>
+            <div class="stat-value" th:text="${points}"></div>
+            <div class="stat-label">RECORD</div>
+            <div class="record-value" th:text="${record}"></div>
+        </div>
+    </div>
+</body>
+</html>
