@@ -9,7 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.TemplateSpec;
 import org.thymeleaf.context.Context;
+import org.thymeleaf.templatemode.TemplateMode;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -167,7 +169,8 @@ public class TeamCardService {
         Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
         if (Files.exists(customTemplate)) {
             String template = Files.readString(customTemplate);
-            return templateEngine.process(template, ctx);
+            var spec = new TemplateSpec(template, TemplateMode.HTML);
+            return templateEngine.process(spec, ctx);
         }
         return templateEngine.process("admin/team-card-render", ctx);
     }
