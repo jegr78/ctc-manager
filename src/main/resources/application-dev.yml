@@ -28,3 +28,7 @@ spring:
 google:
   sheets:
     credentials-path: google-credentials.json
+
+ctc:
+  site:
+    output-dir: target/site
