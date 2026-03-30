@@ -12,6 +12,7 @@
         </div>
     </div>
     <div class="card">
+        <div class="table-scroll">
         <table th:if="${!cars.isEmpty()}" id="carsTable">
             <thead>
                 <tr>
@@ -36,6 +37,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
         <div id="noResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching cars found.</p></div>
         <div class="pagination" id="pagination" aria-label="Cars pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
             <span id="pageInfo" class="text-dim"></span>

@@ -24,6 +24,7 @@
         <h2 th:if="${isAlltime}">Team Standings — Alltime</h2>
         <h2 th:unless="${isAlltime}">Team Standings — <span th:text="${selectedSeason.name}"></span></h2>
         <!-- League standings table -->
+        <div class="table-scroll">
         <table th:if="${!standings.isEmpty() && (selectedSeason == null || selectedSeason.format.name() != 'SWISS')}" id="standingsTable">
             <thead>
                 <tr>
@@ -51,8 +52,10 @@
                 </tr>
             </tbody>
         </table>
+        </div>
 
         <!-- Swiss standings table -->
+        <div class="table-scroll">
         <table th:if="${selectedSeason != null && selectedSeason.format.name() == 'SWISS' && !standings.isEmpty()}" id="swissStandingsTable">
             <thead>
                 <tr>
@@ -76,6 +79,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
 
         <div th:if="${standings.isEmpty()}" class="empty-state"><p>No results yet.</p></div>
     </div>
@@ -90,6 +94,7 @@
             <input type="text" id="driverSearch" placeholder="Search drivers..." aria-label="Search drivers"
                    style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
         </div>
+        <div class="table-scroll">
         <table th:if="${!driverRanking.isEmpty()}" id="driverRankingTable">
             <thead>
                 <tr>
@@ -114,6 +119,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
         <div id="noResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching drivers found.</p></div>
         <div class="pagination" id="pagination" aria-label="Driver ranking pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
             <span id="pageInfo" class="text-dim"></span>

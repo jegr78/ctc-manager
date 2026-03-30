@@ -154,6 +154,11 @@ h3 { font-size: 16px; margin-bottom: 8px; color: var(--white); }
     margin-bottom: 16px;
 }
 
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;

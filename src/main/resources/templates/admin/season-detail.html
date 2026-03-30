@@ -66,18 +66,20 @@
 
         <div class="detail-section" style="margin-top:32px;">
             <h2 th:text="'Matchdays (' + ${season.matchdays.size()} + ')'"></h2>
-            <table th:if="${!season.matchdays.isEmpty()}">
-                <thead>
-                    <tr><th>#</th><th>Label</th><th>Races</th></tr>
-                </thead>
-                <tbody>
-                    <tr th:each="md : ${season.matchdays}">
-                        <td th:text="${md.sortIndex}"></td>
-                        <td><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="detail-link" th:text="${md.label}"></a></td>
-                        <td th:text="${md.races.size()}"></td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table th:if="${!season.matchdays.isEmpty()}">
+                    <thead>
+                        <tr><th>#</th><th>Label</th><th>Races</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="md : ${season.matchdays}">
+                            <td th:text="${md.sortIndex}"></td>
+                            <td><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="detail-link" th:text="${md.label}"></a></td>
+                            <td th:text="${md.races.size()}"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
             <div th:if="${season.matchdays.isEmpty()}" class="empty-state" style="padding:16px;"><p>No matchdays yet.</p></div>
         </div>
 

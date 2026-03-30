@@ -33,17 +33,19 @@
     <!-- Season assignments (only for existing drivers) -->
     <div th:if="${driver.id != null}" class="card" style="margin-top: 16px;">
         <h2>Season Assignments</h2>
-        <table th:if="${seasonDrivers != null && !seasonDrivers.isEmpty()}" style="margin-bottom: 16px;">
-            <thead>
-                <tr><th>Season</th><th>Team</th></tr>
-            </thead>
-            <tbody>
-                <tr th:each="sd : ${seasonDrivers}">
-                    <td th:text="${sd.season.name}"></td>
-                    <td th:text="${sd.team.shortName + ' - ' + sd.team.name}"></td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-scroll">
+            <table th:if="${seasonDrivers != null && !seasonDrivers.isEmpty()}" style="margin-bottom: 16px;">
+                <thead>
+                    <tr><th>Season</th><th>Team</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="sd : ${seasonDrivers}">
+                        <td th:text="${sd.season.name}"></td>
+                        <td th:text="${sd.team.shortName + ' - ' + sd.team.name}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <div th:if="${seasonDrivers == null || seasonDrivers.isEmpty()}" style="margin-bottom: 16px; color: #999;">
             Not assigned to any season yet.
         </div>

@@ -8,35 +8,37 @@
         <a th:href="@{/admin/seasons/new}" class="btn btn-primary">+ New Season</a>
     </div>
     <div class="card">
-        <table th:if="${!seasons.isEmpty()}">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Start</th>
-                    <th>End</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="season : ${seasons}">
-                    <td><a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="detail-link" th:text="${season.name}"></a></td>
-                    <td th:text="${season.startDate}"></td>
-                    <td th:text="${season.endDate}"></td>
-                    <td>
-                        <span th:if="${season.active}" class="badge badge-active">● Active</span>
-                        <span th:unless="${season.active}" class="badge badge-inactive">○ Inactive</span>
-                    </td>
-                    <td class="actions">
-                        <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="btn btn-secondary btn-sm">Edit</a>
-                        <form th:action="@{/admin/seasons/{id}/delete(id=${season.id})}" method="post"
-                              onsubmit="return confirm('Really delete this season?')">
-                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="table-scroll">
+            <table th:if="${!seasons.isEmpty()}">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="season : ${seasons}">
+                        <td><a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="detail-link" th:text="${season.name}"></a></td>
+                        <td th:text="${season.startDate}"></td>
+                        <td th:text="${season.endDate}"></td>
+                        <td>
+                            <span th:if="${season.active}" class="badge badge-active">● Active</span>
+                            <span th:unless="${season.active}" class="badge badge-inactive">○ Inactive</span>
+                        </td>
+                        <td class="actions">
+                            <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="btn btn-secondary btn-sm">Edit</a>
+                            <form th:action="@{/admin/seasons/{id}/delete(id=${season.id})}" method="post"
+                                  onsubmit="return confirm('Really delete this season?')">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <div th:if="${seasons.isEmpty()}" class="empty-state">
             <p>No seasons created yet.</p>
         </div>
