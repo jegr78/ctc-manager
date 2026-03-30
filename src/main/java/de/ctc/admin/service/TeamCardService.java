@@ -24,6 +24,8 @@ import java.util.List;
 public class TeamCardService {
 
     private static final String FONT_CLASSPATH = "static/admin/fonts/ConthraxSb.woff2";
+    private static final String DEFAULT_TEMPLATE = "templates/admin/team-card-render.html";
+    private static final String CUSTOM_TEMPLATE_FILE = "team-card-template.html";
 
     private final TemplateEngine templateEngine;
     private final StandingsService standingsService;
@@ -73,7 +75,7 @@ public class TeamCardService {
         ctx.setVariable("logoBase64", logoBase64);
         ctx.setVariable("fontBase64", fontBase64);
 
-        String html = templateEngine.process("admin/team-card-render", ctx);
+        String html = renderTemplate(ctx);
 
         Path tempFile = Files.createTempFile("team-card-", ".html");
         Files.writeString(tempFile, html);
@@ -159,5 +161,43 @@ public class TeamCardService {
             log.warn("Failed to encode font", e);
         }
         return null;
+    }
+
+    private String renderTemplate(Context ctx) throws IOException {
+        Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
+        if (Files.exists(customTemplate)) {
+            String template = Files.readString(customTemplate);
+            return templateEngine.process(template, ctx);
+        }
+        return templateEngine.process("admin/team-card-render", ctx);
+    }
+
+    public String loadTemplate() throws IOException {
+        Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
+        if (Files.exists(customTemplate)) {
+            return Files.readString(customTemplate);
+        }
+        return loadDefaultTemplate();
+    }
+
+    public String loadDefaultTemplate() throws IOException {
+        var resource = new ClassPathResource(DEFAULT_TEMPLATE);
+        return new String(resource.getInputStream().readAllBytes());
+    }
+
+    public void saveTemplate(String content) throws IOException {
+        Files.createDirectories(uploadDir);
+        Files.writeString(uploadDir.resolve(CUSTOM_TEMPLATE_FILE), content);
+        log.info("Saved custom team card template");
+    }
+
+    public void resetTemplate() throws IOException {
+        Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
+        Files.deleteIfExists(customTemplate);
+        log.info("Reset team card template to default");
+    }
+
+    public boolean hasCustomTemplate() {
+        return Files.exists(uploadDir.resolve(CUSTOM_TEMPLATE_FILE));
     }
 }

@@ -136,5 +136,39 @@ public class TeamCardController {
                 .body(baos.toByteArray());
     }
 
+    @GetMapping("/template")
+    public String templateEditor(Model model) {
+        try {
+            model.addAttribute("template", teamCardService.loadTemplate());
+            model.addAttribute("isCustom", teamCardService.hasCustomTemplate());
+        } catch (Exception e) {
+            model.addAttribute("template", "");
+            model.addAttribute("errorMessage", "Failed to load template: " + e.getMessage());
+        }
+        return "admin/team-card-template-editor";
+    }
+
+    @PostMapping("/template/save")
+    public String saveTemplate(@RequestParam String template, RedirectAttributes redirectAttributes) {
+        try {
+            teamCardService.saveTemplate(template);
+            redirectAttributes.addFlashAttribute("successMessage", "Template saved");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/team-cards/template";
+    }
+
+    @PostMapping("/template/reset")
+    public String resetTemplate(RedirectAttributes redirectAttributes) {
+        try {
+            teamCardService.resetTemplate();
+            redirectAttributes.addFlashAttribute("successMessage", "Template reset to default");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/team-cards/template";
+    }
+
     public record CardState(SeasonTeam seasonTeam, boolean exists, String cardPath) {}
 }
