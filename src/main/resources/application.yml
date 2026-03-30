@@ -36,7 +36,7 @@ google:
 # Statische Seitengenerierung
 ctc:
   site:
-    output-dir: ${user.home}/ctc-site-output
+    output-dir: docs/site
 
 # Actuator Health-Endpoint (fuer Docker Healthchecks)
 management:
