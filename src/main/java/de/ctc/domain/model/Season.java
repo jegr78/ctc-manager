@@ -10,6 +10,7 @@ import lombok.ToString;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Entity
@@ -112,5 +113,21 @@ public class Season {
      */
     public void removeTeamById(UUID teamId) {
         seasonTeams.removeIf(st -> st.getTeam().getId().equals(teamId));
+    }
+
+    /**
+     * Convenience method: checks if this season contains the given team.
+     */
+    public boolean containsTeam(Team team) {
+        return seasonTeams.stream().anyMatch(st -> st.getTeam().getId().equals(team.getId()));
+    }
+
+    /**
+     * Convenience method: finds the SeasonTeam entry for the given team.
+     */
+    public Optional<SeasonTeam> findSeasonTeam(Team team) {
+        return seasonTeams.stream()
+                .filter(st -> st.getTeam().getId().equals(team.getId()))
+                .findFirst();
     }
 }
