@@ -136,6 +136,50 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     }
 
     @Test
+    void shouldShowTeamDetailWithDriversGroupedBySeason() {
+        page.navigate(url("/admin/teams"));
+        page.locator("a:has-text('P1R')").first().click();
+
+        assertThat(page.locator("h1")).containsText("Project One Racing");
+        assertThat(page.locator("h2:has-text('Seasons & Drivers')")).isVisible();
+
+        var activeSeason = page.locator("details.season-accordion[open]");
+        assertThat(activeSeason).isVisible();
+        assertThat(activeSeason.locator(".season-header")).containsText("Season 4 - 2026");
+        assertThat(activeSeason.locator(".badge-active")).isVisible();
+
+        assertThat(activeSeason.locator(".chip").first()).isVisible();
+        assertThat(activeSeason.locator(".season-drivers")).containsText("France-k88");
+        assertThat(activeSeason.locator(".season-header")).containsText("Drivers");
+    }
+
+    @Test
+    void shouldShowTeamDetailWithSubTeamDriverGroups() {
+        page.navigate(url("/admin/teams"));
+        page.locator("a:has-text('CLR')").first().click();
+
+        assertThat(page.locator("h1")).containsText("Community League Racing");
+
+        var activeSeason = page.locator("details.season-accordion[open]");
+        assertThat(activeSeason.locator(".team-group-label").first()).isVisible();
+        assertThat(activeSeason.locator(".badge-sub").first()).isVisible();
+    }
+
+    @Test
+    void shouldCollapseAndExpandSeasonAccordion() {
+        page.navigate(url("/admin/teams"));
+        page.locator("a:has-text('P1R')").first().click();
+
+        var collapsedSeason = page.locator("details.season-accordion:not([open]):has-text('Season 3')");
+        assertThat(collapsedSeason).isVisible();
+
+        collapsedSeason.locator(".season-header").click();
+
+        assertThat(collapsedSeason.locator(".season-drivers")).isVisible();
+        assertThat(collapsedSeason.locator(".chip").first()).isVisible();
+    }
+
+    @Test
     void shouldShowGt7SyncPage() {
         page.navigate(url("/admin/gt7-sync"));
         assertThat(page.locator("h1")).containsText("GT7 Sync");
