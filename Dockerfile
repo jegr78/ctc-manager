@@ -18,8 +18,11 @@ RUN ./mvnw package -DskipTests -B
 # Stage 2: Runtime
 FROM eclipse-temurin:25-jre
 
-# curl fuer Healthcheck installieren
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+# curl fuer Healthcheck + Chromium-Dependencies fuer Playwright installieren
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \
+    libpango-1.0-0 libcairo2 libasound2t64 libxshmfence1 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Non-root User erstellen
 RUN groupadd -r ctc && useradd -r -g ctc ctc
