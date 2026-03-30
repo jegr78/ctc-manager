@@ -78,6 +78,11 @@
             object-fit: contain;
         }
 
+        .team-info {
+            margin-top: auto;
+            text-align: center;
+        }
+
         .team-name {
             font-size: 52px;
             font-weight: 600;
@@ -89,11 +94,10 @@
         .sub-team-label {
             font-size: 40px;
             color: [[${accentColor}]];
-            margin-bottom: 80px;
+            margin-bottom: 40px;
         }
 
         .stats {
-            margin-top: auto;
             text-align: center;
         }
 
@@ -128,14 +132,16 @@
             <img th:if="${logoBase64 != null}" th:src="${logoBase64}" alt="">
             <span th:if="${logoBase64 == null}" style="font-size:48px;opacity:0.3;">No Logo</span>
         </div>
-        <div class="team-name" th:text="${teamName}"></div>
-        <div class="sub-team-label" th:if="${subTeamLabel != null}" th:text="${subTeamLabel}"></div>
-        <div th:if="${subTeamLabel == null}" style="margin-bottom:80px;"></div>
-        <div class="stats">
-            <div class="stat-label">POINTS</div>
-            <div class="stat-value" th:text="${points}"></div>
-            <div class="stat-label">RECORD</div>
-            <div class="record-value" th:text="${record}"></div>
+        <div class="team-info">
+            <div class="team-name" th:text="${teamName}"></div>
+            <div class="sub-team-label" th:if="${subTeamLabel != null}" th:text="${subTeamLabel}"></div>
+            <div th:if="${subTeamLabel == null}" style="margin-bottom:40px;"></div>
+            <div class="stats">
+                <div class="stat-label">POINTS</div>
+                <div class="stat-value" th:text="${points}"></div>
+                <div class="stat-label">RECORD</div>
+                <div class="record-value" th:text="${record}"></div>
+            </div>
         </div>
     </div>
 </body>
