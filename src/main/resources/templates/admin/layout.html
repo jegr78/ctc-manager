@@ -31,9 +31,9 @@
                 </div>
                 <div class="sidebar-group">
                     <span class="sidebar-group-label">Master Data</span>
-                    <a th:href="@{/admin/teams}" th:classappend="${title.contains('Team') ? 'active' : ''}">Teams</a>
+                    <a th:href="@{/admin/teams}" th:classappend="${title.contains('Team') and !title.contains('Team Cards') ? 'active' : ''}">Teams</a>
                     <a th:href="@{/admin/drivers}" th:classappend="${title.contains('Driver') ? 'active' : ''}">Drivers</a>
-                    <a th:href="@{/admin/cars}" th:classappend="${title.contains('Car') ? 'active' : ''}">Cars</a>
+                    <a th:href="@{/admin/cars}" th:classappend="${title.contains('Car') and !title.contains('Team Cards') ? 'active' : ''}">Cars</a>
                     <a th:href="@{/admin/tracks}" th:classappend="${title.contains('Track') ? 'active' : ''}">Tracks</a>
                 </div>
                 <div class="sidebar-group">
