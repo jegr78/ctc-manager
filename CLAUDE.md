@@ -30,6 +30,9 @@ Deutsch für Kommunikation und Dokumentation. Code, Kommentare und UI-Texte auf 
 # Local mit MariaDB
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
+# Playwright Chromium installieren (fuer Team Card Generierung + E2E Tests)
+./mvnw exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
+
 # Docker: Lokale Umgebung (App + MariaDB)
 docker compose up --build -d
 docker compose down
@@ -108,6 +111,15 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
   1. CI-Build pruefen: `gh run list --branch <branch>` / `gh run view <run-id>`
   2. Bei CI-Failure: Logs analysieren (`gh run view --log-failed`), fixen, pushen
   3. PR darf erst gemergt werden wenn CI gruen ist
+
+## Subagent-Regeln
+
+- **Modellwahl:** Implementierungs-Subagents immer mit `model: "opus"` oder mindestens `model: "sonnet"`. Haiku NUR fuer Read-Only-Tasks (Reviews, Recherche). Nie fuer Code-Aenderungen.
+- **Branch-Schutz:** Jeder Subagent-Prompt muss den aktiven Branch benennen und explizit verbieten: kein `git stash`, `git checkout`, `git reset`, kein Branch-Wechsel.
+- **Post-Dispatch-Validierung:** Nach JEDEM Subagent sofort pruefen: `git branch --show-current`, `git log --oneline -3`, `git diff --stat`. Bei Abweichung sofort `git reset --hard` auf letzten guten Commit.
+- **Plan-Treue:** Subagent-Prompt muss explizit sagen: "Implementiere NUR Task N. Wenn andere Dateien angepasst werden muessen, melde NEEDS_CONTEXT statt selbst zu fixen."
+- **Atomare Tasks:** Tasks im Plan muessen einzeln lauffaehig sein. Wenn eine Aenderung mehrere Tasks erzwingt, als einen Task planen.
+- **Fallback:** Wenn Subagents trotz Regeln Probleme machen, sequentiell selbst abarbeiten.
 
 ## References
 

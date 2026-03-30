@@ -9,12 +9,15 @@ import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "seasons")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchdays", "seasonDrivers", "teams", "cars", "tracks", "raceScoring", "matchScoring"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchdays", "seasonDrivers", "seasonTeams", "cars", "tracks", "raceScoring", "matchScoring"})
 public class Season {
 
     @Id
@@ -56,12 +59,8 @@ public class Season {
     @OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SeasonDriver> seasonDrivers = new ArrayList<>();
 
-    @ManyToMany
-    @JoinTable(name = "season_teams",
-            joinColumns = @JoinColumn(name = "season_id"),
-            inverseJoinColumns = @JoinColumn(name = "team_id"))
-    @OrderBy("shortName ASC")
-    private List<Team> teams = new ArrayList<>();
+    @OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SeasonTeam> seasonTeams = new ArrayList<>();
 
     @ManyToMany
     @JoinTable(name = "season_cars",
@@ -79,5 +78,58 @@ public class Season {
 
     public Season(String name) {
         this.name = name;
+    }
+
+    /**
+     * Convenience method: returns the list of Teams participating in this season,
+     * ordered by short name. Derived from the seasonTeams association.
+     */
+    public List<Team> getTeams() {
+        return seasonTeams.stream()
+                .map(SeasonTeam::getTeam)
+                .sorted(Comparator.comparing(Team::getShortName))
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    /**
+     * Convenience method: adds a team to this season by creating a SeasonTeam entry.
+     * Does nothing if the team is already registered for this season.
+     */
+    public void addTeam(Team team) {
+        boolean alreadyPresent = seasonTeams.stream()
+                .anyMatch(st -> st.getTeam().getId().equals(team.getId()));
+        if (!alreadyPresent) {
+            seasonTeams.add(new SeasonTeam(this, team));
+        }
+    }
+
+    /**
+     * Convenience method: removes a team from this season by removing the SeasonTeam entry.
+     */
+    public void removeTeam(Team team) {
+        seasonTeams.removeIf(st -> st.getTeam().getId().equals(team.getId()));
+    }
+
+    /**
+     * Convenience method: removes a team by ID from this season.
+     */
+    public void removeTeamById(UUID teamId) {
+        seasonTeams.removeIf(st -> st.getTeam().getId().equals(teamId));
+    }
+
+    /**
+     * Convenience method: checks if this season contains the given team.
+     */
+    public boolean containsTeam(Team team) {
+        return seasonTeams.stream().anyMatch(st -> st.getTeam().getId().equals(team.getId()));
+    }
+
+    /**
+     * Convenience method: finds the SeasonTeam entry for the given team.
+     */
+    public Optional<SeasonTeam> findSeasonTeam(Team team) {
+        return seasonTeams.stream()
+                .filter(st -> st.getTeam().getId().equals(team.getId()))
+                .findFirst();
     }
 }

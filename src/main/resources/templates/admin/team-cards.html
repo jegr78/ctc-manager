@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Team Cards', ~{::section})}">
+<body>
+<section>
+    <h1>Team Cards</h1>
+    <div class="card">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <form th:action="@{/admin/tools/team-cards}" method="get" style="display:flex;gap:8px;align-items:center;">
+                <label for="seasonId" style="white-space:nowrap;">Season:</label>
+                <select name="seasonId" id="seasonId" onchange="this.form.submit()"
+                        style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:14px;">
+                    <option value="" th:if="${seasons.isEmpty()}">No seasons</option>
+                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
+                            th:selected="${s.id == selectedSeasonId}"></option>
+                </select>
+            </form>
+            <div style="display:flex;gap:8px;margin-left:auto;">
+                <a th:href="@{/admin/tools/team-cards/template}" class="btn btn-secondary">Edit Template</a>
+                <form th:if="${season != null}" th:action="@{/admin/tools/team-cards/generate-all}" method="post" style="display:flex;margin:0;" id="generateAllForm">
+                    <input type="hidden" name="seasonId" th:value="${season.id}">
+                    <button type="submit" id="generateAllBtn" class="btn btn-secondary" style="align-self:stretch;">Generate All</button>
+                </form>
+                <a th:if="${season != null}" th:href="@{/admin/tools/team-cards/download-all(seasonId=${season.id})}"
+                   class="btn btn-secondary">Download ZIP</a>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${season != null && cardStates != null}" style="margin-top:16px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:16px;">
+            <div th:each="cs : ${cardStates}" class="card" style="padding:12px;text-align:center;">
+                <div th:if="${cs.exists()}" style="margin-bottom:8px;">
+                    <img th:src="${cs.cardPath()}" alt="" style="width:100%;border-radius:6px;">
+                </div>
+                <div th:unless="${cs.exists()}" style="aspect-ratio:9/16;background:var(--bg-input);border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+                    <span class="text-dim">Not generated</span>
+                </div>
+                <strong th:text="${cs.seasonTeam().team.shortName}"></strong>
+                <span th:if="${cs.seasonTeam().rating != null}" class="text-dim"
+                      th:text="' — Rating: ' + ${cs.seasonTeam().rating}"></span>
+                <div style="margin-top:8px;display:flex;gap:4px;justify-content:center;">
+                    <form th:action="@{/admin/tools/team-cards/generate/{id}(id=${cs.seasonTeam().id})}" method="post">
+                        <button type="submit" class="btn btn-primary btn-sm">Generate</button>
+                    </form>
+                    <a th:if="${cs.exists()}"
+                       th:href="@{/admin/tools/team-cards/download/{id}(id=${cs.seasonTeam().id})}"
+                       class="btn btn-secondary btn-sm">Download</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${season == null}" class="card" style="margin-top:16px;">
+        <div class="empty-state" style="padding:24px;"><p>Select a season to manage team cards.</p></div>
+    </div>
+
+    <!-- Fullscreen overlay shown during Generate All -->
+    <div id="generateOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:32px 48px;text-align:center;max-width:400px;">
+            <div style="margin-bottom:12px;color:var(--accent);font-weight:700;font-size:18px;">Generating team cards...</div>
+            <div class="text-dim">Rendering cards for all teams via headless browser.<br>This may take a moment.</div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var form = document.getElementById('generateAllForm');
+        if (!form) return;
+        var btn = document.getElementById('generateAllBtn');
+        var overlay = document.getElementById('generateOverlay');
+        form.addEventListener('submit', function() {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.pointerEvents = 'none';
+            btn.textContent = 'Generating...';
+            overlay.style.display = 'flex';
+        });
+    })();
+    </script>
+</section>
+</body>
+</html>

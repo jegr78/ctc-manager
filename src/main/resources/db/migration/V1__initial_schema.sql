@@ -37,6 +37,9 @@ CREATE TABLE teams (
     name VARCHAR(255) NOT NULL,
     short_name VARCHAR(50) NOT NULL,
     logo_url VARCHAR(500),
+    primary_color VARCHAR(7),
+    secondary_color VARCHAR(7),
+    accent_color VARCHAR(7),
     parent_team_id UUID,
     CONSTRAINT fk_team_parent FOREIGN KEY (parent_team_id) REFERENCES teams(id)
 );
@@ -60,11 +63,17 @@ CREATE TABLE season_drivers (
 );
 
 CREATE TABLE season_teams (
+    id UUID PRIMARY KEY,
     season_id UUID NOT NULL,
     team_id UUID NOT NULL,
-    PRIMARY KEY (season_id, team_id),
+    rating INTEGER,
+    primary_color VARCHAR(7),
+    secondary_color VARCHAR(7),
+    accent_color VARCHAR(7),
+    logo_url VARCHAR(500),
     CONSTRAINT fk_st_season FOREIGN KEY (season_id) REFERENCES seasons(id),
-    CONSTRAINT fk_st_team FOREIGN KEY (team_id) REFERENCES teams(id)
+    CONSTRAINT fk_st_team FOREIGN KEY (team_id) REFERENCES teams(id),
+    CONSTRAINT uk_season_team UNIQUE (season_id, team_id)
 );
 
 CREATE TABLE cars (

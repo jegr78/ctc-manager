@@ -185,6 +185,39 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     }
 
     @Test
+    void shouldSaveTemplateAndGenerateAllCards() {
+        // Navigate to template editor
+        page.navigate(url("/admin/tools/team-cards/template"));
+        assertThat(page.locator("h1")).containsText("Card Template Editor");
+
+        // Save the template (default content, just hit save)
+        page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
+                new com.microsoft.playwright.Page.GetByRoleOptions().setName("Save Template")).click();
+        assertThat(page.locator(".alert-success")).containsText("Template saved");
+
+        // Navigate to team cards page (active season auto-selected)
+        page.navigate(url("/admin/tools/team-cards"));
+        assertThat(page.locator("h1")).containsText("Team Cards");
+
+        // Click Generate All
+        page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
+                new com.microsoft.playwright.Page.GetByRoleOptions().setName("Generate All")).click();
+
+        // Should redirect back with success message
+        assertThat(page.locator(".alert-success")).containsText("cards generated");
+
+        // At least one card thumbnail should be visible (img in the grid)
+        assertThat(page.locator(".card img").first()).isVisible();
+
+        // Reset template back to default (confirm dialog)
+        page.navigate(url("/admin/tools/team-cards/template"));
+        page.onDialog(dialog -> dialog.accept());
+        page.getByRole(com.microsoft.playwright.options.AriaRole.BUTTON,
+                new com.microsoft.playwright.Page.GetByRoleOptions().setName("Reset")).click();
+        assertThat(page.locator(".alert-success")).containsText("Template reset");
+    }
+
+    @Test
     void shouldShowGt7SyncPage() {
         page.navigate(url("/admin/gt7-sync"));
         assertThat(page.locator("h1")).containsText("GT7 Sync");

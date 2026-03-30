@@ -2,6 +2,7 @@ package de.ctc.admin.controller;
 
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
+import de.ctc.domain.service.FileStorageService;
 import de.ctc.domain.service.SwissPairingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.*;
@@ -27,6 +29,8 @@ public class SeasonController {
     private final PlayoffRepository playoffRepository;
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
+    private final SeasonTeamRepository seasonTeamRepository;
+    private final FileStorageService fileStorageService;
     private final SwissPairingService swissPairingService;
 
     @GetMapping("/{id}")
@@ -104,13 +108,13 @@ public class SeasonController {
                           RedirectAttributes redirectAttributes) {
         var season = seasonRepository.findById(id).orElseThrow();
         var team = teamRepository.findById(teamId).orElseThrow();
-        if (!season.getTeams().contains(team)) {
+        if (!season.containsTeam(team)) {
             // Auto-add parent team when adding a sub-team
-            if (team.isSubTeam() && !season.getTeams().contains(team.getParentTeam())) {
-                season.getTeams().add(team.getParentTeam());
+            if (team.isSubTeam() && !season.containsTeam(team.getParentTeam())) {
+                season.addTeam(team.getParentTeam());
                 log.info("Auto-added parent team {} to season {}", team.getParentTeam().getShortName(), season.getName());
             }
-            season.getTeams().add(team);
+            season.addTeam(team);
             seasonRepository.save(season);
             log.info("Added team {} to season {}", team.getShortName(), season.getName());
         }
@@ -135,7 +139,7 @@ public class SeasonController {
             }
         }
 
-        season.getTeams().removeIf(t -> t.getId().equals(teamId));
+        season.removeTeamById(teamId);
 
         // Auto-remove parent team if no more sub-teams in season
         if (team.isSubTeam()) {
@@ -143,7 +147,7 @@ public class SeasonController {
             boolean hasOtherSubs = season.getTeams().stream()
                     .anyMatch(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()));
             if (!hasOtherSubs) {
-                season.getTeams().removeIf(t -> t.getId().equals(parent.getId()));
+                season.removeTeam(parent);
                 log.info("Auto-removed parent team {} from season {} (no sub-teams left)",
                         parent.getShortName(), season.getName());
             }
@@ -153,6 +157,40 @@ public class SeasonController {
         log.info("Removed team {} from season {}", team.getShortName(), season.getName());
         redirectAttributes.addFlashAttribute("successMessage", "Team removed");
         return "redirect:/admin/seasons/" + id + "/edit";
+    }
+
+    @PostMapping("/{id}/update-season-team")
+    public String updateSeasonTeam(@PathVariable UUID id,
+                                   @RequestParam UUID seasonTeamId,
+                                   @RequestParam(required = false) Integer rating,
+                                   @RequestParam(required = false) String primaryColor,
+                                   @RequestParam(required = false) String secondaryColor,
+                                   @RequestParam(required = false) String accentColor,
+                                   @RequestParam(required = false) MultipartFile logoOverride,
+                                   RedirectAttributes redirectAttributes) {
+        var seasonTeam = seasonTeamRepository.findById(seasonTeamId).orElseThrow();
+        seasonTeam.setRating(rating);
+        seasonTeam.setPrimaryColor(primaryColor != null && !primaryColor.isBlank() ? primaryColor : null);
+        seasonTeam.setSecondaryColor(secondaryColor != null && !secondaryColor.isBlank() ? secondaryColor : null);
+        seasonTeam.setAccentColor(accentColor != null && !accentColor.isBlank() ? accentColor : null);
+
+        if (logoOverride != null && !logoOverride.isEmpty()) {
+            try {
+                if (seasonTeam.getLogoUrl() != null) {
+                    fileStorageService.delete(seasonTeam.getLogoUrl());
+                }
+                String url = fileStorageService.storeImage("season-teams", seasonTeamId, logoOverride);
+                seasonTeam.setLogoUrl(url);
+            } catch (Exception e) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
+                return "redirect:/admin/seasons/" + id;
+            }
+        }
+
+        seasonTeamRepository.save(seasonTeam);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Updated: " + seasonTeam.getTeam().getShortName());
+        return "redirect:/admin/seasons/" + id;
     }
 
     @PostMapping("/{id}/cars/add")

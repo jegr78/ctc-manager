@@ -18,8 +18,11 @@ RUN ./mvnw package -DskipTests -B
 # Stage 2: Runtime
 FROM eclipse-temurin:25-jre
 
-# curl fuer Healthcheck installieren
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+# curl fuer Healthcheck + Chromium-Dependencies fuer Playwright installieren
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \
+    libpango-1.0-0 libcairo2 libasound2t64 libxshmfence1 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Non-root User erstellen
 RUN groupadd -r ctc && useradd -r -g ctc ctc
@@ -31,6 +34,12 @@ RUN mkdir -p /app/uploads /app/ctc-site-output && chown -R ctc:ctc /app
 
 # JAR aus Build-Stage kopieren
 COPY --from=build --chown=ctc:ctc /build/target/ctc-manager-*.jar /app/ctc-manager.jar
+
+# Playwright Chromium-Browser installieren (fuer Team Card Generierung)
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
+RUN java -cp /app/ctc-manager.jar -Dloader.main=com.microsoft.playwright.CLI \
+    org.springframework.boot.loader.launch.PropertiesLauncher install chromium \
+    && chown -R ctc:ctc /app/.playwright
 
 USER ctc
 

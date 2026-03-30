@@ -166,7 +166,7 @@ class SwissPairingServiceTest {
         for (int i = 0; i < count; i++) {
             var team = teamRepository.save(new Team("SwissT " + i + "_" + UUID.randomUUID().toString().substring(0, 4),
                     "SW" + i + UUID.randomUUID().toString().substring(0, 2)));
-            season.getTeams().add(team);
+            season.addTeam(team);
         }
         seasonRepository.save(season);
     }

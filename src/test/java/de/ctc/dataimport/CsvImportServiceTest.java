@@ -79,7 +79,10 @@ class CsvImportServiceTest {
         standaloneTeam2.setId(UUID.randomUUID());
 
         // Default: all teams assigned to season
-        season.setTeams(List.of(subTeam1, subTeam2, standaloneTeam1, standaloneTeam2));
+        season.addTeam(subTeam1);
+        season.addTeam(subTeam2);
+        season.addTeam(standaloneTeam1);
+        season.addTeam(standaloneTeam2);
 
         driver1 = new Driver("driver1_psn", "Driver One");
         driver1.setId(UUID.randomUUID());
@@ -114,7 +117,7 @@ class CsvImportServiceTest {
         subTeamSameName.setId(UUID.randomUUID());
 
         // Only the sub-team is assigned to the season
-        season.setTeams(List.of(subTeamSameName));
+        season.addTeam(subTeamSameName);
 
         setupCommonMocks();
         when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());

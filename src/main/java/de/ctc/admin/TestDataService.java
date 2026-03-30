@@ -4,9 +4,14 @@ import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @Slf4j
@@ -34,6 +39,7 @@ public class TestDataService {
         var scorings = seedScorings();
         var teams = seedTeams();
         seedSubTeams(teams);
+        copyDemoLogos(teams);
         seedSeasons(teams, scorings);
         seedDrivers();
         seedSeasonDrivers();
@@ -55,37 +61,58 @@ public class TestDataService {
     }
 
     private List<Team> seedTeams() {
-        return teamRepository.saveAll(List.of(
-                new Team("Project One Racing", "P1R"),
-                new Team("Community League Racing", "CLR"),
-                new Team("Tidgney Community Racing", "TCR"),
-                new Team("Amigos Racing Team", "ART"),
-                new Team("Apex Hunter Racing", "AHR"),
-                new Team("Medway Racing League", "MRL"),
-                new Team("Gen-X Racing", "GXR"),
-                new Team("Dream Team Racing", "DTR"),
-                new Team("VEZ Racing Team", "VEZ"),
-                new Team("The Neutrals Racing", "TNR")
+        var teams = teamRepository.saveAll(List.of(
+                team("Project One Racing", "P1R", "#5ea6f1", "#f5170a", "#FFFFFF"),
+                team("Community League Racing", "CLR", "#0467f5", "#000000", "#FFFFFF"),
+                team("Tidgney Community Racing", "TCR", "#ffff04", "#fb0214", "#000000"),
+                team("Amigos Racing Team", "ART", "#ffff04", "#0000ff", "#FFFFFF"),
+                team("Apex Hunter Racing", "AHR", "#ff0101", "#000000", "#FFFFFF"),
+                team("Medway Racing League", "MRL", "#000000", "#FFFFFF", "#333333"),
+                team("Gen-X Racing", "GXR", "#f78000", "#000000", "#FFFFFF"),
+                team("Dream Team Racing", "DTR", "#b00001", "#101010", "#FFFFFF"),
+                team("VEZ Racing Team", "VEZ", "#ff66c4", "#FFFFFF", "#000000"),
+                team("The Neutrals Racing", "TNR", "#016c88", "#b50001", "#000000")
         ));
+        return teams;
+    }
+
+    private Team subTeam(String name, String shortName, Team parent) {
+        return subTeam(name, shortName, parent, parent.getPrimaryColor(), parent.getSecondaryColor(), parent.getAccentColor());
+    }
+
+    private Team subTeam(String name, String shortName, Team parent, String primary, String secondary, String accent) {
+        var t = new Team(name, shortName, parent);
+        t.setPrimaryColor(primary);
+        t.setSecondaryColor(secondary);
+        t.setAccentColor(accent);
+        return t;
+    }
+
+    private Team team(String name, String shortName, String primary, String secondary, String accent) {
+        var t = new Team(name, shortName);
+        t.setPrimaryColor(primary);
+        t.setSecondaryColor(secondary);
+        t.setAccentColor(accent);
+        return t;
     }
 
     private void seedSubTeams(List<Team> teams) {
         var clr = teams.stream().filter(t -> t.getShortName().equals("CLR")).findFirst().orElseThrow();
-        teamRepository.save(new Team("Community League Racing 1", "CLR 1", clr));
-        teamRepository.save(new Team("Community League Racing 2", "CLR 2", clr));
+        teamRepository.save(subTeam("Community League Racing 1", "CLR 1", clr, "#0467f5", "#000000", "#FFFFFF"));
+        teamRepository.save(subTeam("Community League Racing 2", "CLR 2", clr, "#0467f5", "#FFFFFF", "#000000"));
 
         var tnr = teams.stream().filter(t -> t.getShortName().equals("TNR")).findFirst().orElseThrow();
-        teamRepository.save(new Team("The Neutrals Racing A", "TNR A", tnr));
-        teamRepository.save(new Team("The Neutrals Racing B", "TNR B", tnr));
-        teamRepository.save(new Team("The Neutrals Racing C", "TNR C", tnr));
+        teamRepository.save(subTeam("The Neutrals Racing A", "TNR A", tnr, "#0281a3", "#FFFFFF", "#a60100"));
+        teamRepository.save(subTeam("The Neutrals Racing B", "TNR B", tnr, "#ba0001", "#FFFFFF", "#067392"));
+        teamRepository.save(subTeam("The Neutrals Racing C", "TNR C", tnr, "#FFFFFF", "#039bc3", "#d70200"));
 
         var ahr = teams.stream().filter(t -> t.getShortName().equals("AHR")).findFirst().orElseThrow();
-        teamRepository.save(new Team("Apex Hunter Racing 1", "AHR 1", ahr));
-        teamRepository.save(new Team("Apex Hunter Racing 2", "AHR 2", ahr));
+        teamRepository.save(subTeam("Apex Hunter Racing 1", "AHR 1", ahr, "#ff0101", "#000000", "#FFFFFF"));
+        teamRepository.save(subTeam("Apex Hunter Racing 2", "AHR 2", ahr, "#ff0101", "#FFFFFF", "#000000"));
 
         var p1r = teams.stream().filter(t -> t.getShortName().equals("P1R")).findFirst().orElseThrow();
-        teamRepository.save(new Team("Project One Racing X", "P1Rx", p1r));
-        teamRepository.save(new Team("Project One Racing", "P1R", p1r));
+        teamRepository.save(subTeam("Project One Racing X", "P1Rx", p1r));
+        teamRepository.save(subTeam("Project One Racing", "P1R", p1r));
 
         log.info("Created sub-teams: CLR(2), TNR(3), AHR(2), P1R(2)");
     }
@@ -108,36 +135,36 @@ public class TestDataService {
         // Older seasons: all parent teams
         for (String name : List.of("Season 1 - 2023 - Group A", "Season 1 - 2023 - Group B", "Season 2 - 2024")) {
             var season = createSeason(name, scorings);
-            season.getTeams().addAll(parentTeams);
+            parentTeams.forEach(season::addTeam);
             seasonRepository.save(season);
         }
 
         // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
         var s3a = createSeason("Season 3 - 2025 - Group A", scorings);
-        s3a.getTeams().addAll(List.of(
+        List.of(
                 findSub.apply("P1Rx"),
                 findParent.apply("CLR"),
                 findParent.apply("MRL"),
                 findParent.apply("TCR"),
                 findParent.apply("GXR")
-        ));
+        ).forEach(s3a::addTeam);
         seasonRepository.save(s3a);
 
         // Season 3 - 2025 - Group B: P1R parent + P1R sub-team, AHR, DTR, ART
         var s3b = createSeason("Season 3 - 2025 - Group B", scorings);
-        s3b.getTeams().addAll(List.of(
+        List.of(
                 findParent.apply("P1R"),
                 findSub.apply("P1R"),
                 findParent.apply("AHR"),
                 findParent.apply("DTR"),
                 findParent.apply("ART")
-        ));
+        ).forEach(s3b::addTeam);
         seasonRepository.save(s3b);
 
         // Season 4 - 2026: all parents with subs + standalone parents
         var s4 = createSeason("Season 4 - 2026", scorings);
         s4.setActive(true);
-        s4.getTeams().addAll(List.of(
+        List.of(
                 findParent.apply("CLR"),
                 findSub.apply("CLR 1"),
                 findSub.apply("CLR 2"),
@@ -155,8 +182,51 @@ public class TestDataService {
                 findParent.apply("VEZ"),
                 findParent.apply("GXR"),
                 findParent.apply("TCR")
-        ));
+        ).forEach(s4::addTeam);
         seasonRepository.save(s4);
+
+        // Set ratings for active season
+        s4.findSeasonTeam(findSub.apply("CLR 1")).ifPresent(st -> st.setRating(92));
+        s4.findSeasonTeam(findSub.apply("CLR 2")).ifPresent(st -> st.setRating(87));
+        s4.findSeasonTeam(findSub.apply("TNR A")).ifPresent(st -> st.setRating(93));
+        s4.findSeasonTeam(findSub.apply("TNR B")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findSub.apply("TNR C")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findParent.apply("P1R")).ifPresent(st -> st.setRating(93));
+        s4.findSeasonTeam(findParent.apply("DTR")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findParent.apply("MRL")).ifPresent(st -> {
+            st.setRating(84);
+            st.setPrimaryColor("#1116aa");
+            st.setAccentColor("#134f7c");
+        });
+        s4.findSeasonTeam(findParent.apply("ART")).ifPresent(st -> st.setRating(87));
+        s4.findSeasonTeam(findSub.apply("AHR 1")).ifPresent(st -> st.setRating(92));
+        s4.findSeasonTeam(findSub.apply("AHR 2")).ifPresent(st -> st.setRating(88));
+        s4.findSeasonTeam(findParent.apply("VEZ")).ifPresent(st -> st.setRating(88));
+        s4.findSeasonTeam(findParent.apply("GXR")).ifPresent(st -> st.setRating(83));
+        s4.findSeasonTeam(findParent.apply("TCR")).ifPresent(st -> st.setRating(86));
+        seasonRepository.save(s4);
+    }
+
+    private void copyDemoLogos(List<Team> parentTeams) {
+        var allTeams = teamRepository.findAll();
+        Path uploadBase = Paths.get("uploads/teams").toAbsolutePath().normalize();
+        for (var team : allTeams) {
+            String logoKey = team.isSubTeam() ? team.getParentTeam().getShortName() : team.getShortName();
+            try {
+                var resource = new ClassPathResource("demo/team-logos/" + logoKey + ".png");
+                if (resource.exists()) {
+                    Path teamDir = uploadBase.resolve(team.getId().toString());
+                    Files.createDirectories(teamDir);
+                    Path target = teamDir.resolve(logoKey + ".png");
+                    Files.copy(resource.getInputStream(), target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    team.setLogoUrl("/uploads/teams/" + team.getId() + "/" + logoKey + ".png");
+                    teamRepository.save(team);
+                }
+            } catch (IOException e) {
+                log.warn("Failed to copy demo logo for {}: {}", team.getShortName(), e.getMessage());
+            }
+        }
+        log.info("Demo logos copied for {} teams", allTeams.size());
     }
 
     private Season createSeason(String name, ScoringDefaults scorings) {
@@ -397,7 +467,7 @@ public class TestDataService {
 
         // Test-Season 2026: T-ALF vs T-BRV 1, T-ALF vs T-BRV 2
         var testSeason1 = createSeason("Test-Season 2026", scorings);
-        testSeason1.getTeams().addAll(List.of(testAlpha, testBravo, testBravo1, testBravo2));
+        List.of(testAlpha, testBravo, testBravo1, testBravo2).forEach(testSeason1::addTeam);
         seasonRepository.save(testSeason1);
 
         var md1 = matchdayRepository.save(new Matchday(testSeason1, "Test MD 1", 1));
@@ -432,7 +502,7 @@ public class TestDataService {
 
         // Test-Season 2025: T-ALF vs T-BRV (multi-season test)
         var testSeason2 = createSeason("Test-Season 2025", scorings);
-        testSeason2.getTeams().addAll(List.of(testAlpha, testBravo));
+        List.of(testAlpha, testBravo).forEach(testSeason2::addTeam);
         seasonRepository.save(testSeason2);
 
         var md2 = matchdayRepository.save(new Matchday(testSeason2, "Test MD 1", 1));
