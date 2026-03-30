@@ -16,4 +16,6 @@ public interface SeasonDriverRepository extends JpaRepository<SeasonDriver, UUID
     Optional<SeasonDriver> findBySeasonIdAndDriverId(UUID seasonId, UUID driverId);
 
     List<SeasonDriver> findByDriverId(UUID driverId);
+
+    List<SeasonDriver> findByTeamIdIn(List<UUID> teamIds);
 }

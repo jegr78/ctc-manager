@@ -19,6 +19,7 @@ public class TestDataService {
     private final DriverRepository driverRepository;
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
+    private final SeasonDriverRepository seasonDriverRepository;
 
     @Transactional
     public void seed() {
@@ -31,8 +32,10 @@ public class TestDataService {
         seedSubTeams(teams);
         seedSeasons(teams, scorings);
         seedDrivers();
-        log.info("Seed data created: {} teams, {} seasons, {} drivers",
-                teamRepository.count(), seasonRepository.count(), driverRepository.count());
+        seedSeasonDrivers();
+        log.info("Seed data created: {} teams, {} seasons, {} drivers, {} season-drivers",
+                teamRepository.count(), seasonRepository.count(), driverRepository.count(),
+                seasonDriverRepository.count());
     }
 
     private record ScoringDefaults(RaceScoring raceScoring, MatchScoring matchScoring) {}
@@ -289,6 +292,86 @@ public class TestDataService {
         driver("TNR_SHAWN46", "TNR_SHAWN46");
         driver("TNR_Wipperman537", "TNR_Wipperman");
         driver("VIVSRC370", "TNR_SRC_VIV");
+    }
+
+    private void seedSeasonDrivers() {
+        var allTeams = teamRepository.findAll();
+        var allDrivers = driverRepository.findAll();
+        var allSeasons = seasonRepository.findAll();
+
+        java.util.function.Function<String, Team> findParent = shortName ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Parent team not found: " + shortName));
+
+        java.util.function.Function<String, Team> findSub = shortName ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Sub-team not found: " + shortName));
+
+        java.util.function.Function<String, Driver> findDriver = psnId ->
+                allDrivers.stream()
+                        .filter(d -> d.getPsnId().equals(psnId))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Driver not found: " + psnId));
+
+        java.util.function.Function<String, Season> findSeason = name ->
+                allSeasons.stream()
+                        .filter(s -> s.getName().equals(name))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Season not found: " + name));
+
+        // Season 4 - 2026
+        var s4 = findSeason.apply("Season 4 - 2026");
+
+        for (String psnId : List.of("France-k88", "P1R_Jake", "P1R_SLAMMER", "P1R_OldBanger",
+                "YT_Sorte13", "Unfazed__be", "P1R_Valkyrie", "motorstormhero")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("P1R")));
+        }
+        for (String psnId : List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
+                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("CLR 1")));
+        }
+        for (String psnId : List.of("IEquinoXe-", "kurt_666_", "lemonysqueez",
+                "RA_F1nalized__", "RA_Shred", "RA_Yannis73")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("CLR 2")));
+        }
+        for (String psnId : List.of("Chaz__CA", "D-man371D-man", "Deekuhn",
+                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173", "GMZ_Alfred")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("TNR A")));
+        }
+        for (String psnId : List.of("LEVITIUS", "Lightning_Lorry", "LotariRacing",
+                "Mo_Flavor", "Nutcap_1", "panicpotato17", "Phantom_Steve111")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("TNR B")));
+        }
+        for (String psnId : List.of("RayCarter", "Savvy-Unchained", "sir_maggs",
+                "TNR_Capt_Slow", "TNR_SHAWN46", "TNR_Wipperman537")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("TNR C")));
+        }
+        for (String psnId : List.of("AHR_Hills_93", "AHR_j_mac", "AHR-PezzzaGT",
+                "AHR-Tankbro", "danfn22016", "grey_roc", "Jacko_GT7", "JackPlayz_01")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("AHR 1")));
+        }
+        for (String psnId : List.of("Lemonz7836", "miggldeehiggins", "OFFICIAL_001",
+                "PnR-Proton", "remir201", "Saittam-46", "stevedp81", "stigimoss", "Tracer-tel")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("AHR 2")));
+        }
+        for (String psnId : List.of("TCR_Rapid_GT", "TCR_Sheltie", "TCR_Sonic", "TCR_Tidgney",
+                "Etlits", "Hogston_GT", "TCR_Bracing1", "TCR_White-tiger", "bmataz", "YtrRytonlad28")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("TCR")));
+        }
+        for (String psnId : List.of("DTR_Butzen-Katz", "DTR_H1PPYH33D", "DTR_Kierin", "DTR_M3guy",
+                "DTR_MoominPappa", "DTR_Rosdwerg", "is250dec", "Jaristoteles", "mugelina", "Sionetica")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("DTR")));
+        }
+
+        // Season 3 - 2025 - Group A (multi-season testing)
+        var s3a = findSeason.apply("Season 3 - 2025 - Group A");
+        for (String psnId : List.of("France-k88", "P1R_Jake", "P1R_SLAMMER", "P1R_OldBanger")) {
+            seasonDriverRepository.save(new SeasonDriver(s3a, findDriver.apply(psnId), findSub.apply("P1Rx")));
+        }
+
+        log.info("Created season-driver assignments: s4={}, s3a={}",
+                seasonDriverRepository.findBySeasonId(s4.getId()).size(),
+                seasonDriverRepository.findBySeasonId(s3a.getId()).size());
     }
 
     private void driver(String psnId, String nickname) {
