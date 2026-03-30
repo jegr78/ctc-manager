@@ -6,6 +6,7 @@ import de.ctc.domain.model.SeasonTeam;
 import de.ctc.domain.service.StandingsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -22,10 +23,11 @@ import java.util.List;
 @Service
 public class TeamCardService {
 
+    private static final String FONT_CLASSPATH = "static/admin/fonts/ConthraxSb.woff2";
+
     private final TemplateEngine templateEngine;
     private final StandingsService standingsService;
     private final Path uploadDir;
-    private final Path fontPath;
 
     public TeamCardService(TemplateEngine templateEngine,
                            StandingsService standingsService,
@@ -33,7 +35,6 @@ public class TeamCardService {
         this.templateEngine = templateEngine;
         this.standingsService = standingsService;
         this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
-        this.fontPath = Paths.get("src/main/resources/static/admin/fonts/ConthraxSb.woff2").toAbsolutePath();
     }
 
     public String generateCard(SeasonTeam seasonTeam) throws IOException {
@@ -128,9 +129,13 @@ public class TeamCardService {
     }
 
     private String encodeLogoBase64(String logoUrl) {
-        if (logoUrl == null) return null;
+        if (logoUrl == null || !logoUrl.startsWith("/uploads/")) return null;
         try {
-            Path logoFile = uploadDir.resolve(logoUrl.substring("/uploads/".length()));
+            Path logoFile = uploadDir.resolve(logoUrl.substring("/uploads/".length())).normalize();
+            if (!logoFile.startsWith(uploadDir)) {
+                log.warn("Path traversal attempt in logo URL: {}", logoUrl);
+                return null;
+            }
             if (Files.exists(logoFile)) {
                 byte[] bytes = Files.readAllBytes(logoFile);
                 String mimeType = Files.probeContentType(logoFile);
@@ -145,8 +150,9 @@ public class TeamCardService {
 
     private String encodeFontBase64() {
         try {
-            if (Files.exists(fontPath)) {
-                byte[] bytes = Files.readAllBytes(fontPath);
+            var resource = new ClassPathResource(FONT_CLASSPATH);
+            if (resource.exists()) {
+                byte[] bytes = resource.getInputStream().readAllBytes();
                 return "data:font/woff2;base64," + Base64.getEncoder().encodeToString(bytes);
             }
         } catch (IOException e) {

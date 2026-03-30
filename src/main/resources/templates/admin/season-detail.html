@@ -63,7 +63,7 @@
                                 </form>
                             </td>
                             <td>
-                                <div th:if="${st.team.primaryColor != null}" style="display:flex;gap:2px;">
+                                <div th:if="${st.effectivePrimaryColor != null}" style="display:flex;gap:2px;">
                                     <span th:style="'display:inline-block;width:16px;height:16px;border-radius:3px;background:' + ${st.effectivePrimaryColor}"></span>
                                     <span th:style="'display:inline-block;width:16px;height:16px;border-radius:3px;background:' + ${st.effectiveSecondaryColor}"></span>
                                     <span th:style="'display:inline-block;width:16px;height:16px;border-radius:3px;background:' + ${st.effectiveAccentColor}"></span>
