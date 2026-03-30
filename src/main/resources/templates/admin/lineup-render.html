@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style th:inline="text">
+        @font-face {
+            font-family: 'Conthrax';
+            src: url([[${fontBase64}]]) format('woff2');
+            font-weight: 600;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(180deg, #c0c0c0 0%, #a0a0a0 100%);
+            padding: 24px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 130px;
+        }
+
+        .header-left {
+            text-align: center;
+        }
+
+        .header-left .title {
+            font-size: 28px;
+            font-weight: 900;
+            color: #1a1a1a;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            line-height: 1.1;
+        }
+
+        .header-left .year {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-top: 4px;
+        }
+
+        .header-center {
+            text-align: center;
+        }
+
+        .header-center .lineups-title {
+            font-size: 56px;
+            font-weight: 900;
+            font-style: italic;
+            color: #1a1a1a;
+            letter-spacing: 2px;
+        }
+
+        .header-center .matchday {
+            font-size: 36px;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .header-right {
+            width: 80px;
+            height: 80px;
+        }
+
+        .header-right img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            background: #111111;
+            display: flex;
+            align-items: stretch;
+            padding: 20px 32px;
+            gap: 24px;
+        }
+
+        .team-card-container {
+            width: 18%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .team-card-container img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+            border: 3px solid white;
+            border-radius: 6px;
+        }
+
+        .pairings {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            padding: 8px 0;
+        }
+
+        .pairing {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 32px;
+        }
+
+        .driver-name {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 45%;
+        }
+
+        .driver-name.home {
+            text-align: left;
+        }
+
+        .driver-name.away {
+            text-align: right;
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(180deg, #d0d0d0 0%, #b0b0b0 100%);
+            padding: 24px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 130px;
+        }
+
+        .position {
+            font-size: 56px;
+            font-weight: 900;
+            color: #1a1a1a;
+        }
+
+        .season-name {
+            font-size: 42px;
+            font-weight: 700;
+            font-style: italic;
+            color: #1a1a1a;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="title">Community<br>Team Cup</div>
+            <div class="year" th:text="${seasonYear}"></div>
+        </div>
+        <div class="header-center">
+            <div class="lineups-title">Lineups</div>
+            <div class="matchday" th:text="${matchdayName}"></div>
+        </div>
+        <div class="header-right">
+            <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC">
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="team-card-container">
+            <img th:src="${homeCardBase64}" alt="Home Team Card">
+        </div>
+
+        <div class="pairings">
+            <div class="pairing" th:each="p : ${pairings}">
+                <span class="driver-name home" th:text="${p.homeDriver}"></span>
+                <span class="driver-name away" th:text="${p.awayDriver}"></span>
+            </div>
+        </div>
+
+        <div class="team-card-container">
+            <img th:src="${awayCardBase64}" alt="Away Team Card">
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="position" th:text="'P' + ${homePosition}"></div>
+        <div class="season-name" th:text="${seasonName}"></div>
+        <div class="position" th:text="'P' + ${awayPosition}"></div>
+    </div>
+</body>
+</html>
