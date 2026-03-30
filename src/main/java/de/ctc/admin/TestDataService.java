@@ -4,9 +4,14 @@ import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @Slf4j
@@ -55,25 +60,31 @@ public class TestDataService {
     }
 
     private List<Team> seedTeams() {
-        return teamRepository.saveAll(List.of(
-                team("Project One Racing", "P1R", "#e53935", "#555555", "#e53935"),
-                team("Community League Racing", "CLR", "#2196f3", "#444444", "#2196f3"),
-                team("Tidgney Community Racing", "TCR", "#fdd835", "#333333", "#fdd835"),
-                team("Amigos Racing Team", "ART", "#4caf50", "#333333", "#4caf50"),
-                team("Apex Hunter Racing", "AHR", "#ff9800", "#333333", "#ff9800"),
-                team("Medway Racing League", "MRL", "#9c27b0", "#333333", "#9c27b0"),
-                team("Gen-X Racing", "GXR", "#00bcd4", "#333333", "#00bcd4"),
-                team("Dream Team Racing", "DTR", "#e53935", "#555555", "#e53935"),
-                team("VEZ Racing Team", "VEZ", "#ff5722", "#333333", "#ff5722"),
-                team("The Neutrals Racing", "TNR", "#e53935", "#555555", "#00bcd4")
+        var teams = teamRepository.saveAll(List.of(
+                team("Project One Racing", "P1R", "#5ea6f1", "#f5170a", "#FFFFFF"),
+                team("Community League Racing", "CLR", "#0467f5", "#000000", "#FFFFFF"),
+                team("Tidgney Community Racing", "TCR", "#ffff04", "#fb0214", "#000000"),
+                team("Amigos Racing Team", "ART", "#ffff04", "#0000ff", "#FFFFFF"),
+                team("Apex Hunter Racing", "AHR", "#ff0101", "#000000", "#FFFFFF"),
+                team("Medway Racing League", "MRL", "#000000", "#FFFFFF", "#333333"),
+                team("Gen-X Racing", "GXR", "#f78000", "#000000", "#FFFFFF"),
+                team("Dream Team Racing", "DTR", "#b00001", "#101010", "#FFFFFF"),
+                team("VEZ Racing Team", "VEZ", "#ff66c4", "#FFFFFF", "#000000"),
+                team("The Neutrals Racing", "TNR", "#016c88", "#b50001", "#000000")
         ));
+        copyDemoLogos(teams);
+        return teams;
     }
 
     private Team subTeam(String name, String shortName, Team parent) {
+        return subTeam(name, shortName, parent, parent.getPrimaryColor(), parent.getSecondaryColor(), parent.getAccentColor());
+    }
+
+    private Team subTeam(String name, String shortName, Team parent, String primary, String secondary, String accent) {
         var t = new Team(name, shortName, parent);
-        t.setPrimaryColor(parent.getPrimaryColor());
-        t.setSecondaryColor(parent.getSecondaryColor());
-        t.setAccentColor(parent.getAccentColor());
+        t.setPrimaryColor(primary);
+        t.setSecondaryColor(secondary);
+        t.setAccentColor(accent);
         return t;
     }
 
@@ -87,17 +98,17 @@ public class TestDataService {
 
     private void seedSubTeams(List<Team> teams) {
         var clr = teams.stream().filter(t -> t.getShortName().equals("CLR")).findFirst().orElseThrow();
-        teamRepository.save(subTeam("Community League Racing 1", "CLR 1", clr));
-        teamRepository.save(subTeam("Community League Racing 2", "CLR 2", clr));
+        teamRepository.save(subTeam("Community League Racing 1", "CLR 1", clr, "#0467f5", "#000000", "#FFFFFF"));
+        teamRepository.save(subTeam("Community League Racing 2", "CLR 2", clr, "#0467f5", "#FFFFFF", "#000000"));
 
         var tnr = teams.stream().filter(t -> t.getShortName().equals("TNR")).findFirst().orElseThrow();
-        teamRepository.save(subTeam("The Neutrals Racing A", "TNR A", tnr));
-        teamRepository.save(subTeam("The Neutrals Racing B", "TNR B", tnr));
-        teamRepository.save(subTeam("The Neutrals Racing C", "TNR C", tnr));
+        teamRepository.save(subTeam("The Neutrals Racing A", "TNR A", tnr, "#0281a3", "#FFFFFF", "#a60100"));
+        teamRepository.save(subTeam("The Neutrals Racing B", "TNR B", tnr, "#ba0001", "#FFFFFF", "#067392"));
+        teamRepository.save(subTeam("The Neutrals Racing C", "TNR C", tnr, "#FFFFFF", "#039bc3", "#d70200"));
 
         var ahr = teams.stream().filter(t -> t.getShortName().equals("AHR")).findFirst().orElseThrow();
-        teamRepository.save(subTeam("Apex Hunter Racing 1", "AHR 1", ahr));
-        teamRepository.save(subTeam("Apex Hunter Racing 2", "AHR 2", ahr));
+        teamRepository.save(subTeam("Apex Hunter Racing 1", "AHR 1", ahr, "#ff0101", "#000000", "#FFFFFF"));
+        teamRepository.save(subTeam("Apex Hunter Racing 2", "AHR 2", ahr, "#ff0101", "#FFFFFF", "#000000"));
 
         var p1r = teams.stream().filter(t -> t.getShortName().equals("P1R")).findFirst().orElseThrow();
         teamRepository.save(subTeam("Project One Racing X", "P1Rx", p1r));
@@ -175,14 +186,47 @@ public class TestDataService {
         seasonRepository.save(s4);
 
         // Set ratings for active season
-        s4.findSeasonTeam(findSub.apply("TNR A")).ifPresent(st -> st.setRating(93));
-        s4.findSeasonTeam(findParent.apply("P1R")).ifPresent(st -> st.setRating(93));
         s4.findSeasonTeam(findSub.apply("CLR 1")).ifPresent(st -> st.setRating(92));
-        s4.findSeasonTeam(findParent.apply("TCR")).ifPresent(st -> st.setRating(86));
-        s4.findSeasonTeam(findParent.apply("DTR")).ifPresent(st -> st.setRating(85));
         s4.findSeasonTeam(findSub.apply("CLR 2")).ifPresent(st -> st.setRating(87));
+        s4.findSeasonTeam(findSub.apply("TNR A")).ifPresent(st -> st.setRating(93));
         s4.findSeasonTeam(findSub.apply("TNR B")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findSub.apply("TNR C")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findParent.apply("P1R")).ifPresent(st -> st.setRating(93));
+        s4.findSeasonTeam(findParent.apply("DTR")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findParent.apply("MRL")).ifPresent(st -> {
+            st.setRating(84);
+            st.setPrimaryColor("#1116aa");
+            st.setAccentColor("#134f7c");
+        });
+        s4.findSeasonTeam(findParent.apply("ART")).ifPresent(st -> st.setRating(87));
+        s4.findSeasonTeam(findSub.apply("AHR 1")).ifPresent(st -> st.setRating(92));
+        s4.findSeasonTeam(findSub.apply("AHR 2")).ifPresent(st -> st.setRating(88));
+        s4.findSeasonTeam(findParent.apply("VEZ")).ifPresent(st -> st.setRating(88));
+        s4.findSeasonTeam(findParent.apply("GXR")).ifPresent(st -> st.setRating(83));
+        s4.findSeasonTeam(findParent.apply("TCR")).ifPresent(st -> st.setRating(86));
         seasonRepository.save(s4);
+    }
+
+    private void copyDemoLogos(List<Team> parentTeams) {
+        var allTeams = teamRepository.findAll();
+        Path uploadBase = Paths.get("uploads/teams").toAbsolutePath().normalize();
+        for (var team : allTeams) {
+            String logoKey = team.isSubTeam() ? team.getParentTeam().getShortName() : team.getShortName();
+            try {
+                var resource = new ClassPathResource("demo/team-logos/" + logoKey + ".png");
+                if (resource.exists()) {
+                    Path teamDir = uploadBase.resolve(team.getId().toString());
+                    Files.createDirectories(teamDir);
+                    Path target = teamDir.resolve(logoKey + ".png");
+                    Files.copy(resource.getInputStream(), target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    team.setLogoUrl("/uploads/teams/" + team.getId() + "/" + logoKey + ".png");
+                    teamRepository.save(team);
+                }
+            } catch (IOException e) {
+                log.warn("Failed to copy demo logo for {}: {}", team.getShortName(), e.getMessage());
+            }
+        }
+        log.info("Demo logos copied for {} teams", allTeams.size());
     }
 
     private Season createSeason(String name, ScoringDefaults scorings) {
