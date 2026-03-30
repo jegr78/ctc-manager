@@ -45,6 +45,10 @@
             padding: 120px 60px 160px;
         }
 
+        .spacer {
+            flex: 1;
+        }
+
         .rating-circle {
             width: 260px;
             height: 260px;
@@ -54,7 +58,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 80px;
         }
 
         .rating-number {
@@ -69,7 +72,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 60px;
+            margin-bottom: 30px;
         }
 
         .logo-container img {
@@ -78,8 +81,13 @@
             object-fit: contain;
         }
 
+        .center-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
         .team-info {
-            margin-top: auto;
             text-align: center;
         }
 
@@ -128,14 +136,17 @@
         <div class="rating-circle">
             <span class="rating-number" th:text="${rating != null ? rating : '—'}"></span>
         </div>
-        <div class="logo-container">
-            <img th:if="${logoBase64 != null}" th:src="${logoBase64}" alt="">
-            <span th:if="${logoBase64 == null}" style="font-size:48px;opacity:0.3;">No Logo</span>
-        </div>
-        <div class="team-info">
+        <div class="spacer"></div>
+        <div class="center-group">
+            <div class="logo-container">
+                <img th:if="${logoBase64 != null}" th:src="${logoBase64}" alt="">
+                <span th:if="${logoBase64 == null}" style="font-size:48px;opacity:0.3;">No Logo</span>
+            </div>
             <div class="team-name" th:text="${teamName}"></div>
             <div class="sub-team-label" th:if="${subTeamLabel != null}" th:text="${subTeamLabel}"></div>
-            <div th:if="${subTeamLabel == null}" style="margin-bottom:40px;"></div>
+        </div>
+        <div class="spacer"></div>
+        <div class="team-info">
             <div class="stats">
                 <div class="stat-label">POINTS</div>
                 <div class="stat-value" th:text="${points}"></div>
