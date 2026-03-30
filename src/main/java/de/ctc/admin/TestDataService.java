@@ -39,6 +39,7 @@ public class TestDataService {
         var scorings = seedScorings();
         var teams = seedTeams();
         seedSubTeams(teams);
+        copyDemoLogos(teams);
         seedSeasons(teams, scorings);
         seedDrivers();
         seedSeasonDrivers();
@@ -72,7 +73,6 @@ public class TestDataService {
                 team("VEZ Racing Team", "VEZ", "#ff66c4", "#FFFFFF", "#000000"),
                 team("The Neutrals Racing", "TNR", "#016c88", "#b50001", "#000000")
         ));
-        copyDemoLogos(teams);
         return teams;
     }
 
