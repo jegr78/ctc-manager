@@ -56,17 +56,25 @@ public class TestDataService {
 
     private List<Team> seedTeams() {
         return teamRepository.saveAll(List.of(
-                new Team("Project One Racing", "P1R"),
-                new Team("Community League Racing", "CLR"),
-                new Team("Tidgney Community Racing", "TCR"),
-                new Team("Amigos Racing Team", "ART"),
-                new Team("Apex Hunter Racing", "AHR"),
-                new Team("Medway Racing League", "MRL"),
-                new Team("Gen-X Racing", "GXR"),
-                new Team("Dream Team Racing", "DTR"),
-                new Team("VEZ Racing Team", "VEZ"),
-                new Team("The Neutrals Racing", "TNR")
+                team("Project One Racing", "P1R", "#e53935", "#555555", "#e53935"),
+                team("Community League Racing", "CLR", "#2196f3", "#444444", "#2196f3"),
+                team("Tidgney Community Racing", "TCR", "#fdd835", "#333333", "#fdd835"),
+                team("Amigos Racing Team", "ART", "#4caf50", "#333333", "#4caf50"),
+                team("Apex Hunter Racing", "AHR", "#ff9800", "#333333", "#ff9800"),
+                team("Medway Racing League", "MRL", "#9c27b0", "#333333", "#9c27b0"),
+                team("Gen-X Racing", "GXR", "#00bcd4", "#333333", "#00bcd4"),
+                team("Dream Team Racing", "DTR", "#e53935", "#555555", "#e53935"),
+                team("VEZ Racing Team", "VEZ", "#ff5722", "#333333", "#ff5722"),
+                team("The Neutrals Racing", "TNR", "#e53935", "#555555", "#00bcd4")
         ));
+    }
+
+    private Team team(String name, String shortName, String primary, String secondary, String accent) {
+        var t = new Team(name, shortName);
+        t.setPrimaryColor(primary);
+        t.setSecondaryColor(secondary);
+        t.setAccentColor(accent);
+        return t;
     }
 
     private void seedSubTeams(List<Team> teams) {
@@ -156,6 +164,16 @@ public class TestDataService {
                 findParent.apply("GXR"),
                 findParent.apply("TCR")
         ).forEach(s4::addTeam);
+        seasonRepository.save(s4);
+
+        // Set ratings for active season
+        s4.findSeasonTeam(findSub.apply("TNR A")).ifPresent(st -> st.setRating(93));
+        s4.findSeasonTeam(findParent.apply("P1R")).ifPresent(st -> st.setRating(93));
+        s4.findSeasonTeam(findSub.apply("CLR 1")).ifPresent(st -> st.setRating(92));
+        s4.findSeasonTeam(findParent.apply("TCR")).ifPresent(st -> st.setRating(86));
+        s4.findSeasonTeam(findParent.apply("DTR")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findSub.apply("CLR 2")).ifPresent(st -> st.setRating(87));
+        s4.findSeasonTeam(findSub.apply("TNR B")).ifPresent(st -> st.setRating(85));
         seasonRepository.save(s4);
     }
 
