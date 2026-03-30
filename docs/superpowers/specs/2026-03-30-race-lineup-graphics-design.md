@@ -37,18 +37,20 @@ Die CTC-Liga veröffentlicht vor jedem Race eine Lineup-Grafik, die beide Teams 
 ```
 
 ### Header
-- Links: "COMMUNITY TEAM CUP" (Conthrax, uppercase, bold) + Jahr darunter (rot, aus Season-Name extrahiert)
+- Links: "COMMUNITY TEAM CUP" (Conthrax, uppercase, bold, dunkelgrau/schwarz) + Jahr darunter (gleiche Farbe wie Haupttext, aus Season-Name extrahiert)
 - Mitte: "Lineups" (groß, italic, Conthrax) + Matchday-Label darunter (bold)
 - Rechts: CTC-Logo (Blitz-Icon, `/static/admin/img/ctc-logo-white.png`)
 - Hintergrund: Hellgrau-Gradient (wie Screenshots)
+- Farbgebung: Orientiert sich an den Screenshots — kein Rot, alle Texte in dunklen Tönen auf hellem Hintergrund
 - Höhe: Großzügig dimensioniert (~12% der Gesamthöhe)
 
 ### Main
-- Hintergrund: Schwarz (#111) mit diagonaler weißer Linie (wie Screenshots)
+- Hintergrund: Schwarz (#111), clean ohne diagonale Linien
 - Links: Home Team Card PNG, skaliert, weißer Rahmen mit leicht abgerundeten Ecken (border-radius ~6px)
 - Rechts: Away Team Card PNG, gleiche Darstellung
 - Mitte: Fahrer-Paarungen (dynamisch aus RaceLineup), Fahrernamen (PSN-IDs) in weiß, bold
 - Paarungen: Home-Fahrer linksbündig, Away-Fahrer rechtsbündig, vertikal gleichmäßig verteilt
+- Overflow: Fahrernamen dürfen nicht umbrechen — bei zu langen Namen mit Ellipsis (`text-overflow: ellipsis`) abschneiden
 
 ### Footer
 - Links: "P{position}" Home-Team (große Schrift, Conthrax)
@@ -91,7 +93,7 @@ Neuer Service analog zu `TeamCardService`:
 1. **Daten laden:**
    - Race → Match → homeTeam, awayTeam
    - RaceLineup für das Race (getrennt nach Home/Away Team)
-   - StandingsService → Positionen beider Teams
+   - StandingsService → Positionen beider Teams (nur die Season des Races, ermittelt über `race.matchday.season`)
    - Season → Name, Jahr
    - Team Cards → PNGs als Base64 aus `/uploads/team-cards/{seasonId}/{shortName}.png`
 2. **Validierung:**
