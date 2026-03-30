@@ -326,33 +326,28 @@ public class TestDataService {
                 "YT_Sorte13", "Unfazed__be", "P1R_Valkyrie", "motorstormhero")) {
             seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("P1R")));
         }
+        // Sub-Team-Zuordnungen werden NICHT geseeded — die kommen aus dem Import
+        // (ensureSeasonDriver aktualisiert das Team bei erneutem Import)
+        // Hier nur Parent-Team-Zuordnungen als Platzhalter fuer Entwicklung ohne Import
         for (String psnId : List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
-                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("CLR 1")));
-        }
-        for (String psnId : List.of("IEquinoXe-", "kurt_666_", "lemonysqueez",
+                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28",
+                "IEquinoXe-", "kurt_666_", "lemonysqueez",
                 "RA_F1nalized__", "RA_Shred", "RA_Yannis73")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("CLR 2")));
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("CLR")));
         }
         for (String psnId : List.of("Chaz__CA", "D-man371D-man", "Deekuhn",
-                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173", "GMZ_Alfred")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("TNR A")));
-        }
-        for (String psnId : List.of("LEVITIUS", "Lightning_Lorry", "LotariRacing",
-                "Mo_Flavor", "Nutcap_1", "panicpotato17", "Phantom_Steve111")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("TNR B")));
-        }
-        for (String psnId : List.of("RayCarter", "Savvy-Unchained", "sir_maggs",
+                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173", "GMZ_Alfred",
+                "LEVITIUS", "Lightning_Lorry", "LotariRacing",
+                "Mo_Flavor", "Nutcap_1", "panicpotato17", "Phantom_Steve111",
+                "RayCarter", "Savvy-Unchained", "sir_maggs",
                 "TNR_Capt_Slow", "TNR_SHAWN46", "TNR_Wipperman537")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("TNR C")));
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("TNR")));
         }
         for (String psnId : List.of("AHR_Hills_93", "AHR_j_mac", "AHR-PezzzaGT",
-                "AHR-Tankbro", "danfn22016", "grey_roc", "Jacko_GT7", "JackPlayz_01")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("AHR 1")));
-        }
-        for (String psnId : List.of("Lemonz7836", "miggldeehiggins", "OFFICIAL_001",
+                "AHR-Tankbro", "danfn22016", "grey_roc", "Jacko_GT7", "JackPlayz_01",
+                "Lemonz7836", "miggldeehiggins", "OFFICIAL_001",
                 "PnR-Proton", "remir201", "Saittam-46", "stevedp81", "stigimoss", "Tracer-tel")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findSub.apply("AHR 2")));
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("AHR")));
         }
         for (String psnId : List.of("TCR_Rapid_GT", "TCR_Sheltie", "TCR_Sonic", "TCR_Tidgney",
                 "Etlits", "Hogston_GT", "TCR_Bracing1", "TCR_White-tiger", "bmataz", "YtrRytonlad28")) {

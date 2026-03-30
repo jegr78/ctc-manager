@@ -200,13 +200,17 @@ public class CsvImportService {
     }
 
     private void ensureSeasonDriver(Season season, Driver driver, String teamShortName) {
+        var team = findTeamFlexible(teamShortName, season.getTeams());
+        if (team == null) return;
+
         var existing = seasonDriverRepository.findBySeasonIdAndDriverId(season.getId(), driver.getId());
         if (existing.isEmpty()) {
-            var team = findTeamFlexible(teamShortName, season.getTeams());
-            if (team != null) {
-                seasonDriverRepository.save(new SeasonDriver(season, driver, team));
-                log.debug("Created SeasonDriver: {} -> {} ({})", driver.getPsnId(), teamShortName, season.getName());
-            }
+            seasonDriverRepository.save(new SeasonDriver(season, driver, team));
+            log.debug("Created SeasonDriver: {} -> {} ({})", driver.getPsnId(), teamShortName, season.getName());
+        } else if (!existing.get().getTeam().getId().equals(team.getId())) {
+            existing.get().setTeam(team);
+            seasonDriverRepository.save(existing.get());
+            log.debug("Updated SeasonDriver: {} -> {} ({})", driver.getPsnId(), teamShortName, season.getName());
         }
     }
 

@@ -154,7 +154,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     }
 
     @Test
-    void shouldShowTeamDetailWithSubTeamDriverGroups() {
+    void shouldShowTeamDetailWithDriverGroupLabel() {
         page.navigate(url("/admin/teams"));
         page.locator("a:has-text('CLR')").first().click();
 
@@ -162,7 +162,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
 
         var activeSeason = page.locator("details.season-accordion[open]");
         assertThat(activeSeason.locator(".team-group-label").first()).isVisible();
-        assertThat(activeSeason.locator(".badge-sub").first()).isVisible();
+        assertThat(activeSeason.locator(".chip").first()).isVisible();
     }
 
     @Test
