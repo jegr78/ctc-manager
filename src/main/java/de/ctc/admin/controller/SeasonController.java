@@ -104,9 +104,9 @@ public class SeasonController {
                           RedirectAttributes redirectAttributes) {
         var season = seasonRepository.findById(id).orElseThrow();
         var team = teamRepository.findById(teamId).orElseThrow();
-        if (!season.getTeams().contains(team)) {
+        if (!season.containsTeam(team)) {
             // Auto-add parent team when adding a sub-team
-            if (team.isSubTeam() && !season.getTeams().contains(team.getParentTeam())) {
+            if (team.isSubTeam() && !season.containsTeam(team.getParentTeam())) {
                 season.addTeam(team.getParentTeam());
                 log.info("Auto-added parent team {} to season {}", team.getParentTeam().getShortName(), season.getName());
             }

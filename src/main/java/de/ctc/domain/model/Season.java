@@ -9,9 +9,11 @@ import lombok.ToString;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "seasons")
@@ -85,8 +87,8 @@ public class Season {
     public List<Team> getTeams() {
         return seasonTeams.stream()
                 .map(SeasonTeam::getTeam)
-                .sorted(java.util.Comparator.comparing(Team::getShortName))
-                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+                .sorted(Comparator.comparing(Team::getShortName))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -95,7 +97,7 @@ public class Season {
      */
     public void addTeam(Team team) {
         boolean alreadyPresent = seasonTeams.stream()
-                .anyMatch(st -> st.getTeam().equals(team));
+                .anyMatch(st -> st.getTeam().getId().equals(team.getId()));
         if (!alreadyPresent) {
             seasonTeams.add(new SeasonTeam(this, team));
         }
