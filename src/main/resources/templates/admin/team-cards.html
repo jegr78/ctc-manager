@@ -19,7 +19,7 @@
                 <a th:href="@{/admin/tools/team-cards/template}" class="btn btn-secondary">Edit Template</a>
                 <form th:if="${season != null}" th:action="@{/admin/tools/team-cards/generate-all}" method="post">
                     <input type="hidden" name="seasonId" th:value="${season.id}">
-                    <button type="submit" class="btn btn-primary">Generate All</button>
+                    <button type="submit" class="btn btn-secondary">Generate All</button>
                 </form>
                 <a th:if="${season != null}" th:href="@{/admin/tools/team-cards/download-all(seasonId=${season.id})}"
                    class="btn btn-secondary">Download ZIP</a>
