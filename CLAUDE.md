@@ -84,6 +84,7 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
 - **BDD (Behavior-Driven Development):** Playwright E2E Tests beschreiben das erwartete Verhalten aus Nutzersicht.
 - Reihenfolge bei neuen Features: Unit Tests → Implementierung → Integration Tests → E2E Tests
 - Superpowers-Skill `superpowers:test-driven-development` nutzen
+- **Visuelle Pruefung mit `playwright-cli`:** Bei UI-Aenderungen (Templates, CSS) immer `playwright-cli` nutzen um das Ergebnis visuell zu verifizieren. Dev-Server starten (`./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`), dann mit `playwright-cli open http://localhost:9090/...` die betroffenen Seiten inspizieren (Desktop + Mobile). Skill: `/playwright-cli`
 
 ## Git-Workflow
 
