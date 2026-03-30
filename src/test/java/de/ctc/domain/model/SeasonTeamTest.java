@@ -42,9 +42,20 @@ class SeasonTeamTest {
         }
 
         @Test
-        void shouldFallbackToParentTeamColorForSubTeam() {
+        void shouldReturnNullWhenSubTeamHasNoColor() {
             Team parent = teamWithColors("#FF0000", null, null, null);
             Team sub = subTeamOf(parent);
+            SeasonTeam seasonTeam = new SeasonTeam(null, sub);
+
+            // Sub-team has no own color — propagation happens at save time, not at read time
+            assertNull(seasonTeam.getEffectivePrimaryColor());
+        }
+
+        @Test
+        void shouldReturnSubTeamColorWhenPropagated() {
+            Team parent = teamWithColors("#FF0000", null, null, null);
+            Team sub = subTeamOf(parent);
+            sub.setPrimaryColor("#FF0000"); // Simulates propagation from parent
             SeasonTeam seasonTeam = new SeasonTeam(null, sub);
 
             assertEquals("#FF0000", seasonTeam.getEffectivePrimaryColor());

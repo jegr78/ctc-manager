@@ -179,6 +179,7 @@ public class TeamController {
             existing.setSecondaryColor(team.getSecondaryColor());
             existing.setAccentColor(team.getAccentColor());
             teamRepository.save(existing);
+            propagateToSubTeams(existing);
         } else {
             teamRepository.save(team);
         }
@@ -198,6 +199,7 @@ public class TeamController {
             String url = fileStorageService.storeImage("teams", id, logo);
             team.setLogoUrl(url);
             teamRepository.save(team);
+            propagateLogoToSubTeams(team, url);
             redirectAttributes.addFlashAttribute("successMessage", "Logo updated");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
@@ -240,5 +242,39 @@ public class TeamController {
         log.info("Deleted team: {}", team.getShortName());
         redirectAttributes.addFlashAttribute("successMessage", "Team deleted: " + team.getName());
         return "redirect:/admin/teams";
+    }
+
+    private void propagateToSubTeams(Team parent) {
+        if (!parent.hasSubTeams()) return;
+        for (var sub : parent.getSubTeams()) {
+            boolean changed = false;
+            if (sub.getPrimaryColor() == null && parent.getPrimaryColor() != null) {
+                sub.setPrimaryColor(parent.getPrimaryColor());
+                changed = true;
+            }
+            if (sub.getSecondaryColor() == null && parent.getSecondaryColor() != null) {
+                sub.setSecondaryColor(parent.getSecondaryColor());
+                changed = true;
+            }
+            if (sub.getAccentColor() == null && parent.getAccentColor() != null) {
+                sub.setAccentColor(parent.getAccentColor());
+                changed = true;
+            }
+            if (changed) {
+                teamRepository.save(sub);
+                log.info("Propagated colors from {} to {}", parent.getShortName(), sub.getShortName());
+            }
+        }
+    }
+
+    private void propagateLogoToSubTeams(Team parent, String logoUrl) {
+        if (!parent.hasSubTeams()) return;
+        for (var sub : parent.getSubTeams()) {
+            if (sub.getLogoUrl() == null) {
+                sub.setLogoUrl(logoUrl);
+                teamRepository.save(sub);
+                log.info("Propagated logo from {} to {}", parent.getShortName(), sub.getShortName());
+            }
+        }
     }
 }
