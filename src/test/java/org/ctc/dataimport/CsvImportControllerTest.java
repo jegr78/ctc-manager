@@ -12,6 +12,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -44,7 +46,7 @@ class CsvImportControllerTest {
 
         mockMvc.perform(multipart("/admin/import/preview")
                         .file(file)
-                        .param("seasonName", season.getName())
+                        .param("seasonId", season.getId().toString())
                         .param("matchdayLabel", matchday.getLabel())
                         .param("matchdayId", matchday.getId().toString()))
                 .andExpect(status().isOk());
@@ -58,7 +60,7 @@ class CsvImportControllerTest {
 
         mockMvc.perform(multipart("/admin/import/preview")
                         .file(file)
-                        .param("seasonName", "NonExistent Season 999")
+                        .param("seasonId", UUID.randomUUID().toString())
                         .param("matchdayLabel", "MD1"))
                 .andExpect(status().isOk());
     }
@@ -66,7 +68,7 @@ class CsvImportControllerTest {
     @Test
     void shouldRedirectWithErrorOnExecuteWithoutFile() throws Exception {
         mockMvc.perform(post("/admin/import/execute")
-                        .param("seasonName", "Test Season")
+                        .param("seasonId", UUID.randomUUID().toString())
                         .param("source", "csv"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/import"))
@@ -79,7 +81,7 @@ class CsvImportControllerTest {
 
         mockMvc.perform(multipart("/admin/import/execute")
                         .file(file)
-                        .param("seasonName", "NonExistent")
+                        .param("seasonId", UUID.randomUUID().toString())
                         .param("source", "csv"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/import"))
@@ -90,7 +92,7 @@ class CsvImportControllerTest {
     void shouldHandlePreviewSheetErrorWhenSheetsUnavailable() throws Exception {
         mockMvc.perform(post("/admin/import/preview-sheet")
                         .param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123")
-                        .param("seasonName", "Test Season")
+                        .param("seasonId", UUID.randomUUID().toString())
                         .param("matchdayLabel", "MD1"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/import"))
@@ -118,7 +120,7 @@ class CsvImportControllerTest {
         // Use a new matchday label so no duplicate
         mockMvc.perform(multipart("/admin/import/execute")
                         .file(file)
-                        .param("seasonName", season.getName())
+                        .param("seasonId", season.getId().toString())
                         .param("matchdayLabel", "CsvExec ImportMD")
                         .param("source", "csv"))
                 .andExpect(status().is3xxRedirection())
@@ -144,7 +146,7 @@ class CsvImportControllerTest {
 
         mockMvc.perform(multipart("/admin/import/preview")
                         .file(file)
-                        .param("seasonName", season.getName())
+                        .param("seasonId", season.getId().toString())
                         .param("matchdayLabel", "CsvPrev ImportMD"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/import-preview"))
@@ -171,7 +173,7 @@ class CsvImportControllerTest {
         // First import
         mockMvc.perform(multipart("/admin/import/execute")
                         .file(file)
-                        .param("seasonName", season.getName())
+                        .param("seasonId", season.getId().toString())
                         .param("matchdayId", matchday.getId().toString())
                         .param("source", "csv"))
                 .andExpect(status().is3xxRedirection());
@@ -180,7 +182,7 @@ class CsvImportControllerTest {
         var file2 = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
         mockMvc.perform(multipart("/admin/import/execute")
                         .file(file2)
-                        .param("seasonName", season.getName())
+                        .param("seasonId", season.getId().toString())
                         .param("matchdayId", matchday.getId().toString())
                         .param("source", "csv")
                         .param("overwrite", "true"))

@@ -61,7 +61,7 @@ public class CsvImportService {
                     if (matchup.isReady()) {
                         matchups.add(new PlayoffMatchupDto(
                                 matchup.getId(),
-                                season.getName(),
+                                season.getDisplayLabel(),
                                 matchup.getRound().getLabel(),
                                 matchup.getTeam1().getShortName(),
                                 matchup.getTeam2().getShortName()
@@ -80,7 +80,7 @@ public class CsvImportService {
         return matchdayRepository.findById(matchdayId).map(Matchday::getLabel);
     }
 
-    public record PlayoffMatchupDto(UUID id, String seasonName, String roundLabel,
+    public record PlayoffMatchupDto(UUID id, String seasonDisplayLabel, String roundLabel,
                                      String team1, String team2) {
         public String displayLabel() {
             return roundLabel + ": " + team1 + " vs " + team2;
@@ -120,8 +120,8 @@ public class CsvImportService {
         var metadata = preview.getMetadata();
 
         // Resolve season
-        var season = seasonRepository.findByName(metadata.seasonName()).orElseThrow(
-                () -> new IllegalArgumentException("Season not found: " + metadata.seasonName()));
+        var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
+                () -> new IllegalArgumentException("Season not found: " + metadata.seasonId()));
 
         // Resolve or create matchday
         var matchday = findOrCreateMatchday(season, metadata);
@@ -345,15 +345,15 @@ public class CsvImportService {
                 || "x".equalsIgnoreCase(value) || "✓".equals(value);
     }
 
-    public record ImportMetadata(String seasonName, String matchdayLabel, String track, String car,
+    public record ImportMetadata(UUID seasonId, String matchdayLabel, String track, String car,
                                     UUID playoffMatchupId, UUID matchdayId) {
-        public ImportMetadata(String seasonName, String matchdayLabel, String track, String car) {
-            this(seasonName, matchdayLabel, track, car, null, null);
+        public ImportMetadata(UUID seasonId, String matchdayLabel, String track, String car) {
+            this(seasonId, matchdayLabel, track, car, null, null);
         }
 
-        public ImportMetadata(String seasonName, String matchdayLabel, String track, String car,
+        public ImportMetadata(UUID seasonId, String matchdayLabel, String track, String car,
                               UUID playoffMatchupId) {
-            this(seasonName, matchdayLabel, track, car, playoffMatchupId, null);
+            this(seasonId, matchdayLabel, track, car, playoffMatchupId, null);
         }
 
         public boolean isPlayoff() {
@@ -370,7 +370,7 @@ public class CsvImportService {
 
     public boolean checkDuplicate(ImportPreview preview) {
         var metadata = preview.getMetadata();
-        var season = seasonRepository.findByName(metadata.seasonName()).orElse(null);
+        var season = seasonRepository.findById(metadata.seasonId()).orElse(null);
         if (season == null) return false;
 
         org.ctc.domain.model.Matchday matchday;

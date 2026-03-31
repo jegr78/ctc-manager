@@ -18,10 +18,10 @@
         <!-- Shared metadata fields -->
         <div class="form-row">
             <div class="form-group">
-                <label for="seasonName">Season</label>
-                <select id="seasonName" name="seasonName" required form="importForm">
+                <label for="seasonId">Season</label>
+                <select id="seasonId" name="seasonId" required form="importForm">
                     <option value="">-- Select season --</option>
-                    <option th:each="s : ${seasons}" th:value="${s.name}" th:text="${s.name}"></option>
+                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"></option>
                 </select>
             </div>
         </div>
@@ -77,7 +77,7 @@
                         <option value="">-- Select matchup --</option>
                         <option th:each="m : ${playoffMatchups}"
                                 th:value="${m.id}"
-                                th:data-season="${m.seasonName}"
+                                th:data-season="${m.seasonDisplayLabel}"
                                 th:text="${m.displayLabel()}"></option>
                     </select>
                 </div>
@@ -151,13 +151,13 @@
 
         // Load matchdays when season changes
         function loadMatchdays() {
-            var seasonName = document.getElementById('seasonName').value;
+            var seasonId = document.getElementById('seasonId').value;
             var matchdaySelect = document.getElementById('matchdayId');
             var toggle = document.getElementById('newMatchdayToggle');
             var panel = document.getElementById('newMatchdayPanel');
             var hint = document.getElementById('newMatchdayHint');
 
-            if (!seasonName) {
+            if (!seasonId) {
                 matchdaySelect.disabled = true;
                 // Reset to default option
                 while (matchdaySelect.options.length > 1) {
@@ -169,7 +169,7 @@
                 return;
             }
 
-            fetch('/admin/matchdays/by-season?seasonName=' + encodeURIComponent(seasonName))
+            fetch('/admin/matchdays/by-season?seasonId=' + encodeURIComponent(seasonId))
                 .then(function(r) { return r.json(); })
                 .then(function(matchdays) {
                     // Clear existing options except the first placeholder
@@ -228,7 +228,7 @@
         }
 
         function createMatchday() {
-            var seasonName = document.getElementById('seasonName').value;
+            var seasonId = document.getElementById('seasonId').value;
             var label = document.getElementById('newMatchdayLabel').value.trim();
             var error = document.getElementById('newMatchdayError');
 
@@ -241,7 +241,7 @@
             fetch('/admin/matchdays/create-inline', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({seasonName: seasonName, label: label})
+                body: JSON.stringify({seasonId: seasonId, label: label})
             })
             .then(function(r) {
                 if (r.ok) return r.json();
@@ -277,7 +277,7 @@
 
         // Sync shared fields into form before submit
         function syncFields(form) {
-            var fields = ['seasonName', 'matchdayId', 'playoffMatchupId'];
+            var fields = ['seasonId', 'matchdayId', 'playoffMatchupId'];
             fields.forEach(function(name) {
                 var source = document.getElementById(name);
                 if (!source) return;
@@ -308,7 +308,7 @@
         }
 
         // Season change triggers matchday loading
-        document.getElementById('seasonName').addEventListener('change', loadMatchdays);
+        document.getElementById('seasonId').addEventListener('change', loadMatchdays);
 
         // Set initial state
         switchImportType('regular');

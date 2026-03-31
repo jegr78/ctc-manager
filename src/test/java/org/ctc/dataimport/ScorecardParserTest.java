@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -29,7 +30,7 @@ class ScorecardParserTest {
 
     @BeforeEach
     void setUp() {
-        metadata = new ImportMetadata("Season 2026", "Matchday 1", null, null);
+        metadata = new ImportMetadata(UUID.randomUUID(), "Matchday 1", null, null);
     }
 
     /** Mocks findDriver to return NONE for any PSN ID. Call in @BeforeEach of nested classes that parse driver rows. */

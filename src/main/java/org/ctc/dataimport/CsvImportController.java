@@ -2,6 +2,7 @@ package org.ctc.dataimport;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,7 @@ public class CsvImportController {
     private final CsvImportService csvImportService;
     private final GoogleSheetsService googleSheetsService;
     private final ScorecardParser scorecardParser;
+    private final SeasonRepository seasonRepository;
 
     @GetMapping
     public String showImportForm(Model model) {
@@ -28,18 +30,19 @@ public class CsvImportController {
 
     @PostMapping("/preview")
     public String preview(@RequestParam("file") MultipartFile file,
-                          @RequestParam String seasonName,
+                          @RequestParam UUID seasonId,
                           @RequestParam(required = false) String matchdayLabel,
                           @RequestParam(required = false) UUID matchdayId,
                           @RequestParam(required = false) UUID playoffMatchupId,
                           Model model) {
         try {
-            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId, matchdayId);
+            var metadata = new CsvImportService.ImportMetadata(seasonId, matchdayLabel, null, null, playoffMatchupId, matchdayId);
             var preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
 
             csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
+            seasonRepository.findById(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
             model.addAttribute("source", "csv");
             addMatchdayName(model, metadata);
             addCommonAttributes(model);
@@ -54,7 +57,7 @@ public class CsvImportController {
 
     @PostMapping("/preview-sheet")
     public String previewSheet(@RequestParam String sheetUrl,
-                               @RequestParam String seasonName,
+                               @RequestParam UUID seasonId,
                                @RequestParam(required = false) String matchdayLabel,
                                @RequestParam(required = false) UUID matchdayId,
                                @RequestParam(required = false) UUID playoffMatchupId,
@@ -63,12 +66,13 @@ public class CsvImportController {
             var spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
             var sheetData = googleSheetsService.readRange(spreadsheetId, "A:H");
 
-            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId, matchdayId);
+            var metadata = new CsvImportService.ImportMetadata(seasonId, matchdayLabel, null, null, playoffMatchupId, matchdayId);
             var preview = scorecardParser.parse(sheetData, metadata);
 
             csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
+            seasonRepository.findById(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
             model.addAttribute("source", "sheet");
             model.addAttribute("sheetUrl", sheetUrl);
             addMatchdayName(model, metadata);
@@ -83,7 +87,7 @@ public class CsvImportController {
     }
 
     @PostMapping("/execute")
-    public String execute(@RequestParam String seasonName,
+    public String execute(@RequestParam UUID seasonId,
                           @RequestParam(required = false) String matchdayLabel,
                           @RequestParam(required = false) UUID matchdayId,
                           @RequestParam(required = false) UUID playoffMatchupId,
@@ -94,7 +98,7 @@ public class CsvImportController {
                           @RequestParam(required = false) Map<String, String> allParams,
                           RedirectAttributes redirectAttributes) {
         try {
-            var metadata = new CsvImportService.ImportMetadata(seasonName, matchdayLabel, null, null, playoffMatchupId, matchdayId);
+            var metadata = new CsvImportService.ImportMetadata(seasonId, matchdayLabel, null, null, playoffMatchupId, matchdayId);
 
             // Re-parse from original source
             CsvImportService.ImportPreview preview;
