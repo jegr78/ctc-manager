@@ -22,6 +22,7 @@ public class PlayoffService {
     private final RaceRepository raceRepository;
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
+    private final ScoringService scoringService;
 
     private static final Map<Integer, List<String>> DEFAULT_ROUND_LABELS = Map.of(
             4, List.of("Halbfinale", "Finale"),
@@ -154,7 +155,6 @@ public class PlayoffService {
             throw new IllegalStateException("No races found for matchup");
         }
 
-        UUID seasonId = matchup.getRound().getPlayoff().getSeason().getId();
         UUID team1Id = matchup.getTeam1().getId();
 
         // #2: Use shared helper for point calculation
@@ -162,7 +162,7 @@ public class PlayoffService {
         int team2Total = 0;
         for (Race leg : legs) {
             if (leg.getResults().isEmpty()) continue;
-            int[] totals = calculateTeamTotals(leg.getResults(), seasonId, team1Id);
+            int[] totals = calculateTeamTotals(leg.getResults(), leg.getId(), team1Id);
             team1Total += totals[0];
             team2Total += totals[1];
         }
@@ -236,14 +236,12 @@ public class PlayoffService {
         Map<UUID, List<Race>> racesByMatchup = allRaces.stream()
                 .collect(Collectors.groupingBy(r -> r.getPlayoffMatchup().getId()));
 
-        UUID seasonId = playoff.getSeason().getId();
-
         List<RoundView> roundViews = new ArrayList<>();
         for (PlayoffRound round : playoff.getRounds()) {
             List<MatchupView> matchupViews = new ArrayList<>();
             for (PlayoffMatchup matchup : round.getMatchups()) {
                 List<Race> legs = racesByMatchup.getOrDefault(matchup.getId(), List.of());
-                matchupViews.add(buildMatchupView(matchup, legs, seasonId));
+                matchupViews.add(buildMatchupView(matchup, legs));
             }
             roundViews.add(new RoundView(round.getLabel(), round.getRoundIndex(), matchupViews));
         }
@@ -251,12 +249,12 @@ public class PlayoffService {
         return new PlayoffBracketView(playoff.getId(), playoff.getName(), roundViews);
     }
 
-    // #2: Shared helper — calculates [team1Points, team2Points] from race results
-    private int[] calculateTeamTotals(List<RaceResult> results, UUID seasonId, UUID team1Id) {
+    // Shared helper — calculates [team1Points, team2Points] from race results
+    private int[] calculateTeamTotals(List<RaceResult> results, UUID raceId, UUID team1Id) {
         int team1Total = 0;
         int team2Total = 0;
         for (RaceResult result : results) {
-            if (isDriverInTeam(result, seasonId, team1Id)) {
+            if (scoringService.isDriverInTeam(result, raceId, team1Id)) {
                 team1Total += result.getPointsTotal();
             } else {
                 team2Total += result.getPointsTotal();
@@ -265,13 +263,7 @@ public class PlayoffService {
         return new int[]{team1Total, team2Total};
     }
 
-    private boolean isDriverInTeam(RaceResult result, UUID seasonId, UUID teamId) {
-        return result.getDriver().getSeasonDrivers().stream()
-                .anyMatch(sd -> sd.getSeason().getId().equals(seasonId)
-                        && sd.getTeam().getId().equals(teamId));
-    }
-
-    private MatchupView buildMatchupView(PlayoffMatchup matchup, List<Race> legs, UUID seasonId) {
+    private MatchupView buildMatchupView(PlayoffMatchup matchup, List<Race> legs) {
         UUID team1Id = matchup.getTeam1() != null ? matchup.getTeam1().getId() : null;
         UUID team2Id = matchup.getTeam2() != null ? matchup.getTeam2().getId() : null;
 
@@ -285,7 +277,7 @@ public class PlayoffService {
             int awayTotal = 0;
 
             if (!leg.getResults().isEmpty() && team1Id != null) {
-                int[] totals = calculateTeamTotals(leg.getResults(), seasonId, team1Id);
+                int[] totals = calculateTeamTotals(leg.getResults(), leg.getId(), team1Id);
                 homeTotal = totals[0];
                 awayTotal = totals[1];
                 team1Aggregate += homeTotal;

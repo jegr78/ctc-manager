@@ -5,15 +5,21 @@ import de.ctc.domain.model.PlayoffMatchup;
 import de.ctc.domain.model.Race;
 import de.ctc.domain.model.RaceResult;
 import de.ctc.domain.model.RaceScoring;
+import de.ctc.domain.repository.RaceLineupRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ScoringService {
+
+    private final RaceLineupRepository raceLineupRepository;
 
     public void calculatePoints(RaceResult result, RaceScoring scoring) {
         int[] racePoints = scoring.getRacePointsArray();
@@ -49,6 +55,7 @@ public class ScoringService {
      * Aggregates race result scores onto the parent Match or PlayoffMatchup.
      * Call this after saving race results to keep match scores in sync.
      */
+    @Transactional
     public void aggregateMatchScores(Race race) {
         if (race.getResults().isEmpty()) return;
 
@@ -66,10 +73,10 @@ public class ScoringService {
             for (Race leg : legs) {
                 if (leg.getResults().isEmpty()) continue;
                 matchHome += leg.getResults().stream()
-                        .filter(r -> isDriverInTeam(r, hId))
+                        .filter(r -> isDriverInTeam(r, leg.getId(), hId))
                         .mapToInt(RaceResult::getPointsTotal).sum();
                 matchAway += leg.getResults().stream()
-                        .filter(r -> !isDriverInTeam(r, hId))
+                        .filter(r -> !isDriverInTeam(r, leg.getId(), hId))
                         .mapToInt(RaceResult::getPointsTotal).sum();
             }
             match.setHomeScore(matchHome);
@@ -92,10 +99,10 @@ public class ScoringService {
             for (Race leg : legs) {
                 if (leg.getResults().isEmpty()) continue;
                 mHome += leg.getResults().stream()
-                        .filter(r -> isDriverInTeam(r, t1Id))
+                        .filter(r -> isDriverInTeam(r, leg.getId(), t1Id))
                         .mapToInt(RaceResult::getPointsTotal).sum();
                 mAway += leg.getResults().stream()
-                        .filter(r -> !isDriverInTeam(r, t1Id))
+                        .filter(r -> !isDriverInTeam(r, leg.getId(), t1Id))
                         .mapToInt(RaceResult::getPointsTotal).sum();
             }
             matchup.setHomeScore(mHome);
@@ -103,7 +110,19 @@ public class ScoringService {
         }
     }
 
-    private boolean isDriverInTeam(RaceResult result, UUID teamId) {
+    /**
+     * Checks if a driver belongs to the given team for a specific race.
+     * Uses RaceLineup (Source of Truth) with fallback to SeasonDriver for legacy data.
+     */
+    public boolean isDriverInTeam(RaceResult result, UUID raceId, UUID teamId) {
+        var lineup = raceLineupRepository.findByRaceIdAndDriverId(raceId, result.getDriver().getId());
+        if (lineup.isPresent()) {
+            UUID lineupTeamId = lineup.get().getTeam().getId();
+            return lineupTeamId.equals(teamId)
+                    || (lineup.get().getTeam().getParentTeam() != null
+                        && lineup.get().getTeam().getParentTeam().getId().equals(teamId));
+        }
+        // Fallback for legacy data without RaceLineup
         return result.getDriver().getSeasonDrivers().stream()
                 .anyMatch(sd -> sd.getTeam().getId().equals(teamId));
     }
