@@ -486,6 +486,7 @@ public class TestDataService {
         var race1 = new Race();
         race1.setMatchday(md1);
         race1.setMatch(match1);
+        race1.setSettings(createTestSettings(race1));
         raceRepository.save(race1);
         raceLineupRepository.save(new RaceLineup(race1, tda1, testAlpha));
         raceLineupRepository.save(new RaceLineup(race1, tda2, testAlpha));
@@ -530,5 +531,21 @@ public class TestDataService {
 
     private Driver driver(String psnId, String nickname) {
         return driverRepository.save(new Driver(psnId, nickname));
+    }
+
+    private RaceSettings createTestSettings(Race race) {
+        var settings = new RaceSettings(race);
+        settings.setNumberOfLaps(20);
+        settings.setTyreWearMultiplier(3);
+        settings.setFuelConsumptionMultiplier(3);
+        settings.setRefuelingSpeed(10);
+        settings.setInitialFuel("90");
+        settings.setNumberOfRequiredPitStops(0);
+        settings.setTimeProgressionMultiplier(5);
+        settings.setWeather("Preset S02");
+        settings.setTimeOfDay("Afternoon");
+        settings.setAvailableTyres("RS, RM, RH, I, W");
+        settings.setMandatoryTyres("RS, RM, RH");
+        return settings;
     }
 }

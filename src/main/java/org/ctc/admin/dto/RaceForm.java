@@ -20,4 +20,17 @@ public class RaceForm {
     private UUID carId;
     private LocalDateTime dateTime;
     private List<RaceResultForm> results = new ArrayList<>();
+
+    // Race Settings
+    private Integer numberOfLaps;
+    private Integer tyreWearMultiplier;
+    private Integer fuelConsumptionMultiplier;
+    private Integer refuelingSpeed;
+    private String initialFuel;
+    private Integer numberOfRequiredPitStops;
+    private Integer timeProgressionMultiplier;
+    private String weather;
+    private String timeOfDay;
+    private String availableTyres;
+    private String mandatoryTyres;
 }

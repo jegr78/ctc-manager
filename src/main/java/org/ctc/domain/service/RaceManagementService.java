@@ -4,6 +4,7 @@ import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
+import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.model.Car;
@@ -49,6 +50,7 @@ public class RaceManagementService {
     private final FileStorageService fileStorageService;
     private final LineupGraphicService lineupGraphicService;
     private final ResultsGraphicService resultsGraphicService;
+    private final SettingsGraphicService settingsGraphicService;
     private final TeamCardService teamCardService;
 
     @Value("${app.upload-dir:uploads}")
@@ -62,7 +64,8 @@ public class RaceManagementService {
     public record RaceDetailData(Race race, int homeTotal, int awayTotal,
                                  Map<UUID, String> driverTeamMap, boolean canGenerateLineup,
                                  boolean lineupMissing, boolean cardsMissing, boolean lineupExists,
-                                 boolean canGenerateResults, boolean resultsMissing, boolean resultsExist) {}
+                                 boolean canGenerateResults, boolean resultsMissing, boolean resultsExist,
+                                 boolean canGenerateSettings, boolean settingsMissing, boolean settingsExist) {}
 
     public record ResultsFormData(RaceForm form, Race race, RaceScoring raceScoring) {}
 
@@ -147,11 +150,17 @@ public class RaceManagementService {
                 .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/results.png"));
         boolean hasResults = !race.getResults().isEmpty();
 
+        boolean settingsGraphicExists = race.getAttachments().stream()
+                .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/settings.png"));
+        boolean hasAllSettings = race.hasAllSettings() && race.getCar() != null && race.getTrack() != null;
+
         return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap,
                 hasLineup && hasHomeCard && hasAwayCard && !lineupExists,
                 !hasLineup, !hasHomeCard || !hasAwayCard, lineupExists,
                 hasResults && hasHomeCard && hasAwayCard && !resultsGraphicExists,
-                !hasResults, resultsGraphicExists);
+                !hasResults, resultsGraphicExists,
+                hasAllSettings && hasHomeCard && hasAwayCard && !settingsGraphicExists,
+                !hasAllSettings, settingsGraphicExists);
     }
 
     // --- Form data for new race ---
@@ -241,6 +250,24 @@ public class RaceManagementService {
             race.setCar(null);
         }
         race.setDateTime(form.getDateTime());
+
+        // Settings
+        var settings = race.getSettings();
+        if (settings == null) {
+            settings = new RaceSettings(race);
+            race.setSettings(settings);
+        }
+        settings.setNumberOfLaps(form.getNumberOfLaps());
+        settings.setTyreWearMultiplier(form.getTyreWearMultiplier());
+        settings.setFuelConsumptionMultiplier(form.getFuelConsumptionMultiplier());
+        settings.setRefuelingSpeed(form.getRefuelingSpeed());
+        settings.setInitialFuel(form.getInitialFuel());
+        settings.setNumberOfRequiredPitStops(form.getNumberOfRequiredPitStops());
+        settings.setTimeProgressionMultiplier(form.getTimeProgressionMultiplier());
+        settings.setWeather(form.getWeather());
+        settings.setTimeOfDay(form.getTimeOfDay());
+        settings.setAvailableTyres(form.getAvailableTyres());
+        settings.setMandatoryTyres(form.getMandatoryTyres());
 
         // Pool validation
         var season = matchday.getSeason();
@@ -396,6 +423,21 @@ public class RaceManagementService {
         }
     }
 
+    @Transactional
+    public void generateSettings(UUID raceId) {
+        var race = raceRepository.findById(raceId).orElseThrow();
+        try {
+            String url = settingsGraphicService.generateSettings(race);
+            String attachmentName = race.getMatchday().getLabel() + "-"
+                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Settings";
+            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
+            raceAttachmentRepository.save(attachment);
+        } catch (IOException e) {
+            log.error("Settings graphic generation failed for race {}", raceId, e);
+            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
+        }
+    }
+
     // --- Download attachment ---
 
     public ResponseEntity<Resource> downloadAttachment(UUID attachmentId) {
@@ -503,6 +545,22 @@ public class RaceManagementService {
         form.setTrackId(race.getTrack() != null ? race.getTrack().getId() : null);
         form.setCarId(race.getCar() != null ? race.getCar().getId() : null);
         form.setDateTime(race.getDateTime());
+
+        // Settings
+        var settings = race.getSettings();
+        if (settings != null) {
+            form.setNumberOfLaps(settings.getNumberOfLaps());
+            form.setTyreWearMultiplier(settings.getTyreWearMultiplier());
+            form.setFuelConsumptionMultiplier(settings.getFuelConsumptionMultiplier());
+            form.setRefuelingSpeed(settings.getRefuelingSpeed());
+            form.setInitialFuel(settings.getInitialFuel());
+            form.setNumberOfRequiredPitStops(settings.getNumberOfRequiredPitStops());
+            form.setTimeProgressionMultiplier(settings.getTimeProgressionMultiplier());
+            form.setWeather(settings.getWeather());
+            form.setTimeOfDay(settings.getTimeOfDay());
+            form.setAvailableTyres(settings.getAvailableTyres());
+            form.setMandatoryTyres(settings.getMandatoryTyres());
+        }
 
         for (var result : race.getResults()) {
             var rf = new RaceResultForm();

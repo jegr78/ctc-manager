@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ public class TemplateEditorController {
 
     private final TeamCardService teamCardService;
     private final LineupGraphicService lineupGraphicService;
+    private final SettingsGraphicService settingsGraphicService;
 
     @GetMapping
     public String index(@RequestParam(defaultValue = "team-cards") String tab, Model model) {
@@ -34,6 +36,15 @@ public class TemplateEditorController {
             model.addAttribute("lineupTemplate", "");
             if (!model.containsAttribute("errorMessage")) {
                 model.addAttribute("errorMessage", "Failed to load lineup template: " + e.getMessage());
+            }
+        }
+        try {
+            model.addAttribute("settingsTemplate", settingsGraphicService.loadTemplate());
+            model.addAttribute("settingsIsCustom", settingsGraphicService.hasCustomTemplate());
+        } catch (Exception e) {
+            model.addAttribute("settingsTemplate", "");
+            if (!model.containsAttribute("errorMessage")) {
+                model.addAttribute("errorMessage", "Failed to load settings template: " + e.getMessage());
             }
         }
         model.addAttribute("activeTab", tab);
@@ -82,5 +93,27 @@ public class TemplateEditorController {
             redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
         }
         return "redirect:/admin/tools/template-editors?tab=lineup";
+    }
+
+    @PostMapping("/settings/save")
+    public String saveSettingsTemplate(@RequestParam String template, RedirectAttributes redirectAttributes) {
+        try {
+            settingsGraphicService.saveTemplate(template);
+            redirectAttributes.addFlashAttribute("successMessage", "Settings template saved");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=settings";
+    }
+
+    @PostMapping("/settings/reset")
+    public String resetSettingsTemplate(RedirectAttributes redirectAttributes) {
+        try {
+            settingsGraphicService.resetTemplate();
+            redirectAttributes.addFlashAttribute("successMessage", "Settings template reset to default");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=settings";
     }
 }

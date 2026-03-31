@@ -14,7 +14,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "races")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "match", "track", "car", "results", "playoffMatchup", "attachments"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "match", "track", "car", "settings", "results", "playoffMatchup", "attachments"})
 public class Race extends BaseEntity {
 
     @Id
@@ -39,6 +39,9 @@ public class Race extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "car_id")
     private Car car;
+
+    @OneToOne(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private RaceSettings settings;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "playoff_matchup_id")
@@ -79,5 +82,9 @@ public class Race extends BaseEntity {
         if (match != null) return match.getAwayScore();
         if (playoffMatchup != null) return playoffMatchup.getAwayScore();
         return null;
+    }
+
+    public boolean hasAllSettings() {
+        return settings != null && settings.isComplete();
     }
 }

@@ -47,6 +47,18 @@
                 <span th:if="${cardsMissing}">Team cards missing.</span>
             </small>
         </span>
+
+        <!-- Settings Button -->
+        <form th:if="${canGenerateSettings}" th:action="@{/admin/races/{id}/generate-settings(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-primary">Generate Settings Graphic</button>
+        </form>
+        <span th:if="${!canGenerateSettings && !settingsExist}" style="display:inline-flex;align-items:center;gap:8px;">
+            <button class="btn btn-secondary" disabled style="opacity:0.5;">Generate Settings Graphic</button>
+            <small class="text-dim">
+                <span th:if="${settingsMissing}">Settings incomplete.</span>
+                <span th:if="${cardsMissing}">Team cards missing.</span>
+            </small>
+        </span>
     </div>
 
     <!-- Score Banner -->
