@@ -1,5 +1,6 @@
 package de.ctc.domain.service;
 
+import de.ctc.admin.dto.SeedForm;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -258,6 +259,251 @@ class PlayoffServiceTest {
             assertEquals(2, view.getRounds().size());
             assertEquals("Halbfinale", view.getRounds().get(0).getLabel());
             assertEquals(2, view.getRounds().get(0).getMatchups().size());
+        }
+    }
+
+    @Nested
+    class SetRoundLegs {
+
+        @Test
+        void shouldUpdateBestOfLegs() {
+            var playoff = playoffService.createPlayoff(season.getId(), "Legs Test", 4);
+            var roundId = playoff.getRounds().get(0).getId();
+
+            var updated = playoffService.setRoundLegs(roundId, 3);
+
+            assertEquals(3, updated.getBestOfLegs());
+            assertEquals("Halbfinale", updated.getLabel());
+        }
+
+        @Test
+        void shouldRejectUnknownRound() {
+            assertThrows(IllegalArgumentException.class, () ->
+                    playoffService.setRoundLegs(UUID.randomUUID(), 3));
+        }
+    }
+
+    @Nested
+    class AddRaceToMatchup {
+
+        @Test
+        void shouldCreateRaceAndMatchday() {
+            var playoff = playoffService.createPlayoff(season.getId(), "Race Test", 4);
+            var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+
+            playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+            playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+
+            var race = playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
+
+            assertNotNull(race.getId());
+            assertNotNull(race.getMatchday());
+            assertEquals(matchup.getId(), race.getPlayoffMatchup().getId());
+            assertTrue(race.getMatchday().getLabel().contains("Leg 1"));
+        }
+
+        @Test
+        void shouldRejectWhenTeamsNotSet() {
+            var playoff = playoffService.createPlayoff(season.getId(), "NoTeams Test", 4);
+            var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+
+            assertThrows(IllegalStateException.class, () ->
+                    playoffService.addRaceToMatchup(matchup.getId(), null, null, null));
+        }
+
+        @Test
+        void shouldRejectWhenMaxLegsReached() {
+            var playoff = playoffService.createPlayoff(season.getId(), "MaxLegs Test", 4);
+            var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+
+            playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+            playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+
+            // Default bestOfLegs is 1, so adding one race fills it
+            playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
+
+            assertThrows(IllegalStateException.class, () ->
+                    playoffService.addRaceToMatchup(matchup.getId(), null, null, null));
+        }
+
+        @Test
+        void shouldAllowMultipleLegsWhenBestOfIsHigher() {
+            var playoff = playoffService.createPlayoff(season.getId(), "MultiLeg Test", 4);
+            var round = playoff.getRounds().get(0);
+            playoffService.setRoundLegs(round.getId(), 3);
+            var matchup = round.getMatchups().get(0);
+
+            playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+            playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+
+            var race1 = playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
+            var race2 = playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
+
+            assertNotEquals(race1.getId(), race2.getId());
+            assertTrue(race1.getMatchday().getLabel().contains("Leg 1"));
+            assertTrue(race2.getMatchday().getLabel().contains("Leg 2"));
+        }
+    }
+
+    @Nested
+    class GetSeedingData {
+
+        @Test
+        void shouldReturnCorrectTeamsAndRound() {
+            // Add teams to the season first
+            for (var team : teams) {
+                season.addTeam(team);
+            }
+            seasonRepository.save(season);
+
+            var playoff = playoffService.createPlayoff(season.getId(), "Seed Data Test", 4);
+            var data = playoffService.getSeedingData(playoff.getId());
+
+            assertNotNull(data.playoff());
+            assertNotNull(data.firstRound());
+            assertNotNull(data.bracketView());
+            assertFalse(data.teams().isEmpty());
+            assertTrue(data.seededTeamIds().isEmpty());
+        }
+
+        @Test
+        void shouldTrackSeededTeams() {
+            for (var team : teams) {
+                season.addTeam(team);
+            }
+            seasonRepository.save(season);
+
+            var playoff = playoffService.createPlayoff(season.getId(), "Seeded Track Test", 4);
+            var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+            playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+
+            var data = playoffService.getSeedingData(playoff.getId());
+
+            assertTrue(data.seededTeamIds().contains(teams.get(0).getId()));
+            assertEquals(1, data.seededTeamIds().size());
+        }
+    }
+
+    @Nested
+    class SaveSeed {
+
+        @Test
+        void shouldSeedAllEntriesFromForm() {
+            var playoff = playoffService.createPlayoff(season.getId(), "Form Seed Test", 4);
+            var matchups = playoff.getRounds().get(0).getMatchups();
+
+            var form = new SeedForm();
+            form.setPlayoffId(playoff.getId());
+
+            var entry1 = new SeedForm.SeedEntry();
+            entry1.setMatchupId(matchups.get(0).getId());
+            entry1.setTeamId(teams.get(0).getId());
+            entry1.setSlot(1);
+
+            var entry2 = new SeedForm.SeedEntry();
+            entry2.setMatchupId(matchups.get(0).getId());
+            entry2.setTeamId(teams.get(1).getId());
+            entry2.setSlot(2);
+
+            form.getSeeds().add(entry1);
+            form.getSeeds().add(entry2);
+
+            playoffService.saveSeed(playoff.getId(), form);
+
+            var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
+            assertEquals(teams.get(0).getId(), matchup.getTeam1().getId());
+            assertEquals(teams.get(1).getId(), matchup.getTeam2().getId());
+        }
+
+        @Test
+        void shouldSkipNullTeamIds() {
+            var playoff = playoffService.createPlayoff(season.getId(), "Null Seed Test", 4);
+            var matchups = playoff.getRounds().get(0).getMatchups();
+
+            var form = new SeedForm();
+            form.setPlayoffId(playoff.getId());
+
+            var entry = new SeedForm.SeedEntry();
+            entry.setMatchupId(matchups.get(0).getId());
+            entry.setTeamId(null);
+            entry.setSlot(1);
+            form.getSeeds().add(entry);
+
+            playoffService.saveSeed(playoff.getId(), form);
+
+            var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
+            assertNull(matchup.getTeam1());
+        }
+    }
+
+    @Nested
+    class MatchupDetail {
+
+        @Test
+        void shouldReturnMatchupWithLegs() {
+            var playoff = playoffService.createPlayoff(season.getId(), "Detail Test", 4);
+            var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+
+            var data = playoffService.getMatchupDetail(matchup.getId());
+
+            assertEquals(matchup.getId(), data.matchup().getId());
+            assertNotNull(data.playoff());
+            assertTrue(data.legs().isEmpty());
+        }
+    }
+
+    @Nested
+    class PlayoffListData {
+
+        @Test
+        void shouldReturnAllSeasonsWithNoSelection() {
+            var data = playoffService.getPlayoffListData(null);
+
+            assertNotNull(data.allSeasons());
+            assertFalse(data.allSeasons().isEmpty());
+        }
+
+        @Test
+        void shouldReturnPlayoffForSelectedSeason() {
+            playoffService.createPlayoff(season.getId(), "List Test", 4);
+
+            var data = playoffService.getPlayoffListData(season.getId());
+
+            assertNotNull(data.playoff());
+            assertNotNull(data.bracketView());
+            assertEquals(season.getId(), data.selectedSeasonId());
+        }
+
+        @Test
+        void shouldReturnNullPlayoffWhenNoneExists() {
+            var data = playoffService.getPlayoffListData(season.getId());
+
+            assertNull(data.playoff());
+            assertNull(data.bracketView());
+        }
+    }
+
+    @Nested
+    class SeasonIdLookups {
+
+        @Test
+        void shouldReturnSeasonIdForPlayoff() {
+            var playoff = playoffService.createPlayoff(season.getId(), "Lookup Test", 4);
+            assertEquals(season.getId(), playoffService.getSeasonIdForPlayoff(playoff.getId()));
+        }
+
+        @Test
+        void shouldReturnSeasonIdForMatchup() {
+            var playoff = playoffService.createPlayoff(season.getId(), "Matchup Lookup Test", 4);
+            var matchupId = playoff.getRounds().get(0).getMatchups().get(0).getId();
+            assertEquals(season.getId(), playoffService.getSeasonIdForMatchup(matchupId));
+        }
+
+        @Test
+        void shouldReturnSeasonIdForRound() {
+            var playoff = playoffService.createPlayoff(season.getId(), "Round Lookup Test", 4);
+            var roundId = playoff.getRounds().get(0).getId();
+            assertEquals(season.getId(), playoffService.getSeasonIdForRound(roundId));
         }
     }
 }
