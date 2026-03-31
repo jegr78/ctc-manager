@@ -23,7 +23,10 @@ CREATE TABLE match_scorings (
 
 CREATE TABLE seasons (
     id UUID PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    year INT NOT NULL,
+    number INT NOT NULL,
+    description VARCHAR(255),
     start_date DATE,
     end_date DATE,
     active BOOLEAN NOT NULL DEFAULT FALSE,
