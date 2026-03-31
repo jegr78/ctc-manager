@@ -1,0 +1,45 @@
+package org.ctc.admin.service;
+
+import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.service.StandingsService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+import java.io.IOException;
+
+@Slf4j
+@Service
+public class MatchdayResultsGraphicService extends AbstractMatchdayGraphicService {
+
+    private static final String DEFAULT_TEMPLATE = "admin/matchday-results-render";
+    private static final String CUSTOM_TEMPLATE_FILE = "matchday-results-template.html";
+
+    public MatchdayResultsGraphicService(TemplateEngine templateEngine,
+                                          StandingsService standingsService,
+                                          @Value("${app.upload-dir:uploads}") String uploadDir) {
+        super(templateEngine, standingsService, uploadDir);
+    }
+
+    public byte[] generateResults(Matchday matchday) throws IOException {
+        var data = prepareBaseContext(matchday);
+
+        var ctx = new Context();
+        ctx.setVariable("data", data);
+
+        String html = renderTemplate(ctx);
+        return renderToBytes(html);
+    }
+
+    @Override
+    protected String getTemplateFileName() {
+        return CUSTOM_TEMPLATE_FILE;
+    }
+
+    @Override
+    protected String getDefaultTemplatePath() {
+        return DEFAULT_TEMPLATE;
+    }
+}

@@ -1,6 +1,9 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.MatchdayOverviewGraphicService;
+import org.ctc.admin.service.MatchdayResultsGraphicService;
+import org.ctc.admin.service.MatchdayScheduleGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,9 @@ public class TemplateEditorController {
     private final TeamCardService teamCardService;
     private final LineupGraphicService lineupGraphicService;
     private final SettingsGraphicService settingsGraphicService;
+    private final MatchdayOverviewGraphicService matchdayOverviewGraphicService;
+    private final MatchdayScheduleGraphicService matchdayScheduleGraphicService;
+    private final MatchdayResultsGraphicService matchdayResultsGraphicService;
 
     @GetMapping
     public String index(@RequestParam(defaultValue = "team-cards") String tab, Model model) {
@@ -45,6 +51,33 @@ public class TemplateEditorController {
             model.addAttribute("settingsTemplate", "");
             if (!model.containsAttribute("errorMessage")) {
                 model.addAttribute("errorMessage", "Failed to load settings template: " + e.getMessage());
+            }
+        }
+        try {
+            model.addAttribute("matchdayOverviewTemplate", matchdayOverviewGraphicService.loadTemplate());
+            model.addAttribute("matchdayOverviewIsCustom", matchdayOverviewGraphicService.hasCustomTemplate());
+        } catch (Exception e) {
+            model.addAttribute("matchdayOverviewTemplate", "");
+            if (!model.containsAttribute("errorMessage")) {
+                model.addAttribute("errorMessage", "Failed to load matchday overview template: " + e.getMessage());
+            }
+        }
+        try {
+            model.addAttribute("matchdayScheduleTemplate", matchdayScheduleGraphicService.loadTemplate());
+            model.addAttribute("matchdayScheduleIsCustom", matchdayScheduleGraphicService.hasCustomTemplate());
+        } catch (Exception e) {
+            model.addAttribute("matchdayScheduleTemplate", "");
+            if (!model.containsAttribute("errorMessage")) {
+                model.addAttribute("errorMessage", "Failed to load matchday schedule template: " + e.getMessage());
+            }
+        }
+        try {
+            model.addAttribute("matchdayResultsTemplate", matchdayResultsGraphicService.loadTemplate());
+            model.addAttribute("matchdayResultsIsCustom", matchdayResultsGraphicService.hasCustomTemplate());
+        } catch (Exception e) {
+            model.addAttribute("matchdayResultsTemplate", "");
+            if (!model.containsAttribute("errorMessage")) {
+                model.addAttribute("errorMessage", "Failed to load matchday results template: " + e.getMessage());
             }
         }
         model.addAttribute("activeTab", tab);
@@ -115,5 +148,71 @@ public class TemplateEditorController {
             redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
         }
         return "redirect:/admin/tools/template-editors?tab=settings";
+    }
+
+    @PostMapping("/matchday-overview/save")
+    public String saveMatchdayOverviewTemplate(@RequestParam String template, RedirectAttributes redirectAttributes) {
+        try {
+            matchdayOverviewGraphicService.saveTemplate(template);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday overview template saved");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=matchday-overview";
+    }
+
+    @PostMapping("/matchday-overview/reset")
+    public String resetMatchdayOverviewTemplate(RedirectAttributes redirectAttributes) {
+        try {
+            matchdayOverviewGraphicService.resetTemplate();
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday overview template reset to default");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=matchday-overview";
+    }
+
+    @PostMapping("/matchday-schedule/save")
+    public String saveMatchdayScheduleTemplate(@RequestParam String template, RedirectAttributes redirectAttributes) {
+        try {
+            matchdayScheduleGraphicService.saveTemplate(template);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday schedule template saved");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=matchday-schedule";
+    }
+
+    @PostMapping("/matchday-schedule/reset")
+    public String resetMatchdayScheduleTemplate(RedirectAttributes redirectAttributes) {
+        try {
+            matchdayScheduleGraphicService.resetTemplate();
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday schedule template reset to default");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=matchday-schedule";
+    }
+
+    @PostMapping("/matchday-results/save")
+    public String saveMatchdayResultsTemplate(@RequestParam String template, RedirectAttributes redirectAttributes) {
+        try {
+            matchdayResultsGraphicService.saveTemplate(template);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday results template saved");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=matchday-results";
+    }
+
+    @PostMapping("/matchday-results/reset")
+    public String resetMatchdayResultsTemplate(RedirectAttributes redirectAttributes) {
+        try {
+            matchdayResultsGraphicService.resetTemplate();
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday results template reset to default");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=matchday-results";
     }
 }

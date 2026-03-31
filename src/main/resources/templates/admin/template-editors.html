@@ -18,6 +18,15 @@
         <a th:href="@{/admin/tools/template-editors(tab='settings')}"
            th:classappend="${activeTab == 'settings' ? 'tab-active' : ''}"
            class="tab-btn">Settings</a>
+        <a th:href="@{/admin/tools/template-editors(tab='matchday-overview')}"
+           th:classappend="${activeTab == 'matchday-overview' ? 'tab-active' : ''}"
+           class="tab-btn">Matchday Overview</a>
+        <a th:href="@{/admin/tools/template-editors(tab='matchday-schedule')}"
+           th:classappend="${activeTab == 'matchday-schedule' ? 'tab-active' : ''}"
+           class="tab-btn">Matchday Schedule</a>
+        <a th:href="@{/admin/tools/template-editors(tab='matchday-results')}"
+           th:classappend="${activeTab == 'matchday-results' ? 'tab-active' : ''}"
+           class="tab-btn">Matchday Results</a>
     </div>
 
     <!-- Team Cards Tab -->
@@ -181,6 +190,163 @@
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Settings are displayed as labeled rows in the center</li>
                         <li>Use <code>th:text</code> for all dynamic values</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matchday Overview Tab -->
+    <div th:if="${activeTab == 'matchday-overview'}" style="margin-top:16px;">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <span th:if="${matchdayOverviewIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
+            <span th:unless="${matchdayOverviewIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card" style="padding:0;display:flex;flex-direction:column;">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <form th:action="@{/admin/tools/template-editors/matchday-overview/reset}" method="post"
+                          onsubmit="return confirm('Reset to default template?')">
+                        <button type="submit" class="btn btn-danger btn-sm">Reset</button>
+                    </form>
+                </div>
+                <form th:action="@{/admin/tools/template-editors/matchday-overview/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                    <textarea name="template" class="template-textarea" th:text="${matchdayOverviewTemplate}"></textarea>
+                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                        <button type="submit" class="btn btn-primary">Save Template</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card" style="padding:16px;">
+                <strong>Available Variables</strong>
+                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>data.matchdayLabel</code></td><td>Matchday label (e.g. "Match Day 3")</td></tr>
+                        <tr><td><code>data.seasonName</code></td><td>Season name</td></tr>
+                        <tr><td><code>data.seasonYear</code></td><td>Season year</td></tr>
+                        <tr><td><code>data.ctcLogoBase64</code></td><td>CTC logo as data URI</td></tr>
+                        <tr><td><code>data.fontBase64</code></td><td>Conthrax font as data URI</td></tr>
+                        <tr><td><code>data.matches</code></td><td>List of match rows (iterate with th:each)</td></tr>
+                        <tr><td><code>m.homeTeamName</code></td><td>Home team full name</td></tr>
+                        <tr><td><code>m.homeTeamShortName</code></td><td>Home team short name</td></tr>
+                        <tr><td><code>m.homeLogoBase64</code></td><td>Home team logo as data URI</td></tr>
+                        <tr><td><code>m.homePrimaryColor</code></td><td>Home primary color hex</td></tr>
+                        <tr><td><code>m.homeSeed</code></td><td>Home team standings position</td></tr>
+                        <tr><td><code>m.homeRecord</code></td><td>Home record (W-L-D)</td></tr>
+                        <tr><td><code>m.awayTeamName</code></td><td>Away team full name</td></tr>
+                        <tr><td><code>m.awaySeed</code></td><td>Away team standings position</td></tr>
+                        <tr><td><code>m.awayRecord</code></td><td>Away record (W-L-D)</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:20px;">
+                    <strong>Tips</strong>
+                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                        <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
+                        <li>Use <code>th:each="m : ${data.matches}"</code> to iterate matches</li>
+                        <li>Matches are sorted by earliest race datetime, nulls last</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matchday Schedule Tab -->
+    <div th:if="${activeTab == 'matchday-schedule'}" style="margin-top:16px;">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <span th:if="${matchdayScheduleIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
+            <span th:unless="${matchdayScheduleIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card" style="padding:0;display:flex;flex-direction:column;">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <form th:action="@{/admin/tools/template-editors/matchday-schedule/reset}" method="post"
+                          onsubmit="return confirm('Reset to default template?')">
+                        <button type="submit" class="btn btn-danger btn-sm">Reset</button>
+                    </form>
+                </div>
+                <form th:action="@{/admin/tools/template-editors/matchday-schedule/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                    <textarea name="template" class="template-textarea" th:text="${matchdayScheduleTemplate}"></textarea>
+                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                        <button type="submit" class="btn btn-primary">Save Template</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card" style="padding:16px;">
+                <strong>Available Variables</strong>
+                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>data.matchdayLabel</code></td><td>Matchday label</td></tr>
+                        <tr><td><code>data.seasonName</code></td><td>Season name</td></tr>
+                        <tr><td><code>data.seasonYear</code></td><td>Season year</td></tr>
+                        <tr><td><code>data.matches</code></td><td>List of match rows</td></tr>
+                        <tr><td><code>m.scheduledDateTime</code></td><td>Formatted date (e.g. "Fri, 20 Mar. 19:30 GMT")</td></tr>
+                        <tr><td><code>m.homeTeamShortName</code></td><td>Home team short name</td></tr>
+                        <tr><td><code>m.homeRecord</code></td><td>Home record (W-L-D)</td></tr>
+                        <tr><td><code>m.awayTeamShortName</code></td><td>Away team short name</td></tr>
+                        <tr><td><code>m.awayRecord</code></td><td>Away record (W-L-D)</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:20px;">
+                    <strong>Tips</strong>
+                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                        <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
+                        <li>Timezone is always Europe/London (GMT/BST)</li>
+                        <li>Matches without datetime show "TBD"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Matchday Results Tab -->
+    <div th:if="${activeTab == 'matchday-results'}" style="margin-top:16px;">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <span th:if="${matchdayResultsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
+            <span th:unless="${matchdayResultsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card" style="padding:0;display:flex;flex-direction:column;">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <form th:action="@{/admin/tools/template-editors/matchday-results/reset}" method="post"
+                          onsubmit="return confirm('Reset to default template?')">
+                        <button type="submit" class="btn btn-danger btn-sm">Reset</button>
+                    </form>
+                </div>
+                <form th:action="@{/admin/tools/template-editors/matchday-results/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                    <textarea name="template" class="template-textarea" th:text="${matchdayResultsTemplate}"></textarea>
+                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                        <button type="submit" class="btn btn-primary">Save Template</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card" style="padding:16px;">
+                <strong>Available Variables</strong>
+                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>data.matchdayLabel</code></td><td>Matchday label</td></tr>
+                        <tr><td><code>data.seasonName</code></td><td>Season name</td></tr>
+                        <tr><td><code>data.seasonYear</code></td><td>Season year</td></tr>
+                        <tr><td><code>data.matches</code></td><td>List of match rows</td></tr>
+                        <tr><td><code>m.homeTeamShortName</code></td><td>Home team short name</td></tr>
+                        <tr><td><code>m.homeRecord</code></td><td>Home record (W-L-D)</td></tr>
+                        <tr><td><code>m.homeScore</code></td><td>Home total points (Integer)</td></tr>
+                        <tr><td><code>m.awayTeamShortName</code></td><td>Away team short name</td></tr>
+                        <tr><td><code>m.awayRecord</code></td><td>Away record (W-L-D)</td></tr>
+                        <tr><td><code>m.awayScore</code></td><td>Away total points (Integer)</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:20px;">
+                    <strong>Tips</strong>
+                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                        <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
+                        <li>Scores are Match.homeScore / Match.awayScore</li>
+                        <li>Records show current season W-L-D</li>
                     </ul>
                 </div>
             </div>

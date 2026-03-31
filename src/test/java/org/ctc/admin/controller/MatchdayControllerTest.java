@@ -190,6 +190,34 @@ class MatchdayControllerTest {
                 .andExpect(jsonPath("$.label").value("Inline MD"));
     }
 
+    // --- Graphics endpoint tests ---
+
+    @Test
+    void givenMatchdayWithMatches_whenGetDetail_thenGraphicFlagsPresent() throws Exception {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("GfxFlags");
+        var matchday = fixture.matchday();
+
+        // when
+        mockMvc.perform(get("/admin/matchdays/" + matchday.getId()))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("hasMatches", "hasSchedule", "hasResults"));
+    }
+
+    @Test
+    void givenMatchdayWithNoMatches_whenGetDetail_thenHasMatchesFalse() throws Exception {
+        // given
+        var season = testHelper.createSeason("GfxEmpty Season");
+        var matchday = matchdayRepository.save(new Matchday(season, "GfxEmpty MD", 1));
+
+        // when
+        mockMvc.perform(get("/admin/matchdays/" + matchday.getId()))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("hasMatches", false));
+    }
+
     @Test
     void givenDuplicateLabel_whenCreateInlineMatchday_thenReturnsConflict() throws Exception {
         // given

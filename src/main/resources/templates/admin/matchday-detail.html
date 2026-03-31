@@ -94,6 +94,36 @@
             <div th:if="${matchday.matches.isEmpty()}" class="empty-state" style="padding:16px;"><p>No matches yet.</p></div>
         </div>
 
+        <!-- Graphics -->
+        <div class="detail-section" style="margin-top:32px;">
+            <h2>Graphics</h2>
+            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
+                <form th:if="${hasMatches}" th:action="@{/admin/matchdays/{id}/download-overview(id=${matchday.id})}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-primary btn-sm">&#11015; Overview</button>
+                </form>
+                <button th:unless="${hasMatches}" class="btn btn-sm" disabled>&#11015; Overview</button>
+
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <form th:if="${hasSchedule}" th:action="@{/admin/matchdays/{id}/download-schedule(id=${matchday.id})}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-primary btn-sm">&#11015; Schedule</button>
+                    </form>
+                    <button th:unless="${hasSchedule}" class="btn btn-sm" disabled>&#11015; Schedule</button>
+                    <span th:if="${hasSchedule && scheduleMissingCount > 0}" class="text-dim" style="font-size:12px;"
+                          th:text="${scheduleMissingCount + ' match(es) missing datetime'}"></span>
+                    <span th:unless="${hasSchedule}" class="text-dim" style="font-size:12px;">No matches with datetime</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <form th:if="${hasResults}" th:action="@{/admin/matchdays/{id}/download-results(id=${matchday.id})}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-primary btn-sm">&#11015; Results</button>
+                    </form>
+                    <button th:unless="${hasResults}" class="btn btn-sm" disabled>&#11015; Results</button>
+                    <span th:unless="${hasResults}" class="text-dim" style="font-size:12px;">No match results yet</span>
+                </div>
+            </div>
+            <p class="text-dim" style="font-size:12px; margin-top:8px;">Graphics are generated on-the-fly and downloaded as PNG (1920&#215;1080).</p>
+        </div>
+
         <div th:if="${!lineupsByTeam.isEmpty()}" class="detail-section" style="margin-top:32px;">
             <h2>Lineup</h2>
             <div th:each="entry : ${lineupsByTeam}" style="margin-bottom:12px;">
