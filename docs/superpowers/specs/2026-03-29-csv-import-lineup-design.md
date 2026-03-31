@@ -21,7 +21,7 @@ Zusätzlich ist das bestehende `MatchdayLineup` (gebunden an Matchday) zu grob f
 
 ### 1.1 Neue Entity `RaceLineup`
 
-**Datei:** `src/main/java/de/ctc/domain/model/RaceLineup.java` (ersetzt `MatchdayLineup.java`)
+**Datei:** `src/main/java/org/ctc/domain/model/RaceLineup.java` (ersetzt `MatchdayLineup.java`)
 
 ```java
 @Entity
@@ -46,7 +46,7 @@ public class RaceLineup {
 
 ### 1.2 Repository
 
-**Datei:** `src/main/java/de/ctc/domain/repository/RaceLineupRepository.java` (ersetzt `MatchdayLineupRepository.java`)
+**Datei:** `src/main/java/org/ctc/domain/repository/RaceLineupRepository.java` (ersetzt `MatchdayLineupRepository.java`)
 
 Query-Methoden:
 - `findByRaceId(UUID raceId)` — alle Lineups eines Races
@@ -77,7 +77,7 @@ Query-Methoden:
 
 ### 2.1 CsvImportService.executeImport()
 
-**Datei:** `src/main/java/de/ctc/dataimport/CsvImportService.java`
+**Datei:** `src/main/java/org/ctc/dataimport/CsvImportService.java`
 
 Neue Dependency: `RaceLineupRepository` per Constructor Injection.
 
@@ -100,7 +100,7 @@ Neues Feld `lineupCount` (int) mit Getter und `incrementLineupCount()`.
 
 ### 2.3 UI Flash-Message
 
-**Datei:** `src/main/java/de/ctc/dataimport/CsvImportController.java`
+**Datei:** `src/main/java/org/ctc/dataimport/CsvImportController.java`
 
 Erfolgs-Message um Lineup-Info ergänzen, z.B.:
 `"Import successful: 6 results, 2 matches, 3 lineup entries created"`

@@ -15,9 +15,9 @@
 ### New Files
 | File | Responsibility |
 |------|---------------|
-| `src/main/java/de/ctc/admin/service/LineupGraphicService.java` | Lineup PNG generation via Playwright, template management |
-| `src/test/java/de/ctc/admin/service/LineupGraphicServiceTest.java` | Unit tests for service |
-| `src/main/java/de/ctc/admin/controller/TemplateEditorController.java` | Template editors page with tabs |
+| `src/main/java/org/ctc/admin/service/LineupGraphicService.java` | Lineup PNG generation via Playwright, template management |
+| `src/test/java/org/ctc/admin/service/LineupGraphicServiceTest.java` | Unit tests for service |
+| `src/main/java/org/ctc/admin/controller/TemplateEditorController.java` | Template editors page with tabs |
 | `src/main/resources/templates/admin/lineup-render.html` | Default lineup Thymeleaf template (1920×1080) |
 | `src/main/resources/templates/admin/template-editors.html` | Template editors page (tabs: Team Cards, Lineup) |
 
@@ -26,23 +26,23 @@
 |------|---------|
 | `src/main/resources/templates/admin/layout.html` | Add "Template Editors" menu item under Tools |
 | `src/main/resources/templates/admin/race-detail.html` | Add Generate Lineup button, Download button per attachment |
-| `src/main/java/de/ctc/admin/controller/RaceController.java` | Add generate-lineup and attachment-download endpoints, pass lineup availability to model |
-| `src/main/java/de/ctc/admin/controller/TeamCardController.java` | Remove template endpoints (migrated to TemplateEditorController) |
+| `src/main/java/org/ctc/admin/controller/RaceController.java` | Add generate-lineup and attachment-download endpoints, pass lineup availability to model |
+| `src/main/java/org/ctc/admin/controller/TeamCardController.java` | Remove template endpoints (migrated to TemplateEditorController) |
 
 ---
 
 ## Task 1: LineupGraphicService — Unit Tests + Core Logic
 
 **Files:**
-- Create: `src/test/java/de/ctc/admin/service/LineupGraphicServiceTest.java`
-- Create: `src/main/java/de/ctc/admin/service/LineupGraphicService.java`
+- Create: `src/test/java/org/ctc/admin/service/LineupGraphicServiceTest.java`
+- Create: `src/main/java/org/ctc/admin/service/LineupGraphicService.java`
 
 - [ ] **Step 1: Write failing tests for buildPairings and encodeCardBase64**
 
 ```java
-package de.ctc.admin.service;
+package org.ctc.admin.service;
 
-import de.ctc.domain.model.*;
+import org.ctc.domain.model.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -207,14 +207,14 @@ Expected: Compilation failure — `LineupGraphicService` does not exist yet.
 - [ ] **Step 3: Implement LineupGraphicService**
 
 ```java
-package de.ctc.admin.service;
+package org.ctc.admin.service;
 
 import com.microsoft.playwright.*;
-import de.ctc.domain.model.Race;
-import de.ctc.domain.model.RaceLineup;
-import de.ctc.domain.model.Team;
-import de.ctc.domain.repository.RaceLineupRepository;
-import de.ctc.domain.service.StandingsService;
+import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.service.StandingsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -455,8 +455,8 @@ Expected: All 7 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/service/LineupGraphicService.java \
-       src/test/java/de/ctc/admin/service/LineupGraphicServiceTest.java
+git add src/main/java/org/ctc/admin/service/LineupGraphicService.java \
+       src/test/java/org/ctc/admin/service/LineupGraphicServiceTest.java
 git commit -m "feat: LineupGraphicService mit Unit Tests"
 ```
 
@@ -690,18 +690,18 @@ git commit -m "feat: Lineup-Grafik Thymeleaf-Template (1920x1080)"
 ## Task 3: Template Editors Page + Controller
 
 **Files:**
-- Create: `src/main/java/de/ctc/admin/controller/TemplateEditorController.java`
+- Create: `src/main/java/org/ctc/admin/controller/TemplateEditorController.java`
 - Create: `src/main/resources/templates/admin/template-editors.html`
 - Modify: `src/main/resources/templates/admin/layout.html`
-- Modify: `src/main/java/de/ctc/admin/controller/TeamCardController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/TeamCardController.java`
 
 - [ ] **Step 1: Create TemplateEditorController**
 
 ```java
-package de.ctc.admin.controller;
+package org.ctc.admin.controller;
 
-import de.ctc.admin.service.LineupGraphicService;
-import de.ctc.admin.service.TeamCardService;
+import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.TeamCardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -983,7 +983,7 @@ In `src/main/resources/templates/admin/layout.html`, add this line after the Tea
 
 - [ ] **Step 5: Remove template endpoints from TeamCardController**
 
-In `src/main/java/de/ctc/admin/controller/TeamCardController.java`, delete the following methods (lines 139-171):
+In `src/main/java/org/ctc/admin/controller/TeamCardController.java`, delete the following methods (lines 139-171):
 - `templateEditor()` (GET `/template`)
 - `saveTemplate()` (POST `/template/save`)
 - `resetTemplate()` (POST `/template/reset`)
@@ -996,11 +996,11 @@ Expected: All tests pass. No compilation errors.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/TemplateEditorController.java \
+git add src/main/java/org/ctc/admin/controller/TemplateEditorController.java \
        src/main/resources/templates/admin/template-editors.html \
        src/main/resources/templates/admin/layout.html \
        src/main/resources/static/admin/css/admin.css \
-       src/main/java/de/ctc/admin/controller/TeamCardController.java
+       src/main/java/org/ctc/admin/controller/TeamCardController.java
 git commit -m "feat: Template Editors Seite mit Tabs (Team Cards + Lineup)"
 ```
 
@@ -1009,7 +1009,7 @@ git commit -m "feat: Template Editors Seite mit Tabs (Team Cards + Lineup)"
 ## Task 4: Generate Lineup Button + Attachment Download on Race Detail
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/RaceController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/RaceController.java`
 - Modify: `src/main/resources/templates/admin/race-detail.html`
 
 - [ ] **Step 1: Add LineupGraphicService dependency and endpoints to RaceController**
@@ -1100,9 +1100,9 @@ Also add the required fields `SeasonTeamRepository seasonTeamRepository` and `Te
 Add the required imports:
 
 ```java
-import de.ctc.admin.service.LineupGraphicService;
-import de.ctc.admin.service.TeamCardService;
-import de.ctc.domain.repository.SeasonTeamRepository;
+import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.TeamCardService;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -1163,7 +1163,7 @@ Expected: All tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/RaceController.java \
+git add src/main/java/org/ctc/admin/controller/RaceController.java \
        src/main/resources/templates/admin/race-detail.html
 git commit -m "feat: Generate Lineup Button + Attachment Download auf Race Detail"
 ```

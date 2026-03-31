@@ -8,7 +8,7 @@
 		<version>4.0.5</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>de.ctc</groupId>
+	<groupId>org.ctc</groupId>
 	<artifactId>ctc-manager</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ctc-manager</name>
@@ -182,13 +182,13 @@
 				<version>0.8.13</version>
 				<configuration>
 					<excludes>
-						<exclude>de/ctc/CtcManagerApplication.class</exclude>
-						<exclude>de/ctc/admin/TestDataService.class</exclude>
-						<exclude>de/ctc/admin/DemoDataSeeder.class</exclude>
-						<exclude>de/ctc/admin/service/TeamCardService.class</exclude>
-						<exclude>de/ctc/admin/service/LineupGraphicService.class</exclude>
-						<exclude>de/ctc/admin/service/ResultsGraphicService.class</exclude>
-						<exclude>de/ctc/admin/service/AbstractGraphicService.class</exclude>
+						<exclude>org/ctc/CtcManagerApplication.class</exclude>
+						<exclude>org/ctc/admin/TestDataService.class</exclude>
+						<exclude>org/ctc/admin/DemoDataSeeder.class</exclude>
+						<exclude>org/ctc/admin/service/TeamCardService.class</exclude>
+						<exclude>org/ctc/admin/service/LineupGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/ResultsGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/AbstractGraphicService.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>

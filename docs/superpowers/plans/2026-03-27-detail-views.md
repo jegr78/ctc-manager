@@ -76,10 +76,10 @@ git commit -m "Detail-Views: CSS-Klassen fuer Detail-Seiten hinzugefuegt"
 ### Task 2: Season Detail-Seite
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/SeasonController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/SeasonController.java`
 - Create: `src/main/resources/templates/admin/season-detail.html`
 - Modify: `src/main/resources/templates/admin/seasons.html`
-- Modify: `src/test/java/de/ctc/admin/controller/SeasonControllerTest.java`
+- Modify: `src/test/java/org/ctc/admin/controller/SeasonControllerTest.java`
 
 **Hinweis:** SeasonController benoetigt zusaetzlich `PlayoffRepository` als Dependency.
 
@@ -120,7 +120,7 @@ private final PlayoffRepository playoffRepository;
 Import:
 
 ```java
-import de.ctc.domain.repository.PlayoffRepository;
+import org.ctc.domain.repository.PlayoffRepository;
 ```
 
 Neue Methode:
@@ -261,7 +261,7 @@ Erwartet: Alle Tests gruen.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/SeasonController.java src/main/resources/templates/admin/season-detail.html src/main/resources/templates/admin/seasons.html src/test/java/de/ctc/admin/controller/SeasonControllerTest.java
+git add src/main/java/org/ctc/admin/controller/SeasonController.java src/main/resources/templates/admin/season-detail.html src/main/resources/templates/admin/seasons.html src/test/java/org/ctc/admin/controller/SeasonControllerTest.java
 git commit -m "Season Detail-Seite mit Teams und Matchdays"
 ```
 
@@ -270,11 +270,11 @@ git commit -m "Season Detail-Seite mit Teams und Matchdays"
 ### Task 3: Team Detail-Seite
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/TeamController.java`
-- Modify: `src/main/java/de/ctc/domain/repository/SeasonRepository.java`
+- Modify: `src/main/java/org/ctc/admin/controller/TeamController.java`
+- Modify: `src/main/java/org/ctc/domain/repository/SeasonRepository.java`
 - Create: `src/main/resources/templates/admin/team-detail.html`
 - Modify: `src/main/resources/templates/admin/teams.html`
-- Modify: `src/test/java/de/ctc/admin/controller/TeamControllerTest.java`
+- Modify: `src/test/java/org/ctc/admin/controller/TeamControllerTest.java`
 
 - [ ] **Step 1: Test schreiben**
 
@@ -313,7 +313,7 @@ private final SeasonRepository seasonRepository;
 Import:
 
 ```java
-import de.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonRepository;
 ```
 
 Neue Repository-Methode in `SeasonRepository.java`:
@@ -477,7 +477,7 @@ Erwartet: Alle Tests gruen.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/TeamController.java src/main/java/de/ctc/domain/repository/SeasonRepository.java src/main/resources/templates/admin/team-detail.html src/main/resources/templates/admin/teams.html src/test/java/de/ctc/admin/controller/TeamControllerTest.java
+git add src/main/java/org/ctc/admin/controller/TeamController.java src/main/java/org/ctc/domain/repository/SeasonRepository.java src/main/resources/templates/admin/team-detail.html src/main/resources/templates/admin/teams.html src/test/java/org/ctc/admin/controller/TeamControllerTest.java
 git commit -m "Team Detail-Seite mit Sub-Teams, Seasons und Drivers"
 ```
 
@@ -486,20 +486,20 @@ git commit -m "Team Detail-Seite mit Sub-Teams, Seasons und Drivers"
 ### Task 4: Driver Detail-Seite
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/DriverController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/DriverController.java`
 - Create: `src/main/resources/templates/admin/driver-detail.html`
 - Modify: `src/main/resources/templates/admin/drivers.html`
-- Create: `src/test/java/de/ctc/admin/controller/DriverControllerTest.java`
+- Create: `src/test/java/org/ctc/admin/controller/DriverControllerTest.java`
 
 - [ ] **Step 1: Test schreiben**
 
 Neue Testklasse `DriverControllerTest.java`:
 
 ```java
-package de.ctc.admin.controller;
+package org.ctc.admin.controller;
 
-import de.ctc.domain.model.Driver;
-import de.ctc.domain.repository.DriverRepository;
+import org.ctc.domain.model.Driver;
+import org.ctc.domain.repository.DriverRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -645,7 +645,7 @@ Erwartet: Alle Tests gruen.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/DriverController.java src/main/resources/templates/admin/driver-detail.html src/main/resources/templates/admin/drivers.html src/test/java/de/ctc/admin/controller/DriverControllerTest.java
+git add src/main/java/org/ctc/admin/controller/DriverController.java src/main/resources/templates/admin/driver-detail.html src/main/resources/templates/admin/drivers.html src/test/java/org/ctc/admin/controller/DriverControllerTest.java
 git commit -m "Driver Detail-Seite mit Season-Zuordnungen"
 ```
 
@@ -654,22 +654,22 @@ git commit -m "Driver Detail-Seite mit Season-Zuordnungen"
 ### Task 5: Matchday Detail-Seite
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/MatchdayController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/MatchdayController.java`
 - Create: `src/main/resources/templates/admin/matchday-detail.html`
 - Modify: `src/main/resources/templates/admin/matchdays.html`
-- Create: `src/test/java/de/ctc/admin/controller/MatchdayControllerTest.java`
+- Create: `src/test/java/org/ctc/admin/controller/MatchdayControllerTest.java`
 
 - [ ] **Step 1: Test schreiben**
 
 Neue Testklasse `MatchdayControllerTest.java`:
 
 ```java
-package de.ctc.admin.controller;
+package org.ctc.admin.controller;
 
-import de.ctc.domain.model.Matchday;
-import de.ctc.domain.model.Season;
-import de.ctc.domain.repository.MatchdayRepository;
-import de.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -728,7 +728,7 @@ private final MatchdayLineupRepository matchdayLineupRepository;
 Import hinzufuegen:
 
 ```java
-import de.ctc.domain.repository.MatchdayLineupRepository;
+import org.ctc.domain.repository.MatchdayLineupRepository;
 ```
 
 Neue Methode:
@@ -858,7 +858,7 @@ Erwartet: Alle Tests gruen.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/MatchdayController.java src/main/resources/templates/admin/matchday-detail.html src/main/resources/templates/admin/matchdays.html src/test/java/de/ctc/admin/controller/MatchdayControllerTest.java
+git add src/main/java/org/ctc/admin/controller/MatchdayController.java src/main/resources/templates/admin/matchday-detail.html src/main/resources/templates/admin/matchdays.html src/test/java/org/ctc/admin/controller/MatchdayControllerTest.java
 git commit -m "Matchday Detail-Seite mit Races und Lineup"
 ```
 
@@ -867,26 +867,26 @@ git commit -m "Matchday Detail-Seite mit Races und Lineup"
 ### Task 6: Race Detail-Seite
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/RaceController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/RaceController.java`
 - Create: `src/main/resources/templates/admin/race-detail.html`
 - Modify: `src/main/resources/templates/admin/races.html`
-- Create: `src/test/java/de/ctc/admin/controller/RaceControllerTest.java`
+- Create: `src/test/java/org/ctc/admin/controller/RaceControllerTest.java`
 
 - [ ] **Step 1: Test schreiben**
 
 Neue Testklasse `RaceControllerTest.java`:
 
 ```java
-package de.ctc.admin.controller;
+package org.ctc.admin.controller;
 
-import de.ctc.domain.model.Matchday;
-import de.ctc.domain.model.Race;
-import de.ctc.domain.model.Season;
-import de.ctc.domain.model.Team;
-import de.ctc.domain.repository.MatchdayRepository;
-import de.ctc.domain.repository.RaceRepository;
-import de.ctc.domain.repository.SeasonRepository;
-import de.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Race;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -1070,7 +1070,7 @@ Erwartet: Alle Tests gruen.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/RaceController.java src/main/resources/templates/admin/race-detail.html src/main/resources/templates/admin/races.html src/test/java/de/ctc/admin/controller/RaceControllerTest.java
+git add src/main/java/org/ctc/admin/controller/RaceController.java src/main/resources/templates/admin/race-detail.html src/main/resources/templates/admin/races.html src/test/java/org/ctc/admin/controller/RaceControllerTest.java
 git commit -m "Race Detail-Seite mit Ergebnissen und Cross-Links"
 ```
 
@@ -1155,7 +1155,7 @@ git commit -m "Playoff-Seiten: Cross-Links zu Team- und Race-Details"
 Falls `PlayoffService` geaendert wurde:
 
 ```bash
-git add src/main/resources/templates/admin/playoff-bracket.html src/main/resources/templates/admin/playoff-matchup.html src/main/java/de/ctc/domain/service/PlayoffService.java
+git add src/main/resources/templates/admin/playoff-bracket.html src/main/resources/templates/admin/playoff-matchup.html src/main/java/org/ctc/domain/service/PlayoffService.java
 git commit -m "Playoff-Seiten: Cross-Links zu Team- und Race-Details"
 ```
 

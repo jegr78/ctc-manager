@@ -57,14 +57,14 @@ docker compose -f docker-compose.prod.yml up -d
 
 ## Package-Struktur
 
-- `de.ctc.domain.model` — JPA Entities
-- `de.ctc.domain.repository` — Spring Data Repositories
-- `de.ctc.domain.service` — Geschaeftslogik (Scoring, Standings, Rankings)
-- `de.ctc.admin.controller` — Admin CRUD Controller
-- `de.ctc.admin.dto` — Form/Display DTOs
-- `de.ctc.sitegen` — Statische Seitengenerierung
-- `de.ctc.dataimport` — CSV/Bild-Import
-- `de.ctc.gt7sync` — GT7 Auto/Strecken-Scraping und Sync
+- `org.ctc.domain.model` — JPA Entities
+- `org.ctc.domain.repository` — Spring Data Repositories
+- `org.ctc.domain.service` — Geschaeftslogik (Scoring, Standings, Rankings)
+- `org.ctc.admin.controller` — Admin CRUD Controller
+- `org.ctc.admin.dto` — Form/Display DTOs
+- `org.ctc.sitegen` — Statische Seitengenerierung
+- `org.ctc.dataimport` — CSV/Bild-Import
+- `org.ctc.gt7sync` — GT7 Auto/Strecken-Scraping und Sync
 
 ## Key Files
 

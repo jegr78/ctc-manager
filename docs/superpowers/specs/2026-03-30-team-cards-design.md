@@ -163,7 +163,7 @@ Eigenstaendige HTML-Seite (kein Admin-Layout-Fragment). Wird nur fuer Playwright
 
 ### 5.2 TeamCardService
 
-**Package:** `de.ctc.admin.service`
+**Package:** `org.ctc.admin.service`
 
 **Methoden:**
 - `generateCard(SeasonTeam seasonTeam)` → String (PNG-Pfad)

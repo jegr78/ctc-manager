@@ -17,16 +17,16 @@
 ### New Files
 | File | Responsibility |
 |------|---------------|
-| `src/main/java/de/ctc/domain/model/SeasonTeam.java` | JPA entity: season-team link with rating, color/logo overrides |
-| `src/main/java/de/ctc/domain/repository/SeasonTeamRepository.java` | Spring Data repository for SeasonTeam |
-| `src/main/java/de/ctc/admin/service/TeamCardService.java` | Card generation: Thymeleaf render + Playwright screenshot |
-| `src/main/java/de/ctc/admin/controller/TeamCardController.java` | Admin tool page controller: generate, download, gallery |
+| `src/main/java/org/ctc/domain/model/SeasonTeam.java` | JPA entity: season-team link with rating, color/logo overrides |
+| `src/main/java/org/ctc/domain/repository/SeasonTeamRepository.java` | Spring Data repository for SeasonTeam |
+| `src/main/java/org/ctc/admin/service/TeamCardService.java` | Card generation: Thymeleaf render + Playwright screenshot |
+| `src/main/java/org/ctc/admin/controller/TeamCardController.java` | Admin tool page controller: generate, download, gallery |
 | `src/main/resources/templates/admin/team-cards.html` | Tool page: season selector, card gallery, generate/download buttons |
 | `src/main/resources/templates/admin/team-card-render.html` | Standalone 1080x1920 card template for Playwright capture |
 | `src/main/resources/static/admin/js/color-sync.js` | JS: sync color picker ↔ hex input |
-| `src/test/java/de/ctc/domain/model/SeasonTeamTest.java` | Unit tests for effective color/logo fallback |
-| `src/test/java/de/ctc/admin/service/TeamCardServiceTest.java` | Unit tests for card service |
-| `src/test/java/de/ctc/admin/controller/TeamCardControllerTest.java` | Integration tests for controller |
+| `src/test/java/org/ctc/domain/model/SeasonTeamTest.java` | Unit tests for effective color/logo fallback |
+| `src/test/java/org/ctc/admin/service/TeamCardServiceTest.java` | Unit tests for card service |
+| `src/test/java/org/ctc/admin/controller/TeamCardControllerTest.java` | Integration tests for controller |
 
 ### Modified Files
 | File | Change |
@@ -52,14 +52,14 @@
 
 **Files:**
 - Modify: `src/main/resources/db/migration/V1__initial_schema.sql:36-43,62-68`
-- Create: `src/main/java/de/ctc/domain/model/SeasonTeam.java`
-- Create: `src/main/java/de/ctc/domain/repository/SeasonTeamRepository.java`
-- Test: `src/test/java/de/ctc/domain/model/SeasonTeamTest.java`
+- Create: `src/main/java/org/ctc/domain/model/SeasonTeam.java`
+- Create: `src/main/java/org/ctc/domain/repository/SeasonTeamRepository.java`
+- Test: `src/test/java/org/ctc/domain/model/SeasonTeamTest.java`
 
 - [ ] **Step 1: Write SeasonTeam unit tests**
 
 ```java
-package de.ctc.domain.model;
+package org.ctc.domain.model;
 
 import org.junit.jupiter.api.Test;
 
@@ -217,7 +217,7 @@ CREATE TABLE season_teams (
 - [ ] **Step 6: Create SeasonTeam entity**
 
 ```java
-package de.ctc.domain.model;
+package org.ctc.domain.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -276,9 +276,9 @@ public class SeasonTeam {
 - [ ] **Step 7: Create SeasonTeamRepository**
 
 ```java
-package de.ctc.domain.repository;
+package org.ctc.domain.repository;
 
-import de.ctc.domain.model.SeasonTeam;
+import org.ctc.domain.model.SeasonTeam;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -300,11 +300,11 @@ Expected: All 8 tests PASS.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add src/main/java/de/ctc/domain/model/SeasonTeam.java \
-       src/main/java/de/ctc/domain/repository/SeasonTeamRepository.java \
-       src/main/java/de/ctc/domain/model/Team.java \
+git add src/main/java/org/ctc/domain/model/SeasonTeam.java \
+       src/main/java/org/ctc/domain/repository/SeasonTeamRepository.java \
+       src/main/java/org/ctc/domain/model/Team.java \
        src/main/resources/db/migration/V1__initial_schema.sql \
-       src/test/java/de/ctc/domain/model/SeasonTeamTest.java
+       src/test/java/org/ctc/domain/model/SeasonTeamTest.java
 git commit -m "$(cat <<'EOF'
 SeasonTeam Entity und Team-Farbfelder einfuehren
 
@@ -322,7 +322,7 @@ EOF
 ## Task 2: Season Entity — ManyToMany zu OneToMany Migration
 
 **Files:**
-- Modify: `src/main/java/de/ctc/domain/model/Season.java:59-64`
+- Modify: `src/main/java/org/ctc/domain/model/Season.java:59-64`
 
 - [ ] **Step 1: Replace ManyToMany with OneToMany in Season.java**
 
@@ -386,7 +386,7 @@ Add import for `Optional`.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/de/ctc/domain/model/Season.java
+git add src/main/java/org/ctc/domain/model/Season.java
 git commit -m "$(cat <<'EOF'
 Season: ManyToMany Teams durch OneToMany SeasonTeams ersetzen
 
@@ -403,14 +403,14 @@ EOF
 ## Task 3: Adapt All season.getTeams() Consumers
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/SeasonController.java`
-- Modify: `src/main/java/de/ctc/admin/TestDataService.java`
-- Modify: `src/main/java/de/ctc/domain/service/StandingsService.java`
-- Modify: `src/main/java/de/ctc/domain/service/PlayoffService.java`
-- Modify: `src/main/java/de/ctc/domain/service/SwissPairingService.java`
-- Modify: `src/main/java/de/ctc/dataimport/CsvImportService.java`
-- Modify: `src/main/java/de/ctc/admin/controller/MatchController.java`
-- Modify: `src/main/java/de/ctc/admin/controller/RaceLineupController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/SeasonController.java`
+- Modify: `src/main/java/org/ctc/admin/TestDataService.java`
+- Modify: `src/main/java/org/ctc/domain/service/StandingsService.java`
+- Modify: `src/main/java/org/ctc/domain/service/PlayoffService.java`
+- Modify: `src/main/java/org/ctc/domain/service/SwissPairingService.java`
+- Modify: `src/main/java/org/ctc/dataimport/CsvImportService.java`
+- Modify: `src/main/java/org/ctc/admin/controller/MatchController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/RaceLineupController.java`
 - Modify: `src/main/resources/templates/admin/season-form.html`
 - Modify: `src/main/resources/templates/admin/season-detail.html`
 - Modify: Test files that use `season.getTeams().add(...)`
@@ -551,7 +551,7 @@ EOF
 ## Task 4: Team Colors & Logo Upload in Admin UI
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/TeamController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/TeamController.java`
 - Modify: `src/main/resources/templates/admin/team-form.html`
 - Create: `src/main/resources/static/admin/js/color-sync.js`
 
@@ -710,7 +710,7 @@ Expected: All tests PASS.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/TeamController.java \
+git add src/main/java/org/ctc/admin/controller/TeamController.java \
        src/main/resources/templates/admin/team-form.html \
        src/main/resources/static/admin/js/color-sync.js
 git commit -m "$(cat <<'EOF'
@@ -730,7 +730,7 @@ EOF
 ## Task 5: TestDataService — Farben und SeasonTeam-Daten
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/TestDataService.java`
+- Modify: `src/main/java/org/ctc/admin/TestDataService.java`
 
 - [ ] **Step 1: Add team colors to seed data**
 
@@ -785,7 +785,7 @@ Verify: Check `/admin/teams` — teams should display. Check that editing a team
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/TestDataService.java
+git add src/main/java/org/ctc/admin/TestDataService.java
 git commit -m "$(cat <<'EOF'
 TestDataService: Teamfarben und SeasonTeam-Ratings hinzufuegen
 
@@ -844,20 +844,20 @@ EOF
 ## Task 7: TeamCardService — Card Generation
 
 **Files:**
-- Create: `src/main/java/de/ctc/admin/service/TeamCardService.java`
+- Create: `src/main/java/org/ctc/admin/service/TeamCardService.java`
 - Create: `src/main/resources/templates/admin/team-card-render.html`
-- Test: `src/test/java/de/ctc/admin/service/TeamCardServiceTest.java`
+- Test: `src/test/java/org/ctc/admin/service/TeamCardServiceTest.java`
 
 - [ ] **Step 1: Write TeamCardService tests**
 
 ```java
-package de.ctc.admin.service;
+package org.ctc.admin.service;
 
-import de.ctc.domain.model.Season;
-import de.ctc.domain.model.SeasonTeam;
-import de.ctc.domain.model.Team;
-import de.ctc.domain.service.FileStorageService;
-import de.ctc.domain.service.StandingsService;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonTeam;
+import org.ctc.domain.model.Team;
+import org.ctc.domain.service.FileStorageService;
+import org.ctc.domain.service.StandingsService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -1060,13 +1060,13 @@ This is the standalone HTML page that Playwright will screenshot. It must be exa
 - [ ] **Step 4: Create TeamCardService**
 
 ```java
-package de.ctc.admin.service;
+package org.ctc.admin.service;
 
 import com.microsoft.playwright.*;
-import de.ctc.domain.model.SeasonTeam;
-import de.ctc.domain.model.Season;
-import de.ctc.domain.service.FileStorageService;
-import de.ctc.domain.service.StandingsService;
+import org.ctc.domain.model.SeasonTeam;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.service.FileStorageService;
+import org.ctc.domain.service.StandingsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -1218,9 +1218,9 @@ Expected: Tests PASS (getCardPath tests only — no Playwright needed for these)
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/service/TeamCardService.java \
+git add src/main/java/org/ctc/admin/service/TeamCardService.java \
        src/main/resources/templates/admin/team-card-render.html \
-       src/test/java/de/ctc/admin/service/TeamCardServiceTest.java
+       src/test/java/org/ctc/admin/service/TeamCardServiceTest.java
 git commit -m "$(cat <<'EOF'
 TeamCardService: Card-Generierung via Thymeleaf + Playwright
 
@@ -1238,19 +1238,19 @@ EOF
 ## Task 8: TeamCardController & Tool Page
 
 **Files:**
-- Create: `src/main/java/de/ctc/admin/controller/TeamCardController.java`
+- Create: `src/main/java/org/ctc/admin/controller/TeamCardController.java`
 - Create: `src/main/resources/templates/admin/team-cards.html`
 - Modify: `src/main/resources/templates/admin/layout.html`
 
 - [ ] **Step 1: Create TeamCardController**
 
 ```java
-package de.ctc.admin.controller;
+package org.ctc.admin.controller;
 
-import de.ctc.admin.service.TeamCardService;
-import de.ctc.domain.model.SeasonTeam;
-import de.ctc.domain.repository.SeasonRepository;
-import de.ctc.domain.repository.SeasonTeamRepository;
+import org.ctc.admin.service.TeamCardService;
+import org.ctc.domain.model.SeasonTeam;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
@@ -1459,7 +1459,7 @@ Expected: All tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/TeamCardController.java \
+git add src/main/java/org/ctc/admin/controller/TeamCardController.java \
        src/main/resources/templates/admin/team-cards.html \
        src/main/resources/templates/admin/layout.html
 git commit -m "$(cat <<'EOF'
@@ -1480,7 +1480,7 @@ EOF
 
 **Files:**
 - Modify: `src/main/resources/templates/admin/season-detail.html`
-- Modify: `src/main/java/de/ctc/admin/controller/SeasonController.java`
+- Modify: `src/main/java/org/ctc/admin/controller/SeasonController.java`
 
 - [ ] **Step 1: Add rating column to season-detail team table**
 
@@ -1551,7 +1551,7 @@ Expected: All tests PASS.
 
 ```bash
 git add src/main/resources/templates/admin/season-detail.html \
-       src/main/java/de/ctc/admin/controller/SeasonController.java
+       src/main/java/org/ctc/admin/controller/SeasonController.java
 git commit -m "$(cat <<'EOF'
 Season-Detail: Rating-Verwaltung pro SeasonTeam
 

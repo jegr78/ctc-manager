@@ -14,14 +14,14 @@
 
 | Action | File | Responsibility |
 |--------|------|---------------|
-| Create | `src/main/java/de/ctc/admin/dto/SeasonDriverGroupDto.java` | DTO: gruppierte Fahrer je Season |
-| Modify | `src/main/java/de/ctc/admin/controller/TeamController.java` | Detail-Endpoint: Gruppierungslogik |
-| Modify | `src/main/java/de/ctc/domain/repository/SeasonDriverRepository.java` | Neue Query: findByTeamIdIn |
+| Create | `src/main/java/org/ctc/admin/dto/SeasonDriverGroupDto.java` | DTO: gruppierte Fahrer je Season |
+| Modify | `src/main/java/org/ctc/admin/controller/TeamController.java` | Detail-Endpoint: Gruppierungslogik |
+| Modify | `src/main/java/org/ctc/domain/repository/SeasonDriverRepository.java` | Neue Query: findByTeamIdIn |
 | Modify | `src/main/resources/templates/admin/team-detail.html` | Verschachtelte Season/Team/Driver-Sections |
 | Modify | `src/main/resources/static/admin/css/admin.css` | Season-Accordion + Team-Group Styles |
-| Modify | `src/main/java/de/ctc/admin/TestDataService.java` | SeasonDriver-Seeding fuer Testdaten |
-| Modify | `src/test/java/de/ctc/admin/controller/TeamControllerTest.java` | Unit-Tests fuer Gruppierungslogik |
-| Modify | `src/test/java/de/ctc/e2e/AdminWorkflowE2ETest.java` | E2E-Test: Team-Detail mit gruppierten Fahrern |
+| Modify | `src/main/java/org/ctc/admin/TestDataService.java` | SeasonDriver-Seeding fuer Testdaten |
+| Modify | `src/test/java/org/ctc/admin/controller/TeamControllerTest.java` | Unit-Tests fuer Gruppierungslogik |
+| Modify | `src/test/java/org/ctc/e2e/AdminWorkflowE2ETest.java` | E2E-Test: Team-Detail mit gruppierten Fahrern |
 
 ---
 
@@ -30,8 +30,8 @@
 Ohne SeasonDrivers in den Testdaten gibt es nichts zu gruppieren. Diese Task erweitert TestDataService, damit Fahrer ihren Teams in Seasons zugewiesen werden.
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/TestDataService.java`
-- Modify: `src/main/java/de/ctc/domain/repository/SeasonDriverRepository.java`
+- Modify: `src/main/java/org/ctc/admin/TestDataService.java`
+- Modify: `src/main/java/org/ctc/domain/repository/SeasonDriverRepository.java`
 
 - [ ] **Step 1: SeasonDriverRepository um findByTeamIdIn erweitern**
 
@@ -135,7 +135,7 @@ Erwartung: Team-Detailseite (z.B. P1R) zeigt Fahrer mit Season-Name in Klammern 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/TestDataService.java src/main/java/de/ctc/domain/repository/SeasonDriverRepository.java
+git add src/main/java/org/ctc/admin/TestDataService.java src/main/java/org/ctc/domain/repository/SeasonDriverRepository.java
 git commit -m "TestDataService: SeasonDriver-Seeding fuer Season 4 und Season 3"
 ```
 
@@ -146,12 +146,12 @@ git commit -m "TestDataService: SeasonDriver-Seeding fuer Season 4 und Season 3"
 Die Fahrer-Daten werden im Controller nach Season und Team gruppiert. Ein neues DTO traegt die Struktur ins Template.
 
 **Files:**
-- Create: `src/main/java/de/ctc/admin/dto/SeasonDriverGroupDto.java`
-- Modify: `src/main/java/de/ctc/admin/controller/TeamController.java`
+- Create: `src/main/java/org/ctc/admin/dto/SeasonDriverGroupDto.java`
+- Modify: `src/main/java/org/ctc/admin/controller/TeamController.java`
 
 - [ ] **Step 1: Failing Test schreiben — Controller liefert seasonDriverGroups**
 
-In `src/test/java/de/ctc/admin/controller/TeamControllerTest.java`:
+In `src/test/java/org/ctc/admin/controller/TeamControllerTest.java`:
 
 ```java
 @Autowired
@@ -192,14 +192,14 @@ Erwartung: FAIL — `seasonDriverGroups` nicht im Model.
 
 - [ ] **Step 3: DTO erstellen**
 
-Create `src/main/java/de/ctc/admin/dto/SeasonDriverGroupDto.java`:
+Create `src/main/java/org/ctc/admin/dto/SeasonDriverGroupDto.java`:
 
 ```java
-package de.ctc.admin.dto;
+package org.ctc.admin.dto;
 
-import de.ctc.domain.model.Season;
-import de.ctc.domain.model.SeasonDriver;
-import de.ctc.domain.model.Team;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.Team;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -217,7 +217,7 @@ public record SeasonDriverGroupDto(
 
 - [ ] **Step 4: Controller-Detail-Methode erweitern**
 
-In `src/main/java/de/ctc/admin/controller/TeamController.java`:
+In `src/main/java/org/ctc/admin/controller/TeamController.java`:
 
 Neue Dependency injizieren:
 
@@ -284,9 +284,9 @@ public String detail(@PathVariable UUID id, Model model) {
 Import hinzufuegen:
 
 ```java
-import de.ctc.admin.dto.SeasonDriverGroupDto;
-import de.ctc.domain.model.SeasonDriver;
-import de.ctc.domain.repository.SeasonDriverRepository;
+import org.ctc.admin.dto.SeasonDriverGroupDto;
+import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.repository.SeasonDriverRepository;
 import java.util.ArrayList;
 ```
 
@@ -321,7 +321,7 @@ Erwartung: Alle Tests PASS.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/dto/SeasonDriverGroupDto.java src/main/java/de/ctc/admin/controller/TeamController.java src/test/java/de/ctc/admin/controller/TeamControllerTest.java
+git add src/main/java/org/ctc/admin/dto/SeasonDriverGroupDto.java src/main/java/org/ctc/admin/controller/TeamController.java src/test/java/org/ctc/admin/controller/TeamControllerTest.java
 git commit -m "TeamController: Fahrer nach Season und Team gruppiert aufbereiten"
 ```
 
@@ -538,7 +538,7 @@ git commit -m "CSS: Season-Accordion und Team-Group Styles fuer Team-Detail"
 Weitere Tests fuer Edge Cases der Gruppierungslogik.
 
 **Files:**
-- Modify: `src/test/java/de/ctc/admin/controller/TeamControllerTest.java`
+- Modify: `src/test/java/org/ctc/admin/controller/TeamControllerTest.java`
 
 - [ ] **Step 1: Test — Sub-Team-Fahrer erscheinen beim Parent-Team**
 
@@ -592,7 +592,7 @@ Erwartung: Alle Tests PASS.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/test/java/de/ctc/admin/controller/TeamControllerTest.java
+git add src/test/java/org/ctc/admin/controller/TeamControllerTest.java
 git commit -m "TeamControllerTest: Edge-Case Tests fuer gruppierte Fahrer-Anzeige"
 ```
 
@@ -603,7 +603,7 @@ git commit -m "TeamControllerTest: Edge-Case Tests fuer gruppierte Fahrer-Anzeig
 E2E-Test der Team-Detailseite mit der neuen gruppierten Fahrer-Ansicht.
 
 **Files:**
-- Modify: `src/test/java/de/ctc/e2e/AdminWorkflowE2ETest.java`
+- Modify: `src/test/java/org/ctc/e2e/AdminWorkflowE2ETest.java`
 
 - [ ] **Step 1: E2E-Test schreiben — Team-Detail zeigt Season-Gruppen**
 
@@ -681,7 +681,7 @@ Erwartung: Alle E2E-Tests PASS.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/test/java/de/ctc/e2e/AdminWorkflowE2ETest.java
+git add src/test/java/org/ctc/e2e/AdminWorkflowE2ETest.java
 git commit -m "E2E: Team-Detail mit gruppierten Fahrern nach Season und Sub-Team"
 ```
 
