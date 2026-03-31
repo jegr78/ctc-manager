@@ -170,6 +170,77 @@ class TeamControllerTest {
     }
 
     @Test
+    void shouldShowNewTeamForm() throws Exception {
+        mockMvc.perform(get("/admin/teams/new"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/team-form"))
+                .andExpect(model().attributeExists("teamForm"));
+    }
+
+    @Test
+    void shouldShowTeamEditForm() throws Exception {
+        var team = teamRepository.save(new Team("Edit Racing", "EDT"));
+
+        mockMvc.perform(get("/admin/teams/" + team.getId() + "/edit"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/team-form"))
+                .andExpect(model().attributeExists("teamForm", "team"));
+    }
+
+    @Test
+    void shouldSaveExistingTeam() throws Exception {
+        var team = teamRepository.save(new Team("Original Racing", "ORI"));
+
+        mockMvc.perform(post("/admin/teams/save")
+                        .param("id", team.getId().toString())
+                        .param("name", "Updated Racing")
+                        .param("shortName", "UPD"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/teams"));
+
+        var updated = teamRepository.findById(team.getId()).orElseThrow();
+        assertEquals("Updated Racing", updated.getName());
+        assertEquals("UPD", updated.getShortName());
+    }
+
+    @Test
+    void shouldAddSubTeam() throws Exception {
+        var parent = teamRepository.save(new Team("Parent Sub Racing", "PSR"));
+
+        mockMvc.perform(post("/admin/teams/" + parent.getId() + "/add-sub-team")
+                        .param("subName", "Sub Racing A")
+                        .param("subShortName", "PSR A"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/teams/" + parent.getId() + "/edit"))
+                .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    @Test
+    void shouldRejectBlankSubTeamName() throws Exception {
+        var parent = teamRepository.save(new Team("Blank Sub Parent", "BSP"));
+
+        mockMvc.perform(post("/admin/teams/" + parent.getId() + "/add-sub-team")
+                        .param("subName", "")
+                        .param("subShortName", ""))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("errorMessage"));
+    }
+
+    @Test
+    void shouldRemoveSubTeam() throws Exception {
+        var parent = teamRepository.save(new Team("Remove Sub Parent", "RSP"));
+        var sub = teamRepository.save(new Team("Remove Sub A", "RSP A", parent));
+
+        mockMvc.perform(post("/admin/teams/" + parent.getId() + "/remove-sub-team")
+                        .param("subTeamId", sub.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/teams/" + parent.getId() + "/edit"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        assertFalse(teamRepository.findById(sub.getId()).isPresent());
+    }
+
+    @Test
     void shouldDeleteTeam() throws Exception {
         var team = teamRepository.save(new Team("Delete Racing", "DLR"));
 

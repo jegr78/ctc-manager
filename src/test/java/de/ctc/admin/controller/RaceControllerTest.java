@@ -79,11 +79,59 @@ class RaceControllerTest {
     }
 
     @Test
+    void shouldListRaces() throws Exception {
+        mockMvc.perform(get("/admin/races"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/races"))
+                .andExpect(model().attributeExists("races", "seasons", "raceScores"));
+    }
+
+    @Test
+    void shouldListRacesByMatchday() throws Exception {
+        mockMvc.perform(get("/admin/races").param("matchdayId", matchday.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/races"))
+                .andExpect(model().attributeExists("races", "matchday"));
+    }
+
+    @Test
+    void shouldListRacesBySeason() throws Exception {
+        mockMvc.perform(get("/admin/races").param("seasonId", season.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/races"))
+                .andExpect(model().attributeExists("races", "selectedSeasonId"));
+    }
+
+    @Test
     void shouldShowRaceDetail() throws Exception {
         mockMvc.perform(get("/admin/races/" + race.getId()))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/race-detail"))
                 .andExpect(model().attributeExists("race"));
+    }
+
+    @Test
+    void shouldShowNewRaceForm() throws Exception {
+        mockMvc.perform(get("/admin/races/new").param("matchdayId", matchday.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/race-form"))
+                .andExpect(model().attributeExists("raceForm", "matchdays", "teams"));
+    }
+
+    @Test
+    void shouldShowRaceEditForm() throws Exception {
+        mockMvc.perform(get("/admin/races/" + race.getId() + "/edit"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/race-form"))
+                .andExpect(model().attributeExists("raceForm", "matchdays", "teams", "seasonCars", "seasonTracks"));
+    }
+
+    @Test
+    void shouldShowRaceResultsForm() throws Exception {
+        mockMvc.perform(get("/admin/races/" + race.getId() + "/results"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/race-results"))
+                .andExpect(model().attributeExists("raceForm", "race", "raceScoring"));
     }
 
     // --- POST /admin/races/save ---

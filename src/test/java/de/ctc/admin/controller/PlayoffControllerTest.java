@@ -128,4 +128,30 @@ class PlayoffControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("errorMessage"));
     }
+
+    @Test
+    void shouldSetRoundLegs() throws Exception {
+        var playoff = playoffService.createPlayoff(season.getId(), "Legs Test", 4);
+        var roundId = playoff.getRounds().get(0).getId();
+
+        mockMvc.perform(post("/admin/playoffs/round/" + roundId + "/set-legs")
+                        .param("bestOfLegs", "3"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    @Test
+    void shouldSaveSeedingForm() throws Exception {
+        var playoff = playoffService.createPlayoff(season.getId(), "Seed Save Test", 4);
+        var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+        var team = teamRepository.findAll().stream().findFirst().orElseThrow();
+
+        mockMvc.perform(post("/admin/playoffs/" + playoff.getId() + "/seed")
+                        .param("playoffId", playoff.getId().toString())
+                        .param("seeds[0].matchupId", matchup.getId().toString())
+                        .param("seeds[0].teamId", team.getId().toString())
+                        .param("seeds[0].slot", "1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("successMessage"));
+    }
 }
