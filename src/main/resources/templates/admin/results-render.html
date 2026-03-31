@@ -219,7 +219,7 @@
 
     <div class="footer">
         <div class="team-total" th:classappend="${homeIsWinner ? 'winner' : ''}" th:text="${homeTotal}"></div>
-        <div class="season-name">Regular Season</div>
+        <div class="season-name" th:text="${seasonName}"></div>
         <div class="team-total" th:classappend="${awayIsWinner ? 'winner' : ''}" th:text="${awayTotal}"></div>
     </div>
 </body>
