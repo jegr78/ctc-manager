@@ -3,6 +3,7 @@ package de.ctc.domain.service;
 import de.ctc.admin.dto.RaceForm;
 import de.ctc.admin.dto.RaceResultForm;
 import de.ctc.admin.service.LineupGraphicService;
+import de.ctc.admin.service.ResultsGraphicService;
 import de.ctc.admin.service.TeamCardService;
 import de.ctc.domain.model.*;
 import de.ctc.domain.model.Car;
@@ -47,6 +48,7 @@ public class RaceManagementService {
     private final ScoringService scoringService;
     private final FileStorageService fileStorageService;
     private final LineupGraphicService lineupGraphicService;
+    private final ResultsGraphicService resultsGraphicService;
     private final TeamCardService teamCardService;
 
     @Value("${app.upload-dir:uploads}")
@@ -59,7 +61,8 @@ public class RaceManagementService {
 
     public record RaceDetailData(Race race, int homeTotal, int awayTotal,
                                  Map<UUID, String> driverTeamMap, boolean canGenerateLineup,
-                                 boolean lineupMissing, boolean cardsMissing, boolean lineupExists) {}
+                                 boolean lineupMissing, boolean cardsMissing, boolean lineupExists,
+                                 boolean canGenerateResults, boolean resultsMissing, boolean resultsExist) {}
 
     public record ResultsFormData(RaceForm form, Race race, RaceScoring raceScoring) {}
 
@@ -140,10 +143,15 @@ public class RaceManagementService {
         }
         boolean lineupExists = race.getAttachments().stream()
                 .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/lineup.png"));
+        boolean resultsGraphicExists = race.getAttachments().stream()
+                .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/results.png"));
+        boolean hasResults = !race.getResults().isEmpty();
 
         return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap,
                 hasLineup && hasHomeCard && hasAwayCard && !lineupExists,
-                !hasLineup, !hasHomeCard || !hasAwayCard, lineupExists);
+                !hasLineup, !hasHomeCard || !hasAwayCard, lineupExists,
+                hasResults && hasHomeCard && hasAwayCard && !resultsGraphicExists,
+                !hasResults, resultsGraphicExists);
     }
 
     // --- Form data for new race ---
@@ -367,6 +375,23 @@ public class RaceManagementService {
             raceAttachmentRepository.save(attachment);
         } catch (Exception e) {
             log.error("Lineup generation failed for race {}", raceId, e);
+            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
+        }
+    }
+
+    // --- Generate results ---
+
+    @Transactional
+    public void generateResults(UUID raceId) {
+        var race = raceRepository.findById(raceId).orElseThrow();
+        try {
+            String url = resultsGraphicService.generateResults(race);
+            String attachmentName = race.getMatchday().getLabel() + "-"
+                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Results";
+            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
+            raceAttachmentRepository.save(attachment);
+        } catch (Exception e) {
+            log.error("Results graphic generation failed for race {}", raceId, e);
             throw new RuntimeException("Generation failed: " + e.getMessage(), e);
         }
     }

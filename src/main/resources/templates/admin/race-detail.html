@@ -22,20 +22,31 @@
         </div>
     </div>
 
-    <!-- Generate Lineup -->
-    <div th:if="${canGenerateLineup}" style="margin-bottom:16px;display:flex;justify-content:flex-end;">
-        <form th:action="@{/admin/races/{id}/generate-lineup(id=${race.id})}" method="post">
+    <!-- Generate Graphics -->
+    <div style="margin-bottom:16px;display:flex;justify-content:flex-end;gap:8px;align-items:center;flex-wrap:wrap;">
+        <!-- Lineup Button -->
+        <form th:if="${canGenerateLineup}" th:action="@{/admin/races/{id}/generate-lineup(id=${race.id})}" method="post">
             <button type="submit" class="btn btn-primary">Generate Lineup Graphic</button>
         </form>
-    </div>
-    <div th:if="${!canGenerateLineup && !lineupExists}" style="margin-bottom:16px;display:flex;justify-content:flex-end;align-items:center;gap:8px;">
-        <button class="btn btn-secondary" disabled style="opacity:0.5;">
-            Generate Lineup Graphic
-        </button>
-        <small class="text-dim">
-            <span th:if="${lineupMissing}">No lineup assigned for this race.</span>
-            <span th:if="${cardsMissing}">Team cards must be generated first.</span>
-        </small>
+        <span th:if="${!canGenerateLineup && !lineupExists}" style="display:inline-flex;align-items:center;gap:8px;">
+            <button class="btn btn-secondary" disabled style="opacity:0.5;">Generate Lineup Graphic</button>
+            <small class="text-dim">
+                <span th:if="${lineupMissing}">No lineup assigned.</span>
+                <span th:if="${cardsMissing}">Team cards missing.</span>
+            </small>
+        </span>
+
+        <!-- Results Button -->
+        <form th:if="${canGenerateResults}" th:action="@{/admin/races/{id}/generate-results(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-primary">Generate Results Graphic</button>
+        </form>
+        <span th:if="${!canGenerateResults && !resultsExist}" style="display:inline-flex;align-items:center;gap:8px;">
+            <button class="btn btn-secondary" disabled style="opacity:0.5;">Generate Results Graphic</button>
+            <small class="text-dim">
+                <span th:if="${resultsMissing}">No results entered.</span>
+                <span th:if="${cardsMissing}">Team cards missing.</span>
+            </small>
+        </span>
     </div>
 
     <!-- Score Banner -->

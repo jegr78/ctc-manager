@@ -3,6 +3,7 @@ package de.ctc.domain.service;
 import de.ctc.admin.dto.RaceForm;
 import de.ctc.admin.dto.RaceResultForm;
 import de.ctc.admin.service.LineupGraphicService;
+import de.ctc.admin.service.ResultsGraphicService;
 import de.ctc.admin.service.TeamCardService;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
@@ -38,6 +39,7 @@ class RaceManagementServiceTest {
     @Mock private ScoringService scoringService;
     @Mock private FileStorageService fileStorageService;
     @Mock private LineupGraphicService lineupGraphicService;
+    @Mock private ResultsGraphicService resultsGraphicService;
     @Mock private TeamCardService teamCardService;
 
     @InjectMocks
@@ -301,6 +303,121 @@ class RaceManagementServiceTest {
         var result = service.getUsedSelections(seasonId, homeTeamId, null);
 
         assertThat(result).containsKeys("usedCarIds", "usedTrackIds");
+    }
+
+    // --- getRaceDetailData ---
+
+    @Test
+    void getRaceDetailData_withResults_returnsScoresAndFlags() {
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var season = new Season("Test Season 2026");
+        season.setId(UUID.randomUUID());
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setSeason(season);
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        var driver1 = new Driver("psn1", "Nick1");
+        driver1.setId(UUID.randomUUID());
+        driver1.setSeasonDrivers(List.of());
+        var driver2 = new Driver("psn2", "Nick2");
+        driver2.setId(UUID.randomUUID());
+        driver2.setSeasonDrivers(List.of());
+
+        var r1 = new RaceResult(race, driver1, 1, 1, false);
+        r1.setPointsTotal(20);
+        var r2 = new RaceResult(race, driver2, 2, 2, false);
+        r2.setPointsTotal(17);
+        race.getResults().addAll(List.of(r1, r2));
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
+        when(scoringService.isDriverInTeam(eq(r2), any(), eq(homeTeam.getId()))).thenReturn(false);
+        when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver1.getId()))
+                .thenReturn(Optional.of(new RaceLineup(race, driver1, homeTeam)));
+        when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver2.getId()))
+                .thenReturn(Optional.of(new RaceLineup(race, driver2, awayTeam)));
+        when(raceLineupRepository.findByRaceId(race.getId()))
+                .thenReturn(List.of(new RaceLineup(race, driver1, homeTeam), new RaceLineup(race, driver2, awayTeam)));
+
+        var data = service.getRaceDetailData(race.getId());
+
+        assertThat(data.homeTotal()).isEqualTo(20);
+        assertThat(data.awayTotal()).isEqualTo(17);
+        assertThat(data.driverTeamMap()).containsEntry(driver1.getId(), "HOM");
+        assertThat(data.driverTeamMap()).containsEntry(driver2.getId(), "AWY");
+        assertThat(data.resultsMissing()).isFalse();
+        assertThat(data.canGenerateLineup()).isFalse(); // no team cards
+    }
+
+    @Test
+    void getRaceDetailData_withoutResults_flagsResultsMissing() {
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var season = new Season("Test Season 2026");
+        season.setId(UUID.randomUUID());
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setSeason(season);
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
+
+        var data = service.getRaceDetailData(race.getId());
+
+        assertThat(data.resultsMissing()).isTrue();
+        assertThat(data.canGenerateResults()).isFalse();
+        assertThat(data.resultsExist()).isFalse();
+    }
+
+    // --- generateResults ---
+
+    @Test
+    void generateResults_createsAttachment() throws Exception {
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setLabel("MD 1");
+        matchday.setSeason(new Season("S"));
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(resultsGraphicService.generateResults(race)).thenReturn("/uploads/races/" + race.getId() + "/results.png");
+
+        service.generateResults(race.getId());
+
+        verify(raceAttachmentRepository).save(argThat(att ->
+                att.getName().equals("MD 1-HOM-AWY-Results")
+                        && att.getUrl().endsWith("/results.png")
+                        && att.getType() == AttachmentType.FILE));
+    }
+
+    @Test
+    void generateResults_onFailure_throwsRuntimeException() throws Exception {
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(resultsGraphicService.generateResults(race)).thenThrow(new RuntimeException("Playwright failed"));
+
+        assertThatThrownBy(() -> service.generateResults(race.getId()))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Playwright failed");
     }
 
     // --- Helper methods ---

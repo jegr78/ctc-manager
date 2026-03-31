@@ -55,7 +55,7 @@
             flex: 1;
         }
 
-        .header-center .lineups-title {
+        .header-center .scorecard-title {
             font-size: 56px;
             font-weight: 900;
             color: #1a1a1a;
@@ -105,7 +105,7 @@
             border-radius: 16px;
         }
 
-        .pairings {
+        .results {
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -113,9 +113,8 @@
             padding: 8px 0;
         }
 
-        .pairing {
+        .result-row {
             display: flex;
-            justify-content: space-between;
             align-items: center;
             padding: 8px 32px;
         }
@@ -127,15 +126,25 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 45%;
         }
 
         .driver-name.home {
             text-align: left;
+            flex: 1;
         }
 
         .driver-name.away {
             text-align: right;
+            flex: 1;
+        }
+
+        .points {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            width: 60px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
         }
 
         /* Footer */
@@ -148,14 +157,20 @@
             min-height: 130px;
         }
 
-        .position {
+        .team-total {
             flex: 1;
             font-size: 56px;
             font-weight: 900;
             color: #1a1a1a;
         }
 
-        .position:last-child {
+        .team-total.winner {
+            text-decoration: underline;
+            text-underline-offset: 12px;
+            text-decoration-thickness: 6px;
+        }
+
+        .team-total:last-child {
             text-align: right;
         }
 
@@ -175,7 +190,7 @@
             <div class="year" th:text="${seasonYear}"></div>
         </div>
         <div class="header-center">
-            <div class="lineups-title">Lineups</div>
+            <div class="scorecard-title">Scorecard</div>
             <div class="matchday" th:text="${matchdayName}"></div>
         </div>
         <div class="header-right">
@@ -188,10 +203,12 @@
             <img th:src="${homeCardBase64}" alt="Home Team Card">
         </div>
 
-        <div class="pairings">
-            <div class="pairing" th:each="p : ${pairings}">
-                <span class="driver-name home" th:text="${p.homeDriver}"></span>
-                <span class="driver-name away" th:text="${p.awayDriver}"></span>
+        <div class="results">
+            <div class="result-row" th:each="row : ${resultRows}">
+                <span class="driver-name home" th:text="${row.homeDriver}"></span>
+                <span class="points" th:text="${row.homeDriver != '' ? row.homePoints : ''}"></span>
+                <span class="points" th:text="${row.awayDriver != '' ? row.awayPoints : ''}"></span>
+                <span class="driver-name away" th:text="${row.awayDriver}"></span>
             </div>
         </div>
 
@@ -201,9 +218,9 @@
     </div>
 
     <div class="footer">
-        <div class="position" th:text="'P' + ${homePosition}"></div>
+        <div class="team-total" th:classappend="${homeIsWinner ? 'winner' : ''}" th:text="${homeTotal}"></div>
         <div class="season-name" th:text="${seasonName}"></div>
-        <div class="position" th:text="'P' + ${awayPosition}"></div>
+        <div class="team-total" th:classappend="${awayIsWinner ? 'winner' : ''}" th:text="${awayTotal}"></div>
     </div>
 </body>
 </html>
