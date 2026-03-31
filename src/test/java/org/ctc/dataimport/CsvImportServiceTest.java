@@ -6,6 +6,7 @@ import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.PlayoffMatchupRepository;
+import org.ctc.domain.repository.PlayoffRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
@@ -37,6 +38,7 @@ class CsvImportServiceTest {
     @Mock private MatchRepository matchRepository;
     @Mock private RaceRepository raceRepository;
     @Mock private PlayoffMatchupRepository playoffMatchupRepository;
+    @Mock private PlayoffRepository playoffRepository;
     @Mock private ScoringService scoringService;
     @Mock private RaceLineupRepository raceLineupRepository;
 
@@ -355,5 +357,172 @@ class CsvImportServiceTest {
 
         assertThat(preview.hasErrors()).isTrue();
         assertThat(preview.getRows()).isEmpty();
+    }
+
+    // --- checkDuplicate ---
+
+    @Test
+    void checkDuplicate_whenMatchExists_returnsTrue() {
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+                matchday.getId(), standaloneTeam1.getId(), standaloneTeam2.getId())).thenReturn(true);
+
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(new CsvImportService.ImportRow("BRV", "d1", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("d1", driver1)));
+        preview.addRow(new CsvImportService.ImportRow("CRL", "d2", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("d2", driver2)));
+
+        boolean isDuplicate = csvImportService.checkDuplicate(preview);
+
+        assertThat(isDuplicate).isTrue();
+        assertThat(preview.isDuplicateDetected()).isTrue();
+    }
+
+    @Test
+    void checkDuplicate_whenNoMatchExists_returnsFalse() {
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any())).thenReturn(false);
+
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(new CsvImportService.ImportRow("BRV", "d1", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("d1", driver1)));
+        preview.addRow(new CsvImportService.ImportRow("CRL", "d2", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("d2", driver2)));
+
+        boolean isDuplicate = csvImportService.checkDuplicate(preview);
+
+        assertThat(isDuplicate).isFalse();
+    }
+
+    @Test
+    void checkDuplicate_withNoMatchday_returnsFalse() {
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of());
+
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), "NonExistent MD", null, null);
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(new CsvImportService.ImportRow("BRV", "d1", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("d1", driver1)));
+        preview.addRow(new CsvImportService.ImportRow("CRL", "d2", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("d2", driver2)));
+
+        boolean isDuplicate = csvImportService.checkDuplicate(preview);
+
+        assertThat(isDuplicate).isFalse();
+    }
+
+    // --- getPlayoffMatchups ---
+
+    @Test
+    void getPlayoffMatchups_returnsReadyMatchups() {
+        var playoff = new Playoff();
+        playoff.setId(UUID.randomUUID());
+
+        var round = new PlayoffRound();
+        round.setId(UUID.randomUUID());
+        round.setLabel("Quarterfinal");
+        round.setPlayoff(playoff);
+
+        var team1 = standaloneTeam1;
+        var team2 = standaloneTeam2;
+        var matchup = new PlayoffMatchup();
+        matchup.setId(UUID.randomUUID());
+        matchup.setRound(round);
+        matchup.setTeam1(team1);
+        matchup.setTeam2(team2);
+
+        when(seasonRepository.findAll()).thenReturn(List.of(season));
+        when(playoffRepository.findBySeasonId(season.getId())).thenReturn(Optional.of(playoff));
+        when(playoffMatchupRepository.findByRoundPlayoffId(playoff.getId())).thenReturn(List.of(matchup));
+
+        var matchups = csvImportService.getPlayoffMatchups();
+
+        assertThat(matchups).hasSize(1);
+        assertThat(matchups.getFirst().team1()).isEqualTo("BRV");
+        assertThat(matchups.getFirst().team2()).isEqualTo("CRL");
+        assertThat(matchups.getFirst().roundLabel()).isEqualTo("Quarterfinal");
+    }
+
+    // --- parseAndPreview edge cases ---
+
+    @Test
+    void parseAndPreview_withInvalidPosition_addsError() throws Exception {
+        var csvContent = "BRV,drv1,abc,1,false\n";
+        var stream = new java.io.ByteArrayInputStream(csvContent.getBytes());
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), "MD1", null, null);
+
+        var preview = csvImportService.parseAndPreview(stream, metadata);
+
+        assertThat(preview.hasErrors()).isTrue();
+        assertThat(preview.getErrors().getFirst()).contains("Invalid value for Position");
+        assertThat(preview.getRows()).isEmpty();
+    }
+
+    @Test
+    void parseAndPreview_withBlankLines_skipsBlankLines() throws Exception {
+        when(driverMatchingService.findDriver("drv1"))
+                .thenReturn(DriverMatchingService.MatchResult.exact("drv1", driver1));
+
+        var csvContent = "Team,PSN ID,Position,Quali,FL\n\nBRV,drv1,1,1,false\n\n";
+        var stream = new java.io.ByteArrayInputStream(csvContent.getBytes());
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), "MD1", null, null);
+
+        var preview = csvImportService.parseAndPreview(stream, metadata);
+
+        assertThat(preview.getRows()).hasSize(1);
+        assertThat(preview.hasErrors()).isFalse();
+    }
+
+    // --- getMatchdayLabel ---
+
+    @Test
+    void getMatchdayLabel_existingMatchday_returnsLabel() {
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+
+        var label = csvImportService.getMatchdayLabel(matchday.getId());
+
+        assertThat(label).isPresent();
+        assertThat(label.get()).isEqualTo("Matchday 1");
+    }
+
+    @Test
+    void getMatchdayLabel_nonExistent_returnsEmpty() {
+        var randomId = UUID.randomUUID();
+        when(matchdayRepository.findById(randomId)).thenReturn(Optional.empty());
+
+        var label = csvImportService.getMatchdayLabel(randomId);
+
+        assertThat(label).isEmpty();
+    }
+
+    // --- resolveDriver edge case: unconfirmed fuzzy match ---
+
+    @Test
+    void executeImport_withUnconfirmedFuzzyMatch_addsError() {
+        setupCommonMocks();
+
+        var fuzzyDriver = new Driver("fuzzy_psn", "Fuzzy Name");
+        fuzzyDriver.setId(UUID.randomUUID());
+
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+        var row1 = new CsvImportService.ImportRow("BRV", "fuzz_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.fuzzy("fuzz_psn", fuzzyDriver, 85));
+        var row2 = new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2));
+
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(row1);
+        preview.addRow(row2);
+
+        // No confirmation for fuzzy match, not in createNewDrivers
+        var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
+
+        assertThat(result.hasErrors()).isTrue();
+        assertThat(result.getErrors().getFirst()).contains("could not be assigned");
     }
 }

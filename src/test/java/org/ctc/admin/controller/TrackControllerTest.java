@@ -159,4 +159,40 @@ class TrackControllerTest {
 
         assertTrue(trackRepository.findById(track.getId()).isPresent());
     }
+
+    // --- POST /admin/tracks/{id}/image ---
+
+    @Test
+    void shouldUploadImage() throws Exception {
+        var imageFile = new org.springframework.mock.web.MockMultipartFile(
+                "image", "track.png", "image/png", new byte[]{1, 2, 3});
+
+        mockMvc.perform(multipart("/admin/tracks/" + track.getId() + "/image").file(imageFile))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tracks/" + track.getId() + "/edit"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        var updated = trackRepository.findById(track.getId()).orElseThrow();
+        assertNotNull(updated.getImageUrl());
+        assertTrue(updated.getImageUrl().contains("track.png"));
+    }
+
+    @Test
+    void shouldNotDeleteTrackWhenAssignedToSeasonPool() throws Exception {
+        var rs = raceScoringRepository.save(new RaceScoring("TP RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0));
+        var ms = matchScoringRepository.save(new MatchScoring("TP MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
+        var s = new Season("Pool Test Season", 2026, 1);
+        s.setRaceScoring(rs);
+        s.setMatchScoring(ms);
+        var season = seasonRepository.save(s);
+        season.getTracks().add(track);
+        seasonRepository.save(season);
+
+        mockMvc.perform(post("/admin/tracks/" + track.getId() + "/delete"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tracks"))
+                .andExpect(flash().attributeExists("errorMessage"));
+
+        assertTrue(trackRepository.findById(track.getId()).isPresent());
+    }
 }

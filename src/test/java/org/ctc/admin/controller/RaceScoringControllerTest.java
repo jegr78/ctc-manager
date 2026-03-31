@@ -84,4 +84,33 @@ class RaceScoringControllerTest {
 
         assertFalse(raceScoringRepository.existsById(id));
     }
+
+    @Test
+    void shouldUpdateExistingRaceScoring() throws Exception {
+        var scoring = raceScoringRepository.save(new RaceScoring("Update Test", "20,17", null, 0));
+
+        mockMvc.perform(post("/admin/race-scorings/save")
+                        .param("id", scoring.getId().toString())
+                        .param("name", "Updated RS")
+                        .param("racePoints", "25,20,15")
+                        .param("qualiPoints", "3,2,1")
+                        .param("fastestLapPoints", "1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/race-scorings"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        var updated = raceScoringRepository.findById(scoring.getId()).orElseThrow();
+        assertEquals("Updated RS", updated.getName());
+        assertEquals("25,20,15", updated.getRacePoints());
+    }
+
+    @Test
+    void shouldRejectBlankName() throws Exception {
+        mockMvc.perform(post("/admin/race-scorings/save")
+                        .param("name", "")
+                        .param("racePoints", "20,17")
+                        .param("fastestLapPoints", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/race-scoring-form"));
+    }
 }

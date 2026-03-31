@@ -530,6 +530,219 @@ class RaceManagementServiceTest {
         assertThat(result.success()).isTrue();
     }
 
+    // --- getNewRaceFormData ---
+
+    @Test
+    void getNewRaceFormData_withMatchdayId_populatesSeasonPools() {
+        var matchday = createMatchday();
+        var season = matchday.getSeason();
+        var car = new Car();
+        car.setId(UUID.randomUUID());
+        season.getCars().add(car);
+        var track = new Track();
+        track.setId(UUID.randomUUID());
+        season.getTracks().add(track);
+
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
+        when(teamRepository.findAll()).thenReturn(List.of());
+
+        var data = service.getNewRaceFormData(matchday.getId());
+
+        assertThat(data.form().getMatchdayId()).isEqualTo(matchday.getId());
+        assertThat(data.seasonCars()).containsExactly(car);
+        assertThat(data.seasonTracks()).containsExactly(track);
+    }
+
+    @Test
+    void getNewRaceFormData_withoutMatchdayId_returnsEmptyPools() {
+        when(matchdayRepository.findAll()).thenReturn(List.of());
+        when(teamRepository.findAll()).thenReturn(List.of());
+
+        var data = service.getNewRaceFormData(null);
+
+        assertThat(data.form().getMatchdayId()).isNull();
+        assertThat(data.seasonCars()).isEmpty();
+        assertThat(data.seasonTracks()).isEmpty();
+    }
+
+    // --- getRaceFormData (edit) ---
+
+    @Test
+    void getRaceFormData_populatesFormFromExistingRace() {
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var matchday = createMatchday();
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
+        when(teamRepository.findAll()).thenReturn(List.of(homeTeam, awayTeam));
+        when(raceRepository.findByMatchdaySeasonId(any())).thenReturn(List.of());
+
+        var data = service.getRaceFormData(race.getId());
+
+        assertThat(data.form().getId()).isEqualTo(race.getId());
+        assertThat(data.form().getHomeTeamId()).isEqualTo(homeTeam.getId());
+        assertThat(data.form().getAwayTeamId()).isEqualTo(awayTeam.getId());
+    }
+
+    // --- getResultsFormData ---
+
+    @Test
+    void getResultsFormData_withoutResults_populatesDriversFromLineup() {
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var matchday = createMatchday();
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        var driver = new Driver("psn1", "Nick1");
+        driver.setId(UUID.randomUUID());
+        driver.setSeasonDrivers(List.of());
+        var lineup = new RaceLineup(race, driver, homeTeam);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of(lineup));
+
+        var data = service.getResultsFormData(race.getId());
+
+        assertThat(data.form().getResults()).isNotEmpty();
+        assertThat(data.form().getResults().get(0).getDriverId()).isEqualTo(driver.getId());
+    }
+
+    // --- uploadAttachment ---
+
+    @Test
+    void uploadAttachment_storesFileAndCreatesAttachment() throws Exception {
+        var raceId = UUID.randomUUID();
+        var race = new Race();
+        race.setId(raceId);
+
+        var file = mock(org.springframework.web.multipart.MultipartFile.class);
+        when(file.getOriginalFilename()).thenReturn("screenshot.png");
+
+        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+        when(fileStorageService.store(eq(raceId), any())).thenReturn("/uploads/races/" + raceId + "/screenshot.png");
+
+        var name = service.uploadAttachment(raceId, file);
+
+        assertThat(name).isEqualTo("screenshot.png");
+        verify(fileStorageService).store(eq(raceId), any());
+        verify(raceAttachmentRepository).save(argThat(att ->
+                att.getName().equals("screenshot.png") && att.getType() == AttachmentType.FILE));
+    }
+
+    // --- downloadAttachment ---
+
+    @Test
+    void downloadAttachment_linkType_returnsBadRequest() {
+        var attachmentId = UUID.randomUUID();
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var attachment = new RaceAttachment(race, AttachmentType.LINK, "Replay", "https://youtube.com");
+        attachment.setId(attachmentId);
+
+        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+
+        var response = service.downloadAttachment(attachmentId);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+    }
+
+    // --- saveRace edit ---
+
+    @Test
+    void saveRace_editExisting_updatesRace() {
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var matchday = createMatchday();
+        var existingMatch = new Match(matchday, homeTeam, awayTeam);
+        var existingRace = new Race();
+        existingRace.setId(UUID.randomUUID());
+        existingRace.setMatchday(matchday);
+        existingRace.setMatch(existingMatch);
+
+        var form = new RaceForm();
+        form.setId(existingRace.getId());
+        form.setMatchdayId(matchday.getId());
+        form.setHomeTeamId(homeTeam.getId());
+        form.setAwayTeamId(awayTeam.getId());
+
+        when(matchdayRepository.findById(form.getMatchdayId())).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(form.getHomeTeamId())).thenReturn(Optional.of(homeTeam));
+        when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
+        when(raceRepository.findById(existingRace.getId())).thenReturn(Optional.of(existingRace));
+        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var result = service.saveRace(form);
+
+        assertThat(result.success()).isTrue();
+        verify(raceRepository).save(existingRace);
+        verify(matchRepository, never()).save(any());
+    }
+
+    // --- saveRace track not in pool ---
+
+    @Test
+    void saveRace_trackNotInSeasonPool_returnsError() {
+        var form = new RaceForm();
+        form.setMatchdayId(UUID.randomUUID());
+        form.setHomeTeamId(UUID.randomUUID());
+        form.setAwayTeamId(UUID.randomUUID());
+        form.setTrackId(UUID.randomUUID());
+
+        var matchday = createMatchday();
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var track = new Track();
+        track.setId(form.getTrackId());
+
+        when(matchdayRepository.findById(form.getMatchdayId())).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(form.getHomeTeamId())).thenReturn(Optional.of(homeTeam));
+        when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
+        when(trackRepository.findById(form.getTrackId())).thenReturn(Optional.of(track));
+
+        var result = service.saveRace(form);
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.message()).contains("Track is not in this season's pool");
+    }
+
+    // --- generateLineup ---
+
+    @Test
+    void generateLineup_createsAttachment() throws Exception {
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setLabel("MD 1");
+        matchday.setSeason(new Season("S"));
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(lineupGraphicService.generateLineup(race)).thenReturn("/uploads/races/" + race.getId() + "/lineup.png");
+
+        service.generateLineup(race.getId());
+
+        verify(raceAttachmentRepository).save(argThat(att ->
+                att.getName().equals("MD 1-HOM-AWY-Lineups")
+                        && att.getUrl().endsWith("/lineup.png")
+                        && att.getType() == AttachmentType.FILE));
+    }
+
     // --- Helper methods ---
 
     private Race createRaceWithScore(int homeScore, int awayScore) {
