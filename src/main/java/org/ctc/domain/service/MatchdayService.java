@@ -111,23 +111,21 @@ public class MatchdayService {
         return seasonId;
     }
 
-    // --- By season name (JSON API) ---
+    // --- By season ID (JSON API) ---
 
-    public List<MatchdayDto> getMatchdaysBySeason(String seasonName) {
-        return seasonRepository.findByName(seasonName)
-                .map(season -> matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
-                        .map(md -> new MatchdayDto(md.getId(), md.getLabel(), md.getSortIndex()))
-                        .toList())
-                .orElse(List.of());
+    public List<MatchdayDto> getMatchdaysBySeason(UUID seasonId) {
+        return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId).stream()
+                .map(md -> new MatchdayDto(md.getId(), md.getLabel(), md.getSortIndex()))
+                .toList();
     }
 
     // --- Create inline (JSON API) ---
 
     @Transactional
-    public MatchdayDto createInline(String seasonName, String label) {
-        var season = seasonRepository.findByName(seasonName)
+    public MatchdayDto createInline(UUID seasonId, String label) {
+        var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Season not found: " + seasonName));
+                        "Season not found: " + seasonId));
 
         var existingMatchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
 

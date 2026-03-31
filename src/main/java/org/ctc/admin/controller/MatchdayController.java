@@ -90,14 +90,14 @@ public class MatchdayController {
 
     @GetMapping("/by-season")
     @ResponseBody
-    public List<MatchdayDto> matchdaysBySeason(@RequestParam String seasonName) {
-        return matchdayService.getMatchdaysBySeason(seasonName);
+    public List<MatchdayDto> matchdaysBySeason(@RequestParam UUID seasonId) {
+        return matchdayService.getMatchdaysBySeason(seasonId);
     }
 
     @PostMapping("/create-inline")
     @ResponseBody
     public ResponseEntity<MatchdayDto> createInline(@Valid @RequestBody CreateMatchdayRequest request) {
-        var dto = matchdayService.createInline(request.seasonName(), request.label());
+        var dto = matchdayService.createInline(request.seasonId(), request.label());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 }

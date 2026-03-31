@@ -1,6 +1,9 @@
 package org.ctc.admin.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
-public record CreateMatchdayRequest(@NotBlank String seasonName, @NotBlank String label) {
+import java.util.UUID;
+
+public record CreateMatchdayRequest(@NotNull UUID seasonId, @NotBlank String label) {
 }
