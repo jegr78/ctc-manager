@@ -4,6 +4,8 @@
 
 Season hat bisher nur ein `name`-Feld, aus dem Grafik-Generatoren per Regex das Jahr extrahieren (`extractYear()`). Das ist fragil und erfordert ein bestimmtes Namens-Pattern. Durch strukturierte Felder können Grafik-Generatoren und UI-Komponenten die Informationen direkt aus der Season lesen, ohne Parse-Logik.
 
+Zusätzlich ist `name` aktuell UNIQUE, was verhindert, dass mehrere Seasons denselben Namen tragen (z.B. "Regular Season"). Der UNIQUE-Constraint wird entfernt und `findByName()` durch ID-basierte Lookups ersetzt.
+
 ## Datenmodell
 
 ### Neue Felder auf `Season`
@@ -14,15 +16,19 @@ Season hat bisher nur ein `name`-Feld, aus dem Grafik-Generatoren per Regex das 
 | `number` | `int` | `number INT NOT NULL` | Pflicht | `4` |
 | `description` | `String` | `description VARCHAR(255)` | Optional | `"Group A"` |
 
-**`name`** bleibt als frei wählbares Display-Label (UNIQUE, NOT NULL).
+### Änderung an `name`
+
+- **UNIQUE-Constraint entfernen** — `name` bleibt NOT NULL, aber nicht mehr UNIQUE
+- Mehrere Seasons dürfen denselben Namen tragen (z.B. "Regular Season")
 
 ### Schema-Änderung
 
-Direkt in `V1__initial_schema.sql` ergänzen (Schema noch nicht veröffentlicht):
+Direkt in `V1__initial_schema.sql` anpassen (Schema noch nicht veröffentlicht):
 
 ```sql
 CREATE TABLE seasons (
     ...
+    name VARCHAR(255) NOT NULL,          -- UNIQUE entfernt!
     year INT NOT NULL,
     number INT NOT NULL,
     description VARCHAR(255),
@@ -49,12 +55,13 @@ Wird verwendet in allen **Dropdowns, Filter-Selects, Auswahllisten und Übersich
 ### 1. Entity — `Season.java`
 
 - Neue Felder: `year` (int, `@Column(nullable = false)`), `number` (int, `@Column(nullable = false)`), `description` (String)
+- **UNIQUE von `name` entfernen** (`@Column(nullable = false)` ohne `unique = true`)
 - Neue Methode: `getDisplayLabel()`
 - Konstruktor erweitern: `Season(String name, int year, int number)`
 
 ### 2. DTO — `SeasonForm.java`
 
-- Neue Felder: `year` (int, `@NotNull`), `number` (int, `@NotNull`), `description` (String)
+- Neue Felder: `year` (int), `number` (int), `description` (String)
 
 ### 3. Controller — `SeasonController.java`
 
@@ -106,7 +113,23 @@ slugify(season.getName())
 slugify(season.getDisplayLabel())
 ```
 
-### 8. TestDataService
+### 8. findByName() → findById() Refactoring
+
+`SeasonRepository.findByName()` wird entfernt. Alle Stellen, die bisher per Season-Name suchen, verwenden künftig die Season-ID:
+
+| Stelle | Vorher | Nachher |
+|--------|--------|---------|
+| `CsvImportController` | `@RequestParam String seasonName` | `@RequestParam UUID seasonId` |
+| `CsvImportService.executeImport()` | `findByName(metadata.seasonName())` | `findById(metadata.seasonId())` |
+| `CsvImportService.ImportMetadata` | `seasonName` (String) | `seasonId` (UUID) |
+| `MatchdayService.getMatchdaysBySeason()` | `findByName(seasonName)` | `findById(seasonId)` |
+| `MatchdayService.createInline()` | `findByName(seasonName)` | `findById(seasonId)` |
+| `MatchdayController` | `seasonName` Parameter | `seasonId` Parameter |
+| `SeasonRepository` | `findByName()` entfernen | — |
+
+Die Import-Formulare im UI übergeben bereits die Season-ID oder können einfach darauf umgestellt werden.
+
+### 9. TestDataService
 
 Season-Erstellung um year/number/description erweitern:
 
@@ -122,9 +145,8 @@ Analog für alle Test-Seasons (Season 1-4, Test-Seasons).
 
 ## Nicht betroffen
 
-- **SeasonRepository** — `findByName()` bleibt unverändert
 - **Logging** — weiterhin `season.getName()`
-- **CSV-Import** — referenziert Seasons per Name, bleibt
+- **Site-Templates** — weiterhin `season.name`
 
 ## Verifikation
 
@@ -133,5 +155,6 @@ Analog für alle Test-Seasons (Season 1-4, Test-Seasons).
    - Season erstellen mit year/number/description → prüfen ob gespeichert
    - Season-Liste zeigt DisplayLabel
    - Alle Dropdowns (Race-Form, Matchday-Liste) zeigen DisplayLabel
+   - CSV-Import funktioniert mit Season-ID statt Name
 3. Grafik-Generierung testen (Lineup + Results) → seasonYear korrekt
 4. SiteGenerator → Verzeichnisstruktur mit neuem Slug-Format prüfen
