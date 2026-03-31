@@ -518,6 +518,28 @@ class RaceControllerTest {
                 .andExpect(model().attributeExists("race", "homeTotal", "awayTotal", "driverTeamMap"));
     }
 
+    // --- Race detail with results-graphic flags ---
+
+    @Test
+    void shouldShowRaceDetailWithResultsGraphicFlags() throws Exception {
+        mockMvc.perform(get("/admin/races/" + race.getId()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/race-detail"))
+                .andExpect(model().attributeExists("canGenerateResults", "resultsMissing", "resultsExist"))
+                .andExpect(model().attribute("resultsMissing", true))
+                .andExpect(model().attribute("canGenerateResults", false));
+    }
+
+    // --- POST /admin/races/{id}/generate-results ---
+
+    @Test
+    void generateResults_withoutResults_shouldShowError() throws Exception {
+        mockMvc.perform(post("/admin/races/" + race.getId() + "/generate-results"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/races/" + race.getId()))
+                .andExpect(flash().attributeExists("errorMessage"));
+    }
+
     // --- List races with scores ---
 
     @Test
