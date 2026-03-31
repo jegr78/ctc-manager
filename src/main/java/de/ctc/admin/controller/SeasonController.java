@@ -3,6 +3,7 @@ package de.ctc.admin.controller;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
 import de.ctc.domain.service.FileStorageService;
+import de.ctc.domain.service.ScoringService;
 import de.ctc.domain.service.SwissPairingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class SeasonController {
     private final MatchScoringRepository matchScoringRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final FileStorageService fileStorageService;
+    private final ScoringService scoringService;
     private final SwissPairingService swissPairingService;
 
     @GetMapping("/{id}")
@@ -300,11 +302,7 @@ public class SeasonController {
     }
 
     private boolean isHomeTeamDriver(RaceResult result, Race race) {
-        UUID seasonId = race.getMatchday().getSeason().getId();
-        return result.getDriver().getSeasonDrivers().stream()
-                .anyMatch(sd -> sd.getSeason().getId().equals(seasonId)
-                        && (sd.getTeam().getId().equals(race.getHomeTeam().getId())
-                            || sd.getTeam().getId().equals(race.getHomeTeam().getParentOrSelf().getId())));
+        return scoringService.isDriverInTeam(result, race.getId(), race.getHomeTeam().getId());
     }
 
     private void addScoringLists(Model model) {

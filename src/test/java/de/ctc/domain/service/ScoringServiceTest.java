@@ -1,27 +1,31 @@
 package de.ctc.domain.service;
 
-import de.ctc.domain.model.Driver;
-import de.ctc.domain.model.Race;
-import de.ctc.domain.model.RaceResult;
-import de.ctc.domain.model.RaceScoring;
-import org.junit.jupiter.api.BeforeEach;
+import de.ctc.domain.model.*;
+import de.ctc.domain.repository.RaceLineupRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class ScoringServiceTest {
 
-    private ScoringService scoringService;
+    @Mock
+    private RaceLineupRepository raceLineupRepository;
 
-    @BeforeEach
-    void setUp() {
-        scoringService = new ScoringService();
-    }
+    @InjectMocks
+    private ScoringService scoringService;
 
     // Standard scoring preset matching current hardcoded values
     private static RaceScoring standardScoring() {
@@ -132,6 +136,142 @@ class ScoringServiceTest {
             result.setRace(race);
             result.setDriver(new Driver(psnId, psnId));
             result.setPointsTotal(total);
+            return result;
+        }
+    }
+
+    @Nested
+    class AggregateMatchScoresTest {
+
+        @Test
+        void shouldUseRaceLineupForTeamAssignment() {
+            var homeTeam = createTeam("Home");
+            var awayTeam = createTeam("Away");
+            var match = createMatch(homeTeam, awayTeam);
+            var race = createRace(match);
+
+            var homeDriver = createDriver("home_d");
+            var awayDriver = createDriver("away_d");
+
+            var r1 = createResult(race, homeDriver, 10);
+            var r2 = createResult(race, awayDriver, 7);
+            race.setResults(List.of(r1, r2));
+            match.setRaces(new ArrayList<>(List.of(race)));
+
+            // RaceLineup determines team assignment
+            when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), homeDriver.getId()))
+                    .thenReturn(Optional.of(new RaceLineup(race, homeDriver, homeTeam)));
+            when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), awayDriver.getId()))
+                    .thenReturn(Optional.of(new RaceLineup(race, awayDriver, awayTeam)));
+
+            scoringService.aggregateMatchScores(race);
+
+            assertEquals(10, match.getHomeScore());
+            assertEquals(7, match.getAwayScore());
+        }
+
+        @Test
+        void shouldFallbackToSeasonDriverWhenNoLineup() {
+            var homeTeam = createTeam("Home");
+            var awayTeam = createTeam("Away");
+            var match = createMatch(homeTeam, awayTeam);
+            var race = createRace(match);
+            var season = new Season("Test");
+            season.setId(UUID.randomUUID());
+
+            var homeDriver = createDriver("home_d");
+            var awayDriver = createDriver("away_d");
+
+            // Set up SeasonDriver as fallback
+            var homeSd = new SeasonDriver();
+            homeSd.setTeam(homeTeam);
+            homeSd.setSeason(season);
+            homeDriver.setSeasonDrivers(new ArrayList<>(List.of(homeSd)));
+
+            var awaySd = new SeasonDriver();
+            awaySd.setTeam(awayTeam);
+            awaySd.setSeason(season);
+            awayDriver.setSeasonDrivers(new ArrayList<>(List.of(awaySd)));
+
+            var r1 = createResult(race, homeDriver, 15);
+            var r2 = createResult(race, awayDriver, 12);
+            race.setResults(List.of(r1, r2));
+            match.setRaces(new ArrayList<>(List.of(race)));
+
+            // No RaceLineup exists — fallback to SeasonDriver
+            when(raceLineupRepository.findByRaceIdAndDriverId(any(), any()))
+                    .thenReturn(Optional.empty());
+
+            scoringService.aggregateMatchScores(race);
+
+            assertEquals(15, match.getHomeScore());
+            assertEquals(12, match.getAwayScore());
+        }
+
+        @Test
+        void shouldResolveSubTeamToParentTeam() {
+            var parentTeam = createTeam("Parent");
+            var subTeam = createTeam("Sub");
+            subTeam.setParentTeam(parentTeam);
+            var awayTeam = createTeam("Away");
+
+            // Match is between parent team and away team
+            var match = createMatch(parentTeam, awayTeam);
+            var race = createRace(match);
+
+            var driver = createDriver("sub_driver");
+            var r1 = createResult(race, driver, 20);
+            race.setResults(List.of(r1));
+            match.setRaces(new ArrayList<>(List.of(race)));
+
+            // RaceLineup points to sub-team, but match uses parent team
+            when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId()))
+                    .thenReturn(Optional.of(new RaceLineup(race, driver, subTeam)));
+
+            scoringService.aggregateMatchScores(race);
+
+            // Driver's points should count for home (parent) team
+            assertEquals(20, match.getHomeScore());
+            assertEquals(0, match.getAwayScore());
+        }
+
+        private Team createTeam(String name) {
+            var team = new Team(name, name);
+            team.setId(UUID.randomUUID());
+            return team;
+        }
+
+        private Match createMatch(Team home, Team away) {
+            var matchday = new Matchday();
+            matchday.setId(UUID.randomUUID());
+            var match = new Match();
+            match.setId(UUID.randomUUID());
+            match.setMatchday(matchday);
+            match.setHomeTeam(home);
+            match.setAwayTeam(away);
+            return match;
+        }
+
+        private Race createRace(Match match) {
+            var race = new Race();
+            race.setId(UUID.randomUUID());
+            race.setMatch(match);
+            race.setMatchday(match.getMatchday());
+            return race;
+        }
+
+        private Driver createDriver(String psnId) {
+            var driver = new Driver(psnId, psnId);
+            driver.setId(UUID.randomUUID());
+            driver.setSeasonDrivers(new ArrayList<>());
+            return driver;
+        }
+
+        private RaceResult createResult(Race race, Driver driver, int totalPoints) {
+            var result = new RaceResult();
+            result.setRace(race);
+            result.setDriver(driver);
+            result.setPointsTotal(totalPoints);
             return result;
         }
     }
