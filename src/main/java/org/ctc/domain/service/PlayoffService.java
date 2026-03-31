@@ -34,14 +34,15 @@ public class PlayoffService {
     private final ScoringService scoringService;
 
     private static final Map<Integer, List<String>> DEFAULT_ROUND_LABELS = Map.of(
-            4, List.of("Halbfinale", "Finale"),
-            8, List.of("Viertelfinale", "Halbfinale", "Finale")
+            2, List.of("Final"),
+            4, List.of("Semifinal", "Final"),
+            8, List.of("Quarterfinal", "Semifinal", "Final")
     );
 
     @Transactional
     public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams) {
-        if (numberOfTeams != 4 && numberOfTeams != 8) {
-            throw new IllegalArgumentException("Number of teams must be 4 or 8, got: " + numberOfTeams);
+        if (!DEFAULT_ROUND_LABELS.containsKey(numberOfTeams)) {
+            throw new IllegalArgumentException("Number of teams must be 2, 4 or 8, got: " + numberOfTeams);
         }
 
         // #7: Check for existing playoff
