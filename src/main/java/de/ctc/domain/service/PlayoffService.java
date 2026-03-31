@@ -1,5 +1,6 @@
 package de.ctc.domain.service;
 
+import de.ctc.admin.dto.SeedForm;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
 import lombok.Getter;
@@ -8,8 +9,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.*;
+
+/**
+ * Service for all playoff business logic: bracket creation, seeding, matchup management,
+ * race creation, winner determination and bracket view assembly.
+ */
 
 @Slf4j
 @Service
@@ -22,6 +30,7 @@ public class PlayoffService {
     private final RaceRepository raceRepository;
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
+    private final MatchdayRepository matchdayRepository;
     private final ScoringService scoringService;
 
     private static final Map<Integer, List<String>> DEFAULT_ROUND_LABELS = Map.of(
@@ -309,6 +318,156 @@ public class PlayoffService {
                 legViews
         );
     }
+
+    // --- New service methods (extracted from PlayoffController) ---
+
+    @Transactional
+    public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams,
+                                  LocalDate startDate, LocalDate endDate) {
+        var playoff = createPlayoff(seasonId, name, numberOfTeams);
+        playoff.setStartDate(startDate);
+        playoff.setEndDate(endDate);
+        return playoffRepository.save(playoff);
+    }
+
+    @Transactional(readOnly = true)
+    public PlayoffListData getPlayoffListData(UUID seasonId) {
+        var allSeasons = seasonRepository.findAll();
+
+        UUID effectiveSeasonId = seasonId;
+        if (effectiveSeasonId == null) {
+            effectiveSeasonId = allSeasons.stream()
+                    .filter(Season::isActive)
+                    .map(Season::getId)
+                    .findFirst().orElse(null);
+        }
+
+        Playoff playoff = null;
+        PlayoffBracketView bracketView = null;
+        if (effectiveSeasonId != null) {
+            var optPlayoff = playoffRepository.findBySeasonId(effectiveSeasonId);
+            if (optPlayoff.isPresent()) {
+                playoff = optPlayoff.get();
+                bracketView = getBracketView(playoff.getId());
+            }
+        }
+
+        return new PlayoffListData(playoff, bracketView, allSeasons, effectiveSeasonId);
+    }
+
+    @Transactional
+    public PlayoffRound setRoundLegs(UUID roundId, int bestOfLegs) {
+        var round = playoffRoundRepository.findById(roundId)
+                .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId));
+        round.setBestOfLegs(bestOfLegs);
+        return playoffRoundRepository.save(round);
+    }
+
+    @Transactional(readOnly = true)
+    public SeedingData getSeedingData(UUID playoffId) {
+        var playoff = playoffRepository.findById(playoffId)
+                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+        var bracket = getBracketView(playoffId);
+
+        var firstRound = playoff.getRounds().stream()
+                .filter(r -> r.getRoundIndex() == 0)
+                .findFirst().orElseThrow();
+
+        var teams = getPlayoffTeams(playoffId);
+
+        Set<UUID> seededTeamIds = firstRound.getMatchups().stream()
+                .flatMap(m -> {
+                    var ids = new ArrayList<UUID>();
+                    if (m.getTeam1() != null) ids.add(m.getTeam1().getId());
+                    if (m.getTeam2() != null) ids.add(m.getTeam2().getId());
+                    return ids.stream();
+                })
+                .collect(Collectors.toSet());
+
+        return new SeedingData(playoff, bracket, firstRound, teams, seededTeamIds);
+    }
+
+    @Transactional
+    public void saveSeed(UUID playoffId, SeedForm form) {
+        for (var entry : form.getSeeds()) {
+            if (entry.getTeamId() != null) {
+                seedTeam(entry.getMatchupId(), entry.getTeamId(), entry.getSlot());
+            }
+        }
+        log.info("Seeding saved for playoff {}", playoffId);
+    }
+
+    @Transactional(readOnly = true)
+    public MatchupDetailData getMatchupDetail(UUID matchupId) {
+        var matchup = playoffMatchupRepository.findById(matchupId)
+                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId));
+        var legs = raceRepository.findByPlayoffMatchupId(matchupId);
+        var playoff = matchup.getRound().getPlayoff();
+        return new MatchupDetailData(matchup, legs, playoff);
+    }
+
+    @Transactional
+    public Race addRaceToMatchup(UUID matchupId, String track, String car, LocalDateTime dateTime) {
+        var matchup = playoffMatchupRepository.findById(matchupId)
+                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId));
+
+        if (!matchup.isReady()) {
+            throw new IllegalStateException("Both teams must be set");
+        }
+
+        int existingLegs = raceRepository.findByPlayoffMatchupId(matchupId).size();
+        int maxLegs = matchup.getRound().getBestOfLegs();
+        if (existingLegs >= maxLegs) {
+            throw new IllegalStateException("Maximum number of legs reached (" + maxLegs + ")");
+        }
+
+        // Auto-create matchday for this playoff leg
+        var season = matchup.getRound().getPlayoff().getSeason();
+        int legNumber = existingLegs + 1;
+        String label = matchup.getRound().getLabel() + " - Leg " + legNumber;
+        var matchday = new Matchday(season, label,
+                100 + matchup.getRound().getRoundIndex() * 10 + legNumber);
+        matchday = matchdayRepository.save(matchday);
+
+        var race = new Race();
+        race.setMatchday(matchday);
+        race.setDateTime(dateTime);
+        race.setPlayoffMatchup(matchup);
+        race = raceRepository.save(race);
+
+        log.info("Added leg {} to matchup {} (round: {})", legNumber, matchupId,
+                matchup.getRound().getLabel());
+        return race;
+    }
+
+    public UUID getSeasonIdForPlayoff(UUID playoffId) {
+        return playoffRepository.findById(playoffId)
+                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId))
+                .getSeason().getId();
+    }
+
+    public UUID getSeasonIdForMatchup(UUID matchupId) {
+        return playoffMatchupRepository.findById(matchupId)
+                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId))
+                .getRound().getPlayoff().getSeason().getId();
+    }
+
+    public UUID getSeasonIdForRound(UUID roundId) {
+        return playoffRoundRepository.findById(roundId)
+                .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId))
+                .getPlayoff().getSeason().getId();
+    }
+
+    // --- Record types for service return data ---
+
+    public record PlayoffListData(Playoff playoff, PlayoffBracketView bracketView,
+                                   List<Season> allSeasons, UUID selectedSeasonId) {}
+
+    public record SeedingData(Playoff playoff, PlayoffBracketView bracketView,
+                               PlayoffRound firstRound, List<Team> teams,
+                               Set<UUID> seededTeamIds) {}
+
+    public record MatchupDetailData(PlayoffMatchup matchup, List<Race> legs, Playoff playoff) {}
 
     // --- DTOs ---
 
