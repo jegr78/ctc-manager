@@ -38,7 +38,8 @@ class Gt7SyncServiceTest {
     );
 
     @Test
-    void shouldPreviewWithNewAndExistingCars() throws IOException {
+    void givenMixOfNewAndExistingCarsAndTracks_whenFetchAndPreview_thenReturnsCorrectCounts() throws IOException {
+        // given
         when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
         when(scraperService.scrapeTracks()).thenReturn(SCRAPED_TRACKS);
 
@@ -52,8 +53,10 @@ class Gt7SyncServiceTest {
         when(trackRepository.existsByName("Deep Forest Raceway")).thenReturn(true);
         when(trackRepository.existsByName("Nurburgring Nordschleife")).thenReturn(false);
 
+        // when
         Gt7SyncPreview preview = syncService.fetchAndPreview();
 
+        // then
         assertThat(preview.getNewCarCount()).isEqualTo(1);
         assertThat(preview.getExistingCarCount()).isEqualTo(2);
         assertThat(preview.getNewTrackCount()).isEqualTo(1);
@@ -69,7 +72,8 @@ class Gt7SyncServiceTest {
     }
 
     @Test
-    void shouldPrioritizeGt7IdMatchOverNameMatch() throws IOException {
+    void givenCarExistsByGt7Id_whenFetchAndPreview_thenGt7IdMatchTakesPriorityOverNameMatch() throws IOException {
+        // given
         when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
         when(scraperService.scrapeTracks()).thenReturn(List.of());
 
@@ -80,8 +84,10 @@ class Gt7SyncServiceTest {
         when(carRepository.existsByGt7Id("car310")).thenReturn(false);
         when(carRepository.existsByManufacturerAndName("Alfa Romeo", "4C Gr.3")).thenReturn(false);
 
+        // when
         Gt7SyncPreview preview = syncService.fetchAndPreview();
 
+        // then
         var nissanEntry = preview.getCars().stream()
                 .filter(c -> c.gt7Id().equals("car102")).findFirst().orElseThrow();
         assertThat(nissanEntry.status()).isEqualTo(SyncStatus.EXISTS);
@@ -91,7 +97,8 @@ class Gt7SyncServiceTest {
     }
 
     @Test
-    void shouldImportOnlySelectedCars() throws IOException {
+    void givenSelectedCar_whenExecuteSync_thenImportsOnlySelectedCar() throws IOException {
+        // given
         when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
 
         when(carRepository.existsByGt7Id(anyString())).thenReturn(false);
@@ -105,16 +112,19 @@ class Gt7SyncServiceTest {
         when(fileStorageService.storeFromUrl(eq("cars"), eq(id), anyString(), eq("car310.png")))
                 .thenReturn("/uploads/cars/" + id + "/car310.png");
 
+        // when
         // Only select car310
         var result = syncService.executeSync(List.of("car310"), List.of());
 
+        // then
         assertThat(result.carsImported()).isEqualTo(1);
         assertThat(result.tracksImported()).isEqualTo(0);
         verify(carRepository, times(2)).save(any(Car.class)); // save + save with imageUrl
     }
 
     @Test
-    void shouldImportOnlySelectedTracks() throws IOException {
+    void givenSelectedTrack_whenExecuteSync_thenImportsOnlySelectedTrack() throws IOException {
+        // given
         when(scraperService.scrapeTracks(true)).thenReturn(SCRAPED_TRACKS);
         when(trackRepository.existsByName(anyString())).thenReturn(false);
         var savedTrack = new Track("Deep Forest Raceway", "Switzerland");
@@ -123,20 +133,25 @@ class Gt7SyncServiceTest {
         when(fileStorageService.storeFromUrl(eq("tracks"), any(UUID.class), anyString(), anyString()))
                 .thenReturn("/uploads/tracks/img.png");
 
+        // when
         var result = syncService.executeSync(List.of(), List.of("Deep Forest Raceway"));
 
+        // then
         assertThat(result.tracksImported()).isEqualTo(1);
         assertThat(result.carsImported()).isEqualTo(0);
         verify(trackRepository, times(2)).save(any(Track.class)); // save + save with imageUrl
     }
 
     @Test
-    void shouldSkipAlreadyExistingDuringExecute() throws IOException {
+    void givenAlreadyExistingCar_whenExecuteSync_thenSkipsImport() throws IOException {
+        // given
         when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
         when(carRepository.existsByGt7Id("car102")).thenReturn(true);
 
+        // when
         var result = syncService.executeSync(List.of("car102"), List.of());
 
+        // then
         assertThat(result.carsImported()).isEqualTo(0);
         verify(carRepository, never()).save(any(Car.class));
     }

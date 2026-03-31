@@ -48,38 +48,47 @@ class TeamCardControllerTest {
     private String uploadDir;
 
     @Test
-    void shouldShowTeamCardsPage() throws Exception {
+    void whenGetTeamCards_thenReturnsTeamCardsView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/tools/team-cards"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/team-cards"))
                 .andExpect(model().attributeExists("seasons"));
     }
 
     @Test
-    void shouldShowTeamCardsPageWithSeasonFilter() throws Exception {
+    void givenSeasonId_whenGetTeamCardsWithFilter_thenReturnsFilteredView() throws Exception {
+        // given
         var season = testHelper.createSeason("Test_TeamCard Season");
         season.setActive(true);
 
+        // when
         mockMvc.perform(get("/admin/tools/team-cards")
                         .param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/team-cards"))
                 .andExpect(model().attributeExists("seasons", "season", "cardStates", "selectedSeasonId"));
     }
 
     @Test
-    void shouldShowTeamCardsWithActiveSeason() throws Exception {
+    void givenActiveSeason_whenGetTeamCards_thenReturnsTeamCardsView() throws Exception {
+        // given
         var season = testHelper.createSeason("Test_TeamCard Active Season");
         season.setActive(true);
 
+        // when
         mockMvc.perform(get("/admin/tools/team-cards"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/team-cards"))
                 .andExpect(model().attributeExists("seasons"));
     }
 
     @Test
-    void shouldGenerateCard() throws Exception {
+    void givenSeasonTeam_whenGenerateCard_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("Test_TC_Gen Season");
         var team = testHelper.createTeam("TC Gen Team", "TCG");
         season.addTeam(team);
@@ -87,7 +96,9 @@ class TeamCardControllerTest {
 
         when(teamCardService.generateCard(any(SeasonTeam.class))).thenReturn("/uploads/team-cards/test.png");
 
+        // when
         mockMvc.perform(post("/admin/tools/team-cards/generate/" + seasonTeam.getId()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/team-cards?seasonId=" + season.getId()))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -96,7 +107,8 @@ class TeamCardControllerTest {
     }
 
     @Test
-    void shouldHandleGenerateCardError() throws Exception {
+    void givenServiceThrowsException_whenGenerateCard_thenRedirectsWithError() throws Exception {
+        // given
         var season = testHelper.createSeason("Test_TC_Err Season");
         var team = testHelper.createTeam("TC Err Team", "TCE");
         season.addTeam(team);
@@ -105,20 +117,25 @@ class TeamCardControllerTest {
         when(teamCardService.generateCard(any(SeasonTeam.class)))
                 .thenThrow(new IOException("Playwright not available"));
 
+        // when
         mockMvc.perform(post("/admin/tools/team-cards/generate/" + seasonTeam.getId()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/team-cards?seasonId=" + season.getId()))
                 .andExpect(flash().attributeExists("errorMessage"));
     }
 
     @Test
-    void shouldGenerateAllCards() throws Exception {
+    void givenSeason_whenGenerateAllCards_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("Test_TC_All Season");
 
         when(teamCardService.generateAllCards(any())).thenReturn(List.of("/a.png", "/b.png"));
 
+        // when
         mockMvc.perform(post("/admin/tools/team-cards/generate-all")
                         .param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/team-cards?seasonId=" + season.getId()))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -127,7 +144,8 @@ class TeamCardControllerTest {
     }
 
     @Test
-    void shouldDownloadCard() throws Exception {
+    void givenExistingCardFile_whenDownloadCard_thenReturnsFileWithContentDisposition() throws Exception {
+        // given
         var season = testHelper.createSeason("Test_TC_DL Season");
         var team = testHelper.createTeam("TC DL Team", "TDL");
         season.addTeam(team);
@@ -142,7 +160,9 @@ class TeamCardControllerTest {
         when(teamCardService.getCardPath(any(SeasonTeam.class)))
                 .thenReturn("/uploads/" + cardRelativePath);
 
+        // when
         var result = mockMvc.perform(get("/admin/tools/team-cards/download/" + seasonTeam.getId()))
+                // then
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -154,7 +174,8 @@ class TeamCardControllerTest {
     }
 
     @Test
-    void shouldReturn404ForMissingCard() throws Exception {
+    void givenMissingCardFile_whenDownloadCard_thenReturnsNotFound() throws Exception {
+        // given
         var season = testHelper.createSeason("Test_TC_404 Season");
         var team = testHelper.createTeam("TC 404 Team", "T404");
         season.addTeam(team);
@@ -163,12 +184,15 @@ class TeamCardControllerTest {
         when(teamCardService.getCardPath(any(SeasonTeam.class)))
                 .thenReturn("/uploads/team-cards/nonexistent/T404.png");
 
+        // when
         mockMvc.perform(get("/admin/tools/team-cards/download/" + seasonTeam.getId()))
+                // then
                 .andExpect(status().isNotFound());
     }
 
     @Test
-    void shouldDownloadAllAsZip() throws Exception {
+    void givenSeasonWithCards_whenDownloadAllAsZip_thenReturnsZipFile() throws Exception {
+        // given
         var season = testHelper.createSeason("Test_TC_ZIP Season");
         var team = testHelper.createTeam("TC ZIP Team", "TZIP");
         season.addTeam(team);
@@ -182,8 +206,10 @@ class TeamCardControllerTest {
         when(teamCardService.getCardPath(any(SeasonTeam.class)))
                 .thenReturn("/uploads/" + cardRelativePath);
 
+        // when
         var result = mockMvc.perform(get("/admin/tools/team-cards/download-all")
                         .param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andReturn();
 

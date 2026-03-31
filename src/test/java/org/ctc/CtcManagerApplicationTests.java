@@ -9,7 +9,7 @@ import org.springframework.test.context.ActiveProfiles;
 class CtcManagerApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void whenApplicationStarts_thenContextLoads() {
 	}
 
 }

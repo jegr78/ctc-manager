@@ -19,42 +19,52 @@ class TemplateEditorControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void shouldShowTemplateEditorsPage() throws Exception {
+    void whenGetTemplateEditors_thenReturnsTemplateEditorsView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/tools/template-editors"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/template-editors"))
                 .andExpect(model().attributeExists("teamCardTemplate", "lineupTemplate", "settingsTemplate", "activeTab"));
     }
 
     @Test
-    void shouldShowTemplateEditorsWithTabParam() throws Exception {
+    void givenTabParam_whenGetTemplateEditors_thenReturnsViewWithActiveTab() throws Exception {
+        // when
         mockMvc.perform(get("/admin/tools/template-editors")
                         .param("tab", "lineup"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/template-editors"))
                 .andExpect(model().attribute("activeTab", "lineup"));
     }
 
     @Test
-    void shouldResetTeamCardTemplateAndRedirect() throws Exception {
+    void whenResetTeamCardTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tools/template-editors/team-cards/reset"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=team-cards"))
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
     @Test
-    void shouldResetLineupTemplateAndRedirect() throws Exception {
+    void whenResetLineupTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tools/template-editors/lineup/reset"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=lineup"))
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
     @Test
-    void shouldSaveTeamCardTemplateAndRedirect() throws Exception {
+    void givenTemplateContent_whenSaveTeamCardTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tools/template-editors/team-cards/save")
                         .param("template", "<html>Test_Template</html>"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=team-cards"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -63,9 +73,11 @@ class TemplateEditorControllerTest {
     }
 
     @Test
-    void shouldSaveLineupTemplateAndRedirect() throws Exception {
+    void givenTemplateContent_whenSaveLineupTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tools/template-editors/lineup/save")
                         .param("template", "<html>Test_Lineup_Template</html>"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=lineup"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -74,9 +86,11 @@ class TemplateEditorControllerTest {
     }
 
     @Test
-    void shouldShowSettingsTab() throws Exception {
+    void givenSettingsTabParam_whenGetTemplateEditors_thenReturnsSettingsTabWithTemplate() throws Exception {
+        // when
         mockMvc.perform(get("/admin/tools/template-editors")
                         .param("tab", "settings"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/template-editors"))
                 .andExpect(model().attribute("activeTab", "settings"))
@@ -84,9 +98,11 @@ class TemplateEditorControllerTest {
     }
 
     @Test
-    void shouldSaveSettingsTemplateAndRedirect() throws Exception {
+    void givenTemplateContent_whenSaveSettingsTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tools/template-editors/settings/save")
                         .param("template", "<html>Test_Settings_Template</html>"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=settings"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -95,8 +111,10 @@ class TemplateEditorControllerTest {
     }
 
     @Test
-    void shouldResetSettingsTemplateAndRedirect() throws Exception {
+    void whenResetSettingsTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tools/template-editors/settings/reset"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=settings"))
                 .andExpect(flash().attributeExists("successMessage"));

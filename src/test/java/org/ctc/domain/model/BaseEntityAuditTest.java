@@ -16,19 +16,23 @@ class BaseEntityAuditTest {
     private DriverRepository driverRepository;
 
     @Test
-    void shouldSetCreatedAtAndUpdatedAtOnSave() {
+    void givenNewEntity_whenSaved_thenCreatedAtAndUpdatedAtAreSet() {
+        // given
         var driver = new Driver("audit_test_psn", "Audit Test");
         assertNull(driver.getCreatedAt());
         assertNull(driver.getUpdatedAt());
 
+        // when
         var saved = driverRepository.save(driver);
 
+        // then
         assertNotNull(saved.getCreatedAt());
         assertNotNull(saved.getUpdatedAt());
     }
 
     @Test
-    void shouldUpdateUpdatedAtButNotCreatedAtOnUpdate() throws InterruptedException {
+    void givenSavedEntity_whenUpdated_thenUpdatedAtChangesButCreatedAtDoesNot() throws InterruptedException {
+        // given
         var driver = new Driver("audit_update_psn", "Audit Update");
         var saved = driverRepository.save(driver);
 
@@ -39,9 +43,11 @@ class BaseEntityAuditTest {
 
         Thread.sleep(50);
 
+        // when
         saved.setNickname("Updated Nickname");
         var updated = driverRepository.save(saved);
 
+        // then
         assertEquals(createdAt, updated.getCreatedAt());
         assertTrue(updated.getUpdatedAt().isAfter(updatedAt) || updated.getUpdatedAt().equals(updatedAt));
     }

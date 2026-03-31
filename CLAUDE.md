@@ -95,6 +95,11 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
 
 - **TDD (Test-Driven Development):** Tests zuerst schreiben, dann Implementierung. Red → Green → Refactor.
 - **BDD (Behavior-Driven Development):** Playwright E2E Tests beschreiben das erwartete Verhalten aus Nutzersicht.
+- **Test-Naming (Given-When-Then):** Alle Testmethoden folgen dem BDD-Pattern:
+  - Methodenname: `givenContext_whenAction_thenExpectedResult()`
+  - Body: `// given` / `// when` / `// then` Kommentare zur Strukturierung
+  - Bei einfachen Tests ohne Precondition: `whenAction_thenResult()` erlaubt
+  - Bei Exception-Tests: `// when / then` kombiniert fuer assertThatThrownBy
 - Reihenfolge bei neuen Features: Unit Tests → Implementierung → Integration Tests → E2E Tests
 - Superpowers-Skill `superpowers:test-driven-development` nutzen
 - **Visuelle Pruefung mit `playwright-cli`:** Bei UI-Aenderungen (Templates, CSS) immer `playwright-cli` nutzen um das Ergebnis visuell zu verifizieren. Dev-Server starten (`./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`), dann mit `playwright-cli open http://localhost:9090/...` die betroffenen Seiten inspizieren (Desktop + Mobile). Skill: `/playwright-cli`

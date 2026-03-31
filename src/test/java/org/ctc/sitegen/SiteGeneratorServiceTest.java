@@ -149,36 +149,49 @@ class SiteGeneratorServiceTest {
     }
 
     @Test
-    void shouldGenerateIndexPage() {
+    void givenActiveSeason_whenGenerate_thenCreatesIndexPage() {
+        // when
         var result = siteGeneratorService.generate();
 
+        // then
         assertFalse(result.hasErrors(), "Errors: " + result.getErrors());
         assertTrue(result.getPagesGenerated() > 0);
         assertTrue(Files.exists(tempDir.resolve("index.html")));
     }
 
     @Test
-    void shouldGenerateStandingsPage() {
+    void givenActiveSeason_whenGenerate_thenCreatesStandingsPage() {
+        // when
         siteGeneratorService.generate();
+
+        // then
         assertTrue(Files.exists(seasonDir().resolve("standings.html")), "standings.html should exist");
     }
 
     @Test
-    void shouldGenerateDriverRankingPage() {
+    void givenActiveSeason_whenGenerate_thenCreatesDriverRankingPage() {
+        // when
         siteGeneratorService.generate();
+
+        // then
         assertTrue(Files.exists(seasonDir().resolve("driver-ranking.html")), "driver-ranking.html should exist");
     }
 
     @Test
-    void shouldGenerateMatchdayPage() {
+    void givenMatchdayData_whenGenerate_thenCreatesMatchdayPage() {
+        // when
         siteGeneratorService.generate();
+
+        // then
         assertTrue(Files.exists(seasonDir().resolve("matchday/spieltag-1.html")), "matchday page should exist");
     }
 
     @Test
-    void shouldGenerateTeamProfilePages() {
+    void givenTwoTeams_whenGenerate_thenCreatesTeamProfilePages() {
+        // when
         siteGeneratorService.generate();
 
+        // then
         var teamDir = seasonDir().resolve("team");
         assertTrue(Files.exists(teamDir), "team directory should exist");
         // Check that at least 2 team profiles were generated
@@ -190,9 +203,11 @@ class SiteGeneratorServiceTest {
     }
 
     @Test
-    void shouldGenerateDriverProfilePages() {
+    void givenFourDrivers_whenGenerate_thenCreatesDriverProfilePages() {
+        // when
         siteGeneratorService.generate();
 
+        // then
         var driverDir = seasonDir().resolve("driver");
         assertTrue(Files.exists(driverDir), "driver directory should exist");
         try (var files = Files.list(driverDir)) {
@@ -203,15 +218,20 @@ class SiteGeneratorServiceTest {
     }
 
     @Test
-    void shouldGenerateArchivePage() {
+    void givenActiveSeason_whenGenerate_thenCreatesArchivePage() {
+        // when
         siteGeneratorService.generate();
+
+        // then
         assertTrue(Files.exists(tempDir.resolve("archive.html")));
     }
 
     @Test
-    void shouldContainCorrectStandingsData() throws IOException {
+    void givenRaceResults_whenGenerate_thenStandingsPageContainsRows() throws IOException {
+        // when
         siteGeneratorService.generate();
 
+        // then
         var html = Files.readString(seasonDir().resolve("standings.html"));
         var doc = Jsoup.parse(html);
 
@@ -220,9 +240,11 @@ class SiteGeneratorServiceTest {
     }
 
     @Test
-    void shouldContainCorrectDriverRankingData() throws IOException {
+    void givenDriversWithPsnIds_whenGenerate_thenDriverRankingContainsDriverPsnIds() throws IOException {
+        // when
         siteGeneratorService.generate();
 
+        // then
         var html = Files.readString(seasonDir().resolve("driver-ranking.html"));
         var doc = Jsoup.parse(html);
 
@@ -231,9 +253,11 @@ class SiteGeneratorServiceTest {
     }
 
     @Test
-    void shouldHaveWorkingInternalLinks() throws IOException {
+    void givenGeneratedSite_whenReadIndexPage_thenContainsInternalLinks() throws IOException {
+        // when
         siteGeneratorService.generate();
 
+        // then
         var indexHtml = Files.readString(tempDir.resolve("index.html"));
         var doc = Jsoup.parse(indexHtml);
 

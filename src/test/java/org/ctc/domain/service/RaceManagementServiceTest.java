@@ -50,7 +50,8 @@ class RaceManagementServiceTest {
     // --- getRaceListData ---
 
     @Test
-    void getRaceListData_byMatchdayId_returnsFilteredRaces() {
+    void givenMatchdayId_whenGetRaceListData_thenReturnsFilteredRaces() {
+        // given
         var matchdayId = UUID.randomUUID();
         var race = createRaceWithScore(10, 5);
         var matchday = new Matchday();
@@ -60,8 +61,10 @@ class RaceManagementServiceTest {
         when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
         when(seasonRepository.findAll()).thenReturn(List.of());
 
+        // when
         var result = service.getRaceListData(matchdayId, null);
 
+        // then
         assertThat(result.races()).hasSize(1);
         assertThat(result.matchday()).isNotNull();
         assertThat(result.raceScores()).containsKey(race.getId());
@@ -69,24 +72,30 @@ class RaceManagementServiceTest {
     }
 
     @Test
-    void getRaceListData_bySeasonId_returnsFilteredRaces() {
+    void givenSeasonId_whenGetRaceListData_thenReturnsFilteredRaces() {
+        // given
         var seasonId = UUID.randomUUID();
         when(raceRepository.findByMatchdaySeasonId(seasonId)).thenReturn(List.of());
         when(seasonRepository.findAll()).thenReturn(List.of());
 
+        // when
         var result = service.getRaceListData(null, seasonId);
 
+        // then
         assertThat(result.selectedSeasonId()).isEqualTo(seasonId);
         assertThat(result.matchday()).isNull();
     }
 
     @Test
-    void getRaceListData_noFilter_returnsAll() {
+    void givenNoFilter_whenGetRaceListData_thenReturnsAll() {
+        // given
         when(raceRepository.findAll()).thenReturn(List.of());
         when(seasonRepository.findAll()).thenReturn(List.of());
 
+        // when
         var result = service.getRaceListData(null, null);
 
+        // then
         assertThat(result.races()).isEmpty();
         verify(raceRepository).findAll();
     }
@@ -94,7 +103,8 @@ class RaceManagementServiceTest {
     // --- saveRace ---
 
     @Test
-    void saveRace_newRace_createsMatchAndSaves() {
+    void givenNewRaceForm_whenSaveRace_thenCreatesMatchAndSaves() {
+        // given
         var form = new RaceForm();
         form.setMatchdayId(UUID.randomUUID());
         form.setHomeTeamId(UUID.randomUUID());
@@ -110,15 +120,18 @@ class RaceManagementServiceTest {
         when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         var result = service.saveRace(form);
 
+        // then
         assertThat(result.success()).isTrue();
         assertThat(result.message()).contains("HOM").contains("AWY");
         verify(raceRepository).save(any(Race.class));
     }
 
     @Test
-    void saveRace_carNotInSeasonPool_returnsError() {
+    void givenCarNotInSeasonPool_whenSaveRace_thenReturnsError() {
+        // given
         var form = new RaceForm();
         form.setMatchdayId(UUID.randomUUID());
         form.setHomeTeamId(UUID.randomUUID());
@@ -136,8 +149,10 @@ class RaceManagementServiceTest {
         when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
         when(carRepository.findById(form.getCarId())).thenReturn(Optional.of(car));
 
+        // when
         var result = service.saveRace(form);
 
+        // then
         assertThat(result.success()).isFalse();
         assertThat(result.message()).contains("Car is not in this season's pool");
     }
@@ -145,7 +160,8 @@ class RaceManagementServiceTest {
     // --- saveResults ---
 
     @Test
-    void saveResults_calculatesPointsAndAggregates() {
+    void givenResultForm_whenSaveResults_thenCalculatesPointsAndAggregates() {
+        // given
         var raceId = UUID.randomUUID();
         var driverId = UUID.randomUUID();
         var race = createRaceWithScoring();
@@ -164,15 +180,18 @@ class RaceManagementServiceTest {
         when(driverRepository.findById(driverId)).thenReturn(Optional.of(driver));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         var message = service.saveResults(raceId, List.of(rf));
 
+        // then
         assertThat(message).contains("Results saved");
         verify(scoringService).calculatePoints(any(RaceResult.class), eq(race.getMatchday().getSeason().getRaceScoring()));
         verify(scoringService).aggregateMatchScores(race);
     }
 
     @Test
-    void saveResults_skipsNullDriverIds() {
+    void givenNullDriverId_whenSaveResults_thenDriverLookupSkipped() {
+        // given
         var raceId = UUID.randomUUID();
         var race = createRaceWithScoring();
         race.setId(raceId);
@@ -182,15 +201,18 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         service.saveResults(raceId, List.of(rf));
 
+        // then
         verify(driverRepository, never()).findById(any());
     }
 
     // --- quickScore ---
 
     @Test
-    void quickScore_setsMatchScores() {
+    void givenRace_whenQuickScore_thenMatchScoresUpdated() {
+        // given
         var raceId = UUID.randomUUID();
         var race = createRaceWithScore(0, 0);
         race.setId(raceId);
@@ -198,8 +220,10 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         var message = service.quickScore(raceId, 42, 38);
 
+        // then
         assertThat(message).contains("42").contains("38");
         assertThat(race.getMatch().getHomeScore()).isEqualTo(42);
         assertThat(race.getMatch().getAwayScore()).isEqualTo(38);
@@ -208,21 +232,25 @@ class RaceManagementServiceTest {
     // --- addLink ---
 
     @Test
-    void addLink_validUrl_savesAttachment() {
+    void givenValidUrl_whenAddLink_thenAttachmentSaved() {
+        // given
         var raceId = UUID.randomUUID();
         var race = new Race();
         race.setId(raceId);
 
         when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
 
+        // when
         var name = service.addLink(raceId, "Replay", "https://youtube.com/watch?v=123");
 
+        // then
         assertThat(name).isEqualTo("Replay");
         verify(raceAttachmentRepository).save(any(RaceAttachment.class));
     }
 
     @Test
-    void addLink_invalidUrl_throwsException() {
+    void givenInvalidUrl_whenAddLink_thenThrowsException() {
+        // when / then
         assertThatThrownBy(() -> service.addLink(UUID.randomUUID(), "Bad", "ftp://invalid"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("http");
@@ -231,7 +259,8 @@ class RaceManagementServiceTest {
     // --- deleteAttachment ---
 
     @Test
-    void deleteAttachment_fileType_deletesFileAndRecord() {
+    void givenFileAttachment_whenDeleteAttachment_thenDeletesFileAndRecord() {
+        // given
         var attachmentId = UUID.randomUUID();
         var raceId = UUID.randomUUID();
         var race = new Race();
@@ -242,15 +271,18 @@ class RaceManagementServiceTest {
 
         when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
 
+        // when
         var result = service.deleteAttachment(attachmentId);
 
+        // then
         assertThat(result).isEqualTo(raceId);
         verify(fileStorageService).delete("/uploads/test.png");
         verify(raceAttachmentRepository).delete(attachment);
     }
 
     @Test
-    void deleteAttachment_linkType_doesNotDeleteFile() {
+    void givenLinkAttachment_whenDeleteAttachment_thenDoesNotDeleteFile() {
+        // given
         var attachmentId = UUID.randomUUID();
         var raceId = UUID.randomUUID();
         var race = new Race();
@@ -261,8 +293,10 @@ class RaceManagementServiceTest {
 
         when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
 
+        // when
         service.deleteAttachment(attachmentId);
 
+        // then
         verify(fileStorageService, never()).delete(any());
         verify(raceAttachmentRepository).delete(attachment);
     }
@@ -270,7 +304,8 @@ class RaceManagementServiceTest {
     // --- deleteRace ---
 
     @Test
-    void deleteRace_returnsMatchdayId() {
+    void givenExistingRace_whenDeleteRace_thenReturnsMatchdayId() {
+        // given
         var raceId = UUID.randomUUID();
         var matchdayId = UUID.randomUUID();
 
@@ -288,8 +323,10 @@ class RaceManagementServiceTest {
 
         when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
 
+        // when
         var result = service.deleteRace(raceId);
 
+        // then
         assertThat(result).isEqualTo(matchdayId);
         verify(raceRepository).delete(race);
     }
@@ -297,20 +334,24 @@ class RaceManagementServiceTest {
     // --- getUsedSelections ---
 
     @Test
-    void getUsedSelections_returnsBothSets() {
+    void givenSeasonAndTeam_whenGetUsedSelections_thenReturnsBothSets() {
+        // given
         var seasonId = UUID.randomUUID();
         var homeTeamId = UUID.randomUUID();
         when(raceRepository.findByMatchdaySeasonId(seasonId)).thenReturn(List.of());
 
+        // when
         var result = service.getUsedSelections(seasonId, homeTeamId, null);
 
+        // then
         assertThat(result).containsKeys("usedCarIds", "usedTrackIds");
     }
 
     // --- getRaceDetailData ---
 
     @Test
-    void getRaceDetailData_withResults_returnsScoresAndFlags() {
+    void givenRaceWithResults_whenGetRaceDetailData_thenReturnsScoresAndFlags() {
+        // given
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var season = new Season("Test Season 2026");
@@ -347,8 +388,10 @@ class RaceManagementServiceTest {
         when(raceLineupRepository.findByRaceId(race.getId()))
                 .thenReturn(List.of(new RaceLineup(race, driver1, homeTeam), new RaceLineup(race, driver2, awayTeam)));
 
+        // when
         var data = service.getRaceDetailData(race.getId());
 
+        // then
         assertThat(data.homeTotal()).isEqualTo(20);
         assertThat(data.awayTotal()).isEqualTo(17);
         assertThat(data.driverTeamMap()).containsEntry(driver1.getId(), "HOM");
@@ -358,7 +401,8 @@ class RaceManagementServiceTest {
     }
 
     @Test
-    void getRaceDetailData_withoutResults_flagsResultsMissing() {
+    void givenRaceWithoutResults_whenGetRaceDetailData_thenFlagsResultsMissing() {
+        // given
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var season = new Season("Test Season 2026");
@@ -375,8 +419,10 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
 
+        // when
         var data = service.getRaceDetailData(race.getId());
 
+        // then
         assertThat(data.resultsMissing()).isTrue();
         assertThat(data.canGenerateResults()).isFalse();
         assertThat(data.resultsExist()).isFalse();
@@ -385,7 +431,8 @@ class RaceManagementServiceTest {
     // --- generateResults ---
 
     @Test
-    void generateResults_createsAttachment() throws Exception {
+    void givenRace_whenGenerateResults_thenCreatesAttachment() throws Exception {
+        // given
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var matchday = new Matchday();
@@ -401,8 +448,10 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(resultsGraphicService.generateResults(race)).thenReturn("/uploads/races/" + race.getId() + "/results.png");
 
+        // when
         service.generateResults(race.getId());
 
+        // then
         verify(raceAttachmentRepository).save(argThat(att ->
                 att.getName().equals("MD 1-HOM-AWY-Results")
                         && att.getUrl().endsWith("/results.png")
@@ -410,13 +459,15 @@ class RaceManagementServiceTest {
     }
 
     @Test
-    void generateResults_onFailure_throwsRuntimeException() throws Exception {
+    void givenGraphicServiceFailure_whenGenerateResults_thenRethrowsException() throws Exception {
+        // given
         var race = new Race();
         race.setId(UUID.randomUUID());
 
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(resultsGraphicService.generateResults(race)).thenThrow(new RuntimeException("Playwright failed"));
 
+        // when / then
         assertThatThrownBy(() -> service.generateResults(race.getId()))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Playwright failed");
@@ -425,7 +476,8 @@ class RaceManagementServiceTest {
     // --- generateSettings ---
 
     @Test
-    void generateSettings_createsAttachment() throws Exception {
+    void givenRace_whenGenerateSettings_thenCreatesAttachment() throws Exception {
+        // given
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var matchday = new Matchday();
@@ -441,8 +493,10 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(settingsGraphicService.generateSettings(race)).thenReturn("/uploads/races/" + race.getId() + "/settings.png");
 
+        // when
         service.generateSettings(race.getId());
 
+        // then
         verify(raceAttachmentRepository).save(argThat(att ->
                 att.getName().equals("MD 1-HOM-AWY-Settings")
                         && att.getUrl().endsWith("/settings.png")
@@ -450,13 +504,15 @@ class RaceManagementServiceTest {
     }
 
     @Test
-    void generateSettings_onFailure_throwsRuntimeException() throws Exception {
+    void givenGraphicServiceFailure_whenGenerateSettings_thenRethrowsException() throws Exception {
+        // given
         var race = new Race();
         race.setId(UUID.randomUUID());
 
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(settingsGraphicService.generateSettings(race)).thenThrow(new RuntimeException("Playwright failed"));
 
+        // when / then
         assertThatThrownBy(() -> service.generateSettings(race.getId()))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Playwright failed");
@@ -465,7 +521,8 @@ class RaceManagementServiceTest {
     // --- getRaceDetailData settings flags ---
 
     @Test
-    void getRaceDetailData_withoutSettings_flagsSettingsMissing() {
+    void givenRaceWithoutSettings_whenGetRaceDetailData_thenFlagsSettingsMissing() {
+        // given
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var season = new Season("Test Season 2026");
@@ -482,8 +539,10 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
 
+        // when
         var data = service.getRaceDetailData(race.getId());
 
+        // then
         assertThat(data.settingsMissing()).isTrue();
         assertThat(data.canGenerateSettings()).isFalse();
         assertThat(data.settingsExist()).isFalse();
@@ -492,7 +551,8 @@ class RaceManagementServiceTest {
     // --- saveRace with settings ---
 
     @Test
-    void saveRace_withSettings_createsRaceSettings() {
+    void givenRaceFormWithSettings_whenSaveRace_thenRaceSettingsCreated() {
+        // given
         var form = new RaceForm();
         form.setMatchdayId(UUID.randomUUID());
         form.setHomeTeamId(UUID.randomUUID());
@@ -525,15 +585,18 @@ class RaceManagementServiceTest {
             return saved;
         });
 
+        // when
         var result = service.saveRace(form);
 
+        // then
         assertThat(result.success()).isTrue();
     }
 
     // --- getNewRaceFormData ---
 
     @Test
-    void getNewRaceFormData_withMatchdayId_populatesSeasonPools() {
+    void givenMatchdayId_whenGetNewRaceFormData_thenPopulatesSeasonPools() {
+        // given
         var matchday = createMatchday();
         var season = matchday.getSeason();
         var car = new Car();
@@ -547,20 +610,25 @@ class RaceManagementServiceTest {
         when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
         when(teamRepository.findAll()).thenReturn(List.of());
 
+        // when
         var data = service.getNewRaceFormData(matchday.getId());
 
+        // then
         assertThat(data.form().getMatchdayId()).isEqualTo(matchday.getId());
         assertThat(data.seasonCars()).containsExactly(car);
         assertThat(data.seasonTracks()).containsExactly(track);
     }
 
     @Test
-    void getNewRaceFormData_withoutMatchdayId_returnsEmptyPools() {
+    void givenNoMatchdayId_whenGetNewRaceFormData_thenReturnsEmptyPools() {
+        // given
         when(matchdayRepository.findAll()).thenReturn(List.of());
         when(teamRepository.findAll()).thenReturn(List.of());
 
+        // when
         var data = service.getNewRaceFormData(null);
 
+        // then
         assertThat(data.form().getMatchdayId()).isNull();
         assertThat(data.seasonCars()).isEmpty();
         assertThat(data.seasonTracks()).isEmpty();
@@ -569,7 +637,8 @@ class RaceManagementServiceTest {
     // --- getRaceFormData (edit) ---
 
     @Test
-    void getRaceFormData_populatesFormFromExistingRace() {
+    void givenExistingRace_whenGetRaceFormData_thenPopulatesFormFromRace() {
+        // given
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var matchday = createMatchday();
@@ -584,8 +653,10 @@ class RaceManagementServiceTest {
         when(teamRepository.findAll()).thenReturn(List.of(homeTeam, awayTeam));
         when(raceRepository.findByMatchdaySeasonId(any())).thenReturn(List.of());
 
+        // when
         var data = service.getRaceFormData(race.getId());
 
+        // then
         assertThat(data.form().getId()).isEqualTo(race.getId());
         assertThat(data.form().getHomeTeamId()).isEqualTo(homeTeam.getId());
         assertThat(data.form().getAwayTeamId()).isEqualTo(awayTeam.getId());
@@ -594,7 +665,8 @@ class RaceManagementServiceTest {
     // --- getResultsFormData ---
 
     @Test
-    void getResultsFormData_withoutResults_populatesDriversFromLineup() {
+    void givenRaceWithLineupButNoResults_whenGetResultsFormData_thenPopulatesDriversFromLineup() {
+        // given
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var matchday = createMatchday();
@@ -612,8 +684,10 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of(lineup));
 
+        // when
         var data = service.getResultsFormData(race.getId());
 
+        // then
         assertThat(data.form().getResults()).isNotEmpty();
         assertThat(data.form().getResults().get(0).getDriverId()).isEqualTo(driver.getId());
     }
@@ -621,7 +695,8 @@ class RaceManagementServiceTest {
     // --- uploadAttachment ---
 
     @Test
-    void uploadAttachment_storesFileAndCreatesAttachment() throws Exception {
+    void givenFile_whenUploadAttachment_thenStoresFileAndCreatesAttachment() throws Exception {
+        // given
         var raceId = UUID.randomUUID();
         var race = new Race();
         race.setId(raceId);
@@ -632,8 +707,10 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
         when(fileStorageService.store(eq(raceId), any())).thenReturn("/uploads/races/" + raceId + "/screenshot.png");
 
+        // when
         var name = service.uploadAttachment(raceId, file);
 
+        // then
         assertThat(name).isEqualTo("screenshot.png");
         verify(fileStorageService).store(eq(raceId), any());
         verify(raceAttachmentRepository).save(argThat(att ->
@@ -643,7 +720,8 @@ class RaceManagementServiceTest {
     // --- downloadAttachment ---
 
     @Test
-    void downloadAttachment_linkType_returnsBadRequest() {
+    void givenLinkAttachment_whenDownloadAttachment_thenReturnsBadRequest() {
+        // given
         var attachmentId = UUID.randomUUID();
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -652,15 +730,18 @@ class RaceManagementServiceTest {
 
         when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
 
+        // when
         var response = service.downloadAttachment(attachmentId);
 
+        // then
         assertThat(response.getStatusCode().value()).isEqualTo(400);
     }
 
     // --- saveRace edit ---
 
     @Test
-    void saveRace_editExisting_updatesRace() {
+    void givenExistingRace_whenSaveRace_thenUpdatesRaceWithoutCreatingMatch() {
+        // given
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var matchday = createMatchday();
@@ -682,8 +763,10 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(existingRace.getId())).thenReturn(Optional.of(existingRace));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         var result = service.saveRace(form);
 
+        // then
         assertThat(result.success()).isTrue();
         verify(raceRepository).save(existingRace);
         verify(matchRepository, never()).save(any());
@@ -692,7 +775,8 @@ class RaceManagementServiceTest {
     // --- saveRace track not in pool ---
 
     @Test
-    void saveRace_trackNotInSeasonPool_returnsError() {
+    void givenTrackNotInSeasonPool_whenSaveRace_thenReturnsError() {
+        // given
         var form = new RaceForm();
         form.setMatchdayId(UUID.randomUUID());
         form.setHomeTeamId(UUID.randomUUID());
@@ -710,8 +794,10 @@ class RaceManagementServiceTest {
         when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
         when(trackRepository.findById(form.getTrackId())).thenReturn(Optional.of(track));
 
+        // when
         var result = service.saveRace(form);
 
+        // then
         assertThat(result.success()).isFalse();
         assertThat(result.message()).contains("Track is not in this season's pool");
     }
@@ -719,7 +805,8 @@ class RaceManagementServiceTest {
     // --- generateLineup ---
 
     @Test
-    void generateLineup_createsAttachment() throws Exception {
+    void givenRace_whenGenerateLineup_thenCreatesAttachment() throws Exception {
+        // given
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var matchday = new Matchday();
@@ -735,8 +822,10 @@ class RaceManagementServiceTest {
         when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
         when(lineupGraphicService.generateLineup(race)).thenReturn("/uploads/races/" + race.getId() + "/lineup.png");
 
+        // when
         service.generateLineup(race.getId());
 
+        // then
         verify(raceAttachmentRepository).save(argThat(att ->
                 att.getName().equals("MD 1-HOM-AWY-Lineups")
                         && att.getUrl().endsWith("/lineup.png")

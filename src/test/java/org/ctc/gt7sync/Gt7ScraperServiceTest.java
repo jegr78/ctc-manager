@@ -20,10 +20,12 @@ class Gt7ScraperServiceTest {
     }
 
     @Test
-    void shouldParseTunersData() throws IOException {
+    void whenParseTunersJs_thenReturnsManufacturerMap() throws IOException {
+        // when
         String tunersJs = loadFixture("gt7/tuners-data.js");
         Map<String, String> map = scraperService.parseTunersJs(tunersJs);
 
+        // then
         assertThat(map).containsEntry("tnr13", "Ford");
         assertThat(map).containsEntry("tnr28", "Nissan");
         assertThat(map).containsEntry("tnr3", "Alfa Romeo");
@@ -32,12 +34,16 @@ class Gt7ScraperServiceTest {
     }
 
     @Test
-    void shouldParseCarDataWithManufacturerLookup() throws IOException {
+    void givenManufacturerLookup_whenParseCarsJs_thenReturnsCorrectManufacturerAndName() throws IOException {
+        // given
         String carsJs = loadFixture("gt7/cars-data.js");
         String tunersJs = loadFixture("gt7/tuners-data.js");
         Map<String, String> manufacturerMap = scraperService.parseTunersJs(tunersJs);
+
+        // when
         List<Gt7ScraperService.ScrapedCar> cars = scraperService.parseCarsJs(carsJs, manufacturerMap);
 
+        // then
         assertThat(cars).hasSize(5);
 
         var nissan = cars.stream().filter(c -> c.gt7Id().equals("car102")).findFirst().orElseThrow();
@@ -51,12 +57,16 @@ class Gt7ScraperServiceTest {
     }
 
     @Test
-    void shouldResolveManufacturerViaLookupForIdenticalNames() throws IOException {
+    void givenIdenticalLongAndShortName_whenParseCarsJs_thenResolvesManufacturerViaLookup() throws IOException {
+        // given
         String carsJs = loadFixture("gt7/cars-data.js");
         String tunersJs = loadFixture("gt7/tuners-data.js");
         Map<String, String> manufacturerMap = scraperService.parseTunersJs(tunersJs);
+
+        // when
         List<Gt7ScraperService.ScrapedCar> cars = scraperService.parseCarsJs(carsJs, manufacturerMap);
 
+        // then
         // Ford GT LM Race Car Spec II has nameLong == nameShort, but manufacturerId tnr13 → Ford
         var ford = cars.stream().filter(c -> c.gt7Id().equals("car1044")).findFirst().orElseThrow();
         assertThat(ford.manufacturer()).isEqualTo("Ford");
@@ -64,12 +74,16 @@ class Gt7ScraperServiceTest {
     }
 
     @Test
-    void shouldResolveManufacturerViaLookupFor1932FordRoadster() throws IOException {
+    void given1932FordRoadster_whenParseCarsJs_thenResolvesManufacturerViaLookup() throws IOException {
+        // given
         String carsJs = loadFixture("gt7/cars-data.js");
         String tunersJs = loadFixture("gt7/tuners-data.js");
         Map<String, String> manufacturerMap = scraperService.parseTunersJs(tunersJs);
+
+        // when
         List<Gt7ScraperService.ScrapedCar> cars = scraperService.parseCarsJs(carsJs, manufacturerMap);
 
+        // then
         // "1932 Ford Roadster" has nameShort "Ford Roadster", manufacturerId tnr13 → Ford (not "1932")
         var hotrod = cars.stream().filter(c -> c.gt7Id().equals("car3500")).findFirst().orElseThrow();
         assertThat(hotrod.manufacturer()).isEqualTo("Ford");
@@ -77,11 +91,15 @@ class Gt7ScraperServiceTest {
     }
 
     @Test
-    void shouldFallbackToNameExtractionWithoutLookup() throws IOException {
+    void givenNoManufacturerMap_whenParseCarsJs_thenFallsBackToNameExtraction() throws IOException {
+        // given
         String carsJs = loadFixture("gt7/cars-data.js");
+
+        // when
         // No manufacturer map — uses name extraction fallback
         List<Gt7ScraperService.ScrapedCar> cars = scraperService.parseCarsJs(carsJs);
 
+        // then
         var nissan = cars.stream().filter(c -> c.gt7Id().equals("car102")).findFirst().orElseThrow();
         assertThat(nissan.manufacturer()).isEqualTo("Nissan");
 
@@ -90,7 +108,8 @@ class Gt7ScraperServiceTest {
     }
 
     @Test
-    void shouldExtractManufacturerFromLongName() {
+    void whenExtractManufacturer_thenExtractsFromLongName() {
+        // when / then
         assertThat(Gt7ScraperService.extractManufacturer(
                 "Nissan Skyline GTS-R (R31) '87", "Skyline GTS-R (R31) '87"))
                 .isEqualTo("Nissan");
@@ -101,17 +120,20 @@ class Gt7ScraperServiceTest {
     }
 
     @Test
-    void shouldHandleIdenticalLongAndShortName() {
+    void givenIdenticalLongAndShortName_whenExtractManufacturer_thenReturnsFirstToken() {
+        // when / then
         assertThat(Gt7ScraperService.extractManufacturer(
                 "Ford GT LM Race Car Spec II", "Ford GT LM Race Car Spec II"))
                 .isEqualTo("Ford");
     }
 
     @Test
-    void shouldParseTrackData() throws IOException {
+    void whenParseTracksJs_thenReturnsCorrectTrackData() throws IOException {
+        // when
         String tracksJs = loadFixture("gt7/tracks-data.js");
         List<Gt7ScraperService.ScrapedTrack> tracks = scraperService.parseTracksJs(tracksJs);
 
+        // then
         assertThat(tracks).hasSize(3);
 
         var deepForest = tracks.stream().filter(t -> t.id().equals("0457d4")).findFirst().orElseThrow();
@@ -125,32 +147,44 @@ class Gt7ScraperServiceTest {
     }
 
     @Test
-    void shouldBuildCarImageUrl() throws IOException {
+    void whenParseCarsJs_thenCarImageUrlIsWellFormed() throws IOException {
+        // when
         String carsJs = loadFixture("gt7/cars-data.js");
         List<Gt7ScraperService.ScrapedCar> cars = scraperService.parseCarsJs(carsJs);
 
+        // then
         var car = cars.getFirst();
         assertThat(car.imageUrl()).startsWith("https://www.gran-turismo.com/common/dist/gt7/carlist/car_thumbnails/");
         assertThat(car.imageUrl()).endsWith(".png");
     }
 
     @Test
-    void shouldExtractScriptSrc() {
+    void whenExtractScriptSrc_thenReturnsMatchingScriptPath() {
+        // given
         String html = """
                 <html><head>
                 <script type="module" crossorigin src="/common/dist/gt7/carlist/assets/index-BxK3q7Zy.js"></script>
                 </head></html>
                 """;
+
+        // when
         String src = scraperService.extractScriptSrc(html, "/common/dist/gt7/carlist/assets/index-");
+
+        // then
         assertThat(src).isEqualTo("/common/dist/gt7/carlist/assets/index-BxK3q7Zy.js");
     }
 
     @Test
-    void shouldExtractPattern() {
+    void whenExtractPattern_thenReturnsMatchingChunkFilename() {
+        // given
         String indexJs = """
                 import("./cars.gb-D4fGh2kL.js")
                 """;
+
+        // when
         String chunk = scraperService.extractPattern(indexJs, "\"\\.\\/?(cars\\.gb-[^\"]+\\.js)\"");
+
+        // then
         assertThat(chunk).isEqualTo("cars.gb-D4fGh2kL.js");
     }
 

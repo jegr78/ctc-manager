@@ -29,7 +29,8 @@ class CsvImportControllerTest {
     @Autowired private TeamRepository teamRepository;
 
     @Test
-    void shouldShowImportForm() throws Exception {
+    void whenGetImportPage_thenShowsImportForm() throws Exception {
+        // when / then
         mockMvc.perform(get("/admin/import"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/import"))
@@ -37,13 +38,15 @@ class CsvImportControllerTest {
     }
 
     @Test
-    void shouldPreviewCsvUploadWithValidFile() throws Exception {
+    void givenValidCsvFile_whenPreview_thenReturnsOk() throws Exception {
+        // given
         var season = testHelper.createSeason("Import Preview Season");
         var matchday = testHelper.createMatchday(season, "Import MD1", 1);
 
         var csvContent = "Position,Driver,Team,Quali,Fastest Lap,Points\n1,TestDriver1,HOM,1,true,20\n2,TestDriver2,AWY,2,false,17";
         var file = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
 
+        // when / then
         mockMvc.perform(multipart("/admin/import/preview")
                         .file(file)
                         .param("seasonId", season.getId().toString())
@@ -53,11 +56,13 @@ class CsvImportControllerTest {
     }
 
     @Test
-    void shouldHandlePreviewErrorWithMalformedCsv() throws Exception {
+    void givenMalformedCsvFile_whenPreview_thenHandlesErrorGracefully() throws Exception {
+        // given
         // Use binary garbage that cannot be parsed as CSV with expected columns
         var file = new MockMultipartFile("file", "bad.csv", "text/csv",
                 new byte[]{(byte) 0xFF, (byte) 0xFE, 0x00, 0x00});
 
+        // when / then
         mockMvc.perform(multipart("/admin/import/preview")
                         .file(file)
                         .param("seasonId", UUID.randomUUID().toString())
@@ -66,7 +71,8 @@ class CsvImportControllerTest {
     }
 
     @Test
-    void shouldRedirectWithErrorOnExecuteWithoutFile() throws Exception {
+    void givenNoFile_whenExecute_thenRedirectsWithError() throws Exception {
+        // when / then
         mockMvc.perform(post("/admin/import/execute")
                         .param("seasonId", UUID.randomUUID().toString())
                         .param("source", "csv"))
@@ -76,9 +82,11 @@ class CsvImportControllerTest {
     }
 
     @Test
-    void shouldHandleExecuteWithInvalidCsv() throws Exception {
+    void givenInvalidCsvFile_whenExecute_thenRedirectsWithError() throws Exception {
+        // given
         var file = new MockMultipartFile("file", "bad.csv", "text/csv", "invalid,data".getBytes());
 
+        // when / then
         mockMvc.perform(multipart("/admin/import/execute")
                         .file(file)
                         .param("seasonId", UUID.randomUUID().toString())
@@ -89,7 +97,8 @@ class CsvImportControllerTest {
     }
 
     @Test
-    void shouldHandlePreviewSheetErrorWhenSheetsUnavailable() throws Exception {
+    void givenSheetsUnavailable_whenPreviewSheet_thenShowsErrorMessage() throws Exception {
+        // when / then
         mockMvc.perform(post("/admin/import/preview-sheet")
                         .param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123")
                         .param("seasonId", UUID.randomUUID().toString())
@@ -102,7 +111,8 @@ class CsvImportControllerTest {
     // --- POST /admin/import/execute with valid CSV ---
 
     @Test
-    void shouldExecuteImportWithValidCsvAndRedirectWithSuccess() throws Exception {
+    void givenValidCsvWithMatchedDrivers_whenExecute_thenRedirectsWithSuccess() throws Exception {
+        // given
         var fixture = testHelper.createFullSeasonFixture("CsvExec");
         var season = fixture.season();
         var homeTeam = fixture.homeTeam();
@@ -118,6 +128,7 @@ class CsvImportControllerTest {
         var file = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
 
         // Use a new matchday label so no duplicate
+        // when / then
         mockMvc.perform(multipart("/admin/import/execute")
                         .file(file)
                         .param("seasonId", season.getId().toString())
@@ -131,7 +142,8 @@ class CsvImportControllerTest {
     // --- POST /admin/import/preview with valid data ---
 
     @Test
-    void shouldPreviewValidCsvWithMatchedDrivers() throws Exception {
+    void givenValidCsvWithMatchedDrivers_whenPreview_thenShowsPreviewView() throws Exception {
+        // given
         var fixture = testHelper.createFullSeasonFixture("CsvPrev");
         var season = fixture.season();
         var homeTeam = fixture.homeTeam();
@@ -144,6 +156,7 @@ class CsvImportControllerTest {
                 + awayTeam.getShortName() + ",csv_prev_drv2,2,2,false";
         var file = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
 
+        // when / then
         mockMvc.perform(multipart("/admin/import/preview")
                         .file(file)
                         .param("seasonId", season.getId().toString())
@@ -156,7 +169,8 @@ class CsvImportControllerTest {
     // --- POST /admin/import/execute with overwrite ---
 
     @Test
-    void shouldExecuteImportWithOverwrite() throws Exception {
+    void givenExistingImportAndOverwriteEnabled_whenExecute_thenRedirectsToImport() throws Exception {
+        // given
         var fixture = testHelper.createFullSeasonFixture("CsvOver");
         var season = fixture.season();
         var homeTeam = fixture.homeTeam();
@@ -178,8 +192,10 @@ class CsvImportControllerTest {
                         .param("source", "csv"))
                 .andExpect(status().is3xxRedirection());
 
+        // when
         // Second import with overwrite=true
         var file2 = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
+        // then
         mockMvc.perform(multipart("/admin/import/execute")
                         .file(file2)
                         .param("seasonId", season.getId().toString())

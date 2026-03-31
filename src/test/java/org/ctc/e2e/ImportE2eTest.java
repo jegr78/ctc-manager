@@ -38,62 +38,80 @@ class ImportE2eTest extends PlaywrightConfig {
     }
 
     @Test
-    void shouldShowImportPageWithNewLayout() {
+    void whenNavigateToImport_thenPageShowsNewLayout() {
+        // when
         page.navigate(url("/admin/import"));
 
+        // then
         assertThat(page.locator("h1")).containsText("Import");
         assertThat(page.getByRole(AriaRole.BUTTON,
                 new com.microsoft.playwright.Page.GetByRoleOptions().setName("CSV Upload"))).isVisible();
     }
 
     @Test
-    void shouldShowGoogleSheetTabWhenAvailable() {
+    void givenGoogleSheetsAvailable_whenNavigateToImport_thenGoogleSheetTabIsVisible() {
+        // given
+        // GoogleSheetsService stub returns isAvailable() == true
+
+        // when
         page.navigate(url("/admin/import"));
 
+        // then
         assertThat(page.getByRole(AriaRole.BUTTON,
                 new com.microsoft.playwright.Page.GetByRoleOptions().setName("Google Sheet"))).isVisible();
     }
 
     @Test
-    void shouldShowRegularSeasonFieldsByDefault() {
+    void whenNavigateToImport_thenRegularSeasonFieldsAreShownByDefault() {
+        // when
         page.navigate(url("/admin/import"));
 
+        // then
         assertThat(page.locator("#regularFields")).isVisible();
         assertThat(page.locator("#playoffFields")).isHidden();
     }
 
     @Test
-    void shouldToggleToPlayoffFields() {
+    void givenRegularImportType_whenToggleToPlayoff_thenPlayoffFieldsAreVisible() {
+        // given
         page.navigate(url("/admin/import"));
 
+        // when
         page.locator("input[name='importType'][value='playoff']").click();
 
+        // then
         assertThat(page.locator("#regularFields")).isHidden();
         assertThat(page.locator("#playoffFields")).isVisible();
     }
 
     @Test
-    void shouldToggleBackToRegularFields() {
+    void givenPlayoffSelected_whenToggleBackToRegular_thenRegularFieldsAreVisible() {
+        // given
         page.navigate(url("/admin/import"));
 
         // Switch to Playoff
         page.locator("input[name='importType'][value='playoff']").click();
         assertThat(page.locator("#playoffFields")).isVisible();
 
-        // Switch back to Regular
+        // when
         page.locator("input[name='importType'][value='regular']").click();
+
+        // then
         assertThat(page.locator("#regularFields")).isVisible();
         assertThat(page.locator("#playoffFields")).isHidden();
     }
 
     @Test
-    void shouldSwitchToGoogleSheetPanel() {
+    void givenCsvPanelActive_whenClickGoogleSheetTab_thenGoogleSheetPanelIsVisible() {
+        // given
         page.navigate(url("/admin/import"));
 
+        // when
         // Click Google Sheet tab
         page.getByRole(AriaRole.BUTTON,
                 new com.microsoft.playwright.Page.GetByRoleOptions().setName("Google Sheet")).click();
 
+        // then
         // Google Sheet panel visible, CSV panel hidden
         assertThat(page.locator("#panelSheet")).isVisible();
         assertThat(page.locator("#panelCsv")).isHidden();

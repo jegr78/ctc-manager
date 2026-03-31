@@ -38,7 +38,8 @@ class MatchServiceTest {
     // --- createMatch ---
 
     @Test
-    void createMatch_createsMatchAndFirstRace() {
+    void givenValidTeamsAndMatchday_whenCreateMatch_thenMatchAndFirstRaceCreated() {
+        // given
         var matchdayId = UUID.randomUUID();
         var homeTeamId = UUID.randomUUID();
         var awayTeamId = UUID.randomUUID();
@@ -67,8 +68,10 @@ class MatchServiceTest {
         });
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         var result = service.createMatch(matchdayId, homeTeamId, awayTeamId, false);
 
+        // then
         assertThat(result.getHomeTeam()).isEqualTo(homeTeam);
         assertThat(result.getAwayTeam()).isEqualTo(awayTeam);
         assertThat(result.getMatchday()).isEqualTo(matchday);
@@ -78,7 +81,8 @@ class MatchServiceTest {
     }
 
     @Test
-    void createMatch_byeMatch_setsAwayTeamNull() {
+    void givenByeFlag_whenCreateMatch_thenAwayTeamIsNull() {
+        // given
         var matchdayId = UUID.randomUUID();
         var homeTeamId = UUID.randomUUID();
 
@@ -99,8 +103,10 @@ class MatchServiceTest {
         });
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         var result = service.createMatch(matchdayId, homeTeamId, null, true);
 
+        // then
         assertThat(result.getHomeTeam()).isEqualTo(homeTeam);
         assertThat(result.getAwayTeam()).isNull();
         assertThat(result.isBye()).isTrue();
@@ -109,7 +115,8 @@ class MatchServiceTest {
     }
 
     @Test
-    void createMatch_duplicateMatch_throwsException() {
+    void givenDuplicateMatch_whenCreateMatch_thenThrowsException() {
+        // given
         var matchdayId = UUID.randomUUID();
         var homeTeamId = UUID.randomUUID();
         var awayTeamId = UUID.randomUUID();
@@ -132,6 +139,7 @@ class MatchServiceTest {
         when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchdayId, homeTeamId, awayTeamId))
                 .thenReturn(true);
 
+        // when / then
         assertThatThrownBy(() -> service.createMatch(matchdayId, homeTeamId, awayTeamId, false))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Match already exists");
@@ -140,7 +148,8 @@ class MatchServiceTest {
     // --- addLeg ---
 
     @Test
-    void addLeg_createsAdditionalRace() {
+    void givenExistingMatch_whenAddLeg_thenAdditionalRaceCreated() {
+        // given
         var matchId = UUID.randomUUID();
         var matchdayId = UUID.randomUUID();
 
@@ -166,8 +175,10 @@ class MatchServiceTest {
         when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         var result = service.addLeg(matchId);
 
+        // then
         assertThat(result.getRaces()).hasSize(2);
         verify(raceRepository).save(any(Race.class));
     }
@@ -175,7 +186,8 @@ class MatchServiceTest {
     // --- deleteMatch ---
 
     @Test
-    void deleteMatch_deletesAndReturnsMatchdayId() {
+    void givenExistingMatch_whenDeleteMatch_thenDeletesAndReturnsMatchdayId() {
+        // given
         var matchId = UUID.randomUUID();
         var matchdayId = UUID.randomUUID();
 
@@ -191,8 +203,10 @@ class MatchServiceTest {
 
         when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
 
+        // when
         var result = service.deleteMatch(matchId);
 
+        // then
         assertThat(result).isEqualTo(matchdayId);
         verify(matchRepository).delete(match);
     }

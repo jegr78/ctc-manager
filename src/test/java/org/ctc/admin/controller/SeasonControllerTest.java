@@ -30,94 +30,119 @@ class SeasonControllerTest {
     @Autowired private TestHelper testHelper;
 
     @Test
-    void shouldListSeasons() throws Exception {
+    void whenGetSeasons_thenReturnsSeasonsView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/seasons"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/seasons"))
                 .andExpect(model().attributeExists("seasons"));
     }
 
     @Test
-    void shouldShowNewSeasonForm() throws Exception {
+    void whenGetNewSeasonForm_thenReturnsSeasonForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/seasons/new"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/season-form"))
                 .andExpect(model().attributeExists("seasonForm"));
     }
 
     @Test
-    void shouldCreateSeason() throws Exception {
+    void givenValidScoringRefs_whenSaveSeason_thenRedirects() throws Exception {
+        // given
         // Season creation via form will need scoring references — this tests the form binding
         var rs = testHelper.createSeason("Dummy").getRaceScoring();
         var ms = testHelper.createSeason("Dummy2").getMatchScoring();
 
+        // when
         mockMvc.perform(post("/admin/seasons/save")
                         .param("name", "MockMvc Test Season")
                         .param("active", "true")
                         .param("raceScoring", rs.getId().toString())
                         .param("matchScoring", ms.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/seasons"));
     }
 
     @Test
-    void shouldRejectBlankName() throws Exception {
+    void givenBlankName_whenSaveSeason_thenReturnsFormWithErrors() throws Exception {
+        // given
         var season = testHelper.createSeason("Dummy Blank");
+
+        // when
         mockMvc.perform(post("/admin/seasons/save")
                         .param("name", "")
                         .param("raceScoring", season.getRaceScoring().getId().toString())
                         .param("matchScoring", season.getMatchScoring().getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/season-form"));
     }
 
     @Test
-    void shouldEditSeason() throws Exception {
+    void givenExistingSeason_whenGetEditForm_thenReturnsSeasonForm() throws Exception {
+        // given
         var season = testHelper.createSeason("Edit Test");
 
+        // when
         mockMvc.perform(get("/admin/seasons/" + season.getId() + "/edit"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/season-form"))
                 .andExpect(model().attribute("season", hasProperty("name", is("Edit Test"))));
     }
 
     @Test
-    void shouldShowSeasonDetail() throws Exception {
+    void givenExistingSeason_whenGetSeasonDetail_thenReturnsDetailView() throws Exception {
+        // given
         var season = testHelper.createSeason("Detail Test");
 
+        // when
         mockMvc.perform(get("/admin/seasons/" + season.getId()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/season-detail"))
                 .andExpect(model().attributeExists("season"));
     }
 
     @Test
-    void shouldDeleteSeason() throws Exception {
+    void givenExistingSeason_whenDeleteSeason_thenRedirectsAndRemoves() throws Exception {
+        // given
         var season = testHelper.createSeason("Delete Test");
 
+        // when
         mockMvc.perform(post("/admin/seasons/" + season.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/seasons"));
 
+        // then
         assertFalse(seasonRepository.findById(season.getId()).isPresent());
     }
 
     @Test
-    void shouldAddTeamToSeason() throws Exception {
+    void givenSeasonAndTeam_whenAddTeamToSeason_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("Add Team Season");
         var team = teamRepository.save(new Team("Add Team Racing", "ATR"));
 
+        // when
         mockMvc.perform(post("/admin/seasons/" + season.getId() + "/add-team")
                         .param("teamId", team.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/seasons/" + season.getId() + "/edit"))
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
     @Test
-    void shouldSaveExistingSeason() throws Exception {
+    void givenExistingSeason_whenSaveUpdatedSeason_thenRedirectsAndUpdates() throws Exception {
+        // given
         var season = testHelper.createSeason("Update Test");
 
+        // when
         mockMvc.perform(post("/admin/seasons/save")
                         .param("id", season.getId().toString())
                         .param("name", "Updated Season Name")
@@ -127,6 +152,7 @@ class SeasonControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/seasons"));
 
+        // then
         var updated = seasonRepository.findById(season.getId()).orElseThrow();
         assertEquals("Updated Season Name", updated.getName());
     }
@@ -134,14 +160,17 @@ class SeasonControllerTest {
     // --- POST /admin/seasons/{id}/remove-team ---
 
     @Test
-    void shouldRemoveTeamFromSeason() throws Exception {
+    void givenSeasonWithTeam_whenRemoveTeamFromSeason_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("Remove Team Season");
         var team = teamRepository.save(new Team("Remove Team Racing", "RTR"));
         season.addTeam(team);
         seasonRepository.save(season);
 
+        // when
         mockMvc.perform(post("/admin/seasons/" + season.getId() + "/remove-team")
                         .param("teamId", team.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/seasons/" + season.getId() + "/edit"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -150,26 +179,32 @@ class SeasonControllerTest {
     // --- POST /admin/seasons/{id}/cars/add + remove ---
 
     @Test
-    void shouldAddCarsToSeason() throws Exception {
+    void givenSeasonAndCar_whenAddCarsToSeason_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("Add Cars Season");
         var car = carRepository.save(new Car("Test Toyota", "GR86"));
 
+        // when
         mockMvc.perform(post("/admin/seasons/" + season.getId() + "/cars/add")
                         .param("carIds", car.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("/admin/seasons/" + season.getId() + "/edit*"))
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
     @Test
-    void shouldRemoveCarsFromSeason() throws Exception {
+    void givenSeasonWithCar_whenRemoveCarsFromSeason_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("Remove Cars Season");
         var car = carRepository.save(new Car("Test Honda", "NSX-R"));
         season.getCars().add(car);
         seasonRepository.save(season);
 
+        // when
         mockMvc.perform(post("/admin/seasons/" + season.getId() + "/cars/remove")
                         .param("carIds", car.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("/admin/seasons/" + season.getId() + "/edit*"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -178,26 +213,32 @@ class SeasonControllerTest {
     // --- POST /admin/seasons/{id}/tracks/add + remove ---
 
     @Test
-    void shouldAddTracksToSeason() throws Exception {
+    void givenSeasonAndTrack_whenAddTracksToSeason_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("Add Tracks Season");
         var track = trackRepository.save(new Track("Test Fuji Speedway", "JP"));
 
+        // when
         mockMvc.perform(post("/admin/seasons/" + season.getId() + "/tracks/add")
                         .param("trackIds", track.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("/admin/seasons/" + season.getId() + "/edit*"))
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
     @Test
-    void shouldRemoveTracksFromSeason() throws Exception {
+    void givenSeasonWithTrack_whenRemoveTracksFromSeason_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("Remove Tracks Season");
         var track = trackRepository.save(new Track("Test Autopolis", "JP"));
         season.getTracks().add(track);
         seasonRepository.save(season);
 
+        // when
         mockMvc.perform(post("/admin/seasons/" + season.getId() + "/tracks/remove")
                         .param("trackIds", track.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrlPattern("/admin/seasons/" + season.getId() + "/edit*"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -206,13 +247,16 @@ class SeasonControllerTest {
     // --- GET /admin/seasons/{id}/swiss ---
 
     @Test
-    void shouldShowSwissRoundsPage() throws Exception {
+    void givenSwissSeason_whenGetSwissRoundsPage_thenReturnsSwissView() throws Exception {
+        // given
         var season = testHelper.createSeason("Swiss Test Season");
         season.setFormat(SeasonFormat.SWISS);
         season.setTotalRounds(5);
         seasonRepository.save(season);
 
+        // when
         mockMvc.perform(get("/admin/seasons/" + season.getId() + "/swiss"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/swiss-rounds"))
                 .andExpect(model().attributeExists("season", "raceScores", "currentRound", "canGenerateNext"));

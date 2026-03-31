@@ -43,21 +43,28 @@ class MatchControllerTest {
     }
 
     @Test
-    void shouldShowNewMatchForm() throws Exception {
+    void givenMatchday_whenGetNewMatchForm_thenReturnsMatchForm() throws Exception {
+        // given
+        // fixture provides matchday
+
+        // when
         mockMvc.perform(get("/admin/matches/new")
                         .param("matchdayId", fixture.matchday().getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/match-form"))
                 .andExpect(model().attributeExists("matchday", "teams"));
     }
 
     @Test
-    void shouldCreateMatchAndAutoCreateRace() throws Exception {
+    void givenTwoTeams_whenSaveMatch_thenRedirectsAndCreatesMatchWithRace() throws Exception {
+        // given
         var newHome = testHelper.createTeam("Test_Match Save Home", "Test_MSH");
         var newAway = testHelper.createTeam("Test_Match Save Away", "Test_MSA");
         fixture.season().addTeam(newHome);
         fixture.season().addTeam(newAway);
 
+        // when
         mockMvc.perform(post("/admin/matches/save")
                         .param("matchdayId", fixture.matchday().getId().toString())
                         .param("homeTeamId", newHome.getId().toString())
@@ -66,6 +73,7 @@ class MatchControllerTest {
                 .andExpect(redirectedUrl("/admin/matchdays/" + fixture.matchday().getId()))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var matches = matchRepository.findByMatchdayId(fixture.matchday().getId());
         var created = matches.stream()
                 .filter(m -> m.getHomeTeam().getId().equals(newHome.getId()))
@@ -80,10 +88,12 @@ class MatchControllerTest {
     }
 
     @Test
-    void shouldCreateByeMatch() throws Exception {
+    void givenByeTeam_whenSaveByeMatch_thenRedirectsAndCreatesByeMatch() throws Exception {
+        // given
         var byeTeam = testHelper.createTeam("Test_Match Bye Team", "Test_MBT");
         fixture.season().addTeam(byeTeam);
 
+        // when
         mockMvc.perform(post("/admin/matches/save")
                         .param("matchdayId", fixture.matchday().getId().toString())
                         .param("homeTeamId", byeTeam.getId().toString())
@@ -91,6 +101,7 @@ class MatchControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var matches = matchRepository.findByMatchdayId(fixture.matchday().getId());
         var byeMatch = matches.stream()
                 .filter(m -> m.getHomeTeam().getId().equals(byeTeam.getId()) && m.isBye())
@@ -99,25 +110,32 @@ class MatchControllerTest {
     }
 
     @Test
-    void shouldDeleteMatch() throws Exception {
+    void givenExistingMatch_whenDeleteMatch_thenRedirectsAndRemoves() throws Exception {
+        // given
         var matchId = fixture.match().getId();
         var matchdayId = fixture.matchday().getId();
 
+        // when
         mockMvc.perform(post("/admin/matches/" + matchId + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/matchdays/" + matchdayId))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         assertFalse(matchRepository.findById(matchId).isPresent());
     }
 
     @Test
-    void shouldRejectDuplicateMatch() throws Exception {
+    void givenExistingMatch_whenSaveDuplicateMatch_thenRedirectsWithError() throws Exception {
+        // given
         // Fixture already has a match homeTeam vs awayTeam — creating the same should fail
+
+        // when
         mockMvc.perform(post("/admin/matches/save")
                         .param("matchdayId", fixture.matchday().getId().toString())
                         .param("homeTeamId", fixture.homeTeam().getId().toString())
                         .param("awayTeamId", fixture.awayTeam().getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("errorMessage"));
     }

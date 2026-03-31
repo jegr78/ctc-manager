@@ -37,7 +37,8 @@ class ResultsGraphicServiceTest {
     }
 
     @Test
-    void buildResultRows_sortsByPointsDescending() {
+    void givenRaceWithEvenTeams_whenBuildResultRows_thenRowsSortedByPointsDescending() {
+        // given
         var service = createService();
         var homeTeam = new Team("Home", "HOM");
         homeTeam.setId(UUID.randomUUID());
@@ -60,8 +61,10 @@ class ResultsGraphicServiceTest {
         when(scoringService.isDriverInTeam(eq(r3), any(), eq(homeTeam.getId()))).thenReturn(false);
         when(scoringService.isDriverInTeam(eq(r4), any(), eq(homeTeam.getId()))).thenReturn(false);
 
+        // when
         var rows = service.buildResultRows(race);
 
+        // then
         assertThat(rows).hasSize(2);
         assertThat(rows.get(0).homeDriver()).isEqualTo("HomeTop");
         assertThat(rows.get(0).homePoints()).isEqualTo(20);
@@ -74,7 +77,8 @@ class ResultsGraphicServiceTest {
     }
 
     @Test
-    void buildResultRows_tiebreakerByPosition() {
+    void givenDriversWithEqualPoints_whenBuildResultRows_thenTiebreakerByPosition() {
+        // given
         var service = createService();
         var homeTeam = new Team("Home", "HOM");
         homeTeam.setId(UUID.randomUUID());
@@ -94,15 +98,18 @@ class ResultsGraphicServiceTest {
         when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
         when(scoringService.isDriverInTeam(eq(r2), any(), eq(homeTeam.getId()))).thenReturn(true);
 
+        // when
         var rows = service.buildResultRows(race);
 
+        // then
         assertThat(rows).hasSize(2);
         assertThat(rows.get(0).homeDriver()).isEqualTo("HomeP1");
         assertThat(rows.get(1).homeDriver()).isEqualTo("HomeP3");
     }
 
     @Test
-    void buildResultRows_unevenTeams() {
+    void givenRaceWithUnevenTeams_whenBuildResultRows_thenLastRowHasEmptyAwaySlot() {
+        // given
         var service = createService();
         var homeTeam = new Team("Home", "HOM");
         homeTeam.setId(UUID.randomUUID());
@@ -127,8 +134,10 @@ class ResultsGraphicServiceTest {
         when(scoringService.isDriverInTeam(eq(r4), any(), eq(homeTeam.getId()))).thenReturn(false);
         when(scoringService.isDriverInTeam(eq(r5), any(), eq(homeTeam.getId()))).thenReturn(false);
 
+        // when
         var rows = service.buildResultRows(race);
 
+        // then
         assertThat(rows).hasSize(3);
         assertThat(rows.get(2).homeDriver()).isEqualTo("H3");
         assertThat(rows.get(2).homePoints()).isEqualTo(14);

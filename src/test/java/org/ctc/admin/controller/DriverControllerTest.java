@@ -26,23 +26,28 @@ class DriverControllerTest {
     @Autowired private TestHelper testHelper;
 
     @Test
-    void shouldListDrivers() throws Exception {
+    void whenGetDrivers_thenReturnsDriversView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/drivers"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/drivers"))
                 .andExpect(model().attributeExists("drivers"));
     }
 
     @Test
-    void shouldShowNewDriverForm() throws Exception {
+    void whenGetNewDriverForm_thenReturnsDriverForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/drivers/new"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/driver-form"))
                 .andExpect(model().attributeExists("driverForm"));
     }
 
     @Test
-    void shouldCreateDriver() throws Exception {
+    void givenValidDriverForm_whenSaveDriver_thenRedirectsAndPersists() throws Exception {
+        // when
         mockMvc.perform(post("/admin/drivers/save")
                         .param("psnId", "mockmvc_driver")
                         .param("nickname", "MockMvc Driver")
@@ -50,35 +55,44 @@ class DriverControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers"));
 
+        // then
         var saved = driverRepository.findByPsnId("mockmvc_driver");
         assertTrue(saved.isPresent());
         assertEquals("MockMvc Driver", saved.get().getNickname());
     }
 
     @Test
-    void shouldShowDriverDetail() throws Exception {
+    void givenExistingDriver_whenGetDriverDetail_thenReturnsDetailView() throws Exception {
+        // given
         var driver = driverRepository.save(new Driver("detail_test_psn", "Detail Tester"));
 
+        // when
         mockMvc.perform(get("/admin/drivers/" + driver.getId()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/driver-detail"))
                 .andExpect(model().attributeExists("driver"));
     }
 
     @Test
-    void shouldShowEditForm() throws Exception {
+    void givenExistingDriver_whenGetEditForm_thenReturnsDriverForm() throws Exception {
+        // given
         var driver = driverRepository.save(new Driver("edit_test_psn", "Edit Tester"));
 
+        // when
         mockMvc.perform(get("/admin/drivers/" + driver.getId() + "/edit"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/driver-form"))
                 .andExpect(model().attributeExists("driverForm", "seasonDrivers", "seasons", "teams"));
     }
 
     @Test
-    void shouldSaveExistingDriver() throws Exception {
+    void givenExistingDriver_whenSaveUpdatedDriver_thenRedirectsAndUpdates() throws Exception {
+        // given
         var driver = driverRepository.save(new Driver("update_test_psn", "Original Name"));
 
+        // when
         mockMvc.perform(post("/admin/drivers/save")
                         .param("id", driver.getId().toString())
                         .param("psnId", "update_test_psn")
@@ -87,31 +101,38 @@ class DriverControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers"));
 
+        // then
         var updated = driverRepository.findById(driver.getId()).orElseThrow();
         assertEquals("Updated Name", updated.getNickname());
     }
 
     @Test
-    void shouldAssignDriverToSeason() throws Exception {
+    void givenDriverAndSeasonAndTeam_whenAssignDriver_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("Assign Driver Season");
         var team = testHelper.createTeam("Assign Team", "ASG");
         var driver = driverRepository.save(new Driver("assign_test_psn", "Assign Driver"));
 
+        // when
         mockMvc.perform(post("/admin/drivers/" + driver.getId() + "/assign")
                         .param("seasonId", season.getId().toString())
                         .param("teamId", team.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/" + driver.getId() + "/edit"))
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
     @Test
-    void shouldDeleteDriver() throws Exception {
+    void givenExistingDriver_whenDeleteDriver_thenRedirectsAndRemoves() throws Exception {
+        // given
         var driver = driverRepository.save(new Driver("delete_driver", "Delete Driver"));
 
+        // when
         mockMvc.perform(post("/admin/drivers/" + driver.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection());
 
+        // then
         assertFalse(driverRepository.findById(driver.getId()).isPresent());
     }
 }
