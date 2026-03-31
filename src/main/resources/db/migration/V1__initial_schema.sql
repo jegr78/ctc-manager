@@ -6,7 +6,9 @@ CREATE TABLE race_scorings (
     name VARCHAR(255) NOT NULL UNIQUE,
     race_points VARCHAR(500) NOT NULL,
     quali_points VARCHAR(500),
-    fastest_lap_points INT NOT NULL DEFAULT 0
+    fastest_lap_points INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE match_scorings (
@@ -14,7 +16,9 @@ CREATE TABLE match_scorings (
     name VARCHAR(255) NOT NULL UNIQUE,
     points_win INT NOT NULL,
     points_draw INT NOT NULL,
-    points_loss INT NOT NULL
+    points_loss INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE seasons (
@@ -28,6 +32,8 @@ CREATE TABLE seasons (
     legs INT NOT NULL DEFAULT 1,
     race_scoring_id UUID NOT NULL,
     match_scoring_id UUID NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_season_race_scoring FOREIGN KEY (race_scoring_id) REFERENCES race_scorings(id),
     CONSTRAINT fk_season_match_scoring FOREIGN KEY (match_scoring_id) REFERENCES match_scorings(id)
 );
@@ -41,6 +47,8 @@ CREATE TABLE teams (
     secondary_color VARCHAR(7),
     accent_color VARCHAR(7),
     parent_team_id UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_team_parent FOREIGN KEY (parent_team_id) REFERENCES teams(id)
 );
 
@@ -48,7 +56,9 @@ CREATE TABLE drivers (
     id UUID PRIMARY KEY,
     psn_id VARCHAR(255) NOT NULL UNIQUE,
     nickname VARCHAR(255) NOT NULL,
-    active BOOLEAN NOT NULL DEFAULT TRUE
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE season_drivers (
@@ -58,6 +68,8 @@ CREATE TABLE season_drivers (
     team_id UUID NOT NULL,
     CONSTRAINT fk_sd_season FOREIGN KEY (season_id) REFERENCES seasons(id),
     CONSTRAINT fk_sd_driver FOREIGN KEY (driver_id) REFERENCES drivers(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_sd_team FOREIGN KEY (team_id) REFERENCES teams(id),
     CONSTRAINT uk_season_driver UNIQUE (season_id, driver_id)
 );
@@ -72,6 +84,8 @@ CREATE TABLE season_teams (
     accent_color VARCHAR(7),
     logo_url VARCHAR(500),
     CONSTRAINT fk_st_season FOREIGN KEY (season_id) REFERENCES seasons(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_st_team FOREIGN KEY (team_id) REFERENCES teams(id),
     CONSTRAINT uk_season_team UNIQUE (season_id, team_id)
 );
@@ -82,6 +96,8 @@ CREATE TABLE cars (
     name VARCHAR(255) NOT NULL,
     gt7_id VARCHAR(20),
     image_url VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_car UNIQUE (manufacturer, name)
 );
 
@@ -91,7 +107,9 @@ CREATE TABLE tracks (
     id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
     country VARCHAR(100),
-    image_url VARCHAR(500)
+    image_url VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE season_cars (
@@ -115,6 +133,8 @@ CREATE TABLE matchdays (
     season_id UUID NOT NULL,
     label VARCHAR(255) NOT NULL,
     sort_index INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_md_season FOREIGN KEY (season_id) REFERENCES seasons(id)
 );
 
@@ -127,6 +147,8 @@ CREATE TABLE matches (
     away_score INT,
     bye BOOLEAN DEFAULT FALSE NOT NULL,
     CONSTRAINT fk_match_matchday FOREIGN KEY (matchday_id) REFERENCES matchdays(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_match_home_team FOREIGN KEY (home_team_id) REFERENCES teams(id),
     CONSTRAINT fk_match_away_team FOREIGN KEY (away_team_id) REFERENCES teams(id)
 );
@@ -137,6 +159,8 @@ CREATE TABLE playoffs (
     name VARCHAR(255) NOT NULL,
     start_date DATE,
     end_date DATE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_playoff_season FOREIGN KEY (season_id) REFERENCES seasons(id),
     CONSTRAINT uk_playoff_season UNIQUE (season_id)
 );
@@ -147,6 +171,8 @@ CREATE TABLE playoff_rounds (
     label VARCHAR(255) NOT NULL,
     round_index INT NOT NULL,
     best_of_legs INT NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_pr_playoff FOREIGN KEY (playoff_id) REFERENCES playoffs(id)
 );
 
@@ -163,6 +189,8 @@ CREATE TABLE playoff_matchups (
     CONSTRAINT fk_pm_round FOREIGN KEY (round_id) REFERENCES playoff_rounds(id),
     CONSTRAINT fk_pm_team1 FOREIGN KEY (team1_id) REFERENCES teams(id),
     CONSTRAINT fk_pm_team2 FOREIGN KEY (team2_id) REFERENCES teams(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_pm_winner FOREIGN KEY (winner_id) REFERENCES teams(id),
     CONSTRAINT fk_pm_next FOREIGN KEY (next_matchup_id) REFERENCES playoff_matchups(id)
 );
@@ -185,6 +213,8 @@ CREATE TABLE races (
     date_time TIMESTAMP,
     CONSTRAINT fk_race_matchday FOREIGN KEY (matchday_id) REFERENCES matchdays(id),
     CONSTRAINT fk_race_match FOREIGN KEY (match_id) REFERENCES matches(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_race_track FOREIGN KEY (track_id) REFERENCES tracks(id),
     CONSTRAINT fk_race_car FOREIGN KEY (car_id) REFERENCES cars(id),
     CONSTRAINT fk_race_playoff_matchup FOREIGN KEY (playoff_matchup_id) REFERENCES playoff_matchups(id)
@@ -202,6 +232,8 @@ CREATE TABLE race_results (
     points_fl INT NOT NULL DEFAULT 0,
     points_total INT NOT NULL DEFAULT 0,
     CONSTRAINT fk_rr_race FOREIGN KEY (race_id) REFERENCES races(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_rr_driver FOREIGN KEY (driver_id) REFERENCES drivers(id),
     CONSTRAINT uk_race_driver UNIQUE (race_id, driver_id)
 );
@@ -213,6 +245,8 @@ CREATE TABLE race_lineups (
     team_id UUID NOT NULL,
     CONSTRAINT fk_rl_race FOREIGN KEY (race_id) REFERENCES races(id),
     CONSTRAINT fk_rl_driver FOREIGN KEY (driver_id) REFERENCES drivers(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_rl_team FOREIGN KEY (team_id) REFERENCES teams(id),
     CONSTRAINT uk_race_lineup_driver UNIQUE (race_id, driver_id)
 );
@@ -224,5 +258,6 @@ CREATE TABLE race_attachments (
     name VARCHAR(255) NOT NULL,
     url VARCHAR(1000) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_ra_race FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE
 );

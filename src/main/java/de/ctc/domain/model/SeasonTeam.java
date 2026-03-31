@@ -10,7 +10,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "season_teams")
 @Getter @Setter @NoArgsConstructor
-public class SeasonTeam {
+public class SeasonTeam extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

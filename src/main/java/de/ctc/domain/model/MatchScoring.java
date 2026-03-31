@@ -12,7 +12,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "match_scorings")
 @Getter @Setter @NoArgsConstructor @ToString
-public class MatchScoring {
+public class MatchScoring extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

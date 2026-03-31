@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 @Entity
 @Table(name = "seasons")
 @Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchdays", "seasonDrivers", "seasonTeams", "cars", "tracks", "raceScoring", "matchScoring"})
-public class Season {
+public class Season extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

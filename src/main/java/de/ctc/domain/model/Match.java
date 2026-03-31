@@ -14,7 +14,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "matches")
 @Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "homeTeam", "awayTeam", "races"})
-public class Match {
+public class Match extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -13,7 +13,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "race_scorings")
 @Getter @Setter @NoArgsConstructor @ToString
-public class RaceScoring {
+public class RaceScoring extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

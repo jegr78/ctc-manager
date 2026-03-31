@@ -15,7 +15,7 @@ import java.util.UUID;
 @Table(name = "race_results",
        uniqueConstraints = @UniqueConstraint(columnNames = {"race_id", "driver_id"}))
 @Getter @Setter @NoArgsConstructor @ToString(exclude = {"race", "driver"})
-public class RaceResult {
+public class RaceResult extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

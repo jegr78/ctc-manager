@@ -5,15 +5,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "race_attachments")
 @Getter @Setter @NoArgsConstructor @ToString(exclude = {"race"})
-public class RaceAttachment {
+public class RaceAttachment extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -32,10 +30,6 @@ public class RaceAttachment {
 
     @Column(nullable = false, length = 1000)
     private String url;
-
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
 
     public RaceAttachment(Race race, AttachmentType type, String name, String url) {
         this.race = race;
