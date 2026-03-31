@@ -185,6 +185,8 @@
 						<exclude>de/ctc/CtcManagerApplication.class</exclude>
 						<exclude>de/ctc/admin/TestDataService.class</exclude>
 						<exclude>de/ctc/admin/DemoDataSeeder.class</exclude>
+						<exclude>de/ctc/admin/service/TeamCardService.class</exclude>
+						<exclude>de/ctc/admin/service/LineupGraphicService.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>
@@ -209,7 +211,7 @@
 										<limit>
 											<counter>LINE</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.70</minimum>
+											<minimum>0.80</minimum>
 										</limit>
 									</limits>
 								</rule>

@@ -1,15 +1,22 @@
 package de.ctc.admin.controller;
 
+import de.ctc.TestHelper;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -53,6 +60,18 @@ class RaceControllerTest {
 
     @Autowired
     private MatchScoringRepository matchScoringRepository;
+
+    @Autowired
+    private SeasonDriverRepository seasonDriverRepository;
+
+    @Autowired
+    private RaceAttachmentRepository raceAttachmentRepository;
+
+    @Autowired
+    private TestHelper testHelper;
+
+    @Value("${app.upload-dir:uploads}")
+    private String uploadDir;
 
     private Season season;
     private Matchday matchday;
@@ -359,5 +378,157 @@ class RaceControllerTest {
                         .param("trackId", track.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute("errorMessage", "Track is not in this season's pool"));
+    }
+
+    // --- POST /admin/races/{id}/attachments/upload ---
+
+    @Test
+    void shouldUploadFileAttachment() throws Exception {
+        var file = new MockMultipartFile("file", "test-image.png", "image/png",
+                new byte[]{(byte) 0x89, 'P', 'N', 'G'});
+
+        mockMvc.perform(multipart("/admin/races/" + race.getId() + "/attachments/upload")
+                        .file(file))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/races/" + race.getId()))
+                .andExpect(flash().attribute("successMessage", "File uploaded: test-image.png"));
+    }
+
+    // --- POST /admin/races/attachments/{id}/delete ---
+
+    @Test
+    void shouldDeleteLinkAttachment() throws Exception {
+        var attachment = raceAttachmentRepository.save(
+                new RaceAttachment(race, AttachmentType.LINK, "Test Link", "https://example.com"));
+
+        mockMvc.perform(post("/admin/races/attachments/" + attachment.getId() + "/delete"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/races/" + race.getId()))
+                .andExpect(flash().attribute("successMessage", "Attachment deleted"));
+
+        assertFalse(raceAttachmentRepository.findById(attachment.getId()).isPresent());
+    }
+
+    @Test
+    void shouldDeleteFileAttachment() throws Exception {
+        // Create a file attachment with a URL that points to a non-existent file (delete is best-effort)
+        var attachment = raceAttachmentRepository.save(
+                new RaceAttachment(race, AttachmentType.FILE, "Test File", "/uploads/races/" + race.getId() + "/test.png"));
+
+        mockMvc.perform(post("/admin/races/attachments/" + attachment.getId() + "/delete"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/races/" + race.getId()))
+                .andExpect(flash().attribute("successMessage", "Attachment deleted"));
+
+        assertFalse(raceAttachmentRepository.findById(attachment.getId()).isPresent());
+    }
+
+    // --- GET /admin/races/attachments/{id}/download ---
+
+    @Test
+    void shouldDownloadFileAttachment() throws Exception {
+        // Create actual file on disk
+        Path raceDir = Paths.get(uploadDir).toAbsolutePath().normalize()
+                .resolve("races").resolve(race.getId().toString());
+        Files.createDirectories(raceDir);
+        Path testFile = raceDir.resolve("test-download.png");
+        Files.write(testFile, new byte[]{1, 2, 3, 4});
+
+        var attachment = raceAttachmentRepository.save(
+                new RaceAttachment(race, AttachmentType.FILE, "Download Test",
+                        "/uploads/races/" + race.getId() + "/test-download.png"));
+
+        mockMvc.perform(get("/admin/races/attachments/" + attachment.getId() + "/download"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("Download Test")));
+
+        // Cleanup
+        Files.deleteIfExists(testFile);
+    }
+
+    @Test
+    void shouldReturnBadRequestForLinkDownload() throws Exception {
+        var attachment = raceAttachmentRepository.save(
+                new RaceAttachment(race, AttachmentType.LINK, "Not a file", "https://example.com"));
+
+        mockMvc.perform(get("/admin/races/attachments/" + attachment.getId() + "/download"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnNotFoundForMissingFile() throws Exception {
+        var attachment = raceAttachmentRepository.save(
+                new RaceAttachment(race, AttachmentType.FILE, "Missing",
+                        "/uploads/races/" + race.getId() + "/nonexistent.png"));
+
+        mockMvc.perform(get("/admin/races/attachments/" + attachment.getId() + "/download"))
+                .andExpect(status().isNotFound());
+    }
+
+    // --- POST /admin/races/{id}/delete (already covered above but adding race with results) ---
+
+    // --- Duplicate track validation ---
+
+    @Test
+    void shouldRejectDuplicateTrackForSameHomeTeam() throws Exception {
+        var track = trackRepository.save(new Track("Test Suzuka", "JP"));
+        season.getTracks().add(track);
+        seasonRepository.save(season);
+        race.setTrack(track);
+        raceRepository.save(race);
+
+        var matchday2 = matchdayRepository.save(new Matchday(season, "RT Matchday DT", 3));
+
+        mockMvc.perform(post("/admin/races/save")
+                        .param("matchdayId", matchday2.getId().toString())
+                        .param("homeTeamId", home.getId().toString())
+                        .param("awayTeamId", away.getId().toString())
+                        .param("trackId", track.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("errorMessage",
+                        home.getShortName() + " has already used " + track.getName() + " this season"));
+    }
+
+    // --- Race detail with results ---
+
+    @Test
+    void shouldShowRaceDetailWithResults() throws Exception {
+        var driver1 = driverRepository.save(new Driver("psn_detail_h", "DetailHomeDriver"));
+        var driver2 = driverRepository.save(new Driver("psn_detail_a", "DetailAwayDriver"));
+        seasonDriverRepository.save(new SeasonDriver(season, driver1, home));
+        seasonDriverRepository.save(new SeasonDriver(season, driver2, away));
+
+        // Save results first
+        mockMvc.perform(post("/admin/races/" + race.getId() + "/results")
+                        .param("results[0].driverId", driver1.getId().toString())
+                        .param("results[0].position", "1")
+                        .param("results[0].qualiPosition", "1")
+                        .param("results[0].fastestLap", "true")
+                        .param("results[1].driverId", driver2.getId().toString())
+                        .param("results[1].position", "2")
+                        .param("results[1].qualiPosition", "2")
+                        .param("results[1].fastestLap", "false"))
+                .andExpect(status().is3xxRedirection());
+
+        // Now view the detail page with results
+        mockMvc.perform(get("/admin/races/" + race.getId()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/race-detail"))
+                .andExpect(model().attributeExists("race", "homeTotal", "awayTotal", "driverTeamMap"));
+    }
+
+    // --- List races with scores ---
+
+    @Test
+    void shouldListRacesWithScores() throws Exception {
+        // Set up a match with scores
+        race.getMatch().setHomeScore(10);
+        race.getMatch().setAwayScore(8);
+        matchRepository.save(race.getMatch());
+
+        mockMvc.perform(get("/admin/races"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("raceScores"));
     }
 }

@@ -217,4 +217,143 @@ class CsvImportServiceTest {
         assertThat(result.getLineupCount()).isEqualTo(1);
         verify(raceLineupRepository, times(1)).save(any());
     }
+
+    @Test
+    void executeImport_withConfirmedFuzzyMatch_usesConfirmedDriver() {
+        setupCommonMocks();
+        when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+
+        var fuzzyDriver = new Driver("fuzzy_psn", "Fuzzy Name");
+        fuzzyDriver.setId(UUID.randomUUID());
+        when(driverRepository.findById(fuzzyDriver.getId())).thenReturn(Optional.of(fuzzyDriver));
+
+        var metadata = new CsvImportService.ImportMetadata("Season 1", null, null, null, null, matchday.getId());
+        var row1 = new CsvImportService.ImportRow("BRV", "fuzz_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.fuzzy("fuzz_psn", fuzzyDriver, 85));
+        var row2 = new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2));
+
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(row1);
+        preview.addRow(row2);
+
+        // Confirm fuzzy match
+        Map<String, UUID> confirmedMatches = Map.of("fuzz_psn", fuzzyDriver.getId());
+        var result = csvImportService.executeImport(preview, confirmedMatches, Set.of(), false);
+
+        assertThat(result.hasErrors()).isFalse();
+        assertThat(result.getImportedRaces()).hasSize(1);
+    }
+
+    @Test
+    void executeImport_withCreateNewDrivers_createsNewDriver() {
+        setupCommonMocks();
+        when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+        when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> {
+            var d = inv.getArgument(0, Driver.class);
+            if (d.getId() == null) d.setId(UUID.randomUUID());
+            return d;
+        });
+
+        var metadata = new CsvImportService.ImportMetadata("Season 1", null, null, null, null, matchday.getId());
+        var row1 = new CsvImportService.ImportRow("BRV", "brand_new_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.noMatch("brand_new_psn"));
+        var row2 = new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2));
+
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(row1);
+        preview.addRow(row2);
+
+        Set<String> createNew = Set.of("brand_new_psn");
+        var result = csvImportService.executeImport(preview, Map.of(), createNew, false);
+
+        assertThat(result.hasErrors()).isFalse();
+        assertThat(result.getNewDriversCreated()).isEqualTo(1);
+    }
+
+    @Test
+    void executeImport_withOverwrite_deletesExistingMatch() {
+        setupCommonMocks();
+        when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+
+        // First call returns true (duplicate exists), second call after delete returns false
+        when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
+                .thenReturn(true);
+
+        var existingMatch = new Match(matchday, standaloneTeam1, standaloneTeam2);
+        existingMatch.setId(UUID.randomUUID());
+        existingMatch.setHomeTeam(standaloneTeam1);
+        existingMatch.setAwayTeam(standaloneTeam2);
+        when(matchRepository.findByMatchdayId(matchday.getId()))
+                .thenReturn(List.of(existingMatch));
+
+        var metadata = new CsvImportService.ImportMetadata("Season 1", null, null, null, null, matchday.getId());
+        var row1 = new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1));
+        var row2 = new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2));
+
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(row1);
+        preview.addRow(row2);
+
+        var result = csvImportService.executeImport(preview, Map.of(), Set.of(), true);
+
+        verify(matchRepository).delete(existingMatch);
+        verify(matchRepository).flush();
+        assertThat(result.getImportedRaces()).hasSize(1);
+    }
+
+    @Test
+    void executeImport_withDuplicate_noOverwrite_addsError() {
+        when(seasonRepository.findByName("Season 1")).thenReturn(Optional.of(season));
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
+                .thenReturn(true);
+
+        var metadata = new CsvImportService.ImportMetadata("Season 1", null, null, null, null, matchday.getId());
+        var row1 = new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1));
+        var row2 = new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2));
+
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(row1);
+        preview.addRow(row2);
+
+        var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
+
+        assertThat(result.hasErrors()).isTrue();
+        assertThat(result.getErrors().getFirst()).contains("Match already exists");
+    }
+
+    @Test
+    void parseAndPreview_withValidCsv_returnsRows() throws Exception {
+        when(driverMatchingService.findDriver("drv1"))
+                .thenReturn(DriverMatchingService.MatchResult.exact("drv1", driver1));
+        when(driverMatchingService.findDriver("drv2"))
+                .thenReturn(DriverMatchingService.MatchResult.exact("drv2", driver2));
+
+        var csvContent = "Team,PSN ID,Position,Quali,FL\nBRV,drv1,1,1,true\nCRL,drv2,2,2,false\n";
+        var stream = new java.io.ByteArrayInputStream(csvContent.getBytes());
+        var metadata = new CsvImportService.ImportMetadata("Season 1", "MD1", null, null);
+
+        var preview = csvImportService.parseAndPreview(stream, metadata);
+
+        assertThat(preview.getRows()).hasSize(2);
+        assertThat(preview.hasErrors()).isFalse();
+    }
+
+    @Test
+    void parseAndPreview_withTooFewColumns_addsError() throws Exception {
+        var csvContent = "BRV,drv1\n";
+        var stream = new java.io.ByteArrayInputStream(csvContent.getBytes());
+        var metadata = new CsvImportService.ImportMetadata("Season 1", "MD1", null, null);
+
+        var preview = csvImportService.parseAndPreview(stream, metadata);
+
+        assertThat(preview.hasErrors()).isTrue();
+        assertThat(preview.getRows()).isEmpty();
+    }
 }

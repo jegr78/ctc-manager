@@ -1,6 +1,8 @@
 package de.ctc.dataimport;
 
 import de.ctc.TestHelper;
+import de.ctc.domain.model.*;
+import de.ctc.domain.repository.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +23,8 @@ class CsvImportControllerTest {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private TestHelper testHelper;
+    @Autowired private DriverRepository driverRepository;
+    @Autowired private TeamRepository teamRepository;
 
     @Test
     void shouldShowImportForm() throws Exception {
@@ -91,5 +95,96 @@ class CsvImportControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/import"))
                 .andExpect(model().attributeExists("errorMessage"));
+    }
+
+    // --- POST /admin/import/execute with valid CSV ---
+
+    @Test
+    void shouldExecuteImportWithValidCsvAndRedirectWithSuccess() throws Exception {
+        var fixture = testHelper.createFullSeasonFixture("CsvExec");
+        var season = fixture.season();
+        var homeTeam = fixture.homeTeam();
+        var awayTeam = fixture.awayTeam();
+
+        // Create drivers that exist in DB (exact match)
+        var driver1 = driverRepository.save(new Driver("csv_exec_drv1", "CsvExecDriver1"));
+        var driver2 = driverRepository.save(new Driver("csv_exec_drv2", "CsvExecDriver2"));
+
+        // CSV with correct format: Team, PSN ID, Position, Quali, FL
+        var csvContent = homeTeam.getShortName() + ",csv_exec_drv1,1,1,true\n"
+                + awayTeam.getShortName() + ",csv_exec_drv2,2,2,false";
+        var file = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
+
+        // Use a new matchday label so no duplicate
+        mockMvc.perform(multipart("/admin/import/execute")
+                        .file(file)
+                        .param("seasonName", season.getName())
+                        .param("matchdayLabel", "CsvExec ImportMD")
+                        .param("source", "csv"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/import"))
+                .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    // --- POST /admin/import/preview with valid data ---
+
+    @Test
+    void shouldPreviewValidCsvWithMatchedDrivers() throws Exception {
+        var fixture = testHelper.createFullSeasonFixture("CsvPrev");
+        var season = fixture.season();
+        var homeTeam = fixture.homeTeam();
+        var awayTeam = fixture.awayTeam();
+
+        var driver1 = driverRepository.save(new Driver("csv_prev_drv1", "CsvPrevDriver1"));
+        var driver2 = driverRepository.save(new Driver("csv_prev_drv2", "CsvPrevDriver2"));
+
+        var csvContent = homeTeam.getShortName() + ",csv_prev_drv1,1,1,true\n"
+                + awayTeam.getShortName() + ",csv_prev_drv2,2,2,false";
+        var file = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
+
+        mockMvc.perform(multipart("/admin/import/preview")
+                        .file(file)
+                        .param("seasonName", season.getName())
+                        .param("matchdayLabel", "CsvPrev ImportMD"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/import-preview"))
+                .andExpect(model().attributeExists("preview", "metadata"));
+    }
+
+    // --- POST /admin/import/execute with overwrite ---
+
+    @Test
+    void shouldExecuteImportWithOverwrite() throws Exception {
+        var fixture = testHelper.createFullSeasonFixture("CsvOver");
+        var season = fixture.season();
+        var homeTeam = fixture.homeTeam();
+        var awayTeam = fixture.awayTeam();
+        var matchday = fixture.matchday();
+
+        var driver1 = driverRepository.save(new Driver("csv_over_drv1", "CsvOverDriver1"));
+        var driver2 = driverRepository.save(new Driver("csv_over_drv2", "CsvOverDriver2"));
+
+        var csvContent = homeTeam.getShortName() + ",csv_over_drv1,1,1,true\n"
+                + awayTeam.getShortName() + ",csv_over_drv2,2,2,false";
+        var file = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
+
+        // First import
+        mockMvc.perform(multipart("/admin/import/execute")
+                        .file(file)
+                        .param("seasonName", season.getName())
+                        .param("matchdayId", matchday.getId().toString())
+                        .param("source", "csv"))
+                .andExpect(status().is3xxRedirection());
+
+        // Second import with overwrite=true
+        var file2 = new MockMultipartFile("file", "results.csv", "text/csv", csvContent.getBytes());
+        mockMvc.perform(multipart("/admin/import/execute")
+                        .file(file2)
+                        .param("seasonName", season.getName())
+                        .param("matchdayId", matchday.getId().toString())
+                        .param("source", "csv")
+                        .param("overwrite", "true"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/import"));
     }
 }
