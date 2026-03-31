@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   build-and-test:
@@ -35,6 +36,17 @@ jobs:
       - name: E2E Tests
         run: ./mvnw verify -Pe2e -Dspring.profiles.active=dev
 
+      - name: JaCoCo Coverage Report
+        if: github.event_name == 'pull_request'
+        uses: madrapps/jacoco-report@v1.7.2
+        with:
+          paths: target/site/jacoco/jacoco.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: 70
+          min-coverage-changed-files: 80
+          title: "Coverage Report"
+          update-comment: true
+
       - name: Upload Test Reports
         if: always()
         uses: actions/upload-artifact@v7
@@ -43,4 +55,12 @@ jobs:
           path: |
             target/surefire-reports/
             target/failsafe-reports/
+          retention-days: 7
+
+      - name: Upload Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: target/site/jacoco/
           retention-days: 7
