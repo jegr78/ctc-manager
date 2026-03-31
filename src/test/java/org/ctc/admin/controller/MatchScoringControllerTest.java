@@ -74,4 +74,34 @@ class MatchScoringControllerTest {
 
         assertFalse(matchScoringRepository.existsById(id));
     }
+
+    @Test
+    void shouldUpdateExistingMatchScoring() throws Exception {
+        var scoring = matchScoringRepository.save(new MatchScoring("Update Test MS", 3, 1, 0));
+
+        mockMvc.perform(post("/admin/match-scorings/save")
+                        .param("id", scoring.getId().toString())
+                        .param("name", "Updated MS")
+                        .param("pointsWin", "4")
+                        .param("pointsDraw", "2")
+                        .param("pointsLoss", "1"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/match-scorings"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        var updated = matchScoringRepository.findById(scoring.getId()).orElseThrow();
+        assertEquals("Updated MS", updated.getName());
+        assertEquals(4, updated.getPointsWin());
+    }
+
+    @Test
+    void shouldRejectBlankName() throws Exception {
+        mockMvc.perform(post("/admin/match-scorings/save")
+                        .param("name", "")
+                        .param("pointsWin", "3")
+                        .param("pointsDraw", "1")
+                        .param("pointsLoss", "0"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/match-scoring-form"));
+    }
 }

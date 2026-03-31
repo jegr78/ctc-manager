@@ -161,4 +161,30 @@ class CarControllerTest {
 
         assertTrue(carRepository.findById(car.getId()).isPresent());
     }
+
+    // --- POST /admin/cars/{id}/image ---
+
+    @Test
+    void shouldUploadImage() throws Exception {
+        var imageFile = new org.springframework.mock.web.MockMultipartFile(
+                "image", "car.png", "image/png", new byte[]{1, 2, 3});
+
+        mockMvc.perform(multipart("/admin/cars/" + car.getId() + "/image").file(imageFile))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/cars/" + car.getId() + "/edit"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        var updated = carRepository.findById(car.getId()).orElseThrow();
+        assertNotNull(updated.getImageUrl());
+        assertTrue(updated.getImageUrl().contains("car.png"));
+    }
+
+    @Test
+    void shouldRejectBlankName() throws Exception {
+        mockMvc.perform(post("/admin/cars/save")
+                        .param("manufacturer", "Toyota")
+                        .param("name", ""))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/car-form"));
+    }
 }

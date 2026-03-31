@@ -116,4 +116,62 @@ class FileStorageServiceTest {
         // Spaces and parentheses should be replaced with underscores
         assertTrue(url.contains("my_file__1_.png"));
     }
+
+    @Test
+    void shouldStoreImageAndReturnUrl() throws IOException {
+        var file = new MockMultipartFile("file", "logo.png", "image/png", new byte[]{1, 2, 3});
+        var entityId = UUID.randomUUID();
+
+        String url = fileStorageService.storeImage("season-teams", entityId, file);
+
+        assertTrue(url.startsWith("/uploads/season-teams/" + entityId + "/"));
+        assertTrue(url.endsWith("_logo.png"));
+
+        Path storedFile = tempDir.resolve(url.substring("/uploads/".length()));
+        assertTrue(Files.exists(storedFile));
+        assertEquals(3, Files.size(storedFile));
+    }
+
+    @Test
+    void shouldRejectNullFilename() {
+        var file = new MockMultipartFile("file", null, "image/png", new byte[]{1});
+
+        assertThrows(IllegalArgumentException.class,
+                () -> fileStorageService.store(UUID.randomUUID(), file));
+    }
+
+    @Test
+    void shouldRejectBlankFilename() {
+        var file = new MockMultipartFile("file", "   ", "image/png", new byte[]{1});
+
+        var ex = assertThrows(IllegalArgumentException.class,
+                () -> fileStorageService.store(UUID.randomUUID(), file));
+        assertTrue(ex.getMessage().contains("Filename is required"));
+    }
+
+    @Test
+    void shouldRejectFilenameWithoutExtension() {
+        var file = new MockMultipartFile("file", "testfile", "image/png", new byte[]{1});
+
+        var ex = assertThrows(IllegalArgumentException.class,
+                () -> fileStorageService.store(UUID.randomUUID(), file));
+        assertTrue(ex.getMessage().contains("extension not allowed"));
+    }
+
+    @Test
+    void shouldStoreFromUrl() throws IOException {
+        Path sourceFile = tempDir.resolve("source-image.png");
+        Files.write(sourceFile, new byte[]{10, 20, 30});
+
+        var entityId = UUID.randomUUID();
+        String url = fileStorageService.storeFromUrl("cars", entityId,
+                sourceFile.toUri().toString(), "car-photo.png");
+
+        assertTrue(url.startsWith("/uploads/cars/" + entityId + "/"));
+        assertTrue(url.endsWith("_car-photo.png"));
+
+        Path storedFile = tempDir.resolve(url.substring("/uploads/".length()));
+        assertTrue(Files.exists(storedFile));
+        assertEquals(3, Files.size(storedFile));
+    }
 }

@@ -79,4 +79,127 @@ class RaceLineupServiceTest {
         verify(raceLineupRepository).deleteAll(List.of(existingLineup));
         verify(raceLineupRepository).save(any(RaceLineup.class));
     }
+
+    // --- getLineupData ---
+
+    @Test
+    void getLineupData_withRegularTeams_returnsCorrectEntries() {
+        var homeTeam = new Team("Home Team", "HOM");
+        homeTeam.setId(UUID.randomUUID());
+        var awayTeam = new Team("Away Team", "AWY");
+        awayTeam.setId(UUID.randomUUID());
+
+        var season = new Season("Test Season");
+        season.setId(UUID.randomUUID());
+        season.addTeam(homeTeam);
+        season.addTeam(awayTeam);
+
+        var matchday = new Matchday(season, "MD 1", 1);
+        matchday.setId(UUID.randomUUID());
+
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), homeTeam.getId())).thenReturn(List.of());
+        when(seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), awayTeam.getId())).thenReturn(List.of());
+
+        var data = service.getLineupData(race.getId());
+
+        assertThat(data.race()).isEqualTo(race);
+        assertThat(data.homeEntry()).isNotNull();
+        assertThat(data.homeEntry().team()).isEqualTo(homeTeam);
+        assertThat(data.homeEntry().hasSubTeams()).isFalse();
+        assertThat(data.awayEntry()).isNotNull();
+        assertThat(data.awayEntry().team()).isEqualTo(awayTeam);
+        assertThat(data.awayEntry().hasSubTeams()).isFalse();
+    }
+
+    @Test
+    void getLineupData_withSubTeams_returnsParentWithSubTeams() {
+        var parentHome = new Team("Parent Home", "PAR");
+        parentHome.setId(UUID.randomUUID());
+        var sub1 = new Team("Sub Home 1", "PAR_1");
+        sub1.setId(UUID.randomUUID());
+        sub1.setParentTeam(parentHome);
+        var sub2 = new Team("Sub Home 2", "PAR_2");
+        sub2.setId(UUID.randomUUID());
+        sub2.setParentTeam(parentHome);
+        parentHome.setSubTeams(List.of(sub1, sub2));
+
+        var awayTeam = new Team("Away Team", "AWY");
+        awayTeam.setId(UUID.randomUUID());
+
+        var season = new Season("Test Season");
+        season.setId(UUID.randomUUID());
+        season.addTeam(parentHome);
+        season.addTeam(sub1);
+        season.addTeam(sub2);
+        season.addTeam(awayTeam);
+
+        var matchday = new Matchday(season, "MD 1", 1);
+        matchday.setId(UUID.randomUUID());
+
+        var match = new Match(matchday, sub1, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), sub1.getId())).thenReturn(List.of());
+        when(seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), sub2.getId())).thenReturn(List.of());
+        when(seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), awayTeam.getId())).thenReturn(List.of());
+
+        var data = service.getLineupData(race.getId());
+
+        assertThat(data.homeEntry()).isNotNull();
+        assertThat(data.homeEntry().team()).isEqualTo(parentHome);
+        assertThat(data.homeEntry().hasSubTeams()).isTrue();
+        assertThat(data.homeEntry().subTeams()).containsExactly(sub1, sub2);
+        assertThat(data.awayEntry()).isNotNull();
+        assertThat(data.awayEntry().team()).isEqualTo(awayTeam);
+        assertThat(data.awayEntry().hasSubTeams()).isFalse();
+    }
+
+    // --- getDriverAssignments ---
+
+    @Test
+    void getDriverAssignments_returnsDriverTeamMap() {
+        var raceId = UUID.randomUUID();
+        var driver1 = new Driver();
+        driver1.setId(UUID.randomUUID());
+        var driver2 = new Driver();
+        driver2.setId(UUID.randomUUID());
+        var team1 = new Team();
+        team1.setId(UUID.randomUUID());
+        var team2 = new Team();
+        team2.setId(UUID.randomUUID());
+
+        var race = new Race();
+        race.setId(raceId);
+        var lu1 = new RaceLineup(race, driver1, team1);
+        var lu2 = new RaceLineup(race, driver2, team2);
+
+        when(raceLineupRepository.findByRaceId(raceId)).thenReturn(List.of(lu1, lu2));
+
+        var assignments = service.getDriverAssignments(raceId);
+
+        assertThat(assignments).hasSize(2);
+        assertThat(assignments.get(driver1.getId())).isEqualTo(team1.getId());
+        assertThat(assignments.get(driver2.getId())).isEqualTo(team2.getId());
+    }
+
+    @Test
+    void getDriverAssignments_emptyLineup_returnsEmptyMap() {
+        var raceId = UUID.randomUUID();
+        when(raceLineupRepository.findByRaceId(raceId)).thenReturn(List.of());
+
+        var assignments = service.getDriverAssignments(raceId);
+
+        assertThat(assignments).isEmpty();
+    }
 }
