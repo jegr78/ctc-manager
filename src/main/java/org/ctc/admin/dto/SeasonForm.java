@@ -17,6 +17,12 @@ public class SeasonForm {
     @NotBlank
     private String name;
 
+    private int year;
+
+    private int number;
+
+    private String description;
+
     private LocalDate startDate;
 
     private LocalDate endDate;

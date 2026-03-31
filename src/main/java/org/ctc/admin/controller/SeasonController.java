@@ -64,6 +64,9 @@ public class SeasonController {
         var form = new SeasonForm();
         form.setId(season.getId());
         form.setName(season.getName());
+        form.setYear(season.getYear());
+        form.setNumber(season.getNumber());
+        form.setDescription(season.getDescription());
         form.setStartDate(season.getStartDate());
         form.setEndDate(season.getEndDate());
         form.setActive(season.isActive());
@@ -91,6 +94,9 @@ public class SeasonController {
         if (form.getId() != null) {
             var existing = seasonRepository.findById(form.getId()).orElseThrow();
             existing.setName(form.getName());
+            existing.setYear(form.getYear());
+            existing.setNumber(form.getNumber());
+            existing.setDescription(form.getDescription());
             existing.setStartDate(form.getStartDate());
             existing.setEndDate(form.getEndDate());
             existing.setActive(form.isActive());
@@ -105,6 +111,9 @@ public class SeasonController {
         } else {
             var season = new Season();
             season.setName(form.getName());
+            season.setYear(form.getYear());
+            season.setNumber(form.getNumber());
+            season.setDescription(form.getDescription());
             season.setStartDate(form.getStartDate());
             season.setEndDate(form.getEndDate());
             season.setActive(form.isActive());
