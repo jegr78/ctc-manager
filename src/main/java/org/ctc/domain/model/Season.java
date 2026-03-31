@@ -25,8 +25,16 @@ public class Season extends BaseEntity {
     private UUID id;
 
     @NotBlank
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
+
+    @Column(name = "season_year", nullable = false)
+    private int year;
+
+    @Column(name = "season_number", nullable = false)
+    private int number;
+
+    private String description;
 
     private LocalDate startDate;
 
@@ -78,6 +86,16 @@ public class Season extends BaseEntity {
 
     public Season(String name) {
         this.name = name;
+    }
+
+    public Season(String name, int year, int number) {
+        this.name = name;
+        this.year = year;
+        this.number = number;
+    }
+
+    public String getDisplayLabel() {
+        return year + " | #" + number + " | " + name;
     }
 
     /**

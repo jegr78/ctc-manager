@@ -9,7 +9,7 @@
             <form method="get" th:action="@{/admin/matchdays}" style="display:inline-flex;gap:8px;align-items:center;">
                 <select name="seasonId" onchange="this.form.submit()">
                     <option value="">-- Select season --</option>
-                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
+                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
                             th:selected="${s.id == selectedSeasonId}"></option>
                 </select>
             </form>
@@ -26,7 +26,7 @@
                     <tr th:each="md : ${matchdays}">
                         <td th:text="${md.sortIndex}"></td>
                         <td><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="detail-link"><strong th:text="${md.label}"></strong></a></td>
-                        <td th:text="${md.season.name}"></td>
+                        <td th:text="${md.season.displayLabel}"></td>
                         <td th:text="${md.races.size()}"></td>
                         <td class="actions">
                             <a th:href="@{/admin/matchdays/{id}/edit(id=${md.id})}" class="btn btn-secondary btn-sm">Edit</a>

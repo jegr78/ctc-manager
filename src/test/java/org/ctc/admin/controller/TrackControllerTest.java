@@ -138,7 +138,7 @@ class TrackControllerTest {
     void shouldNotDeleteTrackWhenReferencedByRace() throws Exception {
         var rs = raceScoringRepository.save(new RaceScoring("TT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0));
         var ms = matchScoringRepository.save(new MatchScoring("TT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
-        var s = new Season("Track Test Season");
+        var s = new Season("Track Test Season", 2026, 1);
         s.setRaceScoring(rs);
         s.setMatchScoring(ms);
         var season = seasonRepository.save(s);

@@ -131,7 +131,7 @@ class MatchdayControllerTest {
         matchdayRepository.save(new Matchday(season, "JSON MD1", 1));
 
         mockMvc.perform(get("/admin/matchdays/by-season")
-                        .param("seasonName", season.getName()))
+                        .param("seasonId", season.getId().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].label").value("JSON MD1"));
@@ -140,7 +140,7 @@ class MatchdayControllerTest {
     @Test
     void shouldReturnEmptyListForUnknownSeason() throws Exception {
         mockMvc.perform(get("/admin/matchdays/by-season")
-                        .param("seasonName", "NonExistent Season XYZ"))
+                        .param("seasonId", java.util.UUID.randomUUID().toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());
@@ -152,7 +152,7 @@ class MatchdayControllerTest {
 
         mockMvc.perform(post("/admin/matchdays/create-inline")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"seasonName\":\"" + season.getName() + "\",\"label\":\"Inline MD\"}"))
+                        .content("{\"seasonId\":\"" + season.getId() + "\",\"label\":\"Inline MD\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.label").value("Inline MD"));
     }
@@ -164,7 +164,7 @@ class MatchdayControllerTest {
 
         mockMvc.perform(post("/admin/matchdays/create-inline")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"seasonName\":\"" + season.getName() + "\",\"label\":\"Existing MD\"}"))
+                        .content("{\"seasonId\":\"" + season.getId() + "\",\"label\":\"Existing MD\"}"))
                 .andExpect(status().isConflict());
     }
 }

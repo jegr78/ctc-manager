@@ -11,7 +11,7 @@
                 <select name="seasonId" id="seasonId" onchange="this.form.submit()"
                         style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:14px;">
                     <option value="" th:if="${seasons.isEmpty()}">No seasons</option>
-                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
+                    <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
                             th:selected="${s.id == selectedSeasonId}"></option>
                 </select>
             </form>

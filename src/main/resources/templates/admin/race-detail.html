@@ -93,7 +93,7 @@
             <span class="label">Matchday</span>
             <a th:href="@{/admin/matchdays/{id}(id=${race.matchday.id})}" class="detail-link" th:text="${race.matchday.label}"></a>
             <span class="label">Season</span>
-            <a th:href="@{/admin/seasons/{id}(id=${race.matchday.season.id})}" class="detail-link" th:text="${race.matchday.season.name}"></a>
+            <a th:href="@{/admin/seasons/{id}(id=${race.matchday.season.id})}" class="detail-link" th:text="${race.matchday.season.displayLabel}"></a>
             <span class="label">Track</span>
             <span th:text="${race.track?.name ?: '-'}"></span>
             <span class="label">Car</span>

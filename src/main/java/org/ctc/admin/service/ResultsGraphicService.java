@@ -51,7 +51,7 @@ public class ResultsGraphicService extends AbstractGraphicService {
         int awayTotal = resultRows.stream().mapToInt(DriverResultRow::awayPoints).sum();
 
         var ctx = new Context();
-        ctx.setVariable("seasonYear", extractYear(season.getName()));
+        ctx.setVariable("seasonYear", String.valueOf(season.getYear()));
         ctx.setVariable("matchdayName", race.getMatchday().getLabel());
         ctx.setVariable("seasonName", season.getName());
         ctx.setVariable("homeCardBase64", homeCardBase64);

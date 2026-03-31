@@ -151,7 +151,7 @@ class MatchdayServiceTest {
         season.setName("Test Season");
         var existing = new Matchday(season, "MD1", 3);
 
-        when(seasonRepository.findByName("Test Season")).thenReturn(Optional.of(season));
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
         when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(existing));
         when(matchdayRepository.save(any(Matchday.class))).thenAnswer(inv -> {
             Matchday md = inv.getArgument(0);
@@ -159,7 +159,7 @@ class MatchdayServiceTest {
             return md;
         });
 
-        var result = service.createInline("Test Season", "MD2");
+        var result = service.createInline(season.getId(), "MD2");
 
         assertThat(result.label()).isEqualTo("MD2");
         assertThat(result.sortIndex()).isEqualTo(4);
@@ -172,10 +172,10 @@ class MatchdayServiceTest {
         season.setName("Test Season");
         var existing = new Matchday(season, "Existing", 1);
 
-        when(seasonRepository.findByName("Test Season")).thenReturn(Optional.of(season));
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
         when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(existing));
 
-        assertThatThrownBy(() -> service.createInline("Test Season", "Existing"))
+        assertThatThrownBy(() -> service.createInline(season.getId(), "Existing"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("already exists");
     }

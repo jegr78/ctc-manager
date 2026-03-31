@@ -111,7 +111,7 @@ public class SiteGeneratorService {
         ctx.setVariable("season", season);
         ctx.setVariable("standings", standingsService.calculateStandings(season.getId()));
 
-        var dir = outPath.resolve("season").resolve(slugify(season.getName()));
+        var dir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel()));
         Files.createDirectories(dir);
         writeTemplate("site/standings", ctx, dir.resolve("standings.html"));
         result.incrementPages();
@@ -122,7 +122,7 @@ public class SiteGeneratorService {
         ctx.setVariable("season", season);
         ctx.setVariable("driverRanking", driverRankingService.calculateRanking(season.getId()));
 
-        var dir = outPath.resolve("season").resolve(slugify(season.getName()));
+        var dir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel()));
         Files.createDirectories(dir);
         writeTemplate("site/driver-ranking", ctx, dir.resolve("driver-ranking.html"));
         result.incrementPages();
@@ -139,7 +139,7 @@ public class SiteGeneratorService {
                     .map(r -> toRaceView(r, season)).toList();
             ctx.setVariable("races", raceViews);
 
-            var dir = outPath.resolve("season").resolve(slugify(season.getName())).resolve("matchday");
+            var dir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel())).resolve("matchday");
             Files.createDirectories(dir);
             writeTemplate("site/matchday", ctx, dir.resolve(slugify(matchday.getLabel()) + ".html"));
             result.incrementPages();
@@ -162,7 +162,7 @@ public class SiteGeneratorService {
             ctx.setVariable("team", team);
             ctx.setVariable("standing", teamStanding);
 
-            var dir = outPath.resolve("season").resolve(slugify(season.getName())).resolve("team");
+            var dir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel())).resolve("team");
             Files.createDirectories(dir);
             writeTemplate("site/team-profile", ctx, dir.resolve(slugify(team.getShortName()) + ".html"));
             result.incrementPages();
@@ -189,7 +189,7 @@ public class SiteGeneratorService {
             ctx.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) results.stream().mapToInt(r -> r.getPointsTotal()).sum() / results.size());
             ctx.setVariable("bestPosition", results.stream().mapToInt(r -> r.getPosition()).min().orElse(0));
 
-            var dir = outPath.resolve("season").resolve(slugify(season.getName())).resolve("driver");
+            var dir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel())).resolve("driver");
             Files.createDirectories(dir);
             writeTemplate("site/driver-profile", ctx, dir.resolve(slugify(driver.getPsnId()) + ".html"));
             result.incrementPages();
@@ -208,7 +208,7 @@ public class SiteGeneratorService {
         ctx.setVariable("playoff", playoff);
         ctx.setVariable("bracket", bracket);
 
-        var dir = outPath.resolve("season").resolve(slugify(season.getName()));
+        var dir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel()));
         Files.createDirectories(dir);
         writeTemplate("site/playoff-bracket", ctx, dir.resolve("playoff.html"));
         result.incrementPages();

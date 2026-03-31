@@ -38,7 +38,7 @@ class SwissPairingServiceTest {
         var matchScoring = matchScoringRepository.save(
                 new MatchScoring("Swiss MS " + uniqueSuffix, 3, 1, 0));
 
-        season = new Season("Swiss Test " + uniqueSuffix);
+        season = new Season("Swiss Test " + uniqueSuffix, 2026, 1);
         season.setFormat(SeasonFormat.SWISS);
         season.setTotalRounds(5);
         season.setRaceScoring(raceScoring);
@@ -98,7 +98,7 @@ class SwissPairingServiceTest {
         var matchScoring = matchScoringRepository.save(
                 new MatchScoring("League MS " + uniqueSuffix, 3, 1, 0));
 
-        var leagueSeason = new Season("League Test " + uniqueSuffix);
+        var leagueSeason = new Season("League Test " + uniqueSuffix, 2026, 2);
         leagueSeason.setFormat(SeasonFormat.LEAGUE);
         leagueSeason.setRaceScoring(raceScoring);
         leagueSeason.setMatchScoring(matchScoring);

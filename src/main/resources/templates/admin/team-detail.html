@@ -51,7 +51,7 @@
                 </p>
                 <div class="chip-list" style="margin-top:8px;">
                     <a th:each="s : ${seasons}" th:href="@{/admin/seasons/{id}(id=${s.id})}" class="chip">
-                        <span th:text="${s.name}"></span>
+                        <span th:text="${s.displayLabel}"></span>
                         <span th:if="${s.active}" class="badge badge-active" style="margin-left:6px;font-size:11px;">Active</span>
                     </a>
                 </div>
@@ -59,7 +59,7 @@
             <div th:each="group : ${seasonDriverGroups}">
                 <details class="season-accordion" th:open="${group.season.active}">
                     <summary class="season-header">
-                        <span class="season-header-title" th:text="${group.season.name}"></span>
+                        <span class="season-header-title" th:text="${group.season.displayLabel}"></span>
                         <span th:if="${group.season.active}" class="badge badge-active" style="margin-left:6px;font-size:11px;">Active</span>
                         <span class="text-dim" th:text="'(' + ${group.totalDriverCount()} + ' Drivers)'"></span>
                     </summary>
@@ -83,7 +83,7 @@
             <div th:each="s : ${seasonsWithoutDrivers}">
                 <details class="season-accordion">
                     <summary class="season-header">
-                        <a th:href="@{/admin/seasons/{id}(id=${s.id})}" th:text="${s.name}" class="season-header-title"></a>
+                        <a th:href="@{/admin/seasons/{id}(id=${s.id})}" th:text="${s.displayLabel}" class="season-header-title"></a>
                         <span class="text-dim">(0 Drivers)</span>
                     </summary>
                 </details>

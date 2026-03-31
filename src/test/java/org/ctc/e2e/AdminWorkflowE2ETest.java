@@ -46,6 +46,8 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     void shouldCreateSeasonAndShowInList() {
         page.navigate(url("/admin/seasons/new"));
         page.getByRole(com.microsoft.playwright.options.AriaRole.TEXTBOX, new com.microsoft.playwright.Page.GetByRoleOptions().setName("Name").setExact(true)).fill("E2E Season");
+        page.fill("#year", "2026");
+        page.fill("#number", "99");
         // Select scoring presets (created by DevDataSeeder)
         page.selectOption("#raceScoring", new com.microsoft.playwright.options.SelectOption().setLabel("CTC Standard"));
         page.selectOption("#matchScoring", new com.microsoft.playwright.options.SelectOption().setLabel("Standard 3-1-0"));

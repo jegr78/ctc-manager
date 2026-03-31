@@ -5,7 +5,7 @@
 <section>
     <h1>Import Preview</h1>
     <div class="card" style="margin-bottom:16px;">
-        <p><strong>Season:</strong> <span th:text="${metadata.seasonName}"></span> |
+        <p><strong>Season:</strong> <span th:text="${seasonDisplayLabel}"></span> |
            <strong>Matchday:</strong> <span th:text="${matchdayName ?: metadata.matchdayLabel ?: '-'}"></span></p>
     </div>
 
@@ -24,7 +24,7 @@
     </div>
 
     <form th:action="@{/admin/import/execute}" method="post" enctype="multipart/form-data">
-        <input type="hidden" name="seasonName" th:value="${metadata.seasonName}">
+        <input type="hidden" name="seasonId" th:value="${metadata.seasonId}">
         <input type="hidden" name="matchdayId" th:if="${metadata.matchdayId}" th:value="${metadata.matchdayId}">
         <input type="hidden" name="matchdayLabel" th:if="${metadata.matchdayLabel}" th:value="${metadata.matchdayLabel}">
         <input type="hidden" name="playoffMatchupId" th:if="${metadata.playoffMatchupId}" th:value="${metadata.playoffMatchupId}">

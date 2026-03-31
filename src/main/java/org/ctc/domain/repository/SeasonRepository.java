@@ -9,8 +9,6 @@ import java.util.UUID;
 
 public interface SeasonRepository extends JpaRepository<Season, UUID> {
 
-    Optional<Season> findByName(String name);
-
     Optional<Season> findByActiveTrue();
 
     List<Season> findBySeasonTeamsTeamId(UUID teamId);

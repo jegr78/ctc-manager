@@ -9,7 +9,7 @@
             <select name="seasonId" onchange="this.form.submit()">
                 <option value="">-- Select season --</option>
                 <option value="alltime" th:selected="${isAlltime}">Alltime</option>
-                <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
+                <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
                         th:selected="${selectedSeason != null && s.id == selectedSeason.id}"></option>
             </select>
         </form>

@@ -13,7 +13,7 @@
                     <option value="">-- Select matchday --</option>
                     <option th:each="md : ${matchdays}" th:value="${md.id}"
                             th:attr="data-season-id=${md.season.id}"
-                            th:text="${md.season.name + ' — ' + md.label}"></option>
+                            th:text="${md.season.displayLabel + ' — ' + md.label}"></option>
                 </select>
             </div>
             <div class="form-row">

@@ -14,15 +14,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 public abstract class AbstractGraphicService {
 
     protected static final String FONT_CLASSPATH = "static/admin/fonts/ConthraxSb.woff2";
     protected static final String CTC_LOGO_CLASSPATH = "static/admin/img/ctc-logo-white.png";
-    private static final Pattern YEAR_PATTERN = Pattern.compile("(20\\d{2})");
 
     protected final TemplateEngine templateEngine;
     protected final Path uploadDir;
@@ -81,12 +78,6 @@ public abstract class AbstractGraphicService {
 
     protected String sanitizeFilename(String name) {
         return name.replaceAll("[^a-zA-Z0-9._-]", "_");
-    }
-
-    protected String extractYear(String seasonName) {
-        if (seasonName == null) return "";
-        Matcher m = YEAR_PATTERN.matcher(seasonName);
-        return m.find() ? m.group(1) : "";
     }
 
     protected String processStringTemplate(String template, Context ctx) {

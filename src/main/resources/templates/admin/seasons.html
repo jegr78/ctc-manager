@@ -21,7 +21,7 @@
                 </thead>
                 <tbody>
                     <tr th:each="season : ${seasons}">
-                        <td><a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="detail-link" th:text="${season.name}"></a></td>
+                        <td><a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="detail-link" th:text="${season.displayLabel}"></a></td>
                         <td th:text="${season.startDate}"></td>
                         <td th:text="${season.endDate}"></td>
                         <td>
