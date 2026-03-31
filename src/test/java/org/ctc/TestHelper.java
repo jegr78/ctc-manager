@@ -22,12 +22,16 @@ public class TestHelper {
     private final SeasonDriverRepository seasonDriverRepository;
 
     public Season createSeason(String name) {
+        return createSeason(name, 2026, 1);
+    }
+
+    public Season createSeason(String name, int year, int number) {
         var suffix = UUID.randomUUID().toString().substring(0, 4);
         var rs = raceScoringRepository.save(
                 new RaceScoring("RS " + suffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
         var ms = matchScoringRepository.save(
                 new MatchScoring("MS " + suffix, 3, 1, 0));
-        var season = new Season(name);
+        var season = new Season(name, year, number);
         season.setRaceScoring(rs);
         season.setMatchScoring(ms);
         return seasonRepository.save(season);

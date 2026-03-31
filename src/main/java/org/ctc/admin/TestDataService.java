@@ -133,14 +133,17 @@ public class TestDataService {
                         .findFirst().orElseThrow(() -> new IllegalStateException("Sub-team not found: " + shortName));
 
         // Older seasons: all parent teams
-        for (String name : List.of("Season 1 - 2023 - Group A", "Season 1 - 2023 - Group B", "Season 2 - 2024")) {
-            var season = createSeason(name, scorings);
+        for (var entry : List.of(
+                new Object[]{"Season 1 - 2023 - Group A", 2023, 1, "Group A"},
+                new Object[]{"Season 1 - 2023 - Group B", 2023, 1, "Group B"},
+                new Object[]{"Season 2 - 2024", 2024, 2, null})) {
+            var season = createSeason((String) entry[0], (int) entry[1], (int) entry[2], (String) entry[3], scorings);
             parentTeams.forEach(season::addTeam);
             seasonRepository.save(season);
         }
 
         // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
-        var s3a = createSeason("Season 3 - 2025 - Group A", scorings);
+        var s3a = createSeason("Season 3 - 2025 - Group A", 2025, 3, "Group A", scorings);
         List.of(
                 findSub.apply("P1Rx"),
                 findParent.apply("CLR"),
@@ -151,7 +154,7 @@ public class TestDataService {
         seasonRepository.save(s3a);
 
         // Season 3 - 2025 - Group B: P1R parent + P1R sub-team, AHR, DTR, ART
-        var s3b = createSeason("Season 3 - 2025 - Group B", scorings);
+        var s3b = createSeason("Season 3 - 2025 - Group B", 2025, 3, "Group B", scorings);
         List.of(
                 findParent.apply("P1R"),
                 findSub.apply("P1R"),
@@ -162,7 +165,7 @@ public class TestDataService {
         seasonRepository.save(s3b);
 
         // Season 4 - 2026: all parents with subs + standalone parents
-        var s4 = createSeason("Season 4 - 2026", scorings);
+        var s4 = createSeason("Season 4 - 2026", 2026, 4, null, scorings);
         s4.setActive(true);
         List.of(
                 findParent.apply("CLR"),
@@ -231,8 +234,9 @@ public class TestDataService {
         log.info("Demo logos copied for {} teams", allTeams.size());
     }
 
-    private Season createSeason(String name, ScoringDefaults scorings) {
-        var season = new Season(name);
+    private Season createSeason(String name, int year, int number, String description, ScoringDefaults scorings) {
+        var season = new Season(name, year, number);
+        season.setDescription(description);
         season.setRaceScoring(scorings.raceScoring());
         season.setMatchScoring(scorings.matchScoring());
         return season;
@@ -468,7 +472,7 @@ public class TestDataService {
         var tdb4 = driver("Test_Bravo2_2", "Test Bravo2 Driver 2");
 
         // Test-Season 2026: T-ALF vs T-BRV 1, T-ALF vs T-BRV 2
-        var testSeason1 = createSeason("Test-Season 2026", scorings);
+        var testSeason1 = createSeason("Test-Season 2026", 2026, 99, "Test", scorings);
         List.of(testAlpha, testBravo, testBravo1, testBravo2).forEach(testSeason1::addTeam);
         seasonRepository.save(testSeason1);
 
@@ -503,7 +507,7 @@ public class TestDataService {
         raceLineupRepository.save(new RaceLineup(race2, tdb4, testBravo2));
 
         // Test-Season 2025: T-ALF vs T-BRV (multi-season test)
-        var testSeason2 = createSeason("Test-Season 2025", scorings);
+        var testSeason2 = createSeason("Test-Season 2025", 2025, 98, "Test", scorings);
         List.of(testAlpha, testBravo).forEach(testSeason2::addTeam);
         seasonRepository.save(testSeason2);
 
