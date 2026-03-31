@@ -34,7 +34,7 @@
             <h2 th:text="'Season Assignments (' + ${driver.seasonDrivers.size()} + ')'"></h2>
             <div th:if="${!driver.seasonDrivers.isEmpty()}" class="chip-list">
                 <span th:each="sd : ${driver.seasonDrivers}" class="chip">
-                    <span th:text="${sd.season.name}"></span>
+                    <span th:text="${sd.season.displayLabel}"></span>
                     <span class="text-dim" th:text="' — ' + ${sd.team.shortName}"></span>
                 </span>
             </div>
