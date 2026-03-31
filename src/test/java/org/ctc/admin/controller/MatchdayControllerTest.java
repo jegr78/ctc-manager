@@ -27,80 +27,101 @@ class MatchdayControllerTest {
     @Autowired private TestHelper testHelper;
 
     @Test
-    void shouldShowMatchdayDetail() throws Exception {
+    void givenExistingMatchday_whenGetMatchdayDetail_thenReturnsDetailView() throws Exception {
+        // given
         var season = testHelper.createSeason("MD Detail Season");
         var matchday = matchdayRepository.save(new Matchday(season, "Test Matchday", 1));
 
+        // when
         mockMvc.perform(get("/admin/matchdays/" + matchday.getId()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-detail"))
                 .andExpect(model().attributeExists("matchday"));
     }
 
     @Test
-    void shouldListMatchdays() throws Exception {
+    void whenGetMatchdays_thenReturnsMatchdaysView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/matchdays"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchdays"))
                 .andExpect(model().attributeExists("matchdays", "seasons"));
     }
 
     @Test
-    void shouldListMatchdaysBySeasonId() throws Exception {
+    void givenSeasonId_whenGetMatchdaysBySeasonId_thenReturnsFilteredMatchdays() throws Exception {
+        // given
         var season = testHelper.createSeason("MD List Season");
         matchdayRepository.save(new Matchday(season, "List MD1", 1));
 
+        // when
         mockMvc.perform(get("/admin/matchdays").param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchdays"))
                 .andExpect(model().attributeExists("matchdays", "selectedSeasonId"));
     }
 
     @Test
-    void shouldShowCreateForm() throws Exception {
+    void whenGetNewMatchdayForm_thenReturnsMatchdayForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/matchdays/new"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-form"))
                 .andExpect(model().attributeExists("matchday", "seasons"));
     }
 
     @Test
-    void shouldShowCreateFormWithSeasonId() throws Exception {
+    void givenSeasonId_whenGetNewMatchdayFormWithSeasonId_thenReturnsPrefilledForm() throws Exception {
+        // given
         var season = testHelper.createSeason("MD Create Season");
 
+        // when
         mockMvc.perform(get("/admin/matchdays/new").param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-form"));
     }
 
     @Test
-    void shouldShowEditForm() throws Exception {
+    void givenExistingMatchday_whenGetEditForm_thenReturnsMatchdayForm() throws Exception {
+        // given
         var season = testHelper.createSeason("MD Edit Season");
         var matchday = matchdayRepository.save(new Matchday(season, "Edit MD", 1));
 
+        // when
         mockMvc.perform(get("/admin/matchdays/" + matchday.getId() + "/edit"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-form"))
                 .andExpect(model().attributeExists("matchday", "seasons"));
     }
 
     @Test
-    void shouldSaveNewMatchday() throws Exception {
+    void givenValidMatchdayForm_whenSaveNewMatchday_thenRedirectsWithSuccess() throws Exception {
+        // given
         var season = testHelper.createSeason("MD Save Season");
 
+        // when
         mockMvc.perform(post("/admin/matchdays/save")
                         .param("label", "New Test Matchday")
                         .param("sortIndex", "1")
                         .param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
     @Test
-    void shouldSaveExistingMatchday() throws Exception {
+    void givenExistingMatchday_whenSaveUpdatedMatchday_thenRedirectsAndUpdates() throws Exception {
+        // given
         var season = testHelper.createSeason("MD Update Season");
         var matchday = matchdayRepository.save(new Matchday(season, "Original", 1));
 
+        // when
         mockMvc.perform(post("/admin/matchdays/save")
                         .param("id", matchday.getId().toString())
                         .param("label", "Updated Label")
@@ -109,62 +130,77 @@ class MatchdayControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var updated = matchdayRepository.findById(matchday.getId()).orElseThrow();
         assertEquals("Updated Label", updated.getLabel());
     }
 
     @Test
-    void shouldDeleteMatchday() throws Exception {
+    void givenExistingMatchday_whenDeleteMatchday_thenRedirectsAndRemoves() throws Exception {
+        // given
         var season = testHelper.createSeason("MD Delete Season");
         var matchday = matchdayRepository.save(new Matchday(season, "Delete MD", 1));
 
+        // when
         mockMvc.perform(post("/admin/matchdays/" + matchday.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         assertFalse(matchdayRepository.findById(matchday.getId()).isPresent());
     }
 
     @Test
-    void shouldReturnMatchdaysBySeasonJson() throws Exception {
+    void givenSeasonWithMatchday_whenGetMatchdaysBySeasonJson_thenReturnsJsonArray() throws Exception {
+        // given
         var season = testHelper.createSeason("MD JSON Season");
         matchdayRepository.save(new Matchday(season, "JSON MD1", 1));
 
+        // when
         mockMvc.perform(get("/admin/matchdays/by-season")
                         .param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].label").value("JSON MD1"));
     }
 
     @Test
-    void shouldReturnEmptyListForUnknownSeason() throws Exception {
+    void givenUnknownSeasonId_whenGetMatchdaysBySeasonJson_thenReturnsEmptyArray() throws Exception {
+        // when
         mockMvc.perform(get("/admin/matchdays/by-season")
                         .param("seasonId", java.util.UUID.randomUUID().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$").isEmpty());
     }
 
     @Test
-    void shouldCreateMatchdayInline() throws Exception {
+    void givenValidRequest_whenCreateInlineMatchday_thenReturnsCreatedJson() throws Exception {
+        // given
         var season = testHelper.createSeason("MD Inline Season");
 
+        // when
         mockMvc.perform(post("/admin/matchdays/create-inline")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"seasonId\":\"" + season.getId() + "\",\"label\":\"Inline MD\"}"))
+                // then
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.label").value("Inline MD"));
     }
 
     @Test
-    void shouldRejectDuplicateInlineMatchday() throws Exception {
+    void givenDuplicateLabel_whenCreateInlineMatchday_thenReturnsConflict() throws Exception {
+        // given
         var season = testHelper.createSeason("MD Dup Inline Season");
         matchdayRepository.save(new Matchday(season, "Existing MD", 1));
 
+        // when
         mockMvc.perform(post("/admin/matchdays/create-inline")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"seasonId\":\"" + season.getId() + "\",\"label\":\"Existing MD\"}"))
+                // then
                 .andExpect(status().isConflict());
     }
 }

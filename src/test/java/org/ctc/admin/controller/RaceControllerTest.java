@@ -98,56 +98,70 @@ class RaceControllerTest {
     }
 
     @Test
-    void shouldListRaces() throws Exception {
+    void whenGetRaces_thenReturnsRacesView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/races"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/races"))
                 .andExpect(model().attributeExists("races", "seasons", "raceScores"));
     }
 
     @Test
-    void shouldListRacesByMatchday() throws Exception {
+    void givenMatchdayId_whenGetRacesByMatchday_thenReturnsFilteredRaces() throws Exception {
+        // when
         mockMvc.perform(get("/admin/races").param("matchdayId", matchday.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/races"))
                 .andExpect(model().attributeExists("races", "matchday"));
     }
 
     @Test
-    void shouldListRacesBySeason() throws Exception {
+    void givenSeasonId_whenGetRacesBySeason_thenReturnsFilteredRaces() throws Exception {
+        // when
         mockMvc.perform(get("/admin/races").param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/races"))
                 .andExpect(model().attributeExists("races", "selectedSeasonId"));
     }
 
     @Test
-    void shouldShowRaceDetail() throws Exception {
+    void givenExistingRace_whenGetRaceDetail_thenReturnsDetailView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/races/" + race.getId()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/race-detail"))
                 .andExpect(model().attributeExists("race"));
     }
 
     @Test
-    void shouldShowNewRaceForm() throws Exception {
+    void givenMatchday_whenGetNewRaceForm_thenReturnsRaceForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/races/new").param("matchdayId", matchday.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/race-form"))
                 .andExpect(model().attributeExists("raceForm", "matchdays", "teams"));
     }
 
     @Test
-    void shouldShowRaceEditForm() throws Exception {
+    void givenExistingRace_whenGetEditForm_thenReturnsRaceForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/races/" + race.getId() + "/edit"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/race-form"))
                 .andExpect(model().attributeExists("raceForm", "matchdays", "teams", "seasonCars", "seasonTracks"));
     }
 
     @Test
-    void shouldShowRaceResultsForm() throws Exception {
+    void givenExistingRace_whenGetResultsForm_thenReturnsResultsView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/races/" + race.getId() + "/results"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/race-results"))
                 .andExpect(model().attributeExists("raceForm", "race", "raceScoring"));
@@ -156,12 +170,14 @@ class RaceControllerTest {
     // --- POST /admin/races/save ---
 
     @Test
-    void shouldCreateNewRace() throws Exception {
+    void givenMatchdayAndTeams_whenSaveNewRace_thenRedirectsWithSuccess() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/save")
                         .param("matchdayId", matchday.getId().toString())
                         .param("homeTeamId", home.getId().toString())
                         .param("awayTeamId", away.getId().toString())
 )
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races?matchdayId=" + matchday.getId()))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -170,10 +186,12 @@ class RaceControllerTest {
     // --- POST /admin/races/{id}/results ---
 
     @Test
-    void shouldSaveResultsClearAndRepopulate() throws Exception {
+    void givenTwoDrivers_whenSaveResults_thenRedirectsAndPersistsAndAllowsRepopulate() throws Exception {
+        // given
         var driver1 = driverRepository.save(new Driver("psn_home1", "HomeDriver1"));
         var driver2 = driverRepository.save(new Driver("psn_away1", "AwayDriver1"));
 
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/results")
                         .param("results[0].driverId", driver1.getId().toString())
                         .param("results[0].position", "1")
@@ -187,6 +205,7 @@ class RaceControllerTest {
                 .andExpect(redirectedUrl("/admin/races/" + race.getId() + "/results"))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var saved = raceRepository.findById(race.getId()).orElseThrow();
         assertEquals(2, saved.getResults().size());
 
@@ -205,7 +224,8 @@ class RaceControllerTest {
     // --- POST /admin/races/{id}/quick-score ---
 
     @Test
-    void quickScoreShouldRedirectToValidReturnUrl() throws Exception {
+    void givenValidReturnUrl_whenQuickScore_thenRedirectsToReturnUrlAndPersistsScore() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/quick-score")
                         .param("homeScore", "10")
                         .param("awayScore", "8")
@@ -214,36 +234,43 @@ class RaceControllerTest {
                 .andExpect(redirectedUrl("/admin/matchdays/" + matchday.getId()))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var saved = raceRepository.findById(race.getId()).orElseThrow();
         assertEquals(10, saved.getHomeScore());
         assertEquals(8, saved.getAwayScore());
     }
 
     @Test
-    void quickScoreShouldRejectAbsoluteUrlRedirect() throws Exception {
+    void givenAbsoluteReturnUrl_whenQuickScore_thenFallsBackToRacesList() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/quick-score")
                         .param("homeScore", "5")
                         .param("awayScore", "3")
                         .param("returnUrl", "https://evil.com"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races"));
     }
 
     @Test
-    void quickScoreShouldRejectProtocolRelativeUrlRedirect() throws Exception {
+    void givenProtocolRelativeReturnUrl_whenQuickScore_thenFallsBackToRacesList() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/quick-score")
                         .param("homeScore", "5")
                         .param("awayScore", "3")
                         .param("returnUrl", "//evil.com"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races"));
     }
 
     @Test
-    void quickScoreShouldFallbackWhenReturnUrlMissing() throws Exception {
+    void givenMissingReturnUrl_whenQuickScore_thenFallsBackToRacesList() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/quick-score")
                         .param("homeScore", "7")
                         .param("awayScore", "4"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races"));
     }
@@ -251,30 +278,36 @@ class RaceControllerTest {
     // --- POST /admin/races/{id}/attachments/link ---
 
     @Test
-    void shouldAddValidLink() throws Exception {
+    void givenValidHttpLink_whenAddLink_thenRedirectsWithSuccess() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/attachments/link")
                         .param("name", "Race Replay")
                         .param("url", "https://youtube.com/watch?v=abc123"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races/" + race.getId()))
                 .andExpect(flash().attribute("successMessage", "Link added: Race Replay"));
     }
 
     @Test
-    void shouldRejectJavascriptLink() throws Exception {
+    void givenJavascriptUrl_whenAddLink_thenRedirectsWithError() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/attachments/link")
                         .param("name", "XSS Attempt")
                         .param("url", "javascript:alert(1)"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races/" + race.getId()))
                 .andExpect(flash().attribute("errorMessage", "Link must start with http:// or https://"));
     }
 
     @Test
-    void shouldRejectDataUriLink() throws Exception {
+    void givenDataUriUrl_whenAddLink_thenRedirectsWithError() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/attachments/link")
                         .param("name", "Data URI")
                         .param("url", "data:text/html,<script>alert(1)</script>"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races/" + race.getId()))
                 .andExpect(flash().attribute("errorMessage", "Link must start with http:// or https://"));
@@ -283,28 +316,33 @@ class RaceControllerTest {
     // --- POST /admin/races/{id}/delete ---
 
     @Test
-    void shouldDeleteRace() throws Exception {
+    void givenExistingRace_whenDeleteRace_thenRedirectsAndRemoves() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races?matchdayId=" + matchday.getId()))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         assertFalse(raceRepository.findById(race.getId()).isPresent());
     }
 
     // --- GET /admin/races/used-selections ---
 
     @Test
-    void shouldReturnUsedSelectionsAsJson() throws Exception {
+    void givenRaceWithCar_whenGetUsedSelections_thenReturnsUsedCarIds() throws Exception {
+        // given
         var car = carRepository.save(new Car("Toyota", "GR Supra"));
         season.getCars().add(car);
         seasonRepository.save(season);
         race.setCar(car);
         raceRepository.save(race);
 
+        // when
         mockMvc.perform(get("/admin/races/used-selections")
                         .param("seasonId", season.getId().toString())
                         .param("homeTeamId", home.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.usedCarIds").isArray())
                 .andExpect(jsonPath("$.usedCarIds[0]").value(car.getId().toString()))
@@ -312,17 +350,20 @@ class RaceControllerTest {
     }
 
     @Test
-    void shouldReturnUsedSelectionsExcludingCurrentRace() throws Exception {
+    void givenRaceWithCarAndExcludeRaceId_whenGetUsedSelections_thenExcludesCurrentRace() throws Exception {
+        // given
         var car = carRepository.save(new Car("Nissan", "GT-R"));
         season.getCars().add(car);
         seasonRepository.save(season);
         race.setCar(car);
         raceRepository.save(race);
 
+        // when
         mockMvc.perform(get("/admin/races/used-selections")
                         .param("seasonId", season.getId().toString())
                         .param("homeTeamId", home.getId().toString())
                         .param("excludeRaceId", race.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.usedCarIds").isEmpty());
     }
@@ -330,7 +371,8 @@ class RaceControllerTest {
     // --- Uniqueness validation ---
 
     @Test
-    void shouldRejectDuplicateCarForSameHomeTeam() throws Exception {
+    void givenHomeTeamAlreadyUsedCar_whenSaveRaceWithSameCar_thenRedirectsWithError() throws Exception {
+        // given
         var car = carRepository.save(new Car("Honda", "NSX"));
         season.getCars().add(car);
         seasonRepository.save(season);
@@ -340,11 +382,13 @@ class RaceControllerTest {
         // Create a second matchday for the second race
         var matchday2 = matchdayRepository.save(new Matchday(season, "RT Matchday 2", 2));
 
+        // when
         mockMvc.perform(post("/admin/races/save")
                         .param("matchdayId", matchday2.getId().toString())
                         .param("homeTeamId", home.getId().toString())
                         .param("awayTeamId", away.getId().toString())
                         .param("carId", car.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute("errorMessage",
                         home.getShortName() + " has already used " + car.getDisplayName() + " this season"));
@@ -353,29 +397,35 @@ class RaceControllerTest {
     // --- Pool validation ---
 
     @Test
-    void shouldRejectCarNotInSeasonPool() throws Exception {
+    void givenCarNotInSeasonPool_whenSaveRace_thenRedirectsWithError() throws Exception {
+        // given
         var car = carRepository.save(new Car("Ferrari", "488"));
         // Intentionally NOT adding car to season pool
 
+        // when
         mockMvc.perform(post("/admin/races/save")
                         .param("matchdayId", matchday.getId().toString())
                         .param("homeTeamId", home.getId().toString())
                         .param("awayTeamId", away.getId().toString())
                         .param("carId", car.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute("errorMessage", "Car is not in this season's pool"));
     }
 
     @Test
-    void shouldRejectTrackNotInSeasonPool() throws Exception {
+    void givenTrackNotInSeasonPool_whenSaveRace_thenRedirectsWithError() throws Exception {
+        // given
         var track = trackRepository.save(new Track("Silverstone", "UK"));
         // Intentionally NOT adding track to season pool
 
+        // when
         mockMvc.perform(post("/admin/races/save")
                         .param("matchdayId", matchday.getId().toString())
                         .param("homeTeamId", home.getId().toString())
                         .param("awayTeamId", away.getId().toString())
                         .param("trackId", track.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute("errorMessage", "Track is not in this season's pool"));
     }
@@ -383,12 +433,15 @@ class RaceControllerTest {
     // --- POST /admin/races/{id}/attachments/upload ---
 
     @Test
-    void shouldUploadFileAttachment() throws Exception {
+    void givenImageFile_whenUploadAttachment_thenRedirectsWithSuccess() throws Exception {
+        // given
         var file = new MockMultipartFile("file", "test-image.png", "image/png",
                 new byte[]{(byte) 0x89, 'P', 'N', 'G'});
 
+        // when
         mockMvc.perform(multipart("/admin/races/" + race.getId() + "/attachments/upload")
                         .file(file))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races/" + race.getId()))
                 .andExpect(flash().attribute("successMessage", "File uploaded: test-image.png"));
@@ -397,37 +450,43 @@ class RaceControllerTest {
     // --- POST /admin/races/attachments/{id}/delete ---
 
     @Test
-    void shouldDeleteLinkAttachment() throws Exception {
+    void givenLinkAttachment_whenDeleteAttachment_thenRedirectsAndRemoves() throws Exception {
+        // given
         var attachment = raceAttachmentRepository.save(
                 new RaceAttachment(race, AttachmentType.LINK, "Test Link", "https://example.com"));
 
+        // when
         mockMvc.perform(post("/admin/races/attachments/" + attachment.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races/" + race.getId()))
                 .andExpect(flash().attribute("successMessage", "Attachment deleted"));
 
+        // then
         assertFalse(raceAttachmentRepository.findById(attachment.getId()).isPresent());
     }
 
     @Test
-    void shouldDeleteFileAttachment() throws Exception {
+    void givenFileAttachment_whenDeleteAttachment_thenRedirectsAndRemoves() throws Exception {
+        // given
         // Create a file attachment with a URL that points to a non-existent file (delete is best-effort)
         var attachment = raceAttachmentRepository.save(
                 new RaceAttachment(race, AttachmentType.FILE, "Test File", "/uploads/races/" + race.getId() + "/test.png"));
 
+        // when
         mockMvc.perform(post("/admin/races/attachments/" + attachment.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races/" + race.getId()))
                 .andExpect(flash().attribute("successMessage", "Attachment deleted"));
 
+        // then
         assertFalse(raceAttachmentRepository.findById(attachment.getId()).isPresent());
     }
 
     // --- GET /admin/races/attachments/{id}/download ---
 
     @Test
-    void shouldDownloadFileAttachment() throws Exception {
-        // Create actual file on disk
+    void givenExistingFileAttachment_whenDownloadAttachment_thenReturnsFileWithContentDisposition() throws Exception {
+        // given
         Path raceDir = Paths.get(uploadDir).toAbsolutePath().normalize()
                 .resolve("races").resolve(race.getId().toString());
         Files.createDirectories(raceDir);
@@ -438,7 +497,9 @@ class RaceControllerTest {
                 new RaceAttachment(race, AttachmentType.FILE, "Download Test",
                         "/uploads/races/" + race.getId() + "/test-download.png"));
 
+        // when
         mockMvc.perform(get("/admin/races/attachments/" + attachment.getId() + "/download"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition",
                         org.hamcrest.Matchers.containsString("Download Test")));
@@ -448,30 +509,35 @@ class RaceControllerTest {
     }
 
     @Test
-    void shouldReturnBadRequestForLinkDownload() throws Exception {
+    void givenLinkAttachment_whenDownloadAttachment_thenReturnsBadRequest() throws Exception {
+        // given
         var attachment = raceAttachmentRepository.save(
                 new RaceAttachment(race, AttachmentType.LINK, "Not a file", "https://example.com"));
 
+        // when
         mockMvc.perform(get("/admin/races/attachments/" + attachment.getId() + "/download"))
+                // then
                 .andExpect(status().isBadRequest());
     }
 
     @Test
-    void shouldReturnNotFoundForMissingFile() throws Exception {
+    void givenFileAttachmentWithMissingFile_whenDownloadAttachment_thenReturnsNotFound() throws Exception {
+        // given
         var attachment = raceAttachmentRepository.save(
                 new RaceAttachment(race, AttachmentType.FILE, "Missing",
                         "/uploads/races/" + race.getId() + "/nonexistent.png"));
 
+        // when
         mockMvc.perform(get("/admin/races/attachments/" + attachment.getId() + "/download"))
+                // then
                 .andExpect(status().isNotFound());
     }
-
-    // --- POST /admin/races/{id}/delete (already covered above but adding race with results) ---
 
     // --- Duplicate track validation ---
 
     @Test
-    void shouldRejectDuplicateTrackForSameHomeTeam() throws Exception {
+    void givenHomeTeamAlreadyUsedTrack_whenSaveRaceWithSameTrack_thenRedirectsWithError() throws Exception {
+        // given
         var track = trackRepository.save(new Track("Test Suzuka", "JP"));
         season.getTracks().add(track);
         seasonRepository.save(season);
@@ -480,11 +546,13 @@ class RaceControllerTest {
 
         var matchday2 = matchdayRepository.save(new Matchday(season, "RT Matchday DT", 3));
 
+        // when
         mockMvc.perform(post("/admin/races/save")
                         .param("matchdayId", matchday2.getId().toString())
                         .param("homeTeamId", home.getId().toString())
                         .param("awayTeamId", away.getId().toString())
                         .param("trackId", track.getId().toString()))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attribute("errorMessage",
                         home.getShortName() + " has already used " + track.getName() + " this season"));
@@ -493,7 +561,8 @@ class RaceControllerTest {
     // --- Race detail with results ---
 
     @Test
-    void shouldShowRaceDetailWithResults() throws Exception {
+    void givenRaceWithResults_whenGetRaceDetail_thenReturnsDetailWithScores() throws Exception {
+        // given
         var driver1 = driverRepository.save(new Driver("psn_detail_h", "DetailHomeDriver"));
         var driver2 = driverRepository.save(new Driver("psn_detail_a", "DetailAwayDriver"));
         seasonDriverRepository.save(new SeasonDriver(season, driver1, home));
@@ -511,8 +580,9 @@ class RaceControllerTest {
                         .param("results[1].fastestLap", "false"))
                 .andExpect(status().is3xxRedirection());
 
-        // Now view the detail page with results
+        // when
         mockMvc.perform(get("/admin/races/" + race.getId()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/race-detail"))
                 .andExpect(model().attributeExists("race", "homeTotal", "awayTotal", "driverTeamMap"));
@@ -521,8 +591,10 @@ class RaceControllerTest {
     // --- Race detail with results-graphic flags ---
 
     @Test
-    void shouldShowRaceDetailWithResultsGraphicFlags() throws Exception {
+    void givenRaceWithoutResults_whenGetRaceDetail_thenReturnsCorrectResultsGraphicFlags() throws Exception {
+        // when
         mockMvc.perform(get("/admin/races/" + race.getId()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/race-detail"))
                 .andExpect(model().attributeExists("canGenerateResults", "resultsMissing", "resultsExist"))
@@ -533,8 +605,10 @@ class RaceControllerTest {
     // --- POST /admin/races/{id}/generate-results ---
 
     @Test
-    void generateResults_withoutResults_shouldShowError() throws Exception {
+    void givenRaceWithoutResults_whenGenerateResults_thenRedirectsWithError() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/generate-results"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races/" + race.getId()))
                 .andExpect(flash().attributeExists("errorMessage"));
@@ -543,8 +617,10 @@ class RaceControllerTest {
     // --- POST /admin/races/{id}/generate-settings ---
 
     @Test
-    void generateSettings_withoutSettings_shouldShowError() throws Exception {
+    void givenRaceWithoutSettings_whenGenerateSettings_thenRedirectsWithError() throws Exception {
+        // when
         mockMvc.perform(post("/admin/races/" + race.getId() + "/generate-settings"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/races/" + race.getId()))
                 .andExpect(flash().attributeExists("errorMessage"));
@@ -553,8 +629,10 @@ class RaceControllerTest {
     // --- GET detail with settings flags ---
 
     @Test
-    void shouldShowRaceDetailWithSettingsFlags() throws Exception {
+    void givenRaceWithoutSettings_whenGetRaceDetail_thenReturnsCorrectSettingsFlags() throws Exception {
+        // when
         mockMvc.perform(get("/admin/races/" + race.getId()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/race-detail"))
                 .andExpect(model().attributeExists("canGenerateSettings", "settingsMissing", "settingsExist"))
@@ -565,13 +643,15 @@ class RaceControllerTest {
     // --- List races with scores ---
 
     @Test
-    void shouldListRacesWithScores() throws Exception {
-        // Set up a match with scores
+    void givenMatchWithScores_whenGetRaces_thenReturnsRaceScoresInModel() throws Exception {
+        // given
         race.getMatch().setHomeScore(10);
         race.getMatch().setAwayScore(8);
         matchRepository.save(race.getMatch());
 
+        // when
         mockMvc.perform(get("/admin/races"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(model().attributeExists("raceScores"));
     }

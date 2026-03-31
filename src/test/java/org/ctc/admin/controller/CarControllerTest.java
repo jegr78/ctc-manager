@@ -58,8 +58,10 @@ class CarControllerTest {
     // --- GET /admin/cars ---
 
     @Test
-    void shouldListCars() throws Exception {
+    void whenGetCars_thenReturnsCarsView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/cars"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/cars"))
                 .andExpect(model().attributeExists("cars"));
@@ -68,8 +70,10 @@ class CarControllerTest {
     // --- GET /admin/cars/new ---
 
     @Test
-    void shouldShowCreateForm() throws Exception {
+    void whenGetNewCarForm_thenReturnsCarForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/cars/new"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/car-form"))
                 .andExpect(model().attributeExists("carForm"));
@@ -78,8 +82,10 @@ class CarControllerTest {
     // --- GET /admin/cars/{id}/edit ---
 
     @Test
-    void shouldShowEditForm() throws Exception {
+    void givenExistingCar_whenGetEditForm_thenReturnsCarForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/cars/" + car.getId() + "/edit"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/car-form"))
                 .andExpect(model().attributeExists("carForm"));
@@ -88,7 +94,8 @@ class CarControllerTest {
     // --- POST /admin/cars/save ---
 
     @Test
-    void shouldCreateNewCar() throws Exception {
+    void givenValidCarForm_whenSaveNewCar_thenRedirectsAndPersists() throws Exception {
+        // when
         mockMvc.perform(post("/admin/cars/save")
                         .param("manufacturer", "Toyota")
                         .param("name", "GR Supra Racing Concept"))
@@ -96,11 +103,13 @@ class CarControllerTest {
                 .andExpect(redirectedUrl("/admin/cars"))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         assertTrue(carRepository.existsByManufacturerAndName("Toyota", "GR Supra Racing Concept"));
     }
 
     @Test
-    void shouldUpdateExistingCar() throws Exception {
+    void givenExistingCar_whenSaveUpdatedCar_thenRedirectsAndUpdates() throws Exception {
+        // when
         mockMvc.perform(post("/admin/cars/save")
                         .param("id", car.getId().toString())
                         .param("manufacturer", "Mazda")
@@ -109,15 +118,18 @@ class CarControllerTest {
                 .andExpect(redirectedUrl("/admin/cars"))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var updated = carRepository.findById(car.getId()).orElseThrow();
         assertEquals("RX-7 GT", updated.getName());
     }
 
     @Test
-    void shouldRejectBlankManufacturer() throws Exception {
+    void givenBlankManufacturer_whenSaveCar_thenReturnsFormWithErrors() throws Exception {
+        // when
         mockMvc.perform(post("/admin/cars/save")
                         .param("manufacturer", "")
                         .param("name", "Some Car"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/car-form"));
     }
@@ -125,17 +137,20 @@ class CarControllerTest {
     // --- POST /admin/cars/{id}/delete ---
 
     @Test
-    void shouldDeleteCar() throws Exception {
+    void givenUnreferencedCar_whenDeleteCar_thenRedirectsAndRemoves() throws Exception {
+        // when
         mockMvc.perform(post("/admin/cars/" + car.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/cars"))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         assertFalse(carRepository.findById(car.getId()).isPresent());
     }
 
     @Test
-    void shouldNotDeleteCarWhenReferencedByRace() throws Exception {
+    void givenCarReferencedByRace_whenDeleteCar_thenRedirectsWithErrorAndKeepsCar() throws Exception {
+        // given
         var rs = new RaceScoring("CT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0);
         rs = raceScoringRepository.save(rs);
         var ms = new MatchScoring("CT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0);
@@ -154,36 +169,43 @@ class CarControllerTest {
         race.setCar(car);
         raceRepository.save(race);
 
+        // when
         mockMvc.perform(post("/admin/cars/" + car.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/cars"))
                 .andExpect(flash().attributeExists("errorMessage"));
 
+        // then
         assertTrue(carRepository.findById(car.getId()).isPresent());
     }
 
     // --- POST /admin/cars/{id}/image ---
 
     @Test
-    void shouldUploadImage() throws Exception {
+    void givenImageFile_whenUploadCarImage_thenRedirectsAndSetsImageUrl() throws Exception {
+        // given
         var imageFile = new org.springframework.mock.web.MockMultipartFile(
                 "image", "car.png", "image/png", new byte[]{1, 2, 3});
 
+        // when
         mockMvc.perform(multipart("/admin/cars/" + car.getId() + "/image").file(imageFile))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/cars/" + car.getId() + "/edit"))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var updated = carRepository.findById(car.getId()).orElseThrow();
         assertNotNull(updated.getImageUrl());
         assertTrue(updated.getImageUrl().contains("car.png"));
     }
 
     @Test
-    void shouldRejectBlankName() throws Exception {
+    void givenBlankName_whenSaveCar_thenReturnsFormWithErrors() throws Exception {
+        // when
         mockMvc.perform(post("/admin/cars/save")
                         .param("manufacturer", "Toyota")
                         .param("name", ""))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/car-form"));
     }

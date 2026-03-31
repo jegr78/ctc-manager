@@ -58,8 +58,10 @@ class TrackControllerTest {
     // --- GET /admin/tracks ---
 
     @Test
-    void shouldListTracks() throws Exception {
+    void whenGetTracks_thenReturnsTracksView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/tracks"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/tracks"))
                 .andExpect(model().attributeExists("tracks"));
@@ -68,8 +70,10 @@ class TrackControllerTest {
     // --- GET /admin/tracks/new ---
 
     @Test
-    void shouldShowCreateForm() throws Exception {
+    void whenGetNewTrackForm_thenReturnsTrackForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/tracks/new"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/track-form"))
                 .andExpect(model().attributeExists("trackForm"));
@@ -78,8 +82,10 @@ class TrackControllerTest {
     // --- GET /admin/tracks/{id}/edit ---
 
     @Test
-    void shouldShowEditForm() throws Exception {
+    void givenExistingTrack_whenGetEditForm_thenReturnsTrackForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/tracks/" + track.getId() + "/edit"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/track-form"))
                 .andExpect(model().attributeExists("trackForm"));
@@ -88,7 +94,8 @@ class TrackControllerTest {
     // --- POST /admin/tracks/save ---
 
     @Test
-    void shouldCreateNewTrack() throws Exception {
+    void givenValidTrackForm_whenSaveNewTrack_thenRedirectsAndPersists() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tracks/save")
                         .param("name", "Suzuka Circuit")
                         .param("country", "Japan"))
@@ -96,11 +103,13 @@ class TrackControllerTest {
                 .andExpect(redirectedUrl("/admin/tracks"))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         assertTrue(trackRepository.existsByName("Suzuka Circuit"));
     }
 
     @Test
-    void shouldUpdateExistingTrack() throws Exception {
+    void givenExistingTrack_whenSaveUpdatedTrack_thenRedirectsAndUpdates() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tracks/save")
                         .param("id", track.getId().toString())
                         .param("name", "Tsukuba Circuit Updated")
@@ -109,15 +118,18 @@ class TrackControllerTest {
                 .andExpect(redirectedUrl("/admin/tracks"))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var updated = trackRepository.findById(track.getId()).orElseThrow();
         assertEquals("Tsukuba Circuit Updated", updated.getName());
     }
 
     @Test
-    void shouldRejectBlankName() throws Exception {
+    void givenBlankName_whenSaveTrack_thenReturnsFormWithErrors() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tracks/save")
                         .param("name", "")
                         .param("country", "Japan"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/track-form"));
     }
@@ -125,17 +137,20 @@ class TrackControllerTest {
     // --- POST /admin/tracks/{id}/delete ---
 
     @Test
-    void shouldDeleteTrack() throws Exception {
+    void givenUnreferencedTrack_whenDeleteTrack_thenRedirectsAndRemoves() throws Exception {
+        // when
         mockMvc.perform(post("/admin/tracks/" + track.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tracks"))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         assertFalse(trackRepository.findById(track.getId()).isPresent());
     }
 
     @Test
-    void shouldNotDeleteTrackWhenReferencedByRace() throws Exception {
+    void givenTrackReferencedByRace_whenDeleteTrack_thenRedirectsWithErrorAndKeepsTrack() throws Exception {
+        // given
         var rs = raceScoringRepository.save(new RaceScoring("TT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0));
         var ms = matchScoringRepository.save(new MatchScoring("TT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
         var s = new Season("Track Test Season", 2026, 1);
@@ -152,33 +167,39 @@ class TrackControllerTest {
         race.setTrack(track);
         raceRepository.save(race);
 
+        // when
         mockMvc.perform(post("/admin/tracks/" + track.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tracks"))
                 .andExpect(flash().attributeExists("errorMessage"));
 
+        // then
         assertTrue(trackRepository.findById(track.getId()).isPresent());
     }
 
     // --- POST /admin/tracks/{id}/image ---
 
     @Test
-    void shouldUploadImage() throws Exception {
+    void givenImageFile_whenUploadTrackImage_thenRedirectsAndSetsImageUrl() throws Exception {
+        // given
         var imageFile = new org.springframework.mock.web.MockMultipartFile(
                 "image", "track.png", "image/png", new byte[]{1, 2, 3});
 
+        // when
         mockMvc.perform(multipart("/admin/tracks/" + track.getId() + "/image").file(imageFile))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tracks/" + track.getId() + "/edit"))
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var updated = trackRepository.findById(track.getId()).orElseThrow();
         assertNotNull(updated.getImageUrl());
         assertTrue(updated.getImageUrl().contains("track.png"));
     }
 
     @Test
-    void shouldNotDeleteTrackWhenAssignedToSeasonPool() throws Exception {
+    void givenTrackAssignedToSeasonPool_whenDeleteTrack_thenRedirectsWithErrorAndKeepsTrack() throws Exception {
+        // given
         var rs = raceScoringRepository.save(new RaceScoring("TP RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0));
         var ms = matchScoringRepository.save(new MatchScoring("TP MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
         var s = new Season("Pool Test Season", 2026, 1);
@@ -188,11 +209,13 @@ class TrackControllerTest {
         season.getTracks().add(track);
         seasonRepository.save(season);
 
+        // when
         mockMvc.perform(post("/admin/tracks/" + track.getId() + "/delete"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tracks"))
                 .andExpect(flash().attributeExists("errorMessage"));
 
+        // then
         assertTrue(trackRepository.findById(track.getId()).isPresent());
     }
 }

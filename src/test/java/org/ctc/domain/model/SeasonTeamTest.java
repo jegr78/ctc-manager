@@ -25,39 +25,47 @@ class SeasonTeamTest {
     class GetEffectivePrimaryColorTest {
 
         @Test
-        void shouldReturnOverrideWhenSet() {
+        void givenSeasonOverride_whenGetEffectivePrimaryColor_thenReturnsOverride() {
+            // given
             Team team = teamWithColors("#FF0000", null, null, null);
             SeasonTeam seasonTeam = new SeasonTeam(null, team);
             seasonTeam.setPrimaryColor("#0000FF");
 
+            // when / then
             assertEquals("#0000FF", seasonTeam.getEffectivePrimaryColor());
         }
 
         @Test
-        void shouldFallbackToTeamColorWhenNoOverride() {
+        void givenNoOverride_whenGetEffectivePrimaryColor_thenFallsBackToTeamColor() {
+            // given
             Team team = teamWithColors("#FF0000", null, null, null);
             SeasonTeam seasonTeam = new SeasonTeam(null, team);
 
+            // when / then
             assertEquals("#FF0000", seasonTeam.getEffectivePrimaryColor());
         }
 
         @Test
-        void shouldReturnNullWhenSubTeamHasNoColor() {
+        void givenSubTeamWithNoColor_whenGetEffectivePrimaryColor_thenReturnsNull() {
+            // given
             Team parent = teamWithColors("#FF0000", null, null, null);
             Team sub = subTeamOf(parent);
             SeasonTeam seasonTeam = new SeasonTeam(null, sub);
 
             // Sub-team has no own color — propagation happens at save time, not at read time
+            // when / then
             assertNull(seasonTeam.getEffectivePrimaryColor());
         }
 
         @Test
-        void shouldReturnSubTeamColorWhenPropagated() {
+        void givenSubTeamWithPropagatedColor_whenGetEffectivePrimaryColor_thenReturnsSubTeamColor() {
+            // given
             Team parent = teamWithColors("#FF0000", null, null, null);
             Team sub = subTeamOf(parent);
             sub.setPrimaryColor("#FF0000"); // Simulates propagation from parent
             SeasonTeam seasonTeam = new SeasonTeam(null, sub);
 
+            // when / then
             assertEquals("#FF0000", seasonTeam.getEffectivePrimaryColor());
         }
     }
@@ -66,19 +74,23 @@ class SeasonTeamTest {
     class GetEffectiveSecondaryColorTest {
 
         @Test
-        void shouldReturnOverrideWhenSet() {
+        void givenSeasonOverride_whenGetEffectiveSecondaryColor_thenReturnsOverride() {
+            // given
             Team team = teamWithColors(null, "#FFFFFF", null, null);
             SeasonTeam seasonTeam = new SeasonTeam(null, team);
             seasonTeam.setSecondaryColor("#000000");
 
+            // when / then
             assertEquals("#000000", seasonTeam.getEffectiveSecondaryColor());
         }
 
         @Test
-        void shouldFallbackToTeamColorWhenNoOverride() {
+        void givenNoOverride_whenGetEffectiveSecondaryColor_thenFallsBackToTeamColor() {
+            // given
             Team team = teamWithColors(null, "#FFFFFF", null, null);
             SeasonTeam seasonTeam = new SeasonTeam(null, team);
 
+            // when / then
             assertEquals("#FFFFFF", seasonTeam.getEffectiveSecondaryColor());
         }
     }
@@ -87,19 +99,23 @@ class SeasonTeamTest {
     class GetEffectiveAccentColorTest {
 
         @Test
-        void shouldReturnOverrideWhenSet() {
+        void givenSeasonOverride_whenGetEffectiveAccentColor_thenReturnsOverride() {
+            // given
             Team team = teamWithColors(null, null, "#123456", null);
             SeasonTeam seasonTeam = new SeasonTeam(null, team);
             seasonTeam.setAccentColor("#654321");
 
+            // when / then
             assertEquals("#654321", seasonTeam.getEffectiveAccentColor());
         }
 
         @Test
-        void shouldFallbackToTeamColorWhenNoOverride() {
+        void givenNoOverride_whenGetEffectiveAccentColor_thenFallsBackToTeamColor() {
+            // given
             Team team = teamWithColors(null, null, "#123456", null);
             SeasonTeam seasonTeam = new SeasonTeam(null, team);
 
+            // when / then
             assertEquals("#123456", seasonTeam.getEffectiveAccentColor());
         }
     }
@@ -108,19 +124,23 @@ class SeasonTeamTest {
     class GetEffectiveLogoUrlTest {
 
         @Test
-        void shouldReturnOverrideWhenSet() {
+        void givenSeasonOverride_whenGetEffectiveLogoUrl_thenReturnsOverride() {
+            // given
             Team team = teamWithColors(null, null, null, "https://example.com/team-logo.png");
             SeasonTeam seasonTeam = new SeasonTeam(null, team);
             seasonTeam.setLogoUrl("https://example.com/season-logo.png");
 
+            // when / then
             assertEquals("https://example.com/season-logo.png", seasonTeam.getEffectiveLogoUrl());
         }
 
         @Test
-        void shouldFallbackToTeamLogoUrlWhenNoOverride() {
+        void givenNoOverride_whenGetEffectiveLogoUrl_thenFallsBackToTeamLogoUrl() {
+            // given
             Team team = teamWithColors(null, null, null, "https://example.com/team-logo.png");
             SeasonTeam seasonTeam = new SeasonTeam(null, team);
 
+            // when / then
             assertEquals("https://example.com/team-logo.png", seasonTeam.getEffectiveLogoUrl());
         }
     }

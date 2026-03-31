@@ -49,7 +49,8 @@ class DriverRankingServiceTest {
     }
 
     @Test
-    void shouldRankDriversByTotalPoints() {
+    void givenTwoDriversWithDifferentPoints_whenCalculateRanking_thenSortedByTotalPoints() {
+        // given
         var sd1 = new SeasonDriver(season, panicpotato, tnr);
         var sd2 = new SeasonDriver(season, levitius, tnr);
 
@@ -64,8 +65,10 @@ class DriverRankingServiceTest {
         when(seasonDriverRepository.findBySeasonId(season.getId()))
                 .thenReturn(List.of(sd1, sd2));
 
+        // when
         var rankings = driverRankingService.calculateRanking(season.getId());
 
+        // then
         assertEquals(2, rankings.size());
         assertEquals(panicpotato.getId(), rankings.get(0).getDriver().getId());
         assertEquals(23, rankings.get(0).getTotalPoints());
@@ -78,7 +81,8 @@ class DriverRankingServiceTest {
     }
 
     @Test
-    void shouldAccumulateAcrossMultipleRaces() {
+    void givenDriverWithMultipleRaces_whenCalculateRanking_thenPointsAccumulated() {
+        // given
         var sd = new SeasonDriver(season, panicpotato, tnr);
 
         var race1 = new Race();
@@ -94,8 +98,10 @@ class DriverRankingServiceTest {
         when(seasonDriverRepository.findBySeasonId(season.getId()))
                 .thenReturn(List.of(sd));
 
+        // when
         var rankings = driverRankingService.calculateRanking(season.getId());
 
+        // then
         assertEquals(1, rankings.size());
         assertEquals(40, rankings.get(0).getTotalPoints());
         assertEquals(2, rankings.get(0).getRacesCount());
@@ -104,19 +110,23 @@ class DriverRankingServiceTest {
     }
 
     @Test
-    void shouldReturnEmptyForNoResults() {
+    void givenNoResults_whenCalculateRanking_thenReturnsEmptyList() {
+        // given
         when(raceResultRepository.findByRaceMatchdaySeasonId(season.getId()))
                 .thenReturn(List.of());
         when(seasonDriverRepository.findBySeasonId(season.getId()))
                 .thenReturn(List.of());
 
+        // when
         var rankings = driverRankingService.calculateRanking(season.getId());
 
+        // then
         assertTrue(rankings.isEmpty());
     }
 
     @Test
-    void shouldIncludeTeamInRanking() {
+    void givenDriverWithSeasonDriver_whenCalculateRanking_thenTeamIncludedInRanking() {
+        // given
         var sd = new SeasonDriver(season, panicpotato, tnr);
 
         var race = new Race();
@@ -128,13 +138,16 @@ class DriverRankingServiceTest {
         when(seasonDriverRepository.findBySeasonId(season.getId()))
                 .thenReturn(List.of(sd));
 
+        // when
         var rankings = driverRankingService.calculateRanking(season.getId());
 
+        // then
         assertEquals(tnr, rankings.get(0).getTeam());
     }
 
     @Test
-    void shouldBreakTieByFewerRaces() {
+    void givenTiedPointsWithDifferentRaceCounts_whenCalculateRanking_thenFewerRacesRankedFirst() {
+        // given
         var sd1 = new SeasonDriver(season, panicpotato, tnr);
         var sd2 = new SeasonDriver(season, levitius, tnr);
 
@@ -154,14 +167,17 @@ class DriverRankingServiceTest {
         when(seasonDriverRepository.findBySeasonId(season.getId()))
                 .thenReturn(List.of(sd1, sd2));
 
+        // when
         var rankings = driverRankingService.calculateRanking(season.getId());
 
+        // then
         // Same total points, panicpotato has fewer races → ranked first
         assertEquals(panicpotato.getId(), rankings.get(0).getDriver().getId());
     }
 
     @Test
-    void shouldCalculateAlltimeRankingAcrossSeasons() {
+    void givenDriverAcrossMultipleSeasons_whenCalculateAlltimeRanking_thenPointsAggregated() {
+        // given
         var season2 = new Season("2025");
         season2.setId(UUID.randomUUID());
 
@@ -181,8 +197,10 @@ class DriverRankingServiceTest {
         when(seasonDriverRepository.findAll())
                 .thenReturn(List.of(sd1, sd2));
 
+        // when
         var rankings = driverRankingService.calculateAlltimeRanking();
 
+        // then
         assertEquals(1, rankings.size());
         assertEquals(40, rankings.get(0).getTotalPoints());
         assertEquals(2, rankings.get(0).getRacesCount());
@@ -190,7 +208,8 @@ class DriverRankingServiceTest {
     }
 
     @Test
-    void shouldShowMostRecentTeamInAlltime() {
+    void givenDriverInMultipleTeams_whenCalculateAlltimeRanking_thenShowsMostRecentTeam() {
+        // given
         var season2 = new Season("2025");
         season2.setId(UUID.randomUUID());
 
@@ -210,14 +229,17 @@ class DriverRankingServiceTest {
         when(seasonDriverRepository.findAll())
                 .thenReturn(List.of(sd1, sd2));
 
+        // when
         var rankings = driverRankingService.calculateAlltimeRanking();
 
+        // then
         // Season "2026" > "2025" alphabetically, so TNR is most recent
         assertEquals(tnr, rankings.get(0).getTeam());
     }
 
     @Test
-    void shouldResolveSubTeamToParentInAlltime() {
+    void givenDriverInSubTeam_whenCalculateAlltimeRanking_thenShowsParentTeam() {
+        // given
         var clr = new Team("Community League Racing", "CLR");
         clr.setId(UUID.randomUUID());
         var clr1 = new Team("CLR 1", "CLR 1", clr);
@@ -234,8 +256,10 @@ class DriverRankingServiceTest {
         when(seasonDriverRepository.findAll())
                 .thenReturn(List.of(sd));
 
+        // when
         var rankings = driverRankingService.calculateAlltimeRanking();
 
+        // then
         // Should show parent CLR, not sub-team CLR 1
         assertEquals(clr, rankings.get(0).getTeam());
     }

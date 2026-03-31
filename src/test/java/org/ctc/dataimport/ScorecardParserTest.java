@@ -94,11 +94,14 @@ class ScorecardParserTest {
         }
 
         @Test
-        void shouldParseTwoTeamsWithSixDriversEach() {
+        void givenTwoTeamsWithSixDriversEach_whenParse_thenReturnsTwelveRows() {
+            // given
             var sheetData = buildTwoTeamScorecard("AHR 1", 6, "TCR", 6);
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(12, preview.getRows().size());
             assertFalse(preview.hasErrors());
 
@@ -118,11 +121,14 @@ class ScorecardParserTest {
         }
 
         @Test
-        void shouldParseTwoTeamsWithDifferentDriverCounts() {
+        void givenTwoTeamsWithDifferentDriverCounts_whenParse_thenReturnsCombinedRows() {
+            // given
             var sheetData = buildTwoTeamScorecard("AHR 1", 4, "TCR", 6);
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(10, preview.getRows().size());
             assertFalse(preview.hasErrors());
 
@@ -144,27 +150,33 @@ class ScorecardParserTest {
         }
 
         @Test
-        void shouldPreserveTeamNameWithSpaces() {
+        void givenTeamNameWithSpaces_whenParse_thenPreservesSpaces() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("AHR 1"));
             sheetData.add(driverRow("driver1", 1, 1, Boolean.FALSE));
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(1, preview.getRows().size());
             assertEquals("AHR 1", preview.getRows().getFirst().teamShortName());
         }
 
         @Test
-        void shouldHandleAlreadyNormalizedNames() {
+        void givenAlreadyNormalizedTeamName_whenParse_thenPreservesName() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("TCR"));
             sheetData.add(driverRow("driver1", 1, 1, Boolean.FALSE));
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(1, preview.getRows().size());
             assertEquals("TCR", preview.getRows().getFirst().teamShortName());
         }
@@ -179,53 +191,65 @@ class ScorecardParserTest {
         }
 
         @Test
-        void shouldParseBooleanTrue() {
+        void givenBooleanTrue_whenParse_thenFastestLapIsTrue() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("TCR"));
             sheetData.add(driverRow("driver1", 1, 1, Boolean.TRUE));
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(1, preview.getRows().size());
             assertTrue(preview.getRows().getFirst().fastestLap());
         }
 
         @Test
-        void shouldParseBooleanFalse() {
+        void givenBooleanFalse_whenParse_thenFastestLapIsFalse() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("TCR"));
             sheetData.add(driverRow("driver1", 1, 1, Boolean.FALSE));
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(1, preview.getRows().size());
             assertFalse(preview.getRows().getFirst().fastestLap());
         }
 
         @Test
-        void shouldParseStringTrue() {
+        void givenStringTrue_whenParse_thenFastestLapIsTrue() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("TCR"));
             sheetData.add(driverRow("driver1", 1, 1, "TRUE"));
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(1, preview.getRows().size());
             assertTrue(preview.getRows().getFirst().fastestLap());
         }
 
         @Test
-        void shouldParseStringFalse() {
+        void givenStringFalse_whenParse_thenFastestLapIsFalse() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("TCR"));
             sheetData.add(driverRow("driver1", 1, 1, "FALSE"));
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(1, preview.getRows().size());
             assertFalse(preview.getRows().getFirst().fastestLap());
         }
@@ -235,60 +259,73 @@ class ScorecardParserTest {
     class ErrorHandlingTest {
 
         @Test
-        void shouldSkipRowsWithInvalidPosition() {
+        void givenRowWithInvalidPosition_whenParse_thenSkipsRowAndAddsError() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("TCR"));
             sheetData.add(driverRow("driver1", "abc", 1, Boolean.FALSE));
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
             assertTrue(preview.getErrors().getFirst().contains("Invalid value for"));
         }
 
         @Test
-        void shouldSkipRowsWithTooFewColumns() {
+        void givenRowWithTooFewColumns_whenParse_thenSkipsRowAndAddsError() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("TCR"));
             sheetData.add(List.of("driver1", 1)); // only 2 columns
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
             assertTrue(preview.getErrors().getFirst().contains("Too few columns"));
         }
 
         @Test
-        void shouldHandleEmptySheetData() {
+        void givenEmptySheetData_whenParse_thenAddsEmptyError() {
+            // when
             var preview = parser.parse(List.of(), metadata);
 
+            // then
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
             assertTrue(preview.getErrors().getFirst().contains("empty"));
         }
 
         @Test
-        void shouldHandleNullSheetData() {
+        void givenNullSheetData_whenParse_thenAddsEmptyError() {
+            // when
             var preview = parser.parse(null, metadata);
 
+            // then
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
             assertTrue(preview.getErrors().getFirst().contains("empty"));
         }
 
         @Test
-        void shouldSkipEmptyPsnId() {
+        void givenRowWithEmptyPsnId_whenParse_thenSkipsRowAndAddsError() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("TCR"));
             sheetData.add(driverRow("", 1, 1, Boolean.FALSE));
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
             assertTrue(preview.getErrors().getFirst().contains("PSN ID is empty"));
@@ -304,14 +341,17 @@ class ScorecardParserTest {
         }
 
         @Test
-        void shouldParseDecimalPositions() {
+        void givenDecimalStringPositions_whenParse_thenParsesAsIntegers() {
+            // given
             var sheetData = new ArrayList<List<Object>>();
             sheetData.add(headerRow("TCR"));
             sheetData.add(driverRow("driver1", "2.0", "3.0", Boolean.FALSE));
             sheetData.add(overallRow());
 
+            // when
             var preview = parser.parse(sheetData, metadata);
 
+            // then
             assertEquals(1, preview.getRows().size());
             assertFalse(preview.hasErrors());
             assertEquals(2, preview.getRows().getFirst().position());

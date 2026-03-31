@@ -52,106 +52,132 @@ class PlayoffControllerTest {
     }
 
     @Test
-    void shouldShowPlayoffsPage() throws Exception {
+    void whenGetPlayoffs_thenReturnsPlayoffBracketView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/playoffs"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/playoff-bracket"))
                 .andExpect(model().attributeExists("seasons"));
     }
 
     @Test
-    void shouldShowPlayoffsForSeason() throws Exception {
+    void givenSeasonId_whenGetPlayoffsForSeason_thenReturnsSelectedSeason() throws Exception {
+        // when
         mockMvc.perform(get("/admin/playoffs").param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("selectedSeasonId", season.getId()));
     }
 
     @Test
-    void shouldShowNewPlayoffForm() throws Exception {
+    void givenSeasonId_whenGetNewPlayoffForm_thenReturnsPlayoffForm() throws Exception {
+        // when
         mockMvc.perform(get("/admin/playoffs/new").param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/playoff-form"))
                 .andExpect(model().attributeExists("playoffForm", "seasons"));
     }
 
     @Test
-    void shouldCreatePlayoff() throws Exception {
+    void givenValidPlayoffForm_whenSavePlayoff_thenRedirectsAndPersists() throws Exception {
+        // when
         mockMvc.perform(post("/admin/playoffs/save")
                         .param("seasonId", season.getId().toString())
                         .param("name", "Test Playoffs")
-                                                .param("numberOfTeams", "4"))
+                        .param("numberOfTeams", "4"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("successMessage"));
 
+        // then
         var playoff = playoffRepository.findBySeasonId(season.getId());
         assertTrue(playoff.isPresent());
         assertEquals("Test Playoffs", playoff.get().getName());
     }
 
     @Test
-    void shouldShowSeedingPage() throws Exception {
+    void givenExistingPlayoff_whenGetSeedingPage_thenReturnsSeedView() throws Exception {
+        // given
         var playoff = playoffService.createPlayoff(season.getId(), "Seed Test", 4);
 
+        // when
         mockMvc.perform(get("/admin/playoffs/" + playoff.getId() + "/seed"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/playoff-seed"))
                 .andExpect(model().attributeExists("playoff", "bracket", "firstRound", "teams"));
     }
 
     @Test
-    void shouldShowBracketWithPlayoff() throws Exception {
+    void givenSeasonWithPlayoff_whenGetPlayoffsForSeason_thenReturnsBracketInModel() throws Exception {
+        // given
         playoffService.createPlayoff(season.getId(), "Bracket Test", 4);
 
+        // when
         mockMvc.perform(get("/admin/playoffs").param("seasonId", season.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(model().attributeExists("playoff", "bracket"));
     }
 
     @Test
-    void shouldShowMatchupDetail() throws Exception {
+    void givenExistingPlayoff_whenGetMatchupDetail_thenReturnsMatchupView() throws Exception {
+        // given
         var playoff = playoffService.createPlayoff(season.getId(), "Matchup Test", 4);
         var matchupId = playoff.getRounds().get(0).getMatchups().get(0).getId();
 
+        // when
         mockMvc.perform(get("/admin/playoffs/matchup/" + matchupId))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/playoff-matchup"))
                 .andExpect(model().attributeExists("matchup", "legs", "playoff"));
     }
 
     @Test
-    void shouldRejectDuplicatePlayoff() throws Exception {
+    void givenExistingPlayoff_whenSaveDuplicatePlayoff_thenRedirectsWithError() throws Exception {
+        // given
         playoffService.createPlayoff(season.getId(), "First", 4);
 
+        // when
         mockMvc.perform(post("/admin/playoffs/save")
                         .param("seasonId", season.getId().toString())
                         .param("name", "Second")
-                                                .param("numberOfTeams", "4"))
+                        .param("numberOfTeams", "4"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("errorMessage"));
     }
 
     @Test
-    void shouldSetRoundLegs() throws Exception {
+    void givenPlayoffRound_whenSetRoundLegs_thenRedirectsWithSuccess() throws Exception {
+        // given
         var playoff = playoffService.createPlayoff(season.getId(), "Legs Test", 4);
         var roundId = playoff.getRounds().get(0).getId();
 
+        // when
         mockMvc.perform(post("/admin/playoffs/round/" + roundId + "/set-legs")
                         .param("bestOfLegs", "3"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
     @Test
-    void shouldSaveSeedingForm() throws Exception {
+    void givenPlayoffMatchup_whenSaveSeedingForm_thenRedirectsWithSuccess() throws Exception {
+        // given
         var playoff = playoffService.createPlayoff(season.getId(), "Seed Save Test", 4);
         var matchup = playoff.getRounds().get(0).getMatchups().get(0);
         var team = teamRepository.findAll().stream().findFirst().orElseThrow();
 
+        // when
         mockMvc.perform(post("/admin/playoffs/" + playoff.getId() + "/seed")
                         .param("playoffId", playoff.getId().toString())
                         .param("seeds[0].matchupId", matchup.getId().toString())
                         .param("seeds[0].teamId", team.getId().toString())
                         .param("seeds[0].slot", "1"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(flash().attributeExists("successMessage"));
     }
@@ -159,7 +185,8 @@ class PlayoffControllerTest {
     // --- POST /admin/playoffs/matchup/{id}/add-race ---
 
     @Test
-    void shouldAddRaceToMatchup() throws Exception {
+    void givenMatchupWithBothTeamsSeeded_whenAddRaceToMatchup_thenRedirectsWithSuccess() throws Exception {
+        // given
         var playoff = playoffService.createPlayoff(season.getId(), "AddRace Test", 4);
         var matchup = playoff.getRounds().get(0).getMatchups().get(0);
 
@@ -168,18 +195,23 @@ class PlayoffControllerTest {
         playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
         playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
 
+        // when
         mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/add-race"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/playoffs/matchup/" + matchup.getId()))
                 .andExpect(flash().attribute("successMessage", "Leg added"));
     }
 
     @Test
-    void shouldRejectAddRaceWhenTeamsNotSet() throws Exception {
+    void givenMatchupWithoutTeams_whenAddRaceToMatchup_thenRedirectsWithError() throws Exception {
+        // given
         var playoff = playoffService.createPlayoff(season.getId(), "NoTeams Test", 4);
         var matchup = playoff.getRounds().get(0).getMatchups().get(0);
 
+        // when
         mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/add-race"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/playoffs/matchup/" + matchup.getId()))
                 .andExpect(flash().attribute("errorMessage", "Both teams must be set"));
@@ -188,7 +220,8 @@ class PlayoffControllerTest {
     // --- POST /admin/playoffs/matchup/{id}/determine-winner ---
 
     @Test
-    void shouldDetermineWinner() throws Exception {
+    void givenMatchupWithSeededTeams_whenDetermineWinner_thenRedirects() throws Exception {
+        // given
         var playoff = playoffService.createPlayoff(season.getId(), "Winner Test", 4);
         var matchup = playoff.getRounds().get(0).getMatchups().get(0);
         var teams = season.getTeams();
@@ -199,8 +232,9 @@ class PlayoffControllerTest {
         mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/add-race"))
                 .andExpect(status().is3xxRedirection());
 
-        // Determine winner - may fail if no scores, but should exercise the code path
+        // when
         mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/determine-winner"))
+                // then
                 .andExpect(status().is3xxRedirection());
         // Either success or error flash attribute should be present
     }
@@ -208,10 +242,12 @@ class PlayoffControllerTest {
     // --- POST /admin/playoffs/{id}/add-season + remove-season ---
 
     @Test
-    void shouldAddAndRemoveSeasonFromPlayoff() throws Exception {
+    void givenPlayoffAndOtherSeason_whenAddAndRemoveSeasonFromPlayoff_thenBothSucceed() throws Exception {
+        // given
         var playoff = playoffService.createPlayoff(season.getId(), "Season Link Test", 4);
         var otherSeason = testHelper.createSeason("Other Playoff Season");
 
+        // when / then
         mockMvc.perform(post("/admin/playoffs/" + playoff.getId() + "/add-season")
                         .param("seasonId", otherSeason.getId().toString()))
                 .andExpect(status().is3xxRedirection())

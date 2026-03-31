@@ -42,23 +42,29 @@ class DriverMatchingServiceTest {
     class ExactMatchTest {
 
         @Test
-        void shouldFindExactMatch() {
+        void givenKnownPsnId_whenFindDriver_thenReturnsExactMatch() {
+            // given
             when(driverRepository.findByPsnId("AHR_Hills_93")).thenReturn(Optional.of(hills));
 
+            // when
             var result = matchingService.findDriver("AHR_Hills_93");
 
+            // then
             assertEquals(DriverMatchingService.MatchType.EXACT, result.type());
             assertEquals(hills, result.driver());
             assertFalse(result.needsConfirmation());
         }
 
         @Test
-        void shouldFindCaseInsensitiveMatch() {
+        void givenPsnIdWithDifferentCase_whenFindDriver_thenReturnsExactMatch() {
+            // given
             when(driverRepository.findByPsnId("ahr_hills_93")).thenReturn(Optional.empty());
             when(driverRepository.findByPsnIdIgnoreCase("ahr_hills_93")).thenReturn(Optional.of(hills));
 
+            // when
             var result = matchingService.findDriver("ahr_hills_93");
 
+            // then
             assertEquals(DriverMatchingService.MatchType.EXACT, result.type());
             assertEquals(hills, result.driver());
         }
@@ -68,13 +74,16 @@ class DriverMatchingServiceTest {
     class FuzzyMatchTest {
 
         @Test
-        void shouldFindFuzzyMatchOnPsnId() {
+        void givenSlightlyMisspelledPsnId_whenFindDriver_thenReturnsFuzzyMatchOnPsnId() {
+            // given
             when(driverRepository.findByPsnId("AHR_Hils_93")).thenReturn(Optional.empty());
             when(driverRepository.findByPsnIdIgnoreCase("AHR_Hils_93")).thenReturn(Optional.empty());
             when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
 
+            // when
             var result = matchingService.findDriver("AHR_Hils_93");
 
+            // then
             assertEquals(DriverMatchingService.MatchType.FUZZY, result.type());
             assertEquals(hills, result.driver());
             assertTrue(result.needsConfirmation());
@@ -82,26 +91,32 @@ class DriverMatchingServiceTest {
         }
 
         @Test
-        void shouldFindFuzzyMatchOnNickname() {
+        void givenSlightlyMisspelledNickname_whenFindDriver_thenReturnsFuzzyMatchOnNickname() {
+            // given
             when(driverRepository.findByPsnId("Micky D Higins")).thenReturn(Optional.empty());
             when(driverRepository.findByPsnIdIgnoreCase("Micky D Higins")).thenReturn(Optional.empty());
             when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
 
+            // when
             var result = matchingService.findDriver("Micky D Higins");
 
+            // then
             assertEquals(DriverMatchingService.MatchType.FUZZY, result.type());
             assertEquals(micky, result.driver());
             assertTrue(result.similarity() >= 0.8);
         }
 
         @Test
-        void shouldNotMatchBelowThreshold() {
+        void givenPsnIdBelowSimilarityThreshold_whenFindDriver_thenReturnsNoMatch() {
+            // given
             when(driverRepository.findByPsnId("completely_different")).thenReturn(Optional.empty());
             when(driverRepository.findByPsnIdIgnoreCase("completely_different")).thenReturn(Optional.empty());
             when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
 
+            // when
             var result = matchingService.findDriver("completely_different");
 
+            // then
             assertEquals(DriverMatchingService.MatchType.NONE, result.type());
             assertNull(result.driver());
         }
@@ -111,26 +126,35 @@ class DriverMatchingServiceTest {
     class NoMatchTest {
 
         @Test
-        void shouldReturnNoMatchForUnknownDriver() {
+        void givenUnknownPsnId_whenFindDriver_thenReturnsNoMatch() {
+            // given
             when(driverRepository.findByPsnId("unknown_driver")).thenReturn(Optional.empty());
             when(driverRepository.findByPsnIdIgnoreCase("unknown_driver")).thenReturn(Optional.empty());
             when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
 
+            // when
             var result = matchingService.findDriver("unknown_driver");
 
+            // then
             assertEquals(DriverMatchingService.MatchType.NONE, result.type());
             assertFalse(result.isMatch());
         }
 
         @Test
-        void shouldReturnNoMatchForBlankInput() {
+        void givenBlankInput_whenFindDriver_thenReturnsNoMatch() {
+            // when
             var result = matchingService.findDriver("");
+
+            // then
             assertEquals(DriverMatchingService.MatchType.NONE, result.type());
         }
 
         @Test
-        void shouldReturnNoMatchForNull() {
+        void givenNullInput_whenFindDriver_thenReturnsNoMatch() {
+            // when
             var result = matchingService.findDriver(null);
+
+            // then
             assertEquals(DriverMatchingService.MatchType.NONE, result.type());
         }
     }
@@ -139,26 +163,34 @@ class DriverMatchingServiceTest {
     class SimilarityTest {
 
         @Test
-        void shouldCalculateIdenticalStrings() {
+        void givenIdenticalStrings_whenCalculateSimilarity_thenReturnsOne() {
+            // when / then
             assertEquals(1.0, matchingService.calculateSimilarity("abc", "abc"));
         }
 
         @Test
-        void shouldCalculateSingleCharDifference() {
+        void givenSingleCharDifference_whenCalculateSimilarity_thenReturnsHighSimilarity() {
+            // when
             double sim = matchingService.calculateSimilarity("AHR_Hills_93", "AHR_Hils_93");
+
+            // then
             assertTrue(sim > 0.9, "Expected > 0.9 but was " + sim);
         }
 
         @Test
-        void shouldBeCaseInsensitive() {
+        void givenDifferentCases_whenCalculateSimilarity_thenIsCaseInsensitive() {
+            // when / then
             assertEquals(
                     matchingService.calculateSimilarity("ABC", "abc"),
                     matchingService.calculateSimilarity("abc", "abc"));
         }
 
         @Test
-        void shouldReturn0ForCompletelyDifferent() {
+        void givenCompletelyDifferentStrings_whenCalculateSimilarity_thenReturnsLowSimilarity() {
+            // when
             double sim = matchingService.calculateSimilarity("aaaa", "zzzz");
+
+            // then
             assertTrue(sim < 0.5);
         }
     }

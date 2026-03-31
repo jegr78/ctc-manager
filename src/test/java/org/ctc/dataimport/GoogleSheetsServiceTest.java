@@ -20,52 +20,64 @@ class GoogleSheetsServiceTest {
         private final GoogleSheetsService service = new GoogleSheetsService("");
 
         @Test
-        void shouldExtractFromFullUrl() {
+        void givenFullUrl_whenExtractSpreadsheetId_thenReturnsId() {
+            // given
             var url = "https://docs.google.com/spreadsheets/d/" + SAMPLE_ID + "/edit";
 
+            // when / then
             assertEquals(SAMPLE_ID, service.extractSpreadsheetId(url));
         }
 
         @Test
-        void shouldExtractFromUrlWithGid() {
+        void givenUrlWithGid_whenExtractSpreadsheetId_thenReturnsId() {
+            // given
             var url = "https://docs.google.com/spreadsheets/d/" + SAMPLE_ID + "/edit#gid=0";
 
+            // when / then
             assertEquals(SAMPLE_ID, service.extractSpreadsheetId(url));
         }
 
         @Test
-        void shouldExtractFromUrlWithTrailingSlash() {
+        void givenUrlWithTrailingSlash_whenExtractSpreadsheetId_thenReturnsId() {
+            // given
             var url = "https://docs.google.com/spreadsheets/d/" + SAMPLE_ID + "/";
 
+            // when / then
             assertEquals(SAMPLE_ID, service.extractSpreadsheetId(url));
         }
 
         @Test
-        void shouldExtractFromUrlWithoutTrailingSlash() {
+        void givenUrlWithoutTrailingSlash_whenExtractSpreadsheetId_thenReturnsId() {
+            // given
             var url = "https://docs.google.com/spreadsheets/d/" + SAMPLE_ID;
 
+            // when / then
             assertEquals(SAMPLE_ID, service.extractSpreadsheetId(url));
         }
 
         @Test
-        void shouldAcceptBareSpreadsheetId() {
+        void givenBareSpreadsheetId_whenExtractSpreadsheetId_thenReturnsId() {
+            // when / then
             assertEquals(SAMPLE_ID, service.extractSpreadsheetId(SAMPLE_ID));
         }
 
         @Test
-        void shouldThrowForNullUrl() {
+        void givenNullUrl_whenExtractSpreadsheetId_thenThrowsIllegalArgumentException() {
+            // when / then
             assertThrows(IllegalArgumentException.class,
                     () -> service.extractSpreadsheetId(null));
         }
 
         @Test
-        void shouldThrowForBlankUrl() {
+        void givenBlankUrl_whenExtractSpreadsheetId_thenThrowsIllegalArgumentException() {
+            // when / then
             assertThrows(IllegalArgumentException.class,
                     () -> service.extractSpreadsheetId("   "));
         }
 
         @Test
-        void shouldThrowForInvalidUrl() {
+        void givenInvalidUrl_whenExtractSpreadsheetId_thenThrowsIllegalArgumentException() {
+            // when / then
             assertThrows(IllegalArgumentException.class,
                     () -> service.extractSpreadsheetId("https://example.com/not-a-sheet"));
         }
@@ -75,33 +87,41 @@ class GoogleSheetsServiceTest {
     class IsAvailableTest {
 
         @Test
-        void shouldReturnTrueWhenCredentialsExist(@TempDir Path tempDir) throws IOException {
+        void givenExistingCredentialsFile_whenIsAvailable_thenReturnsTrue(@TempDir Path tempDir) throws IOException {
+            // given
             Path credentialsFile = tempDir.resolve("credentials.json");
             Files.writeString(credentialsFile, "{}");
 
             var service = new GoogleSheetsService(credentialsFile.toString());
 
+            // when / then
             assertTrue(service.isAvailable());
         }
 
         @Test
-        void shouldReturnFalseWhenPathIsEmpty() {
+        void givenEmptyCredentialsPath_whenIsAvailable_thenReturnsFalse() {
+            // given
             var service = new GoogleSheetsService("");
 
+            // when / then
             assertFalse(service.isAvailable());
         }
 
         @Test
-        void shouldReturnFalseWhenPathIsNull() {
+        void givenNullCredentialsPath_whenIsAvailable_thenReturnsFalse() {
+            // given
             var service = new GoogleSheetsService(null);
 
+            // when / then
             assertFalse(service.isAvailable());
         }
 
         @Test
-        void shouldReturnFalseWhenFileDoesNotExist() {
+        void givenNonExistentCredentialsFile_whenIsAvailable_thenReturnsFalse() {
+            // given
             var service = new GoogleSheetsService("/nonexistent/path.json");
 
+            // when / then
             assertFalse(service.isAvailable());
         }
     }

@@ -47,11 +47,14 @@ class SwissPairingServiceTest {
     }
 
     @Test
-    void shouldGenerateFirstRoundWithCorrectNumberOfPairings() {
+    void givenSwissSeasonWith6Teams_whenGenerateNextRound_thenCreatesThreePairings() {
+        // given
         addTeams(6);
 
+        // when
         var matchday = swissPairingService.generateNextRound(season.getId());
 
+        // then
         assertEquals("Round 1", matchday.getLabel());
         assertEquals(1, matchday.getSortIndex());
 
@@ -61,11 +64,14 @@ class SwissPairingServiceTest {
     }
 
     @Test
-    void shouldGenerateByeForOddNumberOfTeams() {
+    void givenOddNumberOfTeams_whenGenerateNextRound_thenOneByeCreated() {
+        // given
         addTeams(5);
 
+        // when
         var matchday = swissPairingService.generateNextRound(season.getId());
 
+        // then
         var races = raceRepository.findByMatchdayId(matchday.getId());
         assertEquals(3, races.size()); // 2 regular + 1 bye
 
@@ -78,7 +84,8 @@ class SwissPairingServiceTest {
     }
 
     @Test
-    void shouldNotAllowGeneratingBeyondTotalRounds() {
+    void givenTotalRoundsReached_whenGenerateNextRound_thenThrowsException() {
+        // given
         addTeams(4);
         season.setTotalRounds(1);
         seasonRepository.save(season);
@@ -86,12 +93,14 @@ class SwissPairingServiceTest {
         var md = swissPairingService.generateNextRound(season.getId());
         addDummyResults(md.getId());
 
+        // when / then
         assertThrows(IllegalStateException.class,
                 () -> swissPairingService.generateNextRound(season.getId()));
     }
 
     @Test
-    void shouldRejectNonSwissSeason() {
+    void givenLeagueSeason_whenGenerateNextRound_thenThrowsException() {
+        // given
         var uniqueSuffix = UUID.randomUUID().toString().substring(0, 4);
         var raceScoring = raceScoringRepository.save(
                 new RaceScoring("League RS " + uniqueSuffix, "20,17,14", null, 0));
@@ -105,12 +114,15 @@ class SwissPairingServiceTest {
         leagueSeason = seasonRepository.save(leagueSeason);
 
         UUID id = leagueSeason.getId();
+
+        // when / then
         assertThrows(IllegalArgumentException.class,
                 () -> swissPairingService.generateNextRound(id));
     }
 
     @Test
-    void shouldAvoidRematchesInSubsequentRounds() {
+    void givenTwoCompletedRounds_whenGenerateNextRound_thenNoRematches() {
+        // given
         addTeams(8);
 
         var md1 = swissPairingService.generateNextRound(season.getId());
@@ -123,8 +135,11 @@ class SwissPairingServiceTest {
             firstRoundPairs.add(pairKey(race.getHomeTeam().getId(), race.getAwayTeam().getId()));
         }
 
+        // when
         var md2 = swissPairingService.generateNextRound(season.getId());
         var races2 = raceRepository.findByMatchdayId(md2.getId());
+
+        // then
         assertEquals(4, races2.size());
 
         for (var race : races2) {
@@ -135,11 +150,13 @@ class SwissPairingServiceTest {
     }
 
     @Test
-    void shouldBlockNextRoundWhenCurrentRoundIncomplete() {
+    void givenIncompleteCurrentRound_whenGenerateNextRound_thenThrowsException() {
+        // given
         addTeams(4);
 
         swissPairingService.generateNextRound(season.getId());
 
+        // when / then
         var ex = assertThrows(IllegalStateException.class,
                 () -> swissPairingService.generateNextRound(season.getId()));
         assertTrue(ex.getMessage().toLowerCase().contains("incomplete"),
@@ -147,14 +164,17 @@ class SwissPairingServiceTest {
     }
 
     @Test
-    void shouldCalculateBuchholz() {
+    void givenOneCompletedRound_whenCalculateBuchholz_thenReturnsOpponentScoreSums() {
+        // given
         addTeams(4);
 
         var md = swissPairingService.generateNextRound(season.getId());
         addDummyResults(md.getId());
 
+        // when
         var buchholz = swissPairingService.calculateBuchholz(season.getId());
 
+        // then
         assertEquals(4, buchholz.size());
 
         var values = new ArrayList<>(buchholz.values());

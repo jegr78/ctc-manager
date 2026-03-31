@@ -75,9 +75,11 @@ class PlayoffServiceTest {
     class BracketCreation {
 
         @Test
-        void shouldCreate8TeamBracket() {
+        void whenCreate8TeamPlayoff_thenBracketHasThreeRoundsWithCorrectMatchups() {
+            // when
             var playoff = playoffService.createPlayoff(season.getId(), "Test Playoffs", 8);
 
+            // then
             assertNotNull(playoff.getId());
             assertEquals(3, playoff.getRounds().size());
             assertEquals("Viertelfinale", playoff.getRounds().get(0).getLabel());
@@ -90,9 +92,11 @@ class PlayoffServiceTest {
         }
 
         @Test
-        void shouldCreate4TeamBracket() {
+        void whenCreate4TeamPlayoff_thenBracketHasTwoRoundsWithCorrectMatchups() {
+            // when
             var playoff = playoffService.createPlayoff(season.getId(), "Small Playoffs", 4);
 
+            // then
             assertEquals(2, playoff.getRounds().size());
             assertEquals("Halbfinale", playoff.getRounds().get(0).getLabel());
             assertEquals("Finale", playoff.getRounds().get(1).getLabel());
@@ -102,9 +106,11 @@ class PlayoffServiceTest {
         }
 
         @Test
-        void shouldWireNextMatchupLinks() {
+        void whenCreate8TeamPlayoff_thenNextMatchupLinksWiredCorrectly() {
+            // when
             var playoff = playoffService.createPlayoff(season.getId(), "Test Playoffs", 8);
 
+            // then
             var qf = playoff.getRounds().get(0).getMatchups();
             var sf = playoff.getRounds().get(1).getMatchups();
             var finale = playoff.getRounds().get(2).getMatchups().get(0);
@@ -119,7 +125,8 @@ class PlayoffServiceTest {
         }
 
         @Test
-        void shouldRejectInvalidTeamCount() {
+        void givenInvalidTeamCount_whenCreatePlayoff_thenThrowsException() {
+            // when / then
             assertThrows(IllegalArgumentException.class, () ->
                     playoffService.createPlayoff(season.getId(), "Bad", 6));
         }
@@ -129,13 +136,16 @@ class PlayoffServiceTest {
     class Seeding {
 
         @Test
-        void shouldSeedTeamsIntoMatchups() {
+        void givenMatchup_whenSeedTeams_thenTeamsAssignedAndMatchupReady() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Test", 4);
             var matchups = playoff.getRounds().get(0).getMatchups();
 
+            // when
             playoffService.seedTeam(matchups.get(0).getId(), teams.get(0).getId(), 1);
             playoffService.seedTeam(matchups.get(0).getId(), teams.get(1).getId(), 2);
 
+            // then
             var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
             assertEquals(teams.get(0).getId(), matchup.getTeam1().getId());
             assertEquals(teams.get(1).getId(), matchup.getTeam2().getId());
@@ -147,7 +157,8 @@ class PlayoffServiceTest {
     class WinnerDetermination {
 
         @Test
-        void shouldDetermineWinnerAndAdvance() {
+        void givenRaceResultsWithClearWinner_whenDetermineWinner_thenWinnerSetAndAdvanced() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Test", 4);
             var sf = playoff.getRounds().get(0).getMatchups();
 
@@ -183,9 +194,11 @@ class PlayoffServiceTest {
             entityManager.flush();
             entityManager.clear();
 
+            // when
             // team 0: 20+17=37, team 1: 14+12=26
             playoffService.determineWinner(sf.get(0).getId());
 
+            // then
             var resolved = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
             assertNotNull(resolved.getWinner(), "Winner should be set");
             assertTrue(resolved.isComplete());
@@ -205,7 +218,8 @@ class PlayoffServiceTest {
     class TieBreaking {
 
         @Test
-        void shouldThrowOnTie() {
+        void givenTiedScores_whenDetermineWinner_thenThrowsException() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Tie Test", 4);
             var sf = playoff.getRounds().get(0).getMatchups();
 
@@ -242,6 +256,7 @@ class PlayoffServiceTest {
             entityManager.flush();
             entityManager.clear();
 
+            // when / then
             assertThrows(IllegalStateException.class, () ->
                     playoffService.determineWinner(sf.get(0).getId()));
         }
@@ -251,10 +266,14 @@ class PlayoffServiceTest {
     class BracketView {
 
         @Test
-        void shouldReturnBracketView() {
+        void givenExistingPlayoff_whenGetBracketView_thenReturnsCorrectView() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "View Test", 4);
+
+            // when
             var view = playoffService.getBracketView(playoff.getId());
 
+            // then
             assertEquals("View Test", view.getName());
             assertEquals(2, view.getRounds().size());
             assertEquals("Halbfinale", view.getRounds().get(0).getLabel());
@@ -266,18 +285,22 @@ class PlayoffServiceTest {
     class SetRoundLegs {
 
         @Test
-        void shouldUpdateBestOfLegs() {
+        void givenRound_whenSetRoundLegs_thenBestOfLegsUpdated() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Legs Test", 4);
             var roundId = playoff.getRounds().get(0).getId();
 
+            // when
             var updated = playoffService.setRoundLegs(roundId, 3);
 
+            // then
             assertEquals(3, updated.getBestOfLegs());
             assertEquals("Halbfinale", updated.getLabel());
         }
 
         @Test
-        void shouldRejectUnknownRound() {
+        void givenUnknownRoundId_whenSetRoundLegs_thenThrowsException() {
+            // when / then
             assertThrows(IllegalArgumentException.class, () ->
                     playoffService.setRoundLegs(UUID.randomUUID(), 3));
         }
@@ -287,15 +310,18 @@ class PlayoffServiceTest {
     class AddRaceToMatchup {
 
         @Test
-        void shouldCreateRaceAndMatchday() {
+        void givenSeededMatchup_whenAddRaceToMatchup_thenRaceAndMatchdayCreated() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Race Test", 4);
             var matchup = playoff.getRounds().get(0).getMatchups().get(0);
 
             playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
             playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
 
+            // when
             var race = playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
 
+            // then
             assertNotNull(race.getId());
             assertNotNull(race.getMatchday());
             assertEquals(matchup.getId(), race.getPlayoffMatchup().getId());
@@ -303,16 +329,19 @@ class PlayoffServiceTest {
         }
 
         @Test
-        void shouldRejectWhenTeamsNotSet() {
+        void givenUnseededMatchup_whenAddRaceToMatchup_thenThrowsException() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "NoTeams Test", 4);
             var matchup = playoff.getRounds().get(0).getMatchups().get(0);
 
+            // when / then
             assertThrows(IllegalStateException.class, () ->
                     playoffService.addRaceToMatchup(matchup.getId(), null, null, null));
         }
 
         @Test
-        void shouldRejectWhenMaxLegsReached() {
+        void givenMaxLegsReached_whenAddRaceToMatchup_thenThrowsException() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "MaxLegs Test", 4);
             var matchup = playoff.getRounds().get(0).getMatchups().get(0);
 
@@ -322,12 +351,14 @@ class PlayoffServiceTest {
             // Default bestOfLegs is 1, so adding one race fills it
             playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
 
+            // when / then
             assertThrows(IllegalStateException.class, () ->
                     playoffService.addRaceToMatchup(matchup.getId(), null, null, null));
         }
 
         @Test
-        void shouldAllowMultipleLegsWhenBestOfIsHigher() {
+        void givenHigherBestOfLegs_whenAddMultipleRaces_thenEachLegLabeled() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "MultiLeg Test", 4);
             var round = playoff.getRounds().get(0);
             playoffService.setRoundLegs(round.getId(), 3);
@@ -336,9 +367,11 @@ class PlayoffServiceTest {
             playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
             playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
 
+            // when
             var race1 = playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
             var race2 = playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
 
+            // then
             assertNotEquals(race1.getId(), race2.getId());
             assertTrue(race1.getMatchday().getLabel().contains("Leg 1"));
             assertTrue(race2.getMatchday().getLabel().contains("Leg 2"));
@@ -349,7 +382,8 @@ class PlayoffServiceTest {
     class GetSeedingData {
 
         @Test
-        void shouldReturnCorrectTeamsAndRound() {
+        void givenSeasonWithTeams_whenGetSeedingData_thenReturnsTeamsAndEmptySeededIds() {
+            // given
             // Add teams to the season first
             for (var team : teams) {
                 season.addTeam(team);
@@ -357,8 +391,11 @@ class PlayoffServiceTest {
             seasonRepository.save(season);
 
             var playoff = playoffService.createPlayoff(season.getId(), "Seed Data Test", 4);
+
+            // when
             var data = playoffService.getSeedingData(playoff.getId());
 
+            // then
             assertNotNull(data.playoff());
             assertNotNull(data.firstRound());
             assertNotNull(data.bracketView());
@@ -367,7 +404,8 @@ class PlayoffServiceTest {
         }
 
         @Test
-        void shouldTrackSeededTeams() {
+        void givenOneTeamSeeded_whenGetSeedingData_thenSeededTeamIdTracked() {
+            // given
             for (var team : teams) {
                 season.addTeam(team);
             }
@@ -377,8 +415,10 @@ class PlayoffServiceTest {
             var matchup = playoff.getRounds().get(0).getMatchups().get(0);
             playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
 
+            // when
             var data = playoffService.getSeedingData(playoff.getId());
 
+            // then
             assertTrue(data.seededTeamIds().contains(teams.get(0).getId()));
             assertEquals(1, data.seededTeamIds().size());
         }
@@ -388,7 +428,8 @@ class PlayoffServiceTest {
     class SaveSeed {
 
         @Test
-        void shouldSeedAllEntriesFromForm() {
+        void givenSeedFormWithEntries_whenSaveSeed_thenAllEntriesSeeded() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Form Seed Test", 4);
             var matchups = playoff.getRounds().get(0).getMatchups();
 
@@ -408,15 +449,18 @@ class PlayoffServiceTest {
             form.getSeeds().add(entry1);
             form.getSeeds().add(entry2);
 
+            // when
             playoffService.saveSeed(playoff.getId(), form);
 
+            // then
             var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
             assertEquals(teams.get(0).getId(), matchup.getTeam1().getId());
             assertEquals(teams.get(1).getId(), matchup.getTeam2().getId());
         }
 
         @Test
-        void shouldSkipNullTeamIds() {
+        void givenSeedEntryWithNullTeamId_whenSaveSeed_thenEntrySkipped() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Null Seed Test", 4);
             var matchups = playoff.getRounds().get(0).getMatchups();
 
@@ -429,8 +473,10 @@ class PlayoffServiceTest {
             entry.setSlot(1);
             form.getSeeds().add(entry);
 
+            // when
             playoffService.saveSeed(playoff.getId(), form);
 
+            // then
             var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
             assertNull(matchup.getTeam1());
         }
@@ -440,12 +486,15 @@ class PlayoffServiceTest {
     class MatchupDetail {
 
         @Test
-        void shouldReturnMatchupWithLegs() {
+        void givenMatchup_whenGetMatchupDetail_thenReturnsMatchupWithLegs() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Detail Test", 4);
             var matchup = playoff.getRounds().get(0).getMatchups().get(0);
 
+            // when
             var data = playoffService.getMatchupDetail(matchup.getId());
 
+            // then
             assertEquals(matchup.getId(), data.matchup().getId());
             assertNotNull(data.playoff());
             assertTrue(data.legs().isEmpty());
@@ -456,28 +505,35 @@ class PlayoffServiceTest {
     class PlayoffListData {
 
         @Test
-        void shouldReturnAllSeasonsWithNoSelection() {
+        void givenNoSeasonSelected_whenGetPlayoffListData_thenReturnsAllSeasons() {
+            // when
             var data = playoffService.getPlayoffListData(null);
 
+            // then
             assertNotNull(data.allSeasons());
             assertFalse(data.allSeasons().isEmpty());
         }
 
         @Test
-        void shouldReturnPlayoffForSelectedSeason() {
+        void givenSeasonWithPlayoff_whenGetPlayoffListData_thenReturnsPlayoffForSeason() {
+            // given
             playoffService.createPlayoff(season.getId(), "List Test", 4);
 
+            // when
             var data = playoffService.getPlayoffListData(season.getId());
 
+            // then
             assertNotNull(data.playoff());
             assertNotNull(data.bracketView());
             assertEquals(season.getId(), data.selectedSeasonId());
         }
 
         @Test
-        void shouldReturnNullPlayoffWhenNoneExists() {
+        void givenSeasonWithoutPlayoff_whenGetPlayoffListData_thenReturnsNullPlayoff() {
+            // when
             var data = playoffService.getPlayoffListData(season.getId());
 
+            // then
             assertNull(data.playoff());
             assertNull(data.bracketView());
         }
@@ -487,22 +543,31 @@ class PlayoffServiceTest {
     class SeasonIdLookups {
 
         @Test
-        void shouldReturnSeasonIdForPlayoff() {
+        void givenPlayoff_whenGetSeasonIdForPlayoff_thenReturnsCorrectSeasonId() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Lookup Test", 4);
+
+            // when / then
             assertEquals(season.getId(), playoffService.getSeasonIdForPlayoff(playoff.getId()));
         }
 
         @Test
-        void shouldReturnSeasonIdForMatchup() {
+        void givenMatchup_whenGetSeasonIdForMatchup_thenReturnsCorrectSeasonId() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Matchup Lookup Test", 4);
             var matchupId = playoff.getRounds().get(0).getMatchups().get(0).getId();
+
+            // when / then
             assertEquals(season.getId(), playoffService.getSeasonIdForMatchup(matchupId));
         }
 
         @Test
-        void shouldReturnSeasonIdForRound() {
+        void givenRound_whenGetSeasonIdForRound_thenReturnsCorrectSeasonId() {
+            // given
             var playoff = playoffService.createPlayoff(season.getId(), "Round Lookup Test", 4);
             var roundId = playoff.getRounds().get(0).getId();
+
+            // when / then
             assertEquals(season.getId(), playoffService.getSeasonIdForRound(roundId));
         }
     }

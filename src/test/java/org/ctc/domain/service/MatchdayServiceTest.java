@@ -34,7 +34,8 @@ class MatchdayServiceTest {
     // --- getMatchdayList ---
 
     @Test
-    void getMatchdayList_withSeasonId_returnsFilteredMatchdays() {
+    void givenSeasonId_whenGetMatchdayList_thenReturnsFilteredMatchdays() {
+        // given
         var seasonId = UUID.randomUUID();
         var matchday = new Matchday();
         matchday.setLabel("MD1");
@@ -44,15 +45,18 @@ class MatchdayServiceTest {
         when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId)).thenReturn(List.of(matchday));
         when(seasonRepository.findAll()).thenReturn(List.of(season));
 
+        // when
         var result = service.getMatchdayList(seasonId);
 
+        // then
         assertThat(result.matchdays()).containsExactly(matchday);
         assertThat(result.selectedSeasonId()).isEqualTo(seasonId);
         assertThat(result.seasons()).containsExactly(season);
     }
 
     @Test
-    void getMatchdayList_withoutSeasonId_usesActiveSeason() {
+    void givenNoSeasonIdAndActiveSeason_whenGetMatchdayList_thenUsesActiveSeason() {
+        // given
         var season = new Season();
         season.setId(UUID.randomUUID());
         season.setActive(true);
@@ -62,22 +66,27 @@ class MatchdayServiceTest {
         when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(matchday));
         when(seasonRepository.findAll()).thenReturn(List.of(season));
 
+        // when
         var result = service.getMatchdayList(null);
 
+        // then
         assertThat(result.matchdays()).containsExactly(matchday);
         assertThat(result.selectedSeasonId()).isEqualTo(season.getId());
     }
 
     @Test
-    void getMatchdayList_noActiveSeason_returnsAll() {
+    void givenNoSeasonIdAndNoActiveSeason_whenGetMatchdayList_thenReturnsAll() {
+        // given
         var matchday = new Matchday();
 
         when(seasonRepository.findByActiveTrue()).thenReturn(Optional.empty());
         when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
         when(seasonRepository.findAll()).thenReturn(List.of());
 
+        // when
         var result = service.getMatchdayList(null);
 
+        // then
         assertThat(result.matchdays()).containsExactly(matchday);
         assertThat(result.selectedSeasonId()).isNull();
     }
@@ -85,7 +94,8 @@ class MatchdayServiceTest {
     // --- saveMatchday ---
 
     @Test
-    void saveMatchday_new_createsMatchday() {
+    void givenNewMatchday_whenSaveMatchday_thenCreatesMatchday() {
+        // given
         var seasonId = UUID.randomUUID();
         var season = new Season();
         season.setId(seasonId);
@@ -93,8 +103,10 @@ class MatchdayServiceTest {
         when(seasonRepository.findById(seasonId)).thenReturn(Optional.of(season));
         when(matchdayRepository.save(any(Matchday.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         var result = service.saveMatchday("New MD", 1, seasonId, null);
 
+        // then
         assertThat(result.getLabel()).isEqualTo("New MD");
         assertThat(result.getSortIndex()).isEqualTo(1);
         assertThat(result.getSeason()).isEqualTo(season);
@@ -102,7 +114,8 @@ class MatchdayServiceTest {
     }
 
     @Test
-    void saveMatchday_existing_updatesMatchday() {
+    void givenExistingMatchday_whenSaveMatchday_thenUpdatesMatchday() {
+        // given
         var seasonId = UUID.randomUUID();
         var matchdayId = UUID.randomUUID();
         var season = new Season();
@@ -115,8 +128,10 @@ class MatchdayServiceTest {
         when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(existing));
         when(matchdayRepository.save(any(Matchday.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        // when
         var result = service.saveMatchday("Updated", 5, seasonId, matchdayId);
 
+        // then
         assertThat(result.getLabel()).isEqualTo("Updated");
         assertThat(result.getSortIndex()).isEqualTo(5);
         assertThat(result.getSeason()).isEqualTo(season);
@@ -125,7 +140,8 @@ class MatchdayServiceTest {
     // --- deleteMatchday ---
 
     @Test
-    void deleteMatchday_returnsSeasonId() {
+    void givenExistingMatchday_whenDeleteMatchday_thenReturnsSeasonId() {
+        // given
         var seasonId = UUID.randomUUID();
         var matchdayId = UUID.randomUUID();
         var season = new Season();
@@ -136,8 +152,10 @@ class MatchdayServiceTest {
 
         when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
 
+        // when
         var result = service.deleteMatchday(matchdayId);
 
+        // then
         assertThat(result).isEqualTo(seasonId);
         verify(matchdayRepository).delete(matchday);
     }
@@ -145,7 +163,8 @@ class MatchdayServiceTest {
     // --- createInline ---
 
     @Test
-    void createInline_calculatesNextSortIndex() {
+    void givenExistingMatchdays_whenCreateInline_thenCalculatesNextSortIndex() {
+        // given
         var season = new Season();
         season.setId(UUID.randomUUID());
         season.setName("Test Season");
@@ -159,14 +178,17 @@ class MatchdayServiceTest {
             return md;
         });
 
+        // when
         var result = service.createInline(season.getId(), "MD2");
 
+        // then
         assertThat(result.label()).isEqualTo("MD2");
         assertThat(result.sortIndex()).isEqualTo(4);
     }
 
     @Test
-    void createInline_rejectsDuplicateLabel() {
+    void givenDuplicateLabel_whenCreateInline_thenThrowsException() {
+        // given
         var season = new Season();
         season.setId(UUID.randomUUID());
         season.setName("Test Season");
@@ -175,6 +197,7 @@ class MatchdayServiceTest {
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
         when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(existing));
 
+        // when / then
         assertThatThrownBy(() -> service.createInline(season.getId(), "Existing"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("already exists");

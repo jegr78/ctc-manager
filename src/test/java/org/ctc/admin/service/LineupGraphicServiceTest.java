@@ -25,7 +25,8 @@ class LineupGraphicServiceTest {
     }
 
     @Test
-    void buildPairings_matchesHomeAndAwayByIndex() {
+    void givenEvenLineupWithHomeAndAwayDrivers_whenBuildPairings_thenMatchesByIndex() {
+        // given
         var service = createService();
         var homeTeam = new Team("Home", "HOM");
         homeTeam.setId(UUID.randomUUID());
@@ -45,8 +46,10 @@ class LineupGraphicServiceTest {
                 new RaceLineup(race, driverD, awayTeam)
         );
 
+        // when
         var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
 
+        // then
         assertThat(pairings).hasSize(2);
         assertThat(pairings.get(0).homeDriver()).isEqualTo("HomeDriver1");
         assertThat(pairings.get(0).awayDriver()).isEqualTo("AwayDriver1");
@@ -55,7 +58,8 @@ class LineupGraphicServiceTest {
     }
 
     @Test
-    void buildPairings_handlesSubTeams() {
+    void givenSubTeamLineup_whenBuildPairings_thenSubTeamDriverMatchedToParent() {
+        // given
         var service = createService();
         var parentHome = new Team("Parent Home", "PH");
         parentHome.setId(UUID.randomUUID());
@@ -73,15 +77,18 @@ class LineupGraphicServiceTest {
                 new RaceLineup(race, driverB, awayTeam)
         );
 
+        // when
         var pairings = service.buildPairings(lineups, parentHome, awayTeam);
 
+        // then
         assertThat(pairings).hasSize(1);
         assertThat(pairings.get(0).homeDriver()).isEqualTo("SubDriver1");
         assertThat(pairings.get(0).awayDriver()).isEqualTo("AwayDriver1");
     }
 
     @Test
-    void buildPairings_unevenTeams_pairsUpToMinimum() {
+    void givenUnevenTeamSizes_whenBuildPairings_thenPairsUpToMinimumWithEmptySlots() {
+        // given
         var service = createService();
         var homeTeam = new Team("Home", "HOM");
         homeTeam.setId(UUID.randomUUID());
@@ -103,15 +110,18 @@ class LineupGraphicServiceTest {
                 new RaceLineup(race, d5, awayTeam)
         );
 
+        // when
         var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
 
+        // then
         assertThat(pairings).hasSize(3);
         assertThat(pairings.get(2).homeDriver()).isEqualTo("H3");
         assertThat(pairings.get(2).awayDriver()).isEmpty();
     }
 
     @Test
-    void encodeCardBase64_returnsDataUri() throws IOException {
+    void givenExistingCardFile_whenEncodeCardBase64_thenReturnsDataUri() throws IOException {
+        // given
         var service = createService();
         Path cardDir = tempDir.resolve("team-cards").resolve("season1");
         Files.createDirectories(cardDir);
@@ -119,30 +129,57 @@ class LineupGraphicServiceTest {
         var img = new BufferedImage(10, 10, BufferedImage.TYPE_INT_ARGB);
         ImageIO.write(img, "png", cardFile.toFile());
 
+        // when
         String result = service.encodeCardBase64("/uploads/team-cards/season1/TST.png");
 
+        // then
         assertThat(result).startsWith("data:image/png;base64,");
     }
 
     @Test
-    void encodeCardBase64_returnsNullForMissingFile() {
+    void givenMissingCardFile_whenEncodeCardBase64_thenReturnsNull() {
+        // given
         var service = createService();
 
+        // when
         String result = service.encodeCardBase64("/uploads/team-cards/season1/MISSING.png");
 
+        // then
         assertThat(result).isNull();
     }
 
     @Test
-    void templateManagement_defaultAndCustom() throws IOException {
+    void givenNoCustomTemplate_whenHasCustomTemplate_thenReturnsFalse() throws IOException {
+        // given
         var service = createService();
-        assertThat(service.hasCustomTemplate()).isFalse();
 
+        // when / then
+        assertThat(service.hasCustomTemplate()).isFalse();
+    }
+
+    @Test
+    void givenNoCustomTemplate_whenSaveTemplate_thenCustomTemplateExistsAndCanBeLoaded() throws IOException {
+        // given
+        var service = createService();
+
+        // when
         service.saveTemplate("<html>custom</html>");
+
+        // then
         assertThat(service.hasCustomTemplate()).isTrue();
         assertThat(service.loadTemplate()).isEqualTo("<html>custom</html>");
+    }
 
+    @Test
+    void givenSavedCustomTemplate_whenResetTemplate_thenNoCustomTemplateExists() throws IOException {
+        // given
+        var service = createService();
+        service.saveTemplate("<html>custom</html>");
+
+        // when
         service.resetTemplate();
+
+        // then
         assertThat(service.hasCustomTemplate()).isFalse();
     }
 }

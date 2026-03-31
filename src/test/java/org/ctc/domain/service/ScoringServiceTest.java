@@ -36,13 +36,16 @@ class ScoringServiceTest {
     class CalculatePointsWithScoringTest {
 
         @Test
-        void shouldCalculateWithStandardScoring() {
+        void whenCalculatePoints_thenCorrectTotalPoints() {
+            // given
             var scoring = standardScoring();
             var driver = new Driver("panicpotato17", "panicpotato17");
             var result = new RaceResult(new Race(), driver, 1, 1, false);
 
+            // when
             scoringService.calculatePoints(result, scoring);
 
+            // then
             assertEquals(20, result.getPointsRace());
             assertEquals(3, result.getPointsQuali());
             assertEquals(0, result.getPointsFl());
@@ -50,13 +53,16 @@ class ScoringServiceTest {
         }
 
         @Test
-        void shouldCalculateWithFastestLap() {
+        void givenFastestLap_whenCalculatePoints_thenFastestLapPointsIncluded() {
+            // given
             var scoring = standardScoring();
             var driver = new Driver("P1R_Jake", "P1R_Jake");
             var result = new RaceResult(new Race(), driver, 11, 2, true);
 
+            // when
             scoringService.calculatePoints(result, scoring);
 
+            // then
             assertEquals(3, result.getPointsRace());
             assertEquals(2, result.getPointsQuali());
             assertEquals(2, result.getPointsFl());
@@ -64,13 +70,16 @@ class ScoringServiceTest {
         }
 
         @Test
-        void shouldCalculateWithLegacyScoring() {
+        void givenLegacyScoringWithNoQuali_whenCalculatePoints_thenOnlyRacePointsCounted() {
+            // given
             var scoring = new RaceScoring("Legacy", "15,12,10,8,6,4,3,2,1", null, 0);
             var driver = new Driver("driver1", "Driver 1");
             var result = new RaceResult(new Race(), driver, 1, 1, true);
 
+            // when
             scoringService.calculatePoints(result, scoring);
 
+            // then
             assertEquals(15, result.getPointsRace());
             assertEquals(0, result.getPointsQuali()); // no quali points
             assertEquals(0, result.getPointsFl());     // FL disabled
@@ -78,20 +87,24 @@ class ScoringServiceTest {
         }
 
         @Test
-        void shouldReturnZeroForPositionBeyondScale() {
+        void givenPositionBeyondScale_whenCalculatePoints_thenZeroPoints() {
+            // given
             var scoring = new RaceScoring("Short", "10,5", "3", 0);
             var driver = new Driver("driver1", "Driver 1");
             var result = new RaceResult(new Race(), driver, 3, 2, false);
 
+            // when
             scoringService.calculatePoints(result, scoring);
 
+            // then
             assertEquals(0, result.getPointsRace());  // position 3 not in scale
             assertEquals(0, result.getPointsQuali());  // quali pos 2 not in scale (only 1 entry)
             assertEquals(0, result.getPointsTotal());
         }
 
         @Test
-        void shouldCalculateListWithScoring() {
+        void givenMultipleResults_whenCalculatePointsList_thenEachResultScored() {
+            // given
             var scoring = standardScoring();
             var driver1 = new Driver("driver1", "Driver 1");
             var driver2 = new Driver("driver2", "Driver 2");
@@ -101,8 +114,10 @@ class ScoringServiceTest {
                     new RaceResult(race, driver2, 12, 12, false)
             );
 
+            // when
             scoringService.calculatePoints(results, scoring);
 
+            // then
             assertEquals(23, results.get(0).getPointsTotal());
             assertEquals(2, results.get(1).getPointsTotal());
         }
@@ -112,7 +127,8 @@ class ScoringServiceTest {
     class TeamTotalTest {
 
         @Test
-        void shouldSumTeamResults() {
+        void whenCalculateTeamTotal_thenSumsAllResults() {
+            // given
             var race = new Race();
             var results = List.of(
                     createResultWithTotal(race, "LEVITIUS", 11),
@@ -123,11 +139,13 @@ class ScoringServiceTest {
                     createResultWithTotal(race, "Ghostriderz16173", 2)
             );
 
+            // when / then
             assertEquals(70, scoringService.calculateTeamTotal(results));
         }
 
         @Test
-        void shouldReturn0ForEmptyList() {
+        void givenEmptyList_whenCalculateTeamTotal_thenReturnsZero() {
+            // when / then
             assertEquals(0, scoringService.calculateTeamTotal(List.of()));
         }
 
@@ -144,7 +162,8 @@ class ScoringServiceTest {
     class AggregateMatchScoresTest {
 
         @Test
-        void shouldUseRaceLineupForTeamAssignment() {
+        void givenRaceLineupExists_whenAggregateMatchScores_thenLineupDeterminesTeamAssignment() {
+            // given
             var homeTeam = createTeam("Home");
             var awayTeam = createTeam("Away");
             var match = createMatch(homeTeam, awayTeam);
@@ -164,14 +183,17 @@ class ScoringServiceTest {
             when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), awayDriver.getId()))
                     .thenReturn(Optional.of(new RaceLineup(race, awayDriver, awayTeam)));
 
+            // when
             scoringService.aggregateMatchScores(race);
 
+            // then
             assertEquals(10, match.getHomeScore());
             assertEquals(7, match.getAwayScore());
         }
 
         @Test
-        void shouldFallbackToSeasonDriverWhenNoLineup() {
+        void givenNoRaceLineup_whenAggregateMatchScores_thenFallsBackToSeasonDriver() {
+            // given
             var homeTeam = createTeam("Home");
             var awayTeam = createTeam("Away");
             var match = createMatch(homeTeam, awayTeam);
@@ -202,14 +224,17 @@ class ScoringServiceTest {
             when(raceLineupRepository.findByRaceIdAndDriverId(any(), any()))
                     .thenReturn(Optional.empty());
 
+            // when
             scoringService.aggregateMatchScores(race);
 
+            // then
             assertEquals(15, match.getHomeScore());
             assertEquals(12, match.getAwayScore());
         }
 
         @Test
-        void shouldResolveSubTeamToParentTeam() {
+        void givenSubTeamDriver_whenAggregateMatchScores_thenPointsCountForParentTeam() {
+            // given
             var parentTeam = createTeam("Parent");
             var subTeam = createTeam("Sub");
             subTeam.setParentTeam(parentTeam);
@@ -228,8 +253,10 @@ class ScoringServiceTest {
             when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId()))
                     .thenReturn(Optional.of(new RaceLineup(race, driver, subTeam)));
 
+            // when
             scoringService.aggregateMatchScores(race);
 
+            // then
             // Driver's points should count for home (parent) team
             assertEquals(20, match.getHomeScore());
             assertEquals(0, match.getAwayScore());

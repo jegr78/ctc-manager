@@ -7,40 +7,56 @@ import static org.assertj.core.api.Assertions.assertThat;
 class RaceSettingsTest {
 
     @Test
-    void isComplete_allFieldsFilled_returnsTrue() {
+    void givenAllFieldsFilled_whenIsComplete_thenReturnsTrue() {
+        // given
         var settings = createCompleteSettings();
+
+        // when / then
         assertThat(settings.isComplete()).isTrue();
     }
 
     @Test
-    void isComplete_nullIntegerField_returnsFalse() {
+    void givenNullIntegerField_whenIsComplete_thenReturnsFalse() {
+        // given
         var settings = createCompleteSettings();
         settings.setNumberOfLaps(null);
+
+        // when / then
         assertThat(settings.isComplete()).isFalse();
     }
 
     @Test
-    void isComplete_blankStringField_returnsFalse() {
+    void givenBlankStringField_whenIsComplete_thenReturnsFalse() {
+        // given
         var settings = createCompleteSettings();
         settings.setWeather("   ");
+
+        // when / then
         assertThat(settings.isComplete()).isFalse();
     }
 
     @Test
-    void isComplete_nullStringField_returnsFalse() {
+    void givenNullStringField_whenIsComplete_thenReturnsFalse() {
+        // given
         var settings = createCompleteSettings();
         settings.setInitialFuel(null);
+
+        // when / then
         assertThat(settings.isComplete()).isFalse();
     }
 
     @Test
-    void isComplete_emptySettings_returnsFalse() {
+    void givenEmptySettings_whenIsComplete_thenReturnsFalse() {
+        // given
         var settings = new RaceSettings(new Race());
+
+        // when / then
         assertThat(settings.isComplete()).isFalse();
     }
 
     @Test
-    void isComplete_eachIntegerFieldNull_returnsFalse() {
+    void givenEachIntegerFieldSetToNull_whenIsComplete_thenReturnsFalse() {
+        // given / when / then
         // tyreWearMultiplier
         var s1 = createCompleteSettings();
         s1.setTyreWearMultiplier(null);
@@ -68,7 +84,8 @@ class RaceSettingsTest {
     }
 
     @Test
-    void isComplete_eachStringFieldBlank_returnsFalse() {
+    void givenEachStringFieldBlankOrNull_whenIsComplete_thenReturnsFalse() {
+        // given / when / then
         var s1 = createCompleteSettings();
         s1.setTimeOfDay("");
         assertThat(s1.isComplete()).isFalse();

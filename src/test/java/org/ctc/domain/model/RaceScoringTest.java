@@ -11,20 +11,29 @@ class RaceScoringTest {
     class RacePointsArrayTest {
 
         @Test
-        void shouldParseCommaSeparatedRacePoints() {
+        void whenGetRacePointsArray_thenParsesCommaSeparatedValues() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14,12,10,8,7,6,5,4,3,2", null, 0);
+
+            // when / then
             assertArrayEquals(new int[]{20, 17, 14, 12, 10, 8, 7, 6, 5, 4, 3, 2}, scoring.getRacePointsArray());
         }
 
         @Test
-        void shouldHandleSpacesInCsv() {
+        void givenCsvWithSpaces_whenGetRacePointsArray_thenTrimsAndParses() {
+            // given
             var scoring = new RaceScoring("Test", "20, 17, 14", null, 0);
+
+            // when / then
             assertArrayEquals(new int[]{20, 17, 14}, scoring.getRacePointsArray());
         }
 
         @Test
-        void shouldHandleSingleValue() {
+        void givenSingleValue_whenGetRacePointsArray_thenReturnsSingleElementArray() {
+            // given
             var scoring = new RaceScoring("Test", "10", null, 0);
+
+            // when / then
             assertArrayEquals(new int[]{10}, scoring.getRacePointsArray());
         }
     }
@@ -33,26 +42,38 @@ class RaceScoringTest {
     class QualiPointsArrayTest {
 
         @Test
-        void shouldParseCommaSeparatedQualiPoints() {
+        void whenGetQualiPointsArray_thenParsesCommaSeparatedValues() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14", "3,2,1", 0);
+
+            // when / then
             assertArrayEquals(new int[]{3, 2, 1}, scoring.getQualiPointsArray());
         }
 
         @Test
-        void shouldReturnEmptyArrayForNullQualiPoints() {
+        void givenNullQualiPoints_whenGetQualiPointsArray_thenReturnsEmptyArray() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14", null, 0);
+
+            // when / then
             assertArrayEquals(new int[]{}, scoring.getQualiPointsArray());
         }
 
         @Test
-        void shouldReturnEmptyArrayForEmptyQualiPoints() {
+        void givenEmptyQualiPoints_whenGetQualiPointsArray_thenReturnsEmptyArray() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14", "", 0);
+
+            // when / then
             assertArrayEquals(new int[]{}, scoring.getQualiPointsArray());
         }
 
         @Test
-        void shouldReturnEmptyArrayForBlankQualiPoints() {
+        void givenBlankQualiPoints_whenGetQualiPointsArray_thenReturnsEmptyArray() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14", "  ", 0);
+
+            // when / then
             assertArrayEquals(new int[]{}, scoring.getQualiPointsArray());
         }
     }
@@ -61,44 +82,65 @@ class RaceScoringTest {
     class MonotonicallyDecreasingValidationTest {
 
         @Test
-        void shouldAcceptStrictlyDecreasingValues() {
+        void givenStrictlyDecreasingValues_whenIsValid_thenReturnsTrue() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14,12,10", "3,2,1", 0);
+
+            // when / then
             assertTrue(scoring.isValid());
         }
 
         @Test
-        void shouldAcceptEqualConsecutiveValues() {
+        void givenEqualConsecutiveValues_whenIsValid_thenReturnsTrue() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14,14,10", "3,2,1", 0);
+
+            // when / then
             assertTrue(scoring.isValid());
         }
 
         @Test
-        void shouldRejectIncreasingRacePoints() {
+        void givenIncreasingRacePoints_whenIsValid_thenReturnsFalse() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14,15,10", "3,2,1", 0);
+
+            // when / then
             assertFalse(scoring.isValid());
         }
 
         @Test
-        void shouldRejectIncreasingQualiPoints() {
+        void givenIncreasingQualiPoints_whenIsValid_thenReturnsFalse() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14", "3,2,4", 0);
+
+            // when / then
             assertFalse(scoring.isValid());
         }
 
         @Test
-        void shouldAcceptNullQualiPointsAsValid() {
+        void givenNullQualiPoints_whenIsValid_thenReturnsTrue() {
+            // given
             var scoring = new RaceScoring("Test", "20,17,14", null, 0);
+
+            // when / then
             assertTrue(scoring.isValid());
         }
 
         @Test
-        void shouldAcceptSingleValueAsValid() {
+        void givenSingleValue_whenIsValid_thenReturnsTrue() {
+            // given
             var scoring = new RaceScoring("Test", "10", null, 0);
+
+            // when / then
             assertTrue(scoring.isValid());
         }
 
         @Test
-        void shouldAcceptAllEqualValues() {
+        void givenAllEqualValues_whenIsValid_thenReturnsTrue() {
+            // given
             var scoring = new RaceScoring("Test", "10,10,10", null, 0);
+
+            // when / then
             assertTrue(scoring.isValid());
         }
     }

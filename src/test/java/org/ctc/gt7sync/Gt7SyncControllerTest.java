@@ -27,20 +27,23 @@ class Gt7SyncControllerTest {
     @MockitoBean private Gt7SyncService syncService;
 
     @Test
-    void shouldShowSyncPage() throws Exception {
+    void whenGetGt7Sync_thenShowsSyncPage() throws Exception {
+        // when / then
         mockMvc.perform(get("/admin/gt7-sync"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/gt7-sync"));
     }
 
     @Test
-    void shouldShowPreviewWithMockedService() throws Exception {
+    void givenMockedService_whenPostPreview_thenShowsPreviewWithModel() throws Exception {
+        // given
         var preview = new Gt7SyncPreview(
                 List.of(new Gt7SyncPreview.CarEntry("gt7-1", "Toyota", "GR Supra", "http://img.test/car.png", Gt7SyncPreview.SyncStatus.NEW)),
                 List.of(new Gt7SyncPreview.TrackEntry("t-1", "Fuji Speedway", "JP", Gt7SyncPreview.SyncStatus.NEW))
         );
         when(syncService.fetchAndPreview()).thenReturn(preview);
 
+        // when / then
         mockMvc.perform(post("/admin/gt7-sync/preview"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/gt7-sync-preview"))
@@ -48,9 +51,11 @@ class Gt7SyncControllerTest {
     }
 
     @Test
-    void shouldHandlePreviewError() throws Exception {
+    void givenServiceThrowsIOException_whenPostPreview_thenRedirectsWithErrorFlash() throws Exception {
+        // given
         when(syncService.fetchAndPreview()).thenThrow(new IOException("Connection refused"));
 
+        // when / then
         mockMvc.perform(post("/admin/gt7-sync/preview"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/gt7-sync"))
@@ -58,10 +63,12 @@ class Gt7SyncControllerTest {
     }
 
     @Test
-    void shouldExecuteSyncWithSelectedItems() throws Exception {
+    void givenSelectedItems_whenPostExecute_thenRedirectsWithSuccessFlash() throws Exception {
+        // given
         var result = new Gt7SyncService.SyncResult(3, 2, List.of(), 5);
         when(syncService.executeSync(anyList(), anyList())).thenReturn(result);
 
+        // when / then
         mockMvc.perform(post("/admin/gt7-sync/execute")
                         .param("selectedCars", "gt7-1", "gt7-2")
                         .param("selectedTracks", "Fuji Speedway"))
@@ -71,10 +78,12 @@ class Gt7SyncControllerTest {
     }
 
     @Test
-    void shouldExecuteSyncWithNoSelections() throws Exception {
+    void givenNoSelections_whenPostExecute_thenRedirectsWithSuccessFlash() throws Exception {
+        // given
         var result = new Gt7SyncService.SyncResult(0, 0, List.of(), 1);
         when(syncService.executeSync(anyList(), anyList())).thenReturn(result);
 
+        // when / then
         mockMvc.perform(post("/admin/gt7-sync/execute"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/gt7-sync"))
@@ -82,9 +91,11 @@ class Gt7SyncControllerTest {
     }
 
     @Test
-    void shouldHandleExecuteError() throws Exception {
+    void givenServiceThrowsRuntimeException_whenPostExecute_thenRedirectsWithErrorFlash() throws Exception {
+        // given
         when(syncService.executeSync(anyList(), anyList())).thenThrow(new RuntimeException("Scrape failed"));
 
+        // when / then
         mockMvc.perform(post("/admin/gt7-sync/execute")
                         .param("selectedCars", "gt7-1"))
                 .andExpect(status().is3xxRedirection())
@@ -93,10 +104,12 @@ class Gt7SyncControllerTest {
     }
 
     @Test
-    void shouldExecuteSyncWithWarnings() throws Exception {
+    void givenSyncResultWithWarnings_whenPostExecute_thenRedirectsWithSuccessFlash() throws Exception {
+        // given
         var result = new Gt7SyncService.SyncResult(2, 1, List.of("Image download failed"), 3);
         when(syncService.executeSync(anyList(), anyList())).thenReturn(result);
 
+        // when / then
         mockMvc.perform(post("/admin/gt7-sync/execute")
                         .param("selectedCars", "gt7-1"))
                 .andExpect(status().is3xxRedirection())

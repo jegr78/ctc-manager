@@ -55,8 +55,10 @@ class StandingsControllerTest {
     }
 
     @Test
-    void shouldShowStandingsForActiveSeason() throws Exception {
+    void givenActiveSeason_whenGetStandings_thenReturnsActiveSeasonStandings() throws Exception {
+        // when
         mockMvc.perform(get("/admin/standings"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/standings"))
                 .andExpect(model().attributeExists("seasons", "standings", "driverRanking", "selectedSeason"))
@@ -64,8 +66,10 @@ class StandingsControllerTest {
     }
 
     @Test
-    void shouldShowStandingsForSpecificSeason() throws Exception {
+    void givenSpecificSeasonId_whenGetStandings_thenReturnsSpecificSeasonStandings() throws Exception {
+        // when
         mockMvc.perform(get("/admin/standings").param("seasonId", inactiveSeason.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/standings"))
                 .andExpect(model().attributeExists("seasons", "standings", "driverRanking"))
@@ -74,8 +78,10 @@ class StandingsControllerTest {
     }
 
     @Test
-    void shouldShowAlltimeStandings() throws Exception {
+    void whenGetAlltimeStandings_thenReturnsAlltimeView() throws Exception {
+        // when
         mockMvc.perform(get("/admin/standings").param("seasonId", "alltime"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/standings"))
                 .andExpect(model().attributeExists("seasons", "standings", "driverRanking"))
@@ -85,11 +91,14 @@ class StandingsControllerTest {
     }
 
     @Test
-    void shouldShowSelectSeasonStateWhenNoActiveSeasonAndNoParam() throws Exception {
+    void givenNoActiveSeasonAndNoParam_whenGetStandings_thenReturnsSelectSeasonState() throws Exception {
+        // given
         activeSeason.setActive(false);
         seasonRepository.save(activeSeason);
 
+        // when
         mockMvc.perform(get("/admin/standings"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/standings"))
                 .andExpect(model().attributeExists("seasons"))
@@ -98,12 +107,15 @@ class StandingsControllerTest {
     }
 
     @Test
-    void shouldShowStandingsForSwissSeason() throws Exception {
+    void givenSwissSeason_whenGetStandingsForSeason_thenReturnsSwissSeasonStandings() throws Exception {
+        // given
         var swissSeason = testHelper.createSeason("Swiss Season " + UUID.randomUUID().toString().substring(0, 8));
         swissSeason.setFormat(SeasonFormat.SWISS);
         swissSeason = seasonRepository.save(swissSeason);
 
+        // when
         mockMvc.perform(get("/admin/standings").param("seasonId", swissSeason.getId().toString()))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/standings"))
                 .andExpect(model().attributeExists("seasons", "standings", "driverRanking"))
@@ -111,8 +123,10 @@ class StandingsControllerTest {
     }
 
     @Test
-    void shouldAlwaysPopulateSeasonsList() throws Exception {
+    void givenMultipleSeasons_whenGetStandings_thenAlwaysPopulatesSeasonsListWithAllSeasons() throws Exception {
+        // when
         mockMvc.perform(get("/admin/standings"))
+                // then
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("seasons", hasSize(greaterThanOrEqualTo(2))));
     }

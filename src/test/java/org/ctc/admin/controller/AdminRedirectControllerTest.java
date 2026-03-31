@@ -19,15 +19,19 @@ class AdminRedirectControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void shouldRedirectRootToSeasons() throws Exception {
+    void whenGetRoot_thenRedirectsToSeasons() throws Exception {
+        // when
         mockMvc.perform(get("/"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/seasons"));
     }
 
     @Test
-    void shouldRedirectAdminToSeasons() throws Exception {
+    void whenGetAdmin_thenRedirectsToSeasons() throws Exception {
+        // when
         mockMvc.perform(get("/admin"))
+                // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/seasons"));
     }
