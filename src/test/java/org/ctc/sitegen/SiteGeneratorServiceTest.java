@@ -84,7 +84,7 @@ class SiteGeneratorServiceTest {
         var matchScoring = matchScoringRepository.save(
                 new MatchScoring("Gen MS " + uniqueSuffix, 3, 1, 0));
 
-        season = new Season("Gen Test " + uniqueSuffix);
+        season = new Season("Gen Test " + uniqueSuffix, 2026, 1);
         season.setActive(true);
         season.setRaceScoring(raceScoring);
         season.setMatchScoring(matchScoring);
