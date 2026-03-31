@@ -218,7 +218,9 @@ public class TestDataService {
                     Path teamDir = uploadBase.resolve(team.getId().toString());
                     Files.createDirectories(teamDir);
                     Path target = teamDir.resolve(logoKey + ".png");
-                    Files.copy(resource.getInputStream(), target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    try (var is = resource.getInputStream()) {
+                        Files.copy(is, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    }
                     team.setLogoUrl("/uploads/teams/" + team.getId() + "/" + logoKey + ".png");
                     teamRepository.save(team);
                 }

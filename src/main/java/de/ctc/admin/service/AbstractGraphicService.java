@@ -36,15 +36,14 @@ public abstract class AbstractGraphicService {
         Path tempFile = Files.createTempFile("graphic-", ".html");
         Files.writeString(tempFile, html);
 
-        try (Playwright pw = Playwright.create()) {
-            Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
-            Page page = browser.newPage(new Browser.NewPageOptions()
-                    .setViewportSize(1920, 1080));
+        try (Playwright pw = Playwright.create();
+             Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+             Page page = browser.newPage(new Browser.NewPageOptions()
+                     .setViewportSize(1920, 1080))) {
             page.navigate("file://" + tempFile.toAbsolutePath());
             page.screenshot(new Page.ScreenshotOptions()
                     .setPath(outputFile)
                     .setFullPage(false));
-            browser.close();
         } finally {
             Files.deleteIfExists(tempFile);
         }
@@ -69,8 +68,10 @@ public abstract class AbstractGraphicService {
         try {
             var resource = new ClassPathResource(classpathLocation);
             if (resource.exists()) {
-                byte[] bytes = resource.getInputStream().readAllBytes();
-                return "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(bytes);
+                try (var is = resource.getInputStream()) {
+                    byte[] bytes = is.readAllBytes();
+                    return "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(bytes);
+                }
             }
         } catch (IOException e) {
             log.warn("Failed to encode classpath resource: {}", classpathLocation, e);

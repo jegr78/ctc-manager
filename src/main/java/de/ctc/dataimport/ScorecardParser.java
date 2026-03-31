@@ -25,7 +25,7 @@ public class ScorecardParser {
         var preview = new ImportPreview(metadata);
 
         if (sheetData == null || sheetData.isEmpty()) {
-            preview.addError("Sheet-Daten sind leer");
+            preview.addError("Sheet data is empty");
             return preview;
         }
 
@@ -46,13 +46,13 @@ public class ScorecardParser {
             if (isHeaderRow(row)) {
                 currentTeam = cleanTeamName(cellToString(row.get(0)));
                 inTeamBlock = true;
-                log.debug("Team-Block erkannt: '{}' in Zeile {}", currentTeam, i + 1);
+                log.debug("Team block detected: '{}' at row {}", currentTeam, i + 1);
                 continue;
             }
 
             // Check if this is the "Overall" summary row (team block end)
             if (isOverallRow(row)) {
-                log.debug("Overall-Zeile in Zeile {} — Team-Block '{}' beendet", i + 1, currentTeam);
+                log.debug("Overall row at row {} — team block '{}' ended", i + 1, currentTeam);
                 inTeamBlock = false;
                 currentTeam = null;
                 continue;
@@ -64,7 +64,7 @@ public class ScorecardParser {
             }
         }
 
-        log.info("Scorecard geparst: {} Fahrer-Zeilen, {} Fehler",
+        log.info("Scorecard parsed: {} driver rows, {} errors",
                 preview.getRows().size(), preview.getErrors().size());
         return preview;
     }
@@ -89,13 +89,13 @@ public class ScorecardParser {
 
     private void parseDriverRow(List<Object> row, String teamShortName, int rowNumber, ImportPreview preview) {
         if (row.size() < 4) {
-            preview.addError("Zeile " + rowNumber + ": Zu wenige Spalten (erwartet mindestens 4: PSN-ID, Position, Quali, FL)");
+            preview.addError("Row " + rowNumber + ": Too few columns (expected at least 4: PSN ID, Position, Quali, FL)");
             return;
         }
 
         var psnId = cellToString(row.get(0)).trim();
         if (psnId.isEmpty()) {
-            preview.addError("Zeile " + rowNumber + ": PSN-ID ist leer");
+            preview.addError("Row " + rowNumber + ": PSN ID is empty");
             return;
         }
 
@@ -114,7 +114,7 @@ public class ScorecardParser {
         var matchResult = driverMatchingService.findDriver(psnId);
         preview.addRow(new ImportRow(teamShortName, psnId, position, qualiPosition, fastestLap, matchResult));
 
-        log.debug("Fahrer geparst: {} (Team: {}, P{}, Q{}, FL: {})",
+        log.debug("Driver parsed: {} (Team: {}, P{}, Q{}, FL: {})",
                 psnId, teamShortName, position, qualiPosition, fastestLap);
     }
 
@@ -126,7 +126,7 @@ public class ScorecardParser {
             }
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
-            preview.addError("Zeile " + rowNumber + ": Ungültiger Wert für " + fieldName + ": " + value);
+            preview.addError("Row " + rowNumber + ": Invalid value for " + fieldName + ": " + value);
             return null;
         }
     }

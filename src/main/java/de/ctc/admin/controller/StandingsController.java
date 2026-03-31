@@ -6,6 +6,7 @@ import de.ctc.domain.service.DriverRankingService;
 import de.ctc.domain.service.StandingsService;
 import de.ctc.domain.service.SwissPairingService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.UUID;
 
+@Slf4j
 @Controller
 @RequestMapping("/admin/standings")
 @RequiredArgsConstructor
@@ -36,7 +38,7 @@ public class StandingsController {
             UUID parsedId = null;
             if (seasonId != null && !seasonId.isBlank()) {
                 try { parsedId = UUID.fromString(seasonId); }
-                catch (IllegalArgumentException ignored) { }
+                catch (IllegalArgumentException e) { log.debug("Invalid season ID: {}", seasonId); }
             }
             var season = parsedId != null
                     ? seasonRepository.findById(parsedId).orElse(null)

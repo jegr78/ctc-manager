@@ -92,15 +92,14 @@ public class TeamCardService {
         Path outputFile = uploadDir.resolve(storagePath);
         Files.createDirectories(outputFile.getParent());
 
-        try (Playwright pw = Playwright.create()) {
-            Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
-            Page page = browser.newPage(new Browser.NewPageOptions()
-                    .setViewportSize(1080, 1920));
+        try (Playwright pw = Playwright.create();
+             Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+             Page page = browser.newPage(new Browser.NewPageOptions()
+                     .setViewportSize(1080, 1920))) {
             page.navigate("file://" + tempFile.toAbsolutePath());
             page.screenshot(new Page.ScreenshotOptions()
                     .setPath(outputFile)
                     .setFullPage(false));
-            browser.close();
         } finally {
             Files.deleteIfExists(tempFile);
         }
@@ -192,8 +191,10 @@ public class TeamCardService {
         try {
             var resource = new ClassPathResource(FONT_CLASSPATH);
             if (resource.exists()) {
-                byte[] bytes = resource.getInputStream().readAllBytes();
-                return "data:font/woff2;base64," + Base64.getEncoder().encodeToString(bytes);
+                try (var is = resource.getInputStream()) {
+                    byte[] bytes = is.readAllBytes();
+                    return "data:font/woff2;base64," + Base64.getEncoder().encodeToString(bytes);
+                }
             }
         } catch (IOException e) {
             log.warn("Failed to encode font", e);
@@ -228,7 +229,9 @@ public class TeamCardService {
 
     public String loadDefaultTemplate() throws IOException {
         var resource = new ClassPathResource(DEFAULT_TEMPLATE);
-        return new String(resource.getInputStream().readAllBytes());
+        try (var is = resource.getInputStream()) {
+            return new String(is.readAllBytes());
+        }
     }
 
     public void saveTemplate(String content) throws IOException {
