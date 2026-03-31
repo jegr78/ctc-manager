@@ -9,6 +9,7 @@ import de.ctc.domain.repository.SeasonDriverRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,6 +22,7 @@ public class DriverRankingService {
     private final RaceResultRepository raceResultRepository;
     private final SeasonDriverRepository seasonDriverRepository;
 
+    @Transactional(readOnly = true)
     public List<DriverRanking> calculateRanking(UUID seasonId) {
         List<RaceResult> results = raceResultRepository.findByRaceMatchdaySeasonId(seasonId);
         List<SeasonDriver> seasonDrivers = seasonDriverRepository.findBySeasonId(seasonId);
@@ -51,6 +53,7 @@ public class DriverRankingService {
         return rankings;
     }
 
+    @Transactional(readOnly = true)
     public List<DriverRanking> calculateAlltimeRanking() {
         List<RaceResult> results = raceResultRepository.findByRacePlayoffMatchupIsNull();
         List<SeasonDriver> allSeasonDrivers = seasonDriverRepository.findAll();

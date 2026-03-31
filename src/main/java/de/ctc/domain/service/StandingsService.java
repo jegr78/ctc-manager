@@ -9,6 +9,7 @@ import de.ctc.domain.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
@@ -21,6 +22,7 @@ public class StandingsService {
     private final TeamRepository teamRepository;
     private final SeasonRepository seasonRepository;
 
+    @Transactional(readOnly = true)
     public List<TeamStanding> calculateStandings(UUID seasonId) {
         var season = seasonRepository.findById(seasonId).orElse(null);
         if (season == null) return List.of();
