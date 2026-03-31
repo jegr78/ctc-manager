@@ -1,16 +1,10 @@
 package de.ctc.admin.controller;
 
-import de.ctc.admin.dto.SeasonDriverGroupDto;
 import de.ctc.admin.dto.TeamForm;
-import de.ctc.domain.model.Driver;
-import de.ctc.domain.model.RaceLineup;
-import de.ctc.domain.model.SeasonDriver;
 import de.ctc.domain.model.Team;
-import de.ctc.domain.repository.RaceLineupRepository;
-import de.ctc.domain.repository.SeasonDriverRepository;
-import de.ctc.domain.repository.SeasonRepository;
 import de.ctc.domain.repository.TeamRepository;
 import de.ctc.domain.service.FileStorageService;
+import de.ctc.domain.service.TeamManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,14 +24,11 @@ import java.util.UUID;
 public class TeamController {
 
     private final TeamRepository teamRepository;
-    private final SeasonRepository seasonRepository;
-    private final RaceLineupRepository raceLineupRepository;
-    private final SeasonDriverRepository seasonDriverRepository;
     private final FileStorageService fileStorageService;
+    private final TeamManagementService teamManagementService;
 
     @GetMapping
     public String list(Model model) {
-        // Show parent teams first, sub-teams grouped under parents
         var allTeams = teamRepository.findAll();
         var parentTeams = allTeams.stream()
                 .filter(t -> t.getParentTeam() == null)
@@ -49,108 +40,11 @@ public class TeamController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
-        var team = teamRepository.findById(id).orElseThrow();
-        var seasons = seasonRepository.findBySeasonTeamsTeamId(id);
-
-        // Alle relevanten Team-IDs (dieses Team + Sub-Teams)
-        var teamIds = new java.util.ArrayList<UUID>();
-        teamIds.add(id);
-        team.getSubTeams().forEach(sub -> teamIds.add(sub.getId()));
-
-        // RaceLineups als Datenquelle: nur Fahrer die tatsaechlich gefahren sind
-        var allLineups = raceLineupRepository.findByTeamIdIn(teamIds);
-
-        // Gruppieren: Season → Team → eindeutige Drivers
-        var seasonDriverGroups = allLineups.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                        lu -> lu.getRace().getMatchday().getSeason(),
-                        java.util.LinkedHashMap::new,
-                        java.util.stream.Collectors.groupingBy(
-                                RaceLineup::getTeam,
-                                java.util.LinkedHashMap::new,
-                                java.util.stream.Collectors.mapping(
-                                        RaceLineup::getDriver,
-                                        java.util.stream.Collectors.toCollection(
-                                                () -> new java.util.TreeSet<>(
-                                                        java.util.Comparator.comparing(Driver::getPsnId)))
-                                )
-                        )
-                ))
-                .entrySet().stream()
-                .sorted((a, b) -> {
-                    if (a.getKey().isActive() != b.getKey().isActive()) {
-                        return a.getKey().isActive() ? -1 : 1;
-                    }
-                    return b.getKey().getName().compareTo(a.getKey().getName());
-                })
-                .map(entry -> {
-                    var sortedByTeam = new java.util.LinkedHashMap<Team, java.util.List<Driver>>();
-                    entry.getValue().entrySet().stream()
-                            .sorted(java.util.Comparator.comparing(e -> e.getKey().getShortName()))
-                            .forEach(e -> sortedByTeam.put(e.getKey(), new java.util.ArrayList<>(e.getValue())));
-                    return new SeasonDriverGroupDto(entry.getKey(), sortedByTeam);
-                })
-                .toList();
-
-        // Seasons ohne Lineups: Fallback auf SeasonDriver-Zuordnungen
-        var groupedSeasonIds = seasonDriverGroups.stream()
-                .map(g -> g.season().getId())
-                .collect(java.util.stream.Collectors.toSet());
-
-        var allSeasonDrivers = seasonDriverRepository.findByTeamIdIn(teamIds);
-        var fallbackGroups = allSeasonDrivers.stream()
-                .filter(sd -> !groupedSeasonIds.contains(sd.getSeason().getId()))
-                .collect(java.util.stream.Collectors.groupingBy(
-                        SeasonDriver::getSeason,
-                        java.util.LinkedHashMap::new,
-                        java.util.stream.Collectors.groupingBy(
-                                SeasonDriver::getTeam,
-                                java.util.LinkedHashMap::new,
-                                java.util.stream.Collectors.mapping(
-                                        SeasonDriver::getDriver,
-                                        java.util.stream.Collectors.toCollection(
-                                                () -> new java.util.TreeSet<>(
-                                                        java.util.Comparator.comparing(Driver::getPsnId)))
-                                )
-                        )
-                ))
-                .entrySet().stream()
-                .sorted((a, b) -> {
-                    if (a.getKey().isActive() != b.getKey().isActive()) {
-                        return a.getKey().isActive() ? -1 : 1;
-                    }
-                    return b.getKey().getName().compareTo(a.getKey().getName());
-                })
-                .map(entry -> {
-                    var sortedByTeam = new java.util.LinkedHashMap<Team, java.util.List<Driver>>();
-                    entry.getValue().entrySet().stream()
-                            .sorted(java.util.Comparator.comparing(e -> e.getKey().getShortName()))
-                            .forEach(e -> sortedByTeam.put(e.getKey(), new java.util.ArrayList<>(e.getValue())));
-                    return new SeasonDriverGroupDto(entry.getKey(), sortedByTeam);
-                })
-                .toList();
-
-        // Zusammenfuehren: Lineup-Gruppen zuerst, dann Fallback-Gruppen
-        var allGroups = new java.util.ArrayList<>(seasonDriverGroups);
-        allGroups.addAll(fallbackGroups);
-        allGroups.sort((a, b) -> {
-            if (a.season().isActive() != b.season().isActive()) {
-                return a.season().isActive() ? -1 : 1;
-            }
-            return b.season().getName().compareTo(a.season().getName());
-        });
-
-        var allGroupedSeasonIds = allGroups.stream()
-                .map(g -> g.season().getId())
-                .collect(java.util.stream.Collectors.toSet());
-        var seasonsWithoutDrivers = seasons.stream()
-                .filter(s -> !allGroupedSeasonIds.contains(s.getId()))
-                .toList();
-
-        model.addAttribute("team", team);
-        model.addAttribute("seasons", seasons);
-        model.addAttribute("seasonDriverGroups", allGroups);
-        model.addAttribute("seasonsWithoutDrivers", seasonsWithoutDrivers);
+        var data = teamManagementService.getTeamDetailData(id);
+        model.addAttribute("team", data.team());
+        model.addAttribute("seasons", data.seasons());
+        model.addAttribute("seasonDriverGroups", data.seasonDriverGroups());
+        model.addAttribute("seasonsWithoutDrivers", data.seasonsWithoutDrivers());
         return "admin/team-detail";
     }
 
@@ -189,7 +83,7 @@ public class TeamController {
             existing.setSecondaryColor(form.getSecondaryColor());
             existing.setAccentColor(form.getAccentColor());
             teamRepository.save(existing);
-            propagateToSubTeams(existing);
+            teamManagementService.propagateColorsToSubTeams(existing);
         } else {
             var team = new Team(form.getName(), form.getShortName());
             teamRepository.save(team);
@@ -210,7 +104,7 @@ public class TeamController {
             String url = fileStorageService.storeImage("teams", id, logo);
             team.setLogoUrl(url);
             teamRepository.save(team);
-            propagateLogoToSubTeams(team, url);
+            teamManagementService.propagateLogoToSubTeams(team, url);
             redirectAttributes.addFlashAttribute("successMessage", "Logo updated");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
@@ -253,39 +147,5 @@ public class TeamController {
         log.info("Deleted team: {}", team.getShortName());
         redirectAttributes.addFlashAttribute("successMessage", "Team deleted: " + team.getName());
         return "redirect:/admin/teams";
-    }
-
-    private void propagateToSubTeams(Team parent) {
-        if (!parent.hasSubTeams()) return;
-        for (var sub : parent.getSubTeams()) {
-            boolean changed = false;
-            if (sub.getPrimaryColor() == null && parent.getPrimaryColor() != null) {
-                sub.setPrimaryColor(parent.getPrimaryColor());
-                changed = true;
-            }
-            if (sub.getSecondaryColor() == null && parent.getSecondaryColor() != null) {
-                sub.setSecondaryColor(parent.getSecondaryColor());
-                changed = true;
-            }
-            if (sub.getAccentColor() == null && parent.getAccentColor() != null) {
-                sub.setAccentColor(parent.getAccentColor());
-                changed = true;
-            }
-            if (changed) {
-                teamRepository.save(sub);
-                log.info("Propagated colors from {} to {}", parent.getShortName(), sub.getShortName());
-            }
-        }
-    }
-
-    private void propagateLogoToSubTeams(Team parent, String logoUrl) {
-        if (!parent.hasSubTeams()) return;
-        for (var sub : parent.getSubTeams()) {
-            if (sub.getLogoUrl() == null) {
-                sub.setLogoUrl(logoUrl);
-                teamRepository.save(sub);
-                log.info("Propagated logo from {} to {}", parent.getShortName(), sub.getShortName());
-            }
-        }
     }
 }

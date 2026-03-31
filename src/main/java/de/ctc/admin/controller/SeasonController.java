@@ -3,8 +3,8 @@ package de.ctc.admin.controller;
 import de.ctc.admin.dto.SeasonForm;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
-import de.ctc.domain.service.FileStorageService;
 import de.ctc.domain.service.ScoringService;
+import de.ctc.domain.service.SeasonManagementService;
 import de.ctc.domain.service.SwissPairingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,10 +31,9 @@ public class SeasonController {
     private final PlayoffRepository playoffRepository;
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
-    private final SeasonTeamRepository seasonTeamRepository;
-    private final FileStorageService fileStorageService;
     private final ScoringService scoringService;
     private final SwissPairingService swissPairingService;
+    private final SeasonManagementService seasonManagementService;
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
@@ -128,56 +127,20 @@ public class SeasonController {
     @PostMapping("/{id}/add-team")
     public String addTeam(@PathVariable UUID id, @RequestParam UUID teamId,
                           RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(id).orElseThrow();
-        var team = teamRepository.findById(teamId).orElseThrow();
-        if (!season.containsTeam(team)) {
-            // Auto-add parent team when adding a sub-team
-            if (team.isSubTeam() && !season.containsTeam(team.getParentTeam())) {
-                season.addTeam(team.getParentTeam());
-                log.info("Auto-added parent team {} to season {}", team.getParentTeam().getShortName(), season.getName());
-            }
-            season.addTeam(team);
-            seasonRepository.save(season);
-            log.info("Added team {} to season {}", team.getShortName(), season.getName());
-        }
-        redirectAttributes.addFlashAttribute("successMessage", "Team added: " + team.getShortName());
+        String teamName = seasonManagementService.addTeamToSeason(id, teamId);
+        redirectAttributes.addFlashAttribute("successMessage", "Team added: " + teamName);
         return "redirect:/admin/seasons/" + id + "/edit";
     }
 
     @PostMapping("/{id}/remove-team")
     public String removeTeam(@PathVariable UUID id, @RequestParam UUID teamId,
                              RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(id).orElseThrow();
-        var team = teamRepository.findById(teamId).orElseThrow();
-
-        // Prevent removing parent team while sub-teams still exist in season
-        if (!team.isSubTeam()) {
-            boolean hasSubs = season.getTeams().stream()
-                    .anyMatch(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(team.getId()));
-            if (hasSubs) {
-                redirectAttributes.addFlashAttribute("errorMessage",
-                        "Cannot remove parent team " + team.getShortName() + " — remove its sub-teams first");
-                return "redirect:/admin/seasons/" + id + "/edit";
-            }
+        try {
+            seasonManagementService.removeTeamFromSeason(id, teamId);
+            redirectAttributes.addFlashAttribute("successMessage", "Team removed");
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-
-        season.removeTeamById(teamId);
-
-        // Auto-remove parent team if no more sub-teams in season
-        if (team.isSubTeam()) {
-            var parent = team.getParentTeam();
-            boolean hasOtherSubs = season.getTeams().stream()
-                    .anyMatch(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()));
-            if (!hasOtherSubs) {
-                season.removeTeam(parent);
-                log.info("Auto-removed parent team {} from season {} (no sub-teams left)",
-                        parent.getShortName(), season.getName());
-            }
-        }
-
-        seasonRepository.save(season);
-        log.info("Removed team {} from season {}", team.getShortName(), season.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Team removed");
         return "redirect:/admin/seasons/" + id + "/edit";
     }
 
@@ -190,44 +153,20 @@ public class SeasonController {
                                    @RequestParam(required = false) String accentColor,
                                    @RequestParam(required = false) MultipartFile logoOverride,
                                    RedirectAttributes redirectAttributes) {
-        var seasonTeam = seasonTeamRepository.findById(seasonTeamId).orElseThrow();
-        seasonTeam.setRating(rating);
-        seasonTeam.setPrimaryColor(primaryColor != null && !primaryColor.isBlank() ? primaryColor : null);
-        seasonTeam.setSecondaryColor(secondaryColor != null && !secondaryColor.isBlank() ? secondaryColor : null);
-        seasonTeam.setAccentColor(accentColor != null && !accentColor.isBlank() ? accentColor : null);
-
-        if (logoOverride != null && !logoOverride.isEmpty()) {
-            try {
-                if (seasonTeam.getLogoUrl() != null) {
-                    fileStorageService.delete(seasonTeam.getLogoUrl());
-                }
-                String url = fileStorageService.storeImage("season-teams", seasonTeamId, logoOverride);
-                seasonTeam.setLogoUrl(url);
-            } catch (Exception e) {
-                redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
-                return "redirect:/admin/seasons/" + id;
-            }
+        try {
+            String teamName = seasonManagementService.updateSeasonTeam(
+                    seasonTeamId, rating, primaryColor, secondaryColor, accentColor, logoOverride);
+            redirectAttributes.addFlashAttribute("successMessage", "Updated: " + teamName);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
         }
-
-        seasonTeamRepository.save(seasonTeam);
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Updated: " + seasonTeam.getTeam().getShortName());
         return "redirect:/admin/seasons/" + id;
     }
 
     @PostMapping("/{id}/cars/add")
     public String addCars(@PathVariable UUID id, @RequestParam List<UUID> carIds,
                           RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(id).orElseThrow();
-        int added = 0;
-        for (UUID carId : carIds) {
-            var car = carRepository.findById(carId).orElse(null);
-            if (car != null && !season.getCars().contains(car)) {
-                season.getCars().add(car);
-                added++;
-            }
-        }
-        if (added > 0) seasonRepository.save(season);
+        int added = seasonManagementService.addCarsToSeason(id, carIds);
         redirectAttributes.addFlashAttribute("successMessage", added + " car(s) added to pool");
         return "redirect:/admin/seasons/" + id + "/edit#carPool";
     }
@@ -235,26 +174,15 @@ public class SeasonController {
     @PostMapping("/{id}/cars/remove")
     public String removeCars(@PathVariable UUID id, @RequestParam List<UUID> carIds,
                              RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(id).orElseThrow();
-        season.getCars().removeIf(c -> carIds.contains(c.getId()));
-        seasonRepository.save(season);
-        redirectAttributes.addFlashAttribute("successMessage", carIds.size() + " car(s) removed from pool");
+        int removed = seasonManagementService.removeCarsFromSeason(id, carIds);
+        redirectAttributes.addFlashAttribute("successMessage", removed + " car(s) removed from pool");
         return "redirect:/admin/seasons/" + id + "/edit#carPool";
     }
 
     @PostMapping("/{id}/tracks/add")
     public String addTracks(@PathVariable UUID id, @RequestParam List<UUID> trackIds,
                             RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(id).orElseThrow();
-        int added = 0;
-        for (UUID trackId : trackIds) {
-            var track = trackRepository.findById(trackId).orElse(null);
-            if (track != null && !season.getTracks().contains(track)) {
-                season.getTracks().add(track);
-                added++;
-            }
-        }
-        if (added > 0) seasonRepository.save(season);
+        int added = seasonManagementService.addTracksToSeason(id, trackIds);
         redirectAttributes.addFlashAttribute("successMessage", added + " track(s) added to pool");
         return "redirect:/admin/seasons/" + id + "/edit#trackPool";
     }
@@ -262,10 +190,8 @@ public class SeasonController {
     @PostMapping("/{id}/tracks/remove")
     public String removeTracks(@PathVariable UUID id, @RequestParam List<UUID> trackIds,
                                RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(id).orElseThrow();
-        season.getTracks().removeIf(t -> trackIds.contains(t.getId()));
-        seasonRepository.save(season);
-        redirectAttributes.addFlashAttribute("successMessage", trackIds.size() + " track(s) removed from pool");
+        int removed = seasonManagementService.removeTracksFromSeason(id, trackIds);
+        redirectAttributes.addFlashAttribute("successMessage", removed + " track(s) removed from pool");
         return "redirect:/admin/seasons/" + id + "/edit#trackPool";
     }
 
