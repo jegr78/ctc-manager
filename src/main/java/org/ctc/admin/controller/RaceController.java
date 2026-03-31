@@ -49,6 +49,9 @@ public class RaceController {
         model.addAttribute("canGenerateResults", data.canGenerateResults());
         model.addAttribute("resultsMissing", data.resultsMissing());
         model.addAttribute("resultsExist", data.resultsExist());
+        model.addAttribute("canGenerateSettings", data.canGenerateSettings());
+        model.addAttribute("settingsMissing", data.settingsMissing());
+        model.addAttribute("settingsExist", data.settingsExist());
         return "admin/race-detail";
     }
 
@@ -171,6 +174,17 @@ public class RaceController {
         try {
             raceManagementService.generateResults(id);
             redirectAttributes.addFlashAttribute("successMessage", "Results graphic generated");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/races/" + id;
+    }
+
+    @PostMapping("/{id}/generate-settings")
+    public String generateSettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            raceManagementService.generateSettings(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Settings graphic generated");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }

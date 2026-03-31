@@ -4,6 +4,7 @@ import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
+import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -40,6 +41,7 @@ class RaceManagementServiceTest {
     @Mock private FileStorageService fileStorageService;
     @Mock private LineupGraphicService lineupGraphicService;
     @Mock private ResultsGraphicService resultsGraphicService;
+    @Mock private SettingsGraphicService settingsGraphicService;
     @Mock private TeamCardService teamCardService;
 
     @InjectMocks
@@ -418,6 +420,114 @@ class RaceManagementServiceTest {
         assertThatThrownBy(() -> service.generateResults(race.getId()))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Playwright failed");
+    }
+
+    // --- generateSettings ---
+
+    @Test
+    void generateSettings_createsAttachment() throws Exception {
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setLabel("MD 1");
+        matchday.setSeason(new Season("S"));
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(settingsGraphicService.generateSettings(race)).thenReturn("/uploads/races/" + race.getId() + "/settings.png");
+
+        service.generateSettings(race.getId());
+
+        verify(raceAttachmentRepository).save(argThat(att ->
+                att.getName().equals("MD 1-HOM-AWY-Settings")
+                        && att.getUrl().endsWith("/settings.png")
+                        && att.getType() == AttachmentType.FILE));
+    }
+
+    @Test
+    void generateSettings_onFailure_throwsRuntimeException() throws Exception {
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(settingsGraphicService.generateSettings(race)).thenThrow(new RuntimeException("Playwright failed"));
+
+        assertThatThrownBy(() -> service.generateSettings(race.getId()))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Playwright failed");
+    }
+
+    // --- getRaceDetailData settings flags ---
+
+    @Test
+    void getRaceDetailData_withoutSettings_flagsSettingsMissing() {
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+        var season = new Season("Test Season 2026");
+        season.setId(UUID.randomUUID());
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setSeason(season);
+        var match = new Match(matchday, homeTeam, awayTeam);
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
+
+        var data = service.getRaceDetailData(race.getId());
+
+        assertThat(data.settingsMissing()).isTrue();
+        assertThat(data.canGenerateSettings()).isFalse();
+        assertThat(data.settingsExist()).isFalse();
+    }
+
+    // --- saveRace with settings ---
+
+    @Test
+    void saveRace_withSettings_createsRaceSettings() {
+        var form = new RaceForm();
+        form.setMatchdayId(UUID.randomUUID());
+        form.setHomeTeamId(UUID.randomUUID());
+        form.setAwayTeamId(UUID.randomUUID());
+        form.setNumberOfLaps(20);
+        form.setTyreWearMultiplier(3);
+        form.setFuelConsumptionMultiplier(4);
+        form.setRefuelingSpeed(10);
+        form.setInitialFuel("90");
+        form.setNumberOfRequiredPitStops(0);
+        form.setTimeProgressionMultiplier(5);
+        form.setWeather("Preset S02");
+        form.setTimeOfDay("Afternoon");
+        form.setAvailableTyres("RS, RM");
+        form.setMandatoryTyres("RS");
+
+        var matchday = createMatchday();
+        var homeTeam = createTeam("HOM", "Home");
+        var awayTeam = createTeam("AWY", "Away");
+
+        when(matchdayRepository.findById(form.getMatchdayId())).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(form.getHomeTeamId())).thenReturn(Optional.of(homeTeam));
+        when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
+        when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> {
+            Race saved = inv.getArgument(0);
+            assertThat(saved.getSettings()).isNotNull();
+            assertThat(saved.getSettings().getNumberOfLaps()).isEqualTo(20);
+            assertThat(saved.getSettings().getWeather()).isEqualTo("Preset S02");
+            return saved;
+        });
+
+        var result = service.saveRace(form);
+
+        assertThat(result.success()).isTrue();
     }
 
     // --- Helper methods ---

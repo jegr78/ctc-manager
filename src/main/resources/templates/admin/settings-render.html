@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style th:inline="text">
+        @font-face {
+            font-family: 'Conthrax';
+            src: url([[${fontBase64}]]) format('woff2');
+            font-weight: 600;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(180deg, #c0c0c0 0%, #a0a0a0 100%);
+            padding: 24px 96px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 130px;
+        }
+
+        .header-left {
+            text-align: left;
+            flex: 1;
+        }
+
+        .header-left .title {
+            font-size: 28px;
+            font-weight: 900;
+            color: #1a1a1a;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            line-height: 1.1;
+        }
+
+        .header-left .year {
+            font-size: 32px;
+            font-weight: 700;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .header-center {
+            text-align: center;
+            flex: 1;
+        }
+
+        .header-center .settings-title {
+            font-size: 56px;
+            font-weight: 900;
+            color: #1a1a1a;
+            letter-spacing: 2px;
+        }
+
+        .header-center .matchday {
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .header-right {
+            flex: 1;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .header-right img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            background: #111111;
+            display: flex;
+            align-items: stretch;
+            padding: 20px 32px;
+            gap: 24px;
+        }
+
+        .team-card-container {
+            width: 18%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .team-card-container img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+            border: 3px solid white;
+            border-radius: 16px;
+        }
+
+        .settings {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            padding: 8px 16px;
+        }
+
+        .setting-row {
+            text-align: center;
+        }
+
+        .setting-label {
+            font-size: 18px;
+            font-weight: 700;
+            color: #888888;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 4px;
+        }
+
+        .setting-value {
+            font-size: 30px;
+            font-weight: 700;
+            color: #e0e0e0;
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(180deg, #d0d0d0 0%, #b0b0b0 100%);
+            padding: 24px 96px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 130px;
+        }
+
+        .position {
+            flex: 1;
+            font-size: 56px;
+            font-weight: 900;
+            color: #1a1a1a;
+        }
+
+        .position:last-child {
+            text-align: right;
+        }
+
+        .season-name {
+            flex: 1;
+            text-align: center;
+            font-size: 42px;
+            font-weight: 700;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="title">Community<br>Team Cup</div>
+            <div class="year" th:text="${seasonYear}"></div>
+        </div>
+        <div class="header-center">
+            <div class="settings-title">Settings</div>
+            <div class="matchday" th:text="${matchdayName}"></div>
+        </div>
+        <div class="header-right">
+            <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC">
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="team-card-container">
+            <img th:src="${homeCardBase64}" alt="Home Team Card">
+        </div>
+
+        <div class="settings">
+            <div class="setting-row">
+                <div class="setting-label">Car</div>
+                <div class="setting-value" th:text="${carName}"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Track</div>
+                <div class="setting-value"><span th:text="${trackName}"></span><br/><span th:text="'(' + ${numberOfLaps} + ' Laps)'"></span></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Tyre / Fuel / Mandatory Pit Stops</div>
+                <div class="setting-value" th:text="${tyreWearMultiplier + 'x / ' + fuelConsumptionMultiplier + 'x / ' + numberOfRequiredPitStops}"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Initial Fuel / Refuel Speed</div>
+                <div class="setting-value" th:text="${initialFuel + ' / ' + refuelingSpeed + ' l/s'}"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Time of Day / Progression</div>
+                <div class="setting-value" th:text="${timeOfDay + ' / ' + timeProgressionMultiplier + 'x'}"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Weather</div>
+                <div class="setting-value" th:text="${weather}"></div>
+            </div>
+            <div class="setting-row">
+                <div class="setting-label">Available Tyres / Mandatory Tyres</div>
+                <div class="setting-value" th:text="${availableTyres + ' / ' + mandatoryTyres}"></div>
+            </div>
+        </div>
+
+        <div class="team-card-container">
+            <img th:src="${awayCardBase64}" alt="Away Team Card">
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="position" th:text="'P' + ${homePosition}"></div>
+        <div class="season-name" th:text="${seasonName}"></div>
+        <div class="position" th:text="'P' + ${awayPosition}"></div>
+    </div>
+</body>
+</html>

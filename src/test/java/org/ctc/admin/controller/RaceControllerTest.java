@@ -540,6 +540,28 @@ class RaceControllerTest {
                 .andExpect(flash().attributeExists("errorMessage"));
     }
 
+    // --- POST /admin/races/{id}/generate-settings ---
+
+    @Test
+    void generateSettings_withoutSettings_shouldShowError() throws Exception {
+        mockMvc.perform(post("/admin/races/" + race.getId() + "/generate-settings"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/races/" + race.getId()))
+                .andExpect(flash().attributeExists("errorMessage"));
+    }
+
+    // --- GET detail with settings flags ---
+
+    @Test
+    void shouldShowRaceDetailWithSettingsFlags() throws Exception {
+        mockMvc.perform(get("/admin/races/" + race.getId()))
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/race-detail"))
+                .andExpect(model().attributeExists("canGenerateSettings", "settingsMissing", "settingsExist"))
+                .andExpect(model().attribute("settingsMissing", true))
+                .andExpect(model().attribute("canGenerateSettings", false));
+    }
+
     // --- List races with scores ---
 
     @Test

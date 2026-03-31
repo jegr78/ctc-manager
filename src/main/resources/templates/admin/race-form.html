@@ -92,6 +92,63 @@
                     </div>
                 </div>
             </div>
+            <!-- Race Settings -->
+            <h3 style="margin-top:24px;margin-bottom:12px;">Race Settings</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="numberOfLaps">Number of Laps</label>
+                    <input type="number" id="numberOfLaps" th:field="*{numberOfLaps}" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="numberOfRequiredPitStops">Required Pit Stops</label>
+                    <input type="number" id="numberOfRequiredPitStops" th:field="*{numberOfRequiredPitStops}" min="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="tyreWearMultiplier">Tyre Wear Multiplier</label>
+                    <input type="number" id="tyreWearMultiplier" th:field="*{tyreWearMultiplier}" min="0">
+                </div>
+                <div class="form-group">
+                    <label for="fuelConsumptionMultiplier">Fuel Consumption Multiplier</label>
+                    <input type="number" id="fuelConsumptionMultiplier" th:field="*{fuelConsumptionMultiplier}" min="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="initialFuel">Initial Fuel</label>
+                    <input type="text" id="initialFuel" th:field="*{initialFuel}">
+                </div>
+                <div class="form-group">
+                    <label for="refuelingSpeed">Refueling Speed</label>
+                    <input type="number" id="refuelingSpeed" th:field="*{refuelingSpeed}" min="0">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="timeOfDay">Time of Day</label>
+                    <input type="text" id="timeOfDay" th:field="*{timeOfDay}">
+                </div>
+                <div class="form-group">
+                    <label for="timeProgressionMultiplier">Time Progression Multiplier</label>
+                    <input type="number" id="timeProgressionMultiplier" th:field="*{timeProgressionMultiplier}" min="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="weather">Weather</label>
+                <input type="text" id="weather" th:field="*{weather}">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="availableTyres">Available Tyres</label>
+                    <input type="text" id="availableTyres" th:field="*{availableTyres}">
+                </div>
+                <div class="form-group">
+                    <label for="mandatoryTyres">Mandatory Tyres</label>
+                    <input type="text" id="mandatoryTyres" th:field="*{mandatoryTyres}">
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="dateTime">Date &amp; Time</label>
                 <input type="datetime-local" id="dateTime" name="dateTime"

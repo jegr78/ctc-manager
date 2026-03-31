@@ -15,6 +15,9 @@
         <a th:href="@{/admin/tools/template-editors(tab='lineup')}"
            th:classappend="${activeTab == 'lineup' ? 'tab-active' : ''}"
            class="tab-btn">Lineup</a>
+        <a th:href="@{/admin/tools/template-editors(tab='settings')}"
+           th:classappend="${activeTab == 'settings' ? 'tab-active' : ''}"
+           class="tab-btn">Settings</a>
     </div>
 
     <!-- Team Cards Tab -->
@@ -115,6 +118,69 @@
                         <li>Use <code>th:each="p : ${pairings}"</code> to iterate pairings</li>
                         <li>Access driver names: <code>${p.homeDriver}</code>, <code>${p.awayDriver}</code></li>
                         <li>Use <code>text-overflow: ellipsis</code> for long driver names</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div th:if="${activeTab == 'settings'}" style="margin-top:16px;">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <span th:if="${settingsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
+            <span th:unless="${settingsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card" style="padding:0;display:flex;flex-direction:column;">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <form th:action="@{/admin/tools/template-editors/settings/reset}" method="post"
+                          onsubmit="return confirm('Reset to default template?')">
+                        <button type="submit" class="btn btn-danger btn-sm">Reset</button>
+                    </form>
+                </div>
+                <form th:action="@{/admin/tools/template-editors/settings/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                    <textarea name="template" class="template-textarea" th:text="${settingsTemplate}"></textarea>
+                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                        <button type="submit" class="btn btn-primary">Save Template</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card" style="padding:16px;">
+                <strong>Available Variables</strong>
+                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>seasonYear</code></td><td>Year from season</td></tr>
+                        <tr><td><code>matchdayName</code></td><td>Matchday label (e.g. "MD 1")</td></tr>
+                        <tr><td><code>seasonName</code></td><td>Season name for footer</td></tr>
+                        <tr><td><code>homeCardBase64</code></td><td>Home team card PNG as data URI</td></tr>
+                        <tr><td><code>awayCardBase64</code></td><td>Away team card PNG as data URI</td></tr>
+                        <tr><td><code>homePosition</code></td><td>Home team standings position</td></tr>
+                        <tr><td><code>awayPosition</code></td><td>Away team standings position</td></tr>
+                        <tr><td><code>ctcLogoBase64</code></td><td>CTC logo as data URI</td></tr>
+                        <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
+                        <tr><td><code>carName</code></td><td>Car display name</td></tr>
+                        <tr><td><code>trackName</code></td><td>Track name</td></tr>
+                        <tr><td><code>numberOfLaps</code></td><td>Number of laps</td></tr>
+                        <tr><td><code>tyreWearMultiplier</code></td><td>Tyre wear multiplier</td></tr>
+                        <tr><td><code>fuelConsumptionMultiplier</code></td><td>Fuel consumption multiplier</td></tr>
+                        <tr><td><code>refuelingSpeed</code></td><td>Refueling speed</td></tr>
+                        <tr><td><code>initialFuel</code></td><td>Initial fuel setting</td></tr>
+                        <tr><td><code>numberOfRequiredPitStops</code></td><td>Required pit stops</td></tr>
+                        <tr><td><code>timeProgressionMultiplier</code></td><td>Time progression multiplier</td></tr>
+                        <tr><td><code>weather</code></td><td>Weather setting</td></tr>
+                        <tr><td><code>timeOfDay</code></td><td>Time of day</td></tr>
+                        <tr><td><code>availableTyres</code></td><td>Available tyre types</td></tr>
+                        <tr><td><code>mandatoryTyres</code></td><td>Mandatory tyre types</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:20px;">
+                    <strong>Tips</strong>
+                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                        <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
+                        <li>Settings are displayed as labeled rows in the center</li>
+                        <li>Use <code>th:text</code> for all dynamic values</li>
                     </ul>
                 </div>
             </div>

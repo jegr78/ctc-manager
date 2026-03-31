@@ -254,6 +254,26 @@ CREATE TABLE race_lineups (
     CONSTRAINT uk_race_lineup_driver UNIQUE (race_id, driver_id)
 );
 
+CREATE TABLE race_settings (
+    id UUID PRIMARY KEY,
+    race_id UUID NOT NULL,
+    number_of_laps INT,
+    tyre_wear_multiplier INT,
+    fuel_consumption_multiplier INT,
+    refueling_speed INT,
+    initial_fuel VARCHAR(100),
+    number_of_required_pit_stops INT,
+    time_progression_multiplier INT,
+    weather VARCHAR(255),
+    time_of_day VARCHAR(100),
+    available_tyres VARCHAR(255),
+    mandatory_tyres VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_race_settings_race FOREIGN KEY (race_id) REFERENCES races(id),
+    CONSTRAINT uq_race_settings_race UNIQUE (race_id)
+);
+
 CREATE TABLE race_attachments (
     id UUID PRIMARY KEY,
     race_id UUID NOT NULL,

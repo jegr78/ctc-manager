@@ -1,0 +1,49 @@
+package org.ctc.domain.model;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.util.UUID;
+
+@Entity
+@Table(name = "race_settings")
+@Getter @Setter @NoArgsConstructor
+public class RaceSettings extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "race_id", nullable = false, unique = true)
+    private Race race;
+
+    private Integer numberOfLaps;
+    private Integer tyreWearMultiplier;
+    private Integer fuelConsumptionMultiplier;
+    private Integer refuelingSpeed;
+    private String initialFuel;
+    private Integer numberOfRequiredPitStops;
+    private Integer timeProgressionMultiplier;
+    private String weather;
+    private String timeOfDay;
+    private String availableTyres;
+    private String mandatoryTyres;
+
+    public RaceSettings(Race race) {
+        this.race = race;
+    }
+
+    public boolean isComplete() {
+        return numberOfLaps != null && tyreWearMultiplier != null
+                && fuelConsumptionMultiplier != null && refuelingSpeed != null
+                && initialFuel != null && !initialFuel.isBlank()
+                && numberOfRequiredPitStops != null && timeProgressionMultiplier != null
+                && weather != null && !weather.isBlank()
+                && timeOfDay != null && !timeOfDay.isBlank()
+                && availableTyres != null && !availableTyres.isBlank()
+                && mandatoryTyres != null && !mandatoryTyres.isBlank();
+    }
+}
