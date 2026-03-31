@@ -134,7 +134,9 @@ public class LineupGraphicService extends AbstractGraphicService {
 
     public String loadDefaultTemplate() throws IOException {
         var resource = new ClassPathResource(DEFAULT_TEMPLATE);
-        return new String(resource.getInputStream().readAllBytes());
+        try (var is = resource.getInputStream()) {
+            return new String(is.readAllBytes());
+        }
     }
 
     public void saveTemplate(String content) throws IOException {

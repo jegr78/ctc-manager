@@ -244,7 +244,7 @@ class ScorecardParserTest {
 
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
-            assertTrue(preview.getErrors().getFirst().contains("Ungültiger Wert"));
+            assertTrue(preview.getErrors().getFirst().contains("Invalid value for"));
         }
 
         @Test
@@ -258,7 +258,7 @@ class ScorecardParserTest {
 
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
-            assertTrue(preview.getErrors().getFirst().contains("Zu wenige Spalten"));
+            assertTrue(preview.getErrors().getFirst().contains("Too few columns"));
         }
 
         @Test
@@ -267,7 +267,7 @@ class ScorecardParserTest {
 
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
-            assertTrue(preview.getErrors().getFirst().contains("leer"));
+            assertTrue(preview.getErrors().getFirst().contains("empty"));
         }
 
         @Test
@@ -276,7 +276,7 @@ class ScorecardParserTest {
 
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
-            assertTrue(preview.getErrors().getFirst().contains("leer"));
+            assertTrue(preview.getErrors().getFirst().contains("empty"));
         }
 
         @Test
@@ -290,7 +290,7 @@ class ScorecardParserTest {
 
             assertEquals(0, preview.getRows().size());
             assertTrue(preview.hasErrors());
-            assertTrue(preview.getErrors().getFirst().contains("PSN-ID ist leer"));
+            assertTrue(preview.getErrors().getFirst().contains("PSN ID is empty"));
         }
     }
 

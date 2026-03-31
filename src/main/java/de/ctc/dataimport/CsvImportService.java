@@ -94,7 +94,7 @@ public class CsvImportService {
         for (int i = 0; i < lines.size(); i++) {
             var fields = lines.get(i);
             if (fields.length < 5) {
-                preview.addError("Zeile " + (i + 2) + ": Zu wenige Spalten (erwartet: Team, PSN ID, Position, Quali, FL)");
+                preview.addError("Row " + (i + 2) + ": Too few columns (expected: Team, PSN ID, Position, Quali, FL)");
                 continue;
             }
 
@@ -136,11 +136,11 @@ public class CsvImportService {
             var awayTeam = teamParts.length > 1 ? findTeamFlexible(teamParts[1], seasonTeams) : null;
 
             if (homeTeam == null) {
-                result.addError("Team nicht gefunden: " + teamParts[0]);
+                result.addError("Team not found: " + teamParts[0]);
                 continue;
             }
             if (awayTeam == null && teamParts.length > 1) {
-                result.addError("Team nicht gefunden: " + teamParts[1]);
+                result.addError("Team not found: " + teamParts[1]);
                 continue;
             }
 
@@ -179,7 +179,7 @@ public class CsvImportService {
             if (metadata.isPlayoff()) {
                 var matchup = playoffMatchupRepository.findById(metadata.playoffMatchupId())
                         .orElseThrow(() -> new IllegalArgumentException(
-                                "Playoff-Matchup nicht gefunden: " + metadata.playoffMatchupId()));
+                                "Playoff matchup not found: " + metadata.playoffMatchupId()));
                 race.setPlayoffMatchup(matchup);
             }
 
@@ -288,7 +288,7 @@ public class CsvImportService {
         if (metadata.hasMatchdayId()) {
             return matchdayRepository.findById(metadata.matchdayId())
                     .orElseThrow(() -> new IllegalArgumentException(
-                            "Matchday nicht gefunden: " + metadata.matchdayId()));
+                            "Matchday not found: " + metadata.matchdayId()));
         }
         return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
                 .filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
@@ -334,7 +334,7 @@ public class CsvImportService {
         try {
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
-            preview.addError("Zeile " + lineNumber + ": Ungültiger Wert für " + fieldName + ": " + value);
+            preview.addError("Row " + lineNumber + ": Invalid value for " + fieldName + ": " + value);
             return null;
         }
     }

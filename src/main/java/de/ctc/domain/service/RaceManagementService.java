@@ -330,7 +330,7 @@ public class RaceManagementService {
             var attachment = new RaceAttachment(race, AttachmentType.FILE, file.getOriginalFilename(), url);
             raceAttachmentRepository.save(attachment);
             return file.getOriginalFilename();
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("Upload failed for race {}", raceId, e);
             throw new RuntimeException(e.getMessage(), e);
         }
@@ -373,7 +373,7 @@ public class RaceManagementService {
                     + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Lineups";
             var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
             raceAttachmentRepository.save(attachment);
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("Lineup generation failed for race {}", raceId, e);
             throw new RuntimeException("Generation failed: " + e.getMessage(), e);
         }
@@ -390,7 +390,7 @@ public class RaceManagementService {
                     + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Results";
             var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
             raceAttachmentRepository.save(attachment);
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("Results graphic generation failed for race {}", raceId, e);
             throw new RuntimeException("Generation failed: " + e.getMessage(), e);
         }
@@ -410,7 +410,7 @@ public class RaceManagementService {
             return ResponseEntity.notFound().build();
         }
         String contentType = "application/octet-stream";
-        try { contentType = Files.probeContentType(file); } catch (IOException ignored) {}
+        try { contentType = Files.probeContentType(file); } catch (IOException e) { log.debug("Could not probe content type for {}", file, e); }
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION,

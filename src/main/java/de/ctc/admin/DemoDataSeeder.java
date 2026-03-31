@@ -1,5 +1,7 @@
 package de.ctc.admin;
 
+import de.ctc.domain.repository.CarRepository;
+import de.ctc.domain.repository.TrackRepository;
 import de.ctc.gt7sync.Gt7SyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +22,8 @@ import org.springframework.stereotype.Component;
 public class DemoDataSeeder implements CommandLineRunner {
 
     private final Gt7SyncService syncService;
-    private final de.ctc.domain.repository.CarRepository carRepository;
-    private final de.ctc.domain.repository.TrackRepository trackRepository;
+    private final CarRepository carRepository;
+    private final TrackRepository trackRepository;
 
     @Override
     public void run(String... args) {
