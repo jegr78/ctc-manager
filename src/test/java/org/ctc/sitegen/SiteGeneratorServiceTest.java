@@ -141,7 +141,7 @@ class SiteGeneratorServiceTest {
     }
 
     private Path seasonDir() {
-        return tempDir.resolve("season").resolve(slugify("Gen Test " + uniqueSuffix));
+        return tempDir.resolve("season").resolve(slugify(season.getDisplayLabel()));
     }
 
     private String slugify(String input) {
