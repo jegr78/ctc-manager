@@ -24,7 +24,7 @@ Autos und Strecken als eigene Stammdaten verwalten, pro Saison einen Pool zuweis
 
 ### Car
 
-Entity `de.ctc.domain.model.Car`:
+Entity `org.ctc.domain.model.Car`:
 - `id` — UUID, Primary Key
 - `manufacturer` — String, required (z.B. "Mazda", "Porsche")
 - `name` — String, required (z.B. "RX-Vision GT3 Concept")
@@ -32,7 +32,7 @@ Entity `de.ctc.domain.model.Car`:
 
 ### Track
 
-Entity `de.ctc.domain.model.Track`:
+Entity `org.ctc.domain.model.Track`:
 - `id` — UUID, Primary Key
 - `name` — String, required, unique (z.B. "Tsukuba Circuit")
 - `country` — String, optional (z.B. "Japan")

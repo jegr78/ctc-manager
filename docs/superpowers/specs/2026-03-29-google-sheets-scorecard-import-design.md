@@ -36,7 +36,7 @@ Der bestehende Import-Flow (`CsvImportService` → Preview → Execute) bleibt u
 
 ## Komponenten
 
-### 1. `GoogleSheetsService` (neuer Service in `de.ctc.dataimport`)
+### 1. `GoogleSheetsService` (neuer Service in `org.ctc.dataimport`)
 
 Liest Zelldaten per Google Sheets API v4.
 
@@ -50,7 +50,7 @@ Liest Zelldaten per Google Sheets API v4.
   - `List<List<Object>> readRange(String spreadsheetId, String range)` — liest einen Zellbereich
   - `String extractSpreadsheetId(String url)` — extrahiert die ID aus einer Google Sheets URL
 
-### 2. `ScorecardParser` (neuer Service in `de.ctc.dataimport`)
+### 2. `ScorecardParser` (neuer Service in `org.ctc.dataimport`)
 
 Transformiert das Scorecard-Layout in flache Import-Rows.
 
@@ -141,15 +141,15 @@ Das bestehende Formular wird um eine **Google Sheets Option** erweitert:
 ## Dateien
 
 ### Neu erstellen
-- `src/main/java/de/ctc/dataimport/GoogleSheetsService.java`
-- `src/main/java/de/ctc/dataimport/ScorecardParser.java`
-- `src/test/java/de/ctc/dataimport/ScorecardParserTest.java`
-- `src/test/java/de/ctc/dataimport/GoogleSheetsServiceTest.java`
-- `src/test/java/de/ctc/e2e/GoogleSheetsImportE2eTest.java`
+- `src/main/java/org/ctc/dataimport/GoogleSheetsService.java`
+- `src/main/java/org/ctc/dataimport/ScorecardParser.java`
+- `src/test/java/org/ctc/dataimport/ScorecardParserTest.java`
+- `src/test/java/org/ctc/dataimport/GoogleSheetsServiceTest.java`
+- `src/test/java/org/ctc/e2e/GoogleSheetsImportE2eTest.java`
 
 ### Modifizieren
 - `pom.xml` — Google API Dependencies hinzufügen
-- `src/main/java/de/ctc/dataimport/CsvImportController.java` — neuer Endpunkt `preview-sheet`
+- `src/main/java/org/ctc/dataimport/CsvImportController.java` — neuer Endpunkt `preview-sheet`
 - `src/main/resources/templates/admin/import.html` — Google Sheet URL-Eingabe hinzufügen
 - `src/main/resources/application.properties` — Property-Defaults
 - `.gitignore` — Credentials-Datei ausschließen

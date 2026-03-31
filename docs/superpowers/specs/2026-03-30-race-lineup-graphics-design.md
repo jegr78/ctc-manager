@@ -86,7 +86,7 @@ Die Fahrer-Paarungen werden direkt aus dem `RaceLineup` abgeleitet:
 
 Neuer Service analog zu `TeamCardService`:
 
-**Datei:** `de.ctc.admin.service.LineupGraphicService`
+**Datei:** `org.ctc.admin.service.LineupGraphicService`
 
 ### Ablauf
 
@@ -191,8 +191,8 @@ In der Attachment-Liste auf der Race-Detailseite (`race-detail.html`) wird für 
 ## 7. Kritische Dateien
 
 ### Zu erstellen
-- `de.ctc.admin.service.LineupGraphicService` — Generierungslogik
-- `de.ctc.admin.controller.TemplateEditorController` — Template Editor Seite
+- `org.ctc.admin.service.LineupGraphicService` — Generierungslogik
+- `org.ctc.admin.controller.TemplateEditorController` — Template Editor Seite
 - `templates/admin/lineup-render.html` — Default Lineup-Template
 - `templates/admin/template-editors.html` — Template Editors Seite mit Tabs
 

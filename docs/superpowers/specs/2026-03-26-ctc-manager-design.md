@@ -64,7 +64,7 @@ Vorteile: Einfaches Setup, klare innere Struktur, später zu Multi-Module erweit
 ```
 ctc-manager/
 ├── pom.xml
-├── src/main/java/de/ctc/
+├── src/main/java/org/ctc/
 │   ├── CtcApplication.java
 │   ├── domain/
 │   │   ├── model/                  # JPA Entities
@@ -92,7 +92,7 @@ ctc-manager/
 │   ├── application-dev.yml         # H2 In-Memory
 │   ├── application-local.yml       # MariaDB lokal
 │   └── application-prod.yml        # Cloud DB
-├── src/test/java/de/ctc/
+├── src/test/java/org/ctc/
 │   ├── domain/service/             # JUnit + Mockito Unit Tests
 │   ├── admin/controller/           # MockMvc Integration Tests
 │   ├── sitegen/                    # Generator Output Tests (Jsoup)

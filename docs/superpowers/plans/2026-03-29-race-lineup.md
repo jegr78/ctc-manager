@@ -14,37 +14,37 @@
 
 | Action | File | Responsibility |
 |--------|------|----------------|
-| Create | `src/main/java/de/ctc/domain/model/RaceLineup.java` | Entity: race + driver + team |
-| Create | `src/main/java/de/ctc/domain/repository/RaceLineupRepository.java` | Query methods for race-scoped lineups |
-| Create | `src/main/java/de/ctc/admin/controller/RaceLineupController.java` | Admin CRUD for lineup per race |
+| Create | `src/main/java/org/ctc/domain/model/RaceLineup.java` | Entity: race + driver + team |
+| Create | `src/main/java/org/ctc/domain/repository/RaceLineupRepository.java` | Query methods for race-scoped lineups |
+| Create | `src/main/java/org/ctc/admin/controller/RaceLineupController.java` | Admin CRUD for lineup per race |
 | Create | `src/main/resources/templates/admin/race-lineup.html` | Lineup edit form per race |
-| Delete | `src/main/java/de/ctc/domain/model/MatchdayLineup.java` | Replaced by RaceLineup |
-| Delete | `src/main/java/de/ctc/domain/repository/MatchdayLineupRepository.java` | Replaced by RaceLineupRepository |
-| Delete | `src/main/java/de/ctc/admin/controller/MatchdayLineupController.java` | Replaced by RaceLineupController |
+| Delete | `src/main/java/org/ctc/domain/model/MatchdayLineup.java` | Replaced by RaceLineup |
+| Delete | `src/main/java/org/ctc/domain/repository/MatchdayLineupRepository.java` | Replaced by RaceLineupRepository |
+| Delete | `src/main/java/org/ctc/admin/controller/MatchdayLineupController.java` | Replaced by RaceLineupController |
 | Delete | `src/main/resources/templates/admin/matchday-lineup.html` | Replaced by race-lineup.html |
 | Modify | `src/main/resources/db/migration/V1__initial_schema.sql` | Tabelle race_lineups statt matchday_lineups |
-| Modify | `src/main/java/de/ctc/admin/controller/RaceController.java` | populateDrivers: RaceLineupRepository |
-| Modify | `src/main/java/de/ctc/admin/controller/MatchdayController.java` | Lineups aggregiert aus Races |
+| Modify | `src/main/java/org/ctc/admin/controller/RaceController.java` | populateDrivers: RaceLineupRepository |
+| Modify | `src/main/java/org/ctc/admin/controller/MatchdayController.java` | Lineups aggregiert aus Races |
 | Modify | `src/main/resources/templates/admin/matchday-detail.html` | Aggregiertes Lineup readonly, Links anpassen |
 | Modify | `src/main/resources/templates/admin/matchdays.html` | Lineup-Link entfernen (jetzt pro Race) |
 | Modify | `src/main/resources/templates/admin/race-detail.html` | Lineup-Button + Lineup-Anzeige |
-| Modify | `src/test/java/de/ctc/domain/service/StandingsServiceTest.java` | Unbenutzten Mock entfernen |
-| Modify | `src/main/java/de/ctc/dataimport/CsvImportService.java` | RaceLineup beim Import erstellen |
-| Modify | `src/main/java/de/ctc/dataimport/CsvImportController.java` | Flash-Message mit Lineup-Zähler |
+| Modify | `src/test/java/org/ctc/domain/service/StandingsServiceTest.java` | Unbenutzten Mock entfernen |
+| Modify | `src/main/java/org/ctc/dataimport/CsvImportService.java` | RaceLineup beim Import erstellen |
+| Modify | `src/main/java/org/ctc/dataimport/CsvImportController.java` | Flash-Message mit Lineup-Zähler |
 
 ---
 
 ## Task 1: RaceLineup Entity & Repository
 
 **Files:**
-- Create: `src/main/java/de/ctc/domain/model/RaceLineup.java`
-- Create: `src/main/java/de/ctc/domain/repository/RaceLineupRepository.java`
+- Create: `src/main/java/org/ctc/domain/model/RaceLineup.java`
+- Create: `src/main/java/org/ctc/domain/repository/RaceLineupRepository.java`
 - Modify: `src/main/resources/db/migration/V1__initial_schema.sql:200-209`
 
 - [ ] **Step 1: Create RaceLineup entity**
 
 ```java
-package de.ctc.domain.model;
+package org.ctc.domain.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -90,9 +90,9 @@ public class RaceLineup {
 - [ ] **Step 2: Create RaceLineupRepository**
 
 ```java
-package de.ctc.domain.repository;
+package org.ctc.domain.repository;
 
-import de.ctc.domain.model.RaceLineup;
+import org.ctc.domain.model.RaceLineup;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -128,8 +128,8 @@ CREATE TABLE race_lineups (
 
 - [ ] **Step 4: Delete old entity and repository**
 
-Delete `src/main/java/de/ctc/domain/model/MatchdayLineup.java`
-Delete `src/main/java/de/ctc/domain/repository/MatchdayLineupRepository.java`
+Delete `src/main/java/org/ctc/domain/model/MatchdayLineup.java`
+Delete `src/main/java/org/ctc/domain/repository/MatchdayLineupRepository.java`
 
 - [ ] **Step 5: Compile check**
 
@@ -139,11 +139,11 @@ Expected: Compilation errors in controllers that still reference MatchdayLineup 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/main/java/de/ctc/domain/model/RaceLineup.java \
-       src/main/java/de/ctc/domain/repository/RaceLineupRepository.java \
+git add src/main/java/org/ctc/domain/model/RaceLineup.java \
+       src/main/java/org/ctc/domain/repository/RaceLineupRepository.java \
        src/main/resources/db/migration/V1__initial_schema.sql
-git add -u src/main/java/de/ctc/domain/model/MatchdayLineup.java \
-           src/main/java/de/ctc/domain/repository/MatchdayLineupRepository.java
+git add -u src/main/java/org/ctc/domain/model/MatchdayLineup.java \
+           src/main/java/org/ctc/domain/repository/MatchdayLineupRepository.java
 git commit -m "RaceLineup Entity und Repository erstellt, MatchdayLineup entfernt"
 ```
 
@@ -152,7 +152,7 @@ git commit -m "RaceLineup Entity und Repository erstellt, MatchdayLineup entfern
 ## Task 2: RaceController Migration
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/RaceController.java:40,150-152,373-404`
+- Modify: `src/main/java/org/ctc/admin/controller/RaceController.java:40,150-152,373-404`
 
 - [ ] **Step 1: Update dependency injection**
 
@@ -165,14 +165,14 @@ with:
 private final RaceLineupRepository raceLineupRepository;
 ```
 
-Update import: replace `de.ctc.domain.repository.MatchdayLineupRepository` → remove (already uses wildcard `de.ctc.domain.repository.*`).
+Update import: replace `org.ctc.domain.repository.MatchdayLineupRepository` → remove (already uses wildcard `org.ctc.domain.repository.*`).
 
 - [ ] **Step 2: Update populateDrivers method**
 
 Replace the `populateDrivers` method (lines 373-404):
 
 ```java
-private void populateDrivers(RaceForm form, UUID raceId, UUID seasonId, de.ctc.domain.model.Team team) {
+private void populateDrivers(RaceForm form, UUID raceId, UUID seasonId, org.ctc.domain.model.Team team) {
     var lineupDrivers = raceLineupRepository.findByRaceIdAndTeamId(raceId, team.getId());
 
     if (!lineupDrivers.isEmpty()) {
@@ -230,7 +230,7 @@ populateDrivers(form, raceId, seasonId, race.getAwayTeam());
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/RaceController.java
+git add src/main/java/org/ctc/admin/controller/RaceController.java
 git commit -m "RaceController: MatchdayLineupRepository durch RaceLineupRepository ersetzt"
 ```
 
@@ -239,20 +239,20 @@ git commit -m "RaceController: MatchdayLineupRepository durch RaceLineupReposito
 ## Task 3: RaceLineupController (Lineup pro Race verwalten)
 
 **Files:**
-- Create: `src/main/java/de/ctc/admin/controller/RaceLineupController.java`
+- Create: `src/main/java/org/ctc/admin/controller/RaceLineupController.java`
 - Create: `src/main/resources/templates/admin/race-lineup.html`
-- Delete: `src/main/java/de/ctc/admin/controller/MatchdayLineupController.java`
+- Delete: `src/main/java/org/ctc/admin/controller/MatchdayLineupController.java`
 - Delete: `src/main/resources/templates/admin/matchday-lineup.html`
 
 - [ ] **Step 1: Create RaceLineupController**
 
 ```java
-package de.ctc.admin.controller;
+package org.ctc.admin.controller;
 
-import de.ctc.domain.model.RaceLineup;
-import de.ctc.domain.model.SeasonDriver;
-import de.ctc.domain.model.Team;
-import de.ctc.domain.repository.*;
+import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -408,15 +408,15 @@ public class RaceLineupController {
 
 - [ ] **Step 3: Delete old controller and template**
 
-Delete `src/main/java/de/ctc/admin/controller/MatchdayLineupController.java`
+Delete `src/main/java/org/ctc/admin/controller/MatchdayLineupController.java`
 Delete `src/main/resources/templates/admin/matchday-lineup.html`
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/RaceLineupController.java \
+git add src/main/java/org/ctc/admin/controller/RaceLineupController.java \
        src/main/resources/templates/admin/race-lineup.html
-git add -u src/main/java/de/ctc/admin/controller/MatchdayLineupController.java \
+git add -u src/main/java/org/ctc/admin/controller/MatchdayLineupController.java \
            src/main/resources/templates/admin/matchday-lineup.html
 git commit -m "RaceLineupController und Template erstellt, MatchdayLineup-Controller entfernt"
 ```
@@ -426,7 +426,7 @@ git commit -m "RaceLineupController und Template erstellt, MatchdayLineup-Contro
 ## Task 4: MatchdayController & Templates anpassen
 
 **Files:**
-- Modify: `src/main/java/de/ctc/admin/controller/MatchdayController.java:6,32,52-58`
+- Modify: `src/main/java/org/ctc/admin/controller/MatchdayController.java:6,32,52-58`
 - Modify: `src/main/resources/templates/admin/matchday-detail.html:13,98-106`
 - Modify: `src/main/resources/templates/admin/matchdays.html:32`
 - Modify: `src/main/resources/templates/admin/race-detail.html`
@@ -437,7 +437,7 @@ Remove the `MatchdayLineupRepository` dependency and import. Replace the `detail
 
 Replace imports and field:
 ```java
-import de.ctc.domain.repository.MatchdayLineupRepository;
+import org.ctc.domain.repository.MatchdayLineupRepository;
 ```
 → remove this import (replace with `RaceLineupRepository` if needed, but we'll derive from races instead).
 
@@ -506,7 +506,7 @@ In `race-detail.html`, add a Lineup button in the actions area (after line 15):
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/main/java/de/ctc/admin/controller/MatchdayController.java \
+git add src/main/java/org/ctc/admin/controller/MatchdayController.java \
        src/main/resources/templates/admin/matchday-detail.html \
        src/main/resources/templates/admin/matchdays.html \
        src/main/resources/templates/admin/race-detail.html
@@ -518,13 +518,13 @@ git commit -m "Matchday-Templates: Lineup-Links zu Race verschoben, aggregierte 
 ## Task 5: StandingsServiceTest aufräumen
 
 **Files:**
-- Modify: `src/test/java/de/ctc/domain/service/StandingsServiceTest.java:5,41`
+- Modify: `src/test/java/org/ctc/domain/service/StandingsServiceTest.java:5,41`
 
 - [ ] **Step 1: Remove unused mock**
 
 Remove the import:
 ```java
-import de.ctc.domain.repository.MatchdayLineupRepository;
+import org.ctc.domain.repository.MatchdayLineupRepository;
 ```
 
 Remove the field:
@@ -541,7 +541,7 @@ Expected: All tests PASS
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/test/java/de/ctc/domain/service/StandingsServiceTest.java
+git add src/test/java/org/ctc/domain/service/StandingsServiceTest.java
 git commit -m "StandingsServiceTest: Unbenutzten MatchdayLineupRepository-Mock entfernt"
 ```
 
@@ -564,16 +564,16 @@ Expected: BUILD SUCCESS, alle Tests grün
 ## Task 7: CSV-Import — Tests schreiben (TDD Red)
 
 **Files:**
-- Create: `src/test/java/de/ctc/dataimport/CsvImportServiceTest.java`
+- Create: `src/test/java/org/ctc/dataimport/CsvImportServiceTest.java`
 
 - [ ] **Step 1: Write test class with lineup tests**
 
 ```java
-package de.ctc.dataimport;
+package org.ctc.dataimport;
 
-import de.ctc.domain.model.*;
-import de.ctc.domain.repository.*;
-import de.ctc.domain.service.ScoringService;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.*;
+import org.ctc.domain.service.ScoringService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -794,7 +794,7 @@ Expected: FAIL — `CsvImportService` has no `RaceLineupRepository` field yet, `
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/test/java/de/ctc/dataimport/CsvImportServiceTest.java
+git add src/test/java/org/ctc/dataimport/CsvImportServiceTest.java
 git commit -m "CsvImportServiceTest: Tests fuer RaceLineup-Erstellung beim Import (Red)"
 ```
 
@@ -803,8 +803,8 @@ git commit -m "CsvImportServiceTest: Tests fuer RaceLineup-Erstellung beim Impor
 ## Task 8: CSV-Import — Implementierung (TDD Green)
 
 **Files:**
-- Modify: `src/main/java/de/ctc/dataimport/CsvImportService.java:23-34,131-144,354-364`
-- Modify: `src/main/java/de/ctc/dataimport/CsvImportController.java:137-146`
+- Modify: `src/main/java/org/ctc/dataimport/CsvImportService.java:23-34,131-144,354-364`
+- Modify: `src/main/java/org/ctc/dataimport/CsvImportController.java:137-146`
 
 - [ ] **Step 1: Add RaceLineupRepository dependency to CsvImportService**
 
@@ -813,11 +813,11 @@ Add field after line 34 (`private final ScoringService scoringService;`):
 private final RaceLineupRepository raceLineupRepository;
 ```
 
-Add import (already covered by wildcard `de.ctc.domain.repository.*`). Add model import:
+Add import (already covered by wildcard `org.ctc.domain.repository.*`). Add model import:
 ```java
-import de.ctc.domain.model.RaceLineup;
+import org.ctc.domain.model.RaceLineup;
 ```
-(Nope — already covered by `de.ctc.domain.model.*` wildcard.)
+(Nope — already covered by `org.ctc.domain.model.*` wildcard.)
 
 - [ ] **Step 2: Add lineupCount to ImportResult**
 
@@ -892,8 +892,8 @@ redirectAttributes.addFlashAttribute("successMessage", msg);
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/main/java/de/ctc/dataimport/CsvImportService.java \
-       src/main/java/de/ctc/dataimport/CsvImportController.java
+git add src/main/java/org/ctc/dataimport/CsvImportService.java \
+       src/main/java/org/ctc/dataimport/CsvImportController.java
 git commit -m "CSV-Import: Automatische RaceLineup-Erstellung fuer Sub-Teams"
 ```
 
