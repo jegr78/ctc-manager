@@ -83,7 +83,7 @@ class RaceControllerTest {
     void setUp() {
         var rs = raceScoringRepository.save(new RaceScoring("RT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
         var ms = matchScoringRepository.save(new MatchScoring("RT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
-        var s = new Season("Race Test Season");
+        var s = new Season("Race Test Season", 2026, 1);
         s.setRaceScoring(rs);
         s.setMatchScoring(ms);
         season = seasonRepository.save(s);

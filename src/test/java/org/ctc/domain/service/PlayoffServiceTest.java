@@ -50,7 +50,7 @@ class PlayoffServiceTest {
         var matchScoring = matchScoringRepository.save(
                 new MatchScoring("Test MS " + uniqueSuffix, 3, 1, 0));
 
-        season = new Season("Playoff Test " + UUID.randomUUID().toString().substring(0, 8));
+        season = new Season("Playoff Test " + UUID.randomUUID().toString().substring(0, 8), 2026, 1);
         season.setActive(true);
         season.setRaceScoring(raceScoring);
         season.setMatchScoring(matchScoring);
