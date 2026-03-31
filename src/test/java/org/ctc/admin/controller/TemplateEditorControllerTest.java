@@ -58,6 +58,8 @@ class TemplateEditorControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=team-cards"))
                 .andExpect(flash().attributeExists("successMessage"));
+        // Cleanup: reset to avoid leftover custom template on disk
+        mockMvc.perform(post("/admin/tools/template-editors/team-cards/reset"));
     }
 
     @Test
@@ -67,6 +69,8 @@ class TemplateEditorControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=lineup"))
                 .andExpect(flash().attributeExists("successMessage"));
+        // Cleanup: reset to avoid leftover custom template on disk
+        mockMvc.perform(post("/admin/tools/template-editors/lineup/reset"));
     }
 
     @Test
@@ -86,6 +90,8 @@ class TemplateEditorControllerTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=settings"))
                 .andExpect(flash().attributeExists("successMessage"));
+        // Cleanup: reset to avoid leftover custom template on disk
+        mockMvc.perform(post("/admin/tools/template-editors/settings/reset"));
     }
 
     @Test

@@ -189,7 +189,7 @@
             </div>
             <div class="setting-row">
                 <div class="setting-label">Track</div>
-                <div class="setting-value" th:text="${trackName + ' (' + numberOfLaps + ' Laps)'}"></div>
+                <div class="setting-value"><span th:text="${trackName}"></span><br/><span th:text="'(' + ${numberOfLaps} + ' Laps)'"></span></div>
             </div>
             <div class="setting-row">
                 <div class="setting-label">Tyre / Fuel / Mandatory Pit Stops</div>
