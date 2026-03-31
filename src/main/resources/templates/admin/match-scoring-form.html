@@ -1,34 +1,34 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout(${scoring.id != null ? 'Edit Match-Scoring' : 'New Match-Scoring'}, ~{::section})}">
+      th:replace="~{admin/layout :: layout(${matchScoringForm.id != null ? 'Edit Match-Scoring' : 'New Match-Scoring'}, ~{::section})}">
 <body>
 <section>
     <a th:href="@{/admin/match-scorings}" class="back-link">&larr; Back</a>
-    <h1 th:text="${scoring.id != null ? 'Edit Match-Scoring' : 'New Match-Scoring'}"></h1>
+    <h1 th:text="${matchScoringForm.id != null ? 'Edit Match-Scoring' : 'New Match-Scoring'}"></h1>
 
     <form th:action="@{/admin/match-scorings/save}" method="post">
-        <input type="hidden" name="id" th:value="${scoring.id}">
+        <input type="hidden" name="id" th:value="${matchScoringForm.id}">
 
         <div class="card">
             <div class="form-group">
                 <label for="name">Name</label>
-                <input type="text" id="name" name="name" th:value="${scoring.name}" required>
+                <input type="text" id="name" name="name" th:value="${matchScoringForm.name}" required>
             </div>
 
             <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr;">
                 <div class="form-group">
                     <label for="pointsWin" style="color:#66bb6a;">Win</label>
-                    <input type="number" id="pointsWin" name="pointsWin" th:value="${scoring.pointsWin}"
+                    <input type="number" id="pointsWin" name="pointsWin" th:value="${matchScoringForm.pointsWin}"
                            min="0" required style="text-align:center; font-size:18px; font-weight:700;">
                 </div>
                 <div class="form-group">
                     <label for="pointsDraw">Draw</label>
-                    <input type="number" id="pointsDraw" name="pointsDraw" th:value="${scoring.pointsDraw}"
+                    <input type="number" id="pointsDraw" name="pointsDraw" th:value="${matchScoringForm.pointsDraw}"
                            min="0" required style="text-align:center; font-size:18px; font-weight:700;">
                 </div>
                 <div class="form-group">
                     <label for="pointsLoss" style="color:#ef5350;">Loss</label>
-                    <input type="number" id="pointsLoss" name="pointsLoss" th:value="${scoring.pointsLoss}"
+                    <input type="number" id="pointsLoss" name="pointsLoss" th:value="${matchScoringForm.pointsLoss}"
                            min="0" required style="text-align:center; font-size:18px; font-weight:700;">
                 </div>
             </div>

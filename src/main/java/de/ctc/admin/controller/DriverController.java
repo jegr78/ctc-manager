@@ -1,5 +1,6 @@
 package de.ctc.admin.controller;
 
+import de.ctc.admin.dto.DriverForm;
 import de.ctc.domain.model.Driver;
 import de.ctc.domain.model.SeasonDriver;
 import de.ctc.domain.repository.DriverRepository;
@@ -43,13 +44,19 @@ public class DriverController {
 
     @GetMapping("/new")
     public String create(Model model) {
-        model.addAttribute("driver", new Driver());
+        model.addAttribute("driverForm", new DriverForm());
         return "admin/driver-form";
     }
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        model.addAttribute("driver", driverRepository.findById(id).orElseThrow());
+        var driver = driverRepository.findById(id).orElseThrow();
+        var form = new DriverForm();
+        form.setId(driver.getId());
+        form.setPsnId(driver.getPsnId());
+        form.setNickname(driver.getNickname());
+        form.setActive(driver.isActive());
+        model.addAttribute("driverForm", form);
         model.addAttribute("seasonDrivers", seasonDriverRepository.findByDriverId(id));
         model.addAttribute("seasons", seasonRepository.findAll());
         model.addAttribute("teams", teamRepository.findAll());
@@ -57,22 +64,26 @@ public class DriverController {
     }
 
     @PostMapping("/save")
-    public String save(@Valid @ModelAttribute Driver driver, BindingResult result,
+    public String save(@Valid @ModelAttribute("driverForm") DriverForm driverForm, BindingResult result,
                        RedirectAttributes redirectAttributes) {
         if (result.hasErrors()) {
             return "admin/driver-form";
         }
-        if (driver.getId() != null) {
-            var existing = driverRepository.findById(driver.getId()).orElseThrow();
-            existing.setPsnId(driver.getPsnId());
-            existing.setNickname(driver.getNickname());
-            existing.setActive(driver.isActive());
+        if (driverForm.getId() != null) {
+            var existing = driverRepository.findById(driverForm.getId()).orElseThrow();
+            existing.setPsnId(driverForm.getPsnId());
+            existing.setNickname(driverForm.getNickname());
+            existing.setActive(driverForm.isActive());
             driverRepository.save(existing);
         } else {
+            var driver = new Driver();
+            driver.setPsnId(driverForm.getPsnId());
+            driver.setNickname(driverForm.getNickname());
+            driver.setActive(driverForm.isActive());
             driverRepository.save(driver);
         }
-        log.info("Saved driver: {}", driver.getPsnId());
-        redirectAttributes.addFlashAttribute("successMessage", "Driver saved: " + driver.getPsnId());
+        log.info("Saved driver: {}", driverForm.getPsnId());
+        redirectAttributes.addFlashAttribute("successMessage", "Driver saved: " + driverForm.getPsnId());
         return "redirect:/admin/drivers";
     }
 
