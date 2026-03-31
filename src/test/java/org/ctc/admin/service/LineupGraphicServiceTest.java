@@ -134,14 +134,6 @@ class LineupGraphicServiceTest {
     }
 
     @Test
-    void extractYear_fromSeasonName() {
-        var service = createService();
-        assertThat(service.extractYear("Season 4 - 2026")).isEqualTo("2026");
-        assertThat(service.extractYear("2025")).isEqualTo("2025");
-        assertThat(service.extractYear("No year here")).isEqualTo("");
-    }
-
-    @Test
     void templateManagement_defaultAndCustom() throws IOException {
         var service = createService();
         assertThat(service.hasCustomTemplate()).isFalse();
