@@ -3,11 +3,10 @@
       th:replace="~{admin/layout :: layout('Edit Team', ~{::section})}">
 <body>
 <section>
-    <h1 th:text="${team.id != null ? 'Edit Team' : 'New Team'}"></h1>
+    <h1 th:text="${teamForm.id != null ? 'Edit Team' : 'New Team'}"></h1>
     <div class="card">
-        <form th:action="@{/admin/teams/save}" th:object="${team}" method="post">
+        <form th:action="@{/admin/teams/save}" th:object="${teamForm}" method="post">
             <input type="hidden" th:field="*{id}">
-            <input type="hidden" th:field="*{parentTeam}">
             <div class="form-row">
                 <div class="form-group">
                     <label for="name">Name</label>
@@ -18,20 +17,20 @@
                     <input type="text" id="shortName" th:field="*{shortName}" placeholder="e.g. CLR" required>
                 </div>
             </div>
-            <div th:if="${team.parentTeam != null}" class="form-group">
+            <div th:if="${team != null && team.parentTeam != null}" class="form-group">
                 <label>Parent Team</label>
                 <input type="text" th:value="${team.parentTeam.shortName + ' — ' + team.parentTeam.name}" disabled
                        style="background:var(--bg);color:var(--text-dim);">
             </div>
 
             <!-- Brand Colors (inline, only when editing) -->
-            <div th:if="${team.id != null}" style="margin-top:24px;">
+            <div th:if="${teamForm.id != null}" style="margin-top:24px;">
                 <h3>Brand Colors</h3>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Primary Color</label>
                         <div class="color-pair" style="display:flex;gap:8px;align-items:center;">
-                            <input type="color" th:value="${team.primaryColor ?: '#333333'}"
+                            <input type="color" th:value="${teamForm.primaryColor ?: '#333333'}"
                                    style="width:48px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);cursor:pointer;">
                             <input type="text" th:field="*{primaryColor}" placeholder="#333333"
                                    pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:100px;">
@@ -40,7 +39,7 @@
                     <div class="form-group">
                         <label>Secondary Color</label>
                         <div class="color-pair" style="display:flex;gap:8px;align-items:center;">
-                            <input type="color" th:value="${team.secondaryColor ?: '#555555'}"
+                            <input type="color" th:value="${teamForm.secondaryColor ?: '#555555'}"
                                    style="width:48px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);cursor:pointer;">
                             <input type="text" th:field="*{secondaryColor}" placeholder="#555555"
                                    pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:100px;">
@@ -49,7 +48,7 @@
                     <div class="form-group">
                         <label>Accent Color</label>
                         <div class="color-pair" style="display:flex;gap:8px;align-items:center;">
-                            <input type="color" th:value="${team.accentColor ?: '#4fc3f7'}"
+                            <input type="color" th:value="${teamForm.accentColor ?: '#4fc3f7'}"
                                    style="width:48px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);cursor:pointer;">
                             <input type="text" th:field="*{accentColor}" placeholder="#4fc3f7"
                                    pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:100px;">
@@ -66,7 +65,7 @@
     </div>
 
     <!-- Logo Upload (only when editing) -->
-    <div th:if="${team.id != null}" class="card" style="margin-top:16px;">
+    <div th:if="${teamForm.id != null}" class="card" style="margin-top:16px;">
         <h2>Logo</h2>
         <div th:if="${team.logoUrl != null}" style="margin-bottom:12px;">
             <img th:src="${team.logoUrl}" alt="" style="max-width:150px;border-radius:6px;background:#222;padding:8px;">
@@ -85,7 +84,7 @@
     </div>
 
     <!-- Sub-Teams section (only for parent teams when editing) -->
-    <div th:if="${team.id != null && team.parentTeam == null}" class="card">
+    <div th:if="${teamForm.id != null && (team == null || team.parentTeam == null)}" class="card">
         <h2>Sub-Teams</h2>
         <table th:if="${!team.subTeams.isEmpty()}">
             <thead>

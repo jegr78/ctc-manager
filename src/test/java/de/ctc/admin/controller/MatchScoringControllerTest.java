@@ -36,7 +36,7 @@ class MatchScoringControllerTest {
         mockMvc.perform(get("/admin/match-scorings/new"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/match-scoring-form"))
-                .andExpect(model().attributeExists("scoring"));
+                .andExpect(model().attributeExists("matchScoringForm"));
     }
 
     @Test
@@ -60,7 +60,7 @@ class MatchScoringControllerTest {
         mockMvc.perform(get("/admin/match-scorings/" + scoring.getId() + "/edit"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/match-scoring-form"))
-                .andExpect(model().attributeExists("scoring"));
+                .andExpect(model().attributeExists("matchScoringForm"));
     }
 
     @Test

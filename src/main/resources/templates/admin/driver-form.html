@@ -3,9 +3,9 @@
       th:replace="~{admin/layout :: layout('Edit Driver', ~{::section})}">
 <body>
 <section>
-    <h1 th:text="${driver.id != null ? 'Edit Driver' : 'New Driver'}"></h1>
+    <h1 th:text="${driverForm.id != null ? 'Edit Driver' : 'New Driver'}"></h1>
     <div class="card">
-        <form th:action="@{/admin/drivers/save}" th:object="${driver}" method="post">
+        <form th:action="@{/admin/drivers/save}" th:object="${driverForm}" method="post">
             <input type="hidden" th:field="*{id}">
             <div class="form-row">
                 <div class="form-group">
@@ -31,7 +31,7 @@
     </div>
 
     <!-- Season assignments (only for existing drivers) -->
-    <div th:if="${driver.id != null}" class="card" style="margin-top: 16px;">
+    <div th:if="${driverForm.id != null}" class="card" style="margin-top: 16px;">
         <h2>Season Assignments</h2>
         <div class="table-scroll">
             <table th:if="${seasonDrivers != null && !seasonDrivers.isEmpty()}" style="margin-bottom: 16px;">
@@ -49,7 +49,7 @@
         <div th:if="${seasonDrivers == null || seasonDrivers.isEmpty()}" style="margin-bottom: 16px; color: #999;">
             Not assigned to any season yet.
         </div>
-        <form th:action="@{/admin/drivers/{id}/assign(id=${driver.id})}" method="post">
+        <form th:action="@{/admin/drivers/{id}/assign(id=${driverForm.id})}" method="post">
             <div class="form-row">
                 <div class="form-group">
                     <label for="seasonId">Season</label>

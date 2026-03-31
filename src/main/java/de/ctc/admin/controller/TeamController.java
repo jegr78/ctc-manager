@@ -1,6 +1,7 @@
 package de.ctc.admin.controller;
 
 import de.ctc.admin.dto.SeasonDriverGroupDto;
+import de.ctc.admin.dto.TeamForm;
 import de.ctc.domain.model.Driver;
 import de.ctc.domain.model.RaceLineup;
 import de.ctc.domain.model.SeasonDriver;
@@ -155,36 +156,46 @@ public class TeamController {
 
     @GetMapping("/new")
     public String create(Model model) {
-        model.addAttribute("team", new Team());
+        model.addAttribute("teamForm", new TeamForm());
         return "admin/team-form";
     }
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        model.addAttribute("team", teamRepository.findById(id).orElseThrow());
+        var team = teamRepository.findById(id).orElseThrow();
+        var form = new TeamForm();
+        form.setId(team.getId());
+        form.setName(team.getName());
+        form.setShortName(team.getShortName());
+        form.setPrimaryColor(team.getPrimaryColor());
+        form.setSecondaryColor(team.getSecondaryColor());
+        form.setAccentColor(team.getAccentColor());
+        model.addAttribute("teamForm", form);
+        model.addAttribute("team", team);
         return "admin/team-form";
     }
 
     @PostMapping("/save")
-    public String save(@Valid @ModelAttribute Team team, BindingResult result,
+    public String save(@Valid @ModelAttribute("teamForm") TeamForm form, BindingResult result,
                        RedirectAttributes redirectAttributes) {
         if (result.hasErrors()) {
             return "admin/team-form";
         }
-        if (team.getId() != null) {
-            var existing = teamRepository.findById(team.getId()).orElseThrow();
-            existing.setName(team.getName());
-            existing.setShortName(team.getShortName());
-            existing.setPrimaryColor(team.getPrimaryColor());
-            existing.setSecondaryColor(team.getSecondaryColor());
-            existing.setAccentColor(team.getAccentColor());
+        if (form.getId() != null) {
+            var existing = teamRepository.findById(form.getId()).orElseThrow();
+            existing.setName(form.getName());
+            existing.setShortName(form.getShortName());
+            existing.setPrimaryColor(form.getPrimaryColor());
+            existing.setSecondaryColor(form.getSecondaryColor());
+            existing.setAccentColor(form.getAccentColor());
             teamRepository.save(existing);
             propagateToSubTeams(existing);
         } else {
+            var team = new Team(form.getName(), form.getShortName());
             teamRepository.save(team);
         }
-        log.info("Saved team: {}", team.getShortName());
-        redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + team.getName());
+        log.info("Saved team: {}", form.getShortName());
+        redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + form.getName());
         return "redirect:/admin/teams";
     }
 

@@ -1,11 +1,14 @@
 package de.ctc.admin.controller;
 
+import de.ctc.admin.dto.RaceScoringForm;
 import de.ctc.domain.model.RaceScoring;
 import de.ctc.domain.repository.RaceScoringRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -27,37 +30,53 @@ public class RaceScoringController {
 
     @GetMapping("/new")
     public String create(Model model) {
-        model.addAttribute("scoring", new RaceScoring());
+        model.addAttribute("raceScoringForm", new RaceScoringForm());
         return "admin/race-scoring-form";
     }
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        model.addAttribute("scoring", raceScoringRepository.findById(id).orElseThrow());
+        var scoring = raceScoringRepository.findById(id).orElseThrow();
+        var form = new RaceScoringForm();
+        form.setId(scoring.getId());
+        form.setName(scoring.getName());
+        form.setRacePoints(scoring.getRacePoints());
+        form.setQualiPoints(scoring.getQualiPoints());
+        form.setFastestLapPoints(scoring.getFastestLapPoints());
+        model.addAttribute("raceScoringForm", form);
         return "admin/race-scoring-form";
     }
 
     @PostMapping("/save")
-    public String save(@ModelAttribute RaceScoring scoring, RedirectAttributes redirectAttributes) {
+    public String save(@Valid @ModelAttribute("raceScoringForm") RaceScoringForm form, BindingResult result,
+                       RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            return "admin/race-scoring-form";
+        }
+
+        // Map form to entity for validation
+        var scoring = new RaceScoring(form.getName(), form.getRacePoints(), form.getQualiPoints(), form.getFastestLapPoints());
+        scoring.setId(form.getId());
+
         if (!scoring.isValid()) {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Points must be monotonically decreasing (equal values allowed)");
-            return "redirect:/admin/race-scorings" + (scoring.getId() != null ? "/" + scoring.getId() + "/edit" : "/new");
+            return "redirect:/admin/race-scorings" + (form.getId() != null ? "/" + form.getId() + "/edit" : "/new");
         }
 
-        if (scoring.getId() != null) {
-            var existing = raceScoringRepository.findById(scoring.getId()).orElseThrow();
-            existing.setName(scoring.getName());
-            existing.setRacePoints(scoring.getRacePoints());
-            existing.setQualiPoints(scoring.getQualiPoints());
-            existing.setFastestLapPoints(scoring.getFastestLapPoints());
+        if (form.getId() != null) {
+            var existing = raceScoringRepository.findById(form.getId()).orElseThrow();
+            existing.setName(form.getName());
+            existing.setRacePoints(form.getRacePoints());
+            existing.setQualiPoints(form.getQualiPoints());
+            existing.setFastestLapPoints(form.getFastestLapPoints());
             raceScoringRepository.save(existing);
         } else {
             raceScoringRepository.save(scoring);
         }
 
-        log.info("Saved race scoring: {}", scoring.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Race-Scoring saved: " + scoring.getName());
+        log.info("Saved race scoring: {}", form.getName());
+        redirectAttributes.addFlashAttribute("successMessage", "Race-Scoring saved: " + form.getName());
         return "redirect:/admin/race-scorings";
     }
 

@@ -3,9 +3,9 @@
       th:replace="~{admin/layout :: layout('Edit Season', ~{::section})}">
 <body>
 <section>
-    <h1 th:text="${season.id != null ? 'Edit Season' : 'New Season'}"></h1>
+    <h1 th:text="${seasonForm.id != null ? 'Edit Season' : 'New Season'}"></h1>
     <div class="card">
-        <form th:action="@{/admin/seasons/save}" th:object="${season}" method="post">
+        <form th:action="@{/admin/seasons/save}" th:object="${seasonForm}" method="post">
             <input type="hidden" th:field="*{id}">
             <div class="form-row">
                 <div class="form-group">
@@ -23,11 +23,11 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="startDate">Start Date</label>
-                    <input type="date" id="startDate" name="startDate" th:value="${season.startDate != null ? season.startDate.toString() : ''}">
+                    <input type="date" id="startDate" name="startDate" th:value="${seasonForm.startDate != null ? seasonForm.startDate.toString() : ''}">
                 </div>
                 <div class="form-group">
                     <label for="endDate">End Date</label>
-                    <input type="date" id="endDate" name="endDate" th:value="${season.endDate != null ? season.endDate.toString() : ''}">
+                    <input type="date" id="endDate" name="endDate" th:value="${seasonForm.endDate != null ? seasonForm.endDate.toString() : ''}">
                 </div>
             </div>
             <div class="form-row">
@@ -63,9 +63,9 @@
                             <option value="">-- Select --</option>
                             <option th:each="rs : ${allRaceScorings}" th:value="${rs.id}"
                                     th:text="${rs.name}"
-                                    th:selected="${season.raceScoring != null && season.raceScoring.id == rs.id}"></option>
+                                    th:selected="${season != null && season.raceScoring != null && season.raceScoring.id == rs.id}"></option>
                         </select>
-                        <div th:if="${season.raceScoring != null}" class="text-dim" style="font-size:11px; margin-top:2px;"
+                        <div th:if="${season != null && season.raceScoring != null}" class="text-dim" style="font-size:11px; margin-top:2px;"
                              th:text="${season.raceScoring.racePoints + (season.raceScoring.qualiPoints != null ? ' · Quali ' + season.raceScoring.qualiPoints : '') + ' · FL ' + season.raceScoring.fastestLapPoints}"></div>
                     </div>
                     <div class="form-group">
@@ -74,9 +74,9 @@
                             <option value="">-- Select --</option>
                             <option th:each="ms : ${allMatchScorings}" th:value="${ms.id}"
                                     th:text="${ms.name}"
-                                    th:selected="${season.matchScoring != null && season.matchScoring.id == ms.id}"></option>
+                                    th:selected="${season != null && season.matchScoring != null && season.matchScoring.id == ms.id}"></option>
                         </select>
-                        <div th:if="${season.matchScoring != null}" class="text-dim" style="font-size:11px; margin-top:2px;"
+                        <div th:if="${season != null && season.matchScoring != null}" class="text-dim" style="font-size:11px; margin-top:2px;"
                              th:text="'S ' + ${season.matchScoring.pointsWin} + ' · U ' + ${season.matchScoring.pointsDraw} + ' · N ' + ${season.matchScoring.pointsLoss}"></div>
                     </div>
                 </div>
@@ -94,7 +94,7 @@
     </div>
 
     <!-- Team assignment (only when editing) -->
-    <div th:if="${season.id != null}" class="card">
+    <div th:if="${seasonForm.id != null}" class="card">
         <h2>Teams in this Season</h2>
         <table th:if="${!season.teams.isEmpty()}">
             <thead>
@@ -134,7 +134,7 @@
     </div>
 
     <!-- Car Pool (only when editing) -->
-    <div th:if="${season.id != null}" class="card" style="margin-top: 16px;" id="carPool">
+    <div th:if="${seasonForm.id != null}" class="card" style="margin-top: 16px;" id="carPool">
         <h2 th:text="'Car Pool (' + ${season.cars.size()} + ')'">Car Pool</h2>
         <div class="transfer-picker">
             <div class="transfer-list">
@@ -177,7 +177,7 @@
     </div>
 
     <!-- Track Pool (only when editing) -->
-    <div th:if="${season.id != null}" class="card" style="margin-top: 16px;" id="trackPool">
+    <div th:if="${seasonForm.id != null}" class="card" style="margin-top: 16px;" id="trackPool">
         <h2 th:text="'Track Pool (' + ${season.tracks.size()} + ')'">Track Pool</h2>
         <div class="transfer-picker">
             <div class="transfer-list">

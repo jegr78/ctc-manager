@@ -1,11 +1,14 @@
 package de.ctc.admin.controller;
 
+import de.ctc.admin.dto.MatchScoringForm;
 import de.ctc.domain.model.MatchScoring;
 import de.ctc.domain.repository.MatchScoringRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -27,31 +30,43 @@ public class MatchScoringController {
 
     @GetMapping("/new")
     public String create(Model model) {
-        model.addAttribute("scoring", new MatchScoring());
+        model.addAttribute("matchScoringForm", new MatchScoringForm());
         return "admin/match-scoring-form";
     }
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        model.addAttribute("scoring", matchScoringRepository.findById(id).orElseThrow());
+        var scoring = matchScoringRepository.findById(id).orElseThrow();
+        var form = new MatchScoringForm();
+        form.setId(scoring.getId());
+        form.setName(scoring.getName());
+        form.setPointsWin(scoring.getPointsWin());
+        form.setPointsDraw(scoring.getPointsDraw());
+        form.setPointsLoss(scoring.getPointsLoss());
+        model.addAttribute("matchScoringForm", form);
         return "admin/match-scoring-form";
     }
 
     @PostMapping("/save")
-    public String save(@ModelAttribute MatchScoring scoring, RedirectAttributes redirectAttributes) {
-        if (scoring.getId() != null) {
-            var existing = matchScoringRepository.findById(scoring.getId()).orElseThrow();
-            existing.setName(scoring.getName());
-            existing.setPointsWin(scoring.getPointsWin());
-            existing.setPointsDraw(scoring.getPointsDraw());
-            existing.setPointsLoss(scoring.getPointsLoss());
+    public String save(@Valid @ModelAttribute("matchScoringForm") MatchScoringForm form, BindingResult result,
+                       RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            return "admin/match-scoring-form";
+        }
+        if (form.getId() != null) {
+            var existing = matchScoringRepository.findById(form.getId()).orElseThrow();
+            existing.setName(form.getName());
+            existing.setPointsWin(form.getPointsWin());
+            existing.setPointsDraw(form.getPointsDraw());
+            existing.setPointsLoss(form.getPointsLoss());
             matchScoringRepository.save(existing);
         } else {
+            var scoring = new MatchScoring(form.getName(), form.getPointsWin(), form.getPointsDraw(), form.getPointsLoss());
             matchScoringRepository.save(scoring);
         }
 
-        log.info("Saved match scoring: {}", scoring.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Match-Scoring saved: " + scoring.getName());
+        log.info("Saved match scoring: {}", form.getName());
+        redirectAttributes.addFlashAttribute("successMessage", "Match-Scoring saved: " + form.getName());
         return "redirect:/admin/match-scorings";
     }
 

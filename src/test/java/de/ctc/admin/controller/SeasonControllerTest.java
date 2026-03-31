@@ -38,7 +38,7 @@ class SeasonControllerTest {
         mockMvc.perform(get("/admin/seasons/new"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/season-form"))
-                .andExpect(model().attributeExists("season"));
+                .andExpect(model().attributeExists("seasonForm"));
     }
 
     @Test

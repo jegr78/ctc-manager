@@ -1,5 +1,6 @@
 package de.ctc.admin.controller;
 
+import de.ctc.admin.dto.SeasonForm;
 import de.ctc.domain.model.*;
 import de.ctc.domain.repository.*;
 import de.ctc.domain.service.FileStorageService;
@@ -53,7 +54,7 @@ public class SeasonController {
 
     @GetMapping("/new")
     public String create(Model model) {
-        model.addAttribute("season", new Season());
+        model.addAttribute("seasonForm", new SeasonForm());
         addScoringLists(model);
         return "admin/season-form";
     }
@@ -61,6 +62,16 @@ public class SeasonController {
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
         var season = seasonRepository.findById(id).orElseThrow();
+        var form = new SeasonForm();
+        form.setId(season.getId());
+        form.setName(season.getName());
+        form.setStartDate(season.getStartDate());
+        form.setEndDate(season.getEndDate());
+        form.setActive(season.isActive());
+        form.setFormat(season.getFormat());
+        form.setTotalRounds(season.getTotalRounds());
+        form.setLegs(season.getLegs());
+        model.addAttribute("seasonForm", form);
         model.addAttribute("season", season);
         model.addAttribute("allTeams", teamRepository.findAll());
         model.addAttribute("allCars", carRepository.findAllByOrderByManufacturerAscNameAsc());
@@ -70,7 +81,7 @@ public class SeasonController {
     }
 
     @PostMapping("/save")
-    public String save(@Valid @ModelAttribute Season season, BindingResult result,
+    public String save(@Valid @ModelAttribute("seasonForm") SeasonForm form, BindingResult result,
                        @RequestParam UUID raceScoring,
                        @RequestParam UUID matchScoring,
                        RedirectAttributes redirectAttributes, Model model) {
@@ -78,24 +89,33 @@ public class SeasonController {
             addScoringLists(model);
             return "admin/season-form";
         }
-        if (season.getId() != null) {
-            var existing = seasonRepository.findById(season.getId()).orElseThrow();
-            existing.setName(season.getName());
-            existing.setStartDate(season.getStartDate());
-            existing.setEndDate(season.getEndDate());
-            existing.setActive(season.isActive());
-            existing.setFormat(season.getFormat());
-            existing.setTotalRounds(season.getFormat() == SeasonFormat.SWISS ? season.getTotalRounds() : null);
-            existing.setLegs(season.getLegs());
+        if (form.getId() != null) {
+            var existing = seasonRepository.findById(form.getId()).orElseThrow();
+            existing.setName(form.getName());
+            existing.setStartDate(form.getStartDate());
+            existing.setEndDate(form.getEndDate());
+            existing.setActive(form.isActive());
+            existing.setFormat(form.getFormat());
+            existing.setTotalRounds(form.getFormat() == SeasonFormat.SWISS ? form.getTotalRounds() : null);
+            existing.setLegs(form.getLegs());
             existing.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
             existing.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
             seasonRepository.save(existing);
             log.info("Updated season: {}", existing.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + existing.getName());
         } else {
-            if (season.getFormat() == SeasonFormat.LEAGUE) {
+            var season = new Season();
+            season.setName(form.getName());
+            season.setStartDate(form.getStartDate());
+            season.setEndDate(form.getEndDate());
+            season.setActive(form.isActive());
+            season.setFormat(form.getFormat());
+            if (form.getFormat() == SeasonFormat.LEAGUE) {
                 season.setTotalRounds(null);
+            } else {
+                season.setTotalRounds(form.getTotalRounds());
             }
+            season.setLegs(form.getLegs());
             season.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
             season.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
             seasonRepository.save(season);
