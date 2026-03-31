@@ -46,6 +46,9 @@ public class RaceController {
         model.addAttribute("lineupMissing", data.lineupMissing());
         model.addAttribute("cardsMissing", data.cardsMissing());
         model.addAttribute("lineupExists", data.lineupExists());
+        model.addAttribute("canGenerateResults", data.canGenerateResults());
+        model.addAttribute("resultsMissing", data.resultsMissing());
+        model.addAttribute("resultsExist", data.resultsExist());
         return "admin/race-detail";
     }
 
@@ -157,6 +160,17 @@ public class RaceController {
         try {
             raceManagementService.generateLineup(id);
             redirectAttributes.addFlashAttribute("successMessage", "Lineup graphic generated");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/races/" + id;
+    }
+
+    @PostMapping("/{id}/generate-results")
+    public String generateResults(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            raceManagementService.generateResults(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Results graphic generated");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }

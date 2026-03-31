@@ -187,6 +187,8 @@
 						<exclude>de/ctc/admin/DemoDataSeeder.class</exclude>
 						<exclude>de/ctc/admin/service/TeamCardService.class</exclude>
 						<exclude>de/ctc/admin/service/LineupGraphicService.class</exclude>
+						<exclude>de/ctc/admin/service/ResultsGraphicService.class</exclude>
+						<exclude>de/ctc/admin/service/AbstractGraphicService.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>
