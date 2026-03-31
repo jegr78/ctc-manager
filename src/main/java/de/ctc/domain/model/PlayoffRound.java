@@ -15,7 +15,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "playoff_rounds")
 @Getter @Setter @NoArgsConstructor @ToString(exclude = {"playoff", "matchups"})
-public class PlayoffRound {
+public class PlayoffRound extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

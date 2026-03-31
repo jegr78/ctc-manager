@@ -13,7 +13,7 @@ import java.util.UUID;
 @Table(name = "season_drivers",
        uniqueConstraints = @UniqueConstraint(columnNames = {"season_id", "driver_id"}))
 @Getter @Setter @NoArgsConstructor @ToString(exclude = {"season", "driver", "team"})
-public class SeasonDriver {
+public class SeasonDriver extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

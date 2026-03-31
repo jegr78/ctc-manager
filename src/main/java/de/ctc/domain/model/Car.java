@@ -8,7 +8,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "cars", uniqueConstraints = @UniqueConstraint(columnNames = {"manufacturer", "name"}))
 @Getter @Setter @NoArgsConstructor @ToString
-public class Car {
+public class Car extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 

@@ -12,7 +12,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "race_lineups")
 @Getter @Setter @NoArgsConstructor @ToString(exclude = {"race", "driver", "team"})
-public class RaceLineup {
+public class RaceLineup extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

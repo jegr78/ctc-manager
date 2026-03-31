@@ -8,7 +8,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "tracks")
 @Getter @Setter @NoArgsConstructor @ToString
-public class Track {
+public class Track extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
