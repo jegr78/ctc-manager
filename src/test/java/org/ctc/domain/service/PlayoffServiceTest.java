@@ -82,13 +82,25 @@ class PlayoffServiceTest {
             // then
             assertNotNull(playoff.getId());
             assertEquals(3, playoff.getRounds().size());
-            assertEquals("Viertelfinale", playoff.getRounds().get(0).getLabel());
-            assertEquals("Halbfinale", playoff.getRounds().get(1).getLabel());
-            assertEquals("Finale", playoff.getRounds().get(2).getLabel());
+            assertEquals("Quarterfinal", playoff.getRounds().get(0).getLabel());
+            assertEquals("Semifinal", playoff.getRounds().get(1).getLabel());
+            assertEquals("Final", playoff.getRounds().get(2).getLabel());
 
             assertEquals(4, playoff.getRounds().get(0).getMatchups().size());
             assertEquals(2, playoff.getRounds().get(1).getMatchups().size());
             assertEquals(1, playoff.getRounds().get(2).getMatchups().size());
+        }
+
+        @Test
+        void whenCreate2TeamPlayoff_thenBracketHasOneRoundWithOneMatchup() {
+            // when
+            var playoff = playoffService.createPlayoff(season.getId(), "Final Only", 2);
+
+            // then
+            assertEquals(1, playoff.getRounds().size());
+            assertEquals("Final", playoff.getRounds().get(0).getLabel());
+            assertEquals(1, playoff.getRounds().get(0).getMatchups().size());
+            assertNull(playoff.getRounds().get(0).getMatchups().get(0).getNextMatchup());
         }
 
         @Test
@@ -98,8 +110,8 @@ class PlayoffServiceTest {
 
             // then
             assertEquals(2, playoff.getRounds().size());
-            assertEquals("Halbfinale", playoff.getRounds().get(0).getLabel());
-            assertEquals("Finale", playoff.getRounds().get(1).getLabel());
+            assertEquals("Semifinal", playoff.getRounds().get(0).getLabel());
+            assertEquals("Final", playoff.getRounds().get(1).getLabel());
 
             assertEquals(2, playoff.getRounds().get(0).getMatchups().size());
             assertEquals(1, playoff.getRounds().get(1).getMatchups().size());
@@ -276,7 +288,7 @@ class PlayoffServiceTest {
             // then
             assertEquals("View Test", view.getName());
             assertEquals(2, view.getRounds().size());
-            assertEquals("Halbfinale", view.getRounds().get(0).getLabel());
+            assertEquals("Semifinal", view.getRounds().get(0).getLabel());
             assertEquals(2, view.getRounds().get(0).getMatchups().size());
         }
     }
@@ -295,7 +307,7 @@ class PlayoffServiceTest {
 
             // then
             assertEquals(3, updated.getBestOfLegs());
-            assertEquals("Halbfinale", updated.getLabel());
+            assertEquals("Semifinal", updated.getLabel());
         }
 
         @Test
