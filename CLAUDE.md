@@ -21,11 +21,14 @@ Deutsch für Kommunikation und Dokumentation. Code, Kommentare und UI-Texte auf 
 # Dev-Modus mit GT7-Demodaten (Autos, Strecken, Bilder)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,demo
 
-# Tests ausfuehren (Unit + Integration)
+# Tests ausfuehren (Unit + Integration + JaCoCo Coverage)
 ./mvnw verify
 
 # Tests ausfuehren inkl. Playwright E2E
 ./mvnw verify -Pe2e
+
+# Coverage-Report oeffnen
+open target/site/jacoco/index.html
 
 # Local mit MariaDB
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
@@ -67,15 +70,20 @@ docker compose -f docker-compose.prod.yml up -d
 
 - `CtcManagerApplication.java` — Entry Point
 - `TestDataService.java` — DevDataSeeder: Erstellt Teams, Seasons, Drivers, Scoring-Presets beim Start (dev-Profil)
-- `ScoringService.java` — Punkteberechnung (konfigurierbar via RaceScoring) + Score-Aggregation auf Match/PlayoffMatchup
+- `ScoringService.java` — Punkteberechnung (konfigurierbar via RaceScoring) + Score-Aggregation auf Match/PlayoffMatchup + isDriverInTeam() (RaceLineup Source of Truth)
 - `StandingsService.java` — Team-Tabelle (Match-basiert, nutzt MatchScoring)
+- `SeasonManagementService.java` — Team/Car/Track-Pool-Verwaltung fuer Seasons
+- `TeamManagementService.java` — Team-Detail-Daten, Farb/Logo-Propagation an Sub-Teams
+- `BaseEntity.java` — @MappedSuperclass mit createdAt/updatedAt (JPA Auditing)
 - `V1__initial_schema.sql` — Konsolidiertes DB-Schema (noch nicht veroeffentlicht)
 - `layout.html` — Thymeleaf Admin-Layout mit Sidebar (Fragment-Pattern: `th:replace="~{admin/layout :: layout(...)}"`)
 
 ## Architektur-Prinzipien
 
+- **Controller duenn halten:** Controller sind nur fuer HTTP-Handling zustaendig (Request annehmen, Service aufrufen, Model/Redirect/Flash befuellen). Keine Business-Logik, keine direkten Repository-Zugriffe in Controllern. Geschaeftslogik gehoert in Service-Klassen (`domain.service` oder `admin.service`).
+- **DTOs statt Entities in Controllern:** Form-Eingaben (POST/save) immer ueber Form-DTOs (`admin.dto`) binden, nie JPA Entities direkt per `@ModelAttribute` — Schutz gegen Mass Assignment. Fuer Template-Anzeige (GET) duerfen Entities ans Model uebergeben werden (OSIV ist aktiv).
 - **Keine Fallback-Berechnungen:** Wenn abgeleitete Daten fehlen, keine Workarounds in Templates oder Controllern einbauen. Stattdessen Datenmodell und Service-Architektur analysieren und die Ursache beheben — Daten muessen an der richtigen Stelle konsistent geschrieben werden.
-- **Thymeleaf Templates schlank halten:** Keine komplexe Logik (SpEL-Expressions, Collection-Projektionen, verschachtelte Bedingungen) in Templates. Berechnungen und Datenaufbereitung gehoeren in den Controller oder Service — Templates nur fuer Darstellung.
+- **Thymeleaf Templates schlank halten:** Keine komplexe Logik (SpEL-Expressions, Collection-Projektionen, verschachtelte Bedingungen) in Templates. Berechnungen und Datenaufbereitung gehoeren in den Service — Templates nur fuer Darstellung.
 - **Testdaten komplett isolieren:** E2E-Testdaten in `TestDataService` muessen eigene Entities mit Test-Prefix verwenden (z.B. `T-ALF`, `Test_Alpha_1`, `Test-Season 2026`). Nie echte Teams, Fahrer oder Saisons fuer automatisierte Tests nutzen — diese kollidieren mit manuellen Tests auf Import-Daten.
 - **RaceLineup ist Source of Truth:** Fuer Fahrer-Team-Zuordnungen (insb. Sub-Teams) immer `RaceLineup` priorisieren, `SeasonDriver` nur als Fallback fuer Saisons ohne Rennen. Der CSV-Import bestimmt die korrekte Zuordnung.
 
@@ -90,6 +98,14 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
 - Reihenfolge bei neuen Features: Unit Tests → Implementierung → Integration Tests → E2E Tests
 - Superpowers-Skill `superpowers:test-driven-development` nutzen
 - **Visuelle Pruefung mit `playwright-cli`:** Bei UI-Aenderungen (Templates, CSS) immer `playwright-cli` nutzen um das Ergebnis visuell zu verifizieren. Dev-Server starten (`./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`), dann mit `playwright-cli open http://localhost:9090/...` die betroffenen Seiten inspizieren (Desktop + Mobile). Skill: `/playwright-cli`
+
+## Code Coverage (JaCoCo)
+
+- **Minimum:** 80% Line Coverage (Build bricht bei Unterschreitung)
+- **Report:** `target/site/jacoco/index.html` nach `./mvnw verify`
+- **CI:** Automatischer PR-Kommentar mit Coverage via `madrapps/jacoco-report`
+- **Excludes:** CtcManagerApplication, TestDataService, DemoDataSeeder, TeamCardService, LineupGraphicService (Playwright-abhaengig)
+- **Schwellwert anpassen:** Erst messen (`jacoco.csv`), dann Minimum setzen — nie optimistisch raten
 
 ## Git-Workflow
 
