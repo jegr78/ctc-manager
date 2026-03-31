@@ -3,9 +3,7 @@ package de.ctc.admin.controller;
 import de.ctc.admin.dto.CreateMatchdayRequest;
 import de.ctc.admin.dto.MatchdayDto;
 import de.ctc.domain.model.Matchday;
-import de.ctc.domain.repository.MatchdayRepository;
-import de.ctc.domain.repository.RaceLineupRepository;
-import de.ctc.domain.repository.SeasonRepository;
+import de.ctc.domain.service.MatchdayService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +13,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
@@ -27,40 +24,24 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MatchdayController {
 
-    private final MatchdayRepository matchdayRepository;
-    private final SeasonRepository seasonRepository;
-    private final RaceLineupRepository raceLineupRepository;
+    private final MatchdayService matchdayService;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
-        if (seasonId != null) {
-            model.addAttribute("matchdays", matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId));
-            model.addAttribute("selectedSeasonId", seasonId);
-        } else {
-            var activeSeason = seasonRepository.findByActiveTrue();
-            if (activeSeason.isPresent()) {
-                model.addAttribute("matchdays", matchdayRepository.findBySeasonIdOrderBySortIndexAsc(activeSeason.get().getId()));
-                model.addAttribute("selectedSeasonId", activeSeason.get().getId());
-            } else {
-                model.addAttribute("matchdays", matchdayRepository.findAll());
-            }
+        var data = matchdayService.getMatchdayList(seasonId);
+        model.addAttribute("matchdays", data.matchdays());
+        if (data.selectedSeasonId() != null) {
+            model.addAttribute("selectedSeasonId", data.selectedSeasonId());
         }
-        model.addAttribute("seasons", seasonRepository.findAll());
+        model.addAttribute("seasons", data.seasons());
         return "admin/matchdays";
     }
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
-        var matchday = matchdayRepository.findById(id).orElseThrow();
-        var lineups = raceLineupRepository.findByRaceMatchdayId(id);
-        // Group lineups by team for display
-        var lineupsByTeam = lineups.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                        lu -> lu.getTeam().getShortName(),
-                        java.util.LinkedHashMap::new,
-                        java.util.stream.Collectors.toList()));
-        model.addAttribute("matchday", matchday);
-        model.addAttribute("lineupsByTeam", lineupsByTeam);
+        var data = matchdayService.getMatchdayDetail(id);
+        model.addAttribute("matchday", data.matchday());
+        model.addAttribute("lineupsByTeam", data.lineupsByTeam());
         return "admin/matchday-detail";
     }
 
@@ -68,17 +49,18 @@ public class MatchdayController {
     public String create(@RequestParam(required = false) UUID seasonId, Model model) {
         var matchday = new Matchday();
         if (seasonId != null) {
-            matchday.setSeason(seasonRepository.findById(seasonId).orElse(null));
+            matchday.setSeason(matchdayService.findSeasonById(seasonId));
         }
         model.addAttribute("matchday", matchday);
-        model.addAttribute("seasons", seasonRepository.findAll());
+        model.addAttribute("seasons", matchdayService.getAllSeasons());
         return "admin/matchday-form";
     }
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        model.addAttribute("matchday", matchdayRepository.findById(id).orElseThrow());
-        model.addAttribute("seasons", seasonRepository.findAll());
+        var data = matchdayService.getMatchdayDetail(id);
+        model.addAttribute("matchday", data.matchday());
+        model.addAttribute("seasons", matchdayService.getAllSeasons());
         return "admin/matchday-form";
     }
 
@@ -88,33 +70,19 @@ public class MatchdayController {
                        @RequestParam UUID seasonId,
                        RedirectAttributes redirectAttributes,
                        Model model) {
-        matchday.setSeason(seasonRepository.findById(seasonId).orElse(null));
         if (result.hasErrors()) {
-            model.addAttribute("seasons", seasonRepository.findAll());
+            model.addAttribute("seasons", matchdayService.getAllSeasons());
             return "admin/matchday-form";
         }
-        if (matchday.getId() != null) {
-            var existing = matchdayRepository.findById(matchday.getId()).orElseThrow();
-            existing.setLabel(matchday.getLabel());
-            existing.setSortIndex(matchday.getSortIndex());
-            existing.setSeason(seasonRepository.findById(seasonId).orElseThrow());
-            matchdayRepository.save(existing);
-        } else {
-            matchday.setSeason(seasonRepository.findById(seasonId).orElseThrow());
-            matchdayRepository.save(matchday);
-        }
-        log.info("Saved matchday: {} (season {})", matchday.getLabel(), seasonId);
-        redirectAttributes.addFlashAttribute("successMessage", "Matchday saved: " + matchday.getLabel());
+        var saved = matchdayService.saveMatchday(matchday.getLabel(), matchday.getSortIndex(), seasonId, matchday.getId());
+        redirectAttributes.addFlashAttribute("successMessage", "Matchday saved: " + saved.getLabel());
         return "redirect:/admin/matchdays?seasonId=" + seasonId;
     }
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var matchday = matchdayRepository.findById(id).orElseThrow();
-        var seasonId = matchday.getSeason().getId();
-        matchdayRepository.delete(matchday);
-        log.info("Deleted matchday: {}", matchday.getLabel());
-        redirectAttributes.addFlashAttribute("successMessage", "Matchday deleted: " + matchday.getLabel());
+        var seasonId = matchdayService.deleteMatchday(id);
+        redirectAttributes.addFlashAttribute("successMessage", "Matchday deleted");
         return "redirect:/admin/matchdays?seasonId=" + seasonId;
     }
 
@@ -123,38 +91,13 @@ public class MatchdayController {
     @GetMapping("/by-season")
     @ResponseBody
     public List<MatchdayDto> matchdaysBySeason(@RequestParam String seasonName) {
-        return seasonRepository.findByName(seasonName)
-                .map(season -> matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
-                        .map(md -> new MatchdayDto(md.getId(), md.getLabel(), md.getSortIndex()))
-                        .toList())
-                .orElse(List.of());
+        return matchdayService.getMatchdaysBySeason(seasonName);
     }
 
     @PostMapping("/create-inline")
     @ResponseBody
     public ResponseEntity<MatchdayDto> createInline(@Valid @RequestBody CreateMatchdayRequest request) {
-        var season = seasonRepository.findByName(request.seasonName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Season not found: " + request.seasonName()));
-
-        var existingMatchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
-
-        boolean duplicateLabel = existingMatchdays.stream()
-                .anyMatch(md -> md.getLabel().equals(request.label()));
-        if (duplicateLabel) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Matchday label already exists in this season: " + request.label());
-        }
-
-        int nextSortIndex = existingMatchdays.stream()
-                .mapToInt(Matchday::getSortIndex)
-                .max()
-                .orElse(0) + 1;
-
-        var matchday = matchdayRepository.save(new Matchday(season, request.label(), nextSortIndex));
-        log.info("Created matchday inline: {} (season {})", matchday.getLabel(), season.getName());
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new MatchdayDto(matchday.getId(), matchday.getLabel(), matchday.getSortIndex()));
+        var dto = matchdayService.createInline(request.seasonName(), request.label());
+        return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
 }
