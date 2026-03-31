@@ -1,11 +1,6 @@
 package de.ctc.admin.controller;
 
-import de.ctc.domain.model.Match;
-import de.ctc.domain.model.Race;
-import de.ctc.domain.repository.MatchRepository;
-import de.ctc.domain.repository.MatchdayRepository;
-import de.ctc.domain.repository.RaceRepository;
-import de.ctc.domain.repository.TeamRepository;
+import de.ctc.domain.service.MatchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -21,16 +16,13 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class MatchController {
 
-    private final MatchRepository matchRepository;
-    private final MatchdayRepository matchdayRepository;
-    private final TeamRepository teamRepository;
-    private final RaceRepository raceRepository;
+    private final MatchService matchService;
 
     @GetMapping("/new")
     public String create(@RequestParam UUID matchdayId, Model model) {
-        var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
-        model.addAttribute("matchday", matchday);
-        model.addAttribute("teams", matchday.getSeason().getTeams());
+        var formData = matchService.getCreateFormData(matchdayId);
+        model.addAttribute("matchday", formData.matchday());
+        model.addAttribute("teams", formData.teams());
         return "admin/match-form";
     }
 
@@ -40,70 +32,33 @@ public class MatchController {
                        @RequestParam(required = false) UUID awayTeamId,
                        @RequestParam(defaultValue = "false") boolean bye,
                        RedirectAttributes redirectAttributes) {
-        var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
-        var homeTeam = teamRepository.findById(homeTeamId).orElseThrow();
-        var awayTeam = bye ? null : (awayTeamId != null ? teamRepository.findById(awayTeamId).orElse(null) : null);
-
-        // Duplicate check
-        if (!bye && awayTeam != null &&
-                matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
-                        matchdayId, homeTeam.getId(), awayTeam.getId())) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Match already exists: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName());
-            return "redirect:/admin/matchdays/" + matchdayId;
+        try {
+            var match = matchService.createMatch(matchdayId, homeTeamId, awayTeamId, bye);
+            var homeShort = match.getHomeTeam().getShortName();
+            var awayShort = match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "?";
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Match created: " + homeShort + (bye ? " (Bye)" : " vs " + awayShort));
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-
-        var match = new Match(matchday, homeTeam, awayTeam);
-        match.setBye(bye);
-        match = matchRepository.save(match);
-
-        // Auto-create first leg (Race) for the match
-        var race = new Race();
-        race.setMatchday(matchday);
-        race.setMatch(match);
-        raceRepository.save(race);
-
-        log.info("Created match: {} {} {} on {}",
-                homeTeam.getShortName(),
-                bye ? "bye" : "vs " + (awayTeam != null ? awayTeam.getShortName() : "?"),
-                "", matchday.getLabel());
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Match created: " + homeTeam.getShortName() + (bye ? " (Bye)" : " vs " + (awayTeam != null ? awayTeam.getShortName() : "?")));
         return "redirect:/admin/matchdays/" + matchdayId;
     }
 
     @PostMapping("/{id}/add-leg")
     public String addLeg(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var match = matchRepository.findById(id).orElseThrow();
-        var matchday = match.getMatchday();
-        int maxLegs = matchday.getSeason().getLegs();
-
-        if (match.getRaces().size() >= maxLegs) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Maximum legs reached (" + maxLegs + ")");
-            return "redirect:/admin/matchdays/" + matchday.getId();
+        try {
+            var match = matchService.addLeg(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Leg added");
+            return "redirect:/admin/matchdays/" + match.getMatchday().getId();
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/admin/matchdays/" + matchService.getMatchdayId(id);
         }
-
-        var race = new Race();
-        race.setMatchday(matchday);
-        race.setMatch(match);
-        match.getRaces().add(race);
-        raceRepository.save(race);
-
-        log.info("Added leg {} for match {} vs {}",
-                match.getRaces().size(), match.getHomeTeam().getShortName(),
-                match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "bye");
-        redirectAttributes.addFlashAttribute("successMessage", "Leg added");
-        return "redirect:/admin/matchdays/" + matchday.getId();
     }
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var match = matchRepository.findById(id).orElseThrow();
-        var matchdayId = match.getMatchday().getId();
-        matchRepository.delete(match);
-        log.info("Deleted match: {} vs {}", match.getHomeTeam().getShortName(),
-                match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "bye");
+        var matchdayId = matchService.deleteMatch(id);
         redirectAttributes.addFlashAttribute("successMessage", "Match deleted");
         return "redirect:/admin/matchdays/" + matchdayId;
     }

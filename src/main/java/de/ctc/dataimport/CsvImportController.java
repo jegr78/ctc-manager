@@ -1,8 +1,5 @@
 package de.ctc.dataimport;
 
-import de.ctc.domain.repository.PlayoffMatchupRepository;
-import de.ctc.domain.repository.PlayoffRepository;
-import de.ctc.domain.repository.SeasonRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -20,12 +17,8 @@ import java.util.*;
 public class CsvImportController {
 
     private final CsvImportService csvImportService;
-    private final SeasonRepository seasonRepository;
-    private final de.ctc.domain.repository.MatchdayRepository matchdayRepository;
     private final GoogleSheetsService googleSheetsService;
     private final ScorecardParser scorecardParser;
-    private final PlayoffMatchupRepository playoffMatchupRepository;
-    private final PlayoffRepository playoffRepository;
 
     @GetMapping
     public String showImportForm(Model model) {
@@ -156,40 +149,14 @@ public class CsvImportController {
 
     private void addMatchdayName(Model model, CsvImportService.ImportMetadata metadata) {
         if (metadata.hasMatchdayId()) {
-            matchdayRepository.findById(metadata.matchdayId())
-                    .ifPresent(md -> model.addAttribute("matchdayName", md.getLabel()));
+            csvImportService.getMatchdayLabel(metadata.matchdayId())
+                    .ifPresent(label -> model.addAttribute("matchdayName", label));
         }
     }
 
     private void addCommonAttributes(Model model) {
-        model.addAttribute("seasons", seasonRepository.findAll());
+        model.addAttribute("seasons", csvImportService.getAllSeasons());
         model.addAttribute("sheetsAvailable", googleSheetsService.isAvailable());
-
-        // Load playoff matchups for all seasons that have playoffs
-        List<PlayoffMatchupDto> matchups = new ArrayList<>();
-        for (var season : seasonRepository.findAll()) {
-            playoffRepository.findBySeasonId(season.getId()).ifPresent(playoff -> {
-                var playoffMatchups = playoffMatchupRepository.findByRoundPlayoffId(playoff.getId());
-                for (var matchup : playoffMatchups) {
-                    if (matchup.isReady()) {
-                        matchups.add(new PlayoffMatchupDto(
-                                matchup.getId(),
-                                season.getName(),
-                                matchup.getRound().getLabel(),
-                                matchup.getTeam1().getShortName(),
-                                matchup.getTeam2().getShortName()
-                        ));
-                    }
-                }
-            });
-        }
-        model.addAttribute("playoffMatchups", matchups);
-    }
-
-    public record PlayoffMatchupDto(UUID id, String seasonName, String roundLabel,
-                                     String team1, String team2) {
-        public String displayLabel() {
-            return roundLabel + ": " + team1 + " vs " + team2;
-        }
+        model.addAttribute("playoffMatchups", csvImportService.getPlayoffMatchups());
     }
 }
