@@ -5,7 +5,7 @@
 <section>
     <div class="toolbar">
         <h1>
-            <span th:if="${matchday != null}" th:text="'Races — ' + ${matchday.label} + ' (' + ${matchday.season.name} + ')'">Races</span>
+            <span th:if="${matchday != null}" th:text="'Races — ' + ${matchday.label} + ' (' + ${matchday.season.displayLabel} + ')'">Races</span>
             <span th:if="${matchday == null}">Races</span>
         </h1>
         <a th:if="${matchday != null}" th:href="@{/admin/races/new(matchdayId=${matchday.id})}" class="btn btn-primary">+ New Race</a>
@@ -17,7 +17,7 @@
             <label class="text-dim" style="font-size:13px; white-space:nowrap;">Season</label>
             <select name="seasonId" onchange="this.form.submit()" style="min-width:200px;">
                 <option value="">All Seasons</option>
-                <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"
+                <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
                         th:selected="${selectedSeasonId != null && selectedSeasonId.equals(s.id)}"></option>
             </select>
         </form>
@@ -47,7 +47,7 @@
                 <tr th:each="race : ${races}">
                     <td class="text-dim" style="font-size:13px;">
                         <a th:href="@{/admin/seasons/{id}(id=${race.matchday.season.id})}" class="detail-link"
-                           th:text="${race.matchday.season.name}" style="font-size:13px;"></a>
+                           th:text="${race.matchday.season.displayLabel}" style="font-size:13px;"></a>
                     </td>
                     <td>
                         <a th:href="@{/admin/matchdays/{id}(id=${race.matchday.id})}" class="detail-link"

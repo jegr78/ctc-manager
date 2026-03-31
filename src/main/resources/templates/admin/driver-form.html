@@ -40,7 +40,7 @@
                 </thead>
                 <tbody>
                     <tr th:each="sd : ${seasonDrivers}">
-                        <td th:text="${sd.season.name}"></td>
+                        <td th:text="${sd.season.displayLabel}"></td>
                         <td th:text="${sd.team.shortName + ' - ' + sd.team.name}"></td>
                     </tr>
                 </tbody>
@@ -55,7 +55,7 @@
                     <label for="seasonId">Season</label>
                     <select id="seasonId" name="seasonId" required>
                         <option value="">-- Select season --</option>
-                        <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.name}"></option>
+                        <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"></option>
                     </select>
                 </div>
                 <div class="form-group">

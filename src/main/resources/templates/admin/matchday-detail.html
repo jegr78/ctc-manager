@@ -7,7 +7,7 @@
         <div>
             <a th:href="@{/admin/matchdays(seasonId=${matchday.season.id})}" class="back-link">&larr; Back to Matchdays</a>
             <h1 th:text="${matchday.label}"></h1>
-            <span class="text-dim" th:text="${matchday.season.name + ' · ' + matchday.season.legs + ' Leg(s)'}"></span>
+            <span class="text-dim" th:text="${matchday.season.displayLabel + ' · ' + matchday.season.legs + ' Leg(s)'}"></span>
         </div>
         <div class="actions">
             <a th:href="@{/admin/matchdays/{id}/edit(id=${matchday.id})}" class="btn btn-primary">Edit</a>
@@ -25,7 +25,7 @@
             <span class="label">Sort Index</span>
             <span th:text="${matchday.sortIndex}"></span>
             <span class="label">Season</span>
-            <a th:href="@{/admin/seasons/{id}(id=${matchday.season.id})}" class="detail-link" th:text="${matchday.season.name}"></a>
+            <a th:href="@{/admin/seasons/{id}(id=${matchday.season.id})}" class="detail-link" th:text="${matchday.season.displayLabel}"></a>
         </div>
 
         <!-- Matches -->

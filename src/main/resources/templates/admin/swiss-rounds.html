@@ -6,7 +6,7 @@
     <div class="toolbar">
         <div>
             <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="back-link">&larr; Back to Season</a>
-            <h1 th:text="'Swiss Rounds — ' + ${season.name}"></h1>
+            <h1 th:text="'Swiss Rounds — ' + ${season.displayLabel}"></h1>
         </div>
         <div class="actions">
             <span class="text-dim" th:text="'Round ' + ${currentRound} + ' of ' + ${season.totalRounds}"></span>
