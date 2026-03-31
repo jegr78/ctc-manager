@@ -28,10 +28,10 @@ public class Season extends BaseEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(name = "season_year", nullable = false)
     private int year;
 
-    @Column(nullable = false)
+    @Column(name = "season_number", nullable = false)
     private int number;
 
     private String description;
