@@ -6,6 +6,7 @@ import de.ctc.domain.repository.DriverRepository;
 import de.ctc.domain.repository.MatchRepository;
 import de.ctc.domain.repository.MatchdayRepository;
 import de.ctc.domain.repository.PlayoffMatchupRepository;
+import de.ctc.domain.repository.PlayoffRepository;
 import de.ctc.domain.repository.RaceLineupRepository;
 import de.ctc.domain.repository.RaceRepository;
 import de.ctc.domain.repository.SeasonDriverRepository;
@@ -37,8 +38,54 @@ public class CsvImportService {
     private final MatchRepository matchRepository;
     private final RaceRepository raceRepository;
     private final PlayoffMatchupRepository playoffMatchupRepository;
+    private final PlayoffRepository playoffRepository;
     private final ScoringService scoringService;
     private final RaceLineupRepository raceLineupRepository;
+
+    /**
+     * Returns all seasons for the import form.
+     */
+    public List<Season> getAllSeasons() {
+        return seasonRepository.findAll();
+    }
+
+    /**
+     * Returns playoff matchups for all seasons that have playoffs (for the import form dropdown).
+     */
+    public List<PlayoffMatchupDto> getPlayoffMatchups() {
+        List<PlayoffMatchupDto> matchups = new ArrayList<>();
+        for (var season : seasonRepository.findAll()) {
+            playoffRepository.findBySeasonId(season.getId()).ifPresent(playoff -> {
+                var playoffMatchups = playoffMatchupRepository.findByRoundPlayoffId(playoff.getId());
+                for (var matchup : playoffMatchups) {
+                    if (matchup.isReady()) {
+                        matchups.add(new PlayoffMatchupDto(
+                                matchup.getId(),
+                                season.getName(),
+                                matchup.getRound().getLabel(),
+                                matchup.getTeam1().getShortName(),
+                                matchup.getTeam2().getShortName()
+                        ));
+                    }
+                }
+            });
+        }
+        return matchups;
+    }
+
+    /**
+     * Returns the matchday label for a given matchday ID.
+     */
+    public Optional<String> getMatchdayLabel(UUID matchdayId) {
+        return matchdayRepository.findById(matchdayId).map(Matchday::getLabel);
+    }
+
+    public record PlayoffMatchupDto(UUID id, String seasonName, String roundLabel,
+                                     String team1, String team2) {
+        public String displayLabel() {
+            return roundLabel + ": " + team1 + " vs " + team2;
+        }
+    }
 
     public ImportPreview parseAndPreview(InputStream csvStream, ImportMetadata metadata) throws IOException {
         var preview = new ImportPreview(metadata);
