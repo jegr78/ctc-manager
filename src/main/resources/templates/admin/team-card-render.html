@@ -42,7 +42,7 @@
             flex-direction: column;
             align-items: center;
             height: 100%;
-            padding: 120px 60px 160px;
+            padding: 100px 60px 120px;
         }
 
         .spacer {
@@ -50,34 +50,49 @@
         }
 
         .rating-circle {
-            width: 260px;
-            height: 260px;
+            width: 240px;
+            height: 240px;
             border-radius: 50%;
-            border: 8px solid [[${secondaryColor}]];
+            border: 6px solid [[${secondaryColor}]];
             background: rgba(50, 50, 50, 0.8);
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 120px;
+        }
+
+        .rating-bolt {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+            opacity: 0.15;
         }
 
         .rating-number {
-            font-size: 120px;
+            position: relative;
+            font-size: 110px;
             font-weight: 600;
             letter-spacing: -4px;
         }
 
         .logo-container {
-            width: 460px;
-            height: 460px;
+            width: 540px;
+            height: 540px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 140px;
+            background: rgba(255, 255, 255, 0.10);
+            border-radius: 50%;
+            padding: 40px;
+            margin-bottom: 72px;
         }
 
         .logo-container img {
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
             object-fit: contain;
         }
 
@@ -100,9 +115,9 @@
         }
 
         .sub-team-label {
-            font-size: 52px;
-            margin-top: 16px;
-            margin-bottom: 40px;
+            font-size: 36px;
+            margin-top: 12px;
+            color: rgba(255, 255, 255, 0.7);
         }
 
         .stats {
@@ -134,9 +149,11 @@
     <div class="glow-overlay"></div>
     <div class="content">
         <div class="rating-circle">
+            <svg class="rating-bolt" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path d="M36 4L16 36h12l-4 24 24-32H34z" fill="white"/>
+            </svg>
             <span class="rating-number" th:text="${rating != null ? rating : '—'}"></span>
         </div>
-        <div class="spacer"></div>
         <div class="center-group">
             <div class="logo-container">
                 <img th:if="${logoBase64 != null}" th:src="${logoBase64}" alt="">
