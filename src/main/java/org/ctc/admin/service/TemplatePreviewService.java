@@ -35,7 +35,7 @@ public class TemplatePreviewService {
     private static final Pattern BLOCKED_EXPRESSION_PATTERN = Pattern.compile(
             "T\\s*\\("          // SpringEL type access T(...)
             + "|__\\$\\{"       // Thymeleaf expression preprocessing __${...}__
-            + "|\\$\\{[^}]*@\\w" // OGNL static method access @Class@method inside ${}
+            + "|\\$\\{[^}@]*@\\w" // OGNL static method access @Class@method inside ${} ([^}@] prevents ReDoS)
     );
 
     private String cachedFontBase64;
