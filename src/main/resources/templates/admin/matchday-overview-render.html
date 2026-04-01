@@ -41,13 +41,13 @@
         }
 
         .header-center .title {
-            font-size: 48px;
+            font-size: 44px;
             font-weight: 900;
             letter-spacing: 3px;
         }
 
-        .header-center .year {
-            font-size: 40px;
+        .header-center .subtitle {
+            font-size: 28px;
             font-weight: 700;
             color: #ccc;
         }
@@ -142,8 +142,8 @@
     <div class="header">
         <img th:if="${data.ctcLogoBase64 != null}" th:src="${data.ctcLogoBase64}" alt="CTC" class="ctc-logo">
         <div class="header-center">
-            <div class="title" th:text="${data.matchdayLabel}"></div>
-            <div class="year" th:text="${data.seasonYear}"></div>
+            <div class="title" th:text="${data.matchdayLabel + ' Overview'}"></div>
+            <div class="subtitle" th:text="${data.seasonName + ' ' + data.seasonYear}"></div>
         </div>
         <img th:if="${data.ctcLogoBase64 != null}" th:src="${data.ctcLogoBase64}" alt="CTC" class="ctc-logo">
     </div>

@@ -155,7 +155,7 @@
                  th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${m.homePrimaryColor ?: '#333'} + ' 70%, black) 0%, #222 100%);'">
                 <img th:if="${m.homeLogoBase64 != null}" th:src="${m.homeLogoBase64}" alt="" class="team-logo">
                 <div class="team-info home">
-                    <span class="team-name" th:text="${m.homeTeamShortName}"></span>
+                    <span class="team-name" th:text="${m.homeTeamName}"></span>
                     <span class="team-record" th:text="${m.homeRecord}"></span>
                 </div>
             </div>
@@ -163,7 +163,7 @@
             <div class="team-bar away"
                  th:style="'background: linear-gradient(90deg, #222 0%, color-mix(in srgb, ' + ${m.awayPrimaryColor ?: '#333'} + ' 70%, black) 100%);'">
                 <div class="team-info away">
-                    <span class="team-name" th:text="${m.awayTeamShortName}"></span>
+                    <span class="team-name" th:text="${m.awayTeamName}"></span>
                     <span class="team-record" th:text="${m.awayRecord}"></span>
                 </div>
                 <img th:if="${m.awayLogoBase64 != null}" th:src="${m.awayLogoBase64}" alt="" class="team-logo">
