@@ -4,6 +4,7 @@ import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.MatchdayScheduleGraphicService;
+import org.ctc.admin.service.OverlayGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
@@ -30,6 +31,7 @@ public class TemplateEditorController {
     private final MatchdayScheduleGraphicService matchdayScheduleGraphicService;
     private final MatchdayResultsGraphicService matchdayResultsGraphicService;
     private final ResultsGraphicService resultsGraphicService;
+    private final OverlayGraphicService overlayGraphicService;
     private final TemplatePreviewService templatePreviewService;
 
     @GetMapping
@@ -93,6 +95,15 @@ public class TemplateEditorController {
             model.addAttribute("matchdayResultsTemplate", "");
             if (!model.containsAttribute("errorMessage")) {
                 model.addAttribute("errorMessage", "Failed to load matchday results template: " + e.getMessage());
+            }
+        }
+        try {
+            model.addAttribute("overlayTemplate", overlayGraphicService.loadTemplate());
+            model.addAttribute("overlayIsCustom", overlayGraphicService.hasCustomTemplate());
+        } catch (Exception e) {
+            model.addAttribute("overlayTemplate", "");
+            if (!model.containsAttribute("errorMessage")) {
+                model.addAttribute("errorMessage", "Failed to load overlay template: " + e.getMessage());
             }
         }
         model.addAttribute("activeTab", tab);
@@ -251,6 +262,28 @@ public class TemplateEditorController {
             redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
         }
         return "redirect:/admin/tools/template-editors?tab=matchday-results";
+    }
+
+    @PostMapping("/overlay/save")
+    public String saveOverlayTemplate(@RequestParam String template, RedirectAttributes redirectAttributes) {
+        try {
+            overlayGraphicService.saveTemplate(template);
+            redirectAttributes.addFlashAttribute("successMessage", "Overlay template saved");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=overlay";
+    }
+
+    @PostMapping("/overlay/reset")
+    public String resetOverlayTemplate(RedirectAttributes redirectAttributes) {
+        try {
+            overlayGraphicService.resetTemplate();
+            redirectAttributes.addFlashAttribute("successMessage", "Overlay template reset to default");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=overlay";
     }
 
     @PostMapping("/{templateType}/preview")

@@ -626,6 +626,23 @@ class RaceControllerTest {
                 .andExpect(flash().attributeExists("errorMessage"));
     }
 
+    // --- POST /admin/races/{id}/generate-overlay ---
+
+    @Test
+    void givenRaceWithNoMatch_whenGenerateOverlay_thenRedirectsWithError() throws Exception {
+        // given — create a race without a match
+        var raceWithoutMatch = new Race();
+        raceWithoutMatch.setMatchday(race.getMatchday());
+        raceWithoutMatch = raceRepository.save(raceWithoutMatch);
+
+        // when
+        mockMvc.perform(post("/admin/races/" + raceWithoutMatch.getId() + "/generate-overlay"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/races/" + raceWithoutMatch.getId()))
+                .andExpect(flash().attributeExists("errorMessage"));
+    }
+
     // --- GET detail with settings flags ---
 
     @Test
@@ -635,9 +652,12 @@ class RaceControllerTest {
                 // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/race-detail"))
-                .andExpect(model().attributeExists("canGenerateSettings", "settingsMissing", "settingsExist"))
+                .andExpect(model().attributeExists("canGenerateSettings", "settingsMissing", "settingsExist",
+                        "canGenerateOverlay", "overlayExists"))
                 .andExpect(model().attribute("settingsMissing", true))
-                .andExpect(model().attribute("canGenerateSettings", false));
+                .andExpect(model().attribute("canGenerateSettings", false))
+                .andExpect(model().attribute("canGenerateOverlay", true))
+                .andExpect(model().attribute("overlayExists", false));
     }
 
     // --- List races with scores ---

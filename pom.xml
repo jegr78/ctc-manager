@@ -189,6 +189,7 @@
 						<exclude>org/ctc/admin/service/LineupGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/ResultsGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/SettingsGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/OverlayGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/AbstractGraphicService.class</exclude>
 					</excludes>
 				</configuration>

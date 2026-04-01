@@ -20,9 +20,13 @@ public class TemplatePreviewService {
 
     private static final String FONT_CLASSPATH = "static/admin/fonts/ConthraxSb.woff2";
     private static final String CTC_LOGO_CLASSPATH = "static/admin/img/ctc-logo-white.png";
+    private static final String COMMENTATOR_CLASSPATH = "static/admin/img/commentator.png";
+    private static final String VS_BADGE_CLASSPATH = "static/admin/img/vs-badge.svg";
 
     private String cachedFontBase64;
     private String cachedLogoBase64;
+    private String cachedCommentatorBase64;
+    private String cachedVsBadgeBase64;
 
     public String renderPreview(String templateType, String templateContent) {
         var ctx = switch (templateType) {
@@ -33,6 +37,7 @@ public class TemplatePreviewService {
             case "matchday-overview" -> buildMatchdayOverviewContext();
             case "matchday-schedule" -> buildMatchdayScheduleContext();
             case "matchday-results" -> buildMatchdayResultsContext();
+            case "overlay" -> buildOverlayContext();
             default -> throw new IllegalArgumentException("Unknown template type: " + templateType);
         };
         return processTemplate(templateContent, ctx);
@@ -101,6 +106,34 @@ public class TemplatePreviewService {
         ctx.setVariable("awayTotal", 82);
         ctx.setVariable("homeIsWinner", true);
         ctx.setVariable("awayIsWinner", false);
+        return ctx;
+    }
+
+    private Context buildOverlayContext() {
+        var ctx = new Context();
+        var data = buildMatchdayData(false, true);
+        var match = data.matches().getFirst();
+
+        ctx.setVariable("homeTeamName", match.homeTeamName());
+        ctx.setVariable("homeTeamNameHtml", formatTeamNameHtml(match.homeTeamName()));
+        ctx.setVariable("homeTeamShortName", match.homeTeamShortName());
+        ctx.setVariable("homeLogoBase64", match.homeLogoBase64());
+        ctx.setVariable("homePrimaryColor", match.homePrimaryColor());
+        ctx.setVariable("homeSecondaryColor", match.homeSecondaryColor());
+        ctx.setVariable("homeRecord", match.homeRecord());
+        ctx.setVariable("awayTeamName", match.awayTeamName());
+        ctx.setVariable("awayTeamNameHtml", formatTeamNameHtml(match.awayTeamName()));
+        ctx.setVariable("awayTeamShortName", match.awayTeamShortName());
+        ctx.setVariable("awayLogoBase64", match.awayLogoBase64());
+        ctx.setVariable("awayPrimaryColor", match.awayPrimaryColor());
+        ctx.setVariable("awaySecondaryColor", match.awaySecondaryColor());
+        ctx.setVariable("awayRecord", match.awayRecord());
+        ctx.setVariable("seasonYear", data.seasonYear());
+        ctx.setVariable("matchdayName", data.matchdayLabel());
+        ctx.setVariable("ctcLogoBase64", getLogoBase64());
+        ctx.setVariable("vsBadgeBase64", getVsBadgeBase64());
+        ctx.setVariable("commentatorBase64", getCommentatorBase64());
+        ctx.setVariable("fontBase64", getFontBase64());
         return ctx;
     }
 
@@ -195,6 +228,20 @@ public class TemplatePreviewService {
         return cachedLogoBase64;
     }
 
+    private String getCommentatorBase64() {
+        if (cachedCommentatorBase64 == null) {
+            cachedCommentatorBase64 = encodeClasspathResource(COMMENTATOR_CLASSPATH, "image/png");
+        }
+        return cachedCommentatorBase64;
+    }
+
+    private String getVsBadgeBase64() {
+        if (cachedVsBadgeBase64 == null) {
+            cachedVsBadgeBase64 = encodeClasspathResource(VS_BADGE_CLASSPATH, "image/svg+xml");
+        }
+        return cachedVsBadgeBase64;
+    }
+
     private String encodeClasspathResource(String classpathLocation, String mimeType) {
         try {
             var resource = new ClassPathResource(classpathLocation);
@@ -208,6 +255,15 @@ public class TemplatePreviewService {
             log.warn("Failed to encode classpath resource: {}", classpathLocation, e);
         }
         return null;
+    }
+
+    private String formatTeamNameHtml(String name) {
+        if (name == null) return "";
+        String[] words = name.split("\\s+");
+        if (words.length <= 3) {
+            return String.join("<br>", words);
+        }
+        return words[0] + "<br>" + words[1] + "<br>" + String.join(" ", java.util.Arrays.copyOfRange(words, 2, words.length));
     }
 
     private String processTemplate(String template, Context ctx) {

@@ -109,7 +109,7 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
 - **Minimum:** 80% Line Coverage (Build bricht bei Unterschreitung)
 - **Report:** `target/site/jacoco/index.html` nach `./mvnw verify`
 - **CI:** Automatischer PR-Kommentar mit Coverage via `madrapps/jacoco-report`
-- **Excludes:** CtcManagerApplication, TestDataService, DemoDataSeeder, TeamCardService, LineupGraphicService (Playwright-abhaengig)
+- **Excludes:** CtcManagerApplication, TestDataService, DemoDataSeeder, TeamCardService, LineupGraphicService, ResultsGraphicService, SettingsGraphicService, OverlayGraphicService, AbstractGraphicService (Playwright-abhaengig)
 - **Schwellwert anpassen:** Erst messen (`jacoco.csv`), dann Minimum setzen — nie optimistisch raten
 
 ## Git-Workflow

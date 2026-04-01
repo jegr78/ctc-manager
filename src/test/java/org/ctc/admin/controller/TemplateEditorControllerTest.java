@@ -26,7 +26,7 @@ class TemplateEditorControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/template-editors"))
                 .andExpect(model().attributeExists("teamCardTemplate", "lineupTemplate", "settingsTemplate",
-                        "raceResultsTemplate", "activeTab"));
+                        "raceResultsTemplate", "overlayTemplate", "activeTab"));
     }
 
     @Test
@@ -181,6 +181,55 @@ class TemplateEditorControllerTest {
                 // then
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("95")));
+    }
+
+    @Test
+    void givenOverlayTabParam_whenGetTemplateEditors_thenReturnsOverlayTab() throws Exception {
+        // when
+        mockMvc.perform(get("/admin/tools/template-editors")
+                        .param("tab", "overlay"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/template-editors"))
+                .andExpect(model().attribute("activeTab", "overlay"))
+                .andExpect(model().attributeExists("overlayTemplate", "overlayIsCustom"));
+    }
+
+    @Test
+    void whenResetOverlayTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/overlay/reset"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tools/template-editors?tab=overlay"))
+                .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    @Test
+    void givenTemplateContent_whenSaveOverlayTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/overlay/save")
+                        .param("template", "<html>test overlay</html>"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tools/template-editors?tab=overlay"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        // cleanup
+        mockMvc.perform(post("/admin/tools/template-editors/overlay/reset"));
+    }
+
+    @Test
+    void givenOverlayTemplate_whenPreview_thenReturnsRenderedHtml() throws Exception {
+        // given
+        String template = "<html><body><span th:text=\"${homeTeamName}\"></span></body></html>";
+
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/overlay/preview")
+                        .param("template", template))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Team Alpha")));
     }
 
     @Test

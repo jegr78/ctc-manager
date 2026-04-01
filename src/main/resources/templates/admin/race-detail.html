@@ -59,6 +59,15 @@
                 <span th:if="${cardsMissing}">Team cards missing.</span>
             </small>
         </span>
+
+        <!-- Overlay Button -->
+        <form th:if="${canGenerateOverlay}" th:action="@{/admin/races/{id}/generate-overlay(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-primary">Generate Overlay Graphic</button>
+        </form>
+        <span th:if="${!canGenerateOverlay && !overlayExists}" style="display:inline-flex;align-items:center;gap:8px;">
+            <button class="btn btn-secondary" disabled style="opacity:0.5;">Generate Overlay Graphic</button>
+            <small class="text-dim">No match data.</small>
+        </span>
     </div>
 
     <!-- Score Banner -->

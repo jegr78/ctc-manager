@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style th:inline="text">
+        @font-face {
+            font-family: 'Conthrax';
+            src: url([[${fontBase64}]]) format('woff2');
+            font-weight: 600;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif;
+            background: transparent;
+            color: white;
+            position: relative;
+        }
+
+        /* Top bar: Team matchup — exact position from example */
+        .top-bar {
+            position: absolute;
+            left: 500px;
+            top: 0;
+            width: 921px;
+            height: 120px;
+            display: flex;
+            align-items: stretch;
+        }
+
+        .team-bar {
+            width: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+
+        .logo-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .team-logo {
+            width: 75px;
+            height: 75px;
+            object-fit: contain;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            padding: 5px;
+        }
+
+        .team-record {
+            font-size: 18px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5);
+            line-height: 1;
+        }
+
+        .team-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: #111;
+            text-shadow: 0 1px 3px rgba(255,255,255,0.3);
+            line-height: 1.15;
+        }
+
+        .team-bar.home .team-name {
+            text-align: left;
+        }
+
+        .team-bar.away .team-name {
+            text-align: left;
+        }
+
+        .vs-badge {
+            width: 120px;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.75);
+        }
+
+        .vs-badge img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        /* CTC Logo top-right corner */
+        .ctc-logo-corner {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        /* Bottom bar: Branding — exact position from example */
+        .bottom-wrapper {
+            position: absolute;
+            left: 218px;
+            top: 924px;
+            width: 1275px;
+            height: 148px;
+        }
+
+        .bottom-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #555 0%, #1a1a1a 100%);
+            display: flex;
+            align-items: center;
+            padding: 0 56px;
+            gap: 36px;
+            transform: skewX(-5deg);
+            border: 2px solid #777;
+            position: relative;
+        }
+
+        .bottom-bar > * {
+            transform: skewX(5deg);
+        }
+
+        .ctc-logo {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .ctc-text-block {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+        }
+
+        .ctc-text-line1 {
+            font-size: 40px;
+            font-weight: 700;
+            letter-spacing: 5px;
+            color: white;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .ctc-text-line2 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #ccc;
+            text-transform: uppercase;
+            line-height: 1.1;
+        }
+
+        .matchday-label {
+            position: absolute;
+            left: 804px;
+            top: 21px;
+            width: 134px;
+            height: 57px;
+            font-size: 48px;
+            font-weight: 900;
+            color: white;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: skewX(5deg);
+        }
+
+        .commentator-img {
+            position: absolute;
+            left: 1089px;
+            top: 6px;
+            width: 111px;
+            height: 111px;
+            object-fit: contain;
+            transform: skewX(5deg);
+        }
+    </style>
+</head>
+<body>
+    <!-- Top: Team matchup bar (absolute positioned) -->
+    <div class="top-bar">
+        <div class="team-bar home"
+             th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 80%, black) 0%, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 30%, white) 100%);'">
+            <span class="team-name" th:utext="${homeTeamNameHtml}"></span>
+            <div class="logo-block">
+                <img th:if="${homeLogoBase64 != null}" th:src="${homeLogoBase64}" alt="" class="team-logo">
+                <span class="team-record" th:text="${homeRecord}"></span>
+            </div>
+        </div>
+        <div class="vs-badge">
+            <img th:if="${vsBadgeBase64 != null}" th:src="${vsBadgeBase64}" alt="VS">
+        </div>
+        <div class="team-bar away"
+             th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 80%, black) 0%, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 30%, white) 100%);'">
+            <div class="logo-block">
+                <img th:if="${awayLogoBase64 != null}" th:src="${awayLogoBase64}" alt="" class="team-logo">
+                <span class="team-record" th:text="${awayRecord}"></span>
+            </div>
+            <span class="team-name" th:utext="${awayTeamNameHtml}"></span>
+        </div>
+    </div>
+
+    <!-- CTC Logo top-right -->
+    <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC" class="ctc-logo-corner">
+
+    <!-- Bottom: Branding bar (absolute positioned) -->
+    <div class="bottom-wrapper">
+        <div class="bottom-bar">
+            <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC" class="ctc-logo">
+            <div class="ctc-text-block">
+                <span class="ctc-text-line1">Community</span>
+                <span class="ctc-text-line2">Team Cup <span th:text="${seasonYear}"></span></span>
+            </div>
+            <span class="matchday-label" th:text="${matchdayName}"></span>
+            <img th:if="${commentatorBase64 != null}" th:src="${commentatorBase64}" alt="" class="commentator-img">
+        </div>
+    </div>
+</body>
+</html>

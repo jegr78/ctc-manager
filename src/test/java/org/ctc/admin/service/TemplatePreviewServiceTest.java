@@ -194,6 +194,30 @@ class TemplatePreviewServiceTest {
     }
 
     @Test
+    void givenOverlayTemplate_whenRenderPreview_thenContainsTeamData() {
+        // given
+        String template = """
+                <html><body>
+                <span th:text="${homeTeamName}"></span>
+                <span th:text="${awayTeamName}"></span>
+                <span th:text="${homeRecord}"></span>
+                <span th:text="${seasonYear}"></span>
+                <span th:text="${matchdayName}"></span>
+                </body></html>
+                """;
+
+        // when
+        String html = service.renderPreview("overlay", template);
+
+        // then
+        assertThat(html).contains("Team Alpha");
+        assertThat(html).contains("Team Bravo");
+        assertThat(html).contains("3 - 1 - 0");
+        assertThat(html).contains("2026");
+        assertThat(html).contains("Match Day 3");
+    }
+
+    @Test
     void givenInvalidTemplateType_whenRenderPreview_thenThrowsException() {
         // when / then
         assertThatThrownBy(() -> service.renderPreview("invalid-type", "<html></html>"))
@@ -203,7 +227,7 @@ class TemplatePreviewServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"team-cards", "lineup", "settings", "race-results",
-            "matchday-overview", "matchday-schedule", "matchday-results"})
+            "matchday-overview", "matchday-schedule", "matchday-results", "overlay"})
     void givenAnyTemplateType_whenRenderPreview_thenReturnsNonEmptyHtml(String templateType) {
         // given
         String template = "<html><body>Test</body></html>";

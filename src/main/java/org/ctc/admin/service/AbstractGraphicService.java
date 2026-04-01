@@ -46,6 +46,24 @@ public abstract class AbstractGraphicService {
         }
     }
 
+    protected void renderScreenshotTransparent(String html, Path outputFile) throws IOException {
+        Path tempFile = Files.createTempFile("graphic-", ".html");
+        Files.writeString(tempFile, html);
+
+        try (Playwright pw = Playwright.create();
+             Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+             Page page = browser.newPage(new Browser.NewPageOptions()
+                     .setViewportSize(1920, 1080))) {
+            page.navigate("file://" + tempFile.toAbsolutePath());
+            page.screenshot(new Page.ScreenshotOptions()
+                    .setPath(outputFile)
+                    .setFullPage(false)
+                    .setOmitBackground(true));
+        } finally {
+            Files.deleteIfExists(tempFile);
+        }
+    }
+
     protected String encodeCardBase64(String cardUrl) {
         if (cardUrl == null || !cardUrl.startsWith("/uploads/")) return null;
         try {
