@@ -155,4 +155,40 @@ class TemplateEditorControllerTest {
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=race-results"))
                 .andExpect(flash().attributeExists("successMessage"));
     }
+
+    @Test
+    void givenTeamCardTemplate_whenPreview_thenReturnsRenderedHtml() throws Exception {
+        // given
+        String template = "<html><body><span th:text=\"${teamName}\"></span></body></html>";
+
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/team-cards/preview")
+                        .param("template", template))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/html"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Team Alpha")));
+    }
+
+    @Test
+    void givenRaceResultsTemplate_whenPreview_thenReturnsRenderedHtml() throws Exception {
+        // given
+        String template = "<html><body><span th:text=\"${homeTotal}\"></span></body></html>";
+
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/race-results/preview")
+                        .param("template", template))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("95")));
+    }
+
+    @Test
+    void givenInvalidTemplateType_whenPreview_thenReturnsBadRequest() throws Exception {
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/invalid-type/preview")
+                        .param("template", "<html></html>"))
+                // then
+                .andExpect(status().isBadRequest());
+    }
 }

@@ -33,11 +33,24 @@
     </div>
 
     <!-- Team Cards Tab -->
-    <div th:if="${activeTab == 'team-cards'}" style="margin-top:16px;">
+    <div th:if="${activeTab == 'team-cards'}" style="margin-top:16px;" data-template-type="team-cards" data-preview-mode="portrait">
         <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
             <span th:if="${teamCardIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
             <span th:unless="${teamCardIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
         </div>
+        <!-- Preview -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <strong>Preview</strong>
+                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+            </div>
+            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
+                <div style="width:270px;height:480px;overflow:hidden;">
+                    <iframe class="preview-frame" style="width:1080px;height:1920px;border:none;transform:scale(0.25);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Editor + Variables -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div class="card" style="padding:0;display:flex;flex-direction:column;">
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
@@ -85,11 +98,24 @@
     </div>
 
     <!-- Lineup Tab -->
-    <div th:if="${activeTab == 'lineup'}" style="margin-top:16px;">
+    <div th:if="${activeTab == 'lineup'}" style="margin-top:16px;" data-template-type="lineup" data-preview-mode="landscape">
         <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
             <span th:if="${lineupIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
             <span th:unless="${lineupIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
         </div>
+        <!-- Preview -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <strong>Preview</strong>
+                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+            </div>
+            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
+                <div style="width:640px;height:360px;overflow:hidden;">
+                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Editor + Variables -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div class="card" style="padding:0;display:flex;flex-direction:column;">
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
@@ -137,11 +163,24 @@
     </div>
 
     <!-- Settings Tab -->
-    <div th:if="${activeTab == 'settings'}" style="margin-top:16px;">
+    <div th:if="${activeTab == 'settings'}" style="margin-top:16px;" data-template-type="settings" data-preview-mode="landscape">
         <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
             <span th:if="${settingsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
             <span th:unless="${settingsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
         </div>
+        <!-- Preview -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <strong>Preview</strong>
+                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+            </div>
+            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
+                <div style="width:640px;height:360px;overflow:hidden;">
+                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Editor + Variables -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div class="card" style="padding:0;display:flex;flex-direction:column;">
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
@@ -200,11 +239,24 @@
     </div>
 
     <!-- Race Results Tab -->
-    <div th:if="${activeTab == 'race-results'}" style="margin-top:16px;">
+    <div th:if="${activeTab == 'race-results'}" style="margin-top:16px;" data-template-type="race-results" data-preview-mode="landscape">
         <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
             <span th:if="${raceResultsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
             <span th:unless="${raceResultsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
         </div>
+        <!-- Preview -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <strong>Preview</strong>
+                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+            </div>
+            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
+                <div style="width:640px;height:360px;overflow:hidden;">
+                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Editor + Variables -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div class="card" style="padding:0;display:flex;flex-direction:column;">
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
@@ -254,11 +306,24 @@
     </div>
 
     <!-- Matchday Overview Tab -->
-    <div th:if="${activeTab == 'matchday-overview'}" style="margin-top:16px;">
+    <div th:if="${activeTab == 'matchday-overview'}" style="margin-top:16px;" data-template-type="matchday-overview" data-preview-mode="landscape">
         <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
             <span th:if="${matchdayOverviewIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
             <span th:unless="${matchdayOverviewIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
         </div>
+        <!-- Preview -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <strong>Preview</strong>
+                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+            </div>
+            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
+                <div style="width:640px;height:360px;overflow:hidden;">
+                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Editor + Variables -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div class="card" style="padding:0;display:flex;flex-direction:column;">
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
@@ -310,11 +375,24 @@
     </div>
 
     <!-- Matchday Schedule Tab -->
-    <div th:if="${activeTab == 'matchday-schedule'}" style="margin-top:16px;">
+    <div th:if="${activeTab == 'matchday-schedule'}" style="margin-top:16px;" data-template-type="matchday-schedule" data-preview-mode="landscape">
         <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
             <span th:if="${matchdayScheduleIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
             <span th:unless="${matchdayScheduleIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
         </div>
+        <!-- Preview -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <strong>Preview</strong>
+                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+            </div>
+            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
+                <div style="width:640px;height:360px;overflow:hidden;">
+                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Editor + Variables -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div class="card" style="padding:0;display:flex;flex-direction:column;">
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
@@ -360,11 +438,24 @@
     </div>
 
     <!-- Matchday Results Tab -->
-    <div th:if="${activeTab == 'matchday-results'}" style="margin-top:16px;">
+    <div th:if="${activeTab == 'matchday-results'}" style="margin-top:16px;" data-template-type="matchday-results" data-preview-mode="landscape">
         <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
             <span th:if="${matchdayResultsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
             <span th:unless="${matchdayResultsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
         </div>
+        <!-- Preview -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <strong>Preview</strong>
+                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+            </div>
+            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
+                <div style="width:640px;height:360px;overflow:hidden;">
+                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Editor + Variables -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
             <div class="card" style="padding:0;display:flex;flex-direction:column;">
                 <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
@@ -421,6 +512,54 @@
                     this.selectionStart = this.selectionEnd = start + 4;
                 }
             });
+        });
+
+        async function refreshPreview(tabEl) {
+            var templateType = tabEl.dataset.templateType;
+            var textarea = tabEl.querySelector('.template-textarea');
+            var iframe = tabEl.querySelector('.preview-frame');
+            var btn = tabEl.querySelector('.refresh-preview-btn');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Loading...';
+            }
+
+            try {
+                var response = await fetch('/admin/tools/template-editors/' + templateType + '/preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: 'template=' + encodeURIComponent(textarea.value)
+                });
+
+                if (!response.ok) {
+                    var errorText = await response.text();
+                    alert('Preview failed: ' + errorText);
+                    return;
+                }
+
+                var html = await response.text();
+                iframe.srcdoc = html;
+            } catch (err) {
+                alert('Preview failed: ' + err.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Refresh';
+                }
+            }
+        }
+
+        // Auto-load preview on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            var activeTab = document.querySelector('[data-template-type]');
+            if (activeTab) {
+                refreshPreview(activeTab);
+
+                activeTab.querySelector('.refresh-preview-btn').addEventListener('click', function() {
+                    refreshPreview(activeTab);
+                });
+            }
         });
     </script>
 </section>
