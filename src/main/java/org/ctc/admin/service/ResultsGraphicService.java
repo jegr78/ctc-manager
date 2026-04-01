@@ -20,6 +20,9 @@ import java.util.List;
 @Service
 public class ResultsGraphicService extends AbstractGraphicService {
 
+    private static final String DEFAULT_TEMPLATE = "templates/admin/results-render.html";
+    private static final String CUSTOM_TEMPLATE_FILE = "results-template.html";
+
     private final ScoringService scoringService;
 
     public ResultsGraphicService(TemplateEngine templateEngine,
@@ -64,7 +67,7 @@ public class ResultsGraphicService extends AbstractGraphicService {
         ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
         ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 
-        String html = templateEngine.process("admin/results-render", ctx);
+        String html = renderTemplate(ctx);
 
         Path raceDir = uploadDir.resolve("races").resolve(race.getId().toString());
         Files.createDirectories(raceDir);
@@ -74,6 +77,47 @@ public class ResultsGraphicService extends AbstractGraphicService {
 
         log.info("Generated results graphic: {}", outputFile);
         return "/uploads/races/" + race.getId() + "/results.png";
+    }
+
+    // Template management
+
+    private String renderTemplate(Context ctx) throws IOException {
+        Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
+        if (Files.exists(customTemplate)) {
+            String template = Files.readString(customTemplate);
+            return processStringTemplate(template, ctx);
+        }
+        return templateEngine.process("admin/results-render", ctx);
+    }
+
+    public String loadTemplate() throws IOException {
+        Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
+        if (Files.exists(customTemplate)) {
+            return Files.readString(customTemplate);
+        }
+        return loadDefaultTemplate();
+    }
+
+    public String loadDefaultTemplate() throws IOException {
+        var resource = new org.springframework.core.io.ClassPathResource(DEFAULT_TEMPLATE);
+        try (var is = resource.getInputStream()) {
+            return new String(is.readAllBytes());
+        }
+    }
+
+    public void saveTemplate(String content) throws IOException {
+        Files.createDirectories(uploadDir);
+        Files.writeString(uploadDir.resolve(CUSTOM_TEMPLATE_FILE), content);
+        log.info("Saved custom results template");
+    }
+
+    public void resetTemplate() throws IOException {
+        Files.deleteIfExists(uploadDir.resolve(CUSTOM_TEMPLATE_FILE));
+        log.info("Reset results template to default");
+    }
+
+    public boolean hasCustomTemplate() {
+        return Files.exists(uploadDir.resolve(CUSTOM_TEMPLATE_FILE));
     }
 
     List<DriverResultRow> buildResultRows(Race race) {

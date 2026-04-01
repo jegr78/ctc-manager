@@ -4,6 +4,7 @@ import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.MatchdayScheduleGraphicService;
+import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,7 @@ public class TemplateEditorController {
     private final MatchdayOverviewGraphicService matchdayOverviewGraphicService;
     private final MatchdayScheduleGraphicService matchdayScheduleGraphicService;
     private final MatchdayResultsGraphicService matchdayResultsGraphicService;
+    private final ResultsGraphicService resultsGraphicService;
 
     @GetMapping
     public String index(@RequestParam(defaultValue = "team-cards") String tab, Model model) {
@@ -51,6 +53,15 @@ public class TemplateEditorController {
             model.addAttribute("settingsTemplate", "");
             if (!model.containsAttribute("errorMessage")) {
                 model.addAttribute("errorMessage", "Failed to load settings template: " + e.getMessage());
+            }
+        }
+        try {
+            model.addAttribute("raceResultsTemplate", resultsGraphicService.loadTemplate());
+            model.addAttribute("raceResultsIsCustom", resultsGraphicService.hasCustomTemplate());
+        } catch (Exception e) {
+            model.addAttribute("raceResultsTemplate", "");
+            if (!model.containsAttribute("errorMessage")) {
+                model.addAttribute("errorMessage", "Failed to load race results template: " + e.getMessage());
             }
         }
         try {
@@ -148,6 +159,28 @@ public class TemplateEditorController {
             redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
         }
         return "redirect:/admin/tools/template-editors?tab=settings";
+    }
+
+    @PostMapping("/race-results/save")
+    public String saveRaceResultsTemplate(@RequestParam String template, RedirectAttributes redirectAttributes) {
+        try {
+            resultsGraphicService.saveTemplate(template);
+            redirectAttributes.addFlashAttribute("successMessage", "Race results template saved");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=race-results";
+    }
+
+    @PostMapping("/race-results/reset")
+    public String resetRaceResultsTemplate(RedirectAttributes redirectAttributes) {
+        try {
+            resultsGraphicService.resetTemplate();
+            redirectAttributes.addFlashAttribute("successMessage", "Race results template reset to default");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=race-results";
     }
 
     @PostMapping("/matchday-overview/save")
