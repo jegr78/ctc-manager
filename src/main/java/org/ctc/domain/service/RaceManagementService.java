@@ -3,6 +3,7 @@ package org.ctc.domain.service;
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.OverlayGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
@@ -51,6 +52,7 @@ public class RaceManagementService {
     private final LineupGraphicService lineupGraphicService;
     private final ResultsGraphicService resultsGraphicService;
     private final SettingsGraphicService settingsGraphicService;
+    private final OverlayGraphicService overlayGraphicService;
     private final TeamCardService teamCardService;
 
     @Value("${app.upload-dir:uploads}")
@@ -65,7 +67,8 @@ public class RaceManagementService {
                                  Map<UUID, String> driverTeamMap, boolean canGenerateLineup,
                                  boolean lineupMissing, boolean cardsMissing, boolean lineupExists,
                                  boolean canGenerateResults, boolean resultsMissing, boolean resultsExist,
-                                 boolean canGenerateSettings, boolean settingsMissing, boolean settingsExist) {}
+                                 boolean canGenerateSettings, boolean settingsMissing, boolean settingsExist,
+                                 boolean canGenerateOverlay, boolean overlayExists) {}
 
     public record ResultsFormData(RaceForm form, Race race, RaceScoring raceScoring) {}
 
@@ -154,13 +157,18 @@ public class RaceManagementService {
                 .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/settings.png"));
         boolean hasAllSettings = race.hasAllSettings() && race.getCar() != null && race.getTrack() != null;
 
+        boolean overlayExists = race.getAttachments().stream()
+                .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/overlay.png"));
+        boolean hasMatch = race.getMatch() != null && race.getHomeTeam() != null && race.getAwayTeam() != null;
+
         return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap,
                 hasLineup && hasHomeCard && hasAwayCard && !lineupExists,
                 !hasLineup, !hasHomeCard || !hasAwayCard, lineupExists,
                 hasResults && hasHomeCard && hasAwayCard && !resultsGraphicExists,
                 !hasResults, resultsGraphicExists,
                 hasAllSettings && hasHomeCard && hasAwayCard && !settingsGraphicExists,
-                !hasAllSettings, settingsGraphicExists);
+                !hasAllSettings, settingsGraphicExists,
+                hasMatch && !overlayExists, overlayExists);
     }
 
     // --- Form data for new race ---
@@ -434,6 +442,23 @@ public class RaceManagementService {
             raceAttachmentRepository.save(attachment);
         } catch (IOException e) {
             log.error("Settings graphic generation failed for race {}", raceId, e);
+            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
+        }
+    }
+
+    // --- Generate overlay ---
+
+    @Transactional
+    public void generateOverlay(UUID raceId) {
+        var race = raceRepository.findById(raceId).orElseThrow();
+        try {
+            String url = overlayGraphicService.generateOverlay(race);
+            String attachmentName = race.getMatchday().getLabel() + "-"
+                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Overlay";
+            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
+            raceAttachmentRepository.save(attachment);
+        } catch (IOException e) {
+            log.error("Overlay generation failed for race {}", raceId, e);
             throw new RuntimeException("Generation failed: " + e.getMessage(), e);
         }
     }

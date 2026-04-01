@@ -30,6 +30,9 @@
         <a th:href="@{/admin/tools/template-editors(tab='matchday-results')}"
            th:classappend="${activeTab == 'matchday-results' ? 'tab-active' : ''}"
            class="tab-btn">Matchday Results</a>
+        <a th:href="@{/admin/tools/template-editors(tab='overlay')}"
+           th:classappend="${activeTab == 'overlay' ? 'tab-active' : ''}"
+           class="tab-btn">Stream Overlay</a>
     </div>
 
     <!-- Team Cards Tab -->
@@ -495,6 +498,78 @@
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Scores are Match.homeScore / Match.awayScore</li>
                         <li>Records show current season W-L-D</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stream Overlay Tab -->
+    <div th:if="${activeTab == 'overlay'}" style="margin-top:16px;" data-template-type="overlay" data-preview-mode="landscape">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <span th:if="${overlayIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
+            <span th:unless="${overlayIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+        </div>
+        <!-- Preview -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <strong>Preview</strong>
+                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+            </div>
+            <div style="padding:16px;display:flex;justify-content:center;background:repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50%/20px 20px;overflow:hidden;">
+                <div style="width:640px;height:360px;overflow:hidden;">
+                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Editor + Variables -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card" style="padding:0;display:flex;flex-direction:column;">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <form th:action="@{/admin/tools/template-editors/overlay/reset}" method="post"
+                          onsubmit="return confirm('Reset to default template?')">
+                        <button type="submit" class="btn btn-danger btn-sm">Reset</button>
+                    </form>
+                </div>
+                <form th:action="@{/admin/tools/template-editors/overlay/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                    <textarea name="template" class="template-textarea" th:text="${overlayTemplate}"></textarea>
+                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                        <button type="submit" class="btn btn-primary">Save Template</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card" style="padding:16px;">
+                <strong>Available Variables</strong>
+                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>homeTeamName</code></td><td>Home team full name</td></tr>
+                        <tr><td><code>homeTeamShortName</code></td><td>Home team short name</td></tr>
+                        <tr><td><code>homeLogoBase64</code></td><td>Home team logo as data URI</td></tr>
+                        <tr><td><code>homePrimaryColor</code></td><td>Home primary color hex</td></tr>
+                        <tr><td><code>homeSecondaryColor</code></td><td>Home secondary color hex</td></tr>
+                        <tr><td><code>homeRecord</code></td><td>Home record (W-L-D)</td></tr>
+                        <tr><td><code>awayTeamName</code></td><td>Away team full name</td></tr>
+                        <tr><td><code>awayTeamShortName</code></td><td>Away team short name</td></tr>
+                        <tr><td><code>awayLogoBase64</code></td><td>Away team logo as data URI</td></tr>
+                        <tr><td><code>awayPrimaryColor</code></td><td>Away primary color hex</td></tr>
+                        <tr><td><code>awaySecondaryColor</code></td><td>Away secondary color hex</td></tr>
+                        <tr><td><code>awayRecord</code></td><td>Away record (W-L-D)</td></tr>
+                        <tr><td><code>seasonYear</code></td><td>Season year</td></tr>
+                        <tr><td><code>matchdayName</code></td><td>Matchday label (e.g. "MD 1")</td></tr>
+                        <tr><td><code>ctcLogoBase64</code></td><td>CTC logo as data URI</td></tr>
+                        <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:20px;">
+                    <strong>Tips</strong>
+                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                        <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
+                        <li>Body background MUST be transparent for OBS overlay</li>
+                        <li>The checkered preview background simulates transparency</li>
+                        <li>Use team colors for gradient effects with <code>color-mix()</code></li>
+                        <li>Middle area should remain empty/transparent for stream content</li>
                     </ul>
                 </div>
             </div>

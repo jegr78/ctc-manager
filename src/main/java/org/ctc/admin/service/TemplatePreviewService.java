@@ -33,6 +33,7 @@ public class TemplatePreviewService {
             case "matchday-overview" -> buildMatchdayOverviewContext();
             case "matchday-schedule" -> buildMatchdayScheduleContext();
             case "matchday-results" -> buildMatchdayResultsContext();
+            case "overlay" -> buildOverlayContext();
             default -> throw new IllegalArgumentException("Unknown template type: " + templateType);
         };
         return processTemplate(templateContent, ctx);
@@ -101,6 +102,30 @@ public class TemplatePreviewService {
         ctx.setVariable("awayTotal", 82);
         ctx.setVariable("homeIsWinner", true);
         ctx.setVariable("awayIsWinner", false);
+        return ctx;
+    }
+
+    private Context buildOverlayContext() {
+        var ctx = new Context();
+        var data = buildMatchdayData(false, true);
+        var match = data.matches().getFirst();
+
+        ctx.setVariable("homeTeamName", match.homeTeamName());
+        ctx.setVariable("homeTeamShortName", match.homeTeamShortName());
+        ctx.setVariable("homeLogoBase64", match.homeLogoBase64());
+        ctx.setVariable("homePrimaryColor", match.homePrimaryColor());
+        ctx.setVariable("homeSecondaryColor", match.homeSecondaryColor());
+        ctx.setVariable("homeRecord", match.homeRecord());
+        ctx.setVariable("awayTeamName", match.awayTeamName());
+        ctx.setVariable("awayTeamShortName", match.awayTeamShortName());
+        ctx.setVariable("awayLogoBase64", match.awayLogoBase64());
+        ctx.setVariable("awayPrimaryColor", match.awayPrimaryColor());
+        ctx.setVariable("awaySecondaryColor", match.awaySecondaryColor());
+        ctx.setVariable("awayRecord", match.awayRecord());
+        ctx.setVariable("seasonYear", data.seasonYear());
+        ctx.setVariable("matchdayName", data.matchdayLabel());
+        ctx.setVariable("ctcLogoBase64", getLogoBase64());
+        ctx.setVariable("fontBase64", getFontBase64());
         return ctx;
     }
 

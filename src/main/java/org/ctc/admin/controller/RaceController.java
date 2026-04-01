@@ -52,6 +52,8 @@ public class RaceController {
         model.addAttribute("canGenerateSettings", data.canGenerateSettings());
         model.addAttribute("settingsMissing", data.settingsMissing());
         model.addAttribute("settingsExist", data.settingsExist());
+        model.addAttribute("canGenerateOverlay", data.canGenerateOverlay());
+        model.addAttribute("overlayExists", data.overlayExists());
         return "admin/race-detail";
     }
 
@@ -185,6 +187,17 @@ public class RaceController {
         try {
             raceManagementService.generateSettings(id);
             redirectAttributes.addFlashAttribute("successMessage", "Settings graphic generated");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/races/" + id;
+    }
+
+    @PostMapping("/{id}/generate-overlay")
+    public String generateOverlay(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            raceManagementService.generateOverlay(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Overlay graphic generated");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
