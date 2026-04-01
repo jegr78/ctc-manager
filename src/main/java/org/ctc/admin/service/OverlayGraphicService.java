@@ -110,7 +110,11 @@ public class OverlayGraphicService extends AbstractGraphicService {
 
     String formatTeamNameHtml(String name) {
         if (name == null) return "";
-        return String.join("<br>", name.split("\\s+"));
+        String[] words = name.split("\\s+");
+        if (words.length <= 3) {
+            return String.join("<br>", words);
+        }
+        return words[0] + "<br>" + words[1] + "<br>" + String.join(" ", java.util.Arrays.copyOfRange(words, 2, words.length));
     }
 
     // Template management
