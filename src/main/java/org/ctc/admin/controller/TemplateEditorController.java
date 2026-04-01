@@ -7,8 +7,11 @@ import org.ctc.admin.service.MatchdayScheduleGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
+import org.ctc.admin.service.TemplatePreviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +30,7 @@ public class TemplateEditorController {
     private final MatchdayScheduleGraphicService matchdayScheduleGraphicService;
     private final MatchdayResultsGraphicService matchdayResultsGraphicService;
     private final ResultsGraphicService resultsGraphicService;
+    private final TemplatePreviewService templatePreviewService;
 
     @GetMapping
     public String index(@RequestParam(defaultValue = "team-cards") String tab, Model model) {
@@ -247,5 +251,22 @@ public class TemplateEditorController {
             redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
         }
         return "redirect:/admin/tools/template-editors?tab=matchday-results";
+    }
+
+    @PostMapping("/{templateType}/preview")
+    @ResponseBody
+    public ResponseEntity<String> preview(@PathVariable String templateType,
+                                          @RequestParam String template) {
+        try {
+            String html = templatePreviewService.renderPreview(templateType, template);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(html);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Unknown template type: " + templateType);
+        } catch (Exception e) {
+            log.error("Preview failed for template type: {}", templateType, e);
+            return ResponseEntity.internalServerError().body("Preview failed: " + e.getMessage());
+        }
     }
 }
