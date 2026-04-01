@@ -109,18 +109,19 @@ public class Gt7SyncService {
             }
         }
 
-        // Phase 3: Download all images in parallel
+        // Phase 3: Download images in parallel (IO only), then update DB on main thread
+        var carImageResults = java.util.Collections.synchronizedList(new ArrayList<ImageResult<CarImageTask>>());
+        var trackImageResults = java.util.Collections.synchronizedList(new ArrayList<ImageResult<TrackImageTask>>());
+
         var allFutures = new ArrayList<java.util.concurrent.CompletableFuture<Void>>();
 
         for (var task : carsToDownload) {
             allFutures.add(java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
                     String localPath = fileStorageService.storeFromUrl("cars", task.car.getId(), task.imageUrl, task.gt7Id + ".png");
-                    task.car.setImageUrl(localPath);
-                    carRepository.save(task.car);
+                    carImageResults.add(new ImageResult<>(task, localPath, null));
                 } catch (Exception e) {
-                    log.warn("Image download failed for car {}: {}", task.gt7Id, e.getMessage());
-                    errors.add("Image download failed for " + task.car.getManufacturer() + " " + task.car.getName());
+                    carImageResults.add(new ImageResult<>(task, null, e));
                 }
             }));
         }
@@ -129,16 +130,35 @@ public class Gt7SyncService {
             allFutures.add(java.util.concurrent.CompletableFuture.runAsync(() -> {
                 try {
                     String localPath = fileStorageService.storeFromUrl("tracks", task.track.getId(), task.imageUrl, task.trackId + ".png");
-                    task.track.setImageUrl(localPath);
-                    trackRepository.save(task.track);
+                    trackImageResults.add(new ImageResult<>(task, localPath, null));
                 } catch (Exception e) {
-                    log.warn("Image download failed for track {}: {}", task.track.getName(), e.getMessage());
-                    errors.add("Image download failed for " + task.track.getName());
+                    trackImageResults.add(new ImageResult<>(task, null, e));
                 }
             }));
         }
 
         java.util.concurrent.CompletableFuture.allOf(allFutures.toArray(new java.util.concurrent.CompletableFuture[0])).join();
+
+        // Update entities on main thread (within transaction)
+        for (var result : carImageResults) {
+            if (result.error != null) {
+                log.warn("Image download failed for car {}: {}", result.task.gt7Id, result.error.getMessage());
+                errors.add("Image download failed for " + result.task.car.getManufacturer() + " " + result.task.car.getName());
+            } else {
+                result.task.car.setImageUrl(result.localPath);
+                carRepository.save(result.task.car);
+            }
+        }
+
+        for (var result : trackImageResults) {
+            if (result.error != null) {
+                log.warn("Image download failed for track {}: {}", result.task.track.getName(), result.error.getMessage());
+                errors.add("Image download failed for " + result.task.track.getName());
+            } else {
+                result.task.track.setImageUrl(result.localPath);
+                trackRepository.save(result.task.track);
+            }
+        }
 
         long durationSeconds = (System.currentTimeMillis() - startTime) / 1000;
         log.info("GT7 sync completed in {}s: {} cars, {} tracks, {} errors",
@@ -149,6 +169,7 @@ public class Gt7SyncService {
 
     private record CarImageTask(Car car, String imageUrl, String gt7Id) {}
     private record TrackImageTask(Track track, String imageUrl, String trackId) {}
+    private record ImageResult<T>(T task, String localPath, Exception error) {}
 
     public record SyncResult(int carsImported, int tracksImported, List<String> errors, long durationSeconds) {}
 }
