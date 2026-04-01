@@ -20,26 +20,23 @@
             position: relative;
         }
 
-        /* Top bar: Team matchup — centered */
+        /* Top bar: Team matchup — exact position from example */
         .top-bar {
-            display: flex;
-            justify-content: center;
-            padding: 0;
-        }
-
-        .matchup {
+            position: absolute;
+            left: 500px;
+            top: 0;
+            width: 921px;
+            height: 120px;
             display: flex;
             align-items: stretch;
-            height: 90px;
-            width: 700px;
         }
 
         .team-bar {
             flex: 1;
             display: flex;
             align-items: center;
-            padding: 0 14px;
-            gap: 10px;
+            padding: 0 16px;
+            gap: 12px;
         }
 
         .team-bar.home {
@@ -51,12 +48,12 @@
         }
 
         .team-logo {
-            width: 56px;
-            height: 56px;
+            width: 70px;
+            height: 70px;
             object-fit: contain;
             background: rgba(255,255,255,0.15);
             border-radius: 50%;
-            padding: 5px;
+            padding: 6px;
         }
 
         .team-info {
@@ -74,7 +71,7 @@
         }
 
         .team-name {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 700;
             color: white;
             white-space: nowrap;
@@ -83,7 +80,7 @@
         }
 
         .team-record {
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 600;
             color: rgba(255,255,255,0.7);
             text-shadow: 0 1px 3px rgba(0,0,0,0.8);
@@ -91,8 +88,8 @@
         }
 
         .vs-badge {
-            width: 100px;
-            min-width: 100px;
+            width: 120px;
+            min-width: 120px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -100,8 +97,18 @@
         }
 
         .vs-badge img {
-            width: 64px;
-            height: 64px;
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        /* CTC Logo top-right corner */
+        .ctc-logo-corner {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 80px;
+            height: 80px;
             object-fit: contain;
         }
 
@@ -124,6 +131,7 @@
             gap: 36px;
             transform: skewX(-5deg);
             border: 2px solid #777;
+            position: relative;
         }
 
         .bottom-bar > * {
@@ -163,57 +171,60 @@
         }
 
         .matchday-label {
-            font-size: 52px;
+            position: absolute;
+            left: 804px;
+            top: 21px;
+            width: 134px;
+            height: 57px;
+            font-size: 48px;
             font-weight: 900;
             color: white;
             letter-spacing: 2px;
             text-transform: uppercase;
             white-space: nowrap;
-        }
-
-        .commentator-wrapper {
-            position: relative;
-            width: 120px;
-            height: 100%;
-            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: skewX(5deg);
         }
 
         .commentator-img {
             position: absolute;
-            bottom: 0;
-            right: -10px;
-            width: 160px;
-            height: 160px;
+            left: 1089px;
+            top: 6px;
+            width: 111px;
+            height: 111px;
             object-fit: contain;
             transform: skewX(5deg);
         }
     </style>
 </head>
 <body>
-    <!-- Top: Team matchup bar (centered) -->
+    <!-- Top: Team matchup bar (absolute positioned) -->
     <div class="top-bar">
-        <div class="matchup">
-            <div class="team-bar home"
-                 th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 80%, black) 0%, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 30%, white) 100%);'">
-                <img th:if="${homeLogoBase64 != null}" th:src="${homeLogoBase64}" alt="" class="team-logo">
-                <div class="team-info home">
-                    <span class="team-name" th:text="${homeTeamName}"></span>
-                    <span class="team-record" th:text="${homeRecord}"></span>
-                </div>
-            </div>
-            <div class="vs-badge">
-                <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="VS">
-            </div>
-            <div class="team-bar away"
-                 th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 30%, white) 0%, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 80%, black) 100%);'">
-                <div class="team-info away">
-                    <span class="team-name" th:text="${awayTeamName}"></span>
-                    <span class="team-record" th:text="${awayRecord}"></span>
-                </div>
-                <img th:if="${awayLogoBase64 != null}" th:src="${awayLogoBase64}" alt="" class="team-logo">
+        <div class="team-bar home"
+             th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 80%, black) 0%, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 30%, white) 100%);'">
+            <img th:if="${homeLogoBase64 != null}" th:src="${homeLogoBase64}" alt="" class="team-logo">
+            <div class="team-info home">
+                <span class="team-name" th:text="${homeTeamName}"></span>
+                <span class="team-record" th:text="${homeRecord}"></span>
             </div>
         </div>
+        <div class="vs-badge">
+            <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="VS">
+        </div>
+        <div class="team-bar away"
+             th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 30%, white) 0%, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 80%, black) 100%);'">
+            <div class="team-info away">
+                <span class="team-name" th:text="${awayTeamName}"></span>
+                <span class="team-record" th:text="${awayRecord}"></span>
+            </div>
+            <img th:if="${awayLogoBase64 != null}" th:src="${awayLogoBase64}" alt="" class="team-logo">
+        </div>
     </div>
+
+    <!-- CTC Logo top-right -->
+    <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC" class="ctc-logo-corner">
 
     <!-- Bottom: Branding bar (absolute positioned) -->
     <div class="bottom-wrapper">
@@ -224,9 +235,7 @@
                 <span class="ctc-text-line2">Team Cup <span th:text="${seasonYear}"></span></span>
             </div>
             <span class="matchday-label" th:text="${matchdayName}"></span>
-            <div class="commentator-wrapper">
-                <img th:if="${commentatorBase64 != null}" th:src="${commentatorBase64}" alt="" class="commentator-img">
-            </div>
+            <img th:if="${commentatorBase64 != null}" th:src="${commentatorBase64}" alt="" class="commentator-img">
         </div>
     </div>
 </body>
