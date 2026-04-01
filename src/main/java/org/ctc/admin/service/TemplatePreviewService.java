@@ -20,9 +20,11 @@ public class TemplatePreviewService {
 
     private static final String FONT_CLASSPATH = "static/admin/fonts/ConthraxSb.woff2";
     private static final String CTC_LOGO_CLASSPATH = "static/admin/img/ctc-logo-white.png";
+    private static final String COMMENTATOR_CLASSPATH = "static/admin/img/commentator.png";
 
     private String cachedFontBase64;
     private String cachedLogoBase64;
+    private String cachedCommentatorBase64;
 
     public String renderPreview(String templateType, String templateContent) {
         var ctx = switch (templateType) {
@@ -125,6 +127,7 @@ public class TemplatePreviewService {
         ctx.setVariable("seasonYear", data.seasonYear());
         ctx.setVariable("matchdayName", data.matchdayLabel());
         ctx.setVariable("ctcLogoBase64", getLogoBase64());
+        ctx.setVariable("commentatorBase64", getCommentatorBase64());
         ctx.setVariable("fontBase64", getFontBase64());
         return ctx;
     }
@@ -218,6 +221,13 @@ public class TemplatePreviewService {
             cachedLogoBase64 = encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png");
         }
         return cachedLogoBase64;
+    }
+
+    private String getCommentatorBase64() {
+        if (cachedCommentatorBase64 == null) {
+            cachedCommentatorBase64 = encodeClasspathResource(COMMENTATOR_CLASSPATH, "image/png");
+        }
+        return cachedCommentatorBase64;
     }
 
     private String encodeClasspathResource(String classpathLocation, String mimeType) {

@@ -26,6 +26,7 @@ public class OverlayGraphicService extends AbstractGraphicService {
 
     private static final String DEFAULT_TEMPLATE = "templates/admin/overlay-render.html";
     private static final String CUSTOM_TEMPLATE_FILE = "overlay-template.html";
+    private static final String COMMENTATOR_CLASSPATH = "static/admin/img/commentator.png";
 
     private final StandingsService standingsService;
     private final SeasonTeamRepository seasonTeamRepository;
@@ -77,6 +78,7 @@ public class OverlayGraphicService extends AbstractGraphicService {
         ctx.setVariable("seasonYear", String.valueOf(season.getYear()));
         ctx.setVariable("matchdayName", race.getMatchday().getLabel());
         ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
+        ctx.setVariable("commentatorBase64", encodeClasspathResource(COMMENTATOR_CLASSPATH, "image/png"));
         ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 
         String html = renderTemplate(ctx);
