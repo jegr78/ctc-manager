@@ -1,6 +1,8 @@
 package org.ctc.admin.service;
 
+import org.ctc.admin.service.TemplatePreviewService.TemplateSecurityException;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -238,5 +240,82 @@ class TemplatePreviewServiceTest {
         // then
         assertThat(html).isNotEmpty();
         assertThat(html).contains("Test");
+    }
+
+    @Nested
+    class TemplateSecurity {
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "<span th:text=\"${T(java.lang.Runtime).getRuntime()}\"></span>",
+                "<span th:text=\"${T( java.lang.Runtime )}\"></span>"
+        })
+        void givenSpringElTypeAccess_whenValidate_thenRejectsTemplate(String template) {
+            // when / then
+            assertThatThrownBy(() -> service.validateTemplateContent(template))
+                    .isInstanceOf(TemplateSecurityException.class);
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {
+                "Runtime", "ProcessBuilder", "getClass(", "Class.forName",
+                "ClassLoader", "URLClassLoader", "ScriptEngine",
+                "javax.script", "java.lang.reflect"
+        })
+        void givenBlockedToken_whenValidate_thenRejectsTemplate(String token) {
+            // given
+            String template = "<span th:text=\"${" + token + "}\">";
+
+            // when / then
+            assertThatThrownBy(() -> service.validateTemplateContent(template))
+                    .isInstanceOf(TemplateSecurityException.class);
+        }
+
+        @Test
+        void givenOgnlStaticAccess_whenValidate_thenRejectsTemplate() {
+            // given
+            String template = "<span th:text=\"${@java.lang.System@getenv()}\">";
+
+            // when / then
+            assertThatThrownBy(() -> service.validateTemplateContent(template))
+                    .isInstanceOf(TemplateSecurityException.class);
+        }
+
+        @Test
+        void givenExpressionPreprocessing_whenValidate_thenRejectsTemplate() {
+            // given
+            String template = "<span th:text=\"__${malicious}__\">";
+
+            // when / then
+            assertThatThrownBy(() -> service.validateTemplateContent(template))
+                    .isInstanceOf(TemplateSecurityException.class);
+        }
+
+        @Test
+        void givenSafeTemplate_whenValidate_thenAcceptsTemplate() {
+            // given
+            String template = """
+                    <html><body>
+                    <span th:text="${teamName}"></span>
+                    <div th:each="p : ${pairings}">
+                        <span th:text="${p.homeDriver}"></span>
+                    </div>
+                    <style>@font-face { font-family: 'Test'; }</style>
+                    </body></html>
+                    """;
+
+            // when / then (no exception)
+            service.validateTemplateContent(template);
+        }
+
+        @Test
+        void givenMaliciousTemplate_whenRenderPreview_thenThrowsSecurityException() {
+            // given
+            String template = "<span th:text=\"${T(java.lang.Runtime).getRuntime()}\"></span>";
+
+            // when / then
+            assertThatThrownBy(() -> service.renderPreview("team-cards", template))
+                    .isInstanceOf(TemplateSecurityException.class);
+        }
     }
 }

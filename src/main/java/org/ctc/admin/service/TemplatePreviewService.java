@@ -23,6 +23,14 @@ public class TemplatePreviewService {
     private static final String COMMENTATOR_CLASSPATH = "static/admin/img/commentator.png";
     private static final String VS_BADGE_CLASSPATH = "static/admin/img/vs-badge.svg";
 
+    private static final List<String> BLOCKED_TOKENS = List.of(
+            "Runtime", "ProcessBuilder", "getClass(", "Class.forName",
+            ".exec(", ".invoke(", "newInstance(", "getMethod(",
+            "getDeclaredMethod(", "getField(", "getDeclaredField(",
+            "ClassLoader", "URLClassLoader", "ScriptEngine",
+            "javax.script", "java.lang.reflect"
+    );
+
     private String cachedFontBase64;
     private String cachedLogoBase64;
     private String cachedCommentatorBase64;
@@ -266,12 +274,70 @@ public class TemplatePreviewService {
         return words[0] + "<br>" + words[1] + "<br>" + String.join(" ", java.util.Arrays.copyOfRange(words, 2, words.length));
     }
 
-    private String processTemplate(String template, Context ctx) {
+    private String processTemplate(String templateContent, Context ctx) {
+        validateTemplateContent(templateContent);
         var engine = new SpringTemplateEngine();
         var resolver = new StringTemplateResolver();
         resolver.setTemplateMode(TemplateMode.HTML);
         engine.setTemplateResolver(resolver);
-        return engine.process(template, ctx);
+        return engine.process(templateContent, ctx);
+    }
+
+    void validateTemplateContent(String templateContent) {
+        if (templateContent == null) {
+            return;
+        }
+        for (String token : BLOCKED_TOKENS) {
+            if (templateContent.contains(token)) {
+                throw new TemplateSecurityException("Template contains blocked expression: " + token);
+            }
+        }
+        if (containsSpringElTypeAccess(templateContent)) {
+            throw new TemplateSecurityException("Template contains blocked expression pattern");
+        }
+        if (templateContent.contains("__${")) {
+            throw new TemplateSecurityException("Template contains blocked expression pattern");
+        }
+        if (containsOgnlStaticAccess(templateContent)) {
+            throw new TemplateSecurityException("Template contains blocked expression pattern");
+        }
+    }
+
+    private boolean containsSpringElTypeAccess(String content) {
+        int idx = 0;
+        while ((idx = content.indexOf('T', idx)) != -1) {
+            int next = idx + 1;
+            while (next < content.length() && content.charAt(next) == ' ') {
+                next++;
+            }
+            if (next < content.length() && content.charAt(next) == '(') {
+                return true;
+            }
+            idx++;
+        }
+        return false;
+    }
+
+    private boolean containsOgnlStaticAccess(String content) {
+        int idx = 0;
+        while ((idx = content.indexOf("${", idx)) != -1) {
+            int end = content.indexOf('}', idx + 2);
+            if (end == -1) break;
+            String expr = content.substring(idx + 2, end);
+            for (int i = 0; i < expr.length() - 1; i++) {
+                if (expr.charAt(i) == '@' && Character.isLetterOrDigit(expr.charAt(i + 1))) {
+                    return true;
+                }
+            }
+            idx = end + 1;
+        }
+        return false;
+    }
+
+    public static class TemplateSecurityException extends RuntimeException {
+        public TemplateSecurityException(String message) {
+            super(message);
+        }
     }
 
     // Records for template preview data

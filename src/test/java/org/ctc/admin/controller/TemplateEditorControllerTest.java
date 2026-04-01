@@ -7,6 +7,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -238,6 +239,40 @@ class TemplateEditorControllerTest {
         mockMvc.perform(post("/admin/tools/template-editors/invalid-type/preview")
                         .param("template", "<html></html>"))
                 // then
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("text/plain"))
+                .andExpect(content().string("Unknown template type"));
+    }
+
+    @Test
+    void givenMaliciousTemplate_whenPreview_thenReturnsBadRequest() throws Exception {
+        // given
+        String maliciousTemplate = "<span th:text=\"${T(java.lang.Runtime).getRuntime()}\"></span>";
+
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/team-cards/preview")
+                        .param("template", maliciousTemplate))
+                // then
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith("text/plain"))
+                .andExpect(content().string("Template contains unsafe expressions"));
+    }
+
+    @Test
+    void givenErrorResponseOnPreview_thenDoesNotExposeExceptionDetails() throws Exception {
+        // given — template that causes a rendering error (undefined variable used with strict mode syntax)
+        String badTemplate = "<span th:text=\"${#undefined.method()}\"></span>";
+
+        // when
+        var result = mockMvc.perform(post("/admin/tools/template-editors/team-cards/preview")
+                        .param("template", badTemplate))
+                // then
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().contentTypeCompatibleWith("text/plain"))
+                .andReturn();
+
+        // Error message must not contain exception class names or stack traces
+        String body = result.getResponse().getContentAsString();
+        assertThat(body).isEqualTo("Preview failed");
     }
 }
