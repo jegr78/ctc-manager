@@ -296,10 +296,19 @@ public class TemplateEditorController {
                     .contentType(MediaType.TEXT_HTML)
                     .body(html);
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Unknown template type: " + templateType);
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Unknown template type");
+        } catch (TemplatePreviewService.TemplateSecurityException e) {
+            log.warn("Blocked unsafe template preview: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Template contains unsafe expressions");
         } catch (Exception e) {
             log.error("Preview failed for template type: {}", templateType, e);
-            return ResponseEntity.internalServerError().body("Preview failed: " + e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body("Preview failed");
         }
     }
 }

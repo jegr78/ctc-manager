@@ -13,6 +13,7 @@ import org.thymeleaf.templateresolver.StringTemplateResolver;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -22,6 +23,20 @@ public class TemplatePreviewService {
     private static final String CTC_LOGO_CLASSPATH = "static/admin/img/ctc-logo-white.png";
     private static final String COMMENTATOR_CLASSPATH = "static/admin/img/commentator.png";
     private static final String VS_BADGE_CLASSPATH = "static/admin/img/vs-badge.svg";
+
+    private static final List<String> BLOCKED_TOKENS = List.of(
+            "Runtime", "ProcessBuilder", "getClass(", "Class.forName",
+            ".exec(", ".invoke(", "newInstance(", "getMethod(",
+            "getDeclaredMethod(", "getField(", "getDeclaredField(",
+            "ClassLoader", "URLClassLoader", "ScriptEngine",
+            "javax.script", "java.lang.reflect"
+    );
+
+    private static final Pattern BLOCKED_EXPRESSION_PATTERN = Pattern.compile(
+            "T\\s*\\("          // SpringEL type access T(...)
+            + "|__\\$\\{"       // Thymeleaf expression preprocessing __${...}__
+            + "|\\$\\{[^}]*@\\w" // OGNL static method access @Class@method inside ${}
+    );
 
     private String cachedFontBase64;
     private String cachedLogoBase64;
@@ -266,12 +281,33 @@ public class TemplatePreviewService {
         return words[0] + "<br>" + words[1] + "<br>" + String.join(" ", java.util.Arrays.copyOfRange(words, 2, words.length));
     }
 
-    private String processTemplate(String template, Context ctx) {
+    private String processTemplate(String templateContent, Context ctx) {
+        validateTemplateContent(templateContent);
         var engine = new SpringTemplateEngine();
         var resolver = new StringTemplateResolver();
         resolver.setTemplateMode(TemplateMode.HTML);
         engine.setTemplateResolver(resolver);
-        return engine.process(template, ctx);
+        return engine.process(templateContent, ctx);
+    }
+
+    void validateTemplateContent(String templateContent) {
+        if (templateContent == null) {
+            return;
+        }
+        for (String token : BLOCKED_TOKENS) {
+            if (templateContent.contains(token)) {
+                throw new TemplateSecurityException("Template contains blocked expression: " + token);
+            }
+        }
+        if (BLOCKED_EXPRESSION_PATTERN.matcher(templateContent).find()) {
+            throw new TemplateSecurityException("Template contains blocked expression pattern");
+        }
+    }
+
+    public static class TemplateSecurityException extends RuntimeException {
+        public TemplateSecurityException(String message) {
+            super(message);
+        }
     }
 
     // Records for template preview data
