@@ -65,12 +65,14 @@ public class OverlayGraphicService extends AbstractGraphicService {
 
         var ctx = new Context();
         ctx.setVariable("homeTeamName", homeTeam.getName());
+        ctx.setVariable("homeTeamNameHtml", formatTeamNameHtml(homeTeam.getName()));
         ctx.setVariable("homeTeamShortName", homeTeam.getShortName());
         ctx.setVariable("homeLogoBase64", encodeLogoBase64(homeTeam, homeSt));
         ctx.setVariable("homePrimaryColor", homeSt != null ? homeSt.getEffectivePrimaryColor() : homeTeam.getPrimaryColor());
         ctx.setVariable("homeSecondaryColor", homeSt != null ? homeSt.getEffectiveSecondaryColor() : homeTeam.getSecondaryColor());
         ctx.setVariable("homeRecord", formatRecord(standingMap.get(homeTeam.getId())));
         ctx.setVariable("awayTeamName", awayTeam.getName());
+        ctx.setVariable("awayTeamNameHtml", formatTeamNameHtml(awayTeam.getName()));
         ctx.setVariable("awayTeamShortName", awayTeam.getShortName());
         ctx.setVariable("awayLogoBase64", encodeLogoBase64(awayTeam, awaySt));
         ctx.setVariable("awayPrimaryColor", awaySt != null ? awaySt.getEffectivePrimaryColor() : awayTeam.getPrimaryColor());
@@ -104,6 +106,11 @@ public class OverlayGraphicService extends AbstractGraphicService {
     private String formatRecord(TeamStanding standing) {
         if (standing == null) return "0-0-0";
         return standing.getWins() + "-" + standing.getLosses() + "-" + standing.getDraws();
+    }
+
+    String formatTeamNameHtml(String name) {
+        if (name == null) return "";
+        return String.join("<br>", name.split("\\s+"));
     }
 
     // Template management

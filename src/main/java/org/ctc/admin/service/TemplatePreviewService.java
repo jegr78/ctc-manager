@@ -115,12 +115,14 @@ public class TemplatePreviewService {
         var match = data.matches().getFirst();
 
         ctx.setVariable("homeTeamName", match.homeTeamName());
+        ctx.setVariable("homeTeamNameHtml", formatTeamNameHtml(match.homeTeamName()));
         ctx.setVariable("homeTeamShortName", match.homeTeamShortName());
         ctx.setVariable("homeLogoBase64", match.homeLogoBase64());
         ctx.setVariable("homePrimaryColor", match.homePrimaryColor());
         ctx.setVariable("homeSecondaryColor", match.homeSecondaryColor());
         ctx.setVariable("homeRecord", match.homeRecord());
         ctx.setVariable("awayTeamName", match.awayTeamName());
+        ctx.setVariable("awayTeamNameHtml", formatTeamNameHtml(match.awayTeamName()));
         ctx.setVariable("awayTeamShortName", match.awayTeamShortName());
         ctx.setVariable("awayLogoBase64", match.awayLogoBase64());
         ctx.setVariable("awayPrimaryColor", match.awayPrimaryColor());
@@ -253,6 +255,11 @@ public class TemplatePreviewService {
             log.warn("Failed to encode classpath resource: {}", classpathLocation, e);
         }
         return null;
+    }
+
+    private String formatTeamNameHtml(String name) {
+        if (name == null) return "";
+        return String.join("<br>", name.split("\\s+"));
     }
 
     private String processTemplate(String template, Context ctx) {

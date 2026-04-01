@@ -35,16 +35,8 @@
             width: 400px;
             display: flex;
             align-items: center;
-            padding: 0 12px;
-            gap: 10px;
-        }
-
-        .team-bar.home {
-            flex-direction: row;
-        }
-
-        .team-bar.away {
-            flex-direction: row-reverse;
+            justify-content: space-between;
+            padding: 0 10px;
         }
 
         .logo-block {
@@ -56,8 +48,8 @@
         }
 
         .team-logo {
-            width: 65px;
-            height: 65px;
+            width: 75px;
+            height: 75px;
             object-fit: contain;
             background: rgba(255,255,255,0.15);
             border-radius: 50%;
@@ -78,9 +70,6 @@
             color: white;
             text-shadow: 0 2px 4px rgba(0,0,0,0.8);
             line-height: 1.15;
-            max-width: 200px;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
         }
 
         .team-bar.home .team-name {
@@ -208,22 +197,22 @@
     <div class="top-bar">
         <div class="team-bar home"
              th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 80%, black) 0%, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 30%, white) 100%);'">
+            <span class="team-name" th:utext="${homeTeamNameHtml}"></span>
             <div class="logo-block">
                 <img th:if="${homeLogoBase64 != null}" th:src="${homeLogoBase64}" alt="" class="team-logo">
                 <span class="team-record" th:text="${homeRecord}"></span>
             </div>
-            <span class="team-name" th:text="${homeTeamName}"></span>
         </div>
         <div class="vs-badge">
             <img th:if="${vsBadgeBase64 != null}" th:src="${vsBadgeBase64}" alt="VS">
         </div>
         <div class="team-bar away"
              th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 30%, white) 0%, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 80%, black) 100%);'">
-            <span class="team-name" th:text="${awayTeamName}"></span>
             <div class="logo-block">
                 <img th:if="${awayLogoBase64 != null}" th:src="${awayLogoBase64}" alt="" class="team-logo">
                 <span class="team-record" th:text="${awayRecord}"></span>
             </div>
+            <span class="team-name" th:utext="${awayTeamNameHtml}"></span>
         </div>
     </div>
 
