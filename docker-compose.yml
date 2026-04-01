@@ -26,6 +26,7 @@ services:
     volumes:
       - ctc-uploads:/app/uploads
       - ctc-site-output:/app/ctc-site-output
+      - ctc-logs:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -40,3 +41,4 @@ volumes:
   ctc-db-data:
   ctc-uploads:
   ctc-site-output:
+  ctc-logs:

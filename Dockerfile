@@ -30,7 +30,7 @@ RUN groupadd -r ctc && useradd -r -g ctc ctc
 WORKDIR /app
 
 # Verzeichnisse fuer Uploads und Site-Output
-RUN mkdir -p /app/uploads /app/ctc-site-output && chown -R ctc:ctc /app
+RUN mkdir -p /app/uploads /app/ctc-site-output /app/logs && chown -R ctc:ctc /app
 
 # JAR aus Build-Stage kopieren
 COPY --from=build --chown=ctc:ctc /build/target/ctc-manager-*.jar /app/ctc-manager.jar
