@@ -33,11 +33,12 @@
                 <tr>
                     <th class="sortable" data-col="0">Season</th>
                     <th class="sortable" data-col="1">Matchday</th>
-                    <th class="sortable" data-col="2">Home</th>
+                    <th class="sortable" data-col="2">Date</th>
+                    <th class="sortable" data-col="3">Home</th>
                     <th></th>
-                    <th class="sortable" data-col="4">Away</th>
-                    <th class="sortable" data-col="5">Track</th>
-                    <th class="sortable" data-col="6">Car</th>
+                    <th class="sortable" data-col="5">Away</th>
+                    <th class="sortable" data-col="6">Track</th>
+                    <th class="sortable" data-col="7">Car</th>
                     <th>Context</th>
                     <th style="text-align:center;">Score</th>
                     <th>Actions</th>
@@ -53,6 +54,8 @@
                         <a th:href="@{/admin/matchdays/{id}(id=${race.matchday.id})}" class="detail-link"
                            th:text="${race.matchday.label}"></a>
                     </td>
+                    <td class="text-dim" style="font-size:13px; white-space:nowrap;"
+                        th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                     <td>
                         <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link">
                             <strong th:text="${race.homeTeam?.shortName ?: '-'}"></strong>
