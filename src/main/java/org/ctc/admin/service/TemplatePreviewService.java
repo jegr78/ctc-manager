@@ -13,7 +13,6 @@ import org.thymeleaf.templateresolver.StringTemplateResolver;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
-import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -30,12 +29,6 @@ public class TemplatePreviewService {
             "getDeclaredMethod(", "getField(", "getDeclaredField(",
             "ClassLoader", "URLClassLoader", "ScriptEngine",
             "javax.script", "java.lang.reflect"
-    );
-
-    private static final Pattern BLOCKED_EXPRESSION_PATTERN = Pattern.compile(
-            "T\\s*\\("          // SpringEL type access T(...)
-            + "|__\\$\\{"       // Thymeleaf expression preprocessing __${...}__
-            + "|\\$\\{[^}@]*@\\w" // OGNL static method access @Class@method inside ${} ([^}@] prevents ReDoS)
     );
 
     private String cachedFontBase64;
@@ -299,9 +292,46 @@ public class TemplatePreviewService {
                 throw new TemplateSecurityException("Template contains blocked expression: " + token);
             }
         }
-        if (BLOCKED_EXPRESSION_PATTERN.matcher(templateContent).find()) {
+        if (containsSpringElTypeAccess(templateContent)) {
             throw new TemplateSecurityException("Template contains blocked expression pattern");
         }
+        if (templateContent.contains("__${")) {
+            throw new TemplateSecurityException("Template contains blocked expression pattern");
+        }
+        if (containsOgnlStaticAccess(templateContent)) {
+            throw new TemplateSecurityException("Template contains blocked expression pattern");
+        }
+    }
+
+    private boolean containsSpringElTypeAccess(String content) {
+        int idx = 0;
+        while ((idx = content.indexOf('T', idx)) != -1) {
+            int next = idx + 1;
+            while (next < content.length() && content.charAt(next) == ' ') {
+                next++;
+            }
+            if (next < content.length() && content.charAt(next) == '(') {
+                return true;
+            }
+            idx++;
+        }
+        return false;
+    }
+
+    private boolean containsOgnlStaticAccess(String content) {
+        int idx = 0;
+        while ((idx = content.indexOf("${", idx)) != -1) {
+            int end = content.indexOf('}', idx + 2);
+            if (end == -1) break;
+            String expr = content.substring(idx + 2, end);
+            for (int i = 0; i < expr.length() - 1; i++) {
+                if (expr.charAt(i) == '@' && Character.isLetterOrDigit(expr.charAt(i + 1))) {
+                    return true;
+                }
+            }
+            idx = end + 1;
+        }
+        return false;
     }
 
     public static class TemplateSecurityException extends RuntimeException {
