@@ -21,10 +21,12 @@ public class TemplatePreviewService {
     private static final String FONT_CLASSPATH = "static/admin/fonts/ConthraxSb.woff2";
     private static final String CTC_LOGO_CLASSPATH = "static/admin/img/ctc-logo-white.png";
     private static final String COMMENTATOR_CLASSPATH = "static/admin/img/commentator.png";
+    private static final String VS_BADGE_CLASSPATH = "static/admin/img/vs-badge.svg";
 
     private String cachedFontBase64;
     private String cachedLogoBase64;
     private String cachedCommentatorBase64;
+    private String cachedVsBadgeBase64;
 
     public String renderPreview(String templateType, String templateContent) {
         var ctx = switch (templateType) {
@@ -127,6 +129,7 @@ public class TemplatePreviewService {
         ctx.setVariable("seasonYear", data.seasonYear());
         ctx.setVariable("matchdayName", data.matchdayLabel());
         ctx.setVariable("ctcLogoBase64", getLogoBase64());
+        ctx.setVariable("vsBadgeBase64", getVsBadgeBase64());
         ctx.setVariable("commentatorBase64", getCommentatorBase64());
         ctx.setVariable("fontBase64", getFontBase64());
         return ctx;
@@ -228,6 +231,13 @@ public class TemplatePreviewService {
             cachedCommentatorBase64 = encodeClasspathResource(COMMENTATOR_CLASSPATH, "image/png");
         }
         return cachedCommentatorBase64;
+    }
+
+    private String getVsBadgeBase64() {
+        if (cachedVsBadgeBase64 == null) {
+            cachedVsBadgeBase64 = encodeClasspathResource(VS_BADGE_CLASSPATH, "image/svg+xml");
+        }
+        return cachedVsBadgeBase64;
     }
 
     private String encodeClasspathResource(String classpathLocation, String mimeType) {

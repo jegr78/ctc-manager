@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <!-- Gradient for VS text (top-light to bottom-dark) -->
+    <linearGradient id="vsGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ddd"/>
+      <stop offset="100%" stop-color="#666"/>
+    </linearGradient>
+  </defs>
+  <!-- Circle -->
+  <circle cx="100" cy="100" r="90" fill="white" stroke="#222" stroke-width="8"/>
+  <!-- Lightning bolt behind text -->
+  <polygon points="112,8 68,108 98,108 84,192 136,88 106,88" fill="#1a1a1a"/>
+  <!-- VS text shadow -->
+  <text x="102" y="142" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="80" font-weight="900" fill="#333" opacity="0.5">VS</text>
+  <!-- VS text main -->
+  <text x="100" y="140" text-anchor="middle" font-family="Arial Black, Impact, sans-serif" font-size="80" font-weight="900" fill="url(#vsGrad)" stroke="#333" stroke-width="3">VS</text>
+</svg>
