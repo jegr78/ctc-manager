@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Spring Boot Defaults (CONSOLE_LOG_PATTERN, Farben, etc.) -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- Log-Verzeichnis: profil-abhaengig -->
+    <springProfile name="docker | prod">
+        <property name="LOG_DIR" value="/app/logs"/>
+    </springProfile>
+    <springProfile name="!docker &amp; !prod">
+        <property name="LOG_DIR" value="./logs"/>
+    </springProfile>
+
+    <!-- Console Appender (Spring Boot Default-Pattern) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- File Appender mit Rolling Policy -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/ctc-manager.log</file>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- Taegliche Rotation mit Groessen-Split -->
+            <fileNamePattern>${LOG_DIR}/archived/ctc-manager.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <!-- Max Groesse pro Datei bevor Split innerhalb eines Tages -->
+            <maxFileSize>50MB</maxFileSize>
+            <!-- Archive aelter als 7 Tage loeschen -->
+            <maxHistory>7</maxHistory>
+            <!-- Gesamtlimit ueber alle archivierten Dateien -->
+            <totalSizeCap>500MB</totalSizeCap>
+            <!-- Beim Start alte Archive aufraeumen -->
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+
+    <!-- Root Logger: Console + File -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>
