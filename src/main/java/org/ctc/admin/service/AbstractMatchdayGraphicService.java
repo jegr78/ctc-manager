@@ -6,7 +6,9 @@ import org.ctc.admin.dto.MatchdayGraphicData.MatchGraphicRow;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.service.StandingsService;
 import org.ctc.domain.service.StandingsService.TeamStanding;
 import org.springframework.core.io.ClassPathResource;
@@ -18,7 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -30,12 +31,15 @@ public abstract class AbstractMatchdayGraphicService extends AbstractGraphicServ
             DateTimeFormatter.ofPattern("EEE, dd MMM. HH:mm z", Locale.ENGLISH);
 
     protected final StandingsService standingsService;
+    protected final SeasonTeamRepository seasonTeamRepository;
 
     protected AbstractMatchdayGraphicService(TemplateEngine templateEngine,
                                              StandingsService standingsService,
+                                             SeasonTeamRepository seasonTeamRepository,
                                              String uploadDir) {
         super(templateEngine, uploadDir);
         this.standingsService = standingsService;
+        this.seasonTeamRepository = seasonTeamRepository;
     }
 
     protected abstract String getTemplateFileName();
@@ -54,12 +58,17 @@ public abstract class AbstractMatchdayGraphicService extends AbstractGraphicServ
             standingMap.put(standing.getTeam().getId(), standing);
         }
 
+        Map<UUID, SeasonTeam> seasonTeamMap = new HashMap<>();
+        for (var st : seasonTeamRepository.findBySeasonId(season.getId())) {
+            seasonTeamMap.put(st.getTeam().getId(), st);
+        }
+
         var rows = matchday.getMatches().stream()
                 .filter(m -> !m.isBye())
                 .sorted(Comparator.comparing(
                         this::getEarliestDateTime,
                         Comparator.nullsLast(Comparator.naturalOrder())))
-                .map(m -> buildMatchRow(m, seedMap, standingMap, season.getId().toString()))
+                .map(m -> buildMatchRow(m, seedMap, standingMap, seasonTeamMap))
                 .toList();
 
         return new MatchdayGraphicData(
@@ -73,19 +82,26 @@ public abstract class AbstractMatchdayGraphicService extends AbstractGraphicServ
     }
 
     private MatchGraphicRow buildMatchRow(Match match, Map<UUID, Integer> seedMap,
-                                          Map<UUID, TeamStanding> standingMap, String seasonId) {
+                                          Map<UUID, TeamStanding> standingMap,
+                                          Map<UUID, SeasonTeam> seasonTeamMap) {
         var home = match.getHomeTeam();
         var away = match.getAwayTeam();
+        var homeSt = seasonTeamMap.get(home.getId());
+        var awaySt = seasonTeamMap.get(away.getId());
 
         return new MatchGraphicRow(
                 home.getName(), home.getShortName(),
-                encodeLogoBase64(home),
-                home.getPrimaryColor(), home.getSecondaryColor(), home.getAccentColor(),
+                encodeLogoBase64(home, homeSt),
+                homeSt != null ? homeSt.getEffectivePrimaryColor() : home.getPrimaryColor(),
+                homeSt != null ? homeSt.getEffectiveSecondaryColor() : home.getSecondaryColor(),
+                homeSt != null ? homeSt.getEffectiveAccentColor() : home.getAccentColor(),
                 seedMap.getOrDefault(home.getId(), 0),
                 formatRecord(standingMap.get(home.getId())),
                 away.getName(), away.getShortName(),
-                encodeLogoBase64(away),
-                away.getPrimaryColor(), away.getSecondaryColor(), away.getAccentColor(),
+                encodeLogoBase64(away, awaySt),
+                awaySt != null ? awaySt.getEffectivePrimaryColor() : away.getPrimaryColor(),
+                awaySt != null ? awaySt.getEffectiveSecondaryColor() : away.getSecondaryColor(),
+                awaySt != null ? awaySt.getEffectiveAccentColor() : away.getAccentColor(),
                 seedMap.getOrDefault(away.getId(), 0),
                 formatRecord(standingMap.get(away.getId())),
                 formatScheduledDateTime(match),
@@ -94,9 +110,10 @@ public abstract class AbstractMatchdayGraphicService extends AbstractGraphicServ
         );
     }
 
-    private String encodeLogoBase64(Team team) {
-        if (team.getLogoUrl() == null) return null;
-        return encodeCardBase64(team.getLogoUrl());
+    private String encodeLogoBase64(Team team, SeasonTeam seasonTeam) {
+        String logoUrl = seasonTeam != null ? seasonTeam.getEffectiveLogoUrl() : team.getLogoUrl();
+        if (logoUrl == null) return null;
+        return encodeCardBase64(logoUrl);
     }
 
     private String formatRecord(TeamStanding standing) {

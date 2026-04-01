@@ -14,7 +14,7 @@ class MatchdayOverviewGraphicServiceTest {
     Path tempDir;
 
     private MatchdayOverviewGraphicService createService() {
-        return new MatchdayOverviewGraphicService(null, null, tempDir.toString());
+        return new MatchdayOverviewGraphicService(null, null, null, tempDir.toString());
     }
 
     @Test

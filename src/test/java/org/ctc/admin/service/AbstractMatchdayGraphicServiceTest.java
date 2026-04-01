@@ -2,6 +2,7 @@ package org.ctc.admin.service;
 
 import org.ctc.admin.dto.MatchdayGraphicData;
 import org.ctc.domain.model.*;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.service.StandingsService;
 import org.ctc.domain.service.StandingsService.TeamStanding;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,13 +28,16 @@ class AbstractMatchdayGraphicServiceTest {
     Path tempDir;
 
     private StandingsService standingsService;
+    private SeasonTeamRepository seasonTeamRepository;
     private TestableMatchdayGraphicService service;
 
     // Concrete subclass for testing the abstract class
     static class TestableMatchdayGraphicService extends AbstractMatchdayGraphicService {
 
-        TestableMatchdayGraphicService(StandingsService standingsService, String uploadDir) {
-            super(null, standingsService, uploadDir);
+        TestableMatchdayGraphicService(StandingsService standingsService,
+                                       SeasonTeamRepository seasonTeamRepository,
+                                       String uploadDir) {
+            super(null, standingsService, seasonTeamRepository, uploadDir);
         }
 
         @Override
@@ -50,7 +54,8 @@ class AbstractMatchdayGraphicServiceTest {
     @BeforeEach
     void setUp() {
         standingsService = mock(StandingsService.class);
-        service = new TestableMatchdayGraphicService(standingsService, tempDir.toString());
+        seasonTeamRepository = mock(SeasonTeamRepository.class);
+        service = new TestableMatchdayGraphicService(standingsService, seasonTeamRepository, tempDir.toString());
     }
 
     private Season createSeason() {
@@ -74,6 +79,8 @@ class AbstractMatchdayGraphicServiceTest {
         var match = new Match(matchday, homeTeam, awayTeam);
         match.setId(UUID.randomUUID());
         matchday.getMatches().add(match);
+        when(seasonTeamRepository.findBySeasonId(season.getId()))
+                .thenReturn(List.copyOf(season.getSeasonTeams()));
         return matchday;
     }
 
@@ -267,6 +274,37 @@ class AbstractMatchdayGraphicServiceTest {
 
         // then
         assertThat(data.matches().getFirst().scheduledDateTime()).isNull();
+    }
+
+    @Test
+    void givenSeasonTeamWithOverriddenColors_whenPrepareBaseContext_thenUsesSeasonColors() {
+        // given
+        var season = createSeason();
+        var homeTeam = createTeam("Home Team", "HOM", "#111111", "#222222", "#333333");
+        var awayTeam = createTeam("Away Team", "AWY", "#444444", "#555555", "#666666");
+        season.addTeam(homeTeam);
+        season.addTeam(awayTeam);
+
+        // Override season-specific colors for home team
+        var homeSeasonTeam = season.getSeasonTeams().stream()
+                .filter(st -> st.getTeam().getId().equals(homeTeam.getId()))
+                .findFirst().orElseThrow();
+        homeSeasonTeam.setPrimaryColor("#aa0000");
+        homeSeasonTeam.setSecondaryColor("#bb0000");
+
+        var matchday = createMatchdayWithMatches(season, homeTeam, awayTeam);
+        when(standingsService.calculateStandings(season.getId())).thenReturn(List.of());
+
+        // when
+        var data = service.prepareBaseContext(matchday);
+
+        // then — home uses season-specific colors, away falls back to team colors
+        var row = data.matches().getFirst();
+        assertThat(row.homePrimaryColor()).isEqualTo("#aa0000");
+        assertThat(row.homeSecondaryColor()).isEqualTo("#bb0000");
+        assertThat(row.homeAccentColor()).isEqualTo("#333333"); // no override, falls back
+        assertThat(row.awayPrimaryColor()).isEqualTo("#444444"); // no override
+        assertThat(row.awaySecondaryColor()).isEqualTo("#555555");
     }
 
     // Template management tests

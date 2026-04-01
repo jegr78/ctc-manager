@@ -1,6 +1,7 @@
 package org.ctc.admin.service;
 
 import org.ctc.domain.model.*;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.service.StandingsService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,7 +21,7 @@ class MatchdayScheduleGraphicServiceTest {
     Path tempDir;
 
     private MatchdayScheduleGraphicService createService() {
-        return new MatchdayScheduleGraphicService(null, null, tempDir.toString());
+        return new MatchdayScheduleGraphicService(null, null, null, tempDir.toString());
     }
 
     @Test
@@ -40,7 +41,8 @@ class MatchdayScheduleGraphicServiceTest {
     void givenMatchesWithDifferentDateTimes_whenPrepareBaseContext_thenSortedByDateTime() {
         // given
         var standingsService = mock(StandingsService.class);
-        var service = new MatchdayScheduleGraphicService(null, standingsService, tempDir.toString());
+        var seasonTeamRepository = mock(SeasonTeamRepository.class);
+        var service = new MatchdayScheduleGraphicService(null, standingsService, seasonTeamRepository, tempDir.toString());
 
         var season = new Season("CTC", 2026, 1);
         season.setId(UUID.randomUUID());
@@ -90,6 +92,8 @@ class MatchdayScheduleGraphicServiceTest {
         matchday.getMatches().addAll(List.of(match1, match2, match3));
 
         when(standingsService.calculateStandings(season.getId())).thenReturn(List.of());
+        when(seasonTeamRepository.findBySeasonId(season.getId()))
+                .thenReturn(List.copyOf(season.getSeasonTeams()));
 
         // when
         var data = service.prepareBaseContext(matchday);
