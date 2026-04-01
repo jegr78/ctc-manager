@@ -73,7 +73,7 @@
         }
 
         .team-bar.home .team-name {
-            text-align: right;
+            text-align: left;
         }
 
         .team-bar.away .team-name {
@@ -207,7 +207,7 @@
             <img th:if="${vsBadgeBase64 != null}" th:src="${vsBadgeBase64}" alt="VS">
         </div>
         <div class="team-bar away"
-             th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 30%, white) 0%, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 80%, black) 100%);'">
+             th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 80%, black) 0%, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 30%, white) 100%);'">
             <div class="logo-block">
                 <img th:if="${awayLogoBase64 != null}" th:src="${awayLogoBase64}" alt="" class="team-logo">
                 <span class="team-record" th:text="${awayRecord}"></span>
