@@ -12,7 +12,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -237,10 +240,14 @@ class AbstractMatchdayGraphicServiceTest {
         // when
         var data = service.prepareBaseContext(matchday);
 
-        // then
+        // then — earliest race (19:30 system time) converted to Europe/London
         var row = data.matches().getFirst();
-        // Europe/London in March = GMT
-        assertThat(row.scheduledDateTime()).isEqualTo("Fri, 20 Mar. 19:30 GMT");
+        var expectedLondon = LocalDateTime.of(2026, 3, 20, 19, 30)
+                .atZone(ZoneId.systemDefault())
+                .withZoneSameInstant(ZoneId.of("Europe/London"));
+        var expectedFormatted = expectedLondon.format(
+                DateTimeFormatter.ofPattern("EEE, dd MMM. HH:mm z", Locale.ENGLISH));
+        assertThat(row.scheduledDateTime()).isEqualTo(expectedFormatted);
     }
 
     @Test

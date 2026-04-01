@@ -115,7 +115,9 @@ public abstract class AbstractMatchdayGraphicService extends AbstractGraphicServ
     private String formatScheduledDateTime(Match match) {
         var earliest = getEarliestDateTime(match);
         if (earliest == null) return null;
-        return ZonedDateTime.of(earliest, LONDON_ZONE).format(SCHEDULE_FORMAT);
+        var sourceTime = earliest.atZone(ZoneId.systemDefault());
+        var londonTime = sourceTime.withZoneSameInstant(LONDON_ZONE);
+        return londonTime.format(SCHEDULE_FORMAT);
     }
 
     // Template management
