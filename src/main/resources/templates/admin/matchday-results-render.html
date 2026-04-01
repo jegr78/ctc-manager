@@ -111,12 +111,14 @@
             font-weight: 700;
             color: white;
             white-space: nowrap;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
         }
 
         .team-record {
             font-size: 14px;
             font-weight: 600;
             color: rgba(255,255,255,0.7);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
         }
 
         .vs {
@@ -150,7 +152,7 @@
     <div class="matches">
         <div class="match-row" th:each="m : ${data.matches}">
             <div class="team-bar home"
-                 th:style="'background: linear-gradient(90deg, ' + ${m.homePrimaryColor ?: '#333'} + ' 0%, #222 100%);'">
+                 th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${m.homePrimaryColor ?: '#333'} + ' 70%, black) 0%, #222 100%);'">
                 <img th:if="${m.homeLogoBase64 != null}" th:src="${m.homeLogoBase64}" alt="" class="team-logo">
                 <div class="team-info home">
                     <span class="team-name" th:text="${m.homeTeamShortName}"></span>
@@ -159,7 +161,7 @@
             </div>
             <span class="vs">VS</span>
             <div class="team-bar away"
-                 th:style="'background: linear-gradient(90deg, #222 0%, ' + ${m.awayPrimaryColor ?: '#333'} + ' 100%);'">
+                 th:style="'background: linear-gradient(90deg, #222 0%, color-mix(in srgb, ' + ${m.awayPrimaryColor ?: '#333'} + ' 70%, black) 100%);'">
                 <div class="team-info away">
                     <span class="team-name" th:text="${m.awayTeamShortName}"></span>
                     <span class="team-record" th:text="${m.awayRecord}"></span>
