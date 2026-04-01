@@ -32,59 +32,63 @@
         }
 
         .team-bar {
-            flex: 1;
+            width: 400px;
             display: flex;
             align-items: center;
-            padding: 0 16px;
-            gap: 12px;
+            padding: 0 12px;
+            gap: 10px;
         }
 
         .team-bar.home {
-            justify-content: flex-start;
+            flex-direction: row;
         }
 
         .team-bar.away {
-            justify-content: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .logo-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
         }
 
         .team-logo {
-            width: 70px;
-            height: 70px;
+            width: 65px;
+            height: 65px;
             object-fit: contain;
             background: rgba(255,255,255,0.15);
             border-radius: 50%;
-            padding: 6px;
-        }
-
-        .team-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .team-info.home {
-            align-items: flex-end;
-        }
-
-        .team-info.away {
-            align-items: flex-start;
-        }
-
-        .team-name {
-            font-size: 24px;
-            font-weight: 700;
-            color: white;
-            white-space: nowrap;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-            line-height: 1.2;
+            padding: 5px;
         }
 
         .team-record {
-            font-size: 16px;
-            font-weight: 600;
-            color: rgba(255,255,255,0.7);
-            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-            line-height: 1.2;
+            font-size: 18px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5);
+            line-height: 1;
+        }
+
+        .team-name {
+            font-size: 22px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            line-height: 1.15;
+            max-width: 200px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .team-bar.home .team-name {
+            text-align: right;
+        }
+
+        .team-bar.away .team-name {
+            text-align: left;
         }
 
         .vs-badge {
@@ -204,22 +208,22 @@
     <div class="top-bar">
         <div class="team-bar home"
              th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 80%, black) 0%, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 30%, white) 100%);'">
-            <img th:if="${homeLogoBase64 != null}" th:src="${homeLogoBase64}" alt="" class="team-logo">
-            <div class="team-info home">
-                <span class="team-name" th:text="${homeTeamName}"></span>
+            <div class="logo-block">
+                <img th:if="${homeLogoBase64 != null}" th:src="${homeLogoBase64}" alt="" class="team-logo">
                 <span class="team-record" th:text="${homeRecord}"></span>
             </div>
+            <span class="team-name" th:text="${homeTeamName}"></span>
         </div>
         <div class="vs-badge">
             <img th:if="${vsBadgeBase64 != null}" th:src="${vsBadgeBase64}" alt="VS">
         </div>
         <div class="team-bar away"
              th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 30%, white) 0%, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 80%, black) 100%);'">
-            <div class="team-info away">
-                <span class="team-name" th:text="${awayTeamName}"></span>
+            <span class="team-name" th:text="${awayTeamName}"></span>
+            <div class="logo-block">
+                <img th:if="${awayLogoBase64 != null}" th:src="${awayLogoBase64}" alt="" class="team-logo">
                 <span class="team-record" th:text="${awayRecord}"></span>
             </div>
-            <img th:if="${awayLogoBase64 != null}" th:src="${awayLogoBase64}" alt="" class="team-logo">
         </div>
     </div>
 
