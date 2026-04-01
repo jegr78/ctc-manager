@@ -14,7 +14,7 @@ class MatchdayResultsGraphicServiceTest {
     Path tempDir;
 
     private MatchdayResultsGraphicService createService() {
-        return new MatchdayResultsGraphicService(null, null, tempDir.toString());
+        return new MatchdayResultsGraphicService(null, null, null, tempDir.toString());
     }
 
     @Test
