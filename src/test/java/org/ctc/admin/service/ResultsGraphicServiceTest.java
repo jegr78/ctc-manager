@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.UUID;
 
 
+import java.io.IOException;
+import java.nio.file.Files;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -143,5 +146,72 @@ class ResultsGraphicServiceTest {
         assertThat(rows.get(2).homePoints()).isEqualTo(14);
         assertThat(rows.get(2).awayDriver()).isEmpty();
         assertThat(rows.get(2).awayPoints()).isZero();
+    }
+
+    @Test
+    void whenNoCustomTemplate_thenHasCustomTemplateReturnsFalse() {
+        // when / then
+        var service = createService();
+        assertThat(service.hasCustomTemplate()).isFalse();
+    }
+
+    @Test
+    void givenCustomTemplate_whenHasCustomTemplate_thenReturnsTrue() throws IOException {
+        // given
+        var service = createService();
+        Files.writeString(tempDir.resolve("results-template.html"), "<html>custom</html>");
+
+        // when / then
+        assertThat(service.hasCustomTemplate()).isTrue();
+    }
+
+    @Test
+    void whenLoadTemplate_thenReturnsDefaultTemplate() throws IOException {
+        // when
+        var service = createService();
+        String template = service.loadTemplate();
+
+        // then
+        assertThat(template).contains("resultRows");
+    }
+
+    @Test
+    void givenCustomTemplate_whenLoadTemplate_thenReturnsCustomContent() throws IOException {
+        // given
+        var service = createService();
+        String customContent = "<html>custom results template</html>";
+        Files.writeString(tempDir.resolve("results-template.html"), customContent);
+
+        // when
+        String template = service.loadTemplate();
+
+        // then
+        assertThat(template).isEqualTo(customContent);
+    }
+
+    @Test
+    void givenTemplateContent_whenSaveTemplate_thenWritesFile() throws IOException {
+        // given
+        var service = createService();
+        String content = "<html>saved template</html>";
+
+        // when
+        service.saveTemplate(content);
+
+        // then
+        assertThat(Files.readString(tempDir.resolve("results-template.html"))).isEqualTo(content);
+    }
+
+    @Test
+    void givenCustomTemplate_whenResetTemplate_thenDeletesFile() throws IOException {
+        // given
+        var service = createService();
+        Files.writeString(tempDir.resolve("results-template.html"), "<html>custom</html>");
+
+        // when
+        service.resetTemplate();
+
+        // then
+        assertThat(service.hasCustomTemplate()).isFalse();
     }
 }

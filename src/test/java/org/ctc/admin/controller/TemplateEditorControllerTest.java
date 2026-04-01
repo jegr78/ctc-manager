@@ -25,7 +25,8 @@ class TemplateEditorControllerTest {
                 // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/template-editors"))
-                .andExpect(model().attributeExists("teamCardTemplate", "lineupTemplate", "settingsTemplate", "activeTab"));
+                .andExpect(model().attributeExists("teamCardTemplate", "lineupTemplate", "settingsTemplate",
+                        "raceResultsTemplate", "activeTab"));
     }
 
     @Test
@@ -117,6 +118,41 @@ class TemplateEditorControllerTest {
                 // then
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/tools/template-editors?tab=settings"))
+                .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    @Test
+    void givenRaceResultsTabParam_whenGetTemplateEditors_thenReturnsRaceResultsTabWithTemplate() throws Exception {
+        // when
+        mockMvc.perform(get("/admin/tools/template-editors")
+                        .param("tab", "race-results"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/template-editors"))
+                .andExpect(model().attribute("activeTab", "race-results"))
+                .andExpect(model().attributeExists("raceResultsTemplate", "raceResultsIsCustom"));
+    }
+
+    @Test
+    void givenTemplateContent_whenSaveRaceResultsTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/race-results/save")
+                        .param("template", "<html>Test_Race_Results_Template</html>"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tools/template-editors?tab=race-results"))
+                .andExpect(flash().attributeExists("successMessage"));
+        // Cleanup: reset to avoid leftover custom template on disk
+        mockMvc.perform(post("/admin/tools/template-editors/race-results/reset"));
+    }
+
+    @Test
+    void whenResetRaceResultsTemplate_thenRedirectsWithSuccess() throws Exception {
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/race-results/reset"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tools/template-editors?tab=race-results"))
                 .andExpect(flash().attributeExists("successMessage"));
     }
 }
