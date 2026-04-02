@@ -1,18 +1,38 @@
 package org.ctc.admin;
 
-import org.ctc.domain.model.*;
-import org.ctc.domain.repository.*;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+
+import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.Match;
+import org.ctc.domain.model.MatchScoring;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.model.RaceScoring;
+import org.ctc.domain.model.RaceSettings;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.DriverRepository;
+import org.ctc.domain.repository.MatchRepository;
+import org.ctc.domain.repository.MatchScoringRepository;
+import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.RaceScoringRepository;
+import org.ctc.domain.repository.SeasonDriverRepository;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.TeamRepository;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -134,16 +154,16 @@ public class TestDataService {
 
         // Older seasons: all parent teams
         for (var entry : List.of(
-                new Object[]{"Season 1 - 2023 - Group A", 2023, 1, "Group A"},
-                new Object[]{"Season 1 - 2023 - Group B", 2023, 1, "Group B"},
-                new Object[]{"Season 2 - 2024", 2024, 2, null})) {
+                new Object[]{"Group A", 2023, 1, "Group A, Regular Season"},
+                new Object[]{"Group B", 2023, 1, "Group B, Regular Season"},
+                new Object[]{"Regular Season", 2024, 2, "Round Robin"})) {
             var season = createSeason((String) entry[0], (int) entry[1], (int) entry[2], (String) entry[3], scorings);
             parentTeams.forEach(season::addTeam);
             seasonRepository.save(season);
         }
 
         // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
-        var s3a = createSeason("Season 3 - 2025 - Group A", 2025, 3, "Group A", scorings);
+        var s3a = createSeason("Group A", 2025, 3, "Group A, Regular Season", scorings);
         List.of(
                 findSub.apply("P1Rx"),
                 findParent.apply("CLR"),
@@ -154,7 +174,7 @@ public class TestDataService {
         seasonRepository.save(s3a);
 
         // Season 3 - 2025 - Group B: P1R parent + P1R sub-team, AHR, DTR, ART
-        var s3b = createSeason("Season 3 - 2025 - Group B", 2025, 3, "Group B", scorings);
+        var s3b = createSeason("Group B", 2025, 3, "Group B, Regular Season", scorings);
         List.of(
                 findParent.apply("P1R"),
                 findSub.apply("P1R"),
@@ -165,7 +185,7 @@ public class TestDataService {
         seasonRepository.save(s3b);
 
         // Season 4 - 2026: all parents with subs + standalone parents
-        var s4 = createSeason("Season 4 - 2026", 2026, 4, null, scorings);
+        var s4 = createSeason("Regular Season", 2026, 4, null, scorings);
         s4.setActive(true);
         List.of(
                 findParent.apply("CLR"),
@@ -395,13 +415,13 @@ public class TestDataService {
                         .filter(d -> d.getPsnId().equals(psnId))
                         .findFirst().orElseThrow(() -> new IllegalStateException("Driver not found: " + psnId));
 
-        java.util.function.Function<String, Season> findSeason = name ->
+        java.util.function.Function<Integer, Season> findSeason = year ->
                 allSeasons.stream()
-                        .filter(s -> s.getName().equals(name))
-                        .findFirst().orElseThrow(() -> new IllegalStateException("Season not found: " + name));
+                        .filter(s -> s.getYear() == year)
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Season not found: " + year));
 
         // Season 4 - 2026
-        var s4 = findSeason.apply("Season 4 - 2026");
+        var s4 = findSeason.apply(2026);
 
         for (String psnId : List.of("France-k88", "P1R_Jake", "P1R_SLAMMER", "P1R_OldBanger",
                 "YT_Sorte13", "Unfazed__be", "P1R_Valkyrie", "motorstormhero")) {
@@ -439,15 +459,8 @@ public class TestDataService {
             seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("DTR")));
         }
 
-        // Season 3 - 2025 - Group A (multi-season testing)
-        var s3a = findSeason.apply("Season 3 - 2025 - Group A");
-        for (String psnId : List.of("France-k88", "P1R_Jake", "P1R_SLAMMER", "P1R_OldBanger")) {
-            seasonDriverRepository.save(new SeasonDriver(s3a, findDriver.apply(psnId), findSub.apply("P1Rx")));
-        }
-
-        log.info("Created season-driver assignments: s4={}, s3a={}",
-                seasonDriverRepository.findBySeasonId(s4.getId()).size(),
-                seasonDriverRepository.findBySeasonId(s3a.getId()).size());
+        log.info("Created season-driver assignments: s4={}",
+                seasonDriverRepository.findBySeasonId(s4.getId()).size());
     }
 
     private void seedRaceLineups() {
