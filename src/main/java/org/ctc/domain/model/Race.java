@@ -2,6 +2,7 @@ package org.ctc.domain.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,7 +15,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "races")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "match", "track", "car", "settings", "results", "playoffMatchup", "attachments"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchday", "match", "track", "car", "settings", "results", "playoffMatchup", "attachments", "homeTeamOverride", "awayTeamOverride"})
 public class Race extends BaseEntity {
 
     @Id
@@ -47,6 +48,16 @@ public class Race extends BaseEntity {
     @JoinColumn(name = "playoff_matchup_id")
     private PlayoffMatchup playoffMatchup;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "home_team_id")
+    @Getter(AccessLevel.NONE)
+    private Team homeTeamOverride;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "away_team_id")
+    @Getter(AccessLevel.NONE)
+    private Team awayTeamOverride;
+
     @OneToMany(mappedBy = "race", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     private List<RaceResult> results = new ArrayList<>();
@@ -55,14 +66,16 @@ public class Race extends BaseEntity {
     @OrderBy("createdAt DESC")
     private List<RaceAttachment> attachments = new ArrayList<>();
 
-    // Convenience delegation methods — resolve teams from Match or PlayoffMatchup
+    // Convenience delegation methods — resolve teams from override, Match, or PlayoffMatchup
     public Team getHomeTeam() {
+        if (homeTeamOverride != null) return homeTeamOverride;
         if (match != null) return match.getHomeTeam();
         if (playoffMatchup != null) return playoffMatchup.getTeam1();
         return null;
     }
 
     public Team getAwayTeam() {
+        if (awayTeamOverride != null) return awayTeamOverride;
         if (match != null) return match.getAwayTeam();
         if (playoffMatchup != null) return playoffMatchup.getTeam2();
         return null;

@@ -89,6 +89,11 @@ public class MatchService {
         var race = new Race();
         race.setMatchday(matchday);
         race.setMatch(match);
+        int legNumber = match.getRaces().size() + 1;
+        if (legNumber % 2 == 0 && !match.isBye()) { // even legs (2nd, 4th, ...) get swapped home/away
+            race.setHomeTeamOverride(match.getAwayTeam());
+            race.setAwayTeamOverride(match.getHomeTeam());
+        }
         match.getRaces().add(race);
         raceRepository.save(race);
 

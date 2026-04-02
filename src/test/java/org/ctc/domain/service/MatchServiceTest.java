@@ -183,6 +183,75 @@ class MatchServiceTest {
         verify(raceRepository).save(any(Race.class));
     }
 
+    @Test
+    void givenMatchWith1Leg_whenAddLeg_thenSecondLegHasSwappedHomeAway() {
+        // given
+        var matchId = UUID.randomUUID();
+        var season = new Season("Test Season");
+        season.setLegs(2);
+        var matchday = new Matchday(season, "MD1", 1);
+        matchday.setId(UUID.randomUUID());
+
+        var homeTeam = new Team();
+        homeTeam.setId(UUID.randomUUID());
+        homeTeam.setShortName("HOM");
+        var awayTeam = new Team();
+        awayTeam.setId(UUID.randomUUID());
+        awayTeam.setShortName("AWY");
+
+        var match = new Match(matchday, homeTeam, awayTeam);
+        match.setId(matchId);
+        var leg1 = new Race();
+        leg1.setMatch(match);
+        match.setRaces(new ArrayList<>());
+        match.getRaces().add(leg1);
+
+        when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
+        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // when
+        service.addLeg(matchId);
+
+        // then
+        var savedRace = match.getRaces().get(1);
+        assertThat(savedRace.getHomeTeam()).isEqualTo(awayTeam);
+        assertThat(savedRace.getAwayTeam()).isEqualTo(homeTeam);
+    }
+
+    @Test
+    void givenMatchWith2Legs_whenAddThirdLeg_thenNoSwap() {
+        // given
+        var matchId = UUID.randomUUID();
+        var season = new Season("Test Season");
+        season.setLegs(3);
+        var matchday = new Matchday(season, "MD1", 1);
+        matchday.setId(UUID.randomUUID());
+
+        var homeTeam = new Team();
+        homeTeam.setId(UUID.randomUUID());
+        homeTeam.setShortName("HOM");
+        var awayTeam = new Team();
+        awayTeam.setId(UUID.randomUUID());
+        awayTeam.setShortName("AWY");
+
+        var match = new Match(matchday, homeTeam, awayTeam);
+        match.setId(matchId);
+        match.setRaces(new ArrayList<>());
+        match.getRaces().add(new Race());
+        match.getRaces().add(new Race());
+
+        when(matchRepository.findById(matchId)).thenReturn(Optional.of(match));
+        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // when
+        service.addLeg(matchId);
+
+        // then — leg 3 (odd, 1-based) has no swap
+        var savedRace = match.getRaces().get(2);
+        assertThat(savedRace.getHomeTeam()).isEqualTo(homeTeam);
+        assertThat(savedRace.getAwayTeam()).isEqualTo(awayTeam);
+    }
+
     // --- deleteMatch ---
 
     @Test
