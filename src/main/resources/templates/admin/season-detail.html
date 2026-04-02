@@ -10,6 +10,7 @@
         </div>
         <div class="actions">
             <a th:if="${season.format.name() == 'SWISS'}" th:href="@{/admin/seasons/{id}/swiss(id=${season.id})}" class="btn btn-secondary">Swiss Rounds</a>
+            <a th:if="${canGenerate}" th:href="@{/admin/seasons/{id}/generate(id=${season.id})}" class="btn btn-secondary">Generate Matchdays</a>
             <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="btn btn-primary">Edit</a>
             <form th:action="@{/admin/seasons/{id}/delete(id=${season.id})}" method="post"
                   onsubmit="return confirm('Really delete this season?')">

@@ -50,6 +50,83 @@ class SeasonTest {
     }
 
     @Nested
+    class EligibleTeamsTest {
+
+        private Team teamWithId(String shortName) {
+            var team = new Team("Team " + shortName, shortName);
+            team.setId(UUID.randomUUID());
+            return team;
+        }
+
+        private Team subTeamWithId(String shortName, Team parent) {
+            var team = new Team("Team " + shortName, shortName, parent);
+            team.setId(UUID.randomUUID());
+            return team;
+        }
+
+        @Test
+        void givenOnlyParentTeams_whenGetEligibleTeams_thenReturnsAll() {
+            // given
+            var season = new Season("S1", 2026, 1);
+            var teamA = teamWithId("A");
+            var teamB = teamWithId("B");
+            season.addTeam(teamA);
+            season.addTeam(teamB);
+
+            // when
+            var eligible = season.getEligibleTeams();
+
+            // then
+            assertThat(eligible).extracting(Team::getShortName).containsExactlyInAnyOrder("A", "B");
+        }
+
+        @Test
+        void givenParentWithSubTeams_whenGetEligibleTeams_thenExcludesParent() {
+            // given
+            var season = new Season("S1", 2026, 1);
+            var parent = teamWithId("P1R");
+            var sub1 = subTeamWithId("P1R-1", parent);
+            var sub2 = subTeamWithId("P1R-2", parent);
+            var otherTeam = teamWithId("CLR");
+            season.addTeam(parent);
+            season.addTeam(sub1);
+            season.addTeam(sub2);
+            season.addTeam(otherTeam);
+
+            // when
+            var eligible = season.getEligibleTeams();
+
+            // then
+            assertThat(eligible).extracting(Team::getShortName)
+                    .containsExactlyInAnyOrder("P1R-1", "P1R-2", "CLR");
+            assertThat(eligible).noneMatch(t -> t.getShortName().equals("P1R"));
+        }
+
+        @Test
+        void givenReplacedTeam_whenGetEligibleTeams_thenExcludesReplaced() {
+            // given
+            var season = new Season("S1", 2026, 1);
+            var teamA = teamWithId("A");
+            var teamB = teamWithId("B");
+            var teamC = teamWithId("C");
+            season.addTeam(teamA);
+            season.addTeam(teamB);
+            season.addTeam(teamC);
+
+            var stA = season.findSeasonTeam(teamA).orElseThrow();
+            var stC = season.findSeasonTeam(teamC).orElseThrow();
+            stA.setSuccessor(stC);
+
+            // when
+            var eligible = season.getEligibleTeams();
+
+            // then
+            assertThat(eligible).extracting(Team::getShortName)
+                    .containsExactlyInAnyOrder("B", "C");
+        }
+    }
+
+    @Nested
     class SuccessionTest {
 
         private Team teamWithId(String shortName) {

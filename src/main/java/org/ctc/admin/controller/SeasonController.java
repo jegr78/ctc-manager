@@ -1,8 +1,10 @@
 package org.ctc.admin.controller;
 
+import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.SeasonForm;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.domain.service.MatchdayGeneratorService;
 import org.ctc.domain.service.ScoringService;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.SwissPairingService;
@@ -35,6 +37,7 @@ public class SeasonController {
     private final ScoringService scoringService;
     private final SwissPairingService swissPairingService;
     private final SeasonManagementService seasonManagementService;
+    private final MatchdayGeneratorService matchdayGeneratorService;
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
@@ -43,6 +46,10 @@ public class SeasonController {
         model.addAttribute("season", season);
         model.addAttribute("playoff", playoff);
         model.addAttribute("isSwiss", season.getFormat() == SeasonFormat.SWISS);
+        model.addAttribute("canGenerate",
+                season.getFormat() != SeasonFormat.SWISS
+                && season.getMatchdays().isEmpty()
+                && season.getEligibleTeams().size() >= 2);
         model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(id));
         return "admin/season-detail";
     }
@@ -103,7 +110,7 @@ public class SeasonController {
             existing.setEndDate(form.getEndDate());
             existing.setActive(form.isActive());
             existing.setFormat(form.getFormat());
-            existing.setTotalRounds(form.getFormat() == SeasonFormat.SWISS ? form.getTotalRounds() : null);
+            existing.setTotalRounds(form.getTotalRounds());
             existing.setLegs(form.getLegs());
             existing.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
             existing.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
@@ -120,11 +127,7 @@ public class SeasonController {
             season.setEndDate(form.getEndDate());
             season.setActive(form.isActive());
             season.setFormat(form.getFormat());
-            if (form.getFormat() == SeasonFormat.LEAGUE) {
-                season.setTotalRounds(null);
-            } else {
-                season.setTotalRounds(form.getTotalRounds());
-            }
+            season.setTotalRounds(form.getTotalRounds());
             season.setLegs(form.getLegs());
             season.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
             season.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
@@ -271,6 +274,38 @@ public class SeasonController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/seasons/" + id + "/swiss";
+    }
+
+    @GetMapping("/{id}/generate")
+    public String generateForm(@PathVariable UUID id, Model model) {
+        var formData = matchdayGeneratorService.getFormData(id);
+        var season = formData.season();
+        var form = new MatchdayGeneratorForm();
+        form.setNumberOfRounds(season.getTotalRounds() != null ? season.getTotalRounds() : formData.optimalRounds());
+        model.addAttribute("season", season);
+        model.addAttribute("generatorForm", form);
+        model.addAttribute("teamCount", formData.teamCount());
+        model.addAttribute("optimalRounds", formData.optimalRounds());
+        return "admin/matchday-generator";
+    }
+
+    @PostMapping("/{id}/generate")
+    public String generate(@PathVariable UUID id,
+                           @Valid @ModelAttribute MatchdayGeneratorForm form,
+                           BindingResult result,
+                           RedirectAttributes redirectAttributes) {
+        if (result.hasErrors()) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Invalid input: number of rounds must be at least 1");
+            return "redirect:/admin/seasons/" + id + "/generate";
+        }
+        try {
+            matchdayGeneratorService.generate(id, form.getNumberOfRounds(), form.isHomeAndAway());
+            redirectAttributes.addFlashAttribute("successMessage", "Matchdays generated successfully");
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/admin/seasons/" + id + "/generate";
+        }
+        return "redirect:/admin/seasons/" + id;
     }
 
     private boolean isHomeTeamDriver(RaceResult result, Race race) {

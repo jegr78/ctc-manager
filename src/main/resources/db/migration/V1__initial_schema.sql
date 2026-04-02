@@ -30,7 +30,7 @@ CREATE TABLE seasons (
     start_date DATE,
     end_date DATE,
     active BOOLEAN NOT NULL DEFAULT FALSE,
-    format VARCHAR(10) DEFAULT 'LEAGUE' NOT NULL,
+    format VARCHAR(20) DEFAULT 'LEAGUE' NOT NULL,
     total_rounds INT,
     legs INT NOT NULL DEFAULT 1,
     race_scoring_id UUID NOT NULL,
