@@ -86,10 +86,13 @@ CREATE TABLE season_teams (
     secondary_color VARCHAR(7),
     accent_color VARCHAR(7),
     logo_url VARCHAR(500),
+    successor_season_team_id UUID,
+    replaced_at DATE,
     CONSTRAINT fk_st_season FOREIGN KEY (season_id) REFERENCES seasons(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_st_team FOREIGN KEY (team_id) REFERENCES teams(id),
+    CONSTRAINT fk_st_successor FOREIGN KEY (successor_season_team_id) REFERENCES season_teams(id),
     CONSTRAINT uk_season_team UNIQUE (season_id, team_id)
 );
 

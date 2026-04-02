@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -107,6 +108,41 @@ public class SeasonManagementService {
 
         seasonTeamRepository.save(seasonTeam);
         return seasonTeam.getTeam().getShortName();
+    }
+
+    /**
+     * Replaces a team in a season with a successor team.
+     * The predecessor's results are inherited by the successor in standings.
+     * Returns "OLD → NEW" for flash messages.
+     */
+    @Transactional
+    public String replaceTeam(UUID seasonId, UUID predecessorTeamId, UUID successorTeamId, LocalDate replacedAt) {
+        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var predecessor = teamRepository.findById(predecessorTeamId).orElseThrow();
+        var successor = teamRepository.findById(successorTeamId).orElseThrow();
+
+        var predecessorSt = season.findSeasonTeam(predecessor)
+                .orElseThrow(() -> new IllegalStateException("Team " + predecessor.getShortName() + " not in season"));
+
+        if (predecessorSt.isReplaced()) {
+            throw new IllegalStateException("Team " + predecessor.getShortName() + " already replaced");
+        }
+
+        if (!season.containsTeam(successor)) {
+            season.addTeam(successor);
+        }
+        seasonRepository.save(season);
+
+        var successorSt = seasonTeamRepository.findBySeasonIdAndTeamId(seasonId, successorTeamId).orElseThrow();
+
+        predecessorSt.setSuccessor(successorSt);
+        predecessorSt.setReplacedAt(replacedAt);
+        seasonTeamRepository.save(predecessorSt);
+
+        log.info("Replaced team {} with {} in season {} (effective {})",
+                predecessor.getShortName(), successor.getShortName(), season.getName(), replacedAt);
+
+        return predecessor.getShortName() + " → " + successor.getShortName();
     }
 
     /**

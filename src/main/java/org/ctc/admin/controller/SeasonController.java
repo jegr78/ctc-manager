@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Slf4j
@@ -39,9 +40,18 @@ public class SeasonController {
     public String detail(@PathVariable UUID id, Model model) {
         var season = seasonRepository.findById(id).orElseThrow();
         var playoff = playoffRepository.findBySeasonId(id).orElse(null);
+        var seasonTeamIds = season.getSeasonTeams().stream()
+                .filter(st -> !st.isReplaced())
+                .map(st -> st.getTeam().getId())
+                .collect(java.util.stream.Collectors.toSet());
+        var availableTeams = teamRepository.findAll().stream()
+                .filter(t -> !seasonTeamIds.contains(t.getId()))
+                .sorted(Comparator.comparing(Team::getShortName))
+                .toList();
         model.addAttribute("season", season);
         model.addAttribute("playoff", playoff);
         model.addAttribute("isSwiss", season.getFormat() == SeasonFormat.SWISS);
+        model.addAttribute("availableTeams", availableTeams);
         return "admin/season-detail";
     }
 
@@ -168,6 +178,21 @@ public class SeasonController {
             redirectAttributes.addFlashAttribute("successMessage", "Updated: " + teamName);
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
+        }
+        return "redirect:/admin/seasons/" + id;
+    }
+
+    @PostMapping("/{id}/replace-team")
+    public String replaceTeam(@PathVariable UUID id,
+                              @RequestParam UUID predecessorTeamId,
+                              @RequestParam UUID successorTeamId,
+                              @RequestParam LocalDate replacedAt,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            String result = seasonManagementService.replaceTeam(id, predecessorTeamId, successorTeamId, replacedAt);
+            redirectAttributes.addFlashAttribute("successMessage", "Team replaced: " + result);
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/seasons/" + id;
     }

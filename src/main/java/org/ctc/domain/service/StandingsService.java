@@ -30,13 +30,14 @@ public class StandingsService {
         var matchScoring = season.getMatchScoring();
         List<Match> matches = matchRepository.findByMatchdaySeasonId(seasonId);
         Map<UUID, TeamStanding> standingsMap = new HashMap<>();
+        Map<UUID, UUID> successionMap = season.buildSuccessionMap();
 
-        for (Team team : season.getTeams()) {
+        for (Team team : season.getActiveTeams()) {
             standingsMap.put(team.getId(), new TeamStanding(team));
         }
 
         for (Match match : matches) {
-            processMatch(match, standingsMap, matchScoring);
+            processMatch(match, standingsMap, matchScoring, successionMap);
         }
 
         List<TeamStanding> standings = new ArrayList<>(standingsMap.values());
@@ -50,9 +51,11 @@ public class StandingsService {
         return standings;
     }
 
-    private void processMatch(Match match, Map<UUID, TeamStanding> standingsMap, MatchScoring matchScoring) {
+    private void processMatch(Match match, Map<UUID, TeamStanding> standingsMap,
+                              MatchScoring matchScoring, Map<UUID, UUID> successionMap) {
         if (match.isBye()) {
-            var homeStanding = standingsMap.get(match.getHomeTeam().getId());
+            UUID homeId = resolveTeamId(match.getHomeTeam().getId(), successionMap);
+            var homeStanding = standingsMap.get(homeId);
             if (homeStanding != null) {
                 homeStanding.addWin();
                 homeStanding.addMatchPoints(matchScoring.getPointsWin());
@@ -65,8 +68,11 @@ public class StandingsService {
         int homeTotal = match.getHomeScore();
         int awayTotal = match.getAwayScore();
 
-        var homeStanding = standingsMap.get(match.getHomeTeam().getId());
-        var awayStanding = match.getAwayTeam() != null ? standingsMap.get(match.getAwayTeam().getId()) : null;
+        UUID homeId = resolveTeamId(match.getHomeTeam().getId(), successionMap);
+        UUID awayId = match.getAwayTeam() != null ? resolveTeamId(match.getAwayTeam().getId(), successionMap) : null;
+
+        var homeStanding = standingsMap.get(homeId);
+        var awayStanding = awayId != null ? standingsMap.get(awayId) : null;
 
         if (homeStanding == null) return;
 
@@ -99,6 +105,10 @@ public class StandingsService {
                 awayStanding.addMatchPoints(matchScoring.getPointsDraw());
             }
         }
+    }
+
+    private UUID resolveTeamId(UUID teamId, Map<UUID, UUID> successionMap) {
+        return successionMap.getOrDefault(teamId, teamId);
     }
 
     public static class TeamStanding {

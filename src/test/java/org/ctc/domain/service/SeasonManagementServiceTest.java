@@ -3,12 +3,14 @@ package org.ctc.domain.service;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.mock.web.MockMultipartFile;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -300,6 +302,106 @@ class SeasonManagementServiceTest {
         assertThat(seasonTeam.getSecondaryColor()).isNull();
         assertThat(seasonTeam.getAccentColor()).isNull();
         verify(seasonTeamRepository).save(seasonTeam);
+    }
+
+    @Nested
+    class ReplaceTeamTest {
+
+        @Test
+        void givenValidTeams_whenReplaceTeam_thenSuccessorSetAndTeamAdded() {
+            // given
+            var season = createSeason("Test Season");
+            var predecessor = createTeam("OLD", "Old Team");
+            var successor = createTeam("NEW", "New Team");
+            season.addTeam(predecessor);
+
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(teamRepository.findById(predecessor.getId())).thenReturn(Optional.of(predecessor));
+            when(teamRepository.findById(successor.getId())).thenReturn(Optional.of(successor));
+            when(seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), successor.getId()))
+                    .thenAnswer(inv -> season.findSeasonTeam(successor));
+
+            var replacedAt = LocalDate.of(2026, 3, 15);
+
+            // when
+            String result = service.replaceTeam(season.getId(), predecessor.getId(), successor.getId(), replacedAt);
+
+            // then
+            assertThat(result).isEqualTo("OLD → NEW");
+            assertThat(season.containsTeam(successor)).isTrue();
+
+            var stOld = season.findSeasonTeam(predecessor).orElseThrow();
+            assertThat(stOld.isReplaced()).isTrue();
+            assertThat(stOld.getReplacedAt()).isEqualTo(replacedAt);
+            assertThat(stOld.getSuccessor().getTeam().getId()).isEqualTo(successor.getId());
+            verify(seasonRepository).save(season);
+        }
+
+        @Test
+        void givenPredecessorNotInSeason_whenReplaceTeam_thenThrowsException() {
+            // given
+            var season = createSeason("Test Season");
+            var predecessor = createTeam("OLD", "Old Team");
+            var successor = createTeam("NEW", "New Team");
+
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(teamRepository.findById(predecessor.getId())).thenReturn(Optional.of(predecessor));
+            when(teamRepository.findById(successor.getId())).thenReturn(Optional.of(successor));
+
+            // when / then
+            assertThatThrownBy(() -> service.replaceTeam(season.getId(), predecessor.getId(),
+                    successor.getId(), LocalDate.of(2026, 3, 15)))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("not in season");
+        }
+
+        @Test
+        void givenAlreadyReplacedTeam_whenReplaceTeam_thenThrowsException() {
+            // given
+            var season = createSeason("Test Season");
+            var predecessor = createTeam("OLD", "Old Team");
+            var firstSuccessor = createTeam("MID", "Mid Team");
+            var secondSuccessor = createTeam("NEW", "New Team");
+            season.addTeam(predecessor);
+            season.addTeam(firstSuccessor);
+
+            // Already replaced
+            var stOld = season.findSeasonTeam(predecessor).orElseThrow();
+            var stMid = season.findSeasonTeam(firstSuccessor).orElseThrow();
+            stOld.setSuccessor(stMid);
+
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(teamRepository.findById(predecessor.getId())).thenReturn(Optional.of(predecessor));
+            when(teamRepository.findById(secondSuccessor.getId())).thenReturn(Optional.of(secondSuccessor));
+
+            // when / then
+            assertThatThrownBy(() -> service.replaceTeam(season.getId(), predecessor.getId(),
+                    secondSuccessor.getId(), LocalDate.of(2026, 3, 15)))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("already replaced");
+        }
+
+        @Test
+        void givenSuccessorAlreadyInSeason_whenReplaceTeam_thenNoDoubleAdd() {
+            // given
+            var season = createSeason("Test Season");
+            var predecessor = createTeam("OLD", "Old Team");
+            var successor = createTeam("NEW", "New Team");
+            season.addTeam(predecessor);
+            season.addTeam(successor);
+
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(teamRepository.findById(predecessor.getId())).thenReturn(Optional.of(predecessor));
+            when(teamRepository.findById(successor.getId())).thenReturn(Optional.of(successor));
+            when(seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), successor.getId()))
+                    .thenAnswer(inv -> season.findSeasonTeam(successor));
+
+            // when
+            service.replaceTeam(season.getId(), predecessor.getId(), successor.getId(), LocalDate.of(2026, 3, 15));
+
+            // then — only 2 season teams (no duplicate)
+            assertThat(season.getSeasonTeams()).hasSize(2);
+        }
     }
 
     private Season createSeason(String name) {

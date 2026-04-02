@@ -47,11 +47,13 @@ public class PowerRankingsGraphicService extends AbstractGraphicService {
             return List.of();
         }
 
-        // Collect all SeasonTeams across all seasons with this (year, number)
+        // Collect all active (non-replaced) SeasonTeams across all seasons with this (year, number)
         Map<UUID, SeasonTeam> seasonTeamMap = new LinkedHashMap<>();
         for (Season season : seasons) {
             for (SeasonTeam st : seasonTeamRepository.findBySeasonId(season.getId())) {
-                seasonTeamMap.putIfAbsent(st.getTeam().getId(), st);
+                if (!st.isReplaced()) {
+                    seasonTeamMap.putIfAbsent(st.getTeam().getId(), st);
+                }
             }
         }
 
@@ -94,11 +96,13 @@ public class PowerRankingsGraphicService extends AbstractGraphicService {
             throw new IllegalStateException("No seasons found for year=" + year + " number=" + number);
         }
 
-        // Build SeasonTeam lookup across all seasons
+        // Build SeasonTeam lookup across all seasons (exclude replaced teams)
         Map<UUID, SeasonTeam> seasonTeamMap = new HashMap<>();
         for (Season season : seasons) {
             for (SeasonTeam st : seasonTeamRepository.findBySeasonId(season.getId())) {
-                seasonTeamMap.putIfAbsent(st.getTeam().getId(), st);
+                if (!st.isReplaced()) {
+                    seasonTeamMap.putIfAbsent(st.getTeam().getId(), st);
+                }
             }
         }
 

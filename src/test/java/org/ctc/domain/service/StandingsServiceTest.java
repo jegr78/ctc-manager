@@ -232,6 +232,134 @@ class StandingsServiceTest {
         }
     }
 
+    @Nested
+    class TeamSuccessionTest {
+
+        @Test
+        void givenReplacedTeam_whenCalculateStandings_thenSuccessorInheritsResults() {
+            // given
+            // Team A (TNR) wins match 1, then gets replaced by Team C (CLR)
+            // CLR should inherit TNR's win
+            var md1 = new Matchday(season, "Spieltag 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            season.addTeam(clr);
+
+            // TNR replaced by CLR
+            var stTnr = season.findSeasonTeam(tnr).orElseThrow();
+            var stClr = season.findSeasonTeam(clr).orElseThrow();
+            stTnr.setSuccessor(stClr);
+
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match1));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(season.getId());
+
+            // then — CLR inherits TNR's win
+            var clrStanding = findStanding(standings, clr);
+            assertEquals(1, clrStanding.getWins());
+            assertEquals(3, clrStanding.getPoints());
+            assertEquals(70, clrStanding.getPointsFor());
+            assertEquals(46, clrStanding.getPointsAgainst());
+        }
+
+        @Test
+        void givenReplacedTeam_whenCalculateStandings_thenPredecessorNotInStandings() {
+            // given
+            var md1 = new Matchday(season, "Spieltag 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            season.addTeam(clr);
+
+            var stTnr = season.findSeasonTeam(tnr).orElseThrow();
+            var stClr = season.findSeasonTeam(clr).orElseThrow();
+            stTnr.setSuccessor(stClr);
+
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match1));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(season.getId());
+
+            // then — TNR should not appear
+            assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(tnr.getId())));
+        }
+
+        @Test
+        void givenReplacedTeamAndNewMatches_whenCalculateStandings_thenBothResultsMerged() {
+            // given
+            // TNR wins match 1, gets replaced by CLR, CLR wins match 2
+            var md1 = new Matchday(season, "Spieltag 1", 1);
+            var md2 = new Matchday(season, "Spieltag 2", 2);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+            var match2 = createMatchWithScore(md2, clr, p1r, 60, 50);
+
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            season.addTeam(clr);
+
+            var stTnr = season.findSeasonTeam(tnr).orElseThrow();
+            var stClr = season.findSeasonTeam(clr).orElseThrow();
+            stTnr.setSuccessor(stClr);
+
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match1, match2));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(season.getId());
+
+            // then — CLR has 2 wins (inherited + own)
+            var clrStanding = findStanding(standings, clr);
+            assertEquals(2, clrStanding.getWins());
+            assertEquals(6, clrStanding.getPoints());
+            assertEquals(130, clrStanding.getPointsFor());
+            assertEquals(96, clrStanding.getPointsAgainst());
+        }
+
+        @Test
+        void givenSuccessionChain_whenCalculateStandings_thenFinalSuccessorInheritsAll() {
+            // given
+            // TNR wins, replaced by P1R, P1R replaced by CLR
+            var newTeam = new Team("New Team", "NEW");
+            newTeam.setId(UUID.randomUUID());
+
+            var md1 = new Matchday(season, "Spieltag 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, newTeam, 70, 46);
+
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            season.addTeam(clr);
+            season.addTeam(newTeam);
+
+            // TNR → P1R → CLR
+            var stTnr = season.findSeasonTeam(tnr).orElseThrow();
+            var stP1r = season.findSeasonTeam(p1r).orElseThrow();
+            var stClr = season.findSeasonTeam(clr).orElseThrow();
+            stTnr.setSuccessor(stP1r);
+            stP1r.setSuccessor(stClr);
+
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match1));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(season.getId());
+
+            // then — CLR inherits TNR's win through chain
+            var clrStanding = findStanding(standings, clr);
+            assertEquals(1, clrStanding.getWins());
+            assertEquals(3, clrStanding.getPoints());
+
+            // TNR and P1R should not appear
+            assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(tnr.getId())));
+            assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(p1r.getId())));
+        }
+    }
+
     private Match createMatchWithScore(Matchday matchday, Team home, Team away, int homeScore, int awayScore) {
         var match = new Match(matchday, home, away);
         match.setId(UUID.randomUUID());
