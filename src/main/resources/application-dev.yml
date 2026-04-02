@@ -25,6 +25,13 @@ spring:
       cache:
         period: 0
 
+app:
+  upload-dir: data/dev/uploads
+
+logging:
+  level:
+    org.ctc: DEBUG
+
 ctc:
   site:
     output-dir: target/site

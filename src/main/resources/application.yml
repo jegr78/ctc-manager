@@ -1,5 +1,5 @@
 app:
-  upload-dir: uploads
+  upload-dir: data/dev/uploads
   version: @project.version@
 
 spring:

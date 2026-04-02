@@ -1,6 +1,9 @@
 server:
   port: 9091
 
+app:
+  upload-dir: data/local/uploads
+
 spring:
   datasource:
     url: jdbc:mariadb://localhost:3306/ctcdb
