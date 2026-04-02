@@ -32,7 +32,7 @@ server:
 # Google Sheets Integration
 google:
   sheets:
-    credentials-path: ""
+    credentials-path: google-credentials.json
 
 # Statische Seitengenerierung
 ctc:

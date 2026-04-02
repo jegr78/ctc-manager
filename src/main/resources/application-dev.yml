@@ -25,10 +25,6 @@ spring:
       cache:
         period: 0
 
-google:
-  sheets:
-    credentials-path: google-credentials.json
-
 ctc:
   site:
     output-dir: target/site
