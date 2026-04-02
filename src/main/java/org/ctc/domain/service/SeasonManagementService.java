@@ -7,10 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.ctc.domain.model.Team;
+
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -23,6 +25,23 @@ public class SeasonManagementService {
     private final TrackRepository trackRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final FileStorageService fileStorageService;
+
+    /**
+     * Returns teams available as replacement candidates for a season
+     * (all teams not currently active in the season).
+     */
+    @Transactional(readOnly = true)
+    public List<Team> getAvailableTeamsForReplacement(UUID seasonId) {
+        var season = seasonRepository.findById(seasonId).orElseThrow();
+        Set<UUID> activeTeamIds = season.getSeasonTeams().stream()
+                .filter(st -> !st.isReplaced())
+                .map(st -> st.getTeam().getId())
+                .collect(Collectors.toSet());
+        return teamRepository.findAll().stream()
+                .filter(t -> !activeTeamIds.contains(t.getId()))
+                .sorted(Comparator.comparing(Team::getShortName))
+                .toList();
+    }
 
     /**
      * Adds a team to a season. Auto-adds the parent team when adding a sub-team.

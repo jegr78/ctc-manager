@@ -40,18 +40,10 @@ public class SeasonController {
     public String detail(@PathVariable UUID id, Model model) {
         var season = seasonRepository.findById(id).orElseThrow();
         var playoff = playoffRepository.findBySeasonId(id).orElse(null);
-        var seasonTeamIds = season.getSeasonTeams().stream()
-                .filter(st -> !st.isReplaced())
-                .map(st -> st.getTeam().getId())
-                .collect(java.util.stream.Collectors.toSet());
-        var availableTeams = teamRepository.findAll().stream()
-                .filter(t -> !seasonTeamIds.contains(t.getId()))
-                .sorted(Comparator.comparing(Team::getShortName))
-                .toList();
         model.addAttribute("season", season);
         model.addAttribute("playoff", playoff);
         model.addAttribute("isSwiss", season.getFormat() == SeasonFormat.SWISS);
-        model.addAttribute("availableTeams", availableTeams);
+        model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(id));
         return "admin/season-detail";
     }
 

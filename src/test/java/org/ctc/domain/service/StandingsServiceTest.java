@@ -358,6 +358,35 @@ class StandingsServiceTest {
             assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(tnr.getId())));
             assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(p1r.getId())));
         }
+
+        @Test
+        void givenReplacedTeamWithBye_whenCalculateStandings_thenSuccessorInheritsByeWin() {
+            // given
+            var matchday = new Matchday(season, "Spieltag 1", 1);
+            var byeMatch = new Match(matchday, tnr, null);
+            byeMatch.setId(UUID.randomUUID());
+            byeMatch.setBye(true);
+
+            season.addTeam(tnr);
+            season.addTeam(clr);
+
+            // TNR replaced by CLR
+            var stTnr = season.findSeasonTeam(tnr).orElseThrow();
+            var stClr = season.findSeasonTeam(clr).orElseThrow();
+            stTnr.setSuccessor(stClr);
+
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(byeMatch));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(season.getId());
+
+            // then — CLR inherits TNR's bye win
+            assertEquals(1, standings.size());
+            var clrStanding = findStanding(standings, clr);
+            assertEquals(1, clrStanding.getWins());
+            assertEquals(3, clrStanding.getPoints());
+        }
     }
 
     private Match createMatchWithScore(Matchday matchday, Team home, Team away, int homeScore, int awayScore) {
