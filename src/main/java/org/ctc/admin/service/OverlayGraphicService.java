@@ -45,8 +45,8 @@ public class OverlayGraphicService extends AbstractGraphicService {
         var match = race.getMatch();
         if (match == null) throw new IllegalStateException("Race has no match");
 
-        var homeTeam = match.getHomeTeam();
-        var awayTeam = match.getAwayTeam();
+        var homeTeam = race.getHomeTeam();
+        var awayTeam = race.getAwayTeam();
         var season = race.getMatchday().getSeason();
 
         Map<UUID, SeasonTeam> seasonTeamMap = new HashMap<>();

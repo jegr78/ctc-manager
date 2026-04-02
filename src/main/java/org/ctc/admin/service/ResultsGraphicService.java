@@ -41,8 +41,8 @@ public class ResultsGraphicService extends AbstractGraphicService {
         if (match == null) throw new IllegalStateException("Race has no match");
         if (race.getResults().isEmpty()) throw new IllegalStateException("No results for this race");
 
-        var homeTeam = match.getHomeTeam();
-        var awayTeam = match.getAwayTeam();
+        var homeTeam = race.getHomeTeam();
+        var awayTeam = race.getAwayTeam();
         var season = race.getMatchday().getSeason();
 
         var resultRows = buildResultRows(race);
