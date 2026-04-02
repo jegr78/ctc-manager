@@ -53,5 +53,4 @@ service-account*.json
 
 ### OS ###
 .DS_Store
-uploads/
-logs/
+data/

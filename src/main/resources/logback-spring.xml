@@ -8,7 +8,13 @@
     <springProfile name="docker | prod">
         <property name="LOG_DIR" value="/app/logs"/>
     </springProfile>
-    <springProfile name="!docker &amp; !prod">
+    <springProfile name="dev">
+        <property name="LOG_DIR" value="data/dev/logs"/>
+    </springProfile>
+    <springProfile name="local">
+        <property name="LOG_DIR" value="data/local/logs"/>
+    </springProfile>
+    <springProfile name="!docker &amp; !prod &amp; !dev &amp; !local">
         <property name="LOG_DIR" value="./logs"/>
     </springProfile>
 
@@ -22,14 +28,14 @@
 
     <!-- File Appender mit Rolling Policy -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_DIR}/ctc-manager.log</file>
+        <file>${LOG_DIR}/app.log</file>
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
             <charset>UTF-8</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- Taegliche Rotation mit Groessen-Split -->
-            <fileNamePattern>${LOG_DIR}/archived/ctc-manager.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <fileNamePattern>${LOG_DIR}/archived/app.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
             <!-- Max Groesse pro Datei bevor Split innerhalb eines Tages -->
             <maxFileSize>50MB</maxFileSize>
             <!-- Archive aelter als 7 Tage loeschen -->

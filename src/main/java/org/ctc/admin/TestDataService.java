@@ -39,6 +39,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class TestDataService {
 
+    @org.springframework.beans.factory.annotation.Value("${app.upload-dir:data/dev/uploads}")
+    private String uploadDir;
+
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
     private final DriverRepository driverRepository;
@@ -232,7 +235,7 @@ public class TestDataService {
 
     private void copyDemoLogos(List<Team> parentTeams) {
         var allTeams = teamRepository.findAll();
-        Path uploadBase = Paths.get("uploads/teams").toAbsolutePath().normalize();
+        Path uploadBase = Paths.get(uploadDir, "teams").toAbsolutePath().normalize();
         for (var team : allTeams) {
             String logoKey = team.isSubTeam() ? team.getParentTeam().getShortName() : team.getShortName();
             try {
