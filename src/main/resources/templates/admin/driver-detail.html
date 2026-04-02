@@ -23,6 +23,11 @@
             <span th:text="${driver.psnId}"></span>
             <span class="label">Nickname</span>
             <span th:text="${driver.nickname}"></span>
+            <span class="label">PSN Aliases</span>
+            <span th:if="${!driver.aliases.isEmpty()}">
+                <span th:each="alias, stat : ${driver.aliases}"><span th:text="${alias.alias}"></span><span th:if="${!stat.last}">, </span></span>
+            </span>
+            <span th:if="${driver.aliases.isEmpty()}" class="text-dim">—</span>
             <span class="label">Status</span>
             <span>
                 <span th:if="${driver.active}" class="badge badge-active">● Active</span>
