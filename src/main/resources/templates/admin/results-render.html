@@ -116,11 +116,26 @@
         .result-row {
             display: flex;
             align-items: center;
-            padding: 8px 32px;
+            padding: 4px 32px;
+        }
+
+        .driver-info {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .driver-info.home {
+            align-items: flex-start;
+        }
+
+        .driver-info.away {
+            align-items: flex-end;
         }
 
         .driver-name {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
             color: #b2b2b2;
             white-space: nowrap;
@@ -128,14 +143,13 @@
             text-overflow: ellipsis;
         }
 
-        .driver-name.home {
-            text-align: left;
-            flex: 1;
-        }
-
-        .driver-name.away {
-            text-align: right;
-            flex: 1;
+        .driver-nickname {
+            font-size: 18px;
+            font-weight: 600;
+            color: #b2b2b2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .points {
@@ -205,10 +219,16 @@
 
         <div class="results">
             <div class="result-row" th:each="row : ${resultRows}">
-                <span class="driver-name home" th:text="${row.homeDriver}"></span>
+                <div class="driver-info home">
+                    <span class="driver-name" th:text="${row.homeDriver}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${row.homeNickname} + ')'" th:if="${row.homeDriver != ''}"></span>
+                </div>
                 <span class="points" th:text="${row.homeDriver != '' ? row.homePoints : ''}"></span>
                 <span class="points" th:text="${row.awayDriver != '' ? row.awayPoints : ''}"></span>
-                <span class="driver-name away" th:text="${row.awayDriver}"></span>
+                <div class="driver-info away">
+                    <span class="driver-name" th:text="${row.awayDriver}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${row.awayNickname} + ')'" th:if="${row.awayDriver != ''}"></span>
+                </div>
             </div>
         </div>
 

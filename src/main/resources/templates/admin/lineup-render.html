@@ -117,25 +117,39 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 32px;
+            padding: 4px 32px;
+        }
+
+        .driver-info {
+            display: flex;
+            flex-direction: column;
+            max-width: 45%;
+        }
+
+        .driver-info.home {
+            align-items: flex-start;
+        }
+
+        .driver-info.away {
+            align-items: flex-end;
         }
 
         .driver-name {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
             color: #b2b2b2;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 45%;
         }
 
-        .driver-name.home {
-            text-align: left;
-        }
-
-        .driver-name.away {
-            text-align: right;
+        .driver-nickname {
+            font-size: 18px;
+            font-weight: 600;
+            color: #b2b2b2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* Footer */
@@ -190,8 +204,14 @@
 
         <div class="pairings">
             <div class="pairing" th:each="p : ${pairings}">
-                <span class="driver-name home" th:text="${p.homeDriver}"></span>
-                <span class="driver-name away" th:text="${p.awayDriver}"></span>
+                <div class="driver-info home">
+                    <span class="driver-name" th:text="${p.homeDriver}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${p.homeNickname} + ')'" th:if="${p.homeDriver != ''}"></span>
+                </div>
+                <div class="driver-info away">
+                    <span class="driver-name" th:text="${p.awayDriver}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${p.awayNickname} + ')'" th:if="${p.awayDriver != ''}"></span>
+                </div>
             </div>
         </div>
 

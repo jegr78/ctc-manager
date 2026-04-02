@@ -1,5 +1,6 @@
 package org.ctc.admin.service;
 
+import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.service.ScoringService;
@@ -32,7 +33,8 @@ public class ResultsGraphicService extends AbstractGraphicService {
         this.scoringService = scoringService;
     }
 
-    public record DriverResultRow(String homeDriver, int homePoints, int awayPoints, String awayDriver) {}
+    public record DriverResultRow(String homeDriver, String homeNickname, int homePoints,
+                                      int awayPoints, String awayDriver, String awayNickname) {}
 
     public String generateResults(Race race) throws IOException {
         var match = race.getMatch();
@@ -140,11 +142,18 @@ public class ResultsGraphicService extends AbstractGraphicService {
         var rows = new ArrayList<DriverResultRow>();
         for (int i = 0; i < maxSize; i++) {
             String homeName = i < homeResults.size() ? homeResults.get(i).getDriver().getPsnId() : "";
+            String homeNick = i < homeResults.size() ? resolveNickname(homeResults.get(i).getDriver()) : "";
             int homePoints = i < homeResults.size() ? homeResults.get(i).getPointsTotal() : 0;
             String awayName = i < awayResults.size() ? awayResults.get(i).getDriver().getPsnId() : "";
+            String awayNick = i < awayResults.size() ? resolveNickname(awayResults.get(i).getDriver()) : "";
             int awayPoints = i < awayResults.size() ? awayResults.get(i).getPointsTotal() : 0;
-            rows.add(new DriverResultRow(homeName, homePoints, awayPoints, awayName));
+            rows.add(new DriverResultRow(homeName, homeNick, homePoints, awayPoints, awayName, awayNick));
         }
         return rows;
+    }
+
+    private String resolveNickname(Driver driver) {
+        return driver.getNickname() != null && !driver.getNickname().isBlank()
+                ? driver.getNickname() : driver.getPsnId();
     }
 }
