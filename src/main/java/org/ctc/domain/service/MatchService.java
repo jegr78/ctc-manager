@@ -26,6 +26,10 @@ public class MatchService {
     private final TeamRepository teamRepository;
     private final RaceRepository raceRepository;
 
+    public Match getMatch(UUID matchId) {
+        return matchRepository.findById(matchId).orElseThrow();
+    }
+
     /**
      * Returns the matchday and its season's teams for the match creation form.
      */

@@ -2,10 +2,12 @@ package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.CreateMatchdayRequest;
 import org.ctc.admin.dto.MatchdayDto;
+import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.MatchdayScheduleGraphicService;
 import org.ctc.domain.model.Matchday;
+import org.ctc.domain.service.MatchService;
 import org.ctc.domain.service.MatchdayService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,8 @@ public class MatchdayController {
     private final MatchdayOverviewGraphicService overviewGraphicService;
     private final MatchdayScheduleGraphicService scheduleGraphicService;
     private final MatchdayResultsGraphicService resultsGraphicService;
+    private final MatchResultsGraphicService matchResultsGraphicService;
+    private final MatchService matchService;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
@@ -140,6 +144,19 @@ public class MatchdayController {
             return buildPngResponse(png, matchday.getLabel(), "results");
         } catch (Exception e) {
             log.error("Failed to generate results graphic for matchday {}", id, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{matchdayId}/matches/{matchId}/download-match-results")
+    public ResponseEntity<byte[]> downloadMatchResults(@PathVariable UUID matchdayId, @PathVariable UUID matchId) {
+        try {
+            var match = matchService.getMatch(matchId);
+            byte[] png = matchResultsGraphicService.generateMatchResults(match);
+            String label = match.getHomeTeam().getShortName() + "-vs-" + match.getAwayTeam().getShortName();
+            return buildPngResponse(png, label, "match-results");
+        } catch (Exception e) {
+            log.error("Failed to generate match results graphic for match {}", matchId, e);
             return ResponseEntity.internalServerError().build();
         }
     }

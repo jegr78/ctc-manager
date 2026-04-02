@@ -77,6 +77,11 @@
                                 <span th:unless="${race.results.isEmpty()}" class="badge badge-active" th:text="${race.results.size() + ' Results'}"></span>
                             </a>
                         </div>
+                        <div th:if="${match.homeScore != null && !match.bye}" style="padding:8px 0; border-top:1px solid var(--border);">
+                            <form th:action="@{/admin/matchdays/{mdId}/matches/{mId}/download-match-results(mdId=${matchday.id}, mId=${match.id})}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-secondary btn-sm">&#11015; Match Results</button>
+                            </form>
+                        </div>
                     </div>
 
                     <!-- Single-Leg: direkt Link zum Race -->
