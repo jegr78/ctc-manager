@@ -71,6 +71,75 @@ class DriverMatchingServiceTest {
     }
 
     @Nested
+    class AliasMatchTest {
+
+        @Test
+        void givenKnownAlias_whenFindDriver_thenReturnsExactMatch() {
+            // given
+            when(driverRepository.findByPsnId("OldPsnId_93")).thenReturn(Optional.empty());
+            when(driverRepository.findByPsnIdIgnoreCase("OldPsnId_93")).thenReturn(Optional.empty());
+            when(driverRepository.findByAliasIgnoreCase("OldPsnId_93")).thenReturn(Optional.of(hills));
+
+            // when
+            var result = matchingService.findDriver("OldPsnId_93");
+
+            // then
+            assertEquals(DriverMatchingService.MatchType.EXACT, result.type());
+            assertEquals(hills, result.driver());
+            assertFalse(result.needsConfirmation());
+        }
+
+        @Test
+        void givenAliasDifferentCase_whenFindDriver_thenReturnsExactMatch() {
+            // given
+            when(driverRepository.findByPsnId("oldpsnid_93")).thenReturn(Optional.empty());
+            when(driverRepository.findByPsnIdIgnoreCase("oldpsnid_93")).thenReturn(Optional.empty());
+            when(driverRepository.findByAliasIgnoreCase("oldpsnid_93")).thenReturn(Optional.of(hills));
+
+            // when
+            var result = matchingService.findDriver("oldpsnid_93");
+
+            // then
+            assertEquals(DriverMatchingService.MatchType.EXACT, result.type());
+            assertEquals(hills, result.driver());
+        }
+
+        @Test
+        void givenNoAliasMatch_whenFindDriver_thenFallsToFuzzy() {
+            // given
+            when(driverRepository.findByPsnId("AHR_Hils_93")).thenReturn(Optional.empty());
+            when(driverRepository.findByPsnIdIgnoreCase("AHR_Hils_93")).thenReturn(Optional.empty());
+            when(driverRepository.findByAliasIgnoreCase("AHR_Hils_93")).thenReturn(Optional.empty());
+            when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
+
+            // when
+            var result = matchingService.findDriver("AHR_Hils_93");
+
+            // then
+            assertEquals(DriverMatchingService.MatchType.FUZZY, result.type());
+            assertEquals(hills, result.driver());
+        }
+
+        @Test
+        void givenFuzzyMatchOnAlias_whenFindDriver_thenReturnsFuzzyMatch() {
+            // given
+            hills.addAlias("AHR_Mountain_93");
+            when(driverRepository.findByPsnId("AHR_Mountan_93")).thenReturn(Optional.empty());
+            when(driverRepository.findByPsnIdIgnoreCase("AHR_Mountan_93")).thenReturn(Optional.empty());
+            when(driverRepository.findByAliasIgnoreCase("AHR_Mountan_93")).thenReturn(Optional.empty());
+            when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
+
+            // when
+            var result = matchingService.findDriver("AHR_Mountan_93");
+
+            // then
+            assertEquals(DriverMatchingService.MatchType.FUZZY, result.type());
+            assertEquals(hills, result.driver());
+            assertTrue(result.similarity() >= 0.8);
+        }
+    }
+
+    @Nested
     class FuzzyMatchTest {
 
         @Test
@@ -78,6 +147,7 @@ class DriverMatchingServiceTest {
             // given
             when(driverRepository.findByPsnId("AHR_Hils_93")).thenReturn(Optional.empty());
             when(driverRepository.findByPsnIdIgnoreCase("AHR_Hils_93")).thenReturn(Optional.empty());
+            when(driverRepository.findByAliasIgnoreCase("AHR_Hils_93")).thenReturn(Optional.empty());
             when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
 
             // when
@@ -95,6 +165,7 @@ class DriverMatchingServiceTest {
             // given
             when(driverRepository.findByPsnId("Micky D Higins")).thenReturn(Optional.empty());
             when(driverRepository.findByPsnIdIgnoreCase("Micky D Higins")).thenReturn(Optional.empty());
+            when(driverRepository.findByAliasIgnoreCase("Micky D Higins")).thenReturn(Optional.empty());
             when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
 
             // when
@@ -111,6 +182,7 @@ class DriverMatchingServiceTest {
             // given
             when(driverRepository.findByPsnId("completely_different")).thenReturn(Optional.empty());
             when(driverRepository.findByPsnIdIgnoreCase("completely_different")).thenReturn(Optional.empty());
+            when(driverRepository.findByAliasIgnoreCase("completely_different")).thenReturn(Optional.empty());
             when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
 
             // when
@@ -130,6 +202,7 @@ class DriverMatchingServiceTest {
             // given
             when(driverRepository.findByPsnId("unknown_driver")).thenReturn(Optional.empty());
             when(driverRepository.findByPsnIdIgnoreCase("unknown_driver")).thenReturn(Optional.empty());
+            when(driverRepository.findByAliasIgnoreCase("unknown_driver")).thenReturn(Optional.empty());
             when(driverRepository.findAll()).thenReturn(List.of(hills, micky));
 
             // when

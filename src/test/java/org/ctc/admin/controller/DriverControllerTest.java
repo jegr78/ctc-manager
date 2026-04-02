@@ -124,6 +124,67 @@ class DriverControllerTest {
     }
 
     @Test
+    void givenDriverWithAliases_whenGetEditForm_thenFormContainsAliases() throws Exception {
+        // given
+        var driver = driverRepository.save(new Driver("alias_edit_psn", "Alias Tester"));
+        driver.addAlias("OldPsn_1");
+        driver.addAlias("OldPsn_2");
+        driverRepository.save(driver);
+
+        // when
+        mockMvc.perform(get("/admin/drivers/" + driver.getId() + "/edit"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("driverForm"))
+                .andExpect(result -> {
+                    var form = (org.ctc.admin.dto.DriverForm) result.getModelAndView().getModel().get("driverForm");
+                    assertEquals(2, form.getAliases().size());
+                    assertTrue(form.getAliases().contains("OldPsn_1"));
+                    assertTrue(form.getAliases().contains("OldPsn_2"));
+                });
+    }
+
+    @Test
+    void givenValidAliases_whenSaveDriver_thenAliasesPersisted() throws Exception {
+        // given
+        var driver = driverRepository.save(new Driver("alias_save_psn", "Alias Save"));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/save")
+                        .param("id", driver.getId().toString())
+                        .param("psnId", "alias_save_psn")
+                        .param("nickname", "Alias Save")
+                        .param("active", "true")
+                        .param("aliases[0]", "PreviousPsn1")
+                        .param("aliases[1]", "PreviousPsn2"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/drivers"));
+
+        // then
+        var updated = driverRepository.findById(driver.getId()).orElseThrow();
+        assertEquals(2, updated.getAliases().size());
+    }
+
+    @Test
+    void givenConflictingAlias_whenSaveDriver_thenReturnsFormWithError() throws Exception {
+        // given
+        driverRepository.save(new Driver("existing_psn", "Existing Driver"));
+        var driver = driverRepository.save(new Driver("conflict_test_psn", "Conflict Tester"));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/save")
+                        .param("id", driver.getId().toString())
+                        .param("psnId", "conflict_test_psn")
+                        .param("nickname", "Conflict Tester")
+                        .param("active", "true")
+                        .param("aliases[0]", "existing_psn"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/driver-form"))
+                .andExpect(model().attributeHasErrors("driverForm"));
+    }
+
+    @Test
     void givenExistingDriver_whenDeleteDriver_thenRedirectsAndRemoves() throws Exception {
         // given
         var driver = driverRepository.save(new Driver("delete_driver", "Delete Driver"));

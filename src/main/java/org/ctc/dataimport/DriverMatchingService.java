@@ -40,7 +40,14 @@ public class DriverMatchingService {
             return MatchResult.exact(searchTerm, caseInsensitive.get());
         }
 
-        // Stage 3: Fuzzy match on PSN ID and Nickname
+        // Stage 3: Alias match (case-insensitive)
+        var aliasMatch = driverRepository.findByAliasIgnoreCase(searchTerm);
+        if (aliasMatch.isPresent()) {
+            log.debug("Alias match for '{}': {}", searchTerm, aliasMatch.get().getPsnId());
+            return MatchResult.exact(searchTerm, aliasMatch.get());
+        }
+
+        // Stage 4: Fuzzy match on PSN ID, Nickname and Aliases
         var allDrivers = driverRepository.findAll();
         var bestFuzzy = findBestFuzzyMatch(searchTerm, allDrivers);
         if (bestFuzzy.isPresent()) {
@@ -50,7 +57,7 @@ public class DriverMatchingService {
             return MatchResult.fuzzy(searchTerm, match.driver(), match.similarity());
         }
 
-        // Stage 4: No match
+        // Stage 5: No match
         log.debug("No match found for '{}'", searchTerm);
         return MatchResult.noMatch(searchTerm);
     }
@@ -60,7 +67,10 @@ public class DriverMatchingService {
                 .map(driver -> {
                     double psnSimilarity = calculateSimilarity(searchTerm, driver.getPsnId());
                     double nickSimilarity = calculateSimilarity(searchTerm, driver.getNickname());
-                    double bestSimilarity = Math.max(psnSimilarity, nickSimilarity);
+                    double aliasSimilarity = driver.getAliases().stream()
+                            .mapToDouble(alias -> calculateSimilarity(searchTerm, alias.getAlias()))
+                            .max().orElse(0.0);
+                    double bestSimilarity = Math.max(Math.max(psnSimilarity, nickSimilarity), aliasSimilarity);
                     return new FuzzyMatch(driver, bestSimilarity);
                 })
                 .filter(m -> m.similarity() >= FUZZY_THRESHOLD)

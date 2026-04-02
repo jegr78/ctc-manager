@@ -65,6 +65,7 @@ public class TestDataService {
         copyDemoLogos(teams);
         seedSeasons(teams, scorings);
         seedDrivers();
+        seedAliases();
         seedSeasonDrivers();
         seedRaceLineups();
         log.info("Seed data created: {} teams, {} seasons, {} drivers, {} race-lineups",
@@ -396,6 +397,29 @@ public class TestDataService {
         driver("TNR_SHAWN46", "TNR_SHAWN46");
         driver("TNR_Wipperman537", "TNR_Wipperman");
         driver("VIVSRC370", "TNR_SRC_VIV");
+    }
+
+    private void seedAliases() {
+        var allDrivers = driverRepository.findAll();
+
+        java.util.function.Function<String, org.ctc.domain.model.Driver> findDriver = psnId ->
+                allDrivers.stream()
+                        .filter(d -> d.getPsnId().equals(psnId))
+                        .findFirst().orElseThrow(() -> new IllegalStateException("Driver not found: " + psnId));
+
+        // Typical PSN ID changes
+        var jake = findDriver.apply("P1R_Jake");
+        jake.addAlias("P1R_Jake_Old");
+        driverRepository.save(jake);
+
+        var kurt = findDriver.apply("kurt_666_");
+        kurt.addAlias("kurt_old_psn");
+        kurt.addAlias("KurtTheGamer");
+        driverRepository.save(kurt);
+
+        var richy = findDriver.apply("CLR_RichyI78");
+        richy.addAlias("TCR_RichyI78_v1");
+        driverRepository.save(richy);
     }
 
     private void seedSeasonDrivers() {
