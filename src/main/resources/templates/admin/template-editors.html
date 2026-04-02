@@ -21,6 +21,9 @@
         <a th:href="@{/admin/tools/template-editors(tab='race-results')}"
            th:classappend="${activeTab == 'race-results' ? 'tab-active' : ''}"
            class="tab-btn">Race Results</a>
+        <a th:href="@{/admin/tools/template-editors(tab='match-results')}"
+           th:classappend="${activeTab == 'match-results' ? 'tab-active' : ''}"
+           class="tab-btn">Match Results</a>
         <a th:href="@{/admin/tools/template-editors(tab='matchday-overview')}"
            th:classappend="${activeTab == 'matchday-overview' ? 'tab-active' : ''}"
            class="tab-btn">Matchday Overview</a>
@@ -305,6 +308,73 @@
                         <li>Use <code>th:each="row : ${resultRows}"</code> to iterate results</li>
                         <li>Access: <code>${row.homeDriver}</code>, <code>${row.homePoints}</code>, <code>${row.awayPoints}</code>, <code>${row.awayDriver}</code></li>
                         <li>Use <code>th:classappend</code> with <code>homeIsWinner</code>/<code>awayIsWinner</code> for winner styling</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Match Results Tab -->
+    <div th:if="${activeTab == 'match-results'}" style="margin-top:16px;" data-template-type="match-results" data-preview-mode="landscape">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+            <span th:if="${matchResultsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
+            <span th:unless="${matchResultsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+        </div>
+        <!-- Preview -->
+        <div class="card" style="padding:0;margin-bottom:16px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <strong>Preview</strong>
+                <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+            </div>
+            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
+                <div style="width:640px;height:360px;overflow:hidden;">
+                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+                </div>
+            </div>
+        </div>
+        <!-- Editor + Variables -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card" style="padding:0;display:flex;flex-direction:column;">
+                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <strong>Template (HTML + Thymeleaf)</strong>
+                    <form th:action="@{/admin/tools/template-editors/match-results/reset}" method="post"
+                          onsubmit="return confirm('Reset to default template?')">
+                        <button type="submit" class="btn btn-danger btn-sm">Reset</button>
+                    </form>
+                </div>
+                <form th:action="@{/admin/tools/template-editors/match-results/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                    <textarea name="template" class="template-textarea" th:text="${matchResultsTemplate}"></textarea>
+                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                        <button type="submit" class="btn btn-primary">Save Template</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card" style="padding:16px;">
+                <strong>Available Variables</strong>
+                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                    <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td><code>seasonYear</code></td><td>Year from season</td></tr>
+                        <tr><td><code>matchdayName</code></td><td>Matchday label (e.g. "MD 1")</td></tr>
+                        <tr><td><code>seasonName</code></td><td>Season name for footer</td></tr>
+                        <tr><td><code>homeCardBase64</code></td><td>Home team card PNG as data URI</td></tr>
+                        <tr><td><code>awayCardBase64</code></td><td>Away team card PNG as data URI</td></tr>
+                        <tr><td><code>homeTotal</code></td><td>Home team total points (sum of all races)</td></tr>
+                        <tr><td><code>awayTotal</code></td><td>Away team total points (sum of all races)</td></tr>
+                        <tr><td><code>homeIsWinner</code></td><td>True if home total > away total</td></tr>
+                        <tr><td><code>awayIsWinner</code></td><td>True if away total > home total</td></tr>
+                        <tr><td><code>raceRows</code></td><td>List of {label, homePoints, awayPoints}</td></tr>
+                        <tr><td><code>ctcLogoBase64</code></td><td>CTC logo as data URI</td></tr>
+                        <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
+                    </tbody>
+                </table>
+                <div style="margin-top:20px;">
+                    <strong>Tips</strong>
+                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                        <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
+                        <li>Use <code>th:each="row : ${raceRows}"</code> to iterate races</li>
+                        <li>Access: <code>${row.label}</code> (e.g. "Race 1"), <code>${row.homePoints}</code>, <code>${row.awayPoints}</code></li>
+                        <li>Use <code>th:classappend</code> with <code>homeIsWinner</code>/<code>awayIsWinner</code> for winner styling in footer</li>
                     </ul>
                 </div>
             </div>

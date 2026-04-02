@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style th:inline="text">
+        @font-face {
+            font-family: 'Conthrax';
+            src: url([[${fontBase64}]]) format('woff2');
+            font-weight: 600;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1920px;
+            height: 1080px;
+            overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(180deg, #c0c0c0 0%, #a0a0a0 100%);
+            padding: 24px 96px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 130px;
+        }
+
+        .header-left {
+            text-align: left;
+            flex: 1;
+        }
+
+        .header-left .title {
+            font-size: 28px;
+            font-weight: 900;
+            color: #1a1a1a;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            line-height: 1.1;
+        }
+
+        .header-left .year {
+            font-size: 32px;
+            font-weight: 700;
+            color: white;
+            margin-top: 10px;
+        }
+
+        .header-center {
+            text-align: center;
+            flex: 1;
+        }
+
+        .header-center .scorecard-title {
+            font-size: 56px;
+            font-weight: 900;
+            color: #1a1a1a;
+            letter-spacing: 2px;
+        }
+
+        .header-center .matchday {
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .header-right {
+            flex: 1;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .header-right img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            background: #111111;
+            display: flex;
+            align-items: stretch;
+            padding: 20px 32px;
+            gap: 24px;
+        }
+
+        .team-card-container {
+            width: 18%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .team-card-container img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+            border: 3px solid white;
+            border-radius: 16px;
+        }
+
+        .results {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            padding: 8px 0;
+        }
+
+        .result-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 32px;
+        }
+
+        .race-label {
+            flex: 1;
+            font-size: 28px;
+            font-weight: 700;
+            color: #b2b2b2;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-align: center;
+        }
+
+        .points {
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            width: 100px;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .separator {
+            font-size: 28px;
+            font-weight: 700;
+            color: #666;
+            width: 30px;
+            text-align: center;
+        }
+
+        /* Footer */
+        .footer {
+            background: linear-gradient(180deg, #d0d0d0 0%, #b0b0b0 100%);
+            padding: 24px 96px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 130px;
+        }
+
+        .team-total {
+            flex: 1;
+            font-size: 56px;
+            font-weight: 900;
+            color: #1a1a1a;
+        }
+
+        .team-total.winner {
+            text-decoration: underline;
+            text-underline-offset: 12px;
+            text-decoration-thickness: 6px;
+        }
+
+        .team-total:last-child {
+            text-align: right;
+        }
+
+        .season-name {
+            flex: 1;
+            text-align: center;
+            font-size: 42px;
+            font-weight: 700;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="title">Community<br>Team Cup</div>
+            <div class="year" th:text="${seasonYear}"></div>
+        </div>
+        <div class="header-center">
+            <div class="scorecard-title">Match Results</div>
+            <div class="matchday" th:text="${matchdayName}"></div>
+        </div>
+        <div class="header-right">
+            <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC">
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="team-card-container">
+            <img th:src="${homeCardBase64}" alt="Home Team Card">
+        </div>
+
+        <div class="results">
+            <div class="result-row" th:each="row : ${raceRows}">
+                <span class="points" th:text="${row.homePoints}"></span>
+                <span class="separator">:</span>
+                <span class="points" th:text="${row.awayPoints}"></span>
+                <span class="race-label" th:text="${row.label}"></span>
+            </div>
+        </div>
+
+        <div class="team-card-container">
+            <img th:src="${awayCardBase64}" alt="Away Team Card">
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="team-total" th:classappend="${homeIsWinner ? 'winner' : ''}" th:text="${homeTotal}"></div>
+        <div class="season-name" th:text="${seasonName}"></div>
+        <div class="team-total" th:classappend="${awayIsWinner ? 'winner' : ''}" th:text="${awayTotal}"></div>
+    </div>
+</body>
+</html>

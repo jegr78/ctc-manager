@@ -44,6 +44,7 @@ public class TemplatePreviewService {
             case "lineup" -> buildLineupContext();
             case "settings" -> buildSettingsContext();
             case "race-results" -> buildRaceResultsContext();
+            case "match-results" -> buildMatchResultsContext();
             case "matchday-overview" -> buildMatchdayOverviewContext();
             case "matchday-schedule" -> buildMatchdayScheduleContext();
             case "matchday-results" -> buildMatchdayResultsContext();
@@ -116,6 +117,20 @@ public class TemplatePreviewService {
         ctx.setVariable("homeTotal", 95);
         ctx.setVariable("awayTotal", 82);
         ctx.setVariable("homeIsWinner", true);
+        ctx.setVariable("awayIsWinner", false);
+        return ctx;
+    }
+
+    private Context buildMatchResultsContext() {
+        var ctx = buildRaceHeaderContext();
+        var rows = List.of(
+                new RaceRow("Race 1", 95, 82),
+                new RaceRow("Race 2", 78, 91)
+        );
+        ctx.setVariable("raceRows", rows);
+        ctx.setVariable("homeTotal", 173);
+        ctx.setVariable("awayTotal", 173);
+        ctx.setVariable("homeIsWinner", false);  // draw scenario — change to test winner styling
         ctx.setVariable("awayIsWinner", false);
         return ctx;
     }
@@ -371,4 +386,5 @@ public class TemplatePreviewService {
     // Records for template preview data
     public record LineupPairing(String homeDriver, String awayDriver) {}
     public record ResultRow(String homeDriver, int homePoints, int awayPoints, String awayDriver) {}
+    public record RaceRow(String label, int homePoints, int awayPoints) {}
 }

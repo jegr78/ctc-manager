@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.MatchdayScheduleGraphicService;
@@ -32,6 +33,7 @@ public class TemplateEditorController {
     private final MatchdayScheduleGraphicService matchdayScheduleGraphicService;
     private final MatchdayResultsGraphicService matchdayResultsGraphicService;
     private final ResultsGraphicService resultsGraphicService;
+    private final MatchResultsGraphicService matchResultsGraphicService;
     private final OverlayGraphicService overlayGraphicService;
     private final PowerRankingsGraphicService powerRankingsGraphicService;
     private final TemplatePreviewService templatePreviewService;
@@ -70,6 +72,15 @@ public class TemplateEditorController {
             model.addAttribute("raceResultsTemplate", "");
             if (!model.containsAttribute("errorMessage")) {
                 model.addAttribute("errorMessage", "Failed to load race results template: " + e.getMessage());
+            }
+        }
+        try {
+            model.addAttribute("matchResultsTemplate", matchResultsGraphicService.loadTemplate());
+            model.addAttribute("matchResultsIsCustom", matchResultsGraphicService.hasCustomTemplate());
+        } catch (Exception e) {
+            model.addAttribute("matchResultsTemplate", "");
+            if (!model.containsAttribute("errorMessage")) {
+                model.addAttribute("errorMessage", "Failed to load match results template: " + e.getMessage());
             }
         }
         try {
@@ -273,6 +284,28 @@ public class TemplateEditorController {
             redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
         }
         return "redirect:/admin/tools/template-editors?tab=matchday-results";
+    }
+
+    @PostMapping("/match-results/save")
+    public String saveMatchResultsTemplate(@RequestParam String template, RedirectAttributes redirectAttributes) {
+        try {
+            matchResultsGraphicService.saveTemplate(template);
+            redirectAttributes.addFlashAttribute("successMessage", "Match results template saved");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=match-results";
+    }
+
+    @PostMapping("/match-results/reset")
+    public String resetMatchResultsTemplate(RedirectAttributes redirectAttributes) {
+        try {
+            matchResultsGraphicService.resetTemplate();
+            redirectAttributes.addFlashAttribute("successMessage", "Match results template reset to default");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
+        }
+        return "redirect:/admin/tools/template-editors?tab=match-results";
     }
 
     @PostMapping("/overlay/save")
