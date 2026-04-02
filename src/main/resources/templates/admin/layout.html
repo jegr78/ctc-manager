@@ -47,6 +47,7 @@
                 <div class="sidebar-group">
                     <span class="sidebar-group-label">Tools</span>
                     <a th:href="@{/admin/standings}" th:classappend="${title.contains('Standing') ? 'active' : ''}">Standings</a>
+                    <a th:href="@{/admin/tools/power-rankings}" th:classappend="${title.contains('Power Rankings') ? 'active' : ''}">Power Rankings</a>
                     <a th:href="@{/admin/import}" th:classappend="${title.contains('Import') ? 'active' : ''}">Import</a>
                     <a th:href="@{/admin/gt7-sync}" th:classappend="${title.contains('GT7') ? 'active' : ''}">GT7 Sync</a>
                     <a th:href="@{/admin/tools/team-cards}" th:classappend="${title.contains('Team Cards') ? 'active' : ''}">Team Cards</a>

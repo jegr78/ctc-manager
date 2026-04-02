@@ -12,4 +12,6 @@ public interface SeasonRepository extends JpaRepository<Season, UUID> {
     Optional<Season> findByActiveTrue();
 
     List<Season> findBySeasonTeamsTeamId(UUID teamId);
+
+    List<Season> findByYearAndNumber(int year, int number);
 }
