@@ -71,6 +71,19 @@ h1, h2, .sidebar-brand span {
     color: var(--white);
 }
 
+.sidebar-brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.sidebar-version {
+    font-size: 10px;
+    font-weight: 400;
+    color: #888;
+    letter-spacing: 0.3px;
+}
+
 .sidebar-group {
     padding: 4px 0;
 }
