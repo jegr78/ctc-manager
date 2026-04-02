@@ -20,12 +20,12 @@
             <div th:if="${driverForm.id != null}" class="form-group">
                 <label>PSN Aliases</label>
                 <div id="aliases-container">
-                    <div th:each="alias, stat : ${driverForm.aliases}" class="form-row" style="margin-bottom: 4px; align-items: center;">
-                        <input type="text" th:name="'aliases[' + ${stat.index} + ']'" th:value="${alias}" style="flex: 1;">
+                    <div th:each="alias, stat : ${driverForm.aliases}" class="form-row alias-row">
+                        <input type="text" th:name="'aliases[' + ${stat.index} + ']'" th:value="${alias}" class="alias-input">
                         <button type="button" class="btn btn-danger btn-xs" onclick="this.parentElement.remove()">Remove</button>
                     </div>
                 </div>
-                <button type="button" class="btn btn-secondary btn-xs" onclick="addAlias()" style="margin-top: 4px;">Add Alias</button>
+                <button type="button" class="btn btn-secondary btn-xs mt-xs" onclick="addAlias()">Add Alias</button>
                 <div th:if="${#fields.hasErrors('aliases')}" class="field-error">
                     <span th:each="err : ${#fields.errors('aliases')}" th:text="${err}" class="error-message"></span>
                 </div>
@@ -44,20 +44,19 @@
     </div>
 
     <script th:inline="javascript">
+        var aliasCounter = /*[[${driverForm.aliases != null ? driverForm.aliases.size() : 0}]]*/ 0;
         function addAlias() {
             var container = document.getElementById('aliases-container');
-            var index = container.children.length;
+            var index = aliasCounter++;
 
             var row = document.createElement('div');
-            row.className = 'form-row';
-            row.style.marginBottom = '4px';
-            row.style.alignItems = 'center';
+            row.className = 'form-row alias-row';
 
             var input = document.createElement('input');
             input.type = 'text';
             input.name = 'aliases[' + index + ']';
             input.placeholder = 'e.g. OldPsnId_123';
-            input.style.flex = '1';
+            input.className = 'alias-input';
 
             var btn = document.createElement('button');
             btn.type = 'button';
