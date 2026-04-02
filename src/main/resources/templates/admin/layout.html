@@ -19,7 +19,10 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-brand">
                 <img th:src="@{/admin/img/ctc-logo-white.png}" alt="CTC" class="sidebar-logo">
-                <span>CTC Admin</span>
+                <div class="sidebar-brand-text">
+                    <span>CTC Admin</span>
+                    <small class="sidebar-version" th:text="${appVersion}"></small>
+                </div>
             </div>
             <nav aria-label="Main navigation">
                 <div class="sidebar-group">
