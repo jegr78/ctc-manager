@@ -30,10 +30,11 @@ class ResultsGraphicServiceTest {
         return new ResultsGraphicService(null, scoringService, tempDir.toString());
     }
 
-    private RaceResult createResult(Race race, String psnId, Team team, int position, int pointsTotal) {
+    private RaceResult createResult(Race race, String psnId, String nickname, Team team, int position, int pointsTotal) {
         var driver = new Driver();
         driver.setId(UUID.randomUUID());
         driver.setPsnId(psnId);
+        driver.setNickname(nickname);
         var result = new RaceResult(race, driver, position, position, false);
         result.setPointsTotal(pointsTotal);
         return result;
@@ -53,10 +54,10 @@ class ResultsGraphicServiceTest {
         var match = new Match(new Matchday(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
         race.setMatch(match);
 
-        var r1 = createResult(race, "HomeTop", homeTeam, 1, 20);
-        var r2 = createResult(race, "HomeMid", homeTeam, 3, 14);
-        var r3 = createResult(race, "AwayTop", awayTeam, 2, 17);
-        var r4 = createResult(race, "AwayMid", awayTeam, 4, 12);
+        var r1 = createResult(race, "HomeTop", "Nick_HT", homeTeam, 1, 20);
+        var r2 = createResult(race, "HomeMid", "Nick_HM", homeTeam, 3, 14);
+        var r3 = createResult(race, "AwayTop", "Nick_AT", awayTeam, 2, 17);
+        var r4 = createResult(race, "AwayMid", "Nick_AM", awayTeam, 4, 12);
         race.getResults().addAll(List.of(r1, r2, r3, r4));
 
         when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
@@ -70,12 +71,16 @@ class ResultsGraphicServiceTest {
         // then
         assertThat(rows).hasSize(2);
         assertThat(rows.get(0).homeDriver()).isEqualTo("HomeTop");
+        assertThat(rows.get(0).homeNickname()).isEqualTo("Nick_HT");
         assertThat(rows.get(0).homePoints()).isEqualTo(20);
         assertThat(rows.get(0).awayDriver()).isEqualTo("AwayTop");
+        assertThat(rows.get(0).awayNickname()).isEqualTo("Nick_AT");
         assertThat(rows.get(0).awayPoints()).isEqualTo(17);
         assertThat(rows.get(1).homeDriver()).isEqualTo("HomeMid");
+        assertThat(rows.get(1).homeNickname()).isEqualTo("Nick_HM");
         assertThat(rows.get(1).homePoints()).isEqualTo(14);
         assertThat(rows.get(1).awayDriver()).isEqualTo("AwayMid");
+        assertThat(rows.get(1).awayNickname()).isEqualTo("Nick_AM");
         assertThat(rows.get(1).awayPoints()).isEqualTo(12);
     }
 
@@ -94,8 +99,8 @@ class ResultsGraphicServiceTest {
         race.setMatch(match);
 
         // Same points, different positions — lower position should come first
-        var r1 = createResult(race, "HomeP3", homeTeam, 3, 15);
-        var r2 = createResult(race, "HomeP1", homeTeam, 1, 15);
+        var r1 = createResult(race, "HomeP3", "Nick_P3", homeTeam, 3, 15);
+        var r2 = createResult(race, "HomeP1", "Nick_P1", homeTeam, 1, 15);
         race.getResults().addAll(List.of(r1, r2));
 
         when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
@@ -124,11 +129,11 @@ class ResultsGraphicServiceTest {
         var match = new Match(new Matchday(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
         race.setMatch(match);
 
-        var r1 = createResult(race, "H1", homeTeam, 1, 20);
-        var r2 = createResult(race, "H2", homeTeam, 2, 17);
-        var r3 = createResult(race, "H3", homeTeam, 3, 14);
-        var r4 = createResult(race, "A1", awayTeam, 4, 12);
-        var r5 = createResult(race, "A2", awayTeam, 5, 10);
+        var r1 = createResult(race, "H1", "Nick_H1", homeTeam, 1, 20);
+        var r2 = createResult(race, "H2", "Nick_H2", homeTeam, 2, 17);
+        var r3 = createResult(race, "H3", "Nick_H3", homeTeam, 3, 14);
+        var r4 = createResult(race, "A1", "Nick_A1", awayTeam, 4, 12);
+        var r5 = createResult(race, "A2", "Nick_A2", awayTeam, 5, 10);
         race.getResults().addAll(List.of(r1, r2, r3, r4, r5));
 
         when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
@@ -143,9 +148,41 @@ class ResultsGraphicServiceTest {
         // then
         assertThat(rows).hasSize(3);
         assertThat(rows.get(2).homeDriver()).isEqualTo("H3");
+        assertThat(rows.get(2).homeNickname()).isEqualTo("Nick_H3");
         assertThat(rows.get(2).homePoints()).isEqualTo(14);
         assertThat(rows.get(2).awayDriver()).isEmpty();
+        assertThat(rows.get(2).awayNickname()).isEmpty();
         assertThat(rows.get(2).awayPoints()).isZero();
+    }
+
+    @Test
+    void givenDriverWithoutNickname_whenBuildResultRows_thenFallsBackToPsnId() {
+        // given
+        var service = createService();
+        var homeTeam = new Team("Home", "HOM");
+        homeTeam.setId(UUID.randomUUID());
+        var awayTeam = new Team("Away", "AWY");
+        awayTeam.setId(UUID.randomUUID());
+
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var match = new Match(new Matchday(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
+        race.setMatch(match);
+
+        var r1 = createResult(race, "HomeNoNick", "", homeTeam, 1, 20);
+        var r2 = createResult(race, "AwayNoNick", "", awayTeam, 2, 17);
+        race.getResults().addAll(List.of(r1, r2));
+
+        when(scoringService.isDriverInTeam(eq(r1), any(), eq(homeTeam.getId()))).thenReturn(true);
+        when(scoringService.isDriverInTeam(eq(r2), any(), eq(homeTeam.getId()))).thenReturn(false);
+
+        // when
+        var rows = service.buildResultRows(race);
+
+        // then
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).homeNickname()).isEqualTo("HomeNoNick");
+        assertThat(rows.get(0).awayNickname()).isEqualTo("AwayNoNick");
     }
 
     @Test

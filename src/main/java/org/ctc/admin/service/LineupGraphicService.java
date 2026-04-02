@@ -1,5 +1,6 @@
 package org.ctc.admin.service;
 
+import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Team;
@@ -37,7 +38,7 @@ public class LineupGraphicService extends AbstractGraphicService {
         this.raceLineupRepository = raceLineupRepository;
     }
 
-    public record DriverPairing(String homeDriver, String awayDriver) {}
+    public record DriverPairing(String homeDriver, String homeNickname, String awayDriver, String awayNickname) {}
 
     public String generateLineup(Race race) throws IOException {
         var match = race.getMatch();
@@ -89,23 +90,30 @@ public class LineupGraphicService extends AbstractGraphicService {
     }
 
     List<DriverPairing> buildPairings(List<RaceLineup> lineups, Team homeTeam, Team awayTeam) {
-        var homeDrivers = lineups.stream()
+        var homeEntries = lineups.stream()
                 .filter(lu -> isTeamOrSubTeam(lu.getTeam(), homeTeam))
-                .map(lu -> lu.getDriver().getPsnId())
+                .map(RaceLineup::getDriver)
                 .toList();
-        var awayDrivers = lineups.stream()
+        var awayEntries = lineups.stream()
                 .filter(lu -> isTeamOrSubTeam(lu.getTeam(), awayTeam))
-                .map(lu -> lu.getDriver().getPsnId())
+                .map(RaceLineup::getDriver)
                 .toList();
 
-        int maxSize = Math.max(homeDrivers.size(), awayDrivers.size());
+        int maxSize = Math.max(homeEntries.size(), awayEntries.size());
         var pairings = new ArrayList<DriverPairing>();
         for (int i = 0; i < maxSize; i++) {
-            String home = i < homeDrivers.size() ? homeDrivers.get(i) : "";
-            String away = i < awayDrivers.size() ? awayDrivers.get(i) : "";
-            pairings.add(new DriverPairing(home, away));
+            String homePsn = i < homeEntries.size() ? homeEntries.get(i).getPsnId() : "";
+            String homeNick = i < homeEntries.size() ? resolveNickname(homeEntries.get(i)) : "";
+            String awayPsn = i < awayEntries.size() ? awayEntries.get(i).getPsnId() : "";
+            String awayNick = i < awayEntries.size() ? resolveNickname(awayEntries.get(i)) : "";
+            pairings.add(new DriverPairing(homePsn, homeNick, awayPsn, awayNick));
         }
         return pairings;
+    }
+
+    private String resolveNickname(Driver driver) {
+        return driver.getNickname() != null && !driver.getNickname().isBlank()
+                ? driver.getNickname() : driver.getPsnId();
     }
 
     private boolean isTeamOrSubTeam(Team team, Team parentOrSelf) {

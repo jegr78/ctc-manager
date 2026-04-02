@@ -34,10 +34,10 @@ class LineupGraphicServiceTest {
         awayTeam.setId(UUID.randomUUID());
 
         var race = new Race();
-        var driverA = new Driver(); driverA.setPsnId("HomeDriver1");
-        var driverB = new Driver(); driverB.setPsnId("HomeDriver2");
-        var driverC = new Driver(); driverC.setPsnId("AwayDriver1");
-        var driverD = new Driver(); driverD.setPsnId("AwayDriver2");
+        var driverA = new Driver(); driverA.setPsnId("HomeDriver1"); driverA.setNickname("Nick_H1");
+        var driverB = new Driver(); driverB.setPsnId("HomeDriver2"); driverB.setNickname("Nick_H2");
+        var driverC = new Driver(); driverC.setPsnId("AwayDriver1"); driverC.setNickname("Nick_A1");
+        var driverD = new Driver(); driverD.setPsnId("AwayDriver2"); driverD.setNickname("Nick_A2");
 
         var lineups = List.of(
                 new RaceLineup(race, driverA, homeTeam),
@@ -52,9 +52,13 @@ class LineupGraphicServiceTest {
         // then
         assertThat(pairings).hasSize(2);
         assertThat(pairings.get(0).homeDriver()).isEqualTo("HomeDriver1");
+        assertThat(pairings.get(0).homeNickname()).isEqualTo("Nick_H1");
         assertThat(pairings.get(0).awayDriver()).isEqualTo("AwayDriver1");
+        assertThat(pairings.get(0).awayNickname()).isEqualTo("Nick_A1");
         assertThat(pairings.get(1).homeDriver()).isEqualTo("HomeDriver2");
+        assertThat(pairings.get(1).homeNickname()).isEqualTo("Nick_H2");
         assertThat(pairings.get(1).awayDriver()).isEqualTo("AwayDriver2");
+        assertThat(pairings.get(1).awayNickname()).isEqualTo("Nick_A2");
     }
 
     @Test
@@ -69,8 +73,8 @@ class LineupGraphicServiceTest {
         awayTeam.setId(UUID.randomUUID());
 
         var race = new Race();
-        var driverA = new Driver(); driverA.setPsnId("SubDriver1");
-        var driverB = new Driver(); driverB.setPsnId("AwayDriver1");
+        var driverA = new Driver(); driverA.setPsnId("SubDriver1"); driverA.setNickname("Nick_Sub1");
+        var driverB = new Driver(); driverB.setPsnId("AwayDriver1"); driverB.setNickname("Nick_Away1");
 
         var lineups = List.of(
                 new RaceLineup(race, driverA, subHome),
@@ -83,7 +87,9 @@ class LineupGraphicServiceTest {
         // then
         assertThat(pairings).hasSize(1);
         assertThat(pairings.get(0).homeDriver()).isEqualTo("SubDriver1");
+        assertThat(pairings.get(0).homeNickname()).isEqualTo("Nick_Sub1");
         assertThat(pairings.get(0).awayDriver()).isEqualTo("AwayDriver1");
+        assertThat(pairings.get(0).awayNickname()).isEqualTo("Nick_Away1");
     }
 
     @Test
@@ -96,11 +102,11 @@ class LineupGraphicServiceTest {
         awayTeam.setId(UUID.randomUUID());
 
         var race = new Race();
-        var d1 = new Driver(); d1.setPsnId("H1");
-        var d2 = new Driver(); d2.setPsnId("H2");
-        var d3 = new Driver(); d3.setPsnId("H3");
-        var d4 = new Driver(); d4.setPsnId("A1");
-        var d5 = new Driver(); d5.setPsnId("A2");
+        var d1 = new Driver(); d1.setPsnId("H1"); d1.setNickname("Nick_H1");
+        var d2 = new Driver(); d2.setPsnId("H2"); d2.setNickname("Nick_H2");
+        var d3 = new Driver(); d3.setPsnId("H3"); d3.setNickname("Nick_H3");
+        var d4 = new Driver(); d4.setPsnId("A1"); d4.setNickname("Nick_A1");
+        var d5 = new Driver(); d5.setPsnId("A2"); d5.setNickname("Nick_A2");
 
         var lineups = List.of(
                 new RaceLineup(race, d1, homeTeam),
@@ -116,7 +122,36 @@ class LineupGraphicServiceTest {
         // then
         assertThat(pairings).hasSize(3);
         assertThat(pairings.get(2).homeDriver()).isEqualTo("H3");
+        assertThat(pairings.get(2).homeNickname()).isEqualTo("Nick_H3");
         assertThat(pairings.get(2).awayDriver()).isEmpty();
+        assertThat(pairings.get(2).awayNickname()).isEmpty();
+    }
+
+    @Test
+    void givenDriverWithoutNickname_whenBuildPairings_thenFallsBackToPsnId() {
+        // given
+        var service = createService();
+        var homeTeam = new Team("Home", "HOM");
+        homeTeam.setId(UUID.randomUUID());
+        var awayTeam = new Team("Away", "AWY");
+        awayTeam.setId(UUID.randomUUID());
+
+        var race = new Race();
+        var driverA = new Driver(); driverA.setPsnId("HomeDriver1"); // no nickname set
+        var driverB = new Driver(); driverB.setPsnId("AwayDriver1"); driverB.setNickname("");
+
+        var lineups = List.of(
+                new RaceLineup(race, driverA, homeTeam),
+                new RaceLineup(race, driverB, awayTeam)
+        );
+
+        // when
+        var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
+
+        // then
+        assertThat(pairings).hasSize(1);
+        assertThat(pairings.get(0).homeNickname()).isEqualTo("HomeDriver1");
+        assertThat(pairings.get(0).awayNickname()).isEqualTo("AwayDriver1");
     }
 
     @Test
