@@ -208,11 +208,15 @@ th.sortable[data-sort="desc"]::after { content: ' \2193'; opacity: 1; }
 .btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     padding: 8px 16px;
-    border: none;
+    min-height: 36px;
+    box-sizing: border-box;
+    border: 1px solid transparent;
     border-radius: var(--radius-sm);
     font-size: 14px;
     font-weight: 500;
+    line-height: 1;
     cursor: pointer;
     text-decoration: none;
     white-space: nowrap;
@@ -230,7 +234,10 @@ th.sortable[data-sort="desc"]::after { content: ' \2193'; opacity: 1; }
 .btn-secondary:hover { background: #333; }
 .btn-danger { background: var(--danger); color: var(--white); }
 .btn-danger:hover { background: #c62828; }
-.btn-sm { padding: 6px 12px; font-size: 13px; min-height: 44px; }
+.btn-xs { padding: 2px 8px; font-size: 11px; min-height: auto; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn-lg { padding: 12px 24px; font-size: 16px; }
+.btn-tab { border-radius: var(--radius-sm) var(--radius-sm) 0 0; border-bottom-color: transparent; }
 .btn-success { background: var(--success); color: var(--white); }
 .btn-success:hover { background: #388e3c; }
 

@@ -18,7 +18,7 @@
             <div style="display:flex;gap:8px;margin-left:auto;">
                 <form th:if="${season != null}" th:action="@{/admin/tools/team-cards/generate-all}" method="post" style="display:flex;margin:0;" id="generateAllForm">
                     <input type="hidden" name="seasonId" th:value="${season.id}">
-                    <button type="submit" id="generateAllBtn" class="btn btn-secondary" style="align-self:stretch;">Generate All</button>
+                    <button type="submit" id="generateAllBtn" class="btn btn-secondary">Generate All</button>
                 </form>
                 <a th:if="${season != null}" th:href="@{/admin/tools/team-cards/download-all(seasonId=${season.id})}"
                    class="btn btn-secondary">Download ZIP</a>

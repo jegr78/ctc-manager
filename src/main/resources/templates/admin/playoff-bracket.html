@@ -84,7 +84,7 @@
                 <a th:href="@{/admin/seasons/{id}(id=${s.id})}" th:text="${s.displayLabel}" style="color:var(--text);text-decoration:none;"></a>
                 <form th:action="@{/admin/playoffs/{id}/remove-season(id=${playoff.id})}" method="post" style="display:inline;">
                     <input type="hidden" name="seasonId" th:value="${s.id}">
-                    <button type="submit" class="btn btn-danger btn-sm" style="padding:2px 8px;font-size:11px;">Remove</button>
+                    <button type="submit" class="btn btn-danger btn-xs">Remove</button>
                 </form>
             </span>
         </div>

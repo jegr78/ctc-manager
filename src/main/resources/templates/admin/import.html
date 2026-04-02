@@ -7,10 +7,8 @@
 
     <!-- Source Tabs -->
     <div style="display:flex;gap:0;margin-bottom:0;">
-        <button id="tabCsv" class="btn btn-primary" onclick="switchSource('csv')"
-                style="border-radius:6px 6px 0 0;border-bottom:none;">CSV Upload</button>
-        <button th:if="${sheetsAvailable}" id="tabSheet" class="btn btn-secondary" onclick="switchSource('sheet')"
-                style="border-radius:6px 6px 0 0;border-bottom:none;">Google Sheet</button>
+        <button id="tabCsv" class="btn btn-primary btn-tab" onclick="switchSource('csv')">CSV Upload</button>
+        <button th:if="${sheetsAvailable}" id="tabSheet" class="btn btn-secondary btn-tab" onclick="switchSource('sheet')">Google Sheet</button>
     </div>
 
     <div class="card" style="border-radius:0 6px 6px 6px;">
@@ -59,7 +57,7 @@
                                 <label for="newMatchdayLabel" style="font-size:13px;">Label</label>
                                 <input type="text" id="newMatchdayLabel" placeholder="e.g. Matchday 7">
                             </div>
-                            <button type="button" class="btn btn-primary" onclick="createMatchday()" style="height:38px;">Create</button>
+                            <button type="button" class="btn btn-primary" onclick="createMatchday()">Create</button>
                         </div>
                         <div id="newMatchdayError" style="display:none;color:var(--danger);font-size:13px;margin-top:4px;"></div>
                         <div id="newMatchdayHint" style="display:none;color:var(--text-dim);font-size:13px;margin-top:4px;">No matchdays yet for this season.</div>
@@ -123,13 +121,13 @@
             var sheetPanel = document.getElementById('panelSheet');
 
             if (source === 'csv') {
-                csvBtn.className = 'btn btn-primary';
-                if (sheetBtn) sheetBtn.className = 'btn btn-secondary';
+                csvBtn.className = 'btn btn-primary btn-tab';
+                if (sheetBtn) sheetBtn.className = 'btn btn-secondary btn-tab';
                 csvPanel.style.display = '';
                 if (sheetPanel) sheetPanel.style.display = 'none';
             } else {
-                csvBtn.className = 'btn btn-secondary';
-                if (sheetBtn) sheetBtn.className = 'btn btn-primary';
+                csvBtn.className = 'btn btn-secondary btn-tab';
+                if (sheetBtn) sheetBtn.className = 'btn btn-primary btn-tab';
                 csvPanel.style.display = 'none';
                 if (sheetPanel) sheetPanel.style.display = '';
             }
