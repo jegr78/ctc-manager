@@ -169,6 +169,10 @@ public class MatchdayGeneratorService {
             var race = new Race();
             race.setMatchday(matchday);
             race.setMatch(match);
+            if (leg % 2 == 1 && !bye) { // even legs (2nd, 4th, ...) get swapped home/away
+                race.setHomeTeamOverride(awayTeam);
+                race.setAwayTeamOverride(homeTeam);
+            }
             raceRepository.save(race);
         }
     }

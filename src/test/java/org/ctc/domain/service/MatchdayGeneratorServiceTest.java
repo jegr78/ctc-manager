@@ -291,6 +291,40 @@ class MatchdayGeneratorServiceTest {
         assertThat(allRaces).hasSize(12);
     }
 
+    @Test
+    void givenSeasonWith2Legs_whenGenerate_thenLeg2HasSwappedHomeAway() {
+        // given
+        season.setLegs(2);
+        seasonRepository.save(season);
+        addTeams(4);
+
+        // when
+        matchdayGeneratorService.generate(season.getId(), 3, false);
+
+        // then — verify via races grouped by match
+        var allRaces = raceRepository.findByMatchdaySeasonId(season.getId());
+        var racesByMatch = allRaces.stream()
+                .filter(r -> !r.isBye())
+                .collect(java.util.stream.Collectors.groupingBy(r -> r.getMatch().getId()));
+
+        for (var entry : racesByMatch.entrySet()) {
+            var races = entry.getValue();
+            assertThat(races).hasSize(2);
+
+            var match = races.get(0).getMatch();
+            var leg1 = races.get(0);
+            var leg2 = races.get(1);
+
+            // Leg 1: same as match home/away (no override)
+            assertThat(leg1.getHomeTeam().getId()).isEqualTo(match.getHomeTeam().getId());
+            assertThat(leg1.getAwayTeam().getId()).isEqualTo(match.getAwayTeam().getId());
+
+            // Leg 2: swapped home/away
+            assertThat(leg2.getHomeTeam().getId()).isEqualTo(match.getAwayTeam().getId());
+            assertThat(leg2.getAwayTeam().getId()).isEqualTo(match.getHomeTeam().getId());
+        }
+    }
+
     private List<Team> addTeams(int count) {
         var teams = new ArrayList<Team>();
         var suffix = UUID.randomUUID().toString().substring(0, 4);
