@@ -2,6 +2,8 @@ package org.ctc.admin.service;
 
 import org.ctc.admin.dto.MatchdayGraphicData;
 import org.ctc.admin.dto.MatchdayGraphicData.MatchGraphicRow;
+import org.ctc.admin.dto.PowerRankingsGraphicData;
+import org.ctc.admin.dto.PowerRankingsGraphicData.PowerRankingEntry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,7 @@ public class TemplatePreviewService {
             case "matchday-schedule" -> buildMatchdayScheduleContext();
             case "matchday-results" -> buildMatchdayResultsContext();
             case "overlay" -> buildOverlayContext();
+            case "power-rankings" -> buildPowerRankingsContext();
             default -> throw new IllegalArgumentException("Unknown template type: " + templateType);
         };
         return processTemplate(templateContent, ctx);
@@ -154,6 +157,31 @@ public class TemplatePreviewService {
     private Context buildMatchdayScheduleContext() {
         var ctx = new Context();
         ctx.setVariable("data", buildMatchdayData(true, false));
+        return ctx;
+    }
+
+    private Context buildPowerRankingsContext() {
+        String logo = getLogoBase64();
+        String font = getFontBase64();
+
+        var teams = List.of(
+                new PowerRankingEntry(1, "Team Alpha", "ALF", logo, "#E63946", "#1D3557", "#457B9D"),
+                new PowerRankingEntry(2, "Team Bravo", "BRV", logo, "#2A9D8F", "#264653", "#E9C46A"),
+                new PowerRankingEntry(3, "Team Charlie", "CHL", logo, "#F4A261", "#E76F51", "#2A9D8F"),
+                new PowerRankingEntry(4, "Team Delta", "DLT", logo, "#6A0572", "#AB83A1", "#E8D5B7"),
+                new PowerRankingEntry(5, "Team Echo", "ECH", logo, "#0077B6", "#00B4D8", "#90E0EF"),
+                new PowerRankingEntry(6, "Team Foxtrot", "FXT", logo, "#606C38", "#283618", "#DDA15E")
+        );
+
+        int mid = (teams.size() + 1) / 2;
+        var data = new PowerRankingsGraphicData(
+                "Power Rankings 2026", "Match Day 3",
+                logo, font, teams,
+                teams.subList(0, mid), teams.subList(mid, teams.size())
+        );
+
+        var ctx = new Context();
+        ctx.setVariable("data", data);
         return ctx;
     }
 

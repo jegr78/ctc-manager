@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Power Rankings', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Power Rankings</h1>
+    </div>
+
+    <!-- Season Selection -->
+    <div class="card">
+        <form id="seasonForm" method="get" th:action="@{/admin/tools/power-rankings}">
+            <div class="form-group" style="margin-bottom:0;">
+                <label for="seasonSelect">Season Number</label>
+                <select id="seasonSelect" onchange="submitSeasonForm(this)" style="max-width:400px;">
+                    <option value="">-- Select season --</option>
+                    <option th:each="sg : ${seasonGroups}"
+                            th:value="${sg.year() + '|' + sg.number()}"
+                            th:text="${sg.label()}"
+                            th:selected="${selectedYear != null && sg.year() == selectedYear && sg.number() == selectedNumber}">
+                    </option>
+                </select>
+                <input type="hidden" id="yearInput" name="year" th:value="${selectedYear}">
+                <input type="hidden" id="numberInput" name="number" th:value="${selectedNumber}">
+                <small class="text-dim">Groups seasons with same number (e.g. Group A + B)</small>
+            </div>
+        </form>
+    </div>
+
+    <!-- Subtitle + Download + Team List -->
+    <div th:if="${teams != null}" class="card" style="margin-top:16px;">
+        <form id="downloadForm" method="post" th:action="@{/admin/tools/power-rankings/download}"
+              style="display:flex;flex-direction:column;gap:16px;">
+            <input type="hidden" name="year" th:value="${selectedYear}">
+            <input type="hidden" name="number" th:value="${selectedNumber}">
+
+            <div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
+                <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+                    <label for="subtitle">Subtitle (free text)</label>
+                    <input type="text" id="subtitle" name="subtitle"
+                           placeholder="e.g. Match Day 2, After Playoffs...">
+                </div>
+                <button type="submit" class="btn btn-primary" onclick="prepareDownload()">
+                    &#11015; Download PNG
+                </button>
+            </div>
+
+            <!-- Hidden fields for team order -->
+            <div id="teamIdsContainer"></div>
+
+            <!-- Drag & Drop Team List -->
+            <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <h2 style="margin:0;">Team Ranking</h2>
+                    <span class="text-dim" style="font-size:13px;">Drag to reorder</span>
+                </div>
+                <div id="teamList" class="ranking-list">
+                    <div th:each="team, iter : ${teams}"
+                         class="ranking-item"
+                         draggable="true"
+                         th:data-team-id="${team.teamId()}"
+                         th:data-team-name="${team.teamName()}">
+                        <span class="ranking-rank" th:text="${iter.count}"></span>
+                        <span class="ranking-drag-handle">&#9776;</span>
+                        <div class="ranking-color-swatch"
+                             th:style="'background:' + ${team.primaryColor() ?: '#333'}"></div>
+                        <span class="ranking-team-name">
+                            <strong th:text="${team.teamShortName()}"></strong>
+                            <span class="text-dim" th:text="' ' + ${team.teamName()}"></span>
+                        </span>
+                        <span class="ranking-rating text-dim"
+                              th:text="${team.rating() != null ? 'Rating: ' + team.rating() : 'Rating: —'}"></span>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div th:if="${teams != null && teams.isEmpty()}" class="card empty-state" style="margin-top:16px;">
+        <p>No teams found for this season group.</p>
+    </div>
+
+    <style>
+        .ranking-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: var(--bg-card);
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            cursor: grab;
+            transition: background 0.15s, border-color 0.15s;
+            user-select: none;
+        }
+        .ranking-item:active {
+            cursor: grabbing;
+        }
+        .ranking-item.drag-over {
+            border-color: var(--primary);
+            background: rgba(59,130,246,0.08);
+        }
+        .ranking-item.dragging {
+            opacity: 0.4;
+        }
+        .ranking-rank {
+            width: 28px;
+            text-align: center;
+            font-weight: 700;
+            color: var(--text-dim);
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .ranking-drag-handle {
+            color: var(--text-dim);
+            opacity: 0.5;
+            flex-shrink: 0;
+        }
+        .ranking-color-swatch {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        .ranking-team-name {
+            font-size: 14px;
+            flex: 1;
+        }
+        .ranking-rating {
+            font-size: 12px;
+            white-space: nowrap;
+        }
+    </style>
+
+    <script>
+        function submitSeasonForm(select) {
+            var val = select.value;
+            if (!val) return;
+            var parts = val.split('|');
+            document.getElementById('yearInput').value = parts[0];
+            document.getElementById('numberInput').value = parts[1];
+            document.getElementById('seasonForm').submit();
+        }
+
+        function prepareDownload() {
+            var container = document.getElementById('teamIdsContainer');
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+            var items = document.querySelectorAll('#teamList .ranking-item');
+            items.forEach(function(item) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'teamIds';
+                input.value = item.dataset.teamId;
+                container.appendChild(input);
+            });
+        }
+
+        // Drag and Drop
+        (function() {
+            var list = document.getElementById('teamList');
+            if (!list) return;
+
+            var draggedItem = null;
+
+            list.addEventListener('dragstart', function(e) {
+                var item = e.target.closest('.ranking-item');
+                if (!item) return;
+                draggedItem = item;
+                item.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', '');
+            });
+
+            list.addEventListener('dragend', function(e) {
+                var item = e.target.closest('.ranking-item');
+                if (item) item.classList.remove('dragging');
+                list.querySelectorAll('.ranking-item').forEach(function(el) {
+                    el.classList.remove('drag-over');
+                });
+                draggedItem = null;
+                updateRanks();
+            });
+
+            list.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                var target = e.target.closest('.ranking-item');
+                if (!target || target === draggedItem) return;
+
+                list.querySelectorAll('.ranking-item').forEach(function(el) {
+                    el.classList.remove('drag-over');
+                });
+                target.classList.add('drag-over');
+
+                var rect = target.getBoundingClientRect();
+                var midY = rect.top + rect.height / 2;
+                if (e.clientY < midY) {
+                    list.insertBefore(draggedItem, target);
+                } else {
+                    list.insertBefore(draggedItem, target.nextSibling);
+                }
+            });
+
+            list.addEventListener('drop', function(e) {
+                e.preventDefault();
+            });
+
+            function updateRanks() {
+                var items = list.querySelectorAll('.ranking-item');
+                items.forEach(function(item, index) {
+                    item.querySelector('.ranking-rank').textContent = index + 1;
+                });
+            }
+        })();
+    </script>
+</section>
+</body>
+</html>
