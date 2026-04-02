@@ -42,6 +42,7 @@ build/
 .junie/
 .playwright-cli/
 .playwright-mcp/
+.screenshots/
 skills-lock.json
 
 ### Google Credentials ###
