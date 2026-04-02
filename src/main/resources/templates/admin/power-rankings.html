@@ -7,13 +7,12 @@
         <h1>Power Rankings</h1>
     </div>
 
-    <!-- Season Selection + Subtitle -->
+    <!-- Season Selection -->
     <div class="card">
-        <form id="seasonForm" method="get" th:action="@{/admin/tools/power-rankings}"
-              style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
-            <div style="flex:1;min-width:200px;">
-                <label for="seasonSelect" class="form-label">Season Number</label>
-                <select id="seasonSelect" onchange="submitSeasonForm(this)" class="form-control">
+        <form id="seasonForm" method="get" th:action="@{/admin/tools/power-rankings}">
+            <div class="form-group" style="margin-bottom:0;">
+                <label for="seasonSelect">Season Number</label>
+                <select id="seasonSelect" onchange="submitSeasonForm(this)" style="max-width:400px;">
                     <option value="">-- Select season --</option>
                     <option th:each="sg : ${seasonGroups}"
                             th:value="${sg.year() + '|' + sg.number()}"
@@ -36,9 +35,9 @@
             <input type="hidden" name="number" th:value="${selectedNumber}">
 
             <div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;">
-                <div style="flex:1;min-width:200px;">
-                    <label for="subtitle" class="form-label">Subtitle (free text)</label>
-                    <input type="text" id="subtitle" name="subtitle" class="form-control"
+                <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+                    <label for="subtitle">Subtitle (free text)</label>
+                    <input type="text" id="subtitle" name="subtitle"
                            placeholder="e.g. Match Day 2, After Playoffs...">
                 </div>
                 <button type="submit" class="btn btn-primary" onclick="prepareDownload()">
