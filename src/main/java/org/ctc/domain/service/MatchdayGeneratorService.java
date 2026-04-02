@@ -164,9 +164,12 @@ public class MatchdayGeneratorService {
         var match = new Match(matchday, homeTeam, awayTeam);
         match.setBye(bye);
         match = matchRepository.save(match);
-        var race = new Race();
-        race.setMatchday(matchday);
-        race.setMatch(match);
-        raceRepository.save(race);
+        int legs = matchday.getSeason().getLegs();
+        for (int leg = 0; leg < legs; leg++) {
+            var race = new Race();
+            race.setMatchday(matchday);
+            race.setMatch(match);
+            raceRepository.save(race);
+        }
     }
 }

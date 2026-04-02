@@ -273,6 +273,24 @@ class MatchdayGeneratorServiceTest {
         }
     }
 
+    @Test
+    void givenSeasonWith2Legs_whenGenerate_thenEachMatchHas2Races() {
+        // given
+        season.setLegs(2);
+        seasonRepository.save(season);
+        addTeams(4);
+
+        // when
+        matchdayGeneratorService.generate(season.getId(), 3, false);
+
+        // then
+        var allRaces = raceRepository.findByMatchdaySeasonId(season.getId());
+        var allMatches = matchRepository.findByMatchdaySeasonId(season.getId());
+        // 4 teams → 2 matches per round → 6 matches total, each with 2 legs → 12 races
+        assertThat(allMatches).hasSize(6);
+        assertThat(allRaces).hasSize(12);
+    }
+
     private List<Team> addTeams(int count) {
         var teams = new ArrayList<Team>();
         var suffix = UUID.randomUUID().toString().substring(0, 4);
