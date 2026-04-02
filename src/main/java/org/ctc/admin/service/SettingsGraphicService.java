@@ -36,8 +36,8 @@ public class SettingsGraphicService extends AbstractGraphicService {
         if (race.getTrack() == null) throw new IllegalStateException("Race has no track");
         if (!race.hasAllSettings()) throw new IllegalStateException("Race settings are incomplete");
 
-        var homeTeam = match.getHomeTeam();
-        var awayTeam = match.getAwayTeam();
+        var homeTeam = race.getHomeTeam();
+        var awayTeam = race.getAwayTeam();
         var season = race.getMatchday().getSeason();
         var settings = race.getSettings();
 
