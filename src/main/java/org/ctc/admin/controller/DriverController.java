@@ -1,12 +1,13 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.DriverForm;
-import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.PsnAlias;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.service.DriverService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class DriverController {
 
     private final DriverRepository driverRepository;
+    private final DriverService driverService;
     private final SeasonDriverRepository seasonDriverRepository;
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
@@ -56,6 +58,7 @@ public class DriverController {
         form.setPsnId(driver.getPsnId());
         form.setNickname(driver.getNickname());
         form.setActive(driver.isActive());
+        form.setAliases(driver.getAliases().stream().map(PsnAlias::getAlias).toList());
         model.addAttribute("driverForm", form);
         model.addAttribute("seasonDrivers", seasonDriverRepository.findByDriverId(id));
         model.addAttribute("seasons", seasonRepository.findAll());
@@ -69,19 +72,14 @@ public class DriverController {
         if (result.hasErrors()) {
             return "admin/driver-form";
         }
-        if (driverForm.getId() != null) {
-            var existing = driverRepository.findById(driverForm.getId()).orElseThrow();
-            existing.setPsnId(driverForm.getPsnId());
-            existing.setNickname(driverForm.getNickname());
-            existing.setActive(driverForm.isActive());
-            driverRepository.save(existing);
-        } else {
-            var driver = new Driver();
-            driver.setPsnId(driverForm.getPsnId());
-            driver.setNickname(driverForm.getNickname());
-            driver.setActive(driverForm.isActive());
-            driverRepository.save(driver);
+
+        var aliasErrors = driverService.validateAliases(driverForm.getId(), driverForm.getAliases());
+        if (!aliasErrors.isEmpty()) {
+            aliasErrors.forEach(error -> result.rejectValue("aliases", "alias.conflict", error));
+            return "admin/driver-form";
         }
+
+        driverService.save(driverForm);
         log.info("Saved driver: {}", driverForm.getPsnId());
         redirectAttributes.addFlashAttribute("successMessage", "Driver saved: " + driverForm.getPsnId());
         return "redirect:/admin/drivers";

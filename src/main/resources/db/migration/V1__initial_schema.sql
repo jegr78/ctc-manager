@@ -277,6 +277,18 @@ CREATE TABLE race_settings (
     CONSTRAINT uq_race_settings_race UNIQUE (race_id)
 );
 
+CREATE TABLE psn_aliases (
+    id UUID PRIMARY KEY,
+    driver_id UUID NOT NULL,
+    alias VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_alias_driver FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
+    CONSTRAINT uk_alias UNIQUE (alias)
+);
+
+CREATE INDEX idx_alias_driver ON psn_aliases(driver_id);
+
 CREATE TABLE race_attachments (
     id UUID PRIMARY KEY,
     race_id UUID NOT NULL,

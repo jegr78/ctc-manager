@@ -13,7 +13,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "drivers")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"seasonDrivers", "raceResults"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"seasonDrivers", "raceResults", "aliases"})
 public class Driver extends BaseEntity {
 
     @Id
@@ -37,8 +37,19 @@ public class Driver extends BaseEntity {
     @OneToMany(mappedBy = "driver")
     private List<RaceResult> raceResults = new ArrayList<>();
 
+    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PsnAlias> aliases = new ArrayList<>();
+
     public Driver(String psnId, String nickname) {
         this.psnId = psnId;
         this.nickname = nickname;
+    }
+
+    public void addAlias(String alias) {
+        aliases.add(new PsnAlias(this, alias));
+    }
+
+    public void removeAlias(PsnAlias alias) {
+        aliases.remove(alias);
     }
 }

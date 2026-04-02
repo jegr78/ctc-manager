@@ -235,6 +235,9 @@ th.sortable[data-sort="desc"]::after { content: ' \2193'; opacity: 1; }
 .btn-danger { background: var(--danger); color: var(--white); }
 .btn-danger:hover { background: #c62828; }
 .btn-xs { padding: 2px 8px; font-size: 11px; min-height: auto; }
+.btn-xs.mt-xs { margin-top: 4px; }
+.alias-row { margin-bottom: 4px; align-items: center; }
+.alias-input { flex: 1; }
 .btn-sm { padding: 6px 12px; font-size: 13px; }
 .btn-lg { padding: 12px 24px; font-size: 16px; }
 .btn-tab { border-radius: var(--radius-sm) var(--radius-sm) 0 0; border-bottom-color: transparent; }
