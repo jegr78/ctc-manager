@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Slf4j
@@ -42,6 +43,7 @@ public class SeasonController {
         model.addAttribute("season", season);
         model.addAttribute("playoff", playoff);
         model.addAttribute("isSwiss", season.getFormat() == SeasonFormat.SWISS);
+        model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(id));
         return "admin/season-detail";
     }
 
@@ -168,6 +170,21 @@ public class SeasonController {
             redirectAttributes.addFlashAttribute("successMessage", "Updated: " + teamName);
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
+        }
+        return "redirect:/admin/seasons/" + id;
+    }
+
+    @PostMapping("/{id}/replace-team")
+    public String replaceTeam(@PathVariable UUID id,
+                              @RequestParam UUID predecessorTeamId,
+                              @RequestParam UUID successorTeamId,
+                              @RequestParam LocalDate replacedAt,
+                              RedirectAttributes redirectAttributes) {
+        try {
+            String result = seasonManagementService.replaceTeam(id, predecessorTeamId, successorTeamId, replacedAt);
+            redirectAttributes.addFlashAttribute("successMessage", "Team replaced: " + result);
+        } catch (IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/seasons/" + id;
     }

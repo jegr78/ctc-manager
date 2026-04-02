@@ -182,6 +182,45 @@ class SwissPairingServiceTest {
         assertEquals(List.of(0, 0, 3, 3), values);
     }
 
+    @Test
+    void givenReplacedTeam_whenGenerateNextRound_thenReplacedTeamExcluded() {
+        // given
+        var teams = new ArrayList<Team>();
+        for (int i = 0; i < 4; i++) {
+            var team = teamRepository.save(new Team("SwissT " + i + "_" + UUID.randomUUID().toString().substring(0, 4),
+                    "SW" + i + UUID.randomUUID().toString().substring(0, 2)));
+            season.addTeam(team);
+            teams.add(team);
+        }
+        seasonRepository.save(season);
+
+        // Team 0 replaced by a new team
+        var replacementTeam = teamRepository.save(new Team("Replacement " + UUID.randomUUID().toString().substring(0, 4),
+                "REP" + UUID.randomUUID().toString().substring(0, 2)));
+        season.addTeam(replacementTeam);
+        season = seasonRepository.saveAndFlush(season);
+
+        var stOld = season.findSeasonTeam(teams.get(0)).orElseThrow();
+        var stNew = season.findSeasonTeam(replacementTeam).orElseThrow();
+        stOld.setSuccessor(stNew);
+        season = seasonRepository.saveAndFlush(season);
+
+        // when
+        var matchday = swissPairingService.generateNextRound(season.getId());
+
+        // then — 4 active teams (3 original + 1 replacement), replaced team excluded
+        var races = raceRepository.findByMatchdayId(matchday.getId());
+        assertEquals(2, races.size()); // 4 teams = 2 pairings
+
+        // Replaced team should not appear in any race
+        for (var race : races) {
+            assertNotEquals(teams.get(0).getId(), race.getHomeTeam().getId());
+            if (race.getAwayTeam() != null) {
+                assertNotEquals(teams.get(0).getId(), race.getAwayTeam().getId());
+            }
+        }
+    }
+
     private void addTeams(int count) {
         for (int i = 0; i < count; i++) {
             var team = teamRepository.save(new Team("SwissT " + i + "_" + UUID.randomUUID().toString().substring(0, 4),

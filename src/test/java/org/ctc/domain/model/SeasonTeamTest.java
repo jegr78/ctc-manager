@@ -3,6 +3,8 @@ package org.ctc.domain.model;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class SeasonTeamTest {
@@ -142,6 +144,66 @@ class SeasonTeamTest {
 
             // when / then
             assertEquals("https://example.com/team-logo.png", seasonTeam.getEffectiveLogoUrl());
+        }
+    }
+
+    @Nested
+    class SuccessionTest {
+
+        @Test
+        void givenNoSuccessor_whenIsReplaced_thenReturnsFalse() {
+            // given
+            SeasonTeam seasonTeam = new SeasonTeam(null, new Team("Team A", "A"));
+
+            // when / then
+            assertFalse(seasonTeam.isReplaced());
+        }
+
+        @Test
+        void givenSuccessor_whenIsReplaced_thenReturnsTrue() {
+            // given
+            SeasonTeam predecessor = new SeasonTeam(null, new Team("Team A", "A"));
+            SeasonTeam successor = new SeasonTeam(null, new Team("Team B", "B"));
+            predecessor.setSuccessor(successor);
+            predecessor.setReplacedAt(LocalDate.of(2026, 3, 15));
+
+            // when / then
+            assertTrue(predecessor.isReplaced());
+            assertEquals(LocalDate.of(2026, 3, 15), predecessor.getReplacedAt());
+        }
+
+        @Test
+        void givenNoSuccessor_whenGetActiveSeasonTeam_thenReturnsSelf() {
+            // given
+            SeasonTeam seasonTeam = new SeasonTeam(null, new Team("Team A", "A"));
+
+            // when / then
+            assertSame(seasonTeam, seasonTeam.getActiveSeasonTeam());
+        }
+
+        @Test
+        void givenDirectSuccessor_whenGetActiveSeasonTeam_thenReturnsSuccessor() {
+            // given
+            SeasonTeam predecessor = new SeasonTeam(null, new Team("Team A", "A"));
+            SeasonTeam successor = new SeasonTeam(null, new Team("Team B", "B"));
+            predecessor.setSuccessor(successor);
+
+            // when / then
+            assertSame(successor, predecessor.getActiveSeasonTeam());
+        }
+
+        @Test
+        void givenSuccessionChain_whenGetActiveSeasonTeam_thenReturnsFinalSuccessor() {
+            // given
+            SeasonTeam teamA = new SeasonTeam(null, new Team("Team A", "A"));
+            SeasonTeam teamB = new SeasonTeam(null, new Team("Team B", "B"));
+            SeasonTeam teamC = new SeasonTeam(null, new Team("Team C", "C"));
+            teamA.setSuccessor(teamB);
+            teamB.setSuccessor(teamC);
+
+            // when / then
+            assertSame(teamC, teamA.getActiveSeasonTeam());
+            assertSame(teamC, teamB.getActiveSeasonTeam());
         }
     }
 }

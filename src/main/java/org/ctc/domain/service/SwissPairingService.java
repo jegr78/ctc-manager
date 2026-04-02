@@ -91,11 +91,14 @@ public class SwissPairingService {
             return Integer.compare(pb, pa);
         });
 
-        // Get played opponents for each team
-        Map<UUID, Set<UUID>> playedOpponents = getPlayedOpponents(seasonId);
+        var season = seasonRepository.findById(seasonId).orElseThrow();
+        Map<UUID, UUID> successionMap = season.buildSuccessionMap();
 
-        // Get teams that already had a bye
-        Set<UUID> byeTeams = getByeTeams(seasonId);
+        // Get played opponents for each team (resolved through succession)
+        Map<UUID, Set<UUID>> playedOpponents = getPlayedOpponents(seasonId, successionMap);
+
+        // Get teams that already had a bye (resolved through succession)
+        Set<UUID> byeTeams = getByeTeams(seasonId, successionMap);
 
         return createSwissPairings(matchday, teams, playedOpponents, byeTeams);
     }
@@ -178,13 +181,17 @@ public class SwissPairingService {
     }
 
     public Map<UUID, Set<UUID>> getPlayedOpponents(UUID seasonId) {
+        return getPlayedOpponents(seasonId, Map.of());
+    }
+
+    private Map<UUID, Set<UUID>> getPlayedOpponents(UUID seasonId, Map<UUID, UUID> successionMap) {
         List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(seasonId);
         Map<UUID, Set<UUID>> opponents = new HashMap<>();
 
         for (Race race : races) {
             if (race.isBye() || race.getAwayTeam() == null) continue;
-            UUID home = race.getHomeTeam().getId();
-            UUID away = race.getAwayTeam().getId();
+            UUID home = successionMap.getOrDefault(race.getHomeTeam().getId(), race.getHomeTeam().getId());
+            UUID away = successionMap.getOrDefault(race.getAwayTeam().getId(), race.getAwayTeam().getId());
             opponents.computeIfAbsent(home, k -> new HashSet<>()).add(away);
             opponents.computeIfAbsent(away, k -> new HashSet<>()).add(home);
         }
@@ -193,10 +200,14 @@ public class SwissPairingService {
     }
 
     public Set<UUID> getByeTeams(UUID seasonId) {
+        return getByeTeams(seasonId, Map.of());
+    }
+
+    private Set<UUID> getByeTeams(UUID seasonId, Map<UUID, UUID> successionMap) {
         List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(seasonId);
         return races.stream()
                 .filter(Race::isBye)
-                .map(r -> r.getHomeTeam().getId())
+                .map(r -> successionMap.getOrDefault(r.getHomeTeam().getId(), r.getHomeTeam().getId()))
                 .collect(Collectors.toSet());
     }
 
@@ -205,23 +216,26 @@ public class SwissPairingService {
      * that have sub-teams in the season (only sub-teams compete).
      */
     private List<Team> getEligibleTeams(Season season) {
-        List<Team> allTeams = season.getTeams();
-        Set<UUID> parentIdsWithSubs = allTeams.stream()
+        List<Team> activeTeams = season.getActiveTeams();
+        Set<UUID> parentIdsWithSubs = activeTeams.stream()
                 .filter(Team::isSubTeam)
                 .map(t -> t.getParentTeam().getId())
                 .collect(Collectors.toSet());
 
-        return allTeams.stream()
+        return activeTeams.stream()
                 .filter(t -> !parentIdsWithSubs.contains(t.getId()))
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
     public Map<UUID, Integer> calculateBuchholz(UUID seasonId) {
+        var season = seasonRepository.findById(seasonId).orElseThrow();
+        Map<UUID, UUID> successionMap = season.buildSuccessionMap();
+
         var standings = standingsService.calculateStandings(seasonId);
         Map<UUID, Integer> pointsMap = standings.stream()
                 .collect(Collectors.toMap(s -> s.getTeam().getId(), StandingsService.TeamStanding::getPoints));
 
-        Map<UUID, Set<UUID>> opponents = getPlayedOpponents(seasonId);
+        Map<UUID, Set<UUID>> opponents = getPlayedOpponents(seasonId, successionMap);
         Map<UUID, Integer> buchholz = new HashMap<>();
 
         for (var entry : opponents.entrySet()) {

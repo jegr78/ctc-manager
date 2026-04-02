@@ -7,9 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.ctc.domain.model.Team;
+
 import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -22,6 +25,23 @@ public class SeasonManagementService {
     private final TrackRepository trackRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final FileStorageService fileStorageService;
+
+    /**
+     * Returns teams available as replacement candidates for a season
+     * (all teams not currently active in the season).
+     */
+    @Transactional(readOnly = true)
+    public List<Team> getAvailableTeamsForReplacement(UUID seasonId) {
+        var season = seasonRepository.findById(seasonId).orElseThrow();
+        Set<UUID> activeTeamIds = season.getSeasonTeams().stream()
+                .filter(st -> !st.isReplaced())
+                .map(st -> st.getTeam().getId())
+                .collect(Collectors.toSet());
+        return teamRepository.findAll().stream()
+                .filter(t -> !activeTeamIds.contains(t.getId()))
+                .sorted(Comparator.comparing(Team::getShortName))
+                .toList();
+    }
 
     /**
      * Adds a team to a season. Auto-adds the parent team when adding a sub-team.
@@ -107,6 +127,41 @@ public class SeasonManagementService {
 
         seasonTeamRepository.save(seasonTeam);
         return seasonTeam.getTeam().getShortName();
+    }
+
+    /**
+     * Replaces a team in a season with a successor team.
+     * The predecessor's results are inherited by the successor in standings.
+     * Returns "OLD → NEW" for flash messages.
+     */
+    @Transactional
+    public String replaceTeam(UUID seasonId, UUID predecessorTeamId, UUID successorTeamId, LocalDate replacedAt) {
+        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var predecessor = teamRepository.findById(predecessorTeamId).orElseThrow();
+        var successor = teamRepository.findById(successorTeamId).orElseThrow();
+
+        var predecessorSt = season.findSeasonTeam(predecessor)
+                .orElseThrow(() -> new IllegalStateException("Team " + predecessor.getShortName() + " not in season"));
+
+        if (predecessorSt.isReplaced()) {
+            throw new IllegalStateException("Team " + predecessor.getShortName() + " already replaced");
+        }
+
+        if (!season.containsTeam(successor)) {
+            season.addTeam(successor);
+        }
+        seasonRepository.save(season);
+
+        var successorSt = seasonTeamRepository.findBySeasonIdAndTeamId(seasonId, successorTeamId).orElseThrow();
+
+        predecessorSt.setSuccessor(successorSt);
+        predecessorSt.setReplacedAt(replacedAt);
+        seasonTeamRepository.save(predecessorSt);
+
+        log.info("Replaced team {} with {} in season {} (effective {})",
+                predecessor.getShortName(), successor.getShortName(), season.getName(), replacedAt);
+
+        return predecessor.getShortName() + " → " + successor.getShortName();
     }
 
     /**

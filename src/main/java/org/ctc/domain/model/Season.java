@@ -8,11 +8,7 @@ import lombok.Setter;
 import lombok.ToString;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Entity
@@ -149,5 +145,30 @@ public class Season extends BaseEntity {
         return seasonTeams.stream()
                 .filter(st -> st.getTeam().getId().equals(team.getId()))
                 .findFirst();
+    }
+
+    /**
+     * Returns only active (non-replaced) teams, ordered by short name.
+     */
+    public List<Team> getActiveTeams() {
+        return seasonTeams.stream()
+                .filter(st -> !st.isReplaced())
+                .map(SeasonTeam::getTeam)
+                .sorted(Comparator.comparing(Team::getShortName))
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    /**
+     * Builds a map from replaced team IDs to their final active successor team ID.
+     */
+    public Map<UUID, UUID> buildSuccessionMap() {
+        Map<UUID, UUID> map = new HashMap<>();
+        for (SeasonTeam st : seasonTeams) {
+            if (st.isReplaced()) {
+                UUID activeTeamId = st.getActiveSeasonTeam().getTeam().getId();
+                map.put(st.getTeam().getId(), activeTeamId);
+            }
+        }
+        return map;
     }
 }

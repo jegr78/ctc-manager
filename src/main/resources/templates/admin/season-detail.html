@@ -53,7 +53,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr th:each="st : ${season.seasonTeams}">
+                        <tr th:each="st : ${season.seasonTeams}" th:classappend="${st.replaced ? 'replaced-team' : ''}">
                             <td style="width:60px;">
                                 <div th:if="${st.effectivePrimaryColor != null}" style="display:flex;gap:3px;">
                                     <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectivePrimaryColor}"></span>
@@ -63,15 +63,18 @@
                             </td>
                             <td>
                                 <a th:href="@{/admin/teams/{id}(id=${st.team.id})}" class="detail-link"
-                                   th:text="${st.team.shortName + ' — ' + st.team.name}"></a>
+                                   th:text="${st.team.shortName + ' — ' + st.team.name}"
+                                   th:styleappend="${st.replaced ? 'text-decoration:line-through;opacity:0.6;' : ''}"></a>
                                 <span th:if="${st.team.isSubTeam()}" class="badge badge-active" style="margin-left:6px;font-size:11px;">Sub</span>
+                                <span th:if="${st.replaced}" class="badge badge-inactive" style="margin-left:6px;font-size:11px;"
+                                      th:text="'Replaced → ' + ${st.successor.team.shortName}"></span>
                             </td>
                             <td style="width:60px;text-align:center;">
                                 <span th:if="${st.rating != null}" th:text="${st.rating}"></span>
                                 <span th:if="${st.rating == null}" class="text-dim">—</span>
                             </td>
-                            <td style="width:1%;">
-                                <button type="button" class="btn btn-secondary btn-sm season-team-edit"
+                            <td style="width:1%;white-space:nowrap;">
+                                <button th:unless="${st.replaced}" type="button" class="btn btn-secondary btn-sm season-team-edit"
                                         th:data-id="${st.id}"
                                         th:data-shortname="${st.team.shortName}"
                                         th:data-rating="${st.rating}"
@@ -82,6 +85,10 @@
                                         th:data-eff-primary="${st.effectivePrimaryColor ?: '#333333'}"
                                         th:data-eff-secondary="${st.effectiveSecondaryColor ?: '#555555'}"
                                         th:data-eff-accent="${st.effectiveAccentColor ?: '#4fc3f7'}">Edit</button>
+                                <button th:unless="${st.replaced}" type="button" class="btn btn-secondary btn-sm replace-team-btn"
+                                        th:data-team-id="${st.team.id}"
+                                        th:data-team-name="${st.team.shortName}"
+                                        style="margin-left:4px;">Replace</button>
                             </td>
                         </tr>
                     </tbody>
@@ -152,6 +159,37 @@
             </div>
         </div>
 
+        <!-- Replace Team Modal -->
+        <div id="replaceTeamModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
+            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:420px;margin:16px;">
+                <h3 id="replaceModalTitle" style="margin-bottom:16px;"></h3>
+                <form th:action="@{/admin/seasons/{id}/replace-team(id=${season.id})}" method="post">
+                    <input type="hidden" id="replacePredecessorId" name="predecessorTeamId">
+
+                    <div class="form-group">
+                        <label>Replacement Team</label>
+                        <select name="successorTeamId" required
+                                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:14px;">
+                            <option value="">— Select team —</option>
+                            <option th:each="t : ${availableTeams}" th:value="${t.id}"
+                                    th:text="${t.shortName + ' — ' + t.name}"></option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-top:12px;">
+                        <label>Effective Date</label>
+                        <input type="date" name="replacedAt" required
+                               style="width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:14px;">
+                    </div>
+
+                    <div class="actions" style="margin-top:20px;justify-content:flex-end;">
+                        <button type="button" class="btn btn-secondary" onclick="closeReplaceTeamModal()">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Replace</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <script>
             function closeSeasonTeamModal() {
                 document.getElementById('seasonTeamModal').style.display = 'none';
@@ -186,7 +224,23 @@
             });
 
             document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') closeSeasonTeamModal();
+                if (e.key === 'Escape') { closeSeasonTeamModal(); closeReplaceTeamModal(); }
+            });
+
+            function closeReplaceTeamModal() {
+                document.getElementById('replaceTeamModal').style.display = 'none';
+            }
+
+            document.querySelectorAll('.replace-team-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.getElementById('replacePredecessorId').value = this.dataset.teamId;
+                    document.getElementById('replaceModalTitle').textContent = 'Replace ' + this.dataset.teamName;
+                    document.getElementById('replaceTeamModal').style.display = 'flex';
+                });
+            });
+
+            document.getElementById('replaceTeamModal').addEventListener('click', function(e) {
+                if (e.target === this) closeReplaceTeamModal();
             });
         </script>
 

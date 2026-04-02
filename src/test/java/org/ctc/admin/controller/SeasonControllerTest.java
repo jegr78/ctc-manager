@@ -244,6 +244,34 @@ class SeasonControllerTest {
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
+    // --- POST /admin/seasons/{id}/replace-team ---
+
+    @Test
+    void givenValidTeams_whenReplaceTeam_thenRedirectsWithSuccess() throws Exception {
+        // given
+        var season = testHelper.createSeason("Replace Test Season");
+        var predecessor = teamRepository.save(new Team("Old Team", "OLD_" + java.util.UUID.randomUUID().toString().substring(0, 4)));
+        var successor = teamRepository.save(new Team("New Team", "NEW_" + java.util.UUID.randomUUID().toString().substring(0, 4)));
+        season.addTeam(predecessor);
+        seasonRepository.save(season);
+
+        // when
+        mockMvc.perform(post("/admin/seasons/" + season.getId() + "/replace-team")
+                        .param("predecessorTeamId", predecessor.getId().toString())
+                        .param("successorTeamId", successor.getId().toString())
+                        .param("replacedAt", "2026-03-15"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/seasons/" + season.getId()))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        // Verify successor is in season and predecessor is replaced
+        var updatedSeason = seasonRepository.findById(season.getId()).orElseThrow();
+        assertTrue(updatedSeason.containsTeam(successor));
+        var stOld = updatedSeason.findSeasonTeam(predecessor).orElseThrow();
+        assertTrue(stOld.isReplaced());
+    }
+
     // --- GET /admin/seasons/{id}/swiss ---
 
     @Test
