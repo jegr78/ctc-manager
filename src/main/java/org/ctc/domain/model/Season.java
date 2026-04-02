@@ -159,6 +159,21 @@ public class Season extends BaseEntity {
     }
 
     /**
+     * Returns eligible teams for match pairings: filters out parent teams
+     * that have sub-teams in the season (only sub-teams compete).
+     */
+    public List<Team> getEligibleTeams() {
+        List<Team> activeTeams = getActiveTeams();
+        Set<UUID> parentIdsWithSubs = activeTeams.stream()
+                .filter(Team::isSubTeam)
+                .map(t -> t.getParentTeam().getId())
+                .collect(Collectors.toSet());
+        return activeTeams.stream()
+                .filter(t -> !parentIdsWithSubs.contains(t.getId()))
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    /**
      * Builds a map from replaced team IDs to their final active successor team ID.
      */
     public Map<UUID, UUID> buildSuccessionMap() {

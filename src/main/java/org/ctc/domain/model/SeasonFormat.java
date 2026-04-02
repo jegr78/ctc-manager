@@ -2,5 +2,6 @@ package org.ctc.domain.model;
 
 public enum SeasonFormat {
     LEAGUE,
-    SWISS
+    SWISS,
+    ROUND_ROBIN
 }
