@@ -24,6 +24,8 @@ Die bestehende Anwendung ist funktional komplett:
 - ✓ Graphic Generation (Team Cards, Lineups, Results) — existing
 - ✓ Static Site Generation — existing
 - ✓ Template Editor — existing
+- ✓ Zentrale Exception-Behandlung (GlobalExceptionHandler, EntityNotFoundException) — Phase 1
+- ✓ Aussagekraeftige orElseThrow()-Messages in allen 21 Produktionsdateien — Phase 1
 
 ### Active
 
@@ -99,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after initialization*
+*Last updated: 2026-04-03 after Phase 1 completion*
