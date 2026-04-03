@@ -58,6 +58,16 @@
                     <input type="number" id="totalRounds" th:field="*{totalRounds}" min="1" max="20" placeholder="e.g. 8">
                 </div>
             </div>
+            <div class="form-row">
+                <div class="form-group" style="max-width:200px;">
+                    <label for="legs">Legs per Match</label>
+                    <input type="number" id="legs" th:field="*{legs}" min="1" value="1">
+                </div>
+                <div class="form-group" style="max-width:200px;">
+                    <label for="eventDurationMinutes">Event Duration (min)</label>
+                    <input type="number" id="eventDurationMinutes" th:field="*{eventDurationMinutes}" min="10" max="480" placeholder="e.g. 90">
+                </div>
+            </div>
 
             <!-- Scoring -->
             <div style="border:1px solid var(--accent); border-radius:var(--radius-md); padding:16px; margin-top:16px; background:rgba(79,195,247,0.03);">
@@ -84,16 +94,6 @@
                         </select>
                         <div th:if="${season != null && season.matchScoring != null}" class="text-dim" style="font-size:11px; margin-top:2px;"
                              th:text="'S ' + ${season.matchScoring.pointsWin} + ' · U ' + ${season.matchScoring.pointsDraw} + ' · N ' + ${season.matchScoring.pointsLoss}"></div>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group" style="max-width:200px;">
-                        <label for="legs">Legs per Match</label>
-                        <input type="number" id="legs" th:field="*{legs}" min="1" value="1">
-                    </div>
-                    <div class="form-group" style="max-width:200px;">
-                        <label for="eventDurationMinutes">Event Duration (min)</label>
-                        <input type="number" id="eventDurationMinutes" th:field="*{eventDurationMinutes}" min="10" max="480" placeholder="e.g. 90">
                     </div>
                 </div>
             </div>
