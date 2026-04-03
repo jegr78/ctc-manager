@@ -34,4 +34,6 @@ public class SeasonForm {
     private Integer totalRounds;
 
     private int legs = 1;
+
+    private Integer eventDurationMinutes;
 }

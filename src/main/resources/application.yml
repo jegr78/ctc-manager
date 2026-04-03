@@ -29,10 +29,12 @@ logging:
 server:
   port: 8080
 
-# Google Sheets Integration
+# Google Integration
 google:
   sheets:
     credentials-path: google-credentials.json
+  calendar:
+    id: ${GOOGLE_CALENDAR_ID:}
 
 # Statische Seitengenerierung
 ctc:

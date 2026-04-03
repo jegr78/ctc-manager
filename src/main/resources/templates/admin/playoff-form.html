@@ -35,6 +35,10 @@
                     <input type="date" id="endDate" name="endDate" th:value="${playoffForm.endDate != null ? playoffForm.endDate.toString() : ''}">
                 </div>
             </div>
+            <div class="form-group" style="max-width:200px;">
+                <label for="eventDurationMinutes">Event Duration (min)</label>
+                <input type="number" id="eventDurationMinutes" th:field="*{eventDurationMinutes}" min="10" max="480" placeholder="e.g. 90">
+            </div>
             <div class="actions" style="margin-top:16px;">
                 <button type="submit" class="btn btn-primary">Create Playoff</button>
                 <a th:href="@{/admin/playoffs}" class="btn btn-secondary">Cancel</a>

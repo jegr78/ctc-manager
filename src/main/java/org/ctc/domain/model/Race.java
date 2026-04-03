@@ -33,6 +33,9 @@ public class Race extends BaseEntity {
 
     private LocalDateTime dateTime;
 
+    @Column(name = "calendar_event_id")
+    private String calendarEventId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "track_id")
     private Track track;
@@ -99,5 +102,9 @@ public class Race extends BaseEntity {
 
     public boolean hasAllSettings() {
         return settings != null && settings.isComplete();
+    }
+
+    public boolean hasCalendarEvent() {
+        return calendarEventId != null && !calendarEventId.isBlank();
     }
 }

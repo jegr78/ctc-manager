@@ -49,8 +49,9 @@ skills-lock.json
 *-credentials.json
 service-account*.json
 
-### Docker ###
+### Environment ###
 .env
+.env.*
 
 ### OS ###
 .DS_Store

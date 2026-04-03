@@ -86,9 +86,15 @@
                              th:text="'S ' + ${season.matchScoring.pointsWin} + ' · U ' + ${season.matchScoring.pointsDraw} + ' · N ' + ${season.matchScoring.pointsLoss}"></div>
                     </div>
                 </div>
-                <div class="form-group" style="max-width:200px;">
-                    <label for="legs">Legs per Match</label>
-                    <input type="number" id="legs" th:field="*{legs}" min="1" value="1">
+                <div class="form-row">
+                    <div class="form-group" style="max-width:200px;">
+                        <label for="legs">Legs per Match</label>
+                        <input type="number" id="legs" th:field="*{legs}" min="1" value="1">
+                    </div>
+                    <div class="form-group" style="max-width:200px;">
+                        <label for="eventDurationMinutes">Event Duration (min)</label>
+                        <input type="number" id="eventDurationMinutes" th:field="*{eventDurationMinutes}" min="10" max="480" placeholder="e.g. 90">
+                    </div>
                 </div>
             </div>
 

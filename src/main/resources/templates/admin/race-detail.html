@@ -68,6 +68,16 @@
             <button class="btn btn-secondary" disabled style="opacity:0.5;">Generate Overlay Graphic</button>
             <small class="text-dim">No match data.</small>
         </span>
+
+        <!-- Calendar Event Button -->
+        <form th:if="${canCreateCalendarEvent}" th:action="@{/admin/races/{id}/create-calendar-event(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-primary"
+                    th:text="${hasCalendarEvent ? 'Update Calendar Event' : 'Create Calendar Event'}"></button>
+        </form>
+        <span th:if="${!canCreateCalendarEvent && calendarAvailable}" style="display:inline-flex;align-items:center;gap:8px;">
+            <button class="btn btn-secondary" disabled style="opacity:0.5;">Create Calendar Event</button>
+            <small class="text-dim">Date/time or teams missing.</small>
+        </span>
     </div>
 
     <!-- Score Banner -->

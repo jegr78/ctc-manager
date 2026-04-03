@@ -51,7 +51,7 @@ public class PlayoffController {
         try {
             var playoff = playoffService.createPlayoff(
                     form.getSeasonId(), form.getName(), form.getNumberOfTeams(),
-                    form.getStartDate(), form.getEndDate());
+                    form.getStartDate(), form.getEndDate(), form.getEventDurationMinutes());
             redirectAttributes.addFlashAttribute("successMessage",
                     "Playoff created: " + playoff.getName());
             return "redirect:/admin/playoffs?seasonId=" + form.getSeasonId();

@@ -48,6 +48,9 @@ public class Season extends BaseEntity {
     @Column(nullable = false)
     private int legs = 1;
 
+    @Column(name = "event_duration_minutes")
+    private Integer eventDurationMinutes;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "race_scoring_id", nullable = false)
     private RaceScoring raceScoring;

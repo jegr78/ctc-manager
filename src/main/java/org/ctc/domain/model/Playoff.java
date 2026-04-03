@@ -35,6 +35,9 @@ public class Playoff extends BaseEntity {
 
     private LocalDate endDate;
 
+    @Column(name = "event_duration_minutes")
+    private Integer eventDurationMinutes;
+
     @ManyToMany
     @JoinTable(name = "playoff_seasons",
             joinColumns = @JoinColumn(name = "playoff_id"),
