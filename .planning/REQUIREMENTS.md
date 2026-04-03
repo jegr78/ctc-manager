@@ -9,8 +9,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Exception Handling
 
-- [ ] **EXCP-01**: Global Exception Handler mit @ControllerAdvice faengt unbehandelte Exceptions (NoSuchElementException, EntityNotFoundException) und zeigt benutzerfreundliche Fehlerseite
-- [ ] **EXCP-02**: Alle 50+ .orElseThrow() Aufrufe mit aussagekraeftigen Exception-Messages (Entity-Typ + ID)
+- [x] **EXCP-01**: Global Exception Handler mit @ControllerAdvice faengt unbehandelte Exceptions (NoSuchElementException, EntityNotFoundException) und zeigt benutzerfreundliche Fehlerseite
+- [x] **EXCP-02**: Alle 50+ .orElseThrow() Aufrufe mit aussagekraeftigen Exception-Messages (Entity-Typ + ID)
 
 ### Service Layer
 
@@ -84,8 +84,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXCP-01 | Phase 1 | Pending |
-| EXCP-02 | Phase 1 | Pending |
+| EXCP-01 | Phase 1 | Complete |
+| EXCP-02 | Phase 1 | Complete |
 | SRVC-01 | Phase 2 | Pending |
 | SRVC-02 | Phase 2 | Pending |
 | SRVC-03 | Phase 2 | Pending |
