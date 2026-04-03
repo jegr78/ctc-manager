@@ -28,11 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. Eine fehlende Entity (z.B. geloeschtes Team per URL aufrufen) zeigt eine lesbare Fehlerseite statt Whitelabel Error
   2. Alle .orElseThrow()-Aufrufe im Code enthalten Entity-Typ und ID in der Exception-Message
   3. Bestehende Controller-Flash-Messages (z.B. nach Form-Submits) funktionieren weiterhin ungestoert
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — Exception classes, GlobalExceptionHandler, admin error template + tests
+- [ ] 01-02-PLAN.md — Migrate all 136 orElseThrow() calls to EntityNotFoundException across 21 files
 
 ### Phase 2: Service Layer Extraction
 **Goal**: Alle Controller delegieren Repository-Zugriffe an Services — kein Controller injiziert mehr direkt ein Repository
@@ -98,7 +98,7 @@ Note: Phase 4 depends on Phase 2 (not Phase 3), so 4 and 3 have no mutual depend
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Exception Infrastructure | 0/0 | Not started | - |
+| 1. Exception Infrastructure | 0/2 | Planned | - |
 | 2. Service Layer Extraction | 0/0 | Not started | - |
 | 3. God Service Split | 0/0 | Not started | - |
 | 4. Database Optimization | 0/0 | Not started | - |
