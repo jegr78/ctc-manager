@@ -1,0 +1,148 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    # Skip bot commits (SNAPSHOT version bumps)
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Determine version
+        id: version
+        run: |
+          # Check if any tags exist
+          if git describe --tags --abbrev=0 2>/dev/null; then
+            LAST_TAG=$(git describe --tags --abbrev=0)
+            HAS_TAGS=true
+          else
+            HAS_TAGS=false
+          fi
+          echo "has_tags=$HAS_TAGS" >> $GITHUB_OUTPUT
+
+          if [ "$HAS_TAGS" = "false" ]; then
+            # Initial release: read version from pom.xml SNAPSHOT
+            POM_VERSION=$(./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout)
+            NEW_VERSION=${POM_VERSION%-SNAPSHOT}
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "Initial release: $NEW_VERSION (from pom.xml $POM_VERSION)"
+          else
+            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+
+            # Get commits since last tag
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+
+            # Check for releasable commits
+            if ! echo "$COMMITS" | grep -qE "^(feat|fix|docs|refactor|perf|test|style|chore)(\(.+\))?[!]?:"; then
+              echo "should_skip=true" >> $GITHUB_OUTPUT
+              echo "No releasable commits found, skipping release"
+              exit 0
+            fi
+
+            # Determine bump type from conventional commits
+            BUMP="patch"
+            if echo "$COMMITS" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
+              BUMP="major"
+            elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+              BUMP="minor"
+            fi
+
+            # Parse version from last tag
+            VERSION=${LAST_TAG#v}
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+            # Apply bump
+            case $BUMP in
+              major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+              minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+              patch) PATCH=$((PATCH + 1)) ;;
+            esac
+
+            NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "bump=$BUMP" >> $GITHUB_OUTPUT
+            echo "Release: $NEW_VERSION ($BUMP bump from $LAST_TAG)"
+          fi
+
+          # Calculate next SNAPSHOT version (always next minor)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$NEW_VERSION"
+          NEXT_SNAPSHOT="${MAJOR}.$((MINOR + 1)).0-SNAPSHOT"
+          echo "next_snapshot=$NEXT_SNAPSHOT" >> $GITHUB_OUTPUT
+
+      - name: Set release version in pom.xml
+        if: steps.version.outputs.should_skip != 'true'
+        run: ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.new_version }} -DgenerateBackupPoms=false
+
+      - name: Build and verify
+        if: steps.version.outputs.should_skip != 'true'
+        run: ./mvnw verify -Dspring.profiles.active=dev
+
+      - name: Configure git
+        if: steps.version.outputs.should_skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create release commit and tag
+        if: steps.version.outputs.should_skip != 'true'
+        run: |
+          git add pom.xml
+          git commit -m "release: v${{ steps.version.outputs.new_version }}"
+          git tag -a "v${{ steps.version.outputs.new_version }}" -m "Release v${{ steps.version.outputs.new_version }}"
+
+      - name: Push tag and create GitHub Release
+        if: steps.version.outputs.should_skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push origin "v${{ steps.version.outputs.new_version }}"
+          gh release create "v${{ steps.version.outputs.new_version }}" \
+            --title "v${{ steps.version.outputs.new_version }}" \
+            --generate-notes \
+            target/ctc-manager-${{ steps.version.outputs.new_version }}.jar
+
+      - name: Login to GHCR
+        if: steps.version.outputs.should_skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: steps.version.outputs.should_skip != 'true'
+        run: |
+          VERSION=${{ steps.version.outputs.new_version }}
+          IMAGE=ghcr.io/${{ github.repository_owner }}/ctc-manager
+
+          docker build -t ${IMAGE}:${VERSION} -t ${IMAGE}:latest .
+          docker push ${IMAGE}:${VERSION}
+          docker push ${IMAGE}:latest
+
+      - name: Bump to next SNAPSHOT
+        if: steps.version.outputs.should_skip != 'true'
+        run: |
+          ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.next_snapshot }} -DgenerateBackupPoms=false
+          git add pom.xml
+          git commit -m "chore: bump version to ${{ steps.version.outputs.next_snapshot }} [skip ci]"
+          git push origin master
