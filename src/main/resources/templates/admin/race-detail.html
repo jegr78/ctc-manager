@@ -130,7 +130,8 @@
             <span class="label">Car</span>
             <span th:text="${race.car?.displayName ?: '-'}"></span>
             <span class="label">Date &amp; Time</span>
-            <span th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></span>
+            <span th:data-london-time="${race.dateTime != null ? race.dateTime.toString().substring(0, 16) : ''}"
+                  th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></span>
             <span class="label">Context</span>
             <span th:if="${race.playoffMatchup != null}">
                 <a th:href="@{/admin/playoffs/matchup/{id}(id=${race.playoffMatchup.id})}" class="detail-link">

@@ -31,7 +31,7 @@ import java.time.format.DateTimeFormatter;
 public class GoogleCalendarService {
 
     private static final String APPLICATION_NAME = "CTC Manager";
-    private static final String TIME_ZONE = "Europe/Berlin";
+    private static final String TIME_ZONE = "Europe/London";
     private static final int REMINDER_MINUTES = 30;
 
     private final String credentialsPath;

@@ -151,9 +151,10 @@
 
             <div class="form-group">
                 <label for="dateTime">Date &amp; Time</label>
-                <input type="datetime-local" id="dateTime" name="dateTime"
+                <input type="datetime-local" id="dateTime" name="dateTime" class="london-time-input"
+                       th:data-london-time="${raceForm.dateTime != null ? raceForm.dateTime.toString().substring(0, 16) : ''}"
                        th:value="${raceForm.dateTime != null ? raceForm.dateTime.toString().substring(0, 16) : ''}">
-                <small class="text-dim">When this match takes place</small>
+                <small class="text-dim">Stored as London time, displayed in your local timezone</small>
             </div>
             <div class="actions" style="margin-top: 16px;">
                 <button type="submit" class="btn btn-primary">Save</button>
