@@ -54,6 +54,9 @@ public class RaceController {
         model.addAttribute("settingsExist", data.settingsExist());
         model.addAttribute("canGenerateOverlay", data.canGenerateOverlay());
         model.addAttribute("overlayExists", data.overlayExists());
+        model.addAttribute("calendarAvailable", data.calendarAvailable());
+        model.addAttribute("hasCalendarEvent", data.hasCalendarEvent());
+        model.addAttribute("canCreateCalendarEvent", data.canCreateCalendarEvent());
         return "admin/race-detail";
     }
 
@@ -158,6 +161,17 @@ public class RaceController {
         UUID raceId = raceManagementService.deleteAttachment(attachmentId);
         redirectAttributes.addFlashAttribute("successMessage", "Attachment deleted");
         return "redirect:/admin/races/" + raceId;
+    }
+
+    @PostMapping("/{id}/create-calendar-event")
+    public String createCalendarEvent(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            raceManagementService.createOrUpdateCalendarEvent(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Calendar event saved");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", "Calendar: " + e.getMessage());
+        }
+        return "redirect:/admin/races/" + id;
     }
 
     @PostMapping("/{id}/generate-lineup")

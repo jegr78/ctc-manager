@@ -2,6 +2,7 @@ package org.ctc.domain.service;
 
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
+import org.ctc.dataimport.GoogleCalendarService;
 import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.OverlayGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
@@ -54,6 +55,7 @@ public class RaceManagementService {
     private final SettingsGraphicService settingsGraphicService;
     private final OverlayGraphicService overlayGraphicService;
     private final TeamCardService teamCardService;
+    private final GoogleCalendarService googleCalendarService;
 
     @Value("${app.upload-dir:uploads}")
     private String uploadDir;
@@ -68,7 +70,9 @@ public class RaceManagementService {
                                  boolean lineupMissing, boolean cardsMissing, boolean lineupExists,
                                  boolean canGenerateResults, boolean resultsMissing, boolean resultsExist,
                                  boolean canGenerateSettings, boolean settingsMissing, boolean settingsExist,
-                                 boolean canGenerateOverlay, boolean overlayExists) {}
+                                 boolean canGenerateOverlay, boolean overlayExists,
+                                 boolean calendarAvailable, boolean hasCalendarEvent,
+                                 boolean canCreateCalendarEvent) {}
 
     public record ResultsFormData(RaceForm form, Race race, RaceScoring raceScoring) {}
 
@@ -161,6 +165,13 @@ public class RaceManagementService {
                 .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/overlay.png"));
         boolean hasMatch = race.getMatch() != null && race.getHomeTeam() != null && race.getAwayTeam() != null;
 
+        boolean calendarAvailable = googleCalendarService.isAvailable();
+        boolean hasCalendarEvent = race.hasCalendarEvent();
+        boolean canCreateCalendarEvent = calendarAvailable
+                && race.getDateTime() != null
+                && race.getHomeTeam() != null
+                && race.getAwayTeam() != null;
+
         return new RaceDetailData(race, homeTotal, awayTotal, driverTeamMap,
                 hasLineup && hasHomeCard && hasAwayCard && !lineupExists,
                 !hasLineup, !hasHomeCard || !hasAwayCard, lineupExists,
@@ -168,7 +179,54 @@ public class RaceManagementService {
                 !hasResults, resultsGraphicExists,
                 hasAllSettings && hasHomeCard && hasAwayCard && !settingsGraphicExists,
                 !hasAllSettings, settingsGraphicExists,
-                hasMatch && !overlayExists, overlayExists);
+                hasMatch && !overlayExists, overlayExists,
+                calendarAvailable, hasCalendarEvent, canCreateCalendarEvent);
+    }
+
+    // --- Calendar event ---
+
+    @Transactional
+    public void createOrUpdateCalendarEvent(UUID raceId) throws IOException {
+        var race = raceRepository.findById(raceId).orElseThrow();
+
+        if (!googleCalendarService.isAvailable()) {
+            throw new IllegalStateException("Google Calendar integration not available");
+        }
+        if (race.getDateTime() == null) {
+            throw new IllegalStateException("Race has no date/time set");
+        }
+        if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
+            throw new IllegalStateException("Race has no teams assigned");
+        }
+
+        Integer durationMinutes = resolveEventDuration(race);
+        if (durationMinutes == null) {
+            throw new IllegalStateException("Event duration not configured. Set it in the season or playoff form.");
+        }
+
+        String title = race.getMatchday().getLabel() + " - "
+                + race.getHomeTeam().getShortName() + " vs. "
+                + race.getAwayTeam().getShortName();
+
+        if (race.hasCalendarEvent()) {
+            googleCalendarService.updateEvent(race.getCalendarEventId(), title, race.getDateTime(), durationMinutes);
+            log.info("Updated calendar event for race {}: {}", raceId, title);
+        } else {
+            String eventId = googleCalendarService.createEvent(title, race.getDateTime(), durationMinutes);
+            race.setCalendarEventId(eventId);
+            raceRepository.save(race);
+            log.info("Created calendar event for race {}: {} (eventId: {})", raceId, title, eventId);
+        }
+    }
+
+    private Integer resolveEventDuration(Race race) {
+        if (race.getPlayoffMatchup() != null) {
+            var playoffDuration = race.getPlayoffMatchup().getRound().getPlayoff().getEventDurationMinutes();
+            if (playoffDuration != null) {
+                return playoffDuration;
+            }
+        }
+        return race.getMatchday().getSeason().getEventDurationMinutes();
     }
 
     // --- Form data for new race ---

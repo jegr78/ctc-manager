@@ -324,10 +324,12 @@ public class PlayoffService {
 
     @Transactional
     public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams,
-                                  LocalDate startDate, LocalDate endDate) {
+                                  LocalDate startDate, LocalDate endDate,
+                                  Integer eventDurationMinutes) {
         var playoff = createPlayoff(seasonId, name, numberOfTeams);
         playoff.setStartDate(startDate);
         playoff.setEndDate(endDate);
+        playoff.setEventDurationMinutes(eventDurationMinutes);
         return playoffRepository.save(playoff);
     }
 

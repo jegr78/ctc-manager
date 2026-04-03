@@ -29,7 +29,7 @@
             <button type="submit" class="btn btn-primary">Generate Lineup Graphic</button>
         </form>
         <span th:if="${!canGenerateLineup && !lineupExists}" style="display:inline-flex;align-items:center;gap:8px;">
-            <button class="btn btn-secondary" disabled style="opacity:0.5;">Generate Lineup Graphic</button>
+            <button class="btn btn-secondary" disabled>Generate Lineup Graphic</button>
             <small class="text-dim">
                 <span th:if="${lineupMissing}">No lineup assigned.</span>
                 <span th:if="${cardsMissing}">Team cards missing.</span>
@@ -41,7 +41,7 @@
             <button type="submit" class="btn btn-primary">Generate Results Graphic</button>
         </form>
         <span th:if="${!canGenerateResults && !resultsExist}" style="display:inline-flex;align-items:center;gap:8px;">
-            <button class="btn btn-secondary" disabled style="opacity:0.5;">Generate Results Graphic</button>
+            <button class="btn btn-secondary" disabled>Generate Results Graphic</button>
             <small class="text-dim">
                 <span th:if="${resultsMissing}">No results entered.</span>
                 <span th:if="${cardsMissing}">Team cards missing.</span>
@@ -53,7 +53,7 @@
             <button type="submit" class="btn btn-primary">Generate Settings Graphic</button>
         </form>
         <span th:if="${!canGenerateSettings && !settingsExist}" style="display:inline-flex;align-items:center;gap:8px;">
-            <button class="btn btn-secondary" disabled style="opacity:0.5;">Generate Settings Graphic</button>
+            <button class="btn btn-secondary" disabled>Generate Settings Graphic</button>
             <small class="text-dim">
                 <span th:if="${settingsMissing}">Settings incomplete.</span>
                 <span th:if="${cardsMissing}">Team cards missing.</span>
@@ -65,8 +65,18 @@
             <button type="submit" class="btn btn-primary">Generate Overlay Graphic</button>
         </form>
         <span th:if="${!canGenerateOverlay && !overlayExists}" style="display:inline-flex;align-items:center;gap:8px;">
-            <button class="btn btn-secondary" disabled style="opacity:0.5;">Generate Overlay Graphic</button>
+            <button class="btn btn-secondary" disabled>Generate Overlay Graphic</button>
             <small class="text-dim">No match data.</small>
+        </span>
+
+        <!-- Calendar Event Button -->
+        <form th:if="${canCreateCalendarEvent}" th:action="@{/admin/races/{id}/create-calendar-event(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-primary"
+                    th:text="${hasCalendarEvent ? 'Update Calendar Event' : 'Create Calendar Event'}"></button>
+        </form>
+        <span th:if="${!canCreateCalendarEvent && calendarAvailable}" style="display:inline-flex;align-items:center;gap:8px;">
+            <button class="btn btn-secondary" disabled>Create Calendar Event</button>
+            <small class="text-dim">Date/time or teams missing.</small>
         </span>
     </div>
 
@@ -120,7 +130,8 @@
             <span class="label">Car</span>
             <span th:text="${race.car?.displayName ?: '-'}"></span>
             <span class="label">Date &amp; Time</span>
-            <span th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></span>
+            <span th:data-london-time="${race.dateTime != null ? race.dateTime.toString().substring(0, 16) : ''}"
+                  th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></span>
             <span class="label">Context</span>
             <span th:if="${race.playoffMatchup != null}">
                 <a th:href="@{/admin/playoffs/matchup/{id}(id=${race.playoffMatchup.id})}" class="detail-link">

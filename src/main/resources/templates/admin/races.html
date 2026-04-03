@@ -55,6 +55,7 @@
                            th:text="${race.matchday.label}"></a>
                     </td>
                     <td class="text-dim" style="font-size:13px; white-space:nowrap;"
+                        th:data-london-time="${race.dateTime != null ? race.dateTime.toString().substring(0, 16) : ''}"
                         th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                     <td>
                         <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link">

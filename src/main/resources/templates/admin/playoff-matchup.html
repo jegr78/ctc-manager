@@ -54,7 +54,8 @@
                         <span th:if="${leg.results.isEmpty()}" class="text-dim">—</span>
                         <span th:unless="${leg.results.isEmpty()}" th:text="${leg.results.size() + ' Drivers'}"></span>
                     </td>
-                    <td th:text="${leg.dateTime != null ? #temporals.format(leg.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
+                    <td th:data-london-time="${leg.dateTime != null ? leg.dateTime.toString().substring(0, 16) : ''}"
+                        th:text="${leg.dateTime != null ? #temporals.format(leg.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                     <td>
                         <span th:if="${leg.results.isEmpty()}" class="badge badge-inactive">Open</span>
                         <span th:unless="${leg.results.isEmpty()}" class="badge badge-active"
@@ -87,8 +88,8 @@
             </div>
             <div class="form-group">
                 <label for="dateTime">Date &amp; Time</label>
-                <input type="datetime-local" id="dateTime" name="dateTime">
-                <small class="text-dim">When this leg takes place</small>
+                <input type="datetime-local" id="dateTime" name="dateTime" class="london-time-input">
+                <small class="text-dim">Stored as London time, displayed in your local timezone</small>
             </div>
             <button type="submit" class="btn btn-primary">Add Leg</button>
         </form>

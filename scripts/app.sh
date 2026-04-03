@@ -21,6 +21,17 @@ start() {
     exit 1
   fi
 
+  # Load base .env if present
+  if [ -f "$PROJECT_DIR/.env" ]; then
+    set -a; source "$PROJECT_DIR/.env"; set +a
+  fi
+
+  # Load profile-specific .env (overrides base)
+  local primary_profile="${profile%%,*}"
+  if [ -f "$PROJECT_DIR/.env.$primary_profile" ]; then
+    set -a; source "$PROJECT_DIR/.env.$primary_profile"; set +a
+  fi
+
   echo "Starting CTC Manager with profile '$profile'..."
   cd "$PROJECT_DIR"
   ./mvnw spring-boot:run -Dspring-boot.run.profiles="$profile" &

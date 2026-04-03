@@ -16,4 +16,5 @@ public class PlayoffForm {
     private int numberOfTeams = 8;
     private LocalDate startDate;
     private LocalDate endDate;
+    private Integer eventDurationMinutes;
 }

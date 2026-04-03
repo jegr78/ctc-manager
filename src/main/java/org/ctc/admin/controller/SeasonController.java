@@ -82,6 +82,7 @@ public class SeasonController {
         form.setFormat(season.getFormat());
         form.setTotalRounds(season.getTotalRounds());
         form.setLegs(season.getLegs());
+        form.setEventDurationMinutes(season.getEventDurationMinutes());
         model.addAttribute("seasonForm", form);
         model.addAttribute("season", season);
         model.addAttribute("allTeams", teamRepository.findAll());
@@ -112,6 +113,7 @@ public class SeasonController {
             existing.setFormat(form.getFormat());
             existing.setTotalRounds(form.getTotalRounds());
             existing.setLegs(form.getLegs());
+            existing.setEventDurationMinutes(form.getEventDurationMinutes());
             existing.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
             existing.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
             seasonRepository.save(existing);
@@ -129,6 +131,7 @@ public class SeasonController {
             season.setFormat(form.getFormat());
             season.setTotalRounds(form.getTotalRounds());
             season.setLegs(form.getLegs());
+            season.setEventDurationMinutes(form.getEventDurationMinutes());
             season.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
             season.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
             seasonRepository.save(season);
