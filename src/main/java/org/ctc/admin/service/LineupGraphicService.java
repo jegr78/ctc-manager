@@ -1,9 +1,11 @@
 package org.ctc.admin.service;
 
 import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.PlayoffSeed;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.PlayoffSeedRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.service.StandingsService;
 import lombok.extern.slf4j.Slf4j;
@@ -28,24 +30,26 @@ public class LineupGraphicService extends AbstractGraphicService {
 
     private final StandingsService standingsService;
     private final RaceLineupRepository raceLineupRepository;
+    private final PlayoffSeedRepository playoffSeedRepository;
 
     public LineupGraphicService(TemplateEngine templateEngine,
                                 StandingsService standingsService,
                                 RaceLineupRepository raceLineupRepository,
+                                PlayoffSeedRepository playoffSeedRepository,
                                 @Value("${app.upload-dir:uploads}") String uploadDir) {
         super(templateEngine, uploadDir);
         this.standingsService = standingsService;
         this.raceLineupRepository = raceLineupRepository;
+        this.playoffSeedRepository = playoffSeedRepository;
     }
 
     public record DriverPairing(String homeDriver, String homeNickname, String awayDriver, String awayNickname) {}
 
     public String generateLineup(Race race) throws IOException {
-        var match = race.getMatch();
-        if (match == null) throw new IllegalStateException("Race has no match");
-
         var homeTeam = race.getHomeTeam();
         var awayTeam = race.getAwayTeam();
+        if (homeTeam == null || awayTeam == null) throw new IllegalStateException("Race has no teams assigned");
+
         var season = race.getMatchday().getSeason();
 
         var lineups = raceLineupRepository.findByRaceId(race.getId());
@@ -57,18 +61,31 @@ public class LineupGraphicService extends AbstractGraphicService {
         if (homeCardBase64 == null) throw new IllegalStateException("Team card not found for " + homeTeam.getShortName());
         if (awayCardBase64 == null) throw new IllegalStateException("Team card not found for " + awayTeam.getShortName());
 
-        var standings = standingsService.calculateStandings(season.getId());
         int homePosition = 0;
         int awayPosition = 0;
-        for (int i = 0; i < standings.size(); i++) {
-            if (standings.get(i).getTeam().getId().equals(homeTeam.getId())) homePosition = i + 1;
-            if (standings.get(i).getTeam().getId().equals(awayTeam.getId())) awayPosition = i + 1;
+
+        if (race.getPlayoffMatchup() != null) {
+            var playoff = race.getPlayoffMatchup().getRound().getPlayoff();
+            var homeSeed = playoffSeedRepository.findByPlayoffIdAndTeamId(playoff.getId(), homeTeam.getId());
+            var awaySeed = playoffSeedRepository.findByPlayoffIdAndTeamId(playoff.getId(), awayTeam.getId());
+            homePosition = homeSeed.map(PlayoffSeed::getSeed).orElse(0);
+            awayPosition = awaySeed.map(PlayoffSeed::getSeed).orElse(0);
+        } else {
+            var standings = standingsService.calculateStandings(season.getId());
+            for (int i = 0; i < standings.size(); i++) {
+                if (standings.get(i).getTeam().getId().equals(homeTeam.getId())) homePosition = i + 1;
+                if (standings.get(i).getTeam().getId().equals(awayTeam.getId())) awayPosition = i + 1;
+            }
         }
+
+        String seasonName = race.getPlayoffMatchup() != null
+                ? race.getPlayoffMatchup().getRound().getPlayoff().getName()
+                : season.getName();
 
         var ctx = new Context();
         ctx.setVariable("seasonYear", String.valueOf(season.getYear()));
         ctx.setVariable("matchdayName", race.getMatchday().getLabel());
-        ctx.setVariable("seasonName", season.getName());
+        ctx.setVariable("seasonName", seasonName);
         ctx.setVariable("homeCardBase64", homeCardBase64);
         ctx.setVariable("awayCardBase64", awayCardBase64);
         ctx.setVariable("homePosition", homePosition);
