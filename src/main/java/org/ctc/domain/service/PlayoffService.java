@@ -418,7 +418,6 @@ public class PlayoffService {
         log.info("Seeding saved for playoff {}", playoffId);
     }
 
-    @Transactional
     public void saveSeedNumbers(UUID playoffId, Map<UUID, Integer> teamSeeds) {
         var playoff = playoffRepository.findById(playoffId)
                 .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));

@@ -1061,3 +1061,11 @@ a.season-header-title:hover {
     white-space: pre;
     overflow: auto;
 }
+
+/* Utility: spacing */
+.mb-sm { margin-bottom: 12px; }
+.mt-md { margin-top: 16px; }
+
+/* Utility: seed input column */
+.seed-col { width: 60px; }
+.seed-input { width: 50px; }

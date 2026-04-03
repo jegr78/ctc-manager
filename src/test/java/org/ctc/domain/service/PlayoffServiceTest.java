@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -608,6 +609,19 @@ class PlayoffServiceTest {
                     .filter(s -> s.getTeam().getId().equals(teams.get(1).getId()))
                     .findFirst().orElseThrow();
             assertEquals(1, seedForTeam1.getSeed());
+        }
+
+        @Test
+        void givenNoSeedNumbers_whenAutoSeedBracket_thenThrowsIllegalState() {
+            // given
+            var playoff = playoffService.createPlayoff(season.getId(), "Test Playoffs", 4);
+            entityManager.flush();
+            entityManager.clear();
+
+            // when / then
+            assertThatThrownBy(() -> playoffService.autoSeedBracket(playoff.getId()))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("No seed numbers assigned");
         }
 
         @Test
