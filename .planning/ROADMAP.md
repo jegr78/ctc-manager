@@ -40,14 +40,16 @@ Plans:
 **Requirements**: SRVC-01, SRVC-02, SRVC-03, SRVC-04, SRVC-05, SRVC-06, SRVC-07
 **Success Criteria** (what must be TRUE):
   1. DriverController, TrackController, CarController, RaceScoringController, MatchScoringController und TeamController enthalten keine @Autowired Repository-Felder mehr
-  2. SeasonController hat maximal 2 Service-Injections statt 8 Repository-Injections
+  2. SeasonController hat maximal 3 Service-Injections statt 8 Repository-Injections
   3. Alle CRUD-Operationen (assign, delete, save, upload) funktionieren identisch wie vor dem Refactoring
   4. Test-Coverage bleibt ueber 82% (neue Services haben eigene Unit-Tests)
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — RaceScoringService + MatchScoringService: new services for simplest scoring controllers
+- [ ] 02-02-PLAN.md — TrackService + CarService: new services with image upload handling
+- [ ] 02-03-PLAN.md — DriverService + TeamManagementService: extend existing services for remaining controllers
+- [ ] 02-04-PLAN.md — SeasonController consolidation: 7 repository injections into SeasonManagementService
 
 ### Phase 3: God Service Split
 **Goal**: RaceManagementService (673 Zeilen, 13 Dependencies) ist in drei fokussierte Services mit klaren Verantwortlichkeiten aufgeteilt
@@ -99,7 +101,7 @@ Note: Phase 4 depends on Phase 2 (not Phase 3), so 4 and 3 have no mutual depend
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Exception Infrastructure | 1/2 | In Progress | - |
-| 2. Service Layer Extraction | 0/0 | Not started | - |
+| 2. Service Layer Extraction | 0/4 | Planned | - |
 | 3. God Service Split | 0/0 | Not started | - |
 | 4. Database Optimization | 0/0 | Not started | - |
 | 5. Security | 0/0 | Not started | - |
