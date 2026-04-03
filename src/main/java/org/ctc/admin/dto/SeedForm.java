@@ -19,5 +19,6 @@ public class SeedForm {
         private UUID matchupId;
         private int slot;
         private UUID teamId;
+        private Integer seedNumber;
     }
 }
