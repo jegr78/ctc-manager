@@ -239,6 +239,29 @@ class PlayoffControllerTest {
         // Either success or error flash attribute should be present
     }
 
+    // --- Round graphic download endpoints ---
+
+    @Test
+    void givenUnknownRoundId_whenDownloadRoundOverview_thenReturns500() throws Exception {
+        // when / then
+        mockMvc.perform(post("/admin/playoffs/round/" + UUID.randomUUID() + "/download-overview"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void givenUnknownRoundId_whenDownloadRoundSchedule_thenReturns500() throws Exception {
+        // when / then
+        mockMvc.perform(post("/admin/playoffs/round/" + UUID.randomUUID() + "/download-schedule"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void givenUnknownRoundId_whenDownloadRoundResults_thenReturns500() throws Exception {
+        // when / then
+        mockMvc.perform(post("/admin/playoffs/round/" + UUID.randomUUID() + "/download-results"))
+                .andExpect(status().isInternalServerError());
+    }
+
     // --- POST /admin/playoffs/{id}/add-season + remove-season ---
 
     @Test

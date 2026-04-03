@@ -57,7 +57,7 @@
         <h2>Round Configuration</h2>
         <div class="table-scroll">
             <table>
-                <thead><tr><th>Round</th><th>Legs</th><th></th></tr></thead>
+                <thead><tr><th>Round</th><th>Legs</th><th></th><th>Graphics</th></tr></thead>
                 <tbody>
                     <tr th:each="round : ${playoff.rounds}">
                         <td th:text="${round.label}"></td>
@@ -71,6 +71,22 @@
                             </form>
                         </td>
                         <td class="text-dim" th:text="${round.matchups.size() + ' Matchups'}"></td>
+                        <td>
+                            <div style="display:flex;gap:4px;">
+                                <form th:action="@{/admin/playoffs/round/{id}/download-overview(id=${round.id})}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-secondary btn-xs"
+                                            th:disabled="${round.matchups.isEmpty()}">Overview</button>
+                                </form>
+                                <form th:action="@{/admin/playoffs/round/{id}/download-schedule(id=${round.id})}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-secondary btn-xs"
+                                            th:disabled="${round.matchups.isEmpty()}">Schedule</button>
+                                </form>
+                                <form th:action="@{/admin/playoffs/round/{id}/download-results(id=${round.id})}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-secondary btn-xs"
+                                            th:disabled="${round.matchups.isEmpty()}">Results</button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </table>
