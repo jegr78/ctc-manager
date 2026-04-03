@@ -33,7 +33,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 ### Database
 
 - [ ] **DBIX-01**: Flyway V2 Migration mit Indexes auf allen FK-Columns (races, race_results, race_lineups, matches, matchdays, season_drivers, season_teams)
-- [ ] **DBIX-02**: @EntityGraph Annotationen fuer haeufig traversierte Beziehungen (Match→Teams, Race→Matchday)
+- [ ] **DBIX-02**: @EntityGraph Annotationen fuer haeufig traversierte Beziehungen (Match->Teams, Race->Matchday)
 
 ## v2 Requirements
 
@@ -84,28 +84,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EXCP-01 | Pending | Pending |
-| EXCP-02 | Pending | Pending |
-| SRVC-01 | Pending | Pending |
-| SRVC-02 | Pending | Pending |
-| SRVC-03 | Pending | Pending |
-| SRVC-04 | Pending | Pending |
-| SRVC-05 | Pending | Pending |
-| SRVC-06 | Pending | Pending |
-| SRVC-07 | Pending | Pending |
-| SRVC-08 | Pending | Pending |
-| SECU-01 | Pending | Pending |
-| SECU-02 | Pending | Pending |
-| SECU-03 | Pending | Pending |
-| SECU-04 | Pending | Pending |
-| DBIX-01 | Pending | Pending |
-| DBIX-02 | Pending | Pending |
+| EXCP-01 | Phase 1 | Pending |
+| EXCP-02 | Phase 1 | Pending |
+| SRVC-01 | Phase 2 | Pending |
+| SRVC-02 | Phase 2 | Pending |
+| SRVC-03 | Phase 2 | Pending |
+| SRVC-04 | Phase 2 | Pending |
+| SRVC-05 | Phase 2 | Pending |
+| SRVC-06 | Phase 2 | Pending |
+| SRVC-07 | Phase 2 | Pending |
+| SRVC-08 | Phase 3 | Pending |
+| SECU-01 | Phase 5 | Pending |
+| SECU-02 | Phase 5 | Pending |
+| SECU-03 | Phase 5 | Pending |
+| SECU-04 | Phase 5 | Pending |
+| DBIX-01 | Phase 4 | Pending |
+| DBIX-02 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 16 total
-- Mapped to phases: 0
-- Unmapped: 16 ⚠️
+- Mapped to phases: 16
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-03*
-*Last updated: 2026-04-03 after initial definition*
+*Last updated: 2026-04-03 after roadmap creation*
