@@ -1,6 +1,7 @@
 package org.ctc.domain.service;
 
 import org.ctc.admin.dto.SeedForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import lombok.Getter;
@@ -55,7 +56,7 @@ public class PlayoffService {
         }
 
         Season season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new IllegalArgumentException("Season not found: " + seasonId));
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
         Playoff playoff = new Playoff(season, name);
         playoff = playoffRepository.save(playoff);
@@ -100,9 +101,9 @@ public class PlayoffService {
     @Transactional
     public void addSeasonToPlayoff(UUID playoffId, UUID seasonId) {
         Playoff playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
         Season season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new IllegalArgumentException("Season not found: " + seasonId));
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         if (!playoff.getSeasons().contains(season)) {
             playoff.getSeasons().add(season);
             playoffRepository.save(playoff);
@@ -112,7 +113,7 @@ public class PlayoffService {
     @Transactional
     public void removeSeasonFromPlayoff(UUID playoffId, UUID seasonId) {
         Playoff playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
         playoff.getSeasons().removeIf(s -> s.getId().equals(seasonId));
         playoffRepository.save(playoff);
     }
@@ -120,7 +121,7 @@ public class PlayoffService {
     @Transactional(readOnly = true)
     public List<Team> getPlayoffTeams(UUID playoffId) {
         Playoff playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
         // Collect teams from all linked seasons, deduplicate by ID
         Map<UUID, Team> teamMap = new LinkedHashMap<>();
         for (Season season : playoff.getSeasons()) {
@@ -138,7 +139,7 @@ public class PlayoffService {
     @Transactional
     public void seedTeam(UUID matchupId, UUID teamId, int slot) {
         PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
-                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId));
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
 
         if (slot == 1) {
             matchup.setTeam1(teamId != null ? findTeam(teamId) : null);
@@ -152,13 +153,13 @@ public class PlayoffService {
 
     private Team findTeam(UUID teamId) {
         return teamRepository.findById(teamId)
-                .orElseThrow(() -> new IllegalArgumentException("Team not found: " + teamId));
+                .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
     }
 
     @Transactional
     public void determineWinner(UUID matchupId) {
         PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
-                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId));
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
 
         if (!matchup.isReady()) {
             throw new IllegalStateException("Matchup is not ready - both teams must be set");
@@ -214,7 +215,7 @@ public class PlayoffService {
     @Transactional
     public void setWinnerManually(UUID matchupId, UUID winnerTeamId) {
         PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
-                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId));
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
 
         Team winner = findTeam(winnerTeamId);
 
@@ -243,7 +244,7 @@ public class PlayoffService {
     @Transactional(readOnly = true)
     public PlayoffBracketView getBracketView(UUID playoffId) {
         Playoff playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
 
         // #4: Fetch all races for this playoff in one query, then group by matchup ID
         List<Race> allRaces = raceRepository.findByPlayoffMatchupRoundPlayoffId(playoffId);
@@ -376,7 +377,7 @@ public class PlayoffService {
     @Transactional
     public PlayoffRound setRoundLegs(UUID roundId, int bestOfLegs) {
         var round = playoffRoundRepository.findById(roundId)
-                .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId));
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
         round.setBestOfLegs(bestOfLegs);
         return playoffRoundRepository.save(round);
     }
@@ -384,12 +385,12 @@ public class PlayoffService {
     @Transactional(readOnly = true)
     public SeedingData getSeedingData(UUID playoffId) {
         var playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
         var bracket = getBracketView(playoffId);
 
         var firstRound = playoff.getRounds().stream()
                 .filter(r -> r.getRoundIndex() == 0)
-                .findFirst().orElseThrow();
+                .findFirst().orElseThrow(() -> new EntityNotFoundException("PlayoffRound", "index=0"));
 
         var teams = getPlayoffTeams(playoffId);
 
@@ -431,7 +432,7 @@ public class PlayoffService {
 
     public void saveSeedNumbers(UUID playoffId, Map<UUID, Integer> teamSeeds) {
         var playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
         playoffSeedRepository.deleteByPlayoffId(playoffId);
         entityManager.flush();
 
@@ -451,10 +452,10 @@ public class PlayoffService {
         }
 
         var playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
         var firstRound = playoff.getRounds().stream()
                 .filter(r -> r.getRoundIndex() == 0)
-                .findFirst().orElseThrow();
+                .findFirst().orElseThrow(() -> new EntityNotFoundException("PlayoffRound", "index=0"));
 
         var sortedSeeds = seeds.stream()
                 .sorted(Comparator.comparingInt(PlayoffSeed::getSeed))
@@ -493,7 +494,7 @@ public class PlayoffService {
     @Transactional(readOnly = true)
     public MatchupDetailData getMatchupDetail(UUID matchupId) {
         var matchup = playoffMatchupRepository.findById(matchupId)
-                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId));
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
         var legs = raceRepository.findByPlayoffMatchupId(matchupId);
         var playoff = matchup.getRound().getPlayoff();
         return new MatchupDetailData(matchup, legs, playoff);
@@ -502,7 +503,7 @@ public class PlayoffService {
     @Transactional
     public Race addRaceToMatchup(UUID matchupId, String track, String car, LocalDateTime dateTime) {
         var matchup = playoffMatchupRepository.findById(matchupId)
-                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId));
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
 
         if (!matchup.isReady()) {
             throw new IllegalStateException("Both teams must be set");
@@ -535,19 +536,19 @@ public class PlayoffService {
 
     public UUID getSeasonIdForPlayoff(UUID playoffId) {
         return playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId))
+                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId))
                 .getSeason().getId();
     }
 
     public UUID getSeasonIdForMatchup(UUID matchupId) {
         return playoffMatchupRepository.findById(matchupId)
-                .orElseThrow(() -> new IllegalArgumentException("Matchup not found: " + matchupId))
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId))
                 .getRound().getPlayoff().getSeason().getId();
     }
 
     public UUID getSeasonIdForRound(UUID roundId) {
         return playoffRoundRepository.findById(roundId)
-                .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId))
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId))
                 .getPlayoff().getSeason().getId();
     }
 

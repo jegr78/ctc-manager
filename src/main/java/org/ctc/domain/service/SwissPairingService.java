@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
@@ -26,7 +27,8 @@ public class SwissPairingService {
 
     @Transactional
     public Matchday generateNextRound(UUID seasonId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
         if (season.getFormat() != SeasonFormat.SWISS) {
             throw new IllegalArgumentException("Season is not in Swiss format");
@@ -91,7 +93,8 @@ public class SwissPairingService {
             return Integer.compare(pb, pa);
         });
 
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         Map<UUID, UUID> successionMap = season.buildSuccessionMap();
 
         // Get played opponents for each team (resolved through succession)
@@ -212,7 +215,8 @@ public class SwissPairingService {
     }
 
     public Map<UUID, Integer> calculateBuchholz(UUID seasonId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         Map<UUID, UUID> successionMap = season.buildSuccessionMap();
 
         var standings = standingsService.calculateStandings(seasonId);
@@ -233,12 +237,14 @@ public class SwissPairingService {
     }
 
     public int getCurrentRound(UUID seasonId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         return season.getMatchdays().size();
     }
 
     public boolean isCurrentRoundComplete(UUID seasonId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         if (season.getMatchdays().isEmpty()) return true;
 
         var lastMatchday = season.getMatchdays().get(season.getMatchdays().size() - 1);

@@ -1,6 +1,7 @@
 package org.ctc.domain.service;
 
 import org.ctc.admin.dto.DriverForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PsnAlias;
 import org.ctc.domain.repository.DriverRepository;
@@ -25,7 +26,8 @@ public class DriverService {
     public Driver save(DriverForm form) {
         Driver driver;
         if (form.getId() != null) {
-            driver = driverRepository.findById(form.getId()).orElseThrow();
+            driver = driverRepository.findById(form.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Driver", form.getId()));
             driver.setPsnId(form.getPsnId());
             driver.setNickname(form.getNickname());
             driver.setActive(form.isActive());

@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,8 @@ public class SeasonManagementService {
      */
     @Transactional(readOnly = true)
     public List<Team> getAvailableTeamsForReplacement(UUID seasonId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         Set<UUID> activeTeamIds = season.getSeasonTeams().stream()
                 .filter(st -> !st.isReplaced())
                 .map(st -> st.getTeam().getId())
@@ -49,8 +51,10 @@ public class SeasonManagementService {
      */
     @Transactional
     public String addTeamToSeason(UUID seasonId, UUID teamId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
-        var team = teamRepository.findById(teamId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 
         if (!season.containsTeam(team)) {
             if (team.isSubTeam() && !season.containsTeam(team.getParentTeam())) {
@@ -72,8 +76,10 @@ public class SeasonManagementService {
      */
     @Transactional
     public String removeTeamFromSeason(UUID seasonId, UUID teamId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
-        var team = teamRepository.findById(teamId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 
         if (!team.isSubTeam()) {
             boolean hasSubs = season.getTeams().stream()
@@ -111,7 +117,8 @@ public class SeasonManagementService {
     public String updateSeasonTeam(UUID seasonTeamId, Integer rating,
                                    String primaryColor, String secondaryColor, String accentColor,
                                    MultipartFile logoOverride) throws IOException {
-        var seasonTeam = seasonTeamRepository.findById(seasonTeamId).orElseThrow();
+        var seasonTeam = seasonTeamRepository.findById(seasonTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", seasonTeamId));
         seasonTeam.setRating(rating);
         seasonTeam.setPrimaryColor(primaryColor != null && !primaryColor.isBlank() ? primaryColor : null);
         seasonTeam.setSecondaryColor(secondaryColor != null && !secondaryColor.isBlank() ? secondaryColor : null);
@@ -136,9 +143,12 @@ public class SeasonManagementService {
      */
     @Transactional
     public String replaceTeam(UUID seasonId, UUID predecessorTeamId, UUID successorTeamId, LocalDate replacedAt) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
-        var predecessor = teamRepository.findById(predecessorTeamId).orElseThrow();
-        var successor = teamRepository.findById(successorTeamId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var predecessor = teamRepository.findById(predecessorTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", predecessorTeamId));
+        var successor = teamRepository.findById(successorTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", successorTeamId));
 
         var predecessorSt = season.findSeasonTeam(predecessor)
                 .orElseThrow(() -> new IllegalStateException("Team " + predecessor.getShortName() + " not in season"));
@@ -152,7 +162,8 @@ public class SeasonManagementService {
         }
         seasonRepository.save(season);
 
-        var successorSt = seasonTeamRepository.findBySeasonIdAndTeamId(seasonId, successorTeamId).orElseThrow();
+        var successorSt = seasonTeamRepository.findBySeasonIdAndTeamId(seasonId, successorTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", successorTeamId));
 
         predecessorSt.setSuccessor(successorSt);
         predecessorSt.setReplacedAt(replacedAt);
@@ -169,7 +180,8 @@ public class SeasonManagementService {
      */
     @Transactional
     public int addCarsToSeason(UUID seasonId, List<UUID> carIds) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         int added = 0;
         for (UUID carId : carIds) {
             var car = carRepository.findById(carId).orElse(null);
@@ -187,7 +199,8 @@ public class SeasonManagementService {
      */
     @Transactional
     public int removeCarsFromSeason(UUID seasonId, List<UUID> carIds) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         season.getCars().removeIf(c -> carIds.contains(c.getId()));
         seasonRepository.save(season);
         return carIds.size();
@@ -198,7 +211,8 @@ public class SeasonManagementService {
      */
     @Transactional
     public int addTracksToSeason(UUID seasonId, List<UUID> trackIds) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         int added = 0;
         for (UUID trackId : trackIds) {
             var track = trackRepository.findById(trackId).orElse(null);
@@ -216,7 +230,8 @@ public class SeasonManagementService {
      */
     @Transactional
     public int removeTracksFromSeason(UUID seasonId, List<UUID> trackIds) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         season.getTracks().removeIf(t -> trackIds.contains(t.getId()));
         seasonRepository.save(season);
         return trackIds.size();

@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
@@ -27,7 +28,8 @@ public class MatchService {
     private final RaceRepository raceRepository;
 
     public Match getMatch(UUID matchId) {
-        return matchRepository.findById(matchId).orElseThrow();
+        return matchRepository.findById(matchId)
+                .orElseThrow(() -> new EntityNotFoundException("Match", matchId));
     }
 
     /**
@@ -36,7 +38,8 @@ public class MatchService {
     public record CreateFormData(Matchday matchday, List<Team> teams) {}
 
     public CreateFormData getCreateFormData(UUID matchdayId) {
-        var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
+        var matchday = matchdayRepository.findById(matchdayId)
+                .orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
         return new CreateFormData(matchday, matchday.getSeason().getTeams());
     }
 
@@ -46,8 +49,10 @@ public class MatchService {
      */
     @Transactional
     public Match createMatch(UUID matchdayId, UUID homeTeamId, UUID awayTeamId, boolean bye) {
-        var matchday = matchdayRepository.findById(matchdayId).orElseThrow();
-        var homeTeam = teamRepository.findById(homeTeamId).orElseThrow();
+        var matchday = matchdayRepository.findById(matchdayId)
+                .orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
+        var homeTeam = teamRepository.findById(homeTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", homeTeamId));
         var awayTeam = bye ? null : (awayTeamId != null ? teamRepository.findById(awayTeamId).orElse(null) : null);
 
         // Duplicate check
@@ -82,7 +87,8 @@ public class MatchService {
      */
     @Transactional
     public Match addLeg(UUID matchId) {
-        var match = matchRepository.findById(matchId).orElseThrow();
+        var match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new EntityNotFoundException("Match", matchId));
         var matchday = match.getMatchday();
         int maxLegs = matchday.getSeason().getLegs();
 
@@ -112,7 +118,9 @@ public class MatchService {
      * Returns the matchday ID for a given match (useful for redirects).
      */
     public UUID getMatchdayId(UUID matchId) {
-        return matchRepository.findById(matchId).orElseThrow().getMatchday().getId();
+        return matchRepository.findById(matchId)
+                .orElseThrow(() -> new EntityNotFoundException("Match", matchId))
+                .getMatchday().getId();
     }
 
     /**
@@ -120,7 +128,8 @@ public class MatchService {
      */
     @Transactional
     public UUID deleteMatch(UUID matchId) {
-        var match = matchRepository.findById(matchId).orElseThrow();
+        var match = matchRepository.findById(matchId)
+                .orElseThrow(() -> new EntityNotFoundException("Match", matchId));
         var matchdayId = match.getMatchday().getId();
         matchRepository.delete(match);
         log.info("Deleted match: {} vs {}", match.getHomeTeam().getShortName(),

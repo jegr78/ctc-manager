@@ -1,6 +1,7 @@
 package org.ctc.domain.service;
 
 import org.ctc.admin.dto.SeasonDriverGroupDto;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
@@ -44,7 +45,8 @@ public class TeamManagementService {
      */
     @Transactional(readOnly = true)
     public TeamDetailData getTeamDetailData(UUID teamId) {
-        var team = teamRepository.findById(teamId).orElseThrow();
+        var team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
         var seasons = seasonRepository.findBySeasonTeamsTeamId(teamId);
 
         var teamIds = new ArrayList<UUID>();

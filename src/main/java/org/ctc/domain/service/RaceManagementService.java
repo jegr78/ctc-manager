@@ -8,6 +8,7 @@ import org.ctc.admin.service.OverlayGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.model.Car;
 import org.ctc.domain.model.Track;
@@ -112,7 +113,8 @@ public class RaceManagementService {
     // --- Detail ---
 
     public RaceDetailData getRaceDetailData(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
 
         int homeTotal = 0;
         int awayTotal = 0;
@@ -187,7 +189,8 @@ public class RaceManagementService {
 
     @Transactional
     public void createOrUpdateCalendarEvent(UUID raceId) throws IOException {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
 
         if (!googleCalendarService.isAvailable()) {
             throw new IllegalStateException("Google Calendar integration not available");
@@ -253,7 +256,8 @@ public class RaceManagementService {
     // --- Form data for edit ---
 
     public RaceFormData getRaceFormData(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         var form = toForm(race);
         var season = race.getMatchday().getSeason();
 
@@ -266,7 +270,8 @@ public class RaceManagementService {
     // --- Results form data ---
 
     public ResultsFormData getResultsFormData(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         var form = toForm(race);
 
         if (form.getResults().isEmpty()) {
@@ -282,13 +287,17 @@ public class RaceManagementService {
 
     @Transactional
     public SaveResult saveRace(RaceForm form) {
-        var matchday = matchdayRepository.findById(form.getMatchdayId()).orElseThrow();
-        var homeTeam = teamRepository.findById(form.getHomeTeamId()).orElseThrow();
-        var awayTeam = teamRepository.findById(form.getAwayTeamId()).orElseThrow();
+        var matchday = matchdayRepository.findById(form.getMatchdayId())
+                .orElseThrow(() -> new EntityNotFoundException("Matchday", form.getMatchdayId()));
+        var homeTeam = teamRepository.findById(form.getHomeTeamId())
+                .orElseThrow(() -> new EntityNotFoundException("Team", form.getHomeTeamId()));
+        var awayTeam = teamRepository.findById(form.getAwayTeamId())
+                .orElseThrow(() -> new EntityNotFoundException("Team", form.getAwayTeamId()));
 
         Race race;
         if (form.getId() != null) {
-            race = raceRepository.findById(form.getId()).orElseThrow();
+            race = raceRepository.findById(form.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Race", form.getId()));
         } else {
             race = new Race();
         }
@@ -373,14 +382,16 @@ public class RaceManagementService {
 
     @Transactional
     public String saveResults(UUID raceId, List<RaceResultForm> results) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
 
         race.getResults().clear();
 
         for (var rf : results) {
             if (rf.getDriverId() == null) continue;
 
-            var driver = driverRepository.findById(rf.getDriverId()).orElseThrow();
+            var driver = driverRepository.findById(rf.getDriverId())
+                    .orElseThrow(() -> new EntityNotFoundException("Driver", rf.getDriverId()));
             var result = new RaceResult(race, driver, rf.getPosition(), rf.getQualiPosition(), rf.isFastestLap());
             scoringService.calculatePoints(result, race.getMatchday().getSeason().getRaceScoring());
             race.getResults().add(result);
@@ -402,7 +413,8 @@ public class RaceManagementService {
 
     @Transactional
     public String quickScore(UUID raceId, int homeScore, int awayScore) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         if (race.getMatch() != null) {
             race.getMatch().setHomeScore(homeScore);
             race.getMatch().setAwayScore(awayScore);
@@ -417,7 +429,8 @@ public class RaceManagementService {
 
     @Transactional
     public String uploadAttachment(UUID raceId, MultipartFile file) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         try {
             String url = fileStorageService.store(raceId, file);
             var attachment = new RaceAttachment(race, AttachmentType.FILE, file.getOriginalFilename(), url);
@@ -436,7 +449,8 @@ public class RaceManagementService {
         if (!url.startsWith("http://") && !url.startsWith("https://")) {
             throw new IllegalArgumentException("Link must start with http:// or https://");
         }
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         var attachment = new RaceAttachment(race, AttachmentType.LINK, name, url);
         raceAttachmentRepository.save(attachment);
         return name;
@@ -446,7 +460,8 @@ public class RaceManagementService {
 
     @Transactional
     public UUID deleteAttachment(UUID attachmentId) {
-        var attachment = raceAttachmentRepository.findById(attachmentId).orElseThrow();
+        var attachment = raceAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new EntityNotFoundException("RaceAttachment", attachmentId));
         UUID raceId = attachment.getRace().getId();
         if (attachment.getType() == AttachmentType.FILE) {
             fileStorageService.delete(attachment.getUrl());
@@ -459,7 +474,8 @@ public class RaceManagementService {
 
     @Transactional
     public void generateLineup(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         try {
             String url = lineupGraphicService.generateLineup(race);
             String attachmentName = race.getMatchday().getLabel() + "-"
@@ -476,7 +492,8 @@ public class RaceManagementService {
 
     @Transactional
     public void generateResults(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         try {
             String url = resultsGraphicService.generateResults(race);
             String attachmentName = race.getMatchday().getLabel() + "-"
@@ -491,7 +508,8 @@ public class RaceManagementService {
 
     @Transactional
     public void generateSettings(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         try {
             String url = settingsGraphicService.generateSettings(race);
             String attachmentName = race.getMatchday().getLabel() + "-"
@@ -508,7 +526,8 @@ public class RaceManagementService {
 
     @Transactional
     public void generateOverlay(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         try {
             String url = overlayGraphicService.generateOverlay(race);
             String attachmentName = race.getMatchday().getLabel() + "-"
@@ -524,7 +543,8 @@ public class RaceManagementService {
     // --- Download attachment ---
 
     public ResponseEntity<Resource> downloadAttachment(UUID attachmentId) {
-        var attachment = raceAttachmentRepository.findById(attachmentId).orElseThrow();
+        var attachment = raceAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new EntityNotFoundException("RaceAttachment", attachmentId));
         if (attachment.getType() != AttachmentType.FILE) {
             return ResponseEntity.badRequest().build();
         }
@@ -547,7 +567,8 @@ public class RaceManagementService {
 
     @Transactional
     public UUID deleteRace(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         var matchdayId = race.getMatchday().getId();
         raceRepository.delete(race);
         log.info("Deleted race: {} vs {}", race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName());
