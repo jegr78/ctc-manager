@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "playoffs")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"season", "seasons", "rounds"})
+@Getter @Setter @NoArgsConstructor @ToString(exclude = {"season", "seasons", "rounds", "seeds"})
 public class Playoff extends BaseEntity {
 
     @Id
@@ -48,6 +48,10 @@ public class Playoff extends BaseEntity {
     @OneToMany(mappedBy = "playoff", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("roundIndex ASC")
     private List<PlayoffRound> rounds = new ArrayList<>();
+
+    @OneToMany(mappedBy = "playoff", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("seed ASC")
+    private List<PlayoffSeed> seeds = new ArrayList<>();
 
     public Playoff(Season season, String name) {
         this.season = season;
