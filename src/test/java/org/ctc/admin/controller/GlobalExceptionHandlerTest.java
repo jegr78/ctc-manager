@@ -11,9 +11,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -105,6 +108,16 @@ class GlobalExceptionHandlerTest {
         assertThat(mav.getViewName()).isEqualTo("admin/error");
         assertThat(mav.getModel().get("status")).isEqualTo(500);
         assertThat(mav.getModel().get("error")).isEqualTo("Internal Error");
+    }
+
+    @Test
+    void givenResponseStatusException_whenHandled_thenRethrown() {
+        // given
+        var ex = new ResponseStatusException(HttpStatus.CONFLICT, "Duplicate label");
+
+        // when / then
+        assertThatThrownBy(() -> handler.handleResponseStatus(ex))
+                .isSameAs(ex);
     }
 
     @Test

@@ -9,6 +9,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.util.NoSuchElementException;
@@ -46,6 +47,11 @@ public class GlobalExceptionHandler {
     public ModelAndView handleBusinessRule(BusinessRuleException ex) {
         log.warn("Business rule violation: {}", ex.getMessage());
         return buildErrorView(HttpStatus.CONFLICT, "Business Rule Violation", ex);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseStatusException handleResponseStatus(ResponseStatusException ex) throws ResponseStatusException {
+        throw ex;
     }
 
     @ExceptionHandler(Exception.class)
