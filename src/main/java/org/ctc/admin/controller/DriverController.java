@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.DriverForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.PsnAlias;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.repository.DriverRepository;
@@ -39,7 +40,8 @@ public class DriverController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
-        var driver = driverRepository.findById(id).orElseThrow();
+        var driver = driverRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Driver", id));
         model.addAttribute("driver", driver);
         return "admin/driver-detail";
     }
@@ -52,7 +54,8 @@ public class DriverController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var driver = driverRepository.findById(id).orElseThrow();
+        var driver = driverRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Driver", id));
         var form = new DriverForm();
         form.setId(driver.getId());
         form.setPsnId(driver.getPsnId());
@@ -90,9 +93,12 @@ public class DriverController {
                                  @RequestParam UUID seasonId,
                                  @RequestParam UUID teamId,
                                  RedirectAttributes redirectAttributes) {
-        var driver = driverRepository.findById(id).orElseThrow();
-        var season = seasonRepository.findById(seasonId).orElseThrow();
-        var team = teamRepository.findById(teamId).orElseThrow();
+        var driver = driverRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Driver", id));
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 
         var existing = seasonDriverRepository.findBySeasonIdAndDriverId(seasonId, id);
         if (existing.isPresent()) {
@@ -111,7 +117,8 @@ public class DriverController {
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var driver = driverRepository.findById(id).orElseThrow();
+        var driver = driverRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Driver", id));
         driverRepository.delete(driver);
         log.info("Deleted driver: {}", driver.getPsnId());
         redirectAttributes.addFlashAttribute("successMessage", "Driver deleted: " + driver.getPsnId());

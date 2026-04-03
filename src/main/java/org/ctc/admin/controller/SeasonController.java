@@ -2,6 +2,7 @@ package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.SeasonForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.ctc.domain.service.MatchdayGeneratorService;
@@ -41,7 +42,8 @@ public class SeasonController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
-        var season = seasonRepository.findById(id).orElseThrow();
+        var season = seasonRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Season", id));
         var playoff = playoffRepository.findBySeasonId(id).orElse(null);
         model.addAttribute("season", season);
         model.addAttribute("playoff", playoff);
@@ -69,7 +71,8 @@ public class SeasonController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var season = seasonRepository.findById(id).orElseThrow();
+        var season = seasonRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Season", id));
         var form = new SeasonForm();
         form.setId(season.getId());
         form.setName(season.getName());
@@ -102,7 +105,8 @@ public class SeasonController {
             return "admin/season-form";
         }
         if (form.getId() != null) {
-            var existing = seasonRepository.findById(form.getId()).orElseThrow();
+            var existing = seasonRepository.findById(form.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Season", form.getId()));
             existing.setName(form.getName());
             existing.setYear(form.getYear());
             existing.setNumber(form.getNumber());
@@ -114,8 +118,10 @@ public class SeasonController {
             existing.setTotalRounds(form.getTotalRounds());
             existing.setLegs(form.getLegs());
             existing.setEventDurationMinutes(form.getEventDurationMinutes());
-            existing.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
-            existing.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
+            existing.setRaceScoring(raceScoringRepository.findById(raceScoring)
+                    .orElseThrow(() -> new EntityNotFoundException("RaceScoring", raceScoring)));
+            existing.setMatchScoring(matchScoringRepository.findById(matchScoring)
+                    .orElseThrow(() -> new EntityNotFoundException("MatchScoring", matchScoring)));
             seasonRepository.save(existing);
             log.info("Updated season: {}", existing.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + existing.getName());
@@ -132,8 +138,10 @@ public class SeasonController {
             season.setTotalRounds(form.getTotalRounds());
             season.setLegs(form.getLegs());
             season.setEventDurationMinutes(form.getEventDurationMinutes());
-            season.setRaceScoring(raceScoringRepository.findById(raceScoring).orElseThrow());
-            season.setMatchScoring(matchScoringRepository.findById(matchScoring).orElseThrow());
+            season.setRaceScoring(raceScoringRepository.findById(raceScoring)
+                    .orElseThrow(() -> new EntityNotFoundException("RaceScoring", raceScoring)));
+            season.setMatchScoring(matchScoringRepository.findById(matchScoring)
+                    .orElseThrow(() -> new EntityNotFoundException("MatchScoring", matchScoring)));
             seasonRepository.save(season);
             log.info("Created season: {}", season.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
@@ -229,7 +237,8 @@ public class SeasonController {
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(id).orElseThrow();
+        var season = seasonRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Season", id));
         seasonRepository.delete(season);
         log.info("Deleted season: {}", season.getName());
         redirectAttributes.addFlashAttribute("successMessage", "Season deleted: " + season.getName());
@@ -238,7 +247,8 @@ public class SeasonController {
 
     @GetMapping("/{id}/swiss")
     public String swissRounds(@PathVariable UUID id, Model model) {
-        var season = seasonRepository.findById(id).orElseThrow();
+        var season = seasonRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Season", id));
 
         // Calculate race scores for display
         Map<UUID, int[]> raceScores = new HashMap<>();

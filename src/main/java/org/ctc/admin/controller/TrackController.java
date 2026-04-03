@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.TrackForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Track;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
@@ -44,7 +45,8 @@ public class TrackController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var track = trackRepository.findById(id).orElseThrow();
+        var track = trackRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Track", id));
         var form = new TrackForm();
         form.setId(track.getId());
         form.setName(track.getName());
@@ -58,7 +60,8 @@ public class TrackController {
     public String uploadImage(@PathVariable UUID id, @RequestParam MultipartFile image,
                               RedirectAttributes redirectAttributes) {
         try {
-            var track = trackRepository.findById(id).orElseThrow();
+            var track = trackRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Track", id));
             if (track.getImageUrl() != null) {
                 fileStorageService.delete(track.getImageUrl());
             }
@@ -80,7 +83,8 @@ public class TrackController {
         }
         try {
             if (trackForm.getId() != null) {
-                var existing = trackRepository.findById(trackForm.getId()).orElseThrow();
+                var existing = trackRepository.findById(trackForm.getId())
+                        .orElseThrow(() -> new EntityNotFoundException("Track", trackForm.getId()));
                 existing.setName(trackForm.getName());
                 existing.setCountry(trackForm.getCountry());
                 trackRepository.save(existing);
@@ -100,7 +104,8 @@ public class TrackController {
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var track = trackRepository.findById(id).orElseThrow();
+        var track = trackRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Track", id));
         boolean usedInRace = raceRepository.existsByTrackId(id);
         boolean usedInPool = seasonRepository.findAll().stream()
                 .anyMatch(s -> s.getTracks().contains(track));

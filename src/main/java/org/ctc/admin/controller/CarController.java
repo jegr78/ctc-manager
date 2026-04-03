@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.CarForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Car;
 import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.repository.RaceRepository;
@@ -44,7 +45,8 @@ public class CarController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var car = carRepository.findById(id).orElseThrow();
+        var car = carRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Car", id));
         var form = new CarForm();
         form.setId(car.getId());
         form.setManufacturer(car.getManufacturer());
@@ -58,7 +60,8 @@ public class CarController {
     public String uploadImage(@PathVariable UUID id, @RequestParam MultipartFile image,
                               RedirectAttributes redirectAttributes) {
         try {
-            var car = carRepository.findById(id).orElseThrow();
+            var car = carRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Car", id));
             if (car.getImageUrl() != null) {
                 fileStorageService.delete(car.getImageUrl());
             }
@@ -80,7 +83,8 @@ public class CarController {
         }
         try {
             if (carForm.getId() != null) {
-                var existing = carRepository.findById(carForm.getId()).orElseThrow();
+                var existing = carRepository.findById(carForm.getId())
+                        .orElseThrow(() -> new EntityNotFoundException("Car", carForm.getId()));
                 existing.setManufacturer(carForm.getManufacturer());
                 existing.setName(carForm.getName());
                 carRepository.save(existing);
@@ -100,7 +104,8 @@ public class CarController {
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var car = carRepository.findById(id).orElseThrow();
+        var car = carRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Car", id));
         boolean usedInRace = raceRepository.existsByCarId(id);
         boolean usedInPool = seasonRepository.findAll().stream()
                 .anyMatch(s -> s.getCars().contains(car));

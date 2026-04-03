@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.MatchScoringForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.repository.MatchScoringRepository;
 import jakarta.validation.Valid;
@@ -36,7 +37,8 @@ public class MatchScoringController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var scoring = matchScoringRepository.findById(id).orElseThrow();
+        var scoring = matchScoringRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("MatchScoring", id));
         var form = new MatchScoringForm();
         form.setId(scoring.getId());
         form.setName(scoring.getName());
@@ -54,7 +56,8 @@ public class MatchScoringController {
             return "admin/match-scoring-form";
         }
         if (form.getId() != null) {
-            var existing = matchScoringRepository.findById(form.getId()).orElseThrow();
+            var existing = matchScoringRepository.findById(form.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("MatchScoring", form.getId()));
             existing.setName(form.getName());
             existing.setPointsWin(form.getPointsWin());
             existing.setPointsDraw(form.getPointsDraw());
@@ -72,7 +75,8 @@ public class MatchScoringController {
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var scoring = matchScoringRepository.findById(id).orElseThrow();
+        var scoring = matchScoringRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("MatchScoring", id));
         try {
             matchScoringRepository.delete(scoring);
             matchScoringRepository.flush();

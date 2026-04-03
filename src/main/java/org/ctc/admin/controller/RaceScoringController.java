@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.RaceScoringForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.repository.RaceScoringRepository;
 import jakarta.validation.Valid;
@@ -36,7 +37,8 @@ public class RaceScoringController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var scoring = raceScoringRepository.findById(id).orElseThrow();
+        var scoring = raceScoringRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("RaceScoring", id));
         var form = new RaceScoringForm();
         form.setId(scoring.getId());
         form.setName(scoring.getName());
@@ -65,7 +67,8 @@ public class RaceScoringController {
         }
 
         if (form.getId() != null) {
-            var existing = raceScoringRepository.findById(form.getId()).orElseThrow();
+            var existing = raceScoringRepository.findById(form.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("RaceScoring", form.getId()));
             existing.setName(form.getName());
             existing.setRacePoints(form.getRacePoints());
             existing.setQualiPoints(form.getQualiPoints());
@@ -82,7 +85,8 @@ public class RaceScoringController {
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var scoring = raceScoringRepository.findById(id).orElseThrow();
+        var scoring = raceScoringRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("RaceScoring", id));
         try {
             raceScoringRepository.delete(scoring);
             raceScoringRepository.flush();
