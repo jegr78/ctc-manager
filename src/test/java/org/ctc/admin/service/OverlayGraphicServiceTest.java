@@ -1,6 +1,5 @@
 package org.ctc.admin.service;
 
-import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Race;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -21,7 +20,7 @@ class OverlayGraphicServiceTest {
     }
 
     @Test
-    void givenRaceWithNoMatch_whenGenerateOverlay_thenThrowsIllegalState() {
+    void givenRaceWithNoTeams_whenGenerateOverlay_thenThrowsIllegalState() {
         // given
         var service = createService();
         var race = new Race();
@@ -29,7 +28,7 @@ class OverlayGraphicServiceTest {
         // when / then
         assertThatThrownBy(() -> service.generateOverlay(race))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("no match");
+                .hasMessageContaining("no teams");
     }
 
     @Test

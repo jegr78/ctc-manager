@@ -1,6 +1,8 @@
 package org.ctc.admin.service;
 
+import org.ctc.domain.model.PlayoffSeed;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.repository.PlayoffSeedRepository;
 import org.ctc.domain.service.StandingsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,17 +23,21 @@ public class SettingsGraphicService extends AbstractGraphicService {
     private static final String CUSTOM_TEMPLATE_FILE = "settings-template.html";
 
     private final StandingsService standingsService;
+    private final PlayoffSeedRepository playoffSeedRepository;
 
     public SettingsGraphicService(TemplateEngine templateEngine,
                                   StandingsService standingsService,
+                                  PlayoffSeedRepository playoffSeedRepository,
                                   @Value("${app.upload-dir:uploads}") String uploadDir) {
         super(templateEngine, uploadDir);
         this.standingsService = standingsService;
+        this.playoffSeedRepository = playoffSeedRepository;
     }
 
     public String generateSettings(Race race) throws IOException {
-        var match = race.getMatch();
-        if (match == null) throw new IllegalStateException("Race has no match");
+        if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
+            throw new IllegalStateException("Race has no teams assigned");
+        }
         if (race.getCar() == null) throw new IllegalStateException("Race has no car");
         if (race.getTrack() == null) throw new IllegalStateException("Race has no track");
         if (!race.hasAllSettings()) throw new IllegalStateException("Race settings are incomplete");
@@ -46,18 +52,30 @@ public class SettingsGraphicService extends AbstractGraphicService {
         if (homeCardBase64 == null) throw new IllegalStateException("Team card not found for " + homeTeam.getShortName());
         if (awayCardBase64 == null) throw new IllegalStateException("Team card not found for " + awayTeam.getShortName());
 
-        var standings = standingsService.calculateStandings(season.getId());
         int homePosition = 0;
         int awayPosition = 0;
-        for (int i = 0; i < standings.size(); i++) {
-            if (standings.get(i).getTeam().getId().equals(homeTeam.getId())) homePosition = i + 1;
-            if (standings.get(i).getTeam().getId().equals(awayTeam.getId())) awayPosition = i + 1;
+
+        if (race.getPlayoffMatchup() != null) {
+            var playoff = race.getPlayoffMatchup().getRound().getPlayoff();
+            var homeSeed = playoffSeedRepository.findByPlayoffIdAndTeamId(playoff.getId(), homeTeam.getId());
+            var awaySeed = playoffSeedRepository.findByPlayoffIdAndTeamId(playoff.getId(), awayTeam.getId());
+            homePosition = homeSeed.map(PlayoffSeed::getSeed).orElse(0);
+            awayPosition = awaySeed.map(PlayoffSeed::getSeed).orElse(0);
+        } else {
+            var standings = standingsService.calculateStandings(season.getId());
+            for (int i = 0; i < standings.size(); i++) {
+                if (standings.get(i).getTeam().getId().equals(homeTeam.getId())) homePosition = i + 1;
+                if (standings.get(i).getTeam().getId().equals(awayTeam.getId())) awayPosition = i + 1;
+            }
         }
 
         var ctx = new Context();
         ctx.setVariable("seasonYear", String.valueOf(season.getYear()));
         ctx.setVariable("matchdayName", race.getMatchday().getLabel());
-        ctx.setVariable("seasonName", season.getName());
+        String seasonName = race.getPlayoffMatchup() != null
+                ? race.getPlayoffMatchup().getRound().getPlayoff().getName()
+                : season.getName();
+        ctx.setVariable("seasonName", seasonName);
         ctx.setVariable("homeCardBase64", homeCardBase64);
         ctx.setVariable("awayCardBase64", awayCardBase64);
         ctx.setVariable("homePosition", homePosition);

@@ -99,7 +99,19 @@ public class PlayoffController {
         model.addAttribute("firstRound", data.firstRound());
         model.addAttribute("teams", data.teams());
         model.addAttribute("seededTeamIds", data.seededTeamIds());
+        model.addAttribute("seedNumbers", data.seedNumbers());
         return "admin/playoff-seed";
+    }
+
+    @PostMapping("/{id}/auto-seed")
+    public String autoSeed(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            playoffService.autoSeedBracket(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Bracket auto-seeded");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/playoffs/" + id + "/seed";
     }
 
     @PostMapping("/{id}/seed")

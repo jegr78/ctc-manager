@@ -13,9 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityManager;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -25,6 +28,7 @@ class PlayoffServiceTest {
 
     @Autowired private PlayoffService playoffService;
     @Autowired private PlayoffMatchupRepository playoffMatchupRepository;
+    @Autowired private PlayoffSeedRepository playoffSeedRepository;
     @Autowired private SeasonRepository seasonRepository;
     @Autowired private TeamRepository teamRepository;
     @Autowired private DriverRepository driverRepository;
@@ -548,6 +552,111 @@ class PlayoffServiceTest {
             // then
             assertNull(data.playoff());
             assertNull(data.bracketView());
+        }
+    }
+
+    @Nested
+    class SeedManagement {
+
+        @Test
+        void givenPlayoffWithTeams_whenSaveSeedNumbers_thenSeedsArePersisted() {
+            // given
+            var playoff = playoffService.createPlayoff(season.getId(), "Seed Test", 4);
+            Map<UUID, Integer> teamSeeds = new LinkedHashMap<>();
+            teamSeeds.put(teams.get(0).getId(), 1);
+            teamSeeds.put(teams.get(1).getId(), 2);
+            teamSeeds.put(teams.get(2).getId(), 3);
+            teamSeeds.put(teams.get(3).getId(), 4);
+
+            // when
+            playoffService.saveSeedNumbers(playoff.getId(), teamSeeds);
+            entityManager.flush();
+
+            // then
+            var seeds = playoffSeedRepository.findByPlayoffId(playoff.getId());
+            assertEquals(4, seeds.size());
+            var seedForTeam0 = seeds.stream()
+                    .filter(s -> s.getTeam().getId().equals(teams.get(0).getId()))
+                    .findFirst().orElseThrow();
+            assertEquals(1, seedForTeam0.getSeed());
+        }
+
+        @Test
+        void givenExistingSeeds_whenSaveSeedNumbers_thenOldSeedsReplaced() {
+            // given
+            var playoff = playoffService.createPlayoff(season.getId(), "Replace Seed Test", 4);
+            Map<UUID, Integer> original = new LinkedHashMap<>();
+            original.put(teams.get(0).getId(), 1);
+            original.put(teams.get(1).getId(), 2);
+            playoffService.saveSeedNumbers(playoff.getId(), original);
+            entityManager.flush();
+
+            // when — swap seeds 1 and 2
+            Map<UUID, Integer> swapped = new LinkedHashMap<>();
+            swapped.put(teams.get(0).getId(), 2);
+            swapped.put(teams.get(1).getId(), 1);
+            playoffService.saveSeedNumbers(playoff.getId(), swapped);
+            entityManager.flush();
+
+            // then
+            var seeds = playoffSeedRepository.findByPlayoffId(playoff.getId());
+            assertEquals(2, seeds.size());
+            var seedForTeam0 = seeds.stream()
+                    .filter(s -> s.getTeam().getId().equals(teams.get(0).getId()))
+                    .findFirst().orElseThrow();
+            assertEquals(2, seedForTeam0.getSeed());
+            var seedForTeam1 = seeds.stream()
+                    .filter(s -> s.getTeam().getId().equals(teams.get(1).getId()))
+                    .findFirst().orElseThrow();
+            assertEquals(1, seedForTeam1.getSeed());
+        }
+
+        @Test
+        void givenNoSeedNumbers_whenAutoSeedBracket_thenThrowsIllegalState() {
+            // given
+            var playoff = playoffService.createPlayoff(season.getId(), "Test Playoffs", 4);
+            entityManager.flush();
+            entityManager.clear();
+
+            // when / then
+            assertThatThrownBy(() -> playoffService.autoSeedBracket(playoff.getId()))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("No seed numbers assigned");
+        }
+
+        @Test
+        void givenSeedNumbers_whenAutoSeedBracket_thenMatchupsPopulatedCorrectly() {
+            // given
+            for (var team : teams) {
+                season.addTeam(team);
+            }
+            seasonRepository.save(season);
+
+            var playoff = playoffService.createPlayoff(season.getId(), "Auto Seed Test", 4);
+            Map<UUID, Integer> teamSeeds = new LinkedHashMap<>();
+            teamSeeds.put(teams.get(0).getId(), 1);
+            teamSeeds.put(teams.get(1).getId(), 2);
+            teamSeeds.put(teams.get(2).getId(), 3);
+            teamSeeds.put(teams.get(3).getId(), 4);
+            playoffService.saveSeedNumbers(playoff.getId(), teamSeeds);
+            entityManager.flush();
+
+            // when
+            playoffService.autoSeedBracket(playoff.getId());
+            entityManager.flush();
+
+            // then — Matchup 0: Seed 1 vs Seed 4, Matchup 1: Seed 2 vs Seed 3
+            var matchups = playoff.getRounds().get(0).getMatchups().stream()
+                    .sorted(java.util.Comparator.comparingInt(PlayoffMatchup::getBracketPosition))
+                    .toList();
+
+            var m0 = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
+            assertEquals(teams.get(0).getId(), m0.getTeam1().getId()); // Seed 1
+            assertEquals(teams.get(3).getId(), m0.getTeam2().getId()); // Seed 4
+
+            var m1 = playoffMatchupRepository.findById(matchups.get(1).getId()).orElseThrow();
+            assertEquals(teams.get(1).getId(), m1.getTeam1().getId()); // Seed 2
+            assertEquals(teams.get(2).getId(), m1.getTeam2().getId()); // Seed 3
         }
     }
 

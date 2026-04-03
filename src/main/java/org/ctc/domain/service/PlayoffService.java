@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -27,11 +29,13 @@ public class PlayoffService {
     private final PlayoffRepository playoffRepository;
     private final PlayoffRoundRepository playoffRoundRepository;
     private final PlayoffMatchupRepository playoffMatchupRepository;
+    private final PlayoffSeedRepository playoffSeedRepository;
     private final RaceRepository raceRepository;
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
     private final MatchdayRepository matchdayRepository;
     private final ScoringService scoringService;
+    private final EntityManager entityManager;
 
     private static final Map<Integer, List<String>> DEFAULT_ROUND_LABELS = Map.of(
             2, List.of("Final"),
@@ -387,7 +391,10 @@ public class PlayoffService {
                 })
                 .collect(Collectors.toSet());
 
-        return new SeedingData(playoff, bracket, firstRound, teams, seededTeamIds);
+        Map<UUID, Integer> seedNumbers = playoffSeedRepository.findByPlayoffId(playoffId).stream()
+                .collect(Collectors.toMap(s -> s.getTeam().getId(), PlayoffSeed::getSeed));
+
+        return new SeedingData(playoff, bracket, firstRound, teams, seededTeamIds, seedNumbers);
     }
 
     @Transactional
@@ -397,7 +404,79 @@ public class PlayoffService {
                 seedTeam(entry.getMatchupId(), entry.getTeamId(), entry.getSlot());
             }
         }
+
+        Map<UUID, Integer> teamSeeds = new LinkedHashMap<>();
+        for (var entry : form.getSeeds()) {
+            if (entry.getTeamId() != null && entry.getSeedNumber() != null) {
+                teamSeeds.put(entry.getTeamId(), entry.getSeedNumber());
+            }
+        }
+        if (!teamSeeds.isEmpty()) {
+            saveSeedNumbers(playoffId, teamSeeds);
+        }
+
         log.info("Seeding saved for playoff {}", playoffId);
+    }
+
+    public void saveSeedNumbers(UUID playoffId, Map<UUID, Integer> teamSeeds) {
+        var playoff = playoffRepository.findById(playoffId)
+                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+        playoffSeedRepository.deleteByPlayoffId(playoffId);
+        entityManager.flush();
+
+        for (var entry : teamSeeds.entrySet()) {
+            var team = findTeam(entry.getKey());
+            var seed = new PlayoffSeed(playoff, team, entry.getValue());
+            playoffSeedRepository.save(seed);
+        }
+        log.info("Saved {} seed numbers for playoff {}", teamSeeds.size(), playoffId);
+    }
+
+    @Transactional
+    public void autoSeedBracket(UUID playoffId) {
+        var seeds = playoffSeedRepository.findByPlayoffId(playoffId);
+        if (seeds.isEmpty()) {
+            throw new IllegalStateException("No seed numbers assigned yet");
+        }
+
+        var playoff = playoffRepository.findById(playoffId)
+                .orElseThrow(() -> new IllegalArgumentException("Playoff not found: " + playoffId));
+        var firstRound = playoff.getRounds().stream()
+                .filter(r -> r.getRoundIndex() == 0)
+                .findFirst().orElseThrow();
+
+        var sortedSeeds = seeds.stream()
+                .sorted(Comparator.comparingInt(PlayoffSeed::getSeed))
+                .toList();
+
+        int totalTeams = sortedSeeds.size();
+        var matchups = firstRound.getMatchups().stream()
+                .sorted(Comparator.comparingInt(PlayoffMatchup::getBracketPosition))
+                .toList();
+
+        int[] matchupOrder = buildBracketOrder(totalTeams / 2);
+
+        for (int i = 0; i < matchups.size() && i < matchupOrder.length; i++) {
+            int seedIdx = matchupOrder[i];
+            var matchup = matchups.get(i);
+            matchup.setTeam1(sortedSeeds.get(seedIdx).getTeam());
+            matchup.setTeam2(sortedSeeds.get(totalTeams - 1 - seedIdx).getTeam());
+            playoffMatchupRepository.save(matchup);
+        }
+        log.info("Auto-seeded bracket for playoff {}", playoffId);
+    }
+
+    private int[] buildBracketOrder(int matchCount) {
+        return switch (matchCount) {
+            case 1 -> new int[]{0};
+            case 2 -> new int[]{0, 1};
+            case 4 -> new int[]{0, 3, 2, 1};
+            default -> {
+                int[] order = new int[matchCount];
+                for (int i = 0; i < matchCount; i++) order[i] = i;
+                yield order;
+            }
+        };
     }
 
     @Transactional(readOnly = true)
@@ -468,7 +547,7 @@ public class PlayoffService {
 
     public record SeedingData(Playoff playoff, PlayoffBracketView bracketView,
                                PlayoffRound firstRound, List<Team> teams,
-                               Set<UUID> seededTeamIds) {}
+                               Set<UUID> seededTeamIds, Map<UUID, Integer> seedNumbers) {}
 
     public record MatchupDetailData(PlayoffMatchup matchup, List<Race> legs, Playoff playoff) {}
 

@@ -21,7 +21,19 @@ class LineupGraphicServiceTest {
     Path tempDir;
 
     private LineupGraphicService createService() {
-        return new LineupGraphicService(null, null, null, tempDir.toString());
+        return new LineupGraphicService(null, null, null, null, tempDir.toString());
+    }
+
+    @Test
+    void givenRaceWithNoTeams_whenGenerateLineup_thenThrowsIllegalState() {
+        // given
+        var service = createService();
+        var race = new Race();
+
+        // when / then
+        assertThatThrownBy(() -> service.generateLineup(race))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("no teams");
     }
 
     @Test

@@ -37,8 +37,9 @@ public class ResultsGraphicService extends AbstractGraphicService {
                                       int awayPoints, String awayDriver, String awayNickname) {}
 
     public String generateResults(Race race) throws IOException {
-        var match = race.getMatch();
-        if (match == null) throw new IllegalStateException("Race has no match");
+        if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
+            throw new IllegalStateException("Race has no teams assigned");
+        }
         if (race.getResults().isEmpty()) throw new IllegalStateException("No results for this race");
 
         var homeTeam = race.getHomeTeam();
@@ -55,10 +56,14 @@ public class ResultsGraphicService extends AbstractGraphicService {
         int homeTotal = resultRows.stream().mapToInt(DriverResultRow::homePoints).sum();
         int awayTotal = resultRows.stream().mapToInt(DriverResultRow::awayPoints).sum();
 
+        String seasonName = race.getPlayoffMatchup() != null
+                ? race.getPlayoffMatchup().getRound().getPlayoff().getName()
+                : season.getName();
+
         var ctx = new Context();
         ctx.setVariable("seasonYear", String.valueOf(season.getYear()));
         ctx.setVariable("matchdayName", race.getMatchday().getLabel());
-        ctx.setVariable("seasonName", season.getName());
+        ctx.setVariable("seasonName", seasonName);
         ctx.setVariable("homeCardBase64", homeCardBase64);
         ctx.setVariable("awayCardBase64", awayCardBase64);
         ctx.setVariable("homeTotal", homeTotal);

@@ -211,6 +211,19 @@ CREATE TABLE playoff_seasons (
     CONSTRAINT fk_ps_season FOREIGN KEY (season_id) REFERENCES seasons(id)
 );
 
+CREATE TABLE playoff_seeds (
+    id UUID PRIMARY KEY,
+    playoff_id UUID NOT NULL,
+    team_id UUID NOT NULL,
+    seed INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_playoff_seed_playoff FOREIGN KEY (playoff_id) REFERENCES playoffs(id),
+    CONSTRAINT fk_playoff_seed_team FOREIGN KEY (team_id) REFERENCES teams(id),
+    CONSTRAINT uk_playoff_seed_team UNIQUE (playoff_id, team_id),
+    CONSTRAINT uk_playoff_seed_number UNIQUE (playoff_id, seed)
+);
+
 CREATE TABLE races (
     id UUID PRIMARY KEY,
     matchday_id UUID NOT NULL,

@@ -42,8 +42,9 @@ public class OverlayGraphicService extends AbstractGraphicService {
     }
 
     public String generateOverlay(Race race) throws IOException {
-        var match = race.getMatch();
-        if (match == null) throw new IllegalStateException("Race has no match");
+        if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
+            throw new IllegalStateException("Race has no teams assigned");
+        }
 
         var homeTeam = race.getHomeTeam();
         var awayTeam = race.getAwayTeam();
