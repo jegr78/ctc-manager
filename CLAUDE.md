@@ -75,7 +75,7 @@ docker compose -f docker-compose.prod.yml up -d
 - `SeasonManagementService.java` — Team/Car/Track-Pool-Verwaltung fuer Seasons
 - `TeamManagementService.java` — Team-Detail-Daten, Farb/Logo-Propagation an Sub-Teams
 - `BaseEntity.java` — @MappedSuperclass mit createdAt/updatedAt (JPA Auditing)
-- `V1__initial_schema.sql` — Konsolidiertes DB-Schema (noch nicht veroeffentlicht)
+- `V1__initial_schema.sql` — Konsolidiertes DB-Schema (eingefroren seit v1.0.0)
 - `layout.html` — Thymeleaf Admin-Layout mit Sidebar (Fragment-Pattern: `th:replace="~{admin/layout :: layout(...)}"`)
 
 ## Architektur-Prinzipien
@@ -87,6 +87,7 @@ docker compose -f docker-compose.prod.yml up -d
 - **Keine Inline-Styles auf Buttons:** Statt `style="..."` auf `.btn`-Elementen immer CSS-Klassen aus `admin.css` verwenden (`btn-xs`, `btn-sm`, `btn-lg`, `btn-tab`). Beim Refactoring von Inline-Styles zu CSS-Klassen immer auch JavaScript pruefen, das `element.className = '...'` setzt — dort muessen die neuen Klassen ebenfalls ergaenzt werden.
 - **Testdaten komplett isolieren:** E2E-Testdaten in `TestDataService` muessen eigene Entities mit Test-Prefix verwenden (z.B. `T-ALF`, `Test_Alpha_1`, `Test-Season 2026`). Nie echte Teams, Fahrer oder Saisons fuer automatisierte Tests nutzen — diese kollidieren mit manuellen Tests auf Import-Daten.
 - **RaceLineup ist Source of Truth:** Fuer Fahrer-Team-Zuordnungen (insb. Sub-Teams) immer `RaceLineup` priorisieren, `SeasonDriver` nur als Fallback fuer Saisons ohne Rennen. Der CSV-Import bestimmt die korrekte Zuordnung.
+- **Flyway Migrationen nicht aendern:** Bestehende `V*__*.sql` Dateien duerfen nach Release nie mehr geaendert werden (Flyway prueft Checksummen). Schema-Aenderungen immer als neue Migrationsdatei: `V{N}__{kurzbeschreibung}.sql` (snake_case, englisch). H2 + MariaDB Kompatibilitaet beachten.
 
 ## OSIV (Open Session in View)
 
@@ -124,7 +125,19 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
   - `gh pr create --assignee jegr78` zum Erstellen (immer jegr78 zuweisen)
   - `gh pr merge --squash` zum Mergen (saubere History)
   - Nach Merge lokalen Branch aufraeumen: `git switch master && git pull && git branch -d <branch>`
-- **Commits:** Aussagekraeftige deutsche Commit-Messages
+- **Commits:** Englische Commit-Messages mit Conventional Commits Prefixen:
+  - `feat:` — Neues Feature (Minor-Bump)
+  - `fix:` — Bugfix (Patch-Bump)
+  - `docs:` — Dokumentation (Patch-Bump)
+  - `chore:` — Maintenance (Patch-Bump)
+  - `refactor:` — Refactoring (Patch-Bump)
+  - `test:` — Tests (Patch-Bump)
+  - `style:` — Formatting/CSS (Patch-Bump)
+  - `perf:` — Performance (Patch-Bump)
+  - `ci:` — CI/CD (kein Release)
+  - `BREAKING CHANGE` im Footer → Major-Bump
+  - Format: `<type>(<optional scope>): <description>`
+  - Beispiel: `feat(scoring): add penalty point deduction`
 - **Vor PR:**
   1. Tests lokal mit `./mvnw verify` sicherstellen
   2. Code-Review der eigenen Aenderungen durchfuehren (superpowers:code-reviewer)
@@ -147,3 +160,4 @@ Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt
 
 - Design Spec: `docs/superpowers/specs/2026-03-26-ctc-manager-design.md`
 - Scoring/Legs Spec: `docs/superpowers/specs/2026-03-29-scoring-legs-design.md`
+- Release Management Spec: `docs/superpowers/specs/2026-04-03-release-management-design.md`

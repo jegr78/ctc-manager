@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.ctc</groupId>
 	<artifactId>ctc-manager</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<name>ctc-manager</name>
 	<description>Community Team Cup - Gran Turismo Racing League Manager</description>
 	<properties>
@@ -180,6 +180,10 @@
 						<exclude>**/e2e/**</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>versions-maven-plugin</artifactId>
 			</plugin>
 			<plugin>
 				<groupId>org.jacoco</groupId>
