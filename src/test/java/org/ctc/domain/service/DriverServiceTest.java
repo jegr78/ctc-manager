@@ -1,17 +1,25 @@
 package org.ctc.domain.service;
 
 import org.ctc.admin.dto.DriverForm;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PsnAlias;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.PsnAliasRepository;
+import org.ctc.domain.repository.SeasonDriverRepository;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +27,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -30,6 +39,15 @@ class DriverServiceTest {
 
     @Mock
     private PsnAliasRepository psnAliasRepository;
+
+    @Mock
+    private SeasonDriverRepository seasonDriverRepository;
+
+    @Mock
+    private SeasonRepository seasonRepository;
+
+    @Mock
+    private TeamRepository teamRepository;
 
     @InjectMocks
     private DriverService driverService;
@@ -259,6 +277,189 @@ class DriverServiceTest {
 
             // then
             assertThat(errors).isEmpty();
+        }
+    }
+
+    @Nested
+    class FindAllTest {
+
+        @Test
+        void whenFindAll_thenReturnsAllDrivers() {
+            // given
+            var driver1 = new Driver("PSN1", "Nick1");
+            var driver2 = new Driver("PSN2", "Nick2");
+            when(driverRepository.findAll()).thenReturn(List.of(driver1, driver2));
+
+            // when
+            var result = driverService.findAll();
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(result).containsExactly(driver1, driver2);
+        }
+    }
+
+    @Nested
+    class FindByIdTest {
+
+        @Test
+        void givenExistingId_whenFindById_thenReturnsDriver() {
+            // given
+            var id = UUID.randomUUID();
+            var driver = new Driver("PSN1", "Nick1");
+            driver.setId(id);
+            when(driverRepository.findById(id)).thenReturn(Optional.of(driver));
+
+            // when
+            var result = driverService.findById(id);
+
+            // then
+            assertThat(result).isEqualTo(driver);
+        }
+
+        @Test
+        void givenNonExistentId_whenFindById_thenThrowsEntityNotFoundException() {
+            // given
+            var id = UUID.randomUUID();
+            when(driverRepository.findById(id)).thenReturn(Optional.empty());
+
+            // when / then
+            assertThatThrownBy(() -> driverService.findById(id))
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessageContaining("Driver")
+                    .hasMessageContaining(id.toString());
+        }
+    }
+
+    @Nested
+    class GetEditFormDataTest {
+
+        @Test
+        void givenExistingDriver_whenGetEditFormData_thenReturnsDriverWithSeasonDriversAndAllSeasonsAndAllTeams() {
+            // given
+            var id = UUID.randomUUID();
+            var driver = new Driver("PSN1", "Nick1");
+            driver.setId(id);
+
+            var season = new Season();
+            season.setId(UUID.randomUUID());
+            var team = new Team("Team A", "TA");
+            team.setId(UUID.randomUUID());
+            var seasonDriver = new SeasonDriver(season, driver, team);
+
+            when(driverRepository.findById(id)).thenReturn(Optional.of(driver));
+            when(seasonDriverRepository.findByDriverId(id)).thenReturn(List.of(seasonDriver));
+            when(seasonRepository.findAll()).thenReturn(List.of(season));
+            when(teamRepository.findAll()).thenReturn(List.of(team));
+
+            // when
+            var result = driverService.getEditFormData(id);
+
+            // then
+            assertThat(result.driver()).isEqualTo(driver);
+            assertThat(result.seasonDrivers()).containsExactly(seasonDriver);
+            assertThat(result.allSeasons()).containsExactly(season);
+            assertThat(result.allTeams()).containsExactly(team);
+        }
+    }
+
+    @Nested
+    class AssignToSeasonTest {
+
+        @Test
+        void givenDriverAndSeasonAndTeam_whenAssignToSeason_thenCreatesSeasonDriver() {
+            // given
+            var driverId = UUID.randomUUID();
+            var seasonId = UUID.randomUUID();
+            var teamId = UUID.randomUUID();
+
+            var driver = new Driver("PSN1", "Nick1");
+            driver.setId(driverId);
+            var season = new Season();
+            season.setId(seasonId);
+            season.setName("Season 2026");
+            var team = new Team("Team A", "TA");
+            team.setId(teamId);
+
+            when(driverRepository.findById(driverId)).thenReturn(Optional.of(driver));
+            when(seasonRepository.findById(seasonId)).thenReturn(Optional.of(season));
+            when(teamRepository.findById(teamId)).thenReturn(Optional.of(team));
+            when(seasonDriverRepository.findBySeasonIdAndDriverId(seasonId, driverId)).thenReturn(Optional.empty());
+
+            // when
+            var message = driverService.assignToSeason(driverId, seasonId, teamId);
+
+            // then
+            verify(seasonDriverRepository).save(any(SeasonDriver.class));
+            assertThat(message).contains("PSN1").contains("TA").contains("Season 2026");
+        }
+
+        @Test
+        void givenDriverAlreadyAssigned_whenAssignToSeason_thenUpdatesExistingSeasonDriver() {
+            // given
+            var driverId = UUID.randomUUID();
+            var seasonId = UUID.randomUUID();
+            var teamId = UUID.randomUUID();
+
+            var driver = new Driver("PSN1", "Nick1");
+            driver.setId(driverId);
+            var season = new Season();
+            season.setId(seasonId);
+            season.setName("Season 2026");
+            var oldTeam = new Team("Old Team", "OT");
+            oldTeam.setId(UUID.randomUUID());
+            var newTeam = new Team("New Team", "NT");
+            newTeam.setId(teamId);
+
+            var existingSd = new SeasonDriver(season, driver, oldTeam);
+
+            when(driverRepository.findById(driverId)).thenReturn(Optional.of(driver));
+            when(seasonRepository.findById(seasonId)).thenReturn(Optional.of(season));
+            when(teamRepository.findById(teamId)).thenReturn(Optional.of(newTeam));
+            when(seasonDriverRepository.findBySeasonIdAndDriverId(seasonId, driverId)).thenReturn(Optional.of(existingSd));
+
+            // when
+            var message = driverService.assignToSeason(driverId, seasonId, teamId);
+
+            // then
+            assertThat(existingSd.getTeam()).isEqualTo(newTeam);
+            verify(seasonDriverRepository).save(existingSd);
+            assertThat(message).contains("PSN1").contains("NT").contains("Season 2026");
+        }
+    }
+
+    @Nested
+    class DeleteTest {
+
+        @Test
+        void givenExistingDriver_whenDelete_thenRemoves() {
+            // given
+            var id = UUID.randomUUID();
+            var driver = new Driver("PSN1", "Nick1");
+            driver.setId(id);
+            when(driverRepository.findById(id)).thenReturn(Optional.of(driver));
+
+            // when
+            driverService.delete(id);
+
+            // then
+            verify(driverRepository).delete(driver);
+            verify(driverRepository).flush();
+        }
+
+        @Test
+        void givenDriverReferencedBySeason_whenDelete_thenThrowsBusinessRuleException() {
+            // given
+            var id = UUID.randomUUID();
+            var driver = new Driver("PSN1", "Nick1");
+            driver.setId(id);
+            when(driverRepository.findById(id)).thenReturn(Optional.of(driver));
+            doThrow(new DataIntegrityViolationException("FK constraint"))
+                    .when(driverRepository).flush();
+
+            // when / then
+            assertThatThrownBy(() -> driverService.delete(id))
+                    .isInstanceOf(BusinessRuleException.class);
         }
     }
 }
