@@ -76,12 +76,6 @@ public class GoogleCalendarService {
         log.info("Updated calendar event '{}' (id: {})", title, eventId);
     }
 
-    public void deleteEvent(String eventId) throws IOException {
-        var client = getCalendarClient();
-        client.events().delete(calendarId, eventId).execute();
-        log.info("Deleted calendar event (id: {})", eventId);
-    }
-
     private Event buildEvent(String title, LocalDateTime startTime, int durationMinutes) {
         var zoneId = ZoneId.of(TIME_ZONE);
         var startZoned = startTime.atZone(zoneId);
