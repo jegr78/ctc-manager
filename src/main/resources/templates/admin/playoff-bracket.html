@@ -31,6 +31,7 @@
                     <a th:href="@{/admin/playoffs/matchup/{id}(id=${matchup.matchupId})}" class="bracket-matchup-link">
                         <div class="bracket-team" th:classappend="${matchup.team1IsWinner ? 'winner' : ''}">
                             <span class="bracket-team-name">
+                                <span th:if="${matchup.team1Seed != null}" class="bracket-seed" th:text="'(' + ${matchup.team1Seed} + ')'"></span>
                                 <span th:if="${matchup.team1Id != null}" th:text="${matchup.team1ShortName}"></span>
                                 <span th:if="${matchup.team1Id == null}">TBD</span>
                             </span>
@@ -38,6 +39,7 @@
                         </div>
                         <div class="bracket-team" th:classappend="${matchup.team2IsWinner ? 'winner' : ''}">
                             <span class="bracket-team-name">
+                                <span th:if="${matchup.team2Seed != null}" class="bracket-seed" th:text="'(' + ${matchup.team2Seed} + ')'"></span>
                                 <span th:if="${matchup.team2Id != null}" th:text="${matchup.team2ShortName}"></span>
                                 <span th:if="${matchup.team2Id == null}">TBD</span>
                             </span>
@@ -55,7 +57,7 @@
         <h2>Round Configuration</h2>
         <div class="table-scroll">
             <table>
-                <thead><tr><th>Round</th><th>Legs</th><th></th></tr></thead>
+                <thead><tr><th>Round</th><th>Legs</th><th></th><th>Graphics</th></tr></thead>
                 <tbody>
                     <tr th:each="round : ${playoff.rounds}">
                         <td th:text="${round.label}"></td>
@@ -69,6 +71,22 @@
                             </form>
                         </td>
                         <td class="text-dim" th:text="${round.matchups.size() + ' Matchups'}"></td>
+                        <td>
+                            <div style="display:flex;gap:4px;">
+                                <form th:action="@{/admin/playoffs/round/{id}/download-overview(id=${round.id})}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-secondary btn-xs"
+                                            th:disabled="${round.matchups.isEmpty()}">Overview</button>
+                                </form>
+                                <form th:action="@{/admin/playoffs/round/{id}/download-schedule(id=${round.id})}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-secondary btn-xs"
+                                            th:disabled="${round.matchups.isEmpty()}">Schedule</button>
+                                </form>
+                                <form th:action="@{/admin/playoffs/round/{id}/download-results(id=${round.id})}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-secondary btn-xs"
+                                            th:disabled="${round.matchups.isEmpty()}">Results</button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                 </tbody>
             </table>

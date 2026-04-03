@@ -2,9 +2,17 @@ package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.PlayoffForm;
 import org.ctc.admin.dto.SeedForm;
+import org.ctc.admin.service.PlayoffRoundOverviewGraphicService;
+import org.ctc.admin.service.PlayoffRoundResultsGraphicService;
+import org.ctc.admin.service.PlayoffRoundScheduleGraphicService;
+import org.ctc.domain.model.PlayoffRound;
+import org.ctc.domain.repository.PlayoffRoundRepository;
 import org.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +27,10 @@ import java.util.UUID;
 public class PlayoffController {
 
     private final PlayoffService playoffService;
+    private final PlayoffRoundRepository playoffRoundRepository;
+    private final PlayoffRoundOverviewGraphicService roundOverviewGraphicService;
+    private final PlayoffRoundScheduleGraphicService roundScheduleGraphicService;
+    private final PlayoffRoundResultsGraphicService roundResultsGraphicService;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
@@ -170,5 +182,54 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
+    }
+
+    // --- Round graphic download endpoints ---
+
+    @PostMapping("/round/{roundId}/download-overview")
+    public ResponseEntity<byte[]> downloadRoundOverview(@PathVariable UUID roundId) {
+        try {
+            PlayoffRound round = playoffRoundRepository.findById(roundId)
+                    .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId));
+            byte[] png = roundOverviewGraphicService.generateOverview(round);
+            return buildPngResponse(png, round.getLabel(), "overview");
+        } catch (Exception e) {
+            log.error("Failed to generate overview graphic for playoff round {}", roundId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/round/{roundId}/download-schedule")
+    public ResponseEntity<byte[]> downloadRoundSchedule(@PathVariable UUID roundId) {
+        try {
+            PlayoffRound round = playoffRoundRepository.findById(roundId)
+                    .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId));
+            byte[] png = roundScheduleGraphicService.generateSchedule(round);
+            return buildPngResponse(png, round.getLabel(), "schedule");
+        } catch (Exception e) {
+            log.error("Failed to generate schedule graphic for playoff round {}", roundId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/round/{roundId}/download-results")
+    public ResponseEntity<byte[]> downloadRoundResults(@PathVariable UUID roundId) {
+        try {
+            PlayoffRound round = playoffRoundRepository.findById(roundId)
+                    .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId));
+            byte[] png = roundResultsGraphicService.generateResults(round);
+            return buildPngResponse(png, round.getLabel(), "results");
+        } catch (Exception e) {
+            log.error("Failed to generate results graphic for playoff round {}", roundId, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    private ResponseEntity<byte[]> buildPngResponse(byte[] png, String label, String type) {
+        String filename = label.toLowerCase().replaceAll("[^a-z0-9]+", "-") + "-" + type + ".png";
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(png);
     }
 }

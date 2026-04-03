@@ -198,6 +198,9 @@
 						<exclude>org/ctc/admin/service/MatchResultsGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/PowerRankingsGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/AbstractGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/PlayoffRoundOverviewGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/PlayoffRoundScheduleGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/PlayoffRoundResultsGraphicService.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>

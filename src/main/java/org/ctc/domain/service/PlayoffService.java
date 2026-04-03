@@ -250,12 +250,17 @@ public class PlayoffService {
         Map<UUID, List<Race>> racesByMatchup = allRaces.stream()
                 .collect(Collectors.groupingBy(r -> r.getPlayoffMatchup().getId()));
 
+        // Load seed numbers for bracket display
+        Map<UUID, Integer> seedsByTeamId = playoffSeedRepository.findByPlayoffId(playoffId)
+                .stream()
+                .collect(Collectors.toMap(s -> s.getTeam().getId(), PlayoffSeed::getSeed));
+
         List<RoundView> roundViews = new ArrayList<>();
         for (PlayoffRound round : playoff.getRounds()) {
             List<MatchupView> matchupViews = new ArrayList<>();
             for (PlayoffMatchup matchup : round.getMatchups()) {
                 List<Race> legs = racesByMatchup.getOrDefault(matchup.getId(), List.of());
-                matchupViews.add(buildMatchupView(matchup, legs));
+                matchupViews.add(buildMatchupView(matchup, legs, seedsByTeamId));
             }
             roundViews.add(new RoundView(round.getLabel(), round.getRoundIndex(), matchupViews));
         }
@@ -277,7 +282,8 @@ public class PlayoffService {
         return new int[]{team1Total, team2Total};
     }
 
-    private MatchupView buildMatchupView(PlayoffMatchup matchup, List<Race> legs) {
+    private MatchupView buildMatchupView(PlayoffMatchup matchup, List<Race> legs,
+                                         Map<UUID, Integer> seedsByTeamId) {
         UUID team1Id = matchup.getTeam1() != null ? matchup.getTeam1().getId() : null;
         UUID team2Id = matchup.getTeam2() != null ? matchup.getTeam2().getId() : null;
 
@@ -306,6 +312,9 @@ public class PlayoffService {
                 && matchup.getWinner().getId().equals(team1Id);
         boolean team2IsWinner = matchup.getWinner() != null && !team1IsWinner && matchup.isComplete();
 
+        Integer team1Seed = team1Id != null ? seedsByTeamId.get(team1Id) : null;
+        Integer team2Seed = team2Id != null ? seedsByTeamId.get(team2Id) : null;
+
         return new MatchupView(
                 matchup.getId(),
                 matchup.getBracketPosition(),
@@ -315,6 +324,8 @@ public class PlayoffService {
                 matchup.getTeam2() != null ? matchup.getTeam2().getShortName() : null,
                 matchup.getTeam1() != null ? matchup.getTeam1().getLogoUrl() : null,
                 matchup.getTeam2() != null ? matchup.getTeam2().getLogoUrl() : null,
+                team1Seed,
+                team2Seed,
                 team1Aggregate,
                 team2Aggregate,
                 team1IsWinner,
@@ -580,6 +591,8 @@ public class PlayoffService {
         private final String team2ShortName;
         private final String team1LogoUrl;
         private final String team2LogoUrl;
+        private final Integer team1Seed;
+        private final Integer team2Seed;
         private final int team1AggregatePoints;
         private final int team2AggregatePoints;
         private final boolean team1IsWinner;

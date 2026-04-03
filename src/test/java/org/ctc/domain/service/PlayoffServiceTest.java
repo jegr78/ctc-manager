@@ -295,6 +295,70 @@ class PlayoffServiceTest {
             assertEquals("Semifinal", view.getRounds().get(0).getLabel());
             assertEquals(2, view.getRounds().get(0).getMatchups().size());
         }
+
+        @Test
+        void givenSeededPlayoff_whenGetBracketView_thenMatchupsContainSeedNumbers() {
+            // given
+            var playoff = playoffService.createPlayoff(season.getId(), "Seed View Test", 4);
+            Map<UUID, Integer> teamSeeds = new LinkedHashMap<>();
+            teamSeeds.put(teams.get(0).getId(), 1);
+            teamSeeds.put(teams.get(1).getId(), 2);
+            teamSeeds.put(teams.get(2).getId(), 3);
+            teamSeeds.put(teams.get(3).getId(), 4);
+            playoffService.saveSeedNumbers(playoff.getId(), teamSeeds);
+            playoffService.autoSeedBracket(playoff.getId());
+            entityManager.flush();
+            entityManager.clear();
+
+            // when
+            var view = playoffService.getBracketView(playoff.getId());
+
+            // then — Matchup 0: Seed 1 vs Seed 4, Matchup 1: Seed 2 vs Seed 3
+            var matchups = view.getRounds().get(0).getMatchups();
+            assertEquals(Integer.valueOf(1), matchups.get(0).getTeam1Seed());
+            assertEquals(Integer.valueOf(4), matchups.get(0).getTeam2Seed());
+            assertEquals(Integer.valueOf(2), matchups.get(1).getTeam1Seed());
+            assertEquals(Integer.valueOf(3), matchups.get(1).getTeam2Seed());
+        }
+
+        @Test
+        void givenUnseededPlayoff_whenGetBracketView_thenSeedsAreNull() {
+            // given
+            var playoff = playoffService.createPlayoff(season.getId(), "No Seed View Test", 4);
+
+            // when
+            var view = playoffService.getBracketView(playoff.getId());
+
+            // then
+            var matchups = view.getRounds().get(0).getMatchups();
+            assertNull(matchups.get(0).getTeam1Seed());
+            assertNull(matchups.get(0).getTeam2Seed());
+            assertNull(matchups.get(1).getTeam1Seed());
+            assertNull(matchups.get(1).getTeam2Seed());
+        }
+
+        @Test
+        void givenPartiallyFilledBracket_whenGetBracketView_thenTBDSlotsHaveNullSeed() {
+            // given
+            var playoff = playoffService.createPlayoff(season.getId(), "Partial Seed Test", 4);
+            Map<UUID, Integer> teamSeeds = new LinkedHashMap<>();
+            teamSeeds.put(teams.get(0).getId(), 1);
+            teamSeeds.put(teams.get(1).getId(), 2);
+            teamSeeds.put(teams.get(2).getId(), 3);
+            teamSeeds.put(teams.get(3).getId(), 4);
+            playoffService.saveSeedNumbers(playoff.getId(), teamSeeds);
+            playoffService.autoSeedBracket(playoff.getId());
+            entityManager.flush();
+            entityManager.clear();
+
+            // when — Finale has no teams yet (TBD)
+            var view = playoffService.getBracketView(playoff.getId());
+
+            // then
+            var finaleMatchups = view.getRounds().get(1).getMatchups();
+            assertNull(finaleMatchups.get(0).getTeam1Seed());
+            assertNull(finaleMatchups.get(0).getTeam2Seed());
+        }
     }
 
     @Nested
