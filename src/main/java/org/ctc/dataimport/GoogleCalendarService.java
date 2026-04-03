@@ -7,6 +7,7 @@ import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.CalendarScopes;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventDateTime;
+import com.google.api.services.calendar.model.EventReminder;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import jakarta.annotation.PostConstruct;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -29,7 +31,8 @@ import java.time.format.DateTimeFormatter;
 public class GoogleCalendarService {
 
     private static final String APPLICATION_NAME = "CTC Manager";
-    private static final String TIME_ZONE = "Europe/London";
+    private static final String TIME_ZONE = "Europe/Berlin";
+    private static final int REMINDER_MINUTES = 30;
 
     private final String credentialsPath;
     private final String calendarId;
@@ -85,6 +88,10 @@ public class GoogleCalendarService {
         event.setSummary(title);
         event.setStart(toEventDateTime(startZoned));
         event.setEnd(toEventDateTime(endZoned));
+        event.setReminders(new Event.Reminders()
+                .setUseDefault(false)
+                .setOverrides(List.of(
+                        new EventReminder().setMethod("popup").setMinutes(REMINDER_MINUTES))));
         return event;
     }
 
