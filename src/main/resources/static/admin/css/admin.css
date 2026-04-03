@@ -489,6 +489,12 @@ select option {
     flex: 1;
 }
 
+.bracket-seed {
+    font-size: 0.75em;
+    color: var(--text-dim);
+    margin-right: 2px;
+}
+
 .bracket-team-score {
     font-weight: 600;
     font-variant-numeric: tabular-nums;

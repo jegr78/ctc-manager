@@ -31,6 +31,7 @@
                     <a th:href="@{/admin/playoffs/matchup/{id}(id=${matchup.matchupId})}" class="bracket-matchup-link">
                         <div class="bracket-team" th:classappend="${matchup.team1IsWinner ? 'winner' : ''}">
                             <span class="bracket-team-name">
+                                <span th:if="${matchup.team1Seed != null}" class="bracket-seed" th:text="'(' + ${matchup.team1Seed} + ')'"></span>
                                 <span th:if="${matchup.team1Id != null}" th:text="${matchup.team1ShortName}"></span>
                                 <span th:if="${matchup.team1Id == null}">TBD</span>
                             </span>
@@ -38,6 +39,7 @@
                         </div>
                         <div class="bracket-team" th:classappend="${matchup.team2IsWinner ? 'winner' : ''}">
                             <span class="bracket-team-name">
+                                <span th:if="${matchup.team2Seed != null}" class="bracket-seed" th:text="'(' + ${matchup.team2Seed} + ')'"></span>
                                 <span th:if="${matchup.team2Id != null}" th:text="${matchup.team2ShortName}"></span>
                                 <span th:if="${matchup.team2Id == null}">TBD</span>
                             </span>
