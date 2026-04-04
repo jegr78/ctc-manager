@@ -26,10 +26,11 @@ Die bestehende Anwendung ist funktional komplett:
 - ✓ Template Editor — existing
 - ✓ Zentrale Exception-Behandlung (GlobalExceptionHandler, EntityNotFoundException) — Phase 1
 - ✓ Aussagekraeftige orElseThrow()-Messages in allen 21 Produktionsdateien — Phase 1
+- ✓ 7 Controller ohne Repository-Injections, 4 neue + 3 erweiterte Services — Phase 2
 
 ### Active
 
-- [ ] Controller-Repository-Zugriffe in Services extrahieren
+- [ ] RaceManagementService aufteilen (God Service eliminieren)
 - [ ] RaceManagementService aufteilen (God Service eliminieren)
 - [ ] TemplateEditorController Duplikation beseitigen
 - [ ] StandingsController Business-Logik in Service verschieben
