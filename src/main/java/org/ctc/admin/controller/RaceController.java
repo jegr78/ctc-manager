@@ -2,6 +2,7 @@ package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.domain.service.RaceAttachmentService;
+import org.ctc.domain.service.RaceGraphicService;
 import org.ctc.domain.service.RaceManagementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -23,6 +24,7 @@ public class RaceController {
 
     private final RaceManagementService raceManagementService;
     private final RaceAttachmentService raceAttachmentService;
+    private final RaceGraphicService raceGraphicService;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID matchdayId,
@@ -179,7 +181,7 @@ public class RaceController {
     @PostMapping("/{id}/generate-lineup")
     public String generateLineup(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
-            raceManagementService.generateLineup(id);
+            raceGraphicService.generateLineup(id);
             redirectAttributes.addFlashAttribute("successMessage", "Lineup graphic generated");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -190,7 +192,7 @@ public class RaceController {
     @PostMapping("/{id}/generate-results")
     public String generateResults(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
-            raceManagementService.generateResults(id);
+            raceGraphicService.generateResults(id);
             redirectAttributes.addFlashAttribute("successMessage", "Results graphic generated");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -201,7 +203,7 @@ public class RaceController {
     @PostMapping("/{id}/generate-settings")
     public String generateSettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
-            raceManagementService.generateSettings(id);
+            raceGraphicService.generateSettings(id);
             redirectAttributes.addFlashAttribute("successMessage", "Settings graphic generated");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -212,7 +214,7 @@ public class RaceController {
     @PostMapping("/{id}/generate-overlay")
     public String generateOverlay(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
-            raceManagementService.generateOverlay(id);
+            raceGraphicService.generateOverlay(id);
             redirectAttributes.addFlashAttribute("successMessage", "Overlay graphic generated");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());

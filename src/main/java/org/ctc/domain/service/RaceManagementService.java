@@ -3,10 +3,6 @@ package org.ctc.domain.service;
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.dataimport.GoogleCalendarService;
-import org.ctc.admin.service.LineupGraphicService;
-import org.ctc.admin.service.OverlayGraphicService;
-import org.ctc.admin.service.ResultsGraphicService;
-import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.model.Car;
@@ -34,15 +30,10 @@ public class RaceManagementService {
     private final DriverRepository driverRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final RaceLineupRepository raceLineupRepository;
-    private final RaceAttachmentRepository raceAttachmentRepository;
     private final CarRepository carRepository;
     private final TrackRepository trackRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final ScoringService scoringService;
-    private final LineupGraphicService lineupGraphicService;
-    private final ResultsGraphicService resultsGraphicService;
-    private final SettingsGraphicService settingsGraphicService;
-    private final OverlayGraphicService overlayGraphicService;
     private final TeamCardService teamCardService;
     private final GoogleCalendarService googleCalendarService;
 
@@ -397,72 +388,6 @@ public class RaceManagementService {
         log.info("Quick score: {} {} : {} {}",
                 race.getHomeTeam().getShortName(), homeScore, awayScore, race.getAwayTeam().getShortName());
         return race.getHomeTeam().getShortName() + " " + homeScore + " : " + awayScore + " " + race.getAwayTeam().getShortName();
-    }
-
-    // --- Generate lineup ---
-
-    @Transactional
-    public void generateLineup(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        try {
-            String url = lineupGraphicService.generateLineup(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Lineups";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Lineup generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    // --- Generate results ---
-
-    @Transactional
-    public void generateResults(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        try {
-            String url = resultsGraphicService.generateResults(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Results";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Results graphic generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    @Transactional
-    public void generateSettings(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        try {
-            String url = settingsGraphicService.generateSettings(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Settings";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Settings graphic generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    // --- Generate overlay ---
-
-    @Transactional
-    public void generateOverlay(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        try {
-            String url = overlayGraphicService.generateOverlay(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Overlay";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Overlay generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
     }
 
     // --- Delete race ---
