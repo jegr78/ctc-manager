@@ -1,14 +1,14 @@
 package org.ctc.domain.service;
 
+import org.ctc.admin.dto.SeasonForm;
 import org.ctc.domain.exception.EntityNotFoundException;
+import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import org.ctc.domain.model.Team;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -26,6 +26,137 @@ public class SeasonManagementService {
     private final TrackRepository trackRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final FileStorageService fileStorageService;
+    private final PlayoffRepository playoffRepository;
+    private final RaceScoringRepository raceScoringRepository;
+    private final MatchScoringRepository matchScoringRepository;
+    private final ScoringService scoringService;
+
+    // --- Records for structured return data ---
+
+    public record SeasonDetailData(Season season, Playoff playoff, boolean hasTeams,
+                                   boolean hasMatchdays, boolean canGenerate, boolean isSwiss) {}
+
+    public record SeasonEditFormData(Season season, List<Team> allTeams, List<Car> allCars,
+                                     List<Track> allTracks, List<RaceScoring> allRaceScorings,
+                                     List<MatchScoring> allMatchScorings) {}
+
+    public record SwissRoundData(Season season, Map<UUID, int[]> raceScores) {}
+
+    // --- Season CRUD ---
+
+    @Transactional(readOnly = true)
+    public List<Season> findAll() {
+        return seasonRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Season findById(UUID id) {
+        return seasonRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Season", id));
+    }
+
+    @Transactional(readOnly = true)
+    public SeasonDetailData getDetailData(UUID id) {
+        var season = findById(id);
+        var playoff = playoffRepository.findBySeasonId(id).orElse(null);
+        boolean hasTeams = !season.getSeasonTeams().isEmpty();
+        boolean hasMatchdays = !season.getMatchdays().isEmpty();
+        boolean isSwiss = season.getFormat() == SeasonFormat.SWISS;
+        boolean canGenerate = !isSwiss && !hasMatchdays && season.getEligibleTeams().size() >= 2;
+        return new SeasonDetailData(season, playoff, hasTeams, hasMatchdays, canGenerate, isSwiss);
+    }
+
+    @Transactional(readOnly = true)
+    public SeasonEditFormData getEditFormData(UUID id) {
+        Season season = id != null ? findById(id) : null;
+        var allTeams = teamRepository.findAll();
+        var allCars = carRepository.findAllByOrderByManufacturerAscNameAsc();
+        var allTracks = trackRepository.findAllByOrderByNameAsc();
+        var allRaceScorings = raceScoringRepository.findAll();
+        var allMatchScorings = matchScoringRepository.findAll();
+        return new SeasonEditFormData(season, allTeams, allCars, allTracks, allRaceScorings, allMatchScorings);
+    }
+
+    @Transactional
+    public Season save(SeasonForm form, UUID raceScoringId, UUID matchScoringId) {
+        var raceScoring = raceScoringRepository.findById(raceScoringId)
+                .orElseThrow(() -> new EntityNotFoundException("RaceScoring", raceScoringId));
+        var matchScoring = matchScoringRepository.findById(matchScoringId)
+                .orElseThrow(() -> new EntityNotFoundException("MatchScoring", matchScoringId));
+
+        Season season;
+        if (form.getId() != null) {
+            season = findById(form.getId());
+        } else {
+            season = new Season();
+        }
+        season.setName(form.getName());
+        season.setYear(form.getYear());
+        season.setNumber(form.getNumber());
+        season.setDescription(form.getDescription());
+        season.setStartDate(form.getStartDate());
+        season.setEndDate(form.getEndDate());
+        season.setActive(form.isActive());
+        season.setFormat(form.getFormat());
+        season.setTotalRounds(form.getTotalRounds());
+        season.setLegs(form.getLegs());
+        season.setEventDurationMinutes(form.getEventDurationMinutes());
+        season.setRaceScoring(raceScoring);
+        season.setMatchScoring(matchScoring);
+
+        season = seasonRepository.save(season);
+        if (form.getId() != null) {
+            log.info("Updated season: {}", season.getName());
+        } else {
+            log.info("Created season: {}", season.getName());
+        }
+        return season;
+    }
+
+    @Transactional
+    public String delete(UUID id) {
+        var season = findById(id);
+        seasonRepository.delete(season);
+        log.info("Deleted season: {}", season.getName());
+        return season.getName();
+    }
+
+    // --- Scoring lookups ---
+
+    @Transactional(readOnly = true)
+    public List<RaceScoring> getAllRaceScorings() {
+        return raceScoringRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<MatchScoring> getAllMatchScorings() {
+        return matchScoringRepository.findAll();
+    }
+
+    // --- Swiss round data ---
+
+    @Transactional(readOnly = true)
+    public SwissRoundData getSwissRoundData(UUID seasonId) {
+        var season = findById(seasonId);
+        Map<UUID, int[]> raceScores = new HashMap<>();
+        for (var md : season.getMatchdays()) {
+            for (var race : md.getRaces()) {
+                if (race.isBye()) continue;
+                if (race.getHomeScore() != null && race.getAwayScore() != null) {
+                    raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
+                } else if (!race.getResults().isEmpty()) {
+                    int homeTotal = race.getResults().stream()
+                            .filter(r -> scoringService.isDriverInTeam(r, race.getId(), race.getHomeTeam().getId()))
+                            .mapToInt(RaceResult::getPointsTotal).sum();
+                    int awayTotal = race.getResults().stream()
+                            .filter(r -> !scoringService.isDriverInTeam(r, race.getId(), race.getHomeTeam().getId()))
+                            .mapToInt(RaceResult::getPointsTotal).sum();
+                    raceScores.put(race.getId(), new int[]{homeTotal, awayTotal});
+                }
+            }
+        }
+        return new SwissRoundData(season, raceScores);
+    }
 
     /**
      * Returns teams available as replacement candidates for a season
