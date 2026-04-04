@@ -3,7 +3,7 @@ package org.ctc.admin.controller;
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.domain.service.RaceAttachmentService;
 import org.ctc.domain.service.RaceGraphicService;
-import org.ctc.domain.service.RaceManagementService;
+import org.ctc.domain.service.RaceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RaceController {
 
-    private final RaceManagementService raceManagementService;
+    private final RaceService raceService;
     private final RaceAttachmentService raceAttachmentService;
     private final RaceGraphicService raceGraphicService;
 
@@ -30,7 +30,7 @@ public class RaceController {
     public String list(@RequestParam(required = false) UUID matchdayId,
                        @RequestParam(required = false) UUID seasonId,
                        Model model) {
-        var data = raceManagementService.getRaceListData(matchdayId, seasonId);
+        var data = raceService.getRaceListData(matchdayId, seasonId);
         model.addAttribute("races", data.races());
         model.addAttribute("raceScores", data.raceScores());
         model.addAttribute("matchday", data.matchday());
@@ -41,7 +41,7 @@ public class RaceController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
-        var data = raceManagementService.getRaceDetailData(id);
+        var data = raceService.getRaceDetailData(id);
         model.addAttribute("race", data.race());
         model.addAttribute("homeTotal", data.homeTotal());
         model.addAttribute("awayTotal", data.awayTotal());
@@ -66,7 +66,7 @@ public class RaceController {
 
     @GetMapping("/new")
     public String create(@RequestParam(required = false) UUID matchdayId, Model model) {
-        var data = raceManagementService.getNewRaceFormData(matchdayId);
+        var data = raceService.getNewRaceFormData(matchdayId);
         model.addAttribute("raceForm", data.form());
         model.addAttribute("matchdays", data.matchdays());
         model.addAttribute("teams", data.teams());
@@ -79,7 +79,7 @@ public class RaceController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var data = raceManagementService.getRaceFormData(id);
+        var data = raceService.getRaceFormData(id);
         model.addAttribute("raceForm", data.form());
         model.addAttribute("matchdays", data.matchdays());
         model.addAttribute("teams", data.teams());
@@ -92,7 +92,7 @@ public class RaceController {
 
     @GetMapping("/{id}/results")
     public String results(@PathVariable UUID id, Model model) {
-        var data = raceManagementService.getResultsFormData(id);
+        var data = raceService.getResultsFormData(id);
         model.addAttribute("raceForm", data.form());
         model.addAttribute("race", data.race());
         model.addAttribute("raceScoring", data.raceScoring());
@@ -101,7 +101,7 @@ public class RaceController {
 
     @PostMapping("/save")
     public String save(@ModelAttribute RaceForm form, RedirectAttributes redirectAttributes) {
-        var result = raceManagementService.saveRace(form);
+        var result = raceService.saveRace(form);
         if (!result.success()) {
             redirectAttributes.addFlashAttribute("errorMessage", result.message());
             return "redirect:/admin/races/" + (result.raceId() != null
@@ -115,7 +115,7 @@ public class RaceController {
     @PostMapping("/{id}/results")
     public String saveResults(@PathVariable UUID id, @ModelAttribute RaceForm form,
                               RedirectAttributes redirectAttributes) {
-        String message = raceManagementService.saveResults(id, form.getResults());
+        String message = raceService.saveResults(id, form.getResults());
         redirectAttributes.addFlashAttribute("successMessage", message);
         return "redirect:/admin/races/" + id + "/results";
     }
@@ -126,7 +126,7 @@ public class RaceController {
                               @RequestParam int awayScore,
                               @RequestParam(required = false) String returnUrl,
                               RedirectAttributes redirectAttributes) {
-        String message = raceManagementService.quickScore(id, homeScore, awayScore);
+        String message = raceService.quickScore(id, homeScore, awayScore);
         redirectAttributes.addFlashAttribute("successMessage", message);
         String safeUrl = (returnUrl != null && returnUrl.startsWith("/") && !returnUrl.startsWith("//"))
                 ? returnUrl : "/admin/races";
@@ -170,7 +170,7 @@ public class RaceController {
     @PostMapping("/{id}/create-calendar-event")
     public String createCalendarEvent(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
-            raceManagementService.createOrUpdateCalendarEvent(id);
+            raceService.createOrUpdateCalendarEvent(id);
             redirectAttributes.addFlashAttribute("successMessage", "Calendar event saved");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Calendar: " + e.getMessage());
@@ -229,7 +229,7 @@ public class RaceController {
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        UUID matchdayId = raceManagementService.deleteRace(id);
+        UUID matchdayId = raceService.deleteRace(id);
         redirectAttributes.addFlashAttribute("successMessage", "Race deleted");
         return "redirect:/admin/races?matchdayId=" + matchdayId;
     }
@@ -240,6 +240,6 @@ public class RaceController {
             @RequestParam UUID seasonId,
             @RequestParam UUID homeTeamId,
             @RequestParam(required = false) UUID excludeRaceId) {
-        return raceManagementService.getUsedSelections(seasonId, homeTeamId, excludeRaceId);
+        return raceService.getUsedSelections(seasonId, homeTeamId, excludeRaceId);
     }
 }

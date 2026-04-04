@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class RaceManagementServiceTest {
+class RaceServiceTest {
 
     @Mock private RaceRepository raceRepository;
     @Mock private MatchRepository matchRepository;
@@ -39,7 +39,7 @@ class RaceManagementServiceTest {
     @Mock private GoogleCalendarService googleCalendarService;
 
     @InjectMocks
-    private RaceManagementService service;
+    private RaceService service;
 
     // --- getRaceListData ---
 

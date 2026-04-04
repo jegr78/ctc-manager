@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class RaceManagementService {
+public class RaceService {
 
     private final RaceRepository raceRepository;
     private final MatchRepository matchRepository;
