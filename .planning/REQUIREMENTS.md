@@ -32,8 +32,8 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Database
 
-- [ ] **DBIX-01**: Flyway V2 Migration mit Indexes auf allen FK-Columns (races, race_results, race_lineups, matches, matchdays, season_drivers, season_teams)
-- [ ] **DBIX-02**: @EntityGraph Annotationen fuer haeufig traversierte Beziehungen (Match->Teams, Race->Matchday)
+- [x] **DBIX-01**: Flyway V2 Migration mit Indexes auf allen FK-Columns (races, race_results, race_lineups, matches, matchdays, season_drivers, season_teams)
+- [x] **DBIX-02**: @EntityGraph Annotationen fuer haeufig traversierte Beziehungen (Match->Teams, Race->Matchday)
 
 ## v2 Requirements
 
@@ -98,8 +98,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SECU-02 | Phase 5 | Pending |
 | SECU-03 | Phase 5 | Pending |
 | SECU-04 | Phase 5 | Pending |
-| DBIX-01 | Phase 4 | Pending |
-| DBIX-02 | Phase 4 | Pending |
+| DBIX-01 | Phase 4 | Complete |
+| DBIX-02 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 16 total
