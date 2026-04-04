@@ -21,6 +21,8 @@ services:
     build: .
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      SPRING_SECURITY_USER_NAME: admin
+      SPRING_SECURITY_USER_PASSWORD: ctc-admin
     ports:
       - "8080:8080"
     volumes:
