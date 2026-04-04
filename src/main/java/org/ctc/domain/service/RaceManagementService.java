@@ -3,32 +3,17 @@ package org.ctc.domain.service;
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.dataimport.GoogleCalendarService;
-import org.ctc.admin.service.LineupGraphicService;
-import org.ctc.admin.service.OverlayGraphicService;
-import org.ctc.admin.service.ResultsGraphicService;
-import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
-import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.model.Car;
 import org.ctc.domain.model.Track;
 import org.ctc.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,21 +30,12 @@ public class RaceManagementService {
     private final DriverRepository driverRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final RaceLineupRepository raceLineupRepository;
-    private final RaceAttachmentRepository raceAttachmentRepository;
     private final CarRepository carRepository;
     private final TrackRepository trackRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final ScoringService scoringService;
-    private final FileStorageService fileStorageService;
-    private final LineupGraphicService lineupGraphicService;
-    private final ResultsGraphicService resultsGraphicService;
-    private final SettingsGraphicService settingsGraphicService;
-    private final OverlayGraphicService overlayGraphicService;
     private final TeamCardService teamCardService;
     private final GoogleCalendarService googleCalendarService;
-
-    @Value("${app.upload-dir:uploads}")
-    private String uploadDir;
 
     // --- Return types ---
 
@@ -113,8 +89,7 @@ public class RaceManagementService {
     // --- Detail ---
 
     public RaceDetailData getRaceDetailData(UUID raceId) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+        var race = raceRepository.findById(raceId).orElseThrow();
 
         int homeTotal = 0;
         int awayTotal = 0;
@@ -189,8 +164,7 @@ public class RaceManagementService {
 
     @Transactional
     public void createOrUpdateCalendarEvent(UUID raceId) throws IOException {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+        var race = raceRepository.findById(raceId).orElseThrow();
 
         if (!googleCalendarService.isAvailable()) {
             throw new IllegalStateException("Google Calendar integration not available");
@@ -256,8 +230,7 @@ public class RaceManagementService {
     // --- Form data for edit ---
 
     public RaceFormData getRaceFormData(UUID raceId) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+        var race = raceRepository.findById(raceId).orElseThrow();
         var form = toForm(race);
         var season = race.getMatchday().getSeason();
 
@@ -270,8 +243,7 @@ public class RaceManagementService {
     // --- Results form data ---
 
     public ResultsFormData getResultsFormData(UUID raceId) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+        var race = raceRepository.findById(raceId).orElseThrow();
         var form = toForm(race);
 
         if (form.getResults().isEmpty()) {
@@ -287,17 +259,13 @@ public class RaceManagementService {
 
     @Transactional
     public SaveResult saveRace(RaceForm form) {
-        var matchday = matchdayRepository.findById(form.getMatchdayId())
-                .orElseThrow(() -> new EntityNotFoundException("Matchday", form.getMatchdayId()));
-        var homeTeam = teamRepository.findById(form.getHomeTeamId())
-                .orElseThrow(() -> new EntityNotFoundException("Team", form.getHomeTeamId()));
-        var awayTeam = teamRepository.findById(form.getAwayTeamId())
-                .orElseThrow(() -> new EntityNotFoundException("Team", form.getAwayTeamId()));
+        var matchday = matchdayRepository.findById(form.getMatchdayId()).orElseThrow();
+        var homeTeam = teamRepository.findById(form.getHomeTeamId()).orElseThrow();
+        var awayTeam = teamRepository.findById(form.getAwayTeamId()).orElseThrow();
 
         Race race;
         if (form.getId() != null) {
-            race = raceRepository.findById(form.getId())
-                    .orElseThrow(() -> new EntityNotFoundException("Race", form.getId()));
+            race = raceRepository.findById(form.getId()).orElseThrow();
         } else {
             race = new Race();
         }
@@ -382,16 +350,14 @@ public class RaceManagementService {
 
     @Transactional
     public String saveResults(UUID raceId, List<RaceResultForm> results) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+        var race = raceRepository.findById(raceId).orElseThrow();
 
         race.getResults().clear();
 
         for (var rf : results) {
             if (rf.getDriverId() == null) continue;
 
-            var driver = driverRepository.findById(rf.getDriverId())
-                    .orElseThrow(() -> new EntityNotFoundException("Driver", rf.getDriverId()));
+            var driver = driverRepository.findById(rf.getDriverId()).orElseThrow();
             var result = new RaceResult(race, driver, rf.getPosition(), rf.getQualiPosition(), rf.isFastestLap());
             scoringService.calculatePoints(result, race.getMatchday().getSeason().getRaceScoring());
             race.getResults().add(result);
@@ -413,8 +379,7 @@ public class RaceManagementService {
 
     @Transactional
     public String quickScore(UUID raceId, int homeScore, int awayScore) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+        var race = raceRepository.findById(raceId).orElseThrow();
         if (race.getMatch() != null) {
             race.getMatch().setHomeScore(homeScore);
             race.getMatch().setAwayScore(awayScore);
@@ -425,150 +390,11 @@ public class RaceManagementService {
         return race.getHomeTeam().getShortName() + " " + homeScore + " : " + awayScore + " " + race.getAwayTeam().getShortName();
     }
 
-    // --- Upload attachment ---
-
-    @Transactional
-    public String uploadAttachment(UUID raceId, MultipartFile file) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
-        try {
-            String url = fileStorageService.store(raceId, file);
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, file.getOriginalFilename(), url);
-            raceAttachmentRepository.save(attachment);
-            return file.getOriginalFilename();
-        } catch (IOException e) {
-            log.error("Upload failed for race {}", raceId, e);
-            throw new RuntimeException(e.getMessage(), e);
-        }
-    }
-
-    // --- Add link ---
-
-    @Transactional
-    public String addLink(UUID raceId, String name, String url) {
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            throw new IllegalArgumentException("Link must start with http:// or https://");
-        }
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
-        var attachment = new RaceAttachment(race, AttachmentType.LINK, name, url);
-        raceAttachmentRepository.save(attachment);
-        return name;
-    }
-
-    // --- Delete attachment ---
-
-    @Transactional
-    public UUID deleteAttachment(UUID attachmentId) {
-        var attachment = raceAttachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new EntityNotFoundException("RaceAttachment", attachmentId));
-        UUID raceId = attachment.getRace().getId();
-        if (attachment.getType() == AttachmentType.FILE) {
-            fileStorageService.delete(attachment.getUrl());
-        }
-        raceAttachmentRepository.delete(attachment);
-        return raceId;
-    }
-
-    // --- Generate lineup ---
-
-    @Transactional
-    public void generateLineup(UUID raceId) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
-        try {
-            String url = lineupGraphicService.generateLineup(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Lineups";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Lineup generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    // --- Generate results ---
-
-    @Transactional
-    public void generateResults(UUID raceId) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
-        try {
-            String url = resultsGraphicService.generateResults(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Results";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Results graphic generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    @Transactional
-    public void generateSettings(UUID raceId) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
-        try {
-            String url = settingsGraphicService.generateSettings(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Settings";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Settings graphic generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    // --- Generate overlay ---
-
-    @Transactional
-    public void generateOverlay(UUID raceId) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
-        try {
-            String url = overlayGraphicService.generateOverlay(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Overlay";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Overlay generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    // --- Download attachment ---
-
-    public ResponseEntity<Resource> downloadAttachment(UUID attachmentId) {
-        var attachment = raceAttachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new EntityNotFoundException("RaceAttachment", attachmentId));
-        if (attachment.getType() != AttachmentType.FILE) {
-            return ResponseEntity.badRequest().build();
-        }
-        String url = attachment.getUrl();
-        Path file = Paths.get(uploadDir).toAbsolutePath().normalize()
-                .resolve(url.substring("/uploads/".length()));
-        if (!Files.exists(file)) {
-            return ResponseEntity.notFound().build();
-        }
-        String contentType = "application/octet-stream";
-        try { contentType = Files.probeContentType(file); } catch (IOException e) { log.debug("Could not probe content type for {}", file, e); }
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + attachment.getName() + getExtension(file) + "\"")
-                .body(new FileSystemResource(file));
-    }
-
     // --- Delete race ---
 
     @Transactional
     public UUID deleteRace(UUID raceId) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+        var race = raceRepository.findById(raceId).orElseThrow();
         var matchdayId = race.getMatchday().getId();
         raceRepository.delete(race);
         log.info("Deleted race: {} vs {}", race.getHomeTeam().getShortName(), race.getAwayTeam().getShortName());
@@ -686,9 +512,4 @@ public class RaceManagementService {
         return form;
     }
 
-    private String getExtension(Path file) {
-        String name = file.getFileName().toString();
-        int dot = name.lastIndexOf('.');
-        return dot >= 0 ? name.substring(dot) : "";
-    }
 }

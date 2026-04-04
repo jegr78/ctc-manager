@@ -2,9 +2,6 @@ package org.ctc.domain.service;
 
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
-import org.ctc.admin.service.LineupGraphicService;
-import org.ctc.admin.service.ResultsGraphicService;
-import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.dataimport.GoogleCalendarService;
 import org.ctc.domain.model.*;
@@ -34,15 +31,10 @@ class RaceManagementServiceTest {
     @Mock private DriverRepository driverRepository;
     @Mock private SeasonDriverRepository seasonDriverRepository;
     @Mock private RaceLineupRepository raceLineupRepository;
-    @Mock private RaceAttachmentRepository raceAttachmentRepository;
     @Mock private CarRepository carRepository;
     @Mock private TrackRepository trackRepository;
     @Mock private SeasonTeamRepository seasonTeamRepository;
     @Mock private ScoringService scoringService;
-    @Mock private FileStorageService fileStorageService;
-    @Mock private LineupGraphicService lineupGraphicService;
-    @Mock private ResultsGraphicService resultsGraphicService;
-    @Mock private SettingsGraphicService settingsGraphicService;
     @Mock private TeamCardService teamCardService;
     @Mock private GoogleCalendarService googleCalendarService;
 
@@ -231,78 +223,6 @@ class RaceManagementServiceTest {
         assertThat(race.getMatch().getAwayScore()).isEqualTo(38);
     }
 
-    // --- addLink ---
-
-    @Test
-    void givenValidUrl_whenAddLink_thenAttachmentSaved() {
-        // given
-        var raceId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(raceId);
-
-        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
-
-        // when
-        var name = service.addLink(raceId, "Replay", "https://youtube.com/watch?v=123");
-
-        // then
-        assertThat(name).isEqualTo("Replay");
-        verify(raceAttachmentRepository).save(any(RaceAttachment.class));
-    }
-
-    @Test
-    void givenInvalidUrl_whenAddLink_thenThrowsException() {
-        // when / then
-        assertThatThrownBy(() -> service.addLink(UUID.randomUUID(), "Bad", "ftp://invalid"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("http");
-    }
-
-    // --- deleteAttachment ---
-
-    @Test
-    void givenFileAttachment_whenDeleteAttachment_thenDeletesFileAndRecord() {
-        // given
-        var attachmentId = UUID.randomUUID();
-        var raceId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(raceId);
-
-        var attachment = new RaceAttachment(race, AttachmentType.FILE, "screenshot.png", "/uploads/test.png");
-        attachment.setId(attachmentId);
-
-        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
-
-        // when
-        var result = service.deleteAttachment(attachmentId);
-
-        // then
-        assertThat(result).isEqualTo(raceId);
-        verify(fileStorageService).delete("/uploads/test.png");
-        verify(raceAttachmentRepository).delete(attachment);
-    }
-
-    @Test
-    void givenLinkAttachment_whenDeleteAttachment_thenDoesNotDeleteFile() {
-        // given
-        var attachmentId = UUID.randomUUID();
-        var raceId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(raceId);
-
-        var attachment = new RaceAttachment(race, AttachmentType.LINK, "Replay", "https://youtube.com");
-        attachment.setId(attachmentId);
-
-        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
-
-        // when
-        service.deleteAttachment(attachmentId);
-
-        // then
-        verify(fileStorageService, never()).delete(any());
-        verify(raceAttachmentRepository).delete(attachment);
-    }
-
     // --- deleteRace ---
 
     @Test
@@ -428,96 +348,6 @@ class RaceManagementServiceTest {
         assertThat(data.resultsMissing()).isTrue();
         assertThat(data.canGenerateResults()).isFalse();
         assertThat(data.resultsExist()).isFalse();
-    }
-
-    // --- generateResults ---
-
-    @Test
-    void givenRace_whenGenerateResults_thenCreatesAttachment() throws Exception {
-        // given
-        var homeTeam = createTeam("HOM", "Home");
-        var awayTeam = createTeam("AWY", "Away");
-        var matchday = new Matchday();
-        matchday.setId(UUID.randomUUID());
-        matchday.setLabel("MD 1");
-        matchday.setSeason(new Season("S"));
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(resultsGraphicService.generateResults(race)).thenReturn("/uploads/races/" + race.getId() + "/results.png");
-
-        // when
-        service.generateResults(race.getId());
-
-        // then
-        verify(raceAttachmentRepository).save(argThat(att ->
-                att.getName().equals("MD 1-HOM-AWY-Results")
-                        && att.getUrl().endsWith("/results.png")
-                        && att.getType() == AttachmentType.FILE));
-    }
-
-    @Test
-    void givenGraphicServiceFailure_whenGenerateResults_thenRethrowsException() throws Exception {
-        // given
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(resultsGraphicService.generateResults(race)).thenThrow(new RuntimeException("Playwright failed"));
-
-        // when / then
-        assertThatThrownBy(() -> service.generateResults(race.getId()))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Playwright failed");
-    }
-
-    // --- generateSettings ---
-
-    @Test
-    void givenRace_whenGenerateSettings_thenCreatesAttachment() throws Exception {
-        // given
-        var homeTeam = createTeam("HOM", "Home");
-        var awayTeam = createTeam("AWY", "Away");
-        var matchday = new Matchday();
-        matchday.setId(UUID.randomUUID());
-        matchday.setLabel("MD 1");
-        matchday.setSeason(new Season("S"));
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(settingsGraphicService.generateSettings(race)).thenReturn("/uploads/races/" + race.getId() + "/settings.png");
-
-        // when
-        service.generateSettings(race.getId());
-
-        // then
-        verify(raceAttachmentRepository).save(argThat(att ->
-                att.getName().equals("MD 1-HOM-AWY-Settings")
-                        && att.getUrl().endsWith("/settings.png")
-                        && att.getType() == AttachmentType.FILE));
-    }
-
-    @Test
-    void givenGraphicServiceFailure_whenGenerateSettings_thenRethrowsException() throws Exception {
-        // given
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(settingsGraphicService.generateSettings(race)).thenThrow(new RuntimeException("Playwright failed"));
-
-        // when / then
-        assertThatThrownBy(() -> service.generateSettings(race.getId()))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Playwright failed");
     }
 
     // --- getRaceDetailData settings flags ---
@@ -694,51 +524,6 @@ class RaceManagementServiceTest {
         assertThat(data.form().getResults().get(0).getDriverId()).isEqualTo(driver.getId());
     }
 
-    // --- uploadAttachment ---
-
-    @Test
-    void givenFile_whenUploadAttachment_thenStoresFileAndCreatesAttachment() throws Exception {
-        // given
-        var raceId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(raceId);
-
-        var file = mock(org.springframework.web.multipart.MultipartFile.class);
-        when(file.getOriginalFilename()).thenReturn("screenshot.png");
-
-        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
-        when(fileStorageService.store(eq(raceId), any())).thenReturn("/uploads/races/" + raceId + "/screenshot.png");
-
-        // when
-        var name = service.uploadAttachment(raceId, file);
-
-        // then
-        assertThat(name).isEqualTo("screenshot.png");
-        verify(fileStorageService).store(eq(raceId), any());
-        verify(raceAttachmentRepository).save(argThat(att ->
-                att.getName().equals("screenshot.png") && att.getType() == AttachmentType.FILE));
-    }
-
-    // --- downloadAttachment ---
-
-    @Test
-    void givenLinkAttachment_whenDownloadAttachment_thenReturnsBadRequest() {
-        // given
-        var attachmentId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        var attachment = new RaceAttachment(race, AttachmentType.LINK, "Replay", "https://youtube.com");
-        attachment.setId(attachmentId);
-
-        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
-
-        // when
-        var response = service.downloadAttachment(attachmentId);
-
-        // then
-        assertThat(response.getStatusCode().value()).isEqualTo(400);
-    }
-
     // --- saveRace edit ---
 
     @Test
@@ -802,36 +587,6 @@ class RaceManagementServiceTest {
         // then
         assertThat(result.success()).isFalse();
         assertThat(result.message()).contains("Track is not in this season's pool");
-    }
-
-    // --- generateLineup ---
-
-    @Test
-    void givenRace_whenGenerateLineup_thenCreatesAttachment() throws Exception {
-        // given
-        var homeTeam = createTeam("HOM", "Home");
-        var awayTeam = createTeam("AWY", "Away");
-        var matchday = new Matchday();
-        matchday.setId(UUID.randomUUID());
-        matchday.setLabel("MD 1");
-        matchday.setSeason(new Season("S"));
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(lineupGraphicService.generateLineup(race)).thenReturn("/uploads/races/" + race.getId() + "/lineup.png");
-
-        // when
-        service.generateLineup(race.getId());
-
-        // then
-        verify(raceAttachmentRepository).save(argThat(att ->
-                att.getName().equals("MD 1-HOM-AWY-Lineups")
-                        && att.getUrl().endsWith("/lineup.png")
-                        && att.getType() == AttachmentType.FILE));
     }
 
     // --- createOrUpdateCalendarEvent ---
