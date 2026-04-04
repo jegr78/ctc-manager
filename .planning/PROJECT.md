@@ -28,6 +28,8 @@ Die bestehende Anwendung ist funktional komplett:
 - ✓ Aussagekraeftige orElseThrow()-Messages in allen 21 Produktionsdateien — Phase 1
 - ✓ 7 Controller ohne Repository-Injections, 4 neue + 3 erweiterte Services — Phase 2
 - ✓ RaceManagementService in 3 Services aufgeteilt (RaceService, RaceGraphicService, RaceAttachmentService) — Phase 3
+- ✓ 36 FK-Indexes auf allen Foreign Key Columns via Flyway V2 Migration — Phase 4
+- ✓ 28 @EntityGraph-Annotationen auf Collection-returning Repository-Methoden — Phase 4
 
 ### Active
 
@@ -36,7 +38,6 @@ Die bestehende Anwendung ist funktional komplett:
 - [ ] Global Exception Handler mit @ControllerAdvice
 - [ ] .orElseThrow() mit aussagekraeftigen Exceptions
 - [ ] Spezifische Exception-Typen statt catch(Exception e)
-- [ ] DB-Indexes auf Foreign Key Columns
 - [ ] Spring Security Basic Auth fuer prod/docker Profile
 - [ ] SSRF-Schutz fuer FileStorageService.storeFromUrl()
 - [ ] H2-Console explizit nur in dev aktivieren
@@ -44,7 +45,6 @@ Die bestehende Anwendung ist funktional komplett:
 - [ ] CompletableFuture Fehler-Propagation in GT7 Sync
 - [ ] Alltime Standings implementieren oder UI-Option deaktivieren
 - [ ] Playwright Runtime-Dependency dokumentieren / Health Check
-- [ ] OSIV N+1 Query Optimierung mit @EntityGraph (Vorbereitung)
 - [ ] Unbounded findAll() durch Pagination ersetzen (Vorbereitung)
 
 ### Out of Scope
@@ -101,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 after Phase 3 completion*
+*Last updated: 2026-04-04 after Phase 4 completion*
