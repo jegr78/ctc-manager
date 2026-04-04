@@ -27,11 +27,10 @@ Die bestehende Anwendung ist funktional komplett:
 - ✓ Zentrale Exception-Behandlung (GlobalExceptionHandler, EntityNotFoundException) — Phase 1
 - ✓ Aussagekraeftige orElseThrow()-Messages in allen 21 Produktionsdateien — Phase 1
 - ✓ 7 Controller ohne Repository-Injections, 4 neue + 3 erweiterte Services — Phase 2
+- ✓ RaceManagementService in 3 Services aufgeteilt (RaceService, RaceGraphicService, RaceAttachmentService) — Phase 3
 
 ### Active
 
-- [ ] RaceManagementService aufteilen (God Service eliminieren)
-- [ ] RaceManagementService aufteilen (God Service eliminieren)
 - [ ] TemplateEditorController Duplikation beseitigen
 - [ ] StandingsController Business-Logik in Service verschieben
 - [ ] Global Exception Handler mit @ControllerAdvice
@@ -81,7 +80,7 @@ Die bestehende Anwendung ist funktional komplett:
 | Architektur-Refactoring vor Auth | Saubere Service-Schicht macht Auth-Integration einfacher | — Pending |
 | Basic Auth statt Form Login | Single-Admin-App, kein User-Management noetig | — Pending |
 | Auth nur prod/docker Profile | Dev/Local sind lokale Umgebungen ohne Netzwerk-Exposure | — Pending |
-| RaceManagementService aufteilen | 673 Zeilen, 13 Dependencies — nach Analyse beste Aufteilung vorschlagen | — Pending |
+| RaceManagementService aufteilen | 673 Zeilen, 13 Dependencies — 3 fokussierte Services extrahiert | Phase 3: Complete |
 | Alle 17 Concerns angehen | Komplettbereinigung vor naechstem Feature-Zyklus | — Pending |
 
 ## Evolution
@@ -102,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-03 after Phase 1 completion*
+*Last updated: 2026-04-04 after Phase 3 completion*
