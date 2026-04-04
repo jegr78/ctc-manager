@@ -21,7 +21,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 - [ ] **SRVC-05**: MatchScoringController Repository-Zugriffe in MatchScoringService extrahieren
 - [ ] **SRVC-06**: TeamController Repository-Zugriffe in TeamManagementService extrahieren
 - [ ] **SRVC-07**: SeasonController 8 Repository-Injections durch Service-Aufrufe ersetzen
-- [ ] **SRVC-08**: RaceManagementService in RaceService (Core CRUD), RaceGraphicService, RaceAttachmentService aufteilen
+- [x] **SRVC-08**: RaceManagementService in RaceService (Core CRUD), RaceGraphicService, RaceAttachmentService aufteilen
 
 ### Security
 
@@ -93,7 +93,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRVC-05 | Phase 2 | Pending |
 | SRVC-06 | Phase 2 | Pending |
 | SRVC-07 | Phase 2 | Pending |
-| SRVC-08 | Phase 3 | Pending |
+| SRVC-08 | Phase 3 | Complete |
 | SECU-01 | Phase 5 | Pending |
 | SECU-02 | Phase 5 | Pending |
 | SECU-03 | Phase 5 | Pending |
