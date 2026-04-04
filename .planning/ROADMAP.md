@@ -39,10 +39,10 @@
   1. FileStorageService.storeFromUrl() rejects URLs targeting private IPs, localhost, and internal networks
   2. FileStorageService.store() and storeImage() reject filenames containing path traversal sequences (../, absolute paths)
   3. Existing file upload and URL import functionality continues to work for legitimate inputs
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 06-01: TBD
+- [ ] 06-01-PLAN.md — SSRF hostname validation + path traversal protection (TDD)
 
 ### Phase 7: Layer Cleanup
 **Goal**: Controllers contain no business logic and no direct repository access -- clean three-tier separation
