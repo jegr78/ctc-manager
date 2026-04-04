@@ -42,7 +42,7 @@
 **Plans:** 1 plan
 
 Plans:
-- [ ] 06-01-PLAN.md — SSRF hostname validation + path traversal protection (TDD)
+- [x] 06-01-PLAN.md — SSRF hostname validation + path traversal protection (TDD)
 
 ### Phase 7: Layer Cleanup
 **Goal**: Controllers contain no business logic and no direct repository access -- clean three-tier separation

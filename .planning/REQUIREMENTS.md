@@ -26,8 +26,8 @@ Requirements for Codebase Concerns Cleanup. Each maps to roadmap phases.
 
 ### Security
 
-- [ ] **SECU-01**: FileStorageService.storeFromUrl() validiert Hostname -- private IPs, localhost und interne Netzwerke blockiert
-- [ ] **SECU-02**: FileStorageService.store() und storeImage() pruefen Path-Traversal mit normalize()+startsWith(uploadDir)
+- [x] **SECU-01**: FileStorageService.storeFromUrl() validiert Hostname -- private IPs, localhost und interne Netzwerke blockiert
+- [x] **SECU-02**: FileStorageService.store() und storeImage() pruefen Path-Traversal mit normalize()+startsWith(uploadDir)
 
 ### Code Quality
 
@@ -53,8 +53,8 @@ None deferred -- all concerns addressed in v1.1.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SECU-01 | Phase 6 | Pending |
-| SECU-02 | Phase 6 | Pending |
+| SECU-01 | Phase 6 | Complete |
+| SECU-02 | Phase 6 | Complete |
 | ARCH-01 | Phase 7 | Pending |
 | ARCH-02 | Phase 7 | Pending |
 | FEAT-02 | Phase 7 | Pending |

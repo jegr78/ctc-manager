@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Codebase Concerns Cleanup
-status: planning
-stopped_at: Phase 6 context gathered
-last_updated: "2026-04-04T12:44:09.898Z"
-last_activity: 2026-04-04 -- Roadmap created for v1.1
+status: verifying
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-04-04T13:02:58.746Z"
+last_activity: 2026-04-04
 progress:
   total_phases: 6
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Phase 6 - Security Hardening
+**Current focus:** Phase 06 — security-hardening
 
 ## Current Position
 
-Phase: 6 of 11 (Security Hardening)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-04-04 -- Roadmap created for v1.1
+Phase: 06 (security-hardening) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-04-04
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -43,6 +43,7 @@ Progress: [░░░░░░░░░░] 0%
 | 03 -- God Service Split | 2/2 | ~6min |
 | 04 -- Database Optimization | 1/1 | ~5min |
 | 05 -- Security | 3/3 | ~4min |
+| Phase 06 P01 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -50,6 +51,8 @@ Progress: [░░░░░░░░░░] 0%
 
 All decisions logged in PROJECT.md Key Decisions table.
 Full history in .planning/milestones/v1.0-ROADMAP.md.
+
+- [Phase 06]: String-based SSRF hostname blocklist without DNS resolution; defense-in-depth path traversal with raw filename + resolved path checks
 
 ### Blockers/Concerns
 
@@ -63,6 +66,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-04T12:44:09.890Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-security-hardening/06-CONTEXT.md
+Last session: 2026-04-04T13:02:58.742Z
+Stopped at: Completed 06-01-PLAN.md
+Resume file: None
