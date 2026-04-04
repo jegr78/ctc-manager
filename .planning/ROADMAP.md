@@ -53,11 +53,12 @@ Plans:
   2. StandingsController, PowerRankingsController, PlayoffController, TeamCardController, and CsvImportController inject only services, no repositories
   3. Buchholz calculation and Swiss-system sorting logic lives in StandingsService, not in StandingsController
   4. All existing admin UI pages render correctly with unchanged behavior
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [ ] 07-01-PLAN.md — Service extensions (Buchholz + finders) and controller repository removal
+- [ ] 07-02-PLAN.md — Simple DTO decoupling (Car, Track, Driver, RaceScoring, MatchScoring)
+- [ ] 07-03-PLAN.md — Complex DTO decoupling (Season, Team, Playoff, Matchday, Race)
 
 ### Phase 8: Exception Refinement
 **Goal**: Exception handling is specific and intentional -- no blanket catch-all blocks hiding real errors
@@ -128,7 +129,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 4. Database Optimization | v1.0 | 1/1 | Complete | 2026-04-04 |
 | 5. Security | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 6. Security Hardening | v1.1 | 0/1 | Not started | - |
-| 7. Layer Cleanup | v1.1 | 0/2 | Not started | - |
+| 7. Layer Cleanup | v1.1 | 0/3 | Not started | - |
 | 8. Exception Refinement | v1.1 | 0/1 | Not started | - |
 | 9. Alltime Standings | v1.1 | 0/1 | Not started | - |
 | 10. Service Refactoring | v1.1 | 0/2 | Not started | - |
