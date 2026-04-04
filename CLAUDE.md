@@ -62,6 +62,7 @@ docker compose -f docker-compose.prod.yml up -d
 - `org.ctc.domain.service` — Geschaeftslogik (Scoring, Standings, Rankings)
 - `org.ctc.admin.controller` — Admin CRUD Controller
 - `org.ctc.admin.dto` — Form/Display DTOs
+- `org.ctc.admin.service` — Graphic Services (Playwright-basierte Bildgenerierung)
 - `org.ctc.sitegen` — Statische Seitengenerierung
 - `org.ctc.dataimport` — CSV/Bild-Import
 - `org.ctc.gt7sync` — GT7 Auto/Strecken-Scraping und Sync
@@ -184,255 +185,88 @@ Systematische Bereinigung aller technischen Schulden im CTC Manager, einer Gran 
 <!-- GSD:stack-start source:codebase/STACK.md -->
 ## Technology Stack
 
-## Languages
-- Java 25 - All application code (`src/main/java/org/ctc/`)
-- SQL - Database migrations (`src/main/resources/db/migration/V1__initial_schema.sql`, 321 lines)
-- HTML/CSS - Thymeleaf templates (`src/main/resources/templates/`)
-## Runtime
-- Eclipse Temurin JDK 25 (build) / JRE 25 (runtime Docker image)
-- CI uses `actions/setup-java@v5` with `distribution: temurin`, `java-version: 25`
-- Apache Maven 3.9.14 via Maven Wrapper (`./mvnw`)
-- Wrapper config: `.mvn/wrapper/maven-wrapper.properties`
-- Lockfile: Not applicable (Maven uses `pom.xml` dependency resolution)
-## Frameworks
-- Spring Boot 4.0.5 - Application framework (`pom.xml` parent)
-- Spring Data JPA - ORM and repository layer
-- Spring MVC (WebMVC starter) - HTTP request handling
-- Thymeleaf - Server-side HTML templating (admin UI)
-- Spring Boot Validation - Bean validation (`jakarta.validation`)
-- Spring Boot Actuator - Health endpoint for Docker healthchecks
-- Flyway (with `flyway-mysql` dialect) - Schema migrations
-- H2 Database - In-memory DB for dev/test profiles
-- MariaDB 11 (via `mariadb-java-client`) - Production/local/docker profiles
-- JUnit 5 - Test framework (via Spring Boot test starters)
-- Mockito - Mocking framework (core + JUnit Jupiter extension)
-- Playwright 1.58.0 - E2E browser tests and runtime graphic generation
-- Spring Boot Test starters - `data-jpa-test`, `flyway-test`, `thymeleaf-test`, `validation-test`, `webmvc-test`
-- Maven Compiler Plugin - Java 25 compilation with Lombok annotation processing
-- Maven Surefire Plugin - Unit + integration tests (excludes `**/e2e/**`)
-- Maven Failsafe Plugin - E2E tests (activated via `-Pe2e` profile)
-- JaCoCo 0.8.13 - Code coverage (82% minimum line coverage enforced)
-- Spring Boot Maven Plugin - Fat JAR packaging (excludes Lombok)
-## Key Dependencies
-- `spring-boot-starter-data-jpa` - JPA/Hibernate ORM, repository pattern
-- `spring-boot-starter-thymeleaf` - Admin UI rendering
-- `spring-boot-starter-flyway` - Database migration management
-- `com.microsoft.playwright` 1.58.0 - Headless Chromium for graphic generation (team cards, lineup graphics, results graphics) AND E2E testing
-- `google-api-client` 2.9.0 - Google API client core
-- `google-api-services-sheets` v4-rev20250106-2.0.0 - Google Sheets read access (race result import)
-- `google-api-services-calendar` v3-rev20250115-2.0.0 - Google Calendar event management
-- `google-auth-library-oauth2-http` 1.43.0 - Google service account authentication
-- `commons-text` 1.15.0 (Apache) - Fuzzy string matching (driver name matching during import)
-- `jsoup` 1.22.1 - HTML parsing for GT7 web scraping
-- `lombok` - Boilerplate reduction (@Getter, @Setter, @RequiredArgsConstructor, @Slf4j)
+- **Runtime:** Java 25 (Eclipse Temurin), Maven via `./mvnw`, Spring Boot 4.x
+- **DB:** MariaDB (prod/local/docker), H2 (dev/test), Flyway Migrations
+- **UI:** Thymeleaf (server-side rendering), kein Frontend-Build-Tool
+- **Testing:** JUnit 5, Mockito, Playwright (E2E + Grafik-Generierung)
+- **Externe APIs:** Google Sheets (Race-Import), Google Calendar, Jsoup (GT7-Scraping)
+- **Build:** Surefire (Unit/Integration), Failsafe + `-Pe2e` (E2E), JaCoCo (Coverage)
+
 ## Configuration
-- Spring profiles control all environment-specific config: `dev`, `local`, `docker`, `prod`
-- `.env` files present for Docker/prod (`.env`, `.env.dev`, `.env.local`, `.env.example`)
-- Production uses environment variables: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `GOOGLE_CALENDAR_ID`
-- Google credentials via file path: `google.sheets.credentials-path` (default: `google-credentials.json`)
-- `pom.xml` - Maven build configuration, all dependencies
-- `.mvn/wrapper/maven-wrapper.properties` - Maven Wrapper version
-- No `package.json` or frontend build tools - pure server-side rendering
-- `src/main/resources/application.yml` - Base config (shared across all profiles)
-- `src/main/resources/application-dev.yml` - H2 in-memory, port 9090, debug logging
-- `src/main/resources/application-local.yml` - MariaDB localhost, port 9091
-- `src/main/resources/application-docker.yml` - MariaDB at host `db`, port 8080
-- `src/main/resources/application-prod.yml` - Cloud DB via env vars
-- OSIV enabled (`spring.jpa.open-in-view: true`) - Intentional for Thymeleaf lazy loading
-- File uploads: max 10MB (`spring.servlet.multipart.max-file-size`)
-- Upload directory: configurable via `app.upload-dir` (default: `data/dev/uploads`)
-- Static site output: configurable via `ctc.site.output-dir` (default: `docs/site`)
-## Platform Requirements
-- JDK 25 (Eclipse Temurin recommended)
-- Maven 3.9+ (or use `./mvnw` wrapper)
-- Chromium browser for Playwright: `./mvnw exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"`
-- Optional: MariaDB for `local` profile, Docker for `docker` profile
-- Docker (multi-stage build: `Dockerfile`)
-- MariaDB 11+ (external or Docker Compose)
-- Google service account credentials JSON file (optional, for Sheets/Calendar integration)
-- Chromium installed in container (Playwright, for graphic generation)
+
+- Profile-spezifisch: `application-{dev,local,docker,prod}.yml`
+- Prod-Env-Vars: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `GOOGLE_CALENDAR_ID`
+- Google Credentials: `google.sheets.credentials-path` (default: `google-credentials.json`)
+- Upload-Dir: `app.upload-dir` (default: `data/dev/uploads`)
+- Site-Output: `ctc.site.output-dir` (default: `docs/site`)
+
 ## CI/CD
-- Trigger: Push/PR to `master`/`main`
-- Steps: Build, Unit/Integration Tests, Install Playwright, E2E Tests, JaCoCo Coverage Report
-- Coverage PR comment via `madrapps/jacoco-report@v1.7.2` (min 70% overall, 80% changed files)
-- Test reports uploaded as artifacts (7-day retention)
-- Trigger: Push to `master` when `docs/site/**` changes, or manual dispatch
-- Deploys static site to GitHub Pages
-- `docker-compose.yml` - Local dev (App + MariaDB 11)
-- `docker-compose.prod.yml` - Production (App only, external DB via env vars)
-- Multi-stage Dockerfile: Temurin JDK 25 build, Temurin JRE 25 runtime
-- Non-root user `ctc` in container
-- Healthcheck via `/actuator/health`
+
+- Push/PR to `master`: Build, Tests, Playwright E2E, JaCoCo Coverage PR-Kommentar
+- Push `docs/site/**`: GitHub Pages Deployment
+- Docker: Multi-stage Dockerfile (JDK build, JRE runtime), non-root user `ctc`, Healthcheck `/actuator/health`
 <!-- GSD:stack-end -->
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 ## Conventions
 
 ## Naming Patterns
+
 - Domain layer: `org.ctc.domain.model`, `org.ctc.domain.repository`, `org.ctc.domain.service`
 - Admin layer: `org.ctc.admin.controller`, `org.ctc.admin.dto`, `org.ctc.admin.service`
 - Feature modules: `org.ctc.dataimport`, `org.ctc.gt7sync`, `org.ctc.sitegen`
 - Entities: singular nouns, PascalCase (`Season`, `RaceScoring`, `PlayoffMatchup`)
-- Repositories: `{Entity}Repository` (`SeasonRepository`, `RaceLineupRepository`)
-- Services: `{Domain}Service` or `{Domain}ManagementService` for complex orchestration (`ScoringService`, `SeasonManagementService`, `TeamManagementService`)
-- Controllers: `{Entity}Controller` (`SeasonController`, `RaceController`)
-- DTOs: `{Entity}Form` for form binding, `{Entity}Dto` for display data, `{Entity}Data` for record-based view data (`SeasonForm`, `MatchdayDto`, `MatchdayGraphicData`)
-- camelCase, verb-first: `calculatePoints()`, `addTeamToSeason()`, `getAvailableTeamsForReplacement()`
+- Repositories: `{Entity}Repository` — Services: `{Domain}Service` / `{Domain}ManagementService`
+- Controllers: `{Entity}Controller` — DTOs: `{Entity}Form` (form), `{Entity}Dto` (display), `{Entity}Data` (records)
+- Methods: camelCase, verb-first (`calculatePoints()`, `addTeamToSeason()`)
 - Boolean getters: `isSubTeam()`, `hasSubTeams()`, `isActive()`, `canParse()`
-- Controller actions: HTTP verb mapping (`list()`, `detail()`, `create()`, `edit()`, `save()`, `delete()`)
-- camelCase, descriptive: `homeStanding`, `matchScoring`, `raceScoring`
-- Use `var` for local variables with obvious types (Java 10+ style used consistently)
-- UUID parameters named `id` (path) or `{entity}Id` (request param)
-- Table names: plural snake_case (`seasons`, `race_scorings`, `season_teams`)
-- Column names: snake_case (`created_at`, `race_scoring_id`, `season_year`)
-- Join tables: `{parent}_{child}` (`season_cars`, `season_tracks`)
+- Variables: camelCase, `var` for obvious types, UUID params `id` (path) / `{entity}Id` (request)
+- DB: plural snake_case tables (`seasons`), snake_case columns (`created_at`), join tables `{parent}_{child}`
+
 ## Lombok Usage
-- Always `@Getter @Setter @NoArgsConstructor` on entities
-- `@ToString(exclude = ...)` to prevent lazy-loading triggers and circular references
-- Entities extend `BaseEntity` for `createdAt`/`updatedAt` auditing
-- `@RequiredArgsConstructor` for constructor injection via `final` fields
-- `@Slf4j` for logging
-## Entity Patterns
-## DTO Patterns
-- Form DTOs use `@Valid` + `BindingResult` in controllers
-- Entities are acceptable in GET model attributes (OSIV is active)
-- Display DTOs use Java records where appropriate (e.g., `TeamManagementService.TeamDetailData`)
-## Controller Patterns
-- `"successMessage"` for success
-- `"errorMessage"` for errors
-## Import Organization
+
+- Entities: `@Getter @Setter @NoArgsConstructor`, `@ToString(exclude = ...)`, extend `BaseEntity`
+- Services/Controllers: `@RequiredArgsConstructor` (constructor injection via `final`), `@Slf4j`
+
+## Controller & DTO Patterns
+
+- Form DTOs mit `@Valid` + `BindingResult`, Entities direkt in GET (OSIV aktiv)
+- Flash attributes: `"successMessage"` / `"errorMessage"`
+
 ## Error Handling
-- `IllegalStateException` caught and converted to flash error messages:
-- Generic `Exception` catch only for IO-related operations (file uploads)
-- Throws `IllegalStateException` for business rule violations
-- Throws `IllegalArgumentException` for invalid input
-- `orElseThrow()` for required entity lookups (NoSuchElementException if missing)
-- No custom exception classes -- uses standard Java exceptions
+
+- `IllegalStateException` for business rules, `IllegalArgumentException` for invalid input
+- `orElseThrow()` for entity lookups — keine custom Exceptions
+- Controllers fangen `IllegalStateException`, konvertieren zu Flash-Fehlermeldung
+
 ## Logging
-- `log.info()` for significant state changes (create, update, delete operations):
-- `log.debug()` for calculation results and intermediate state:
-- Always use parameterized messages `{}`, never string concatenation
-## Transaction Management
-## Repository Patterns
-## Inner Classes and Records
-## Global Model Attributes
-## Thymeleaf Templates
+
+- `log.info()` fuer State Changes, `log.debug()` fuer Berechnungen
+- Immer parameterized `{}`, nie String-Concatenation
+
 ## CSS Guidelines
-- Use CSS classes from `admin.css` instead of inline styles on buttons
-- Size classes: `btn-xs`, `btn-sm`, `btn-lg`, `btn-tab`
-- When refactoring inline styles to CSS classes, check JavaScript `element.className = '...'` references
+
+- CSS-Klassen aus `admin.css` statt inline styles: `btn-xs`, `btn-sm`, `btn-lg`, `btn-tab`
+- Bei Refactoring: JavaScript `element.className = '...'` mitpruefen
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
 ## Architecture
 
 ## Pattern Overview
-- Classic three-tier architecture: Controller -> Service -> Repository -> Database
-- Domain-centric package structure with clear separation between admin UI, domain logic, and auxiliary modules
-- OSIV (Open Session in View) deliberately enabled for lazy-loading in Thymeleaf templates
-- No REST API -- all interactions are server-rendered HTML with form submissions and redirects
-- Thin controllers delegate all business logic to service classes
-- DTOs used for form binding (POST), entities passed directly to templates (GET) thanks to OSIV
-## Layers
-- Purpose: HTTP request handling for the admin UI -- receives requests, delegates to services, populates Model or redirects
-- Location: `src/main/java/org/ctc/admin/controller/`
-- Contains: 17 `@Controller` classes, 1 `@ControllerAdvice` (`GlobalModelAdvice`)
-- Key files: `SeasonController.java`, `MatchdayController.java`, `RaceController.java`, `MatchController.java`, `PlayoffController.java`, `TeamController.java`, `DriverController.java`, `CarController.java`, `TrackController.java`
-- Depends on: Domain services (`domain.service`), admin services (`admin.service`)
-- Used by: Thymeleaf templates (via Spring MVC)
-- Pattern: POST-Redirect-GET with flash attributes for success/error messages
-- Purpose: Form-binding objects for POST requests (Mass Assignment protection)
-- Location: `src/main/java/org/ctc/admin/dto/`
-- Contains: Form DTOs (`TeamForm`, `CarForm`, `TrackForm`, `DriverForm`, `RaceForm`, etc.), display DTOs (`MatchdayDto`, `SeasonDriverGroupDto`, `MatchdayGraphicData`, `PowerRankingsGraphicData`)
-- Depends on: Nothing (POJOs/records)
-- Used by: Controllers
-- Purpose: Graphic/image generation using Playwright (Chromium headless)
-- Location: `src/main/java/org/ctc/admin/service/`
-- Contains: `AbstractGraphicService` (base class), `TeamCardService`, `LineupGraphicService`, `ResultsGraphicService`, `MatchResultsGraphicService`, `MatchdayOverviewGraphicService`, `MatchdayResultsGraphicService`, `MatchdayScheduleGraphicService`, `OverlayGraphicService`, `SettingsGraphicService`, `PowerRankingsGraphicService`, `TemplatePreviewService`
-- Pattern: Render Thymeleaf HTML template -> take Playwright screenshot -> save PNG
-- Depends on: Thymeleaf `TemplateEngine`, Playwright, file system
-- Used by: Admin controllers (TeamCardController, RaceController, MatchdayController, etc.)
-- Purpose: JPA entities representing the core domain
-- Location: `src/main/java/org/ctc/domain/model/`
-- Contains: 18 entity classes + 1 `@MappedSuperclass` (`BaseEntity`) + enums
-- Depends on: JPA/Hibernate, Jakarta Validation
-- Used by: Repositories, services, controllers (via OSIV)
-- Purpose: Spring Data JPA interfaces for database access
-- Location: `src/main/java/org/ctc/domain/repository/`
-- Contains: 17 repository interfaces extending `JpaRepository`
-- Depends on: Spring Data JPA, domain model
-- Used by: Domain services, admin services, import services
-- Purpose: Business logic -- scoring, standings, rankings, season/team/match management
-- Location: `src/main/java/org/ctc/domain/service/`
-- Contains: 14 service classes
-- Key files: `ScoringService.java` (points calculation + match score aggregation), `StandingsService.java` (league table), `DriverRankingService.java`, `SeasonManagementService.java`, `TeamManagementService.java`, `MatchService.java`, `MatchdayService.java`, `MatchdayGeneratorService.java`, `RaceManagementService.java`, `PlayoffService.java`, `SwissPairingService.java`, `RaceLineupService.java`, `DriverService.java`, `FileStorageService.java`
-- Depends on: Domain repositories, domain model
-- Used by: Admin controllers, site generator, CSV import
-- Purpose: CSV file import for race results + Google Sheets/Calendar integration
-- Location: `src/main/java/org/ctc/dataimport/`
-- Contains: `CsvImportService.java` (parse/preview/execute flow), `CsvImportController.java`, `ScorecardParser.java`, `GoogleSheetsService.java`, `DriverMatchingService.java`, `GoogleCalendarService.java`
-- Pattern: Two-phase import -- parse+preview (showing fuzzy matches) then confirm+execute
-- Depends on: Domain repositories, `ScoringService`
-- Purpose: Scrape Gran Turismo 7 car/track data from external website, sync to local DB
-- Location: `src/main/java/org/ctc/gt7sync/`
-- Contains: `Gt7ScraperService.java` (HTML scraping via Jsoup), `Gt7SyncService.java` (preview + execute), `Gt7SyncController.java`, `Gt7SyncPreview.java`
-- Pattern: Two-phase sync with preview (like import)
-- Depends on: Car/Track repositories, `FileStorageService`
-- Purpose: Generate static HTML pages from Thymeleaf templates for public-facing league website
-- Location: `src/main/java/org/ctc/sitegen/`
-- Contains: `SiteGeneratorService.java`, `SiteGeneratorController.java`, `model/RaceView.java`
-- Pattern: Reads all season data, renders Thymeleaf templates to static HTML files, copies assets
-- Output: `docs/site/` (or `target/site` in dev)
-- Depends on: Domain repositories, `StandingsService`, `DriverRankingService`, `PlayoffService`
-- Purpose: Application startup, configuration, dev data seeding
-- Location: `src/main/java/org/ctc/admin/`
-- Contains: `WebConfig.java` (upload dir resource handler), `DevDataSeeder.java` (dev profile), `DemoDataSeeder.java` (demo profile), `TestDataService.java` (shared test data creation)
-- Pattern: `CommandLineRunner` for dev/demo profile seeding
-## Data Flow
-- All state is persisted in the relational database (MariaDB in prod, H2 in dev)
-- No application-level caching or session state beyond standard Spring MVC
-- File uploads stored on local filesystem (`data/dev/uploads/` or configured path)
-## Domain Model (Entity Graph)
-```
-```
+
+- Three-tier: Controller -> Service -> Repository -> Database
+- No REST API -- server-rendered HTML with form submissions and redirects (POST-Redirect-GET)
+- Graphic Services: Thymeleaf HTML -> Playwright screenshot -> PNG (`AbstractGraphicService` base class)
+- Two-phase import/sync pattern: parse+preview then confirm+execute (CsvImport, Gt7Sync)
+- Static site generation: domain data -> Thymeleaf -> HTML files in `docs/site/`
+
 ## Key Abstractions
-- Purpose: `@MappedSuperclass` providing `createdAt`/`updatedAt` via JPA Auditing (`@EntityListeners(AuditingEntityListener.class)`)
-- All entities extend this
-- File: `src/main/java/org/ctc/domain/model/BaseEntity.java`
-- Purpose: Base class for all Playwright-based graphic generators
-- Provides: `renderScreenshot()`, `renderScreenshotTransparent()`, `encodeCardBase64()`, `encodeClasspathResource()`, `processStringTemplate()`
-- File: `src/main/java/org/ctc/admin/service/AbstractGraphicService.java`
-- Extended by: All graphic service classes in `admin.service`
-- Purpose: Intermediate base class for matchday-specific graphics (schedule, results, overview)
-- Adds matchday data preparation helpers
-- File: `src/main/java/org/ctc/admin/service/AbstractMatchdayGraphicService.java`
-- Purpose: Decouple scoring rules from code -- points arrays stored as comma-separated strings in DB
-- `RaceScoring`: race position points, quali points, fastest lap points
-- `MatchScoring`: win/draw/loss match points
-- Each Season references one of each
-- Files: `src/main/java/org/ctc/domain/model/RaceScoring.java`, `src/main/java/org/ctc/domain/model/MatchScoring.java`
-- Purpose: Join table with extra attributes -- per-season team rating, color overrides, logo overrides, and team succession (replacement) tracking
-- File: `src/main/java/org/ctc/domain/model/SeasonTeam.java`
-## Entry Points
-- Location: `src/main/java/org/ctc/CtcManagerApplication.java`
-- Triggers: `SpringApplication.run()`, enables `@EnableJpaAuditing`
-- Responsibilities: Bootstrap Spring Boot context
-- Location: `src/main/java/org/ctc/admin/controller/AdminRedirectController.java`
-- Triggers: Any request to `/` or `/admin`
-- Responsibilities: Redirect to `/admin/seasons` (the default landing page)
-- Location: `src/main/java/org/ctc/admin/DevDataSeeder.java`
-- Triggers: Application startup with `dev` profile active
-- Responsibilities: Calls `TestDataService.seed()` to create test teams, seasons, drivers, scoring presets
-- Location: `src/main/java/org/ctc/admin/DemoDataSeeder.java`
-- Triggers: Application startup with `demo` profile active
-- Responsibilities: Imports all GT7 cars and tracks with images for manual testing
-## Error Handling
-- Controllers catch `IllegalStateException` from services, convert to flash error messages, redirect back
-- Global error page: `src/main/resources/templates/error.html`
-- Services throw `IllegalStateException` or `IllegalArgumentException` for business rule violations
-- No custom exception hierarchy -- standard Java exceptions used throughout
-- `@Transactional` ensures atomicity -- failures roll back the entire operation
-## Cross-Cutting Concerns
+
+- `BaseEntity` — `@MappedSuperclass` with `createdAt`/`updatedAt` (JPA Auditing), all entities extend this
+- `AbstractGraphicService` / `AbstractMatchdayGraphicService` — base classes for Playwright-based image generation
+- `RaceScoring` / `MatchScoring` — scoring rules decoupled from code, stored as comma-separated strings in DB
+- `SeasonTeam` — join table with per-season rating, color/logo overrides, team succession tracking
 <!-- GSD:architecture-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->
