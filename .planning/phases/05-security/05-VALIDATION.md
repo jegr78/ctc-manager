@@ -38,10 +38,10 @@ created: 2026-04-04
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 05-01-01 | 01 | 1 | SECU-01 | integration | `./mvnw test -Dtest=SecurityConfigTest` | ❌ W0 | ⬜ pending |
-| 05-01-02 | 01 | 1 | SECU-02 | integration | `./mvnw test -Dtest=SecurityConfigTest` | ❌ W0 | ⬜ pending |
-| 05-01-03 | 01 | 1 | SECU-03 | unit+integration | `./mvnw test -Dtest=SecurityConfigTest` | ❌ W0 | ⬜ pending |
-| 05-02-01 | 02 | 1 | SECU-04 | unit | `./mvnw test -Dtest=FileStorageServiceTest` | ✅ | ⬜ pending |
+| 05-02-01 | 02 | 1 | SECU-01 | integration | `./mvnw test -Dtest="SecurityIntegrationTest$ProdProfileSecurityTest"` | ❌ W1 | ⬜ pending |
+| 05-02-02 | 02 | 1 | SECU-02 | integration | `./mvnw test -Dtest="SecurityIntegrationTest$DevProfileSecurityTest"` | ❌ W1 | ⬜ pending |
+| 05-02-03 | 02 | 1 | SECU-03 | integration | `./mvnw verify` | ✅ | ⬜ pending |
+| 05-01-01 | 01 | 1 | SECU-04 | unit | `./mvnw test -Dtest=FileStorageServiceTest` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 

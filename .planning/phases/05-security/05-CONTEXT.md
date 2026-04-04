@@ -24,9 +24,9 @@ Spring Security Basic Auth fuer prod- und docker-Profile einfuehren, dev/local o
 - **D-06:** Actuator Health-Endpoint (/actuator/health) bleibt ohne Auth erreichbar (Docker Healthcheck)
 
 ### Test-Strategie
-- **D-07:** Alle 19 WebMvcTest-Klassen erhalten @WithMockUser (direkt oder via Basisklasse/Meta-Annotation) damit sie mit Security auf dem Classpath weiter gruen sind
+- **D-07:** ~~Alle 19 WebMvcTest-Klassen erhalten @WithMockUser~~ **REVISED (Research Finding):** Alle 19 Controller-Tests nutzen `@SpringBootTest` + `@ActiveProfiles("dev")`, NICHT `@WebMvcTest`. Da das dev-Profil `OpenSecurityConfig` (permitAll) laedt, bleiben alle Tests ohne `@WithMockUser` gruen. Kein Eingriff in bestehende Tests noetig.
 - **D-08:** Eigene dedizierte Security-Tests die verifizieren: 401 ohne Credentials in prod/docker, 200 mit Credentials, dev-Profil bleibt offen
-- **D-09:** Claude's Discretion: Ob @WithMockUser per Klasse oder als Meta-Annotation / Test-Basisklasse — Claude waehlt was am wenigsten invasiv ist
+- **D-09:** ~~Claude's Discretion: Ob @WithMockUser per Klasse oder als Meta-Annotation / Test-Basisklasse~~ **OBSOLETE:** Nicht mehr noetig, da @WithMockUser nur fuer neue Security-Integration-Tests verwendet wird
 
 ### SSRF-Schutz
 - **D-10:** FileStorageService.storeFromUrl() validiert URL-Schema — nur `https://` erlaubt
