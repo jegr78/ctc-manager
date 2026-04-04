@@ -25,9 +25,9 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Security
 
-- [ ] **SECU-01**: Spring Security Basic Auth aktiv fuer prod und docker Profile
-- [ ] **SECU-02**: Dev und local Profile bleiben ohne Authentifizierung
-- [ ] **SECU-03**: Alle bestehenden @WebMvcTest Tests funktionieren mit Security auf Classpath
+- [x] **SECU-01**: Spring Security Basic Auth aktiv fuer prod und docker Profile
+- [x] **SECU-02**: Dev und local Profile bleiben ohne Authentifizierung
+- [x] **SECU-03**: Alle bestehenden @WebMvcTest Tests funktionieren mit Security auf Classpath
 - [x] **SECU-04**: FileStorageService.storeFromUrl() validiert URL-Schema (nur https) und optional Hostname-Allowlist
 
 ### Database
@@ -94,9 +94,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRVC-06 | Phase 2 | Pending |
 | SRVC-07 | Phase 2 | Pending |
 | SRVC-08 | Phase 3 | Complete |
-| SECU-01 | Phase 5 | Pending |
-| SECU-02 | Phase 5 | Pending |
-| SECU-03 | Phase 5 | Pending |
+| SECU-01 | Phase 5 | Complete |
+| SECU-02 | Phase 5 | Complete |
+| SECU-03 | Phase 5 | Complete |
 | SECU-04 | Phase 5 | Complete |
 | DBIX-01 | Phase 4 | Complete |
 | DBIX-02 | Phase 4 | Complete |
