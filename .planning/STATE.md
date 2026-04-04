@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Codebase Concerns Cleanup
-status: defining_requirements
+status: ready_to_plan
 stopped_at: null
 last_updated: "2026-04-04"
 last_activity: 2026-04-04
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 8
   completed_plans: 0
   percent: 0
 ---
@@ -21,14 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Defining requirements for v1.1 Codebase Concerns Cleanup
+**Current focus:** Phase 6 - Security Hardening
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-04 — Milestone v1.1 started
+Phase: 6 of 11 (Security Hardening)
+Plan: 0 of 1 in current phase
+Status: Ready to plan
+Last activity: 2026-04-04 -- Roadmap created for v1.1
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -36,11 +38,11 @@ Last activity: 2026-04-04 — Milestone v1.1 started
 
 | Phase | Plans | Avg/Plan |
 |-------|-------|----------|
-| 01 — Exception Infrastructure | 2/2 | ~10min |
-| 02 — Service Layer Extraction | 4/4 | ~8min |
-| 03 — God Service Split | 2/2 | ~6min |
-| 04 — Database Optimization | 1/1 | ~5min |
-| 05 — Security | 3/3 | ~4min |
+| 01 -- Exception Infrastructure | 2/2 | ~10min |
+| 02 -- Service Layer Extraction | 4/4 | ~8min |
+| 03 -- God Service Split | 2/2 | ~6min |
+| 04 -- Database Optimization | 1/1 | ~5min |
+| 05 -- Security | 3/3 | ~4min |
 
 ## Accumulated Context
 
@@ -51,7 +53,7 @@ Full history in .planning/milestones/v1.0-ROADMAP.md.
 
 ### Blockers/Concerns
 
-None — all resolved during v1.0.
+None.
 
 ### Quick Tasks Completed
 
@@ -62,5 +64,5 @@ None — all resolved during v1.0.
 ## Session Continuity
 
 Last session: 2026-04-04
-Stopped at: v1.0 milestone archived
+Stopped at: v1.1 roadmap created
 Resume file: None
