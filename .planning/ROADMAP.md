@@ -73,10 +73,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Flyway V2 Migration laeuft fehlerfrei auf H2 (Tests) und MariaDB (Docker/Prod)
   2. Match-Listen und Race-Abfragen laden zugehoerige Teams/Matchdays ohne N+1 Queries (verifizierbar via Hibernate SQL-Log)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md — FK indexes via Flyway V2 migration + @EntityGraph annotations on all collection-returning repository methods
 
 ### Phase 5: Security
 **Goal**: Prod- und Docker-Umgebungen sind mit HTTP Basic Auth abgesichert, Dev/Local bleiben offen
@@ -103,6 +103,6 @@ Note: Phase 4 depends on Phase 2 (not Phase 3), so 4 and 3 have no mutual depend
 |-------|----------------|--------|-----------|
 | 1. Exception Infrastructure | 2/2 | Complete | 2026-04-03 |
 | 2. Service Layer Extraction | 4/4 | Complete | 2026-04-04 |
-| 3. God Service Split | 0/2 | Planned | - |
-| 4. Database Optimization | 0/0 | Not started | - |
+| 3. God Service Split | 2/2 | Complete | 2026-04-04 |
+| 4. Database Optimization | 0/1 | Planned | - |
 | 5. Security | 0/0 | Not started | - |
