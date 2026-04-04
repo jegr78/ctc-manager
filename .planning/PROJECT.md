@@ -8,6 +8,24 @@ Gran Turismo Racing League Management-Anwendung (Spring Boot 4 / Thymeleaf / Mar
 
 Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
 
+## Current Milestone: v1.1 Codebase Concerns Cleanup
+
+**Goal:** Alle identifizierten technischen Concerns aus dem Codebase-Audit systematisch beheben — von Layer-Violations ueber Security-Hardening bis hin zu Code-Reduktion.
+
+**Target features:**
+
+- Layer-Violation beheben: Domain Services von Admin DTOs entkoppeln
+- Residuale Repository-Zugriffe aus 5 Controllern entfernen
+- TemplateEditorController von 380 Zeilen Duplikation auf generischen Ansatz refactoren
+- 60+ `catch(Exception e)` Bloecke durch spezifische Exceptions ersetzen
+- Alltime Standings implementieren (aktuell leere Liste)
+- StandingsController Business-Logik (Buchholz/Swiss-Sorting) in Service verschieben
+- Inline-Styles in Admin Templates durch CSS-Klassen ersetzen
+- Grosse Service-Klassen aufteilen (PlayoffService, RaceService)
+- SSRF-Schutz: Hostname-Validierung in FileStorageService.storeFromUrl()
+- Path-Traversal-Check in store() und storeImage() ergaenzen
+- Unbounded findAll() eingrenzen
+
 ## Current State (after v1.0)
 
 - **Codebase:** 13.526 LOC Java (Prod) + 17.021 LOC Java (Tests), 753 Tests, 82%+ Coverage
@@ -29,17 +47,19 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 - ✓ Spring Security Basic Auth fuer prod/docker Profile — Phase 5
 - ✓ SSRF-Schutz fuer FileStorageService.storeFromUrl() — Phase 5
 
-### Active (v2 candidates)
+### Active (v1.1)
 
-- [ ] TemplateEditorController Duplikation beseitigen (SRVC-10)
-- [ ] StandingsController Business-Logik in Service verschieben (SRVC-09)
-- [ ] Spezifische Exception-Typen statt catch(Exception e) (EXCP-03, EXCP-04)
-- [ ] H2-Console explizit nur in dev aktivieren (SECU-05)
-- [ ] Stacktrace-Exposure in Prod explizit deaktivieren (SECU-06)
-- [ ] CompletableFuture Fehler-Propagation in GT7 Sync (RELI-01)
-- [ ] Alltime Standings implementieren oder UI-Option deaktivieren (RELI-02)
-- [ ] Playwright Runtime-Dependency dokumentieren / Health Check (RELI-03)
-- [ ] Unbounded findAll() durch Pagination ersetzen (PERF-01)
+- [ ] Layer-Violation: Domain Services von Admin DTOs entkoppeln
+- [ ] Residuale Repository-Zugriffe aus 5 Controllern entfernen
+- [ ] TemplateEditorController Duplikation beseitigen (generischer Ansatz)
+- [ ] 60+ catch(Exception e) durch spezifische Exceptions ersetzen
+- [ ] Alltime Standings implementieren
+- [ ] StandingsController Business-Logik in Service verschieben
+- [ ] Inline-Styles in Admin Templates durch CSS-Klassen ersetzen
+- [ ] Grosse Service-Klassen aufteilen (PlayoffService, RaceService)
+- [ ] SSRF-Schutz: Hostname-Validierung in FileStorageService.storeFromUrl()
+- [ ] Path-Traversal-Check in store() und storeImage() ergaenzen
+- [ ] Unbounded findAll() eingrenzen
 
 ### Out of Scope
 
@@ -75,5 +95,22 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 
 This document evolves at phase transitions and milestone boundaries.
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-04-04 after v1.0 milestone completion*
+*Last updated: 2026-04-04 after v1.1 milestone start*

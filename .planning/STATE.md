@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Technical Debt Cleanup
-status: milestone_complete
-stopped_at: v1.0 milestone archived
+milestone: v1.1
+milestone_name: Codebase Concerns Cleanup
+status: defining_requirements
+stopped_at: null
 last_updated: "2026-04-04"
 last_activity: 2026-04-04
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Milestone v1.0 complete — planning next milestone
+**Current focus:** Defining requirements for v1.1 Codebase Concerns Cleanup
 
 ## Current Position
 
-Milestone: v1.0 Technical Debt Cleanup — COMPLETE
-Phase: All 5 phases complete (12/12 plans)
-Status: Milestone archived, ready for next milestone
-Last activity: 2026-04-04 - Completed quick task 260404-jh8: Fix release workflow RELEASE_TOKEN
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-04 — Milestone v1.1 started
 
 ## Performance Metrics
 
