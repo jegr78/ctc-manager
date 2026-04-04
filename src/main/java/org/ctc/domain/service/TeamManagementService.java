@@ -1,6 +1,8 @@
 package org.ctc.domain.service;
 
 import org.ctc.admin.dto.SeasonDriverGroupDto;
+import org.ctc.admin.dto.TeamForm;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.RaceLineup;
@@ -13,8 +15,10 @@ import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -28,6 +32,7 @@ public class TeamManagementService {
     private final SeasonRepository seasonRepository;
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonDriverRepository seasonDriverRepository;
+    private final FileStorageService fileStorageService;
 
     /**
      * Return value for team detail view data.
@@ -184,5 +189,105 @@ public class TeamManagementService {
                 log.info("Propagated logo from {} to {}", parent.getShortName(), sub.getShortName());
             }
         }
+    }
+
+    /**
+     * Returns all parent teams (no parentTeam) sorted by shortName.
+     */
+    @Transactional(readOnly = true)
+    public List<Team> findParentTeamsSorted() {
+        return teamRepository.findAll().stream()
+                .filter(t -> t.getParentTeam() == null)
+                .sorted(Comparator.comparing(Team::getShortName))
+                .toList();
+    }
+
+    /**
+     * Finds a team by ID or throws EntityNotFoundException.
+     */
+    @Transactional(readOnly = true)
+    public Team findById(UUID id) {
+        return teamRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Team", id));
+    }
+
+    /**
+     * Creates or updates a team from a TeamForm.
+     */
+    @Transactional
+    public Team save(TeamForm form) {
+        Team team;
+        if (form.getId() != null) {
+            team = findById(form.getId());
+            team.setName(form.getName());
+            team.setShortName(form.getShortName());
+            team.setPrimaryColor(form.getPrimaryColor());
+            team.setSecondaryColor(form.getSecondaryColor());
+            team.setAccentColor(form.getAccentColor());
+            team = teamRepository.save(team);
+            propagateColorsToSubTeams(team);
+        } else {
+            team = new Team(form.getName(), form.getShortName());
+            team.setPrimaryColor(form.getPrimaryColor());
+            team.setSecondaryColor(form.getSecondaryColor());
+            team.setAccentColor(form.getAccentColor());
+            team = teamRepository.save(team);
+        }
+        return team;
+    }
+
+    /**
+     * Deletes a team by ID. Throws BusinessRuleException if referenced.
+     */
+    @Transactional
+    public void delete(UUID id) {
+        var team = findById(id);
+        try {
+            teamRepository.delete(team);
+            teamRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessRuleException("Cannot delete team '" + team.getShortName()
+                    + "' because it is still referenced by other entities.");
+        }
+    }
+
+    /**
+     * Uploads a logo for a team, deleting the old one if present, and propagates to sub-teams.
+     */
+    @Transactional
+    public void uploadLogo(UUID id, MultipartFile logo) {
+        var team = findById(id);
+        try {
+            if (team.getLogoUrl() != null) {
+                fileStorageService.delete(team.getLogoUrl());
+            }
+            var newUrl = fileStorageService.storeImage("teams", id, logo);
+            team.setLogoUrl(newUrl);
+            teamRepository.save(team);
+            propagateLogoToSubTeams(team, newUrl);
+        } catch (Exception e) {
+            throw new BusinessRuleException("Logo upload failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Creates a sub-team under a parent team.
+     */
+    @Transactional
+    public Team addSubTeam(UUID parentId, String name, String shortName) {
+        var parent = findById(parentId);
+        var subTeam = new Team(name, shortName);
+        subTeam.setParentTeam(parent);
+        subTeam = teamRepository.save(subTeam);
+        return subTeam;
+    }
+
+    /**
+     * Removes a sub-team by ID.
+     */
+    @Transactional
+    public void removeSubTeam(UUID subTeamId) {
+        var subTeam = findById(subTeamId);
+        teamRepository.delete(subTeam);
     }
 }
