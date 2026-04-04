@@ -64,7 +64,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — Extract RaceAttachmentService + RaceGraphicService from RaceManagementService
-- [ ] 03-02-PLAN.md — Rename to RaceService, rewire RaceController, delete old God Service
+- [x] 03-02-PLAN.md — Rename to RaceService, rewire RaceController, delete old God Service
 
 ### Phase 4: Database Optimization
 **Goal**: FK-Columns haben Indexes und haeufig traversierte Beziehungen nutzen EntityGraph fuer optimierte Queries
