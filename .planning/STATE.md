@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 Milestone: v1.0 Technical Debt Cleanup — COMPLETE
 Phase: All 5 phases complete (12/12 plans)
 Status: Milestone archived, ready for next milestone
-Last activity: 2026-04-04
+Last activity: 2026-04-04 - Completed quick task 260404-jh8: Fix release workflow RELEASE_TOKEN
 
 Progress: [██████████] 100%
 
@@ -54,6 +54,12 @@ Full history in .planning/milestones/v1.0-ROADMAP.md.
 ### Blockers/Concerns
 
 None — all resolved during v1.0.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260404-jh8 | Fix release workflow: Use RELEASE_TOKEN for branch protection bypass | 2026-04-04 | d4745ee | [260404-jh8-fix-release-workflow-use-release-token-s](./quick/260404-jh8-fix-release-workflow-use-release-token-s/) |
 
 ## Session Continuity
 
