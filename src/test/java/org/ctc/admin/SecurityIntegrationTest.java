@@ -15,7 +15,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SecurityIntegrationTest {
 
     @Nested
-    @SpringBootTest
+    @SpringBootTest(properties = {
+        "spring.datasource.url=jdbc:h2:mem:sectest;DB_CLOSE_DELAY=-1",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.jpa.hibernate.ddl-auto=validate",
+        "spring.flyway.locations=classpath:db/migration",
+        "logging.config=classpath:logback-test.xml"
+    })
     @AutoConfigureMockMvc
     @ActiveProfiles("prod")
     class ProdProfileSecurityTest {
