@@ -30,16 +30,16 @@ Die bestehende Anwendung ist funktional komplett:
 - ✓ RaceManagementService in 3 Services aufgeteilt (RaceService, RaceGraphicService, RaceAttachmentService) — Phase 3
 - ✓ 36 FK-Indexes auf allen Foreign Key Columns via Flyway V2 Migration — Phase 4
 - ✓ 28 @EntityGraph-Annotationen auf Collection-returning Repository-Methoden — Phase 4
+- ✓ Spring Security Basic Auth fuer prod/docker Profile (SecurityConfig + OpenSecurityConfig) — Phase 5
+- ✓ SSRF-Schutz fuer FileStorageService.storeFromUrl() (nur HTTPS, IllegalArgumentException + log.warn) — Phase 5
+- ✓ 403 Access Denied Seite im Admin-Layout, Docker-Credentials konfiguriert — Phase 5
+- ✓ 753 Tests gruen inkl. Security Integration Tests, alle bestehenden Tests unveraendert — Phase 5
 
 ### Active
 
 - [ ] TemplateEditorController Duplikation beseitigen
 - [ ] StandingsController Business-Logik in Service verschieben
-- [ ] Global Exception Handler mit @ControllerAdvice
-- [ ] .orElseThrow() mit aussagekraeftigen Exceptions
 - [ ] Spezifische Exception-Typen statt catch(Exception e)
-- [ ] Spring Security Basic Auth fuer prod/docker Profile
-- [ ] SSRF-Schutz fuer FileStorageService.storeFromUrl()
 - [ ] H2-Console explizit nur in dev aktivieren
 - [ ] Stacktrace-Exposure in Prod explizit deaktivieren
 - [ ] CompletableFuture Fehler-Propagation in GT7 Sync
@@ -59,7 +59,7 @@ Die bestehende Anwendung ist funktional komplett:
 
 - 17 Concerns identifiziert via Codebase-Analyse (`.planning/codebase/CONCERNS.md`)
 - Severity-Verteilung: 1x High, 6x Medium, 10x Low
-- Bestehende Testabdeckung: 628+ Tests, 82% Line Coverage Minimum
+- Bestehende Testabdeckung: 753 Tests, 82% Line Coverage Minimum
 - Architektur-Prinzipien in CLAUDE.md dokumentiert — Code soll diesen entsprechen
 - App laeuft lokal ohne Auth (dev/local), Auth nur fuer prod/docker Profile
 - Spring Boot 4.0.5, Java 25, MariaDB 11 / H2
@@ -77,10 +77,13 @@ Die bestehende Anwendung ist funktional komplett:
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Architektur-Refactoring vor Auth | Saubere Service-Schicht macht Auth-Integration einfacher | — Pending |
-| Basic Auth statt Form Login | Single-Admin-App, kein User-Management noetig | — Pending |
-| Auth nur prod/docker Profile | Dev/Local sind lokale Umgebungen ohne Netzwerk-Exposure | — Pending |
+| Architektur-Refactoring vor Auth | Saubere Service-Schicht macht Auth-Integration einfacher | Phase 5: Validated |
+| Basic Auth statt Form Login | Single-Admin-App, kein User-Management noetig | Phase 5: Complete |
+| Auth nur prod/docker Profile | Dev/Local sind lokale Umgebungen ohne Netzwerk-Exposure | Phase 5: Complete |
 | RaceManagementService aufteilen | 673 Zeilen, 13 Dependencies — 3 fokussierte Services extrahiert | Phase 3: Complete |
+| Zwei-Profil SecurityFilterChain | @Profile-basiert statt Runtime-Check — sauberer, testbarer | Phase 5: Complete |
+| CSRF disabled | Kein oeffentlich zugaengliches Formular, Single-Admin via Basic Auth | Phase 5: Complete |
+| @WithMockUser nicht noetig | Alle 19 Tests nutzen @ActiveProfiles("dev") → OpenSecurityConfig permitAll | Phase 5: Validated |
 | Alle 17 Concerns angehen | Komplettbereinigung vor naechstem Feature-Zyklus | — Pending |
 
 ## Evolution
@@ -101,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 after Phase 4 completion*
+*Last updated: 2026-04-04 after Phase 5 completion — all 5 phases complete, milestone v1 done*
