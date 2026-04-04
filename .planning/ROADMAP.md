@@ -60,10 +60,11 @@ Plans:
   2. Keine zirkulaeren Dependencies zwischen den drei neuen Services
   3. Transaktionale Integritaet: Race-Ergebnis-Import (Results + Score-Aggregation) laeuft weiterhin in einer Transaktion
   4. Alle bestehenden Race-bezogenen Workflows (CRUD, CSV-Import, Grafik-Generierung) funktionieren identisch
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
+- [ ] 03-01-PLAN.md — Extract RaceAttachmentService + RaceGraphicService from RaceManagementService
+- [ ] 03-02-PLAN.md — Rename to RaceService, rewire RaceController, delete old God Service
 
 ### Phase 4: Database Optimization
 **Goal**: FK-Columns haben Indexes und haeufig traversierte Beziehungen nutzen EntityGraph fuer optimierte Queries
@@ -102,6 +103,6 @@ Note: Phase 4 depends on Phase 2 (not Phase 3), so 4 and 3 have no mutual depend
 |-------|----------------|--------|-----------|
 | 1. Exception Infrastructure | 2/2 | Complete | 2026-04-03 |
 | 2. Service Layer Extraction | 4/4 | Complete | 2026-04-04 |
-| 3. God Service Split | 0/0 | Not started | - |
+| 3. God Service Split | 0/2 | Planned | - |
 | 4. Database Optimization | 0/0 | Not started | - |
 | 5. Security | 0/0 | Not started | - |
