@@ -1,9 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.TeamForm;
-import org.ctc.domain.model.Team;
-import org.ctc.domain.repository.TeamRepository;
-import org.ctc.domain.service.FileStorageService;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.service.TeamManagementService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,18 +21,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TeamController {
 
-    private final TeamRepository teamRepository;
-    private final FileStorageService fileStorageService;
     private final TeamManagementService teamManagementService;
 
     @GetMapping
     public String list(Model model) {
-        var allTeams = teamRepository.findAll();
-        var parentTeams = allTeams.stream()
-                .filter(t -> t.getParentTeam() == null)
-                .sorted((a, b) -> a.getShortName().compareToIgnoreCase(b.getShortName()))
-                .toList();
-        model.addAttribute("parentTeams", parentTeams);
+        model.addAttribute("parentTeams", teamManagementService.findParentTeamsSorted());
         return "admin/teams";
     }
 
@@ -56,7 +47,7 @@ public class TeamController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var team = teamRepository.findById(id).orElseThrow();
+        var team = teamManagementService.findById(id);
         var form = new TeamForm();
         form.setId(team.getId());
         form.setName(team.getName());
@@ -75,21 +66,12 @@ public class TeamController {
         if (result.hasErrors()) {
             return "admin/team-form";
         }
-        if (form.getId() != null) {
-            var existing = teamRepository.findById(form.getId()).orElseThrow();
-            existing.setName(form.getName());
-            existing.setShortName(form.getShortName());
-            existing.setPrimaryColor(form.getPrimaryColor());
-            existing.setSecondaryColor(form.getSecondaryColor());
-            existing.setAccentColor(form.getAccentColor());
-            teamRepository.save(existing);
-            teamManagementService.propagateColorsToSubTeams(existing);
-        } else {
-            var team = new Team(form.getName(), form.getShortName());
-            teamRepository.save(team);
+        try {
+            teamManagementService.save(form);
+            redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + form.getName());
+        } catch (BusinessRuleException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        log.info("Saved team: {}", form.getShortName());
-        redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + form.getName());
         return "redirect:/admin/teams";
     }
 
@@ -97,17 +79,10 @@ public class TeamController {
     public String uploadLogo(@PathVariable UUID id, @RequestParam MultipartFile logo,
                              RedirectAttributes redirectAttributes) {
         try {
-            var team = teamRepository.findById(id).orElseThrow();
-            if (team.getLogoUrl() != null) {
-                fileStorageService.delete(team.getLogoUrl());
-            }
-            String url = fileStorageService.storeImage("teams", id, logo);
-            team.setLogoUrl(url);
-            teamRepository.save(team);
-            teamManagementService.propagateLogoToSubTeams(team, url);
+            teamManagementService.uploadLogo(id, logo);
             redirectAttributes.addFlashAttribute("successMessage", "Logo updated");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
+        } catch (BusinessRuleException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/teams/" + id + "/edit";
     }
@@ -121,10 +96,7 @@ public class TeamController {
             redirectAttributes.addFlashAttribute("errorMessage", "Name and short name must not be blank");
             return "redirect:/admin/teams/" + id + "/edit";
         }
-        var parent = teamRepository.findById(id).orElseThrow();
-        var subTeam = new Team(subName, subShortName, parent);
-        teamRepository.save(subTeam);
-        log.info("Added sub-team {} to {}", subShortName, parent.getShortName());
+        teamManagementService.addSubTeam(id, subName, subShortName);
         redirectAttributes.addFlashAttribute("successMessage", "Sub-team added: " + subShortName);
         return "redirect:/admin/teams/" + id + "/edit";
     }
@@ -133,19 +105,19 @@ public class TeamController {
     public String removeSubTeam(@PathVariable UUID id,
                                 @RequestParam UUID subTeamId,
                                 RedirectAttributes redirectAttributes) {
-        var subTeam = teamRepository.findById(subTeamId).orElseThrow();
-        teamRepository.delete(subTeam);
-        log.info("Removed sub-team {}", subTeam.getShortName());
-        redirectAttributes.addFlashAttribute("successMessage", "Sub-team removed: " + subTeam.getShortName());
+        teamManagementService.removeSubTeam(subTeamId);
+        redirectAttributes.addFlashAttribute("successMessage", "Sub-team removed");
         return "redirect:/admin/teams/" + id + "/edit";
     }
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var team = teamRepository.findById(id).orElseThrow();
-        teamRepository.delete(team);
-        log.info("Deleted team: {}", team.getShortName());
-        redirectAttributes.addFlashAttribute("successMessage", "Team deleted: " + team.getName());
+        try {
+            teamManagementService.delete(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Team deleted");
+        } catch (BusinessRuleException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
         return "redirect:/admin/teams";
     }
 }

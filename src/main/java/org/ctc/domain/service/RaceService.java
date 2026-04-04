@@ -3,10 +3,6 @@ package org.ctc.domain.service;
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.dataimport.GoogleCalendarService;
-import org.ctc.admin.service.LineupGraphicService;
-import org.ctc.admin.service.OverlayGraphicService;
-import org.ctc.admin.service.ResultsGraphicService;
-import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.model.Car;
@@ -14,27 +10,17 @@ import org.ctc.domain.model.Track;
 import org.ctc.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class RaceManagementService {
+public class RaceService {
 
     private final RaceRepository raceRepository;
     private final MatchRepository matchRepository;
@@ -44,21 +30,12 @@ public class RaceManagementService {
     private final DriverRepository driverRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final RaceLineupRepository raceLineupRepository;
-    private final RaceAttachmentRepository raceAttachmentRepository;
     private final CarRepository carRepository;
     private final TrackRepository trackRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final ScoringService scoringService;
-    private final FileStorageService fileStorageService;
-    private final LineupGraphicService lineupGraphicService;
-    private final ResultsGraphicService resultsGraphicService;
-    private final SettingsGraphicService settingsGraphicService;
-    private final OverlayGraphicService overlayGraphicService;
     private final TeamCardService teamCardService;
     private final GoogleCalendarService googleCalendarService;
-
-    @Value("${app.upload-dir:uploads}")
-    private String uploadDir;
 
     // --- Return types ---
 
@@ -413,136 +390,6 @@ public class RaceManagementService {
         return race.getHomeTeam().getShortName() + " " + homeScore + " : " + awayScore + " " + race.getAwayTeam().getShortName();
     }
 
-    // --- Upload attachment ---
-
-    @Transactional
-    public String uploadAttachment(UUID raceId, MultipartFile file) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        try {
-            String url = fileStorageService.store(raceId, file);
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, file.getOriginalFilename(), url);
-            raceAttachmentRepository.save(attachment);
-            return file.getOriginalFilename();
-        } catch (IOException e) {
-            log.error("Upload failed for race {}", raceId, e);
-            throw new RuntimeException(e.getMessage(), e);
-        }
-    }
-
-    // --- Add link ---
-
-    @Transactional
-    public String addLink(UUID raceId, String name, String url) {
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            throw new IllegalArgumentException("Link must start with http:// or https://");
-        }
-        var race = raceRepository.findById(raceId).orElseThrow();
-        var attachment = new RaceAttachment(race, AttachmentType.LINK, name, url);
-        raceAttachmentRepository.save(attachment);
-        return name;
-    }
-
-    // --- Delete attachment ---
-
-    @Transactional
-    public UUID deleteAttachment(UUID attachmentId) {
-        var attachment = raceAttachmentRepository.findById(attachmentId).orElseThrow();
-        UUID raceId = attachment.getRace().getId();
-        if (attachment.getType() == AttachmentType.FILE) {
-            fileStorageService.delete(attachment.getUrl());
-        }
-        raceAttachmentRepository.delete(attachment);
-        return raceId;
-    }
-
-    // --- Generate lineup ---
-
-    @Transactional
-    public void generateLineup(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        try {
-            String url = lineupGraphicService.generateLineup(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Lineups";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Lineup generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    // --- Generate results ---
-
-    @Transactional
-    public void generateResults(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        try {
-            String url = resultsGraphicService.generateResults(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Results";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Results graphic generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    @Transactional
-    public void generateSettings(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        try {
-            String url = settingsGraphicService.generateSettings(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Settings";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Settings graphic generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    // --- Generate overlay ---
-
-    @Transactional
-    public void generateOverlay(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        try {
-            String url = overlayGraphicService.generateOverlay(race);
-            String attachmentName = race.getMatchday().getLabel() + "-"
-                    + race.getHomeTeam().getShortName() + "-" + race.getAwayTeam().getShortName() + "-Overlay";
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, attachmentName, url);
-            raceAttachmentRepository.save(attachment);
-        } catch (IOException e) {
-            log.error("Overlay generation failed for race {}", raceId, e);
-            throw new RuntimeException("Generation failed: " + e.getMessage(), e);
-        }
-    }
-
-    // --- Download attachment ---
-
-    public ResponseEntity<Resource> downloadAttachment(UUID attachmentId) {
-        var attachment = raceAttachmentRepository.findById(attachmentId).orElseThrow();
-        if (attachment.getType() != AttachmentType.FILE) {
-            return ResponseEntity.badRequest().build();
-        }
-        String url = attachment.getUrl();
-        Path file = Paths.get(uploadDir).toAbsolutePath().normalize()
-                .resolve(url.substring("/uploads/".length()));
-        if (!Files.exists(file)) {
-            return ResponseEntity.notFound().build();
-        }
-        String contentType = "application/octet-stream";
-        try { contentType = Files.probeContentType(file); } catch (IOException e) { log.debug("Could not probe content type for {}", file, e); }
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + attachment.getName() + getExtension(file) + "\"")
-                .body(new FileSystemResource(file));
-    }
-
     // --- Delete race ---
 
     @Transactional
@@ -665,9 +512,4 @@ public class RaceManagementService {
         return form;
     }
 
-    private String getExtension(Path file) {
-        String name = file.getFileName().toString();
-        int dot = name.lastIndexOf('.');
-        return dot >= 0 ? name.substring(dot) : "";
-    }
 }

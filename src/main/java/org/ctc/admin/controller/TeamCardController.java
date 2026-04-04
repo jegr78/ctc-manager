@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.service.TeamCardService;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.SeasonTeamRepository;
@@ -64,7 +65,8 @@ public class TeamCardController {
 
     @PostMapping("/generate/{seasonTeamId}")
     public String generate(@PathVariable UUID seasonTeamId, RedirectAttributes redirectAttributes) {
-        var seasonTeam = seasonTeamRepository.findById(seasonTeamId).orElseThrow();
+        var seasonTeam = seasonTeamRepository.findById(seasonTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", seasonTeamId));
         try {
             teamCardService.generateCard(seasonTeam);
             redirectAttributes.addFlashAttribute("successMessage",
@@ -79,7 +81,8 @@ public class TeamCardController {
 
     @PostMapping("/generate-all")
     public String generateAll(@RequestParam UUID seasonId, RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         try {
             var paths = teamCardService.generateAllCards(season);
             redirectAttributes.addFlashAttribute("successMessage",
@@ -94,7 +97,8 @@ public class TeamCardController {
 
     @GetMapping("/download/{seasonTeamId}")
     public ResponseEntity<Resource> download(@PathVariable UUID seasonTeamId) {
-        var seasonTeam = seasonTeamRepository.findById(seasonTeamId).orElseThrow();
+        var seasonTeam = seasonTeamRepository.findById(seasonTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", seasonTeamId));
         String cardPath = teamCardService.getCardPath(seasonTeam);
         Path file = Paths.get(uploadDir).toAbsolutePath().normalize()
                 .resolve(cardPath.substring("/uploads/".length()));
@@ -128,7 +132,8 @@ public class TeamCardController {
             }
         }
 
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION,

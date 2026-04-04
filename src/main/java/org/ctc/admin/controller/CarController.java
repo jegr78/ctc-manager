@@ -1,11 +1,8 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.CarForm;
-import org.ctc.domain.model.Car;
-import org.ctc.domain.repository.CarRepository;
-import org.ctc.domain.repository.RaceRepository;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.service.FileStorageService;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.service.CarService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,14 +22,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CarController {
 
-    private final CarRepository carRepository;
-    private final RaceRepository raceRepository;
-    private final SeasonRepository seasonRepository;
-    private final FileStorageService fileStorageService;
+    private final CarService carService;
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("cars", carRepository.findAllByOrderByManufacturerAscNameAsc());
+        model.addAttribute("cars", carService.findAllSorted());
         return "admin/cars";
     }
 
@@ -44,7 +38,7 @@ public class CarController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var car = carRepository.findById(id).orElseThrow();
+        var car = carService.findById(id);
         var form = new CarForm();
         form.setId(car.getId());
         form.setManufacturer(car.getManufacturer());
@@ -58,16 +52,10 @@ public class CarController {
     public String uploadImage(@PathVariable UUID id, @RequestParam MultipartFile image,
                               RedirectAttributes redirectAttributes) {
         try {
-            var car = carRepository.findById(id).orElseThrow();
-            if (car.getImageUrl() != null) {
-                fileStorageService.delete(car.getImageUrl());
-            }
-            String url = fileStorageService.storeImage("cars", id, image);
-            car.setImageUrl(url);
-            carRepository.save(car);
+            carService.uploadImage(id, image);
             redirectAttributes.addFlashAttribute("successMessage", "Image updated");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Image upload failed: " + e.getMessage());
+        } catch (BusinessRuleException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/cars/" + id + "/edit";
     }
@@ -79,40 +67,23 @@ public class CarController {
             return "admin/car-form";
         }
         try {
-            if (carForm.getId() != null) {
-                var existing = carRepository.findById(carForm.getId()).orElseThrow();
-                existing.setManufacturer(carForm.getManufacturer());
-                existing.setName(carForm.getName());
-                carRepository.save(existing);
-            } else {
-                carRepository.save(new Car(carForm.getManufacturer(), carForm.getName()));
-            }
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "A car with this manufacturer and name already exists");
-            return "redirect:/admin/cars" + (carForm.getId() != null ? "/" + carForm.getId() + "/edit" : "/new");
+            carService.save(carForm);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Car saved: " + carForm.getManufacturer() + " " + carForm.getName());
+        } catch (BusinessRuleException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        log.info("Saved car: {} {}", carForm.getManufacturer(), carForm.getName());
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Car saved: " + carForm.getManufacturer() + " " + carForm.getName());
         return "redirect:/admin/cars";
     }
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var car = carRepository.findById(id).orElseThrow();
-        boolean usedInRace = raceRepository.existsByCarId(id);
-        boolean usedInPool = seasonRepository.findAll().stream()
-                .anyMatch(s -> s.getCars().contains(car));
-        if (usedInRace || usedInPool) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Cannot delete: car is used in a race or assigned to a season pool");
-            return "redirect:/admin/cars";
+        try {
+            carService.delete(id);
+            redirectAttributes.addFlashAttribute("successMessage", "Car deleted");
+        } catch (BusinessRuleException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
-        carRepository.delete(car);
-        log.info("Deleted car: {} {}", car.getManufacturer(), car.getName());
-        redirectAttributes.addFlashAttribute("successMessage",
-                "Car deleted: " + car.getManufacturer() + " " + car.getName());
         return "redirect:/admin/cars";
     }
 }

@@ -81,6 +81,10 @@ public class FileStorageService {
     }
 
     public String storeFromUrl(String subDir, UUID entityId, String sourceUrl, String filename) throws IOException {
+        if (sourceUrl == null || !sourceUrl.toLowerCase().startsWith("https://")) {
+            log.warn("Rejected non-HTTPS URL: {}", sourceUrl);
+            throw new IllegalArgumentException("Only HTTPS URLs allowed: " + sourceUrl);
+        }
         Path dir = uploadDir.resolve(subDir).resolve(entityId.toString());
         Files.createDirectories(dir);
         String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitize(filename);

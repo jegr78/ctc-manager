@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
@@ -27,7 +28,8 @@ public class MatchdayGeneratorService {
     public record GeneratorFormData(Season season, int teamCount, int optimalRounds) {}
 
     public GeneratorFormData getFormData(UUID seasonId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         var teams = season.getEligibleTeams();
         int n = teams.size();
         int optimalRounds = (n % 2 == 0) ? n - 1 : n;
@@ -36,7 +38,8 @@ public class MatchdayGeneratorService {
 
     @Transactional
     public void generate(UUID seasonId, int numberOfRounds, boolean homeAndAway) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
         if (season.getFormat() == SeasonFormat.SWISS) {
             throw new IllegalArgumentException("Generator does not support Swiss format — use Swiss Rounds instead");

@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.MatchScoring;
@@ -121,20 +122,24 @@ public class TestDataService {
     }
 
     private void seedSubTeams(List<Team> teams) {
-        var clr = teams.stream().filter(t -> t.getShortName().equals("CLR")).findFirst().orElseThrow();
+        var clr = teams.stream().filter(t -> t.getShortName().equals("CLR")).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Team", "CLR"));
         teamRepository.save(subTeam("Community League Racing 1", "CLR 1", clr, "#0467f5", "#000000", "#FFFFFF"));
         teamRepository.save(subTeam("Community League Racing 2", "CLR 2", clr, "#0467f5", "#FFFFFF", "#000000"));
 
-        var tnr = teams.stream().filter(t -> t.getShortName().equals("TNR")).findFirst().orElseThrow();
+        var tnr = teams.stream().filter(t -> t.getShortName().equals("TNR")).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Team", "TNR"));
         teamRepository.save(subTeam("The Neutrals Racing A", "TNR A", tnr, "#0281a3", "#FFFFFF", "#a60100"));
         teamRepository.save(subTeam("The Neutrals Racing B", "TNR B", tnr, "#ba0001", "#FFFFFF", "#067392"));
         teamRepository.save(subTeam("The Neutrals Racing C", "TNR C", tnr, "#FFFFFF", "#039bc3", "#d70200"));
 
-        var ahr = teams.stream().filter(t -> t.getShortName().equals("AHR")).findFirst().orElseThrow();
+        var ahr = teams.stream().filter(t -> t.getShortName().equals("AHR")).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Team", "AHR"));
         teamRepository.save(subTeam("Apex Hunter Racing 1", "AHR 1", ahr, "#ff0101", "#000000", "#FFFFFF"));
         teamRepository.save(subTeam("Apex Hunter Racing 2", "AHR 2", ahr, "#ff0101", "#FFFFFF", "#000000"));
 
-        var p1r = teams.stream().filter(t -> t.getShortName().equals("P1R")).findFirst().orElseThrow();
+        var p1r = teams.stream().filter(t -> t.getShortName().equals("P1R")).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Team", "P1R"));
         teamRepository.save(subTeam("Project One Racing X", "P1Rx", p1r));
         teamRepository.save(subTeam("Project One Racing", "P1R", p1r));
 
@@ -148,13 +153,13 @@ public class TestDataService {
         java.util.function.Function<String, Team> findParent = (shortName) ->
                 allTeams.stream()
                         .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
-                        .findFirst().orElseThrow(() -> new IllegalStateException("Parent team not found: " + shortName));
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
         // Helper to find sub-team by shortName (has parent)
         java.util.function.Function<String, Team> findSub = (shortName) ->
                 allTeams.stream()
                         .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
-                        .findFirst().orElseThrow(() -> new IllegalStateException("Sub-team not found: " + shortName));
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
         // Older seasons: all parent teams
         for (var entry : List.of(
@@ -405,7 +410,7 @@ public class TestDataService {
         java.util.function.Function<String, org.ctc.domain.model.Driver> findDriver = psnId ->
                 allDrivers.stream()
                         .filter(d -> d.getPsnId().equals(psnId))
-                        .findFirst().orElseThrow(() -> new IllegalStateException("Driver not found: " + psnId));
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Driver", psnId));
 
         // Typical PSN ID changes
         var jake = findDriver.apply("P1R_Jake");
@@ -430,22 +435,22 @@ public class TestDataService {
         java.util.function.Function<String, Team> findParent = shortName ->
                 allTeams.stream()
                         .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
-                        .findFirst().orElseThrow(() -> new IllegalStateException("Parent team not found: " + shortName));
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
         java.util.function.Function<String, Team> findSub = shortName ->
                 allTeams.stream()
                         .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
-                        .findFirst().orElseThrow(() -> new IllegalStateException("Sub-team not found: " + shortName));
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
         java.util.function.Function<String, Driver> findDriver = psnId ->
                 allDrivers.stream()
                         .filter(d -> d.getPsnId().equals(psnId))
-                        .findFirst().orElseThrow(() -> new IllegalStateException("Driver not found: " + psnId));
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Driver", psnId));
 
         java.util.function.Function<Integer, Season> findSeason = year ->
                 allSeasons.stream()
                         .filter(s -> s.getYear() == year)
-                        .findFirst().orElseThrow(() -> new IllegalStateException("Season not found: " + year));
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Season", year));
 
         // Season 4 - 2026
         var s4 = findSeason.apply(2026);

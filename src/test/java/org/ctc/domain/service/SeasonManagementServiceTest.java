@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import org.ctc.admin.dto.SeasonForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.mock.web.MockMultipartFile;
@@ -11,9 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -36,6 +36,14 @@ class SeasonManagementServiceTest {
     private SeasonTeamRepository seasonTeamRepository;
     @Mock
     private FileStorageService fileStorageService;
+    @Mock
+    private PlayoffRepository playoffRepository;
+    @Mock
+    private RaceScoringRepository raceScoringRepository;
+    @Mock
+    private MatchScoringRepository matchScoringRepository;
+    @Mock
+    private ScoringService scoringService;
 
     @InjectMocks
     private SeasonManagementService service;
@@ -402,6 +410,284 @@ class SeasonManagementServiceTest {
             // then — only 2 season teams (no duplicate)
             assertThat(season.getSeasonTeams()).hasSize(2);
         }
+    }
+
+    // --- Season CRUD tests ---
+
+    @Test
+    void whenFindAll_thenReturnsAllSeasons() {
+        // given
+        var s1 = createSeason("Season 1");
+        var s2 = createSeason("Season 2");
+        when(seasonRepository.findAll()).thenReturn(List.of(s1, s2));
+
+        // when
+        var result = service.findAll();
+
+        // then
+        assertThat(result).hasSize(2);
+        verify(seasonRepository).findAll();
+    }
+
+    @Test
+    void givenExistingId_whenFindById_thenReturnsSeason() {
+        // given
+        var season = createSeason("Test Season");
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+        // when
+        var result = service.findById(season.getId());
+
+        // then
+        assertThat(result.getName()).isEqualTo("Test Season");
+    }
+
+    @Test
+    void givenNonExistentId_whenFindById_thenThrowsEntityNotFoundException() {
+        // given
+        var id = UUID.randomUUID();
+        when(seasonRepository.findById(id)).thenReturn(Optional.empty());
+
+        // when / then
+        assertThatThrownBy(() -> service.findById(id))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("Season");
+    }
+
+    @Test
+    void givenExistingId_whenGetDetailData_thenReturnsSeasonWithPlayoffAndComputedFlags() {
+        // given
+        var season = createSeason("Detail Season");
+        var team1 = createTeam("T1", "Team 1");
+        var team2 = createTeam("T2", "Team 2");
+        season.addTeam(team1);
+        season.addTeam(team2);
+        season.setFormat(SeasonFormat.LEAGUE);
+
+        var playoff = new Playoff();
+        playoff.setId(UUID.randomUUID());
+
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(playoffRepository.findBySeasonId(season.getId())).thenReturn(Optional.of(playoff));
+
+        // when
+        var result = service.getDetailData(season.getId());
+
+        // then
+        assertThat(result.season()).isEqualTo(season);
+        assertThat(result.playoff()).isEqualTo(playoff);
+        assertThat(result.hasTeams()).isTrue();
+        assertThat(result.hasMatchdays()).isFalse();
+        assertThat(result.canGenerate()).isTrue(); // LEAGUE + no matchdays + >=2 teams
+        assertThat(result.isSwiss()).isFalse();
+    }
+
+    @Test
+    void givenExistingId_whenGetEditFormData_thenReturnsSeasonWithAllTeamsCarsTracksScorings() {
+        // given
+        var season = createSeason("Edit Season");
+        var rs = new RaceScoring();
+        rs.setId(UUID.randomUUID());
+        rs.setName("Default");
+        season.setRaceScoring(rs);
+        var ms = new MatchScoring();
+        ms.setId(UUID.randomUUID());
+        ms.setName("Default");
+        season.setMatchScoring(ms);
+
+        var team = createTeam("T1", "Team 1");
+        var car = new Car();
+        car.setId(UUID.randomUUID());
+        var track = new Track();
+        track.setId(UUID.randomUUID());
+
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(teamRepository.findAll()).thenReturn(List.of(team));
+        when(carRepository.findAllByOrderByManufacturerAscNameAsc()).thenReturn(List.of(car));
+        when(trackRepository.findAllByOrderByNameAsc()).thenReturn(List.of(track));
+        when(raceScoringRepository.findAll()).thenReturn(List.of(rs));
+        when(matchScoringRepository.findAll()).thenReturn(List.of(ms));
+
+        // when
+        var result = service.getEditFormData(season.getId());
+
+        // then
+        assertThat(result.season()).isEqualTo(season);
+        assertThat(result.allTeams()).containsExactly(team);
+        assertThat(result.allCars()).containsExactly(car);
+        assertThat(result.allTracks()).containsExactly(track);
+        assertThat(result.allRaceScorings()).containsExactly(rs);
+        assertThat(result.allMatchScorings()).containsExactly(ms);
+    }
+
+    @Test
+    void givenNullId_whenGetEditFormData_thenReturnsNullSeasonWithLists() {
+        // given
+        var rs = new RaceScoring();
+        rs.setId(UUID.randomUUID());
+        var ms = new MatchScoring();
+        ms.setId(UUID.randomUUID());
+
+        when(teamRepository.findAll()).thenReturn(List.of());
+        when(carRepository.findAllByOrderByManufacturerAscNameAsc()).thenReturn(List.of());
+        when(trackRepository.findAllByOrderByNameAsc()).thenReturn(List.of());
+        when(raceScoringRepository.findAll()).thenReturn(List.of(rs));
+        when(matchScoringRepository.findAll()).thenReturn(List.of(ms));
+
+        // when
+        var result = service.getEditFormData(null);
+
+        // then
+        assertThat(result.season()).isNull();
+        assertThat(result.allRaceScorings()).hasSize(1);
+        assertThat(result.allMatchScorings()).hasSize(1);
+    }
+
+    @Test
+    void givenNewSeasonForm_whenSave_thenCreatesSeasonWithScoringLookups() {
+        // given
+        var form = new SeasonForm();
+        form.setName("New Season");
+        form.setYear(2026);
+        form.setNumber(1);
+        form.setActive(true);
+        form.setFormat(SeasonFormat.LEAGUE);
+        form.setLegs(1);
+
+        var rs = new RaceScoring();
+        rs.setId(UUID.randomUUID());
+        var ms = new MatchScoring();
+        ms.setId(UUID.randomUUID());
+
+        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
+        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
+        when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // when
+        var result = service.save(form, rs.getId(), ms.getId());
+
+        // then
+        assertThat(result.getName()).isEqualTo("New Season");
+        assertThat(result.getRaceScoring()).isEqualTo(rs);
+        assertThat(result.getMatchScoring()).isEqualTo(ms);
+        verify(seasonRepository).save(any(Season.class));
+    }
+
+    @Test
+    void givenExistingSeasonForm_whenSave_thenUpdatesSeasonFields() {
+        // given
+        var existing = createSeason("Old Name");
+        var rs = new RaceScoring();
+        rs.setId(UUID.randomUUID());
+        existing.setRaceScoring(rs);
+        var ms = new MatchScoring();
+        ms.setId(UUID.randomUUID());
+        existing.setMatchScoring(ms);
+
+        var form = new SeasonForm();
+        form.setId(existing.getId());
+        form.setName("Updated Name");
+        form.setYear(2027);
+        form.setNumber(2);
+        form.setActive(false);
+        form.setFormat(SeasonFormat.SWISS);
+        form.setLegs(2);
+
+        when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
+        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
+        when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // when
+        var result = service.save(form, rs.getId(), ms.getId());
+
+        // then
+        assertThat(result.getName()).isEqualTo("Updated Name");
+        assertThat(result.getYear()).isEqualTo(2027);
+        assertThat(result.getFormat()).isEqualTo(SeasonFormat.SWISS);
+    }
+
+    @Test
+    void givenExistingSeason_whenDelete_thenRemoves() {
+        // given
+        var season = createSeason("Delete Me");
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+        // when
+        service.delete(season.getId());
+
+        // then
+        verify(seasonRepository).delete(season);
+    }
+
+    @Test
+    void whenGetAllRaceScorings_thenDelegatesToRepository() {
+        // given
+        var rs = new RaceScoring();
+        rs.setId(UUID.randomUUID());
+        when(raceScoringRepository.findAll()).thenReturn(List.of(rs));
+
+        // when
+        var result = service.getAllRaceScorings();
+
+        // then
+        assertThat(result).hasSize(1);
+        verify(raceScoringRepository).findAll();
+    }
+
+    @Test
+    void whenGetAllMatchScorings_thenDelegatesToRepository() {
+        // given
+        var ms = new MatchScoring();
+        ms.setId(UUID.randomUUID());
+        when(matchScoringRepository.findAll()).thenReturn(List.of(ms));
+
+        // when
+        var result = service.getAllMatchScorings();
+
+        // then
+        assertThat(result).hasSize(1);
+        verify(matchScoringRepository).findAll();
+    }
+
+    @Test
+    void givenSeasonWithSwissFormat_whenGetSwissRoundData_thenReturnsRoundDataWithDriverTeamInfo() {
+        // given
+        var season = createSeason("Swiss Season");
+        season.setFormat(SeasonFormat.SWISS);
+
+        var homeTeam = createTeam("HOM", "Home Team");
+        var awayTeam = createTeam("AWY", "Away Team");
+        season.addTeam(homeTeam);
+        season.addTeam(awayTeam);
+
+        // Create a matchday with a race that has match scores
+        var matchday = new Matchday(season, "Round 1", 1);
+        matchday.setId(UUID.randomUUID());
+
+        var match = new Match(matchday, homeTeam, awayTeam);
+        match.setId(UUID.randomUUID());
+        match.setHomeScore(10);
+        match.setAwayScore(8);
+
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatch(match);
+        race.setMatchday(matchday);
+        match.getRaces().add(race);
+        matchday.getRaces().add(race);
+        matchday.getMatches().add(match);
+        season.getMatchdays().add(matchday);
+
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+        // when
+        var result = service.getSwissRoundData(season.getId());
+
+        // then
+        assertThat(result.season()).isEqualTo(season);
+        assertThat(result.raceScores()).containsKey(race.getId());
+        assertThat(result.raceScores().get(race.getId())).isEqualTo(new int[]{10, 8});
     }
 
     private Season createSeason(String name) {

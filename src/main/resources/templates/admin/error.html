@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Error', ~{::content})}">
+<body>
+<div th:fragment="content">
+    <div class="card">
+        <h1>
+            <span th:text="${status}">500</span> &mdash; <span th:text="${error}">Error</span>
+        </h1>
+        <p th:if="${message}" th:text="${message}" class="error-message">Something went wrong</p>
+        <div th:if="${showDetails}" class="error-details">
+            <p>Exception: <code th:text="${exceptionType}"></code></p>
+        </div>
+        <div class="actions">
+            <a href="javascript:history.back()" class="btn btn-secondary">Back</a>
+            <a th:href="@{/admin/seasons}" class="btn btn-primary">Home</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

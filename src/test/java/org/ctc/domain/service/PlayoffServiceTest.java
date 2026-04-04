@@ -1,6 +1,7 @@
 package org.ctc.domain.service;
 
 import org.ctc.admin.dto.SeedForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -381,7 +382,7 @@ class PlayoffServiceTest {
         @Test
         void givenUnknownRoundId_whenSetRoundLegs_thenThrowsException() {
             // when / then
-            assertThrows(IllegalArgumentException.class, () ->
+            assertThrows(EntityNotFoundException.class, () ->
                     playoffService.setRoundLegs(UUID.randomUUID(), 3));
         }
     }

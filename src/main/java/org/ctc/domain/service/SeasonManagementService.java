@@ -1,13 +1,14 @@
 package org.ctc.domain.service;
 
+import org.ctc.admin.dto.SeasonForm;
+import org.ctc.domain.exception.EntityNotFoundException;
+import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import org.ctc.domain.model.Team;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -25,6 +26,137 @@ public class SeasonManagementService {
     private final TrackRepository trackRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final FileStorageService fileStorageService;
+    private final PlayoffRepository playoffRepository;
+    private final RaceScoringRepository raceScoringRepository;
+    private final MatchScoringRepository matchScoringRepository;
+    private final ScoringService scoringService;
+
+    // --- Records for structured return data ---
+
+    public record SeasonDetailData(Season season, Playoff playoff, boolean hasTeams,
+                                   boolean hasMatchdays, boolean canGenerate, boolean isSwiss) {}
+
+    public record SeasonEditFormData(Season season, List<Team> allTeams, List<Car> allCars,
+                                     List<Track> allTracks, List<RaceScoring> allRaceScorings,
+                                     List<MatchScoring> allMatchScorings) {}
+
+    public record SwissRoundData(Season season, Map<UUID, int[]> raceScores) {}
+
+    // --- Season CRUD ---
+
+    @Transactional(readOnly = true)
+    public List<Season> findAll() {
+        return seasonRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Season findById(UUID id) {
+        return seasonRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Season", id));
+    }
+
+    @Transactional(readOnly = true)
+    public SeasonDetailData getDetailData(UUID id) {
+        var season = findById(id);
+        var playoff = playoffRepository.findBySeasonId(id).orElse(null);
+        boolean hasTeams = !season.getSeasonTeams().isEmpty();
+        boolean hasMatchdays = !season.getMatchdays().isEmpty();
+        boolean isSwiss = season.getFormat() == SeasonFormat.SWISS;
+        boolean canGenerate = !isSwiss && !hasMatchdays && season.getEligibleTeams().size() >= 2;
+        return new SeasonDetailData(season, playoff, hasTeams, hasMatchdays, canGenerate, isSwiss);
+    }
+
+    @Transactional(readOnly = true)
+    public SeasonEditFormData getEditFormData(UUID id) {
+        Season season = id != null ? findById(id) : null;
+        var allTeams = teamRepository.findAll();
+        var allCars = carRepository.findAllByOrderByManufacturerAscNameAsc();
+        var allTracks = trackRepository.findAllByOrderByNameAsc();
+        var allRaceScorings = raceScoringRepository.findAll();
+        var allMatchScorings = matchScoringRepository.findAll();
+        return new SeasonEditFormData(season, allTeams, allCars, allTracks, allRaceScorings, allMatchScorings);
+    }
+
+    @Transactional
+    public Season save(SeasonForm form, UUID raceScoringId, UUID matchScoringId) {
+        var raceScoring = raceScoringRepository.findById(raceScoringId)
+                .orElseThrow(() -> new EntityNotFoundException("RaceScoring", raceScoringId));
+        var matchScoring = matchScoringRepository.findById(matchScoringId)
+                .orElseThrow(() -> new EntityNotFoundException("MatchScoring", matchScoringId));
+
+        Season season;
+        if (form.getId() != null) {
+            season = findById(form.getId());
+        } else {
+            season = new Season();
+        }
+        season.setName(form.getName());
+        season.setYear(form.getYear());
+        season.setNumber(form.getNumber());
+        season.setDescription(form.getDescription());
+        season.setStartDate(form.getStartDate());
+        season.setEndDate(form.getEndDate());
+        season.setActive(form.isActive());
+        season.setFormat(form.getFormat());
+        season.setTotalRounds(form.getTotalRounds());
+        season.setLegs(form.getLegs());
+        season.setEventDurationMinutes(form.getEventDurationMinutes());
+        season.setRaceScoring(raceScoring);
+        season.setMatchScoring(matchScoring);
+
+        season = seasonRepository.save(season);
+        if (form.getId() != null) {
+            log.info("Updated season: {}", season.getName());
+        } else {
+            log.info("Created season: {}", season.getName());
+        }
+        return season;
+    }
+
+    @Transactional
+    public String delete(UUID id) {
+        var season = findById(id);
+        seasonRepository.delete(season);
+        log.info("Deleted season: {}", season.getName());
+        return season.getName();
+    }
+
+    // --- Scoring lookups ---
+
+    @Transactional(readOnly = true)
+    public List<RaceScoring> getAllRaceScorings() {
+        return raceScoringRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<MatchScoring> getAllMatchScorings() {
+        return matchScoringRepository.findAll();
+    }
+
+    // --- Swiss round data ---
+
+    @Transactional(readOnly = true)
+    public SwissRoundData getSwissRoundData(UUID seasonId) {
+        var season = findById(seasonId);
+        Map<UUID, int[]> raceScores = new HashMap<>();
+        for (var md : season.getMatchdays()) {
+            for (var race : md.getRaces()) {
+                if (race.isBye()) continue;
+                if (race.getHomeScore() != null && race.getAwayScore() != null) {
+                    raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
+                } else if (!race.getResults().isEmpty()) {
+                    int homeTotal = race.getResults().stream()
+                            .filter(r -> scoringService.isDriverInTeam(r, race.getId(), race.getHomeTeam().getId()))
+                            .mapToInt(RaceResult::getPointsTotal).sum();
+                    int awayTotal = race.getResults().stream()
+                            .filter(r -> !scoringService.isDriverInTeam(r, race.getId(), race.getHomeTeam().getId()))
+                            .mapToInt(RaceResult::getPointsTotal).sum();
+                    raceScores.put(race.getId(), new int[]{homeTotal, awayTotal});
+                }
+            }
+        }
+        return new SwissRoundData(season, raceScores);
+    }
 
     /**
      * Returns teams available as replacement candidates for a season
@@ -32,7 +164,8 @@ public class SeasonManagementService {
      */
     @Transactional(readOnly = true)
     public List<Team> getAvailableTeamsForReplacement(UUID seasonId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         Set<UUID> activeTeamIds = season.getSeasonTeams().stream()
                 .filter(st -> !st.isReplaced())
                 .map(st -> st.getTeam().getId())
@@ -49,8 +182,10 @@ public class SeasonManagementService {
      */
     @Transactional
     public String addTeamToSeason(UUID seasonId, UUID teamId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
-        var team = teamRepository.findById(teamId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 
         if (!season.containsTeam(team)) {
             if (team.isSubTeam() && !season.containsTeam(team.getParentTeam())) {
@@ -72,8 +207,10 @@ public class SeasonManagementService {
      */
     @Transactional
     public String removeTeamFromSeason(UUID seasonId, UUID teamId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
-        var team = teamRepository.findById(teamId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 
         if (!team.isSubTeam()) {
             boolean hasSubs = season.getTeams().stream()
@@ -111,7 +248,8 @@ public class SeasonManagementService {
     public String updateSeasonTeam(UUID seasonTeamId, Integer rating,
                                    String primaryColor, String secondaryColor, String accentColor,
                                    MultipartFile logoOverride) throws IOException {
-        var seasonTeam = seasonTeamRepository.findById(seasonTeamId).orElseThrow();
+        var seasonTeam = seasonTeamRepository.findById(seasonTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", seasonTeamId));
         seasonTeam.setRating(rating);
         seasonTeam.setPrimaryColor(primaryColor != null && !primaryColor.isBlank() ? primaryColor : null);
         seasonTeam.setSecondaryColor(secondaryColor != null && !secondaryColor.isBlank() ? secondaryColor : null);
@@ -136,9 +274,12 @@ public class SeasonManagementService {
      */
     @Transactional
     public String replaceTeam(UUID seasonId, UUID predecessorTeamId, UUID successorTeamId, LocalDate replacedAt) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
-        var predecessor = teamRepository.findById(predecessorTeamId).orElseThrow();
-        var successor = teamRepository.findById(successorTeamId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var predecessor = teamRepository.findById(predecessorTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", predecessorTeamId));
+        var successor = teamRepository.findById(successorTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", successorTeamId));
 
         var predecessorSt = season.findSeasonTeam(predecessor)
                 .orElseThrow(() -> new IllegalStateException("Team " + predecessor.getShortName() + " not in season"));
@@ -152,7 +293,8 @@ public class SeasonManagementService {
         }
         seasonRepository.save(season);
 
-        var successorSt = seasonTeamRepository.findBySeasonIdAndTeamId(seasonId, successorTeamId).orElseThrow();
+        var successorSt = seasonTeamRepository.findBySeasonIdAndTeamId(seasonId, successorTeamId)
+                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", successorTeamId));
 
         predecessorSt.setSuccessor(successorSt);
         predecessorSt.setReplacedAt(replacedAt);
@@ -169,7 +311,8 @@ public class SeasonManagementService {
      */
     @Transactional
     public int addCarsToSeason(UUID seasonId, List<UUID> carIds) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         int added = 0;
         for (UUID carId : carIds) {
             var car = carRepository.findById(carId).orElse(null);
@@ -187,7 +330,8 @@ public class SeasonManagementService {
      */
     @Transactional
     public int removeCarsFromSeason(UUID seasonId, List<UUID> carIds) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         season.getCars().removeIf(c -> carIds.contains(c.getId()));
         seasonRepository.save(season);
         return carIds.size();
@@ -198,7 +342,8 @@ public class SeasonManagementService {
      */
     @Transactional
     public int addTracksToSeason(UUID seasonId, List<UUID> trackIds) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         int added = 0;
         for (UUID trackId : trackIds) {
             var track = trackRepository.findById(trackId).orElse(null);
@@ -216,7 +361,8 @@ public class SeasonManagementService {
      */
     @Transactional
     public int removeTracksFromSeason(UUID seasonId, List<UUID> trackIds) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         season.getTracks().removeIf(t -> trackIds.contains(t.getId()));
         seasonRepository.save(season);
         return trackIds.size();

@@ -1,6 +1,7 @@
 package org.ctc.domain.repository;
 
 import org.ctc.domain.model.Season;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -11,7 +12,9 @@ public interface SeasonRepository extends JpaRepository<Season, UUID> {
 
     Optional<Season> findByActiveTrue();
 
+    @EntityGraph(attributePaths = {"raceScoring", "matchScoring"})
     List<Season> findBySeasonTeamsTeamId(UUID teamId);
 
+    @EntityGraph(attributePaths = {"raceScoring", "matchScoring"})
     List<Season> findByYearAndNumber(int year, int number);
 }

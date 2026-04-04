@@ -1,5 +1,6 @@
 package org.ctc.dataimport;
 
+import org.ctc.domain.exception.ValidationException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.repository.DriverRepository;
@@ -121,7 +122,7 @@ public class CsvImportService {
 
         // Resolve season
         var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
-                () -> new IllegalArgumentException("Season not found: " + metadata.seasonId()));
+                () -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
 
         // Resolve or create matchday
         var matchday = findOrCreateMatchday(season, metadata);
@@ -178,8 +179,8 @@ public class CsvImportService {
             // Link to playoff matchup if applicable
             if (metadata.isPlayoff()) {
                 var matchup = playoffMatchupRepository.findById(metadata.playoffMatchupId())
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Playoff matchup not found: " + metadata.playoffMatchupId()));
+                        .orElseThrow(() -> new ValidationException(
+                                "Playoff matchup not found in CSV import: " + metadata.playoffMatchupId()));
                 race.setPlayoffMatchup(matchup);
             }
 
@@ -287,8 +288,8 @@ public class CsvImportService {
     private Matchday findOrCreateMatchday(Season season, ImportMetadata metadata) {
         if (metadata.hasMatchdayId()) {
             return matchdayRepository.findById(metadata.matchdayId())
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Matchday not found: " + metadata.matchdayId()));
+                    .orElseThrow(() -> new ValidationException(
+                            "Matchday not found in CSV import: " + metadata.matchdayId()));
         }
         return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
                 .filter(md -> md.getLabel().equals(metadata.matchdayLabel()))

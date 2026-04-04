@@ -1,12 +1,21 @@
 package org.ctc.domain.service;
 
 import org.ctc.admin.dto.DriverForm;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PsnAlias;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.PsnAliasRepository;
+import org.ctc.domain.repository.SeasonDriverRepository;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,12 +29,78 @@ public class DriverService {
 
     private final DriverRepository driverRepository;
     private final PsnAliasRepository psnAliasRepository;
+    private final SeasonDriverRepository seasonDriverRepository;
+    private final SeasonRepository seasonRepository;
+    private final TeamRepository teamRepository;
+
+    /**
+     * Return value for driver edit form data.
+     */
+    public record DriverEditData(
+            Driver driver,
+            List<SeasonDriver> seasonDrivers,
+            List<Season> allSeasons,
+            List<Team> allTeams
+    ) {}
+
+    @Transactional(readOnly = true)
+    public List<Driver> findAll() {
+        return driverRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public Driver findById(UUID id) {
+        return driverRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Driver", id));
+    }
+
+    @Transactional(readOnly = true)
+    public DriverEditData getEditFormData(UUID id) {
+        var driver = findById(id);
+        var seasonDrivers = seasonDriverRepository.findByDriverId(id);
+        var allSeasons = seasonRepository.findAll();
+        var allTeams = teamRepository.findAll();
+        return new DriverEditData(driver, seasonDrivers, allSeasons, allTeams);
+    }
+
+    @Transactional
+    public String assignToSeason(UUID driverId, UUID seasonId, UUID teamId) {
+        var driver = findById(driverId);
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
+
+        var existing = seasonDriverRepository.findBySeasonIdAndDriverId(seasonId, driverId);
+        if (existing.isPresent()) {
+            var sd = existing.get();
+            sd.setTeam(team);
+            seasonDriverRepository.save(sd);
+        } else {
+            seasonDriverRepository.save(new SeasonDriver(season, driver, team));
+        }
+
+        return driver.getPsnId() + " assigned to " + team.getShortName() + " in " + season.getName();
+    }
+
+    @Transactional
+    public void delete(UUID id) {
+        var driver = findById(id);
+        try {
+            driverRepository.delete(driver);
+            driverRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessRuleException("Cannot delete driver '" + driver.getPsnId()
+                    + "' because it is still referenced by other entities.");
+        }
+    }
 
     @Transactional
     public Driver save(DriverForm form) {
         Driver driver;
         if (form.getId() != null) {
-            driver = driverRepository.findById(form.getId()).orElseThrow();
+            driver = driverRepository.findById(form.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Driver", form.getId()));
             driver.setPsnId(form.getPsnId());
             driver.setNickname(form.getNickname());
             driver.setActive(form.isActive());

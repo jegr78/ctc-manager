@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.SeasonDriver;
@@ -32,7 +33,8 @@ public class RaceLineupService {
     // --- Get lineup data ---
 
     public LineupData getLineupData(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
         var season = race.getMatchday().getSeason();
         var seasonTeams = season.getTeams();
 
@@ -82,15 +84,18 @@ public class RaceLineupService {
 
     @Transactional
     public int saveLineup(UUID raceId, Map<UUID, UUID> driverTeamAssignments) {
-        var race = raceRepository.findById(raceId).orElseThrow();
+        var race = raceRepository.findById(raceId)
+                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
 
         var existing = raceLineupRepository.findByRaceId(raceId);
         raceLineupRepository.deleteAll(existing);
 
         int count = 0;
         for (var entry : driverTeamAssignments.entrySet()) {
-            var driver = driverRepository.findById(entry.getKey()).orElseThrow();
-            var team = teamRepository.findById(entry.getValue()).orElseThrow();
+            var driver = driverRepository.findById(entry.getKey())
+                    .orElseThrow(() -> new EntityNotFoundException("Driver", entry.getKey()));
+            var team = teamRepository.findById(entry.getValue())
+                    .orElseThrow(() -> new EntityNotFoundException("Team", entry.getValue()));
             raceLineupRepository.save(new RaceLineup(race, driver, team));
             count++;
         }

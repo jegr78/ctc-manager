@@ -2,6 +2,7 @@ package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.PlayoffForm;
 import org.ctc.admin.dto.SeedForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.admin.service.PlayoffRoundOverviewGraphicService;
 import org.ctc.admin.service.PlayoffRoundResultsGraphicService;
 import org.ctc.admin.service.PlayoffRoundScheduleGraphicService;
@@ -190,7 +191,7 @@ public class PlayoffController {
     public ResponseEntity<byte[]> downloadRoundOverview(@PathVariable UUID roundId) {
         try {
             PlayoffRound round = playoffRoundRepository.findById(roundId)
-                    .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId));
+                    .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
             byte[] png = roundOverviewGraphicService.generateOverview(round);
             return buildPngResponse(png, round.getLabel(), "overview");
         } catch (Exception e) {
@@ -203,7 +204,7 @@ public class PlayoffController {
     public ResponseEntity<byte[]> downloadRoundSchedule(@PathVariable UUID roundId) {
         try {
             PlayoffRound round = playoffRoundRepository.findById(roundId)
-                    .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId));
+                    .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
             byte[] png = roundScheduleGraphicService.generateSchedule(round);
             return buildPngResponse(png, round.getLabel(), "schedule");
         } catch (Exception e) {
@@ -216,7 +217,7 @@ public class PlayoffController {
     public ResponseEntity<byte[]> downloadRoundResults(@PathVariable UUID roundId) {
         try {
             PlayoffRound round = playoffRoundRepository.findById(roundId)
-                    .orElseThrow(() -> new IllegalArgumentException("Round not found: " + roundId));
+                    .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
             byte[] png = roundResultsGraphicService.generateResults(round);
             return buildPngResponse(png, round.getLabel(), "results");
         } catch (Exception e) {

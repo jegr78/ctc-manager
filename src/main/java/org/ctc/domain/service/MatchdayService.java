@@ -1,6 +1,7 @@
 package org.ctc.domain.service;
 
 import org.ctc.admin.dto.MatchdayDto;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
@@ -69,7 +70,8 @@ public class MatchdayService {
     // --- Detail ---
 
     public MatchdayDetailData getMatchdayDetail(UUID id) {
-        var matchday = matchdayRepository.findById(id).orElseThrow();
+        var matchday = matchdayRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Matchday", id));
         var lineups = raceLineupRepository.findByRaceMatchdayId(id);
         var lineupsByTeam = lineups.stream()
                 .collect(Collectors.groupingBy(
@@ -83,11 +85,13 @@ public class MatchdayService {
 
     @Transactional
     public Matchday saveMatchday(String label, int sortIndex, UUID seasonId, UUID matchdayId) {
-        var season = seasonRepository.findById(seasonId).orElseThrow();
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
         Matchday matchday;
         if (matchdayId != null) {
-            matchday = matchdayRepository.findById(matchdayId).orElseThrow();
+            matchday = matchdayRepository.findById(matchdayId)
+                    .orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
             matchday.setLabel(label);
             matchday.setSortIndex(sortIndex);
             matchday.setSeason(season);
@@ -104,7 +108,8 @@ public class MatchdayService {
 
     @Transactional
     public UUID deleteMatchday(UUID id) {
-        var matchday = matchdayRepository.findById(id).orElseThrow();
+        var matchday = matchdayRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Matchday", id));
         var seasonId = matchday.getSeason().getId();
         matchdayRepository.delete(matchday);
         log.info("Deleted matchday: {}", matchday.getLabel());
