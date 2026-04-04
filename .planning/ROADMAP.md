@@ -90,7 +90,7 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: TBD
+- [x] 05-01: TBD
 - [ ] 05-02: TBD
 
 ## Progress
