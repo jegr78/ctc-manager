@@ -46,6 +46,8 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 - ✓ 28 @EntityGraph-Annotationen auf Collection-returning Repository-Methoden — Phase 4
 - ✓ Spring Security Basic Auth fuer prod/docker Profile — Phase 5
 - ✓ SSRF-Schutz fuer FileStorageService.storeFromUrl() — Phase 5
+- ✓ SSRF Hostname-Validierung (private IPs, localhost, link-local blockiert) — Phase 6
+- ✓ Path-Traversal-Schutz in store(), storeImage(), storeFromUrl() — Phase 6
 
 ### Active (v1.1)
 
@@ -57,8 +59,6 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 - [ ] StandingsController Business-Logik in Service verschieben
 - [ ] Inline-Styles in Admin Templates durch CSS-Klassen ersetzen
 - [ ] Grosse Service-Klassen aufteilen (PlayoffService, RaceService)
-- [ ] SSRF-Schutz: Hostname-Validierung in FileStorageService.storeFromUrl()
-- [ ] Path-Traversal-Check in store() und storeImage() ergaenzen
 - [ ] Unbounded findAll() eingrenzen
 
 ### Out of Scope
@@ -113,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 after v1.1 milestone start*
+*Last updated: 2026-04-04 after Phase 6 completion*
