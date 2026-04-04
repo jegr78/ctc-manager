@@ -2,11 +2,7 @@ package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.SeasonForm;
-import org.ctc.domain.exception.EntityNotFoundException;
-import org.ctc.domain.model.*;
-import org.ctc.domain.repository.*;
 import org.ctc.domain.service.MatchdayGeneratorService;
-import org.ctc.domain.service.ScoringService;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.SwissPairingService;
 import jakarta.validation.Valid;
@@ -28,37 +24,24 @@ import java.util.*;
 @RequiredArgsConstructor
 public class SeasonController {
 
-    private final SeasonRepository seasonRepository;
-    private final TeamRepository teamRepository;
-    private final CarRepository carRepository;
-    private final TrackRepository trackRepository;
-    private final PlayoffRepository playoffRepository;
-    private final RaceScoringRepository raceScoringRepository;
-    private final MatchScoringRepository matchScoringRepository;
-    private final ScoringService scoringService;
-    private final SwissPairingService swissPairingService;
     private final SeasonManagementService seasonManagementService;
+    private final SwissPairingService swissPairingService;
     private final MatchdayGeneratorService matchdayGeneratorService;
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
-        var season = seasonRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Season", id));
-        var playoff = playoffRepository.findBySeasonId(id).orElse(null);
-        model.addAttribute("season", season);
-        model.addAttribute("playoff", playoff);
-        model.addAttribute("isSwiss", season.getFormat() == SeasonFormat.SWISS);
-        model.addAttribute("canGenerate",
-                season.getFormat() != SeasonFormat.SWISS
-                && season.getMatchdays().isEmpty()
-                && season.getEligibleTeams().size() >= 2);
+        var data = seasonManagementService.getDetailData(id);
+        model.addAttribute("season", data.season());
+        model.addAttribute("playoff", data.playoff());
+        model.addAttribute("isSwiss", data.isSwiss());
+        model.addAttribute("canGenerate", data.canGenerate());
         model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(id));
         return "admin/season-detail";
     }
 
     @GetMapping
     public String list(Model model) {
-        model.addAttribute("seasons", seasonRepository.findAll());
+        model.addAttribute("seasons", seasonManagementService.findAll());
         return "admin/seasons";
     }
 
@@ -71,8 +54,8 @@ public class SeasonController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var season = seasonRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Season", id));
+        var data = seasonManagementService.getEditFormData(id);
+        var season = data.season();
         var form = new SeasonForm();
         form.setId(season.getId());
         form.setName(season.getName());
@@ -88,10 +71,11 @@ public class SeasonController {
         form.setEventDurationMinutes(season.getEventDurationMinutes());
         model.addAttribute("seasonForm", form);
         model.addAttribute("season", season);
-        model.addAttribute("allTeams", teamRepository.findAll());
-        model.addAttribute("allCars", carRepository.findAllByOrderByManufacturerAscNameAsc());
-        model.addAttribute("allTracks", trackRepository.findAllByOrderByNameAsc());
-        addScoringLists(model);
+        model.addAttribute("allTeams", data.allTeams());
+        model.addAttribute("allCars", data.allCars());
+        model.addAttribute("allTracks", data.allTracks());
+        model.addAttribute("allRaceScorings", data.allRaceScorings());
+        model.addAttribute("allMatchScorings", data.allMatchScorings());
         return "admin/season-form";
     }
 
@@ -104,48 +88,8 @@ public class SeasonController {
             addScoringLists(model);
             return "admin/season-form";
         }
-        if (form.getId() != null) {
-            var existing = seasonRepository.findById(form.getId())
-                    .orElseThrow(() -> new EntityNotFoundException("Season", form.getId()));
-            existing.setName(form.getName());
-            existing.setYear(form.getYear());
-            existing.setNumber(form.getNumber());
-            existing.setDescription(form.getDescription());
-            existing.setStartDate(form.getStartDate());
-            existing.setEndDate(form.getEndDate());
-            existing.setActive(form.isActive());
-            existing.setFormat(form.getFormat());
-            existing.setTotalRounds(form.getTotalRounds());
-            existing.setLegs(form.getLegs());
-            existing.setEventDurationMinutes(form.getEventDurationMinutes());
-            existing.setRaceScoring(raceScoringRepository.findById(raceScoring)
-                    .orElseThrow(() -> new EntityNotFoundException("RaceScoring", raceScoring)));
-            existing.setMatchScoring(matchScoringRepository.findById(matchScoring)
-                    .orElseThrow(() -> new EntityNotFoundException("MatchScoring", matchScoring)));
-            seasonRepository.save(existing);
-            log.info("Updated season: {}", existing.getName());
-            redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + existing.getName());
-        } else {
-            var season = new Season();
-            season.setName(form.getName());
-            season.setYear(form.getYear());
-            season.setNumber(form.getNumber());
-            season.setDescription(form.getDescription());
-            season.setStartDate(form.getStartDate());
-            season.setEndDate(form.getEndDate());
-            season.setActive(form.isActive());
-            season.setFormat(form.getFormat());
-            season.setTotalRounds(form.getTotalRounds());
-            season.setLegs(form.getLegs());
-            season.setEventDurationMinutes(form.getEventDurationMinutes());
-            season.setRaceScoring(raceScoringRepository.findById(raceScoring)
-                    .orElseThrow(() -> new EntityNotFoundException("RaceScoring", raceScoring)));
-            season.setMatchScoring(matchScoringRepository.findById(matchScoring)
-                    .orElseThrow(() -> new EntityNotFoundException("MatchScoring", matchScoring)));
-            seasonRepository.save(season);
-            log.info("Created season: {}", season.getName());
-            redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
-        }
+        var season = seasonManagementService.save(form, raceScoring, matchScoring);
+        redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
         return "redirect:/admin/seasons";
     }
 
@@ -237,44 +181,20 @@ public class SeasonController {
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Season", id));
-        seasonRepository.delete(season);
-        log.info("Deleted season: {}", season.getName());
-        redirectAttributes.addFlashAttribute("successMessage", "Season deleted: " + season.getName());
+        String name = seasonManagementService.delete(id);
+        redirectAttributes.addFlashAttribute("successMessage", "Season deleted: " + name);
         return "redirect:/admin/seasons";
     }
 
     @GetMapping("/{id}/swiss")
     public String swissRounds(@PathVariable UUID id, Model model) {
-        var season = seasonRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Season", id));
-
-        // Calculate race scores for display
-        Map<UUID, int[]> raceScores = new HashMap<>();
-        for (var md : season.getMatchdays()) {
-            for (var race : md.getRaces()) {
-                if (race.isBye()) continue;
-                if (race.getHomeScore() != null && race.getAwayScore() != null) {
-                    raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
-                } else if (!race.getResults().isEmpty()) {
-                    int homeTotal = race.getResults().stream()
-                            .filter(r -> isHomeTeamDriver(r, race))
-                            .mapToInt(RaceResult::getPointsTotal).sum();
-                    int awayTotal = race.getResults().stream()
-                            .filter(r -> !isHomeTeamDriver(r, race))
-                            .mapToInt(RaceResult::getPointsTotal).sum();
-                    raceScores.put(race.getId(), new int[]{homeTotal, awayTotal});
-                }
-            }
-        }
-
-        model.addAttribute("season", season);
-        model.addAttribute("raceScores", raceScores);
+        var data = seasonManagementService.getSwissRoundData(id);
+        model.addAttribute("season", data.season());
+        model.addAttribute("raceScores", data.raceScores());
         model.addAttribute("currentRound", swissPairingService.getCurrentRound(id));
         model.addAttribute("canGenerateNext",
                 swissPairingService.isCurrentRoundComplete(id)
-                && (season.getTotalRounds() == null || season.getMatchdays().size() < season.getTotalRounds()));
+                && (data.season().getTotalRounds() == null || data.season().getMatchdays().size() < data.season().getTotalRounds()));
         return "admin/swiss-rounds";
     }
 
@@ -321,12 +241,8 @@ public class SeasonController {
         return "redirect:/admin/seasons/" + id;
     }
 
-    private boolean isHomeTeamDriver(RaceResult result, Race race) {
-        return scoringService.isDriverInTeam(result, race.getId(), race.getHomeTeam().getId());
-    }
-
     private void addScoringLists(Model model) {
-        model.addAttribute("allRaceScorings", raceScoringRepository.findAll());
-        model.addAttribute("allMatchScorings", matchScoringRepository.findAll());
+        model.addAttribute("allRaceScorings", seasonManagementService.getAllRaceScorings());
+        model.addAttribute("allMatchScorings", seasonManagementService.getAllMatchScorings());
     }
 }
