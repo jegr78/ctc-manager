@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.TrackForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Track;
@@ -39,15 +38,15 @@ public class TrackService {
     }
 
     @Transactional
-    public Track save(TrackForm form) {
+    public Track save(UUID id, String name, String country) {
         Track track;
-        if (form.getId() != null) {
-            track = trackRepository.findById(form.getId())
-                    .orElseThrow(() -> new EntityNotFoundException("Track", form.getId()));
-            track.setName(form.getName());
-            track.setCountry(form.getCountry());
+        if (id != null) {
+            track = trackRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Track", id));
+            track.setName(name);
+            track.setCountry(country);
         } else {
-            track = new Track(form.getName(), form.getCountry());
+            track = new Track(name, country);
         }
         try {
             track = trackRepository.saveAndFlush(track);
