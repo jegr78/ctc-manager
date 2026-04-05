@@ -690,6 +690,65 @@ class SeasonManagementServiceTest {
         assertThat(result.raceScores().get(race.getId())).isEqualTo(new int[]{10, 8});
     }
 
+    @Nested
+    class FinderMethodsTest {
+
+        @Test
+        void whenFindActiveSeason_thenReturnsOptionalFromRepository() {
+            // given
+            var season = createSeason("Active Season");
+            season.setActive(true);
+            when(seasonRepository.findByActiveTrue()).thenReturn(Optional.of(season));
+
+            // when
+            var result = service.findActiveSeason();
+
+            // then
+            assertThat(result).isPresent();
+            assertThat(result.get().getName()).isEqualTo("Active Season");
+            verify(seasonRepository).findByActiveTrue();
+        }
+
+        @Test
+        void givenNoActiveSeason_whenFindActiveSeason_thenReturnsEmpty() {
+            // given
+            when(seasonRepository.findByActiveTrue()).thenReturn(Optional.empty());
+
+            // when
+            var result = service.findActiveSeason();
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void whenFindByIdOptional_thenReturnsOptionalFromRepository() {
+            // given
+            var season = createSeason("Some Season");
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var result = service.findByIdOptional(season.getId());
+
+            // then
+            assertThat(result).isPresent();
+            assertThat(result.get().getName()).isEqualTo("Some Season");
+        }
+
+        @Test
+        void givenNonExistentId_whenFindByIdOptional_thenReturnsEmpty() {
+            // given
+            var id = UUID.randomUUID();
+            when(seasonRepository.findById(id)).thenReturn(Optional.empty());
+
+            // when
+            var result = service.findByIdOptional(id);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+    }
+
     private Season createSeason(String name) {
         var season = new Season(name);
         season.setId(UUID.randomUUID());

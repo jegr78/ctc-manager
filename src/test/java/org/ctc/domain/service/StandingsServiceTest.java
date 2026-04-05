@@ -389,6 +389,96 @@ class StandingsServiceTest {
         }
     }
 
+    @Nested
+    class CalculateStandingsWithBuchholzTest {
+
+        @Test
+        void givenSwissSeason_whenCalculateStandingsWithBuchholz_thenStandingsSortedByPointsThenBuchholzThenPointDiffThenPointsFor() {
+            // given
+            season.setFormat(SeasonFormat.SWISS);
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            season.addTeam(clr);
+
+            // Matchday 1: TNR beats P1R (70:46), CLR has bye
+            var md1 = new Matchday(season, "Round 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+
+            // Matchday 2: TNR beats CLR (60:50), P1R has bye
+            var md2 = new Matchday(season, "Round 2", 2);
+            var match2 = createMatchWithScore(md2, tnr, clr, 60, 50);
+
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match1, match2));
+
+            // Races for Buchholz opponent tracking
+            var race1 = new Race();
+            race1.setId(UUID.randomUUID());
+            race1.setMatch(match1);
+            race1.setMatchday(md1);
+            var race2 = new Race();
+            race2.setId(UUID.randomUUID());
+            race2.setMatch(match2);
+            race2.setMatchday(md2);
+            when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId()))
+                    .thenReturn(List.of(race1, race2));
+
+            // when
+            var standings = standingsService.calculateStandingsWithBuchholz(season.getId());
+
+            // then
+            assertFalse(standings.isEmpty());
+            // TNR: 6pts, played P1R(0pts) + CLR(0pts), Buchholz=0
+            // P1R: 0pts, played TNR(6pts), Buchholz=6
+            // CLR: 0pts, played TNR(6pts), Buchholz=6
+            assertEquals(tnr.getId(), standings.get(0).getTeam().getId());
+            // P1R and CLR both have 0 points and Buchholz 6, sorted by pointDiff then pointsFor
+            // P1R: pointsFor=46, pointsAgainst=70, diff=-24
+            // CLR: pointsFor=50, pointsAgainst=60, diff=-10
+            // CLR should be ahead of P1R (better point difference)
+            assertEquals(clr.getId(), standings.get(1).getTeam().getId());
+            assertEquals(p1r.getId(), standings.get(2).getTeam().getId());
+        }
+
+        @Test
+        void givenNonSwissSeason_whenCalculateStandingsWithBuchholz_thenBuchholzIsZeroAndStandingsSortedNormally() {
+            // given
+            season.setFormat(SeasonFormat.LEAGUE);
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+
+            var md1 = new Matchday(season, "Spieltag 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match1));
+            when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId()))
+                    .thenReturn(List.of());
+
+            // when
+            var standings = standingsService.calculateStandingsWithBuchholz(season.getId());
+
+            // then
+            assertEquals(2, standings.size());
+            assertEquals(tnr.getId(), standings.get(0).getTeam().getId());
+            assertEquals(0, standings.get(0).getBuchholz());
+            assertEquals(0, standings.get(1).getBuchholz());
+        }
+
+        @Test
+        void givenNoMatches_whenCalculateStandingsWithBuchholz_thenEmptyList() {
+            // given
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of());
+
+            // when
+            var standings = standingsService.calculateStandingsWithBuchholz(season.getId());
+
+            // then
+            assertTrue(standings.isEmpty());
+        }
+    }
+
     private Match createMatchWithScore(Matchday matchday, Team home, Team away, int homeScore, int awayScore) {
         var match = new Match(matchday, home, away);
         match.setId(UUID.randomUUID());
