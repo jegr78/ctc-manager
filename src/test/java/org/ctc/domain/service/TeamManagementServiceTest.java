@@ -20,6 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -290,7 +292,7 @@ class TeamManagementServiceTest {
             var logo = mock(MultipartFile.class);
 
             when(teamRepository.findById(id)).thenReturn(Optional.of(team));
-            when(fileStorageService.storeImage("teams", id, logo)).thenThrow(new RuntimeException("IO error"));
+            when(fileStorageService.storeImage("teams", id, logo)).thenThrow(new IOException("IO error"));
 
             // when / then
             assertThatThrownBy(() -> service.uploadLogo(id, logo))
