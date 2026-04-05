@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.DriverForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
@@ -58,15 +57,10 @@ class DriverServiceTest {
         @Test
         void givenNewDriver_whenSave_thenDriverPersisted() {
             // given
-            var form = new DriverForm();
-            form.setPsnId("NewDriver_PSN");
-            form.setNickname("New Driver");
-            form.setActive(true);
-
             when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = driverService.save(form);
+            var result = driverService.save(null, "NewDriver_PSN", "New Driver", true, List.of());
 
             // then
             assertThat(result.getPsnId()).isEqualTo("NewDriver_PSN");
@@ -81,17 +75,11 @@ class DriverServiceTest {
             var existing = new Driver("OldPsn", "Old Nick");
             existing.setId(id);
 
-            var form = new DriverForm();
-            form.setId(id);
-            form.setPsnId("NewPsn");
-            form.setNickname("New Nick");
-            form.setActive(false);
-
             when(driverRepository.findById(id)).thenReturn(Optional.of(existing));
             when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = driverService.save(form);
+            var result = driverService.save(id, "NewPsn", "New Nick", false, List.of());
 
             // then
             assertThat(result.getPsnId()).isEqualTo("NewPsn");
@@ -107,18 +95,11 @@ class DriverServiceTest {
             existing.setId(id);
             existing.setAliases(new ArrayList<>());
 
-            var form = new DriverForm();
-            form.setId(id);
-            form.setPsnId("Driver1");
-            form.setNickname("Driver One");
-            form.setActive(true);
-            form.setAliases(List.of("OldPsn1", "OldPsn2"));
-
             when(driverRepository.findById(id)).thenReturn(Optional.of(existing));
             when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = driverService.save(form);
+            var result = driverService.save(id, "Driver1", "Driver One", true, List.of("OldPsn1", "OldPsn2"));
 
             // then
             assertThat(result.getAliases()).hasSize(2);
@@ -137,18 +118,11 @@ class DriverServiceTest {
             aliasesList.add(new PsnAlias(existing, "OldPsn2"));
             existing.setAliases(aliasesList);
 
-            var form = new DriverForm();
-            form.setId(id);
-            form.setPsnId("Driver1");
-            form.setNickname("Driver One");
-            form.setActive(true);
-            form.setAliases(List.of("OldPsn1"));
-
             when(driverRepository.findById(id)).thenReturn(Optional.of(existing));
             when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = driverService.save(form);
+            var result = driverService.save(id, "Driver1", "Driver One", true, List.of("OldPsn1"));
 
             // then
             assertThat(result.getAliases()).hasSize(1);
@@ -158,16 +132,10 @@ class DriverServiceTest {
         @Test
         void givenEmptyAliasStrings_whenSave_thenBlankAliasesIgnored() {
             // given
-            var form = new DriverForm();
-            form.setPsnId("Driver1");
-            form.setNickname("Driver One");
-            form.setActive(true);
-            form.setAliases(List.of("ValidAlias", "", "  "));
-
             when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = driverService.save(form);
+            var result = driverService.save(null, "Driver1", "Driver One", true, List.of("ValidAlias", "", "  "));
 
             // then
             assertThat(result.getAliases()).hasSize(1);
