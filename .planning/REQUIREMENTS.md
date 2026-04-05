@@ -21,7 +21,7 @@ Requirements for Codebase Concerns Cleanup. Each maps to roadmap phases.
 
 ### Features
 
-- [ ] **FEAT-01**: Alltime Standings zeigt cross-season Team-Aggregation (StandingsService.calculateAlltimeStandings())
+- [x] **FEAT-01**: Alltime Standings zeigt cross-season Team-Aggregation (StandingsService.calculateAlltimeStandings())
 - [x] **FEAT-02**: StandingsController enthaelt keine Business-Logik mehr -- Buchholz-Berechnung und Swiss-Sorting in StandingsService
 
 ### Security
@@ -60,7 +60,7 @@ None deferred -- all concerns addressed in v1.1.
 | FEAT-02 | Phase 7 | Complete |
 | ERRH-01 | Phase 8 | Pending |
 | QUAL-02 | Phase 8 | Pending |
-| FEAT-01 | Phase 9 | Pending |
+| FEAT-01 | Phase 9 | Complete |
 | ARCH-03 | Phase 10 | Pending |
 | ARCH-04 | Phase 10 | Pending |
 | ARCH-05 | Phase 10 | Pending |
