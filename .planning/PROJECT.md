@@ -48,15 +48,15 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 - ✓ SSRF-Schutz fuer FileStorageService.storeFromUrl() — Phase 5
 - ✓ SSRF Hostname-Validierung (private IPs, localhost, link-local blockiert) — Phase 6
 - ✓ Path-Traversal-Schutz in store(), storeImage(), storeFromUrl() — Phase 6
+- ✓ Domain Services von Admin DTOs entkoppelt (10 Services, 0 admin.dto Imports) — Phase 7
+- ✓ Residuale Repository-Zugriffe aus 5 Controllern entfernt — Phase 7
+- ✓ StandingsController Business-Logik (Buchholz/Swiss-Sorting) in StandingsService verschoben — Phase 7
 
 ### Active (v1.1)
 
-- [ ] Layer-Violation: Domain Services von Admin DTOs entkoppeln
-- [ ] Residuale Repository-Zugriffe aus 5 Controllern entfernen
 - [ ] TemplateEditorController Duplikation beseitigen (generischer Ansatz)
 - [ ] 60+ catch(Exception e) durch spezifische Exceptions ersetzen
 - [ ] Alltime Standings implementieren
-- [ ] StandingsController Business-Logik in Service verschieben
 - [ ] Inline-Styles in Admin Templates durch CSS-Klassen ersetzen
 - [ ] Grosse Service-Klassen aufteilen (PlayoffService, RaceService)
 - [ ] Unbounded findAll() eingrenzen
@@ -113,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 after Phase 6 completion*
+*Last updated: 2026-04-05 after Phase 7 completion*
