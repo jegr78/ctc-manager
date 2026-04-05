@@ -9,7 +9,7 @@ Requirements for Codebase Concerns Cleanup. Each maps to roadmap phases.
 
 ### Architecture
 
-- [ ] **ARCH-01**: Domain Services importieren keine Admin DTOs mehr -- Entkopplung durch Domain-DTOs oder Controller-Konvertierung
+- [x] **ARCH-01**: Domain Services importieren keine Admin DTOs mehr -- Entkopplung durch Domain-DTOs oder Controller-Konvertierung
 - [x] **ARCH-02**: Alle 5 Controller (Standings, PowerRankings, Playoff, TeamCard, CsvImport) nutzen Services statt direkte Repository-Injections
 - [ ] **ARCH-03**: TemplateEditorController nutzt generischen Ansatz mit Map<String, AbstractGraphicService> statt 30+ Copy-Paste-Bloecke
 - [ ] **ARCH-04**: PlayoffService in fokussierte Services aufgeteilt (Bracket-View, Seeding separiert)
@@ -55,7 +55,7 @@ None deferred -- all concerns addressed in v1.1.
 |-------------|-------|--------|
 | SECU-01 | Phase 6 | Complete |
 | SECU-02 | Phase 6 | Complete |
-| ARCH-01 | Phase 7 | Pending |
+| ARCH-01 | Phase 7 | Complete |
 | ARCH-02 | Phase 7 | Complete |
 | FEAT-02 | Phase 7 | Complete |
 | ERRH-01 | Phase 8 | Pending |

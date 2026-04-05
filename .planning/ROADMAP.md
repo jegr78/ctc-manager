@@ -57,7 +57,7 @@ Plans:
 
 Plans:
 - [x] 07-01-PLAN.md — Service extensions (Buchholz + finders) and controller repository removal
-- [ ] 07-02-PLAN.md — Simple DTO decoupling (Car, Track, Driver, RaceScoring, MatchScoring)
+- [x] 07-02-PLAN.md — Simple DTO decoupling (Car, Track, Driver, RaceScoring, MatchScoring)
 - [ ] 07-03-PLAN.md — Complex DTO decoupling (Season, Team, Playoff, Matchday, Race)
 
 ### Phase 8: Exception Refinement

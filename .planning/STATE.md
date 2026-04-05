@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Codebase Concerns Cleanup
 status: executing
-stopped_at: Completed 07-01-PLAN.md
-last_updated: "2026-04-05T10:27:50.220Z"
+stopped_at: Completed 07-02-PLAN.md
+last_updated: "2026-04-05T10:34:59.271Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 4
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 07 (layer-cleanup) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-05
 
@@ -45,6 +45,7 @@ Progress: [░░░░░░░░░░] 0%
 | 05 -- Security | 3/3 | ~4min |
 | Phase 06 P01 | 10min | 2 tasks | 2 files |
 | Phase 07 P01 | 9min | 2 tasks | 13 files |
+| Phase 07 P02 | 5min | 2 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -55,6 +56,7 @@ Full history in .planning/milestones/v1.0-ROADMAP.md.
 
 - [Phase 06]: String-based SSRF hostname blocklist without DNS resolution; defense-in-depth path traversal with raw filename + resolved path checks
 - [Phase 07]: findActiveSeason() uses stream filter to tolerate multiple active seasons; Buchholz logic duplicated to avoid circular dependency
+- [Phase 07]: Primitive parameters for decoupled service save() methods instead of wrapper records
 
 ### Blockers/Concerns
 
@@ -68,6 +70,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T10:27:50.217Z
-Stopped at: Completed 07-01-PLAN.md
+Last session: 2026-04-05T10:34:59.268Z
+Stopped at: Completed 07-02-PLAN.md
 Resume file: None
