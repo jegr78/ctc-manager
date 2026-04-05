@@ -28,7 +28,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 
 ## Current State (after v1.0)
 
-- **Codebase:** 13.526 LOC Java (Prod) + 17.021 LOC Java (Tests), 777 Tests, 82%+ Coverage
+- **Codebase:** 13.526 LOC Java (Prod) + 17.021 LOC Java (Tests), 818 Tests, 82%+ Coverage
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), open (dev/local), SSRF-geschuetzt
 - **Architecture:** Saubere 3-Tier (Controller → Service → Repository), keine God Services, zentrale Exception-Behandlung
@@ -57,7 +57,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 ### Active (v1.1)
 
 - [ ] TemplateEditorController Duplikation beseitigen (generischer Ansatz)
-- [ ] Alltime Standings implementieren
+- ✓ Alltime Standings implementieren — Phase 9
 - [ ] Inline-Styles in Admin Templates durch CSS-Klassen ersetzen
 - [ ] Grosse Service-Klassen aufteilen (PlayoffService, RaceService)
 
