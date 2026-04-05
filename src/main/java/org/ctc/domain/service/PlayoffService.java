@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.SeedForm;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -416,17 +415,17 @@ public class PlayoffService {
     }
 
     @Transactional
-    public void saveSeed(UUID playoffId, SeedForm form) {
-        for (var entry : form.getSeeds()) {
-            if (entry.getTeamId() != null) {
-                seedTeam(entry.getMatchupId(), entry.getTeamId(), entry.getSlot());
+    public void saveSeed(UUID playoffId, List<SeedEntry> seeds) {
+        for (var entry : seeds) {
+            if (entry.teamId() != null) {
+                seedTeam(entry.matchupId(), entry.teamId(), entry.slot());
             }
         }
 
         Map<UUID, Integer> teamSeeds = new LinkedHashMap<>();
-        for (var entry : form.getSeeds()) {
-            if (entry.getTeamId() != null && entry.getSeedNumber() != null) {
-                teamSeeds.put(entry.getTeamId(), entry.getSeedNumber());
+        for (var entry : seeds) {
+            if (entry.teamId() != null && entry.seedNumber() != null) {
+                teamSeeds.put(entry.teamId(), entry.seedNumber());
             }
         }
         if (!teamSeeds.isEmpty()) {
@@ -558,7 +557,9 @@ public class PlayoffService {
                 .getPlayoff().getSeason().getId();
     }
 
-    // --- Record types for service return data ---
+    // --- Record types for service API contracts ---
+
+    public record SeedEntry(UUID matchupId, int slot, UUID teamId, Integer seedNumber) {}
 
     public record PlayoffListData(Playoff playoff, PlayoffBracketView bracketView,
                                    List<Season> allSeasons, UUID selectedSeasonId) {}

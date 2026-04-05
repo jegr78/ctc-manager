@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.SeasonForm;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -544,16 +543,8 @@ class SeasonManagementServiceTest {
     }
 
     @Test
-    void givenNewSeasonForm_whenSave_thenCreatesSeasonWithScoringLookups() {
+    void givenNewSeasonData_whenSave_thenCreatesSeasonWithScoringLookups() {
         // given
-        var form = new SeasonForm();
-        form.setName("New Season");
-        form.setYear(2026);
-        form.setNumber(1);
-        form.setActive(true);
-        form.setFormat(SeasonFormat.LEAGUE);
-        form.setLegs(1);
-
         var rs = new RaceScoring();
         rs.setId(UUID.randomUUID());
         var ms = new MatchScoring();
@@ -564,7 +555,9 @@ class SeasonManagementServiceTest {
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        var result = service.save(form, rs.getId(), ms.getId());
+        var result = service.save(null, "New Season", 2026, 1, null,
+                null, null, true, SeasonFormat.LEAGUE, null, 1, null,
+                rs.getId(), ms.getId());
 
         // then
         assertThat(result.getName()).isEqualTo("New Season");
@@ -574,7 +567,7 @@ class SeasonManagementServiceTest {
     }
 
     @Test
-    void givenExistingSeasonForm_whenSave_thenUpdatesSeasonFields() {
+    void givenExistingSeasonData_whenSave_thenUpdatesSeasonFields() {
         // given
         var existing = createSeason("Old Name");
         var rs = new RaceScoring();
@@ -584,22 +577,15 @@ class SeasonManagementServiceTest {
         ms.setId(UUID.randomUUID());
         existing.setMatchScoring(ms);
 
-        var form = new SeasonForm();
-        form.setId(existing.getId());
-        form.setName("Updated Name");
-        form.setYear(2027);
-        form.setNumber(2);
-        form.setActive(false);
-        form.setFormat(SeasonFormat.SWISS);
-        form.setLegs(2);
-
         when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
         when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
         when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        var result = service.save(form, rs.getId(), ms.getId());
+        var result = service.save(existing.getId(), "Updated Name", 2027, 2, null,
+                null, null, false, SeasonFormat.SWISS, null, 2, null,
+                rs.getId(), ms.getId());
 
         // then
         assertThat(result.getName()).isEqualTo("Updated Name");
