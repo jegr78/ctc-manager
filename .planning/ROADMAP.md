@@ -71,8 +71,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Controller exception narrowing (8 controllers, 25 catch blocks)
-- [ ] 08-02-PLAN.md — Service exception narrowing + findAll() query scoping (5 services + 2 query fixes)
+- [x] 08-01-PLAN.md — Controller exception narrowing (8 controllers, 25 catch blocks)
+- [x] 08-02-PLAN.md — Service exception narrowing + findAll() query scoping (5 services + 2 query fixes)
 
 ### Phase 9: Alltime Standings
 **Goal**: Users can view aggregated team standings across all seasons

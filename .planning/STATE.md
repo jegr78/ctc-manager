@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Codebase Concerns Cleanup
-status: verifying
+status: executing
 stopped_at: Phase 8 context gathered
-last_updated: "2026-04-05T10:59:52.822Z"
-last_activity: 2026-04-05
+last_updated: "2026-04-05T11:10:45.069Z"
+last_activity: 2026-04-05 -- Phase 08 execution started
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 4
+  total_plans: 6
   completed_plans: 4
   percent: 0
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Phase 07 — layer-cleanup
+**Current focus:** Phase 08 — exception-refinement
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-05
+Phase: 08 (exception-refinement) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 08
+Last activity: 2026-04-05 -- Phase 08 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
