@@ -56,6 +56,8 @@ public class DriverRankingService {
     @Transactional(readOnly = true)
     public List<DriverRanking> calculateAlltimeRanking() {
         List<RaceResult> results = raceResultRepository.findByRacePlayoffMatchupIsNull();
+        // findAll() acceptable: alltime ranking genuinely needs all season-driver records
+        // across all seasons. Dataset is small (dozens of drivers x few seasons = hundreds of records).
         List<SeasonDriver> allSeasonDrivers = seasonDriverRepository.findAll();
 
         // For each driver, find their most recent team (by season name), resolved to parent

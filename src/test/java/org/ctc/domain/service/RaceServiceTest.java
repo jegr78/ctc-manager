@@ -79,9 +79,8 @@ class RaceServiceTest {
     }
 
     @Test
-    void givenNoFilter_whenGetRaceListData_thenReturnsAll() {
+    void givenNoFilter_whenGetRaceListData_thenReturnsEmptyList() {
         // given
-        when(raceRepository.findAll()).thenReturn(List.of());
         when(seasonRepository.findAll()).thenReturn(List.of());
 
         // when
@@ -89,7 +88,7 @@ class RaceServiceTest {
 
         // then
         assertThat(result.races()).isEmpty();
-        verify(raceRepository).findAll();
+        verify(raceRepository, never()).findAll();
     }
 
     // --- saveRace ---

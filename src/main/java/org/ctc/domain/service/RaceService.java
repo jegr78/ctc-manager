@@ -86,7 +86,7 @@ public class RaceService {
             races = raceRepository.findByMatchdaySeasonId(seasonId);
             selectedSeasonId = seasonId;
         } else {
-            races = raceRepository.findAll();
+            races = List.of();
         }
 
         var raceScores = new HashMap<UUID, int[]>();
