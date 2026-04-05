@@ -50,7 +50,7 @@ public class Gt7SyncController {
                 msg += " (" + result.errors().size() + " warnings)";
             }
             redirectAttributes.addFlashAttribute("successMessage", msg);
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             log.error("GT7 sync execute failed", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Import failed: " + e.getMessage());
         }

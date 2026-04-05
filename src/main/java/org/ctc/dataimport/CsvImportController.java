@@ -145,7 +145,7 @@ public class CsvImportController {
                 }
                 redirectAttributes.addFlashAttribute("successMessage", msg);
             }
-        } catch (IOException | IllegalStateException e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Error executing import", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Import error: " + e.getMessage());
         }
