@@ -1,7 +1,6 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.CreateMatchdayRequest;
-import org.ctc.admin.dto.MatchdayDto;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
@@ -173,13 +172,13 @@ public class MatchdayController {
 
     @GetMapping("/by-season")
     @ResponseBody
-    public List<MatchdayDto> matchdaysBySeason(@RequestParam UUID seasonId) {
+    public List<MatchdayService.MatchdayData> matchdaysBySeason(@RequestParam UUID seasonId) {
         return matchdayService.getMatchdaysBySeason(seasonId);
     }
 
     @PostMapping("/create-inline")
     @ResponseBody
-    public ResponseEntity<MatchdayDto> createInline(@Valid @RequestBody CreateMatchdayRequest request) {
+    public ResponseEntity<MatchdayService.MatchdayData> createInline(@Valid @RequestBody CreateMatchdayRequest request) {
         var dto = matchdayService.createInline(request.seasonId(), request.label());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }

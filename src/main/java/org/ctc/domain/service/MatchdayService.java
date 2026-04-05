@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.MatchdayDto;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.RaceLineup;
@@ -32,6 +31,7 @@ public class MatchdayService {
 
     // --- Return types ---
 
+    public record MatchdayData(UUID id, String label, int sortIndex) {}
     public record MatchdayListData(List<Matchday> matchdays, UUID selectedSeasonId, List<Season> seasons) {}
     public record MatchdayDetailData(Matchday matchday, Map<String, List<RaceLineup>> lineupsByTeam) {}
 
@@ -118,16 +118,16 @@ public class MatchdayService {
 
     // --- By season ID (JSON API) ---
 
-    public List<MatchdayDto> getMatchdaysBySeason(UUID seasonId) {
+    public List<MatchdayData> getMatchdaysBySeason(UUID seasonId) {
         return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId).stream()
-                .map(md -> new MatchdayDto(md.getId(), md.getLabel(), md.getSortIndex()))
+                .map(md -> new MatchdayData(md.getId(), md.getLabel(), md.getSortIndex()))
                 .toList();
     }
 
     // --- Create inline (JSON API) ---
 
     @Transactional
-    public MatchdayDto createInline(UUID seasonId, String label) {
+    public MatchdayData createInline(UUID seasonId, String label) {
         var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Season not found: " + seasonId));
@@ -149,6 +149,6 @@ public class MatchdayService {
         var matchday = matchdayRepository.save(new Matchday(season, label, nextSortIndex));
         log.info("Created matchday inline: {} (season {})", matchday.getLabel(), season.getName());
 
-        return new MatchdayDto(matchday.getId(), matchday.getLabel(), matchday.getSortIndex());
+        return new MatchdayData(matchday.getId(), matchday.getLabel(), matchday.getSortIndex());
     }
 }
