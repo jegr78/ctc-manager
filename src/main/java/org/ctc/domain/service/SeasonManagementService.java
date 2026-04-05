@@ -57,7 +57,9 @@ public class SeasonManagementService {
 
     @Transactional(readOnly = true)
     public Optional<Season> findActiveSeason() {
-        return seasonRepository.findByActiveTrue();
+        return findAll().stream()
+                .filter(Season::isActive)
+                .findFirst();
     }
 
     @Transactional(readOnly = true)

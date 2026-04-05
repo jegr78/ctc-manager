@@ -698,7 +698,7 @@ class SeasonManagementServiceTest {
             // given
             var season = createSeason("Active Season");
             season.setActive(true);
-            when(seasonRepository.findByActiveTrue()).thenReturn(Optional.of(season));
+            when(seasonRepository.findAll()).thenReturn(List.of(season));
 
             // when
             var result = service.findActiveSeason();
@@ -706,13 +706,14 @@ class SeasonManagementServiceTest {
             // then
             assertThat(result).isPresent();
             assertThat(result.get().getName()).isEqualTo("Active Season");
-            verify(seasonRepository).findByActiveTrue();
         }
 
         @Test
         void givenNoActiveSeason_whenFindActiveSeason_thenReturnsEmpty() {
             // given
-            when(seasonRepository.findByActiveTrue()).thenReturn(Optional.empty());
+            var inactive = createSeason("Inactive Season");
+            inactive.setActive(false);
+            when(seasonRepository.findAll()).thenReturn(List.of(inactive));
 
             // when
             var result = service.findActiveSeason();
