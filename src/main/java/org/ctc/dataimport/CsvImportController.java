@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.util.*;
 
 @Slf4j
@@ -47,7 +48,7 @@ public class CsvImportController {
             addMatchdayName(model, metadata);
             addCommonAttributes(model);
             return "admin/import-preview";
-        } catch (Exception e) {
+        } catch (IOException e) {
             log.error("Error parsing CSV", e);
             addCommonAttributes(model);
             model.addAttribute("errorMessage", "Error reading CSV: " + e.getMessage());
@@ -78,7 +79,7 @@ public class CsvImportController {
             addMatchdayName(model, metadata);
             addCommonAttributes(model);
             return "admin/import-preview";
-        } catch (Exception e) {
+        } catch (IOException | IllegalStateException e) {
             log.error("Error reading Google Sheet", e);
             addCommonAttributes(model);
             model.addAttribute("errorMessage", "Error reading Google Sheet: " + e.getMessage());
@@ -144,7 +145,7 @@ public class CsvImportController {
                 }
                 redirectAttributes.addFlashAttribute("successMessage", msg);
             }
-        } catch (Exception e) {
+        } catch (IOException | IllegalStateException e) {
             log.error("Error executing import", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Import error: " + e.getMessage());
         }
