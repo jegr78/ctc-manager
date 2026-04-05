@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.RaceForm;
+import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.domain.service.RaceAttachmentService;
 import org.ctc.domain.service.RaceGraphicService;
 import org.ctc.domain.service.RaceService;
@@ -67,7 +68,7 @@ public class RaceController {
     @GetMapping("/new")
     public String create(@RequestParam(required = false) UUID matchdayId, Model model) {
         var data = raceService.getNewRaceFormData(matchdayId);
-        model.addAttribute("raceForm", data.form());
+        model.addAttribute("raceForm", toRaceForm(data.data()));
         model.addAttribute("matchdays", data.matchdays());
         model.addAttribute("teams", data.teams());
         model.addAttribute("seasonCars", data.seasonCars());
@@ -80,7 +81,7 @@ public class RaceController {
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
         var data = raceService.getRaceFormData(id);
-        model.addAttribute("raceForm", data.form());
+        model.addAttribute("raceForm", toRaceForm(data.data()));
         model.addAttribute("matchdays", data.matchdays());
         model.addAttribute("teams", data.teams());
         model.addAttribute("seasonCars", data.seasonCars());
@@ -93,7 +94,7 @@ public class RaceController {
     @GetMapping("/{id}/results")
     public String results(@PathVariable UUID id, Model model) {
         var data = raceService.getResultsFormData(id);
-        model.addAttribute("raceForm", data.form());
+        model.addAttribute("raceForm", toRaceForm(data.data()));
         model.addAttribute("race", data.race());
         model.addAttribute("raceScoring", data.raceScoring());
         return "admin/race-results";
@@ -101,7 +102,14 @@ public class RaceController {
 
     @PostMapping("/save")
     public String save(@ModelAttribute RaceForm form, RedirectAttributes redirectAttributes) {
-        var result = raceService.saveRace(form);
+        var result = raceService.saveRace(
+                form.getId(), form.getMatchdayId(), form.getHomeTeamId(), form.getAwayTeamId(),
+                form.getTrackId(), form.getCarId(), form.getDateTime(),
+                form.getNumberOfLaps(), form.getTyreWearMultiplier(),
+                form.getFuelConsumptionMultiplier(), form.getRefuelingSpeed(),
+                form.getInitialFuel(), form.getNumberOfRequiredPitStops(),
+                form.getTimeProgressionMultiplier(), form.getWeather(),
+                form.getTimeOfDay(), form.getAvailableTyres(), form.getMandatoryTyres());
         if (!result.success()) {
             redirectAttributes.addFlashAttribute("errorMessage", result.message());
             return "redirect:/admin/races/" + (result.raceId() != null
@@ -115,7 +123,12 @@ public class RaceController {
     @PostMapping("/{id}/results")
     public String saveResults(@PathVariable UUID id, @ModelAttribute RaceForm form,
                               RedirectAttributes redirectAttributes) {
-        String message = raceService.saveResults(id, form.getResults());
+        var resultData = form.getResults().stream()
+                .map(rf -> new RaceService.RaceResultData(
+                        rf.getDriverId(), rf.getDriverPsnId(), rf.getTeamShortName(),
+                        rf.getPosition(), rf.getQualiPosition(), rf.isFastestLap()))
+                .toList();
+        String message = raceService.saveResults(id, resultData);
         redirectAttributes.addFlashAttribute("successMessage", message);
         return "redirect:/admin/races/" + id + "/results";
     }
@@ -241,5 +254,40 @@ public class RaceController {
             @RequestParam UUID homeTeamId,
             @RequestParam(required = false) UUID excludeRaceId) {
         return raceService.getUsedSelections(seasonId, homeTeamId, excludeRaceId);
+    }
+
+    // --- Private helper: Map domain RaceData to admin RaceForm for Thymeleaf templates ---
+
+    private RaceForm toRaceForm(RaceService.RaceData data) {
+        var form = new RaceForm();
+        form.setId(data.id());
+        form.setMatchdayId(data.matchdayId());
+        form.setHomeTeamId(data.homeTeamId());
+        form.setAwayTeamId(data.awayTeamId());
+        form.setTrackId(data.trackId());
+        form.setCarId(data.carId());
+        form.setDateTime(data.dateTime());
+        form.setNumberOfLaps(data.numberOfLaps());
+        form.setTyreWearMultiplier(data.tyreWearMultiplier());
+        form.setFuelConsumptionMultiplier(data.fuelConsumptionMultiplier());
+        form.setRefuelingSpeed(data.refuelingSpeed());
+        form.setInitialFuel(data.initialFuel());
+        form.setNumberOfRequiredPitStops(data.numberOfRequiredPitStops());
+        form.setTimeProgressionMultiplier(data.timeProgressionMultiplier());
+        form.setWeather(data.weather());
+        form.setTimeOfDay(data.timeOfDay());
+        form.setAvailableTyres(data.availableTyres());
+        form.setMandatoryTyres(data.mandatoryTyres());
+        for (var rd : data.results()) {
+            var rf = new RaceResultForm();
+            rf.setDriverId(rd.driverId());
+            rf.setDriverPsnId(rd.driverPsnId());
+            rf.setTeamShortName(rd.teamShortName());
+            rf.setPosition(rd.position());
+            rf.setQualiPosition(rd.qualiPosition());
+            rf.setFastestLap(rd.fastestLap());
+            form.getResults().add(rf);
+        }
+        return form;
     }
 }
