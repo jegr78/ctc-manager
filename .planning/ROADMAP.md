@@ -7,15 +7,17 @@
 ## Phases
 
 <details>
-<summary>✅ v1.0 Technical Debt Cleanup (Phases 1-5) — SHIPPED 2026-04-04</summary>
+<summary>v1.0 Technical Debt Cleanup (Phases 1-5) -- SHIPPED 2026-04-04</summary>
 
-- [x] Phase 1: Exception Infrastructure (2/2 plans) — completed 2026-04-03
-- [x] Phase 2: Service Layer Extraction (4/4 plans) — completed 2026-04-04
-- [x] Phase 3: God Service Split (2/2 plans) — completed 2026-04-04
-- [x] Phase 4: Database Optimization (1/1 plan) — completed 2026-04-04
-- [x] Phase 5: Security (3/3 plans) — completed 2026-04-04
+- [x] Phase 1: Exception Infrastructure (2/2 plans) -- completed 2026-04-03
+- [x] Phase 2: Service Layer Extraction (4/4 plans) -- completed 2026-04-04
+- [x] Phase 3: God Service Split (2/2 plans) -- completed 2026-04-04
+- [x] Phase 4: Database Optimization (1/1 plan) -- completed 2026-04-04
+- [x] Phase 5: Security (3/3 plans) -- completed 2026-04-04
 
 </details>
+
+- [x] Phase 9: Alltime Standings (1/1 plan) -- completed 2026-04-05
 
 ## Progress
 
@@ -26,3 +28,4 @@
 | 3. God Service Split | v1.0 | 2/2 | Complete | 2026-04-04 |
 | 4. Database Optimization | v1.0 | 1/1 | Complete | 2026-04-04 |
 | 5. Security | v1.0 | 3/3 | Complete | 2026-04-04 |
+| 9. Alltime Standings | v2 | 1/1 | Complete | 2026-04-05 |

@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 ## Current Position
 
-Milestone: v1.0 Technical Debt Cleanup — COMPLETE
-Phase: All 5 phases complete (12/12 plans)
-Status: Milestone archived, ready for next milestone
-Last activity: 2026-04-04 - Completed quick task 260404-jh8: Fix release workflow RELEASE_TOKEN
+Phase: 09-alltime-standings
+Current Plan: 1/1 complete
+Status: Phase 09 complete
+Last activity: 2026-04-05 - Completed 09-01 Alltime Standings Implementation
 
 Progress: [██████████] 100%
 
@@ -48,8 +48,11 @@ Progress: [██████████] 100%
 
 ### Decisions
 
-All decisions logged in PROJECT.md Key Decisions table.
+All v1.0 decisions logged in PROJECT.md Key Decisions table.
 Full history in .planning/milestones/v1.0-ROADMAP.md.
+
+- Phase 09: Reused TeamStanding with merge() for alltime aggregation (no new class needed)
+- Phase 09: Delegated to calculateStandings(seasonId) per season for scoring rule consistency
 
 ### Blockers/Concerns
 
@@ -63,6 +66,6 @@ None — all resolved during v1.0.
 
 ## Session Continuity
 
-Last session: 2026-04-04
-Stopped at: v1.0 milestone archived
+Last session: 2026-04-05
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None
