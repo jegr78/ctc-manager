@@ -2,10 +2,9 @@ package org.ctc.domain.service;
 
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.MatchScoring;
-import org.ctc.domain.model.Race;
+import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.MatchRepository;
-import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -24,7 +22,6 @@ public class StandingsService {
     private final MatchRepository matchRepository;
     private final TeamRepository teamRepository;
     private final SeasonRepository seasonRepository;
-    private final RaceRepository raceRepository;
 
     @Transactional(readOnly = true)
     public List<TeamStanding> calculateStandings(UUID seasonId) {
@@ -56,57 +53,30 @@ public class StandingsService {
     }
 
     @Transactional(readOnly = true)
-    public List<TeamStanding> calculateStandingsWithBuchholz(UUID seasonId) {
-        var standings = calculateStandings(seasonId);
-        if (standings.isEmpty()) return standings;
+    public List<TeamStanding> calculateAlltimeStandings() {
+        List<Season> allSeasons = seasonRepository.findAll();
+        Map<UUID, TeamStanding> alltimeMap = new HashMap<>();
 
-        Map<UUID, Integer> buchholzScores = calculateBuchholzScores(seasonId);
-        for (var standing : standings) {
-            standing.setBuchholz(buchholzScores.getOrDefault(standing.getTeam().getId(), 0));
+        for (Season season : allSeasons) {
+            List<TeamStanding> seasonStandings = calculateStandings(season.getId());
+            if (seasonStandings.isEmpty()) continue;
+
+            for (TeamStanding standing : seasonStandings) {
+                Team parentTeam = standing.getTeam().getParentOrSelf();
+                TeamStanding alltime = alltimeMap.computeIfAbsent(
+                    parentTeam.getId(), id -> new TeamStanding(parentTeam));
+                alltime.merge(standing);
+            }
         }
 
-        standings.sort(Comparator
-                .<TeamStanding, Integer>comparing(TeamStanding::getPoints, Comparator.reverseOrder())
-                .thenComparing(TeamStanding::getBuchholz, Comparator.reverseOrder())
-                .thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
-                .thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+        List<TeamStanding> result = new ArrayList<>(alltimeMap.values());
+        result.sort(Comparator
+            .<TeamStanding, Integer>comparing(TeamStanding::getPoints, Comparator.reverseOrder())
+            .thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
+            .thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
 
-        log.debug("Calculated standings with Buchholz for season {}: {} teams", seasonId, standings.size());
-        return standings;
-    }
-
-    private Map<UUID, Integer> calculateBuchholzScores(UUID seasonId) {
-        var season = seasonRepository.findById(seasonId).orElse(null);
-        if (season == null) return Map.of();
-
-        Map<UUID, UUID> successionMap = season.buildSuccessionMap();
-
-        // Build points map from standings
-        var standings = calculateStandings(seasonId);
-        Map<UUID, Integer> pointsMap = standings.stream()
-                .collect(Collectors.toMap(s -> s.getTeam().getId(), TeamStanding::getPoints));
-
-        // Build opponents map from races (same logic as SwissPairingService.getPlayedOpponents)
-        List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(seasonId);
-        Map<UUID, Set<UUID>> opponents = new HashMap<>();
-        for (Race race : races) {
-            if (race.isBye() || race.getAwayTeam() == null) continue;
-            UUID home = successionMap.getOrDefault(race.getHomeTeam().getId(), race.getHomeTeam().getId());
-            UUID away = successionMap.getOrDefault(race.getAwayTeam().getId(), race.getAwayTeam().getId());
-            opponents.computeIfAbsent(home, k -> new HashSet<>()).add(away);
-            opponents.computeIfAbsent(away, k -> new HashSet<>()).add(home);
-        }
-
-        // Calculate Buchholz as sum of opponents' points
-        Map<UUID, Integer> buchholz = new HashMap<>();
-        for (var entry : opponents.entrySet()) {
-            int sum = entry.getValue().stream()
-                    .mapToInt(oppId -> pointsMap.getOrDefault(oppId, 0))
-                    .sum();
-            buchholz.put(entry.getKey(), sum);
-        }
-
-        return buchholz;
+        log.debug("Calculated alltime standings: {} teams across {} seasons", result.size(), allSeasons.size());
+        return result;
     }
 
     private void processMatch(Match match, Map<UUID, TeamStanding> standingsMap,
@@ -190,6 +160,15 @@ public class StandingsService {
         public void addPointsFor(int pts) { pointsFor += pts; }
         public void addPointsAgainst(int pts) { pointsAgainst += pts; }
         public void setBuchholz(int buchholz) { this.buchholz = buchholz; }
+
+        public void merge(TeamStanding other) {
+            this.wins += other.wins;
+            this.draws += other.draws;
+            this.losses += other.losses;
+            this.points += other.points;
+            this.pointsFor += other.pointsFor;
+            this.pointsAgainst += other.pointsAgainst;
+        }
 
         public Team getTeam() { return team; }
         public int getWins() { return wins; }
