@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Codebase Concerns Cleanup
-status: verifying
-stopped_at: Phase 7 context gathered
-last_updated: "2026-04-04T13:11:15.366Z"
-last_activity: 2026-04-04
+status: executing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-04-05T10:27:50.220Z"
+last_activity: 2026-04-05
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
+  total_plans: 4
+  completed_plans: 2
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Phase 06 — security-hardening
+**Current focus:** Phase 07 — layer-cleanup
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-04-04
+Phase: 07 (layer-cleanup) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-04-05
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -44,6 +44,7 @@ Progress: [░░░░░░░░░░] 0%
 | 04 -- Database Optimization | 1/1 | ~5min |
 | 05 -- Security | 3/3 | ~4min |
 | Phase 06 P01 | 10min | 2 tasks | 2 files |
+| Phase 07 P01 | 9min | 2 tasks | 13 files |
 
 ## Accumulated Context
 
@@ -53,6 +54,7 @@ All decisions logged in PROJECT.md Key Decisions table.
 Full history in .planning/milestones/v1.0-ROADMAP.md.
 
 - [Phase 06]: String-based SSRF hostname blocklist without DNS resolution; defense-in-depth path traversal with raw filename + resolved path checks
+- [Phase 07]: findActiveSeason() uses stream filter to tolerate multiple active seasons; Buchholz logic duplicated to avoid circular dependency
 
 ### Blockers/Concerns
 
@@ -66,6 +68,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-04T13:11:15.356Z
-Stopped at: Phase 7 context gathered
-Resume file: .planning/phases/07-layer-cleanup/07-CONTEXT.md
+Last session: 2026-04-05T10:27:50.217Z
+Stopped at: Completed 07-01-PLAN.md
+Resume file: None
