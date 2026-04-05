@@ -3,10 +3,13 @@ package org.ctc.domain.service;
 import org.ctc.admin.dto.TeamForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -40,6 +43,8 @@ class TeamManagementServiceTest {
     private RaceLineupRepository raceLineupRepository;
     @Mock
     private SeasonDriverRepository seasonDriverRepository;
+    @Mock
+    private SeasonTeamRepository seasonTeamRepository;
     @Mock
     private FileStorageService fileStorageService;
 
@@ -342,6 +347,62 @@ class TeamManagementServiceTest {
 
             // then
             verify(teamRepository).delete(sub);
+        }
+    }
+
+    @Nested
+    class FindSeasonTeamTest {
+
+        @Test
+        void givenExistingId_whenFindSeasonTeamById_thenReturnsSeasonTeam() {
+            // given
+            var id = UUID.randomUUID();
+            var season = new Season("Test Season");
+            season.setId(UUID.randomUUID());
+            var team = createTeam("TST", "Test Team");
+            var seasonTeam = new SeasonTeam(season, team);
+            seasonTeam.setId(id);
+
+            when(seasonTeamRepository.findById(id)).thenReturn(Optional.of(seasonTeam));
+
+            // when
+            var result = service.findSeasonTeamById(id);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getId()).isEqualTo(id);
+        }
+
+        @Test
+        void givenNonExistentId_whenFindSeasonTeamById_thenThrowsEntityNotFoundException() {
+            // given
+            var id = UUID.randomUUID();
+            when(seasonTeamRepository.findById(id)).thenReturn(Optional.empty());
+
+            // when / then
+            assertThatThrownBy(() -> service.findSeasonTeamById(id))
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessageContaining("SeasonTeam");
+        }
+
+        @Test
+        void whenFindSeasonTeamsBySeasonId_thenReturnsList() {
+            // given
+            var seasonId = UUID.randomUUID();
+            var season = new Season("Test Season");
+            season.setId(seasonId);
+            var team = createTeam("TST", "Test Team");
+            var seasonTeam = new SeasonTeam(season, team);
+            seasonTeam.setId(UUID.randomUUID());
+
+            when(seasonTeamRepository.findBySeasonId(seasonId)).thenReturn(List.of(seasonTeam));
+
+            // when
+            var result = service.findSeasonTeamsBySeasonId(seasonId);
+
+            // then
+            assertThat(result).hasSize(1);
+            verify(seasonTeamRepository).findBySeasonId(seasonId);
         }
     }
 
