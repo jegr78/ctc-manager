@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Codebase Concerns Cleanup
-status: executing
-stopped_at: Completed 07-02-PLAN.md
-last_updated: "2026-04-05T10:34:59.271Z"
+status: verifying
+stopped_at: Completed 07-03-PLAN.md
+last_updated: "2026-04-05T10:47:45.295Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 Phase: 07 (layer-cleanup) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-05
 
 Progress: [░░░░░░░░░░] 0%
@@ -46,6 +46,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06 P01 | 10min | 2 tasks | 2 files |
 | Phase 07 P01 | 9min | 2 tasks | 13 files |
 | Phase 07 P02 | 5min | 2 tasks | 15 files |
+| Phase Phase 07 P03 P07-03 | 11min | 2 tasks | 14 files |
 
 ## Accumulated Context
 
@@ -57,6 +58,7 @@ Full history in .planning/milestones/v1.0-ROADMAP.md.
 - [Phase 06]: String-based SSRF hostname blocklist without DNS resolution; defense-in-depth path traversal with raw filename + resolved path checks
 - [Phase 07]: findActiveSeason() uses stream filter to tolerate multiple active seasons; Buchholz logic duplicated to avoid circular dependency
 - [Phase 07]: Primitive parameters for decoupled service save() methods instead of wrapper records
+- [Phase 07]: Nested records in services as API contracts; RaceController maps RaceData<->RaceForm for template compatibility
 
 ### Blockers/Concerns
 
@@ -70,6 +72,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T10:34:59.268Z
-Stopped at: Completed 07-02-PLAN.md
+Last session: 2026-04-05T10:47:45.291Z
+Stopped at: Completed 07-03-PLAN.md
 Resume file: None
