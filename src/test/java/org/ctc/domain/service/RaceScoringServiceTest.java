@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.RaceScoringForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.RaceScoring;
@@ -75,24 +74,19 @@ class RaceScoringServiceTest {
     }
 
     @Test
-    void givenValidNewForm_whenSave_thenCreatesScoring() {
+    void givenValidNewScoring_whenSave_thenCreatesScoring() {
         // given
-        var form = new RaceScoringForm();
-        form.setName("New Scoring");
-        form.setRacePoints("20,17,14");
-        form.setQualiPoints("3,2,1");
-        form.setFastestLapPoints(2);
         when(raceScoringRepository.saveAndFlush(any(RaceScoring.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        raceScoringService.save(form);
+        raceScoringService.save(null, "New Scoring", "20,17,14", "3,2,1", 2);
 
         // then
         verify(raceScoringRepository).saveAndFlush(any(RaceScoring.class));
     }
 
     @Test
-    void givenValidExistingForm_whenSave_thenUpdatesScoring() {
+    void givenValidExistingScoring_whenSave_thenUpdatesScoring() {
         // given
         var id = UUID.randomUUID();
         var existing = new RaceScoring("Old Name", "10,8", null, 0);
@@ -100,15 +94,8 @@ class RaceScoringServiceTest {
         when(raceScoringRepository.findById(id)).thenReturn(Optional.of(existing));
         when(raceScoringRepository.saveAndFlush(any(RaceScoring.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        var form = new RaceScoringForm();
-        form.setId(id);
-        form.setName("Updated Name");
-        form.setRacePoints("20,17,14");
-        form.setQualiPoints("3,2,1");
-        form.setFastestLapPoints(2);
-
         // when
-        raceScoringService.save(form);
+        raceScoringService.save(id, "Updated Name", "20,17,14", "3,2,1", 2);
 
         // then
         verify(raceScoringRepository).findById(id);
@@ -119,14 +106,8 @@ class RaceScoringServiceTest {
 
     @Test
     void givenInvalidPoints_whenSave_thenThrowsBusinessRuleException() {
-        // given
-        var form = new RaceScoringForm();
-        form.setName("Invalid");
-        form.setRacePoints("10,20,5");
-        form.setFastestLapPoints(0);
-
         // when / then
-        assertThatThrownBy(() -> raceScoringService.save(form))
+        assertThatThrownBy(() -> raceScoringService.save(null, "Invalid", "10,20,5", null, 0))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("monotonically decreasing");
     }
@@ -134,15 +115,11 @@ class RaceScoringServiceTest {
     @Test
     void givenDuplicateName_whenSave_thenThrowsBusinessRuleException() {
         // given
-        var form = new RaceScoringForm();
-        form.setName("Duplicate");
-        form.setRacePoints("20,17");
-        form.setFastestLapPoints(0);
         when(raceScoringRepository.saveAndFlush(any(RaceScoring.class)))
                 .thenThrow(new DataIntegrityViolationException("unique constraint"));
 
         // when / then
-        assertThatThrownBy(() -> raceScoringService.save(form))
+        assertThatThrownBy(() -> raceScoringService.save(null, "Duplicate", "20,17", null, 0))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("already exists");
     }

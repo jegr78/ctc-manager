@@ -54,7 +54,8 @@ public class MatchScoringController {
             return "admin/match-scoring-form";
         }
         try {
-            matchScoringService.save(form);
+            matchScoringService.save(form.getId(), form.getName(), form.getPointsWin(),
+                    form.getPointsDraw(), form.getPointsLoss());
             redirectAttributes.addFlashAttribute("successMessage", "Match-Scoring saved: " + form.getName());
             return "redirect:/admin/match-scorings";
         } catch (BusinessRuleException e) {
