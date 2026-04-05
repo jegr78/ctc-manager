@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -153,7 +154,7 @@ public class RaceController {
         try {
             String filename = raceAttachmentService.uploadAttachment(id, file);
             redirectAttributes.addFlashAttribute("successMessage", "File uploaded: " + filename);
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/races/" + id;
@@ -185,7 +186,7 @@ public class RaceController {
         try {
             raceService.createOrUpdateCalendarEvent(id);
             redirectAttributes.addFlashAttribute("successMessage", "Calendar event saved");
-        } catch (Exception e) {
+        } catch (IOException | IllegalStateException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Calendar: " + e.getMessage());
         }
         return "redirect:/admin/races/" + id;
@@ -196,7 +197,7 @@ public class RaceController {
         try {
             raceGraphicService.generateLineup(id);
             redirectAttributes.addFlashAttribute("successMessage", "Lineup graphic generated");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/races/" + id;
@@ -207,7 +208,7 @@ public class RaceController {
         try {
             raceGraphicService.generateResults(id);
             redirectAttributes.addFlashAttribute("successMessage", "Results graphic generated");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/races/" + id;
@@ -218,7 +219,7 @@ public class RaceController {
         try {
             raceGraphicService.generateSettings(id);
             redirectAttributes.addFlashAttribute("successMessage", "Settings graphic generated");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/races/" + id;
@@ -229,7 +230,7 @@ public class RaceController {
         try {
             raceGraphicService.generateOverlay(id);
             redirectAttributes.addFlashAttribute("successMessage", "Overlay graphic generated");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/races/" + id;

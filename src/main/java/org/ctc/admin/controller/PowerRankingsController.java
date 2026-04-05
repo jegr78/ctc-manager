@@ -12,6 +12,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -77,7 +78,7 @@ public class PowerRankingsController {
                     .contentType(MediaType.IMAGE_PNG)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Power Rankings.png\"")
                     .body(png);
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Failed to generate power rankings graphic", e);
             return ResponseEntity.internalServerError().build();
         }
