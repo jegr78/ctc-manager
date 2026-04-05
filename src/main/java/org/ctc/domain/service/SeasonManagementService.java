@@ -56,6 +56,16 @@ public class SeasonManagementService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<Season> findActiveSeason() {
+        return seasonRepository.findByActiveTrue();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Season> findByIdOptional(UUID id) {
+        return seasonRepository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
     public SeasonDetailData getDetailData(UUID id) {
         var season = findById(id);
         var playoff = playoffRepository.findBySeasonId(id).orElse(null);
