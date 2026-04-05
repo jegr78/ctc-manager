@@ -82,11 +82,10 @@ Plans:
   1. Alltime Standings page displays a ranked list of teams with aggregated cross-season data
   2. StandingsService.calculateAlltimeStandings() returns correct aggregation across multiple seasons
   3. The existing per-season standings remain unchanged
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 1 plan
 
 Plans:
-- [ ] 09-01: TBD
+- [ ] 09-01-PLAN.md — TDD: Cross-season alltime standings aggregation + controller wiring
 
 ### Phase 10: Service Refactoring
 **Goal**: Large service classes and duplicated controller code are split into focused, maintainable units
