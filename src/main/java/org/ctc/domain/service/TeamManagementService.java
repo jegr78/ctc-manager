@@ -1,7 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.SeasonDriverGroupDto;
-import org.ctc.admin.dto.TeamForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
@@ -38,12 +36,24 @@ public class TeamManagementService {
     private final FileStorageService fileStorageService;
 
     /**
+     * Groups drivers by team within a season. Replacement for admin SeasonDriverGroupDto.
+     */
+    public record SeasonDriverGroup(
+            Season season,
+            Map<Team, List<Driver>> driversByTeam
+    ) {
+        public int totalDriverCount() {
+            return driversByTeam.values().stream().mapToInt(List::size).sum();
+        }
+    }
+
+    /**
      * Return value for team detail view data.
      */
     public record TeamDetailData(
             Team team,
             List<Season> seasons,
-            List<SeasonDriverGroupDto> seasonDriverGroups,
+            List<SeasonDriverGroup> seasonDriverGroups,
             List<Season> seasonsWithoutDrivers
     ) {}
 
@@ -90,7 +100,7 @@ public class TeamManagementService {
                     entry.getValue().entrySet().stream()
                             .sorted(Comparator.comparing(e -> e.getKey().getShortName()))
                             .forEach(e -> sortedByTeam.put(e.getKey(), new ArrayList<>(e.getValue())));
-                    return new SeasonDriverGroupDto(entry.getKey(), sortedByTeam);
+                    return new SeasonDriverGroup(entry.getKey(), sortedByTeam);
                 })
                 .toList();
 
@@ -127,7 +137,7 @@ public class TeamManagementService {
                     entry.getValue().entrySet().stream()
                             .sorted(Comparator.comparing(e -> e.getKey().getShortName()))
                             .forEach(e -> sortedByTeam.put(e.getKey(), new ArrayList<>(e.getValue())));
-                    return new SeasonDriverGroupDto(entry.getKey(), sortedByTeam);
+                    return new SeasonDriverGroup(entry.getKey(), sortedByTeam);
                 })
                 .toList();
 
@@ -232,25 +242,26 @@ public class TeamManagementService {
     }
 
     /**
-     * Creates or updates a team from a TeamForm.
+     * Creates or updates a team.
      */
     @Transactional
-    public Team save(TeamForm form) {
+    public Team save(UUID id, String name, String shortName,
+                     String primaryColor, String secondaryColor, String accentColor) {
         Team team;
-        if (form.getId() != null) {
-            team = findById(form.getId());
-            team.setName(form.getName());
-            team.setShortName(form.getShortName());
-            team.setPrimaryColor(form.getPrimaryColor());
-            team.setSecondaryColor(form.getSecondaryColor());
-            team.setAccentColor(form.getAccentColor());
+        if (id != null) {
+            team = findById(id);
+            team.setName(name);
+            team.setShortName(shortName);
+            team.setPrimaryColor(primaryColor);
+            team.setSecondaryColor(secondaryColor);
+            team.setAccentColor(accentColor);
             team = teamRepository.save(team);
             propagateColorsToSubTeams(team);
         } else {
-            team = new Team(form.getName(), form.getShortName());
-            team.setPrimaryColor(form.getPrimaryColor());
-            team.setSecondaryColor(form.getSecondaryColor());
-            team.setAccentColor(form.getAccentColor());
+            team = new Team(name, shortName);
+            team.setPrimaryColor(primaryColor);
+            team.setSecondaryColor(secondaryColor);
+            team.setAccentColor(accentColor);
             team = teamRepository.save(team);
         }
         return team;

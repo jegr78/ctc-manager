@@ -88,7 +88,11 @@ public class SeasonController {
             addScoringLists(model);
             return "admin/season-form";
         }
-        var season = seasonManagementService.save(form, raceScoring, matchScoring);
+        var season = seasonManagementService.save(
+                form.getId(), form.getName(), form.getYear(), form.getNumber(),
+                form.getDescription(), form.getStartDate(), form.getEndDate(),
+                form.isActive(), form.getFormat(), form.getTotalRounds(), form.getLegs(),
+                form.getEventDurationMinutes(), raceScoring, matchScoring);
         redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
         return "redirect:/admin/seasons";
     }
