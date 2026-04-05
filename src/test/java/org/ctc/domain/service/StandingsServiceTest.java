@@ -389,6 +389,224 @@ class StandingsServiceTest {
         }
     }
 
+    @Nested
+    class AlltimeStandingsTest {
+
+        private Season season1;
+        private Season season2;
+        private MatchScoring matchScoring310;
+        private MatchScoring matchScoring210;
+        private Team tnr2;
+
+        @BeforeEach
+        void setUp() {
+            matchScoring310 = new MatchScoring("Standard 3-1-0", 3, 1, 0);
+            matchScoring210 = new MatchScoring("Classic 2-1-0", 2, 1, 0);
+
+            season1 = new Season("2025");
+            season1.setId(UUID.randomUUID());
+            season1.setRaceScoring(raceScoring);
+            season1.setMatchScoring(matchScoring310);
+
+            season2 = new Season("2026");
+            season2.setId(UUID.randomUUID());
+            season2.setRaceScoring(raceScoring);
+            season2.setMatchScoring(matchScoring310);
+
+            tnr2 = new Team("TNR Sub-Team", "TN2");
+            tnr2.setId(UUID.randomUUID());
+            tnr2.setParentTeam(tnr);
+        }
+
+        @Test
+        void givenTwoSeasonsWithMatches_whenCalculateAlltimeStandings_thenAggregatesAcrossSeasons() {
+            // given
+            season1.addTeam(tnr);
+            season1.addTeam(p1r);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+
+            season2.addTeam(tnr);
+            season2.addTeam(p1r);
+            var md2 = new Matchday(season2, "Spieltag 1", 1);
+            var match2 = createMatchWithScore(md2, tnr, p1r, 60, 50);
+
+            when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
+            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
+            when(seasonRepository.findById(season2.getId())).thenReturn(Optional.of(season2));
+            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
+            when(matchRepository.findByMatchdaySeasonId(season2.getId())).thenReturn(List.of(match2));
+
+            // when
+            var standings = standingsService.calculateAlltimeStandings();
+
+            // then
+            assertEquals(2, standings.size());
+
+            var tnrStanding = findStanding(standings, tnr);
+            assertEquals(2, tnrStanding.getWins());
+            assertEquals(0, tnrStanding.getDraws());
+            assertEquals(0, tnrStanding.getLosses());
+            assertEquals(6, tnrStanding.getPoints());
+            assertEquals(130, tnrStanding.getPointsFor());
+            assertEquals(96, tnrStanding.getPointsAgainst());
+
+            var p1rStanding = findStanding(standings, p1r);
+            assertEquals(0, p1rStanding.getWins());
+            assertEquals(2, p1rStanding.getLosses());
+            assertEquals(0, p1rStanding.getPoints());
+            assertEquals(96, p1rStanding.getPointsFor());
+            assertEquals(130, p1rStanding.getPointsAgainst());
+        }
+
+        @Test
+        void givenDifferentMatchScoringPerSeason_whenCalculateAlltimeStandings_thenRespectsSeasonsOwnRules() {
+            // given
+            season2.setMatchScoring(matchScoring210);
+
+            season1.addTeam(tnr);
+            season1.addTeam(p1r);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+
+            season2.addTeam(tnr);
+            season2.addTeam(p1r);
+            var md2 = new Matchday(season2, "Spieltag 1", 1);
+            var match2 = createMatchWithScore(md2, tnr, p1r, 60, 50);
+
+            when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
+            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
+            when(seasonRepository.findById(season2.getId())).thenReturn(Optional.of(season2));
+            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
+            when(matchRepository.findByMatchdaySeasonId(season2.getId())).thenReturn(List.of(match2));
+
+            // when
+            var standings = standingsService.calculateAlltimeStandings();
+
+            // then
+            var tnrStanding = findStanding(standings, tnr);
+            assertEquals(2, tnrStanding.getWins());
+            assertEquals(5, tnrStanding.getPoints()); // 3 + 2, not 6
+        }
+
+        @Test
+        void givenSubTeamInOneSeason_whenCalculateAlltimeStandings_thenAggregesToParentTeam() {
+            // given
+            season1.addTeam(tnr);
+            season1.addTeam(p1r);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+
+            season2.addTeam(tnr2);
+            season2.addTeam(p1r);
+            var md2 = new Matchday(season2, "Spieltag 1", 1);
+            var match2 = createMatchWithScore(md2, tnr2, p1r, 60, 50);
+
+            when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
+            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
+            when(seasonRepository.findById(season2.getId())).thenReturn(Optional.of(season2));
+            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
+            when(matchRepository.findByMatchdaySeasonId(season2.getId())).thenReturn(List.of(match2));
+
+            // when
+            var standings = standingsService.calculateAlltimeStandings();
+
+            // then — TNR should have wins from both own and sub-team
+            var tnrStanding = findStanding(standings, tnr);
+            assertEquals(2, tnrStanding.getWins());
+            assertEquals(6, tnrStanding.getPoints());
+            assertEquals(130, tnrStanding.getPointsFor());
+            assertEquals(96, tnrStanding.getPointsAgainst());
+        }
+
+        @Test
+        void givenSeasonWithNoMatches_whenCalculateAlltimeStandings_thenSeasonExcluded() {
+            // given
+            season1.addTeam(tnr);
+            season1.addTeam(p1r);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+
+            // season2 has no matches
+            season2.addTeam(tnr);
+            season2.addTeam(p1r);
+
+            when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
+            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
+            when(seasonRepository.findById(season2.getId())).thenReturn(Optional.of(season2));
+            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
+            when(matchRepository.findByMatchdaySeasonId(season2.getId())).thenReturn(List.of());
+
+            // when
+            var standings = standingsService.calculateAlltimeStandings();
+
+            // then — only season 1 results
+            assertEquals(2, standings.size());
+            var tnrStanding = findStanding(standings, tnr);
+            assertEquals(1, tnrStanding.getWins());
+            assertEquals(3, tnrStanding.getPoints());
+        }
+
+        @Test
+        void givenNoSeasonsWithMatches_whenCalculateAlltimeStandings_thenReturnsEmptyList() {
+            // given
+            when(seasonRepository.findAll()).thenReturn(List.of());
+
+            // when
+            var standings = standingsService.calculateAlltimeStandings();
+
+            // then
+            assertTrue(standings.isEmpty());
+        }
+
+        @Test
+        void givenAlltimeStandings_whenCalculated_thenSortedByPointsThenPointDiffThenPointsFor() {
+            // given
+            // Season with three teams: TNR wins big, CLR wins small, P1R loses both
+            season1.addTeam(tnr);
+            season1.addTeam(p1r);
+            season1.addTeam(clr);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
+            var md2 = new Matchday(season1, "Spieltag 2", 2);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 80, 40); // TNR +40
+            var match2 = createMatchWithScore(md2, clr, p1r, 60, 50); // CLR +10
+
+            when(seasonRepository.findAll()).thenReturn(List.of(season1));
+            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
+            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1, match2));
+
+            // when
+            var standings = standingsService.calculateAlltimeStandings();
+
+            // then — both TNR and CLR have 3 pts, but TNR has better point diff
+            assertEquals(3, standings.size());
+            assertEquals(tnr.getId(), standings.get(0).getTeam().getId()); // 3pts, +40
+            assertEquals(clr.getId(), standings.get(1).getTeam().getId()); // 3pts, +10
+            assertEquals(p1r.getId(), standings.get(2).getTeam().getId()); // 0pts
+        }
+
+        @Test
+        void givenNoBuchholz_whenCalculateAlltimeStandings_thenBuchholzIsZero() {
+            // given
+            season1.addTeam(tnr);
+            season1.addTeam(p1r);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
+            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
+
+            when(seasonRepository.findAll()).thenReturn(List.of(season1));
+            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
+            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
+
+            // when
+            var standings = standingsService.calculateAlltimeStandings();
+
+            // then — alltime standings never include Buchholz
+            for (var standing : standings) {
+                assertEquals(0, standing.getBuchholz());
+            }
+        }
+    }
+
     private Match createMatchWithScore(Matchday matchday, Team home, Team away, int homeScore, int awayScore) {
         var match = new Match(matchday, home, away);
         match.setId(UUID.randomUUID());
