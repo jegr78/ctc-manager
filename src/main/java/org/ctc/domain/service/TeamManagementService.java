@@ -8,10 +8,12 @@ import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +34,7 @@ public class TeamManagementService {
     private final SeasonRepository seasonRepository;
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonDriverRepository seasonDriverRepository;
+    private final SeasonTeamRepository seasonTeamRepository;
     private final FileStorageService fileStorageService;
 
     /**
@@ -200,6 +203,23 @@ public class TeamManagementService {
                 .filter(t -> t.getParentTeam() == null)
                 .sorted(Comparator.comparing(Team::getShortName))
                 .toList();
+    }
+
+    /**
+     * Finds a SeasonTeam by ID or throws EntityNotFoundException.
+     */
+    @Transactional(readOnly = true)
+    public SeasonTeam findSeasonTeamById(UUID id) {
+        return seasonTeamRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", id));
+    }
+
+    /**
+     * Returns all SeasonTeams for a given season.
+     */
+    @Transactional(readOnly = true)
+    public List<SeasonTeam> findSeasonTeamsBySeasonId(UUID seasonId) {
+        return seasonTeamRepository.findBySeasonId(seasonId);
     }
 
     /**
