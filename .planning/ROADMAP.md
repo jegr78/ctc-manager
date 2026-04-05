@@ -68,10 +68,11 @@ Plans:
   1. No catch(Exception e) blocks remain in controllers -- each catch targets a specific exception type (IOException, IllegalStateException, etc.)
   2. Unexpected exceptions propagate to GlobalExceptionHandler and display the admin error page
   3. RaceService, DriverService, and DriverRankingService findAll() calls are scoped by seasonId or have result limits
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 08-01: TBD
+- [ ] 08-01-PLAN.md — Controller exception narrowing (8 controllers, 25 catch blocks)
+- [ ] 08-02-PLAN.md — Service exception narrowing + findAll() query scoping (5 services + 2 query fixes)
 
 ### Phase 9: Alltime Standings
 **Goal**: Users can view aggregated team standings across all seasons
@@ -130,7 +131,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 5. Security | v1.0 | 3/3 | Complete | 2026-04-04 |
 | 6. Security Hardening | v1.1 | 0/1 | Not started | - |
 | 7. Layer Cleanup | v1.1 | 0/3 | Not started | - |
-| 8. Exception Refinement | v1.1 | 0/1 | Not started | - |
+| 8. Exception Refinement | v1.1 | 0/2 | Not started | - |
 | 9. Alltime Standings | v1.1 | 0/1 | Not started | - |
 | 10. Service Refactoring | v1.1 | 0/2 | Not started | - |
 | 11. Template Quality | v1.1 | 0/1 | Not started | - |
