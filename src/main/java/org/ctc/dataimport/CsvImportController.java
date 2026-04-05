@@ -2,7 +2,7 @@ package org.ctc.dataimport;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.service.SeasonManagementService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +20,7 @@ public class CsvImportController {
     private final CsvImportService csvImportService;
     private final GoogleSheetsService googleSheetsService;
     private final ScorecardParser scorecardParser;
-    private final SeasonRepository seasonRepository;
+    private final SeasonManagementService seasonManagementService;
 
     @GetMapping
     public String showImportForm(Model model) {
@@ -42,7 +42,7 @@ public class CsvImportController {
             csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
-            seasonRepository.findById(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
+            seasonManagementService.findByIdOptional(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
             model.addAttribute("source", "csv");
             addMatchdayName(model, metadata);
             addCommonAttributes(model);
@@ -72,7 +72,7 @@ public class CsvImportController {
             csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
-            seasonRepository.findById(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
+            seasonManagementService.findByIdOptional(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
             model.addAttribute("source", "sheet");
             model.addAttribute("sheetUrl", sheetUrl);
             addMatchdayName(model, metadata);

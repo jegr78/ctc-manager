@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.PowerRankingsGraphicService;
 import org.ctc.domain.model.Season;
-import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.service.SeasonManagementService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,14 +22,14 @@ import java.util.stream.Collectors;
 public class PowerRankingsController {
 
     private final PowerRankingsGraphicService powerRankingsGraphicService;
-    private final SeasonRepository seasonRepository;
+    private final SeasonManagementService seasonManagementService;
 
     @GetMapping
     public String index(@RequestParam(required = false) Integer year,
                         @RequestParam(required = false) Integer number,
                         Model model) {
         // Build season group options
-        List<Season> allSeasons = seasonRepository.findAll();
+        List<Season> allSeasons = seasonManagementService.findAll();
         var seasonGroups = allSeasons.stream()
                 .collect(Collectors.groupingBy(
                         s -> s.getYear() + "|" + s.getNumber(),

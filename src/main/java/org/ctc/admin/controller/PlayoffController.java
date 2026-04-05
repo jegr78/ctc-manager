@@ -2,12 +2,10 @@ package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.PlayoffForm;
 import org.ctc.admin.dto.SeedForm;
-import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.admin.service.PlayoffRoundOverviewGraphicService;
 import org.ctc.admin.service.PlayoffRoundResultsGraphicService;
 import org.ctc.admin.service.PlayoffRoundScheduleGraphicService;
 import org.ctc.domain.model.PlayoffRound;
-import org.ctc.domain.repository.PlayoffRoundRepository;
 import org.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +26,6 @@ import java.util.UUID;
 public class PlayoffController {
 
     private final PlayoffService playoffService;
-    private final PlayoffRoundRepository playoffRoundRepository;
     private final PlayoffRoundOverviewGraphicService roundOverviewGraphicService;
     private final PlayoffRoundScheduleGraphicService roundScheduleGraphicService;
     private final PlayoffRoundResultsGraphicService roundResultsGraphicService;
@@ -190,8 +187,7 @@ public class PlayoffController {
     @PostMapping("/round/{roundId}/download-overview")
     public ResponseEntity<byte[]> downloadRoundOverview(@PathVariable UUID roundId) {
         try {
-            PlayoffRound round = playoffRoundRepository.findById(roundId)
-                    .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
+            PlayoffRound round = playoffService.findRoundById(roundId);
             byte[] png = roundOverviewGraphicService.generateOverview(round);
             return buildPngResponse(png, round.getLabel(), "overview");
         } catch (Exception e) {
@@ -203,8 +199,7 @@ public class PlayoffController {
     @PostMapping("/round/{roundId}/download-schedule")
     public ResponseEntity<byte[]> downloadRoundSchedule(@PathVariable UUID roundId) {
         try {
-            PlayoffRound round = playoffRoundRepository.findById(roundId)
-                    .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
+            PlayoffRound round = playoffService.findRoundById(roundId);
             byte[] png = roundScheduleGraphicService.generateSchedule(round);
             return buildPngResponse(png, round.getLabel(), "schedule");
         } catch (Exception e) {
@@ -216,8 +211,7 @@ public class PlayoffController {
     @PostMapping("/round/{roundId}/download-results")
     public ResponseEntity<byte[]> downloadRoundResults(@PathVariable UUID roundId) {
         try {
-            PlayoffRound round = playoffRoundRepository.findById(roundId)
-                    .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
+            PlayoffRound round = playoffService.findRoundById(roundId);
             byte[] png = roundResultsGraphicService.generateResults(round);
             return buildPngResponse(png, round.getLabel(), "results");
         } catch (Exception e) {
