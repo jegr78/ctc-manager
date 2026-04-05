@@ -28,7 +28,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 
 ## Current State (after v1.0)
 
-- **Codebase:** 13.526 LOC Java (Prod) + 17.021 LOC Java (Tests), 753 Tests, 82%+ Coverage
+- **Codebase:** 13.526 LOC Java (Prod) + 17.021 LOC Java (Tests), 777 Tests, 82%+ Coverage
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), open (dev/local), SSRF-geschuetzt
 - **Architecture:** Saubere 3-Tier (Controller → Service → Repository), keine God Services, zentrale Exception-Behandlung
@@ -51,15 +51,15 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 - ✓ Domain Services von Admin DTOs entkoppelt (10 Services, 0 admin.dto Imports) — Phase 7
 - ✓ Residuale Repository-Zugriffe aus 5 Controllern entfernt — Phase 7
 - ✓ StandingsController Business-Logik (Buchholz/Swiss-Sorting) in StandingsService verschoben — Phase 7
+- ✓ catch(Exception e) in Controllern und Services durch spezifische Exceptions ersetzt — Phase 8
+- ✓ Unbounded findAll() in RaceService eingegrenzt, DriverRankingService dokumentiert — Phase 8
 
 ### Active (v1.1)
 
 - [ ] TemplateEditorController Duplikation beseitigen (generischer Ansatz)
-- [ ] 60+ catch(Exception e) durch spezifische Exceptions ersetzen
 - [ ] Alltime Standings implementieren
 - [ ] Inline-Styles in Admin Templates durch CSS-Klassen ersetzen
 - [ ] Grosse Service-Klassen aufteilen (PlayoffService, RaceService)
-- [ ] Unbounded findAll() eingrenzen
 
 ### Out of Scope
 
@@ -113,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-05 after Phase 7 completion*
+*Last updated: 2026-04-05 after Phase 8 completion*
