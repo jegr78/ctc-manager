@@ -104,7 +104,7 @@ public class Gt7ScraperService {
                         if (m.find()) {
                             imageUrlMap.put(baseId, BASE_URL + m.group(1));
                         }
-                    } catch (Exception e) {
+                    } catch (IOException e) {
                         log.warn("Failed to resolve image for baseId {}: {}", baseId, e.getMessage());
                     }
                 })
