@@ -21,7 +21,6 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .httpBasic(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable())
             .exceptionHandling(exceptions -> exceptions
                 .accessDeniedPage("/admin/access-denied")
             );
