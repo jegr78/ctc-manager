@@ -9,11 +9,11 @@ Requirements for Codebase Concerns Cleanup. Each maps to roadmap phases.
 
 ### Architecture
 
-- [x] **ARCH-01**: Domain Services importieren keine Admin DTOs mehr -- Entkopplung durch Domain-DTOs oder Controller-Konvertierung
-- [x] **ARCH-02**: Alle 5 Controller (Standings, PowerRankings, Playoff, TeamCard, CsvImport) nutzen Services statt direkte Repository-Injections
-- [ ] **ARCH-03**: TemplateEditorController nutzt generischen Ansatz mit Map<String, AbstractGraphicService> statt 30+ Copy-Paste-Bloecke
-- [ ] **ARCH-04**: PlayoffService in fokussierte Services aufgeteilt (Bracket-View, Seeding separiert)
-- [ ] **ARCH-05**: RaceService in fokussierte Services aufgeteilt (FormData-Assembly, Calendar-Events separiert)
+- [ ] **ARCH-01**: Domain Services importieren keine Admin DTOs mehr -- Entkopplung durch Domain-DTOs oder Controller-Konvertierung
+- [ ] **ARCH-02**: Alle 5 Controller (Standings, PowerRankings, Playoff, TeamCard, CsvImport) nutzen Services statt direkte Repository-Injections
+- [x] **ARCH-03**: TemplateEditorController nutzt generischen Ansatz mit Map<String, AbstractGraphicService> statt 30+ Copy-Paste-Bloecke
+- [x] **ARCH-04**: PlayoffService in fokussierte Services aufgeteilt (Bracket-View, Seeding separiert)
+- [x] **ARCH-05**: RaceService in fokussierte Services aufgeteilt (FormData-Assembly, Calendar-Events separiert)
 
 ### Error Handling
 
@@ -21,17 +21,17 @@ Requirements for Codebase Concerns Cleanup. Each maps to roadmap phases.
 
 ### Features
 
-- [x] **FEAT-01**: Alltime Standings zeigt cross-season Team-Aggregation (StandingsService.calculateAlltimeStandings())
-- [x] **FEAT-02**: StandingsController enthaelt keine Business-Logik mehr -- Buchholz-Berechnung und Swiss-Sorting in StandingsService
+- [ ] **FEAT-01**: Alltime Standings zeigt cross-season Team-Aggregation (StandingsService.calculateAlltimeStandings())
+- [ ] **FEAT-02**: StandingsController enthaelt keine Business-Logik mehr -- Buchholz-Berechnung und Swiss-Sorting in StandingsService
 
 ### Security
 
-- [x] **SECU-01**: FileStorageService.storeFromUrl() validiert Hostname -- private IPs, localhost und interne Netzwerke blockiert
-- [x] **SECU-02**: FileStorageService.store() und storeImage() pruefen Path-Traversal mit normalize()+startsWith(uploadDir)
+- [ ] **SECU-01**: FileStorageService.storeFromUrl() validiert Hostname -- private IPs, localhost und interne Netzwerke blockiert
+- [ ] **SECU-02**: FileStorageService.store() und storeImage() pruefen Path-Traversal mit normalize()+startsWith(uploadDir)
 
 ### Code Quality
 
-- [ ] **QUAL-01**: Inline-Styles in Admin Templates durch CSS-Utility-Klassen ersetzt (Prioritaet: season-detail, race-detail; Ausnahme: Graphic-Render-Templates)
+- [x] **QUAL-01**: Inline-Styles in Admin Templates durch CSS-Utility-Klassen ersetzt (Prioritaet: season-detail, race-detail; Ausnahme: Graphic-Render-Templates)
 - [ ] **QUAL-02**: Unbounded findAll() in RaceService, DriverService, DriverRankingService eingegrenzt (seasonId-Parameter oder Limit)
 
 ## Future Requirements
@@ -53,18 +53,18 @@ None deferred -- all concerns addressed in v1.1.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SECU-01 | Phase 6 | Complete |
-| SECU-02 | Phase 6 | Complete |
-| ARCH-01 | Phase 7 | Complete |
-| ARCH-02 | Phase 7 | Complete |
-| FEAT-02 | Phase 7 | Complete |
-| ERRH-01 | Phase 8 | Pending |
-| QUAL-02 | Phase 8 | Pending |
-| FEAT-01 | Phase 9 | Complete |
-| ARCH-03 | Phase 10 | Pending |
-| ARCH-04 | Phase 10 | Pending |
-| ARCH-05 | Phase 10 | Pending |
-| QUAL-01 | Phase 11 | Pending |
+| SECU-01 | Phase 12 (was 6) | Pending |
+| SECU-02 | Phase 12 (was 6) | Pending |
+| ARCH-01 | Phase 13 (was 7) | Pending |
+| ARCH-02 | Phase 13 (was 7) | Pending |
+| FEAT-02 | Phase 13 (was 7) | Pending |
+| ERRH-01 | Phase 14 (was 8) | Pending |
+| QUAL-02 | Phase 8 | Complete |
+| FEAT-01 | Phase 15 (was 9) | Pending |
+| ARCH-03 | Phase 10 | Complete |
+| ARCH-04 | Phase 10 | Complete |
+| ARCH-05 | Phase 10 | Complete |
+| QUAL-01 | Phase 11 | Complete |
 
 **Coverage:**
 
@@ -74,4 +74,4 @@ None deferred -- all concerns addressed in v1.1.
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 after roadmap creation*
+*Last updated: 2026-04-06 after gap closure phase creation*

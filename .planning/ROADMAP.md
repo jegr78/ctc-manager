@@ -26,8 +26,12 @@
 - [x] **Phase 7: Layer Cleanup** (3/3 plans) -- completed 2026-04-05
 - [x] **Phase 8: Exception Refinement** (2/2 plans) -- completed 2026-04-05
 - [x] **Phase 9: Alltime Standings** (1/1 plan) -- completed 2026-04-05
-- [ ] **Phase 10: Service Refactoring** - Split large services and deduplicate TemplateEditorController
-- [ ] **Phase 11: Template Quality** - Replace inline styles with CSS utility classes in admin templates
+- [x] **Phase 10: Service Refactoring** (3/3 plans) -- completed 2026-04-06
+- [x] **Phase 11: Template Quality** (3/3 plans) -- completed 2026-04-06
+- [ ] **Phase 12: Security Hardening Recovery** - Re-apply SSRF + path traversal protections lost by worktree clobber
+- [ ] **Phase 13: Layer Cleanup Recovery** - Re-apply controller service delegation + DTO decoupling
+- [ ] **Phase 14: Exception Refinement Recovery** - Re-apply specific exception catches in controllers
+- [ ] **Phase 15: Alltime Standings Recovery** - Re-apply cross-season standings aggregation
 
 ## Phase Details
 
@@ -104,7 +108,9 @@ Plans:
 
 </details>
 
-### Phase 10: Service Refactoring
+<details>
+<summary>Phase 10: Service Refactoring -- COMPLETED 2026-04-06</summary>
+
 **Goal**: Large service classes and duplicated controller code are split into focused, maintainable units
 **Depends on**: Phase 7
 **Requirements**: ARCH-03, ARCH-04, ARCH-05
@@ -120,7 +126,12 @@ Plans:
 - [x] 10-02-PLAN.md — PlayoffService split into BracketView + Seeding services
 - [x] 10-03-PLAN.md — RaceService split into FormData + Calendar services
 
-### Phase 11: Template Quality
+</details>
+
+<details>
+<summary>Phase 11: Template Quality -- COMPLETED 2026-04-06</summary>
+
+**Goal**: Admin templates use consistent CSS classes instead of scattered inline styles
 **Goal**: Admin templates use consistent CSS classes instead of scattered inline styles
 **Depends on**: Nothing (independent)
 **Requirements**: QUAL-01
@@ -136,10 +147,56 @@ Plans:
 - [x] 11-02-PLAN.md — P2 templates (matchday-detail + 34 remaining templates)
 - [x] 11-03-PLAN.md — template-editors.html (181 inline styles, separate per D-07)
 
+</details>
+
+### Phase 12: Security Hardening Recovery
+**Goal**: Re-apply SSRF hostname validation and path traversal protections lost by worktree file clobber
+**Depends on**: Nothing (independent)
+**Requirements**: SECU-01, SECU-02
+**Gap Closure**: Closes gaps from v1.1 audit (commit 5b3a58b regression)
+**Success Criteria** (what must be TRUE):
+  1. FileStorageService.storeFromUrl() rejects URLs targeting private IPs, localhost, and internal networks
+  2. FileStorageService.store() and storeImage() reject filenames containing path traversal sequences
+  3. Existing file upload and URL import functionality continues to work for legitimate inputs
+**Recovery Source**: Commit `84e8896` (original Phase 6 implementation)
+
+### Phase 13: Layer Cleanup Recovery
+**Goal**: Re-apply controller service delegation and domain DTO decoupling lost by worktree file clobber
+**Depends on**: Phase 12
+**Requirements**: ARCH-01, ARCH-02, FEAT-02
+**Gap Closure**: Closes gaps from v1.1 audit (commit 5b3a58b regression)
+**Success Criteria** (what must be TRUE):
+  1. Domain services (org.ctc.domain.service) have zero imports from org.ctc.admin.dto
+  2. StandingsController, PowerRankingsController, PlayoffController, TeamCardController, CsvImportController inject only services, no repositories
+  3. Buchholz calculation and Swiss-system sorting logic lives in StandingsService, not StandingsController
+  4. All existing admin UI pages render correctly with unchanged behavior
+**Recovery Source**: Phase 7 commits (`b733781` + Plan 02/03 commits)
+
+### Phase 14: Exception Refinement Recovery
+**Goal**: Re-apply specific exception catches in controllers lost by worktree file clobber
+**Depends on**: Phase 13
+**Requirements**: ERRH-01
+**Gap Closure**: Closes gaps from v1.1 audit (commit 5b3a58b regression)
+**Success Criteria** (what must be TRUE):
+  1. No catch(Exception e) blocks remain in controllers — each catch targets a specific exception type
+  2. Unexpected exceptions propagate to GlobalExceptionHandler and display the admin error page
+**Recovery Source**: Phase 8 commits (`1960a9e`, `e645d43`, `3a21dde`, `981a42a`, `1d7e37f`)
+
+### Phase 15: Alltime Standings Recovery
+**Goal**: Re-apply cross-season team standings aggregation lost by worktree file clobber
+**Depends on**: Phase 13 (FEAT-02: StandingsService refactoring)
+**Requirements**: FEAT-01
+**Gap Closure**: Closes gaps from v1.1 audit (commit 5b3a58b regression)
+**Success Criteria** (what must be TRUE):
+  1. StandingsService.calculateAlltimeStandings() returns correct aggregation across multiple seasons
+  2. GET /admin/standings with alltime=true displays a ranked list of teams
+  3. The existing per-season standings remain unchanged
+**Recovery Source**: Phase 9 commits (`0979c0f`, `d5c6e56`)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
+Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 -> 15
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -154,3 +211,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 9. Alltime Standings | v1.1 | 1/1 | Complete | 2026-04-05 |
 | 10. Service Refactoring | v1.1 | 3/3 | Complete    | 2026-04-06 |
 | 11. Template Quality | v1.1 | 3/3 | Complete    | 2026-04-06 |
+| 12. Security Hardening Recovery | v1.1 | 0/0 | Pending | — |
+| 13. Layer Cleanup Recovery | v1.1 | 0/0 | Pending | — |
+| 14. Exception Refinement Recovery | v1.1 | 0/0 | Pending | — |
+| 15. Alltime Standings Recovery | v1.1 | 0/0 | Pending | — |
