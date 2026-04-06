@@ -1359,5 +1359,8 @@ a.season-header-title:hover {
     min-width: auto;
 }
 
+.input-title { width: 120px; }
+.input-url { width: 200px; }
+
 /* === Button Spacing === */
 .ml-xs { margin-left: 4px; }
