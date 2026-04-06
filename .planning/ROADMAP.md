@@ -128,13 +128,13 @@ Plans:
   1. season-detail and race-detail templates contain no inline style attributes (excluding graphic-render templates)
   2. All remaining admin templates have inline styles replaced with CSS utility classes from admin.css
   3. Visual appearance of all admin pages is unchanged (verified via Playwright screenshots)
-**Plans:** 1/3 plans executed
+**Plans:** 3/3 plans complete
 **UI hint**: yes
 
 Plans:
 - [x] 11-01-PLAN.md — CSS class library + P1 templates (season-detail, race-detail)
-- [ ] 11-02-PLAN.md — P2 templates (matchday-detail + 34 remaining templates)
-- [ ] 11-03-PLAN.md — template-editors.html (181 inline styles, separate per D-07)
+- [x] 11-02-PLAN.md — P2 templates (matchday-detail + 34 remaining templates)
+- [x] 11-03-PLAN.md — template-editors.html (181 inline styles, separate per D-07)
 
 ## Progress
 
@@ -153,4 +153,4 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 8. Exception Refinement | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 9. Alltime Standings | v1.1 | 1/1 | Complete | 2026-04-05 |
 | 10. Service Refactoring | v1.1 | 3/3 | Complete    | 2026-04-06 |
-| 11. Template Quality | v1.1 | 1/3 | In Progress|  |
+| 11. Template Quality | v1.1 | 3/3 | Complete    | 2026-04-06 |
