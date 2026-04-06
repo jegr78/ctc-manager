@@ -22,7 +22,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-public class OverlayGraphicService extends AbstractGraphicService {
+public class OverlayGraphicService extends AbstractGraphicService implements TemplateManageable {
 
     private static final String DEFAULT_TEMPLATE = "templates/admin/overlay-render.html";
     private static final String CUSTOM_TEMPLATE_FILE = "overlay-template.html";

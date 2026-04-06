@@ -259,6 +259,27 @@ class TemplateEditorControllerTest {
     }
 
     @Test
+    void givenInvalidTemplateType_whenSave_thenRedirectsWithErrorMessage() throws Exception {
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/invalid-type/save")
+                        .param("template", "<html>test</html>"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tools/template-editors"))
+                .andExpect(flash().attribute("errorMessage", "Unknown template type"));
+    }
+
+    @Test
+    void givenInvalidTemplateType_whenReset_thenRedirectsWithErrorMessage() throws Exception {
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/invalid-type/reset"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tools/template-editors"))
+                .andExpect(flash().attribute("errorMessage", "Unknown template type"));
+    }
+
+    @Test
     void givenErrorResponseOnPreview_thenDoesNotExposeExceptionDetails() throws Exception {
         // given — template that causes a rendering error (undefined variable used with strict mode syntax)
         String badTemplate = "<span th:text=\"${#undefined.method()}\"></span>";
