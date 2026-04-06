@@ -41,3 +41,64 @@ Classify the input:
 
 Display: `Mode: {MODE} | Target: {phase/URLs/description}`
 </step>
+
+<step name="server_ensure">
+**Ensure dev server is running on port 9090.**
+
+```bash
+if curl -sf http://localhost:9090/actuator/health > /dev/null 2>&1; then
+  echo "SERVER_STATUS=already_running"
+else
+  echo "SERVER_STATUS=not_running"
+fi
+```
+
+**If `SERVER_STATUS=already_running`:**
+- Set `SERVER_STARTED_BY_US=false`
+- Display: `Server already running on :9090`
+
+**If `SERVER_STATUS=not_running`:**
+- Set `SERVER_STARTED_BY_US=true`
+- Start the server:
+  ```bash
+  ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,demo > /tmp/auto-uat-server.log 2>&1 &
+  SERVER_PID=$!
+  echo "SERVER_PID=$SERVER_PID"
+  ```
+- Poll until healthy (max 120s):
+  ```bash
+  for i in $(seq 1 40); do
+    if curl -sf http://localhost:9090/actuator/health > /dev/null 2>&1; then
+      echo "SERVER_HEALTHY=true"
+      break
+    fi
+    sleep 3
+  done
+  ```
+- If not healthy after 120s: display error, show last 20 lines of `/tmp/auto-uat-server.log`, and stop.
+- Display: `Server started (PID: $SERVER_PID), healthy after ~{seconds}s`
+</step>
+
+<step name="server_cleanup">
+**Stop server if we started it.**
+
+Only execute if `SERVER_STARTED_BY_US=true`:
+
+```bash
+if [ "$SERVER_STARTED_BY_US" = "true" ] && [ -n "$SERVER_PID" ]; then
+  kill $SERVER_PID 2>/dev/null
+  wait $SERVER_PID 2>/dev/null
+  echo "Server stopped (PID: $SERVER_PID)"
+fi
+```
+
+If `SERVER_STARTED_BY_US=false`: display `Server was already running — left untouched`.
+</step>
+
+<step name="close_browser">
+**Close playwright-cli browser session.**
+
+```bash
+playwright-cli close
+```
+</step>
