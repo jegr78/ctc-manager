@@ -4,13 +4,13 @@ milestone: v1.1
 milestone_name: Codebase Concerns Cleanup
 status: executing
 stopped_at: Phase 11 UI-SPEC approved
-last_updated: "2026-04-06T14:26:46.536Z"
+last_updated: "2026-04-06T17:22:33.421Z"
 last_activity: 2026-04-06
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_phases: 4
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
   percent: 100
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Phase 11 — Template Quality
+**Current focus:** Phase 12 — security-hardening-recovery
 
 ## Current Position
 
-Phase: 11
+Phase: 13
 Plan: Not started
-Status: Executing Phase 11
+Status: Executing Phase 12
 Last activity: 2026-04-06
 
 Progress: [░░░░░░░░░░] 0%
