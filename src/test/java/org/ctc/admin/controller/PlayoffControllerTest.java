@@ -3,6 +3,7 @@ package org.ctc.admin.controller;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.domain.service.PlayoffSeedingService;
 import org.ctc.domain.service.PlayoffService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ class PlayoffControllerTest {
     @Autowired private SeasonDriverRepository seasonDriverRepository;
     @Autowired private PlayoffRepository playoffRepository;
     @Autowired private PlayoffService playoffService;
+    @Autowired private PlayoffSeedingService playoffSeedingService;
     @Autowired private TestHelper testHelper;
 
     private Season season;
@@ -192,8 +194,8 @@ class PlayoffControllerTest {
 
         // Seed both teams so matchup is ready
         var teams = season.getTeams();
-        playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
-        playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+        playoffSeedingService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+        playoffSeedingService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
 
         // when
         mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/add-race"))
@@ -225,8 +227,8 @@ class PlayoffControllerTest {
         var playoff = playoffService.createPlayoff(season.getId(), "Winner Test", 4);
         var matchup = playoff.getRounds().get(0).getMatchups().get(0);
         var teams = season.getTeams();
-        playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
-        playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+        playoffSeedingService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+        playoffSeedingService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
 
         // Add a race leg and give it a score so winner can be determined
         mockMvc.perform(post("/admin/playoffs/matchup/" + matchup.getId() + "/add-race"))
