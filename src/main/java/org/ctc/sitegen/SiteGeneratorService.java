@@ -5,6 +5,7 @@ import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.*;
 import org.ctc.sitegen.model.RaceView;
 import org.ctc.domain.service.DriverRankingService;
+import org.ctc.domain.service.PlayoffBracketViewService;
 import org.ctc.domain.service.PlayoffService;
 import org.ctc.domain.service.StandingsService;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class SiteGeneratorService {
     private final StandingsService standingsService;
     private final DriverRankingService driverRankingService;
     private final PlayoffService playoffService;
+    private final PlayoffBracketViewService playoffBracketViewService;
     private final PlayoffRepository playoffRepository;
 
     @lombok.Setter
@@ -201,7 +203,7 @@ public class SiteGeneratorService {
         if (playoffOpt.isEmpty()) return;
 
         var playoff = playoffOpt.get();
-        var bracket = playoffService.getBracketView(playoff.getId());
+        var bracket = playoffBracketViewService.getBracketView(playoff.getId());
 
         var ctx = new Context(Locale.GERMAN);
         ctx.setVariable("season", season);

@@ -19,7 +19,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-public class ResultsGraphicService extends AbstractGraphicService {
+public class ResultsGraphicService extends AbstractGraphicService implements TemplateManageable {
 
     private static final String DEFAULT_TEMPLATE = "templates/admin/results-render.html";
     private static final String CUSTOM_TEMPLATE_FILE = "results-template.html";

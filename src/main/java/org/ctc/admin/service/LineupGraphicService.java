@@ -23,7 +23,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-public class LineupGraphicService extends AbstractGraphicService {
+public class LineupGraphicService extends AbstractGraphicService implements TemplateManageable {
 
     private static final String DEFAULT_TEMPLATE = "templates/admin/lineup-render.html";
     private static final String CUSTOM_TEMPLATE_FILE = "lineup-template.html";

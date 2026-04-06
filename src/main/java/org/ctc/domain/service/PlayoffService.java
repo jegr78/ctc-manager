@@ -1,25 +1,22 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.SeedForm;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.persistence.EntityManager;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.*;
 
 /**
- * Service for all playoff business logic: bracket creation, seeding, matchup management,
- * race creation, winner determination and bracket view assembly.
+ * Service for playoff matchup lifecycle management: bracket creation, winner determination,
+ * race-to-matchup linkage, and playoff CRUD.
+ * Bracket view assembly is delegated to PlayoffBracketViewService.
+ * Seeding logic is delegated to PlayoffSeedingService.
  */
 
 @Slf4j
@@ -36,7 +33,7 @@ public class PlayoffService {
     private final TeamRepository teamRepository;
     private final MatchdayRepository matchdayRepository;
     private final ScoringService scoringService;
-    private final EntityManager entityManager;
+    private final PlayoffBracketViewService playoffBracketViewService;
 
     private static final Map<Integer, List<String>> DEFAULT_ROUND_LABELS = Map.of(
             2, List.of("Final"),
@@ -50,7 +47,7 @@ public class PlayoffService {
             throw new IllegalArgumentException("Number of teams must be 2, 4 or 8, got: " + numberOfTeams);
         }
 
-        // #7: Check for existing playoff
+        // Check for existing playoff
         if (playoffRepository.findBySeasonId(seasonId).isPresent()) {
             throw new IllegalArgumentException("Playoff already exists for this season");
         }
@@ -136,21 +133,6 @@ public class PlayoffService {
         return new ArrayList<>(teamMap.values());
     }
 
-    @Transactional
-    public void seedTeam(UUID matchupId, UUID teamId, int slot) {
-        PlayoffMatchup matchup = playoffMatchupRepository.findById(matchupId)
-                .orElseThrow(() -> new EntityNotFoundException("PlayoffMatchup", matchupId));
-
-        if (slot == 1) {
-            matchup.setTeam1(teamId != null ? findTeam(teamId) : null);
-        } else if (slot == 2) {
-            matchup.setTeam2(teamId != null ? findTeam(teamId) : null);
-        } else {
-            throw new IllegalArgumentException("Slot must be 1 or 2, got: " + slot);
-        }
-        playoffMatchupRepository.save(matchup);
-    }
-
     private Team findTeam(UUID teamId) {
         return teamRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
@@ -172,12 +154,12 @@ public class PlayoffService {
 
         UUID team1Id = matchup.getTeam1().getId();
 
-        // #2: Use shared helper for point calculation
+        // Use shared ScoringService.calculateTeamTotals (per D-06 no duplication)
         int team1Total = 0;
         int team2Total = 0;
         for (Race leg : legs) {
             if (leg.getResults().isEmpty()) continue;
-            int[] totals = calculateTeamTotals(leg.getResults(), leg.getId(), team1Id);
+            int[] totals = scoringService.calculateTeamTotals(leg.getResults(), leg.getId(), team1Id);
             team1Total += totals[0];
             team2Total += totals[1];
         }
@@ -186,7 +168,7 @@ public class PlayoffService {
         matchup.setHomeScore(team1Total);
         matchup.setAwayScore(team2Total);
 
-        // #1: Explicit tie handling — ties are not silently resolved
+        // Explicit tie handling — ties are not silently resolved
         if (team1Total == team2Total) {
             playoffMatchupRepository.save(matchup);
             throw new IllegalStateException(
@@ -241,101 +223,6 @@ public class PlayoffService {
         log.info("Matchup winner set manually: {}", winner.getShortName());
     }
 
-    @Transactional(readOnly = true)
-    public PlayoffBracketView getBracketView(UUID playoffId) {
-        Playoff playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-
-        // #4: Fetch all races for this playoff in one query, then group by matchup ID
-        List<Race> allRaces = raceRepository.findByPlayoffMatchupRoundPlayoffId(playoffId);
-        Map<UUID, List<Race>> racesByMatchup = allRaces.stream()
-                .collect(Collectors.groupingBy(r -> r.getPlayoffMatchup().getId()));
-
-        // Load seed numbers for bracket display
-        Map<UUID, Integer> seedsByTeamId = playoffSeedRepository.findByPlayoffId(playoffId)
-                .stream()
-                .collect(Collectors.toMap(s -> s.getTeam().getId(), PlayoffSeed::getSeed));
-
-        List<RoundView> roundViews = new ArrayList<>();
-        for (PlayoffRound round : playoff.getRounds()) {
-            List<MatchupView> matchupViews = new ArrayList<>();
-            for (PlayoffMatchup matchup : round.getMatchups()) {
-                List<Race> legs = racesByMatchup.getOrDefault(matchup.getId(), List.of());
-                matchupViews.add(buildMatchupView(matchup, legs, seedsByTeamId));
-            }
-            roundViews.add(new RoundView(round.getLabel(), round.getRoundIndex(), matchupViews));
-        }
-
-        return new PlayoffBracketView(playoff.getId(), playoff.getName(), roundViews);
-    }
-
-    // Shared helper — calculates [team1Points, team2Points] from race results
-    private int[] calculateTeamTotals(List<RaceResult> results, UUID raceId, UUID team1Id) {
-        int team1Total = 0;
-        int team2Total = 0;
-        for (RaceResult result : results) {
-            if (scoringService.isDriverInTeam(result, raceId, team1Id)) {
-                team1Total += result.getPointsTotal();
-            } else {
-                team2Total += result.getPointsTotal();
-            }
-        }
-        return new int[]{team1Total, team2Total};
-    }
-
-    private MatchupView buildMatchupView(PlayoffMatchup matchup, List<Race> legs,
-                                         Map<UUID, Integer> seedsByTeamId) {
-        UUID team1Id = matchup.getTeam1() != null ? matchup.getTeam1().getId() : null;
-        UUID team2Id = matchup.getTeam2() != null ? matchup.getTeam2().getId() : null;
-
-        int team1Aggregate = 0;
-        int team2Aggregate = 0;
-        List<LegView> legViews = new ArrayList<>();
-
-        for (int i = 0; i < legs.size(); i++) {
-            Race leg = legs.get(i);
-            int homeTotal = 0;
-            int awayTotal = 0;
-
-            if (!leg.getResults().isEmpty() && team1Id != null) {
-                int[] totals = calculateTeamTotals(leg.getResults(), leg.getId(), team1Id);
-                homeTotal = totals[0];
-                awayTotal = totals[1];
-                team1Aggregate += homeTotal;
-                team2Aggregate += awayTotal;
-            }
-
-            legViews.add(new LegView(leg.getId(), i + 1, homeTotal, awayTotal, !leg.getResults().isEmpty()));
-        }
-
-        // #3: Boolean fields instead of string comparison in templates
-        boolean team1IsWinner = matchup.getWinner() != null && team1Id != null
-                && matchup.getWinner().getId().equals(team1Id);
-        boolean team2IsWinner = matchup.getWinner() != null && !team1IsWinner && matchup.isComplete();
-
-        Integer team1Seed = team1Id != null ? seedsByTeamId.get(team1Id) : null;
-        Integer team2Seed = team2Id != null ? seedsByTeamId.get(team2Id) : null;
-
-        return new MatchupView(
-                matchup.getId(),
-                matchup.getBracketPosition(),
-                team1Id,
-                team2Id,
-                matchup.getTeam1() != null ? matchup.getTeam1().getShortName() : null,
-                matchup.getTeam2() != null ? matchup.getTeam2().getShortName() : null,
-                matchup.getTeam1() != null ? matchup.getTeam1().getLogoUrl() : null,
-                matchup.getTeam2() != null ? matchup.getTeam2().getLogoUrl() : null,
-                team1Seed,
-                team2Seed,
-                team1Aggregate,
-                team2Aggregate,
-                team1IsWinner,
-                team2IsWinner,
-                matchup.isComplete(),
-                legViews
-        );
-    }
-
     // --- New service methods (extracted from PlayoffController) ---
 
     @Transactional
@@ -362,12 +249,12 @@ public class PlayoffService {
         }
 
         Playoff playoff = null;
-        PlayoffBracketView bracketView = null;
+        PlayoffBracketViewService.PlayoffBracketView bracketView = null;
         if (effectiveSeasonId != null) {
             var optPlayoff = playoffRepository.findBySeasonId(effectiveSeasonId);
             if (optPlayoff.isPresent()) {
                 playoff = optPlayoff.get();
-                bracketView = getBracketView(playoff.getId());
+                bracketView = playoffBracketViewService.getBracketView(playoff.getId());
             }
         }
 
@@ -380,115 +267,6 @@ public class PlayoffService {
                 .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
         round.setBestOfLegs(bestOfLegs);
         return playoffRoundRepository.save(round);
-    }
-
-    @Transactional(readOnly = true)
-    public SeedingData getSeedingData(UUID playoffId) {
-        var playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-        var bracket = getBracketView(playoffId);
-
-        var firstRound = playoff.getRounds().stream()
-                .filter(r -> r.getRoundIndex() == 0)
-                .findFirst().orElseThrow(() -> new EntityNotFoundException("PlayoffRound", "index=0"));
-
-        var teams = getPlayoffTeams(playoffId);
-
-        Set<UUID> seededTeamIds = firstRound.getMatchups().stream()
-                .flatMap(m -> {
-                    var ids = new ArrayList<UUID>();
-                    if (m.getTeam1() != null) ids.add(m.getTeam1().getId());
-                    if (m.getTeam2() != null) ids.add(m.getTeam2().getId());
-                    return ids.stream();
-                })
-                .collect(Collectors.toSet());
-
-        Map<UUID, Integer> seedNumbers = playoffSeedRepository.findByPlayoffId(playoffId).stream()
-                .collect(Collectors.toMap(s -> s.getTeam().getId(), PlayoffSeed::getSeed));
-
-        return new SeedingData(playoff, bracket, firstRound, teams, seededTeamIds, seedNumbers);
-    }
-
-    @Transactional
-    public void saveSeed(UUID playoffId, SeedForm form) {
-        for (var entry : form.getSeeds()) {
-            if (entry.getTeamId() != null) {
-                seedTeam(entry.getMatchupId(), entry.getTeamId(), entry.getSlot());
-            }
-        }
-
-        Map<UUID, Integer> teamSeeds = new LinkedHashMap<>();
-        for (var entry : form.getSeeds()) {
-            if (entry.getTeamId() != null && entry.getSeedNumber() != null) {
-                teamSeeds.put(entry.getTeamId(), entry.getSeedNumber());
-            }
-        }
-        if (!teamSeeds.isEmpty()) {
-            saveSeedNumbers(playoffId, teamSeeds);
-        }
-
-        log.info("Seeding saved for playoff {}", playoffId);
-    }
-
-    public void saveSeedNumbers(UUID playoffId, Map<UUID, Integer> teamSeeds) {
-        var playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-        playoffSeedRepository.deleteByPlayoffId(playoffId);
-        entityManager.flush();
-
-        for (var entry : teamSeeds.entrySet()) {
-            var team = findTeam(entry.getKey());
-            var seed = new PlayoffSeed(playoff, team, entry.getValue());
-            playoffSeedRepository.save(seed);
-        }
-        log.info("Saved {} seed numbers for playoff {}", teamSeeds.size(), playoffId);
-    }
-
-    @Transactional
-    public void autoSeedBracket(UUID playoffId) {
-        var seeds = playoffSeedRepository.findByPlayoffId(playoffId);
-        if (seeds.isEmpty()) {
-            throw new IllegalStateException("No seed numbers assigned yet");
-        }
-
-        var playoff = playoffRepository.findById(playoffId)
-                .orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-        var firstRound = playoff.getRounds().stream()
-                .filter(r -> r.getRoundIndex() == 0)
-                .findFirst().orElseThrow(() -> new EntityNotFoundException("PlayoffRound", "index=0"));
-
-        var sortedSeeds = seeds.stream()
-                .sorted(Comparator.comparingInt(PlayoffSeed::getSeed))
-                .toList();
-
-        int totalTeams = sortedSeeds.size();
-        var matchups = firstRound.getMatchups().stream()
-                .sorted(Comparator.comparingInt(PlayoffMatchup::getBracketPosition))
-                .toList();
-
-        int[] matchupOrder = buildBracketOrder(totalTeams / 2);
-
-        for (int i = 0; i < matchups.size() && i < matchupOrder.length; i++) {
-            int seedIdx = matchupOrder[i];
-            var matchup = matchups.get(i);
-            matchup.setTeam1(sortedSeeds.get(seedIdx).getTeam());
-            matchup.setTeam2(sortedSeeds.get(totalTeams - 1 - seedIdx).getTeam());
-            playoffMatchupRepository.save(matchup);
-        }
-        log.info("Auto-seeded bracket for playoff {}", playoffId);
-    }
-
-    private int[] buildBracketOrder(int matchCount) {
-        return switch (matchCount) {
-            case 1 -> new int[]{0};
-            case 2 -> new int[]{0, 1};
-            case 4 -> new int[]{0, 3, 2, 1};
-            default -> {
-                int[] order = new int[matchCount];
-                for (int i = 0; i < matchCount; i++) order[i] = i;
-                yield order;
-            }
-        };
     }
 
     @Transactional(readOnly = true)
@@ -554,61 +332,8 @@ public class PlayoffService {
 
     // --- Record types for service return data ---
 
-    public record PlayoffListData(Playoff playoff, PlayoffBracketView bracketView,
+    public record PlayoffListData(Playoff playoff, PlayoffBracketViewService.PlayoffBracketView bracketView,
                                    List<Season> allSeasons, UUID selectedSeasonId) {}
 
-    public record SeedingData(Playoff playoff, PlayoffBracketView bracketView,
-                               PlayoffRound firstRound, List<Team> teams,
-                               Set<UUID> seededTeamIds, Map<UUID, Integer> seedNumbers) {}
-
     public record MatchupDetailData(PlayoffMatchup matchup, List<Race> legs, Playoff playoff) {}
-
-    // --- DTOs ---
-
-    @Getter
-    @RequiredArgsConstructor
-    public static class PlayoffBracketView {
-        private final UUID playoffId;
-        private final String name;
-        private final List<RoundView> rounds;
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    public static class RoundView {
-        private final String label;
-        private final int roundIndex;
-        private final List<MatchupView> matchups;
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    public static class MatchupView {
-        private final UUID matchupId;
-        private final int bracketPosition;
-        private final UUID team1Id;
-        private final UUID team2Id;
-        private final String team1ShortName;
-        private final String team2ShortName;
-        private final String team1LogoUrl;
-        private final String team2LogoUrl;
-        private final Integer team1Seed;
-        private final Integer team2Seed;
-        private final int team1AggregatePoints;
-        private final int team2AggregatePoints;
-        private final boolean team1IsWinner;
-        private final boolean team2IsWinner;
-        private final boolean complete;
-        private final List<LegView> legs;
-    }
-
-    @Getter
-    @RequiredArgsConstructor
-    public static class LegView {
-        private final UUID raceId;
-        private final int legNumber;
-        private final int team1Total;
-        private final int team2Total;
-        private final boolean hasResults;
-    }
 }

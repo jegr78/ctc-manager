@@ -8,6 +8,8 @@ import org.ctc.admin.service.PlayoffRoundResultsGraphicService;
 import org.ctc.admin.service.PlayoffRoundScheduleGraphicService;
 import org.ctc.domain.model.PlayoffRound;
 import org.ctc.domain.repository.PlayoffRoundRepository;
+import org.ctc.domain.service.PlayoffBracketViewService;
+import org.ctc.domain.service.PlayoffSeedingService;
 import org.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +30,8 @@ import java.util.UUID;
 public class PlayoffController {
 
     private final PlayoffService playoffService;
+    private final PlayoffBracketViewService playoffBracketViewService;
+    private final PlayoffSeedingService playoffSeedingService;
     private final PlayoffRoundRepository playoffRoundRepository;
     private final PlayoffRoundOverviewGraphicService roundOverviewGraphicService;
     private final PlayoffRoundScheduleGraphicService roundScheduleGraphicService;
@@ -102,7 +106,7 @@ public class PlayoffController {
 
     @GetMapping("/{id}/seed")
     public String seed(@PathVariable UUID id, Model model) {
-        var data = playoffService.getSeedingData(id);
+        var data = playoffSeedingService.getSeedingData(id);
         var form = new SeedForm();
         form.setPlayoffId(id);
 
@@ -119,7 +123,7 @@ public class PlayoffController {
     @PostMapping("/{id}/auto-seed")
     public String autoSeed(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
-            playoffService.autoSeedBracket(id);
+            playoffSeedingService.autoSeedBracket(id);
             redirectAttributes.addFlashAttribute("successMessage", "Bracket auto-seeded");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -130,7 +134,7 @@ public class PlayoffController {
     @PostMapping("/{id}/seed")
     public String saveSeed(@PathVariable UUID id, @ModelAttribute SeedForm form,
                            RedirectAttributes redirectAttributes) {
-        playoffService.saveSeed(id, form);
+        playoffSeedingService.saveSeed(id, form);
         redirectAttributes.addFlashAttribute("successMessage", "Seeding saved");
         return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForPlayoff(id);
     }

@@ -1,9 +1,6 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.RaceForm;
-import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.admin.service.TeamCardService;
-import org.ctc.dataimport.GoogleCalendarService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.Test;
@@ -36,7 +33,7 @@ class RaceServiceTest {
     @Mock private SeasonTeamRepository seasonTeamRepository;
     @Mock private ScoringService scoringService;
     @Mock private TeamCardService teamCardService;
-    @Mock private GoogleCalendarService googleCalendarService;
+    @Mock private RaceCalendarService raceCalendarService;
 
     @InjectMocks
     private RaceService service;
@@ -81,9 +78,8 @@ class RaceServiceTest {
     }
 
     @Test
-    void givenNoFilter_whenGetRaceListData_thenReturnsAll() {
+    void givenNoFilter_whenGetRaceListData_thenReturnsEmptyList() {
         // given
-        when(raceRepository.findAll()).thenReturn(List.of());
         when(seasonRepository.findAll()).thenReturn(List.of());
 
         // when
@@ -91,31 +87,31 @@ class RaceServiceTest {
 
         // then
         assertThat(result.races()).isEmpty();
-        verify(raceRepository).findAll();
+        verify(raceRepository, never()).findAll();
     }
 
     // --- saveRace ---
 
     @Test
-    void givenNewRaceForm_whenSaveRace_thenCreatesMatchAndSaves() {
+    void givenNewRaceData_whenSaveRace_thenCreatesMatchAndSaves() {
         // given
-        var form = new RaceForm();
-        form.setMatchdayId(UUID.randomUUID());
-        form.setHomeTeamId(UUID.randomUUID());
-        form.setAwayTeamId(UUID.randomUUID());
+        var matchdayId = UUID.randomUUID();
+        var homeTeamId = UUID.randomUUID();
+        var awayTeamId = UUID.randomUUID();
 
         var matchday = createMatchday();
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
 
-        when(matchdayRepository.findById(form.getMatchdayId())).thenReturn(Optional.of(matchday));
-        when(teamRepository.findById(form.getHomeTeamId())).thenReturn(Optional.of(homeTeam));
-        when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
+        when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(homeTeamId)).thenReturn(Optional.of(homeTeam));
+        when(teamRepository.findById(awayTeamId)).thenReturn(Optional.of(awayTeam));
         when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        var result = service.saveRace(form);
+        var result = service.saveRace(null, matchdayId, homeTeamId, awayTeamId,
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         // then
         assertThat(result.success()).isTrue();
@@ -126,25 +122,25 @@ class RaceServiceTest {
     @Test
     void givenCarNotInSeasonPool_whenSaveRace_thenReturnsError() {
         // given
-        var form = new RaceForm();
-        form.setMatchdayId(UUID.randomUUID());
-        form.setHomeTeamId(UUID.randomUUID());
-        form.setAwayTeamId(UUID.randomUUID());
-        form.setCarId(UUID.randomUUID());
+        var matchdayId = UUID.randomUUID();
+        var homeTeamId = UUID.randomUUID();
+        var awayTeamId = UUID.randomUUID();
+        var carId = UUID.randomUUID();
 
         var matchday = createMatchday();
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var car = new Car();
-        car.setId(form.getCarId());
+        car.setId(carId);
 
-        when(matchdayRepository.findById(form.getMatchdayId())).thenReturn(Optional.of(matchday));
-        when(teamRepository.findById(form.getHomeTeamId())).thenReturn(Optional.of(homeTeam));
-        when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
-        when(carRepository.findById(form.getCarId())).thenReturn(Optional.of(car));
+        when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(homeTeamId)).thenReturn(Optional.of(homeTeam));
+        when(teamRepository.findById(awayTeamId)).thenReturn(Optional.of(awayTeam));
+        when(carRepository.findById(carId)).thenReturn(Optional.of(car));
 
         // when
-        var result = service.saveRace(form);
+        var result = service.saveRace(null, matchdayId, homeTeamId, awayTeamId,
+                null, carId, null, null, null, null, null, null, null, null, null, null, null, null);
 
         // then
         assertThat(result.success()).isFalse();
@@ -154,18 +150,14 @@ class RaceServiceTest {
     // --- saveResults ---
 
     @Test
-    void givenResultForm_whenSaveResults_thenCalculatesPointsAndAggregates() {
+    void givenResultData_whenSaveResults_thenCalculatesPointsAndAggregates() {
         // given
         var raceId = UUID.randomUUID();
         var driverId = UUID.randomUUID();
         var race = createRaceWithScoring();
         race.setId(raceId);
 
-        var rf = new RaceResultForm();
-        rf.setDriverId(driverId);
-        rf.setPosition(1);
-        rf.setQualiPosition(1);
-        rf.setFastestLap(true);
+        var rd = new RaceService.RaceResultData(driverId, "TestPSN", "HOM", 1, 1, true);
 
         var driver = new Driver("TestPSN", "TestNick");
         driver.setId(driverId);
@@ -175,7 +167,7 @@ class RaceServiceTest {
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        var message = service.saveResults(raceId, List.of(rf));
+        var message = service.saveResults(raceId, List.of(rd));
 
         // then
         assertThat(message).contains("Results saved");
@@ -190,13 +182,13 @@ class RaceServiceTest {
         var race = createRaceWithScoring();
         race.setId(raceId);
 
-        var rf = new RaceResultForm(); // driverId is null
+        var rd = new RaceService.RaceResultData(null, null, null, 0, 0, false);
 
         when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        service.saveResults(raceId, List.of(rf));
+        service.saveResults(raceId, List.of(rd));
 
         // then
         verify(driverRepository, never()).findById(any());
@@ -251,22 +243,6 @@ class RaceServiceTest {
         // then
         assertThat(result).isEqualTo(matchdayId);
         verify(raceRepository).delete(race);
-    }
-
-    // --- getUsedSelections ---
-
-    @Test
-    void givenSeasonAndTeam_whenGetUsedSelections_thenReturnsBothSets() {
-        // given
-        var seasonId = UUID.randomUUID();
-        var homeTeamId = UUID.randomUUID();
-        when(raceRepository.findByMatchdaySeasonId(seasonId)).thenReturn(List.of());
-
-        // when
-        var result = service.getUsedSelections(seasonId, homeTeamId, null);
-
-        // then
-        assertThat(result).containsKeys("usedCarIds", "usedTrackIds");
     }
 
     // --- getRaceDetailData ---
@@ -383,31 +359,19 @@ class RaceServiceTest {
     // --- saveRace with settings ---
 
     @Test
-    void givenRaceFormWithSettings_whenSaveRace_thenRaceSettingsCreated() {
+    void givenRaceDataWithSettings_whenSaveRace_thenRaceSettingsCreated() {
         // given
-        var form = new RaceForm();
-        form.setMatchdayId(UUID.randomUUID());
-        form.setHomeTeamId(UUID.randomUUID());
-        form.setAwayTeamId(UUID.randomUUID());
-        form.setNumberOfLaps(20);
-        form.setTyreWearMultiplier(3);
-        form.setFuelConsumptionMultiplier(4);
-        form.setRefuelingSpeed(10);
-        form.setInitialFuel("90");
-        form.setNumberOfRequiredPitStops(0);
-        form.setTimeProgressionMultiplier(5);
-        form.setWeather("Preset S02");
-        form.setTimeOfDay("Afternoon");
-        form.setAvailableTyres("RS, RM");
-        form.setMandatoryTyres("RS");
+        var matchdayId = UUID.randomUUID();
+        var homeTeamId = UUID.randomUUID();
+        var awayTeamId = UUID.randomUUID();
 
         var matchday = createMatchday();
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
 
-        when(matchdayRepository.findById(form.getMatchdayId())).thenReturn(Optional.of(matchday));
-        when(teamRepository.findById(form.getHomeTeamId())).thenReturn(Optional.of(homeTeam));
-        when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
+        when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(homeTeamId)).thenReturn(Optional.of(homeTeam));
+        when(teamRepository.findById(awayTeamId)).thenReturn(Optional.of(awayTeam));
         when(matchRepository.save(any(Match.class))).thenAnswer(inv -> inv.getArgument(0));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> {
             Race saved = inv.getArgument(0);
@@ -418,110 +382,11 @@ class RaceServiceTest {
         });
 
         // when
-        var result = service.saveRace(form);
+        var result = service.saveRace(null, matchdayId, homeTeamId, awayTeamId,
+                null, null, null, 20, 3, 4, 10, "90", 0, 5, "Preset S02", "Afternoon", "RS, RM", "RS");
 
         // then
         assertThat(result.success()).isTrue();
-    }
-
-    // --- getNewRaceFormData ---
-
-    @Test
-    void givenMatchdayId_whenGetNewRaceFormData_thenPopulatesSeasonPools() {
-        // given
-        var matchday = createMatchday();
-        var season = matchday.getSeason();
-        var car = new Car();
-        car.setId(UUID.randomUUID());
-        season.getCars().add(car);
-        var track = new Track();
-        track.setId(UUID.randomUUID());
-        season.getTracks().add(track);
-
-        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
-        when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
-        when(teamRepository.findAll()).thenReturn(List.of());
-
-        // when
-        var data = service.getNewRaceFormData(matchday.getId());
-
-        // then
-        assertThat(data.form().getMatchdayId()).isEqualTo(matchday.getId());
-        assertThat(data.seasonCars()).containsExactly(car);
-        assertThat(data.seasonTracks()).containsExactly(track);
-    }
-
-    @Test
-    void givenNoMatchdayId_whenGetNewRaceFormData_thenReturnsEmptyPools() {
-        // given
-        when(matchdayRepository.findAll()).thenReturn(List.of());
-        when(teamRepository.findAll()).thenReturn(List.of());
-
-        // when
-        var data = service.getNewRaceFormData(null);
-
-        // then
-        assertThat(data.form().getMatchdayId()).isNull();
-        assertThat(data.seasonCars()).isEmpty();
-        assertThat(data.seasonTracks()).isEmpty();
-    }
-
-    // --- getRaceFormData (edit) ---
-
-    @Test
-    void givenExistingRace_whenGetRaceFormData_thenPopulatesFormFromRace() {
-        // given
-        var homeTeam = createTeam("HOM", "Home");
-        var awayTeam = createTeam("AWY", "Away");
-        var matchday = createMatchday();
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
-        when(teamRepository.findAll()).thenReturn(List.of(homeTeam, awayTeam));
-        when(raceRepository.findByMatchdaySeasonId(any())).thenReturn(List.of());
-
-        // when
-        var data = service.getRaceFormData(race.getId());
-
-        // then
-        assertThat(data.form().getId()).isEqualTo(race.getId());
-        assertThat(data.form().getHomeTeamId()).isEqualTo(homeTeam.getId());
-        assertThat(data.form().getAwayTeamId()).isEqualTo(awayTeam.getId());
-    }
-
-    // --- getResultsFormData ---
-
-    @Test
-    void givenRaceWithLineupButNoResults_whenGetResultsFormData_thenPopulatesDriversFromLineup() {
-        // given
-        var homeTeam = createTeam("HOM", "Home");
-        var awayTeam = createTeam("AWY", "Away");
-        var matchday = createMatchday();
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-
-        var driver = new Driver("psn1", "Nick1");
-        driver.setId(UUID.randomUUID());
-        driver.setSeasonDrivers(List.of());
-        var lineup = new RaceLineup(race, driver, homeTeam);
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of(lineup));
-
-        // when
-        var data = service.getResultsFormData(race.getId());
-
-        // then
-        assertThat(data.form().getResults()).isNotEmpty();
-        assertThat(data.form().getResults().get(0).getDriverId()).isEqualTo(driver.getId());
     }
 
     // --- saveRace edit ---
@@ -538,20 +403,15 @@ class RaceServiceTest {
         existingRace.setMatchday(matchday);
         existingRace.setMatch(existingMatch);
 
-        var form = new RaceForm();
-        form.setId(existingRace.getId());
-        form.setMatchdayId(matchday.getId());
-        form.setHomeTeamId(homeTeam.getId());
-        form.setAwayTeamId(awayTeam.getId());
-
-        when(matchdayRepository.findById(form.getMatchdayId())).thenReturn(Optional.of(matchday));
-        when(teamRepository.findById(form.getHomeTeamId())).thenReturn(Optional.of(homeTeam));
-        when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(homeTeam.getId())).thenReturn(Optional.of(homeTeam));
+        when(teamRepository.findById(awayTeam.getId())).thenReturn(Optional.of(awayTeam));
         when(raceRepository.findById(existingRace.getId())).thenReturn(Optional.of(existingRace));
         when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        var result = service.saveRace(form);
+        var result = service.saveRace(existingRace.getId(), matchday.getId(), homeTeam.getId(), awayTeam.getId(),
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         // then
         assertThat(result.success()).isTrue();
@@ -564,183 +424,29 @@ class RaceServiceTest {
     @Test
     void givenTrackNotInSeasonPool_whenSaveRace_thenReturnsError() {
         // given
-        var form = new RaceForm();
-        form.setMatchdayId(UUID.randomUUID());
-        form.setHomeTeamId(UUID.randomUUID());
-        form.setAwayTeamId(UUID.randomUUID());
-        form.setTrackId(UUID.randomUUID());
+        var matchdayId = UUID.randomUUID();
+        var homeTeamId = UUID.randomUUID();
+        var awayTeamId = UUID.randomUUID();
+        var trackId = UUID.randomUUID();
 
         var matchday = createMatchday();
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
         var track = new Track();
-        track.setId(form.getTrackId());
+        track.setId(trackId);
 
-        when(matchdayRepository.findById(form.getMatchdayId())).thenReturn(Optional.of(matchday));
-        when(teamRepository.findById(form.getHomeTeamId())).thenReturn(Optional.of(homeTeam));
-        when(teamRepository.findById(form.getAwayTeamId())).thenReturn(Optional.of(awayTeam));
-        when(trackRepository.findById(form.getTrackId())).thenReturn(Optional.of(track));
+        when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+        when(teamRepository.findById(homeTeamId)).thenReturn(Optional.of(homeTeam));
+        when(teamRepository.findById(awayTeamId)).thenReturn(Optional.of(awayTeam));
+        when(trackRepository.findById(trackId)).thenReturn(Optional.of(track));
 
         // when
-        var result = service.saveRace(form);
+        var result = service.saveRace(null, matchdayId, homeTeamId, awayTeamId,
+                trackId, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         // then
         assertThat(result.success()).isFalse();
         assertThat(result.message()).contains("Track is not in this season's pool");
-    }
-
-    // --- createOrUpdateCalendarEvent ---
-
-    @Test
-    void givenRaceWithDateTimeAndTeams_whenCreateCalendarEvent_thenCreatesEvent() throws Exception {
-        // given
-        var homeTeam = createTeam("DTR", "Delta Racing");
-        var awayTeam = createTeam("MRL", "Maranello");
-        var matchday = createMatchday();
-        matchday.setLabel("MD 2");
-        matchday.getSeason().setEventDurationMinutes(90);
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-        race.setDateTime(java.time.LocalDateTime.of(2026, 3, 20, 19, 30));
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(true);
-        when(googleCalendarService.createEvent("MD 2 - DTR vs. MRL",
-                java.time.LocalDateTime.of(2026, 3, 20, 19, 30), 90))
-                .thenReturn("event-id-123");
-        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        // when
-        service.createOrUpdateCalendarEvent(race.getId());
-
-        // then
-        verify(googleCalendarService).createEvent("MD 2 - DTR vs. MRL",
-                java.time.LocalDateTime.of(2026, 3, 20, 19, 30), 90);
-        verify(raceRepository).save(argThat(r -> "event-id-123".equals(r.getCalendarEventId())));
-    }
-
-    @Test
-    void givenRaceWithExistingEventId_whenCreateCalendarEvent_thenUpdatesEvent() throws Exception {
-        // given
-        var homeTeam = createTeam("DTR", "Delta Racing");
-        var awayTeam = createTeam("MRL", "Maranello");
-        var matchday = createMatchday();
-        matchday.setLabel("MD 2");
-        matchday.getSeason().setEventDurationMinutes(90);
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-        race.setDateTime(java.time.LocalDateTime.of(2026, 3, 27, 20, 0));
-        race.setCalendarEventId("existing-event-id");
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(true);
-
-        // when
-        service.createOrUpdateCalendarEvent(race.getId());
-
-        // then
-        verify(googleCalendarService).updateEvent("existing-event-id", "MD 2 - DTR vs. MRL",
-                java.time.LocalDateTime.of(2026, 3, 27, 20, 0), 90);
-        verify(googleCalendarService, never()).createEvent(any(), any(), anyInt());
-    }
-
-    @Test
-    void givenRaceWithoutDateTime_whenCreateCalendarEvent_thenThrowsException() {
-        // given
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(createMatchday());
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(true);
-
-        // when / then
-        assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(race.getId()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("date/time");
-    }
-
-    @Test
-    void givenSeasonWithoutDuration_whenCreateCalendarEvent_thenThrowsException() {
-        // given
-        var homeTeam = createTeam("HOM", "Home");
-        var awayTeam = createTeam("AWY", "Away");
-        var matchday = createMatchday();
-        matchday.getSeason().setEventDurationMinutes(null);
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-        race.setDateTime(java.time.LocalDateTime.of(2026, 3, 20, 19, 30));
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(true);
-
-        // when / then
-        assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(race.getId()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("duration");
-    }
-
-    @Test
-    void givenCalendarNotAvailable_whenCreateCalendarEvent_thenThrowsException() {
-        // given
-        var raceId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(raceId);
-        race.setMatchday(createMatchday());
-
-        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(false);
-
-        // when / then
-        assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(raceId))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Calendar");
-    }
-
-    @Test
-    void givenPlayoffRace_whenCreateCalendarEvent_thenUsesPlayoffDuration() throws Exception {
-        // given
-        var homeTeam = createTeam("DTR", "Delta Racing");
-        var awayTeam = createTeam("MRL", "Maranello");
-        var matchday = createMatchday();
-        matchday.setLabel("PO 1");
-        matchday.getSeason().setEventDurationMinutes(90);
-
-        var playoff = new Playoff(matchday.getSeason(), "Playoffs");
-        playoff.setEventDurationMinutes(120);
-        var round = new PlayoffRound();
-        round.setPlayoff(playoff);
-        var matchup = new PlayoffMatchup();
-        matchup.setRound(round);
-        matchup.setTeam1(homeTeam);
-        matchup.setTeam2(awayTeam);
-
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setPlayoffMatchup(matchup);
-        race.setDateTime(java.time.LocalDateTime.of(2026, 4, 10, 20, 0));
-
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(true);
-        when(googleCalendarService.createEvent(any(), any(), eq(120))).thenReturn("playoff-event-id");
-        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        // when
-        service.createOrUpdateCalendarEvent(race.getId());
-
-        // then
-        verify(googleCalendarService).createEvent("PO 1 - DTR vs. MRL",
-                java.time.LocalDateTime.of(2026, 4, 10, 20, 0), 120);
     }
 
     // --- Helper methods ---

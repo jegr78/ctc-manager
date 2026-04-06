@@ -111,6 +111,23 @@ public class ScoringService {
     }
 
     /**
+     * Calculates [team1Points, team2Points] from race results.
+     * Used by PlayoffService.determineWinner and PlayoffBracketViewService.buildMatchupView.
+     */
+    public int[] calculateTeamTotals(List<RaceResult> results, UUID raceId, UUID team1Id) {
+        int team1Total = 0;
+        int team2Total = 0;
+        for (RaceResult result : results) {
+            if (isDriverInTeam(result, raceId, team1Id)) {
+                team1Total += result.getPointsTotal();
+            } else {
+                team2Total += result.getPointsTotal();
+            }
+        }
+        return new int[]{team1Total, team2Total};
+    }
+
+    /**
      * Checks if a driver belongs to the given team for a specific race.
      * Uses RaceLineup (Source of Truth) with fallback to SeasonDriver for legacy data.
      */
