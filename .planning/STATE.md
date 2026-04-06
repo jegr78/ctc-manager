@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v1.1
+milestone_name: Codebase Concerns Cleanup
 status: executing
-stopped_at: Phase 9 context gathered
-last_updated: "2026-04-05T11:56:18.905Z"
+stopped_at: Phase 10 context gathered (assumptions mode)
+last_updated: "2026-04-06T07:18:10.435Z"
 last_activity: 2026-04-05
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 2
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -72,6 +72,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-05T11:35:02.642Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-alltime-standings/09-CONTEXT.md
+Last session: 2026-04-06T07:18:10.429Z
+Stopped at: Phase 10 context gathered (assumptions mode)
+Resume file: .planning/phases/10-service-refactoring/10-CONTEXT.md
