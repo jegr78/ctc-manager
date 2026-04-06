@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.TeamForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Team;
@@ -197,16 +196,12 @@ class TeamManagementServiceTest {
     class SaveTest {
 
         @Test
-        void givenNewTeamForm_whenSave_thenCreatesTeam() {
+        void givenNewTeamPrimitives_whenSave_thenCreatesTeam() {
             // given
-            var form = new TeamForm();
-            form.setName("New Team");
-            form.setShortName("NT");
-
             when(teamRepository.save(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = service.save(form);
+            var result = service.save(null, "New Team", "NT", null, null, null);
 
             // then
             assertThat(result.getName()).isEqualTo("New Team");
@@ -215,7 +210,7 @@ class TeamManagementServiceTest {
         }
 
         @Test
-        void givenExistingTeamForm_whenSave_thenUpdatesAndPropagatesColors() {
+        void givenExistingTeamPrimitives_whenSave_thenUpdatesAndPropagatesColors() {
             // given
             var id = UUID.randomUUID();
             var existing = createTeam("OT", "Old Team");
@@ -225,19 +220,11 @@ class TeamManagementServiceTest {
             sub.setParentTeam(existing);
             existing.setSubTeams(List.of(sub));
 
-            var form = new TeamForm();
-            form.setId(id);
-            form.setName("Updated Team");
-            form.setShortName("UT");
-            form.setPrimaryColor("#FF0000");
-            form.setSecondaryColor("#00FF00");
-            form.setAccentColor("#0000FF");
-
             when(teamRepository.findById(id)).thenReturn(Optional.of(existing));
             when(teamRepository.save(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = service.save(form);
+            var result = service.save(id, "Updated Team", "UT", "#FF0000", "#00FF00", "#0000FF");
 
             // then
             assertThat(result.getName()).isEqualTo("Updated Team");
