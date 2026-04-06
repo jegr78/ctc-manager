@@ -4,13 +4,13 @@
 <body>
 <section>
     <h1>Import Preview</h1>
-    <div class="card" style="margin-bottom:16px;">
+    <div class="card mb-md">
         <p><strong>Season:</strong> <span th:text="${seasonDisplayLabel}"></span> |
            <strong>Matchday:</strong> <span th:text="${matchdayName ?: metadata.matchdayLabel ?: '-'}"></span></p>
     </div>
 
     <!-- Errors -->
-    <div th:if="${preview.hasErrors()}" class="alert alert-error" style="margin-bottom:16px;">
+    <div th:if="${preview.hasErrors()}" class="alert alert-error mb-md">
         <strong>Errors:</strong>
         <ul style="margin:8px 0 0 16px;">
             <li th:each="error : ${preview.errors}" th:text="${error}"></li>
@@ -36,7 +36,7 @@
             <label for="file">Re-select CSV file (for import)</label>
             <input type="file" id="file" name="file" accept=".csv,.txt,.tsv" required>
         </div>
-        <div th:if="${source == 'sheet'}" class="text-dim" style="margin-bottom:16px;">
+        <div th:if="${source == 'sheet'}" class="text-dim mb-md">
             <p>Source: Google Sheet</p>
         </div>
 
@@ -84,7 +84,7 @@
             </table>
         </div>
 
-        <div class="actions" style="margin-top:16px;">
+        <div class="actions mt-md">
             <button th:unless="${preview.duplicateDetected}" type="submit" class="btn btn-primary">Execute Import</button>
             <button th:if="${preview.duplicateDetected}" type="submit" name="overwrite" value="true" class="btn btn-danger"
                     onclick="return confirm('This will overwrite the existing match results. Continue?')">Overwrite Existing</button>

@@ -19,21 +19,21 @@
                 <div class="form-group">
                     <label for="pointsWin" style="color:#66bb6a;">Win</label>
                     <input type="number" id="pointsWin" name="pointsWin" th:value="${matchScoringForm.pointsWin}"
-                           min="0" required style="text-align:center; font-size:18px; font-weight:700;">
+                           min="0" required class="scoring-input">
                 </div>
                 <div class="form-group">
                     <label for="pointsDraw">Draw</label>
                     <input type="number" id="pointsDraw" name="pointsDraw" th:value="${matchScoringForm.pointsDraw}"
-                           min="0" required style="text-align:center; font-size:18px; font-weight:700;">
+                           min="0" required class="scoring-input">
                 </div>
                 <div class="form-group">
                     <label for="pointsLoss" style="color:#ef5350;">Loss</label>
                     <input type="number" id="pointsLoss" name="pointsLoss" th:value="${matchScoringForm.pointsLoss}"
-                           min="0" required style="text-align:center; font-size:18px; font-weight:700;">
+                           min="0" required class="scoring-input">
                 </div>
             </div>
 
-            <div style="display:flex; gap:8px; margin-top:16px;">
+            <div class="actions mt-md">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/match-scorings}" class="btn btn-secondary">Cancel</a>
             </div>

@@ -7,7 +7,7 @@
         <h1>Tracks</h1>
         <div class="actions">
             <input type="text" id="trackSearch" placeholder="Search tracks..." aria-label="Search tracks"
-                   style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
+                   class="search-input">
             <a th:href="@{/admin/tracks/new}" class="btn btn-primary">+ New Track</a>
         </div>
     </div>
@@ -16,7 +16,7 @@
         <table th:if="${!tracks.isEmpty()}" id="tracksTable">
             <thead>
                 <tr>
-                    <th style="width:60px"></th>
+                    <th class="col-thumb"></th>
                     <th class="sortable" data-col="1" aria-label="Sort by Name">Name</th>
                     <th class="sortable" data-col="2" aria-label="Sort by Country">Country</th>
                     <th>Actions</th>
@@ -24,7 +24,7 @@
             </thead>
             <tbody>
                 <tr th:each="track : ${tracks}" class="track-row">
-                    <td style="width:60px"><img th:if="${track.imageUrl}" th:src="${track.imageUrl}" alt="" style="width:50px;height:auto;border-radius:4px;"></td>
+                    <td class="col-thumb"><img th:if="${track.imageUrl}" th:src="${track.imageUrl}" alt="" class="thumb-sm"></td>
                     <td th:text="${track.name}"></td>
                     <td th:text="${track.country}"></td>
                     <td class="actions">
@@ -39,7 +39,7 @@
         </table>
         </div>
         <div id="noResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching tracks found.</p></div>
-        <div class="pagination" id="pagination" aria-label="Tracks pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+        <div class="pagination pagination-bar" id="pagination" aria-label="Tracks pagination">
             <span id="pageInfo" class="text-dim"></span>
             <div class="actions">
                 <button id="prevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>

@@ -9,7 +9,7 @@
 
         <!-- Cars Section -->
         <div class="card" style="margin-bottom:24px;">
-            <div class="toolbar" style="margin-bottom:16px;">
+            <div class="toolbar mb-md">
                 <div>
                     <h2 style="font-size:18px;">Cars</h2>
                     <p class="text-dim" style="margin-top:4px;">
@@ -20,7 +20,7 @@
                 </div>
                 <div class="actions">
                     <input type="text" id="carSearch" placeholder="Search cars..." aria-label="Search cars"
-                           style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
+                           class="search-input">
                     <button type="button" id="toggleCars" class="btn btn-secondary btn-sm">Deselect all new</button>
                 </div>
             </div>
@@ -30,7 +30,7 @@
                 <thead>
                     <tr>
                         <th style="width:40px;"></th>
-                        <th style="width:60px;"></th>
+                        <th class="col-thumb"></th>
                         <th style="width:80px;">Status</th>
                         <th>Manufacturer</th>
                         <th>Name</th>
@@ -43,8 +43,8 @@
                             <input th:if="${car.status.name() == 'NEW'}" type="checkbox"
                                    name="selectedCars" th:value="${car.gt7Id}" checked class="car-check">
                         </td>
-                        <td style="width:60px;">
-                            <img th:src="${car.imageUrl}" alt="" style="width:50px;height:auto;border-radius:4px;"
+                        <td class="col-thumb">
+                            <img th:src="${car.imageUrl}" alt="" class="thumb-sm"
                                  loading="lazy" onerror="this.style.display='none'">
                         </td>
                         <td>
@@ -59,7 +59,7 @@
             </div>
 
             <div id="carNoResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching cars found.</p></div>
-            <div class="pagination" id="carPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+            <div class="pagination pagination-bar" id="carPagination">
                 <span id="carPageInfo" class="text-dim"></span>
                 <div class="actions">
                     <button type="button" id="carPrevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
@@ -70,7 +70,7 @@
 
         <!-- Tracks Section -->
         <div class="card" style="margin-bottom:24px;">
-            <div class="toolbar" style="margin-bottom:16px;">
+            <div class="toolbar mb-md">
                 <div>
                     <h2 style="font-size:18px;">Tracks</h2>
                     <p class="text-dim" style="margin-top:4px;">
@@ -81,7 +81,7 @@
                 </div>
                 <div class="actions">
                     <input type="text" id="trackSearch" placeholder="Search tracks..." aria-label="Search tracks"
-                           style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
+                           class="search-input">
                     <button type="button" id="toggleTracks" class="btn btn-secondary btn-sm">Deselect all new</button>
                 </div>
             </div>
@@ -115,7 +115,7 @@
             </div>
 
             <div id="trackNoResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching tracks found.</p></div>
-            <div class="pagination" id="trackPagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+            <div class="pagination pagination-bar" id="trackPagination">
                 <span id="trackPageInfo" class="text-dim"></span>
                 <div class="actions">
                     <button type="button" id="trackPrevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
@@ -125,16 +125,16 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="actions" style="margin-top:16px;">
+        <div class="actions mt-md">
             <button type="submit" id="importBtn" class="btn btn-primary">Import Selected</button>
             <a th:href="@{/admin/gt7-sync}" id="cancelLink" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 
     <!-- Fullscreen overlay shown during import -->
-    <div id="importOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:none;align-items:center;justify-content:center;">
-        <div style="background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:32px 48px;text-align:center;max-width:400px;">
-            <div style="margin-bottom:12px;color:var(--accent);font-weight:700;font-size:18px;">Importing...</div>
+    <div id="importOverlay" class="overlay">
+        <div class="overlay-panel">
+            <div class="overlay-title">Importing...</div>
             <div class="text-dim">Downloading car and track data with images.<br>This may take a moment.</div>
         </div>
     </div>

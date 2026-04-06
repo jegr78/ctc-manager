@@ -7,7 +7,7 @@
         <h1>Drivers</h1>
         <div class="actions">
             <input type="text" id="driverSearch" placeholder="Search drivers..." aria-label="Search drivers"
-                   style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
+                   class="search-input">
             <a th:href="@{/admin/drivers/new}" class="btn btn-primary">+ New Driver</a>
         </div>
     </div>
@@ -42,7 +42,7 @@
         </table>
         </div>
         <div id="noResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching drivers found.</p></div>
-        <div class="pagination" id="pagination" aria-label="Drivers pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+        <div class="pagination pagination-bar" id="pagination" aria-label="Drivers pagination">
             <span id="pageInfo" class="text-dim"></span>
             <div class="actions">
                 <button id="prevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>
