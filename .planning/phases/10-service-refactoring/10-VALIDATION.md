@@ -1,9 +1,9 @@
 ---
 phase: 10
 slug: service-refactoring
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-06
 ---
 
@@ -38,23 +38,25 @@ created: 2026-04-06
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 10-01-01 | 01 | 1 | ARCH-03 | — | N/A | unit | `./mvnw test -Dtest=TemplateManageableTest` | ❌ W0 | ⬜ pending |
+| 10-01-01 | 01 | 1 | ARCH-03 | — | N/A | unit | `./mvnw test -Dtest=TemplateManageableTest` | TDD-inline | ⬜ pending |
 | 10-01-02 | 01 | 1 | ARCH-03 | — | N/A | integration | `./mvnw test -Dtest=TemplateEditorControllerTest` | ✅ | ⬜ pending |
-| 10-02-01 | 02 | 1 | ARCH-04 | — | N/A | unit | `./mvnw test -Dtest=PlayoffBracketViewServiceTest` | ❌ W0 | ⬜ pending |
-| 10-02-02 | 02 | 1 | ARCH-04 | — | N/A | unit | `./mvnw test -Dtest=PlayoffSeedingServiceTest` | ❌ W0 | ⬜ pending |
+| 10-02-01 | 02 | 1 | ARCH-04 | — | N/A | unit | `./mvnw test -Dtest=PlayoffBracketViewServiceTest` | TDD-inline | ⬜ pending |
+| 10-02-02 | 02 | 1 | ARCH-04 | — | N/A | unit | `./mvnw test -Dtest=PlayoffSeedingServiceTest` | TDD-inline | ⬜ pending |
 | 10-02-03 | 02 | 1 | ARCH-04 | — | N/A | integration | `./mvnw test -Dtest=PlayoffControllerTest` | ✅ | ⬜ pending |
-| 10-03-01 | 03 | 1 | ARCH-05 | — | N/A | unit | `./mvnw test -Dtest=RaceFormDataServiceTest` | ❌ W0 | ⬜ pending |
-| 10-03-02 | 03 | 1 | ARCH-05 | — | N/A | unit | `./mvnw test -Dtest=RaceCalendarServiceTest` | ❌ W0 | ⬜ pending |
+| 10-03-01 | 03 | 1 | ARCH-05 | — | N/A | unit | `./mvnw test -Dtest=RaceFormDataServiceTest` | TDD-inline | ⬜ pending |
+| 10-03-02 | 03 | 1 | ARCH-05 | — | N/A | unit | `./mvnw test -Dtest=RaceCalendarServiceTest` | TDD-inline | ⬜ pending |
 | 10-03-03 | 03 | 1 | ARCH-05 | — | N/A | integration | `./mvnw test -Dtest=RaceControllerTest` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+**Wave 0 resolution:** All 5 missing test files (TemplateManageableTest, PlayoffBracketViewServiceTest, PlayoffSeedingServiceTest, RaceFormDataServiceTest, RaceCalendarServiceTest) are created inline by their respective TDD tasks. Each plan task with `tdd="true"` writes tests as part of the RED phase before implementation. No separate Wave 0 plan is needed.
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] Unit test stubs for new services (`PlayoffBracketViewServiceTest`, `PlayoffSeedingServiceTest`, `RaceFormDataServiceTest`, `RaceCalendarServiceTest`)
-- [ ] `TemplateManageableTest` — interface contract tests
+- [x] Unit test stubs for new services (`PlayoffBracketViewServiceTest`, `PlayoffSeedingServiceTest`, `RaceFormDataServiceTest`, `RaceCalendarServiceTest`) — created inline by TDD tasks in Plans 02 and 03
+- [x] `TemplateManageableTest` — interface contract tests — created inline by TDD task in Plan 01
 
 *Existing infrastructure covers framework and fixture needs.*
 
@@ -72,11 +74,11 @@ created: 2026-04-06
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (inline TDD in each plan task)
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
