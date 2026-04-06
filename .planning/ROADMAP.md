@@ -109,15 +109,16 @@ Plans:
 **Depends on**: Phase 7
 **Requirements**: ARCH-03, ARCH-04, ARCH-05
 **Success Criteria** (what must be TRUE):
-  1. TemplateEditorController uses a generic Map<String, AbstractGraphicService> dispatch instead of 30+ copy-paste blocks
+  1. TemplateEditorController uses a generic Map<String, TemplateManageable> dispatch instead of 20 copy-paste save/reset blocks
   2. PlayoffService bracket-view and seeding logic are in separate focused services
   3. RaceService form-data assembly and calendar-event logic are in separate focused services
   4. All graphic editing, playoff, and race functionality works identically from the UI
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 10-01: TBD
-- [ ] 10-02: TBD
+- [ ] 10-01-PLAN.md — TemplateEditorController generic dispatch with TemplateManageable interface
+- [ ] 10-02-PLAN.md — PlayoffService split into BracketView + Seeding services
+- [ ] 10-03-PLAN.md — RaceService split into FormData + Calendar services
 
 ### Phase 11: Template Quality
 **Goal**: Admin templates use consistent CSS classes instead of scattered inline styles
@@ -149,5 +150,5 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
 | 7. Layer Cleanup | v1.1 | 3/3 | Complete | 2026-04-05 |
 | 8. Exception Refinement | v1.1 | 2/2 | Complete | 2026-04-05 |
 | 9. Alltime Standings | v1.1 | 1/1 | Complete | 2026-04-05 |
-| 10. Service Refactoring | v1.1 | 0/2 | Not started | - |
+| 10. Service Refactoring | v1.1 | 0/3 | Not started | - |
 | 11. Template Quality | v1.1 | 0/1 | Not started | - |
