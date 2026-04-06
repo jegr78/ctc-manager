@@ -192,6 +192,68 @@ Executed: {N} | Passed: {P} | Failed: {F} | Skipped: {S}
 ```
 </step>
 
+<step name="write_reports">
+**Write test results to reports and terminal.**
+
+**Phase-UAT mode — write AUTO-UAT.md:**
+
+Create `.planning/phases/{phase_dir}/{phase_num}-AUTO-UAT.md`:
+
+```markdown
+---
+phase: {phase_name}
+executed: {ISO-8601 timestamp}
+server_profile: dev,demo
+total: {total_count}
+passed: {passed_count}
+failed: {failed_count}
+skipped: {skipped_count}
+---
+
+# Auto-UAT Report: Phase {phase_num}
+
+## Results
+
+### {N}. {test_name}
+- **Status:** {passed|failed|skipped}
+- **Screenshots:** [{screenshot_name}](../../.screenshots/auto-uat/{filename})
+- **Evidence:** {evidence_note or skip_reason}
+```
+
+One section per test, with all screenshots linked.
+
+**Phase-UAT mode — update HUMAN-UAT.md (if exists):**
+
+```bash
+HUMAN_UAT_FILE=$(find "$PHASE_DIR" -name "*-HUMAN-UAT.md" -type f 2>/dev/null | head -1)
+```
+
+If found, update each test's `result:` line:
+- `result: [pending]` → `result: passed (auto-verified {timestamp})` for passed tests
+- `result: [pending]` → `result: failed (auto-verified {timestamp}) — {reason}` for failed tests
+- `result: [pending]` → `result: skipped (not automatable) — {reason}` for skipped tests
+
+Update the `## Summary` section:
+- Recalculate `passed:`, `issues:` (= failed count), `pending:` (= remaining pending), `skipped:` counts
+- Update `status:` in frontmatter: `complete` if no pending/failed, `partial` otherwise
+- Update `updated:` timestamp in frontmatter
+
+**All modes — terminal output:**
+
+Display a summary table:
+
+```
+## Auto-UAT Results
+
+| # | Test | Status | Evidence |
+|---|------|--------|----------|
+| 1 | {name} | {status} | {evidence} |
+
+{passed}/{total} passed, {failed} failed, {skipped} skipped
+Screenshots: .screenshots/auto-uat/
+```
+</step>
+
 <step name="server_cleanup">
 **Stop server if we started it.**
 
