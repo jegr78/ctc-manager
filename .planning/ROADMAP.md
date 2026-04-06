@@ -159,6 +159,10 @@ Plans:
   2. FileStorageService.store() and storeImage() reject filenames containing path traversal sequences
   3. Existing file upload and URL import functionality continues to work for legitimate inputs
 **Recovery Source**: Commit `84e8896` (original Phase 6 implementation)
+**Plans:** 1 plan
+
+Plans:
+- [ ] 12-01-PLAN.md — Restore SSRF hostname validation + path traversal protection (TDD)
 
 ### Phase 13: Layer Cleanup Recovery
 **Goal**: Re-apply controller service delegation and domain DTO decoupling lost by worktree file clobber
@@ -211,7 +215,7 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 
 | 9. Alltime Standings | v1.1 | 1/1 | Complete | 2026-04-05 |
 | 10. Service Refactoring | v1.1 | 3/3 | Complete    | 2026-04-06 |
 | 11. Template Quality | v1.1 | 3/3 | Complete    | 2026-04-06 |
-| 12. Security Hardening Recovery | v1.1 | 0/0 | Pending | — |
+| 12. Security Hardening Recovery | v1.1 | 0/1 | Planned | — |
 | 13. Layer Cleanup Recovery | v1.1 | 0/0 | Pending | — |
 | 14. Exception Refinement Recovery | v1.1 | 0/0 | Pending | — |
 | 15. Alltime Standings Recovery | v1.1 | 0/0 | Pending | — |
