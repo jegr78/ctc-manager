@@ -175,6 +175,12 @@ Plans:
   3. Buchholz calculation and Swiss-system sorting logic lives in StandingsService, not StandingsController
   4. All existing admin UI pages render correctly with unchanged behavior
 **Recovery Source**: Phase 7 commits (`b733781` + Plan 02/03 commits)
+**Plans:** 3 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Service finder methods + controller repository removal (ARCH-02, FEAT-02)
+- [ ] 13-02-PLAN.md — Simple service DTO decoupling (ARCH-01: Car, Track, Driver, RaceScoring, MatchScoring)
+- [ ] 13-03-PLAN.md — Complex service DTO decoupling (ARCH-01: Season, Team, Playoff, Matchday)
 
 ### Phase 14: Exception Refinement Recovery
 **Goal**: Re-apply specific exception catches in controllers lost by worktree file clobber
@@ -216,6 +222,6 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 
 | 10. Service Refactoring | v1.1 | 3/3 | Complete    | 2026-04-06 |
 | 11. Template Quality | v1.1 | 3/3 | Complete    | 2026-04-06 |
 | 12. Security Hardening Recovery | v1.1 | 1/1 | Complete    | 2026-04-06 |
-| 13. Layer Cleanup Recovery | v1.1 | 0/0 | Pending | — |
+| 13. Layer Cleanup Recovery | v1.1 | 0/3 | Planned | — |
 | 14. Exception Refinement Recovery | v1.1 | 0/0 | Pending | — |
 | 15. Alltime Standings Recovery | v1.1 | 0/0 | Pending | — |
