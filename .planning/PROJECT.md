@@ -113,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-06 after Phase 12 completion*
+*Last updated: 2026-04-06 after Phase 13 completion — controller service delegation and domain DTO decoupling re-applied*
