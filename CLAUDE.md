@@ -2,289 +2,208 @@
 
 Community Team Cup — Gran Turismo Racing League Manager
 
-## Tech Stack
+---
 
-- Java 25, Spring Boot 4.x, Maven
-- Thymeleaf (Admin-UI), MariaDB/H2, Flyway
-- JUnit 5, Mockito, Playwright, Jsoup
+## Language
 
-## Sprache
+* **Communication:** German
+* **Documentation, Code, Comments, and UI Texts:** English
 
-Deutsch für Kommunikation und Dokumentation. Code, Kommentare und UI-Texte auf Englisch.
+## Constraints
 
-## Befehle
+* **Test Coverage:** Minimum 82% line coverage must be maintained.
+* **Flyway:** Do not change the existing V1 migration; only new V2+ migrations.
+* **Profiles:** Auth only for `prod`/`docker`; `dev`/`local` remains without auth.
+* **OSIV:** Remains enabled — only use `@EntityGraph` annotations for optimization.
+* **Backward Compatibility:** No breaking changes to existing URLs/endpoints.
+* **Playwright:** Remains a compile-scope dependency (Runtime usage for graphics).
+
+## Technology Stack
+
+* **Runtime:** Java 25 (Eclipse Temurin), Maven via `./mvnw`, Spring Boot 4.x
+* **DB:** MariaDB (prod/local/docker), H2 (dev/test), Flyway Migrations
+* **UI:** Thymeleaf (server-side rendering), no frontend build tool
+* **Testing:** JUnit 5, Mockito, Playwright (E2E + Graphic generation)
+* **External APIs:** Google Sheets (Race Import), Google Calendar, Jsoup (GT7 Scraping)
+* **Build:** Surefire (Unit/Integration), Failsafe + `-Pe2e` (E2E), JaCoCo (Coverage)
+
+## Commands
 
 ```bash
-# Dev-Modus starten
+# Start Dev Mode
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 
-# Dev-Modus mit GT7-Demodaten (Autos, Strecken, Bilder)
+# Dev Mode with GT7 demo data (cars, tracks, images)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,demo
 
-# Tests ausfuehren (Unit + Integration + JaCoCo Coverage)
+# Run tests (Unit + Integration + JaCoCo Coverage)
 ./mvnw verify
 
-# Tests ausfuehren inkl. Playwright E2E
+# Run tests including Playwright E2E
 ./mvnw verify -Pe2e
 
-# Coverage-Report oeffnen
+# Open Coverage Report
 open target/site/jacoco/index.html
 
-# Local mit MariaDB
+# Local with MariaDB
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 
-# Playwright Chromium installieren (fuer Team Card Generierung + E2E Tests)
+# Install Playwright Chromium (for Team Card generation + E2E tests)
 ./mvnw exec:java -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
 
-# Docker: Lokale Umgebung (App + MariaDB)
+# Docker: Local environment (App + MariaDB)
 docker compose up --build -d
 docker compose down
 
-# Docker: Nur Image bauen
+# Docker: Build image only
 docker compose build
 
-# Docker: Produktion (externe DB, .env konfigurieren)
+# Docker: Production (external DB, configure .env)
 docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## Spring Profiles
 
-- `dev` — H2 In-Memory, Port 9090 (Entwicklung, Tests)
-- `dev,demo` — Wie `dev`, importiert beim Start alle GT7-Autos und -Strecken (mit Bildern) fuer manuelles Testen
-- `local` — MariaDB lokal, Port 9091
-- `docker` — MariaDB im Docker-Netzwerk (Host `db`), Port 8080
-- `prod` — Cloud DB (Environment Variables)
+* `dev` — H2 In-Memory, Port 9090 (Development, Testing)
+* `dev,demo` — Same as `dev`, imports all GT7 cars and tracks (with images) on startup for manual testing.
+* `local` — Local MariaDB, Port 9091
+* `docker` — MariaDB within the Docker network (Host `db`), Port 8080
+* `prod` — Cloud DB (Environment Variables)
 
-## Package-Struktur
+## Architectural Principles
 
-- `org.ctc.domain.model` — JPA Entities
-- `org.ctc.domain.repository` — Spring Data Repositories
-- `org.ctc.domain.service` — Geschaeftslogik (Scoring, Standings, Rankings)
-- `org.ctc.admin.controller` — Admin CRUD Controller
-- `org.ctc.admin.dto` — Form/Display DTOs
-- `org.ctc.admin.service` — Graphic Services (Playwright-basierte Bildgenerierung)
-- `org.ctc.sitegen` — Statische Seitengenerierung
-- `org.ctc.dataimport` — CSV/Bild-Import
-- `org.ctc.gt7sync` — GT7 Auto/Strecken-Scraping und Sync
-
-## Key Files
-
-- `CtcManagerApplication.java` — Entry Point
-- `TestDataService.java` — DevDataSeeder: Erstellt Teams, Seasons, Drivers, Scoring-Presets beim Start (dev-Profil)
-- `ScoringService.java` — Punkteberechnung (konfigurierbar via RaceScoring) + Score-Aggregation auf Match/PlayoffMatchup + isDriverInTeam() (RaceLineup Source of Truth)
-- `StandingsService.java` — Team-Tabelle (Match-basiert, nutzt MatchScoring)
-- `SeasonManagementService.java` — Team/Car/Track-Pool-Verwaltung fuer Seasons
-- `TeamManagementService.java` — Team-Detail-Daten, Farb/Logo-Propagation an Sub-Teams
-- `BaseEntity.java` — @MappedSuperclass mit createdAt/updatedAt (JPA Auditing)
-- `V1__initial_schema.sql` — Konsolidiertes DB-Schema (eingefroren seit v1.0.0)
-- `layout.html` — Thymeleaf Admin-Layout mit Sidebar (Fragment-Pattern: `th:replace="~{admin/layout :: layout(...)}"`)
-
-## Architektur-Prinzipien
-
-- **Controller duenn halten:** Controller sind nur fuer HTTP-Handling zustaendig (Request annehmen, Service aufrufen, Model/Redirect/Flash befuellen). Keine Business-Logik, keine direkten Repository-Zugriffe in Controllern. Geschaeftslogik gehoert in Service-Klassen (`domain.service` oder `admin.service`).
-- **DTOs statt Entities in Controllern:** Form-Eingaben (POST/save) immer ueber Form-DTOs (`admin.dto`) binden, nie JPA Entities direkt per `@ModelAttribute` — Schutz gegen Mass Assignment. Fuer Template-Anzeige (GET) duerfen Entities ans Model uebergeben werden (OSIV ist aktiv).
-- **Keine Fallback-Berechnungen:** Wenn abgeleitete Daten fehlen, keine Workarounds in Templates oder Controllern einbauen. Stattdessen Datenmodell und Service-Architektur analysieren und die Ursache beheben — Daten muessen an der richtigen Stelle konsistent geschrieben werden.
-- **Thymeleaf Templates schlank halten:** Keine komplexe Logik (SpEL-Expressions, Collection-Projektionen, verschachtelte Bedingungen) in Templates. Berechnungen und Datenaufbereitung gehoeren in den Service — Templates nur fuer Darstellung.
-- **Keine Inline-Styles auf Buttons:** Statt `style="..."` auf `.btn`-Elementen immer CSS-Klassen aus `admin.css` verwenden (`btn-xs`, `btn-sm`, `btn-lg`, `btn-tab`). Beim Refactoring von Inline-Styles zu CSS-Klassen immer auch JavaScript pruefen, das `element.className = '...'` setzt — dort muessen die neuen Klassen ebenfalls ergaenzt werden.
-- **Testdaten komplett isolieren:** E2E-Testdaten in `TestDataService` muessen eigene Entities mit Test-Prefix verwenden (z.B. `T-ALF`, `Test_Alpha_1`, `Test-Season 2026`). Nie echte Teams, Fahrer oder Saisons fuer automatisierte Tests nutzen — diese kollidieren mit manuellen Tests auf Import-Daten.
-- **RaceLineup ist Source of Truth:** Fuer Fahrer-Team-Zuordnungen (insb. Sub-Teams) immer `RaceLineup` priorisieren, `SeasonDriver` nur als Fallback fuer Saisons ohne Rennen. Der CSV-Import bestimmt die korrekte Zuordnung.
-- **Flyway Migrationen nicht aendern:** Bestehende `V*__*.sql` Dateien duerfen nach Release nie mehr geaendert werden (Flyway prueft Checksummen). Schema-Aenderungen immer als neue Migrationsdatei: `V{N}__{kurzbeschreibung}.sql` (snake_case, englisch). H2 + MariaDB Kompatibilitaet beachten.
+* **Core Value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
+* **Keep Controllers Thin:** Controllers are only responsible for HTTP handling (receiving requests, calling services, filling models/redirects/flash attributes). No business logic or direct repository access in controllers. Business logic belongs in service classes (`domain.service` or `admin.service`).
+* **DTOs instead of Entities in Controllers:** Always bind form inputs (POST/save) via Form DTOs (`admin.dto`), never JPA entities directly via `@ModelAttribute` — protection against Mass Assignment. For template display (GET), entities may be passed to the model (OSIV is active).
+* **No Fallback Calculations:** If derived data is missing, do not implement workarounds in templates or controllers. Instead, analyze the data model and service architecture and fix the root cause — data must be written consistently in the correct place.
+* **Keep Thymeleaf Templates Lean:** No complex logic (SpEL expressions, collection projections, nested conditions) in templates. Calculations and data preparation belong in the service — templates are for presentation only.
+* **No Inline Styles on Buttons:** Instead of `style="..."` on `.btn` elements, always use CSS classes from `admin.css` (`btn-xs`, `btn-sm`, `btn-lg`, `btn-tab`). When refactoring inline styles to CSS classes, always check JavaScript that sets `element.className = '...'` — the new classes must be added there as well.
+* **Isolate Test Data Completely:** E2E test data in `TestDataService` must use separate entities with a test prefix (e.g., `T-ALF`, `Test_Alpha_1`, `Test-Season 2026`). Never use real teams, drivers, or seasons for automated tests — these collide with manual tests on imported data.
+* **RaceLineup is Source of Truth:** For driver-team assignments (especially sub-teams), always prioritize `RaceLineup`; use `SeasonDriver` only as a fallback for seasons without races. The CSV import determines the correct assignment.
+* **Do Not Modify Flyway Migrations:** Existing `V*__*.sql` files must never be changed after release (Flyway checks checksums). Schema changes must always be a new migration file: `V{N}__{short_description}.sql` (snake_case, English). Maintain H2 + MariaDB compatibility.
 
 ## OSIV (Open Session in View)
 
-Bewusst aktiviert (`spring.jpa.open-in-view=true`). Die Hibernate-Session bleibt bis zum Ende des HTTP-Requests offen, damit Thymeleaf lazy-geladene Felder rendern kann. Korrekt fuer diese Admin-Anwendung mit serverseitigem Rendering — kein Lazy-Init-Workaround in Controllern noetig.
+Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session remains open until the end of the HTTP request so that Thymeleaf can render lazy-loaded fields. This is appropriate for this admin application using server-side rendering — no lazy-init workarounds in controllers are necessary.
 
-## Entwicklungsansatz
+## Development Approach
 
-- **TDD (Test-Driven Development):** Tests zuerst schreiben, dann Implementierung. Red → Green → Refactor.
-- **BDD (Behavior-Driven Development):** Playwright E2E Tests beschreiben das erwartete Verhalten aus Nutzersicht.
-- **Test-Naming (Given-When-Then):** Alle Testmethoden folgen dem BDD-Pattern:
-  - Methodenname: `givenContext_whenAction_thenExpectedResult()`
-  - Body: `// given` / `// when` / `// then` Kommentare zur Strukturierung
-  - Bei einfachen Tests ohne Precondition: `whenAction_thenResult()` erlaubt
-  - Bei Exception-Tests: `// when / then` kombiniert fuer assertThatThrownBy
-- Reihenfolge bei neuen Features: Unit Tests → Implementierung → Integration Tests → E2E Tests
-- Superpowers-Skill `superpowers:test-driven-development` nutzen
-- **Visuelle Pruefung mit `playwright-cli`:** Bei UI-Aenderungen (Templates, CSS) immer `playwright-cli` nutzen um das Ergebnis visuell zu verifizieren. Dev-Server starten (`./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`), dann mit `playwright-cli open http://localhost:9090/...` die betroffenen Seiten inspizieren (Desktop + Mobile). Skill: `/playwright-cli`
+* **TDD (Test-Driven Development):** Write tests first, then implementation. Red → Green → Refactor.
+* **BDD (Behavior-Driven Development):** Playwright E2E tests describe expected behavior from the user's perspective.
+* **Test Naming (Given-When-Then):** All test methods follow the BDD pattern:
+  * Method name: `givenContext_whenAction_thenExpectedResult()`
+  * Body: `// given` / `// when` / `// then` comments for structuring.
+  * For simple tests without preconditions: `whenAction_thenResult()` is allowed.
+  * For exception tests: `// when / then` combined for `assertThatThrownBy`.
+* **Feature Sequence:** Unit Tests → Implementation → Integration Tests → E2E Tests.
+* Use Superpowers skill `superpowers:test-driven-development`.
+* **Visual Verification with `playwright-cli`:** For UI changes (templates, CSS), always use `playwright-cli` to verify results visually. Start the dev server (`./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`), then inspect affected pages with `playwright-cli open http://localhost:9090/...` (Desktop + Mobile). Skill: `/playwright-cli`.
 
 ## Code Coverage (JaCoCo)
 
-- **Minimum:** 80% Line Coverage (Build bricht bei Unterschreitung)
-- **Report:** `target/site/jacoco/index.html` nach `./mvnw verify`
-- **CI:** Automatischer PR-Kommentar mit Coverage via `madrapps/jacoco-report`
-- **Excludes:** CtcManagerApplication, TestDataService, DemoDataSeeder, TeamCardService, LineupGraphicService, ResultsGraphicService, SettingsGraphicService, OverlayGraphicService, AbstractGraphicService (Playwright-abhaengig)
-- **Schwellwert anpassen:** Erst messen (`jacoco.csv`), dann Minimum setzen — nie optimistisch raten
+* **Minimum:** documented in `pom.xml`
+* **Report:** `target/site/jacoco/index.html` after running `./mvnw verify`.
+* **CI:** Automatic PR comment with coverage via `madrapps/jacoco-report`.
+* **Adjusting Threshold:** Measure first (`jacoco.csv`), then set the minimum — never guess optimistically.
 
-## Git-Workflow
+## Git Workflow
 
-- **Default-Branch:** `master`
-- **Tooling:** `gh` CLI fuer alle GitHub-Operationen (PRs, Issues, etc.)
-- **Branching:** Fuer jedes Feature/Fix einen eigenen Branch erstellen
-  - Naming: `feature/<kurzbeschreibung>` oder `fix/<kurzbeschreibung>`
-  - Branch von `master` abzweigen
-- **Pull Requests:** Aenderungen immer ueber PRs in `master` mergen, kein direkter Push
-  - `gh pr create --assignee jegr78` zum Erstellen (immer jegr78 zuweisen)
-  - `gh pr merge --squash` zum Mergen (saubere History)
-  - Nach Merge lokalen Branch aufraeumen: `git switch master && git pull && git branch -d <branch>`
-- **Commits:** Englische Commit-Messages mit Conventional Commits Prefixen:
-  - `feat:` — Neues Feature (Minor-Bump)
-  - `fix:` — Bugfix (Patch-Bump)
-  - `docs:` — Dokumentation (Patch-Bump)
-  - `chore:` — Maintenance (Patch-Bump)
-  - `refactor:` — Refactoring (Patch-Bump)
-  - `test:` — Tests (Patch-Bump)
-  - `style:` — Formatting/CSS (Patch-Bump)
-  - `perf:` — Performance (Patch-Bump)
-  - `ci:` — CI/CD (kein Release)
-  - `BREAKING CHANGE` im Footer → Major-Bump
-  - Format: `<type>(<optional scope>): <description>`
-  - Beispiel: `feat(scoring): add penalty point deduction`
-- **Vor PR:**
-  1. Tests lokal mit `./mvnw verify` sicherstellen
-  2. Code-Review der eigenen Aenderungen durchfuehren (superpowers:code-reviewer)
-  3. Gefundene Issues beheben und erneut testen
-- **Nach PR:**
-  1. CI-Build pruefen: `gh run list --branch <branch>` / `gh run view <run-id>`
-  2. Bei CI-Failure: Logs analysieren (`gh run view --log-failed`), fixen, pushen
-  3. PR darf erst gemergt werden wenn CI gruen ist
+* **Default Branch:** `master`
+* **Tooling:** `gh` CLI for all GitHub operations (PRs, Issues, etc.).
+* **Branching:** Create a separate branch for every feature/fix.
+  * Naming: `feature/<short-description>` or `fix/<short-description>`.
+  * Branch off `master`.
+* **Pull Requests:** Always merge changes via PRs into `master`; no direct pushes.
+  * `gh pr create --assignee jegr78` to create (always assign to jegr78).
+  * `gh pr merge --squash` to merge (keeps history clean).
+  * After merge, clean up local branch: `git switch master && git pull && git branch -d <branch>`.
+* **Commits:** English commit messages using Conventional Commits prefixes:
+  * `feat:` — New feature (Minor bump)
+  * `fix:` — Bugfix (Patch bump)
+  * `docs:` — Documentation (Patch bump)
+  * `chore:` — Maintenance (Patch bump)
+  * `refactor:` — Refactoring (Patch bump)
+  * `test:` — Tests (Patch bump)
+  * `style:` — Formatting/CSS (Patch bump)
+  * `perf:` — Performance (Patch bump)
+  * `ci:` — CI/CD (No release)
+  * `BREAKING CHANGE` in footer → Major bump.
+  * Format: `<type>(<optional scope>): <description>`
+  * Example: `feat(scoring): add penalty point deduction`
+* **Before PR:**
+    1. Ensure tests pass locally with `./mvnw verify`.
+    2. Perform a code review of your own changes (`superpowers:code-reviewer`).
+    3. Fix found issues and re-test.
+* **After PR:**
+    1. Check CI build: `gh run list --branch <branch>` / `gh run view <run-id>`.
+    2. In case of CI failure: Analyze logs (`gh run view --log-failed`), fix, and push.
+    3. PR may only be merged once CI is green.
 
-## Subagent-Regeln
+## Subagent Rules
 
-- **Modellwahl:** Implementierungs-Subagents immer mit `model: "opus"` oder mindestens `model: "sonnet"`. Haiku NUR fuer Read-Only-Tasks (Reviews, Recherche). Nie fuer Code-Aenderungen.
-- **Branch-Schutz:** Jeder Subagent-Prompt muss den aktiven Branch benennen und explizit verbieten: kein `git stash`, `git checkout`, `git reset`, kein Branch-Wechsel.
-- **Post-Dispatch-Validierung:** Nach JEDEM Subagent sofort pruefen: `git branch --show-current`, `git log --oneline -3`, `git diff --stat`. Bei Abweichung sofort `git reset --hard` auf letzten guten Commit.
-- **Plan-Treue:** Subagent-Prompt muss explizit sagen: "Implementiere NUR Task N. Wenn andere Dateien angepasst werden muessen, melde NEEDS_CONTEXT statt selbst zu fixen."
-- **Atomare Tasks:** Tasks im Plan muessen einzeln lauffaehig sein. Wenn eine Aenderung mehrere Tasks erzwingt, als einen Task planen.
-- **Fallback:** Wenn Subagents trotz Regeln Probleme machen, sequentiell selbst abarbeiten.
+* **Model Selection:** Implementation subagents must use `model: "opus"` or at least `model: "sonnet"`. Haiku is ONLY for read-only tasks (reviews, research). Never for code changes.
+* **Branch Protection:** Every subagent prompt must name the active branch and explicitly forbid: no `git stash`, `git checkout`, `git reset`, and no branch switching.
+* **Post-Dispatch Validation:** Immediately after EVERY subagent, check: `git branch --show-current`, `git log --oneline -3`, `git diff --stat`. If there is a discrepancy, immediately `git reset --hard` to the last good commit.
+* **Plan Adherence:** Subagent prompts must explicitly state: "Implement ONLY Task N. If other files need adjustment, report `NEEDS_CONTEXT` instead of fixing them yourself."
+* **Atomic Tasks:** Tasks in the plan must be individually executable. If a change forces multiple tasks, plan them as a single task.
+* **Fallback:** If subagents cause issues despite rules, process tasks sequentially yourself.
 
 ## References
 
-- Design Spec: `docs/superpowers/specs/2026-03-26-ctc-manager-design.md`
-- Scoring/Legs Spec: `docs/superpowers/specs/2026-03-29-scoring-legs-design.md`
-- Release Management Spec: `docs/superpowers/specs/2026-04-03-release-management-design.md`
+* Design Spec: `docs/superpowers/specs/2026-03-26-ctc-manager-design.md`
+* Scoring/Legs Spec: `docs/superpowers/specs/2026-03-29-scoring-legs-design.md`
+* Release Management Spec: `docs/superpowers/specs/2026-04-03-release-management-design.md`
+* Architecture: `.planning/codebase/ARCHITECTURE.md`
+* Conventions: `.planning/codebase/CONVENTIONS.md`
+* Stack: `.planning/codebase/STACK.md`
+* Structure: `.planning/codebase/STRUCTURE.md`
+* Testing: `.planning/codebase/TESTING.md`
 
-<!-- GSD:project-start source:PROJECT.md -->
-## Project
-
-**CTC Manager — Technical Debt Cleanup**
-
-Systematische Bereinigung aller technischen Schulden im CTC Manager, einer Gran Turismo Racing League Management-Anwendung (Spring Boot 4 / Thymeleaf / MariaDB). Ziel ist eine saubere Codebasis als Grundlage fuer zukuenftige Feature-Entwicklung.
-
-**Core Value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-
-### Constraints
-
-- **Testabdeckung**: 82% Line Coverage Minimum darf nicht unterschritten werden
-- **Flyway**: Bestehende V1 Migration nicht aendern, nur neue V2+ Migrationen
-- **Profile**: Auth nur fuer prod/docker, dev/local bleiben ohne Auth
-- **OSIV**: Bleibt aktiviert — nur @EntityGraph-Annotationen als Optimierung
-- **Abwaertskompatibilitaet**: Keine Breaking Changes an bestehenden URLs/Endpoints
-- **Playwright**: Bleibt Compile-Scope Dependency (Runtime-Nutzung fuer Graphics)
-<!-- GSD:project-end -->
-
-<!-- GSD:stack-start source:codebase/STACK.md -->
-## Technology Stack
-
-- **Runtime:** Java 25 (Eclipse Temurin), Maven via `./mvnw`, Spring Boot 4.x
-- **DB:** MariaDB (prod/local/docker), H2 (dev/test), Flyway Migrations
-- **UI:** Thymeleaf (server-side rendering), kein Frontend-Build-Tool
-- **Testing:** JUnit 5, Mockito, Playwright (E2E + Grafik-Generierung)
-- **Externe APIs:** Google Sheets (Race-Import), Google Calendar, Jsoup (GT7-Scraping)
-- **Build:** Surefire (Unit/Integration), Failsafe + `-Pe2e` (E2E), JaCoCo (Coverage)
+---
 
 ## Configuration
 
-- Profile-spezifisch: `application-{dev,local,docker,prod}.yml`
-- Prod-Env-Vars: `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `GOOGLE_CALENDAR_ID`
-- Google Credentials: `google.sheets.credentials-path` (default: `google-credentials.json`)
-- Upload-Dir: `app.upload-dir` (default: `data/dev/uploads`)
-- Site-Output: `ctc.site.output-dir` (default: `docs/site`)
+* **Profile-specific:** `application-{dev,local,docker,prod}.yml`
+* **Prod Env Vars:** `DATABASE_URL`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, `GOOGLE_CALENDAR_ID`
+* **Google Credentials:** `google.sheets.credentials-path` (default: `google-credentials.json`)
+* **Upload Dir:** `app.upload-dir` (default: `data/dev/uploads`)
+* **Site Output:** `ctc.site.output-dir` (default: `docs/site`)
 
 ## CI/CD
 
-- Push/PR to `master`: Build, Tests, Playwright E2E, JaCoCo Coverage PR-Kommentar
-- Push `docs/site/**`: GitHub Pages Deployment
-- Docker: Multi-stage Dockerfile (JDK build, JRE runtime), non-root user `ctc`, Healthcheck `/actuator/health`
-<!-- GSD:stack-end -->
+* **Push/PR to `master`:** Build, Tests, Playwright E2E, JaCoCo Coverage PR comment.
+* **Push `docs/site/**`:** GitHub Pages Deployment.
+* **Docker:** Multi-stage Dockerfile (JDK build, JRE runtime), non-root user `ctc`, healthcheck `/actuator/health`.
 
-<!-- GSD:conventions-start source:CONVENTIONS.md -->
+---
+
 ## Conventions
 
-## Naming Patterns
+### Naming Patterns
 
-- Domain layer: `org.ctc.domain.model`, `org.ctc.domain.repository`, `org.ctc.domain.service`
-- Admin layer: `org.ctc.admin.controller`, `org.ctc.admin.dto`, `org.ctc.admin.service`
-- Feature modules: `org.ctc.dataimport`, `org.ctc.gt7sync`, `org.ctc.sitegen`
-- Entities: singular nouns, PascalCase (`Season`, `RaceScoring`, `PlayoffMatchup`)
-- Repositories: `{Entity}Repository` — Services: `{Domain}Service` / `{Domain}ManagementService`
-- Controllers: `{Entity}Controller` — DTOs: `{Entity}Form` (form), `{Entity}Dto` (display), `{Entity}Data` (records)
-- Methods: camelCase, verb-first (`calculatePoints()`, `addTeamToSeason()`)
-- Boolean getters: `isSubTeam()`, `hasSubTeams()`, `isActive()`, `canParse()`
-- Variables: camelCase, `var` for obvious types, UUID params `id` (path) / `{entity}Id` (request)
-- DB: plural snake_case tables (`seasons`), snake_case columns (`created_at`), join tables `{parent}_{child}`
+* **Layers:** `org.ctc.domain.model`, `org.ctc.domain.repository`, `org.ctc.domain.service`, `org.ctc.admin.controller`, `org.ctc.admin.dto`, `org.ctc.admin.service`.
+* **Entities:** Singular nouns, PascalCase (`Season`, `RaceScoring`).
+* **Repositories:** `{Entity}Repository` — Services: `{Domain}Service`.
+* **Controllers:** `{Entity}Controller` — DTOs: `{Entity}Form` (form), `{Entity}Dto` (display).
+* **Methods:** camelCase, verb-first (`calculatePoints()`).
+* **Booleans:** `isSubTeam()`, `isActive()`.
+* **DB:** Plural snake_case tables (`seasons`), snake_case columns (`created_at`).
 
-## Lombok Usage
+### Lombok Usage
 
-- Entities: `@Getter @Setter @NoArgsConstructor`, `@ToString(exclude = ...)`, extend `BaseEntity`
-- Services/Controllers: `@RequiredArgsConstructor` (constructor injection via `final`), `@Slf4j`
+* **Entities:** `@Getter @Setter @NoArgsConstructor`, `@ToString(exclude = ...)`, extend `BaseEntity`.
+* **Services/Controllers:** `@RequiredArgsConstructor` (constructor injection via `final`), `@Slf4j`.
 
-## Controller & DTO Patterns
+### Controller & DTO Patterns
 
-- Form DTOs mit `@Valid` + `BindingResult`, Entities direkt in GET (OSIV aktiv)
-- Flash attributes: `"successMessage"` / `"errorMessage"`
+* Form DTOs with `@Valid` + `BindingResult`, entities directly in GET (OSIV active).
+* Flash attributes: `"successMessage"` / `"errorMessage"`.
 
-## Error Handling
+### Logging
 
-- `IllegalStateException` for business rules, `IllegalArgumentException` for invalid input
-- `orElseThrow()` for entity lookups — keine custom Exceptions
-- Controllers fangen `IllegalStateException`, konvertieren zu Flash-Fehlermeldung
+* `log.info()` for state changes, `log.debug()` for calculations.
+* Always use parameterized `{}` format.
 
-## Logging
+### CSS Guidelines
 
-- `log.info()` fuer State Changes, `log.debug()` fuer Berechnungen
-- Immer parameterized `{}`, nie String-Concatenation
-
-## CSS Guidelines
-
-- CSS-Klassen aus `admin.css` statt inline styles: `btn-xs`, `btn-sm`, `btn-lg`, `btn-tab`
-- Bei Refactoring: JavaScript `element.className = '...'` mitpruefen
-<!-- GSD:conventions-end -->
-
-<!-- GSD:architecture-start source:ARCHITECTURE.md -->
-## Architecture
-
-## Pattern Overview
-
-- Three-tier: Controller -> Service -> Repository -> Database
-- No REST API -- server-rendered HTML with form submissions and redirects (POST-Redirect-GET)
-- Graphic Services: Thymeleaf HTML -> Playwright screenshot -> PNG (`AbstractGraphicService` base class)
-- Two-phase import/sync pattern: parse+preview then confirm+execute (CsvImport, Gt7Sync)
-- Static site generation: domain data -> Thymeleaf -> HTML files in `docs/site/`
-
-## Key Abstractions
-
-- `BaseEntity` — `@MappedSuperclass` with `createdAt`/`updatedAt` (JPA Auditing), all entities extend this
-- `AbstractGraphicService` / `AbstractMatchdayGraphicService` — base classes for Playwright-based image generation
-- `RaceScoring` / `MatchScoring` — scoring rules decoupled from code, stored as comma-separated strings in DB
-- `SeasonTeam` — join table with per-season rating, color/logo overrides, team succession tracking
-<!-- GSD:architecture-end -->
-
-<!-- GSD:workflow-start source:GSD defaults -->
-## GSD Workflow Enforcement
-
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
-
-Use these entry points:
-- `/gsd:quick` for small fixes, doc updates, and ad-hoc tasks
-- `/gsd:debug` for investigation and bug fixing
-- `/gsd:execute-phase` for planned phase work
-
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
-<!-- GSD:workflow-end -->
-
-<!-- GSD:profile-start -->
-## Developer Profile
-
-> Profile not yet configured. Run `/gsd:profile-user` to generate your developer profile.
-> This section is managed by `generate-claude-profile` -- do not edit manually.
-<!-- GSD:profile-end -->
+* Use CSS classes from `admin.css` instead of inline styles: `btn-xs`, `btn-sm`, etc.
