@@ -690,6 +690,72 @@ class SeasonManagementServiceTest {
         assertThat(result.raceScores().get(race.getId())).isEqualTo(new int[]{10, 8});
     }
 
+    @Nested
+    class FindActiveSeasonTest {
+
+        @Test
+        void givenActiveSeasonExists_whenFindActiveSeason_thenReturnsOptionalWithSeason() {
+            // given
+            var activeSeason = createSeason("Active Season");
+            activeSeason.setActive(true);
+            var inactiveSeason = createSeason("Inactive Season");
+            inactiveSeason.setActive(false);
+            when(seasonRepository.findAll()).thenReturn(List.of(inactiveSeason, activeSeason));
+
+            // when
+            var result = service.findActiveSeason();
+
+            // then
+            assertThat(result).isPresent();
+            assertThat(result.get().getName()).isEqualTo("Active Season");
+        }
+
+        @Test
+        void givenNoActiveSeason_whenFindActiveSeason_thenReturnsEmptyOptional() {
+            // given
+            var inactiveSeason = createSeason("Inactive Season");
+            inactiveSeason.setActive(false);
+            when(seasonRepository.findAll()).thenReturn(List.of(inactiveSeason));
+
+            // when
+            var result = service.findActiveSeason();
+
+            // then
+            assertThat(result).isEmpty();
+        }
+    }
+
+    @Nested
+    class FindByIdOptionalTest {
+
+        @Test
+        void givenSeasonExists_whenFindByIdOptional_thenReturnsOptionalWithSeason() {
+            // given
+            var season = createSeason("Test Season");
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var result = service.findByIdOptional(season.getId());
+
+            // then
+            assertThat(result).isPresent();
+            assertThat(result.get().getName()).isEqualTo("Test Season");
+        }
+
+        @Test
+        void givenSeasonNotFound_whenFindByIdOptional_thenReturnsEmptyOptional() {
+            // given
+            var id = UUID.randomUUID();
+            when(seasonRepository.findById(id)).thenReturn(Optional.empty());
+
+            // when
+            var result = service.findByIdOptional(id);
+
+            // then
+            assertThat(result).isEmpty();
+        }
+    }
+
     private Season createSeason(String name) {
         var season = new Season(name);
         season.setId(UUID.randomUUID());

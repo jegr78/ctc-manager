@@ -728,6 +728,32 @@ class PlayoffServiceTest {
     }
 
     @Nested
+    class FindRoundById {
+
+        @Test
+        void givenPlayoffRoundExists_whenFindRoundById_thenReturnsRound() {
+            // given
+            var playoff = playoffService.createPlayoff(season.getId(), "FindRound Test", 4);
+            var roundId = playoff.getRounds().get(0).getId();
+
+            // when
+            var result = playoffService.findRoundById(roundId);
+
+            // then
+            assertNotNull(result);
+            assertEquals(roundId, result.getId());
+            assertEquals("Semifinal", result.getLabel());
+        }
+
+        @Test
+        void givenPlayoffRoundNotFound_whenFindRoundById_thenThrowsEntityNotFoundException() {
+            // when / then
+            assertThrows(EntityNotFoundException.class, () ->
+                    playoffService.findRoundById(UUID.randomUUID()));
+        }
+    }
+
+    @Nested
     class SeasonIdLookups {
 
         @Test
