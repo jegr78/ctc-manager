@@ -135,6 +135,63 @@ Automatable: {N} | Skipped: {M}
 ```
 </step>
 
+<step name="open_browser">
+**Open browser session for test execution.**
+
+```bash
+mkdir -p .screenshots/auto-uat
+playwright-cli open http://localhost:9090
+```
+
+Take an initial snapshot to confirm the browser is connected:
+```bash
+playwright-cli snapshot --filename=.screenshots/auto-uat/initial.yaml
+```
+
+If the snapshot fails, report error and skip to `server_cleanup`.
+</step>
+
+<step name="execute_tests">
+**Execute each automatable test sequentially.**
+
+For each test where `automatable: true`, in order:
+
+1. **Announce:** Display `Testing {N}/{total}: {test name}`
+
+2. **Plan actions:** Read the `test` field and determine the playwright-cli command sequence needed. Common patterns:
+   - "Navigate to /admin/X" → `playwright-cli goto http://localhost:9090/admin/X`
+   - "Click on Y" → `playwright-cli snapshot` to find element ref, then `playwright-cli click {ref}`
+   - "Fill form field Z" → `playwright-cli fill {ref} "value"`
+   - "Verify flash message" → `playwright-cli snapshot` and check for flash text in snapshot output
+   - "Check page has no errors" → verify snapshot contains no "Whitelabel Error", "500", or stack trace
+
+3. **Execute:** Run each playwright-cli command. After key interactions, take a snapshot:
+   ```bash
+   playwright-cli snapshot --filename=.screenshots/auto-uat/test-{id}-{step_name}.yaml
+   ```
+
+4. **Screenshot as evidence:**
+   ```bash
+   playwright-cli screenshot --filename=.screenshots/auto-uat/test-{id}-result.png
+   ```
+
+5. **Evaluate:** Compare the snapshot/page state against the `expected` field:
+   - If the expected conditions are met → `result: passed` with brief evidence note
+   - If conditions are NOT met → `result: failed` with description of what differed
+   - If a playwright-cli command errored → `result: failed` with error message
+
+6. **Record:** Store the result (status, evidence, screenshot paths) for the reporting step.
+
+7. **Continue:** Move to the next test regardless of result.
+
+For skipped tests (`automatable: false`): record `result: skipped` with the `why_human` reason.
+
+**After all tests:** Display inline summary:
+```
+Executed: {N} | Passed: {P} | Failed: {F} | Skipped: {S}
+```
+</step>
+
 <step name="server_cleanup">
 **Stop server if we started it.**
 
