@@ -261,12 +261,6 @@ public class PlayoffService {
         return new PlayoffListData(playoff, bracketView, allSeasons, effectiveSeasonId);
     }
 
-    @Transactional(readOnly = true)
-    public PlayoffRound findRoundById(UUID roundId) {
-        return playoffRoundRepository.findById(roundId)
-                .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
-    }
-
     @Transactional
     public PlayoffRound setRoundLegs(UUID roundId, int bestOfLegs) {
         var round = playoffRoundRepository.findById(roundId)

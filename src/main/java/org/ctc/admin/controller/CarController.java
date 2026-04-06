@@ -67,7 +67,7 @@ public class CarController {
             return "admin/car-form";
         }
         try {
-            carService.save(carForm.getId(), carForm.getManufacturer(), carForm.getName());
+            carService.save(carForm);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Car saved: " + carForm.getManufacturer() + " " + carForm.getName());
         } catch (BusinessRuleException e) {

@@ -1,8 +1,10 @@
 package org.ctc.domain.service;
 
+import org.ctc.admin.dto.DriverForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.PsnAlias;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.Team;
@@ -94,20 +96,20 @@ public class DriverService {
     }
 
     @Transactional
-    public Driver save(UUID id, String psnId, String nickname, boolean active, List<String> aliases) {
+    public Driver save(DriverForm form) {
         Driver driver;
-        if (id != null) {
-            driver = driverRepository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Driver", id));
-            driver.setPsnId(psnId);
-            driver.setNickname(nickname);
-            driver.setActive(active);
+        if (form.getId() != null) {
+            driver = driverRepository.findById(form.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Driver", form.getId()));
+            driver.setPsnId(form.getPsnId());
+            driver.setNickname(form.getNickname());
+            driver.setActive(form.isActive());
         } else {
-            driver = new Driver(psnId, nickname);
-            driver.setActive(active);
+            driver = new Driver(form.getPsnId(), form.getNickname());
+            driver.setActive(form.isActive());
         }
 
-        syncAliases(driver, aliases);
+        syncAliases(driver, form.getAliases());
 
         return driverRepository.save(driver);
     }

@@ -67,7 +67,7 @@ public class TrackController {
             return "admin/track-form";
         }
         try {
-            trackService.save(trackForm.getId(), trackForm.getName(), trackForm.getCountry());
+            trackService.save(trackForm);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Track saved: " + trackForm.getName());
         } catch (BusinessRuleException e) {

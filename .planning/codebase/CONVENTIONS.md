@@ -1,12 +1,11 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-04-04
+> Generated: 2026-04-03 | Focus: quality
 
 ## Naming Patterns
 
 **Packages:**
 - Domain layer: `org.ctc.domain.model`, `org.ctc.domain.repository`, `org.ctc.domain.service`
-- Domain exceptions: `org.ctc.domain.exception`
 - Admin layer: `org.ctc.admin.controller`, `org.ctc.admin.dto`, `org.ctc.admin.service`
 - Feature modules: `org.ctc.dataimport`, `org.ctc.gt7sync`, `org.ctc.sitegen`
 
@@ -16,7 +15,6 @@
 - Services: `{Domain}Service` or `{Domain}ManagementService` for complex orchestration (`ScoringService`, `SeasonManagementService`, `TeamManagementService`)
 - Controllers: `{Entity}Controller` (`SeasonController`, `RaceController`)
 - DTOs: `{Entity}Form` for form binding, `{Entity}Dto` for display data, `{Entity}Data` for record-based view data (`SeasonForm`, `MatchdayDto`, `MatchdayGraphicData`)
-- Exceptions: `{Domain}Exception` in `org.ctc.domain.exception` (`BusinessRuleException`, `EntityNotFoundException`, `ValidationException`)
 
 **Methods:**
 - camelCase, verb-first: `calculatePoints()`, `addTeamToSeason()`, `getAvailableTeamsForReplacement()`
@@ -35,6 +33,8 @@
 
 ## Lombok Usage
 
+All classes use Lombok annotations to reduce boilerplate:
+
 **Entities** (`src/main/java/org/ctc/domain/model/`):
 ```java
 @Entity
@@ -51,10 +51,8 @@ public class Team extends BaseEntity {
 @Getter @Setter @NoArgsConstructor
 public class TeamForm {
 ```
-- Form DTOs use Lombok `@Getter @Setter @NoArgsConstructor`
-- Display DTOs use Java records (`MatchdayGraphicData`, `RankedTeamData`)
 
-**Services and Controllers**:
+**Services** (`src/main/java/org/ctc/domain/service/`):
 ```java
 @Slf4j
 @Service
@@ -64,13 +62,15 @@ public class ScoringService {
 ```
 - `@RequiredArgsConstructor` for constructor injection via `final` fields
 - `@Slf4j` for logging
-- No explicit constructors needed
 
-**Exception: `GlobalExceptionHandler`** uses manual constructor injection (no Lombok) since it does not use `@Slf4j` and has a static logger:
+**Controllers** (`src/main/java/org/ctc/admin/controller/`):
 ```java
-private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
-private final Environment environment;
-public GlobalExceptionHandler(Environment environment) { ... }
+@Slf4j
+@Controller
+@RequestMapping("/admin/seasons")
+@RequiredArgsConstructor
+public class SeasonController {
+    private final SeasonRepository seasonRepository;
 ```
 
 ## Entity Patterns
@@ -121,11 +121,12 @@ private List<Matchday> matchdays = new ArrayList<>();
 public boolean isSubTeam() { return parentTeam != null; }
 public Team getParentOrSelf() { return parentTeam != null ? parentTeam : this; }
 public void addTeam(Team team) { ... }
+public Optional<SeasonTeam> findSeasonTeam(Team team) { ... }
 ```
 
 ## DTO Patterns
 
-**Form DTOs** (`src/main/java/org/ctc/admin/dto/`) are used for POST/save operations to prevent mass assignment:
+**Form DTOs** are used for POST/save operations to prevent mass assignment. Located in `src/main/java/org/ctc/admin/dto/`:
 
 ```java
 @Getter @Setter @NoArgsConstructor
@@ -134,40 +135,30 @@ public class SeasonForm {
     @NotBlank
     private String name;
     private int year;
+    // ... fields matching the form
 }
 ```
 
 **Key rules:**
 - Form DTOs use `@Valid` + `BindingResult` in controllers
 - Entities are acceptable in GET model attributes (OSIV is active)
-- Never bind JPA entities directly via `@ModelAttribute` on POST
+- Display DTOs use Java records where appropriate (e.g., `TeamManagementService.TeamDetailData`)
 
-**Record DTOs** for immutable display/graphic data:
+**Record DTOs** for complex view data:
 ```java
-public record MatchdayGraphicData(
-    String matchdayLabel, String seasonName, String seasonYear,
-    String ctcLogoBase64, String fontBase64,
-    List<MatchGraphicRow> matches
-) {
-    public record MatchGraphicRow(...) {}
-}
-```
-
-```java
-public record RankedTeamData(UUID teamId, String teamName, String teamShortName, ...) {}
-```
-
-**Service-internal records:**
-```java
-// In TeamManagementService
-public record TeamDetailData(Team team, List<Season> seasons, ...) {}
+public record TeamDetailData(
+    Team team,
+    List<Season> seasons,
+    List<SeasonDriverGroupDto> seasonDriverGroups,
+    List<Season> seasonsWithoutDrivers
+) {}
 ```
 
 ## Controller Patterns
 
 **Thin controllers:** Controllers handle HTTP concerns only. Business logic is in services.
 
-**Standard CRUD pattern** (see `src/main/java/org/ctc/admin/controller/TeamController.java`):
+**Standard CRUD pattern** (see `src/main/java/org/ctc/admin/controller/TeamController.java`, `SeasonController.java`):
 
 ```java
 @GetMapping
@@ -184,25 +175,17 @@ public String edit(@PathVariable UUID id, Model model) { ... return "admin/entit
 
 @PostMapping("/save")
 public String save(@Valid @ModelAttribute("form") Form form, BindingResult result,
-                   RedirectAttributes redirectAttributes) {
+                   RedirectAttributes redirectAttributes, Model model) {
     if (result.hasErrors()) return "admin/entity-form";
-    try {
-        service.save(form);
-        redirectAttributes.addFlashAttribute("successMessage", "Entity saved: " + name);
-    } catch (BusinessRuleException e) {
-        redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-    }
+    // ... save logic
+    redirectAttributes.addFlashAttribute("successMessage", "Entity saved: " + name);
     return "redirect:/admin/entities";
 }
 
 @PostMapping("/{id}/delete")
 public String delete(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
-    try {
-        service.delete(id);
-        redirectAttributes.addFlashAttribute("successMessage", "Entity deleted");
-    } catch (BusinessRuleException e) {
-        redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
-    }
+    // ... delete logic
+    redirectAttributes.addFlashAttribute("successMessage", "Entity deleted: " + name);
     return "redirect:/admin/entities";
 }
 ```
@@ -211,40 +194,54 @@ public String delete(@PathVariable UUID id, RedirectAttributes redirectAttribute
 - `"successMessage"` for success
 - `"errorMessage"` for errors
 
-**Entity lookup:** `repository.findById(id).orElseThrow()` for required entities. Service layer uses `EntityNotFoundException` for descriptive 404s.
+**Data-heavy controllers** delegate to service methods that return record DTOs:
+```java
+@GetMapping("/{id}")
+public String detail(@PathVariable UUID id, Model model) {
+    var data = raceManagementService.getRaceDetailData(id);
+    model.addAttribute("race", data.race());
+    model.addAttribute("homeTotal", data.homeTotal());
+    // ... many attributes from the record
+    return "admin/race-detail";
+}
+```
+
+**Entity lookup:** `repository.findById(id).orElseThrow()` for required entities.
+
+## Import Organization
+
+**Order (observed consistently):**
+1. Own project imports (`org.ctc.*`)
+2. Jakarta imports (`jakarta.persistence.*`, `jakarta.validation.*`)
+3. Lombok imports (`lombok.*`)
+4. Spring Framework imports (`org.springframework.*`)
+5. Java standard library (`java.*`)
+
+**Path aliases:** None used. All imports are fully qualified package paths.
+
+**Wildcard imports:** Used for own model classes (`org.ctc.domain.model.*`) and common utilities (`java.util.*`). Individual imports for external libraries.
 
 ## Error Handling
 
-**Custom Exception Hierarchy** (`src/main/java/org/ctc/domain/exception/`):
-- `EntityNotFoundException` -- entity lookup failures (404)
-- `BusinessRuleException` -- business rule violations (409)
-- `ValidationException` -- input validation errors (400)
-- All extend `RuntimeException` (unchecked)
-
-**Global Exception Handler** (`src/main/java/org/ctc/admin/controller/GlobalExceptionHandler.java`):
-```java
-@ControllerAdvice
-public class GlobalExceptionHandler {
-    @ExceptionHandler(EntityNotFoundException.class)  // -> 404, "admin/error"
-    @ExceptionHandler(NoSuchElementException.class)   // -> 404, "admin/error"
-    @ExceptionHandler(ValidationException.class)      // -> 400, "admin/error"
-    @ExceptionHandler(BusinessRuleException.class)    // -> 409, "admin/error"
-    @ExceptionHandler(ResponseStatusException.class)  // -> rethrown
-    @ExceptionHandler(Exception.class)                // -> 500, "admin/error"
-}
-```
-
-**Error view:** All errors render `admin/error` template with `status`, `error`, `message`. In dev profile, `showDetails` and `exceptionType` are added for debugging.
-
-**Controller-level catch:** Controllers still catch `BusinessRuleException` for save/delete operations to show flash error messages instead of an error page:
+**Controller layer:**
+- `IllegalStateException` caught and converted to flash error messages:
 ```java
 try {
-    service.save(form);
-    redirectAttributes.addFlashAttribute("successMessage", "Saved");
-} catch (BusinessRuleException e) {
+    seasonManagementService.removeTeamFromSeason(id, teamId);
+    redirectAttributes.addFlashAttribute("successMessage", "Team removed");
+} catch (IllegalStateException e) {
     redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
 }
 ```
+- Generic `Exception` catch only for IO-related operations (file uploads)
+
+**Service layer:**
+- Throws `IllegalStateException` for business rule violations
+- Throws `IllegalArgumentException` for invalid input
+- `orElseThrow()` for required entity lookups (NoSuchElementException if missing)
+- No custom exception classes -- uses standard Java exceptions
+
+**No global exception handler.** Since this is a server-rendered admin app, errors are handled per-controller via flash messages.
 
 ## Logging
 
@@ -257,31 +254,17 @@ try {
   ```
 - `log.debug()` for calculation results and intermediate state:
   ```java
-  log.debug("Calculated points for driver {}: race={}, quali={}, fl={}, total={}",
-          result.getDriver().getPsnId(), rp, qp, fp, result.getPointsTotal());
+  log.debug("Calculated standings for season {}: {} teams", seasonId, standings.size());
   ```
-- `log.warn()` for handled exceptions in `GlobalExceptionHandler`
-- `log.error()` only for unhandled exceptions
 - Always use parameterized messages `{}`, never string concatenation
-
-**Test logging:** Suppressed to WARN via `src/test/resources/logback-test.xml`
-
-## Import Organization
-
-**Order (observed consistently):**
-1. Own project imports (`org.ctc.*`)
-2. Jakarta imports (`jakarta.persistence.*`, `jakarta.validation.*`)
-3. Lombok imports (`lombok.*`)
-4. Spring Framework imports (`org.springframework.*`)
-5. Java standard library (`java.*`)
-
-**Wildcard imports:** Used for own model classes (`org.ctc.domain.model.*`) and common utilities (`java.util.*`). Individual imports for external libraries.
-
-**No path aliases.** All imports are fully qualified package paths.
 
 ## Transaction Management
 
-**Read operations:** `@Transactional(readOnly = true)` on service methods that only query.
+**Read operations:** `@Transactional(readOnly = true)` on service methods that only query:
+```java
+@Transactional(readOnly = true)
+public List<Team> getAvailableTeamsForReplacement(UUID seasonId) { ... }
+```
 
 **Write operations:** `@Transactional` on service methods that modify data:
 ```java
@@ -293,29 +276,30 @@ public void aggregateMatchScores(Race race) { ... }
 
 ## Repository Patterns
 
-Spring Data JPA interfaces extending `JpaRepository<Entity, UUID>` in `src/main/java/org/ctc/domain/repository/`.
+**Spring Data JPA** interfaces extending `JpaRepository<Entity, UUID>` in `src/main/java/org/ctc/domain/repository/`.
 
-**Query derivation** used for most custom finders:
+**Query derivation** used for custom finders:
 ```java
 Optional<Season> findByActiveTrue();
 List<Season> findBySeasonTeamsTeamId(UUID teamId);
+List<Season> findByYearAndNumber(int year, int number);
 ```
 
-**Custom JPQL** only for complex queries:
-```java
-@Query("SELECT a.driver FROM PsnAlias a WHERE LOWER(a.alias) = LOWER(:alias)")
-Optional<Driver> findByAliasIgnoreCase(@Param("alias") String alias);
-```
+**No custom `@Query` annotations observed** -- all queries use Spring Data method name derivation.
 
 ## Inner Classes and Records
 
 **Static inner classes** for service-specific data types:
 ```java
 // In StandingsService.java
-public static class TeamStanding { ... }
+public static class TeamStanding {
+    private final Team team;
+    private int wins, draws, losses, points, pointsFor, pointsAgainst;
+    // Manual getters (no Lombok -- inner class)
+}
 ```
 
-**Records** for immutable DTOs in services and admin.dto:
+**Records** for immutable DTOs, especially in services:
 ```java
 public record SeasonFixture(Season season, Matchday matchday, Match match, Race race,
                             Team homeTeam, Team awayTeam) {}
@@ -323,32 +307,25 @@ public record SeasonFixture(Season season, Matchday matchday, Match match, Race 
 
 ## Global Model Attributes
 
-`src/main/java/org/ctc/admin/controller/GlobalModelAdvice.java` provides `appVersion` to all templates via `@ControllerAdvice` + `@ModelAttribute`.
+`src/main/java/org/ctc/admin/controller/GlobalModelAdvice.java` provides `appVersion` to all templates via `@ControllerAdvice`.
 
 ## Thymeleaf Templates
 
-**Layout pattern:** Fragment-based layout in `src/main/resources/templates/admin/layout.html`:
+**Layout pattern:** Fragment-based layout in `layout.html`:
 ```html
-<html th:fragment="layout(title, content)">
+th:replace="~{admin/layout :: layout(...)}"
 ```
-
-Pages use: `th:replace="~{admin/layout :: layout(...)}"` to include the layout.
 
 **Admin URL pattern:** All admin pages under `/admin/*` prefix.
 
 **Template location:** `src/main/resources/templates/admin/`
 
-**Template rules:**
-- No complex logic (SpEL expressions, collection projections, nested conditions)
-- Calculations and data preparation belong in services
-- Templates only for presentation
-
 ## CSS Guidelines
 
-- Use CSS classes from `src/main/resources/static/admin/css/admin.css` instead of inline styles
+- Use CSS classes from `admin.css` instead of inline styles on buttons
 - Size classes: `btn-xs`, `btn-sm`, `btn-lg`, `btn-tab`
-- When refactoring inline styles to CSS classes, always check JavaScript `element.className = '...'` references
+- When refactoring inline styles to CSS classes, check JavaScript `element.className = '...'` references
 
 ---
 
-*Convention analysis: 2026-04-04*
+*Convention analysis: 2026-04-03*

@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.admin.dto.RaceScoringForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.RaceScoring;
@@ -32,20 +33,20 @@ public class RaceScoringService {
     }
 
     @Transactional
-    public RaceScoring save(UUID id, String name, String racePoints, String qualiPoints, int fastestLapPoints) {
-        var scoring = new RaceScoring(name, racePoints, qualiPoints, fastestLapPoints);
+    public RaceScoring save(RaceScoringForm form) {
+        var scoring = new RaceScoring(form.getName(), form.getRacePoints(), form.getQualiPoints(), form.getFastestLapPoints());
 
         if (!scoring.isValid()) {
             throw new BusinessRuleException("Points must be monotonically decreasing (equal values allowed)");
         }
 
         try {
-            if (id != null) {
-                var existing = findById(id);
-                existing.setName(name);
-                existing.setRacePoints(racePoints);
-                existing.setQualiPoints(qualiPoints);
-                existing.setFastestLapPoints(fastestLapPoints);
+            if (form.getId() != null) {
+                var existing = findById(form.getId());
+                existing.setName(form.getName());
+                existing.setRacePoints(form.getRacePoints());
+                existing.setQualiPoints(form.getQualiPoints());
+                existing.setFastestLapPoints(form.getFastestLapPoints());
                 var saved = raceScoringRepository.saveAndFlush(existing);
                 log.info("Updated race scoring: {}", saved.getName());
                 return saved;
