@@ -79,6 +79,62 @@ fi
 - Display: `Server started (PID: $SERVER_PID), healthy after ~{seconds}s`
 </step>
 
+<step name="extract_tests">
+**Build test list based on mode.**
+
+**Phase-UAT mode (`MODE=phase`):**
+
+Read the VERIFICATION.md file:
+```bash
+VERIFICATION_FILE=$(find "$PHASE_DIR" -name "*-VERIFICATION.md" -type f 2>/dev/null | head -1)
+```
+
+If not found: report error and skip to `server_cleanup`.
+
+Read the file and parse the YAML frontmatter `human_verification` array. Each item has fields:
+- `test`: What to do (navigation steps, interactions)
+- `expected`: What should happen (observable outcomes)
+- `why_human`: Why this was flagged for human testing
+
+**Classify each item** by analyzing `why_human`:
+
+Skip keywords (set `automatable: false`):
+- `external API`, `credentials`, `Google Calendar`, `docker`, `production profile`
+
+Execute keywords (set `automatable: true`):
+- `visual`, `running server`, `browser`, `form`, `rendering`, `layout`
+
+Default (no keyword match): `automatable: true` — attempt automation, mark `failed` if playwright-cli errors.
+
+**Standalone mode (`MODE=standalone`):**
+
+Create a single test:
+- `test`: The full `$ARGUMENTS` string
+- `expected`: "Page renders correctly without errors"
+- `automatable: true`
+
+**Quick-Check mode (`MODE=quick`):**
+
+For each URL path in `$ARGUMENTS`, create a test:
+- `test`: "Navigate to {url}"
+- `expected`: "Page loads without errors — no 500 status, no Whitelabel Error Page, no stack trace"
+- `automatable: true`
+
+**Display test plan:**
+
+```
+## Test Plan
+
+| # | Test | Auto? |
+|---|------|-------|
+| 1 | Template Editor save/reset | yes |
+| 2 | Playoff Bracket View | yes |
+| 3 | Race Form + Calendar | no — requires Google Calendar credentials |
+
+Automatable: {N} | Skipped: {M}
+```
+</step>
+
 <step name="server_cleanup">
 **Stop server if we started it.**
 
