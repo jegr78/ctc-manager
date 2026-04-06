@@ -160,6 +160,35 @@ class MatchdayServiceTest {
         verify(matchdayRepository).delete(matchday);
     }
 
+    // --- getMatchdaysBySeason ---
+
+    @Test
+    void givenSeasonWithMatchdays_whenGetMatchdaysBySeason_thenReturnsMatchdayDataList() {
+        // given
+        var seasonId = UUID.randomUUID();
+        var md1 = new Matchday();
+        md1.setId(UUID.randomUUID());
+        md1.setLabel("Round 1");
+        md1.setSortIndex(1);
+        var md2 = new Matchday();
+        md2.setId(UUID.randomUUID());
+        md2.setLabel("Round 2");
+        md2.setSortIndex(2);
+
+        when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId)).thenReturn(List.of(md1, md2));
+
+        // when
+        var result = service.getMatchdaysBySeason(seasonId);
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0)).isInstanceOf(MatchdayService.MatchdayData.class);
+        assertThat(result.get(0).id()).isEqualTo(md1.getId());
+        assertThat(result.get(0).label()).isEqualTo("Round 1");
+        assertThat(result.get(0).sortIndex()).isEqualTo(1);
+        assertThat(result.get(1).label()).isEqualTo("Round 2");
+    }
+
     // --- createInline ---
 
     @Test
