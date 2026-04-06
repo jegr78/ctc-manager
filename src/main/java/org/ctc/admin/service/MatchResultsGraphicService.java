@@ -18,7 +18,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-public class MatchResultsGraphicService extends AbstractGraphicService {
+public class MatchResultsGraphicService extends AbstractGraphicService implements TemplateManageable {
 
     private static final String DEFAULT_TEMPLATE = "templates/admin/match-results-render.html";
     private static final String CUSTOM_TEMPLATE_FILE = "match-results-template.html";

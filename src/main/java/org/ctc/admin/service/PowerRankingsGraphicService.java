@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-public class PowerRankingsGraphicService extends AbstractGraphicService {
+public class PowerRankingsGraphicService extends AbstractGraphicService implements TemplateManageable {
 
     private static final String DEFAULT_TEMPLATE = "templates/admin/power-rankings-render.html";
     private static final String DEFAULT_TEMPLATE_PATH = "admin/power-rankings-render";

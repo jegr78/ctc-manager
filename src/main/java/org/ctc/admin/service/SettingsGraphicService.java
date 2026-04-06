@@ -17,7 +17,7 @@ import java.nio.file.Path;
 
 @Slf4j
 @Service
-public class SettingsGraphicService extends AbstractGraphicService {
+public class SettingsGraphicService extends AbstractGraphicService implements TemplateManageable {
 
     private static final String DEFAULT_TEMPLATE = "templates/admin/settings-render.html";
     private static final String CUSTOM_TEMPLATE_FILE = "settings-template.html";
