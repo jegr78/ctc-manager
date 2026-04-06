@@ -23,7 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Slf4j
-public abstract class AbstractPlayoffRoundGraphicService extends AbstractGraphicService {
+public abstract class AbstractPlayoffRoundGraphicService extends AbstractGraphicService implements TemplateManageable {
 
     private static final ZoneId LONDON_ZONE = ZoneId.of("Europe/London");
     private static final DateTimeFormatter SCHEDULE_FORMAT =

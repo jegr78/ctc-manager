@@ -24,7 +24,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-public class TeamCardService {
+public class TeamCardService implements TemplateManageable {
 
     private static final String FONT_CLASSPATH = "static/admin/fonts/ConthraxSb.woff2";
     private static final String DEFAULT_TEMPLATE = "templates/admin/team-card-render.html";
