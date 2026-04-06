@@ -58,7 +58,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 
 - [ ] TemplateEditorController Duplikation beseitigen (generischer Ansatz)
 - ✓ Alltime Standings implementieren — Phase 9
-- [ ] Inline-Styles in Admin Templates durch CSS-Klassen ersetzen
+- ✓ Inline-Styles in Admin Templates durch CSS-Klassen ersetzt — Phase 11
 - [ ] Grosse Service-Klassen aufteilen (PlayoffService, RaceService)
 
 ### Out of Scope
