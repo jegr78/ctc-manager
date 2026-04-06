@@ -35,28 +35,28 @@
             <span th:text="${season.endDate ?: '-'}"></span>
             <span class="label">Status</span>
             <span>
-                <span th:if="${season.active}" class="badge badge-active">● Active</span>
-                <span th:unless="${season.active}" class="badge badge-inactive">○ Inactive</span>
+                <span th:if="${season.active}" class="badge badge-active">&#x25CF; Active</span>
+                <span th:unless="${season.active}" class="badge badge-inactive">&#x25CB; Inactive</span>
             </span>
         </div>
 
         <div class="detail-section">
             <h2 th:text="'Teams (' + ${season.seasonTeams.size()} + ')'"></h2>
-            <div th:if="${season.seasonTeams.isEmpty()}" class="empty-state" style="padding:16px;"><p>No teams assigned.</p></div>
+            <div th:if="${season.seasonTeams.isEmpty()}" class="empty-state empty-state--compact"><p>No teams assigned.</p></div>
             <div th:if="${!season.seasonTeams.isEmpty()}" class="table-scroll">
-                <table style="min-width:auto;">
+                <table class="table--auto-width">
                     <thead>
                         <tr>
                             <th>Colors</th>
                             <th>Team</th>
                             <th>Rating</th>
-                            <th style="width:1%;"></th>
+                            <th class="col-action"></th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr th:each="st : ${season.seasonTeams}" th:classappend="${st.replaced ? 'replaced-team' : ''}">
-                            <td style="width:60px;">
-                                <div th:if="${st.effectivePrimaryColor != null}" style="display:flex;gap:3px;">
+                            <td class="col-color">
+                                <div th:if="${st.effectivePrimaryColor != null}" class="color-swatch-row">
                                     <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectivePrimaryColor}"></span>
                                     <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectiveSecondaryColor}"></span>
                                     <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectiveAccentColor}"></span>
@@ -66,15 +66,15 @@
                                 <a th:href="@{/admin/teams/{id}(id=${st.team.id})}" class="detail-link"
                                    th:text="${st.team.shortName + ' — ' + st.team.name}"
                                    th:styleappend="${st.replaced ? 'text-decoration:line-through;opacity:0.6;' : ''}"></a>
-                                <span th:if="${st.team.isSubTeam()}" class="badge badge-active" style="margin-left:6px;font-size:11px;">Sub</span>
-                                <span th:if="${st.replaced}" class="badge badge-inactive" style="margin-left:6px;font-size:11px;"
-                                      th:text="'Replaced → ' + ${st.successor.team.shortName}"></span>
+                                <span th:if="${st.team.isSubTeam()}" class="badge badge-active badge--inline">Sub</span>
+                                <span th:if="${st.replaced}" class="badge badge-inactive badge--inline"
+                                      th:text="'Replaced &#x2192; ' + ${st.successor.team.shortName}"></span>
                             </td>
-                            <td style="width:60px;text-align:center;">
+                            <td class="col-color td-center">
                                 <span th:if="${st.rating != null}" th:text="${st.rating}"></span>
-                                <span th:if="${st.rating == null}" class="text-dim">—</span>
+                                <span th:if="${st.rating == null}" class="text-dim">&#x2014;</span>
                             </td>
-                            <td style="width:1%;white-space:nowrap;">
+                            <td class="col-action">
                                 <button th:unless="${st.replaced}" type="button" class="btn btn-secondary btn-sm season-team-edit"
                                         th:data-id="${st.id}"
                                         th:data-shortname="${st.team.shortName}"
@@ -86,10 +86,9 @@
                                         th:data-eff-primary="${st.effectivePrimaryColor ?: '#333333'}"
                                         th:data-eff-secondary="${st.effectiveSecondaryColor ?: '#555555'}"
                                         th:data-eff-accent="${st.effectiveAccentColor ?: '#4fc3f7'}">Edit</button>
-                                <button th:unless="${st.replaced}" type="button" class="btn btn-secondary btn-sm replace-team-btn"
+                                <button th:unless="${st.replaced}" type="button" class="btn btn-secondary btn-sm replace-team-btn ml-xs"
                                         th:data-team-id="${st.team.id}"
-                                        th:data-team-name="${st.team.shortName}"
-                                        style="margin-left:4px;">Replace</button>
+                                        th:data-team-name="${st.team.shortName}">Replace</button>
                             </td>
                         </tr>
                     </tbody>
@@ -98,61 +97,58 @@
         </div>
 
         <!-- SeasonTeam Edit Modal -->
-        <div id="seasonTeamModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
-            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:480px;margin:16px;">
-                <h3 id="modalTitle" style="margin-bottom:16px;"></h3>
+        <div id="seasonTeamModal" class="modal-overlay">
+            <div class="modal-body modal-body--md">
+                <h3 id="modalTitle" class="modal-title"></h3>
                 <form th:action="@{/admin/seasons/{id}/update-season-team(id=${season.id})}" method="post" enctype="multipart/form-data">
                     <input type="hidden" id="modalSeasonTeamId" name="seasonTeamId">
 
                     <div class="form-group">
                         <label>Rating</label>
-                        <input type="number" id="modalRating" name="rating" min="0" max="99" placeholder="—"
-                               style="width:80px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:14px;text-align:center;">
+                        <input type="number" id="modalRating" name="rating" min="0" max="99" placeholder="&#x2014;"
+                               class="input-rating">
                     </div>
 
-                    <h4 style="margin:16px 0 8px;color:var(--text-dim);font-size:13px;text-transform:uppercase;letter-spacing:1px;">Season Color Overrides</h4>
-                    <p style="font-size:12px;color:var(--text-dim);margin-bottom:12px;">Leave empty to use team defaults.</p>
+                    <h4 class="modal-section-label">Season Color Overrides</h4>
+                    <p class="form-hint mb-sm">Leave empty to use team defaults.</p>
                     <div class="form-row">
                         <div class="form-group">
                             <label>Primary</label>
-                            <div class="color-pair" style="display:flex;gap:6px;align-items:center;">
-                                <input type="color" id="modalPrimaryPicker"
-                                       style="width:36px;height:30px;padding:1px;border:1px solid var(--border);border-radius:4px;background:var(--bg-input);cursor:pointer;">
+                            <div class="color-pair">
+                                <input type="color" id="modalPrimaryPicker" class="color-picker-input color-picker-input--sm">
                                 <input type="text" id="modalPrimary" name="primaryColor" placeholder="inherit"
-                                       pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:80px;font-size:13px;">
+                                       pattern="#[0-9a-fA-F]{6}" maxlength="7" class="color-text-input">
                             </div>
                         </div>
                         <div class="form-group">
                             <label>Secondary</label>
-                            <div class="color-pair" style="display:flex;gap:6px;align-items:center;">
-                                <input type="color" id="modalSecondaryPicker"
-                                       style="width:36px;height:30px;padding:1px;border:1px solid var(--border);border-radius:4px;background:var(--bg-input);cursor:pointer;">
+                            <div class="color-pair">
+                                <input type="color" id="modalSecondaryPicker" class="color-picker-input color-picker-input--sm">
                                 <input type="text" id="modalSecondary" name="secondaryColor" placeholder="inherit"
-                                       pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:80px;font-size:13px;">
+                                       pattern="#[0-9a-fA-F]{6}" maxlength="7" class="color-text-input">
                             </div>
                         </div>
                         <div class="form-group">
                             <label>Accent</label>
-                            <div class="color-pair" style="display:flex;gap:6px;align-items:center;">
-                                <input type="color" id="modalAccentPicker"
-                                       style="width:36px;height:30px;padding:1px;border:1px solid var(--border);border-radius:4px;background:var(--bg-input);cursor:pointer;">
+                            <div class="color-pair">
+                                <input type="color" id="modalAccentPicker" class="color-picker-input color-picker-input--sm">
                                 <input type="text" id="modalAccent" name="accentColor" placeholder="inherit"
-                                       pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:80px;font-size:13px;">
+                                       pattern="#[0-9a-fA-F]{6}" maxlength="7" class="color-text-input">
                             </div>
                         </div>
                     </div>
 
-                    <div class="form-group" style="margin-top:12px;">
+                    <div class="form-group mt-sm">
                         <label>Season Logo Override</label>
-                        <div id="modalLogoPreview" style="margin-bottom:8px;display:none;">
-                            <img id="modalLogoImg" src="" alt="" style="max-width:80px;border-radius:6px;background:#222;padding:4px;">
+                        <div id="modalLogoPreview" class="mb-xs">
+                            <img id="modalLogoImg" src="" alt="" class="logo-preview-img">
                         </div>
                         <input type="file" name="logoOverride" accept="image/png,image/jpeg,image/webp,image/gif"
-                               style="padding:4px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:12px;">
-                        <small class="text-dim" style="display:block;margin-top:2px;">Leave empty to use team logo.</small>
+                               class="file-input">
+                        <small class="text-dim form-hint">Leave empty to use team logo.</small>
                     </div>
 
-                    <div class="actions" style="margin-top:20px;justify-content:flex-end;">
+                    <div class="actions mt-md actions--end">
                         <button type="button" class="btn btn-secondary" onclick="closeSeasonTeamModal()">Cancel</button>
                         <button type="submit" class="btn btn-primary">Save</button>
                     </div>
@@ -161,29 +157,27 @@
         </div>
 
         <!-- Replace Team Modal -->
-        <div id="replaceTeamModal" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
-            <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;width:100%;max-width:420px;margin:16px;">
-                <h3 id="replaceModalTitle" style="margin-bottom:16px;"></h3>
+        <div id="replaceTeamModal" class="modal-overlay">
+            <div class="modal-body modal-body--sm">
+                <h3 id="replaceModalTitle" class="modal-title"></h3>
                 <form th:action="@{/admin/seasons/{id}/replace-team(id=${season.id})}" method="post">
                     <input type="hidden" id="replacePredecessorId" name="predecessorTeamId">
 
                     <div class="form-group">
                         <label>Replacement Team</label>
-                        <select name="successorTeamId" required
-                                style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:14px;">
-                            <option value="">— Select team —</option>
+                        <select name="successorTeamId" required>
+                            <option value="">&#x2014; Select team &#x2014;</option>
                             <option th:each="t : ${availableTeams}" th:value="${t.id}"
                                     th:text="${t.shortName + ' — ' + t.name}"></option>
                         </select>
                     </div>
 
-                    <div class="form-group" style="margin-top:12px;">
+                    <div class="form-group mt-sm">
                         <label>Effective Date</label>
-                        <input type="date" name="replacedAt" required
-                               style="width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:14px;">
+                        <input type="date" name="replacedAt" required class="input-date">
                     </div>
 
-                    <div class="actions" style="margin-top:20px;justify-content:flex-end;">
+                    <div class="actions mt-md actions--end">
                         <button type="button" class="btn btn-secondary" onclick="closeReplaceTeamModal()">Cancel</button>
                         <button type="submit" class="btn btn-danger">Replace</button>
                     </div>
@@ -245,16 +239,16 @@
             });
         </script>
 
-        <div class="detail-section" style="margin-top:32px;">
+        <div class="detail-section mt-lg">
             <h2 th:text="'Car Pool (' + ${season.cars.size()} + ')'"></h2>
             <div th:if="${!season.cars.isEmpty()}" class="chip-list">
                 <span th:each="car : ${season.cars}" class="chip"
                       th:text="${car.manufacturer + ' — ' + car.name}"></span>
             </div>
-            <div th:if="${season.cars.isEmpty()}" class="empty-state" style="padding:16px;"><p>No cars assigned. <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="detail-link">Edit season</a> to add cars.</p></div>
+            <div th:if="${season.cars.isEmpty()}" class="empty-state empty-state--compact"><p>No cars assigned. <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="detail-link">Edit season</a> to add cars.</p></div>
         </div>
 
-        <div class="detail-section" style="margin-top:32px;">
+        <div class="detail-section mt-lg">
             <h2 th:text="'Track Pool (' + ${season.tracks.size()} + ')'"></h2>
             <div th:if="${!season.tracks.isEmpty()}" class="chip-list">
                 <span th:each="track : ${season.tracks}" class="chip">
@@ -262,10 +256,10 @@
                     <span th:if="${track.country}" class="text-dim" th:text="' (' + ${track.country} + ')'"></span>
                 </span>
             </div>
-            <div th:if="${season.tracks.isEmpty()}" class="empty-state" style="padding:16px;"><p>No tracks assigned. <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="detail-link">Edit season</a> to add tracks.</p></div>
+            <div th:if="${season.tracks.isEmpty()}" class="empty-state empty-state--compact"><p>No tracks assigned. <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="detail-link">Edit season</a> to add tracks.</p></div>
         </div>
 
-        <div class="detail-section" style="margin-top:32px;">
+        <div class="detail-section mt-lg">
             <h2 th:text="'Matchdays (' + ${season.matchdays.size()} + ')'"></h2>
             <div class="table-scroll">
                 <table th:if="${!season.matchdays.isEmpty()}">
@@ -281,10 +275,10 @@
                     </tbody>
                 </table>
             </div>
-            <div th:if="${season.matchdays.isEmpty()}" class="empty-state" style="padding:16px;"><p>No matchdays yet.</p></div>
+            <div th:if="${season.matchdays.isEmpty()}" class="empty-state empty-state--compact"><p>No matchdays yet.</p></div>
         </div>
 
-        <div th:if="${playoff != null}" class="detail-section" style="margin-top:32px;">
+        <div th:if="${playoff != null}" class="detail-section mt-lg">
             <h2>Playoff</h2>
             <div class="detail-fields">
                 <span class="label">Name</span>

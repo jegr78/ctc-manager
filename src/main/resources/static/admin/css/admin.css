@@ -1075,3 +1075,289 @@ a.season-header-title:hover {
 /* Utility: seed input column */
 .seed-col { width: 60px; }
 .seed-input { width: 50px; }
+
+/* === Modal === */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-body {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    margin: 16px;
+}
+
+.modal-section-label {
+    margin: 16px 0 8px;
+    color: var(--text-dim);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* === Color Picker === */
+.color-pair {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.color-picker-input {
+    height: 30px;
+    padding: 1px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-input);
+    cursor: pointer;
+}
+
+.color-text-input {
+    width: 80px;
+    font-size: 13px;
+}
+
+.color-swatch-row {
+    display: flex;
+    gap: 3px;
+}
+
+/* === Score Banner === */
+.score-banner {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    position: relative;
+}
+
+.score-banner__team {
+    text-align: center;
+    flex: 1;
+}
+
+.score-banner__label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+}
+
+.score-banner__name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.score-banner__value {
+    font-size: 36px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 6px;
+}
+
+.score-banner__result-area {
+    height: 22px;
+}
+
+.score-banner__draw-overlay {
+    position: absolute;
+}
+
+.score-separator {
+    font-size: 24px;
+    color: var(--text-dim);
+    font-weight: 300;
+}
+
+/* === Result Badges === */
+.result-badge--win {
+    background: rgba(102, 187, 106, 0.15);
+    color: #66bb6a;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.result-badge--loss {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.5px;
+}
+
+.result-badge--draw {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-label);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* === Action Bar === */
+.action-bar {
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.btn-with-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.context-badge {
+    background: rgba(79, 195, 247, 0.1);
+    color: var(--accent);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* === Form Utilities === */
+.form-hint {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.file-input {
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+    color: var(--white);
+    font-size: 12px;
+}
+
+.inline-form {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.form-group--inline {
+    margin-bottom: 0;
+}
+
+.attachment-forms {
+    margin-top: 16px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.logo-preview-img {
+    max-width: 80px;
+    border-radius: 6px;
+    background: #222;
+    padding: 4px;
+}
+
+#modalLogoPreview {
+    display: none;
+}
+
+/* === Table Utilities === */
+.col-action {
+    width: 1%;
+    white-space: nowrap;
+}
+
+.col-color {
+    width: 60px;
+}
+
+.td-center {
+    text-align: center;
+}
+
+.td-right {
+    text-align: right;
+}
+
+.td-numeric {
+    font-variant-numeric: tabular-nums;
+}
+
+.td-numeric-bold {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.td-label {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* === Spacing/Modifier Utilities === */
+.mt-lg {
+    margin-top: 32px;
+}
+
+.badge--inline {
+    margin-left: 6px;
+    font-size: 11px;
+}
+
+.empty-state--compact {
+    padding: 16px;
+}
+
+.actions--end {
+    justify-content: flex-end;
+}
+
+.mt-sm { margin-top: 12px; }
+.mb-md { margin-bottom: 16px; }
+.mb-xs { margin-bottom: 8px; }
+
+/* === Modal Utilities === */
+.modal-body--md { max-width: 480px; }
+.modal-body--sm { max-width: 420px; }
+
+.modal-title { margin-bottom: 16px; }
+
+/* === Input Size Utilities === */
+.input-rating {
+    width: 80px;
+    text-align: center;
+}
+
+.input-date {
+    width: 160px;
+}
+
+.color-picker-input--sm {
+    width: 36px;
+}
+
+.table--auto-width {
+    min-width: auto;
+}
+
+/* === Button Spacing === */
+.ml-xs { margin-left: 4px; }
