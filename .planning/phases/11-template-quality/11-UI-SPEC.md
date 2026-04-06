@@ -49,6 +49,8 @@ Exceptions:
 - `padding: 2px 10px / 2px 8px` on result and context badges — retained from existing badge pattern
 - `max-width: 480px / 420px` on modal bodies — kept as single-property inline override per D-04 (not 3+ occurrences)
 - `width: 36px / height: 30px` on color picker input — fixed control dimensions, not layout spacing
+- `.form-hint { margin-top: 2px }` — retained from existing inline style; hairline spacing below inputs, below minimum scale step
+- `.badge--inline { margin-left: 6px }` — retained from existing inline style on badge elements; mid-scale value for tight inline context
 
 Source: CONTEXT.md D-04 (layout utilities only for patterns appearing 3+ times); RESEARCH.md inline style inventory.
 
@@ -78,6 +80,10 @@ New classes introduced in this phase that carry typography:
 | `.modal-section-label` | 13px | 400 | Uppercase, letter-spacing: 1px, color: var(--text-dim) |
 | `.form-hint` | 12px | 400 | Below inputs; color: var(--text-dim) |
 | `.td-label` | 12px | 600 | Table cell label column |
+
+**Refactoring Phase Exception — Font Sizes:** This spec documents 9 distinct font sizes in production (11, 12, 13, 14, 16, 20, 22, 24, 36 px). The 4-size constraint from the design contract applies to new design phases where a fresh type scale is being established. This phase is a CSS class extraction: existing inline `font-size` values are being codified into named CSS classes without modification. No new sizes are introduced. The wide range reflects a pre-existing production scale accumulated across multiple development iterations.
+
+**Refactoring Phase Exception — Font Weights:** This spec documents 4 font weights in production (300, 400, 600, 700). The 2-weight constraint applies to new design phases. This phase extracts existing inline `font-weight` declarations into CSS classes without change. All four weights exist in the current production codebase and are retained as-is.
 
 Source: RESEARCH.md §Code Examples; admin.css scan.
 
