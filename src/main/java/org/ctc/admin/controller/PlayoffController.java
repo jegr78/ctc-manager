@@ -133,7 +133,10 @@ public class PlayoffController {
     @PostMapping("/{id}/seed")
     public String saveSeed(@PathVariable UUID id, @ModelAttribute SeedForm form,
                            RedirectAttributes redirectAttributes) {
-        playoffSeedingService.saveSeed(id, form);
+        var seeds = form.getSeeds().stream()
+                .map(e -> new PlayoffSeedingService.SeedEntry(e.getMatchupId(), e.getSlot(), e.getTeamId(), e.getSeedNumber()))
+                .toList();
+        playoffSeedingService.saveSeed(id, seeds);
         redirectAttributes.addFlashAttribute("successMessage", "Seeding saved");
         return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForPlayoff(id);
     }
