@@ -74,12 +74,12 @@ public class TemplatePreviewService {
     private Context buildLineupContext() {
         var ctx = buildRaceHeaderContext();
         var pairings = List.of(
-                new LineupPairing("Player_One", "Player_Seven"),
-                new LineupPairing("Player_Two", "Player_Eight"),
-                new LineupPairing("Player_Three", "Player_Nine"),
-                new LineupPairing("Player_Four", "Player_Ten"),
-                new LineupPairing("Player_Five", "Player_Eleven"),
-                new LineupPairing("Player_Six", "Player_Twelve")
+                new LineupPairing("Player_One", "P1", "Player_Seven", "P7"),
+                new LineupPairing("Player_Two", "P2", "Player_Eight", "P8"),
+                new LineupPairing("Player_Three", "P3", "Player_Nine", "P9"),
+                new LineupPairing("Player_Four", "P4", "Player_Ten", "P10"),
+                new LineupPairing("Player_Five", "P5", "Player_Eleven", "P11"),
+                new LineupPairing("Player_Six", "P6", "Player_Twelve", "P12")
         );
         ctx.setVariable("pairings", pairings);
         return ctx;
@@ -384,7 +384,7 @@ public class TemplatePreviewService {
     }
 
     // Records for template preview data
-    public record LineupPairing(String homeDriver, String awayDriver) {}
+    public record LineupPairing(String homeDriver, String homeNickname, String awayDriver, String awayNickname) {}
     public record ResultRow(String homeDriver, int homePoints, int awayPoints, String awayDriver) {}
     public record RaceRow(String label, int homePoints, int awayPoints) {}
 }
