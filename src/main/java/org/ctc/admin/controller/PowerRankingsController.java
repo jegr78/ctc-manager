@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.PowerRankingsGraphicService;
 import org.ctc.domain.model.Season;
-import org.ctc.domain.service.SeasonManagementService;
+import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +12,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,14 +22,14 @@ import java.util.stream.Collectors;
 public class PowerRankingsController {
 
     private final PowerRankingsGraphicService powerRankingsGraphicService;
-    private final SeasonManagementService seasonManagementService;
+    private final SeasonRepository seasonRepository;
 
     @GetMapping
     public String index(@RequestParam(required = false) Integer year,
                         @RequestParam(required = false) Integer number,
                         Model model) {
         // Build season group options
-        List<Season> allSeasons = seasonManagementService.findAll();
+        List<Season> allSeasons = seasonRepository.findAll();
         var seasonGroups = allSeasons.stream()
                 .collect(Collectors.groupingBy(
                         s -> s.getYear() + "|" + s.getNumber(),
@@ -78,7 +77,7 @@ public class PowerRankingsController {
                     .contentType(MediaType.IMAGE_PNG)
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Power Rankings.png\"")
                     .body(png);
-        } catch (IOException | RuntimeException e) {
+        } catch (Exception e) {
             log.error("Failed to generate power rankings graphic", e);
             return ResponseEntity.internalServerError().build();
         }

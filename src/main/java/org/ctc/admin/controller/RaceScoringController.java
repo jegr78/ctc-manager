@@ -54,8 +54,7 @@ public class RaceScoringController {
             return "admin/race-scoring-form";
         }
         try {
-            raceScoringService.save(form.getId(), form.getName(), form.getRacePoints(),
-                    form.getQualiPoints(), form.getFastestLapPoints());
+            raceScoringService.save(form);
             redirectAttributes.addFlashAttribute("successMessage", "Race-Scoring saved: " + form.getName());
             return "redirect:/admin/race-scorings";
         } catch (BusinessRuleException e) {

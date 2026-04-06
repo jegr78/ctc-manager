@@ -159,6 +159,55 @@ class ScoringServiceTest {
     }
 
     @Nested
+    class CalculateTeamTotalsTest {
+
+        @Test
+        void givenResultsForTwoTeams_whenCalculateTeamTotals_thenReturnsTwoTotals() {
+            // given
+            var race = new Race();
+            race.setId(UUID.randomUUID());
+            var team1 = new Team("Home", "HM");
+            team1.setId(UUID.randomUUID());
+            var team2 = new Team("Away", "AW");
+            team2.setId(UUID.randomUUID());
+
+            var driver1 = new Driver("d1", "Driver 1");
+            driver1.setId(UUID.randomUUID());
+            var driver2 = new Driver("d2", "Driver 2");
+            driver2.setId(UUID.randomUUID());
+
+            var r1 = new RaceResult();
+            r1.setDriver(driver1);
+            r1.setPointsTotal(20);
+            var r2 = new RaceResult();
+            r2.setDriver(driver2);
+            r2.setPointsTotal(15);
+
+            when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver1.getId()))
+                    .thenReturn(java.util.Optional.of(new RaceLineup(race, driver1, team1)));
+            when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver2.getId()))
+                    .thenReturn(java.util.Optional.of(new RaceLineup(race, driver2, team2)));
+
+            // when
+            int[] totals = scoringService.calculateTeamTotals(List.of(r1, r2), race.getId(), team1.getId());
+
+            // then
+            assertEquals(20, totals[0]);
+            assertEquals(15, totals[1]);
+        }
+
+        @Test
+        void givenEmptyResults_whenCalculateTeamTotals_thenReturnsZeroes() {
+            // when
+            int[] totals = scoringService.calculateTeamTotals(List.of(), UUID.randomUUID(), UUID.randomUUID());
+
+            // then
+            assertEquals(0, totals[0]);
+            assertEquals(0, totals[1]);
+        }
+    }
+
+    @Nested
     class AggregateMatchScoresTest {
 
         @Test

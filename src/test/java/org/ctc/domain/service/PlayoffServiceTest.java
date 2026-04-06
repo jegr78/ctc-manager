@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.admin.dto.SeedForm;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -27,6 +28,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class PlayoffServiceTest {
 
     @Autowired private PlayoffService playoffService;
+    @Autowired private PlayoffBracketViewService playoffBracketViewService;
+    @Autowired private PlayoffSeedingService playoffSeedingService;
     @Autowired private PlayoffMatchupRepository playoffMatchupRepository;
     @Autowired private PlayoffSeedRepository playoffSeedRepository;
     @Autowired private SeasonRepository seasonRepository;
@@ -158,8 +161,8 @@ class PlayoffServiceTest {
             var matchups = playoff.getRounds().get(0).getMatchups();
 
             // when
-            playoffService.seedTeam(matchups.get(0).getId(), teams.get(0).getId(), 1);
-            playoffService.seedTeam(matchups.get(0).getId(), teams.get(1).getId(), 2);
+            playoffSeedingService.seedTeam(matchups.get(0).getId(), teams.get(0).getId(), 1);
+            playoffSeedingService.seedTeam(matchups.get(0).getId(), teams.get(1).getId(), 2);
 
             // then
             var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
@@ -178,8 +181,8 @@ class PlayoffServiceTest {
             var playoff = playoffService.createPlayoff(season.getId(), "Test", 4);
             var sf = playoff.getRounds().get(0).getMatchups();
 
-            playoffService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
-            playoffService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
+            playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
+            playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
 
             var matchday = matchdayRepository.save(new Matchday(season, "HF Hinspiel", 1));
             var matchup = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
@@ -239,8 +242,8 @@ class PlayoffServiceTest {
             var playoff = playoffService.createPlayoff(season.getId(), "Tie Test", 4);
             var sf = playoff.getRounds().get(0).getMatchups();
 
-            playoffService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
-            playoffService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
+            playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
+            playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
 
             var matchday = matchdayRepository.save(new Matchday(season, "HF", 1));
             var matchup = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
@@ -287,7 +290,7 @@ class PlayoffServiceTest {
             var playoff = playoffService.createPlayoff(season.getId(), "View Test", 4);
 
             // when
-            var view = playoffService.getBracketView(playoff.getId());
+            var view = playoffBracketViewService.getBracketView(playoff.getId());
 
             // then
             assertEquals("View Test", view.getName());
@@ -305,13 +308,13 @@ class PlayoffServiceTest {
             teamSeeds.put(teams.get(1).getId(), 2);
             teamSeeds.put(teams.get(2).getId(), 3);
             teamSeeds.put(teams.get(3).getId(), 4);
-            playoffService.saveSeedNumbers(playoff.getId(), teamSeeds);
-            playoffService.autoSeedBracket(playoff.getId());
+            playoffSeedingService.saveSeedNumbers(playoff.getId(), teamSeeds);
+            playoffSeedingService.autoSeedBracket(playoff.getId());
             entityManager.flush();
             entityManager.clear();
 
             // when
-            var view = playoffService.getBracketView(playoff.getId());
+            var view = playoffBracketViewService.getBracketView(playoff.getId());
 
             // then — Matchup 0: Seed 1 vs Seed 4, Matchup 1: Seed 2 vs Seed 3
             var matchups = view.getRounds().get(0).getMatchups();
@@ -327,7 +330,7 @@ class PlayoffServiceTest {
             var playoff = playoffService.createPlayoff(season.getId(), "No Seed View Test", 4);
 
             // when
-            var view = playoffService.getBracketView(playoff.getId());
+            var view = playoffBracketViewService.getBracketView(playoff.getId());
 
             // then
             var matchups = view.getRounds().get(0).getMatchups();
@@ -346,13 +349,13 @@ class PlayoffServiceTest {
             teamSeeds.put(teams.get(1).getId(), 2);
             teamSeeds.put(teams.get(2).getId(), 3);
             teamSeeds.put(teams.get(3).getId(), 4);
-            playoffService.saveSeedNumbers(playoff.getId(), teamSeeds);
-            playoffService.autoSeedBracket(playoff.getId());
+            playoffSeedingService.saveSeedNumbers(playoff.getId(), teamSeeds);
+            playoffSeedingService.autoSeedBracket(playoff.getId());
             entityManager.flush();
             entityManager.clear();
 
             // when — Finale has no teams yet (TBD)
-            var view = playoffService.getBracketView(playoff.getId());
+            var view = playoffBracketViewService.getBracketView(playoff.getId());
 
             // then
             var finaleMatchups = view.getRounds().get(1).getMatchups();
@@ -395,8 +398,8 @@ class PlayoffServiceTest {
             var playoff = playoffService.createPlayoff(season.getId(), "Race Test", 4);
             var matchup = playoff.getRounds().get(0).getMatchups().get(0);
 
-            playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
-            playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+            playoffSeedingService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+            playoffSeedingService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
 
             // when
             var race = playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
@@ -425,8 +428,8 @@ class PlayoffServiceTest {
             var playoff = playoffService.createPlayoff(season.getId(), "MaxLegs Test", 4);
             var matchup = playoff.getRounds().get(0).getMatchups().get(0);
 
-            playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
-            playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+            playoffSeedingService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+            playoffSeedingService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
 
             // Default bestOfLegs is 1, so adding one race fills it
             playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
@@ -444,8 +447,8 @@ class PlayoffServiceTest {
             playoffService.setRoundLegs(round.getId(), 3);
             var matchup = round.getMatchups().get(0);
 
-            playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
-            playoffService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+            playoffSeedingService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+            playoffSeedingService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
 
             // when
             var race1 = playoffService.addRaceToMatchup(matchup.getId(), null, null, null);
@@ -473,7 +476,7 @@ class PlayoffServiceTest {
             var playoff = playoffService.createPlayoff(season.getId(), "Seed Data Test", 4);
 
             // when
-            var data = playoffService.getSeedingData(playoff.getId());
+            var data = playoffSeedingService.getSeedingData(playoff.getId());
 
             // then
             assertNotNull(data.playoff());
@@ -493,10 +496,10 @@ class PlayoffServiceTest {
 
             var playoff = playoffService.createPlayoff(season.getId(), "Seeded Track Test", 4);
             var matchup = playoff.getRounds().get(0).getMatchups().get(0);
-            playoffService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+            playoffSeedingService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
 
             // when
-            var data = playoffService.getSeedingData(playoff.getId());
+            var data = playoffSeedingService.getSeedingData(playoff.getId());
 
             // then
             assertTrue(data.seededTeamIds().contains(teams.get(0).getId()));
@@ -508,18 +511,29 @@ class PlayoffServiceTest {
     class SaveSeed {
 
         @Test
-        void givenSeedEntriesWithTeams_whenSaveSeed_thenAllEntriesSeeded() {
+        void givenSeedFormWithEntries_whenSaveSeed_thenAllEntriesSeeded() {
             // given
             var playoff = playoffService.createPlayoff(season.getId(), "Form Seed Test", 4);
             var matchups = playoff.getRounds().get(0).getMatchups();
 
-            var seeds = List.of(
-                    new PlayoffService.SeedEntry(matchups.get(0).getId(), 1, teams.get(0).getId(), null),
-                    new PlayoffService.SeedEntry(matchups.get(0).getId(), 2, teams.get(1).getId(), null)
-            );
+            var form = new SeedForm();
+            form.setPlayoffId(playoff.getId());
+
+            var entry1 = new SeedForm.SeedEntry();
+            entry1.setMatchupId(matchups.get(0).getId());
+            entry1.setTeamId(teams.get(0).getId());
+            entry1.setSlot(1);
+
+            var entry2 = new SeedForm.SeedEntry();
+            entry2.setMatchupId(matchups.get(0).getId());
+            entry2.setTeamId(teams.get(1).getId());
+            entry2.setSlot(2);
+
+            form.getSeeds().add(entry1);
+            form.getSeeds().add(entry2);
 
             // when
-            playoffService.saveSeed(playoff.getId(), seeds);
+            playoffSeedingService.saveSeed(playoff.getId(), form);
 
             // then
             var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
@@ -533,12 +547,17 @@ class PlayoffServiceTest {
             var playoff = playoffService.createPlayoff(season.getId(), "Null Seed Test", 4);
             var matchups = playoff.getRounds().get(0).getMatchups();
 
-            var seeds = List.of(
-                    new PlayoffService.SeedEntry(matchups.get(0).getId(), 1, null, null)
-            );
+            var form = new SeedForm();
+            form.setPlayoffId(playoff.getId());
+
+            var entry = new SeedForm.SeedEntry();
+            entry.setMatchupId(matchups.get(0).getId());
+            entry.setTeamId(null);
+            entry.setSlot(1);
+            form.getSeeds().add(entry);
 
             // when
-            playoffService.saveSeed(playoff.getId(), seeds);
+            playoffSeedingService.saveSeed(playoff.getId(), form);
 
             // then
             var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
@@ -617,7 +636,7 @@ class PlayoffServiceTest {
             teamSeeds.put(teams.get(3).getId(), 4);
 
             // when
-            playoffService.saveSeedNumbers(playoff.getId(), teamSeeds);
+            playoffSeedingService.saveSeedNumbers(playoff.getId(), teamSeeds);
             entityManager.flush();
 
             // then
@@ -636,14 +655,14 @@ class PlayoffServiceTest {
             Map<UUID, Integer> original = new LinkedHashMap<>();
             original.put(teams.get(0).getId(), 1);
             original.put(teams.get(1).getId(), 2);
-            playoffService.saveSeedNumbers(playoff.getId(), original);
+            playoffSeedingService.saveSeedNumbers(playoff.getId(), original);
             entityManager.flush();
 
             // when — swap seeds 1 and 2
             Map<UUID, Integer> swapped = new LinkedHashMap<>();
             swapped.put(teams.get(0).getId(), 2);
             swapped.put(teams.get(1).getId(), 1);
-            playoffService.saveSeedNumbers(playoff.getId(), swapped);
+            playoffSeedingService.saveSeedNumbers(playoff.getId(), swapped);
             entityManager.flush();
 
             // then
@@ -667,7 +686,7 @@ class PlayoffServiceTest {
             entityManager.clear();
 
             // when / then
-            assertThatThrownBy(() -> playoffService.autoSeedBracket(playoff.getId()))
+            assertThatThrownBy(() -> playoffSeedingService.autoSeedBracket(playoff.getId()))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("No seed numbers assigned");
         }
@@ -686,11 +705,11 @@ class PlayoffServiceTest {
             teamSeeds.put(teams.get(1).getId(), 2);
             teamSeeds.put(teams.get(2).getId(), 3);
             teamSeeds.put(teams.get(3).getId(), 4);
-            playoffService.saveSeedNumbers(playoff.getId(), teamSeeds);
+            playoffSeedingService.saveSeedNumbers(playoff.getId(), teamSeeds);
             entityManager.flush();
 
             // when
-            playoffService.autoSeedBracket(playoff.getId());
+            playoffSeedingService.autoSeedBracket(playoff.getId());
             entityManager.flush();
 
             // then — Matchup 0: Seed 1 vs Seed 4, Matchup 1: Seed 2 vs Seed 3
@@ -738,36 +757,6 @@ class PlayoffServiceTest {
 
             // when / then
             assertEquals(season.getId(), playoffService.getSeasonIdForRound(roundId));
-        }
-    }
-
-    @Nested
-    class FindRoundByIdTest {
-
-        @Test
-        void givenExistingRound_whenFindRoundById_thenReturnsPlayoffRound() {
-            // given
-            var playoff = playoffService.createPlayoff(season.getId(), "Find Round Test", 4);
-            var round = playoff.getRounds().get(0);
-
-            // when
-            var result = playoffService.findRoundById(round.getId());
-
-            // then
-            assertNotNull(result);
-            assertEquals(round.getId(), result.getId());
-            assertEquals("Semifinal", result.getLabel());
-        }
-
-        @Test
-        void givenNonExistentId_whenFindRoundById_thenThrowsEntityNotFoundException() {
-            // given
-            var fakeId = UUID.randomUUID();
-
-            // when / then
-            assertThatThrownBy(() -> playoffService.findRoundById(fakeId))
-                    .isInstanceOf(EntityNotFoundException.class)
-                    .hasMessageContaining("PlayoffRound");
         }
     }
 }

@@ -120,7 +120,7 @@ public class Gt7SyncService {
                 try {
                     String localPath = fileStorageService.storeFromUrl("cars", task.car.getId(), task.imageUrl, task.gt7Id + ".png");
                     carImageResults.add(new ImageResult<>(task, localPath, null));
-                } catch (IOException e) {
+                } catch (Exception e) {
                     carImageResults.add(new ImageResult<>(task, null, e));
                 }
             }));
@@ -131,7 +131,7 @@ public class Gt7SyncService {
                 try {
                     String localPath = fileStorageService.storeFromUrl("tracks", task.track.getId(), task.imageUrl, task.trackId + ".png");
                     trackImageResults.add(new ImageResult<>(task, localPath, null));
-                } catch (IOException e) {
+                } catch (Exception e) {
                     trackImageResults.add(new ImageResult<>(task, null, e));
                 }
             }));

@@ -1,9 +1,10 @@
 package org.ctc.admin.controller;
 
 import org.ctc.domain.model.SeasonFormat;
+import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.service.DriverRankingService;
-import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.StandingsService;
+import org.ctc.domain.service.SwissPairingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -22,14 +23,16 @@ public class StandingsController {
 
     private final StandingsService standingsService;
     private final DriverRankingService driverRankingService;
-    private final SeasonManagementService seasonManagementService;
+    private final SeasonRepository seasonRepository;
+    private final SwissPairingService swissPairingService;
 
     @GetMapping
     public String standings(@RequestParam(required = false) String seasonId, Model model) {
         boolean isAlltime = "alltime".equals(seasonId);
 
         if (isAlltime) {
-            model.addAttribute("standings", standingsService.calculateAlltimeStandings());
+            // TODO: Alltime-Standings muessen cross-season MatchScoring-Aggregation unterstuetzen
+            model.addAttribute("standings", java.util.List.of());
             model.addAttribute("driverRanking", driverRankingService.calculateAlltimeRanking());
         } else {
             UUID parsedId = null;
@@ -38,12 +41,20 @@ public class StandingsController {
                 catch (IllegalArgumentException e) { log.debug("Invalid season ID: {}", seasonId); }
             }
             var season = parsedId != null
-                    ? seasonManagementService.findByIdOptional(parsedId).orElse(null)
-                    : seasonManagementService.findActiveSeason().orElse(null);
+                    ? seasonRepository.findById(parsedId).orElse(null)
+                    : seasonRepository.findByActiveTrue().orElse(null);
 
             if (season != null) {
                 if (season.getFormat() == SeasonFormat.SWISS) {
-                    model.addAttribute("standings", standingsService.calculateStandingsWithBuchholz(season.getId()));
+                    var buchholzMap = swissPairingService.calculateBuchholz(season.getId());
+                    var standingsList = standingsService.calculateStandings(season.getId());
+                    standingsList.forEach(s -> s.setBuchholz(buchholzMap.getOrDefault(s.getTeam().getId(), 0)));
+                    standingsList.sort(java.util.Comparator
+                            .<StandingsService.TeamStanding, Integer>comparing(StandingsService.TeamStanding::getPoints, java.util.Comparator.reverseOrder())
+                            .thenComparing(StandingsService.TeamStanding::getBuchholz, java.util.Comparator.reverseOrder())
+                            .thenComparing(StandingsService.TeamStanding::getPointDifference, java.util.Comparator.reverseOrder())
+                            .thenComparing(StandingsService.TeamStanding::getPointsFor, java.util.Comparator.reverseOrder()));
+                    model.addAttribute("standings", standingsList);
                 } else {
                     model.addAttribute("standings", standingsService.calculateStandings(season.getId()));
                 }
@@ -53,7 +64,7 @@ public class StandingsController {
         }
 
         model.addAttribute("isAlltime", isAlltime);
-        model.addAttribute("seasons", seasonManagementService.findAll());
+        model.addAttribute("seasons", seasonRepository.findAll());
         model.addAttribute("selectedSeasonId", seasonId);
         return "admin/standings";
     }

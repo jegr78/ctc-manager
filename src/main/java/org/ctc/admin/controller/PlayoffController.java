@@ -1,12 +1,13 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.PlayoffForm;
-import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.admin.dto.SeedForm;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.admin.service.PlayoffRoundOverviewGraphicService;
 import org.ctc.admin.service.PlayoffRoundResultsGraphicService;
 import org.ctc.admin.service.PlayoffRoundScheduleGraphicService;
 import org.ctc.domain.model.PlayoffRound;
+import org.ctc.domain.repository.PlayoffRoundRepository;
 import org.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +19,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.io.IOException;
 import java.util.UUID;
 
 @Slf4j
@@ -28,6 +28,7 @@ import java.util.UUID;
 public class PlayoffController {
 
     private final PlayoffService playoffService;
+    private final PlayoffRoundRepository playoffRoundRepository;
     private final PlayoffRoundOverviewGraphicService roundOverviewGraphicService;
     private final PlayoffRoundScheduleGraphicService roundScheduleGraphicService;
     private final PlayoffRoundResultsGraphicService roundResultsGraphicService;
@@ -67,7 +68,7 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("successMessage",
                     "Playoff created: " + playoff.getName());
             return "redirect:/admin/playoffs?seasonId=" + form.getSeasonId();
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (Exception e) {
             log.error("Error creating playoff", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/new?seasonId=" + form.getSeasonId();
@@ -120,7 +121,7 @@ public class PlayoffController {
         try {
             playoffService.autoSeedBracket(id);
             redirectAttributes.addFlashAttribute("successMessage", "Bracket auto-seeded");
-        } catch (IllegalStateException e) {
+        } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/playoffs/" + id + "/seed";
@@ -129,10 +130,7 @@ public class PlayoffController {
     @PostMapping("/{id}/seed")
     public String saveSeed(@PathVariable UUID id, @ModelAttribute SeedForm form,
                            RedirectAttributes redirectAttributes) {
-        var seeds = form.getSeeds().stream()
-                .map(e -> new PlayoffService.SeedEntry(e.getMatchupId(), e.getSlot(), e.getTeamId(), e.getSeedNumber()))
-                .toList();
-        playoffService.saveSeed(id, seeds);
+        playoffService.saveSeed(id, form);
         redirectAttributes.addFlashAttribute("successMessage", "Seeding saved");
         return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForPlayoff(id);
     }
@@ -165,7 +163,7 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("successMessage",
                     "Winner: " + data.matchup().getWinner().getShortName());
             return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForMatchup(matchupId);
-        } catch (IllegalStateException | EntityNotFoundException e) {
+        } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
@@ -181,7 +179,7 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("successMessage",
                     "Winner set manually: " + data.matchup().getWinner().getShortName());
             return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForMatchup(matchupId);
-        } catch (EntityNotFoundException | IllegalStateException e) {
+        } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
@@ -192,10 +190,11 @@ public class PlayoffController {
     @PostMapping("/round/{roundId}/download-overview")
     public ResponseEntity<byte[]> downloadRoundOverview(@PathVariable UUID roundId) {
         try {
-            PlayoffRound round = playoffService.findRoundById(roundId);
+            PlayoffRound round = playoffRoundRepository.findById(roundId)
+                    .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
             byte[] png = roundOverviewGraphicService.generateOverview(round);
             return buildPngResponse(png, round.getLabel(), "overview");
-        } catch (IOException | RuntimeException e) {
+        } catch (Exception e) {
             log.error("Failed to generate overview graphic for playoff round {}", roundId, e);
             return ResponseEntity.internalServerError().build();
         }
@@ -204,10 +203,11 @@ public class PlayoffController {
     @PostMapping("/round/{roundId}/download-schedule")
     public ResponseEntity<byte[]> downloadRoundSchedule(@PathVariable UUID roundId) {
         try {
-            PlayoffRound round = playoffService.findRoundById(roundId);
+            PlayoffRound round = playoffRoundRepository.findById(roundId)
+                    .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
             byte[] png = roundScheduleGraphicService.generateSchedule(round);
             return buildPngResponse(png, round.getLabel(), "schedule");
-        } catch (IOException | RuntimeException e) {
+        } catch (Exception e) {
             log.error("Failed to generate schedule graphic for playoff round {}", roundId, e);
             return ResponseEntity.internalServerError().build();
         }
@@ -216,10 +216,11 @@ public class PlayoffController {
     @PostMapping("/round/{roundId}/download-results")
     public ResponseEntity<byte[]> downloadRoundResults(@PathVariable UUID roundId) {
         try {
-            PlayoffRound round = playoffService.findRoundById(roundId);
+            PlayoffRound round = playoffRoundRepository.findById(roundId)
+                    .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", roundId));
             byte[] png = roundResultsGraphicService.generateResults(round);
             return buildPngResponse(png, round.getLabel(), "results");
-        } catch (IOException | RuntimeException e) {
+        } catch (Exception e) {
             log.error("Failed to generate results graphic for playoff round {}", roundId, e);
             return ResponseEntity.internalServerError().build();
         }

@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.admin.dto.CarForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Car;
@@ -95,12 +96,15 @@ class CarServiceTest {
     class SaveTest {
 
         @Test
-        void givenNewCar_whenSave_thenCreatesCar() {
+        void givenNewCarForm_whenSave_thenCreatesCar() {
             // given
+            var form = new CarForm();
+            form.setManufacturer("Honda");
+            form.setName("NSX");
             when(carRepository.saveAndFlush(any(Car.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = carService.save(null, "Honda", "NSX");
+            var result = carService.save(form);
 
             // then
             assertThat(result.getManufacturer()).isEqualTo("Honda");
@@ -108,17 +112,22 @@ class CarServiceTest {
         }
 
         @Test
-        void givenExistingCar_whenSave_thenUpdatesCar() {
+        void givenExistingCarForm_whenSave_thenUpdatesCar() {
             // given
             var id = UUID.randomUUID();
             var existing = new Car("Old Manufacturer", "Old Name");
             existing.setId(id);
 
+            var form = new CarForm();
+            form.setId(id);
+            form.setManufacturer("New Manufacturer");
+            form.setName("New Name");
+
             when(carRepository.findById(id)).thenReturn(Optional.of(existing));
             when(carRepository.saveAndFlush(any(Car.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = carService.save(id, "New Manufacturer", "New Name");
+            var result = carService.save(form);
 
             // then
             assertThat(result.getManufacturer()).isEqualTo("New Manufacturer");
@@ -128,11 +137,14 @@ class CarServiceTest {
         @Test
         void givenDuplicateCar_whenSave_thenThrowsBusinessRuleException() {
             // given
+            var form = new CarForm();
+            form.setManufacturer("Honda");
+            form.setName("NSX");
             when(carRepository.saveAndFlush(any(Car.class)))
                     .thenThrow(new DataIntegrityViolationException("unique constraint"));
 
             // when / then
-            assertThatThrownBy(() -> carService.save(null, "Honda", "NSX"))
+            assertThatThrownBy(() -> carService.save(form))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("already exists");
         }

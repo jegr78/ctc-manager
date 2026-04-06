@@ -67,8 +67,7 @@ public class TeamController {
             return "admin/team-form";
         }
         try {
-            teamManagementService.save(form.getId(), form.getName(), form.getShortName(),
-                    form.getPrimaryColor(), form.getSecondaryColor(), form.getAccentColor());
+            teamManagementService.save(form);
             redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + form.getName());
         } catch (BusinessRuleException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
