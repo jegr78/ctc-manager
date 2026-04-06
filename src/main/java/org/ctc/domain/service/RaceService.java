@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.dataimport.GoogleCalendarService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.model.Car;
@@ -11,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,7 +32,7 @@ public class RaceService {
     private final SeasonTeamRepository seasonTeamRepository;
     private final ScoringService scoringService;
     private final TeamCardService teamCardService;
-    private final GoogleCalendarService googleCalendarService;
+    private final RaceCalendarService raceCalendarService;
 
     // --- Domain records (replacing admin DTOs) ---
 
@@ -155,7 +153,7 @@ public class RaceService {
                 .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/overlay.png"));
         boolean hasMatch = race.getMatch() != null && race.getHomeTeam() != null && race.getAwayTeam() != null;
 
-        boolean calendarAvailable = googleCalendarService.isAvailable();
+        boolean calendarAvailable = raceCalendarService.isCalendarAvailable();
         boolean hasCalendarEvent = race.hasCalendarEvent();
         boolean canCreateCalendarEvent = calendarAvailable
                 && race.getDateTime() != null
@@ -171,110 +169,6 @@ public class RaceService {
                 !hasAllSettings, settingsGraphicExists,
                 hasMatch && !overlayExists, overlayExists,
                 calendarAvailable, hasCalendarEvent, canCreateCalendarEvent);
-    }
-
-    // --- Calendar event ---
-
-    @Transactional
-    public void createOrUpdateCalendarEvent(UUID raceId) throws IOException {
-        var race = raceRepository.findById(raceId).orElseThrow();
-
-        if (!googleCalendarService.isAvailable()) {
-            throw new IllegalStateException("Google Calendar integration not available");
-        }
-        if (race.getDateTime() == null) {
-            throw new IllegalStateException("Race has no date/time set");
-        }
-        if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
-            throw new IllegalStateException("Race has no teams assigned");
-        }
-
-        Integer durationMinutes = resolveEventDuration(race);
-        if (durationMinutes == null) {
-            throw new IllegalStateException("Event duration not configured. Set it in the season or playoff form.");
-        }
-
-        String title = race.getMatchday().getLabel() + " - "
-                + race.getHomeTeam().getShortName() + " vs. "
-                + race.getAwayTeam().getShortName();
-
-        if (race.hasCalendarEvent()) {
-            googleCalendarService.updateEvent(race.getCalendarEventId(), title, race.getDateTime(), durationMinutes);
-            log.info("Updated calendar event for race {}: {}", raceId, title);
-        } else {
-            String eventId = googleCalendarService.createEvent(title, race.getDateTime(), durationMinutes);
-            race.setCalendarEventId(eventId);
-            raceRepository.save(race);
-            log.info("Created calendar event for race {}: {} (eventId: {})", raceId, title, eventId);
-        }
-    }
-
-    private Integer resolveEventDuration(Race race) {
-        if (race.getPlayoffMatchup() != null) {
-            var playoffDuration = race.getPlayoffMatchup().getRound().getPlayoff().getEventDurationMinutes();
-            if (playoffDuration != null) {
-                return playoffDuration;
-            }
-        }
-        return race.getMatchday().getSeason().getEventDurationMinutes();
-    }
-
-    // --- Form data for new race ---
-
-    public RaceFormData getNewRaceFormData(UUID matchdayId) {
-        UUID effectiveMatchdayId = matchdayId;
-        List<Car> seasonCars = List.of();
-        List<Track> seasonTracks = List.of();
-
-        if (matchdayId != null) {
-            var md = matchdayRepository.findById(matchdayId).orElse(null);
-            if (md != null) {
-                var season = md.getSeason();
-                seasonCars = season.getCars();
-                seasonTracks = season.getTracks();
-            }
-        }
-
-        var data = new RaceData(null, effectiveMatchdayId, null, null, null, null, null,
-                List.of(), null, null, null, null, null, null, null, null, null, null, null);
-
-        return new RaceFormData(data, matchdayRepository.findAll(), teamRepository.findAll(),
-                seasonCars, seasonTracks, Set.of(), Set.of());
-    }
-
-    // --- Form data for edit ---
-
-    public RaceFormData getRaceFormData(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        var data = toRaceData(race);
-        var season = race.getMatchday().getSeason();
-
-        return new RaceFormData(data, matchdayRepository.findAll(), teamRepository.findAll(),
-                season.getCars(), season.getTracks(),
-                getUsedCarIds(season.getId(), race.getHomeTeam().getId(), race.getId()),
-                getUsedTrackIds(season.getId(), race.getHomeTeam().getId(), race.getId()));
-    }
-
-    // --- Results form data ---
-
-    public ResultsFormData getResultsFormData(UUID raceId) {
-        var race = raceRepository.findById(raceId).orElseThrow();
-        var data = toRaceData(race);
-
-        if (data.results().isEmpty()) {
-            var seasonId = race.getMatchday().getSeason().getId();
-            var results = new ArrayList<RaceResultData>();
-            populateDrivers(results, raceId, seasonId, race.getHomeTeam());
-            populateDrivers(results, raceId, seasonId, race.getAwayTeam());
-            data = new RaceData(data.id(), data.matchdayId(), data.homeTeamId(), data.awayTeamId(),
-                    data.trackId(), data.carId(), data.dateTime(), results,
-                    data.numberOfLaps(), data.tyreWearMultiplier(), data.fuelConsumptionMultiplier(),
-                    data.refuelingSpeed(), data.initialFuel(), data.numberOfRequiredPitStops(),
-                    data.timeProgressionMultiplier(), data.weather(), data.timeOfDay(),
-                    data.availableTyres(), data.mandatoryTyres());
-        }
-
-        return new ResultsFormData(data, race, race.getMatchday().getSeason().getRaceScoring());
     }
 
     // --- Save race ---
@@ -429,15 +323,7 @@ public class RaceService {
         return matchdayId;
     }
 
-    // --- Used selections ---
-
-    public Map<String, Set<UUID>> getUsedSelections(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
-        return Map.of(
-                "usedCarIds", getUsedCarIds(seasonId, homeTeamId, excludeRaceId),
-                "usedTrackIds", getUsedTrackIds(seasonId, homeTeamId, excludeRaceId));
-    }
-
-    // --- Private helpers ---
+    // --- Private helpers for car/track uniqueness validation ---
 
     private Set<UUID> getUsedCarIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
         return raceRepository.findByMatchdaySeasonId(seasonId).stream()
@@ -458,68 +344,4 @@ public class RaceService {
                 .map(r -> r.getTrack().getId())
                 .collect(Collectors.toSet());
     }
-
-    private void populateDrivers(List<RaceResultData> results, UUID raceId, UUID seasonId, Team team) {
-        var allLineups = raceLineupRepository.findByRaceId(raceId);
-        var lineupDrivers = allLineups.stream()
-                .filter(lu -> lu.getTeam().getId().equals(team.getId())
-                        || lu.getTeam().getParentOrSelf().getId().equals(team.getId()))
-                .toList();
-
-        if (!lineupDrivers.isEmpty()) {
-            int pos = results.size() + 1;
-            for (var lineup : lineupDrivers) {
-                results.add(new RaceResultData(
-                        lineup.getDriver().getId(), lineup.getDriver().getPsnId(),
-                        lineup.getTeam().getShortName(), pos, pos, false));
-                pos++;
-            }
-        } else {
-            var seasonDrivers = seasonDriverRepository.findBySeasonIdAndTeamId(seasonId, team.getId());
-            int pos = results.size() + 1;
-            for (var sd : seasonDrivers) {
-                results.add(new RaceResultData(
-                        sd.getDriver().getId(), sd.getDriver().getPsnId(),
-                        team.getShortName(), pos, pos, false));
-                pos++;
-            }
-        }
-    }
-
-    private RaceData toRaceData(Race race) {
-        var resultDataList = new ArrayList<RaceResultData>();
-        for (var result : race.getResults()) {
-            // Use RaceLineup for team name (Source of Truth), fallback to SeasonDriver
-            String teamShortName = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), result.getDriver().getId())
-                    .map(rl -> rl.getTeam().getShortName())
-                    .orElseGet(() -> result.getDriver().getSeasonDrivers().stream()
-                            .filter(sd -> sd.getSeason().getId().equals(race.getMatchday().getSeason().getId()))
-                            .map(sd -> sd.getTeam().getShortName())
-                            .findFirst().orElse("?"));
-            resultDataList.add(new RaceResultData(
-                    result.getDriver().getId(), result.getDriver().getPsnId(),
-                    teamShortName, result.getPosition(), result.getQualiPosition(),
-                    result.isFastestLap()));
-        }
-
-        var settings = race.getSettings();
-        return new RaceData(
-                race.getId(), race.getMatchday().getId(),
-                race.getHomeTeam().getId(), race.getAwayTeam().getId(),
-                race.getTrack() != null ? race.getTrack().getId() : null,
-                race.getCar() != null ? race.getCar().getId() : null,
-                race.getDateTime(), resultDataList,
-                settings != null ? settings.getNumberOfLaps() : null,
-                settings != null ? settings.getTyreWearMultiplier() : null,
-                settings != null ? settings.getFuelConsumptionMultiplier() : null,
-                settings != null ? settings.getRefuelingSpeed() : null,
-                settings != null ? settings.getInitialFuel() : null,
-                settings != null ? settings.getNumberOfRequiredPitStops() : null,
-                settings != null ? settings.getTimeProgressionMultiplier() : null,
-                settings != null ? settings.getWeather() : null,
-                settings != null ? settings.getTimeOfDay() : null,
-                settings != null ? settings.getAvailableTyres() : null,
-                settings != null ? settings.getMandatoryTyres() : null);
-    }
-
 }

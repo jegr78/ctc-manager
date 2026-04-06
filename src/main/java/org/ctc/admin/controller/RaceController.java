@@ -3,6 +3,8 @@ package org.ctc.admin.controller;
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.domain.service.RaceAttachmentService;
+import org.ctc.domain.service.RaceCalendarService;
+import org.ctc.domain.service.RaceFormDataService;
 import org.ctc.domain.service.RaceGraphicService;
 import org.ctc.domain.service.RaceService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,8 @@ import java.util.UUID;
 public class RaceController {
 
     private final RaceService raceService;
+    private final RaceFormDataService raceFormDataService;
+    private final RaceCalendarService raceCalendarService;
     private final RaceAttachmentService raceAttachmentService;
     private final RaceGraphicService raceGraphicService;
 
@@ -68,7 +72,7 @@ public class RaceController {
 
     @GetMapping("/new")
     public String create(@RequestParam(required = false) UUID matchdayId, Model model) {
-        var data = raceService.getNewRaceFormData(matchdayId);
+        var data = raceFormDataService.getNewRaceFormData(matchdayId);
         model.addAttribute("raceForm", toRaceForm(data.data()));
         model.addAttribute("matchdays", data.matchdays());
         model.addAttribute("teams", data.teams());
@@ -81,7 +85,7 @@ public class RaceController {
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var data = raceService.getRaceFormData(id);
+        var data = raceFormDataService.getRaceFormData(id);
         model.addAttribute("raceForm", toRaceForm(data.data()));
         model.addAttribute("matchdays", data.matchdays());
         model.addAttribute("teams", data.teams());
@@ -94,7 +98,7 @@ public class RaceController {
 
     @GetMapping("/{id}/results")
     public String results(@PathVariable UUID id, Model model) {
-        var data = raceService.getResultsFormData(id);
+        var data = raceFormDataService.getResultsFormData(id);
         model.addAttribute("raceForm", toRaceForm(data.data()));
         model.addAttribute("race", data.race());
         model.addAttribute("raceScoring", data.raceScoring());
@@ -184,7 +188,7 @@ public class RaceController {
     @PostMapping("/{id}/create-calendar-event")
     public String createCalendarEvent(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
         try {
-            raceService.createOrUpdateCalendarEvent(id);
+            raceCalendarService.createOrUpdateCalendarEvent(id);
             redirectAttributes.addFlashAttribute("successMessage", "Calendar event saved");
         } catch (IOException | IllegalStateException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Calendar: " + e.getMessage());
@@ -254,7 +258,7 @@ public class RaceController {
             @RequestParam UUID seasonId,
             @RequestParam UUID homeTeamId,
             @RequestParam(required = false) UUID excludeRaceId) {
-        return raceService.getUsedSelections(seasonId, homeTeamId, excludeRaceId);
+        return raceFormDataService.getUsedSelections(seasonId, homeTeamId, excludeRaceId);
     }
 
     // --- Private helper: Map domain RaceData to admin RaceForm for Thymeleaf templates ---
