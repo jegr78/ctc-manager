@@ -12,6 +12,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -275,5 +276,34 @@ class DriverControllerTest {
         // then
         assertFalse(driverRepository.findById(source.getId()).isPresent(), "Source driver should be deleted");
         assertTrue(driverRepository.findById(target.getId()).isPresent(), "Target driver should still exist");
+    }
+
+    @Test
+    void givenDriver_whenPreviewMergeWithSelf_thenRedirectsToMergeFormWithError() throws Exception {
+        // given
+        var source = driverRepository.save(new Driver("merge_self_err", "Self Merge Error"));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/" + source.getId() + "/merge/preview")
+                        .param("targetId", source.getId().toString()))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/drivers/" + source.getId() + "/merge"))
+                .andExpect(flash().attributeExists("errorMessage"));
+    }
+
+    @Test
+    void givenDriver_whenPreviewMergeWithNonExistentTarget_thenRedirectsToMergeFormWithError() throws Exception {
+        // given
+        var source = driverRepository.save(new Driver("merge_missing_tgt", "Missing Target Test"));
+        var nonExistentId = UUID.randomUUID();
+
+        // when
+        mockMvc.perform(post("/admin/drivers/" + source.getId() + "/merge/preview")
+                        .param("targetId", nonExistentId.toString()))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/drivers/" + source.getId() + "/merge"))
+                .andExpect(flash().attributeExists("errorMessage"));
     }
 }
