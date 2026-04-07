@@ -29,8 +29,7 @@ public class StandingsController {
         boolean isAlltime = "alltime".equals(seasonId);
 
         if (isAlltime) {
-            // TODO: Alltime-Standings muessen cross-season MatchScoring-Aggregation unterstuetzen
-            model.addAttribute("standings", java.util.List.of());
+            model.addAttribute("standings", standingsService.calculateAlltimeStandings());
             model.addAttribute("driverRanking", driverRankingService.calculateAlltimeRanking());
         } else {
             UUID parsedId = null;

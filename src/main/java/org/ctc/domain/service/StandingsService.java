@@ -3,6 +3,7 @@ package org.ctc.domain.service;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.RaceRepository;
@@ -73,6 +74,33 @@ public class StandingsService {
 
         log.debug("Calculated standings with Buchholz for season {}: {} teams", seasonId, standings.size());
         return standings;
+    }
+
+    @Transactional(readOnly = true)
+    public List<TeamStanding> calculateAlltimeStandings() {
+        List<Season> allSeasons = seasonRepository.findAll();
+        Map<UUID, TeamStanding> alltimeMap = new HashMap<>();
+
+        for (Season season : allSeasons) {
+            List<TeamStanding> seasonStandings = calculateStandings(season.getId());
+            if (seasonStandings.isEmpty()) continue;
+
+            for (TeamStanding standing : seasonStandings) {
+                Team parentTeam = standing.getTeam().getParentOrSelf();
+                TeamStanding alltime = alltimeMap.computeIfAbsent(
+                    parentTeam.getId(), id -> new TeamStanding(parentTeam));
+                alltime.merge(standing);
+            }
+        }
+
+        List<TeamStanding> result = new ArrayList<>(alltimeMap.values());
+        result.sort(Comparator
+            .<TeamStanding, Integer>comparing(TeamStanding::getPoints, Comparator.reverseOrder())
+            .thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
+            .thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+
+        log.debug("Calculated alltime standings: {} teams across {} seasons", result.size(), allSeasons.size());
+        return result;
     }
 
     private Map<UUID, Integer> calculateBuchholzScores(UUID seasonId) {
@@ -190,6 +218,15 @@ public class StandingsService {
         public void addPointsFor(int pts) { pointsFor += pts; }
         public void addPointsAgainst(int pts) { pointsAgainst += pts; }
         public void setBuchholz(int buchholz) { this.buchholz = buchholz; }
+
+        public void merge(TeamStanding other) {
+            this.wins += other.wins;
+            this.draws += other.draws;
+            this.losses += other.losses;
+            this.points += other.points;
+            this.pointsFor += other.pointsFor;
+            this.pointsAgainst += other.pointsAgainst;
+        }
 
         public Team getTeam() { return team; }
         public int getWins() { return wins; }
