@@ -42,7 +42,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 - [x] **Phase 16: Merge Service Core** - FK reassignment, audit logging, and source driver deletion (completed 2026-04-07)
 - [x] **Phase 17: Duplicate-Handling** - Conflict resolution for unique-constraint violations across all three FK tables (completed 2026-04-07)
 - [x] **Phase 18: Merge UI** - Merge button, target selection, preview, and confirmation flow on driver detail page (completed 2026-04-07)
-- [ ] **Phase 19: Merge Error Handling** - Graceful error handling for previewMerge() controller method (gap closure)
+- [x] **Phase 19: Merge Error Handling** - Graceful error handling for previewMerge() controller method (gap closure) (completed 2026-04-07)
 
 ## Phase Details
 
@@ -99,9 +99,9 @@ Plans:
   1. previewMerge() catches EntityNotFoundException and BusinessRuleException and redirects to merge form with errorMessage flash attribute
   2. Self-merge via URL manipulation on preview endpoint returns user to merge form with error message instead of generic error page
   3. Non-existent target driver on preview endpoint returns user to merge form with error message instead of generic error page
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 19-01-PLAN.md — TDD: Add try/catch to previewMerge() with flash redirect
+- [x] 19-01-PLAN.md — TDD: Add try/catch to previewMerge() with flash redirect
 
 ## Progress
 
@@ -125,4 +125,4 @@ Plans:
 | 16. Merge Service Core | v1.2 | 1/1 | Complete    | 2026-04-07 |
 | 17. Duplicate-Handling | v1.2 | 1/1 | Complete    | 2026-04-07 |
 | 18. Merge UI | v1.2 | 2/2 | Complete    | 2026-04-07 |
-| 19. Merge Error Handling | v1.2 | 0/1 | Not started | - |
+| 19. Merge Error Handling | v1.2 | 1/1 | Complete    | 2026-04-07 |
