@@ -264,12 +264,13 @@ The test `whenGetAlltimeStandings_thenReturnsAlltimeView()` (line 81) currently 
 |---|-------|---------|---------------|
 | A1 | No template changes needed — standingsTable fragment already handles alltime display | Architecture Patterns, D-06 | If template was changed after Phase 9 in a way that broke alltime rendering, the feature would appear broken in UI without test failures. Low risk — template is server-side rendered and integration test covers the endpoint. | [ASSUMED based on CONTEXT.md D-06; template not re-read in this session] |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Integration test: will SeasonTeam be loaded in the alltime test?**
    - What we know: `activeSeason.getSeasonTeams()` is used in the integration test to find teams. OSIV is enabled, `@Transactional` is on the test class.
    - What's unclear: Whether the `SeasonTeam` relationship is loaded after `seasonRepository.save(activeSeason)` when accessed via `activeSeason.getSeasonTeams()` inside the test.
    - Recommendation: The existing `setUp()` already calls `activeSeason.addTeam()` + `seasonRepository.save()`, which is the same pattern used in other controller tests. The alltime test setup in the original Phase 9 commit uses this identical pattern — low risk.
+   - RESOLVED: Low risk — same pattern as existing controller tests; `activeSeason.getSeasonTeams()` is loaded via `setUp()` in the same `@Transactional` context.
 
 ## Environment Availability
 
