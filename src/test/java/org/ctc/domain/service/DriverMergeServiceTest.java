@@ -518,6 +518,177 @@ class DriverMergeServiceTest {
         }
     }
 
+    @Nested
+    class PreviewMergeTests {
+
+        @Test
+        void givenSourceEqualsTarget_whenPreviewMerge_thenThrowsBusinessRuleException() {
+            // given
+            var id = UUID.randomUUID();
+
+            // when / then
+            assertThatThrownBy(() -> driverMergeService.previewMerge(id, id))
+                    .isInstanceOf(BusinessRuleException.class)
+                    .hasMessageContaining("Cannot merge driver with itself");
+        }
+
+        @Test
+        void givenNonExistentSource_whenPreviewMerge_thenThrowsEntityNotFoundException() {
+            // given
+            var sourceId = UUID.randomUUID();
+            var targetId = UUID.randomUUID();
+            when(driverRepository.findById(sourceId)).thenReturn(Optional.empty());
+
+            // when / then
+            assertThatThrownBy(() -> driverMergeService.previewMerge(sourceId, targetId))
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessageContaining("Driver")
+                    .hasMessageContaining(sourceId.toString());
+        }
+
+        @Test
+        void givenNonExistentTarget_whenPreviewMerge_thenThrowsEntityNotFoundException() {
+            // given
+            var sourceId = UUID.randomUUID();
+            var targetId = UUID.randomUUID();
+            var source = createDriver(sourceId, "SourcePSN");
+            when(driverRepository.findById(sourceId)).thenReturn(Optional.of(source));
+            when(driverRepository.findById(targetId)).thenReturn(Optional.empty());
+
+            // when / then
+            assertThatThrownBy(() -> driverMergeService.previewMerge(sourceId, targetId))
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessageContaining("Driver")
+                    .hasMessageContaining(targetId.toString());
+        }
+
+        @Test
+        void givenMixedConflictsAcrossAllFkTables_whenPreviewMerge_thenReturnsCorrectCounts() {
+            // given
+            var sourceId = UUID.randomUUID();
+            var targetId = UUID.randomUUID();
+            var source = createDriver(sourceId, "SourcePSN");
+            var target = createDriver(targetId, "TargetPSN");
+
+            var seasonConflict = createSeason(UUID.randomUUID(), "ConflictSeason");
+            var seasonNoConflict = createSeason(UUID.randomUUID(), "NoConflictSeason");
+            var sourceSD1 = createSeasonDriverWithSeason(source, seasonConflict);
+            var sourceSD2 = createSeasonDriverWithSeason(source, seasonNoConflict);
+            var targetSD1 = createSeasonDriverWithSeason(target, seasonConflict);
+
+            var raceConflict = createRace(UUID.randomUUID());
+            var raceNoConflict = createRace(UUID.randomUUID());
+            var sourceRL1 = createRaceLineupWithRace(source, raceConflict);
+            var sourceRL2 = createRaceLineupWithRace(source, raceNoConflict);
+            var targetRL1 = createRaceLineupWithRace(target, raceConflict);
+
+            var raceResultConflict = createRace(UUID.randomUUID());
+            var raceResult2 = createRace(UUID.randomUUID());
+            var raceResult3 = createRace(UUID.randomUUID());
+            var sourceRR1 = createRaceResultWithRace(source, raceResultConflict);
+            var sourceRR2 = createRaceResultWithRace(source, raceResult2);
+            var sourceRR3 = createRaceResultWithRace(source, raceResult3);
+            var targetRR1 = createRaceResultWithRace(target, raceResultConflict);
+
+            var alias1 = createPsnAlias(source, "OldAlias1");
+            var alias2 = createPsnAlias(source, "OldAlias2");
+
+            when(driverRepository.findById(sourceId)).thenReturn(Optional.of(source));
+            when(driverRepository.findById(targetId)).thenReturn(Optional.of(target));
+            when(seasonDriverRepository.findByDriverId(sourceId)).thenReturn(List.of(sourceSD1, sourceSD2));
+            when(seasonDriverRepository.findBySeasonIdAndDriverId(seasonConflict.getId(), targetId))
+                    .thenReturn(Optional.of(targetSD1));
+            when(seasonDriverRepository.findBySeasonIdAndDriverId(seasonNoConflict.getId(), targetId))
+                    .thenReturn(Optional.empty());
+            when(raceLineupRepository.findByDriverId(sourceId)).thenReturn(List.of(sourceRL1, sourceRL2));
+            when(raceLineupRepository.findByRaceIdAndDriverId(raceConflict.getId(), targetId))
+                    .thenReturn(Optional.of(targetRL1));
+            when(raceLineupRepository.findByRaceIdAndDriverId(raceNoConflict.getId(), targetId))
+                    .thenReturn(Optional.empty());
+            when(raceResultRepository.findByDriverId(sourceId)).thenReturn(List.of(sourceRR1, sourceRR2, sourceRR3));
+            when(raceResultRepository.findByRaceIdAndDriverId(raceResultConflict.getId(), targetId))
+                    .thenReturn(Optional.of(targetRR1));
+            when(raceResultRepository.findByRaceIdAndDriverId(raceResult2.getId(), targetId))
+                    .thenReturn(Optional.empty());
+            when(raceResultRepository.findByRaceIdAndDriverId(raceResult3.getId(), targetId))
+                    .thenReturn(Optional.empty());
+            when(psnAliasRepository.findByDriverId(sourceId)).thenReturn(List.of(alias1, alias2));
+
+            // when
+            var preview = driverMergeService.previewMerge(sourceId, targetId);
+
+            // then
+            assertThat(preview.seasonDriversToReassign()).isEqualTo(1);
+            assertThat(preview.seasonDriversDuplicate()).isEqualTo(1);
+            assertThat(preview.raceLineupsToReassign()).isEqualTo(1);
+            assertThat(preview.raceLineupsDuplicate()).isEqualTo(1);
+            assertThat(preview.raceResultsToReassign()).isEqualTo(2);
+            assertThat(preview.raceResultsDuplicate()).isEqualTo(1);
+            assertThat(preview.psnAliasesToReassign()).isEqualTo(2);
+            assertThat(preview.totalToReassign()).isEqualTo(6);
+            assertThat(preview.totalDuplicates()).isEqualTo(3);
+        }
+
+        @Test
+        void givenNoReferences_whenPreviewMerge_thenReturnsAllZeroCounts() {
+            // given
+            var sourceId = UUID.randomUUID();
+            var targetId = UUID.randomUUID();
+            var source = createDriver(sourceId, "SourcePSN");
+            var target = createDriver(targetId, "TargetPSN");
+
+            when(driverRepository.findById(sourceId)).thenReturn(Optional.of(source));
+            when(driverRepository.findById(targetId)).thenReturn(Optional.of(target));
+            when(seasonDriverRepository.findByDriverId(sourceId)).thenReturn(List.of());
+            when(raceLineupRepository.findByDriverId(sourceId)).thenReturn(List.of());
+            when(raceResultRepository.findByDriverId(sourceId)).thenReturn(List.of());
+            when(psnAliasRepository.findByDriverId(sourceId)).thenReturn(List.of());
+
+            // when
+            var preview = driverMergeService.previewMerge(sourceId, targetId);
+
+            // then
+            assertThat(preview.seasonDriversToReassign()).isZero();
+            assertThat(preview.seasonDriversDuplicate()).isZero();
+            assertThat(preview.raceLineupsToReassign()).isZero();
+            assertThat(preview.raceLineupsDuplicate()).isZero();
+            assertThat(preview.raceResultsToReassign()).isZero();
+            assertThat(preview.raceResultsDuplicate()).isZero();
+            assertThat(preview.psnAliasesToReassign()).isZero();
+            assertThat(preview.totalToReassign()).isZero();
+            assertThat(preview.totalDuplicates()).isZero();
+        }
+
+        @Test
+        void givenValidPreview_whenPreviewMerge_thenNoMutationsExecuted() {
+            // given
+            var sourceId = UUID.randomUUID();
+            var targetId = UUID.randomUUID();
+            var source = createDriver(sourceId, "SourcePSN");
+            var target = createDriver(targetId, "TargetPSN");
+
+            when(driverRepository.findById(sourceId)).thenReturn(Optional.of(source));
+            when(driverRepository.findById(targetId)).thenReturn(Optional.of(target));
+            when(seasonDriverRepository.findByDriverId(sourceId)).thenReturn(List.of());
+            when(raceLineupRepository.findByDriverId(sourceId)).thenReturn(List.of());
+            when(raceResultRepository.findByDriverId(sourceId)).thenReturn(List.of());
+            when(psnAliasRepository.findByDriverId(sourceId)).thenReturn(List.of());
+
+            // when
+            driverMergeService.previewMerge(sourceId, targetId);
+
+            // then
+            verify(seasonDriverRepository, never()).save(any());
+            verify(seasonDriverRepository, never()).delete(any(SeasonDriver.class));
+            verify(raceLineupRepository, never()).save(any());
+            verify(raceLineupRepository, never()).delete(any(RaceLineup.class));
+            verify(raceResultRepository, never()).save(any());
+            verify(raceResultRepository, never()).delete(any(RaceResult.class));
+            verify(psnAliasRepository, never()).save(any());
+            verify(driverRepository, never()).delete(any(Driver.class));
+        }
+    }
+
     // --- Helper methods ---
 
     private Driver createDriver(UUID id, String psnId) {
