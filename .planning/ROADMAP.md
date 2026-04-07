@@ -4,7 +4,7 @@
 
 - :white_check_mark: **v1.0 Technical Debt Cleanup** — Phases 1-5 (shipped 2026-04-04)
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
-- **v1.2 Driver Merge** — Phases 16-18 (active)
+- **v1.2 Driver Merge** — Phases 16-19 (active)
 
 ## Phases
 
@@ -42,6 +42,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 - [x] **Phase 16: Merge Service Core** - FK reassignment, audit logging, and source driver deletion (completed 2026-04-07)
 - [x] **Phase 17: Duplicate-Handling** - Conflict resolution for unique-constraint violations across all three FK tables (completed 2026-04-07)
 - [x] **Phase 18: Merge UI** - Merge button, target selection, preview, and confirmation flow on driver detail page (completed 2026-04-07)
+- [ ] **Phase 19: Merge Error Handling** - Graceful error handling for previewMerge() controller method (gap closure)
 
 ## Phase Details
 
@@ -89,6 +90,19 @@ Plans:
 - [x] 18-01-PLAN.md — TDD: previewMerge() service method with MergePreview record
 - [x] 18-02-PLAN.md — Controller endpoints, driver-merge template, merge button, integration tests
 
+### Phase 19: Merge Error Handling
+**Goal**: previewMerge() controller method handles exceptions gracefully with flash redirect, matching executeMerge pattern
+**Depends on**: Phase 18
+**Requirements**: MERGE-02 (error path), MERGE-03 (error path)
+**Gap Closure**: Closes GAP-01 and FLOW-GAP-01 from v1.2 audit
+**Success Criteria** (what must be TRUE):
+  1. previewMerge() catches EntityNotFoundException and BusinessRuleException and redirects to merge form with errorMessage flash attribute
+  2. Self-merge via URL manipulation on preview endpoint returns user to merge form with error message instead of generic error page
+  3. Non-existent target driver on preview endpoint returns user to merge form with error message instead of generic error page
+**Plans:** 0/1 plans
+Plans:
+- [ ] 19-01-PLAN.md — TDD: Add try/catch to previewMerge() with flash redirect
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -111,3 +125,4 @@ Plans:
 | 16. Merge Service Core | v1.2 | 1/1 | Complete    | 2026-04-07 |
 | 17. Duplicate-Handling | v1.2 | 1/1 | Complete    | 2026-04-07 |
 | 18. Merge UI | v1.2 | 2/2 | Complete    | 2026-04-07 |
+| 19. Merge Error Handling | v1.2 | 0/1 | Not started | - |
