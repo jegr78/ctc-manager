@@ -395,14 +395,14 @@ void givenRuntimeException_whenUploadImage_thenPropagates() {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **TemplatePreviewService.renderPreview() exception contract**
+1. **TemplatePreviewService.renderPreview() exception contract** — RESOLVED: Plan 01 Task 1 narrows the preview catch to `catch(RuntimeException e)` (third catch after IllegalArgumentException and TemplateSecurityException). renderPreview() does not declare checked exceptions; runtime failures from Thymeleaf processing are RuntimeException.
    - What we know: `TemplateEditorController.preview()` already catches `IllegalArgumentException` and `TemplateSecurityException` specifically; the final `catch(Exception e)` is a fallback.
    - What's unclear: Whether `renderPreview()` can throw `IOException` (file read) or only `RuntimeException` (Thymeleaf processing).
    - Recommendation: Read `TemplatePreviewService.java` during planning/implementation to determine the correct narrowing. If it throws `IOException`, use that; if only RuntimeException, use that.
 
-2. **Gt7SyncService batch lambdas — IOException vs Exception**
+2. **Gt7SyncService batch lambdas — IOException vs Exception** — RESOLVED: Plan 02 Task 1 narrows batch lambda catches to `catch(IOException e)`. `storeFromUrl()` is the only throwing call in those try blocks and declares `throws IOException`.
    - What we know: `fileStorageService.storeFromUrl()` throws `IOException`. The lambdas catch-and-store the exception object.
    - What's unclear: Whether the lambda infrastructure (CompletableFuture.runAsync with Runnable) allows narrowing to `IOException` in the catch without compiler issues.
    - Recommendation: Since we're catching (not rethrowing) inside the lambda, narrowing `catch(Exception e)` to `catch(IOException e)` is valid as long as only `IOException` can actually be thrown in the try block. Verify `storeFromUrl` is the only throwing call.
