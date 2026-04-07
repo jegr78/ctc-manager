@@ -273,5 +273,23 @@ class CarServiceTest {
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("Image upload failed");
         }
+
+        @Test
+        void givenRuntimeException_whenUploadImage_thenPropagates() throws IOException {
+            // given
+            var id = UUID.randomUUID();
+            var car = new Car("Honda", "NSX");
+            car.setId(id);
+            var image = mock(MultipartFile.class);
+
+            when(carRepository.findById(id)).thenReturn(Optional.of(car));
+            when(fileStorageService.storeImage("cars", id, image))
+                    .thenThrow(new RuntimeException("unexpected error"));
+
+            // when / then
+            assertThatThrownBy(() -> carService.uploadImage(id, image))
+                    .isInstanceOf(RuntimeException.class)
+                    .isNotInstanceOf(BusinessRuleException.class);
+        }
     }
 }

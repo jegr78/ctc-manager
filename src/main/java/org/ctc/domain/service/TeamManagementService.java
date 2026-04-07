@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -293,7 +294,7 @@ public class TeamManagementService {
             team.setLogoUrl(newUrl);
             teamRepository.save(team);
             propagateLogoToSubTeams(team, newUrl);
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new BusinessRuleException("Logo upload failed: " + e.getMessage());
         }
     }

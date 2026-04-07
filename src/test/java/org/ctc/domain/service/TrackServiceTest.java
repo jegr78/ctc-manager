@@ -273,5 +273,23 @@ class TrackServiceTest {
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("Image upload failed");
         }
+
+        @Test
+        void givenRuntimeException_whenUploadImage_thenPropagates() throws IOException {
+            // given
+            var id = UUID.randomUUID();
+            var track = new Track("Fuji", "Japan");
+            track.setId(id);
+            var image = mock(MultipartFile.class);
+
+            when(trackRepository.findById(id)).thenReturn(Optional.of(track));
+            when(fileStorageService.storeImage("tracks", id, image))
+                    .thenThrow(new RuntimeException("unexpected error"));
+
+            // when / then
+            assertThatThrownBy(() -> trackService.uploadImage(id, image))
+                    .isInstanceOf(RuntimeException.class)
+                    .isNotInstanceOf(BusinessRuleException.class);
+        }
     }
 }

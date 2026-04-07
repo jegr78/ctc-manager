@@ -155,4 +155,31 @@ class Gt7SyncServiceTest {
         assertThat(result.carsImported()).isEqualTo(0);
         verify(carRepository, never()).save(any(Car.class));
     }
+
+    @Test
+    void givenIoException_whenDownloadCarImage_thenBatchCompletesWithoutThrowing() throws IOException {
+        // given
+        when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
+
+        when(carRepository.existsByGt7Id(anyString())).thenReturn(false);
+        when(carRepository.existsByManufacturerAndName(anyString(), anyString())).thenReturn(false);
+
+        var savedCar = new Car("Alfa Romeo", "4C Gr.3");
+        savedCar.setGt7Id("car310");
+        var id = UUID.randomUUID();
+        savedCar.setId(id);
+        when(carRepository.save(any(Car.class))).thenReturn(savedCar);
+
+        // storeFromUrl throws IOException — batch must not abort
+        when(fileStorageService.storeFromUrl(eq("cars"), eq(id), anyString(), eq("car310.png")))
+                .thenThrow(new IOException("download failed"));
+
+        // when
+        var result = syncService.executeSync(List.of("car310"), List.of());
+
+        // then — sync completes, car was saved (entity), image download silently failed
+        assertThat(result.carsImported()).isEqualTo(1);
+        // imageUrl was not set because download failed, but no exception was thrown
+        verify(carRepository, atLeastOnce()).save(any(Car.class));
+    }
 }
