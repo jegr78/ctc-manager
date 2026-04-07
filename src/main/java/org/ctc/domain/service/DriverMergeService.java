@@ -29,6 +29,73 @@ public class DriverMergeService {
     public record MergeResult(int seasonDrivers, int raceLineups, int raceResults, int aliasesReassigned,
                                int seasonDriversDropped, int raceLineupsDropped, int raceResultsDropped) {}
 
+    public record MergePreview(
+            int seasonDriversToReassign, int seasonDriversDuplicate,
+            int raceLineupsToReassign, int raceLineupsDuplicate,
+            int raceResultsToReassign, int raceResultsDuplicate,
+            int psnAliasesToReassign) {
+
+        public int totalToReassign() {
+            return seasonDriversToReassign + raceLineupsToReassign + raceResultsToReassign + psnAliasesToReassign;
+        }
+
+        public int totalDuplicates() {
+            return seasonDriversDuplicate + raceLineupsDuplicate + raceResultsDuplicate;
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public MergePreview previewMerge(UUID sourceId, UUID targetId) {
+        // Self-merge prevention (same as merge())
+        if (sourceId.equals(targetId)) {
+            throw new BusinessRuleException("Cannot merge driver with itself");
+        }
+
+        // Entity existence validation (same as merge())
+        driverRepository.findById(sourceId)
+                .orElseThrow(() -> new EntityNotFoundException("Driver", sourceId));
+        driverRepository.findById(targetId)
+                .orElseThrow(() -> new EntityNotFoundException("Driver", targetId));
+
+        // Count SeasonDriver reassign vs duplicate (read-only, no save/delete)
+        int sdReassign = 0;
+        int sdDuplicate = 0;
+        for (var sd : seasonDriverRepository.findByDriverId(sourceId)) {
+            if (seasonDriverRepository.findBySeasonIdAndDriverId(sd.getSeason().getId(), targetId).isPresent()) {
+                sdDuplicate++;
+            } else {
+                sdReassign++;
+            }
+        }
+
+        // Count RaceLineup reassign vs duplicate (read-only, no save/delete)
+        int rlReassign = 0;
+        int rlDuplicate = 0;
+        for (var rl : raceLineupRepository.findByDriverId(sourceId)) {
+            if (raceLineupRepository.findByRaceIdAndDriverId(rl.getRace().getId(), targetId).isPresent()) {
+                rlDuplicate++;
+            } else {
+                rlReassign++;
+            }
+        }
+
+        // Count RaceResult reassign vs duplicate (read-only, no save/delete)
+        int rrReassign = 0;
+        int rrDuplicate = 0;
+        for (var rr : raceResultRepository.findByDriverId(sourceId)) {
+            if (raceResultRepository.findByRaceIdAndDriverId(rr.getRace().getId(), targetId).isPresent()) {
+                rrDuplicate++;
+            } else {
+                rrReassign++;
+            }
+        }
+
+        // Count PsnAlias entries to reassign (read-only)
+        int aliasCount = psnAliasRepository.findByDriverId(sourceId).size();
+
+        return new MergePreview(sdReassign, sdDuplicate, rlReassign, rlDuplicate, rrReassign, rrDuplicate, aliasCount);
+    }
+
     @Transactional
     public MergeResult merge(UUID sourceId, UUID targetId) {
         // D-03: Self-merge prevention
