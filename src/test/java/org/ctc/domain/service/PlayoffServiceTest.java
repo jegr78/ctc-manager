@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.SeedForm;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -511,29 +510,18 @@ class PlayoffServiceTest {
     class SaveSeed {
 
         @Test
-        void givenSeedFormWithEntries_whenSaveSeed_thenAllEntriesSeeded() {
+        void givenSeedEntries_whenSaveSeed_thenAllEntriesSeeded() {
             // given
             var playoff = playoffService.createPlayoff(season.getId(), "Form Seed Test", 4);
             var matchups = playoff.getRounds().get(0).getMatchups();
 
-            var form = new SeedForm();
-            form.setPlayoffId(playoff.getId());
-
-            var entry1 = new SeedForm.SeedEntry();
-            entry1.setMatchupId(matchups.get(0).getId());
-            entry1.setTeamId(teams.get(0).getId());
-            entry1.setSlot(1);
-
-            var entry2 = new SeedForm.SeedEntry();
-            entry2.setMatchupId(matchups.get(0).getId());
-            entry2.setTeamId(teams.get(1).getId());
-            entry2.setSlot(2);
-
-            form.getSeeds().add(entry1);
-            form.getSeeds().add(entry2);
+            var seeds = List.of(
+                    new PlayoffSeedingService.SeedEntry(matchups.get(0).getId(), 1, teams.get(0).getId(), null),
+                    new PlayoffSeedingService.SeedEntry(matchups.get(0).getId(), 2, teams.get(1).getId(), null)
+            );
 
             // when
-            playoffSeedingService.saveSeed(playoff.getId(), form);
+            playoffSeedingService.saveSeed(playoff.getId(), seeds);
 
             // then
             var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
@@ -547,17 +535,12 @@ class PlayoffServiceTest {
             var playoff = playoffService.createPlayoff(season.getId(), "Null Seed Test", 4);
             var matchups = playoff.getRounds().get(0).getMatchups();
 
-            var form = new SeedForm();
-            form.setPlayoffId(playoff.getId());
-
-            var entry = new SeedForm.SeedEntry();
-            entry.setMatchupId(matchups.get(0).getId());
-            entry.setTeamId(null);
-            entry.setSlot(1);
-            form.getSeeds().add(entry);
+            var seeds = List.of(
+                    new PlayoffSeedingService.SeedEntry(matchups.get(0).getId(), 1, null, null)
+            );
 
             // when
-            playoffSeedingService.saveSeed(playoff.getId(), form);
+            playoffSeedingService.saveSeed(playoff.getId(), seeds);
 
             // then
             var matchup = playoffMatchupRepository.findById(matchups.get(0).getId()).orElseThrow();
@@ -724,6 +707,32 @@ class PlayoffServiceTest {
             var m1 = playoffMatchupRepository.findById(matchups.get(1).getId()).orElseThrow();
             assertEquals(teams.get(1).getId(), m1.getTeam1().getId()); // Seed 2
             assertEquals(teams.get(2).getId(), m1.getTeam2().getId()); // Seed 3
+        }
+    }
+
+    @Nested
+    class FindRoundById {
+
+        @Test
+        void givenPlayoffRoundExists_whenFindRoundById_thenReturnsRound() {
+            // given
+            var playoff = playoffService.createPlayoff(season.getId(), "FindRound Test", 4);
+            var roundId = playoff.getRounds().get(0).getId();
+
+            // when
+            var result = playoffService.findRoundById(roundId);
+
+            // then
+            assertNotNull(result);
+            assertEquals(roundId, result.getId());
+            assertEquals("Semifinal", result.getLabel());
+        }
+
+        @Test
+        void givenPlayoffRoundNotFound_whenFindRoundById_thenThrowsEntityNotFoundException() {
+            // when / then
+            assertThrows(EntityNotFoundException.class, () ->
+                    playoffService.findRoundById(UUID.randomUUID()));
         }
     }
 

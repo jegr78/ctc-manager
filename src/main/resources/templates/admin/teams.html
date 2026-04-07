@@ -27,8 +27,8 @@
                             </form>
                         </td>
                     </tr>
-                    <tr th:each="sub : ${team.subTeams}" style="opacity:0.8;">
-                        <td style="padding-left:32px;"><a th:href="@{/admin/teams/{id}(id=${sub.id})}" class="detail-link" th:text="'↳ ' + ${sub.shortName}"></a></td>
+                    <tr th:each="sub : ${team.subTeams}" class="sub-team-row">
+                        <td class="td-indent"><a th:href="@{/admin/teams/{id}(id=${sub.id})}" class="detail-link" th:text="'↳ ' + ${sub.shortName}"></a></td>
                         <td th:text="${sub.name}"></td>
                         <td th:text="${sub.logoUrl != null ? '✓' : '-'}"></td>
                         <td class="actions">

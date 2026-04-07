@@ -14,7 +14,7 @@
                     <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
                 </div>
                 <div class="form-group">
-                    <div class="form-check" style="margin-top:24px;">
+                    <div class="form-check mt-xl">
                         <input type="checkbox" id="active" th:field="*{active}">
                         <label for="active">Active Season</label>
                     </div>
@@ -59,18 +59,18 @@
                 </div>
             </div>
             <div class="form-row">
-                <div class="form-group" style="max-width:200px;">
+                <div class="form-group form-group--max-200">
                     <label for="legs">Legs per Match</label>
                     <input type="number" id="legs" th:field="*{legs}" min="1" value="1">
                 </div>
-                <div class="form-group" style="max-width:200px;">
+                <div class="form-group form-group--max-200">
                     <label for="eventDurationMinutes">Event Duration (min)</label>
                     <input type="number" id="eventDurationMinutes" th:field="*{eventDurationMinutes}" min="10" max="480" placeholder="e.g. 90">
                 </div>
             </div>
 
             <!-- Scoring -->
-            <div style="border:1px solid var(--accent); border-radius:var(--radius-md); padding:16px; margin-top:16px; background:rgba(79,195,247,0.03);">
+            <div class="scoring-card">
                 <h3 style="color:var(--accent); margin-bottom:12px;">Scoring</h3>
                 <div class="form-row">
                     <div class="form-group">
@@ -98,7 +98,7 @@
                 </div>
             </div>
 
-            <div class="actions" style="margin-top: 16px;">
+            <div class="actions mt-md">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/seasons}" class="btn btn-secondary">Cancel</a>
             </div>
@@ -130,11 +130,11 @@
                 </tr>
             </tbody>
         </table>
-        <div th:if="${season.teams.isEmpty()}" class="empty-state" style="padding:24px;">
+        <div th:if="${season.teams.isEmpty()}" class="empty-state empty-state--md">
             <p>No teams assigned yet.</p>
         </div>
         <form th:action="@{/admin/seasons/{id}/add-team(id=${season.id})}" method="post"
-              style="margin-top:16px;display:flex;gap:8px;align-items:center;">
+              class="inline-form mt-md">
             <select name="teamId" required>
                 <option value="">-- Add team --</option>
                 <option th:each="t : ${allTeams}" th:value="${t.id}"
@@ -146,14 +146,14 @@
     </div>
 
     <!-- Car Pool (only when editing) -->
-    <div th:if="${seasonForm.id != null}" class="card" style="margin-top: 16px;" id="carPool">
+    <div th:if="${seasonForm.id != null}" class="card mt-md" id="carPool">
         <h2 th:text="'Car Pool (' + ${season.cars.size()} + ')'">Car Pool</h2>
         <div class="transfer-picker">
             <div class="transfer-list">
                 <form th:action="@{/admin/seasons/{id}/cars/add(id=${season.id})}" method="post" id="addCarsForm">
                     <div class="transfer-header">
                         <span class="text-dim">Available</span>
-                        <div style="display:flex;gap:6px;align-items:center;">
+                        <div class="color-pair">
                             <input type="text" id="availableCarsFilter" placeholder="Filter..." class="transfer-filter">
                             <button type="submit" class="btn btn-primary btn-sm" title="Add selected">&rarr;</button>
                         </div>
@@ -171,7 +171,7 @@
                 <form th:action="@{/admin/seasons/{id}/cars/remove(id=${season.id})}" method="post" id="removeCarsForm">
                     <div class="transfer-header">
                         <span class="text-dim" th:text="'Assigned (' + ${season.cars.size()} + ')'">Assigned</span>
-                        <div style="display:flex;gap:6px;align-items:center;">
+                        <div class="color-pair">
                             <input type="text" id="assignedCarsFilter" placeholder="Filter..." class="transfer-filter">
                             <button type="submit" class="btn btn-danger btn-sm" title="Remove selected">&larr;</button>
                         </div>
@@ -189,14 +189,14 @@
     </div>
 
     <!-- Track Pool (only when editing) -->
-    <div th:if="${seasonForm.id != null}" class="card" style="margin-top: 16px;" id="trackPool">
+    <div th:if="${seasonForm.id != null}" class="card mt-md" id="trackPool">
         <h2 th:text="'Track Pool (' + ${season.tracks.size()} + ')'">Track Pool</h2>
         <div class="transfer-picker">
             <div class="transfer-list">
                 <form th:action="@{/admin/seasons/{id}/tracks/add(id=${season.id})}" method="post" id="addTracksForm">
                     <div class="transfer-header">
                         <span class="text-dim">Available</span>
-                        <div style="display:flex;gap:6px;align-items:center;">
+                        <div class="color-pair">
                             <input type="text" id="availableTracksFilter" placeholder="Filter..." class="transfer-filter">
                             <button type="submit" class="btn btn-primary btn-sm" title="Add selected">&rarr;</button>
                         </div>
@@ -214,7 +214,7 @@
                 <form th:action="@{/admin/seasons/{id}/tracks/remove(id=${season.id})}" method="post" id="removeTracksForm">
                     <div class="transfer-header">
                         <span class="text-dim" th:text="'Assigned (' + ${season.tracks.size()} + ')'">Assigned</span>
-                        <div style="display:flex;gap:6px;align-items:center;">
+                        <div class="color-pair">
                             <input type="text" id="assignedTracksFilter" placeholder="Filter..." class="transfer-filter">
                             <button type="submit" class="btn btn-danger btn-sm" title="Remove selected">&larr;</button>
                         </div>

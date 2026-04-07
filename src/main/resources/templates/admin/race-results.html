@@ -7,7 +7,7 @@
     <h1>
         Results: <span th:text="${race.homeTeam.shortName}"></span> vs <span th:text="${race.awayTeam.shortName}"></span>
     </h1>
-    <p class="text-dim" style="margin-bottom:16px;">
+    <p class="text-dim mb-md">
         <span th:text="${race.matchday.label}"></span> —
         <span th:text="${race.track?.name ?: 'No track'}"></span> —
         <span th:text="${race.car?.displayName ?: 'No car'}"></span>
@@ -58,10 +58,10 @@
                     <tr>
                         <th>Team</th>
                         <th>Driver (PSN ID)</th>
-                        <th style="text-align:center;">Pos</th>
-                        <th style="text-align:center;">Quali</th>
-                        <th style="text-align:center;">FL</th>
-                        <th style="text-align:center;">Points</th>
+                        <th class="td-center">Pos</th>
+                        <th class="td-center">Quali</th>
+                        <th class="td-center">FL</th>
+                        <th class="td-center">Points</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,24 +73,24 @@
                             <input type="hidden" th:name="'results[' + ${iter.index} + '].teamShortName'" th:value="${result.teamShortName}">
                         </td>
                         <td style="font-weight:500;" th:text="${result.driverPsnId}"></td>
-                        <td style="text-align:center;">
+                        <td class="td-center">
                             <input type="number" class="pos-input" th:name="'results[' + ${iter.index} + '].position'"
                                    th:value="${result.position}" min="1" max="12" required
                                    style="width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-input); color:var(--white); font-size:14px; font-weight:600; text-align:center; font-variant-numeric:tabular-nums;">
                         </td>
-                        <td style="text-align:center;">
+                        <td class="td-center">
                             <input type="number" class="quali-input" th:name="'results[' + ${iter.index} + '].qualiPosition'"
                                    th:value="${result.qualiPosition}" min="1" max="12" required
                                    style="width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-input); color:var(--white); font-size:14px; font-weight:600; text-align:center; font-variant-numeric:tabular-nums;">
                         </td>
-                        <td style="text-align:center;">
+                        <td class="td-center">
                             <label class="fl-toggle">
                                 <input type="checkbox" class="fl-input" th:name="'results[' + ${iter.index} + '].fastestLap'"
                                        th:checked="${result.fastestLap}" value="true">
                                 <span class="fl-indicator">FL</span>
                             </label>
                         </td>
-                        <td style="text-align:center;">
+                        <td class="td-center">
                             <span class="points-cell">-</span>
                             <div class="points-breakdown"></div>
                         </td>
@@ -99,12 +99,12 @@
                 <tfoot>
                     <tr style="border-top:2px solid var(--border);">
                         <td colspan="5" style="text-align:right; font-weight:600; color:var(--white);">Team Totals</td>
-                        <td style="text-align:center;" id="teamTotals"></td>
+                        <td class="td-center" id="teamTotals"></td>
                     </tr>
                 </tfoot>
             </table>
             </div>
-            <div class="actions" style="margin-top: 16px;">
+            <div class="actions mt-md">
                 <button type="submit" class="btn btn-primary">Save Results</button>
                 <a th:href="@{/admin/races/{id}(id=${race.id})}" class="btn btn-secondary">Cancel</a>
             </div>

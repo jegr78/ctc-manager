@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -88,7 +89,10 @@ public class SeasonController {
             addScoringLists(model);
             return "admin/season-form";
         }
-        var season = seasonManagementService.save(form, raceScoring, matchScoring);
+        var season = seasonManagementService.save(form.getId(), form.getName(), form.getYear(),
+                form.getNumber(), form.getDescription(), form.getStartDate(), form.getEndDate(),
+                form.isActive(), form.getFormat(), form.getTotalRounds(), form.getLegs(),
+                form.getEventDurationMinutes(), raceScoring, matchScoring);
         redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
         return "redirect:/admin/seasons";
     }
@@ -126,7 +130,7 @@ public class SeasonController {
             String teamName = seasonManagementService.updateSeasonTeam(
                     seasonTeamId, rating, primaryColor, secondaryColor, accentColor, logoOverride);
             redirectAttributes.addFlashAttribute("successMessage", "Updated: " + teamName);
-        } catch (Exception e) {
+        } catch (IOException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Logo upload failed: " + e.getMessage());
         }
         return "redirect:/admin/seasons/" + id;

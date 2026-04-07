@@ -1,10 +1,9 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.service.TeamCardService;
-import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.SeasonTeam;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.SeasonTeamRepository;
+import org.ctc.domain.service.SeasonManagementService;
+import org.ctc.domain.service.TeamManagementService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,8 +32,8 @@ import java.util.zip.ZipOutputStream;
 @RequiredArgsConstructor
 public class TeamCardController {
 
-    private final SeasonRepository seasonRepository;
-    private final SeasonTeamRepository seasonTeamRepository;
+    private final SeasonManagementService seasonManagementService;
+    private final TeamManagementService teamManagementService;
     private final TeamCardService teamCardService;
 
     @Value("${app.upload-dir:uploads}")
@@ -42,13 +41,13 @@ public class TeamCardController {
 
     @GetMapping
     public String index(@RequestParam(required = false) UUID seasonId, Model model) {
-        var seasons = seasonRepository.findAll();
+        var seasons = seasonManagementService.findAll();
         var activeSeason = seasonId != null
-                ? seasonRepository.findById(seasonId).orElse(null)
+                ? seasonManagementService.findByIdOptional(seasonId).orElse(null)
                 : seasons.stream().filter(s -> s.isActive()).findFirst().orElse(null);
 
         if (activeSeason != null) {
-            var seasonTeams = seasonTeamRepository.findBySeasonId(activeSeason.getId());
+            var seasonTeams = teamManagementService.findSeasonTeamsBySeasonId(activeSeason.getId());
             var cardStates = seasonTeams.stream().map(st -> new CardState(
                     st,
                     teamCardService.cardExists(st),
@@ -65,13 +64,12 @@ public class TeamCardController {
 
     @PostMapping("/generate/{seasonTeamId}")
     public String generate(@PathVariable UUID seasonTeamId, RedirectAttributes redirectAttributes) {
-        var seasonTeam = seasonTeamRepository.findById(seasonTeamId)
-                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", seasonTeamId));
+        var seasonTeam = teamManagementService.findSeasonTeamById(seasonTeamId);
         try {
             teamCardService.generateCard(seasonTeam);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Card generated: " + seasonTeam.getTeam().getShortName());
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Card generation failed for {}", seasonTeam.getTeam().getShortName(), e);
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Generation failed: " + e.getMessage());
@@ -81,13 +79,12 @@ public class TeamCardController {
 
     @PostMapping("/generate-all")
     public String generateAll(@RequestParam UUID seasonId, RedirectAttributes redirectAttributes) {
-        var season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var season = seasonManagementService.findById(seasonId);
         try {
             var paths = teamCardService.generateAllCards(season);
             redirectAttributes.addFlashAttribute("successMessage",
                     paths.size() + " cards generated");
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Batch card generation failed for season {}", season.getName(), e);
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Generation failed: " + e.getMessage());
@@ -97,8 +94,7 @@ public class TeamCardController {
 
     @GetMapping("/download/{seasonTeamId}")
     public ResponseEntity<Resource> download(@PathVariable UUID seasonTeamId) {
-        var seasonTeam = seasonTeamRepository.findById(seasonTeamId)
-                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", seasonTeamId));
+        var seasonTeam = teamManagementService.findSeasonTeamById(seasonTeamId);
         String cardPath = teamCardService.getCardPath(seasonTeam);
         Path file = Paths.get(uploadDir).toAbsolutePath().normalize()
                 .resolve(cardPath.substring("/uploads/".length()));
@@ -116,7 +112,7 @@ public class TeamCardController {
 
     @GetMapping("/download-all")
     public ResponseEntity<byte[]> downloadAll(@RequestParam UUID seasonId) throws IOException {
-        var seasonTeams = seasonTeamRepository.findBySeasonId(seasonId);
+        var seasonTeams = teamManagementService.findSeasonTeamsBySeasonId(seasonId);
         var baos = new ByteArrayOutputStream();
 
         try (var zip = new ZipOutputStream(baos)) {
@@ -132,8 +128,7 @@ public class TeamCardController {
             }
         }
 
-        var season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var season = seasonManagementService.findById(seasonId);
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .header(HttpHeaders.CONTENT_DISPOSITION,

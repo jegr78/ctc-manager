@@ -11,6 +11,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.util.Map;
 
 @Slf4j
@@ -71,7 +72,7 @@ public class TemplateEditorController {
             try {
                 model.addAttribute(attrPrefix + "Template", svc.loadTemplate());
                 model.addAttribute(attrPrefix + "IsCustom", svc.hasCustomTemplate());
-            } catch (Exception e) {
+            } catch (IOException e) {
                 model.addAttribute(attrPrefix + "Template", "");
                 if (!model.containsAttribute("errorMessage")) {
                     model.addAttribute("errorMessage",
@@ -96,7 +97,7 @@ public class TemplateEditorController {
             templateServices.get(beanName).saveTemplate(template);
             redirectAttributes.addFlashAttribute("successMessage",
                 TEMPLATE_TYPE_TO_LABEL.get(templateType) + " template saved");
-        } catch (Exception e) {
+        } catch (IOException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
         }
         return "redirect:/admin/tools/template-editors?tab=" + templateType;
@@ -114,7 +115,7 @@ public class TemplateEditorController {
             templateServices.get(beanName).resetTemplate();
             redirectAttributes.addFlashAttribute("successMessage",
                 TEMPLATE_TYPE_TO_LABEL.get(templateType) + " template reset to default");
-        } catch (Exception e) {
+        } catch (IOException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Reset failed: " + e.getMessage());
         }
         return "redirect:/admin/tools/template-editors?tab=" + templateType;
@@ -138,7 +139,7 @@ public class TemplateEditorController {
             return ResponseEntity.badRequest()
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Template contains unsafe expressions");
-        } catch (Exception e) {
+        } catch (RuntimeException e) {
             log.error("Preview failed for template type: {}", templateType, e);
             return ResponseEntity.internalServerError()
                     .contentType(MediaType.TEXT_PLAIN)

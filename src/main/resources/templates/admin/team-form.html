@@ -24,40 +24,40 @@
             </div>
 
             <!-- Brand Colors (inline, only when editing) -->
-            <div th:if="${teamForm.id != null}" style="margin-top:24px;">
+            <div th:if="${teamForm.id != null}" class="mt-xl">
                 <h3>Brand Colors</h3>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Primary Color</label>
-                        <div class="color-pair" style="display:flex;gap:8px;align-items:center;">
+                        <div class="color-pair">
                             <input type="color" th:value="${teamForm.primaryColor ?: '#333333'}"
-                                   style="width:48px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);cursor:pointer;">
+                                   class="color-picker-input--lg">
                             <input type="text" th:field="*{primaryColor}" placeholder="#333333"
-                                   pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:100px;">
+                                   pattern="#[0-9a-fA-F]{6}" maxlength="7" class="color-text-input--sm">
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Secondary Color</label>
-                        <div class="color-pair" style="display:flex;gap:8px;align-items:center;">
+                        <div class="color-pair">
                             <input type="color" th:value="${teamForm.secondaryColor ?: '#555555'}"
-                                   style="width:48px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);cursor:pointer;">
+                                   class="color-picker-input--lg">
                             <input type="text" th:field="*{secondaryColor}" placeholder="#555555"
-                                   pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:100px;">
+                                   pattern="#[0-9a-fA-F]{6}" maxlength="7" class="color-text-input--sm">
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Accent Color</label>
-                        <div class="color-pair" style="display:flex;gap:8px;align-items:center;">
+                        <div class="color-pair">
                             <input type="color" th:value="${teamForm.accentColor ?: '#4fc3f7'}"
-                                   style="width:48px;height:36px;padding:2px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);cursor:pointer;">
+                                   class="color-picker-input--lg">
                             <input type="text" th:field="*{accentColor}" placeholder="#4fc3f7"
-                                   pattern="#[0-9a-fA-F]{6}" maxlength="7" style="width:100px;">
+                                   pattern="#[0-9a-fA-F]{6}" maxlength="7" class="color-text-input--sm">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="actions" style="margin-top: 16px;">
+            <div class="actions mt-md">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/teams}" class="btn btn-secondary">Cancel</a>
             </div>
@@ -65,18 +65,18 @@
     </div>
 
     <!-- Logo Upload (only when editing) -->
-    <div th:if="${teamForm.id != null}" class="card" style="margin-top:16px;">
+    <div th:if="${teamForm.id != null}" class="card mt-md">
         <h2>Logo</h2>
-        <div th:if="${team.logoUrl != null}" style="margin-bottom:12px;">
-            <img th:src="${team.logoUrl}" alt="" style="max-width:150px;border-radius:6px;background:#222;padding:8px;">
+        <div th:if="${team.logoUrl != null}" class="mb-sm">
+            <img th:src="${team.logoUrl}" alt="" class="logo-preview">
         </div>
-        <div th:if="${team.logoUrl == null}" class="empty-state" style="padding:16px;"><p>No logo yet.</p></div>
-        <form th:action="@{/admin/teams/{id}/logo(id=${team.id})}" method="post" enctype="multipart/form-data" style="margin-top:8px;">
-            <div style="display:flex;gap:8px;align-items:flex-end;">
-                <div class="form-group" style="margin-bottom:0;">
+        <div th:if="${team.logoUrl == null}" class="empty-state empty-state--compact"><p>No logo yet.</p></div>
+        <form th:action="@{/admin/teams/{id}/logo(id=${team.id})}" method="post" enctype="multipart/form-data" class="mt-xs">
+            <div class="inline-form">
+                <div class="form-group form-group--inline">
                     <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif" required
-                           style="padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
-                    <small class="text-dim" style="display:block;margin-top:2px;">PNG, JPG, WebP, GIF. Max 10 MB.</small>
+                           class="file-input">
+                    <small class="form-hint">PNG, JPG, WebP, GIF. Max 10 MB.</small>
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm">Upload</button>
             </div>
@@ -104,15 +104,15 @@
                 </tr>
             </tbody>
         </table>
-        <div th:if="${team.subTeams.isEmpty()}" class="empty-state" style="padding:24px;">
+        <div th:if="${team.subTeams.isEmpty()}" class="empty-state empty-state--md">
             <p>No sub-teams. This team competes directly.</p>
         </div>
         <form th:action="@{/admin/teams/{id}/add-sub-team(id=${team.id})}" method="post"
-              style="margin-top:16px;display:flex;gap:8px;align-items:center;">
+              class="inline-form mt-md">
             <input type="text" name="subShortName" placeholder="Short name (e.g. CLR1)" required
-                   style="width:120px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;">
+                   class="search-input" style="width:120px;">
             <input type="text" name="subName" placeholder="Full name (e.g. CLR 1)" required
-                   style="width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;">
+                   class="search-input" style="width:200px;">
             <button type="submit" class="btn btn-primary btn-sm">Add Sub-Team</button>
         </form>
     </div>

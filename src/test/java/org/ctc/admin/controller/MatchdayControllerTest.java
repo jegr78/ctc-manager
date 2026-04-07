@@ -1,6 +1,10 @@
 package org.ctc.admin.controller;
 
 import org.ctc.TestHelper;
+import org.ctc.admin.service.MatchResultsGraphicService;
+import org.ctc.admin.service.MatchdayOverviewGraphicService;
+import org.ctc.admin.service.MatchdayResultsGraphicService;
+import org.ctc.admin.service.MatchdayScheduleGraphicService;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.junit.jupiter.api.Test;
@@ -9,10 +13,13 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -25,6 +32,11 @@ class MatchdayControllerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private MatchdayRepository matchdayRepository;
     @Autowired private TestHelper testHelper;
+
+    @MockitoBean private MatchdayOverviewGraphicService overviewGraphicService;
+    @MockitoBean private MatchdayScheduleGraphicService scheduleGraphicService;
+    @MockitoBean private MatchdayResultsGraphicService resultsGraphicService;
+    @MockitoBean private MatchResultsGraphicService matchResultsGraphicService;
 
     @Test
     void givenExistingMatchday_whenGetMatchdayDetail_thenReturnsDetailView() throws Exception {
@@ -230,5 +242,60 @@ class MatchdayControllerTest {
                         .content("{\"seasonId\":\"" + season.getId() + "\",\"label\":\"Existing MD\"}"))
                 // then
                 .andExpect(status().isConflict());
+    }
+
+    // --- Exception handling tests for graphic endpoints ---
+
+    @Test
+    void givenRuntimeException_whenGenerateOverviewGraphic_thenReturns500() throws Exception {
+        // given
+        var season = testHelper.createSeason("MD OvEx Season");
+        var matchday = matchdayRepository.save(new Matchday(season, "OvEx MD", 1));
+        when(overviewGraphicService.generateOverview(any())).thenThrow(new RuntimeException("Playwright failure"));
+
+        // when
+        mockMvc.perform(post("/admin/matchdays/" + matchday.getId() + "/download-overview"))
+                // then
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void givenRuntimeException_whenGenerateScheduleGraphic_thenReturns500() throws Exception {
+        // given
+        var season = testHelper.createSeason("MD SchEx Season");
+        var matchday = matchdayRepository.save(new Matchday(season, "SchEx MD", 1));
+        when(scheduleGraphicService.generateSchedule(any())).thenThrow(new RuntimeException("Playwright failure"));
+
+        // when
+        mockMvc.perform(post("/admin/matchdays/" + matchday.getId() + "/download-schedule"))
+                // then
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void givenRuntimeException_whenGenerateResultsGraphic_thenReturns500() throws Exception {
+        // given
+        var season = testHelper.createSeason("MD ResEx Season");
+        var matchday = matchdayRepository.save(new Matchday(season, "ResEx MD", 1));
+        when(resultsGraphicService.generateResults(any())).thenThrow(new RuntimeException("Playwright failure"));
+
+        // when
+        mockMvc.perform(post("/admin/matchdays/" + matchday.getId() + "/download-results"))
+                // then
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
+    void givenRuntimeException_whenGenerateMatchResultsGraphic_thenReturns500() throws Exception {
+        // given
+        var fixture = testHelper.createFullSeasonFixture("MdMREx");
+        var matchday = fixture.matchday();
+        var match = fixture.match();
+        when(matchResultsGraphicService.generateMatchResults(any())).thenThrow(new RuntimeException("Playwright failure"));
+
+        // when
+        mockMvc.perform(post("/admin/matchdays/" + matchday.getId() + "/matches/" + match.getId() + "/download-match-results"))
+                // then
+                .andExpect(status().isInternalServerError());
     }
 }

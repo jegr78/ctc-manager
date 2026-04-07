@@ -49,14 +49,13 @@
                             </div>
                         </div>
                     </div>
-                    <div th:if="${seasonTracks == null || seasonTracks.isEmpty()}" class="text-dim"
-                         style="font-size:13px;margin-top:4px;">
+                    <div th:if="${seasonTracks == null || seasonTracks.isEmpty()}" class="text-dim form-hint--sm">
                         No tracks assigned to this season yet.
                     </div>
                     <div th:if="${usedTrackIds != null && !usedTrackIds.isEmpty()}"
-                         style="margin-top:8px;padding:10px 12px;background:var(--bg-input);border-radius:var(--radius-sm);border-left:3px solid var(--accent);">
-                        <div style="font-size:11px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Already used this season</div>
-                        <div style="font-size:13px;color:var(--text-dim);">
+                         class="info-hint">
+                        <div class="info-hint__label">Already used this season</div>
+                        <div class="info-hint__content">
                             <span th:each="t : ${seasonTracks}" th:if="${usedTrackIds.contains(t.id)}"
                                   th:text="${t.name}" style="display:inline-block;margin-right:8px;"></span>
                         </div>
@@ -78,14 +77,13 @@
                             </div>
                         </div>
                     </div>
-                    <div th:if="${seasonCars == null || seasonCars.isEmpty()}" class="text-dim"
-                         style="font-size:13px;margin-top:4px;">
+                    <div th:if="${seasonCars == null || seasonCars.isEmpty()}" class="text-dim form-hint--sm">
                         No cars assigned to this season yet.
                     </div>
                     <div th:if="${usedCarIds != null && !usedCarIds.isEmpty()}"
-                         style="margin-top:8px;padding:10px 12px;background:var(--bg-input);border-radius:var(--radius-sm);border-left:3px solid var(--accent);">
-                        <div style="font-size:11px;text-transform:uppercase;color:var(--text-dim);margin-bottom:4px;">Already used this season</div>
-                        <div style="font-size:13px;color:var(--text-dim);">
+                         class="info-hint">
+                        <div class="info-hint__label">Already used this season</div>
+                        <div class="info-hint__content">
                             <span th:each="c : ${seasonCars}" th:if="${usedCarIds.contains(c.id)}"
                                   th:text="${c.displayName}" style="display:inline-block;margin-right:8px;"></span>
                         </div>
@@ -93,7 +91,7 @@
                 </div>
             </div>
             <!-- Race Settings -->
-            <h3 style="margin-top:24px;margin-bottom:12px;">Race Settings</h3>
+            <h3 class="mt-xl mb-sm">Race Settings</h3>
             <div class="form-row">
                 <div class="form-group">
                     <label for="numberOfLaps">Number of Laps</label>
@@ -156,7 +154,7 @@
                        th:value="${raceForm.dateTime != null ? raceForm.dateTime.toString().substring(0, 16) : ''}">
                 <small class="text-dim">Stored as London time, displayed in your local timezone</small>
             </div>
-            <div class="actions" style="margin-top: 16px;">
+            <div class="actions mt-md">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/races}" class="btn btn-secondary">Cancel</a>
             </div>

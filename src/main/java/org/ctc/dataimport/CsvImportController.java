@@ -2,13 +2,17 @@ package org.ctc.dataimport;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.ValidationException;
+import org.ctc.domain.service.SeasonManagementService;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.util.*;
 
 @Slf4j
@@ -20,7 +24,7 @@ public class CsvImportController {
     private final CsvImportService csvImportService;
     private final GoogleSheetsService googleSheetsService;
     private final ScorecardParser scorecardParser;
-    private final SeasonRepository seasonRepository;
+    private final SeasonManagementService seasonManagementService;
 
     @GetMapping
     public String showImportForm(Model model) {
@@ -42,12 +46,12 @@ public class CsvImportController {
             csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
-            seasonRepository.findById(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
+            seasonManagementService.findByIdOptional(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
             model.addAttribute("source", "csv");
             addMatchdayName(model, metadata);
             addCommonAttributes(model);
             return "admin/import-preview";
-        } catch (Exception e) {
+        } catch (IOException | IllegalArgumentException | IllegalStateException e) {
             log.error("Error parsing CSV", e);
             addCommonAttributes(model);
             model.addAttribute("errorMessage", "Error reading CSV: " + e.getMessage());
@@ -72,13 +76,13 @@ public class CsvImportController {
             csvImportService.checkDuplicate(preview);
             model.addAttribute("preview", preview);
             model.addAttribute("metadata", metadata);
-            seasonRepository.findById(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
+            seasonManagementService.findByIdOptional(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
             model.addAttribute("source", "sheet");
             model.addAttribute("sheetUrl", sheetUrl);
             addMatchdayName(model, metadata);
             addCommonAttributes(model);
             return "admin/import-preview";
-        } catch (Exception e) {
+        } catch (IOException | IllegalArgumentException | IllegalStateException e) {
             log.error("Error reading Google Sheet", e);
             addCommonAttributes(model);
             model.addAttribute("errorMessage", "Error reading Google Sheet: " + e.getMessage());
@@ -144,7 +148,7 @@ public class CsvImportController {
                 }
                 redirectAttributes.addFlashAttribute("successMessage", msg);
             }
-        } catch (Exception e) {
+        } catch (IOException | BusinessRuleException | ValidationException | IllegalArgumentException | IllegalStateException | DataAccessException e) {
             log.error("Error executing import", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Import error: " + e.getMessage());
         }

@@ -223,6 +223,12 @@ public class PlayoffService {
         log.info("Matchup winner set manually: {}", winner.getShortName());
     }
 
+    @Transactional(readOnly = true)
+    public PlayoffRound findRoundById(UUID id) {
+        return playoffRoundRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("PlayoffRound", id));
+    }
+
     // --- New service methods (extracted from PlayoffController) ---
 
     @Transactional

@@ -1,16 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Codebase Concerns Cleanup
-status: executing
-stopped_at: Phase 10 UI-SPEC approved
-last_updated: "2026-04-06T08:31:07.820Z"
-last_activity: 2026-04-06
+milestone: completed
+milestone_name: v1.1 Codebase Concerns Cleanup
+status: milestone_complete
+last_updated: "2026-04-07T11:10:00.000Z"
+last_activity: 2026-04-07
 progress:
-  total_phases: 2
-  completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_phases: 10
+  completed_phases: 10
+  total_plans: 20
+  completed_plans: 20
   percent: 100
 ---
 
@@ -18,19 +17,23 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-04)
+See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Phase 09 — alltime-standings
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 11
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-04-06
+Milestone: v1.1 complete (shipped 2026-04-07)
+Status: Ready for next milestone
+Last activity: 2026-04-07
 
-Progress: [░░░░░░░░░░] 0%
+Progress: ██████████ 100%
+
+## Completed Milestones
+
+- v1.0 Technical Debt Cleanup (5 phases, 12 plans) — shipped 2026-04-04
+- v1.1 Codebase Concerns Cleanup (10 phases, 20 plans) — shipped 2026-04-07
 
 ## Performance Metrics
 
@@ -43,22 +46,23 @@ Progress: [░░░░░░░░░░] 0%
 | 03 -- God Service Split | 2/2 | ~6min |
 | 04 -- Database Optimization | 1/1 | ~5min |
 | 05 -- Security | 3/3 | ~4min |
-| Phase 06 P01 | 10min | 2 tasks | 2 files |
-| Phase 07 P01 | 9min | 2 tasks | 13 files |
-| Phase 07 P02 | 5min | 2 tasks | 15 files |
-| Phase Phase 07 P03 P07-03 | 11min | 2 tasks | 14 files |
+| 06 -- Security Hardening | 1/1 | ~10min |
+| 07 -- Layer Cleanup | 3/3 | ~8min |
+| 08 -- Exception Refinement | 2/2 | ~7min |
+| 09 -- Alltime Standings | 1/1 | ~5min |
+| 10 -- Service Refactoring | 3/3 | ~10min |
+| 11 -- Template Quality | 3/3 | ~8min |
+| 12 -- Security Hardening Recovery | 1/1 | ~5min |
+| 13 -- Layer Cleanup Recovery | 3/3 | ~7min |
+| 14 -- Exception Refinement Recovery | 2/2 | ~5min |
+| 15 -- Alltime Standings Recovery | 1/1 | ~5min |
 
 ## Accumulated Context
 
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table.
-Full history in .planning/milestones/v1.0-ROADMAP.md.
-
-- [Phase 06]: String-based SSRF hostname blocklist without DNS resolution; defense-in-depth path traversal with raw filename + resolved path checks
-- [Phase 07]: findActiveSeason() uses stream filter to tolerate multiple active seasons; Buchholz logic duplicated to avoid circular dependency
-- [Phase 07]: Primitive parameters for decoupled service save() methods instead of wrapper records
-- [Phase 07]: Nested records in services as API contracts; RaceController maps RaceData<->RaceForm for template compatibility
+Full history in .planning/milestones/v1.0-ROADMAP.md and .planning/milestones/v1.1-ROADMAP.md.
 
 ### Blockers/Concerns
 
@@ -72,6 +76,5 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T07:31:34.648Z
-Stopped at: Phase 10 UI-SPEC approved
-Resume file: .planning/phases/10-service-refactoring/10-UI-SPEC.md
+Last session: 2026-04-07
+Milestone v1.1 completed. Start next milestone with `/gsd-new-milestone`.

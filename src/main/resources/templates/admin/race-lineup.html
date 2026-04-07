@@ -10,9 +10,9 @@
 
     <form th:action="@{/admin/races/{id}/lineup(id=${race.id})}" method="post">
 
-        <div th:each="entry : ${teamEntries}" class="card" style="margin-bottom:16px;">
+        <div th:each="entry : ${teamEntries}" class="card mb-md">
             <h2 th:text="${entry.team.shortName + ' — ' + entry.team.name}"></h2>
-            <div th:if="${entry.drivers.isEmpty()}" class="empty-state" style="padding:16px;">
+            <div th:if="${entry.drivers.isEmpty()}" class="empty-state empty-state--compact">
                 <p>No drivers registered for this team.</p>
             </div>
             <table th:if="${!entry.drivers.isEmpty()}">
@@ -21,7 +21,7 @@
                         <th>PSN ID</th>
                         <th>Nickname</th>
                         <th th:if="${entry.hasSubTeams}">Sub-Team</th>
-                        <th th:unless="${entry.hasSubTeams}" style="text-align:center;">In Lineup</th>
+                        <th th:unless="${entry.hasSubTeams}" class="td-center">In Lineup</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -40,7 +40,7 @@
                             </select>
                         </td>
                         <!-- Standalone: checkbox -->
-                        <td th:unless="${entry.hasSubTeams}" style="text-align:center;">
+                        <td th:unless="${entry.hasSubTeams}" class="td-center">
                             <input type="checkbox"
                                    th:name="'driver_' + ${sd.driver.id}"
                                    th:value="${entry.team.id}"

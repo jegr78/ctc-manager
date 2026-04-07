@@ -246,4 +246,121 @@ class FileStorageServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Only HTTPS URLs allowed");
     }
+
+    // --- SECU-01: SSRF hostname validation tests ---
+
+    @Test
+    void givenLocalhostUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+                "https://localhost/image.png", "image.png"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("hostname blocked");
+    }
+
+    @Test
+    void givenLoopbackIpUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+                "https://127.0.0.1/image.png", "image.png"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("hostname blocked");
+    }
+
+    @Test
+    void givenPrivateIp10_whenStoreFromUrl_thenThrowsIllegalArgument() {
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+                "https://10.0.0.1/image.png", "image.png"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("hostname blocked");
+    }
+
+    @Test
+    void givenPrivateIp172_whenStoreFromUrl_thenThrowsIllegalArgument() {
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+                "https://172.16.0.1/image.png", "image.png"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("hostname blocked");
+    }
+
+    @Test
+    void givenPrivateIp192_whenStoreFromUrl_thenThrowsIllegalArgument() {
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+                "https://192.168.1.1/image.png", "image.png"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("hostname blocked");
+    }
+
+    @Test
+    void givenLinkLocalUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+                "https://169.254.169.254/latest/meta-data/", "metadata"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("hostname blocked");
+    }
+
+    @Test
+    void givenIpv6LoopbackUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+                "https://[::1]/image.png", "image.png"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("hostname blocked");
+    }
+
+    @Test
+    void givenPublicUrl_whenStoreFromUrl_thenSsrfCheckPasses() {
+        // when / then - passes hostname check but fails on actual download (no server)
+        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+                "https://example.com/image.png", "image.png"))
+                .isInstanceOf(IOException.class);
+    }
+
+    // --- SECU-02: Path traversal protection tests ---
+
+    @Test
+    void givenPathTraversalFilename_whenStore_thenThrowsIllegalArgument() {
+        // given
+        var file = new MockMultipartFile("file", "../../../etc/passwd.png", "image/png", new byte[]{1});
+
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.store(UUID.randomUUID(), file))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Path traversal detected");
+    }
+
+    @Test
+    void givenPathTraversalFilename_whenStoreImage_thenThrowsIllegalArgument() {
+        // given
+        var file = new MockMultipartFile("file", "../../../etc/passwd.png", "image/png", new byte[]{1});
+
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.storeImage("cars", UUID.randomUUID(), file))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Path traversal detected");
+    }
+
+    @Test
+    void givenAbsolutePathFilename_whenStore_thenThrowsIllegalArgument() {
+        // given
+        var file = new MockMultipartFile("file", "/etc/passwd.png", "image/png", new byte[]{1});
+
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.store(UUID.randomUUID(), file))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Path traversal detected");
+    }
+
+    @Test
+    void givenPathTraversalSubDir_whenStoreFromUrl_thenThrowsIllegalArgument() {
+        // when / then
+        assertThatThrownBy(() -> fileStorageService.storeFromUrl("../escape", UUID.randomUUID(),
+                "https://example.com/image.png", "image.png"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Path traversal detected");
+    }
 }

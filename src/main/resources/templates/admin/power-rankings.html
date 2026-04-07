@@ -10,7 +10,7 @@
     <!-- Season Selection -->
     <div class="card">
         <form id="seasonForm" method="get" th:action="@{/admin/tools/power-rankings}">
-            <div class="form-group" style="margin-bottom:0;">
+            <div class="form-group form-group--inline">
                 <label for="seasonSelect">Season Number</label>
                 <select id="seasonSelect" onchange="submitSeasonForm(this)" style="max-width:400px;">
                     <option value="">-- Select season --</option>
@@ -28,7 +28,7 @@
     </div>
 
     <!-- Subtitle + Download + Team List -->
-    <div th:if="${teams != null}" class="card" style="margin-top:16px;">
+    <div th:if="${teams != null}" class="card mt-md">
         <form id="downloadForm" method="post" th:action="@{/admin/tools/power-rankings/download}"
               style="display:flex;flex-direction:column;gap:16px;">
             <input type="hidden" name="year" th:value="${selectedYear}">
@@ -50,9 +50,9 @@
 
             <!-- Drag & Drop Team List -->
             <div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div class="section-header mb-xs">
                     <h2 style="margin:0;">Team Ranking</h2>
-                    <span class="text-dim" style="font-size:13px;">Drag to reorder</span>
+                    <span class="text-dim text-sm">Drag to reorder</span>
                 </div>
                 <div id="teamList" class="ranking-list">
                     <div th:each="team, iter : ${teams}"
@@ -76,7 +76,7 @@
         </form>
     </div>
 
-    <div th:if="${teams != null && teams.isEmpty()}" class="card empty-state" style="margin-top:16px;">
+    <div th:if="${teams != null && teams.isEmpty()}" class="card empty-state mt-md">
         <p>No teams found for this season group.</p>
     </div>
 

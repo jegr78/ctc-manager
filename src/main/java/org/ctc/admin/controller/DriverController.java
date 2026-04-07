@@ -72,7 +72,8 @@ public class DriverController {
             return "admin/driver-form";
         }
 
-        driverService.save(driverForm);
+        driverService.save(driverForm.getId(), driverForm.getPsnId(), driverForm.getNickname(),
+                driverForm.isActive(), driverForm.getAliases());
         log.info("Saved driver: {}", driverForm.getPsnId());
         redirectAttributes.addFlashAttribute("successMessage", "Driver saved: " + driverForm.getPsnId());
         return "redirect:/admin/drivers";

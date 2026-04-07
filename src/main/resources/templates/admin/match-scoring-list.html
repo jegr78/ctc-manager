@@ -11,7 +11,7 @@
         <div class="table-scroll">
             <table th:if="${!scorings.isEmpty()}">
                 <thead>
-                    <tr><th>Name</th><th style="text-align:center">Win</th><th style="text-align:center">Draw</th><th style="text-align:center">Loss</th><th>Actions</th></tr>
+                    <tr><th>Name</th><th class="td-center">Win</th><th class="td-center">Draw</th><th class="td-center">Loss</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                     <tr th:each="s : ${scorings}">

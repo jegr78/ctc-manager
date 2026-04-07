@@ -1,12 +1,14 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.TeamForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +43,8 @@ class TeamManagementServiceTest {
     private RaceLineupRepository raceLineupRepository;
     @Mock
     private SeasonDriverRepository seasonDriverRepository;
+    @Mock
+    private SeasonTeamRepository seasonTeamRepository;
     @Mock
     private FileStorageService fileStorageService;
 
@@ -192,16 +197,12 @@ class TeamManagementServiceTest {
     class SaveTest {
 
         @Test
-        void givenNewTeamForm_whenSave_thenCreatesTeam() {
+        void givenNewTeamPrimitives_whenSave_thenCreatesTeam() {
             // given
-            var form = new TeamForm();
-            form.setName("New Team");
-            form.setShortName("NT");
-
             when(teamRepository.save(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = service.save(form);
+            var result = service.save(null, "New Team", "NT", null, null, null);
 
             // then
             assertThat(result.getName()).isEqualTo("New Team");
@@ -210,7 +211,7 @@ class TeamManagementServiceTest {
         }
 
         @Test
-        void givenExistingTeamForm_whenSave_thenUpdatesAndPropagatesColors() {
+        void givenExistingTeamPrimitives_whenSave_thenUpdatesAndPropagatesColors() {
             // given
             var id = UUID.randomUUID();
             var existing = createTeam("OT", "Old Team");
@@ -220,19 +221,11 @@ class TeamManagementServiceTest {
             sub.setParentTeam(existing);
             existing.setSubTeams(List.of(sub));
 
-            var form = new TeamForm();
-            form.setId(id);
-            form.setName("Updated Team");
-            form.setShortName("UT");
-            form.setPrimaryColor("#FF0000");
-            form.setSecondaryColor("#00FF00");
-            form.setAccentColor("#0000FF");
-
             when(teamRepository.findById(id)).thenReturn(Optional.of(existing));
             when(teamRepository.save(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = service.save(form);
+            var result = service.save(id, "Updated Team", "UT", "#FF0000", "#00FF00", "#0000FF");
 
             // then
             assertThat(result.getName()).isEqualTo("Updated Team");
@@ -291,19 +284,35 @@ class TeamManagementServiceTest {
         }
 
         @Test
-        void givenUploadFailure_whenUploadLogo_thenThrowsBusinessRuleException() throws Exception {
+        void givenIoException_whenUploadLogo_thenThrowsBusinessRuleException() throws Exception {
             // given
             var id = UUID.randomUUID();
             var team = createTeam("TA", "Team A");
             var logo = mock(MultipartFile.class);
 
             when(teamRepository.findById(id)).thenReturn(Optional.of(team));
-            when(fileStorageService.storeImage("teams", id, logo)).thenThrow(new RuntimeException("IO error"));
+            when(fileStorageService.storeImage("teams", id, logo)).thenThrow(new IOException("disk full"));
 
             // when / then
             assertThatThrownBy(() -> service.uploadLogo(id, logo))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("Logo upload failed");
+        }
+
+        @Test
+        void givenRuntimeException_whenUploadLogo_thenPropagates() throws Exception {
+            // given
+            var id = UUID.randomUUID();
+            var team = createTeam("TA", "Team A");
+            var logo = mock(MultipartFile.class);
+
+            when(teamRepository.findById(id)).thenReturn(Optional.of(team));
+            when(fileStorageService.storeImage("teams", id, logo)).thenThrow(new RuntimeException("unexpected error"));
+
+            // when / then
+            assertThatThrownBy(() -> service.uploadLogo(id, logo))
+                    .isInstanceOf(RuntimeException.class)
+                    .isNotInstanceOf(BusinessRuleException.class);
         }
     }
 
@@ -342,6 +351,66 @@ class TeamManagementServiceTest {
 
             // then
             verify(teamRepository).delete(sub);
+        }
+    }
+
+    @Nested
+    class FindSeasonTeamByIdTest {
+
+        @Test
+        void givenSeasonTeamExists_whenFindSeasonTeamById_thenReturnsSeasonTeam() {
+            // given
+            var id = UUID.randomUUID();
+            var season = new Season("Test Season");
+            season.setId(UUID.randomUUID());
+            var team = createTeam("TST", "Test Team");
+            var seasonTeam = new SeasonTeam(season, team);
+            seasonTeam.setId(id);
+            when(seasonTeamRepository.findById(id)).thenReturn(Optional.of(seasonTeam));
+
+            // when
+            var result = service.findSeasonTeamById(id);
+
+            // then
+            assertThat(result).isEqualTo(seasonTeam);
+        }
+
+        @Test
+        void givenSeasonTeamNotFound_whenFindSeasonTeamById_thenThrowsEntityNotFoundException() {
+            // given
+            var id = UUID.randomUUID();
+            when(seasonTeamRepository.findById(id)).thenReturn(Optional.empty());
+
+            // when / then
+            assertThatThrownBy(() -> service.findSeasonTeamById(id))
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessageContaining("SeasonTeam");
+        }
+    }
+
+    @Nested
+    class FindSeasonTeamsBySeasonIdTest {
+
+        @Test
+        void whenFindSeasonTeamsBySeasonId_thenReturnsList() {
+            // given
+            var seasonId = UUID.randomUUID();
+            var season = new Season("Test Season");
+            season.setId(seasonId);
+            var team1 = createTeam("T1", "Team 1");
+            var team2 = createTeam("T2", "Team 2");
+            var st1 = new SeasonTeam(season, team1);
+            st1.setId(UUID.randomUUID());
+            var st2 = new SeasonTeam(season, team2);
+            st2.setId(UUID.randomUUID());
+            when(seasonTeamRepository.findBySeasonId(seasonId)).thenReturn(List.of(st1, st2));
+
+            // when
+            var result = service.findSeasonTeamsBySeasonId(seasonId);
+
+            // then
+            assertThat(result).hasSize(2);
+            verify(seasonTeamRepository).findBySeasonId(seasonId);
         }
     }
 
