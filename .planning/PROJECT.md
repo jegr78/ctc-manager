@@ -8,6 +8,17 @@ Gran Turismo Racing League Management-Anwendung (Spring Boot 4 / Thymeleaf / Mar
 
 Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
 
+## Current Milestone: v1.2 Driver Merge
+
+**Goal:** Zwei Fahrer zusammenfuehren — Quell-Fahrer wird in Ziel-Fahrer gemergt, alle FK-Referenzen umgehaengt, PSN-ID als Alias uebernommen.
+
+**Target features:**
+- Merge-Button auf der Fahrer-Detailseite mit Ziel-Fahrer-Auswahl
+- Alle FK-Referenzen umhaengen (SeasonDriver, RaceLineup, RaceResult, PsnAlias)
+- PSN-ID des Quell-Fahrers als neuer Alias am Ziel-Fahrer
+- Quell-Fahrer nach Merge loeschen
+- Duplikat-Handling bei Unique Constraints (gleicher Fahrer bereits in Season/Race)
+
 ## Current State (after v1.1)
 
 - **Codebase:** 13,731 LOC Java (Prod) + 18,621 LOC Java (Tests), 820 Tests, 82%+ Coverage
@@ -47,7 +58,11 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 
 ### Active
 
-(None — all v1.1 requirements validated. Define new requirements with `/gsd-new-milestone`.)
+- [ ] Merge-Button auf Fahrer-Detailseite mit Ziel-Fahrer-Auswahl
+- [ ] Alle FK-Referenzen (SeasonDriver, RaceLineup, RaceResult, PsnAlias) umhaengen
+- [ ] PSN-ID des Quell-Fahrers als Alias am Ziel-Fahrer
+- [ ] Quell-Fahrer nach Merge loeschen
+- [ ] Duplikat-Handling bei Unique Constraints
 
 ### Out of Scope
 
@@ -101,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after v1.1 milestone completion — 10 phases, 20 plans, 12/12 requirements, 820 tests*
+*Last updated: 2026-04-07 after v1.2 milestone start — Driver Merge*

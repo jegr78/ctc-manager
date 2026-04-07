@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: completed
-milestone_name: v1.1 Codebase Concerns Cleanup
-status: milestone_complete
-last_updated: "2026-04-07T11:10:00.000Z"
+milestone: v1.2
+milestone_name: Driver Merge
+status: defining_requirements
+last_updated: "2026-04-07T12:00:00.000Z"
 last_activity: 2026-04-07
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 20
-  completed_plans: 20
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -20,15 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v1.2 Driver Merge
 
 ## Current Position
 
-Milestone: v1.1 complete (shipped 2026-04-07)
-Status: Ready for next milestone
-Last activity: 2026-04-07
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-07 — Milestone v1.2 started
 
-Progress: ██████████ 100%
+Progress: ░░░░░░░░░░ 0%
 
 ## Completed Milestones
 
