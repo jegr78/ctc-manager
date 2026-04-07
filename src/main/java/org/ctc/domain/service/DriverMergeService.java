@@ -26,7 +26,8 @@ public class DriverMergeService {
     private final RaceResultRepository raceResultRepository;
     private final PsnAliasRepository psnAliasRepository;
 
-    public record MergeResult(int seasonDrivers, int raceLineups, int raceResults, int aliasesReassigned) {}
+    public record MergeResult(int seasonDrivers, int raceLineups, int raceResults, int aliasesReassigned,
+                               int seasonDriversDropped, int raceLineupsDropped, int raceResultsDropped) {}
 
     @Transactional
     public MergeResult merge(UUID sourceId, UUID targetId) {
@@ -87,16 +88,22 @@ public class DriverMergeService {
                 seasonDrivers.size(),
                 raceLineups.size(),
                 raceResults.size(),
-                aliases.size() + psnIdCreated
+                aliases.size() + psnIdCreated,
+                0,
+                0,
+                0
         );
 
         // MERGE-14 + D-10: Audit logging with structured parameters
         log.info("Driver merge complete: source=[{}] '{}', target=[{}] '{}', " +
-                        "seasonDrivers={}, raceLineups={}, raceResults={}, aliases={}",
+                        "seasonDrivers={} (dropped={}), raceLineups={} (dropped={}), " +
+                        "raceResults={} (dropped={}), aliases={}",
                 source.getId(), source.getPsnId(),
                 target.getId(), target.getPsnId(),
-                result.seasonDrivers(), result.raceLineups(),
-                result.raceResults(), result.aliasesReassigned());
+                result.seasonDrivers(), result.seasonDriversDropped(),
+                result.raceLineups(), result.raceLineupsDropped(),
+                result.raceResults(), result.raceResultsDropped(),
+                result.aliasesReassigned());
 
         return result;
     }
