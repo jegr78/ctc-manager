@@ -41,7 +41,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 
 - [x] **Phase 16: Merge Service Core** - FK reassignment, audit logging, and source driver deletion (completed 2026-04-07)
 - [x] **Phase 17: Duplicate-Handling** - Conflict resolution for unique-constraint violations across all three FK tables (completed 2026-04-07)
-- [ ] **Phase 18: Merge UI** - Merge button, target selection, preview, and confirmation flow on driver detail page
+- [x] **Phase 18: Merge UI** - Merge button, target selection, preview, and confirmation flow on driver detail page (completed 2026-04-07)
 
 ## Phase Details
 
@@ -83,11 +83,11 @@ Plans:
   3. Admin sees a preview listing the number of SeasonDriver, RaceLineup, RaceResult, and PsnAlias entries that will be reassigned
   4. Admin must explicitly confirm the merge before any data is changed
   5. After a successful merge the admin is redirected to the target driver's detail page with a success message
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 **UI hint**: yes
 Plans:
-- [ ] 18-01-PLAN.md — TDD: previewMerge() service method with MergePreview record
-- [ ] 18-02-PLAN.md — Controller endpoints, driver-merge template, merge button, integration tests
+- [x] 18-01-PLAN.md — TDD: previewMerge() service method with MergePreview record
+- [x] 18-02-PLAN.md — Controller endpoints, driver-merge template, merge button, integration tests
 
 ## Progress
 
@@ -110,4 +110,4 @@ Plans:
 | 15. Alltime Standings Recovery | v1.1 | 1/1 | Complete | 2026-04-07 |
 | 16. Merge Service Core | v1.2 | 1/1 | Complete    | 2026-04-07 |
 | 17. Duplicate-Handling | v1.2 | 1/1 | Complete    | 2026-04-07 |
-| 18. Merge UI | v1.2 | 0/2 | Planned    | - |
+| 18. Merge UI | v1.2 | 2/2 | Complete    | 2026-04-07 |
