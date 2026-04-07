@@ -1,9 +1,9 @@
 ---
 phase: 20
 slug: english-messages
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-07
 ---
 
@@ -50,7 +50,7 @@ created: 2026-04-07
 
 ## Wave 0 Requirements
 
-Existing infrastructure covers all phase requirements.
+Existing infrastructure covers all phase requirements. No new test scaffolding needed — `./mvnw verify` and grep scans provide full coverage.
 
 ---
 
@@ -64,11 +64,11 @@ Existing infrastructure covers all phase requirements.
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
