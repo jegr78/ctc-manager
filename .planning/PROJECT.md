@@ -28,7 +28,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 
 ## Current State (after v1.0)
 
-- **Codebase:** 13.526 LOC Java (Prod) + 17.021 LOC Java (Tests), 818 Tests, 82%+ Coverage
+- **Codebase:** 13.526 LOC Java (Prod) + 17.021 LOC Java (Tests), 820 Tests, 82%+ Coverage
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), open (dev/local), SSRF-geschuetzt
 - **Architecture:** Saubere 3-Tier (Controller → Service → Repository), keine God Services, zentrale Exception-Behandlung
@@ -57,7 +57,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 ### Active (v1.1)
 
 - [ ] TemplateEditorController Duplikation beseitigen (generischer Ansatz)
-- ✓ Alltime Standings implementieren — Phase 9
+- ✓ Alltime Standings implementieren — Phase 9, recovered in Phase 15
 - ✓ Inline-Styles in Admin Templates durch CSS-Klassen ersetzt — Phase 11
 - [ ] Grosse Service-Klassen aufteilen (PlayoffService, RaceService)
 
@@ -113,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-06 after Phase 13 completion — controller service delegation and domain DTO decoupling re-applied*
+*Last updated: 2026-04-07 after Phase 15 completion — alltime standings recovered with TDD, 820 tests*
