@@ -1,13 +1,20 @@
 package org.ctc.admin.controller;
 
+import org.ctc.admin.service.TeamCardService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.IOException;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -18,6 +25,16 @@ class TemplateEditorControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private TeamCardService teamCardService;
+
+    @BeforeEach
+    void setUpTeamCardServiceDefaults() throws IOException {
+        // Default stub: loadTemplate returns non-null so model attribute exists in happy-path tests
+        when(teamCardService.loadTemplate()).thenReturn("<html>default</html>");
+        when(teamCardService.hasCustomTemplate()).thenReturn(false);
+    }
 
     @Test
     void whenGetTemplateEditors_thenReturnsTemplateEditorsView() throws Exception {
@@ -295,5 +312,48 @@ class TemplateEditorControllerTest {
         // Error message must not contain exception class names or stack traces
         String body = result.getResponse().getContentAsString();
         assertThat(body).isEqualTo("Preview failed");
+    }
+
+    // --- Exception handling tests for narrowed catches ---
+
+    @Test
+    void givenIoException_whenLoadTemplate_thenShowsErrorMessage() throws Exception {
+        // given
+        when(teamCardService.loadTemplate()).thenThrow(new IOException("disk full"));
+
+        // when
+        mockMvc.perform(get("/admin/tools/template-editors")
+                        .param("tab", "team-cards"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/template-editors"))
+                .andExpect(model().attributeExists("errorMessage"));
+    }
+
+    @Test
+    void givenIoException_whenSaveTemplate_thenRedirectsWithError() throws Exception {
+        // given
+        doThrow(new IOException("disk full")).when(teamCardService).saveTemplate(org.mockito.ArgumentMatchers.anyString());
+
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/team-cards/save")
+                        .param("template", "<html>test</html>"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tools/template-editors?tab=team-cards"))
+                .andExpect(flash().attributeExists("errorMessage"));
+    }
+
+    @Test
+    void givenIoException_whenResetTemplate_thenRedirectsWithError() throws Exception {
+        // given
+        doThrow(new IOException("disk full")).when(teamCardService).resetTemplate();
+
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/team-cards/reset"))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tools/template-editors?tab=team-cards"))
+                .andExpect(flash().attributeExists("errorMessage"));
     }
 }

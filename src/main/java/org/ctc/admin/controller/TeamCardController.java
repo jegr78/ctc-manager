@@ -69,7 +69,7 @@ public class TeamCardController {
             teamCardService.generateCard(seasonTeam);
             redirectAttributes.addFlashAttribute("successMessage",
                     "Card generated: " + seasonTeam.getTeam().getShortName());
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Card generation failed for {}", seasonTeam.getTeam().getShortName(), e);
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Generation failed: " + e.getMessage());
@@ -84,7 +84,7 @@ public class TeamCardController {
             var paths = teamCardService.generateAllCards(season);
             redirectAttributes.addFlashAttribute("successMessage",
                     paths.size() + " cards generated");
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Batch card generation failed for season {}", season.getName(), e);
             redirectAttributes.addFlashAttribute("errorMessage",
                     "Generation failed: " + e.getMessage());
