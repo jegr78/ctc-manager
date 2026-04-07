@@ -69,7 +69,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 ### Active
 
 #### English Cleanup
-- [ ] All German texts, constants, enum labels, comments, log messages, exception messages, variable/method names converted to English
+- [~] All German texts, constants, enum labels, comments, log messages, exception messages, variable/method names converted to English (Phase 20: comments done across 5 files)
 
 #### Test Data
 - [ ] 14+ teams (including 2-3 parent teams with sub-teams), 10 drivers each, fictive names
@@ -133,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after v1.3 milestone start — English & Test Data*
+*Last updated: 2026-04-08 after Phase 20 — English comments translated across 5 files*
