@@ -191,11 +191,11 @@ Plans:
   1. No catch(Exception e) blocks remain in controllers or services — each catch targets a specific exception type
   2. Unexpected exceptions propagate to GlobalExceptionHandler and display the admin error page
 **Recovery Source**: Phase 8 commits (`1960a9e`, `e645d43`, `3a21dde`, `981a42a`, `1d7e37f`)
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 14-01-PLAN.md — Narrow all 17 controller catch(Exception e) blocks to specific types (RuntimeException, IOException, multi-catch)
-- [ ] 14-02-PLAN.md — Narrow all 5 service catch(Exception e) blocks to IOException + document QUAL-02 disposition
+- [x] 14-01-PLAN.md — Narrow all 17 controller catch(Exception e) blocks to specific types (RuntimeException, IOException, multi-catch)
+- [x] 14-02-PLAN.md — Narrow all 5 service catch(Exception e) blocks to IOException + document QUAL-02 disposition
 
 ### Phase 15: Alltime Standings Recovery
 **Goal**: Re-apply cross-season team standings aggregation lost by worktree file clobber
@@ -228,5 +228,5 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 
 | 11. Template Quality | v1.1 | 3/3 | Complete    | 2026-04-06 |
 | 12. Security Hardening Recovery | v1.1 | 1/1 | Complete    | 2026-04-06 |
 | 13. Layer Cleanup Recovery | v1.1 | 3/3 | Complete    | 2026-04-06 |
-| 14. Exception Refinement Recovery | v1.1 | 0/2 | Pending | — |
+| 14. Exception Refinement Recovery | v1.1 | 2/2 | Complete    | 2026-04-07 |
 | 15. Alltime Standings Recovery | v1.1 | 0/0 | Pending | — |

@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: Codebase Concerns Cleanup
 status: executing
 stopped_at: Phase 14 context gathered
-last_updated: "2026-04-07T07:10:23.699Z"
-last_activity: 2026-04-07 -- Phase 14 planning complete
+last_updated: "2026-04-07T07:43:42.779Z"
+last_activity: 2026-04-07
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 6
-  completed_plans: 4
-  percent: 67
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Phase 13 — layer-cleanup-recovery
+**Current focus:** Phase 14 — exception-refinement-recovery
 
 ## Current Position
 
-Phase: 14
+Phase: 15
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-04-07 -- Phase 14 planning complete
+Status: Executing Phase 14
+Last activity: 2026-04-07
 
 Progress: [░░░░░░░░░░] 0%
 
