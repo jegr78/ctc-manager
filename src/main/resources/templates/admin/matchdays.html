@@ -6,7 +6,7 @@
     <div class="toolbar">
         <h1>Matchdays</h1>
         <div class="actions">
-            <form method="get" th:action="@{/admin/matchdays}" style="display:inline-flex;gap:8px;align-items:center;">
+            <form method="get" th:action="@{/admin/matchdays}" class="btn-with-hint">
                 <select name="seasonId" onchange="this.form.submit()">
                     <option value="">-- Select season --</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"

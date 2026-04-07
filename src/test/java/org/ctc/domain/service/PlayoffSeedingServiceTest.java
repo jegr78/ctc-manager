@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.SeedForm;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -227,47 +226,37 @@ class PlayoffSeedingServiceTest {
     class SaveSeed {
 
         @Test
-        void givenSeedFormWithEntries_whenSaveSeed_thenTeamsSeededAndSaved() {
+        void givenSeedEntries_whenSaveSeed_thenTeamsSeededAndSaved() {
             // given
             var matchupId = UUID.randomUUID();
             var round = new PlayoffRound(playoff, "Final", 0);
             var matchup = new PlayoffMatchup(round, 0);
             matchup.setId(matchupId);
 
-            var form = new SeedForm();
-            form.setPlayoffId(playoffId);
-
-            var entry = new SeedForm.SeedEntry();
-            entry.setMatchupId(matchupId);
-            entry.setTeamId(team1.getId());
-            entry.setSlot(1);
-            form.getSeeds().add(entry);
+            var seeds = List.of(
+                    new PlayoffSeedingService.SeedEntry(matchupId, 1, team1.getId(), null)
+            );
 
             when(playoffMatchupRepository.findById(matchupId)).thenReturn(Optional.of(matchup));
             when(teamRepository.findById(team1.getId())).thenReturn(Optional.of(team1));
             when(playoffMatchupRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            playoffSeedingService.saveSeed(playoffId, form);
+            playoffSeedingService.saveSeed(playoffId, seeds);
 
             // then
             assertEquals(team1, matchup.getTeam1());
         }
 
         @Test
-        void givenSeedFormWithNullTeamId_whenSaveSeed_thenEntrySkipped() {
+        void givenSeedEntryWithNullTeamId_whenSaveSeed_thenEntrySkipped() {
             // given
-            var form = new SeedForm();
-            form.setPlayoffId(playoffId);
-
-            var entry = new SeedForm.SeedEntry();
-            entry.setMatchupId(UUID.randomUUID());
-            entry.setTeamId(null);
-            entry.setSlot(1);
-            form.getSeeds().add(entry);
+            var seeds = List.of(
+                    new PlayoffSeedingService.SeedEntry(UUID.randomUUID(), 1, null, null)
+            );
 
             // when
-            playoffSeedingService.saveSeed(playoffId, form);
+            playoffSeedingService.saveSeed(playoffId, seeds);
 
             // then — no matchup lookup should occur
             verify(playoffMatchupRepository, never()).findById(any());

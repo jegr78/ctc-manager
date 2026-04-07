@@ -1,7 +1,6 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.CreateMatchdayRequest;
-import org.ctc.admin.dto.MatchdayDto;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
@@ -22,6 +21,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -118,7 +118,7 @@ public class MatchdayController {
             var matchday = matchdayService.getMatchdayDetail(id).matchday();
             byte[] png = overviewGraphicService.generateOverview(matchday);
             return buildPngResponse(png, matchday.getLabel(), "overview");
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Failed to generate overview graphic for matchday {}", id, e);
             return ResponseEntity.internalServerError().build();
         }
@@ -130,7 +130,7 @@ public class MatchdayController {
             var matchday = matchdayService.getMatchdayDetail(id).matchday();
             byte[] png = scheduleGraphicService.generateSchedule(matchday);
             return buildPngResponse(png, matchday.getLabel(), "schedule");
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Failed to generate schedule graphic for matchday {}", id, e);
             return ResponseEntity.internalServerError().build();
         }
@@ -142,7 +142,7 @@ public class MatchdayController {
             var matchday = matchdayService.getMatchdayDetail(id).matchday();
             byte[] png = resultsGraphicService.generateResults(matchday);
             return buildPngResponse(png, matchday.getLabel(), "results");
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Failed to generate results graphic for matchday {}", id, e);
             return ResponseEntity.internalServerError().build();
         }
@@ -155,7 +155,7 @@ public class MatchdayController {
             byte[] png = matchResultsGraphicService.generateMatchResults(match);
             String label = match.getHomeTeam().getShortName() + "-vs-" + match.getAwayTeam().getShortName();
             return buildPngResponse(png, label, "match-results");
-        } catch (Exception e) {
+        } catch (IOException | RuntimeException e) {
             log.error("Failed to generate match results graphic for match {}", matchId, e);
             return ResponseEntity.internalServerError().build();
         }
@@ -173,13 +173,13 @@ public class MatchdayController {
 
     @GetMapping("/by-season")
     @ResponseBody
-    public List<MatchdayDto> matchdaysBySeason(@RequestParam UUID seasonId) {
+    public List<MatchdayService.MatchdayData> matchdaysBySeason(@RequestParam UUID seasonId) {
         return matchdayService.getMatchdaysBySeason(seasonId);
     }
 
     @PostMapping("/create-inline")
     @ResponseBody
-    public ResponseEntity<MatchdayDto> createInline(@Valid @RequestBody CreateMatchdayRequest request) {
+    public ResponseEntity<MatchdayService.MatchdayData> createInline(@Valid @RequestBody CreateMatchdayRequest request) {
         var dto = matchdayService.createInline(request.seasonId(), request.label());
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }

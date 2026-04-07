@@ -1,7 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.SeasonDriverGroupDto;
-import org.ctc.admin.dto.TeamForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
@@ -9,9 +7,11 @@ import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,9 +31,19 @@ public class TeamManagementService {
 
     private final TeamRepository teamRepository;
     private final SeasonRepository seasonRepository;
+    private final SeasonTeamRepository seasonTeamRepository;
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final FileStorageService fileStorageService;
+
+    /**
+     * Groups drivers by team within a season — replaces admin SeasonDriverGroupDto.
+     */
+    public record SeasonDriverGroup(Season season, Map<Team, List<Driver>> driversByTeam) {
+        public int totalDriverCount() {
+            return driversByTeam.values().stream().mapToInt(List::size).sum();
+        }
+    }
 
     /**
      * Return value for team detail view data.
@@ -40,7 +51,7 @@ public class TeamManagementService {
     public record TeamDetailData(
             Team team,
             List<Season> seasons,
-            List<SeasonDriverGroupDto> seasonDriverGroups,
+            List<SeasonDriverGroup> seasonDriverGroups,
             List<Season> seasonsWithoutDrivers
     ) {}
 
@@ -87,7 +98,7 @@ public class TeamManagementService {
                     entry.getValue().entrySet().stream()
                             .sorted(Comparator.comparing(e -> e.getKey().getShortName()))
                             .forEach(e -> sortedByTeam.put(e.getKey(), new ArrayList<>(e.getValue())));
-                    return new SeasonDriverGroupDto(entry.getKey(), sortedByTeam);
+                    return new SeasonDriverGroup(entry.getKey(), sortedByTeam);
                 })
                 .toList();
 
@@ -124,7 +135,7 @@ public class TeamManagementService {
                     entry.getValue().entrySet().stream()
                             .sorted(Comparator.comparing(e -> e.getKey().getShortName()))
                             .forEach(e -> sortedByTeam.put(e.getKey(), new ArrayList<>(e.getValue())));
-                    return new SeasonDriverGroupDto(entry.getKey(), sortedByTeam);
+                    return new SeasonDriverGroup(entry.getKey(), sortedByTeam);
                 })
                 .toList();
 
@@ -192,6 +203,23 @@ public class TeamManagementService {
     }
 
     /**
+     * Finds a season team by ID or throws EntityNotFoundException.
+     */
+    @Transactional(readOnly = true)
+    public SeasonTeam findSeasonTeamById(UUID id) {
+        return seasonTeamRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", id));
+    }
+
+    /**
+     * Returns all season teams for a given season.
+     */
+    @Transactional(readOnly = true)
+    public List<SeasonTeam> findSeasonTeamsBySeasonId(UUID seasonId) {
+        return seasonTeamRepository.findBySeasonId(seasonId);
+    }
+
+    /**
      * Returns all parent teams (no parentTeam) sorted by shortName.
      */
     @Transactional(readOnly = true)
@@ -212,25 +240,26 @@ public class TeamManagementService {
     }
 
     /**
-     * Creates or updates a team from a TeamForm.
+     * Creates or updates a team from primitive parameters.
      */
     @Transactional
-    public Team save(TeamForm form) {
+    public Team save(UUID id, String name, String shortName,
+                     String primaryColor, String secondaryColor, String accentColor) {
         Team team;
-        if (form.getId() != null) {
-            team = findById(form.getId());
-            team.setName(form.getName());
-            team.setShortName(form.getShortName());
-            team.setPrimaryColor(form.getPrimaryColor());
-            team.setSecondaryColor(form.getSecondaryColor());
-            team.setAccentColor(form.getAccentColor());
+        if (id != null) {
+            team = findById(id);
+            team.setName(name);
+            team.setShortName(shortName);
+            team.setPrimaryColor(primaryColor);
+            team.setSecondaryColor(secondaryColor);
+            team.setAccentColor(accentColor);
             team = teamRepository.save(team);
             propagateColorsToSubTeams(team);
         } else {
-            team = new Team(form.getName(), form.getShortName());
-            team.setPrimaryColor(form.getPrimaryColor());
-            team.setSecondaryColor(form.getSecondaryColor());
-            team.setAccentColor(form.getAccentColor());
+            team = new Team(name, shortName);
+            team.setPrimaryColor(primaryColor);
+            team.setSecondaryColor(secondaryColor);
+            team.setAccentColor(accentColor);
             team = teamRepository.save(team);
         }
         return team;
@@ -265,7 +294,7 @@ public class TeamManagementService {
             team.setLogoUrl(newUrl);
             teamRepository.save(team);
             propagateLogoToSubTeams(team, newUrl);
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new BusinessRuleException("Logo upload failed: " + e.getMessage());
         }
     }

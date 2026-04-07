@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.MatchScoringForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.MatchScoring;
@@ -75,24 +74,19 @@ class MatchScoringServiceTest {
     }
 
     @Test
-    void givenValidNewForm_whenSave_thenCreatesScoring() {
+    void givenValidNewScoring_whenSave_thenCreatesScoring() {
         // given
-        var form = new MatchScoringForm();
-        form.setName("New Scoring");
-        form.setPointsWin(3);
-        form.setPointsDraw(1);
-        form.setPointsLoss(0);
         when(matchScoringRepository.saveAndFlush(any(MatchScoring.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        matchScoringService.save(form);
+        matchScoringService.save(null, "New Scoring", 3, 1, 0);
 
         // then
         verify(matchScoringRepository).saveAndFlush(any(MatchScoring.class));
     }
 
     @Test
-    void givenValidExistingForm_whenSave_thenUpdatesScoring() {
+    void givenValidExistingScoring_whenSave_thenUpdatesScoring() {
         // given
         var id = UUID.randomUUID();
         var existing = new MatchScoring("Old Name", 3, 1, 0);
@@ -100,15 +94,8 @@ class MatchScoringServiceTest {
         when(matchScoringRepository.findById(id)).thenReturn(Optional.of(existing));
         when(matchScoringRepository.saveAndFlush(any(MatchScoring.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        var form = new MatchScoringForm();
-        form.setId(id);
-        form.setName("Updated Name");
-        form.setPointsWin(4);
-        form.setPointsDraw(2);
-        form.setPointsLoss(1);
-
         // when
-        matchScoringService.save(form);
+        matchScoringService.save(id, "Updated Name", 4, 2, 1);
 
         // then
         verify(matchScoringRepository).findById(id);
@@ -120,16 +107,11 @@ class MatchScoringServiceTest {
     @Test
     void givenDuplicateName_whenSave_thenThrowsBusinessRuleException() {
         // given
-        var form = new MatchScoringForm();
-        form.setName("Duplicate");
-        form.setPointsWin(3);
-        form.setPointsDraw(1);
-        form.setPointsLoss(0);
         when(matchScoringRepository.saveAndFlush(any(MatchScoring.class)))
                 .thenThrow(new DataIntegrityViolationException("unique constraint"));
 
         // when / then
-        assertThatThrownBy(() -> matchScoringService.save(form))
+        assertThatThrownBy(() -> matchScoringService.save(null, "Duplicate", 3, 1, 0))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("already exists");
     }

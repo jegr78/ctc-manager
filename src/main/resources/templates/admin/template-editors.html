@@ -8,7 +8,7 @@
     </div>
 
     <!-- Tabs -->
-    <div style="display:flex;gap:0;margin-top:16px;border-bottom:2px solid var(--border);">
+    <div class="editor-tab-bar">
         <a th:href="@{/admin/tools/template-editors(tab='team-cards')}"
            th:classappend="${activeTab == 'team-cards' ? 'tab-active' : ''}"
            class="tab-btn">Team Cards</a>
@@ -42,43 +42,43 @@
     </div>
 
     <!-- Team Cards Tab -->
-    <div th:if="${activeTab == 'team-cards'}" style="margin-top:16px;" data-template-type="team-cards" data-preview-mode="portrait">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${teamCardIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${teamCardIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'team-cards'}" class="editor-tab-content" data-template-type="team-cards" data-preview-mode="portrait">
+        <div class="editor-status-row">
+            <span th:if="${teamCardIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${teamCardIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
-                <div style="width:270px;height:480px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1080px;height:1920px;border:none;transform:scale(0.25);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area">
+                <div class="editor-preview-portrait">
+                    <iframe class="preview-frame editor-iframe-portrait" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/team-cards/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/team-cards/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/team-cards/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${teamCardTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>rating</code></td><td>Team rating (Integer or null)</td></tr>
@@ -94,9 +94,9 @@
                         <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Card size is 1080x1920px (Story format)</li>
                         <li>Use <code>th:inline="text"</code> in <code>&lt;style&gt;</code> for CSS variables</li>
                         <li>Use <code>[[...]]</code> syntax for inline text in CSS</li>
@@ -107,43 +107,43 @@
     </div>
 
     <!-- Lineup Tab -->
-    <div th:if="${activeTab == 'lineup'}" style="margin-top:16px;" data-template-type="lineup" data-preview-mode="landscape">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${lineupIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${lineupIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'lineup'}" class="editor-tab-content" data-template-type="lineup" data-preview-mode="landscape">
+        <div class="editor-status-row">
+            <span th:if="${lineupIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${lineupIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
-                <div style="width:640px;height:360px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area">
+                <div class="editor-preview-landscape">
+                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/lineup/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/lineup/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/lineup/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${lineupTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>seasonYear</code></td><td>Year from season name</td></tr>
@@ -158,9 +158,9 @@
                         <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Use <code>th:each="p : ${pairings}"</code> to iterate pairings</li>
                         <li>Access driver names: <code>${p.homeDriver}</code>, <code>${p.awayDriver}</code></li>
@@ -172,43 +172,43 @@
     </div>
 
     <!-- Settings Tab -->
-    <div th:if="${activeTab == 'settings'}" style="margin-top:16px;" data-template-type="settings" data-preview-mode="landscape">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${settingsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${settingsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'settings'}" class="editor-tab-content" data-template-type="settings" data-preview-mode="landscape">
+        <div class="editor-status-row">
+            <span th:if="${settingsIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${settingsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
-                <div style="width:640px;height:360px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area">
+                <div class="editor-preview-landscape">
+                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/settings/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/settings/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/settings/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${settingsTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>seasonYear</code></td><td>Year from season</td></tr>
@@ -235,9 +235,9 @@
                         <tr><td><code>mandatoryTyres</code></td><td>Mandatory tyre types</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Settings are displayed as labeled rows in the center</li>
                         <li>Use <code>th:text</code> for all dynamic values</li>
@@ -248,43 +248,43 @@
     </div>
 
     <!-- Race Results Tab -->
-    <div th:if="${activeTab == 'race-results'}" style="margin-top:16px;" data-template-type="race-results" data-preview-mode="landscape">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${raceResultsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${raceResultsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'race-results'}" class="editor-tab-content" data-template-type="race-results" data-preview-mode="landscape">
+        <div class="editor-status-row">
+            <span th:if="${raceResultsIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${raceResultsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
-                <div style="width:640px;height:360px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area">
+                <div class="editor-preview-landscape">
+                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/race-results/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/race-results/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/race-results/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${raceResultsTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>seasonYear</code></td><td>Year from season</td></tr>
@@ -301,9 +301,9 @@
                         <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Use <code>th:each="row : ${resultRows}"</code> to iterate results</li>
                         <li>Access: <code>${row.homeDriver}</code>, <code>${row.homePoints}</code>, <code>${row.awayPoints}</code>, <code>${row.awayDriver}</code></li>
@@ -315,43 +315,43 @@
     </div>
 
     <!-- Match Results Tab -->
-    <div th:if="${activeTab == 'match-results'}" style="margin-top:16px;" data-template-type="match-results" data-preview-mode="landscape">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${matchResultsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${matchResultsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'match-results'}" class="editor-tab-content" data-template-type="match-results" data-preview-mode="landscape">
+        <div class="editor-status-row">
+            <span th:if="${matchResultsIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${matchResultsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
-                <div style="width:640px;height:360px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area">
+                <div class="editor-preview-landscape">
+                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/match-results/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/match-results/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/match-results/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${matchResultsTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>seasonYear</code></td><td>Year from season</td></tr>
@@ -368,9 +368,9 @@
                         <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Use <code>th:each="row : ${raceRows}"</code> to iterate races</li>
                         <li>Access: <code>${row.label}</code> (e.g. "Race 1"), <code>${row.homePoints}</code>, <code>${row.awayPoints}</code></li>
@@ -382,43 +382,43 @@
     </div>
 
     <!-- Matchday Overview Tab -->
-    <div th:if="${activeTab == 'matchday-overview'}" style="margin-top:16px;" data-template-type="matchday-overview" data-preview-mode="landscape">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${matchdayOverviewIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${matchdayOverviewIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'matchday-overview'}" class="editor-tab-content" data-template-type="matchday-overview" data-preview-mode="landscape">
+        <div class="editor-status-row">
+            <span th:if="${matchdayOverviewIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${matchdayOverviewIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
-                <div style="width:640px;height:360px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area">
+                <div class="editor-preview-landscape">
+                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/matchday-overview/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/matchday-overview/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/matchday-overview/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${matchdayOverviewTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>data.matchdayLabel</code></td><td>Matchday label (e.g. "Match Day 3")</td></tr>
@@ -438,9 +438,9 @@
                         <tr><td><code>m.awayRecord</code></td><td>Away record (W-L-D)</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Use <code>th:each="m : ${data.matches}"</code> to iterate matches</li>
                         <li>Matches are sorted by earliest race datetime, nulls last</li>
@@ -451,43 +451,43 @@
     </div>
 
     <!-- Matchday Schedule Tab -->
-    <div th:if="${activeTab == 'matchday-schedule'}" style="margin-top:16px;" data-template-type="matchday-schedule" data-preview-mode="landscape">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${matchdayScheduleIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${matchdayScheduleIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'matchday-schedule'}" class="editor-tab-content" data-template-type="matchday-schedule" data-preview-mode="landscape">
+        <div class="editor-status-row">
+            <span th:if="${matchdayScheduleIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${matchdayScheduleIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
-                <div style="width:640px;height:360px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area">
+                <div class="editor-preview-landscape">
+                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/matchday-schedule/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/matchday-schedule/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/matchday-schedule/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${matchdayScheduleTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>data.matchdayLabel</code></td><td>Matchday label</td></tr>
@@ -501,9 +501,9 @@
                         <tr><td><code>m.awayRecord</code></td><td>Away record (W-L-D)</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Timezone is always Europe/London (GMT/BST)</li>
                         <li>Matches without datetime show "TBD"</li>
@@ -514,43 +514,43 @@
     </div>
 
     <!-- Matchday Results Tab -->
-    <div th:if="${activeTab == 'matchday-results'}" style="margin-top:16px;" data-template-type="matchday-results" data-preview-mode="landscape">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${matchdayResultsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${matchdayResultsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'matchday-results'}" class="editor-tab-content" data-template-type="matchday-results" data-preview-mode="landscape">
+        <div class="editor-status-row">
+            <span th:if="${matchdayResultsIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${matchdayResultsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
-                <div style="width:640px;height:360px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area">
+                <div class="editor-preview-landscape">
+                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/matchday-results/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/matchday-results/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/matchday-results/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${matchdayResultsTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>data.matchdayLabel</code></td><td>Matchday label</td></tr>
@@ -565,9 +565,9 @@
                         <tr><td><code>m.awayScore</code></td><td>Away total points (Integer)</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Scores are Match.homeScore / Match.awayScore</li>
                         <li>Records show current season W-L-D</li>
@@ -578,43 +578,43 @@
     </div>
 
     <!-- Stream Overlay Tab -->
-    <div th:if="${activeTab == 'overlay'}" style="margin-top:16px;" data-template-type="overlay" data-preview-mode="landscape">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${overlayIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${overlayIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'overlay'}" class="editor-tab-content" data-template-type="overlay" data-preview-mode="landscape">
+        <div class="editor-status-row">
+            <span th:if="${overlayIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${overlayIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:repeating-conic-gradient(#333 0% 25%, #222 0% 50%) 50%/20px 20px;overflow:hidden;">
-                <div style="width:640px;height:360px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area editor-preview-area--overlay">
+                <div class="editor-preview-landscape">
+                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/overlay/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/overlay/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/overlay/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${overlayTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>homeTeamName</code></td><td>Home team full name</td></tr>
@@ -636,9 +636,9 @@
                         <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Body background MUST be transparent for OBS overlay</li>
                         <li>The checkered preview background simulates transparency</li>
@@ -651,43 +651,43 @@
     </div>
 
     <!-- Power Rankings Tab -->
-    <div th:if="${activeTab == 'power-rankings'}" style="margin-top:16px;" data-template-type="power-rankings" data-preview-mode="landscape">
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <span th:if="${powerRankingsIsCustom}" class="badge badge-active" style="font-size:12px;">Custom</span>
-            <span th:unless="${powerRankingsIsCustom}" class="badge badge-inactive" style="font-size:12px;">Default</span>
+    <div th:if="${activeTab == 'power-rankings'}" class="editor-tab-content" data-template-type="power-rankings" data-preview-mode="landscape">
+        <div class="editor-status-row">
+            <span th:if="${powerRankingsIsCustom}" class="badge badge-active badge-sm">Custom</span>
+            <span th:unless="${powerRankingsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
         </div>
         <!-- Preview -->
-        <div class="card" style="padding:0;margin-bottom:16px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="card editor-card-flush">
+            <div class="editor-card-header">
                 <strong>Preview</strong>
                 <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
             </div>
-            <div style="padding:16px;display:flex;justify-content:center;background:#1a1a1a;overflow:hidden;">
-                <div style="width:640px;height:360px;overflow:hidden;">
-                    <iframe class="preview-frame" style="width:1920px;height:1080px;border:none;transform:scale(0.3333);transform-origin:top left;" sandbox="allow-same-origin"></iframe>
+            <div class="editor-preview-area">
+                <div class="editor-preview-landscape">
+                    <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
                 </div>
             </div>
         </div>
         <!-- Editor + Variables -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-            <div class="card" style="padding:0;display:flex;flex-direction:column;">
-                <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div class="editor-grid">
+            <div class="card editor-card-column">
+                <div class="editor-card-header">
                     <strong>Template (HTML + Thymeleaf)</strong>
                     <form th:action="@{/admin/tools/template-editors/power-rankings/reset}" method="post"
                           onsubmit="return confirm('Reset to default template?')">
                         <button type="submit" class="btn btn-danger btn-sm">Reset</button>
                     </form>
                 </div>
-                <form th:action="@{/admin/tools/template-editors/power-rankings/save}" method="post" style="display:flex;flex-direction:column;flex:1;">
+                <form th:action="@{/admin/tools/template-editors/power-rankings/save}" method="post" class="editor-form">
                     <textarea name="template" class="template-textarea" th:text="${powerRankingsTemplate}"></textarea>
-                    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+                    <div class="editor-card-footer">
                         <button type="submit" class="btn btn-primary">Save Template</button>
                     </div>
                 </form>
             </div>
-            <div class="card" style="padding:16px;">
+            <div class="card editor-info-card">
                 <strong>Available Variables</strong>
-                <table style="min-width:auto;margin-top:12px;font-size:13px;">
+                <table class="editor-var-table">
                     <thead><tr><th>Variable</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td><code>data.title</code></td><td>Title (e.g. "Power Rankings 2026")</td></tr>
@@ -706,9 +706,9 @@
                         <tr><td><code>entry.accentColor</code></td><td>Accent color hex</td></tr>
                     </tbody>
                 </table>
-                <div style="margin-top:20px;">
+                <div class="editor-tips">
                     <strong>Tips</strong>
-                    <ul style="margin-top:8px;padding-left:20px;font-size:13px;color:var(--text-dim);line-height:1.8;">
+                    <ul class="editor-tips-list">
                         <li>Graphic size is 1920x1080px (Full HD 16:9)</li>
                         <li>Two-column layout: iterate over <code>data.leftColumn</code> and <code>data.rightColumn</code></li>
                         <li>Use <code>color-mix(in srgb, [color] 70%, black)</code> for team gradients</li>

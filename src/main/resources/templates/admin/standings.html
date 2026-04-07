@@ -5,7 +5,7 @@
 <section>
     <div class="toolbar">
         <h1>Standings &amp; Driver Ranking</h1>
-        <form method="get" th:action="@{/admin/standings}" style="display:inline-flex;gap:8px;align-items:center;">
+        <form method="get" th:action="@{/admin/standings}" class="btn-with-hint">
             <select name="seasonId" onchange="this.form.submit()">
                 <option value="">-- Select season --</option>
                 <option value="alltime" th:selected="${isAlltime}">Alltime</option>
@@ -35,7 +35,7 @@
                     <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Draws">D</th>
                     <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Losses">L</th>
                     <th>PR</th>
-                    <th class="sortable" data-col="7" data-type="num" aria-label="Sort by Points" style="text-align:right">Pts</th>
+                    <th class="sortable td-right" data-col="7" data-type="num" aria-label="Sort by Points">Pts</th>
                 </tr>
             </thead>
             <tbody>
@@ -64,7 +64,7 @@
                     <th>Match W-L-T</th>
                     <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Score">Score</th>
                     <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Buchholz">Buchholz</th>
-                    <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Points Difference" style="text-align:right">Pts Diff</th>
+                    <th class="sortable td-right" data-col="5" data-type="num" aria-label="Sort by Points Difference">Pts Diff</th>
                 </tr>
             </thead>
             <tbody>
@@ -85,14 +85,14 @@
     </div>
 
     <!-- Driver Ranking -->
-    <div th:if="${driverRanking != null}" class="card" style="margin-top: 16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div th:if="${driverRanking != null}" class="card mt-md">
+        <div class="section-header mb-sm">
             <div>
-                <h2 th:if="${isAlltime}" style="margin-bottom:0;">Driver Ranking — Alltime</h2>
-                <h2 th:unless="${isAlltime}" style="margin-bottom:0;">Driver Ranking — <span th:text="${selectedSeason.name}"></span></h2>
+                <h2 th:if="${isAlltime}" class="form-group--inline">Driver Ranking — Alltime</h2>
+                <h2 th:unless="${isAlltime}" class="form-group--inline">Driver Ranking — <span th:text="${selectedSeason.name}"></span></h2>
             </div>
             <input type="text" id="driverSearch" placeholder="Search drivers..." aria-label="Search drivers"
-                   style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg-input);color:var(--white);font-size:14px;width:220px;">
+                   class="search-input">
         </div>
         <div class="table-scroll">
         <table th:if="${!driverRanking.isEmpty()}" id="driverRankingTable">
@@ -104,7 +104,7 @@
                     <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Races">Races</th>
                     <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Best Position">Best Pos.</th>
                     <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Average Points">Avg</th>
-                    <th class="sortable" data-col="6" data-type="num" aria-label="Sort by Points" style="text-align:right">Points</th>
+                    <th class="sortable td-right" data-col="6" data-type="num" aria-label="Sort by Points">Points</th>
                 </tr>
             </thead>
             <tbody>
@@ -121,7 +121,7 @@
         </table>
         </div>
         <div id="noResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching drivers found.</p></div>
-        <div class="pagination" id="pagination" aria-label="Driver ranking pagination" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+        <div class="pagination pagination-bar" id="pagination" aria-label="Driver ranking pagination">
             <span id="pageInfo" class="text-dim"></span>
             <div class="actions">
                 <button id="prevPage" class="btn btn-secondary btn-sm" disabled>Previous</button>

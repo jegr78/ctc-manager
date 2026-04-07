@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.MatchScoringForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.MatchScoring;
@@ -33,19 +32,19 @@ public class MatchScoringService {
     }
 
     @Transactional
-    public MatchScoring save(MatchScoringForm form) {
+    public MatchScoring save(UUID id, String name, int pointsWin, int pointsDraw, int pointsLoss) {
         try {
-            if (form.getId() != null) {
-                var existing = findById(form.getId());
-                existing.setName(form.getName());
-                existing.setPointsWin(form.getPointsWin());
-                existing.setPointsDraw(form.getPointsDraw());
-                existing.setPointsLoss(form.getPointsLoss());
+            if (id != null) {
+                var existing = findById(id);
+                existing.setName(name);
+                existing.setPointsWin(pointsWin);
+                existing.setPointsDraw(pointsDraw);
+                existing.setPointsLoss(pointsLoss);
                 var saved = matchScoringRepository.saveAndFlush(existing);
                 log.info("Updated match scoring: {}", saved.getName());
                 return saved;
             } else {
-                var scoring = new MatchScoring(form.getName(), form.getPointsWin(), form.getPointsDraw(), form.getPointsLoss());
+                var scoring = new MatchScoring(name, pointsWin, pointsDraw, pointsLoss);
                 var saved = matchScoringRepository.saveAndFlush(scoring);
                 log.info("Created match scoring: {}", saved.getName());
                 return saved;

@@ -36,7 +36,7 @@
                     <label for="active">Active</label>
                 </div>
             </div>
-            <div class="actions" style="margin-top: 16px;">
+            <div class="actions mt-md">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/drivers}" class="btn btn-secondary">Cancel</a>
             </div>
@@ -71,10 +71,10 @@
     </script>
 
     <!-- Season assignments (only for existing drivers) -->
-    <div th:if="${driverForm.id != null}" class="card" style="margin-top: 16px;">
+    <div th:if="${driverForm.id != null}" class="card mt-md">
         <h2>Season Assignments</h2>
         <div class="table-scroll">
-            <table th:if="${seasonDrivers != null && !seasonDrivers.isEmpty()}" style="margin-bottom: 16px;">
+            <table th:if="${seasonDrivers != null && !seasonDrivers.isEmpty()}" class="mb-md">
                 <thead>
                     <tr><th>Season</th><th>Team</th></tr>
                 </thead>
@@ -86,7 +86,7 @@
                 </tbody>
             </table>
         </div>
-        <div th:if="${seasonDrivers == null || seasonDrivers.isEmpty()}" style="margin-bottom: 16px; color: #999;">
+        <div th:if="${seasonDrivers == null || seasonDrivers.isEmpty()}" class="mb-md text-dim">
             Not assigned to any season yet.
         </div>
         <form th:action="@{/admin/drivers/{id}/assign(id=${driverForm.id})}" method="post">

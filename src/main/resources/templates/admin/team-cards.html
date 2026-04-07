@@ -5,18 +5,18 @@
 <section>
     <h1>Team Cards</h1>
     <div class="card">
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
-            <form th:action="@{/admin/tools/team-cards}" method="get" style="display:flex;gap:8px;align-items:center;">
-                <label for="seasonId" style="white-space:nowrap;">Season:</label>
+        <div class="actions" style="flex-wrap:wrap;">
+            <form th:action="@{/admin/tools/team-cards}" method="get" class="btn-with-hint">
+                <label for="seasonId" class="text-nowrap">Season:</label>
                 <select name="seasonId" id="seasonId" onchange="this.form.submit()"
-                        style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:14px;">
+                        class="search-input" style="width:auto;">
                     <option value="" th:if="${seasons.isEmpty()}">No seasons</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
                             th:selected="${s.id == selectedSeasonId}"></option>
                 </select>
             </form>
-            <div style="display:flex;gap:8px;margin-left:auto;">
-                <form th:if="${season != null}" th:action="@{/admin/tools/team-cards/generate-all}" method="post" style="display:flex;margin:0;" id="generateAllForm">
+            <div class="actions" style="margin-left:auto;">
+                <form th:if="${season != null}" th:action="@{/admin/tools/team-cards/generate-all}" method="post" class="form-inline" style="display:flex;margin:0;" id="generateAllForm">
                     <input type="hidden" name="seasonId" th:value="${season.id}">
                     <button type="submit" id="generateAllBtn" class="btn btn-secondary">Generate All</button>
                 </form>
@@ -26,19 +26,19 @@
         </div>
     </div>
 
-    <div th:if="${season != null && cardStates != null}" style="margin-top:16px;">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:16px;">
-            <div th:each="cs : ${cardStates}" class="card" style="padding:12px;text-align:center;">
-                <div th:if="${cs.exists()}" style="margin-bottom:8px;">
-                    <img th:src="${cs.cardPath()}" alt="" style="width:100%;border-radius:6px;">
+    <div th:if="${season != null && cardStates != null}" class="mt-md">
+        <div class="card-grid">
+            <div th:each="cs : ${cardStates}" class="card card--compact">
+                <div th:if="${cs.exists()}" class="mb-xs">
+                    <img th:src="${cs.cardPath()}" alt="" class="card-img">
                 </div>
-                <div th:unless="${cs.exists()}" style="aspect-ratio:9/16;background:var(--bg-input);border-radius:6px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;">
+                <div th:unless="${cs.exists()}" class="img-placeholder">
                     <span class="text-dim">Not generated</span>
                 </div>
                 <strong th:text="${cs.seasonTeam().team.shortName}"></strong>
                 <span th:if="${cs.seasonTeam().rating != null}" class="text-dim"
                       th:text="' — Rating: ' + ${cs.seasonTeam().rating}"></span>
-                <div style="margin-top:8px;display:flex;gap:4px;justify-content:center;">
+                <div class="actions--tight mt-xs">
                     <form th:action="@{/admin/tools/team-cards/generate/{id}(id=${cs.seasonTeam().id})}" method="post">
                         <button type="submit" class="btn btn-primary btn-sm">Generate</button>
                     </form>
@@ -50,14 +50,14 @@
         </div>
     </div>
 
-    <div th:if="${season == null}" class="card" style="margin-top:16px;">
-        <div class="empty-state" style="padding:24px;"><p>Select a season to manage team cards.</p></div>
+    <div th:if="${season == null}" class="card mt-md">
+        <div class="empty-state empty-state--md"><p>Select a season to manage team cards.</p></div>
     </div>
 
     <!-- Fullscreen overlay shown during Generate All -->
-    <div id="generateOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
-        <div style="background:var(--bg-card);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:32px 48px;text-align:center;max-width:400px;">
-            <div style="margin-bottom:12px;color:var(--accent);font-weight:700;font-size:18px;">Generating team cards...</div>
+    <div id="generateOverlay" class="overlay">
+        <div class="overlay-panel">
+            <div class="overlay-title">Generating team cards...</div>
             <div class="text-dim">Rendering cards for all teams via headless browser.<br>This may take a moment.</div>
         </div>
     </div>

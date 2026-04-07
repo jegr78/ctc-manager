@@ -191,6 +191,40 @@ class TeamCardControllerTest {
     }
 
     @Test
+    void givenRuntimeException_whenGenerateCard_thenReturns3xxWithError() throws Exception {
+        // given
+        var season = testHelper.createSeason("Test_TC_REx Season");
+        var team = testHelper.createTeam("TC REx Team", "TRX");
+        season.addTeam(team);
+        var seasonTeam = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), team.getId()).orElseThrow();
+
+        when(teamCardService.generateCard(any(SeasonTeam.class)))
+                .thenThrow(new RuntimeException("Playwright failure"));
+
+        // when
+        mockMvc.perform(post("/admin/tools/team-cards/generate/" + seasonTeam.getId()))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("errorMessage"));
+    }
+
+    @Test
+    void givenRuntimeException_whenGenerateAllCards_thenReturns3xxWithError() throws Exception {
+        // given
+        var season = testHelper.createSeason("Test_TC_AllREx Season");
+
+        when(teamCardService.generateAllCards(any()))
+                .thenThrow(new RuntimeException("Playwright failure"));
+
+        // when
+        mockMvc.perform(post("/admin/tools/team-cards/generate-all")
+                        .param("seasonId", season.getId().toString()))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("errorMessage"));
+    }
+
+    @Test
     void givenSeasonWithCards_whenDownloadAllAsZip_thenReturnsZipFile() throws Exception {
         // given
         var season = testHelper.createSeason("Test_TC_ZIP Season");

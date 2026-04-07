@@ -12,16 +12,16 @@
     </div>
 
     <!-- Filter Bar -->
-    <div th:if="${matchday == null}" class="card" style="padding:12px 16px; margin-bottom:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <form th:action="@{/admin/races}" method="get" style="display:flex; gap:8px; align-items:center;">
-            <label class="text-dim" style="font-size:13px; white-space:nowrap;">Season</label>
+    <div th:if="${matchday == null}" class="card filter-bar">
+        <form th:action="@{/admin/races}" method="get" class="btn-with-hint">
+            <label class="text-dim text-sm text-nowrap">Season</label>
             <select name="seasonId" onchange="this.form.submit()" style="min-width:200px;">
                 <option value="">All Seasons</option>
                 <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
                         th:selected="${selectedSeasonId != null && selectedSeasonId.equals(s.id)}"></option>
             </select>
         </form>
-        <div style="flex:1;"></div>
+        <div class="flex-spacer"></div>
         <input type="text" id="raceFilter" placeholder="Filter by team, track, car..."
                style="width:240px; padding:6px 10px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-input); color:var(--white); font-size:13px;">
     </div>
@@ -40,21 +40,21 @@
                     <th class="sortable" data-col="6">Track</th>
                     <th class="sortable" data-col="7">Car</th>
                     <th>Context</th>
-                    <th style="text-align:center;">Score</th>
+                    <th class="td-center">Score</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 <tr th:each="race : ${races}">
-                    <td class="text-dim" style="font-size:13px;">
+                    <td class="text-dim text-sm">
                         <a th:href="@{/admin/seasons/{id}(id=${race.matchday.season.id})}" class="detail-link"
-                           th:text="${race.matchday.season.displayLabel}" style="font-size:13px;"></a>
+                           th:text="${race.matchday.season.displayLabel}"></a>
                     </td>
                     <td>
                         <a th:href="@{/admin/matchdays/{id}(id=${race.matchday.id})}" class="detail-link"
                            th:text="${race.matchday.label}"></a>
                     </td>
-                    <td class="text-dim" style="font-size:13px; white-space:nowrap;"
+                    <td class="text-dim text-sm text-nowrap"
                         th:data-london-time="${race.dateTime != null ? race.dateTime.toString().substring(0, 16) : ''}"
                         th:text="${race.dateTime != null ? #temporals.format(race.dateTime, 'dd.MM.yyyy HH:mm') : '-'}"></td>
                     <td>
@@ -74,11 +74,11 @@
                         <span th:if="${race.playoffMatchup != null}" class="badge" style="background:rgba(79,195,247,0.1); color:var(--accent);">Playoff</span>
                         <span th:if="${race.match != null && race.playoffMatchup == null}" class="badge badge-inactive">Match</span>
                     </td>
-                    <td style="text-align:center;">
+                    <td class="td-center">
                         <span th:if="${raceScores.containsKey(race.id)}" class="score-display" style="font-size:14px;"
                               th:with="scores=${raceScores[race.id]}">
                             <span th:classappend="${scores[0] > scores[1] ? 'score-win' : (scores[0] < scores[1] ? 'score-loss' : 'score-draw')}" th:text="${scores[0]}"></span>
-                            <span style="color:var(--text-dim);">:</span>
+                            <span class="match-score-separator">:</span>
                             <span th:classappend="${scores[1] > scores[0] ? 'score-win' : (scores[1] < scores[0] ? 'score-loss' : 'score-draw')}" th:text="${scores[1]}"></span>
                         </span>
                         <span th:unless="${raceScores.containsKey(race.id)}" class="badge badge-inactive">Open</span>

@@ -23,12 +23,12 @@
     </div>
 
     <!-- Generate Graphics -->
-    <div style="margin-bottom:16px;display:flex;justify-content:flex-end;gap:8px;align-items:center;flex-wrap:wrap;">
+    <div class="action-bar">
         <!-- Lineup Button -->
         <form th:if="${canGenerateLineup}" th:action="@{/admin/races/{id}/generate-lineup(id=${race.id})}" method="post">
             <button type="submit" class="btn btn-primary">Generate Lineup Graphic</button>
         </form>
-        <span th:if="${!canGenerateLineup && !lineupExists}" style="display:inline-flex;align-items:center;gap:8px;">
+        <span th:if="${!canGenerateLineup && !lineupExists}" class="btn-with-hint">
             <button class="btn btn-secondary" disabled>Generate Lineup Graphic</button>
             <small class="text-dim">
                 <span th:if="${lineupMissing}">No lineup assigned.</span>
@@ -40,7 +40,7 @@
         <form th:if="${canGenerateResults}" th:action="@{/admin/races/{id}/generate-results(id=${race.id})}" method="post">
             <button type="submit" class="btn btn-primary">Generate Results Graphic</button>
         </form>
-        <span th:if="${!canGenerateResults && !resultsExist}" style="display:inline-flex;align-items:center;gap:8px;">
+        <span th:if="${!canGenerateResults && !resultsExist}" class="btn-with-hint">
             <button class="btn btn-secondary" disabled>Generate Results Graphic</button>
             <small class="text-dim">
                 <span th:if="${resultsMissing}">No results entered.</span>
@@ -52,7 +52,7 @@
         <form th:if="${canGenerateSettings}" th:action="@{/admin/races/{id}/generate-settings(id=${race.id})}" method="post">
             <button type="submit" class="btn btn-primary">Generate Settings Graphic</button>
         </form>
-        <span th:if="${!canGenerateSettings && !settingsExist}" style="display:inline-flex;align-items:center;gap:8px;">
+        <span th:if="${!canGenerateSettings && !settingsExist}" class="btn-with-hint">
             <button class="btn btn-secondary" disabled>Generate Settings Graphic</button>
             <small class="text-dim">
                 <span th:if="${settingsMissing}">Settings incomplete.</span>
@@ -64,7 +64,7 @@
         <form th:if="${canGenerateOverlay}" th:action="@{/admin/races/{id}/generate-overlay(id=${race.id})}" method="post">
             <button type="submit" class="btn btn-primary">Generate Overlay Graphic</button>
         </form>
-        <span th:if="${!canGenerateOverlay && !overlayExists}" style="display:inline-flex;align-items:center;gap:8px;">
+        <span th:if="${!canGenerateOverlay && !overlayExists}" class="btn-with-hint">
             <button class="btn btn-secondary" disabled>Generate Overlay Graphic</button>
             <small class="text-dim">No match data.</small>
         </span>
@@ -74,48 +74,48 @@
             <button type="submit" class="btn btn-primary"
                     th:text="${hasCalendarEvent ? 'Update Calendar Event' : 'Create Calendar Event'}"></button>
         </form>
-        <span th:if="${!canCreateCalendarEvent && calendarAvailable}" style="display:inline-flex;align-items:center;gap:8px;">
+        <span th:if="${!canCreateCalendarEvent && calendarAvailable}" class="btn-with-hint">
             <button class="btn btn-secondary" disabled>Create Calendar Event</button>
             <small class="text-dim">Date/time or teams missing.</small>
         </span>
     </div>
 
     <!-- Score Banner -->
-    <div th:if="${homeTotal != null}" style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md); padding:24px; margin-bottom:16px; display:flex; align-items:center; justify-content:center; gap:32px;">
-        <div style="text-align:center; flex:1;"
+    <div th:if="${homeTotal != null}" class="score-banner">
+        <div class="score-banner__team"
              th:with="isWinner=${homeTotal > awayTotal}, isLoser=${homeTotal < awayTotal}">
-            <div style="font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin-bottom:4px;">Home</div>
-            <div style="font-size:16px; font-weight:600; margin-bottom:8px;"
+            <div class="score-banner__label">Home</div>
+            <div class="score-banner__name"
                  th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--white);')}"
                  th:text="${race.homeTeam.shortName}"></div>
-            <div style="font-size:36px; font-weight:700; font-variant-numeric:tabular-nums; margin-bottom:6px;"
+            <div class="score-banner__value"
                  th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--text-label);')}"
                  th:text="${homeTotal}"></div>
-            <div style="height:22px;">
-                <span th:if="${isWinner}" style="background:rgba(102,187,106,0.15); color:#66bb6a; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; letter-spacing:0.5px;">WIN</span>
-                <span th:if="${isLoser}" style="font-size:11px; color:var(--text-dim); letter-spacing:0.5px;">LOSS</span>
+            <div class="score-banner__result-area">
+                <span th:if="${isWinner}" class="result-badge--win">WIN</span>
+                <span th:if="${isLoser}" class="result-badge--loss">LOSS</span>
             </div>
         </div>
 
-        <div style="font-size:24px; color:var(--text-dim); font-weight:300;">:</div>
+        <div class="score-separator">:</div>
 
-        <div style="text-align:center; flex:1;"
+        <div class="score-banner__team"
              th:with="isWinner=${awayTotal > homeTotal}, isLoser=${awayTotal < homeTotal}">
-            <div style="font-size:13px; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); margin-bottom:4px;">Away</div>
-            <div style="font-size:16px; font-weight:600; margin-bottom:8px;"
+            <div class="score-banner__label">Away</div>
+            <div class="score-banner__name"
                  th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--white);')}"
                  th:text="${race.awayTeam?.shortName}"></div>
-            <div style="font-size:36px; font-weight:700; font-variant-numeric:tabular-nums; margin-bottom:6px;"
+            <div class="score-banner__value"
                  th:style="${isWinner ? 'color:#66bb6a;' : (isLoser ? 'color:#ef5350;' : 'color:var(--text-label);')}"
                  th:text="${awayTotal}"></div>
-            <div style="height:22px;">
-                <span th:if="${isWinner}" style="background:rgba(102,187,106,0.15); color:#66bb6a; padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; letter-spacing:0.5px;">WIN</span>
-                <span th:if="${isLoser}" style="font-size:11px; color:var(--text-dim); letter-spacing:0.5px;">LOSS</span>
+            <div class="score-banner__result-area">
+                <span th:if="${isWinner}" class="result-badge--win">WIN</span>
+                <span th:if="${isLoser}" class="result-badge--loss">LOSS</span>
             </div>
         </div>
 
-        <div th:if="${homeTotal == awayTotal}" style="position:absolute;">
-            <span style="background:rgba(255,255,255,0.1); color:var(--text-label); padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700; letter-spacing:0.5px;">DRAW</span>
+        <div th:if="${homeTotal == awayTotal}" class="score-banner__draw-overlay">
+            <span class="result-badge--draw">DRAW</span>
         </div>
     </div>
 
@@ -135,7 +135,7 @@
             <span class="label">Context</span>
             <span th:if="${race.playoffMatchup != null}">
                 <a th:href="@{/admin/playoffs/matchup/{id}(id=${race.playoffMatchup.id})}" class="detail-link">
-                    <span style="background:rgba(79,195,247,0.1); color:var(--accent); padding:2px 8px; border-radius:12px; font-size:12px; font-weight:600;">Playoff</span>
+                    <span class="context-badge">Playoff</span>
                     <span th:text="' Matchup #' + ${race.playoffMatchup.bracketPosition}"></span>
                 </a>
             </span>
@@ -148,26 +148,26 @@
             <div th:if="${!race.results.isEmpty()}">
                 <table>
                     <thead>
-                        <tr><th>Pos</th><th>Team</th><th>Driver</th><th style="text-align:center;">Quali</th><th style="text-align:right;">Race</th><th style="text-align:right;">Quali</th><th style="text-align:right;">FL</th><th style="text-align:right;">Total</th></tr>
+                        <tr><th>Pos</th><th>Team</th><th>Driver</th><th class="td-center">Quali</th><th class="td-right">Race</th><th class="td-right">Quali</th><th class="td-right">FL</th><th class="td-right">Total</th></tr>
                     </thead>
                     <tbody>
                         <tr th:each="result : ${race.results}">
-                            <td style="font-variant-numeric:tabular-nums;" th:text="${result.position}"></td>
+                            <td class="td-numeric" th:text="${result.position}"></td>
                             <td>
-                                <span style="font-size:12px; font-weight:600;"
+                                <span class="td-label"
                                       th:text="${driverTeamMap != null ? driverTeamMap[result.driver.id] : '?'}"></span>
                             </td>
                             <td><a th:href="@{/admin/drivers/{id}(id=${result.driver.id})}" class="detail-link" th:text="${result.driver.psnId}"></a></td>
-                            <td style="text-align:center; font-variant-numeric:tabular-nums;" th:text="${result.qualiPosition}"></td>
-                            <td style="text-align:right; font-variant-numeric:tabular-nums;" th:text="${result.pointsRace}"></td>
-                            <td style="text-align:right; font-variant-numeric:tabular-nums; color:var(--text-dim);" th:text="${result.pointsQuali > 0 ? result.pointsQuali : '-'}"></td>
-                            <td style="text-align:right; font-variant-numeric:tabular-nums; color:var(--text-dim);" th:text="${result.pointsFl > 0 ? result.pointsFl : '-'}"></td>
-                            <td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:700;" th:text="${result.pointsTotal}"></td>
+                            <td class="td-center td-numeric" th:text="${result.qualiPosition}"></td>
+                            <td class="td-right td-numeric" th:text="${result.pointsRace}"></td>
+                            <td class="td-right td-numeric text-dim" th:text="${result.pointsQuali > 0 ? result.pointsQuali : '-'}"></td>
+                            <td class="td-right td-numeric text-dim" th:text="${result.pointsFl > 0 ? result.pointsFl : '-'}"></td>
+                            <td class="td-right td-numeric-bold" th:text="${result.pointsTotal}"></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <div th:if="${race.results.isEmpty()}" class="empty-state" style="padding:16px;"><p>No results yet.</p></div>
+            <div th:if="${race.results.isEmpty()}" class="empty-state empty-state--compact"><p>No results yet.</p></div>
         </div>
     </div>
 
@@ -185,12 +185,12 @@
                 <div class="attachment-info">
                     <a th:if="${att.type.name() == 'LINK'}" th:href="${att.url}" target="_blank" rel="noopener" class="detail-link" th:text="${att.name}"></a>
                     <a th:if="${att.type.name() == 'FILE'}" th:href="${att.url}" target="_blank" class="detail-link" th:text="${att.name}"></a>
-                    <span class="text-dim" style="font-size:12px;">
+                    <span class="text-dim form-hint">
                         <span th:if="${att.type.name() == 'LINK'}" th:text="${att.url}"></span>
                         <span th:text="${att.createdAt != null ? #temporals.format(att.createdAt, 'dd.MM.yyyy HH:mm') : ''}"></span>
                     </span>
                 </div>
-                <div style="display:flex;gap:6px;align-items:center;">
+                <div class="color-pair">
                     <a th:if="${att.type.name() == 'FILE'}"
                        th:href="@{/admin/races/attachments/{aid}/download(aid=${att.id})}"
                        class="btn btn-secondary btn-sm">Download</a>
@@ -201,31 +201,31 @@
                 </div>
             </div>
         </div>
-        <div th:if="${race.attachments.isEmpty()}" class="empty-state" style="padding:16px;">
+        <div th:if="${race.attachments.isEmpty()}" class="empty-state empty-state--compact">
             <p>No attachments yet. Upload files or add links below.</p>
         </div>
 
-        <div style="margin-top:16px;display:flex;gap:16px;flex-wrap:wrap;">
+        <div class="attachment-forms">
             <form th:action="@{/admin/races/{id}/attachments/upload(id=${race.id})}" method="post" enctype="multipart/form-data"
-                  style="display:flex;gap:8px;align-items:flex-end;">
-                <div class="form-group" style="margin-bottom:0;">
+                  class="inline-form">
+                <div class="form-group form-group--inline">
                     <label>Upload File</label>
                     <input type="file" name="file" required accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
-                           style="padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
-                    <small class="text-dim" style="display:block;margin-top:2px;">PNG, JPG, WebP, GIF, PDF. Max 10 MB</small>
+                           class="file-input">
+                    <small class="text-dim form-hint">PNG, JPG, WebP, GIF, PDF. Max 10 MB</small>
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm">Upload</button>
             </form>
 
             <form th:action="@{/admin/races/{id}/attachments/link(id=${race.id})}" method="post"
-                  style="display:flex;gap:8px;align-items:flex-end;">
-                <div class="form-group" style="margin-bottom:0;">
+                  class="inline-form">
+                <div class="form-group form-group--inline">
                     <label>Add Link</label>
-                    <div style="display:flex;gap:8px;">
+                    <div class="inline-form">
                         <input type="text" name="name" placeholder="Title" required
-                               style="width:120px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
+                               class="input-title">
                         <input type="url" name="url" placeholder="https://..." required
-                               style="width:200px;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
+                               class="input-url">
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm">Add</button>

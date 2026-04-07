@@ -30,35 +30,35 @@
 
         <!-- Matches -->
         <div class="detail-section">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="section-header">
                 <h2 th:text="'Matches (' + ${matchday.matches.size()} + ')'"></h2>
                 <a th:href="@{/admin/matches/new(matchdayId=${matchday.id})}" class="btn btn-primary btn-sm">+ Match</a>
             </div>
 
-            <div th:if="${!matchday.matches.isEmpty()}" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
-                <div th:each="match : ${matchday.matches}" style="background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden;">
+            <div th:if="${!matchday.matches.isEmpty()}" class="match-list">
+                <div th:each="match : ${matchday.matches}" class="match-row">
                     <!-- Match Header -->
-                    <div style="display:flex; align-items:center; padding:12px 16px;"
+                    <div class="match-header"
                          th:styleappend="${match.bye ? 'opacity:0.6;' : ''}"
                          th:classappend="${!match.races.isEmpty() ? '' : ''}">
-                        <div style="flex:1; text-align:right; font-weight:600; color:var(--white);" th:text="${match.homeTeam.shortName}"></div>
-                        <div th:unless="${match.bye}" style="padding:0 16px; display:flex; align-items:center; gap:8px;">
-                            <span th:if="${match.homeScore != null}" style="font-size:20px; font-weight:700;"
+                        <div class="match-team-name match-team-name--right" th:text="${match.homeTeam.shortName}"></div>
+                        <div th:unless="${match.bye}" class="match-score-area">
+                            <span th:if="${match.homeScore != null}" class="match-score-value"
                                   th:classappend="${match.homeScore > match.awayScore ? 'score-win' : (match.homeScore < match.awayScore ? 'score-loss' : 'score-draw')}"
                                   th:text="${match.homeScore}"></span>
-                            <span th:unless="${match.homeScore != null}" style="font-size:20px; font-weight:700; color:var(--text-dim);">–</span>
-                            <span style="color:var(--text-dim);">:</span>
-                            <span th:if="${match.awayScore != null}" style="font-size:20px; font-weight:700;"
+                            <span th:unless="${match.homeScore != null}" class="match-score-value match-score-value--dim">–</span>
+                            <span class="match-score-separator">:</span>
+                            <span th:if="${match.awayScore != null}" class="match-score-value"
                                   th:classappend="${match.awayScore > match.homeScore ? 'score-win' : (match.awayScore < match.homeScore ? 'score-loss' : 'score-draw')}"
                                   th:text="${match.awayScore}"></span>
-                            <span th:unless="${match.awayScore != null}" style="font-size:20px; font-weight:700; color:var(--text-dim);">–</span>
+                            <span th:unless="${match.awayScore != null}" class="match-score-value match-score-value--dim">–</span>
                         </div>
-                        <div th:if="${match.bye}" style="padding:0 16px;">
-                            <span style="font-size:13px; color:var(--text-dim); font-style:italic;">Bye</span>
+                        <div th:if="${match.bye}" class="match-score-area">
+                            <span class="match-bye">Bye</span>
                         </div>
-                        <div th:unless="${match.bye}" style="flex:1; font-weight:600; color:var(--white);" th:text="${match.awayTeam?.shortName}"></div>
-                        <div th:if="${match.bye}" style="flex:1;"></div>
-                        <div style="margin-left:16px;">
+                        <div th:unless="${match.bye}" class="match-team-name" th:text="${match.awayTeam?.shortName}"></div>
+                        <div th:if="${match.bye}" class="flex-spacer"></div>
+                        <div class="ml-md">
                             <span th:if="${matchday.season.legs > 1}" class="badge"
                                   th:classappend="${match.races.size() >= matchday.season.legs ? 'badge-active' : 'badge-inactive'}"
                                   th:text="${match.races.size() + '/' + matchday.season.legs + ' Legs'}"></span>
@@ -67,28 +67,28 @@
                     </div>
 
                     <!-- Legs (nur anzeigen bei Multi-Leg oder wenn Legs vorhanden) -->
-                    <div th:if="${matchday.season.legs > 1 && !match.races.isEmpty()}" style="padding:0 16px;">
-                        <div th:each="race, iter : ${match.races}" style="display:flex; align-items:center; padding:8px 0; font-size:13px;"
+                    <div th:if="${matchday.season.legs > 1 && !match.races.isEmpty()}" class="legs-container">
+                        <div th:each="race, iter : ${match.races}" class="leg-row"
                              th:styleappend="${!iter.last ? 'border-bottom:1px solid var(--border);' : ''}">
-                            <div style="width:50px; color:var(--accent); font-weight:600;" th:text="'Leg ' + ${iter.count}"></div>
-                            <div style="flex:1; color:var(--text-dim);" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
-                            <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link" style="font-size:11px;">
+                            <div class="leg-label" th:text="'Leg ' + ${iter.count}"></div>
+                            <div class="leg-detail" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
+                            <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link leg-link">
                                 <span th:if="${race.results.isEmpty()}" class="badge badge-inactive">Open</span>
                                 <span th:unless="${race.results.isEmpty()}" class="badge badge-active" th:text="${race.results.size() + ' Results'}"></span>
                             </a>
                         </div>
-                        <div th:if="${match.homeScore != null && !match.bye}" style="padding:8px 0; border-top:1px solid var(--border);">
-                            <form th:action="@{/admin/matchdays/{mdId}/matches/{mId}/download-match-results(mdId=${matchday.id}, mId=${match.id})}" method="post" style="display:inline;">
+                        <div th:if="${match.homeScore != null && !match.bye}" class="leg-download-row">
+                            <form th:action="@{/admin/matchdays/{mdId}/matches/{mId}/download-match-results(mdId=${matchday.id}, mId=${match.id})}" method="post" class="form-inline">
                                 <button type="submit" class="btn btn-secondary btn-sm">&#11015; Match Results</button>
                             </form>
                         </div>
                     </div>
 
                     <!-- Single-Leg: direkt Link zum Race -->
-                    <div th:if="${matchday.season.legs <= 1 && !match.races.isEmpty()}" style="padding:0 16px 8px;">
-                        <div th:each="race : ${match.races}" style="display:flex; align-items:center; padding:4px 0; font-size:13px;">
-                            <div style="flex:1; color:var(--text-dim);" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
-                            <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link" style="font-size:11px;">
+                    <div th:if="${matchday.season.legs <= 1 && !match.races.isEmpty()}" class="legs-container--single">
+                        <div th:each="race : ${match.races}" class="single-leg-row">
+                            <div class="leg-detail" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
+                            <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link leg-link">
                                 <span th:if="${race.results.isEmpty()}" class="badge badge-inactive">Open</span>
                                 <span th:unless="${race.results.isEmpty()}" class="badge badge-active" th:text="${race.results.size() + ' Results'}"></span>
                             </a>
@@ -96,43 +96,43 @@
                     </div>
                 </div>
             </div>
-            <div th:if="${matchday.matches.isEmpty()}" class="empty-state" style="padding:16px;"><p>No matches yet.</p></div>
+            <div th:if="${matchday.matches.isEmpty()}" class="empty-state empty-state--compact"><p>No matches yet.</p></div>
         </div>
 
         <!-- Graphics -->
-        <div class="detail-section" style="margin-top:32px;">
+        <div class="detail-section mt-lg">
             <h2>Graphics</h2>
-            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:12px;">
-                <form th:if="${hasMatches}" th:action="@{/admin/matchdays/{id}/download-overview(id=${matchday.id})}" method="post" style="display:inline;">
+            <div class="graphics-actions">
+                <form th:if="${hasMatches}" th:action="@{/admin/matchdays/{id}/download-overview(id=${matchday.id})}" method="post" class="form-inline">
                     <button type="submit" class="btn btn-primary btn-sm">&#11015; Overview</button>
                 </form>
                 <button th:unless="${hasMatches}" class="btn btn-sm" disabled>&#11015; Overview</button>
 
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <form th:if="${hasSchedule}" th:action="@{/admin/matchdays/{id}/download-schedule(id=${matchday.id})}" method="post" style="display:inline;">
+                <div class="btn-with-hint">
+                    <form th:if="${hasSchedule}" th:action="@{/admin/matchdays/{id}/download-schedule(id=${matchday.id})}" method="post" class="form-inline">
                         <button type="submit" class="btn btn-primary btn-sm">&#11015; Schedule</button>
                     </form>
                     <button th:unless="${hasSchedule}" class="btn btn-sm" disabled>&#11015; Schedule</button>
-                    <span th:if="${hasSchedule && scheduleMissingCount > 0}" class="text-dim" style="font-size:12px;"
+                    <span th:if="${hasSchedule && scheduleMissingCount > 0}" class="text-dim text-xs"
                           th:text="${scheduleMissingCount + ' match(es) missing datetime'}"></span>
-                    <span th:unless="${hasSchedule}" class="text-dim" style="font-size:12px;">No matches with datetime</span>
+                    <span th:unless="${hasSchedule}" class="text-dim text-xs">No matches with datetime</span>
                 </div>
 
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <form th:if="${hasResults}" th:action="@{/admin/matchdays/{id}/download-results(id=${matchday.id})}" method="post" style="display:inline;">
+                <div class="btn-with-hint">
+                    <form th:if="${hasResults}" th:action="@{/admin/matchdays/{id}/download-results(id=${matchday.id})}" method="post" class="form-inline">
                         <button type="submit" class="btn btn-primary btn-sm">&#11015; Results</button>
                     </form>
                     <button th:unless="${hasResults}" class="btn btn-sm" disabled>&#11015; Results</button>
-                    <span th:unless="${hasResults}" class="text-dim" style="font-size:12px;">No match results yet</span>
+                    <span th:unless="${hasResults}" class="text-dim text-xs">No match results yet</span>
                 </div>
             </div>
-            <p class="text-dim" style="font-size:12px; margin-top:8px;">Graphics are generated on-the-fly and downloaded as PNG (1920&#215;1080).</p>
+            <p class="text-dim graphics-hint">Graphics are generated on-the-fly and downloaded as PNG (1920&#215;1080).</p>
         </div>
 
-        <div th:if="${!lineupsByTeam.isEmpty()}" class="detail-section" style="margin-top:32px;">
+        <div th:if="${!lineupsByTeam.isEmpty()}" class="detail-section mt-lg">
             <h2>Lineup</h2>
-            <div th:each="entry : ${lineupsByTeam}" style="margin-bottom:12px;">
-                <h3 th:text="${entry.key}" style="margin-bottom:4px;"></h3>
+            <div th:each="entry : ${lineupsByTeam}" class="lineup-entry">
+                <h3 th:text="${entry.key}"></h3>
                 <div class="chip-list">
                     <span th:each="lu : ${entry.value}" class="chip">
                         <span th:text="${lu.driver.psnId}"></span>

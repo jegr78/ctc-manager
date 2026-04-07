@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.CarForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Car;
@@ -96,15 +95,12 @@ class CarServiceTest {
     class SaveTest {
 
         @Test
-        void givenNewCarForm_whenSave_thenCreatesCar() {
+        void givenNewCar_whenSave_thenCreatesCar() {
             // given
-            var form = new CarForm();
-            form.setManufacturer("Honda");
-            form.setName("NSX");
             when(carRepository.saveAndFlush(any(Car.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = carService.save(form);
+            var result = carService.save(null, "Honda", "NSX");
 
             // then
             assertThat(result.getManufacturer()).isEqualTo("Honda");
@@ -112,22 +108,17 @@ class CarServiceTest {
         }
 
         @Test
-        void givenExistingCarForm_whenSave_thenUpdatesCar() {
+        void givenExistingCar_whenSave_thenUpdatesCar() {
             // given
             var id = UUID.randomUUID();
             var existing = new Car("Old Manufacturer", "Old Name");
             existing.setId(id);
 
-            var form = new CarForm();
-            form.setId(id);
-            form.setManufacturer("New Manufacturer");
-            form.setName("New Name");
-
             when(carRepository.findById(id)).thenReturn(Optional.of(existing));
             when(carRepository.saveAndFlush(any(Car.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = carService.save(form);
+            var result = carService.save(id, "New Manufacturer", "New Name");
 
             // then
             assertThat(result.getManufacturer()).isEqualTo("New Manufacturer");
@@ -137,14 +128,11 @@ class CarServiceTest {
         @Test
         void givenDuplicateCar_whenSave_thenThrowsBusinessRuleException() {
             // given
-            var form = new CarForm();
-            form.setManufacturer("Honda");
-            form.setName("NSX");
             when(carRepository.saveAndFlush(any(Car.class)))
                     .thenThrow(new DataIntegrityViolationException("unique constraint"));
 
             // when / then
-            assertThatThrownBy(() -> carService.save(form))
+            assertThatThrownBy(() -> carService.save(null, "Honda", "NSX"))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("already exists");
         }
@@ -284,6 +272,24 @@ class CarServiceTest {
             assertThatThrownBy(() -> carService.uploadImage(id, image))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("Image upload failed");
+        }
+
+        @Test
+        void givenRuntimeException_whenUploadImage_thenPropagates() throws IOException {
+            // given
+            var id = UUID.randomUUID();
+            var car = new Car("Honda", "NSX");
+            car.setId(id);
+            var image = mock(MultipartFile.class);
+
+            when(carRepository.findById(id)).thenReturn(Optional.of(car));
+            when(fileStorageService.storeImage("cars", id, image))
+                    .thenThrow(new RuntimeException("unexpected error"));
+
+            // when / then
+            assertThatThrownBy(() -> carService.uploadImage(id, image))
+                    .isInstanceOf(RuntimeException.class)
+                    .isNotInstanceOf(BusinessRuleException.class);
         }
     }
 }

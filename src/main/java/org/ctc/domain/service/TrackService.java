@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.TrackForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Track;
@@ -14,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,15 +39,15 @@ public class TrackService {
     }
 
     @Transactional
-    public Track save(TrackForm form) {
+    public Track save(UUID id, String name, String country) {
         Track track;
-        if (form.getId() != null) {
-            track = trackRepository.findById(form.getId())
-                    .orElseThrow(() -> new EntityNotFoundException("Track", form.getId()));
-            track.setName(form.getName());
-            track.setCountry(form.getCountry());
+        if (id != null) {
+            track = trackRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Track", id));
+            track.setName(name);
+            track.setCountry(country);
         } else {
-            track = new Track(form.getName(), form.getCountry());
+            track = new Track(name, country);
         }
         try {
             track = trackRepository.saveAndFlush(track);
@@ -93,7 +93,7 @@ public class TrackService {
             track.setImageUrl(url);
             trackRepository.save(track);
             log.info("Updated image for track: {}", track.getName());
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new BusinessRuleException("Image upload failed: " + e.getMessage());
         }
     }

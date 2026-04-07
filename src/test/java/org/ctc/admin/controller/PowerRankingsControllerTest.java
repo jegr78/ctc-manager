@@ -1,6 +1,8 @@
 package org.ctc.admin.controller;
 
 import org.ctc.TestHelper;
+import org.ctc.admin.dto.RankedTeamData;
+import org.ctc.admin.service.PowerRankingsGraphicService;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.model.Team;
@@ -13,11 +15,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.UUID;
+
 import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -31,6 +42,8 @@ class PowerRankingsControllerTest {
     @Autowired private SeasonTeamRepository seasonTeamRepository;
     @Autowired private TeamRepository teamRepository;
     @Autowired private TestHelper testHelper;
+
+    @MockitoBean private PowerRankingsGraphicService powerRankingsGraphicService;
 
     private Season season;
     private Team teamA;
@@ -69,6 +82,11 @@ class PowerRankingsControllerTest {
 
     @Test
     void givenSeasonSelected_whenGetPowerRankings_thenReturnsTeams() throws Exception {
+        // given — stub loadTeamsForSeasonGroup since service is mocked
+        var entry1 = new RankedTeamData(teamA.getId(), "PR Alpha Racing", "PR-ALF", null, "#FF0000", 1500);
+        var entry2 = new RankedTeamData(teamB.getId(), "PR Beta Racing", "PR-BET", null, "#0000FF", 1400);
+        when(powerRankingsGraphicService.loadTeamsForSeasonGroup(2026, 7)).thenReturn(List.of(entry1, entry2));
+
         mockMvc.perform(get("/admin/tools/power-rankings")
                         .param("year", "2026")
                         .param("number", "7"))
@@ -82,10 +100,29 @@ class PowerRankingsControllerTest {
 
     @Test
     void givenNonExistentSeason_whenGetPowerRankings_thenReturnsEmptyTeams() throws Exception {
+        // given — stub loadTeamsForSeasonGroup to return empty list
+        when(powerRankingsGraphicService.loadTeamsForSeasonGroup(2099, 99)).thenReturn(List.of());
+
         mockMvc.perform(get("/admin/tools/power-rankings")
                         .param("year", "2099")
                         .param("number", "99"))
                 .andExpect(status().isOk())
                 .andExpect(model().attribute("teams", empty()));
+    }
+
+    @Test
+    void givenRuntimeException_whenDownloadRankingGraphic_thenReturns500() throws Exception {
+        // given
+        when(powerRankingsGraphicService.generateRankings(anyInt(), anyInt(), anyString(), any()))
+                .thenThrow(new RuntimeException("Playwright failure"));
+
+        // when
+        mockMvc.perform(post("/admin/tools/power-rankings/download")
+                        .param("year", "2026")
+                        .param("number", "7")
+                        .param("subtitle", "Test")
+                        .param("teamIds", UUID.randomUUID().toString()))
+                // then
+                .andExpect(status().isInternalServerError());
     }
 }

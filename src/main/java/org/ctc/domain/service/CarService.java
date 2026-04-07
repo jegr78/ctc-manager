@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.CarForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Car;
@@ -14,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,15 +39,15 @@ public class CarService {
     }
 
     @Transactional
-    public Car save(CarForm form) {
+    public Car save(UUID id, String manufacturer, String name) {
         Car car;
-        if (form.getId() != null) {
-            car = carRepository.findById(form.getId())
-                    .orElseThrow(() -> new EntityNotFoundException("Car", form.getId()));
-            car.setManufacturer(form.getManufacturer());
-            car.setName(form.getName());
+        if (id != null) {
+            car = carRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Car", id));
+            car.setManufacturer(manufacturer);
+            car.setName(name);
         } else {
-            car = new Car(form.getManufacturer(), form.getName());
+            car = new Car(manufacturer, name);
         }
         try {
             car = carRepository.saveAndFlush(car);
@@ -93,7 +93,7 @@ public class CarService {
             car.setImageUrl(url);
             carRepository.save(car);
             log.info("Updated image for car: {} {}", car.getManufacturer(), car.getName());
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new BusinessRuleException("Image upload failed: " + e.getMessage());
         }
     }

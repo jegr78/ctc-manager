@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.SeasonForm;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -56,6 +55,18 @@ public class SeasonManagementService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<Season> findActiveSeason() {
+        return seasonRepository.findAll().stream()
+                .filter(Season::isActive)
+                .findFirst();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Season> findByIdOptional(UUID id) {
+        return seasonRepository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
     public SeasonDetailData getDetailData(UUID id) {
         var season = findById(id);
         var playoff = playoffRepository.findBySeasonId(id).orElse(null);
@@ -78,34 +89,37 @@ public class SeasonManagementService {
     }
 
     @Transactional
-    public Season save(SeasonForm form, UUID raceScoringId, UUID matchScoringId) {
+    public Season save(UUID id, String name, int year, int number, String description,
+                       LocalDate startDate, LocalDate endDate, boolean active,
+                       SeasonFormat format, Integer totalRounds, int legs,
+                       Integer eventDurationMinutes, UUID raceScoringId, UUID matchScoringId) {
         var raceScoring = raceScoringRepository.findById(raceScoringId)
                 .orElseThrow(() -> new EntityNotFoundException("RaceScoring", raceScoringId));
         var matchScoring = matchScoringRepository.findById(matchScoringId)
                 .orElseThrow(() -> new EntityNotFoundException("MatchScoring", matchScoringId));
 
         Season season;
-        if (form.getId() != null) {
-            season = findById(form.getId());
+        if (id != null) {
+            season = findById(id);
         } else {
             season = new Season();
         }
-        season.setName(form.getName());
-        season.setYear(form.getYear());
-        season.setNumber(form.getNumber());
-        season.setDescription(form.getDescription());
-        season.setStartDate(form.getStartDate());
-        season.setEndDate(form.getEndDate());
-        season.setActive(form.isActive());
-        season.setFormat(form.getFormat());
-        season.setTotalRounds(form.getTotalRounds());
-        season.setLegs(form.getLegs());
-        season.setEventDurationMinutes(form.getEventDurationMinutes());
+        season.setName(name);
+        season.setYear(year);
+        season.setNumber(number);
+        season.setDescription(description);
+        season.setStartDate(startDate);
+        season.setEndDate(endDate);
+        season.setActive(active);
+        season.setFormat(format);
+        season.setTotalRounds(totalRounds);
+        season.setLegs(legs);
+        season.setEventDurationMinutes(eventDurationMinutes);
         season.setRaceScoring(raceScoring);
         season.setMatchScoring(matchScoring);
 
         season = seasonRepository.save(season);
-        if (form.getId() != null) {
+        if (id != null) {
             log.info("Updated season: {}", season.getName());
         } else {
             log.info("Created season: {}", season.getName());

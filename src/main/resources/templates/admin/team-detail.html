@@ -40,19 +40,19 @@
             </div>
         </div>
 
-        <div class="detail-section" style="margin-top:32px;">
+        <div class="detail-section mt-lg">
             <h2>Seasons &amp; Drivers</h2>
-            <div th:if="${seasonDriverGroups.isEmpty() && seasons.isEmpty()}" class="empty-state" style="padding:16px;">
+            <div th:if="${seasonDriverGroups.isEmpty() && seasons.isEmpty()}" class="empty-state empty-state--compact">
                 <p>Not assigned to any season.</p>
             </div>
-            <div th:if="${!seasons.isEmpty() && seasonDriverGroups.isEmpty()}" class="empty-state" style="padding:16px;">
+            <div th:if="${!seasons.isEmpty() && seasonDriverGroups.isEmpty()}" class="empty-state empty-state--compact">
                 <p>Assigned to
                     <span th:text="${seasons.size()}"></span> season(s) but no drivers assigned yet.
                 </p>
-                <div class="chip-list" style="margin-top:8px;">
+                <div class="chip-list mt-xs">
                     <a th:each="s : ${seasons}" th:href="@{/admin/seasons/{id}(id=${s.id})}" class="chip">
                         <span th:text="${s.displayLabel}"></span>
-                        <span th:if="${s.active}" class="badge badge-active" style="margin-left:6px;font-size:11px;">Active</span>
+                        <span th:if="${s.active}" class="badge badge-active badge--inline">Active</span>
                     </a>
                 </div>
             </div>
@@ -60,7 +60,7 @@
                 <details class="season-accordion" th:open="${group.season.active}">
                     <summary class="season-header">
                         <span class="season-header-title" th:text="${group.season.displayLabel}"></span>
-                        <span th:if="${group.season.active}" class="badge badge-active" style="margin-left:6px;font-size:11px;">Active</span>
+                        <span th:if="${group.season.active}" class="badge badge-active badge--inline">Active</span>
                         <span class="text-dim" th:text="'(' + ${group.totalDriverCount()} + ' Drivers)'"></span>
                     </summary>
                     <div class="season-drivers">

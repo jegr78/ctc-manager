@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.dto.TrackForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Season;
@@ -96,15 +95,12 @@ class TrackServiceTest {
     class SaveTest {
 
         @Test
-        void givenNewTrackForm_whenSave_thenCreatesTrack() {
+        void givenNewTrack_whenSave_thenCreatesTrack() {
             // given
-            var form = new TrackForm();
-            form.setName("Fuji Speedway");
-            form.setCountry("Japan");
             when(trackRepository.saveAndFlush(any(Track.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = trackService.save(form);
+            var result = trackService.save(null, "Fuji Speedway", "Japan");
 
             // then
             assertThat(result.getName()).isEqualTo("Fuji Speedway");
@@ -112,22 +108,17 @@ class TrackServiceTest {
         }
 
         @Test
-        void givenExistingTrackForm_whenSave_thenUpdatesTrack() {
+        void givenExistingTrack_whenSave_thenUpdatesTrack() {
             // given
             var id = UUID.randomUUID();
             var existing = new Track("Old Name", "Old Country");
             existing.setId(id);
 
-            var form = new TrackForm();
-            form.setId(id);
-            form.setName("New Name");
-            form.setCountry("New Country");
-
             when(trackRepository.findById(id)).thenReturn(Optional.of(existing));
             when(trackRepository.saveAndFlush(any(Track.class))).thenAnswer(inv -> inv.getArgument(0));
 
             // when
-            var result = trackService.save(form);
+            var result = trackService.save(id, "New Name", "New Country");
 
             // then
             assertThat(result.getName()).isEqualTo("New Name");
@@ -137,14 +128,11 @@ class TrackServiceTest {
         @Test
         void givenDuplicateName_whenSave_thenThrowsBusinessRuleException() {
             // given
-            var form = new TrackForm();
-            form.setName("Duplicate");
-            form.setCountry("Japan");
             when(trackRepository.saveAndFlush(any(Track.class)))
                     .thenThrow(new DataIntegrityViolationException("unique constraint"));
 
             // when / then
-            assertThatThrownBy(() -> trackService.save(form))
+            assertThatThrownBy(() -> trackService.save(null, "Duplicate", "Japan"))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("already exists");
         }
@@ -284,6 +272,24 @@ class TrackServiceTest {
             assertThatThrownBy(() -> trackService.uploadImage(id, image))
                     .isInstanceOf(BusinessRuleException.class)
                     .hasMessageContaining("Image upload failed");
+        }
+
+        @Test
+        void givenRuntimeException_whenUploadImage_thenPropagates() throws IOException {
+            // given
+            var id = UUID.randomUUID();
+            var track = new Track("Fuji", "Japan");
+            track.setId(id);
+            var image = mock(MultipartFile.class);
+
+            when(trackRepository.findById(id)).thenReturn(Optional.of(track));
+            when(fileStorageService.storeImage("tracks", id, image))
+                    .thenThrow(new RuntimeException("unexpected error"));
+
+            // when / then
+            assertThatThrownBy(() -> trackService.uploadImage(id, image))
+                    .isInstanceOf(RuntimeException.class)
+                    .isNotInstanceOf(BusinessRuleException.class);
         }
     }
 }

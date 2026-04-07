@@ -18,24 +18,24 @@
                     <input type="text" id="country" th:field="*{country}" placeholder="e.g. Japan">
                 </div>
             </div>
-            <div class="actions" style="margin-top: 16px;">
+            <div class="actions mt-md">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/tracks}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>
-    <div th:if="${trackForm.id != null}" class="card" style="margin-top: 16px;">
+    <div th:if="${trackForm.id != null}" class="card mt-md">
         <h2>Image</h2>
-        <div th:if="${track != null && track.imageUrl != null}" style="margin-bottom: 12px;">
-            <img th:src="${track.imageUrl}" alt="" style="max-width:200px;border-radius:6px;">
+        <div th:if="${track != null && track.imageUrl != null}" class="mb-sm">
+            <img th:src="${track.imageUrl}" alt="" class="preview-img">
         </div>
-        <div th:if="${track == null || track.imageUrl == null}" class="empty-state" style="padding:16px;"><p>No image yet.</p></div>
-        <form th:action="@{/admin/tracks/{id}/image(id=${trackForm.id})}" method="post" enctype="multipart/form-data" style="margin-top:8px;">
-            <div style="display:flex;gap:8px;align-items:flex-end;">
-                <div class="form-group" style="margin-bottom:0;">
+        <div th:if="${track == null || track.imageUrl == null}" class="empty-state empty-state--compact"><p>No image yet.</p></div>
+        <form th:action="@{/admin/tracks/{id}/image(id=${trackForm.id})}" method="post" enctype="multipart/form-data" class="mt-xs">
+            <div class="inline-form">
+                <div class="form-group form-group--inline">
                     <input type="file" name="image" accept="image/png,image/jpeg,image/webp,image/gif" required
-                           style="padding:6px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--white);font-size:13px;">
-                    <small class="text-dim" style="display:block;margin-top:2px;">PNG, JPG, WebP, GIF. Max 10 MB.</small>
+                           class="file-input">
+                    <small class="form-hint">PNG, JPG, WebP, GIF. Max 10 MB.</small>
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm">Upload</button>
             </div>

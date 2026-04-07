@@ -6,7 +6,7 @@
     <div class="toolbar">
         <h1>Playoffs</h1>
         <div class="actions">
-            <form method="get" th:action="@{/admin/playoffs}" style="display:inline-flex;gap:8px;align-items:center;">
+            <form method="get" th:action="@{/admin/playoffs}" class="btn-with-hint">
                 <select name="seasonId" onchange="this.form.submit()">
                     <option value="">-- Select season --</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
@@ -63,7 +63,7 @@
                         <td th:text="${round.label}"></td>
                         <td>
                             <form th:action="@{/admin/playoffs/round/{id}/set-legs(id=${round.id})}" method="post"
-                                  style="display:inline-flex;gap:8px;align-items:center;">
+                                  class="btn-with-hint">
                                 <select name="bestOfLegs" onchange="this.form.submit()">
                                     <option value="1" th:selected="${round.bestOfLegs == 1}">1 (Single)</option>
                                     <option value="2" th:selected="${round.bestOfLegs == 2}">2 (Home &amp; Away)</option>
@@ -72,16 +72,16 @@
                         </td>
                         <td class="text-dim" th:text="${round.matchups.size() + ' Matchups'}"></td>
                         <td>
-                            <div style="display:flex;gap:4px;">
-                                <form th:action="@{/admin/playoffs/round/{id}/download-overview(id=${round.id})}" method="post" style="display:inline;">
+                            <div class="actions--tight">
+                                <form th:action="@{/admin/playoffs/round/{id}/download-overview(id=${round.id})}" method="post" class="form-inline">
                                     <button type="submit" class="btn btn-secondary btn-xs"
                                             th:disabled="${round.matchups.isEmpty()}">Overview</button>
                                 </form>
-                                <form th:action="@{/admin/playoffs/round/{id}/download-schedule(id=${round.id})}" method="post" style="display:inline;">
+                                <form th:action="@{/admin/playoffs/round/{id}/download-schedule(id=${round.id})}" method="post" class="form-inline">
                                     <button type="submit" class="btn btn-secondary btn-xs"
                                             th:disabled="${round.matchups.isEmpty()}">Schedule</button>
                                 </form>
-                                <form th:action="@{/admin/playoffs/round/{id}/download-results(id=${round.id})}" method="post" style="display:inline;">
+                                <form th:action="@{/admin/playoffs/round/{id}/download-results(id=${round.id})}" method="post" class="form-inline">
                                     <button type="submit" class="btn btn-secondary btn-xs"
                                             th:disabled="${round.matchups.isEmpty()}">Results</button>
                                 </form>
@@ -96,21 +96,21 @@
     <!-- Linked Seasons (Team sources for Playoffs) -->
     <div th:if="${playoff != null}" class="card">
         <h2>Linked Seasons (Team Sources)</h2>
-        <p class="text-dim" style="margin-bottom:12px;">Teams from these seasons are available in the seeding.</p>
+        <p class="text-dim mb-sm">Teams from these seasons are available in the seeding.</p>
         <div th:if="${!playoff.seasons.isEmpty()}" class="chip-list">
             <span th:each="s : ${playoff.seasons}" class="chip" style="gap:8px;">
                 <a th:href="@{/admin/seasons/{id}(id=${s.id})}" th:text="${s.displayLabel}" style="color:var(--text);text-decoration:none;"></a>
-                <form th:action="@{/admin/playoffs/{id}/remove-season(id=${playoff.id})}" method="post" style="display:inline;">
+                <form th:action="@{/admin/playoffs/{id}/remove-season(id=${playoff.id})}" method="post" class="form-inline">
                     <input type="hidden" name="seasonId" th:value="${s.id}">
                     <button type="submit" class="btn btn-danger btn-xs">Remove</button>
                 </form>
             </span>
         </div>
-        <div th:if="${playoff.seasons.isEmpty()}" class="empty-state" style="padding:16px;">
+        <div th:if="${playoff.seasons.isEmpty()}" class="empty-state empty-state--compact">
             <p>No additional seasons linked. Teams come only from the main season.</p>
         </div>
         <form th:action="@{/admin/playoffs/{id}/add-season(id=${playoff.id})}" method="post"
-              style="margin-top:12px;display:flex;gap:8px;align-items:center;">
+              class="inline-form mt-sm">
             <select name="seasonId" required>
                 <option value="">-- Link season --</option>
                 <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"

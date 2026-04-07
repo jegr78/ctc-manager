@@ -15,7 +15,7 @@
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"></option>
                 </select>
             </div>
-            <div th:if="${matchday.season != null}" class="text-dim" style="margin-bottom: 16px;">
+            <div th:if="${matchday.season != null}" class="text-dim mb-md">
                 Season: <strong th:text="${matchday.season.displayLabel}"></strong>
             </div>
             <div class="form-row">
@@ -28,7 +28,7 @@
                     <input type="number" id="sortIndex" th:field="*{sortIndex}" min="0" required>
                 </div>
             </div>
-            <div class="actions" style="margin-top: 16px;">
+            <div class="actions mt-md">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a th:href="@{/admin/matchdays}" class="btn btn-secondary">Cancel</a>
             </div>
