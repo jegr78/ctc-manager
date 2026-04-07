@@ -30,7 +30,7 @@
 - [x] **Phase 11: Template Quality** (3/3 plans) -- completed 2026-04-06
 - [ ] **Phase 12: Security Hardening Recovery** - Re-apply SSRF + path traversal protections lost by worktree clobber
 - [ ] **Phase 13: Layer Cleanup Recovery** - Re-apply controller service delegation + DTO decoupling
-- [ ] **Phase 14: Exception Refinement Recovery** - Re-apply specific exception catches in controllers
+- [ ] **Phase 14: Exception Refinement Recovery** - Re-apply specific exception catches in controllers and services
 - [ ] **Phase 15: Alltime Standings Recovery** - Re-apply cross-season standings aggregation
 
 ## Phase Details
@@ -79,7 +79,7 @@ Plans:
 **Depends on**: Phase 7
 **Requirements**: ERRH-01, QUAL-02
 **Success Criteria** (what must be TRUE):
-  1. No catch(Exception e) blocks remain in controllers -- each catch targets a specific exception type (IOException, IllegalStateException, etc.)
+  1. No catch(Exception e) blocks remain in controllers -- each catch targets a specific exception type (IOException, BusinessRuleException, etc.)
   2. Unexpected exceptions propagate to GlobalExceptionHandler and display the admin error page
   3. RaceService, DriverService, and DriverRankingService findAll() calls are scoped by seasonId or have result limits
 **Plans:** 2 plans
@@ -183,14 +183,19 @@ Plans:
 - [x] 13-03-PLAN.md — Complex service DTO decoupling (ARCH-01: Season, Team, Playoff, Matchday)
 
 ### Phase 14: Exception Refinement Recovery
-**Goal**: Re-apply specific exception catches in controllers lost by worktree file clobber
+**Goal**: Re-apply specific exception catches in controllers and services lost by worktree file clobber
 **Depends on**: Phase 13
 **Requirements**: ERRH-01
 **Gap Closure**: Closes gaps from v1.1 audit (commit 5b3a58b regression)
 **Success Criteria** (what must be TRUE):
-  1. No catch(Exception e) blocks remain in controllers — each catch targets a specific exception type
+  1. No catch(Exception e) blocks remain in controllers or services — each catch targets a specific exception type
   2. Unexpected exceptions propagate to GlobalExceptionHandler and display the admin error page
 **Recovery Source**: Phase 8 commits (`1960a9e`, `e645d43`, `3a21dde`, `981a42a`, `1d7e37f`)
+**Plans:** 2 plans
+
+Plans:
+- [ ] 14-01-PLAN.md — Narrow all 17 controller catch(Exception e) blocks to specific types (RuntimeException, IOException, multi-catch)
+- [ ] 14-02-PLAN.md — Narrow all 5 service catch(Exception e) blocks to IOException + document QUAL-02 disposition
 
 ### Phase 15: Alltime Standings Recovery
 **Goal**: Re-apply cross-season team standings aggregation lost by worktree file clobber
@@ -223,5 +228,5 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 
 | 11. Template Quality | v1.1 | 3/3 | Complete    | 2026-04-06 |
 | 12. Security Hardening Recovery | v1.1 | 1/1 | Complete    | 2026-04-06 |
 | 13. Layer Cleanup Recovery | v1.1 | 3/3 | Complete    | 2026-04-06 |
-| 14. Exception Refinement Recovery | v1.1 | 0/0 | Pending | — |
+| 14. Exception Refinement Recovery | v1.1 | 0/2 | Pending | — |
 | 15. Alltime Standings Recovery | v1.1 | 0/0 | Pending | — |
