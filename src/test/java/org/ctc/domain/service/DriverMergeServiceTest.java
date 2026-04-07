@@ -529,18 +529,21 @@ class DriverMergeServiceTest {
     private SeasonDriver createSeasonDriver(Driver driver) {
         var sd = new SeasonDriver();
         sd.setDriver(driver);
+        sd.setSeason(createSeason(UUID.randomUUID(), "Season"));
         return sd;
     }
 
     private RaceLineup createRaceLineup(Driver driver) {
         var rl = new RaceLineup();
         rl.setDriver(driver);
+        rl.setRace(createRace(UUID.randomUUID()));
         return rl;
     }
 
     private RaceResult createRaceResult(Driver driver) {
         var rr = new RaceResult();
         rr.setDriver(driver);
+        rr.setRace(createRace(UUID.randomUUID()));
         return rr;
     }
 
