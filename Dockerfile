@@ -3,39 +3,39 @@ FROM eclipse-temurin:25-jdk AS build
 
 WORKDIR /build
 
-# Maven Wrapper und pom.xml kopieren fuer Dependency-Caching
+# Copy Maven Wrapper and pom.xml for dependency caching
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Dependencies herunterladen (gecached solange pom.xml sich nicht aendert)
+# Download dependencies (cached as long as pom.xml does not change)
 RUN chmod +x mvnw && ./mvnw dependency:go-offline -B
 
-# Source kopieren und bauen
+# Copy source and build
 COPY src src
 RUN ./mvnw package -DskipTests -B
 
 # Stage 2: Runtime
 FROM eclipse-temurin:25-jre
 
-# curl fuer Healthcheck + Chromium-Dependencies fuer Playwright installieren
+# Install curl for health check + Chromium dependencies for Playwright
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1 \
     libpango-1.0-0 libcairo2 libasound2t64 libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Non-root User erstellen
+# Create non-root user
 RUN groupadd -r ctc && useradd -r -g ctc ctc
 
 WORKDIR /app
 
-# Verzeichnisse fuer Uploads und Site-Output
+# Create directories for uploads and site output
 RUN mkdir -p /app/uploads /app/ctc-site-output /app/logs && chown -R ctc:ctc /app
 
-# JAR aus Build-Stage kopieren
+# Copy JAR from build stage
 COPY --from=build --chown=ctc:ctc /build/target/ctc-manager-*.jar /app/ctc-manager.jar
 
-# Playwright Chromium-Browser installieren (fuer Team Card Generierung)
+# Install Playwright Chromium browser (for team card generation)
 ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright
 RUN java -cp /app/ctc-manager.jar -Dloader.main=com.microsoft.playwright.CLI \
     org.springframework.boot.loader.launch.PropertiesLauncher install chromium \

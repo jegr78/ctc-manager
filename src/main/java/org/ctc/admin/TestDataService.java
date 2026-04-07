@@ -459,9 +459,9 @@ public class TestDataService {
                 "YT_Sorte13", "Unfazed__be", "P1R_Valkyrie", "motorstormhero")) {
             seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("P1R")));
         }
-        // Sub-Team-Zuordnungen werden NICHT geseeded — die kommen aus dem Import
-        // (ensureSeasonDriver aktualisiert das Team bei erneutem Import)
-        // Hier nur Parent-Team-Zuordnungen als Platzhalter fuer Entwicklung ohne Import
+        // Sub-team assignments are NOT seeded — they come from the CSV import
+        // (ensureSeasonDriver updates the team assignment on re-import)
+        // Only parent-team assignments as placeholders for development without import
         for (String psnId : List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
                 "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28",
                 "IEquinoXe-", "kurt_666_", "lemonysqueez",
@@ -500,15 +500,15 @@ public class TestDataService {
                 raceScoringRepository.findAll().getFirst(),
                 matchScoringRepository.findAll().getFirst());
 
-        // === Komplett isolierte Testdaten (kein Bezug zu echten Teams/Fahrern) ===
+        // === Fully isolated test data (no relation to real teams/drivers) ===
 
-        // Test-Teams
+        // Test teams
         var testAlpha = teamRepository.save(new Team("Test Alpha Racing", "T-ALF"));
         var testBravo = teamRepository.save(new Team("Test Bravo Racing", "T-BRV"));
         var testBravo1 = teamRepository.save(new Team("Test Bravo Racing 1", "T-BRV 1", testBravo));
         var testBravo2 = teamRepository.save(new Team("Test Bravo Racing 2", "T-BRV 2", testBravo));
 
-        // Test-Fahrer
+        // Test drivers
         var tda1 = driver("Test_Alpha_1", "Test Alpha Driver 1");
         var tda2 = driver("Test_Alpha_2", "Test Alpha Driver 2");
         var tdb1 = driver("Test_Bravo1_1", "Test Bravo1 Driver 1");

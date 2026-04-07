@@ -8,15 +8,6 @@ Gran Turismo Racing League Management-Anwendung (Spring Boot 4 / Thymeleaf / Mar
 
 Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
 
-## Current Milestone: v1.3 English & Test Data
-
-**Goal:** Full English cleanup of entire codebase and comprehensive dev test data for all season formats.
-
-**Target features:**
-- All German texts, constants, enum labels, comments, log/exception messages, variable/method names to English
-- Dev profile test data: 14+ teams (2-3 parent teams with sub-teams), 10 drivers each, fictive names
-- Generated team cards, seasons (League, Swiss, Round Robin), playoffs (first round), matchdays with results and real scoring
-
 ## Current State (after v1.2 Driver Merge)
 
 - **Codebase:** 852 Tests, 82%+ Coverage
@@ -68,15 +59,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 
 ### Active
 
-#### English Cleanup
-- [ ] All German texts, constants, enum labels, comments, log messages, exception messages, variable/method names converted to English
-
-#### Test Data
-- [ ] 14+ teams (including 2-3 parent teams with sub-teams), 10 drivers each, fictive names
-- [ ] Generated team cards for all teams
-- [ ] Seasons in all formats: League, Swiss, Round Robin (2 groups)
-- [ ] One completed season with playoffs (first round created)
-- [ ] Matchdays with race results, points from actual scoring system
+(No active requirements — planning next milestone)
 
 ### Out of Scope
 
@@ -133,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after v1.3 milestone start — English & Test Data*
+*Last updated: 2026-04-07 after v1.2 milestone — Driver Merge*

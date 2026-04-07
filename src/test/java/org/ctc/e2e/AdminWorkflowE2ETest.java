@@ -172,7 +172,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     @Test
     void givenTestAlphaTeam_whenViewTeamDetail_thenShowsDriversGroupedBySeason() {
         // given
-        // T-ALF (Test Alpha Racing) hat Fahrer in Test-Season 2026 und 2025
+        // T-ALF (Test Alpha Racing) has drivers in Test-Season 2026 and 2025
         page.navigate(url("/admin/teams"));
 
         // when
@@ -186,7 +186,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
         assertThat(seasonHeader).isVisible();
         assertThat(seasonHeader).containsText("Drivers");
 
-        // Fahrer im DOM vorhanden (Accordion muss nicht offen sein)
+        // Drivers are present in DOM (accordion does not need to be open)
         assertThat(page.locator("details.season-accordion:has-text('Test-Season 2026')")).containsText("Test_Alpha_1");
         assertThat(page.locator("details.season-accordion:has-text('Test-Season 2026')")).containsText("Test_Alpha_2");
     }
@@ -194,7 +194,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     @Test
     void givenTestBravoTeamWithSubTeams_whenViewTeamDetail_thenShowsSubTeamDriverGroups() {
         // given
-        // T-BRV (Test Bravo Racing) hat Sub-Teams T-BRV 1 + T-BRV 2
+        // T-BRV (Test Bravo Racing) has sub-teams T-BRV 1 + T-BRV 2
         page.navigate(url("/admin/teams"));
 
         // when
@@ -213,7 +213,7 @@ class AdminWorkflowE2ETest extends PlaywrightConfig {
     @Test
     void givenTestAlphaTeamWithMultipleSeasons_whenViewTeamDetail_thenShowsMultipleSeasonAccordions() {
         // given
-        // T-ALF hat Lineups in Test-Season 2026 + Test-Season 2025
+        // T-ALF has lineups in Test-Season 2026 + Test-Season 2025
         page.navigate(url("/admin/teams"));
 
         // when
