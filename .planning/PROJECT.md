@@ -19,9 +19,10 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 - Quell-Fahrer nach Merge loeschen
 - Duplikat-Handling bei Unique Constraints (gleicher Fahrer bereits in Season/Race)
 
-## Current State (after v1.1)
+## Current State (after Phase 16)
 
-- **Codebase:** 13,731 LOC Java (Prod) + 18,621 LOC Java (Tests), 820 Tests, 82%+ Coverage
+- **Codebase:** 13,731 LOC Java (Prod) + 18,621 LOC Java (Tests), 832 Tests, 84.4% Coverage
+- **Phase 16 complete:** DriverMergeService — all FK reassignment, PSN-ID transfer, audit logging
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), open (dev/local), SSRF hostname blocklist, path traversal defense
 - **Architecture:** Saubere 3-Tier (Controller → Service → Repository), keine God Services, zentrale Exception-Behandlung, domain services fully decoupled from admin DTOs
@@ -116,4 +117,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after v1.2 milestone start — Driver Merge*
+*Last updated: 2026-04-07 after Phase 16 complete — Merge Service Core*
