@@ -26,7 +26,8 @@ public class DriverMergeService {
     private final RaceResultRepository raceResultRepository;
     private final PsnAliasRepository psnAliasRepository;
 
-    public record MergeResult(int seasonDrivers, int raceLineups, int raceResults, int aliasesReassigned) {}
+    public record MergeResult(int seasonDrivers, int raceLineups, int raceResults, int aliasesReassigned,
+                               int seasonDriversDropped, int raceLineupsDropped, int raceResultsDropped) {}
 
     @Transactional
     public MergeResult merge(UUID sourceId, UUID targetId) {
@@ -41,25 +42,61 @@ public class DriverMergeService {
         var target = driverRepository.findById(targetId)
                 .orElseThrow(() -> new EntityNotFoundException("Driver", targetId));
 
-        // MERGE-05: Reassign SeasonDriver entries
+        // MERGE-05 + MERGE-11: Reassign SeasonDriver entries, dropping duplicates (per D-01, D-03)
         var seasonDrivers = seasonDriverRepository.findByDriverId(sourceId);
+        int seasonDriversReassigned = 0;
+        int seasonDriversDropped = 0;
         for (var sd : seasonDrivers) {
-            sd.setDriver(target);
-            seasonDriverRepository.save(sd);
+            var conflict = seasonDriverRepository.findBySeasonIdAndDriverId(
+                    sd.getSeason().getId(), targetId);
+            if (conflict.isPresent()) {
+                log.info("Dropping duplicate SeasonDriver for season '{}' during merge of driver [{}] into [{}]",
+                        sd.getSeason().getName(), sourceId, targetId);
+                seasonDriverRepository.delete(sd);
+                seasonDriversDropped++;
+            } else {
+                sd.setDriver(target);
+                seasonDriverRepository.save(sd);
+                seasonDriversReassigned++;
+            }
         }
 
-        // MERGE-06: Reassign RaceLineup entries
+        // MERGE-06 + MERGE-12: Reassign RaceLineup entries, dropping duplicates (per D-01, D-03, D-07)
         var raceLineups = raceLineupRepository.findByDriverId(sourceId);
+        int raceLineupsReassigned = 0;
+        int raceLineupsDropped = 0;
         for (var rl : raceLineups) {
-            rl.setDriver(target);
-            raceLineupRepository.save(rl);
+            var conflict = raceLineupRepository.findByRaceIdAndDriverId(
+                    rl.getRace().getId(), targetId);
+            if (conflict.isPresent()) {
+                log.info("Dropping duplicate RaceLineup for race [{}] during merge of driver [{}] into [{}]",
+                        rl.getRace().getId(), sourceId, targetId);
+                raceLineupRepository.delete(rl);
+                raceLineupsDropped++;
+            } else {
+                rl.setDriver(target);
+                raceLineupRepository.save(rl);
+                raceLineupsReassigned++;
+            }
         }
 
-        // MERGE-07: Reassign RaceResult entries
+        // MERGE-07 + MERGE-13: Reassign RaceResult entries, dropping duplicates (per D-01, D-02, D-03)
         var raceResults = raceResultRepository.findByDriverId(sourceId);
+        int raceResultsReassigned = 0;
+        int raceResultsDropped = 0;
         for (var rr : raceResults) {
-            rr.setDriver(target);
-            raceResultRepository.save(rr);
+            var conflict = raceResultRepository.findByRaceIdAndDriverId(
+                    rr.getRace().getId(), targetId);
+            if (conflict.isPresent()) {
+                log.info("Dropping duplicate RaceResult for race [{}] during merge of driver [{}] into [{}]",
+                        rr.getRace().getId(), sourceId, targetId);
+                raceResultRepository.delete(rr);
+                raceResultsDropped++;
+            } else {
+                rr.setDriver(target);
+                raceResultRepository.save(rr);
+                raceResultsReassigned++;
+            }
         }
 
         // MERGE-08: Reassign PsnAlias entries via repository (D-08: NOT via Driver.aliases collection)
@@ -84,19 +121,25 @@ public class DriverMergeService {
         driverRepository.delete(source);
 
         var result = new MergeResult(
-                seasonDrivers.size(),
-                raceLineups.size(),
-                raceResults.size(),
-                aliases.size() + psnIdCreated
+                seasonDriversReassigned,
+                raceLineupsReassigned,
+                raceResultsReassigned,
+                aliases.size() + psnIdCreated,
+                seasonDriversDropped,
+                raceLineupsDropped,
+                raceResultsDropped
         );
 
         // MERGE-14 + D-10: Audit logging with structured parameters
         log.info("Driver merge complete: source=[{}] '{}', target=[{}] '{}', " +
-                        "seasonDrivers={}, raceLineups={}, raceResults={}, aliases={}",
+                        "seasonDrivers={} (dropped={}), raceLineups={} (dropped={}), " +
+                        "raceResults={} (dropped={}), aliases={}",
                 source.getId(), source.getPsnId(),
                 target.getId(), target.getPsnId(),
-                result.seasonDrivers(), result.raceLineups(),
-                result.raceResults(), result.aliasesReassigned());
+                result.seasonDrivers(), result.seasonDriversDropped(),
+                result.raceLineups(), result.raceLineupsDropped(),
+                result.raceResults(), result.raceResultsDropped(),
+                result.aliasesReassigned());
 
         return result;
     }
