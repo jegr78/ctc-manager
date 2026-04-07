@@ -118,14 +118,21 @@ public class DriverController {
     }
 
     @PostMapping("/{id}/merge/preview")
-    public String previewMerge(@PathVariable UUID id, @RequestParam UUID targetId, Model model) {
-        var source = driverService.findById(id);
-        var target = driverService.findById(targetId);
-        var preview = driverMergeService.previewMerge(id, targetId);
-        model.addAttribute("source", source);
-        model.addAttribute("target", target);
-        model.addAttribute("preview", preview);
-        return "admin/driver-merge";
+    public String previewMerge(@PathVariable UUID id, @RequestParam UUID targetId,
+                               RedirectAttributes redirectAttributes, Model model) {
+        try {
+            var source = driverService.findById(id);
+            var target = driverService.findById(targetId);
+            var preview = driverMergeService.previewMerge(id, targetId);
+            model.addAttribute("source", source);
+            model.addAttribute("target", target);
+            model.addAttribute("preview", preview);
+            return "admin/driver-merge";
+        } catch (EntityNotFoundException | BusinessRuleException e) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Merge failed: " + e.getMessage());
+            return "redirect:/admin/drivers/" + id + "/merge";
+        }
     }
 
     @PostMapping("/{id}/merge")
