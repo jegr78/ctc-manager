@@ -1,16 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Driver Merge
-status: complete
-last_updated: "2026-04-07T19:00:00+02:00"
-last_activity: 2026-04-07
+milestone: v1.0
+milestone_name: milestone
+status: "v1.2 Driver Merge shipped — PR #99"
+last_updated: "2026-04-07T17:05:29.136Z"
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
