@@ -207,10 +207,10 @@ Plans:
   2. GET /admin/standings with alltime=true displays a ranked list of teams
   3. The existing per-season standings remain unchanged
 **Recovery Source**: Phase 9 commits (`0979c0f`, `d5c6e56`)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 15-01-PLAN.md — Alltime standings TDD recovery (calculateAlltimeStandings + merge + controller wiring)
+- [x] 15-01-PLAN.md — Alltime standings TDD recovery (calculateAlltimeStandings + merge + controller wiring)
 
 ## Progress
 
@@ -233,4 +233,4 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12 -> 13 -> 14 
 | 12. Security Hardening Recovery | v1.1 | 1/1 | Complete    | 2026-04-06 |
 | 13. Layer Cleanup Recovery | v1.1 | 3/3 | Complete    | 2026-04-06 |
 | 14. Exception Refinement Recovery | v1.1 | 2/2 | Complete    | 2026-04-07 |
-| 15. Alltime Standings Recovery | v1.1 | 0/1 | Planned | — |
+| 15. Alltime Standings Recovery | v1.1 | 1/1 | Complete    | 2026-04-07 |
