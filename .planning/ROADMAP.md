@@ -85,7 +85,9 @@ Plans:
   3. All enum constants and string literals used in logic are English
   4. All Javadoc and inline comments are English
   5. Code reviews can be conducted without German language knowledge
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 21-01-PLAN.md — Replace German text in test files and HTML templates, verify no German remains
 
 ### Phase 22: Dev Teams & Drivers
 **Goal**: The dev profile starts with a complete, realistic set of fictive teams and drivers that cover all structural variations (parent teams, sub-teams) and have generated team card images
@@ -96,7 +98,9 @@ Plans:
   2. At least 2 parent teams exist, each with 2 or more named sub-teams
   3. Each team has exactly 10 drivers with fictive names
   4. Every team has a generated team card image visible on the teams list page
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 21-01-PLAN.md — Replace German text in test files and HTML templates, verify no German remains
 **UI hint**: yes
 
 ### Phase 23: Dev Seasons with Results
@@ -109,7 +113,9 @@ Plans:
   3. A Round Robin format season with 2 groups exists with at least 2 matchdays per group
   4. Standings pages for all three seasons display non-zero points derived from the scoring system
   5. Race result entries reflect point values consistent with the configured scoring rules
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 21-01-PLAN.md — Replace German text in test files and HTML templates, verify no German remains
 **UI hint**: yes
 
 ### Phase 24: Dev Playoffs
@@ -120,7 +126,9 @@ Plans:
   1. One season is marked as completed with a playoff bracket created
   2. The first playoff round shows seeded matchups on the bracket page
   3. The bracket view renders without errors using dev profile data
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 21-01-PLAN.md — Replace German text in test files and HTML templates, verify no German remains
 **UI hint**: yes
 
 ## Progress
@@ -147,7 +155,7 @@ Plans:
 | 18. Merge UI | v1.2 | 2/2 | Complete | 2026-04-07 |
 | 19. Merge Error Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
 | 20. English Messages | v1.3 | 1/1 | Complete    | 2026-04-07 |
-| 21. English Code | v1.3 | 0/? | Not started | - |
+| 21. English Code | v1.3 | 0/1 | Planning    | - |
 | 22. Dev Teams & Drivers | v1.3 | 0/? | Not started | - |
 | 23. Dev Seasons with Results | v1.3 | 0/? | Not started | - |
 | 24. Dev Playoffs | v1.3 | 0/? | Not started | - |
