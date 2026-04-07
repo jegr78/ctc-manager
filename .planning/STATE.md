@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Driver Merge
-status: Roadmap ready, awaiting plan-phase
-last_updated: "2026-04-07T11:11:54.794Z"
-last_activity: 2026-04-07 — Roadmap created for v1.2
+status: executing
+last_updated: "2026-04-07T11:35:51.174Z"
+last_activity: 2026-04-07
 progress:
   total_phases: 3
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 100
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** v1.2 Driver Merge — Phase 16 next
+**Current focus:** Phase 16 — Merge Service Core
 
 ## Current Position
 
-Phase: 16 — Merge Service Core (not started)
-Plan: —
-Status: Roadmap ready, awaiting plan-phase
-Last activity: 2026-04-07 — Roadmap created for v1.2
+Phase: 17
+Plan: Not started
+Status: Executing Phase 16
+Last activity: 2026-04-07
 
 Progress: ░░░░░░░░░░ 0% (0/3 phases)
 
