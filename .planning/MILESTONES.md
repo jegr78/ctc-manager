@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.1 Codebase Concerns Cleanup (Shipped: 2026-04-07)
+
+**Phases completed:** 10 phases (6-15), 20 plans, 820 tests
+**Timeline:** 4 days (2026-04-04 → 2026-04-07)
+**Requirements:** 12/12 satisfied
+
+**Key accomplishments:**
+
+- SSRF hostname blocklist + path traversal defense for all FileStorageService write methods (SECU-01, SECU-02)
+- 5 controllers use services only, 10 domain services decoupled from admin DTOs (ARCH-01, ARCH-02)
+- 25+ catch(Exception e) blocks narrowed to specific exception types across controllers and services (ERRH-01)
+- Cross-season alltime standings aggregation with sub-team resolution (FEAT-01)
+- TemplateEditorController generic dispatch via TemplateManageable interface (ARCH-03)
+- PlayoffService + RaceService split into focused units (ARCH-04, ARCH-05)
+- Inline styles replaced with CSS utility classes across all admin templates (QUAL-01)
+- Unbounded findAll() scoped or documented (QUAL-02)
+
+**Known tech debt:** 9 human visual verification items (template editor, admin pages after refactor)
+
+---
+
 ## v1.0 Technical Debt Cleanup (Shipped: 2026-04-04)
 
 **Phases completed:** 5 phases, 12 plans, 16 tasks
