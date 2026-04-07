@@ -4,6 +4,7 @@
 
 - :white_check_mark: **v1.0 Technical Debt Cleanup** — Phases 1-5 (shipped 2026-04-04)
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
+- :white_check_mark: **v1.2 Driver Merge** — Phases 16-19 (shipped 2026-04-07)
 
 ## Phases
 
@@ -36,6 +37,18 @@ See: milestones/v1.1-ROADMAP.md for full details
 
 </details>
 
+<details>
+<summary>v1.2 Driver Merge (Phases 16-19) -- SHIPPED 2026-04-07</summary>
+
+- [x] Phase 16: Merge Service Core (1/1 plan) -- completed 2026-04-07
+- [x] Phase 17: Duplicate-Handling (1/1 plan) -- completed 2026-04-07
+- [x] Phase 18: Merge UI (2/2 plans) -- completed 2026-04-07
+- [x] Phase 19: Merge Error Handling (1/1 plan) -- completed 2026-04-07
+
+See: milestones/v1.2-ROADMAP.md for full details
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -55,3 +68,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 | 13. Layer Cleanup Recovery | v1.1 | 3/3 | Complete | 2026-04-06 |
 | 14. Exception Refinement Recovery | v1.1 | 2/2 | Complete | 2026-04-07 |
 | 15. Alltime Standings Recovery | v1.1 | 1/1 | Complete | 2026-04-07 |
+| 16. Merge Service Core | v1.2 | 1/1 | Complete | 2026-04-07 |
+| 17. Duplicate-Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
+| 18. Merge UI | v1.2 | 2/2 | Complete | 2026-04-07 |
+| 19. Merge Error Handling | v1.2 | 1/1 | Complete | 2026-04-07 |

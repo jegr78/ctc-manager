@@ -86,14 +86,56 @@ Living retrospective across milestones. Updated at each milestone completion.
 - Sessions: ~8 (Phases 6-9, Phases 10-11, audit, Phases 12-13, Phase 14, Phase 15, re-audit, complete)
 - Notable: Recovery phases (12-15) added ~30% overhead but preserved architectural integrity
 
+## Milestone: v1.2 — Driver Merge
+
+**Shipped:** 2026-04-07
+**Phases:** 4 | **Plans:** 5 | **Timeline:** 2026-03-27 → 2026-04-07 (11 days)
+
+### What Was Built
+- DriverMergeService with transactional FK reassignment across SeasonDriver, RaceLineup, RaceResult, PsnAlias
+- Proactive duplicate detection — source entries dropped when target already present in same season/race
+- MergePreview (read-only) with per-table reference and duplicate counts
+- Full merge UI: button on driver detail, target dropdown, preview table, JS confirm dialog
+- Error handling on previewMerge() matching executeMerge() pattern (gap closure)
+
+### What Worked
+- **Focused milestone scope:** 4 phases, each building cleanly on the previous — no scope creep
+- **TDD throughout:** Every phase started with failing tests, then implementation — 852 tests at end
+- **Inline execution for small phases:** Phase 19 (1 plan, 2 tasks) ran inline without subagent overhead — faster and cheaper
+- **Auto-UAT with playwright-cli:** Automated the human verification items for Phase 19, catching a stale-server issue in the process
+- **Gap closure workflow:** Milestone audit identified GAP-01, Phase 19 closed it precisely
+
+### What Was Inefficient
+- **REQUIREMENTS.md checkbox drift (again):** All 14 requirements stayed `[ ]` despite being verified — same issue as v1.1
+- **SUMMARY.md frontmatter incomplete:** `requirements_completed` field missing across all plans — summary-extract returns empty
+- **Stale server during auto-UAT:** Server running old code gave false 409 errors — had to restart before tests passed
+- **Phase 18 human verification:** 5 visual UI items still unverified via auto-UAT (only Phase 19 items automated)
+
+### Patterns Established
+- Separate MergeService from DriverService to avoid circular dependencies
+- Proactive conflict detection (query before reassign) instead of catch-constraint-violation
+- Two-state Thymeleaf template pattern (preview == null vs. preview != null)
+- Auto-UAT with playwright-cli for flash message / redirect verification
+
+### Key Lessons
+- **Small phases execute cleanly:** 4 focused phases with clear dependencies had zero regressions
+- **Auto-UAT needs fresh server:** Always restart dev server before auto-UAT when code changed since last start
+- **Requirements tracking still needs automation:** Three milestones in a row with drifted checkboxes — this is a tooling gap, not a discipline gap
+- **Inline execution for tiny phases:** Subagent overhead is not worth it for 1-2 task plans
+
+### Cost Observations
+- Model mix: 60% opus (execution), 40% sonnet (verification, integration check, research)
+- Sessions: ~4 (research+plan, execute 16-18, execute 19 + auto-UAT + audit, complete)
+- Notable: Phase 19 inline execution used ~5% of a typical subagent session's tokens
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v1.1 |
-|--------|------|------|
-| Phases | 5 | 10 |
-| Plans | 12 | 20 |
-| Tests (start → end) | 628 → 753 | 753 → 820 |
-| Coverage | 82%+ | 82%+ |
-| Timeline (days) | 8 | 4 |
-| Files changed | 68 | ~80 |
-| LOC delta | +3850 / -962 | +5100 / -1300 |
+| Metric | v1.0 | v1.1 | v1.2 |
+|--------|------|------|------|
+| Phases | 5 | 10 | 4 |
+| Plans | 12 | 20 | 5 |
+| Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 |
+| Coverage | 82%+ | 82%+ | 82%+ |
+| Timeline (days) | 8 | 4 | 11 |
+| Files changed | 68 | ~80 | ~15 |
+| LOC delta | +3850 / -962 | +5100 / -1300 | +600 / -30 |

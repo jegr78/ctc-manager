@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Merge Driver: ' + ${source.psnId}, ~{::section})}">
+<body>
+<section>
+    <!-- State 1: Select target driver -->
+    <div th:if="${preview == null}">
+        <div class="toolbar">
+            <div>
+                <a th:href="@{/admin/drivers/{id}(id=${source.id})}" class="back-link">&larr; Back to Driver: <span th:text="${source.psnId}"></span></a>
+                <h1>Merge Driver: <span th:text="${source.psnId}"></span></h1>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="detail-fields">
+                <span class="label">Source Driver</span>
+                <span><span th:text="${source.psnId}"></span> (<span th:text="${source.nickname}"></span>)</span>
+            </div>
+
+            <form th:action="@{/admin/drivers/{id}/merge/preview(id=${source.id})}" method="post">
+                <div class="form-group">
+                    <label for="targetId">Merge into (target driver)</label>
+                    <select name="targetId" id="targetId" required>
+                        <option value="">-- Select target driver --</option>
+                        <option th:each="d : ${allDrivers}" th:value="${d.id}" th:text="${d.psnId + ' (' + d.nickname + ')'}"></option>
+                    </select>
+                </div>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Select Target</button>
+                    <a th:href="@{/admin/drivers/{id}(id=${source.id})}" class="btn btn-secondary">Back to Driver</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- State 2: Preview + Confirm -->
+    <div th:if="${preview != null}">
+        <div class="toolbar">
+            <div>
+                <a th:href="@{/admin/drivers/{id}(id=${source.id})}" class="back-link">&larr; Back to Driver: <span th:text="${source.psnId}"></span></a>
+                <h1>Merge Preview: <span th:text="${source.psnId}"></span> &rarr; <span th:text="${target.psnId}"></span></h1>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>References to Reassign</h2>
+
+            <div th:if="${preview.totalToReassign() > 0 or preview.totalDuplicates() > 0}" class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>FK Table</th>
+                            <th>Reassign</th>
+                            <th>Duplicates Dropped</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SeasonDriver</td>
+                            <td th:text="${preview.seasonDriversToReassign()}"></td>
+                            <td th:text="${preview.seasonDriversDuplicate()}"></td>
+                        </tr>
+                        <tr>
+                            <td>RaceLineup</td>
+                            <td th:text="${preview.raceLineupsToReassign()}"></td>
+                            <td th:text="${preview.raceLineupsDuplicate()}"></td>
+                        </tr>
+                        <tr>
+                            <td>RaceResult</td>
+                            <td th:text="${preview.raceResultsToReassign()}"></td>
+                            <td th:text="${preview.raceResultsDuplicate()}"></td>
+                        </tr>
+                        <tr>
+                            <td>PsnAlias</td>
+                            <td th:text="${preview.psnAliasesToReassign()}"></td>
+                            <td><span class="text-dim">&mdash;</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${preview.totalToReassign() == 0 and preview.totalDuplicates() == 0}" class="empty-state empty-state--compact">
+                <h3>No References Found</h3>
+                <p>This driver has no season, lineup, result, or alias entries. The merge will only delete the source driver.</p>
+            </div>
+
+            <form th:action="@{/admin/drivers/{id}/merge(id=${source.id})}" method="post"
+                  th:attr="onsubmit='return confirm(\'Really merge ' + ${source.psnId} + ' into ' + ${target.psnId} + '? This cannot be undone.\')'">
+                <input type="hidden" name="targetId" th:value="${target.id}">
+                <div class="actions">
+                    <button type="submit" class="btn btn-danger">Confirm Merge</button>
+                    <a th:href="@{/admin/drivers/{id}/merge(id=${source.id})}" class="btn btn-secondary">Back</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+</body>
+</html>
