@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Driver Merge
-status: executing
-last_updated: "2026-04-07T16:46:23.584Z"
+status: complete
+last_updated: "2026-04-07T19:00:00+02:00"
 last_activity: 2026-04-07
 progress:
   total_phases: 4
@@ -20,21 +20,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Phase 19 — merge-error-handling
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 19
-Plan: Not started
-Status: Executing Phase 19
-Last activity: 2026-04-07
-
-Progress: ░░░░░░░░░░ 0% (0/3 phases)
+Milestone v1.2 Driver Merge — SHIPPED 2026-04-07
+All 4 phases complete, 5 plans executed, 14/14 requirements satisfied.
 
 ## Completed Milestones
 
 - v1.0 Technical Debt Cleanup (5 phases, 12 plans) — shipped 2026-04-04
 - v1.1 Codebase Concerns Cleanup (10 phases, 20 plans) — shipped 2026-04-07
+- v1.2 Driver Merge (4 phases, 5 plans) — shipped 2026-04-07
 
 ## Performance Metrics
 
@@ -57,20 +54,17 @@ Progress: ░░░░░░░░░░ 0% (0/3 phases)
 | 13 -- Layer Cleanup Recovery | 3/3 | ~7min |
 | 14 -- Exception Refinement Recovery | 2/2 | ~5min |
 | 15 -- Alltime Standings Recovery | 1/1 | ~5min |
+| 16 -- Merge Service Core | 1/1 | ~15min |
+| 17 -- Duplicate-Handling | 1/1 | ~10min |
+| 18 -- Merge UI | 2/2 | ~12min |
+| 19 -- Merge Error Handling | 1/1 | ~5min |
 
 ## Accumulated Context
 
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table.
-Full history in .planning/milestones/v1.0-ROADMAP.md and .planning/milestones/v1.1-ROADMAP.md.
-
-### v1.2 Architecture Notes
-
-- Driver has 4 FK references: SeasonDriver, RaceLineup, RaceResult, PsnAlias
-- Duplicate-handling strategy: drop duplicate source entry (keep target entry) for SeasonDriver and RaceLineup; same for RaceResult — target's result takes precedence
-- Merge is non-reversible; no undo/rollback in scope
-- Audit logging via log.info() with structured parameters (source id/name, target id/name, timestamp, counts per FK table)
+Full history in .planning/milestones/v1.0-ROADMAP.md, .planning/milestones/v1.1-ROADMAP.md, and .planning/milestones/v1.2-ROADMAP.md.
 
 ### Blockers/Concerns
 
@@ -84,5 +78,5 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-07T12:30:54.719Z
-v1.2 roadmap created (3 phases: 16-18). Next: `/gsd-plan-phase 16`
+Last session: 2026-04-07
+v1.2 milestone complete. Next: `/gsd-new-milestone`

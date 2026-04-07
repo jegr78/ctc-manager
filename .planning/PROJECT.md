@@ -2,34 +2,22 @@
 
 ## What This Is
 
-Gran Turismo Racing League Management-Anwendung (Spring Boot 4 / Thymeleaf / MariaDB). Verwaltet Seasons, Matchdays, Matches, Races, Teams, Drivers, Scoring und Standings fuer die Community Team Cup Liga. Nach v1.0 Tech Debt Cleanup und v1.1 Codebase Concerns Cleanup ist die Codebasis architektonisch sauber, sicherheitsgehaertet und produktionsbereit.
+Gran Turismo Racing League Management-Anwendung (Spring Boot 4 / Thymeleaf / MariaDB). Verwaltet Seasons, Matchdays, Matches, Races, Teams, Drivers, Scoring und Standings fuer die Community Team Cup Liga. Nach v1.0 Tech Debt Cleanup, v1.1 Codebase Concerns Cleanup und v1.2 Driver Merge ist die Codebasis architektonisch sauber, sicherheitsgehaertet und produktionsbereit. Admins koennen Duplikat-Fahrer zusammenfuehren mit vollstaendiger FK-Referenz-Uebernahme.
 
 ## Core Value
 
 Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
 
-## Current Milestone: v1.2 Driver Merge
+## Current State (after v1.2 Driver Merge)
 
-**Goal:** Zwei Fahrer zusammenfuehren — Quell-Fahrer wird in Ziel-Fahrer gemergt, alle FK-Referenzen umgehaengt, PSN-ID als Alias uebernommen.
-
-**Target features:**
-- Merge-Button auf der Fahrer-Detailseite mit Ziel-Fahrer-Auswahl
-- Alle FK-Referenzen umhaengen (SeasonDriver, RaceLineup, RaceResult, PsnAlias)
-- PSN-ID des Quell-Fahrers als neuer Alias am Ziel-Fahrer
-- Quell-Fahrer nach Merge loeschen
-- Duplikat-Handling bei Unique Constraints (gleicher Fahrer bereits in Season/Race)
-
-## Current State (after Phase 18)
-
-- **Codebase:** 850 Tests, 82%+ Coverage
-- **Phase 16 complete:** DriverMergeService — all FK reassignment, PSN-ID transfer, audit logging
-- **Phase 17 complete:** Duplicate-Handling — proactive conflict detection for SeasonDriver, RaceLineup, RaceResult; source duplicates deleted instead of causing constraint violations
-- **Phase 18 complete:** Merge UI — merge button on driver detail page, target driver selection, preview with FK counts, explicit confirmation, redirect to target after merge
+- **Codebase:** 852 Tests, 82%+ Coverage
+- **v1.2 shipped:** Driver Merge — merge button, target selection, preview, confirmation, FK reassignment, duplicate handling, error handling
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), open (dev/local), SSRF hostname blocklist, path traversal defense
 - **Architecture:** Saubere 3-Tier (Controller → Service → Repository), keine God Services, zentrale Exception-Behandlung, domain services fully decoupled from admin DTOs
 - **Database:** 36 FK-Indexes, 28 @EntityGraph-Annotationen, Flyway-managed
 - **Templates:** CSS utility classes statt inline styles, TemplateManageable generic dispatch
+- **Driver Merge:** DriverMergeService (merge + previewMerge), DriverController (3 endpoints), driver-merge.html (two-state template)
 
 ## Requirements
 
@@ -71,7 +59,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 
 ### Active
 
-(No active requirements — v1.2 milestone complete)
+(No active requirements — planning next milestone)
 
 ### Out of Scope
 
@@ -106,6 +94,9 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 | PlayoffService + RaceService Split | Fokussierte Services statt God Services | ✓ v1.1 |
 | Domain DTO Decoupling | Primitive Parameters statt Admin DTOs in Domain Services | ✓ v1.1 |
 | Recovery Phases (12-15) | Worktree file clobber erforderte Re-Implementation | ✓ v1.1 |
+| DriverMergeService separate from DriverService | Vermeidung zirkulaerer Abhaengigkeiten, isoliertes Transaktionsmanagement | ✓ v1.2 |
+| Proactive duplicate detection (drop statt constraint error) | Target-Eintraege haben Vorrang bei Duplikaten | ✓ v1.2 |
+| previewMerge() read-only Transaktion | Vorschau darf keine Daten mutieren | ✓ v1.2 |
 
 ## Evolution
 
@@ -125,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after Phase 16 complete — Merge Service Core*
+*Last updated: 2026-04-07 after v1.2 milestone — Driver Merge*
