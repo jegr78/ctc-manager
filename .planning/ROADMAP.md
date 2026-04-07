@@ -40,7 +40,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 ### v1.2 Driver Merge (Phases 16-18)
 
 - [x] **Phase 16: Merge Service Core** - FK reassignment, audit logging, and source driver deletion (completed 2026-04-07)
-- [ ] **Phase 17: Duplicate-Handling** - Conflict resolution for unique-constraint violations across all three FK tables
+- [x] **Phase 17: Duplicate-Handling** - Conflict resolution for unique-constraint violations across all three FK tables (completed 2026-04-07)
 - [ ] **Phase 18: Merge UI** - Merge button, target selection, preview, and confirmation flow on driver detail page
 
 ## Phase Details
@@ -69,9 +69,9 @@ Plans:
   2. When source and target driver are both in the same race lineup, the duplicate RaceLineup entry is dropped rather than causing a constraint violation
   3. When source and target driver have results for the same race, the duplicate RaceResult entry is dropped rather than causing a constraint violation
   4. All non-duplicate entries across all three FK tables are still reassigned correctly when conflicts exist
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 17-01-PLAN.md — TDD: Duplicate detection and conflict resolution in DriverMergeService
+- [x] 17-01-PLAN.md — TDD: Duplicate detection and conflict resolution in DriverMergeService
 
 ### Phase 18: Merge UI
 **Goal**: Admin can initiate, preview, and confirm a driver merge from the driver detail page
@@ -106,5 +106,5 @@ Plans:
 | 14. Exception Refinement Recovery | v1.1 | 2/2 | Complete | 2026-04-07 |
 | 15. Alltime Standings Recovery | v1.1 | 1/1 | Complete | 2026-04-07 |
 | 16. Merge Service Core | v1.2 | 1/1 | Complete    | 2026-04-07 |
-| 17. Duplicate-Handling | v1.2 | 0/1 | Not started | - |
+| 17. Duplicate-Handling | v1.2 | 1/1 | Complete    | 2026-04-07 |
 | 18. Merge UI | v1.2 | 0/? | Not started | - |
