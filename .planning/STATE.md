@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: "v1.2 Driver Merge shipped — PR #99"
-last_updated: "2026-04-07T17:05:29.136Z"
+milestone: v1.3
+milestone_name: English & Test Data
+status: "Defining requirements"
+last_updated: "2026-04-07"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -18,12 +18,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Planning next milestone
+**Current focus:** Milestone v1.3 — English & Test Data
 
 ## Current Position
 
-Milestone v1.2 Driver Merge — SHIPPED 2026-04-07
-All 4 phases complete, 5 plans executed, 14/14 requirements satisfied.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-07 — Milestone v1.3 started
 
 ## Completed Milestones
 
