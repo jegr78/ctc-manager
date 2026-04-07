@@ -1,35 +1,31 @@
 {
   "version": "1.0",
-  "timestamp": "2026-04-06T18:57:52.764Z",
-  "phase": "14",
-  "phase_name": "Exception Refinement Recovery",
-  "phase_dir": ".planning/phases/14-exception-refinement-recovery",
+  "timestamp": "2026-04-07T13:39:40.453Z",
+  "phase": "19",
+  "phase_name": "Merge Error Handling",
+  "phase_dir": ".planning/phases/19-merge-error-handling",
   "plan": 1,
   "task": 0,
-  "total_tasks": 0,
+  "total_tasks": 2,
   "status": "paused",
   "completed_tasks": [
-    {"id": "context", "name": "CONTEXT.md gathered", "status": "done"},
-    {"id": "research", "name": "RESEARCH.md completed", "status": "done"},
-    {"id": "validation", "name": "VALIDATION.md created", "status": "done"},
-    {"id": "plan-01", "name": "14-01-PLAN.md written by planner", "status": "in_progress", "progress": "Written but not verified by plan-checker"}
+    {"id": "research", "name": "19-RESEARCH.md completed", "status": "done", "commit": "e263b23"},
+    {"id": "validation", "name": "19-VALIDATION.md created", "status": "done", "commit": "1bac180"},
+    {"id": "plan-01", "name": "19-01-PLAN.md written by planner", "status": "done", "commit": "cddc4af"}
   ],
   "remaining_tasks": [
-    {"id": "verify-plan", "name": "Run plan-checker on 14-01-PLAN.md", "status": "not_started"},
-    {"id": "req-coverage", "name": "Requirements coverage gate (ERRH-01)", "status": "not_started"},
-    {"id": "commit-plan", "name": "Commit verified plans", "status": "not_started"},
-    {"id": "execute", "name": "Execute phase 14", "status": "not_started"}
+    {"id": "verify-plan", "name": "Run plan-checker on 19-01-PLAN.md", "status": "not_started"},
+    {"id": "req-coverage", "name": "Requirements coverage gate (MERGE-02, MERGE-03)", "status": "not_started"},
+    {"id": "state-update", "name": "Record planning completion in STATE.md", "status": "not_started"},
+    {"id": "execute", "name": "Execute phase 19 (2 TDD tasks)", "status": "not_started"}
   ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "Research before planning", "rationale": "Phase 13 changed many files, need to verify current exception types", "phase": "14"},
-    {"decision": "Manual re-implementation, no cherry-pick", "rationale": "Phase 13 changes make conflicts likely", "phase": "14"},
-    {"decision": "TemplateEditorController in scope", "rationale": "Phase 10 refactoring complete, controller stable", "phase": "14"}
+    {"decision": "previewMerge redirects to /admin/drivers/{id}/merge (merge form) not /admin/drivers (list)", "rationale": "Source driver still exists after preview error, user can retry", "phase": "19"},
+    {"decision": "Research before planning", "rationale": "Needed to verify exact method signatures and existing pattern in DriverController", "phase": "19"}
   ],
-  "uncommitted_files": [
-    ".planning/phases/14-exception-refinement-recovery/14-01-PLAN.md"
-  ],
-  "next_action": "/gsd-plan-phase 14 — detects existing plan, verify with plan-checker",
-  "context_notes": "Plan-phase workflow interrupted at step 8 (after planner, before checker). Plan exists but is unverified."
+  "uncommitted_files": [],
+  "next_action": "Run /gsd-plan-phase 19 to verify existing plan with plan-checker, or /gsd-execute-phase 19 to skip verification and execute directly.",
+  "context_notes": "Plan-phase workflow completed through step 9 (planner returned PLANNING COMPLETE). Was about to spawn gsd-plan-checker (step 10) for verification when user paused. All artifacts committed. Plan 19-01 has 2 TDD tasks: Task 1 writes failing tests (RED), Task 2 adds try/catch implementation (GREEN)."
 }
