@@ -19,11 +19,12 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 - Quell-Fahrer nach Merge loeschen
 - Duplikat-Handling bei Unique Constraints (gleicher Fahrer bereits in Season/Race)
 
-## Current State (after Phase 17)
+## Current State (after Phase 18)
 
-- **Codebase:** 839 Tests, 82%+ Coverage
+- **Codebase:** 850 Tests, 82%+ Coverage
 - **Phase 16 complete:** DriverMergeService — all FK reassignment, PSN-ID transfer, audit logging
 - **Phase 17 complete:** Duplicate-Handling — proactive conflict detection for SeasonDriver, RaceLineup, RaceResult; source duplicates deleted instead of causing constraint violations
+- **Phase 18 complete:** Merge UI — merge button on driver detail page, target driver selection, preview with FK counts, explicit confirmation, redirect to target after merge
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), open (dev/local), SSRF hostname blocklist, path traversal defense
 - **Architecture:** Saubere 3-Tier (Controller → Service → Repository), keine God Services, zentrale Exception-Behandlung, domain services fully decoupled from admin DTOs
@@ -58,13 +59,19 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 - ✓ Inline-Styles in Admin Templates durch CSS-Klassen ersetzt — Phase 11 (QUAL-01)
 - ✓ Alltime Standings cross-season Aggregation — Phase 9/15 (FEAT-01)
 
+### Validated (v1.2)
+
+- ✓ DriverMergeService mit FK-Reassignment und Duplikat-Handling — Phase 16/17
+- ✓ Merge-Button auf Fahrer-Detailseite mit Ziel-Fahrer-Auswahl — Phase 18 (MERGE-01)
+- ✓ Alle FK-Referenzen (SeasonDriver, RaceLineup, RaceResult, PsnAlias) umgehaengt — Phase 16 (MERGE-05..10)
+- ✓ PSN-ID des Quell-Fahrers als Alias am Ziel-Fahrer — Phase 16 (MERGE-09)
+- ✓ Quell-Fahrer nach Merge geloescht — Phase 16 (MERGE-10)
+- ✓ Duplikat-Handling bei Unique Constraints — Phase 17 (MERGE-11..13)
+- ✓ Merge-Vorschau und explizite Bestaetigung — Phase 18 (MERGE-03, MERGE-04)
+
 ### Active
 
-- [ ] Merge-Button auf Fahrer-Detailseite mit Ziel-Fahrer-Auswahl
-- [ ] Alle FK-Referenzen (SeasonDriver, RaceLineup, RaceResult, PsnAlias) umhaengen
-- [ ] PSN-ID des Quell-Fahrers als Alias am Ziel-Fahrer
-- [ ] Quell-Fahrer nach Merge loeschen
-- [x] Duplikat-Handling bei Unique Constraints — Phase 17
+(No active requirements — v1.2 milestone complete)
 
 ### Out of Scope
 
