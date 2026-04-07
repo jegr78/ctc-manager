@@ -1,7 +1,7 @@
 ---
 phase: 18
 slug: merge-ui
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-04-07
@@ -58,7 +58,7 @@ Source: CONTEXT.md D-18, admin.css measurements.
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 (regular) | 1.6 |
-| Label | 13px | 400 (regular) | 1.0 |
+| Label | 14px | 400 (regular) | 1.0 |
 | Heading (h1) | 22px | 600 (Conthrax) | 1.2 |
 | Heading (h2) | 16px | 600 (Conthrax) | 1.2 |
 
@@ -124,6 +124,8 @@ No new CSS classes are required for this phase. All visual needs are covered by 
 
 ### State 1 — Select Target (GET /admin/drivers/{id}/merge)
 
+**Primary visual anchor:** Target driver dropdown (`select` element) — the only interactive element requiring user input.
+
 ```
 [toolbar]
   [back-link]  ← Back to Driver: {psnId}
@@ -142,10 +144,12 @@ No new CSS classes are required for this phase. All visual needs are covered by 
         <option th:each ...>  {psnId} ({nickname})
     [actions]
       [btn btn-primary type=submit]  Select Target
-      [a href=/admin/drivers/{id} btn btn-secondary]  Cancel
+      [a href=/admin/drivers/{id} btn btn-secondary]  Back to Driver
 ```
 
 ### State 2 — Preview + Confirm (GET /admin/drivers/{id}/merge?targetId={uuid} or POST /admin/drivers/{id}/merge/preview)
+
+**Primary visual anchor:** "Confirm Merge" button (`btn-danger`) — the irreversible action requiring explicit user commitment.
 
 ```
 [toolbar]
@@ -227,7 +231,7 @@ Redirect to `/admin/drivers`.
 |---------|------|
 | Primary CTA (step 1) | "Select Target" |
 | Primary CTA (step 2) | "Confirm Merge" |
-| Cancel / back (step 1) | "Cancel" |
+| Cancel / back (step 1) | "Back to Driver" |
 | Back (step 2) | "Back" |
 | Merge button on detail page | "Merge" |
 | Page title (step 1) | "Merge Driver: {psnId}" |
@@ -265,11 +269,11 @@ This phase adds no third-party dependencies. All components are server-rendered 
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: FLAG (two single-word navigation labels — non-blocking)
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved (2026-04-07)
