@@ -56,7 +56,9 @@ See: milestones/v1.1-ROADMAP.md for full details
   4. All PsnAlias entries and the source driver's PSN-ID are transferred to the target driver as aliases
   5. The source driver is deleted after all FK references are reassigned
   6. Every merge attempt is logged with source driver, target driver, timestamp, and count of affected references
-**Plans**: TBD
+**Plans:** 1 plan
+Plans:
+- [ ] 16-01-PLAN.md — TDD: DriverMergeService with FK reassignment, PSN-ID transfer, audit logging
 
 ### Phase 17: Duplicate-Handling
 **Goal**: The merge service resolves unique-constraint conflicts without data loss or uncaught exceptions
@@ -101,6 +103,6 @@ See: milestones/v1.1-ROADMAP.md for full details
 | 13. Layer Cleanup Recovery | v1.1 | 3/3 | Complete | 2026-04-06 |
 | 14. Exception Refinement Recovery | v1.1 | 2/2 | Complete | 2026-04-07 |
 | 15. Alltime Standings Recovery | v1.1 | 1/1 | Complete | 2026-04-07 |
-| 16. Merge Service Core | v1.2 | 0/? | Not started | - |
+| 16. Merge Service Core | v1.2 | 0/1 | Not started | - |
 | 17. Duplicate-Handling | v1.2 | 0/? | Not started | - |
 | 18. Merge UI | v1.2 | 0/? | Not started | - |
