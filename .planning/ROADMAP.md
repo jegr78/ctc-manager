@@ -54,7 +54,7 @@ See: milestones/v1.2-ROADMAP.md for full details
 
 **Milestone Goal:** Full English cleanup of the entire codebase and comprehensive dev test data covering all season formats with real scoring and playoffs.
 
-- [ ] **Phase 20: English Messages** — Convert all German log and exception messages to English
+- [x] **Phase 20: English Messages** — Convert all German log and exception messages to English (completed 2026-04-07)
 - [ ] **Phase 21: English Code** — Convert all German constants, comments, Javadoc, variable and method names to English
 - [ ] **Phase 22: Dev Teams & Drivers** — Seed 14+ fictive teams with sub-teams, 10 drivers each, and generate team cards
 - [ ] **Phase 23: Dev Seasons with Results** — Seed League, Swiss, and Round Robin seasons with matchdays, races, and scored results
@@ -71,9 +71,9 @@ See: milestones/v1.2-ROADMAP.md for full details
   2. All exception messages thrown by the application are in English
   3. Developer scanning logs can read every entry without German language knowledge
   4. Exception stack traces shown on the error page contain only English descriptions
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 20-01-PLAN.md — Translate all German comments to English across 5 files and verify
+- [x] 20-01-PLAN.md — Translate all German comments to English across 5 files and verify
 
 ### Phase 21: English Code
 **Goal**: Every German identifier, string literal, constant, comment, and Javadoc entry in the codebase has been replaced with English equivalents
@@ -146,7 +146,7 @@ Plans:
 | 17. Duplicate-Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
 | 18. Merge UI | v1.2 | 2/2 | Complete | 2026-04-07 |
 | 19. Merge Error Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
-| 20. English Messages | v1.3 | 0/1 | Not started | - |
+| 20. English Messages | v1.3 | 1/1 | Complete    | 2026-04-07 |
 | 21. English Code | v1.3 | 0/? | Not started | - |
 | 22. Dev Teams & Drivers | v1.3 | 0/? | Not started | - |
 | 23. Dev Seasons with Results | v1.3 | 0/? | Not started | - |
