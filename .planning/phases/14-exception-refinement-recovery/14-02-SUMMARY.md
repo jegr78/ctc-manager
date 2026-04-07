@@ -116,6 +116,18 @@ None - no external service configuration required.
 - Plan 14-01 (controller catch narrowing) can proceed in parallel or after this plan
 - Zero `catch(Exception e)` remains in domain/service and gt7sync service classes
 
+## Self-Check: PASSED
+
+- CarService.java: FOUND, contains `catch (IOException e)`
+- TrackService.java: FOUND, contains `catch (IOException e)`
+- TeamManagementService.java: FOUND, contains `catch (IOException e)`
+- Gt7SyncService.java: FOUND, contains 2 narrowed `catch (IOException e)` in batch lambdas
+- Gt7ScraperService.java: FOUND, contains `catch (IOException e)`
+- DriverRankingService.java: FOUND, contains QUAL-02 Javadoc
+- SUMMARY.md: FOUND at .planning/phases/14-exception-refinement-recovery/14-02-SUMMARY.md
+- Commits: f21d5e9 (test RED), 14d4791 (feat GREEN), d1e9190 (docs QUAL-02) — all verified
+- Full test suite: 774 tests, 0 failures, BUILD SUCCESS
+
 ---
 *Phase: 14-exception-refinement-recovery*
 *Completed: 2026-04-07*
