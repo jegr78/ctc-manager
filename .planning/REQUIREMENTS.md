@@ -43,25 +43,25 @@ None deferred for this milestone.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| I18N-01 | — | Pending |
-| I18N-02 | — | Pending |
-| I18N-03 | — | Pending |
-| I18N-04 | — | Pending |
-| I18N-05 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| DATA-05 | — | Pending |
-| DATA-06 | — | Pending |
-| DATA-07 | — | Pending |
-| DATA-08 | — | Pending |
+| I18N-01 | Phase 20 | Pending |
+| I18N-02 | Phase 20 | Pending |
+| I18N-03 | Phase 21 | Pending |
+| I18N-04 | Phase 21 | Pending |
+| I18N-05 | Phase 21 | Pending |
+| DATA-01 | Phase 22 | Pending |
+| DATA-02 | Phase 22 | Pending |
+| DATA-03 | Phase 22 | Pending |
+| DATA-04 | Phase 23 | Pending |
+| DATA-05 | Phase 23 | Pending |
+| DATA-06 | Phase 23 | Pending |
+| DATA-07 | Phase 23 | Pending |
+| DATA-08 | Phase 24 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 13 total
-- Mapped to phases: 0
-- Unmapped: 13 ⚠️
+- Mapped to phases: 13
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-07*
-*Last updated: 2026-04-07 after initial definition*
+*Last updated: 2026-04-07 after roadmap creation (v1.3 phases 20-24)*

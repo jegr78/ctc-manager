@@ -5,6 +5,7 @@
 - :white_check_mark: **v1.0 Technical Debt Cleanup** — Phases 1-5 (shipped 2026-04-04)
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
 - :white_check_mark: **v1.2 Driver Merge** — Phases 16-19 (shipped 2026-04-07)
+- :construction: **v1.3 English & Test Data** — Phases 20-24 (in progress)
 
 ## Phases
 
@@ -49,6 +50,77 @@ See: milestones/v1.2-ROADMAP.md for full details
 
 </details>
 
+### v1.3 English & Test Data (In Progress)
+
+**Milestone Goal:** Full English cleanup of the entire codebase and comprehensive dev test data covering all season formats with real scoring and playoffs.
+
+- [ ] **Phase 20: English Messages** — Convert all German log and exception messages to English
+- [ ] **Phase 21: English Code** — Convert all German constants, comments, Javadoc, variable and method names to English
+- [ ] **Phase 22: Dev Teams & Drivers** — Seed 14+ fictive teams with sub-teams, 10 drivers each, and generate team cards
+- [ ] **Phase 23: Dev Seasons with Results** — Seed League, Swiss, and Round Robin seasons with matchdays, races, and scored results
+- [ ] **Phase 24: Dev Playoffs** — Seed first playoff round for one completed season
+
+## Phase Details
+
+### Phase 20: English Messages
+**Goal**: All runtime-observable German messages are replaced by English equivalents
+**Depends on**: Phase 19 (v1.2 complete)
+**Requirements**: I18N-01, I18N-02
+**Success Criteria** (what must be TRUE):
+  1. No German text appears in application log output during normal operation
+  2. All exception messages thrown by the application are in English
+  3. Developer scanning logs can read every entry without German language knowledge
+  4. Exception stack traces shown on the error page contain only English descriptions
+**Plans**: TBD
+
+### Phase 21: English Code
+**Goal**: Every German identifier, string literal, constant, comment, and Javadoc entry in the codebase has been replaced with English equivalents
+**Depends on**: Phase 20
+**Requirements**: I18N-03, I18N-04, I18N-05
+**Success Criteria** (what must be TRUE):
+  1. IDE search for German words returns zero hits in production source files
+  2. All public and private method names, variable names, and field names are English
+  3. All enum constants and string literals used in logic are English
+  4. All Javadoc and inline comments are English
+  5. Code reviews can be conducted without German language knowledge
+**Plans**: TBD
+
+### Phase 22: Dev Teams & Drivers
+**Goal**: The dev profile starts with a complete, realistic set of fictive teams and drivers that cover all structural variations (parent teams, sub-teams) and have generated team card images
+**Depends on**: Phase 21
+**Requirements**: DATA-01, DATA-02, DATA-03
+**Success Criteria** (what must be TRUE):
+  1. Starting the dev profile creates 14 or more teams with entirely fictive names
+  2. At least 2 parent teams exist, each with 2 or more named sub-teams
+  3. Each team has exactly 10 drivers with fictive names
+  4. Every team has a generated team card image visible on the teams list page
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 23: Dev Seasons with Results
+**Goal**: The dev profile populates three fully played-out seasons — one per format — each with real matchdays, race results, and points calculated by the existing scoring system
+**Depends on**: Phase 22
+**Requirements**: DATA-04, DATA-05, DATA-06, DATA-07
+**Success Criteria** (what must be TRUE):
+  1. A League format season exists with at least 3 matchdays, each containing races with results
+  2. A Swiss format season exists with at least 3 matchdays, each containing races with results
+  3. A Round Robin format season with 2 groups exists with at least 2 matchdays per group
+  4. Standings pages for all three seasons display non-zero points derived from the scoring system
+  5. Race result entries reflect point values consistent with the configured scoring rules
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 24: Dev Playoffs
+**Goal**: One completed season in the dev profile has a first playoff round seeded and visible in the bracket view
+**Depends on**: Phase 23
+**Requirements**: DATA-08
+**Success Criteria** (what must be TRUE):
+  1. One season is marked as completed with a playoff bracket created
+  2. The first playoff round shows seeded matchups on the bracket page
+  3. The bracket view renders without errors using dev profile data
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -72,3 +144,8 @@ See: milestones/v1.2-ROADMAP.md for full details
 | 17. Duplicate-Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
 | 18. Merge UI | v1.2 | 2/2 | Complete | 2026-04-07 |
 | 19. Merge Error Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
+| 20. English Messages | v1.3 | 0/? | Not started | - |
+| 21. English Code | v1.3 | 0/? | Not started | - |
+| 22. Dev Teams & Drivers | v1.3 | 0/? | Not started | - |
+| 23. Dev Seasons with Results | v1.3 | 0/? | Not started | - |
+| 24. Dev Playoffs | v1.3 | 0/? | Not started | - |
