@@ -50,26 +50,26 @@ Requirements for Driver Merge milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MERGE-01 | — | Pending |
-| MERGE-02 | — | Pending |
-| MERGE-03 | — | Pending |
-| MERGE-04 | — | Pending |
-| MERGE-05 | — | Pending |
-| MERGE-06 | — | Pending |
-| MERGE-07 | — | Pending |
-| MERGE-08 | — | Pending |
-| MERGE-09 | — | Pending |
-| MERGE-10 | — | Pending |
-| MERGE-11 | — | Pending |
-| MERGE-12 | — | Pending |
-| MERGE-13 | — | Pending |
-| MERGE-14 | — | Pending |
+| MERGE-01 | Phase 18 | Pending |
+| MERGE-02 | Phase 18 | Pending |
+| MERGE-03 | Phase 18 | Pending |
+| MERGE-04 | Phase 18 | Pending |
+| MERGE-05 | Phase 16 | Pending |
+| MERGE-06 | Phase 16 | Pending |
+| MERGE-07 | Phase 16 | Pending |
+| MERGE-08 | Phase 16 | Pending |
+| MERGE-09 | Phase 16 | Pending |
+| MERGE-10 | Phase 16 | Pending |
+| MERGE-11 | Phase 17 | Pending |
+| MERGE-12 | Phase 17 | Pending |
+| MERGE-13 | Phase 17 | Pending |
+| MERGE-14 | Phase 16 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-07*
-*Last updated: 2026-04-07 after initial definition*
+*Last updated: 2026-04-07 after roadmap creation*

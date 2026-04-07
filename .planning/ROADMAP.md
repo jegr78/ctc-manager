@@ -4,6 +4,7 @@
 
 - :white_check_mark: **v1.0 Technical Debt Cleanup** — Phases 1-5 (shipped 2026-04-04)
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
+- **v1.2 Driver Merge** — Phases 16-18 (active)
 
 ## Phases
 
@@ -36,6 +37,51 @@ See: milestones/v1.1-ROADMAP.md for full details
 
 </details>
 
+### v1.2 Driver Merge (Phases 16-18)
+
+- [ ] **Phase 16: Merge Service Core** - FK reassignment, audit logging, and source driver deletion
+- [ ] **Phase 17: Duplicate-Handling** - Conflict resolution for unique-constraint violations across all three FK tables
+- [ ] **Phase 18: Merge UI** - Merge button, target selection, preview, and confirmation flow on driver detail page
+
+## Phase Details
+
+### Phase 16: Merge Service Core
+**Goal**: Admin can execute a driver merge that reassigns all FK references and deletes the source driver
+**Depends on**: Nothing (self-contained service layer)
+**Requirements**: MERGE-05, MERGE-06, MERGE-07, MERGE-08, MERGE-09, MERGE-10, MERGE-14
+**Success Criteria** (what must be TRUE):
+  1. All SeasonDriver entries of the source driver are reassigned to the target driver
+  2. All RaceLineup entries of the source driver are reassigned to the target driver
+  3. All RaceResult entries of the source driver are reassigned to the target driver
+  4. All PsnAlias entries and the source driver's PSN-ID are transferred to the target driver as aliases
+  5. The source driver is deleted after all FK references are reassigned
+  6. Every merge attempt is logged with source driver, target driver, timestamp, and count of affected references
+**Plans**: TBD
+
+### Phase 17: Duplicate-Handling
+**Goal**: The merge service resolves unique-constraint conflicts without data loss or uncaught exceptions
+**Depends on**: Phase 16
+**Requirements**: MERGE-11, MERGE-12, MERGE-13
+**Success Criteria** (what must be TRUE):
+  1. When source and target driver are both in the same season, the duplicate SeasonDriver entry is dropped rather than causing a constraint violation
+  2. When source and target driver are both in the same race lineup, the duplicate RaceLineup entry is dropped rather than causing a constraint violation
+  3. When source and target driver have results for the same race, the duplicate RaceResult entry is dropped rather than causing a constraint violation
+  4. All non-duplicate entries across all three FK tables are still reassigned correctly when conflicts exist
+**Plans**: TBD
+
+### Phase 18: Merge UI
+**Goal**: Admin can initiate, preview, and confirm a driver merge from the driver detail page
+**Depends on**: Phase 17
+**Requirements**: MERGE-01, MERGE-02, MERGE-03, MERGE-04
+**Success Criteria** (what must be TRUE):
+  1. A merge button is visible on the driver detail page that opens the merge workflow
+  2. Admin can search for and select the target driver from all existing drivers except the current one
+  3. Admin sees a preview listing the number of SeasonDriver, RaceLineup, RaceResult, and PsnAlias entries that will be reassigned
+  4. Admin must explicitly confirm the merge before any data is changed
+  5. After a successful merge the admin is redirected to the target driver's detail page with a success message
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -55,3 +101,6 @@ See: milestones/v1.1-ROADMAP.md for full details
 | 13. Layer Cleanup Recovery | v1.1 | 3/3 | Complete | 2026-04-06 |
 | 14. Exception Refinement Recovery | v1.1 | 2/2 | Complete | 2026-04-07 |
 | 15. Alltime Standings Recovery | v1.1 | 1/1 | Complete | 2026-04-07 |
+| 16. Merge Service Core | v1.2 | 0/? | Not started | - |
+| 17. Duplicate-Handling | v1.2 | 0/? | Not started | - |
+| 18. Merge UI | v1.2 | 0/? | Not started | - |

@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Driver Merge
-status: defining_requirements
-last_updated: "2026-04-07T12:00:00.000Z"
+status: roadmap_ready
+last_updated: "2026-04-07T12:30:00.000Z"
 last_activity: 2026-04-07
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,16 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Defining requirements for v1.2 Driver Merge
+**Current focus:** v1.2 Driver Merge — Phase 16 next
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 16 — Merge Service Core (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-07 — Milestone v1.2 started
+Status: Roadmap ready, awaiting plan-phase
+Last activity: 2026-04-07 — Roadmap created for v1.2
 
-Progress: ░░░░░░░░░░ 0%
+Progress: ░░░░░░░░░░ 0% (0/3 phases)
 
 ## Completed Milestones
 
@@ -65,6 +65,13 @@ Progress: ░░░░░░░░░░ 0%
 All decisions logged in PROJECT.md Key Decisions table.
 Full history in .planning/milestones/v1.0-ROADMAP.md and .planning/milestones/v1.1-ROADMAP.md.
 
+### v1.2 Architecture Notes
+
+- Driver has 4 FK references: SeasonDriver, RaceLineup, RaceResult, PsnAlias
+- Duplicate-handling strategy: drop duplicate source entry (keep target entry) for SeasonDriver and RaceLineup; same for RaceResult — target's result takes precedence
+- Merge is non-reversible; no undo/rollback in scope
+- Audit logging via log.info() with structured parameters (source id/name, target id/name, timestamp, counts per FK table)
+
 ### Blockers/Concerns
 
 None.
@@ -78,4 +85,4 @@ None.
 ## Session Continuity
 
 Last session: 2026-04-07
-Milestone v1.1 completed. Start next milestone with `/gsd-new-milestone`.
+v1.2 roadmap created (3 phases: 16-18). Next: `/gsd-plan-phase 16`
