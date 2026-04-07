@@ -2,7 +2,10 @@ package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.DriverForm;
 import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
+import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PsnAlias;
+import org.ctc.domain.service.DriverMergeService;
 import org.ctc.domain.service.DriverService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +16,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Comparator;
 import java.util.UUID;
 
 @Slf4j
@@ -22,6 +26,7 @@ import java.util.UUID;
 public class DriverController {
 
     private final DriverService driverService;
+    private final DriverMergeService driverMergeService;
 
     @GetMapping
     public String list(Model model) {
@@ -98,5 +103,48 @@ public class DriverController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/admin/drivers";
+    }
+
+    @GetMapping("/{id}/merge")
+    public String mergeForm(@PathVariable UUID id, Model model) {
+        var source = driverService.findById(id);
+        var allDrivers = driverService.findAll().stream()
+                .filter(d -> !d.getId().equals(id))
+                .sorted(Comparator.comparing(Driver::getPsnId, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+        model.addAttribute("source", source);
+        model.addAttribute("allDrivers", allDrivers);
+        return "admin/driver-merge";
+    }
+
+    @PostMapping("/{id}/merge/preview")
+    public String previewMerge(@PathVariable UUID id, @RequestParam UUID targetId, Model model) {
+        var source = driverService.findById(id);
+        var target = driverService.findById(targetId);
+        var preview = driverMergeService.previewMerge(id, targetId);
+        model.addAttribute("source", source);
+        model.addAttribute("target", target);
+        model.addAttribute("preview", preview);
+        return "admin/driver-merge";
+    }
+
+    @PostMapping("/{id}/merge")
+    public String executeMerge(@PathVariable UUID id, @RequestParam UUID targetId,
+                               RedirectAttributes redirectAttributes) {
+        try {
+            var source = driverService.findById(id);
+            var target = driverService.findById(targetId);
+            var result = driverMergeService.merge(id, targetId);
+            int total = result.seasonDrivers() + result.raceLineups() + result.raceResults() + result.aliasesReassigned();
+            int dropped = result.seasonDriversDropped() + result.raceLineupsDropped() + result.raceResultsDropped();
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Driver merged: " + source.getPsnId() + " into " + target.getPsnId()
+                    + " — " + total + " references reassigned, " + dropped + " duplicates resolved");
+            return "redirect:/admin/drivers/" + targetId;
+        } catch (EntityNotFoundException | BusinessRuleException e) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Merge failed: " + e.getMessage());
+            return "redirect:/admin/drivers";
+        }
     }
 }

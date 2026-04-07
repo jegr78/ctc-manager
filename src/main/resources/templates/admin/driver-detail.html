@@ -10,6 +10,7 @@
         </div>
         <div class="actions">
             <a th:href="@{/admin/drivers/{id}/edit(id=${driver.id})}" class="btn btn-primary">Edit</a>
+            <a th:href="@{/admin/drivers/{id}/merge(id=${driver.id})}" class="btn btn-secondary">Merge</a>
             <form th:action="@{/admin/drivers/{id}/delete(id=${driver.id})}" method="post"
                   onsubmit="return confirm('Really delete this driver?')">
                 <button type="submit" class="btn btn-danger">Delete</button>
