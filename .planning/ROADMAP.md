@@ -99,7 +99,7 @@ Plans:
   1. previewMerge() catches EntityNotFoundException and BusinessRuleException and redirects to merge form with errorMessage flash attribute
   2. Self-merge via URL manipulation on preview endpoint returns user to merge form with error message instead of generic error page
   3. Non-existent target driver on preview endpoint returns user to merge form with error message instead of generic error page
-**Plans:** 0/1 plans
+**Plans:** 1 plan
 Plans:
 - [ ] 19-01-PLAN.md — TDD: Add try/catch to previewMerge() with flash redirect
 
