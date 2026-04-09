@@ -151,9 +151,10 @@ class TestDataServiceIntegrationTest {
         // given
         var season = findSeason(2026, 4);
 
-        // when
+        // when — filter for seed-created matchdays (label pattern "Matchday N")
         var matchdays = matchdayRepository.findAll().stream()
                 .filter(md -> md.getSeason().getId().equals(season.getId()))
+                .filter(md -> md.getLabel().matches("Matchday \\d+"))
                 .count();
 
         // then
@@ -168,6 +169,7 @@ class TestDataServiceIntegrationTest {
         // when
         var matchdays = matchdayRepository.findAll().stream()
                 .filter(md -> md.getSeason().getId().equals(season.getId()))
+                .filter(md -> md.getLabel().matches("Matchday \\d+"))
                 .count();
 
         // then
@@ -182,6 +184,7 @@ class TestDataServiceIntegrationTest {
         // when
         var matchdays = matchdayRepository.findAll().stream()
                 .filter(md -> md.getSeason().getId().equals(season.getId()))
+                .filter(md -> md.getLabel().matches("Matchday \\d+"))
                 .count();
 
         // then
@@ -196,6 +199,7 @@ class TestDataServiceIntegrationTest {
         // when
         var matchdays = matchdayRepository.findAll().stream()
                 .filter(md -> md.getSeason().getId().equals(season.getId()))
+                .filter(md -> md.getLabel().matches("Matchday \\d+"))
                 .count();
 
         // then
@@ -206,12 +210,13 @@ class TestDataServiceIntegrationTest {
     void givenDevSeed_whenStarted_thenLeagueRacesHaveResults() {
         // given
         var season = findSeason(2026, 4);
-        var seasonMatchdays = matchdayRepository.findAll().stream()
+        var seedMatchdayIds = matchdayRepository.findAll().stream()
                 .filter(md -> md.getSeason().getId().equals(season.getId()))
-                .toList();
+                .filter(md -> md.getLabel().matches("Matchday \\d+"))
+                .map(md -> md.getId())
+                .collect(Collectors.toSet());
         var seasonRaces = raceRepository.findAll().stream()
-                .filter(r -> seasonMatchdays.stream()
-                        .anyMatch(md -> md.getId().equals(r.getMatchday().getId())))
+                .filter(r -> seedMatchdayIds.contains(r.getMatchday().getId()))
                 .toList();
 
         // then
@@ -244,15 +249,20 @@ class TestDataServiceIntegrationTest {
 
     @Test
     void givenDevSeed_whenStarted_thenAllMatchesHaveNonNullScores() {
-        // given
+        // given — filter for seed-created matchdays only (label "Matchday N")
         var devSeasonIds = seasonRepository.findAll().stream()
                 .filter(s -> s.getNumber() < 90) // exclude test seasons
                 .map(s -> s.getId())
                 .collect(Collectors.toSet());
+        var seedMatchdayIds = matchdayRepository.findAll().stream()
+                .filter(md -> devSeasonIds.contains(md.getSeason().getId()))
+                .filter(md -> md.getLabel().matches("Matchday \\d+"))
+                .map(md -> md.getId())
+                .collect(Collectors.toSet());
 
         // when
         var devMatches = matchRepository.findAll().stream()
-                .filter(m -> devSeasonIds.contains(m.getMatchday().getSeason().getId()))
+                .filter(m -> seedMatchdayIds.contains(m.getMatchday().getId()))
                 .toList();
 
         // then
