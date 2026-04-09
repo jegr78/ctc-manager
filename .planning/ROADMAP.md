@@ -55,7 +55,7 @@ See: milestones/v1.2-ROADMAP.md for full details
 **Milestone Goal:** Full English cleanup of the entire codebase and comprehensive dev test data covering all season formats with real scoring and playoffs.
 
 - [x] **Phase 20: English Messages** — Convert all German log and exception messages to English (completed 2026-04-07)
-- [ ] **Phase 21: English Code** — Convert all German constants, comments, Javadoc, variable and method names to English
+- [x] **Phase 21: English Code** — Convert all German constants, comments, Javadoc, variable and method names to English (completed 2026-04-09)
 - [ ] **Phase 22: Dev Teams & Drivers** — Seed 14+ fictive teams with sub-teams, 10 drivers each, and generate team cards
 - [ ] **Phase 23: Dev Seasons with Results** — Seed League, Swiss, and Round Robin seasons with matchdays, races, and scored results
 - [ ] **Phase 24: Dev Playoffs** — Seed first playoff round for one completed season
@@ -85,9 +85,9 @@ Plans:
   3. All enum constants and string literals used in logic are English
   4. All Javadoc and inline comments are English
   5. Code reviews can be conducted without German language knowledge
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 21-01-PLAN.md — Replace German text in test files and HTML templates, verify no German remains
+- [x] 21-01-PLAN.md — Replace German text in test files and HTML templates, verify no German remains
 
 ### Phase 22: Dev Teams & Drivers
 **Goal**: The dev profile starts with a complete, realistic set of fictive teams and drivers that cover all structural variations (parent teams, sub-teams) and have generated team card images
@@ -100,7 +100,7 @@ Plans:
   4. Every team has a generated team card image visible on the teams list page
 **Plans:** 1 plan
 Plans:
-- [ ] 21-01-PLAN.md — Replace German text in test files and HTML templates, verify no German remains
+- [x] 21-01-PLAN.md — Replace German text in test files and HTML templates, verify no German remains
 **UI hint**: yes
 
 ### Phase 23: Dev Seasons with Results
@@ -155,7 +155,7 @@ Plans:
 | 18. Merge UI | v1.2 | 2/2 | Complete | 2026-04-07 |
 | 19. Merge Error Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
 | 20. English Messages | v1.3 | 1/1 | Complete    | 2026-04-07 |
-| 21. English Code | v1.3 | 0/1 | Planning    | - |
+| 21. English Code | v1.3 | 1/1 | Complete    | 2026-04-09 |
 | 22. Dev Teams & Drivers | v1.3 | 0/? | Not started | - |
 | 23. Dev Seasons with Results | v1.3 | 0/? | Not started | - |
 | 24. Dev Playoffs | v1.3 | 0/? | Not started | - |
