@@ -72,7 +72,7 @@ class StandingsServiceTest {
         void givenOneMatch_whenCalculateStandings_thenWinnerGetThreePoints() {
             // given
             // TNR beats P1R 70:46
-            var matchday = new Matchday(season, "Matchday 1", 1);
+            var matchday = new Matchday(season, "Spieltag 1", 1);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -103,7 +103,7 @@ class StandingsServiceTest {
         @Test
         void givenEqualScores_whenCalculateStandings_thenBothTeamsGetDrawPoint() {
             // given
-            var matchday = new Matchday(season, "Matchday 1", 1);
+            var matchday = new Matchday(season, "Spieltag 1", 1);
             var match = createMatchWithScore(matchday, clr, tnr, 54, 54);
 
             season.addTeam(clr);
@@ -129,7 +129,7 @@ class StandingsServiceTest {
             var customMatchScoring = new MatchScoring("Classic 2-1-0", 2, 1, 0);
             season.setMatchScoring(customMatchScoring);
 
-            var matchday = new Matchday(season, "Matchday 1", 1);
+            var matchday = new Matchday(season, "Spieltag 1", 1);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -148,7 +148,7 @@ class StandingsServiceTest {
         @Test
         void givenByeMatch_whenCalculateStandings_thenTeamGetsWin() {
             // given
-            var matchday = new Matchday(season, "Matchday 1", 1);
+            var matchday = new Matchday(season, "Spieltag 1", 1);
             var byeMatch = new Match(matchday, tnr, null);
             byeMatch.setId(UUID.randomUUID());
             byeMatch.setBye(true);
@@ -170,8 +170,8 @@ class StandingsServiceTest {
         @Test
         void givenMultipleMatches_whenCalculateStandings_thenSortedByPointsThenPointDifference() {
             // given
-            var md1 = new Matchday(season, "Matchday 1", 1);
-            var md2 = new Matchday(season, "Matchday 2", 2);
+            var md1 = new Matchday(season, "Spieltag 1", 1);
+            var md2 = new Matchday(season, "Spieltag 2", 2);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
             var match2 = createMatchWithScore(md2, clr, p1r, 80, 40);
 
@@ -194,7 +194,7 @@ class StandingsServiceTest {
         @Test
         void givenTeamWithNoGames_whenCalculateStandings_thenTeamExcluded() {
             // given
-            var matchday = new Matchday(season, "Matchday 1", 1);
+            var matchday = new Matchday(season, "Spieltag 1", 1);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -214,7 +214,7 @@ class StandingsServiceTest {
         @Test
         void givenMatchWithNoScores_whenCalculateStandings_thenMatchSkipped() {
             // given
-            var matchday = new Matchday(season, "Matchday 1", 1);
+            var matchday = new Matchday(season, "Spieltag 1", 1);
             var match = new Match(matchday, tnr, p1r);
             match.setId(UUID.randomUUID());
             // No scores set
@@ -240,7 +240,7 @@ class StandingsServiceTest {
             // given
             // Team A (TNR) wins match 1, then gets replaced by Team C (CLR)
             // CLR should inherit TNR's win
-            var md1 = new Matchday(season, "Matchday 1", 1);
+            var md1 = new Matchday(season, "Spieltag 1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -269,7 +269,7 @@ class StandingsServiceTest {
         @Test
         void givenReplacedTeam_whenCalculateStandings_thenPredecessorNotInStandings() {
             // given
-            var md1 = new Matchday(season, "Matchday 1", 1);
+            var md1 = new Matchday(season, "Spieltag 1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -294,8 +294,8 @@ class StandingsServiceTest {
         void givenReplacedTeamAndNewMatches_whenCalculateStandings_thenBothResultsMerged() {
             // given
             // TNR wins match 1, gets replaced by CLR, CLR wins match 2
-            var md1 = new Matchday(season, "Matchday 1", 1);
-            var md2 = new Matchday(season, "Matchday 2", 2);
+            var md1 = new Matchday(season, "Spieltag 1", 1);
+            var md2 = new Matchday(season, "Spieltag 2", 2);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
             var match2 = createMatchWithScore(md2, clr, p1r, 60, 50);
 
@@ -328,7 +328,7 @@ class StandingsServiceTest {
             var newTeam = new Team("New Team", "NEW");
             newTeam.setId(UUID.randomUUID());
 
-            var md1 = new Matchday(season, "Matchday 1", 1);
+            var md1 = new Matchday(season, "Spieltag 1", 1);
             var match1 = createMatchWithScore(md1, tnr, newTeam, 70, 46);
 
             season.addTeam(tnr);
@@ -362,7 +362,7 @@ class StandingsServiceTest {
         @Test
         void givenReplacedTeamWithBye_whenCalculateStandings_thenSuccessorInheritsByeWin() {
             // given
-            var matchday = new Matchday(season, "Matchday 1", 1);
+            var matchday = new Matchday(season, "Spieltag 1", 1);
             var byeMatch = new Match(matchday, tnr, null);
             byeMatch.setId(UUID.randomUUID());
             byeMatch.setBye(true);
@@ -447,7 +447,7 @@ class StandingsServiceTest {
             season.addTeam(tnr);
             season.addTeam(p1r);
 
-            var md1 = new Matchday(season, "Matchday 1", 1);
+            var md1 = new Matchday(season, "Spieltag 1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
@@ -499,10 +499,10 @@ class StandingsServiceTest {
             season2.addTeam(tnr);
             season2.addTeam(clr);
 
-            var md1 = new Matchday(season1, "Matchday 1", 1);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
-            var md2 = new Matchday(season2, "Matchday 1", 1);
+            var md2 = new Matchday(season2, "Spieltag 1", 1);
             var match2 = createMatchWithScore(md2, tnr, clr, 60, 50);
 
             when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
@@ -539,10 +539,10 @@ class StandingsServiceTest {
             season2.addTeam(tnr);
             season2.addTeam(clr);
 
-            var md1 = new Matchday(season1, "Matchday 1", 1);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
-            var md2 = new Matchday(season2, "Matchday 1", 1);
+            var md2 = new Matchday(season2, "Spieltag 1", 1);
             var match2 = createMatchWithScore(md2, tnr, clr, 60, 50);
 
             when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
@@ -573,7 +573,7 @@ class StandingsServiceTest {
             season1.addTeam(subTeam);
             season1.addTeam(p1r);
 
-            var md1 = new Matchday(season1, "Matchday 1", 1);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
             var match1 = createMatchWithScore(md1, subTeam, p1r, 70, 46);
 
             when(seasonRepository.findAll()).thenReturn(List.of(season1));
@@ -606,7 +606,7 @@ class StandingsServiceTest {
             season2.setRaceScoring(raceScoring);
             season2.addTeam(clr);
 
-            var md1 = new Matchday(season1, "Matchday 1", 1);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
             when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
@@ -648,8 +648,8 @@ class StandingsServiceTest {
 
             // TNR beats P1R 70:46 (+24), CLR beats P1R 80:40 (+40)
             // Both TNR and CLR have 3 points, but CLR has better point diff
-            var md1 = new Matchday(season1, "Matchday 1", 1);
-            var md2 = new Matchday(season1, "Matchday 2", 2);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
+            var md2 = new Matchday(season1, "Spieltag 2", 2);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
             var match2 = createMatchWithScore(md2, clr, p1r, 80, 40);
 
@@ -676,7 +676,7 @@ class StandingsServiceTest {
             season1.addTeam(tnr);
             season1.addTeam(p1r);
 
-            var md1 = new Matchday(season1, "Matchday 1", 1);
+            var md1 = new Matchday(season1, "Spieltag 1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
             when(seasonRepository.findAll()).thenReturn(List.of(season1));

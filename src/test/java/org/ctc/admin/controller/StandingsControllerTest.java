@@ -82,7 +82,7 @@ class StandingsControllerTest {
     @Test
     void whenGetAlltimeStandings_thenReturnsAlltimeView() throws Exception {
         // given - create a matchday and match with scores for activeSeason
-        var matchday = new Matchday(activeSeason, "Matchday 1", 1);
+        var matchday = new Matchday(activeSeason, "Spieltag 1", 1);
         matchday = matchdayRepository.save(matchday);
         var teamA = activeSeason.getSeasonTeams().stream()
             .map(SeasonTeam::getTeam).findFirst().orElseThrow();

@@ -10,9 +10,9 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
   jpa:
-    # OSIV: Hibernate session stays open until the end of the HTTP request,
-    # so that Thymeleaf templates can render lazy-loaded fields.
-    # Deliberate decision for this admin application (no REST API).
+    # OSIV: Hibernate-Session bleibt bis zum Ende des HTTP-Requests offen,
+    # damit Thymeleaf-Templates lazy-geladene Felder rendern koennen.
+    # Bewusste Entscheidung fuer diese Admin-Anwendung (kein REST-API).
     open-in-view: true
     properties:
       hibernate:
@@ -23,7 +23,7 @@ spring:
 
 logging:
   level:
-    # Suppress OSIV warning (deliberately enabled, see spring.jpa.open-in-view)
+    # OSIV-Warnung unterdruecken (bewusst aktiviert, siehe spring.jpa.open-in-view)
     org.springframework.orm.jpa.support.OpenEntityManagerInViewInterceptor: ERROR
 
 server:
@@ -36,12 +36,12 @@ google:
   calendar:
     id: ${GOOGLE_CALENDAR_ID:}
 
-# Static site generation
+# Statische Seitengenerierung
 ctc:
   site:
     output-dir: docs/site
 
-# Actuator health endpoint (for Docker health checks)
+# Actuator Health-Endpoint (fuer Docker Healthchecks)
 management:
   endpoints:
     web:

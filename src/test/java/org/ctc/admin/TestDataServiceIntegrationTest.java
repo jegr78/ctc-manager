@@ -1,17 +1,15 @@
 package org.ctc.admin;
 
-import org.ctc.domain.repository.DriverRepository;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonFormat;
 import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @ActiveProfiles("dev")
@@ -19,210 +17,112 @@ import static org.assertj.core.api.Assertions.assertThat;
 class TestDataServiceIntegrationTest {
 
     @Autowired
-    private TeamRepository teamRepository;
-
-    @Autowired
-    private DriverRepository driverRepository;
-
-    @Autowired
     private SeasonRepository seasonRepository;
 
-    /** The 10 fictive parent team short names seeded by TestDataService. */
-    private static final Set<String> SEEDED_PARENT_SHORT_NAMES = Set.of(
-            "VRX", "SGM", "ADR", "TBR", "ICL", "SVT", "NFR", "EGP", "HMS", "PWR");
+    // --- Helper methods ---
 
-    /** The 7 fictive sub-team short names seeded by TestDataService. */
-    private static final Set<String> SEEDED_SUB_SHORT_NAMES = Set.of(
-            "VRX A", "VRX B", "SGM B", "SGM S", "TBR R", "TBR B", "TBR G");
+    private Season findSeason(int year, String name) {
+        return seasonRepository.findAll().stream()
+                .filter(s -> s.getYear() == year && s.getName().equals(name))
+                .findFirst().orElseThrow(() -> new AssertionError(
+                        "Season not found: year=" + year + " name=" + name));
+    }
 
-    // -------------------------------------------------------
-    // Task 1: Team structure tests
-    // -------------------------------------------------------
+    private Season findSeason(int year, int number) {
+        return seasonRepository.findAll().stream()
+                .filter(s -> s.getYear() == year && s.getNumber() == number)
+                .findFirst().orElseThrow(() -> new AssertionError(
+                        "Season not found: year=" + year + " number=" + number));
+    }
+
+    // --- Task 1 Phase 23: Season structure tests ---
 
     @Test
-    void givenDevSeed_whenStarted_thenExactlyTenParentTeamsExist() {
-        // given — dev profile seed() has already run at startup
-
-        // when — count only known seeded parent teams
-        long parentCount = teamRepository.findAll().stream()
-                .filter(t -> t.getParentTeam() == null)
-                .filter(t -> SEEDED_PARENT_SHORT_NAMES.contains(t.getShortName()))
-                .count();
+    void givenDevSeed_whenStarted_thenS1GroupAHasFormatRoundRobin() {
+        // given
+        var season = findSeason(2023, "Group A");
 
         // then
-        assertThat(parentCount).isEqualTo(10);
+        assertThat(season.getFormat()).isEqualTo(SeasonFormat.ROUND_ROBIN);
     }
 
     @Test
-    void givenDevSeed_whenStarted_thenAtLeastTwoParentsHaveTwoOrMoreSubTeams() {
-        // when — only count seeded sub-teams
-        var subTeams = teamRepository.findAll().stream()
-                .filter(t -> t.getParentTeam() != null)
-                .filter(t -> SEEDED_SUB_SHORT_NAMES.contains(t.getShortName()))
-                .toList();
-
-        var parentCounts = new java.util.HashMap<String, Long>();
-        for (var sub : subTeams) {
-            parentCounts.merge(sub.getParentTeam().getShortName(), 1L, Long::sum);
-        }
-
-        long parentsWithTwoOrMoreSubs = parentCounts.values().stream()
-                .filter(count -> count >= 2)
-                .count();
+    void givenDevSeed_whenStarted_thenS1GroupBHasFormatRoundRobin() {
+        // given
+        var season = findSeason(2023, "Group B");
 
         // then
-        assertThat(parentsWithTwoOrMoreSubs).isGreaterThanOrEqualTo(2);
+        assertThat(season.getFormat()).isEqualTo(SeasonFormat.ROUND_ROBIN);
     }
 
     @Test
-    void givenDevSeed_whenStarted_thenTotalNonTestTeamCountIsAtLeastFourteen() {
-        // when — count known seeded teams (parents + sub-teams)
-        long seededTeamCount = teamRepository.findAll().stream()
-                .filter(t -> SEEDED_PARENT_SHORT_NAMES.contains(t.getShortName())
-                        || SEEDED_SUB_SHORT_NAMES.contains(t.getShortName()))
-                .count();
-
-        // then — 10 parents + 7 sub-teams = 17 total
-        assertThat(seededTeamCount).isGreaterThanOrEqualTo(14);
-    }
-
-    @Test
-    void givenDevSeed_whenStarted_thenNoRealCtcTeamNamesExist() {
-        // when
-        var allTeamNames = teamRepository.findAll().stream()
-                .map(t -> t.getName())
-                .toList();
-
-        // then — none of the real CTC team names should appear
-        assertThat(allTeamNames).doesNotContain(
-                "Project One Racing",
-                "Community League Racing",
-                "Tidgney Community Racing",
-                "Amigos Racing Team",
-                "Apex Hunter Racing",
-                "Medway Racing League",
-                "Gen-X Racing",
-                "Dream Team Racing",
-                "VEZ Racing Team",
-                "The Neutrals Racing"
-        );
-    }
-
-    @Test
-    void givenDevSeed_whenStarted_thenEveryParentTeamHasShortNameOfThreeToFourCharacters() {
-        // when — only check seeded parent teams
-        var parentTeams = teamRepository.findAll().stream()
-                .filter(t -> t.getParentTeam() == null)
-                .filter(t -> SEEDED_PARENT_SHORT_NAMES.contains(t.getShortName()))
-                .toList();
+    void givenDevSeed_whenStarted_thenS2HasFormatSwiss() {
+        // given
+        var season = findSeason(2024, "Regular Season");
 
         // then
-        for (var team : parentTeams) {
-            assertThat(team.getShortName().length())
-                    .as("Team %s has shortName '%s' with length %d", team.getName(), team.getShortName(), team.getShortName().length())
-                    .isBetween(3, 4);
-        }
+        assertThat(season.getFormat()).isEqualTo(SeasonFormat.SWISS);
     }
 
     @Test
-    void givenDevSeed_whenStarted_thenEverySeededTeamHasNonNullColors() {
-        // when — only check seeded teams (not teams created by other integration tests)
-        var seededTeams = teamRepository.findAll().stream()
-                .filter(t -> SEEDED_PARENT_SHORT_NAMES.contains(t.getShortName())
-                        || SEEDED_SUB_SHORT_NAMES.contains(t.getShortName()))
-                .toList();
+    void givenDevSeed_whenStarted_thenS4HasFormatLeague() {
+        // given
+        var season = findSeason(2026, 4);
 
         // then
-        for (var team : seededTeams) {
-            assertThat(team.getPrimaryColor())
-                    .as("Team %s should have primaryColor", team.getShortName())
-                    .isNotNull();
-            assertThat(team.getSecondaryColor())
-                    .as("Team %s should have secondaryColor", team.getShortName())
-                    .isNotNull();
-            assertThat(team.getAccentColor())
-                    .as("Team %s should have accentColor", team.getShortName())
-                    .isNotNull();
-        }
+        assertThat(season.getFormat()).isEqualTo(SeasonFormat.LEAGUE);
     }
 
     @Test
-    void givenDevSeed_whenStarted_thenE2ETestTeamsStillExist() {
-        // when
-        var allShortNames = teamRepository.findAll().stream()
-                .map(t -> t.getShortName())
-                .toList();
+    void givenDevSeed_whenStarted_thenS1GroupAHasSixTeams() {
+        // given
+        var season = findSeason(2023, "Group A");
 
         // then
-        assertThat(allShortNames).contains("T-ALF", "T-BRV");
+        assertThat(season.getSeasonTeams()).hasSize(6);
     }
 
-    // -------------------------------------------------------
-    // Task 2: Driver structure tests
-    // -------------------------------------------------------
+    @Test
+    void givenDevSeed_whenStarted_thenS1GroupBHasSixTeams() {
+        // given
+        var season = findSeason(2023, "Group B");
+
+        // then
+        assertThat(season.getSeasonTeams()).hasSize(6);
+    }
 
     @Test
-    void givenDevSeed_whenStarted_thenExactlyOneHundredNonTestDriversExist() {
-        // given — 10 teams x 10 drivers = 100 non-test drivers
-        // Filter by known seeded PSN ID prefixes to avoid counting drivers created by other integration tests
+    void givenDevSeed_whenStarted_thenS4HasFourteenMatchTeams() {
+        // given
+        var season = findSeason(2026, 4);
 
         // when
-        long seededDriverCount = driverRepository.findAll().stream()
-                .filter(d -> d.getPsnId().matches("(VRX|SGM|ADR|TBR|ICL|SVT|NFR|EGP|HMS|PWR)_Driver\\d+"))
-                .count();
+        var teams = season.getSeasonTeams();
 
         // then
-        assertThat(seededDriverCount).isEqualTo(100);
-    }
-
-    @Test
-    void givenDevSeed_whenStarted_thenNoRealPsnIdsExist() {
-        // when
-        var allPsnIds = driverRepository.findAll().stream()
-                .map(d -> d.getPsnId())
+        assertThat(teams).hasSize(14);
+        // CLR, TNR, AHR parents should NOT be present (only their sub-teams)
+        var teamShortNames = teams.stream()
+                .map(st -> st.getTeam().getShortName())
                 .toList();
-
-        // then
-        assertThat(allPsnIds).doesNotContain(
-                "France-k88",
-                "BetelgeuzeFIN",
-                "Etlits",
-                "ART_Lango666",
-                "AHR_Hills_93",
-                "ApexMagnet",
-                "Gen-X_Dan98",
-                "DTR_Butzen-Katz",
-                "andreahoppus",
-                "Chaz__CA"
-        );
+        assertThat(teamShortNames).doesNotContain("CLR", "TNR", "AHR");
     }
 
     @Test
-    void givenDevSeed_whenStarted_thenAtLeastTwoDriversHaveAliases() {
-        // when
-        long driversWithAliases = driverRepository.findAll().stream()
-                .filter(d -> !d.getAliases().isEmpty())
-                .count();
+    void givenDevSeed_whenStarted_thenS1GroupsContainSubTeams() {
+        // given
+        var groupA = findSeason(2023, "Group A");
+        var groupB = findSeason(2023, "Group B");
 
-        // then
-        assertThat(driversWithAliases).isGreaterThanOrEqualTo(2);
-    }
+        // then - at least one sub-team in each group
+        var groupATeams = groupA.getSeasonTeams().stream()
+                .map(st -> st.getTeam())
+                .toList();
+        assertThat(groupATeams).anyMatch(t -> t.getParentTeam() != null);
 
-    // -------------------------------------------------------
-    // Task 3: Team card generation tests
-    // -------------------------------------------------------
-
-    @Test
-    void givenDevSeed_whenStarted_thenActiveSeasonExists() {
-        // given — dev profile seed() has already run at startup
-        // TeamCardService.generateAllCards() may throw in test env (no Playwright Chromium)
-
-        // when — seed() was called by DevDataSeeder at startup
-
-        // then — application context loaded successfully (this test running proves it)
-        var activeSeason = seasonRepository.findAll().stream()
-                .filter(s -> s.isActive())
-                .findFirst();
-        assertThat(activeSeason).isPresent();
+        var groupBTeams = groupB.getSeasonTeams().stream()
+                .map(st -> st.getTeam())
+                .toList();
+        assertThat(groupBTeams).anyMatch(t -> t.getParentTeam() != null);
     }
 }
