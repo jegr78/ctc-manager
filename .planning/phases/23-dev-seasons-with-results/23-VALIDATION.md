@@ -1,9 +1,9 @@
 ---
 phase: 23
 slug: dev-seasons-with-results
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-09
 ---
 
@@ -38,18 +38,19 @@ created: 2026-04-09
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 23-01-01 | 01 | 1 | DATA-04 | — | N/A | integration | `./mvnw verify` | ⬜ TBD | ⬜ pending |
-| 23-01-02 | 01 | 1 | DATA-05 | — | N/A | integration | `./mvnw verify` | ⬜ TBD | ⬜ pending |
-| 23-01-03 | 01 | 1 | DATA-06 | — | N/A | integration | `./mvnw verify` | ⬜ TBD | ⬜ pending |
-| 23-01-04 | 01 | 1 | DATA-07 | — | N/A | integration | `./mvnw verify` | ⬜ TBD | ⬜ pending |
+| 23-01-01 | 01 | 1 | DATA-04, DATA-06 | — | N/A | integration | `./mvnw test-compile -pl .` | Yes (extended) | pending |
+| 23-01-02 | 01 | 1 | DATA-05, DATA-06, DATA-07 | — | N/A | integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest -pl .` | Yes (extended) | pending |
+| 23-02-01 | 02 | 2 | DATA-04, DATA-05, DATA-06, DATA-07 | — | N/A | integration | `./mvnw test-compile -pl .` | Yes (extended) | pending |
+| 23-02-02 | 02 | 2 | DATA-04, DATA-05, DATA-06, DATA-07 | — | N/A | integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest -pl . && ./mvnw verify` | Yes (extended) | pending |
+| 23-02-03 | 02 | 2 | DATA-07 | — | N/A | visual | Manual: standings pages verification | N/A | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
 ## Wave 0 Requirements
 
-*Existing infrastructure covers all phase requirements.*
+*Existing infrastructure covers all phase requirements. Test file `TestDataServiceIntegrationTest.java` exists and will be extended with new test methods in TDD RED tasks (Plan 01 Task 1 and Plan 02 Task 1).*
 
 ---
 
@@ -63,11 +64,11 @@ created: 2026-04-09
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved

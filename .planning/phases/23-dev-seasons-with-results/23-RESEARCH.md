@@ -329,14 +329,14 @@ scoringService.aggregateMatchScores(race); // [VERIFIED: updates Match.homeScore
 
 **Required change:** Remove VRX, SGM, TBR from S4's seasonTeams in `seedSeasons()`.
 
-5 matchdays × 7 matches per matchday = 35 total matches, 35 races, 420 RaceResult rows.
+5 matchdays x 7 matches per matchday = 35 total matches, 35 races, 420 RaceResult rows.
 
 ### S2 2024 Swiss — Team Assignment (D-09)
 
 10 parent teams: VRX, SGM, ADR, TBR, ICL, SVT, NFR, EGP, HMS, PWR.
 No sub-teams. Current seed already has this structure (all 10 parents). `[VERIFIED: TestDataService.java line 169]`
 
-5 matchdays × 5 matches per matchday × 2 races per match = 50 races, 600 RaceResult rows.
+5 matchdays x 5 matches per matchday x 2 races per match = 50 races, 600 RaceResult rows.
 
 **Required addition:** Set `SeasonFormat.SWISS` on S2. Currently defaults to `LEAGUE`. `[VERIFIED: Season.java default format = LEAGUE]`
 
@@ -347,8 +347,8 @@ Current state: all 10 parent teams in both Group A and Group B. `[VERIFIED: Test
 Required: ~5-6 teams per group with sub-team mix per D-08.
 
 Example distribution (planner's discretion):
-- Group A: ADR, ICL, SVT, NFR, HMS + VRX A, SGM B (7 teams → 3 matchdays × 3 matches × 2 races = 18 races)
-- Group B: EGP, PWR, TBR + VRX B, SGM S, TBR R, TBR B (7 teams → 3 matchdays × 3 matches × 2 races = 18 races)
+- Group A: ADR, ICL, SVT, NFR, HMS + VRX A, SGM B (7 teams -> 3 matchdays x 3 matches x 2 races = 18 races)
+- Group B: EGP, PWR, TBR + VRX B, SGM S, TBR R, TBR B (7 teams -> 3 matchdays x 3 matches x 2 races = 18 races)
 
 **Required changes to `seedSeasons()`:**
 1. Clear existing season-teams for S1 Group A and Group B
@@ -371,14 +371,14 @@ Example distribution (planner's discretion):
 | Quick run command | `./mvnw test -Dtest=TestDataServiceIntegrationTest` |
 | Full suite command | `./mvnw verify` |
 
-### Phase Requirements → Test Map
+### Phase Requirements -> Test Map
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
-| DATA-04 | League season has 5 matchdays with results and non-zero standings | Integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest` | ❌ Wave 0 |
-| DATA-05 | Swiss season has 5 matchdays with results and non-zero standings | Integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest` | ❌ Wave 0 |
-| DATA-06 | Round Robin seasons (2) have 3 matchdays each with results | Integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest` | ❌ Wave 0 |
-| DATA-07 | Points computed by ScoringService (non-zero, consistent with scoring preset) | Integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest` | ❌ Wave 0 |
+| DATA-04 | League season has 5 matchdays with results and non-zero standings | Integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest` | Wave 0 |
+| DATA-05 | Swiss season has 5 matchdays with results and non-zero standings | Integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest` | Wave 0 |
+| DATA-06 | Round Robin seasons (2) have 3 matchdays each with results | Integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest` | Wave 0 |
+| DATA-07 | Points computed by ScoringService (non-zero, consistent with scoring preset) | Integration | `./mvnw test -Dtest=TestDataServiceIntegrationTest` | Wave 0 |
 
 All four requirements should be verified in `TestDataServiceIntegrationTest` alongside existing tests. New test methods follow the established `givenDevSeed_whenStarted_then*` naming pattern.
 
@@ -400,7 +400,7 @@ The existing test file exists and will be extended. No new file creation needed.
 
 | Directive | Applies to Phase 23 |
 |-----------|---------------------|
-| TDD: Write tests first (Red → Green → Refactor) | New test methods must be written before implementation |
+| TDD: Write tests first (Red -> Green -> Refactor) | New test methods must be written before implementation |
 | Minimum 82% line coverage | Adding ~200+ lines to TestDataService; ensure coverage ratio maintained |
 | No business logic in controllers | N/A — this phase is service/data-only |
 | DTOs not entities in POST | N/A — no new controllers |
@@ -414,22 +414,19 @@ The existing test file exists and will be extended. No new file creation needed.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **S1 Round Robin exact team distribution**
+1. **S1 Round Robin exact team distribution** — RESOLVED
    - What we know: D-08 says "~5-6 teams per group, mix of parent-teams and sub-teams"
-   - What's unclear: Exact assignment is Claude's discretion
-   - Recommendation: Use 6 teams per group for even matchday pairings (5 matches per 3-round robin would be uneven; 6 teams = 3 matches per matchday per group at 3 matchdays)
+   - Resolution: Use 6 teams per group for even matchday pairings. Group A: ADR, ICL, SVT, NFR, HMS, VRX A. Group B: EGP, PWR, VRX B, SGM B, SGM S, TBR R. This gives 3 matches per matchday per group across 3 matchdays. Decided in Plan 01 Task 2.
 
-2. **SeasonDriver records for S1 and S2**
+2. **SeasonDriver records for S1 and S2** — RESOLVED
    - What we know: They're absent; RaceLineup is source of truth so they're not required for standings
-   - What's unclear: Whether they're needed for any other UI feature
-   - Recommendation: Add SeasonDriver records for S1 and S2 since the CONTEXT.md marks it as Claude's discretion and they provide defensive fallback coverage. The existing `seedSeasonDrivers()` pattern is easy to replicate.
+   - Resolution: Add SeasonDriver records for S1 and S2 as defensive fallback coverage. Implemented in Plan 01 Task 2 using the existing `seedSeasonDrivers()` pattern. CONTEXT.md marks this as Claude's discretion.
 
-3. **Whether `raceRepository.save(race)` needs explicit call after `setSettings()`**
-   - What we know: `RaceSettings` has `@OneToOne(mappedBy = "race", cascade = ALL)` — so saving race after `setSettings` would cascade
-   - What's unclear: The existing pattern in `seedRaceLineups()` saves race, then calls `createTestSettings(race)` without a second `raceRepository.save(race)` (settings are saved separately? No — settings is orphaned without cascade save)
-   - Recommendation: Follow the existing pattern exactly as used in `seedRaceLineups()`. The `createTestSettings()` method returns a `RaceSettings` with race set, but it's not saved. Actually looking at the code: `race.setSettings(createTestSettings(race))` is called before `raceRepository.save(race)` for race3 (line 579), but `createTestSettings` is called without saving settings separately. Since `RaceSettings` maps `cascade = CascadeType.ALL` from Race, saving race after setting the settings will cascade. The plan should call `race.setSettings(createTestSettings(race))` then `raceRepository.save(race)` once.
+3. **Whether `raceRepository.save(race)` needs explicit call after `setSettings()`** — RESOLVED
+   - What we know: `RaceSettings` has `@OneToOne(mappedBy = "race", cascade = ALL)` — saving race after `setSettings` cascades.
+   - Resolution: Call `raceRepository.save(race)` first (to persist race ID), then `race.setSettings(createTestSettings(race))`, then `raceRepository.save(race)` again (cascades settings). This follows the established pattern in `seedRaceLineups()` and is used in Plan 02 Task 2's `seedRace()` helper.
 
 ---
 
@@ -460,7 +457,7 @@ Step 2.6: SKIPPED — Phase 23 is purely Java code changes to `TestDataService`.
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | JPA flush behavior: results must be persisted before `aggregateMatchScores()` reads them in same transaction | Common Pitfalls #2 | Race match scores remain null → standings show 0 for all teams |
+| A1 | JPA flush behavior: results must be persisted before `aggregateMatchScores()` reads them in same transaction | Common Pitfalls #2 | Race match scores remain null -> standings show 0 for all teams |
 | A2 | SeasonDriver records are not required for standings with full RaceLineup coverage | Open Questions #2 | Certain UI paths using SeasonDriver fallback would fail to show driver-team association |
 
 ---
