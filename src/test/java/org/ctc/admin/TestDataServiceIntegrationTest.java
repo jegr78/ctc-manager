@@ -2,8 +2,14 @@ package org.ctc.admin;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.stream.Collectors;
+
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonFormat;
+import org.ctc.domain.repository.MatchRepository;
+import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +24,18 @@ class TestDataServiceIntegrationTest {
 
     @Autowired
     private SeasonRepository seasonRepository;
+
+    @Autowired
+    private MatchdayRepository matchdayRepository;
+
+    @Autowired
+    private RaceResultRepository raceResultRepository;
+
+    @Autowired
+    private MatchRepository matchRepository;
+
+    @Autowired
+    private RaceRepository raceRepository;
 
     // --- Helper methods ---
 
@@ -124,5 +142,121 @@ class TestDataServiceIntegrationTest {
                 .map(st -> st.getTeam())
                 .toList();
         assertThat(groupBTeams).anyMatch(t -> t.getParentTeam() != null);
+    }
+
+    // --- Phase 23 Plan 02: Matchday and result tests ---
+
+    @Test
+    void givenDevSeed_whenStarted_thenLeagueSeasonHasFiveMatchdays() {
+        // given
+        var season = findSeason(2026, 4);
+
+        // when
+        var matchdays = matchdayRepository.findAll().stream()
+                .filter(md -> md.getSeason().getId().equals(season.getId()))
+                .count();
+
+        // then
+        assertThat(matchdays).isEqualTo(5);
+    }
+
+    @Test
+    void givenDevSeed_whenStarted_thenSwissSeasonHasFiveMatchdays() {
+        // given
+        var season = findSeason(2024, "Regular Season");
+
+        // when
+        var matchdays = matchdayRepository.findAll().stream()
+                .filter(md -> md.getSeason().getId().equals(season.getId()))
+                .count();
+
+        // then
+        assertThat(matchdays).isEqualTo(5);
+    }
+
+    @Test
+    void givenDevSeed_whenStarted_thenRoundRobinGroupAHasThreeMatchdays() {
+        // given
+        var season = findSeason(2023, "Group A");
+
+        // when
+        var matchdays = matchdayRepository.findAll().stream()
+                .filter(md -> md.getSeason().getId().equals(season.getId()))
+                .count();
+
+        // then
+        assertThat(matchdays).isEqualTo(3);
+    }
+
+    @Test
+    void givenDevSeed_whenStarted_thenRoundRobinGroupBHasThreeMatchdays() {
+        // given
+        var season = findSeason(2023, "Group B");
+
+        // when
+        var matchdays = matchdayRepository.findAll().stream()
+                .filter(md -> md.getSeason().getId().equals(season.getId()))
+                .count();
+
+        // then
+        assertThat(matchdays).isEqualTo(3);
+    }
+
+    @Test
+    void givenDevSeed_whenStarted_thenLeagueRacesHaveResults() {
+        // given
+        var season = findSeason(2026, 4);
+        var seasonMatchdays = matchdayRepository.findAll().stream()
+                .filter(md -> md.getSeason().getId().equals(season.getId()))
+                .toList();
+        var seasonRaces = raceRepository.findAll().stream()
+                .filter(r -> seasonMatchdays.stream()
+                        .anyMatch(md -> md.getId().equals(r.getMatchday().getId())))
+                .toList();
+
+        // then
+        assertThat(seasonRaces).isNotEmpty();
+        for (var race : seasonRaces) {
+            var resultCount = raceResultRepository.findAll().stream()
+                    .filter(r -> r.getRace().getId().equals(race.getId()))
+                    .count();
+            assertThat(resultCount).as("Race %s should have 12 results", race.getId()).isEqualTo(12);
+        }
+    }
+
+    @Test
+    void givenDevSeed_whenStarted_thenAllRaceResultsHaveNonZeroPoints() {
+        // given
+        var devSeasonIds = seasonRepository.findAll().stream()
+                .filter(s -> s.getNumber() < 90) // exclude test seasons
+                .map(s -> s.getId())
+                .collect(Collectors.toSet());
+
+        // when
+        var devRaceResults = raceResultRepository.findAll().stream()
+                .filter(r -> devSeasonIds.contains(r.getRace().getMatchday().getSeason().getId()))
+                .toList();
+
+        // then
+        assertThat(devRaceResults).isNotEmpty();
+        assertThat(devRaceResults).allMatch(r -> r.getPointsTotal() > 0);
+    }
+
+    @Test
+    void givenDevSeed_whenStarted_thenAllMatchesHaveNonNullScores() {
+        // given
+        var devSeasonIds = seasonRepository.findAll().stream()
+                .filter(s -> s.getNumber() < 90) // exclude test seasons
+                .map(s -> s.getId())
+                .collect(Collectors.toSet());
+
+        // when
+        var devMatches = matchRepository.findAll().stream()
+                .filter(m -> devSeasonIds.contains(m.getMatchday().getSeason().getId()))
+                .toList();
+
+        // then
+        assertThat(devMatches).isNotEmpty();
+        assertThat(devMatches).allMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
     }
 }
