@@ -56,7 +56,7 @@ See: milestones/v1.2-ROADMAP.md for full details
 
 - [x] **Phase 20: English Messages** — Convert all German log and exception messages to English (completed 2026-04-07)
 - [x] **Phase 21: English Code** — Convert all German constants, comments, Javadoc, variable and method names to English (completed 2026-04-09)
-- [ ] **Phase 22: Dev Teams & Drivers** — Seed 14+ fictive teams with sub-teams, 10 drivers each, and generate team cards
+- [x] **Phase 22: Dev Teams & Drivers** — Seed 14+ fictive teams with sub-teams, 10 drivers each, and generate team cards (completed 2026-04-09)
 - [ ] **Phase 23: Dev Seasons with Results** — Seed League, Swiss, and Round Robin seasons with matchdays, races, and scored results
 - [ ] **Phase 24: Dev Playoffs** — Seed first playoff round for one completed season
 
@@ -98,9 +98,9 @@ Plans:
   2. At least 2 parent teams exist, each with 2 or more named sub-teams
   3. Each team has exactly 10 drivers with fictive names
   4. Every team has a generated team card image visible on the teams list page
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 22-01-PLAN.md — Replace real teams/drivers with fictive data, add team card generation
+- [x] 22-01-PLAN.md — Replace real teams/drivers with fictive data, add team card generation
 **UI hint**: yes
 
 ### Phase 23: Dev Seasons with Results
@@ -156,6 +156,6 @@ Plans:
 | 19. Merge Error Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
 | 20. English Messages | v1.3 | 1/1 | Complete    | 2026-04-07 |
 | 21. English Code | v1.3 | 1/1 | Complete    | 2026-04-09 |
-| 22. Dev Teams & Drivers | v1.3 | 0/1 | Planned | - |
+| 22. Dev Teams & Drivers | v1.3 | 1/1 | Complete    | 2026-04-09 |
 | 23. Dev Seasons with Results | v1.3 | 0/? | Not started | - |
 | 24. Dev Playoffs | v1.3 | 0/? | Not started | - |
