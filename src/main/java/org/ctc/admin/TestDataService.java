@@ -13,10 +13,12 @@ import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.model.RaceSettings;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.SeasonFormat;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.MatchRepository;
@@ -24,10 +26,12 @@ import org.ctc.domain.repository.MatchScoringRepository;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.RaceScoringRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.service.ScoringService;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +57,8 @@ public class TestDataService {
     private final MatchRepository matchRepository;
     private final RaceRepository raceRepository;
     private final RaceLineupRepository raceLineupRepository;
+    private final RaceResultRepository raceResultRepository;
+    private final ScoringService scoringService;
 
     @Transactional
     public void seed() {
@@ -161,15 +167,27 @@ public class TestDataService {
                         .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
                         .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
-        // Older seasons: all parent teams
-        for (var entry : List.of(
-                new Object[]{"Group A", 2023, 1, "Group A, Regular Season"},
-                new Object[]{"Group B", 2023, 1, "Group B, Regular Season"},
-                new Object[]{"Regular Season", 2024, 2, "Round Robin"})) {
-            var season = createSeason((String) entry[0], (int) entry[1], (int) entry[2], (String) entry[3], scorings);
-            parentTeams.forEach(season::addTeam);
-            seasonRepository.save(season);
-        }
+        // S1 2023 Group A: Round Robin (6 teams, mix of parents and sub-teams) per D-01, D-03, D-08
+        var s1a = createSeason("Group A", 2023, 1, "Group A, Regular Season", scorings);
+        s1a.setFormat(SeasonFormat.ROUND_ROBIN);
+        List.of(findParent.apply("P1R"), findParent.apply("TCR"), findParent.apply("ART"),
+                findParent.apply("MRL"), findParent.apply("GXR"), findSub.apply("CLR 1"))
+                .forEach(s1a::addTeam);
+        seasonRepository.save(s1a);
+
+        // S1 2023 Group B: Round Robin (6 teams, mix of parents and sub-teams) per D-01, D-03, D-08
+        var s1b = createSeason("Group B", 2023, 1, "Group B, Regular Season", scorings);
+        s1b.setFormat(SeasonFormat.ROUND_ROBIN);
+        List.of(findParent.apply("DTR"), findParent.apply("VEZ"),
+                findSub.apply("CLR 2"), findSub.apply("TNR A"), findSub.apply("TNR B"), findSub.apply("AHR 1"))
+                .forEach(s1b::addTeam);
+        seasonRepository.save(s1b);
+
+        // S2 2024: Swiss format (10 parent teams only) per D-01, D-09
+        var s2 = createSeason("Regular Season", 2024, 2, "Round Robin", scorings);
+        s2.setFormat(SeasonFormat.SWISS);
+        parentTeams.forEach(s2::addTeam);
+        seasonRepository.save(s2);
 
         // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
         var s3a = createSeason("Group A", 2025, 3, "Group A, Regular Season", scorings);
@@ -193,24 +211,23 @@ public class TestDataService {
         ).forEach(s3b::addTeam);
         seasonRepository.save(s3b);
 
-        // Season 4 - 2026: all parents with subs + standalone parents
+        // Season 4 - 2026: 14 match teams (7 standalone parents + 7 sub-teams) per D-10
+        // CLR, TNR, AHR parents do NOT participate as match teams
         var s4 = createSeason("Regular Season", 2026, 4, null, scorings);
         s4.setActive(true);
+        s4.setFormat(SeasonFormat.LEAGUE);
         List.of(
-                findParent.apply("CLR"),
                 findSub.apply("CLR 1"),
                 findSub.apply("CLR 2"),
-                findParent.apply("TNR"),
                 findSub.apply("TNR A"),
                 findSub.apply("TNR B"),
                 findSub.apply("TNR C"),
+                findSub.apply("AHR 1"),
+                findSub.apply("AHR 2"),
                 findParent.apply("P1R"),
                 findParent.apply("DTR"),
                 findParent.apply("MRL"),
                 findParent.apply("ART"),
-                findParent.apply("AHR"),
-                findSub.apply("AHR 1"),
-                findSub.apply("AHR 2"),
                 findParent.apply("VEZ"),
                 findParent.apply("GXR"),
                 findParent.apply("TCR")
@@ -491,8 +508,85 @@ public class TestDataService {
             seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("DTR")));
         }
 
-        log.info("Created season-driver assignments: s4={}",
-                seasonDriverRepository.findBySeasonId(s4.getId()).size());
+        // Helper to find season by year and name
+        java.util.function.BiFunction<Integer, String, Season> findSeasonByName = (year, name) ->
+                allSeasons.stream()
+                        .filter(s -> s.getYear() == year && s.getName().equals(name))
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Season", name));
+
+        // S1 2023 Group A: 6 drivers per team (P1R, TCR, ART, MRL, GXR + CLR 1)
+        var s1a = findSeasonByName.apply(2023, "Group A");
+        assignSeasonDrivers(s1a, "P1R", List.of("France-k88", "P1R_Jake", "P1R_SLAMMER",
+                "P1R_OldBanger", "YT_Sorte13", "Unfazed__be"), findParent, findDriver);
+        assignSeasonDrivers(s1a, "TCR", List.of("TCR_Rapid_GT", "TCR_Sheltie", "TCR_Sonic",
+                "TCR_Tidgney", "Etlits", "Hogston_GT"), findParent, findDriver);
+        assignSeasonDrivers(s1a, "ART", List.of("ART_Lango666", "beardiemcbeard", "CJMR53",
+                "eRA_mikebrfc", "ginnerquinny61", "kylegamesdrums"), findParent, findDriver);
+        assignSeasonDrivers(s1a, "MRL", List.of("ApexMagnet", "MRL_Bish", "MRL_IrIsH_ToNy",
+                "MRL_JOHNNYWAFFLE", "MRL_Splinter117", "Sparkzmajor"), findParent, findDriver);
+        assignSeasonDrivers(s1a, "GXR", List.of("Gen-X_Dan98", "Gen-X_Darlobhoy", "Gen-X_JWrenchy",
+                "Gen-X_MynameJeff", "Gen-X_OldFart", "Gen-X_Sainana"), findParent, findDriver);
+        // CLR 1 sub-team: SeasonDriver uses parent team CLR
+        assignSeasonDrivers(s1a, "CLR", List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
+                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28"), findParent, findDriver);
+
+        // S1 2023 Group B: 6 drivers per team (DTR, VEZ + CLR 2, TNR A, TNR B, AHR 1)
+        var s1b = findSeasonByName.apply(2023, "Group B");
+        assignSeasonDrivers(s1b, "DTR", List.of("DTR_Butzen-Katz", "DTR_H1PPYH33D", "DTR_Kierin",
+                "DTR_M3guy", "DTR_MoominPappa", "DTR_Rosdwerg"), findParent, findDriver);
+        assignSeasonDrivers(s1b, "VEZ", List.of("andreahoppus", "FeArToMa1295", "freshciccio01",
+                "Gnuccaria", "InuyashaGodYokai", "Sonny061288"), findParent, findDriver);
+        // CLR 2: different drivers than Group A, parent team CLR
+        assignSeasonDrivers(s1b, "CLR", List.of("IEquinoXe-", "kurt_666_", "lemonysqueez",
+                "RA_F1nalized__", "RA_Shred", "RA_Yannis73"), findParent, findDriver);
+        // TNR A: parent team TNR
+        assignSeasonDrivers(s1b, "TNR", List.of("Chaz__CA", "D-man371D-man", "Deekuhn",
+                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173"), findParent, findDriver);
+        // TNR B: different drivers, parent team TNR
+        assignSeasonDrivers(s1b, "TNR", List.of("GMZ_Alfred", "LEVITIUS", "Lightning_Lorry",
+                "LotariRacing", "Mo_Flavor", "Nutcap_1"), findParent, findDriver);
+        // AHR 1: parent team AHR
+        assignSeasonDrivers(s1b, "AHR", List.of("AHR_Hills_93", "AHR_j_mac", "AHR-PezzzaGT",
+                "AHR-Tankbro", "danfn22016", "grey_roc"), findParent, findDriver);
+
+        // S2 2024: 10 parent teams, 6 drivers each
+        var s2 = findSeasonByName.apply(2024, "Regular Season");
+        assignSeasonDrivers(s2, "P1R", List.of("France-k88", "P1R_Jake", "P1R_SLAMMER",
+                "P1R_OldBanger", "YT_Sorte13", "Unfazed__be"), findParent, findDriver);
+        assignSeasonDrivers(s2, "CLR", List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
+                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28"), findParent, findDriver);
+        assignSeasonDrivers(s2, "TCR", List.of("TCR_Rapid_GT", "TCR_Sheltie", "TCR_Sonic",
+                "TCR_Tidgney", "Etlits", "Hogston_GT"), findParent, findDriver);
+        assignSeasonDrivers(s2, "ART", List.of("ART_Lango666", "beardiemcbeard", "CJMR53",
+                "eRA_mikebrfc", "ginnerquinny61", "kylegamesdrums"), findParent, findDriver);
+        assignSeasonDrivers(s2, "AHR", List.of("AHR_Hills_93", "AHR_j_mac", "AHR-PezzzaGT",
+                "AHR-Tankbro", "danfn22016", "grey_roc"), findParent, findDriver);
+        assignSeasonDrivers(s2, "MRL", List.of("ApexMagnet", "MRL_Bish", "MRL_IrIsH_ToNy",
+                "MRL_JOHNNYWAFFLE", "MRL_Splinter117", "Sparkzmajor"), findParent, findDriver);
+        assignSeasonDrivers(s2, "GXR", List.of("Gen-X_Dan98", "Gen-X_Darlobhoy", "Gen-X_JWrenchy",
+                "Gen-X_MynameJeff", "Gen-X_OldFart", "Gen-X_Sainana"), findParent, findDriver);
+        assignSeasonDrivers(s2, "DTR", List.of("DTR_Butzen-Katz", "DTR_H1PPYH33D", "DTR_Kierin",
+                "DTR_M3guy", "DTR_MoominPappa", "DTR_Rosdwerg"), findParent, findDriver);
+        assignSeasonDrivers(s2, "VEZ", List.of("andreahoppus", "FeArToMa1295", "freshciccio01",
+                "Gnuccaria", "InuyashaGodYokai", "Sonny061288"), findParent, findDriver);
+        assignSeasonDrivers(s2, "TNR", List.of("Chaz__CA", "D-man371D-man", "Deekuhn",
+                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173"), findParent, findDriver);
+
+        log.info("Created season-driver assignments: s4={}, s1a={}, s1b={}, s2={}",
+                seasonDriverRepository.findBySeasonId(s4.getId()).size(),
+                seasonDriverRepository.findBySeasonId(s1a.getId()).size(),
+                seasonDriverRepository.findBySeasonId(s1b.getId()).size(),
+                seasonDriverRepository.findBySeasonId(s2.getId()).size());
+    }
+
+    private void assignSeasonDrivers(Season season, String teamShortName,
+            List<String> driverPsnIds,
+            java.util.function.Function<String, Team> teamFinder,
+            java.util.function.Function<String, Driver> driverFinder) {
+        var team = teamFinder.apply(teamShortName);
+        for (String psnId : driverPsnIds) {
+            seasonDriverRepository.save(new SeasonDriver(season, driverFinder.apply(psnId), team));
+        }
     }
 
     private void seedRaceLineups() {
