@@ -107,7 +107,7 @@ class SiteGeneratorServiceTest {
         seasonDriverRepository.save(new SeasonDriver(season, driver3, p1r));
         seasonDriverRepository.save(new SeasonDriver(season, driver4, p1r));
 
-        var matchday = matchdayRepository.save(new Matchday(season, "Spieltag 1", 1));
+        var matchday = matchdayRepository.save(new Matchday(season, "Matchday 1", 1));
         var testTrack = trackRepository.save(new Track("Tsukuba " + uniqueSuffix, "Japan"));
         var testCar = carRepository.save(new Car("Mazda " + uniqueSuffix, "RX-Vision GT3"));
         var match = matchRepository.save(new Match(matchday, tnr, p1r));
@@ -183,7 +183,7 @@ class SiteGeneratorServiceTest {
         siteGeneratorService.generate();
 
         // then
-        assertTrue(Files.exists(seasonDir().resolve("matchday/spieltag-1.html")), "matchday page should exist");
+        assertTrue(Files.exists(seasonDir().resolve("matchday/matchday-1.html")), "matchday page should exist");
     }
 
     @Test
