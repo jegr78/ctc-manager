@@ -6,7 +6,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Match;
@@ -14,10 +13,12 @@ import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.model.RaceSettings;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.SeasonFormat;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.MatchRepository;
@@ -25,10 +26,12 @@ import org.ctc.domain.repository.MatchScoringRepository;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.RaceScoringRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.service.ScoringService;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,7 +57,8 @@ public class TestDataService {
     private final MatchRepository matchRepository;
     private final RaceRepository raceRepository;
     private final RaceLineupRepository raceLineupRepository;
-    private final TeamCardService teamCardService;
+    private final RaceResultRepository raceResultRepository;
+    private final ScoringService scoringService;
 
     @Transactional
     public void seed() {
@@ -66,12 +70,11 @@ public class TestDataService {
         var teams = seedTeams();
         seedSubTeams(teams);
         copyDemoLogos(teams);
-        var activeSeason = seedSeasons(teams, scorings);
+        seedSeasons(teams, scorings);
         seedDrivers();
         seedAliases();
         seedSeasonDrivers();
         seedRaceLineups();
-        seedTeamCards(activeSeason);
         log.info("Seed data created: {} teams, {} seasons, {} drivers, {} race-lineups",
                 teamRepository.count(), seasonRepository.count(), driverRepository.count(),
                 raceLineupRepository.count());
@@ -90,16 +93,16 @@ public class TestDataService {
 
     private List<Team> seedTeams() {
         var teams = teamRepository.saveAll(List.of(
-                team("Velocity Racing", "VRX", "#e63946", "#1d3557", "#f1faee"),
-                team("Shadow Grid Motorsport", "SGM", "#2d2d2d", "#ff6b35", "#ffffff"),
-                team("Apex Drift Racing", "ADR", "#06d6a0", "#073b4c", "#ffffff"),
-                team("Thunderbolt Raceworks", "TBR", "#ffd166", "#ef476f", "#073b4c"),
-                team("Iron Circuit League", "ICL", "#118ab2", "#ffffff", "#073b4c"),
-                team("Stellar Velocity Team", "SVT", "#7209b7", "#f72585", "#ffffff"),
-                team("Nitro Forge Racing", "NFR", "#ff9f1c", "#2ec4b6", "#000000"),
-                team("Eclipse Grand Prix", "EGP", "#480ca8", "#f8961e", "#ffffff"),
-                team("Horizon Motorsport", "HMS", "#c1121f", "#fdf0d5", "#003049"),
-                team("Pulse Wave Racing", "PWR", "#00b4d8", "#90e0ef", "#03045e")
+                team("Project One Racing", "P1R", "#5ea6f1", "#f5170a", "#FFFFFF"),
+                team("Community League Racing", "CLR", "#0467f5", "#000000", "#FFFFFF"),
+                team("Tidgney Community Racing", "TCR", "#ffff04", "#fb0214", "#000000"),
+                team("Amigos Racing Team", "ART", "#ffff04", "#0000ff", "#FFFFFF"),
+                team("Apex Hunter Racing", "AHR", "#ff0101", "#000000", "#FFFFFF"),
+                team("Medway Racing League", "MRL", "#000000", "#FFFFFF", "#333333"),
+                team("Gen-X Racing", "GXR", "#f78000", "#000000", "#FFFFFF"),
+                team("Dream Team Racing", "DTR", "#b00001", "#101010", "#FFFFFF"),
+                team("VEZ Racing Team", "VEZ", "#ff66c4", "#FFFFFF", "#000000"),
+                team("The Neutrals Racing", "TNR", "#016c88", "#b50001", "#000000")
         ));
         return teams;
     }
@@ -125,29 +128,31 @@ public class TestDataService {
     }
 
     private void seedSubTeams(List<Team> teams) {
-        // VRX: 2 sub-teams
-        var vrx = teams.stream().filter(t -> t.getShortName().equals("VRX")).findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("Team", "VRX"));
-        teamRepository.save(subTeam("Velocity Racing Alpha", "VRX A", vrx));
-        teamRepository.save(subTeam("Velocity Racing Beta", "VRX B", vrx, "#d62828", "#1d3557", "#f1faee"));
+        var clr = teams.stream().filter(t -> t.getShortName().equals("CLR")).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Team", "CLR"));
+        teamRepository.save(subTeam("Community League Racing 1", "CLR 1", clr, "#0467f5", "#000000", "#FFFFFF"));
+        teamRepository.save(subTeam("Community League Racing 2", "CLR 2", clr, "#0467f5", "#FFFFFF", "#000000"));
 
-        // SGM: 2 sub-teams
-        var sgm = teams.stream().filter(t -> t.getShortName().equals("SGM")).findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("Team", "SGM"));
-        teamRepository.save(subTeam("Shadow Grid Black", "SGM B", sgm, "#1a1a1a", "#ff6b35", "#ffffff"));
-        teamRepository.save(subTeam("Shadow Grid Silver", "SGM S", sgm, "#c0c0c0", "#ff6b35", "#2d2d2d"));
+        var tnr = teams.stream().filter(t -> t.getShortName().equals("TNR")).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Team", "TNR"));
+        teamRepository.save(subTeam("The Neutrals Racing A", "TNR A", tnr, "#0281a3", "#FFFFFF", "#a60100"));
+        teamRepository.save(subTeam("The Neutrals Racing B", "TNR B", tnr, "#ba0001", "#FFFFFF", "#067392"));
+        teamRepository.save(subTeam("The Neutrals Racing C", "TNR C", tnr, "#FFFFFF", "#039bc3", "#d70200"));
 
-        // TBR: 3 sub-teams
-        var tbr = teams.stream().filter(t -> t.getShortName().equals("TBR")).findFirst()
-                .orElseThrow(() -> new EntityNotFoundException("Team", "TBR"));
-        teamRepository.save(subTeam("Thunderbolt Red", "TBR R", tbr, "#ef476f", "#ffd166", "#073b4c"));
-        teamRepository.save(subTeam("Thunderbolt Blue", "TBR B", tbr, "#118ab2", "#ffd166", "#ffffff"));
-        teamRepository.save(subTeam("Thunderbolt Gold", "TBR G", tbr));
+        var ahr = teams.stream().filter(t -> t.getShortName().equals("AHR")).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Team", "AHR"));
+        teamRepository.save(subTeam("Apex Hunter Racing 1", "AHR 1", ahr, "#ff0101", "#000000", "#FFFFFF"));
+        teamRepository.save(subTeam("Apex Hunter Racing 2", "AHR 2", ahr, "#ff0101", "#FFFFFF", "#000000"));
 
-        log.info("Created sub-teams: VRX(2), SGM(2), TBR(3)");
+        var p1r = teams.stream().filter(t -> t.getShortName().equals("P1R")).findFirst()
+                .orElseThrow(() -> new EntityNotFoundException("Team", "P1R"));
+        teamRepository.save(subTeam("Project One Racing X", "P1Rx", p1r));
+        teamRepository.save(subTeam("Project One Racing", "P1R", p1r));
+
+        log.info("Created sub-teams: CLR(2), TNR(3), AHR(2), P1R(2)");
     }
 
-    private Season seedSeasons(List<Team> parentTeams, ScoringDefaults scorings) {
+    private void seedSeasons(List<Team> parentTeams, ScoringDefaults scorings) {
         var allTeams = teamRepository.findAll();
 
         // Helper to find parent team (no parent) by shortName
@@ -162,86 +167,98 @@ public class TestDataService {
                         .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
                         .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
-        // Older seasons: all parent teams
-        for (var entry : List.of(
-                new Object[]{"Group A", 2023, 1, "Group A, Regular Season"},
-                new Object[]{"Group B", 2023, 1, "Group B, Regular Season"},
-                new Object[]{"Regular Season", 2024, 2, "Round Robin"})) {
-            var season = createSeason((String) entry[0], (int) entry[1], (int) entry[2], (String) entry[3], scorings);
-            parentTeams.forEach(season::addTeam);
-            seasonRepository.save(season);
-        }
+        // S1 2023 Group A: Round Robin (6 teams, mix of parents and sub-teams) per D-01, D-03, D-08
+        var s1a = createSeason("Group A", 2023, 1, "Group A, Regular Season", scorings);
+        s1a.setFormat(SeasonFormat.ROUND_ROBIN);
+        List.of(findParent.apply("P1R"), findParent.apply("TCR"), findParent.apply("ART"),
+                findParent.apply("MRL"), findParent.apply("GXR"), findSub.apply("CLR 1"))
+                .forEach(s1a::addTeam);
+        seasonRepository.save(s1a);
 
-        // Season 3 - 2025 - Group A: VRX A, ADR, ICL, NFR, HMS
+        // S1 2023 Group B: Round Robin (6 teams, mix of parents and sub-teams) per D-01, D-03, D-08
+        var s1b = createSeason("Group B", 2023, 1, "Group B, Regular Season", scorings);
+        s1b.setFormat(SeasonFormat.ROUND_ROBIN);
+        List.of(findParent.apply("DTR"), findParent.apply("VEZ"),
+                findSub.apply("CLR 2"), findSub.apply("TNR A"), findSub.apply("TNR B"), findSub.apply("AHR 1"))
+                .forEach(s1b::addTeam);
+        seasonRepository.save(s1b);
+
+        // S2 2024: Swiss format (10 parent teams only) per D-01, D-09
+        var s2 = createSeason("Regular Season", 2024, 2, "Round Robin", scorings);
+        s2.setFormat(SeasonFormat.SWISS);
+        parentTeams.forEach(s2::addTeam);
+        seasonRepository.save(s2);
+
+        // Season 3 - 2025 - Group A: P1Rx, CLR, MRL, TCR, GXR
         var s3a = createSeason("Group A", 2025, 3, "Group A, Regular Season", scorings);
         List.of(
-                findSub.apply("VRX A"),
-                findParent.apply("ADR"),
-                findParent.apply("ICL"),
-                findParent.apply("NFR"),
-                findParent.apply("HMS")
+                findSub.apply("P1Rx"),
+                findParent.apply("CLR"),
+                findParent.apply("MRL"),
+                findParent.apply("TCR"),
+                findParent.apply("GXR")
         ).forEach(s3a::addTeam);
         seasonRepository.save(s3a);
 
-        // Season 3 - 2025 - Group B: VRX parent + VRX B, TBR, EGP, PWR
+        // Season 3 - 2025 - Group B: P1R parent + P1R sub-team, AHR, DTR, ART
         var s3b = createSeason("Group B", 2025, 3, "Group B, Regular Season", scorings);
         List.of(
-                findParent.apply("VRX"),
-                findSub.apply("VRX B"),
-                findParent.apply("TBR"),
-                findParent.apply("EGP"),
-                findParent.apply("PWR")
+                findParent.apply("P1R"),
+                findSub.apply("P1R"),
+                findParent.apply("AHR"),
+                findParent.apply("DTR"),
+                findParent.apply("ART")
         ).forEach(s3b::addTeam);
         seasonRepository.save(s3b);
 
-        // Season 4 - 2026: all parents with subs + standalone parents
+        // Season 4 - 2026: 14 match teams (7 standalone parents + 7 sub-teams) per D-10
+        // CLR, TNR, AHR parents do NOT participate as match teams
         var s4 = createSeason("Regular Season", 2026, 4, null, scorings);
         s4.setActive(true);
+        s4.setFormat(SeasonFormat.LEAGUE);
         List.of(
-                findParent.apply("VRX"),
-                findSub.apply("VRX A"),
-                findSub.apply("VRX B"),
-                findParent.apply("SGM"),
-                findSub.apply("SGM B"),
-                findSub.apply("SGM S"),
-                findParent.apply("TBR"),
-                findSub.apply("TBR R"),
-                findSub.apply("TBR B"),
-                findSub.apply("TBR G"),
-                findParent.apply("ADR"),
-                findParent.apply("ICL"),
-                findParent.apply("SVT"),
-                findParent.apply("NFR"),
-                findParent.apply("EGP"),
-                findParent.apply("HMS"),
-                findParent.apply("PWR")
+                findSub.apply("CLR 1"),
+                findSub.apply("CLR 2"),
+                findSub.apply("TNR A"),
+                findSub.apply("TNR B"),
+                findSub.apply("TNR C"),
+                findSub.apply("AHR 1"),
+                findSub.apply("AHR 2"),
+                findParent.apply("P1R"),
+                findParent.apply("DTR"),
+                findParent.apply("MRL"),
+                findParent.apply("ART"),
+                findParent.apply("VEZ"),
+                findParent.apply("GXR"),
+                findParent.apply("TCR")
         ).forEach(s4::addTeam);
         seasonRepository.save(s4);
 
         // Set ratings for active season
-        s4.findSeasonTeam(findSub.apply("VRX A")).ifPresent(st -> st.setRating(92));
-        s4.findSeasonTeam(findSub.apply("VRX B")).ifPresent(st -> st.setRating(87));
-        s4.findSeasonTeam(findSub.apply("SGM B")).ifPresent(st -> st.setRating(90));
-        s4.findSeasonTeam(findSub.apply("SGM S")).ifPresent(st -> st.setRating(85));
-        s4.findSeasonTeam(findSub.apply("TBR R")).ifPresent(st -> st.setRating(93));
-        s4.findSeasonTeam(findSub.apply("TBR B")).ifPresent(st -> st.setRating(88));
-        s4.findSeasonTeam(findSub.apply("TBR G")).ifPresent(st -> st.setRating(86));
-        s4.findSeasonTeam(findParent.apply("ADR")).ifPresent(st -> st.setRating(84));
-        s4.findSeasonTeam(findParent.apply("ICL")).ifPresent(st -> st.setRating(87));
-        s4.findSeasonTeam(findParent.apply("SVT")).ifPresent(st -> st.setRating(91));
-        s4.findSeasonTeam(findParent.apply("NFR")).ifPresent(st -> st.setRating(83));
-        s4.findSeasonTeam(findParent.apply("EGP")).ifPresent(st -> st.setRating(89));
-        s4.findSeasonTeam(findParent.apply("HMS")).ifPresent(st -> st.setRating(85));
-        s4.findSeasonTeam(findParent.apply("PWR")).ifPresent(st -> st.setRating(88));
+        s4.findSeasonTeam(findSub.apply("CLR 1")).ifPresent(st -> st.setRating(92));
+        s4.findSeasonTeam(findSub.apply("CLR 2")).ifPresent(st -> st.setRating(87));
+        s4.findSeasonTeam(findSub.apply("TNR A")).ifPresent(st -> st.setRating(93));
+        s4.findSeasonTeam(findSub.apply("TNR B")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findSub.apply("TNR C")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findParent.apply("P1R")).ifPresent(st -> st.setRating(93));
+        s4.findSeasonTeam(findParent.apply("DTR")).ifPresent(st -> st.setRating(85));
+        s4.findSeasonTeam(findParent.apply("MRL")).ifPresent(st -> {
+            st.setRating(84);
+            st.setPrimaryColor("#1116aa");
+            st.setAccentColor("#134f7c");
+        });
+        s4.findSeasonTeam(findParent.apply("ART")).ifPresent(st -> st.setRating(87));
+        s4.findSeasonTeam(findSub.apply("AHR 1")).ifPresent(st -> st.setRating(92));
+        s4.findSeasonTeam(findSub.apply("AHR 2")).ifPresent(st -> st.setRating(88));
+        s4.findSeasonTeam(findParent.apply("VEZ")).ifPresent(st -> st.setRating(88));
+        s4.findSeasonTeam(findParent.apply("GXR")).ifPresent(st -> st.setRating(83));
+        s4.findSeasonTeam(findParent.apply("TCR")).ifPresent(st -> st.setRating(86));
         seasonRepository.save(s4);
-
-        return s4;
     }
 
     private void copyDemoLogos(List<Team> parentTeams) {
         var allTeams = teamRepository.findAll();
         Path uploadBase = Paths.get(uploadDir, "teams").toAbsolutePath().normalize();
-        int copied = 0;
         for (var team : allTeams) {
             String logoKey = team.isSubTeam() ? team.getParentTeam().getShortName() : team.getShortName();
             try {
@@ -255,13 +272,12 @@ public class TestDataService {
                     }
                     team.setLogoUrl("/uploads/teams/" + team.getId() + "/" + logoKey + ".png");
                     teamRepository.save(team);
-                    copied++;
                 }
             } catch (IOException e) {
                 log.warn("Failed to copy demo logo for {}: {}", team.getShortName(), e.getMessage());
             }
         }
-        log.info("Demo logos copied for {}/{} teams", copied, allTeams.size());
+        log.info("Demo logos copied for {} teams", allTeams.size());
     }
 
     private Season createSeason(String name, int year, int number, String description, ScoringDefaults scorings) {
@@ -273,125 +289,136 @@ public class TestDataService {
     }
 
     private void seedDrivers() {
-        // VRX — Velocity Racing (10 drivers)
-        driver("VRX_Driver01", "Marco Ferretti");
-        driver("VRX_Driver02", "Sophie Laurent");
-        driver("VRX_Driver03", "Kenji Nakamura");
-        driver("VRX_Driver04", "Elena Vasquez");
-        driver("VRX_Driver05", "Luca Bianchi");
-        driver("VRX_Driver06", "Anya Kowalski");
-        driver("VRX_Driver07", "Omar Khalid");
-        driver("VRX_Driver08", "Clara Dubois");
-        driver("VRX_Driver09", "Raj Patel");
-        driver("VRX_Driver10", "Ingrid Holm");
+        // P1R
+        driver("France-k88", "P1R_Francek88");
+        driver("P1R_Jake", "P1R_Seagull");
+        driver("P1R_OldBanger", "P1R_OldBanger");
+        driver("P1R_SLAMMER", "S L \u039b \u039c \u039c \u039e R");
+        driver("Unfazed__be", "P1R_Unfazed_BE");
+        driver("P1R_Valkyrie", "P1R_Valkyrie");
+        driver("motorstormhero", "P1R_Motorstorm");
+        driver("YT_Sorte13", "P1R_Sorte13");
 
-        // SGM — Shadow Grid Motorsport (10 drivers)
-        driver("SGM_Driver01", "Viktor Sorokin");
-        driver("SGM_Driver02", "Mei Lin Chen");
-        driver("SGM_Driver03", "Callum Briggs");
-        driver("SGM_Driver04", "Fatima Al-Hassan");
-        driver("SGM_Driver05", "Diego Reyes");
-        driver("SGM_Driver06", "Petra Novak");
-        driver("SGM_Driver07", "Tomas Havel");
-        driver("SGM_Driver08", "Amara Osei");
-        driver("SGM_Driver09", "Finn Larsen");
-        driver("SGM_Driver10", "Yuki Tanaka");
+        // CLR
+        driver("BetelgeuzeFIN", "J. Itkonen");
+        driver("chiccoblasi", "E. Blasi");
+        driver("CLR_Prodigy_97", "Prodigy_97");
+        driver("CLR_RichyI78", "TCR_RichyI78");
+        driver("CSX_Thomas", "CSX_Thomas");
+        driver("DylanCliff_28", "D. Clifford");
+        driver("IEquinoXe-", "EquinoXe");
+        driver("kurt_666_", "Major Guinness");
+        driver("lemonysqueez", "Lemony Squeez");
+        driver("RA_F1nalized__", "F1nalized");
+        driver("RA_Shred", "Shred");
+        driver("RA_Yannis73", "Sir Yancelot");
+        driver("RiverRuckus", "CLR_RiverRuckus");
+        driver("Slugzy_88", "Slugsy");
 
-        // ADR — Apex Drift Racing (10 drivers)
-        driver("ADR_Driver01", "Carlos Montoya");
-        driver("ADR_Driver02", "Aisha Nwosu");
-        driver("ADR_Driver03", "Henrik Bergstrom");
-        driver("ADR_Driver04", "Priya Sharma");
-        driver("ADR_Driver05", "Jack O'Brien");
-        driver("ADR_Driver06", "Nadia Popescu");
-        driver("ADR_Driver07", "Sven Eriksson");
-        driver("ADR_Driver08", "Laila Mansour");
-        driver("ADR_Driver09", "Bruno Costa");
-        driver("ADR_Driver10", "Hana Suzuki");
+        // TCR
+        driver("Etlits", "TCR_Arumes");
+        driver("Hogston_GT", "HogstonGT");
+        driver("TCR_Bracing1", "TCR_Bracing1");
+        driver("TCR_Rapid_GT", "TCR_Rapid_GT");
+        driver("TCR_Sheltie", "TCR_Sheltie");
+        driver("TCR_Sonic", "TCR_Sonic");
+        driver("TCR_Tidgney", "TCR_Tidgney");
+        driver("TCR_White-tiger", "WhiteTiger");
+        driver("bmataz", "TCR_Tazz");
+        driver("YtrRytonlad28", "Tcr-grt-rytonlad");
 
-        // TBR — Thunderbolt Raceworks (10 drivers)
-        driver("TBR_Driver01", "Ryan MacLeod");
-        driver("TBR_Driver02", "Zoe Fischer");
-        driver("TBR_Driver03", "Ivan Petrov");
-        driver("TBR_Driver04", "Amelia Torres");
-        driver("TBR_Driver05", "Leo Hoffmann");
-        driver("TBR_Driver06", "Nour El-Din");
-        driver("TBR_Driver07", "Grace Kim");
-        driver("TBR_Driver08", "Matteo Romano");
-        driver("TBR_Driver09", "Sonia Blanc");
-        driver("TBR_Driver10", "Arjun Mehta");
+        // ART
+        driver("ART_Lango666", "ART_Lango");
+        driver("beardiemcbeard", "ART_Beardie");
+        driver("CJMR53", "ART_CJMR");
+        driver("eRA_mikebrfc", "eRA_Judas");
+        driver("ginnerquinny61", "ART_Quinny");
+        driver("kylegamesdrums", "ART_MrKyle");
+        driver("Matt2_3_7", "ART_Matt2_3_7");
+        driver("RA_Tobi", "RA-A_Tobi");
 
-        // ICL — Iron Circuit League (10 drivers)
-        driver("ICL_Driver01", "Patrick Leclaire");
-        driver("ICL_Driver02", "Yuna Park");
-        driver("ICL_Driver03", "Thomas Mueller");
-        driver("ICL_Driver04", "Isabela Carvalho");
-        driver("ICL_Driver05", "Alexei Volkov");
-        driver("ICL_Driver06", "Chloe Martin");
-        driver("ICL_Driver07", "Darius Okafor");
-        driver("ICL_Driver08", "Miriam Steinberg");
-        driver("ICL_Driver09", "Hamid Rezai");
-        driver("ICL_Driver10", "Valentina Russo");
+        // AHR
+        driver("AHR_Hills_93", "AHR_Hills_93");
+        driver("AHR_j_mac", "AHR j mac");
+        driver("AHR-PezzzaGT", "AHR-PezzzaGT");
+        driver("AHR-Tankbro", "AHR Tankbro-_-");
+        driver("danfn22016", "Danfn22016");
+        driver("grey_roc", "Grey_roc GT");
+        driver("Jacko_GT7", "AHR-Jacko");
+        driver("JackPlayz_01", "JKPZ01");
+        driver("Lemonz7836", "Lemon87\u00b9");
+        driver("miggldeehiggins", "Micky D Higgins");
+        driver("OFFICIAL_001", "AHR_REDACTED");
+        driver("PnR-Proton", "AHR-Proton");
+        driver("remir201", "AHR_I K O A");
+        driver("Saittam-46", "Amateus46");
+        driver("stevedp81", "AHR_Steviep");
+        driver("stigimoss", "Stigimoss");
+        driver("Tracer-tel", "TEL");
 
-        // SVT — Stellar Velocity Team (10 drivers)
-        driver("SVT_Driver01", "Emre Demir");
-        driver("SVT_Driver02", "Lin Xiaoming");
-        driver("SVT_Driver03", "Astrid Johansen");
-        driver("SVT_Driver04", "Rafael Ortega");
-        driver("SVT_Driver05", "Nia Williams");
-        driver("SVT_Driver06", "Stefan Kovar");
-        driver("SVT_Driver07", "Yuki Hashimoto");
-        driver("SVT_Driver08", "Bianca Ferrari");
-        driver("SVT_Driver09", "Kofi Mensah");
-        driver("SVT_Driver10", "Vera Kuznetsova");
+        // MRL
+        driver("ApexMagnet", "ApexMagnet");
+        driver("MRL_Bish", "MRL_MikeBish");
+        driver("MRL_IrIsH_ToNy", "MRL_Greta^/");
+        driver("MRL_JOHNNYWAFFLE", "MRL_JOHNNYWAFFLE");
+        driver("MRL_Splinter117", "MRL_Splinter117");
+        driver("Sparkzmajor", "MRL Sparkzmajor");
 
-        // NFR — Nitro Forge Racing (10 drivers)
-        driver("NFR_Driver01", "Jake Morrison");
-        driver("NFR_Driver02", "Sakura Ito");
-        driver("NFR_Driver03", "Pierre Lefebvre");
-        driver("NFR_Driver04", "Amina Diallo");
-        driver("NFR_Driver05", "Ben Hartley");
-        driver("NFR_Driver06", "Lara Ivanova");
-        driver("NFR_Driver07", "Marcus Webb");
-        driver("NFR_Driver08", "Chiara Esposito");
-        driver("NFR_Driver09", "Daichi Watanabe");
-        driver("NFR_Driver10", "Olivia Grant");
+        // GXR
+        driver("Gen-X_Dan98", "Gen-X_Dan98");
+        driver("Gen-X_Darlobhoy", "Gen-X_Darlobhoy");
+        driver("Gen-X_JWrenchy", "Gen-X_JWrenchy");
+        driver("Gen-X_MynameJeff", "Gen-X_MynameJeff");
+        driver("Gen-X_OldFart", "TNT_OLDFART");
+        driver("Gen-X_Sainana", "B. Silva");
+        driver("Gen-X_Sissy", "C. Howell");
+        driver("Gen-X_KMaru", "JJ");
+        driver("Gen-X_Wicksy", "Gen-X_Wicksy");
 
-        // EGP — Eclipse Grand Prix (10 drivers)
-        driver("EGP_Driver01", "Ravi Krishnan");
-        driver("EGP_Driver02", "Anna Lindqvist");
-        driver("EGP_Driver03", "Fabio Conti");
-        driver("EGP_Driver04", "Yasmin El-Amin");
-        driver("EGP_Driver05", "Connor Walsh");
-        driver("EGP_Driver06", "Mia Johansson");
-        driver("EGP_Driver07", "Andrei Moldovan");
-        driver("EGP_Driver08", "Kayla Thompson");
-        driver("EGP_Driver09", "Eduardo Lima");
-        driver("EGP_Driver10", "Fiona Campbell");
+        // DTR
+        driver("DTR_Butzen-Katz", "DTR B\u00fctzen-Katz");
+        driver("DTR_H1PPYH33D", "DTR HippyHeed");
+        driver("DTR_Kierin", "DTR Kierin");
+        driver("DTR_M3guy", "DTR M3Guy");
+        driver("DTR_MoominPappa", "DTR Moomin");
+        driver("DTR_Rosdwerg", "DTR_Rosdwerg");
+        driver("is250dec", "DTR_DEC");
+        driver("Jaristoteles", "DTR Jari");
+        driver("mugelina", "DTR_mugelina");
+        driver("Sionetica", "Sio");
 
-        // HMS — Horizon Motorsport (10 drivers)
-        driver("HMS_Driver01", "Nicolas Bernard");
-        driver("HMS_Driver02", "Yuna Choi");
-        driver("HMS_Driver03", "Alex Turner");
-        driver("HMS_Driver04", "Rosa Martinez");
-        driver("HMS_Driver05", "Dmitri Volkov");
-        driver("HMS_Driver06", "Celine Mercier");
-        driver("HMS_Driver07", "Tariq Hassan");
-        driver("HMS_Driver08", "Elsa Bergman");
-        driver("HMS_Driver09", "Michael Chen");
-        driver("HMS_Driver10", "Lucia Moreno");
+        // VEZ
+        driver("andreahoppus", "AndreaHoppus");
+        driver("FeArToMa1295", "Feartoma95");
+        driver("freshciccio01", "VRT Flexciccio");
+        driver("Gnuccaria", "N. Blasi");
+        driver("InuyashaGodYokai", "InuyashaGodYokai");
+        driver("Sonny061288", "SonnyStyle");
+        driver("VRT_Incredibile", "G.Pancaldi");
+        driver("VRT_Pastinacalda", "G. Mantineo");
 
-        // PWR — Pulse Wave Racing (10 drivers)
-        driver("PWR_Driver01", "Sam Nguyen");
-        driver("PWR_Driver02", "Ingrid Svensson");
-        driver("PWR_Driver03", "Roberto Mancini");
-        driver("PWR_Driver04", "Zara Ahmed");
-        driver("PWR_Driver05", "Kevin O'Connor");
-        driver("PWR_Driver06", "Nadia Florescu");
-        driver("PWR_Driver07", "Hiroshi Yamamoto");
-        driver("PWR_Driver08", "Camille Rousseau");
-        driver("PWR_Driver09", "Tobias Keller");
-        driver("PWR_Driver10", "Alicia Santos");
+        // TNR
+        driver("Chaz__CA", "TNR_Chaz");
+        driver("D-man371D-man", "TNR_D-Man");
+        driver("Deekuhn", "TNR_Deaky");
+        driver("Dirty_Donavan", "TNR_SimDudeSA");
+        driver("Fjneet90", "TNR_FJ");
+        driver("Ghostriderz16173", "TNR_Ghostrider16");
+        driver("GMZ_Alfred", "TNR_Alfred");
+        driver("LEVITIUS", "TNR_LEVITIUS");
+        driver("Lightning_Lorry", "TNR_Lawrence");
+        driver("LotariRacing", "TNR_Lotari");
+        driver("Mo_Flavor", "TNR_Mo Flavor");
+        driver("Nutcap_1", "TNR_Nutcap");
+        driver("panicpotato17", "TNR_panicpotato");
+        driver("Phantom_Steve111", "TNR_Phantom");
+        driver("RayCarter", "TNR_RayCarter");
+        driver("Savvy-Unchained", "TNR_SAVVY");
+        driver("sir_maggs", "TNR_sir-maggs");
+        driver("TNR_Capt_Slow", "TNR_Capt_Slow");
+        driver("TNR_SHAWN46", "TNR_SHAWN46");
+        driver("TNR_Wipperman537", "TNR_Wipperman");
+        driver("VIVSRC370", "TNR_SRC_VIV");
     }
 
     private void seedAliases() {
@@ -402,19 +429,19 @@ public class TestDataService {
                         .filter(d -> d.getPsnId().equals(psnId))
                         .findFirst().orElseThrow(() -> new EntityNotFoundException("Driver", psnId));
 
-        // Typical PSN ID changes — using fictive drivers
-        var vrx01 = findDriver.apply("VRX_Driver01");
-        vrx01.addAlias("VRX_OldPSN01");
-        driverRepository.save(vrx01);
+        // Typical PSN ID changes
+        var jake = findDriver.apply("P1R_Jake");
+        jake.addAlias("P1R_Jake_Old");
+        driverRepository.save(jake);
 
-        var sgm03 = findDriver.apply("SGM_Driver03");
-        sgm03.addAlias("SGM_CallumOld");
-        sgm03.addAlias("SGM_CBriggs");
-        driverRepository.save(sgm03);
+        var kurt = findDriver.apply("kurt_666_");
+        kurt.addAlias("kurt_old_psn");
+        kurt.addAlias("KurtTheGamer");
+        driverRepository.save(kurt);
 
-        var adr05 = findDriver.apply("ADR_Driver05");
-        adr05.addAlias("ADR_JackOB_v1");
-        driverRepository.save(adr05);
+        var richy = findDriver.apply("CLR_RichyI78");
+        richy.addAlias("TCR_RichyI78_v1");
+        driverRepository.save(richy);
     }
 
     private void seedSeasonDrivers() {
@@ -427,6 +454,11 @@ public class TestDataService {
                         .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
                         .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
+        java.util.function.Function<String, Team> findSub = shortName ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
+
         java.util.function.Function<String, Driver> findDriver = psnId ->
                 allDrivers.stream()
                         .filter(d -> d.getPsnId().equals(psnId))
@@ -434,73 +466,126 @@ public class TestDataService {
 
         java.util.function.Function<Integer, Season> findSeason = year ->
                 allSeasons.stream()
-                        .filter(s -> s.getYear() == year && s.getNumber() == 4)
+                        .filter(s -> s.getYear() == year)
                         .findFirst().orElseThrow(() -> new EntityNotFoundException("Season", year));
 
-        // Season 4 - 2026: assign all 10 drivers per team
+        // Season 4 - 2026
         var s4 = findSeason.apply(2026);
 
-        for (String psnId : List.of("VRX_Driver01", "VRX_Driver02", "VRX_Driver03", "VRX_Driver04",
-                "VRX_Driver05", "VRX_Driver06", "VRX_Driver07", "VRX_Driver08",
-                "VRX_Driver09", "VRX_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("VRX")));
+        for (String psnId : List.of("France-k88", "P1R_Jake", "P1R_SLAMMER", "P1R_OldBanger",
+                "YT_Sorte13", "Unfazed__be", "P1R_Valkyrie", "motorstormhero")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("P1R")));
         }
-        for (String psnId : List.of("SGM_Driver01", "SGM_Driver02", "SGM_Driver03", "SGM_Driver04",
-                "SGM_Driver05", "SGM_Driver06", "SGM_Driver07", "SGM_Driver08",
-                "SGM_Driver09", "SGM_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("SGM")));
+        // Sub-Team-Zuordnungen werden NICHT geseeded — die kommen aus dem Import
+        // (ensureSeasonDriver aktualisiert das Team bei erneutem Import)
+        // Hier nur Parent-Team-Zuordnungen als Platzhalter fuer Entwicklung ohne Import
+        for (String psnId : List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
+                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28",
+                "IEquinoXe-", "kurt_666_", "lemonysqueez",
+                "RA_F1nalized__", "RA_Shred", "RA_Yannis73")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("CLR")));
         }
-        for (String psnId : List.of("ADR_Driver01", "ADR_Driver02", "ADR_Driver03", "ADR_Driver04",
-                "ADR_Driver05", "ADR_Driver06", "ADR_Driver07", "ADR_Driver08",
-                "ADR_Driver09", "ADR_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("ADR")));
+        for (String psnId : List.of("Chaz__CA", "D-man371D-man", "Deekuhn",
+                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173", "GMZ_Alfred",
+                "LEVITIUS", "Lightning_Lorry", "LotariRacing",
+                "Mo_Flavor", "Nutcap_1", "panicpotato17", "Phantom_Steve111",
+                "RayCarter", "Savvy-Unchained", "sir_maggs",
+                "TNR_Capt_Slow", "TNR_SHAWN46", "TNR_Wipperman537")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("TNR")));
         }
-        for (String psnId : List.of("TBR_Driver01", "TBR_Driver02", "TBR_Driver03", "TBR_Driver04",
-                "TBR_Driver05", "TBR_Driver06", "TBR_Driver07", "TBR_Driver08",
-                "TBR_Driver09", "TBR_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("TBR")));
+        for (String psnId : List.of("AHR_Hills_93", "AHR_j_mac", "AHR-PezzzaGT",
+                "AHR-Tankbro", "danfn22016", "grey_roc", "Jacko_GT7", "JackPlayz_01",
+                "Lemonz7836", "miggldeehiggins", "OFFICIAL_001",
+                "PnR-Proton", "remir201", "Saittam-46", "stevedp81", "stigimoss", "Tracer-tel")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("AHR")));
         }
-        for (String psnId : List.of("ICL_Driver01", "ICL_Driver02", "ICL_Driver03", "ICL_Driver04",
-                "ICL_Driver05", "ICL_Driver06", "ICL_Driver07", "ICL_Driver08",
-                "ICL_Driver09", "ICL_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("ICL")));
+        for (String psnId : List.of("TCR_Rapid_GT", "TCR_Sheltie", "TCR_Sonic", "TCR_Tidgney",
+                "Etlits", "Hogston_GT", "TCR_Bracing1", "TCR_White-tiger", "bmataz", "YtrRytonlad28")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("TCR")));
         }
-        for (String psnId : List.of("SVT_Driver01", "SVT_Driver02", "SVT_Driver03", "SVT_Driver04",
-                "SVT_Driver05", "SVT_Driver06", "SVT_Driver07", "SVT_Driver08",
-                "SVT_Driver09", "SVT_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("SVT")));
-        }
-        for (String psnId : List.of("NFR_Driver01", "NFR_Driver02", "NFR_Driver03", "NFR_Driver04",
-                "NFR_Driver05", "NFR_Driver06", "NFR_Driver07", "NFR_Driver08",
-                "NFR_Driver09", "NFR_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("NFR")));
-        }
-        for (String psnId : List.of("EGP_Driver01", "EGP_Driver02", "EGP_Driver03", "EGP_Driver04",
-                "EGP_Driver05", "EGP_Driver06", "EGP_Driver07", "EGP_Driver08",
-                "EGP_Driver09", "EGP_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("EGP")));
-        }
-        for (String psnId : List.of("HMS_Driver01", "HMS_Driver02", "HMS_Driver03", "HMS_Driver04",
-                "HMS_Driver05", "HMS_Driver06", "HMS_Driver07", "HMS_Driver08",
-                "HMS_Driver09", "HMS_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("HMS")));
-        }
-        for (String psnId : List.of("PWR_Driver01", "PWR_Driver02", "PWR_Driver03", "PWR_Driver04",
-                "PWR_Driver05", "PWR_Driver06", "PWR_Driver07", "PWR_Driver08",
-                "PWR_Driver09", "PWR_Driver10")) {
-            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("PWR")));
+        for (String psnId : List.of("DTR_Butzen-Katz", "DTR_H1PPYH33D", "DTR_Kierin", "DTR_M3guy",
+                "DTR_MoominPappa", "DTR_Rosdwerg", "is250dec", "Jaristoteles", "mugelina", "Sionetica")) {
+            seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(psnId), findParent.apply("DTR")));
         }
 
-        log.info("Created season-driver assignments: s4={}",
-                seasonDriverRepository.findBySeasonId(s4.getId()).size());
+        // Helper to find season by year and name
+        java.util.function.BiFunction<Integer, String, Season> findSeasonByName = (year, name) ->
+                allSeasons.stream()
+                        .filter(s -> s.getYear() == year && s.getName().equals(name))
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Season", name));
+
+        // S1 2023 Group A: 6 drivers per team (P1R, TCR, ART, MRL, GXR + CLR 1)
+        var s1a = findSeasonByName.apply(2023, "Group A");
+        assignSeasonDrivers(s1a, "P1R", List.of("France-k88", "P1R_Jake", "P1R_SLAMMER",
+                "P1R_OldBanger", "YT_Sorte13", "Unfazed__be"), findParent, findDriver);
+        assignSeasonDrivers(s1a, "TCR", List.of("TCR_Rapid_GT", "TCR_Sheltie", "TCR_Sonic",
+                "TCR_Tidgney", "Etlits", "Hogston_GT"), findParent, findDriver);
+        assignSeasonDrivers(s1a, "ART", List.of("ART_Lango666", "beardiemcbeard", "CJMR53",
+                "eRA_mikebrfc", "ginnerquinny61", "kylegamesdrums"), findParent, findDriver);
+        assignSeasonDrivers(s1a, "MRL", List.of("ApexMagnet", "MRL_Bish", "MRL_IrIsH_ToNy",
+                "MRL_JOHNNYWAFFLE", "MRL_Splinter117", "Sparkzmajor"), findParent, findDriver);
+        assignSeasonDrivers(s1a, "GXR", List.of("Gen-X_Dan98", "Gen-X_Darlobhoy", "Gen-X_JWrenchy",
+                "Gen-X_MynameJeff", "Gen-X_OldFart", "Gen-X_Sainana"), findParent, findDriver);
+        // CLR 1 sub-team: SeasonDriver uses parent team CLR
+        assignSeasonDrivers(s1a, "CLR", List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
+                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28"), findParent, findDriver);
+
+        // S1 2023 Group B: 6 drivers per team (DTR, VEZ + CLR 2, TNR A, TNR B, AHR 1)
+        var s1b = findSeasonByName.apply(2023, "Group B");
+        assignSeasonDrivers(s1b, "DTR", List.of("DTR_Butzen-Katz", "DTR_H1PPYH33D", "DTR_Kierin",
+                "DTR_M3guy", "DTR_MoominPappa", "DTR_Rosdwerg"), findParent, findDriver);
+        assignSeasonDrivers(s1b, "VEZ", List.of("andreahoppus", "FeArToMa1295", "freshciccio01",
+                "Gnuccaria", "InuyashaGodYokai", "Sonny061288"), findParent, findDriver);
+        // CLR 2: different drivers than Group A, parent team CLR
+        assignSeasonDrivers(s1b, "CLR", List.of("IEquinoXe-", "kurt_666_", "lemonysqueez",
+                "RA_F1nalized__", "RA_Shred", "RA_Yannis73"), findParent, findDriver);
+        // TNR A: parent team TNR
+        assignSeasonDrivers(s1b, "TNR", List.of("Chaz__CA", "D-man371D-man", "Deekuhn",
+                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173"), findParent, findDriver);
+        // TNR B: different drivers, parent team TNR
+        assignSeasonDrivers(s1b, "TNR", List.of("GMZ_Alfred", "LEVITIUS", "Lightning_Lorry",
+                "LotariRacing", "Mo_Flavor", "Nutcap_1"), findParent, findDriver);
+        // AHR 1: parent team AHR
+        assignSeasonDrivers(s1b, "AHR", List.of("AHR_Hills_93", "AHR_j_mac", "AHR-PezzzaGT",
+                "AHR-Tankbro", "danfn22016", "grey_roc"), findParent, findDriver);
+
+        // S2 2024: 10 parent teams, 6 drivers each
+        var s2 = findSeasonByName.apply(2024, "Regular Season");
+        assignSeasonDrivers(s2, "P1R", List.of("France-k88", "P1R_Jake", "P1R_SLAMMER",
+                "P1R_OldBanger", "YT_Sorte13", "Unfazed__be"), findParent, findDriver);
+        assignSeasonDrivers(s2, "CLR", List.of("BetelgeuzeFIN", "chiccoblasi", "CLR_Prodigy_97",
+                "CLR_RichyI78", "CSX_Thomas", "DylanCliff_28"), findParent, findDriver);
+        assignSeasonDrivers(s2, "TCR", List.of("TCR_Rapid_GT", "TCR_Sheltie", "TCR_Sonic",
+                "TCR_Tidgney", "Etlits", "Hogston_GT"), findParent, findDriver);
+        assignSeasonDrivers(s2, "ART", List.of("ART_Lango666", "beardiemcbeard", "CJMR53",
+                "eRA_mikebrfc", "ginnerquinny61", "kylegamesdrums"), findParent, findDriver);
+        assignSeasonDrivers(s2, "AHR", List.of("AHR_Hills_93", "AHR_j_mac", "AHR-PezzzaGT",
+                "AHR-Tankbro", "danfn22016", "grey_roc"), findParent, findDriver);
+        assignSeasonDrivers(s2, "MRL", List.of("ApexMagnet", "MRL_Bish", "MRL_IrIsH_ToNy",
+                "MRL_JOHNNYWAFFLE", "MRL_Splinter117", "Sparkzmajor"), findParent, findDriver);
+        assignSeasonDrivers(s2, "GXR", List.of("Gen-X_Dan98", "Gen-X_Darlobhoy", "Gen-X_JWrenchy",
+                "Gen-X_MynameJeff", "Gen-X_OldFart", "Gen-X_Sainana"), findParent, findDriver);
+        assignSeasonDrivers(s2, "DTR", List.of("DTR_Butzen-Katz", "DTR_H1PPYH33D", "DTR_Kierin",
+                "DTR_M3guy", "DTR_MoominPappa", "DTR_Rosdwerg"), findParent, findDriver);
+        assignSeasonDrivers(s2, "VEZ", List.of("andreahoppus", "FeArToMa1295", "freshciccio01",
+                "Gnuccaria", "InuyashaGodYokai", "Sonny061288"), findParent, findDriver);
+        assignSeasonDrivers(s2, "TNR", List.of("Chaz__CA", "D-man371D-man", "Deekuhn",
+                "Dirty_Donavan", "Fjneet90", "Ghostriderz16173"), findParent, findDriver);
+
+        log.info("Created season-driver assignments: s4={}, s1a={}, s1b={}, s2={}",
+                seasonDriverRepository.findBySeasonId(s4.getId()).size(),
+                seasonDriverRepository.findBySeasonId(s1a.getId()).size(),
+                seasonDriverRepository.findBySeasonId(s1b.getId()).size(),
+                seasonDriverRepository.findBySeasonId(s2.getId()).size());
     }
 
-    private void seedTeamCards(Season activeSeason) {
-        try {
-            var paths = teamCardService.generateAllCards(activeSeason);
-            log.info("Generated {} team cards for active season", paths.size());
-        } catch (Exception e) {
-            log.warn("Team card generation skipped (Playwright not installed?): {}", e.getMessage());
+    private void assignSeasonDrivers(Season season, String teamShortName,
+            List<String> driverPsnIds,
+            java.util.function.Function<String, Team> teamFinder,
+            java.util.function.Function<String, Driver> driverFinder) {
+        var team = teamFinder.apply(teamShortName);
+        for (String psnId : driverPsnIds) {
+            seasonDriverRepository.save(new SeasonDriver(season, driverFinder.apply(psnId), team));
         }
     }
 
@@ -509,15 +594,15 @@ public class TestDataService {
                 raceScoringRepository.findAll().getFirst(),
                 matchScoringRepository.findAll().getFirst());
 
-        // === Completely isolated test data (no relation to real teams/drivers) ===
+        // === Komplett isolierte Testdaten (kein Bezug zu echten Teams/Fahrern) ===
 
-        // Test teams
+        // Test-Teams
         var testAlpha = teamRepository.save(new Team("Test Alpha Racing", "T-ALF"));
         var testBravo = teamRepository.save(new Team("Test Bravo Racing", "T-BRV"));
         var testBravo1 = teamRepository.save(new Team("Test Bravo Racing 1", "T-BRV 1", testBravo));
         var testBravo2 = teamRepository.save(new Team("Test Bravo Racing 2", "T-BRV 2", testBravo));
 
-        // Test drivers
+        // Test-Fahrer
         var tda1 = driver("Test_Alpha_1", "Test Alpha Driver 1");
         var tda2 = driver("Test_Alpha_2", "Test Alpha Driver 2");
         var tdb1 = driver("Test_Bravo1_1", "Test Bravo1 Driver 1");
@@ -555,7 +640,6 @@ public class TestDataService {
         var race2 = new Race();
         race2.setMatchday(md1);
         race2.setMatch(match2);
-        race2.setSettings(createTestSettings(race2));
         raceRepository.save(race2);
         raceLineupRepository.save(new RaceLineup(race2, tda1, testAlpha));
         raceLineupRepository.save(new RaceLineup(race2, tda2, testAlpha));
