@@ -241,6 +241,7 @@ public class TestDataService {
     private void copyDemoLogos(List<Team> parentTeams) {
         var allTeams = teamRepository.findAll();
         Path uploadBase = Paths.get(uploadDir, "teams").toAbsolutePath().normalize();
+        int copied = 0;
         for (var team : allTeams) {
             String logoKey = team.isSubTeam() ? team.getParentTeam().getShortName() : team.getShortName();
             try {
@@ -254,12 +255,13 @@ public class TestDataService {
                     }
                     team.setLogoUrl("/uploads/teams/" + team.getId() + "/" + logoKey + ".png");
                     teamRepository.save(team);
+                    copied++;
                 }
             } catch (IOException e) {
                 log.warn("Failed to copy demo logo for {}: {}", team.getShortName(), e.getMessage());
             }
         }
-        log.info("Demo logos copied for {} teams", allTeams.size());
+        log.info("Demo logos copied for {}/{} teams", copied, allTeams.size());
     }
 
     private Season createSeason(String name, int year, int number, String description, ScoringDefaults scorings) {
@@ -507,15 +509,15 @@ public class TestDataService {
                 raceScoringRepository.findAll().getFirst(),
                 matchScoringRepository.findAll().getFirst());
 
-        // === Komplett isolierte Testdaten (kein Bezug zu echten Teams/Fahrern) ===
+        // === Completely isolated test data (no relation to real teams/drivers) ===
 
-        // Test-Teams
+        // Test teams
         var testAlpha = teamRepository.save(new Team("Test Alpha Racing", "T-ALF"));
         var testBravo = teamRepository.save(new Team("Test Bravo Racing", "T-BRV"));
         var testBravo1 = teamRepository.save(new Team("Test Bravo Racing 1", "T-BRV 1", testBravo));
         var testBravo2 = teamRepository.save(new Team("Test Bravo Racing 2", "T-BRV 2", testBravo));
 
-        // Test-Fahrer
+        // Test drivers
         var tda1 = driver("Test_Alpha_1", "Test Alpha Driver 1");
         var tda2 = driver("Test_Alpha_2", "Test Alpha Driver 2");
         var tdb1 = driver("Test_Bravo1_1", "Test Bravo1 Driver 1");
@@ -553,6 +555,7 @@ public class TestDataService {
         var race2 = new Race();
         race2.setMatchday(md1);
         race2.setMatch(match2);
+        race2.setSettings(createTestSettings(race2));
         raceRepository.save(race2);
         raceLineupRepository.save(new RaceLineup(race2, tda1, testAlpha));
         raceLineupRepository.save(new RaceLineup(race2, tda2, testAlpha));
