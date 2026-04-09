@@ -9,6 +9,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Set;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
@@ -25,6 +27,14 @@ class TestDataServiceIntegrationTest {
     @Autowired
     private SeasonRepository seasonRepository;
 
+    /** The 10 fictive parent team short names seeded by TestDataService. */
+    private static final Set<String> SEEDED_PARENT_SHORT_NAMES = Set.of(
+            "VRX", "SGM", "ADR", "TBR", "ICL", "SVT", "NFR", "EGP", "HMS", "PWR");
+
+    /** The 7 fictive sub-team short names seeded by TestDataService. */
+    private static final Set<String> SEEDED_SUB_SHORT_NAMES = Set.of(
+            "VRX A", "VRX B", "SGM B", "SGM S", "TBR R", "TBR B", "TBR G");
+
     // -------------------------------------------------------
     // Task 1: Team structure tests
     // -------------------------------------------------------
@@ -33,10 +43,10 @@ class TestDataServiceIntegrationTest {
     void givenDevSeed_whenStarted_thenExactlyTenParentTeamsExist() {
         // given — dev profile seed() has already run at startup
 
-        // when
+        // when — count only known seeded parent teams
         long parentCount = teamRepository.findAll().stream()
                 .filter(t -> t.getParentTeam() == null)
-                .filter(t -> !t.getShortName().startsWith("T-"))  // exclude E2E test teams
+                .filter(t -> SEEDED_PARENT_SHORT_NAMES.contains(t.getShortName()))
                 .count();
 
         // then
@@ -45,10 +55,10 @@ class TestDataServiceIntegrationTest {
 
     @Test
     void givenDevSeed_whenStarted_thenAtLeastTwoParentsHaveTwoOrMoreSubTeams() {
-        // when
+        // when — only count seeded sub-teams
         var subTeams = teamRepository.findAll().stream()
                 .filter(t -> t.getParentTeam() != null)
-                .filter(t -> !t.getShortName().startsWith("T-"))  // exclude E2E test teams
+                .filter(t -> SEEDED_SUB_SHORT_NAMES.contains(t.getShortName()))
                 .toList();
 
         var parentCounts = new java.util.HashMap<String, Long>();
@@ -66,13 +76,14 @@ class TestDataServiceIntegrationTest {
 
     @Test
     void givenDevSeed_whenStarted_thenTotalNonTestTeamCountIsAtLeastFourteen() {
-        // when
-        long nonTestTeams = teamRepository.findAll().stream()
-                .filter(t -> !t.getShortName().startsWith("T-"))
+        // when — count known seeded teams (parents + sub-teams)
+        long seededTeamCount = teamRepository.findAll().stream()
+                .filter(t -> SEEDED_PARENT_SHORT_NAMES.contains(t.getShortName())
+                        || SEEDED_SUB_SHORT_NAMES.contains(t.getShortName()))
                 .count();
 
-        // then
-        assertThat(nonTestTeams).isGreaterThanOrEqualTo(14);
+        // then — 10 parents + 7 sub-teams = 17 total
+        assertThat(seededTeamCount).isGreaterThanOrEqualTo(14);
     }
 
     @Test
@@ -99,10 +110,10 @@ class TestDataServiceIntegrationTest {
 
     @Test
     void givenDevSeed_whenStarted_thenEveryParentTeamHasShortNameOfThreeToFourCharacters() {
-        // when
+        // when — only check seeded parent teams
         var parentTeams = teamRepository.findAll().stream()
                 .filter(t -> t.getParentTeam() == null)
-                .filter(t -> !t.getShortName().startsWith("T-"))
+                .filter(t -> SEEDED_PARENT_SHORT_NAMES.contains(t.getShortName()))
                 .toList();
 
         // then
@@ -114,14 +125,15 @@ class TestDataServiceIntegrationTest {
     }
 
     @Test
-    void givenDevSeed_whenStarted_thenEveryTeamHasNonNullColors() {
-        // when
-        var allNonTestTeams = teamRepository.findAll().stream()
-                .filter(t -> !t.getShortName().startsWith("T-"))
+    void givenDevSeed_whenStarted_thenEverySeededTeamHasNonNullColors() {
+        // when — only check seeded teams (not teams created by other integration tests)
+        var seededTeams = teamRepository.findAll().stream()
+                .filter(t -> SEEDED_PARENT_SHORT_NAMES.contains(t.getShortName())
+                        || SEEDED_SUB_SHORT_NAMES.contains(t.getShortName()))
                 .toList();
 
         // then
-        for (var team : allNonTestTeams) {
+        for (var team : seededTeams) {
             assertThat(team.getPrimaryColor())
                     .as("Team %s should have primaryColor", team.getShortName())
                     .isNotNull();
@@ -152,16 +164,15 @@ class TestDataServiceIntegrationTest {
     @Test
     void givenDevSeed_whenStarted_thenExactlyOneHundredNonTestDriversExist() {
         // given — 10 teams x 10 drivers = 100 non-test drivers
-        // Test drivers: Test_Alpha_1, Test_Alpha_2, Test_Bravo1_1, Test_Bravo1_2, Test_Bravo2_1, Test_Bravo2_2
+        // Filter by known seeded PSN ID prefixes to avoid counting drivers created by other integration tests
 
         // when
-        long nonTestDriverCount = driverRepository.findAll().stream()
-                .filter(d -> !d.getPsnId().startsWith("Test_"))
-                .filter(d -> !d.getPsnId().startsWith("e2e_"))
+        long seededDriverCount = driverRepository.findAll().stream()
+                .filter(d -> d.getPsnId().matches("(VRX|SGM|ADR|TBR|ICL|SVT|NFR|EGP|HMS|PWR)_Driver\\d+"))
                 .count();
 
         // then
-        assertThat(nonTestDriverCount).isEqualTo(100);
+        assertThat(seededDriverCount).isEqualTo(100);
     }
 
     @Test
