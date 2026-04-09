@@ -113,9 +113,11 @@ Plans:
   3. A Round Robin format season with 2 groups exists with at least 2 matchdays per group
   4. Standings pages for all three seasons display non-zero points derived from the scoring system
   5. Race result entries reflect point values consistent with the configured scoring rules
-**Plans:** 1 plan
+**Plans:** 2 plans
 Plans:
-- [ ] 21-01-PLAN.md — Replace German text in test files and HTML templates, verify no German remains
+- [ ] 23-01-PLAN.md — Restructure seasons (formats, team membership) and inject ScoringService/RaceResultRepository
+- [ ] 23-02-PLAN.md — Seed matchdays, races, results, and scoring for League, Swiss, and Round Robin seasons
+
 **UI hint**: yes
 
 ### Phase 24: Dev Playoffs
