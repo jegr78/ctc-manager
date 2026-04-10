@@ -11,6 +11,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.UUID;
+
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -195,5 +199,111 @@ class DriverControllerTest {
 
         // then
         assertFalse(driverRepository.findById(driver.getId()).isPresent());
+    }
+
+    @Test
+    void givenExistingDriver_whenGetMergeForm_thenReturnsMergeView() throws Exception {
+        // given
+        var driver = driverRepository.save(new Driver("merge_source_psn", "Merge Source"));
+
+        // when
+        mockMvc.perform(get("/admin/drivers/" + driver.getId() + "/merge"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/driver-merge"))
+                .andExpect(model().attributeExists("source", "allDrivers"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void givenTwoDrivers_whenGetMergeForm_thenSourceExcludedFromDropdown() throws Exception {
+        // given
+        var source = driverRepository.save(new Driver("merge_excl_src", "Source"));
+        var target = driverRepository.save(new Driver("merge_excl_tgt", "Target"));
+
+        // when
+        mockMvc.perform(get("/admin/drivers/" + source.getId() + "/merge"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(result -> {
+                    var allDrivers = (List<Driver>) result.getModelAndView().getModel().get("allDrivers");
+                    var ids = allDrivers.stream().map(Driver::getId).toList();
+                    assertFalse(ids.contains(source.getId()), "Source driver should be excluded from dropdown");
+                    assertTrue(ids.contains(target.getId()), "Target driver should be in dropdown");
+                });
+    }
+
+    @Test
+    void givenTwoDrivers_whenPostPreview_thenReturnsPreviewState() throws Exception {
+        // given
+        var source = driverRepository.save(new Driver("merge_prev_src", "Preview Source"));
+        var target = driverRepository.save(new Driver("merge_prev_tgt", "Preview Target"));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/" + source.getId() + "/merge/preview")
+                        .param("targetId", target.getId().toString()))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/driver-merge"))
+                .andExpect(model().attributeExists("source", "target", "preview"));
+    }
+
+    @Test
+    void givenTwoDrivers_whenConfirmMerge_thenRedirectsToTarget() throws Exception {
+        // given
+        var source = driverRepository.save(new Driver("merge_exec_src", "Exec Source"));
+        var target = driverRepository.save(new Driver("merge_exec_tgt", "Exec Target"));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/" + source.getId() + "/merge")
+                        .param("targetId", target.getId().toString()))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/drivers/" + target.getId()))
+                .andExpect(flash().attributeExists("successMessage"));
+    }
+
+    @Test
+    void givenTwoDrivers_whenConfirmMerge_thenSourceDriverDeleted() throws Exception {
+        // given
+        var source = driverRepository.save(new Driver("merge_del_src", "Del Source"));
+        var target = driverRepository.save(new Driver("merge_del_tgt", "Del Target"));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/" + source.getId() + "/merge")
+                        .param("targetId", target.getId().toString()));
+
+        // then
+        assertFalse(driverRepository.findById(source.getId()).isPresent(), "Source driver should be deleted");
+        assertTrue(driverRepository.findById(target.getId()).isPresent(), "Target driver should still exist");
+    }
+
+    @Test
+    void givenDriver_whenPreviewMergeWithSelf_thenRedirectsToMergeFormWithError() throws Exception {
+        // given
+        var source = driverRepository.save(new Driver("merge_self_err", "Self Merge Error"));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/" + source.getId() + "/merge/preview")
+                        .param("targetId", source.getId().toString()))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/drivers/" + source.getId() + "/merge"))
+                .andExpect(flash().attributeExists("errorMessage"));
+    }
+
+    @Test
+    void givenDriver_whenPreviewMergeWithNonExistentTarget_thenRedirectsToMergeFormWithError() throws Exception {
+        // given
+        var source = driverRepository.save(new Driver("merge_missing_tgt", "Missing Target Test"));
+        var nonExistentId = UUID.randomUUID();
+
+        // when
+        mockMvc.perform(post("/admin/drivers/" + source.getId() + "/merge/preview")
+                        .param("targetId", nonExistentId.toString()))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/drivers/" + source.getId() + "/merge"))
+                .andExpect(flash().attributeExists("errorMessage"));
     }
 }

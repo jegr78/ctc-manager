@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.2 Driver Merge (Shipped: 2026-04-07)
+
+**Phases completed:** 4 phases (16-19), 5 plans
+**Timeline:** 11 days (2026-03-27 → 2026-04-07)
+**Requirements:** 14/14 satisfied
+
+**Key accomplishments:**
+
+- Transactional DriverMergeService with FK reassignment across SeasonDriver, RaceLineup, RaceResult, and PsnAlias tables — source PSN-ID preserved as alias on target
+- Proactive duplicate detection for all 3 FK tables — source entries dropped instead of reassigned when target already exists in the same season/race, preventing unique-constraint violations
+- Read-only MergePreview with per-table reference and duplicate counts for informed merge decisions
+- Full merge UI workflow: merge button on driver detail, target selection dropdown, preview table, JavaScript confirm dialog
+- Graceful error handling on all merge endpoints with flash redirect (matching executeMerge pattern)
+
+**Known tech debt:** 5 human visual verification items (Phase 18 merge UI), REQUIREMENTS.md checkboxes not updated
+
+---
+
 ## v1.1 Codebase Concerns Cleanup (Shipped: 2026-04-07)
 
 **Phases completed:** 10 phases (6-15), 20 plans, 820 tests
