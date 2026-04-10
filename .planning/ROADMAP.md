@@ -53,10 +53,10 @@ See: milestones/v1.2-ROADMAP.md for full details
 
 **Goal:** Adapt TestDataService to use fictive teams and restore seedMatchdaysAndResults() pipeline for all three season formats
 **Requirements:** [DATA-04, DATA-05, DATA-06, DATA-07]
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 27-01-PLAN.md — Adapt TestDataService to fictive teams with complete matchday/result seed pipeline
+- [x] 27-01-PLAN.md — Adapt TestDataService to fictive teams with complete matchday/result seed pipeline
 
 ## Progress
 
@@ -81,4 +81,4 @@ Plans:
 | 17. Duplicate-Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
 | 18. Merge UI | v1.2 | 2/2 | Complete | 2026-04-07 |
 | 19. Merge Error Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
-| 27. Restore Matchday/Result Pipeline | v1.3 | 0/1 | Planning | — |
+| 27. Restore Matchday/Result Pipeline | v1.3 | 1/1 | Complete    | 2026-04-10 |
