@@ -599,7 +599,7 @@ public class TestDataService {
                         homePositions[mdIndex], homePositions[mdIndex], awayPositions[mdIndex], awayPositions[mdIndex],
                         fastestLapPositions[mdIndex]);
                 // Race 2 (reversed positions)
-                int nextMd = (mdIndex + 1) % 5;
+                int nextMd = (mdIndex + 1) % 3;
                 seedRace(md, match, raceScoring, teamDrivers.get(homeTeam), teamDrivers.get(awayTeam),
                         homePositions[nextMd], homePositions[nextMd], awayPositions[nextMd], awayPositions[nextMd],
                         fastestLapPositions[nextMd]);

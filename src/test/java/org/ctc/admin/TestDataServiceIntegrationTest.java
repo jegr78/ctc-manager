@@ -119,7 +119,7 @@ class TestDataServiceIntegrationTest {
 
         // then
         assertThat(teams).hasSize(14);
-        // CLR, TNR, AHR parents should NOT be present (only their sub-teams)
+        // VRX, SGM, TBR parents should NOT be present (only their sub-teams)
         var teamShortNames = teams.stream()
                 .map(st -> st.getTeam().getShortName())
                 .toList();
