@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: English Test Data
 status: executing
-last_updated: "2026-04-10T18:59:31.733Z"
-last_activity: 2026-04-10 -- Phase 25 planning complete
+last_updated: "2026-04-10T19:08:12.325Z"
+last_activity: 2026-04-10
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 4
-  completed_plans: 3
-  percent: 75
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Defining requirements for v1.2 Driver Merge
+**Current focus:** Phase 25 — Fix I18N Regressions
 
 ## Current Position
 
 Phase: 25
 Plan: Not started
-Status: Ready to execute
-Last activity: 2026-04-10 -- Phase 25 planning complete
+Status: Executing Phase 25
+Last activity: 2026-04-10
 
 Progress: ░░░░░░░░░░ 0%
 
