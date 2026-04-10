@@ -4,6 +4,7 @@
 
 - :white_check_mark: **v1.0 Technical Debt Cleanup** — Phases 1-5 (shipped 2026-04-04)
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
+- :construction: **v1.3 English Test Data** — Phases 20-25 (gap closure in progress)
 
 ## Phases
 
@@ -36,6 +37,21 @@ See: milestones/v1.1-ROADMAP.md for full details
 
 </details>
 
+### v1.3 English Test Data (Phases 20-25)
+
+- [x] Phase 20: English Messages — completed 2026-04-08
+- [x] Phase 21: English Code — completed 2026-04-09
+- [x] Phase 22: Dev Teams & Drivers — completed 2026-04-09
+- [x] Phase 23: Dev Seasons with Results — completed 2026-04-10
+- [ ] Phase 24: Restore Fictive Dev Data — **Gap Closure**
+  - **Goal:** Restore fictive team/driver data overwritten by Phase 23, re-enable team card generation
+  - **Requirements:** DATA-01, DATA-02, DATA-03
+  - **Gap Closure:** Closes audit gaps — Phase 22→23 overwrite + TeamCardService removal
+- [ ] Phase 25: Fix I18N Regressions — **Gap Closure**
+  - **Goal:** Remove German text regressions introduced by Phase 23
+  - **Requirements:** I18N-03, I18N-04
+  - **Gap Closure:** Closes audit gaps — "Spieltag" in tests + German HTML comments
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -55,3 +71,9 @@ See: milestones/v1.1-ROADMAP.md for full details
 | 13. Layer Cleanup Recovery | v1.1 | 3/3 | Complete | 2026-04-06 |
 | 14. Exception Refinement Recovery | v1.1 | 2/2 | Complete | 2026-04-07 |
 | 15. Alltime Standings Recovery | v1.1 | 1/1 | Complete | 2026-04-07 |
+| 20. English Messages | v1.3 | — | Complete | 2026-04-08 |
+| 21. English Code | v1.3 | — | Complete | 2026-04-09 |
+| 22. Dev Teams & Drivers | v1.3 | — | Complete | 2026-04-09 |
+| 23. Dev Seasons with Results | v1.3 | — | Complete | 2026-04-10 |
+| 24. Restore Fictive Dev Data | v1.3 | 0/0 | Pending | — |
+| 25. Fix I18N Regressions | v1.3 | 0/0 | Pending | — |
