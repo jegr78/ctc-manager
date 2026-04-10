@@ -123,7 +123,7 @@ class TestDataServiceIntegrationTest {
         var teamShortNames = teams.stream()
                 .map(st -> st.getTeam().getShortName())
                 .toList();
-        assertThat(teamShortNames).doesNotContain("CLR", "TNR", "AHR");
+        assertThat(teamShortNames).doesNotContain("VRX", "SGM", "TBR");
     }
 
     @Test
