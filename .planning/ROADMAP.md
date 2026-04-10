@@ -60,6 +60,7 @@ See: milestones/v1.1-ROADMAP.md for full details
   - **Requirements:** DATA-08
   - **Gap Closure:** Closes audit gap — fictive logos missing, copyDemoLogos() fails silently
   - **Plans:** 1 plan
+    - [ ] 26-01-PLAN.md — Restore fictive logos from git history + integration test
 - [ ] Phase 27: Restore Matchday/Result Seed Pipeline — **Gap Closure**
   - **Goal:** Re-add seedMatchdaysAndResults() pipeline removed by Phase 24, adapted for fictive teams
   - **Requirements:** DATA-04, DATA-05, DATA-06, DATA-07
