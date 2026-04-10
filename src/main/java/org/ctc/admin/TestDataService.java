@@ -29,6 +29,7 @@ import org.ctc.domain.repository.RaceScoringRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@Profile("dev")
 @RequiredArgsConstructor
 public class TestDataService {
 
