@@ -47,6 +47,8 @@ See: milestones/v1.1-ROADMAP.md for full details
   - **Goal:** Restore fictive team/driver data overwritten by Phase 23, re-enable team card generation
   - **Requirements:** DATA-01, DATA-02, DATA-03
   - **Gap Closure:** Closes audit gaps — Phase 22→23 overwrite + TeamCardService removal
+  - **Plans:** 1 plan
+    - [ ] 24-01-PLAN.md — Restore fictive teams/drivers + TeamCardService + integration test
 - [ ] Phase 25: Fix I18N Regressions — **Gap Closure**
   - **Goal:** Remove German text regressions introduced by Phase 23
   - **Requirements:** I18N-03, I18N-04
@@ -75,5 +77,5 @@ See: milestones/v1.1-ROADMAP.md for full details
 | 21. English Code | v1.3 | — | Complete | 2026-04-09 |
 | 22. Dev Teams & Drivers | v1.3 | — | Complete | 2026-04-09 |
 | 23. Dev Seasons with Results | v1.3 | — | Complete | 2026-04-10 |
-| 24. Restore Fictive Dev Data | v1.3 | 0/0 | Pending | — |
+| 24. Restore Fictive Dev Data | v1.3 | 0/1 | Planned | — |
 | 25. Fix I18N Regressions | v1.3 | 0/0 | Pending | — |
