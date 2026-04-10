@@ -55,12 +55,12 @@ See: milestones/v1.1-ROADMAP.md for full details
   - **Gap Closure:** Closes audit gaps — "Spieltag" in tests + German HTML comments
   - **Plans:** 1 plan
     - [x] 25-01-PLAN.md — Replace German strings in tests and HTML comments
-- [ ] Phase 26: Restore Fictive Team Logos — **Gap Closure**
+- [x] Phase 26: Restore Fictive Team Logos — **Gap Closure** (completed 2026-04-10)
   - **Goal:** Restore fictive team logo files deleted by Phase 23, fix copyDemoLogos() mismatch
   - **Requirements:** DATA-08
   - **Gap Closure:** Closes audit gap — fictive logos missing, copyDemoLogos() fails silently
   - **Plans:** 1 plan
-    - [ ] 26-01-PLAN.md — Restore fictive logos from git history + integration test
+    - [x] 26-01-PLAN.md — Restore fictive logos from git history + integration test
 - [ ] Phase 27: Restore Matchday/Result Seed Pipeline — **Gap Closure**
   - **Goal:** Re-add seedMatchdaysAndResults() pipeline removed by Phase 24, adapted for fictive teams
   - **Requirements:** DATA-04, DATA-05, DATA-06, DATA-07
@@ -93,5 +93,5 @@ See: milestones/v1.1-ROADMAP.md for full details
 | 23. Dev Seasons with Results | v1.3 | — | Complete | 2026-04-10 |
 | 24. Restore Fictive Dev Data | v1.3 | 1/1 | Complete    | 2026-04-10 |
 | 25. Fix I18N Regressions | v1.3 | 1/1 | Complete    | 2026-04-10 |
-| 26. Restore Fictive Team Logos | v1.3 | 0/1 | Planned | — |
+| 26. Restore Fictive Team Logos | v1.3 | 1/1 | Complete    | 2026-04-10 |
 | 27. Restore Matchday/Result Seed Pipeline | v1.3 | 0/1 | Planned | — |
