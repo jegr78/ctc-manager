@@ -32,17 +32,20 @@ class TestDataServiceIntegrationTest {
     @Autowired
     private SeasonDriverRepository seasonDriverRepository;
 
+    private static final Set<String> FICTIVE_TEAM_SHORT_NAMES = Set.of(
+            "VRX", "SGM", "ADR", "TBR", "ICL", "SVT", "NFR", "EGP", "HMS", "PWR");
+
     private static final Set<String> REAL_CTC_TEAMS = Set.of(
             "P1R", "CLR", "TCR", "ART", "AHR", "MRL", "GXR", "DTR", "VEZ", "TNR");
 
     // --- DATA-01: Fictive teams ---
 
     @Test
-    void givenDevSeed_whenStarted_thenExactlyTenParentTeamsExist() {
+    void givenDevSeed_whenStarted_thenExactlyTenFictiveParentTeamsExist() {
         // when
         long parentCount = teamRepository.findAll().stream()
                 .filter(t -> t.getParentTeam() == null)
-                .filter(t -> !t.getShortName().startsWith("T-"))
+                .filter(t -> FICTIVE_TEAM_SHORT_NAMES.contains(t.getShortName()))
                 .count();
 
         // then
@@ -71,25 +74,27 @@ class TestDataServiceIntegrationTest {
     }
 
     @Test
-    void givenDevSeed_whenStarted_thenNoRealCtcTeamNamesInParentTeams() {
-        // when
-        var parentShortNames = teamRepository.findAll().stream()
+    void givenDevSeed_whenStarted_thenNoRealCtcTeamNamesInFictiveParentTeams() {
+        // when — verify fictive teams contain none of the real CTC short names
+        var fictiveParentNames = teamRepository.findAll().stream()
                 .filter(t -> t.getParentTeam() == null)
-                .filter(t -> !t.getShortName().startsWith("T-"))
+                .filter(t -> FICTIVE_TEAM_SHORT_NAMES.contains(t.getShortName()))
                 .map(t -> t.getShortName())
                 .toList();
 
         // then
-        assertThat(parentShortNames).doesNotContainAnyElementsOf(REAL_CTC_TEAMS);
+        assertThat(fictiveParentNames).doesNotContainAnyElementsOf(REAL_CTC_TEAMS);
+        assertThat(fictiveParentNames).hasSize(10);
     }
 
     // --- DATA-02: Fictive drivers ---
 
     @Test
-    void givenDevSeed_whenStarted_thenExactlyHundredNonTestDriversExist() {
+    void givenDevSeed_whenStarted_thenExactlyHundredFictiveDriversExist() {
         // when
+        var teamPrefixes = List.of("VRX", "SGM", "ADR", "TBR", "ICL", "SVT", "NFR", "EGP", "HMS", "PWR");
         long driverCount = driverRepository.findAll().stream()
-                .filter(d -> !d.getPsnId().startsWith("Test_"))
+                .filter(d -> teamPrefixes.stream().anyMatch(p -> d.getPsnId().startsWith(p + "_Driver")))
                 .count();
 
         // then
