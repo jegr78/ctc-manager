@@ -18,6 +18,8 @@
     "verifier": true,
     "nyquist_validation": true,
     "auto_advance": true,
+    "pre_execution_verify": true,
+    "cross_phase_guard": true,
     "node_repair": true,
     "node_repair_budget": 2,
     "ui_phase": true,
