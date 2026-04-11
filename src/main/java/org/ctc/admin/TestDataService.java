@@ -12,6 +12,9 @@ import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Playoff;
+import org.ctc.domain.model.PlayoffMatchup;
+import org.ctc.domain.model.PlayoffRound;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.RaceResult;
@@ -25,6 +28,9 @@ import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchScoringRepository;
 import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.PlayoffMatchupRepository;
+import org.ctc.domain.repository.PlayoffRepository;
+import org.ctc.domain.repository.PlayoffRoundRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.RaceResultRepository;
@@ -32,6 +38,7 @@ import org.ctc.domain.repository.RaceScoringRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.service.PlayoffService;
 import org.ctc.domain.service.ScoringService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
@@ -64,6 +71,10 @@ public class TestDataService {
     private final RaceLineupRepository raceLineupRepository;
     private final RaceResultRepository raceResultRepository;
     private final ScoringService scoringService;
+    private final PlayoffService playoffService;
+    private final PlayoffRepository playoffRepository;
+    private final PlayoffRoundRepository playoffRoundRepository;
+    private final PlayoffMatchupRepository playoffMatchupRepository;
     private final EntityManager entityManager;
     private final TeamCardService teamCardService;
 
@@ -83,6 +94,7 @@ public class TestDataService {
         seedSeasonDrivers();
         seedMatchdaysAndResults();
         seedRaceLineups();
+        seedPlayoffs();
         generateTeamCards();
         log.info("Seed data created: {} teams, {} seasons, {} drivers, {} race-lineups, {} results",
                 teamRepository.count(), seasonRepository.count(), driverRepository.count(),
@@ -756,6 +768,218 @@ public class TestDataService {
 
         log.info("Created test data: {} test-teams, {} test-drivers, {} races, {} lineups",
                 4, 6, raceRepository.count(), raceLineupRepository.count());
+    }
+
+    private void seedPlayoffs() {
+        var allSeasons = seasonRepository.findAll();
+        var allTeams = teamRepository.findAll();
+        var raceScoring = raceScoringRepository.findAll().getFirst();
+
+        // Helper lambdas
+        java.util.function.Function<String, Team> findParent = shortName ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
+
+        java.util.function.Function<String, Team> findSub = shortName ->
+                allTeams.stream()
+                        .filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
+                        .findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
+
+        // Get seasons
+        var s1a = allSeasons.stream().filter(s -> s.getYear() == 2023 && s.getName().equals("Group A")).findFirst().orElseThrow();
+        var s1b = allSeasons.stream().filter(s -> s.getYear() == 2023 && s.getName().equals("Group B")).findFirst().orElseThrow();
+        var s2 = allSeasons.stream().filter(s -> s.getYear() == 2024 && s.getNumber() == 2).findFirst().orElseThrow();
+
+        // === 2023 PLAYOFFS: SEMIFINAL (4 teams) ===
+        var s1aResults = raceResultRepository.findByRaceMatchdaySeasonId(s1a.getId());
+        var s1bResults = raceResultRepository.findByRaceMatchdaySeasonId(s1b.getId());
+
+        // Calculate Group A standings
+        var s1aTeamScores = new java.util.LinkedHashMap<Team, Integer>();
+        for (var result : s1aResults) {
+            var team = result.getRace().getMatch().getHomeTeam();
+            if (team != null) {
+                var homeTeamId = team.getId();
+                var teamResults = s1aResults.stream()
+                        .filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getHomeTeam() != null && r.getRace().getMatch().getHomeTeam().getId().equals(homeTeamId))
+                        .toList();
+                s1aTeamScores.putIfAbsent(team, scoringService.calculateTeamTotal(teamResults));
+
+                var awayTeam = result.getRace().getMatch().getAwayTeam();
+                if (awayTeam != null) {
+                    var awayTeamId = awayTeam.getId();
+                    var awayTeamResults = s1aResults.stream()
+                            .filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getAwayTeam() != null && r.getRace().getMatch().getAwayTeam().getId().equals(awayTeamId))
+                            .toList();
+                    s1aTeamScores.putIfAbsent(awayTeam, scoringService.calculateTeamTotal(awayTeamResults));
+                }
+            }
+        }
+
+        // Calculate Group B standings
+        var s1bTeamScores = new java.util.LinkedHashMap<Team, Integer>();
+        for (var result : s1bResults) {
+            var team = result.getRace().getMatch().getHomeTeam();
+            if (team != null) {
+                var homeTeamId = team.getId();
+                var teamResults = s1bResults.stream()
+                        .filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getHomeTeam() != null && r.getRace().getMatch().getHomeTeam().getId().equals(homeTeamId))
+                        .toList();
+                s1bTeamScores.putIfAbsent(team, scoringService.calculateTeamTotal(teamResults));
+
+                var awayTeam = result.getRace().getMatch().getAwayTeam();
+                if (awayTeam != null) {
+                    var awayTeamId = awayTeam.getId();
+                    var awayTeamResults = s1bResults.stream()
+                            .filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getAwayTeam() != null && r.getRace().getMatch().getAwayTeam().getId().equals(awayTeamId))
+                            .toList();
+                    s1bTeamScores.putIfAbsent(awayTeam, scoringService.calculateTeamTotal(awayTeamResults));
+                }
+            }
+        }
+
+        // Get top 2 from each group
+        var s1aSorted = s1aTeamScores.entrySet().stream()
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .map(java.util.Map.Entry::getKey)
+                .toList();
+        var s1bSorted = s1bTeamScores.entrySet().stream()
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .map(java.util.Map.Entry::getKey)
+                .toList();
+
+        if (s1aSorted.size() < 2 || s1bSorted.size() < 2) {
+            log.warn("Not enough teams in playoff groups to create 2023 playoff");
+        } else {
+            var winnerA = s1aSorted.get(0);
+            var runnerUpA = s1aSorted.get(1);
+            var winnerB = s1bSorted.get(0);
+            var runnerUpB = s1bSorted.get(1);
+
+            // Create 2023 Playoff
+            var playoff2023 = playoffService.createPlayoff(s1a.getId(), "2023 Playoffs", 4);
+            var semifinal = playoff2023.getRounds().getFirst();
+            semifinal.setBestOfLegs(2);
+            playoffRoundRepository.save(semifinal);
+
+            // Wire matchups
+            var matchup0 = semifinal.getMatchups().get(0);
+            matchup0.setTeam1(winnerA);
+            matchup0.setTeam2(runnerUpB);
+            playoffMatchupRepository.save(matchup0);
+
+            var matchup1 = semifinal.getMatchups().get(1);
+            matchup1.setTeam1(winnerB);
+            matchup1.setTeam2(runnerUpA);
+            playoffMatchupRepository.save(matchup1);
+
+            // Create matchday for playoff races
+            var playoffMatchday = matchdayRepository.save(new Matchday(s1a, "2023 Playoffs", 4));
+
+            // Create races for Semifinal (2 per matchup, 4 total)
+            createPlayoffRaces(playoffMatchday, matchup0, s1a, raceScoring, 2);
+            createPlayoffRaces(playoffMatchday, matchup1, s1a, raceScoring, 2);
+
+            log.info("Created 2023 Playoffs: {} vs {}, {} vs {}",
+                    winnerA.getShortName(), runnerUpB.getShortName(),
+                    winnerB.getShortName(), runnerUpA.getShortName());
+        }
+
+        // === 2024 PLAYOFFS: FINAL (2 teams) ===
+        var s2Results = raceResultRepository.findByRaceMatchdaySeasonId(s2.getId());
+
+        // Calculate 2024 standings
+        var s2TeamScores = new java.util.LinkedHashMap<Team, Integer>();
+        for (var result : s2Results) {
+            var team = result.getRace().getMatch().getHomeTeam();
+            if (team != null) {
+                var homeTeamId = team.getId();
+                var teamResults = s2Results.stream()
+                        .filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getHomeTeam() != null && r.getRace().getMatch().getHomeTeam().getId().equals(homeTeamId))
+                        .toList();
+                s2TeamScores.putIfAbsent(team, scoringService.calculateTeamTotal(teamResults));
+
+                var awayTeam = result.getRace().getMatch().getAwayTeam();
+                if (awayTeam != null) {
+                    var awayTeamId = awayTeam.getId();
+                    var awayTeamResults = s2Results.stream()
+                            .filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getAwayTeam() != null && r.getRace().getMatch().getAwayTeam().getId().equals(awayTeamId))
+                            .toList();
+                    s2TeamScores.putIfAbsent(awayTeam, scoringService.calculateTeamTotal(awayTeamResults));
+                }
+            }
+        }
+
+        var s2Sorted = s2TeamScores.entrySet().stream()
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .map(java.util.Map.Entry::getKey)
+                .toList();
+
+        if (s2Sorted.size() < 2) {
+            log.warn("Not enough teams in 2024 season to create playoff");
+        } else {
+            var topTeam = s2Sorted.get(0);
+            var runnerUpTeam = s2Sorted.get(1);
+
+            // Create 2024 Playoff
+            var playoff2024 = playoffService.createPlayoff(s2.getId(), "2024 Playoffs", 2);
+            var finalRound = playoff2024.getRounds().getFirst();
+            finalRound.setBestOfLegs(2);
+            playoffRoundRepository.save(finalRound);
+
+            // Wire matchup
+            var matchup = finalRound.getMatchups().getFirst();
+            matchup.setTeam1(topTeam);
+            matchup.setTeam2(runnerUpTeam);
+            playoffMatchupRepository.save(matchup);
+
+            // Create matchday for playoff races
+            var playoffMatchday = matchdayRepository.save(new Matchday(s2, "2024 Playoffs", 5));
+
+            // Create races for Final (2 total)
+            createPlayoffRaces(playoffMatchday, matchup, s2, raceScoring, 2);
+
+            log.info("Created 2024 Playoffs: {} vs {}",
+                    topTeam.getShortName(), runnerUpTeam.getShortName());
+        }
+
+        log.info("Seeded playoffs: {} playoff entities, {} playoff races",
+                playoffRepository.count(), raceRepository.count());
+    }
+
+    private void createPlayoffRaces(Matchday matchday, PlayoffMatchup matchup, Season season, RaceScoring raceScoring, int numRaces) {
+        var allSeasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
+
+        // Group drivers by team
+        var team1Drivers = allSeasonDrivers.stream()
+                .filter(sd -> sd.getTeam().getId().equals(matchup.getTeam1().getId()))
+                .map(SeasonDriver::getDriver)
+                .limit(6)
+                .toList();
+        var team2Drivers = allSeasonDrivers.stream()
+                .filter(sd -> sd.getTeam().getId().equals(matchup.getTeam2().getId()))
+                .map(SeasonDriver::getDriver)
+                .limit(6)
+                .toList();
+
+        for (int i = 0; i < numRaces; i++) {
+            var race = new Race();
+            race.setMatchday(matchday);
+            race.setPlayoffMatchup(matchup);
+            race.setSettings(createTestSettings(race));
+            raceRepository.save(race);
+
+            // Add lineups for team 1
+            for (var driver : team1Drivers) {
+                raceLineupRepository.save(new RaceLineup(race, driver, matchup.getTeam1()));
+            }
+
+            // Add lineups for team 2
+            for (var driver : team2Drivers) {
+                raceLineupRepository.save(new RaceLineup(race, driver, matchup.getTeam2()));
+            }
+        }
     }
 
     private Driver driver(String psnId, String nickname) {
