@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Match;
@@ -64,6 +65,7 @@ public class TestDataService {
     private final RaceResultRepository raceResultRepository;
     private final ScoringService scoringService;
     private final EntityManager entityManager;
+    private final TeamCardService teamCardService;
 
     @Transactional
     public void seed() {
@@ -81,6 +83,7 @@ public class TestDataService {
         seedSeasonDrivers();
         seedMatchdaysAndResults();
         seedRaceLineups();
+        generateTeamCards();
         log.info("Seed data created: {} teams, {} seasons, {} drivers, {} race-lineups, {} results",
                 teamRepository.count(), seasonRepository.count(), driverRepository.count(),
                 raceLineupRepository.count(), raceResultRepository.count());
@@ -188,6 +191,37 @@ public class TestDataService {
         var s2 = createSeason("Regular Season", 2024, 2, "Round Robin", scorings);
         s2.setFormat(SeasonFormat.SWISS);
         parentTeams.forEach(s2::addTeam);
+        seasonRepository.save(s2);
+
+        // Set ratings for S1 Group A (2023, ratings -5 from Season 4 baseline)
+        s1a.findSeasonTeam(findParent.apply("ADR")).ifPresent(st -> st.setRating(88));  // 93 - 5
+        s1a.findSeasonTeam(findParent.apply("ICL")).ifPresent(st -> st.setRating(82));  // 87 - 5
+        s1a.findSeasonTeam(findParent.apply("SVT")).ifPresent(st -> st.setRating(80));  // 85 - 5
+        s1a.findSeasonTeam(findParent.apply("NFR")).ifPresent(st -> st.setRating(79));  // 84 - 5
+        s1a.findSeasonTeam(findParent.apply("HMS")).ifPresent(st -> st.setRating(83));  // 88 - 5
+        s1a.findSeasonTeam(findSub.apply("VRX A")).ifPresent(st -> st.setRating(87));   // 92 - 5
+        seasonRepository.save(s1a);
+
+        // Set ratings for S1 Group B (2023, ratings -5 from Season 4 baseline)
+        s1b.findSeasonTeam(findParent.apply("EGP")).ifPresent(st -> st.setRating(87));  // 92 - 5
+        s1b.findSeasonTeam(findParent.apply("PWR")).ifPresent(st -> st.setRating(81));  // 86 - 5
+        s1b.findSeasonTeam(findSub.apply("VRX B")).ifPresent(st -> st.setRating(82));   // 87 - 5
+        s1b.findSeasonTeam(findSub.apply("SGM B")).ifPresent(st -> st.setRating(88));   // 93 - 5
+        s1b.findSeasonTeam(findSub.apply("SGM S")).ifPresent(st -> st.setRating(80));   // 85 - 5
+        s1b.findSeasonTeam(findSub.apply("TBR R")).ifPresent(st -> st.setRating(80));   // 85 - 5
+        seasonRepository.save(s1b);
+
+        // Set ratings for S2 (2024, ratings -3 from Season 4 baseline)
+        s2.findSeasonTeam(findParent.apply("ADR")).ifPresent(st -> st.setRating(90));   // 93 - 3
+        s2.findSeasonTeam(findParent.apply("ICL")).ifPresent(st -> st.setRating(84));   // 87 - 3
+        s2.findSeasonTeam(findParent.apply("SVT")).ifPresent(st -> st.setRating(82));   // 85 - 3
+        s2.findSeasonTeam(findParent.apply("NFR")).ifPresent(st -> st.setRating(81));   // 84 - 3
+        s2.findSeasonTeam(findParent.apply("HMS")).ifPresent(st -> st.setRating(85));   // 88 - 3
+        s2.findSeasonTeam(findParent.apply("PWR")).ifPresent(st -> st.setRating(83));   // 86 - 3
+        s2.findSeasonTeam(findParent.apply("EGP")).ifPresent(st -> st.setRating(89));   // 92 - 3
+        s2.findSeasonTeam(findParent.apply("VRX")).ifPresent(st -> st.setRating(85));   // avg(92,87) - 3 = 89.5 rounded
+        s2.findSeasonTeam(findParent.apply("SGM")).ifPresent(st -> st.setRating(86));   // avg(93,85) - 3 = 88 rounded
+        s2.findSeasonTeam(findParent.apply("TBR")).ifPresent(st -> st.setRating(84));   // avg(85,84,83) - 3 = 81 rounded
         seasonRepository.save(s2);
 
         // Season 4 - 2026: 14 match teams (7 standalone parents + 7 sub-teams) per D-04
@@ -742,5 +776,18 @@ public class TestDataService {
         settings.setAvailableTyres("RS, RM, RH, I, W");
         settings.setMandatoryTyres("RS, RM, RH");
         return settings;
+    }
+
+    private void generateTeamCards() {
+        try {
+            var seasons = seasonRepository.findAll();
+            for (var season : seasons) {
+                log.info("Generating team cards for season: {}", season.getName());
+                var paths = teamCardService.generateAllCards(season);
+                log.info("Generated {} team cards for season {}", paths.size(), season.getName());
+            }
+        } catch (IOException e) {
+            log.error("Failed to generate team cards", e);
+        }
     }
 }
