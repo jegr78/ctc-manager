@@ -389,6 +389,12 @@ public class CsvImportService {
         }
 
         if (createNewDrivers.contains(row.psnId()) || matchResult.type() == DriverMatchingService.MatchType.NONE) {
+            // Check if driver already exists to avoid constraint violation
+            var existingDriver = driverRepository.findByPsnId(row.psnId());
+            if (existingDriver.isPresent()) {
+                return existingDriver.get();
+            }
+            
             var newDriver = new Driver(row.psnId(), row.psnId());
             driverRepository.save(newDriver);
             result.incrementNewDrivers();
