@@ -96,13 +96,13 @@ class CsvImportServiceTest {
     private void setupCommonMocks() {
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
         when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
-        when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any())).thenReturn(false);
-        when(matchRepository.save(any(Match.class))).thenAnswer(inv -> {
+        lenient().when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any())).thenReturn(Optional.empty());
+        lenient().when(matchRepository.save(any(Match.class))).thenAnswer(inv -> {
             var m = inv.getArgument(0, Match.class);
             if (m.getId() == null) m.setId(UUID.randomUUID());
             return m;
         });
-        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> {
+        lenient().when(raceRepository.save(any(Race.class))).thenAnswer(inv -> {
             var r = inv.getArgument(0, Race.class);
             if (r.getId() == null) r.setId(UUID.randomUUID());
             return r;
@@ -300,16 +300,13 @@ class CsvImportServiceTest {
         setupCommonMocks();
         when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
 
-        // First call returns true (duplicate exists), second call after delete returns false
-        when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
-                .thenReturn(true);
-
         var existingMatch = new Match(matchday, standaloneTeam1, standaloneTeam2);
         existingMatch.setId(UUID.randomUUID());
         existingMatch.setHomeTeam(standaloneTeam1);
         existingMatch.setAwayTeam(standaloneTeam2);
-        when(matchRepository.findByMatchdayId(matchday.getId()))
-                .thenReturn(List.of(existingMatch));
+        when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
+                .thenReturn(Optional.of(existingMatch));
+        when(raceRepository.findByMatchId(existingMatch.getId())).thenReturn(List.of());
 
         var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
         var row1 = new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
@@ -325,8 +322,7 @@ class CsvImportServiceTest {
         var result = csvImportService.executeImport(preview, Map.of(), Set.of(), true);
 
         // then
-        verify(matchRepository).delete(existingMatch);
-        verify(matchRepository).flush();
+        verify(raceRepository).findByMatchId(existingMatch.getId());
         assertThat(result.getImportedRaces()).hasSize(1);
     }
 
@@ -335,8 +331,11 @@ class CsvImportServiceTest {
         // given
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
         when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
-        when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
-                .thenReturn(true);
+        
+        var existingMatch = new Match(matchday, standaloneTeam1, standaloneTeam2);
+        existingMatch.setId(UUID.randomUUID());
+        when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
+                .thenReturn(Optional.of(existingMatch));
 
         var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
         var row1 = new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,

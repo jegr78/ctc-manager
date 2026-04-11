@@ -117,6 +117,159 @@ public class CsvImportService {
     @Transactional
     public ImportResult executeImport(ImportPreview preview, Map<String, UUID> confirmedMatches,
                                       Set<String> createNewDrivers, boolean overwriteExisting) {
+        return executeMultiRaceImport(List.of(preview), confirmedMatches, createNewDrivers, overwriteExisting);
+    }
+
+    /**
+     * Executes import for multiple race previews, reusing matches across races.
+     * For the same team pairing, creates one Match with multiple Races (for legs).
+     *
+     * @param previews list of ImportPreview objects (one per race)
+     * @param confirmedMatches map of fuzzy driver matches confirmed by user
+     * @param createNewDrivers set of PSN IDs to create as new drivers
+     * @param overwriteExisting whether to overwrite existing matches
+     * @return cumulative import result
+     */
+    public ImportResult executeMultiRaceImport(List<ImportPreview> previews, Map<String, UUID> confirmedMatches,
+                                               Set<String> createNewDrivers, boolean overwriteExisting) {
+        var result = new ImportResult();
+
+        if (previews.isEmpty()) {
+            result.addError("No previews provided for import");
+            return result;
+        }
+
+        // All previews should have the same metadata (season, matchday)
+        var metadata = previews.get(0).getMetadata();
+
+        // Resolve season
+        var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
+                () -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
+
+        // Resolve or create matchday
+        var matchday = findOrCreateMatchday(season, metadata);
+
+        // Group all rows from all previews by team pair
+        var seasonTeams = season.getTeams();
+        Map<String, List<ImportRow>> byTeamPair = new HashMap<>();
+        Map<String, Map<Integer, List<ImportRow>>> byTeamPairAndRaceIndex = new HashMap<>();
+
+        for (int raceIndex = 0; raceIndex < previews.size(); raceIndex++) {
+            var preview = previews.get(raceIndex);
+            var grouped = groupByTeamPair(preview.getRows());
+
+            for (var entry : grouped.entrySet()) {
+                var teamPair = entry.getKey();
+                var rows = entry.getValue();
+
+                // Track by race index for later processing
+                byTeamPairAndRaceIndex.computeIfAbsent(teamPair, k -> new HashMap<>())
+                        .put(raceIndex, rows);
+
+                // Also add to flat list for compatibility
+                byTeamPair.computeIfAbsent(teamPair, k -> new ArrayList<>()).addAll(rows);
+            }
+        }
+
+        // Process each team pairing once, but handle multiple races
+        for (var entry : byTeamPairAndRaceIndex.entrySet()) {
+            var teamParts = entry.getKey().split("\\|");
+            var homeTeam = findTeamFlexible(teamParts[0], seasonTeams);
+            var awayTeam = teamParts.length > 1 ? findTeamFlexible(teamParts[1], seasonTeams) : null;
+
+            if (homeTeam == null) {
+                result.addError("Team not found: " + teamParts[0]);
+                continue;
+            }
+            if (awayTeam == null && teamParts.length > 1) {
+                result.addError("Team not found: " + teamParts[1]);
+                continue;
+            }
+
+            var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
+
+            // Duplicate check: same home vs away on this matchday
+            var existingMatch = matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+                    matchday.getId(), homeTeam.getId(), effectiveAwayTeam.getId());
+
+            Match match;
+            if (existingMatch.isPresent()) {
+                if (overwriteExisting) {
+                    match = existingMatch.get();
+                    // Delete existing races (cascades to results)
+                    var racesToDelete = raceRepository.findByMatchId(match.getId());
+                    racesToDelete.forEach(raceRepository::delete);
+                    raceRepository.flush();
+                    log.info("Overwriting existing match: {} vs {} on {}",
+                            homeTeam.getShortName(), effectiveAwayTeam.getShortName(), matchday.getLabel());
+                } else {
+                    result.addError("Match already exists: " + homeTeam.getShortName() +
+                            " vs " + effectiveAwayTeam.getShortName() + " on " + matchday.getLabel());
+                    continue;
+                }
+            } else {
+                match = new Match(matchday, homeTeam, effectiveAwayTeam);
+                match = matchRepository.save(match);
+            }
+
+            // Now create a race for each preview (leg)
+            for (int raceIndex = 0; raceIndex < previews.size(); raceIndex++) {
+                var raceRows = entry.getValue().get(raceIndex);
+                if (raceRows == null || raceRows.isEmpty()) {
+                    continue; // This team pair doesn't appear in this race
+                }
+
+                var race = new Race();
+                race.setMatchday(matchday);
+                race.setMatch(match);
+
+                // Link to playoff matchup if applicable
+                if (metadata.isPlayoff()) {
+                    var matchup = playoffMatchupRepository.findById(metadata.playoffMatchupId())
+                            .orElseThrow(() -> new ValidationException(
+                                    "Playoff matchup not found in CSV import: " + metadata.playoffMatchupId()));
+                    race.setPlayoffMatchup(matchup);
+                }
+
+                // Save race early to get ID for RaceLineup references
+                race = raceRepository.save(race);
+
+                for (var row : raceRows) {
+                    var driver = resolveDriver(row, confirmedMatches, createNewDrivers, result);
+                    if (driver == null) continue;
+
+                    // Ensure SeasonDriver exists
+                    ensureSeasonDriver(season, driver, row.teamShortName());
+
+                    var raceResult = new RaceResult(race, driver, row.position(), row.qualiPosition(), row.fastestLap());
+                    scoringService.calculatePoints(raceResult, season.getRaceScoring());
+                    race.getResults().add(raceResult);
+
+                    // Create RaceLineup for all teams
+                    var resolvedTeam = findTeamFlexible(row.teamShortName(), seasonTeams);
+                    if (resolvedTeam != null) {
+                        var existingLineup = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId());
+                        if (existingLineup.isEmpty()) {
+                            raceLineupRepository.save(new RaceLineup(race, driver, resolvedTeam));
+                            result.incrementLineupCount();
+                        }
+                    }
+                }
+
+                raceRepository.save(race);
+                scoringService.aggregateMatchScores(race);
+                result.addImportedRace((raceIndex + 1) + ". " + homeTeam.getShortName() +
+                        (awayTeam != null ? " vs " + awayTeam.getShortName() : ""));
+            }
+        }
+
+        log.info("Import completed: {} races, {} new drivers, {} errors",
+                result.getImportedRaces().size(), result.getNewDriversCreated(), result.getErrors().size());
+        return result;
+    }
+
+    public ImportResult executeImportLegacy(ImportPreview preview, Map<String, UUID> confirmedMatches,
+                                      Set<String> createNewDrivers, boolean overwriteExisting) {
         var result = new ImportResult();
         var metadata = preview.getMetadata();
 

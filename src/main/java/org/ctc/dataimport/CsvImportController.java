@@ -185,15 +185,8 @@ public class CsvImportController {
                 }
             }
 
-            // Execute import for all races
-            var cumulativeResult = new CsvImportService.ImportResult();
-            for (var preview : previews) {
-                var result = csvImportService.executeImport(preview, confirmedMatches, createNewDrivers, overwrite);
-                cumulativeResult.getImportedRaces().addAll(result.getImportedRaces());
-                cumulativeResult.getErrors().addAll(result.getErrors());
-                cumulativeResult.setNewDriversCreated(cumulativeResult.getNewDriversCreated() + result.getNewDriversCreated());
-                cumulativeResult.setLineupCount(cumulativeResult.getLineupCount() + result.getLineupCount());
-            }
+            // Execute import for all races (handles multi-race reuse of matches correctly)
+            var cumulativeResult = csvImportService.executeMultiRaceImport(previews, confirmedMatches, createNewDrivers, overwrite);
 
             if (cumulativeResult.hasErrors()) {
                 redirectAttributes.addFlashAttribute("errorMessage",
