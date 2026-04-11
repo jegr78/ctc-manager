@@ -859,6 +859,10 @@ public class TestDataService {
 
             // Create 2023 Playoff
             var playoff2023 = playoffService.createPlayoff(s1a.getId(), "2023 Playoffs", 4);
+            // Link both groups as team sources (for UI transparency)
+            playoff2023.getSeasons().add(s1b);
+            playoffRepository.save(playoff2023);
+            
             var semifinal = playoff2023.getRounds().getFirst();
             semifinal.setBestOfLegs(2);
             playoffRoundRepository.save(semifinal);
