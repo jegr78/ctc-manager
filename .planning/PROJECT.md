@@ -2,22 +2,31 @@
 
 ## What This Is
 
-Gran Turismo Racing League Management-Anwendung (Spring Boot 4 / Thymeleaf / MariaDB). Verwaltet Seasons, Matchdays, Matches, Races, Teams, Drivers, Scoring und Standings fuer die Community Team Cup Liga. Nach v1.0 Tech Debt Cleanup, v1.1 Codebase Concerns Cleanup und v1.2 Driver Merge ist die Codebasis architektonisch sauber, sicherheitsgehaertet und produktionsbereit. Admins koennen Duplikat-Fahrer zusammenfuehren mit vollstaendiger FK-Referenz-Uebernahme.
+Gran Turismo Racing League Management-Anwendung (Spring Boot 4 / Thymeleaf / MariaDB). Verwaltet Seasons, Matchdays, Matches, Races, Teams, Drivers, Scoring und Standings fuer die Community Team Cup Liga. Nach v1.0 Tech Debt Cleanup und v1.1 Codebase Concerns Cleanup ist die Codebasis architektonisch sauber, sicherheitsgehaertet und produktionsbereit.
 
 ## Core Value
 
 Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
 
-## Current State (after v1.2 Driver Merge)
+## Current Milestone: v1.2 Driver Merge
 
-- **Codebase:** 852 Tests, 82%+ Coverage
-- **v1.2 shipped:** Driver Merge — merge button, target selection, preview, confirmation, FK reassignment, duplicate handling, error handling
+**Goal:** Zwei Fahrer zusammenfuehren — Quell-Fahrer wird in Ziel-Fahrer gemergt, alle FK-Referenzen umgehaengt, PSN-ID als Alias uebernommen.
+
+**Target features:**
+- Merge-Button auf der Fahrer-Detailseite mit Ziel-Fahrer-Auswahl
+- Alle FK-Referenzen umhaengen (SeasonDriver, RaceLineup, RaceResult, PsnAlias)
+- PSN-ID des Quell-Fahrers als neuer Alias am Ziel-Fahrer
+- Quell-Fahrer nach Merge loeschen
+- Duplikat-Handling bei Unique Constraints (gleicher Fahrer bereits in Season/Race)
+
+## Current State (after v1.1)
+
+- **Codebase:** 13,731 LOC Java (Prod) + 18,621 LOC Java (Tests), 820 Tests, 82%+ Coverage
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), open (dev/local), SSRF hostname blocklist, path traversal defense
 - **Architecture:** Saubere 3-Tier (Controller → Service → Repository), keine God Services, zentrale Exception-Behandlung, domain services fully decoupled from admin DTOs
 - **Database:** 36 FK-Indexes, 28 @EntityGraph-Annotationen, Flyway-managed
 - **Templates:** CSS utility classes statt inline styles, TemplateManageable generic dispatch
-- **Driver Merge:** DriverMergeService (merge + previewMerge), DriverController (3 endpoints), driver-merge.html (two-state template)
 
 ## Requirements
 
@@ -47,19 +56,13 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 - ✓ Inline-Styles in Admin Templates durch CSS-Klassen ersetzt — Phase 11 (QUAL-01)
 - ✓ Alltime Standings cross-season Aggregation — Phase 9/15 (FEAT-01)
 
-### Validated (v1.2)
-
-- ✓ DriverMergeService mit FK-Reassignment und Duplikat-Handling — Phase 16/17
-- ✓ Merge-Button auf Fahrer-Detailseite mit Ziel-Fahrer-Auswahl — Phase 18 (MERGE-01)
-- ✓ Alle FK-Referenzen (SeasonDriver, RaceLineup, RaceResult, PsnAlias) umgehaengt — Phase 16 (MERGE-05..10)
-- ✓ PSN-ID des Quell-Fahrers als Alias am Ziel-Fahrer — Phase 16 (MERGE-09)
-- ✓ Quell-Fahrer nach Merge geloescht — Phase 16 (MERGE-10)
-- ✓ Duplikat-Handling bei Unique Constraints — Phase 17 (MERGE-11..13)
-- ✓ Merge-Vorschau und explizite Bestaetigung — Phase 18 (MERGE-03, MERGE-04)
-
 ### Active
 
-(No active requirements — planning next milestone)
+- [ ] Merge-Button auf Fahrer-Detailseite mit Ziel-Fahrer-Auswahl
+- [ ] Alle FK-Referenzen (SeasonDriver, RaceLineup, RaceResult, PsnAlias) umhaengen
+- [ ] PSN-ID des Quell-Fahrers als Alias am Ziel-Fahrer
+- [ ] Quell-Fahrer nach Merge loeschen
+- [ ] Duplikat-Handling bei Unique Constraints
 
 ### Out of Scope
 
@@ -94,9 +97,6 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 | PlayoffService + RaceService Split | Fokussierte Services statt God Services | ✓ v1.1 |
 | Domain DTO Decoupling | Primitive Parameters statt Admin DTOs in Domain Services | ✓ v1.1 |
 | Recovery Phases (12-15) | Worktree file clobber erforderte Re-Implementation | ✓ v1.1 |
-| DriverMergeService separate from DriverService | Vermeidung zirkulaerer Abhaengigkeiten, isoliertes Transaktionsmanagement | ✓ v1.2 |
-| Proactive duplicate detection (drop statt constraint error) | Target-Eintraege haben Vorrang bei Duplikaten | ✓ v1.2 |
-| previewMerge() read-only Transaktion | Vorschau darf keine Daten mutieren | ✓ v1.2 |
 
 ## Evolution
 
@@ -116,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after v1.2 milestone — Driver Merge*
+*Last updated: 2026-04-07 after v1.2 milestone start — Driver Merge*

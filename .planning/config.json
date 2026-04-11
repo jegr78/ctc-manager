@@ -18,6 +18,8 @@
     "verifier": true,
     "nyquist_validation": true,
     "auto_advance": true,
+    "pre_execution_verify": true,
+    "cross_phase_guard": true,
     "node_repair": true,
     "node_repair_budget": 2,
     "ui_phase": true,
@@ -27,7 +29,7 @@
     "discuss_mode": "discuss",
     "skip_discuss": false,
     "use_worktrees": true,
-    "_auto_chain_active": false
+    "_auto_chain_active": true
   },
   "hooks": {
     "context_warnings": true

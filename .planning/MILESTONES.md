@@ -1,5 +1,22 @@
 # Milestones
 
+## v1.3 English Test Data (Shipped: 2026-04-10)
+
+**Phases completed:** 8 phases, 9 plans, 17 tasks
+
+**Key accomplishments:**
+
+- One-liner:
+- Replaced 26 German test-data strings and 3 HTML comments with English equivalents, completing the codebase English cleanup started in Phase 20
+- TestDataService refactored with 10 fictive racing teams (17 total with sub-teams), 100 fictive drivers (10 per team), and TeamCardService integration with graceful Playwright fallback
+- 1. [Rule 1 - Bug] Added @Transactional to integration test class
+- 1. [Rule 1 - Bug] JPA flush + detach for aggregateMatchScores
+- 1. [Rule 1 - Bug] Fixed integration test assertions for shared H2 database
+- One-liner:
+- Commit:
+
+---
+
 ## v1.2 Driver Merge (Shipped: 2026-04-07)
 
 **Phases completed:** 4 phases (16-19), 5 plans

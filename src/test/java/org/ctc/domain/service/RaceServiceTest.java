@@ -1,21 +1,44 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.service.TeamCardService;
-import org.ctc.domain.model.*;
-import org.ctc.domain.repository.*;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.ctc.admin.service.TeamCardService;
+import org.ctc.domain.model.Car;
+import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.Match;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.model.RaceResult;
+import org.ctc.domain.model.RaceScoring;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.Team;
+import org.ctc.domain.model.Track;
+import org.ctc.domain.repository.CarRepository;
+import org.ctc.domain.repository.DriverRepository;
+import org.ctc.domain.repository.MatchRepository;
+import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.SeasonDriverRepository;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonTeamRepository;
+import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.repository.TrackRepository;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class RaceServiceTest {
@@ -78,16 +101,19 @@ class RaceServiceTest {
     }
 
     @Test
-    void givenNoFilter_whenGetRaceListData_thenReturnsEmptyList() {
+    void givenNoFilter_whenGetRaceListData_thenReturnsAllRaces() {
         // given
+        var race1 = new Race();
+        var race2 = new Race();
+        when(raceRepository.findAll()).thenReturn(List.of(race1, race2));
         when(seasonRepository.findAll()).thenReturn(List.of());
 
         // when
         var result = service.getRaceListData(null, null);
 
         // then
-        assertThat(result.races()).isEmpty();
-        verify(raceRepository, never()).findAll();
+        assertThat(result.races()).containsExactly(race1, race2);
+        verify(raceRepository).findAll();
     }
 
     // --- saveRace ---

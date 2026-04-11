@@ -42,33 +42,61 @@ start() {
 }
 
 stop() {
-  if [ ! -f "$PID_FILE" ]; then
-    echo "No PID file found. App not running?"
-    exit 1
-  fi
+  local pid=""
+  local port="9090"  # default dev port
+  local killed=0
 
-  local pid
-  pid=$(cat "$PID_FILE")
-
-  if kill -0 "$pid" 2>/dev/null; then
-    echo "Stopping CTC Manager (PID $pid)..."
-    kill "$pid"
-    # Wait up to 10 seconds for graceful shutdown
-    for i in $(seq 1 10); do
-      if ! kill -0 "$pid" 2>/dev/null; then
-        break
-      fi
-      sleep 1
-    done
+  # Try to get PID from file
+  if [ -f "$PID_FILE" ]; then
+    pid=$(cat "$PID_FILE")
     if kill -0 "$pid" 2>/dev/null; then
-      echo "Forcing shutdown..."
-      kill -9 "$pid" 2>/dev/null || true
+      echo "Stopping CTC Manager (PID $pid)..."
+      kill "$pid"
+      # Wait up to 10 seconds for graceful shutdown
+      for i in $(seq 1 10); do
+        if ! kill -0 "$pid" 2>/dev/null; then
+          break
+        fi
+        sleep 1
+      done
+      if kill -0 "$pid" 2>/dev/null; then
+        echo "Forcing shutdown..."
+        kill -9 "$pid" 2>/dev/null || true
+      fi
+      killed=1
     fi
     rm -f "$PID_FILE"
+  fi
+
+  # Also try to kill any process on the port (in case PID file was missing)
+  if command -v lsof &> /dev/null; then
+    local port_pid=$(lsof -t -i ":$port" 2>/dev/null || true)
+    if [ -n "$port_pid" ]; then
+      if [ "$pid" != "$port_pid" ] || [ -z "$pid" ]; then
+        echo "Found process on port $port (PID $port_pid). Killing..."
+        kill "$port_pid" 2>/dev/null || true
+        sleep 1
+        if kill -0 "$port_pid" 2>/dev/null; then
+          kill -9 "$port_pid" 2>/dev/null || true
+        fi
+        killed=1
+      fi
+    fi
+  elif command -v fuser &> /dev/null; then
+    local port_pid=$(fuser "$port/tcp" 2>/dev/null | awk '{print $1}' || true)
+    if [ -n "$port_pid" ]; then
+      if [ "$pid" != "$port_pid" ] || [ -z "$pid" ]; then
+        echo "Found process on port $port (PID $port_pid). Killing..."
+        fuser -k "$port/tcp" 2>/dev/null || true
+        killed=1
+      fi
+    fi
+  fi
+
+  if [ $killed -eq 1 ]; then
     echo "Stopped."
   else
-    echo "Process $pid not running. Cleaning up PID file."
-    rm -f "$PID_FILE"
+    echo "No running app found."
   fi
 }
 
