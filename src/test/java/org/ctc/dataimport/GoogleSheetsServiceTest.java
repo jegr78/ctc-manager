@@ -147,14 +147,27 @@ class GoogleSheetsServiceTest {
         }
 
         @Test
-        void givenSheetNamesWithoutRace_whenFilterRaceSheets_thenReturnsEmpty() {
-            // given
+        void givenSheetNamesWithoutRace_whenFilterRaceSheets_thenReturnsFallbackSheet() {
+            // given - no "Race" sheets, but has a usable sheet
             var allSheets = java.util.List.of("Overall", "Archive");
 
             // when
             var raceSheets = service.filterRaceSheets(allSheets);
 
-            // then
+            // then - should fall back to non-Overall sheets
+            assertTrue(raceSheets.contains("Archive"));
+            assertFalse(raceSheets.contains("Overall"));
+        }
+
+        @Test
+        void givenOnlyOverallSheet_whenFilterRaceSheets_thenReturnsEmpty() {
+            // given - only summary sheet
+            var allSheets = java.util.List.of("Overall");
+
+            // when
+            var raceSheets = service.filterRaceSheets(allSheets);
+
+            // then - no usable sheets
             assertTrue(raceSheets.isEmpty());
         }
 
@@ -169,6 +182,19 @@ class GoogleSheetsServiceTest {
             // then
             assertEquals(1, raceSheets.size());
             assertEquals("Race 1", raceSheets.get(0));
+        }
+
+        @Test
+        void givenSingleTabWithArbitraryName_whenFilterRaceSheets_thenReturnsFallback() {
+            // given - single tab with name that doesn't contain "Race"
+            var allSheets = java.util.List.of("Matchday 1", "Overall");
+
+            // when
+            var raceSheets = service.filterRaceSheets(allSheets);
+
+            // then - should fall back to accepting non-Overall sheets
+            assertEquals(1, raceSheets.size());
+            assertEquals("Matchday 1", raceSheets.get(0));
         }
     }
 }

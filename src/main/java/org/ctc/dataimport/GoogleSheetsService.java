@@ -101,16 +101,29 @@ public class GoogleSheetsService {
     }
 
     /**
-     * Filters sheet names to return only race sheets (tabs with "Race" in the name).
-     * Excludes "Overall" and other non-race tabs.
+     * Filters sheet names to return race sheets for import.
+     * Defensive approach: tries to find sheets with "Race" in name first,
+     * but if none found, falls back to using any sheet (excluding "Overall").
+     * This ensures single-tab sheets work regardless of tab naming.
      *
      * @param sheetNames list of all sheet names
-     * @return filtered list of race sheet names
+     * @return filtered list of race sheet names for import
      */
     public List<String> filterRaceSheets(List<String> sheetNames) {
-        return sheetNames.stream()
+        // First try: find sheets with "Race" in the name (multi-race scenario)
+        var raceSheets = sheetNames.stream()
                 .filter(name -> name.toLowerCase().contains("race") && !name.toLowerCase().contains("overall"))
                 .collect(Collectors.toList());
+        
+        // Fallback: if no "Race" sheets found, use any sheet except "Overall"
+        // This handles single-tab sheets with arbitrary names
+        if (raceSheets.isEmpty()) {
+            raceSheets = sheetNames.stream()
+                    .filter(name -> !name.toLowerCase().contains("overall"))
+                    .collect(Collectors.toList());
+        }
+        
+        return raceSheets;
     }
 
     /**

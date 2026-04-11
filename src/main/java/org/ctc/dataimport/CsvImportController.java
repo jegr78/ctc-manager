@@ -73,7 +73,7 @@ public class CsvImportController {
 
             if (raceSheets.isEmpty()) {
                 addCommonAttributes(model);
-                model.addAttribute("errorMessage", "No race sheets found in spreadsheet (looking for tabs with 'Race' in the name)");
+                model.addAttribute("errorMessage", "No usable sheets found in spreadsheet (all sheets appear to be summary/overall sheets)");
                 return "admin/import";
             }
 
