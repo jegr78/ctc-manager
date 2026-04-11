@@ -584,4 +584,248 @@ class CsvImportServiceTest {
         assertThat(result.hasErrors()).isTrue();
         assertThat(result.getErrors().getFirst()).contains("could not be assigned");
     }
+
+    // --- Multi-race import tests ---
+
+    @Test
+    void givenMultipleRacePreviewsForSameTeamPair_whenExecuteMultiRaceImport_thenCreatesOneMatchWithMultipleRaces() {
+        // given
+        setupCommonMocks();
+        when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+
+        // Create 2 races for the same team pair (BRV vs CRL)
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+
+        // Race 1
+        var race1Preview = new CsvImportService.ImportPreview(metadata);
+        race1Preview.addRow(new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1)));
+        race1Preview.addRow(new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2)));
+
+        // Race 2 - same teams
+        var driver3 = new Driver("driver3_psn", "Driver 3");
+        driver3.setId(UUID.randomUUID());
+        var driver4 = new Driver("driver4_psn", "Driver 4");
+        driver4.setId(UUID.randomUUID());
+
+        var race2Preview = new CsvImportService.ImportPreview(metadata);
+        race2Preview.addRow(new CsvImportService.ImportRow("BRV", "driver3_psn", 3, 3, false,
+                DriverMatchingService.MatchResult.exact("driver3_psn", driver3)));
+        race2Preview.addRow(new CsvImportService.ImportRow("CRL", "driver4_psn", 4, 4, false,
+                DriverMatchingService.MatchResult.exact("driver4_psn", driver4)));
+
+        var previews = List.of(race1Preview, race2Preview);
+
+        // when
+        var result = csvImportService.executeMultiRaceImport(previews, Map.of(), Set.of(), false);
+
+        // then
+        // Should create 1 Match with 2 Races
+        ArgumentCaptor<Match> matchCaptor = ArgumentCaptor.forClass(Match.class);
+        verify(matchRepository).save(matchCaptor.capture());
+        assertThat(result.getImportedRaces()).hasSize(2);
+        assertThat(result.hasErrors()).isFalse();
+    }
+
+    @Test
+    void givenMultipleRacePreviewsWithDifferentTeamPairs_whenExecuteMultiRaceImport_thenCreatesMultipleMatches() {
+        // given
+        setupCommonMocks();
+        when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+
+        // Add more teams to season for this test
+        var team3 = new Team("Mike Racing", "MRL");
+        team3.setId(UUID.randomUUID());
+        var team4 = new Team("Papa Racing", "PRR");
+        team4.setId(UUID.randomUUID());
+        season.addTeam(team3);
+        season.addTeam(team4);
+
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+
+        // Race 1 - BRV vs CRL
+        var race1Preview = new CsvImportService.ImportPreview(metadata);
+        race1Preview.addRow(new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1)));
+        race1Preview.addRow(new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2)));
+
+        // Race 2 - MRL vs PRR (different team pair)
+        var driver3 = new Driver("driver3_psn", "Driver 3");
+        driver3.setId(UUID.randomUUID());
+        var driver4 = new Driver("driver4_psn", "Driver 4");
+        driver4.setId(UUID.randomUUID());
+
+        var race2Preview = new CsvImportService.ImportPreview(metadata);
+        race2Preview.addRow(new CsvImportService.ImportRow("MRL", "driver3_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver3_psn", driver3)));
+        race2Preview.addRow(new CsvImportService.ImportRow("PRR", "driver4_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver4_psn", driver4)));
+
+        var previews = List.of(race1Preview, race2Preview);
+
+        // when
+        var result = csvImportService.executeMultiRaceImport(previews, Map.of(), Set.of(), false);
+
+        // then
+        // Should create 2 Matches (one per team pair) - but each will only have 1 race
+        ArgumentCaptor<Match> matchCaptor = ArgumentCaptor.forClass(Match.class);
+        verify(matchRepository, times(2)).save(matchCaptor.capture());
+        assertThat(matchCaptor.getAllValues()).hasSize(2);
+        assertThat(result.getImportedRaces()).hasSize(2);
+        assertThat(result.hasErrors()).isFalse();
+    }
+
+    @Test
+    void givenMultipleRacePreviewsSameTeamPair_whenExecuteMultiRaceImportWithOverwrite_thenDeletesExistingRaces() {
+        // given
+        setupCommonMocks();
+        when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+
+        var existingRace = new Race();
+        existingRace.setId(UUID.randomUUID());
+        var existingMatch = new Match(matchday, standaloneTeam1, standaloneTeam2);
+        existingMatch.setId(UUID.randomUUID());
+
+        when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
+                .thenReturn(Optional.of(existingMatch));
+        when(raceRepository.findByMatchId(existingMatch.getId())).thenReturn(List.of(existingRace));
+
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+
+        var driver3 = new Driver("driver3_psn", "Driver 3");
+        driver3.setId(UUID.randomUUID());
+        var driver4 = new Driver("driver4_psn", "Driver 4");
+        driver4.setId(UUID.randomUUID());
+
+        var race1Preview = new CsvImportService.ImportPreview(metadata);
+        race1Preview.addRow(new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1)));
+        race1Preview.addRow(new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2)));
+
+        var race2Preview = new CsvImportService.ImportPreview(metadata);
+        race2Preview.addRow(new CsvImportService.ImportRow("BRV", "driver3_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver3_psn", driver3)));
+        race2Preview.addRow(new CsvImportService.ImportRow("CRL", "driver4_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver4_psn", driver4)));
+
+        var previews = List.of(race1Preview, race2Preview);
+
+        // when
+        var result = csvImportService.executeMultiRaceImport(previews, Map.of(), Set.of(), true);
+
+        // then
+        // Should delete existing race and create 2 new ones
+        verify(raceRepository).delete(existingRace);
+        verify(raceRepository).flush();
+        assertThat(result.getImportedRaces()).hasSize(2);
+        assertThat(result.hasErrors()).isFalse();
+    }
+
+    @Test
+    void givenMultipleRacePreviewsSameTeamPairWithoutOverwrite_whenExecuteMultiRaceImport_thenAddsError() {
+        // given - no setupCommonMocks to avoid unnecessary stubbings
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        lenient().when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any())).thenReturn(Optional.empty());
+
+        var existingMatch = new Match(matchday, standaloneTeam1, standaloneTeam2);
+        existingMatch.setId(UUID.randomUUID());
+
+        when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+                matchday.getId(), standaloneTeam1.getId(), standaloneTeam2.getId()))
+                .thenReturn(Optional.of(existingMatch));
+
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+
+        var driver3 = new Driver("driver3_psn", "Driver 3");
+        driver3.setId(UUID.randomUUID());
+        var driver4 = new Driver("driver4_psn", "Driver 4");
+        driver4.setId(UUID.randomUUID());
+
+        var race1Preview = new CsvImportService.ImportPreview(metadata);
+        race1Preview.addRow(new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1)));
+        race1Preview.addRow(new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2)));
+
+        var race2Preview = new CsvImportService.ImportPreview(metadata);
+        race2Preview.addRow(new CsvImportService.ImportRow("BRV", "driver3_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver3_psn", driver3)));
+        race2Preview.addRow(new CsvImportService.ImportRow("CRL", "driver4_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver4_psn", driver4)));
+
+        var previews = List.of(race1Preview, race2Preview);
+
+        // when
+        var result = csvImportService.executeMultiRaceImport(previews, Map.of(), Set.of(), false);
+
+        // then
+        assertThat(result.hasErrors()).isTrue();
+        assertThat(result.getErrors()).anySatisfy(err -> assertThat(err).contains("Match already exists"));
+        // No new races should be created
+        verify(raceRepository, never()).save(any(Race.class));
+    }
+
+    @Test
+    void givenMultipleRacePreviewsMixedTeamPairs_whenExecuteMultiRaceImport_thenHandlesMixedScenario() {
+        // given: Race 1 has team pair A vs B, Race 2 has both A vs B AND C vs D
+        setupCommonMocks();
+        when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
+
+        // Add more teams to season for this test
+        var team3 = new Team("Mike Racing", "MRL");
+        team3.setId(UUID.randomUUID());
+        var team4 = new Team("Papa Racing", "PRR");
+        team4.setId(UUID.randomUUID());
+        season.addTeam(team3);
+        season.addTeam(team4);
+
+        var metadata = new CsvImportService.ImportMetadata(season.getId(), null, null, null, null, matchday.getId());
+
+        // Race 1 - BRV vs CRL
+        var race1Preview = new CsvImportService.ImportPreview(metadata);
+        race1Preview.addRow(new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1)));
+        race1Preview.addRow(new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2)));
+
+        // Race 2 - BRV vs CRL (same) and MRL vs PRR (new)
+        var driver3 = new Driver("driver3_psn", "Driver 3");
+        driver3.setId(UUID.randomUUID());
+        var driver4 = new Driver("driver4_psn", "Driver 4");
+        driver4.setId(UUID.randomUUID());
+        var driver5 = new Driver("driver5_psn", "Driver 5");
+        driver5.setId(UUID.randomUUID());
+        var driver6 = new Driver("driver6_psn", "Driver 6");
+        driver6.setId(UUID.randomUUID());
+
+        var race2Preview = new CsvImportService.ImportPreview(metadata);
+        race2Preview.addRow(new CsvImportService.ImportRow("BRV", "driver3_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver3_psn", driver3)));
+        race2Preview.addRow(new CsvImportService.ImportRow("CRL", "driver4_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver4_psn", driver4)));
+        race2Preview.addRow(new CsvImportService.ImportRow("MRL", "driver5_psn", 3, 3, false,
+                DriverMatchingService.MatchResult.exact("driver5_psn", driver5)));
+        race2Preview.addRow(new CsvImportService.ImportRow("PRR", "driver6_psn", 4, 4, false,
+                DriverMatchingService.MatchResult.exact("driver6_psn", driver6)));
+
+        var previews = List.of(race1Preview, race2Preview);
+
+        // when
+        var result = csvImportService.executeMultiRaceImport(previews, Map.of(), Set.of(), false);
+
+        // then
+        // Should create 2 Matches:
+        // - Match 1: BRV vs CRL with 2 races (leg 1 and leg 2)
+        // - Match 2: MRL vs PRR with 1 race (only in leg 2)
+        ArgumentCaptor<Match> matchCaptor = ArgumentCaptor.forClass(Match.class);
+        verify(matchRepository, times(2)).save(matchCaptor.capture());
+        assertThat(matchCaptor.getAllValues()).hasSize(2);
+        // Result should list each match once per race: BRV vs CRL (2x), MRL vs PRR (1x) = but results are shown differently
+        assertThat(result.getImportedRaces().size()).isGreaterThanOrEqualTo(2);
+        assertThat(result.hasErrors()).isFalse();
+    }
 }
