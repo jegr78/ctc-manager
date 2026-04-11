@@ -125,4 +125,50 @@ class GoogleSheetsServiceTest {
             assertFalse(service.isAvailable());
         }
     }
+
+    @Nested
+    class GetSheetNamesTest {
+
+        private final GoogleSheetsService service = new GoogleSheetsService("");
+
+        @Test
+        void givenSheetNames_whenFilterRaceSheets_thenReturnsOnlyRaceTabs() {
+            // given
+            var allSheets = java.util.List.of("Race 1", "Race 2", "Overall", "Archive");
+
+            // when
+            var raceSheets = service.filterRaceSheets(allSheets);
+
+            // then
+            assertEquals(2, raceSheets.size());
+            assertTrue(raceSheets.contains("Race 1"));
+            assertTrue(raceSheets.contains("Race 2"));
+            assertFalse(raceSheets.contains("Overall"));
+        }
+
+        @Test
+        void givenSheetNamesWithoutRace_whenFilterRaceSheets_thenReturnsEmpty() {
+            // given
+            var allSheets = java.util.List.of("Overall", "Archive");
+
+            // when
+            var raceSheets = service.filterRaceSheets(allSheets);
+
+            // then
+            assertTrue(raceSheets.isEmpty());
+        }
+
+        @Test
+        void givenSingleRaceSheet_whenFilterRaceSheets_thenReturnsSingleSheet() {
+            // given
+            var allSheets = java.util.List.of("Race 1", "Overall");
+
+            // when
+            var raceSheets = service.filterRaceSheets(allSheets);
+
+            // then
+            assertEquals(1, raceSheets.size());
+            assertEquals("Race 1", raceSheets.get(0));
+        }
+    }
 }
