@@ -7,7 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -67,6 +69,36 @@ public class ScorecardParser {
         log.info("Scorecard parsed: {} driver rows, {} errors",
                 preview.getRows().size(), preview.getErrors().size());
         return preview;
+    }
+
+    /**
+     * Parses multiple race sheets from a Google Spreadsheet.
+     * Reads each race sheet (sheet name provided) and returns a list of ImportPreview objects.
+     *
+     * @param sheetDataMap map of sheet names to raw sheet data (List of rows)
+     * @param raceSheetNames list of race sheet names to parse (in order)
+     * @param metadata import metadata (applied to all races)
+     * @return list of ImportPreview objects, one per race sheet
+     */
+    public List<ImportPreview> parseMultipleRaces(Map<String, List<List<Object>>> sheetDataMap,
+                                                   List<String> raceSheetNames,
+                                                   ImportMetadata metadata) {
+        var previews = new ArrayList<ImportPreview>();
+
+        for (String sheetName : raceSheetNames) {
+            var sheetData = sheetDataMap.get(sheetName);
+            if (sheetData == null) {
+                log.warn("Race sheet '{}' not found in data map, skipping", sheetName);
+                continue;
+            }
+
+            log.info("Parsing race sheet: {}", sheetName);
+            var preview = parse(sheetData, metadata);
+            previews.add(preview);
+        }
+
+        log.info("Parsed {} race sheets", previews.size());
+        return previews;
     }
 
     private boolean isHeaderRow(List<Object> row) {
