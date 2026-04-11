@@ -431,6 +431,8 @@ public class CsvImportService {
         public void addError(String error) { errors.add(error); }
         public void incrementNewDrivers() { newDriversCreated++; }
         public void incrementLineupCount() { lineupCount++; }
+        public void setNewDriversCreated(int count) { newDriversCreated = count; }
+        public void setLineupCount(int count) { lineupCount = count; }
         public boolean hasErrors() { return !errors.isEmpty(); }
     }
 }
