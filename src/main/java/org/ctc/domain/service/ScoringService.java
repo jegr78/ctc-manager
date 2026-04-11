@@ -6,6 +6,7 @@ import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.repository.RaceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class ScoringService {
 
     private final RaceLineupRepository raceLineupRepository;
+    private final RaceRepository raceRepository;
 
     public void calculatePoints(RaceResult result, RaceScoring scoring) {
         int[] racePoints = scoring.getRacePointsArray();
@@ -54,6 +56,7 @@ public class ScoringService {
     /**
      * Aggregates race result scores onto the parent Match or PlayoffMatchup.
      * Call this after saving race results to keep match scores in sync.
+     * Uses database query to ensure all legs are included, even when lazy-loaded collections are incomplete.
      */
     @Transactional
     public void aggregateMatchScores(Race race) {
@@ -63,11 +66,9 @@ public class ScoringService {
             Match match = race.getMatch();
             UUID hId = match.getHomeTeam().getId();
 
-            // Collect all legs — use match.getRaces() but ensure current race is included
-            var legs = new java.util.ArrayList<>(match.getRaces());
-            if (legs.stream().noneMatch(r -> r.getId() != null && r.getId().equals(race.getId()))) {
-                legs.add(race);
-            }
+            // Load all races for this match from database to ensure completeness
+            // (important for CSV import where races are added sequentially)
+            var legs = raceRepository.findByMatchId(match.getId());
 
             int matchHome = 0, matchAway = 0;
             for (Race leg : legs) {
@@ -90,10 +91,8 @@ public class ScoringService {
             PlayoffMatchup matchup = race.getPlayoffMatchup();
             UUID t1Id = matchup.getTeam1().getId();
 
-            var legs = new java.util.ArrayList<>(matchup.getRaces());
-            if (legs.stream().noneMatch(r -> r.getId() != null && r.getId().equals(race.getId()))) {
-                legs.add(race);
-            }
+            // Load all races for this matchup from database for consistency
+            var legs = raceRepository.findByPlayoffMatchupId(matchup.getId());
 
             int mHome = 0, mAway = 0;
             for (Race leg : legs) {

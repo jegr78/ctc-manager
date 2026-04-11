@@ -24,6 +24,9 @@ class ScoringServiceTest {
     @Mock
     private RaceLineupRepository raceLineupRepository;
 
+    @Mock
+    private org.ctc.domain.repository.RaceRepository raceRepository;
+
     @InjectMocks
     private ScoringService scoringService;
 
@@ -224,13 +227,13 @@ class ScoringServiceTest {
             var r1 = createResult(race, homeDriver, 10);
             var r2 = createResult(race, awayDriver, 7);
             race.setResults(List.of(r1, r2));
-            match.setRaces(new ArrayList<>(List.of(race)));
 
             // RaceLineup determines team assignment
             when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), homeDriver.getId()))
                     .thenReturn(Optional.of(new RaceLineup(race, homeDriver, homeTeam)));
             when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), awayDriver.getId()))
                     .thenReturn(Optional.of(new RaceLineup(race, awayDriver, awayTeam)));
+            when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
 
             // when
             scoringService.aggregateMatchScores(race);
@@ -267,11 +270,11 @@ class ScoringServiceTest {
             var r1 = createResult(race, homeDriver, 15);
             var r2 = createResult(race, awayDriver, 12);
             race.setResults(List.of(r1, r2));
-            match.setRaces(new ArrayList<>(List.of(race)));
 
             // No RaceLineup exists — fallback to SeasonDriver
             when(raceLineupRepository.findByRaceIdAndDriverId(any(), any()))
                     .thenReturn(Optional.empty());
+            when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
 
             // when
             scoringService.aggregateMatchScores(race);
@@ -296,11 +299,11 @@ class ScoringServiceTest {
             var driver = createDriver("sub_driver");
             var r1 = createResult(race, driver, 20);
             race.setResults(List.of(r1));
-            match.setRaces(new ArrayList<>(List.of(race)));
 
             // RaceLineup points to sub-team, but match uses parent team
             when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId()))
                     .thenReturn(Optional.of(new RaceLineup(race, driver, subTeam)));
+            when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
 
             // when
             scoringService.aggregateMatchScores(race);

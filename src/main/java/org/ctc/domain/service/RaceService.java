@@ -305,8 +305,9 @@ public class RaceService {
         if (race.getMatch() != null) {
             race.getMatch().setHomeScore(homeScore);
             race.getMatch().setAwayScore(awayScore);
+            raceRepository.save(race);
+            scoringService.aggregateMatchScores(race);
         }
-        raceRepository.save(race);
         log.info("Quick score: {} {} : {} {}",
                 race.getHomeTeam().getShortName(), homeScore, awayScore, race.getAwayTeam().getShortName());
         return race.getHomeTeam().getShortName() + " " + homeScore + " : " + awayScore + " " + race.getAwayTeam().getShortName();
