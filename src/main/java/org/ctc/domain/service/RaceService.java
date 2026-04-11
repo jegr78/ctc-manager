@@ -89,7 +89,22 @@ public class RaceService {
 
         var raceScores = new HashMap<UUID, int[]>();
         for (var race : races) {
-            if (race.getHomeScore() != null && race.getAwayScore() != null) {
+            // Prefer scores from RaceResults (individual race scores)
+            if (!race.getResults().isEmpty()) {
+                int homeScore = 0;
+                int awayScore = 0;
+                
+                UUID homeTeamId = race.getHomeTeam() != null ? race.getHomeTeam().getId() : null;
+                for (var result : race.getResults()) {
+                    if (homeTeamId != null && scoringService.isDriverInTeam(result, race.getId(), homeTeamId)) {
+                        homeScore += result.getPointsTotal();
+                    } else {
+                        awayScore += result.getPointsTotal();
+                    }
+                }
+                raceScores.put(race.getId(), new int[]{homeScore, awayScore});
+            } else if (race.getHomeScore() != null && race.getAwayScore() != null) {
+                // Fallback to match scores if no RaceResults exist
                 raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
             }
         }
