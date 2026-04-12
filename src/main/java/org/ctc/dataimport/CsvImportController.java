@@ -68,13 +68,41 @@ public class CsvImportController {
                                Model model) {
         try {
             var spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
-            var sheetData = googleSheetsService.readRange(spreadsheetId, "A:H");
+            var sheetNames = googleSheetsService.getSheetNames(spreadsheetId);
+            var raceSheets = googleSheetsService.filterRaceSheets(sheetNames);
+
+            if (raceSheets.isEmpty()) {
+                addCommonAttributes(model);
+                model.addAttribute("errorMessage", "No usable sheets found in spreadsheet (all sheets appear to be summary/overall sheets)");
+                return "admin/import";
+            }
 
             var metadata = new CsvImportService.ImportMetadata(seasonId, matchdayLabel, null, null, playoffMatchupId, matchdayId);
-            var preview = scorecardParser.parse(sheetData, metadata);
 
-            csvImportService.checkDuplicate(preview);
-            model.addAttribute("preview", preview);
+            // Read all race sheet data
+            var sheetDataMap = new java.util.HashMap<String, java.util.List<java.util.List<Object>>>();
+            for (String raceName : raceSheets) {
+                var data = googleSheetsService.readRangeFromSheet(spreadsheetId, raceName, "A:H");
+                sheetDataMap.put(raceName, data);
+            }
+
+            // Parse multiple races
+            var previews = scorecardParser.parseMultipleRaces(sheetDataMap, raceSheets, metadata);
+
+            if (previews.isEmpty()) {
+                addCommonAttributes(model);
+                model.addAttribute("errorMessage", "Unable to parse any race sheets from the spreadsheet");
+                return "admin/import";
+            }
+
+            // Check for duplicates in all races
+            for (var preview : previews) {
+                csvImportService.checkDuplicate(preview);
+            }
+
+            model.addAttribute("previews", previews);
+            model.addAttribute("raceSheetNames", raceSheets);
+            model.addAttribute("isMultiRace", raceSheets.size() > 1);
             model.addAttribute("metadata", metadata);
             seasonManagementService.findByIdOptional(seasonId).ifPresent(s -> model.addAttribute("seasonDisplayLabel", s.getDisplayLabel()));
             model.addAttribute("source", "sheet");
@@ -105,20 +133,42 @@ public class CsvImportController {
             var metadata = new CsvImportService.ImportMetadata(seasonId, matchdayLabel, null, null, playoffMatchupId, matchdayId);
 
             // Re-parse from original source
-            CsvImportService.ImportPreview preview;
+            var previews = new ArrayList<CsvImportService.ImportPreview>();
             if ("sheet".equals(source) && sheetUrl != null && !sheetUrl.isBlank()) {
                 var spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
-                var sheetData = googleSheetsService.readRange(spreadsheetId, "A:H");
-                preview = scorecardParser.parse(sheetData, metadata);
+                var sheetNames = googleSheetsService.getSheetNames(spreadsheetId);
+                var raceSheets = googleSheetsService.filterRaceSheets(sheetNames);
+
+                if (raceSheets.isEmpty()) {
+                    redirectAttributes.addFlashAttribute("errorMessage",
+                            "No race sheets found in spreadsheet");
+                    return "redirect:/admin/import";
+                }
+
+                // Read all race sheet data
+                var sheetDataMap = new HashMap<String, List<List<Object>>>();
+                for (String raceName : raceSheets) {
+                    var data = googleSheetsService.readRangeFromSheet(spreadsheetId, raceName, "A:H");
+                    sheetDataMap.put(raceName, data);
+                }
+
+                // Parse multiple races
+                previews = new ArrayList<>(scorecardParser.parseMultipleRaces(sheetDataMap, raceSheets, metadata));
             } else {
                 if (file == null || file.isEmpty()) {
                     redirectAttributes.addFlashAttribute("errorMessage", "No CSV file provided");
                     return "redirect:/admin/import";
                 }
-                preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
+                var preview = csvImportService.parseAndPreview(file.getInputStream(), metadata);
+                previews.add(preview);
             }
 
-            // Collect confirmed fuzzy matches and new driver decisions
+            if (previews.isEmpty()) {
+                redirectAttributes.addFlashAttribute("errorMessage", "Unable to parse any data from the import source");
+                return "redirect:/admin/import";
+            }
+
+            // Collect confirmed fuzzy matches and new driver decisions (shared across all races)
             Map<String, UUID> confirmedMatches = new HashMap<>();
             Set<String> createNewDrivers = new HashSet<>();
 
@@ -135,16 +185,17 @@ public class CsvImportController {
                 }
             }
 
-            var result = csvImportService.executeImport(preview, confirmedMatches, createNewDrivers, overwrite);
+            // Execute import for all races (handles multi-race reuse of matches correctly)
+            var cumulativeResult = csvImportService.executeMultiRaceImport(previews, confirmedMatches, createNewDrivers, overwrite);
 
-            if (result.hasErrors()) {
+            if (cumulativeResult.hasErrors()) {
                 redirectAttributes.addFlashAttribute("errorMessage",
-                        "Import with errors: " + String.join(", ", result.getErrors()));
+                        "Import with errors: " + String.join(", ", cumulativeResult.getErrors()));
             } else {
-                var msg = "Import successful: " + result.getImportedRaces().size() + " races, " +
-                        result.getNewDriversCreated() + " new drivers";
-                if (result.getLineupCount() > 0) {
-                    msg += ", " + result.getLineupCount() + " lineup entries";
+                var msg = "Import successful: " + cumulativeResult.getImportedRaces().size() + " races, " +
+                        cumulativeResult.getNewDriversCreated() + " new drivers";
+                if (cumulativeResult.getLineupCount() > 0) {
+                    msg += ", " + cumulativeResult.getLineupCount() + " lineup entries";
                 }
                 redirectAttributes.addFlashAttribute("successMessage", msg);
             }

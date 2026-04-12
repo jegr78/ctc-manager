@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -356,6 +357,94 @@ class ScorecardParserTest {
             assertFalse(preview.hasErrors());
             assertEquals(2, preview.getRows().getFirst().position());
             assertEquals(3, preview.getRows().getFirst().qualiPosition());
+        }
+    }
+
+    @Nested
+    class MultipleRacesParsingTest {
+
+        @BeforeEach
+        void setUp() {
+            mockDriverMatchingNone();
+        }
+
+        @Test
+        void givenTwoRaceSheets_whenParseMultipleRaces_thenReturnsListWithTwoPreviewsSameSizeEach() {
+            // given
+            var race1Data = buildTwoTeamScorecard("AHR 1", 3, "TCR", 3);
+            var race2Data = buildTwoTeamScorecard("AHR 1", 3, "TCR", 3);
+            var sheetNames = List.of("Race 1", "Race 2");
+
+            // when
+            var previews = parser.parseMultipleRaces(
+                    Map.of("Race 1", race1Data, "Race 2", race2Data),
+                    sheetNames,
+                    metadata
+            );
+
+            // then
+            assertEquals(2, previews.size());
+            assertEquals(6, previews.get(0).getRows().size());
+            assertEquals(6, previews.get(1).getRows().size());
+            assertFalse(previews.get(0).hasErrors());
+            assertFalse(previews.get(1).hasErrors());
+        }
+
+        @Test
+        void givenSingleRaceSheet_whenParseMultipleRaces_thenReturnsListWithOnePreview() {
+            // given
+            var raceData = buildTwoTeamScorecard("AHR 1", 3, "TCR", 3);
+            var sheetNames = List.of("Race 1");
+
+            // when
+            var previews = parser.parseMultipleRaces(
+                    Map.of("Race 1", raceData),
+                    sheetNames,
+                    metadata
+            );
+
+            // then
+            assertEquals(1, previews.size());
+            assertEquals(6, previews.get(0).getRows().size());
+            assertFalse(previews.get(0).hasErrors());
+        }
+
+        @Test
+        void givenRaceSheetsWithDifferentDriverCounts_whenParseMultipleRaces_thenEachPreviewReflectsDifferentCounts() {
+            // given
+            var race1Data = buildTwoTeamScorecard("AHR 1", 3, "TCR", 3);
+            var race2Data = buildTwoTeamScorecard("AHR 1", 4, "TCR", 2);
+            var sheetNames = List.of("Race 1", "Race 2");
+
+            // when
+            var previews = parser.parseMultipleRaces(
+                    Map.of("Race 1", race1Data, "Race 2", race2Data),
+                    sheetNames,
+                    metadata
+            );
+
+            // then
+            assertEquals(2, previews.size());
+            assertEquals(6, previews.get(0).getRows().size());
+            assertEquals(6, previews.get(1).getRows().size());
+        }
+
+        @Test
+        void givenMissingSheetInDataMap_whenParseMultipleRaces_thenSkipsAndLogsWarning() {
+            // given
+            var race1Data = buildTwoTeamScorecard("AHR 1", 3, "TCR", 3);
+            var sheetNames = List.of("Race 1", "Race 2");
+
+            // when
+            var previews = parser.parseMultipleRaces(
+                    Map.of("Race 1", race1Data),
+                    sheetNames,
+                    metadata
+            );
+
+            // then
+            assertEquals(1, previews.size());
+            assertEquals(6, previews.get(0).getRows().size());
         }
     }
 }

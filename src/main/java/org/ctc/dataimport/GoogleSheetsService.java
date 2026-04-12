@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -70,6 +71,59 @@ public class GoogleSheetsService {
                 .execute();
         List<List<Object>> values = response.getValues();
         return values != null ? values : List.of();
+    }
+
+    /**
+     * Reads a cell range from a specific sheet in a Google Spreadsheet.
+     *
+     * @param spreadsheetId the spreadsheet ID
+     * @param sheetName     the sheet name (e.g. "Race 1")
+     * @param range         the A1 notation range (e.g. "A:H")
+     * @return list of rows, each row being a list of cell values
+     */
+    public List<List<Object>> readRangeFromSheet(String spreadsheetId, String sheetName, String range) throws IOException {
+        String fullRange = sheetName + "!" + range;
+        return readRange(spreadsheetId, fullRange);
+    }
+
+    /**
+     * Lists all sheet names in a spreadsheet.
+     *
+     * @param spreadsheetId the spreadsheet ID
+     * @return list of sheet names in order
+     */
+    public List<String> getSheetNames(String spreadsheetId) throws IOException {
+        var client = getSheetsClient();
+        var spreadsheet = client.spreadsheets().get(spreadsheetId).execute();
+        return spreadsheet.getSheets().stream()
+                .map(sheet -> sheet.getProperties().getTitle())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Filters sheet names to return race sheets for import.
+     * Defensive approach: tries to find sheets with "Race" in name first,
+     * but if none found, falls back to using any sheet (excluding "Overall").
+     * This ensures single-tab sheets work regardless of tab naming.
+     *
+     * @param sheetNames list of all sheet names
+     * @return filtered list of race sheet names for import
+     */
+    public List<String> filterRaceSheets(List<String> sheetNames) {
+        // First try: find sheets with "Race" in the name (multi-race scenario)
+        var raceSheets = sheetNames.stream()
+                .filter(name -> name.toLowerCase().contains("race") && !name.toLowerCase().contains("overall"))
+                .collect(Collectors.toList());
+        
+        // Fallback: if no "Race" sheets found, use any sheet except "Overall"
+        // This handles single-tab sheets with arbitrary names
+        if (raceSheets.isEmpty()) {
+            raceSheets = sheetNames.stream()
+                    .filter(name -> !name.toLowerCase().contains("overall"))
+                    .collect(Collectors.toList());
+        }
+        
+        return raceSheets;
     }
 
     /**

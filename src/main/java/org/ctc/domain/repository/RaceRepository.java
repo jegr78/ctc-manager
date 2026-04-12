@@ -27,6 +27,8 @@ public interface RaceRepository extends JpaRepository<Race, UUID> {
     @EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
     List<Race> findByPlayoffMatchupIsNull();
 
+    List<Race> findByMatchId(UUID matchId);
+
     boolean existsByCarId(UUID carId);
 
     boolean existsByTrackId(UUID trackId);

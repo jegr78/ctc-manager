@@ -16,4 +16,6 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
     List<Match> findByMatchdaySeasonId(UUID seasonId);
 
     boolean existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
+
+    java.util.Optional<Match> findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
 }
