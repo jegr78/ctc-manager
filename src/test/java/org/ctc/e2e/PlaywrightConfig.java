@@ -11,37 +11,37 @@ import org.springframework.test.context.ActiveProfiles;
 @ActiveProfiles("dev")
 public abstract class PlaywrightConfig {
 
-    static Playwright playwright;
-    static Browser browser;
+	static Playwright playwright;
+	static Browser browser;
 
-    @LocalServerPort
-    int port;
+	@LocalServerPort
+	int port;
 
-    BrowserContext context;
-    Page page;
+	BrowserContext context;
+	Page page;
 
-    @BeforeAll
-    static void setupBrowser() {
-        playwright = Playwright.create();
-        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
-    }
+	@BeforeAll
+	static void setupBrowser() {
+		playwright = Playwright.create();
+		browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+	}
 
-    @AfterAll
-    static void teardownBrowser() {
-        if (browser != null) browser.close();
-        if (playwright != null) playwright.close();
-    }
+	@AfterAll
+	static void teardownBrowser() {
+		if (browser != null) browser.close();
+		if (playwright != null) playwright.close();
+	}
 
-    protected void setupPage() {
-        context = browser.newContext();
-        page = context.newPage();
-    }
+	protected void setupPage() {
+		context = browser.newContext();
+		page = context.newPage();
+	}
 
-    protected void teardownPage() {
-        if (context != null) context.close();
-    }
+	protected void teardownPage() {
+		if (context != null) context.close();
+	}
 
-    protected String url(String path) {
-        return "http://localhost:" + port + path;
-    }
+	protected String url(String path) {
+		return "http://localhost:" + port + path;
+	}
 }

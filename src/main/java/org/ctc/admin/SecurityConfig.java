@@ -12,18 +12,18 @@ import org.springframework.security.web.SecurityFilterChain;
 @Profile({"prod", "docker"})
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .authorizeHttpRequests(authorize -> authorize
-                .dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
-                .requestMatchers("/actuator/health").permitAll()
-                .anyRequest().authenticated()
-            )
-            .httpBasic(Customizer.withDefaults())
-            .exceptionHandling(exceptions -> exceptions
-                .accessDeniedPage("/admin/access-denied")
-            );
-        return http.build();
-    }
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+		http
+				.authorizeHttpRequests(authorize -> authorize
+						.dispatcherTypeMatchers(DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
+						.requestMatchers("/actuator/health").permitAll()
+						.anyRequest().authenticated()
+				)
+				.httpBasic(Customizer.withDefaults())
+				.exceptionHandling(exceptions -> exceptions
+						.accessDeniedPage("/admin/access-denied")
+				);
+		return http.build();
+	}
 }

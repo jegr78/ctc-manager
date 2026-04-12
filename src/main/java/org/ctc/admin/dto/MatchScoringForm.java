@@ -7,17 +7,19 @@ import lombok.Setter;
 
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class MatchScoringForm {
 
-    private UUID id;
+	private UUID id;
 
-    @NotBlank
-    private String name;
+	@NotBlank
+	private String name;
 
-    private int pointsWin;
+	private int pointsWin;
 
-    private int pointsDraw;
+	private int pointsDraw;
 
-    private int pointsLoss;
+	private int pointsLoss;
 }

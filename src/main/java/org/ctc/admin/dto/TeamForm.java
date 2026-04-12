@@ -7,20 +7,22 @@ import lombok.Setter;
 
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class TeamForm {
 
-    private UUID id;
+	private UUID id;
 
-    @NotBlank
-    private String name;
+	@NotBlank
+	private String name;
 
-    @NotBlank
-    private String shortName;
+	@NotBlank
+	private String shortName;
 
-    private String primaryColor;
+	private String primaryColor;
 
-    private String secondaryColor;
+	private String secondaryColor;
 
-    private String accentColor;
+	private String accentColor;
 }

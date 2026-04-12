@@ -31,72 +31,76 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("dev")
 class CsvImportControllerExceptionTest {
 
-    @Autowired private MockMvc mockMvc;
+	@Autowired
+	private MockMvc mockMvc;
 
-    @MockitoBean private CsvImportService csvImportService;
-    @MockitoBean private GoogleSheetsService googleSheetsService;
-    @MockitoBean private ScorecardParser scorecardParser;
+	@MockitoBean
+	private CsvImportService csvImportService;
+	@MockitoBean
+	private GoogleSheetsService googleSheetsService;
+	@MockitoBean
+	private ScorecardParser scorecardParser;
 
-    @Test
-    void givenIoException_whenPreviewCsv_thenRedirectsWithError() throws Exception {
-        // given
-        when(csvImportService.parseAndPreview(any(), any()))
-                .thenThrow(new IOException("file read error"));
-        when(csvImportService.getAllSeasons()).thenReturn(List.of());
-        when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
+	@Test
+	void givenIoException_whenPreviewCsv_thenRedirectsWithError() throws Exception {
+		// given
+		when(csvImportService.parseAndPreview(any(), any()))
+				.thenThrow(new IOException("file read error"));
+		when(csvImportService.getAllSeasons()).thenReturn(List.of());
+		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
 
-        var file = new MockMultipartFile("file", "results.csv", "text/csv", "data".getBytes());
+		var file = new MockMultipartFile("file", "results.csv", "text/csv", "data".getBytes());
 
-        // when
-        mockMvc.perform(multipart("/admin/import/preview")
-                        .file(file)
-                        .param("seasonId", UUID.randomUUID().toString())
-                        .param("matchdayLabel", "MD1"))
-                // then
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/import"))
-                .andExpect(model().attributeExists("errorMessage"));
-    }
+		// when
+		mockMvc.perform(multipart("/admin/import/preview")
+						.file(file)
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("matchdayLabel", "MD1"))
+				// then
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/import"))
+				.andExpect(model().attributeExists("errorMessage"));
+	}
 
-    @Test
-    void givenIoException_whenPreviewSheet_thenRedirectsWithError() throws Exception {
-        // given
-        when(googleSheetsService.isAvailable()).thenReturn(true);
-        when(googleSheetsService.extractSpreadsheetId(anyString())).thenReturn("abc123");
-        when(googleSheetsService.readRange(anyString(), anyString()))
-                .thenThrow(new IOException("network error"));
-        when(csvImportService.getAllSeasons()).thenReturn(List.of());
-        when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
+	@Test
+	void givenIoException_whenPreviewSheet_thenRedirectsWithError() throws Exception {
+		// given
+		when(googleSheetsService.isAvailable()).thenReturn(true);
+		when(googleSheetsService.extractSpreadsheetId(anyString())).thenReturn("abc123");
+		when(googleSheetsService.readRange(anyString(), anyString()))
+				.thenThrow(new IOException("network error"));
+		when(csvImportService.getAllSeasons()).thenReturn(List.of());
+		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
 
-        // when
-        mockMvc.perform(post("/admin/import/preview-sheet")
-                        .param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123")
-                        .param("seasonId", UUID.randomUUID().toString())
-                        .param("matchdayLabel", "MD1"))
-                // then
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/import"))
-                .andExpect(model().attributeExists("errorMessage"));
-    }
+		// when
+		mockMvc.perform(post("/admin/import/preview-sheet")
+						.param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123")
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("matchdayLabel", "MD1"))
+				// then
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/import"))
+				.andExpect(model().attributeExists("errorMessage"));
+	}
 
-    @Test
-    void givenBusinessRuleException_whenExecuteImport_thenRedirectsWithError() throws Exception {
-        // given
-        when(csvImportService.parseAndPreview(any(), any()))
-                .thenThrow(new BusinessRuleException("duplicate entry"));
-        when(csvImportService.getAllSeasons()).thenReturn(List.of());
-        when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
+	@Test
+	void givenBusinessRuleException_whenExecuteImport_thenRedirectsWithError() throws Exception {
+		// given
+		when(csvImportService.parseAndPreview(any(), any()))
+				.thenThrow(new BusinessRuleException("duplicate entry"));
+		when(csvImportService.getAllSeasons()).thenReturn(List.of());
+		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
 
-        var file = new MockMultipartFile("file", "results.csv", "text/csv", "data".getBytes());
+		var file = new MockMultipartFile("file", "results.csv", "text/csv", "data".getBytes());
 
-        // when
-        mockMvc.perform(multipart("/admin/import/execute")
-                        .file(file)
-                        .param("seasonId", UUID.randomUUID().toString())
-                        .param("source", "csv"))
-                // then
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/import"))
-                .andExpect(flash().attributeExists("errorMessage"));
-    }
+		// when
+		mockMvc.perform(multipart("/admin/import/execute")
+						.file(file)
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("source", "csv"))
+				// then
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/import"))
+				.andExpect(flash().attributeExists("errorMessage"));
+	}
 }

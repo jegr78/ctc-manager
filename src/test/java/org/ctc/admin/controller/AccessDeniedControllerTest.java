@@ -15,17 +15,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("dev")
 class AccessDeniedControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+	@Autowired
+	private MockMvc mockMvc;
 
-    @Test
-    void whenAccessDenied_thenReturnsAccessDeniedView() throws Exception {
-        // when / then
-        mockMvc.perform(get("/admin/access-denied"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("admin/access-denied"))
-                .andExpect(model().attribute("status", 403))
-                .andExpect(model().attribute("error", "Access Denied"))
-                .andExpect(model().attribute("message", "You do not have permission to access this resource."));
-    }
+	@Test
+	void whenAccessDenied_thenReturnsAccessDeniedView() throws Exception {
+		// when / then
+		mockMvc.perform(get("/admin/access-denied"))
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/access-denied"))
+				.andExpect(model().attribute("status", 403))
+				.andExpect(model().attribute("error", "Access Denied"))
+				.andExpect(model().attribute("message", "You do not have permission to access this resource."));
+	}
 }

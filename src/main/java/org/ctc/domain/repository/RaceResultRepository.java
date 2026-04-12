@@ -10,17 +10,17 @@ import java.util.UUID;
 
 public interface RaceResultRepository extends JpaRepository<RaceResult, UUID> {
 
-    @EntityGraph(attributePaths = {"driver"})
-    List<RaceResult> findByRaceId(UUID raceId);
+	@EntityGraph(attributePaths = {"driver"})
+	List<RaceResult> findByRaceId(UUID raceId);
 
-    @EntityGraph(attributePaths = {"driver", "race"})
-    List<RaceResult> findByDriverId(UUID driverId);
+	@EntityGraph(attributePaths = {"driver", "race"})
+	List<RaceResult> findByDriverId(UUID driverId);
 
-    Optional<RaceResult> findByRaceIdAndDriverId(UUID raceId, UUID driverId);
+	Optional<RaceResult> findByRaceIdAndDriverId(UUID raceId, UUID driverId);
 
-    @EntityGraph(attributePaths = {"driver", "race"})
-    List<RaceResult> findByRaceMatchdaySeasonId(UUID seasonId);
+	@EntityGraph(attributePaths = {"driver", "race"})
+	List<RaceResult> findByRaceMatchdaySeasonId(UUID seasonId);
 
-    @EntityGraph(attributePaths = {"driver", "race"})
-    List<RaceResult> findByRacePlayoffMatchupIsNull();
+	@EntityGraph(attributePaths = {"driver", "race"})
+	List<RaceResult> findByRacePlayoffMatchupIsNull();
 }

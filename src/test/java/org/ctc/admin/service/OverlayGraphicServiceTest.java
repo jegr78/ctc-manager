@@ -12,71 +12,71 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OverlayGraphicServiceTest {
 
-    @TempDir
-    Path tempDir;
+	@TempDir
+	Path tempDir;
 
-    private OverlayGraphicService createService() {
-        return new OverlayGraphicService(null, null, null, tempDir.toString());
-    }
+	private OverlayGraphicService createService() {
+		return new OverlayGraphicService(null, null, null, tempDir.toString());
+	}
 
-    @Test
-    void givenRaceWithNoTeams_whenGenerateOverlay_thenThrowsIllegalState() {
-        // given
-        var service = createService();
-        var race = new Race();
+	@Test
+	void givenRaceWithNoTeams_whenGenerateOverlay_thenThrowsIllegalState() {
+		// given
+		var service = createService();
+		var race = new Race();
 
-        // when / then
-        assertThatThrownBy(() -> service.generateOverlay(race))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("no teams");
-    }
+		// when / then
+		assertThatThrownBy(() -> service.generateOverlay(race))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("no teams");
+	}
 
-    @Test
-    void givenNoCustomTemplate_whenHasCustomTemplate_thenReturnsFalse() {
-        // given
-        var service = createService();
+	@Test
+	void givenNoCustomTemplate_whenHasCustomTemplate_thenReturnsFalse() {
+		// given
+		var service = createService();
 
-        // when / then
-        assertThat(service.hasCustomTemplate()).isFalse();
-    }
+		// when / then
+		assertThat(service.hasCustomTemplate()).isFalse();
+	}
 
-    @Test
-    void givenNoCustomTemplate_whenSaveTemplate_thenCustomTemplateExistsAndCanBeLoaded() throws IOException {
-        // given
-        var service = createService();
+	@Test
+	void givenNoCustomTemplate_whenSaveTemplate_thenCustomTemplateExistsAndCanBeLoaded() throws IOException {
+		// given
+		var service = createService();
 
-        // when
-        service.saveTemplate("<html>custom overlay</html>");
+		// when
+		service.saveTemplate("<html>custom overlay</html>");
 
-        // then
-        assertThat(service.hasCustomTemplate()).isTrue();
-        assertThat(service.loadTemplate()).isEqualTo("<html>custom overlay</html>");
-    }
+		// then
+		assertThat(service.hasCustomTemplate()).isTrue();
+		assertThat(service.loadTemplate()).isEqualTo("<html>custom overlay</html>");
+	}
 
-    @Test
-    void givenSavedCustomTemplate_whenResetTemplate_thenNoCustomTemplateExists() throws IOException {
-        // given
-        var service = createService();
-        service.saveTemplate("<html>custom overlay</html>");
+	@Test
+	void givenSavedCustomTemplate_whenResetTemplate_thenNoCustomTemplateExists() throws IOException {
+		// given
+		var service = createService();
+		service.saveTemplate("<html>custom overlay</html>");
 
-        // when
-        service.resetTemplate();
+		// when
+		service.resetTemplate();
 
-        // then
-        assertThat(service.hasCustomTemplate()).isFalse();
-    }
+		// then
+		assertThat(service.hasCustomTemplate()).isFalse();
+	}
 
-    @Test
-    void whenLoadDefaultTemplate_thenReturnsNonEmptyHtml() throws IOException {
-        // given
-        var service = createService();
+	@Test
+	void whenLoadDefaultTemplate_thenReturnsNonEmptyHtml() throws IOException {
+		// given
+		var service = createService();
 
-        // when
-        String template = service.loadDefaultTemplate();
+		// when
+		String template = service.loadDefaultTemplate();
 
-        // then
-        assertThat(template).isNotEmpty();
-        assertThat(template).contains("transparent");
-        assertThat(template).contains("1920px");
-    }
+		// then
+		assertThat(template).isNotEmpty();
+		assertThat(template).contains("transparent");
+		assertThat(template).contains("1920px");
+	}
 }

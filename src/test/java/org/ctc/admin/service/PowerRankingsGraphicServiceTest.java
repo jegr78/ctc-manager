@@ -24,246 +24,243 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class PowerRankingsGraphicServiceTest {
 
-    @Mock
-    private SeasonRepository seasonRepository;
+	@TempDir
+	Path tempDir;
+	@Mock
+	private SeasonRepository seasonRepository;
+	@Mock
+	private SeasonTeamRepository seasonTeamRepository;
+	private PowerRankingsGraphicService service;
 
-    @Mock
-    private SeasonTeamRepository seasonTeamRepository;
+	@BeforeEach
+	void setUp() {
+		service = new PowerRankingsGraphicService(null, seasonRepository, seasonTeamRepository, tempDir.toString());
+	}
 
-    @TempDir
-    Path tempDir;
+	// --- loadTeamsForSeasonGroup ---
 
-    private PowerRankingsGraphicService service;
+	@Test
+	void givenSingleSeasonWithStandaloneTeams_whenLoadTeams_thenReturnsAllTeams() {
+		// given
+		var season = createSeason(2026, 4);
+		var teamA = createTeam("Alpha Racing", "ALF");
+		var teamB = createTeam("Beta Racing", "BET");
+		var stA = createSeasonTeam(season, teamA, 1500);
+		var stB = createSeasonTeam(season, teamB, 1400);
 
-    @BeforeEach
-    void setUp() {
-        service = new PowerRankingsGraphicService(null, seasonRepository, seasonTeamRepository, tempDir.toString());
-    }
+		when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
+		when(seasonTeamRepository.findBySeasonId(season.getId())).thenReturn(List.of(stA, stB));
 
-    // --- loadTeamsForSeasonGroup ---
+		// when
+		var result = service.loadTeamsForSeasonGroup(2026, 4);
 
-    @Test
-    void givenSingleSeasonWithStandaloneTeams_whenLoadTeams_thenReturnsAllTeams() {
-        // given
-        var season = createSeason(2026, 4);
-        var teamA = createTeam("Alpha Racing", "ALF");
-        var teamB = createTeam("Beta Racing", "BET");
-        var stA = createSeasonTeam(season, teamA, 1500);
-        var stB = createSeasonTeam(season, teamB, 1400);
+		// then
+		assertThat(result).hasSize(2);
+		assertThat(result).extracting(RankedTeamData::teamShortName)
+				.containsExactly("ALF", "BET");
+	}
 
-        when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
-        when(seasonTeamRepository.findBySeasonId(season.getId())).thenReturn(List.of(stA, stB));
+	@Test
+	void givenTeamsWithRatings_whenLoadTeams_thenSortedByRatingDescending() {
+		// given
+		var season = createSeason(2026, 4);
+		var teamLow = createTeam("Low Rating", "LOW");
+		var teamHigh = createTeam("High Rating", "HIG");
+		var teamMid = createTeam("Mid Rating", "MID");
+		var stLow = createSeasonTeam(season, teamLow, 1200);
+		var stHigh = createSeasonTeam(season, teamHigh, 1600);
+		var stMid = createSeasonTeam(season, teamMid, 1400);
 
-        // when
-        var result = service.loadTeamsForSeasonGroup(2026, 4);
+		when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
+		when(seasonTeamRepository.findBySeasonId(season.getId())).thenReturn(List.of(stLow, stHigh, stMid));
 
-        // then
-        assertThat(result).hasSize(2);
-        assertThat(result).extracting(RankedTeamData::teamShortName)
-                .containsExactly("ALF", "BET");
-    }
+		// when
+		var result = service.loadTeamsForSeasonGroup(2026, 4);
 
-    @Test
-    void givenTeamsWithRatings_whenLoadTeams_thenSortedByRatingDescending() {
-        // given
-        var season = createSeason(2026, 4);
-        var teamLow = createTeam("Low Rating", "LOW");
-        var teamHigh = createTeam("High Rating", "HIG");
-        var teamMid = createTeam("Mid Rating", "MID");
-        var stLow = createSeasonTeam(season, teamLow, 1200);
-        var stHigh = createSeasonTeam(season, teamHigh, 1600);
-        var stMid = createSeasonTeam(season, teamMid, 1400);
+		// then
+		assertThat(result).extracting(RankedTeamData::teamShortName)
+				.containsExactly("HIG", "MID", "LOW");
+	}
 
-        when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
-        when(seasonTeamRepository.findBySeasonId(season.getId())).thenReturn(List.of(stLow, stHigh, stMid));
+	@Test
+	void givenTeamsWithoutRating_whenLoadTeams_thenNullRatingsAtEndSortedByShortName() {
+		// given
+		var season = createSeason(2026, 4);
+		var teamRated = createTeam("Rated Team", "RAT");
+		var teamZeta = createTeam("Zeta Unrated", "ZET");
+		var teamAlpha = createTeam("Alpha Unrated", "ALP");
+		var stRated = createSeasonTeam(season, teamRated, 1500);
+		var stZeta = createSeasonTeam(season, teamZeta, null);
+		var stAlpha = createSeasonTeam(season, teamAlpha, null);
 
-        // when
-        var result = service.loadTeamsForSeasonGroup(2026, 4);
+		when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
+		when(seasonTeamRepository.findBySeasonId(season.getId())).thenReturn(List.of(stRated, stZeta, stAlpha));
 
-        // then
-        assertThat(result).extracting(RankedTeamData::teamShortName)
-                .containsExactly("HIG", "MID", "LOW");
-    }
+		// when
+		var result = service.loadTeamsForSeasonGroup(2026, 4);
 
-    @Test
-    void givenTeamsWithoutRating_whenLoadTeams_thenNullRatingsAtEndSortedByShortName() {
-        // given
-        var season = createSeason(2026, 4);
-        var teamRated = createTeam("Rated Team", "RAT");
-        var teamZeta = createTeam("Zeta Unrated", "ZET");
-        var teamAlpha = createTeam("Alpha Unrated", "ALP");
-        var stRated = createSeasonTeam(season, teamRated, 1500);
-        var stZeta = createSeasonTeam(season, teamZeta, null);
-        var stAlpha = createSeasonTeam(season, teamAlpha, null);
+		// then
+		assertThat(result).extracting(RankedTeamData::teamShortName)
+				.containsExactly("RAT", "ALP", "ZET");
+	}
 
-        when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
-        when(seasonTeamRepository.findBySeasonId(season.getId())).thenReturn(List.of(stRated, stZeta, stAlpha));
+	@Test
+	void givenParentTeamWithSubTeamsInSeason_whenLoadTeams_thenParentExcluded() {
+		// given
+		var season = createSeason(2026, 4);
+		var parent = createTeam("Neutrals Racing", "TNR");
+		var subA = createTeam("Neutrals Racing A", "TNRA");
+		subA.setParentTeam(parent);
+		parent.getSubTeams().add(subA);
+		var subB = createTeam("Neutrals Racing B", "TNRB");
+		subB.setParentTeam(parent);
+		parent.getSubTeams().add(subB);
+		var standalone = createTeam("Solo Racing", "SOL");
 
-        // when
-        var result = service.loadTeamsForSeasonGroup(2026, 4);
+		var stParent = createSeasonTeam(season, parent, 1500);
+		var stSubA = createSeasonTeam(season, subA, 1400);
+		var stSubB = createSeasonTeam(season, subB, 1300);
+		var stStandalone = createSeasonTeam(season, standalone, 1200);
 
-        // then
-        assertThat(result).extracting(RankedTeamData::teamShortName)
-                .containsExactly("RAT", "ALP", "ZET");
-    }
+		when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
+		when(seasonTeamRepository.findBySeasonId(season.getId()))
+				.thenReturn(List.of(stParent, stSubA, stSubB, stStandalone));
 
-    @Test
-    void givenParentTeamWithSubTeamsInSeason_whenLoadTeams_thenParentExcluded() {
-        // given
-        var season = createSeason(2026, 4);
-        var parent = createTeam("Neutrals Racing", "TNR");
-        var subA = createTeam("Neutrals Racing A", "TNRA");
-        subA.setParentTeam(parent);
-        parent.getSubTeams().add(subA);
-        var subB = createTeam("Neutrals Racing B", "TNRB");
-        subB.setParentTeam(parent);
-        parent.getSubTeams().add(subB);
-        var standalone = createTeam("Solo Racing", "SOL");
+		// when
+		var result = service.loadTeamsForSeasonGroup(2026, 4);
 
-        var stParent = createSeasonTeam(season, parent, 1500);
-        var stSubA = createSeasonTeam(season, subA, 1400);
-        var stSubB = createSeasonTeam(season, subB, 1300);
-        var stStandalone = createSeasonTeam(season, standalone, 1200);
+		// then
+		assertThat(result).extracting(RankedTeamData::teamShortName)
+				.containsExactly("TNRA", "TNRB", "SOL")
+				.doesNotContain("TNR");
+	}
 
-        when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
-        when(seasonTeamRepository.findBySeasonId(season.getId()))
-                .thenReturn(List.of(stParent, stSubA, stSubB, stStandalone));
+	@Test
+	void givenParentTeamWithNoSubTeamsInSeason_whenLoadTeams_thenParentIncluded() {
+		// given
+		var season = createSeason(2026, 4);
+		var parent = createTeam("Neutrals Racing", "TNR");
+		// parent has sub-teams defined but none are in this season
+		var subA = createTeam("Neutrals Racing A", "TNRA");
+		subA.setParentTeam(parent);
+		parent.getSubTeams().add(subA);
 
-        // when
-        var result = service.loadTeamsForSeasonGroup(2026, 4);
+		var stParent = createSeasonTeam(season, parent, 1500);
 
-        // then
-        assertThat(result).extracting(RankedTeamData::teamShortName)
-                .containsExactly("TNRA", "TNRB", "SOL")
-                .doesNotContain("TNR");
-    }
+		when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
+		when(seasonTeamRepository.findBySeasonId(season.getId())).thenReturn(List.of(stParent));
 
-    @Test
-    void givenParentTeamWithNoSubTeamsInSeason_whenLoadTeams_thenParentIncluded() {
-        // given
-        var season = createSeason(2026, 4);
-        var parent = createTeam("Neutrals Racing", "TNR");
-        // parent has sub-teams defined but none are in this season
-        var subA = createTeam("Neutrals Racing A", "TNRA");
-        subA.setParentTeam(parent);
-        parent.getSubTeams().add(subA);
+		// when
+		var result = service.loadTeamsForSeasonGroup(2026, 4);
 
-        var stParent = createSeasonTeam(season, parent, 1500);
+		// then
+		assertThat(result).extracting(RankedTeamData::teamShortName)
+				.containsExactly("TNR");
+	}
 
-        when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(season));
-        when(seasonTeamRepository.findBySeasonId(season.getId())).thenReturn(List.of(stParent));
+	@Test
+	void givenMultipleSeasonsWithSameNumber_whenLoadTeams_thenTeamsDeduplicated() {
+		// given
+		var seasonA = createSeason(2026, 4);
+		var seasonB = createSeason(2026, 4);
+		var team1 = createTeam("Alpha Racing", "ALF");
+		var team2 = createTeam("Beta Racing", "BET");
+		var team3 = createTeam("Gamma Racing", "GAM");
 
-        // when
-        var result = service.loadTeamsForSeasonGroup(2026, 4);
+		// team1 in both seasons, team2 only in A, team3 only in B
+		var stA1 = createSeasonTeam(seasonA, team1, 1500);
+		var stA2 = createSeasonTeam(seasonA, team2, 1400);
+		var stB1 = createSeasonTeam(seasonB, team1, 1500);
+		var stB3 = createSeasonTeam(seasonB, team3, 1300);
 
-        // then
-        assertThat(result).extracting(RankedTeamData::teamShortName)
-                .containsExactly("TNR");
-    }
+		when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(seasonA, seasonB));
+		when(seasonTeamRepository.findBySeasonId(seasonA.getId())).thenReturn(List.of(stA1, stA2));
+		when(seasonTeamRepository.findBySeasonId(seasonB.getId())).thenReturn(List.of(stB1, stB3));
 
-    @Test
-    void givenMultipleSeasonsWithSameNumber_whenLoadTeams_thenTeamsDeduplicated() {
-        // given
-        var seasonA = createSeason(2026, 4);
-        var seasonB = createSeason(2026, 4);
-        var team1 = createTeam("Alpha Racing", "ALF");
-        var team2 = createTeam("Beta Racing", "BET");
-        var team3 = createTeam("Gamma Racing", "GAM");
+		// when
+		var result = service.loadTeamsForSeasonGroup(2026, 4);
 
-        // team1 in both seasons, team2 only in A, team3 only in B
-        var stA1 = createSeasonTeam(seasonA, team1, 1500);
-        var stA2 = createSeasonTeam(seasonA, team2, 1400);
-        var stB1 = createSeasonTeam(seasonB, team1, 1500);
-        var stB3 = createSeasonTeam(seasonB, team3, 1300);
+		// then
+		assertThat(result).hasSize(3);
+		assertThat(result).extracting(RankedTeamData::teamShortName)
+				.containsExactly("ALF", "BET", "GAM");
+	}
 
-        when(seasonRepository.findByYearAndNumber(2026, 4)).thenReturn(List.of(seasonA, seasonB));
-        when(seasonTeamRepository.findBySeasonId(seasonA.getId())).thenReturn(List.of(stA1, stA2));
-        when(seasonTeamRepository.findBySeasonId(seasonB.getId())).thenReturn(List.of(stB1, stB3));
+	@Test
+	void givenNoSeasonsFound_whenLoadTeams_thenReturnsEmptyList() {
+		// given
+		when(seasonRepository.findByYearAndNumber(2026, 99)).thenReturn(List.of());
 
-        // when
-        var result = service.loadTeamsForSeasonGroup(2026, 4);
+		// when
+		var result = service.loadTeamsForSeasonGroup(2026, 99);
 
-        // then
-        assertThat(result).hasSize(3);
-        assertThat(result).extracting(RankedTeamData::teamShortName)
-                .containsExactly("ALF", "BET", "GAM");
-    }
+		// then
+		assertThat(result).isEmpty();
+	}
 
-    @Test
-    void givenNoSeasonsFound_whenLoadTeams_thenReturnsEmptyList() {
-        // given
-        when(seasonRepository.findByYearAndNumber(2026, 99)).thenReturn(List.of());
+	// --- Template management ---
 
-        // when
-        var result = service.loadTeamsForSeasonGroup(2026, 99);
+	@Test
+	void givenNoCustomTemplate_whenHasCustomTemplate_thenReturnsFalse() {
+		// when / then
+		assertThat(service.hasCustomTemplate()).isFalse();
+	}
 
-        // then
-        assertThat(result).isEmpty();
-    }
+	@Test
+	void givenNoCustomTemplate_whenSaveTemplate_thenCustomTemplateExists() throws IOException {
+		// when
+		service.saveTemplate("<html>custom</html>");
 
-    // --- Template management ---
+		// then
+		assertThat(service.hasCustomTemplate()).isTrue();
+		assertThat(service.loadTemplate()).isEqualTo("<html>custom</html>");
+	}
 
-    @Test
-    void givenNoCustomTemplate_whenHasCustomTemplate_thenReturnsFalse() {
-        // when / then
-        assertThat(service.hasCustomTemplate()).isFalse();
-    }
+	@Test
+	void givenSavedCustomTemplate_whenResetTemplate_thenNoCustomTemplate() throws IOException {
+		// given
+		service.saveTemplate("<html>custom</html>");
 
-    @Test
-    void givenNoCustomTemplate_whenSaveTemplate_thenCustomTemplateExists() throws IOException {
-        // when
-        service.saveTemplate("<html>custom</html>");
+		// when
+		service.resetTemplate();
 
-        // then
-        assertThat(service.hasCustomTemplate()).isTrue();
-        assertThat(service.loadTemplate()).isEqualTo("<html>custom</html>");
-    }
+		// then
+		assertThat(service.hasCustomTemplate()).isFalse();
+	}
 
-    @Test
-    void givenSavedCustomTemplate_whenResetTemplate_thenNoCustomTemplate() throws IOException {
-        // given
-        service.saveTemplate("<html>custom</html>");
+	@Test
+	void whenLoadDefaultTemplate_thenReturnsNonEmptyHtml() throws IOException {
+		// when
+		String template = service.loadDefaultTemplate();
 
-        // when
-        service.resetTemplate();
+		// then
+		assertThat(template).isNotEmpty();
+		assertThat(template).contains("1920px");
+		assertThat(template).contains("data.title");
+	}
 
-        // then
-        assertThat(service.hasCustomTemplate()).isFalse();
-    }
+	// --- Helper methods ---
 
-    @Test
-    void whenLoadDefaultTemplate_thenReturnsNonEmptyHtml() throws IOException {
-        // when
-        String template = service.loadDefaultTemplate();
+	private Season createSeason(int year, int number) {
+		var season = new Season();
+		season.setId(UUID.randomUUID());
+		season.setName("Test Season");
+		season.setYear(year);
+		season.setNumber(number);
+		return season;
+	}
 
-        // then
-        assertThat(template).isNotEmpty();
-        assertThat(template).contains("1920px");
-        assertThat(template).contains("data.title");
-    }
+	private Team createTeam(String name, String shortName) {
+		var team = new Team(name, shortName);
+		team.setId(UUID.randomUUID());
+		team.setPrimaryColor("#333333");
+		return team;
+	}
 
-    // --- Helper methods ---
-
-    private Season createSeason(int year, int number) {
-        var season = new Season();
-        season.setId(UUID.randomUUID());
-        season.setName("Test Season");
-        season.setYear(year);
-        season.setNumber(number);
-        return season;
-    }
-
-    private Team createTeam(String name, String shortName) {
-        var team = new Team(name, shortName);
-        team.setId(UUID.randomUUID());
-        team.setPrimaryColor("#333333");
-        return team;
-    }
-
-    private SeasonTeam createSeasonTeam(Season season, Team team, Integer rating) {
-        var st = new SeasonTeam(season, team);
-        st.setId(UUID.randomUUID());
-        st.setRating(rating);
-        return st;
-    }
+	private SeasonTeam createSeasonTeam(Season season, Team team, Integer rating) {
+		var st = new SeasonTeam(season, team);
+		st.setId(UUID.randomUUID());
+		st.setRating(rating);
+		return st;
+	}
 }

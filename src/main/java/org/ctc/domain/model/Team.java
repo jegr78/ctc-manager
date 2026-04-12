@@ -13,61 +13,64 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "teams")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"seasonDrivers", "parentTeam", "subTeams"})
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString(exclude = {"seasonDrivers", "parentTeam", "subTeams"})
 public class Team extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
-    @NotBlank
-    @Column(nullable = false)
-    private String name;
+	@NotBlank
+	@Column(nullable = false)
+	private String name;
 
-    @NotBlank
-    @Column(nullable = false)
-    private String shortName;
+	@NotBlank
+	@Column(nullable = false)
+	private String shortName;
 
-    private String logoUrl;
+	private String logoUrl;
 
-    private String primaryColor;
+	private String primaryColor;
 
-    private String secondaryColor;
+	private String secondaryColor;
 
-    private String accentColor;
+	private String accentColor;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_team_id")
-    private Team parentTeam;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "parent_team_id")
+	private Team parentTeam;
 
-    @OneToMany(mappedBy = "parentTeam")
-    @OrderBy("shortName ASC")
-    private List<Team> subTeams = new ArrayList<>();
+	@OneToMany(mappedBy = "parentTeam")
+	@OrderBy("shortName ASC")
+	private List<Team> subTeams = new ArrayList<>();
 
-    @OneToMany(mappedBy = "team")
-    private List<SeasonDriver> seasonDrivers = new ArrayList<>();
+	@OneToMany(mappedBy = "team")
+	private List<SeasonDriver> seasonDrivers = new ArrayList<>();
 
-    public Team(String name, String shortName) {
-        this.name = name;
-        this.shortName = shortName;
-    }
+	public Team(String name, String shortName) {
+		this.name = name;
+		this.shortName = shortName;
+	}
 
-    public Team(String name, String shortName, Team parentTeam) {
-        this.name = name;
-        this.shortName = shortName;
-        this.parentTeam = parentTeam;
-    }
+	public Team(String name, String shortName, Team parentTeam) {
+		this.name = name;
+		this.shortName = shortName;
+		this.parentTeam = parentTeam;
+	}
 
-    public boolean isSubTeam() {
-        return parentTeam != null;
-    }
+	public boolean isSubTeam() {
+		return parentTeam != null;
+	}
 
-    public boolean hasSubTeams() {
-        return subTeams != null && !subTeams.isEmpty();
-    }
+	public boolean hasSubTeams() {
+		return subTeams != null && !subTeams.isEmpty();
+	}
 
-    public Team getParentOrSelf() {
-        return parentTeam != null ? parentTeam : this;
-    }
+	public Team getParentOrSelf() {
+		return parentTeam != null ? parentTeam : this;
+	}
 
 }

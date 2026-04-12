@@ -9,6 +9,6 @@ import java.util.UUID;
 
 public interface MatchdayRepository extends JpaRepository<Matchday, UUID> {
 
-    @EntityGraph(attributePaths = {"season"})
-    List<Matchday> findBySeasonIdOrderBySortIndexAsc(UUID seasonId);
+	@EntityGraph(attributePaths = {"season"})
+	List<Matchday> findBySeasonIdOrderBySortIndexAsc(UUID seasonId);
 }

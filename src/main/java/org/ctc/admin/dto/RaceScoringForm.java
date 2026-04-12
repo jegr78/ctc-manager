@@ -7,18 +7,20 @@ import lombok.Setter;
 
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class RaceScoringForm {
 
-    private UUID id;
+	private UUID id;
 
-    @NotBlank
-    private String name;
+	@NotBlank
+	private String name;
 
-    @NotBlank
-    private String racePoints;
+	@NotBlank
+	private String racePoints;
 
-    private String qualiPoints;
+	private String qualiPoints;
 
-    private int fastestLapPoints;
+	private int fastestLapPoints;
 }

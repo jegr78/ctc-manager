@@ -12,10 +12,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DevDataSeeder implements CommandLineRunner {
 
-    private final TestDataService testDataService;
+	private final TestDataService testDataService;
 
-    @Override
-    public void run(String... args) {
-        testDataService.seed();
-    }
+	@Override
+	public void run(String... args) {
+		testDataService.seed();
+	}
 }

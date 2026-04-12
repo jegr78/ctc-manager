@@ -9,9 +9,9 @@ import java.util.UUID;
 
 public interface PlayoffMatchupRepository extends JpaRepository<PlayoffMatchup, UUID> {
 
-    @EntityGraph(attributePaths = {"team1", "team2", "winner"})
-    List<PlayoffMatchup> findByRoundIdOrderByBracketPositionAsc(UUID roundId);
+	@EntityGraph(attributePaths = {"team1", "team2", "winner"})
+	List<PlayoffMatchup> findByRoundIdOrderByBracketPositionAsc(UUID roundId);
 
-    @EntityGraph(attributePaths = {"team1", "team2", "winner", "round"})
-    List<PlayoffMatchup> findByRoundPlayoffId(UUID playoffId);
+	@EntityGraph(attributePaths = {"team1", "team2", "winner", "round"})
+	List<PlayoffMatchup> findByRoundPlayoffId(UUID playoffId);
 }

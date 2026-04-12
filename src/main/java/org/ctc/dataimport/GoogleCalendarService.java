@@ -28,94 +28,94 @@ import java.time.format.DateTimeFormatter;
 @Service
 public class GoogleCalendarService {
 
-    private static final String APPLICATION_NAME = "CTC Manager";
-    private static final String TIME_ZONE = "Europe/London";
+	private static final String APPLICATION_NAME = "CTC Manager";
+	private static final String TIME_ZONE = "Europe/London";
 
-    private final String credentialsPath;
-    private final String calendarId;
-    private Calendar calendarClient;
+	private final String credentialsPath;
+	private final String calendarId;
+	private Calendar calendarClient;
 
-    public GoogleCalendarService(
-            @Value("${google.sheets.credentials-path:}") String credentialsPath,
-            @Value("${google.calendar.id:}") String calendarId) {
-        this.credentialsPath = credentialsPath;
-        this.calendarId = calendarId;
-    }
+	public GoogleCalendarService(
+			@Value("${google.sheets.credentials-path:}") String credentialsPath,
+			@Value("${google.calendar.id:}") String calendarId) {
+		this.credentialsPath = credentialsPath;
+		this.calendarId = calendarId;
+	}
 
-    @PostConstruct
-    void logAvailability() {
-        if (isAvailable()) {
-            log.info("Google Calendar integration available (calendar: {})", calendarId);
-        } else {
-            log.info("Google Calendar integration not available (no credentials or calendar ID configured)");
-        }
-    }
+	@PostConstruct
+	void logAvailability() {
+		if (isAvailable()) {
+			log.info("Google Calendar integration available (calendar: {})", calendarId);
+		} else {
+			log.info("Google Calendar integration not available (no credentials or calendar ID configured)");
+		}
+	}
 
-    public boolean isAvailable() {
-        return credentialsPath != null
-                && !credentialsPath.isBlank()
-                && Files.exists(Path.of(credentialsPath))
-                && calendarId != null
-                && !calendarId.isBlank();
-    }
+	public boolean isAvailable() {
+		return credentialsPath != null
+				&& !credentialsPath.isBlank()
+				&& Files.exists(Path.of(credentialsPath))
+				&& calendarId != null
+				&& !calendarId.isBlank();
+	}
 
-    public String createEvent(String title, LocalDateTime startTime, int durationMinutes) throws IOException {
-        var client = getCalendarClient();
-        var event = buildEvent(title, startTime, durationMinutes);
+	public String createEvent(String title, LocalDateTime startTime, int durationMinutes) throws IOException {
+		var client = getCalendarClient();
+		var event = buildEvent(title, startTime, durationMinutes);
 
-        var created = client.events().insert(calendarId, event).execute();
-        log.info("Created calendar event '{}' (id: {})", title, created.getId());
-        return created.getId();
-    }
+		var created = client.events().insert(calendarId, event).execute();
+		log.info("Created calendar event '{}' (id: {})", title, created.getId());
+		return created.getId();
+	}
 
-    public void updateEvent(String eventId, String title, LocalDateTime startTime, int durationMinutes) throws IOException {
-        var client = getCalendarClient();
-        var event = buildEvent(title, startTime, durationMinutes);
+	public void updateEvent(String eventId, String title, LocalDateTime startTime, int durationMinutes) throws IOException {
+		var client = getCalendarClient();
+		var event = buildEvent(title, startTime, durationMinutes);
 
-        client.events().update(calendarId, eventId, event).execute();
-        log.info("Updated calendar event '{}' (id: {})", title, eventId);
-    }
+		client.events().update(calendarId, eventId, event).execute();
+		log.info("Updated calendar event '{}' (id: {})", title, eventId);
+	}
 
-    private Event buildEvent(String title, LocalDateTime startTime, int durationMinutes) {
-        var zoneId = ZoneId.of(TIME_ZONE);
-        var startZoned = startTime.atZone(zoneId);
-        var endZoned = startZoned.plusMinutes(durationMinutes);
+	private Event buildEvent(String title, LocalDateTime startTime, int durationMinutes) {
+		var zoneId = ZoneId.of(TIME_ZONE);
+		var startZoned = startTime.atZone(zoneId);
+		var endZoned = startZoned.plusMinutes(durationMinutes);
 
-        var event = new Event();
-        event.setSummary(title);
-        event.setStart(toEventDateTime(startZoned));
-        event.setEnd(toEventDateTime(endZoned));
-        return event;
-    }
+		var event = new Event();
+		event.setSummary(title);
+		event.setStart(toEventDateTime(startZoned));
+		event.setEnd(toEventDateTime(endZoned));
+		return event;
+	}
 
-    private EventDateTime toEventDateTime(ZonedDateTime zdt) {
-        var dateTime = new DateTime(zdt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")));
-        return new EventDateTime().setDateTime(dateTime).setTimeZone(TIME_ZONE);
-    }
+	private EventDateTime toEventDateTime(ZonedDateTime zdt) {
+		var dateTime = new DateTime(zdt.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")));
+		return new EventDateTime().setDateTime(dateTime).setTimeZone(TIME_ZONE);
+	}
 
-    private synchronized Calendar getCalendarClient() throws IOException {
-        if (calendarClient == null) {
-            if (!isAvailable()) {
-                throw new IllegalStateException(
-                        "Google Calendar credentials not configured or calendar ID missing");
-            }
-            try (var credentialsStream = new FileInputStream(credentialsPath)) {
-                GoogleCredentials credentials = GoogleCredentials
-                        .fromStream(credentialsStream)
-                        .createScoped(CalendarScopes.CALENDAR_EVENTS);
+	private synchronized Calendar getCalendarClient() throws IOException {
+		if (calendarClient == null) {
+			if (!isAvailable()) {
+				throw new IllegalStateException(
+						"Google Calendar credentials not configured or calendar ID missing");
+			}
+			try (var credentialsStream = new FileInputStream(credentialsPath)) {
+				GoogleCredentials credentials = GoogleCredentials
+						.fromStream(credentialsStream)
+						.createScoped(CalendarScopes.CALENDAR_EVENTS);
 
-                calendarClient = new Calendar.Builder(
-                        GoogleNetHttpTransport.newTrustedTransport(),
-                        GsonFactory.getDefaultInstance(),
-                        new HttpCredentialsAdapter(credentials))
-                        .setApplicationName(APPLICATION_NAME)
-                        .build();
+				calendarClient = new Calendar.Builder(
+						GoogleNetHttpTransport.newTrustedTransport(),
+						GsonFactory.getDefaultInstance(),
+						new HttpCredentialsAdapter(credentials))
+						.setApplicationName(APPLICATION_NAME)
+						.build();
 
-                log.info("Google Calendar API client initialized");
-            } catch (GeneralSecurityException e) {
-                throw new IOException("Failed to initialize Google Calendar API client", e);
-            }
-        }
-        return calendarClient;
-    }
+				log.info("Google Calendar API client initialized");
+			} catch (GeneralSecurityException e) {
+				throw new IOException("Failed to initialize Google Calendar API client", e);
+			}
+		}
+		return calendarClient;
+	}
 }

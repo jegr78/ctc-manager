@@ -13,43 +13,46 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "drivers")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"seasonDrivers", "raceResults", "aliases"})
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString(exclude = {"seasonDrivers", "raceResults", "aliases"})
 public class Driver extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
-    @NotBlank
-    @Column(nullable = false, unique = true)
-    private String psnId;
+	@NotBlank
+	@Column(nullable = false, unique = true)
+	private String psnId;
 
-    @NotBlank
-    @Column(nullable = false)
-    private String nickname;
+	@NotBlank
+	@Column(nullable = false)
+	private String nickname;
 
-    @Column(nullable = false)
-    private boolean active = true;
+	@Column(nullable = false)
+	private boolean active = true;
 
-    @OneToMany(mappedBy = "driver")
-    private List<SeasonDriver> seasonDrivers = new ArrayList<>();
+	@OneToMany(mappedBy = "driver")
+	private List<SeasonDriver> seasonDrivers = new ArrayList<>();
 
-    @OneToMany(mappedBy = "driver")
-    private List<RaceResult> raceResults = new ArrayList<>();
+	@OneToMany(mappedBy = "driver")
+	private List<RaceResult> raceResults = new ArrayList<>();
 
-    @OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PsnAlias> aliases = new ArrayList<>();
+	@OneToMany(mappedBy = "driver", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<PsnAlias> aliases = new ArrayList<>();
 
-    public Driver(String psnId, String nickname) {
-        this.psnId = psnId;
-        this.nickname = nickname;
-    }
+	public Driver(String psnId, String nickname) {
+		this.psnId = psnId;
+		this.nickname = nickname;
+	}
 
-    public void addAlias(String alias) {
-        aliases.add(new PsnAlias(this, alias));
-    }
+	public void addAlias(String alias) {
+		aliases.add(new PsnAlias(this, alias));
+	}
 
-    public void removeAlias(PsnAlias alias) {
-        aliases.remove(alias);
-    }
+	public void removeAlias(PsnAlias alias) {
+		aliases.remove(alias);
+	}
 }
