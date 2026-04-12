@@ -1,10 +1,6 @@
 package org.ctc.gt7sync;
 
-import lombok.AllArgsConstructor;
-
 import java.util.List;
-
-@AllArgsConstructor
 public record Gt7SyncPreview(List<CarEntry> cars, List<TrackEntry> tracks) {
 
 	public long getNewCarCount() {
