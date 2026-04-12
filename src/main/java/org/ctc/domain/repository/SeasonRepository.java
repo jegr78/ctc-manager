@@ -10,11 +10,11 @@ import java.util.UUID;
 
 public interface SeasonRepository extends JpaRepository<Season, UUID> {
 
-    Optional<Season> findByActiveTrue();
+	Optional<Season> findByActiveTrue();
 
-    @EntityGraph(attributePaths = {"raceScoring", "matchScoring"})
-    List<Season> findBySeasonTeamsTeamId(UUID teamId);
+	@EntityGraph(attributePaths = {"raceScoring", "matchScoring"})
+	List<Season> findBySeasonTeamsTeamId(UUID teamId);
 
-    @EntityGraph(attributePaths = {"raceScoring", "matchScoring"})
-    List<Season> findByYearAndNumber(int year, int number);
+	@EntityGraph(attributePaths = {"raceScoring", "matchScoring"})
+	List<Season> findByYearAndNumber(int year, int number);
 }

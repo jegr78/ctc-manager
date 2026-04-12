@@ -2,9 +2,12 @@ package org.ctc.domain.repository;
 
 import org.ctc.domain.model.Track;
 import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.*;
+
+import java.util.List;
+import java.util.UUID;
 
 public interface TrackRepository extends JpaRepository<Track, UUID> {
-    List<Track> findAllByOrderByNameAsc();
-    boolean existsByName(String name);
+	List<Track> findAllByOrderByNameAsc();
+
+	boolean existsByName(String name);
 }

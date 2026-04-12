@@ -10,17 +10,17 @@ import java.util.UUID;
 
 public interface SeasonDriverRepository extends JpaRepository<SeasonDriver, UUID> {
 
-    @EntityGraph(attributePaths = {"driver", "team"})
-    List<SeasonDriver> findBySeasonId(UUID seasonId);
+	@EntityGraph(attributePaths = {"driver", "team"})
+	List<SeasonDriver> findBySeasonId(UUID seasonId);
 
-    @EntityGraph(attributePaths = {"driver", "team"})
-    List<SeasonDriver> findBySeasonIdAndTeamId(UUID seasonId, UUID teamId);
+	@EntityGraph(attributePaths = {"driver", "team"})
+	List<SeasonDriver> findBySeasonIdAndTeamId(UUID seasonId, UUID teamId);
 
-    Optional<SeasonDriver> findBySeasonIdAndDriverId(UUID seasonId, UUID driverId);
+	Optional<SeasonDriver> findBySeasonIdAndDriverId(UUID seasonId, UUID driverId);
 
-    @EntityGraph(attributePaths = {"driver", "team"})
-    List<SeasonDriver> findByDriverId(UUID driverId);
+	@EntityGraph(attributePaths = {"driver", "team"})
+	List<SeasonDriver> findByDriverId(UUID driverId);
 
-    @EntityGraph(attributePaths = {"driver", "team"})
-    List<SeasonDriver> findByTeamIdIn(List<UUID> teamIds);
+	@EntityGraph(attributePaths = {"driver", "team"})
+	List<SeasonDriver> findByTeamIdIn(List<UUID> teamIds);
 }

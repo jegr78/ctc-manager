@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.RaceLineup;
@@ -7,8 +9,6 @@ import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,130 +25,135 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MatchdayService {
 
-    private final MatchdayRepository matchdayRepository;
-    private final SeasonRepository seasonRepository;
-    private final RaceLineupRepository raceLineupRepository;
+	private final MatchdayRepository matchdayRepository;
+	private final SeasonRepository seasonRepository;
+	private final RaceLineupRepository raceLineupRepository;
 
-    // --- Return types ---
+	// --- Return types ---
 
-    public record MatchdayData(UUID id, String label, int sortIndex) {}
-    public record MatchdayListData(List<Matchday> matchdays, UUID selectedSeasonId, List<Season> seasons) {}
-    public record MatchdayDetailData(Matchday matchday, Map<String, List<RaceLineup>> lineupsByTeam) {}
+	public List<Season> getAllSeasons() {
+		return seasonRepository.findAll();
+	}
 
-    // --- Season helpers (for controller form data) ---
+	public Season findSeasonById(UUID id) {
+		return seasonRepository.findById(id).orElse(null);
+	}
 
-    public List<Season> getAllSeasons() {
-        return seasonRepository.findAll();
-    }
+	public MatchdayListData getMatchdayList(UUID seasonId) {
+		List<Matchday> matchdays;
+		UUID selectedSeasonId = null;
 
-    public Season findSeasonById(UUID id) {
-        return seasonRepository.findById(id).orElse(null);
-    }
+		if (seasonId != null) {
+			matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId);
+			selectedSeasonId = seasonId;
+		} else {
+			var activeSeason = seasonRepository.findByActiveTrue();
+			if (activeSeason.isPresent()) {
+				matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(activeSeason.get().getId());
+				selectedSeasonId = activeSeason.get().getId();
+			} else {
+				matchdays = matchdayRepository.findAll();
+			}
+		}
 
-    // --- List ---
+		return new MatchdayListData(matchdays, selectedSeasonId, seasonRepository.findAll());
+	}
 
-    public MatchdayListData getMatchdayList(UUID seasonId) {
-        List<Matchday> matchdays;
-        UUID selectedSeasonId = null;
+	// --- Season helpers (for controller form data) ---
 
-        if (seasonId != null) {
-            matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId);
-            selectedSeasonId = seasonId;
-        } else {
-            var activeSeason = seasonRepository.findByActiveTrue();
-            if (activeSeason.isPresent()) {
-                matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(activeSeason.get().getId());
-                selectedSeasonId = activeSeason.get().getId();
-            } else {
-                matchdays = matchdayRepository.findAll();
-            }
-        }
+	public MatchdayDetailData getMatchdayDetail(UUID id) {
+		var matchday = matchdayRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("Matchday", id));
+		var lineups = raceLineupRepository.findByRaceMatchdayId(id);
+		var lineupsByTeam = lineups.stream()
+				.collect(Collectors.groupingBy(
+						lu -> lu.getTeam().getShortName(),
+						LinkedHashMap::new,
+						Collectors.toList()));
+		return new MatchdayDetailData(matchday, lineupsByTeam);
+	}
 
-        return new MatchdayListData(matchdays, selectedSeasonId, seasonRepository.findAll());
-    }
+	@Transactional
+	public Matchday saveMatchday(String label, int sortIndex, UUID seasonId, UUID matchdayId) {
+		var season = seasonRepository.findById(seasonId)
+				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
-    // --- Detail ---
+		Matchday matchday;
+		if (matchdayId != null) {
+			matchday = matchdayRepository.findById(matchdayId)
+					.orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
+			matchday.setLabel(label);
+			matchday.setSortIndex(sortIndex);
+			matchday.setSeason(season);
+		} else {
+			matchday = new Matchday(season, label, sortIndex);
+		}
 
-    public MatchdayDetailData getMatchdayDetail(UUID id) {
-        var matchday = matchdayRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Matchday", id));
-        var lineups = raceLineupRepository.findByRaceMatchdayId(id);
-        var lineupsByTeam = lineups.stream()
-                .collect(Collectors.groupingBy(
-                        lu -> lu.getTeam().getShortName(),
-                        LinkedHashMap::new,
-                        Collectors.toList()));
-        return new MatchdayDetailData(matchday, lineupsByTeam);
-    }
+		matchdayRepository.save(matchday);
+		log.info("Saved matchday: {} (season {})", label, seasonId);
+		return matchday;
+	}
 
-    // --- Save ---
+	// --- List ---
 
-    @Transactional
-    public Matchday saveMatchday(String label, int sortIndex, UUID seasonId, UUID matchdayId) {
-        var season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+	@Transactional
+	public UUID deleteMatchday(UUID id) {
+		var matchday = matchdayRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("Matchday", id));
+		var seasonId = matchday.getSeason().getId();
+		matchdayRepository.delete(matchday);
+		log.info("Deleted matchday: {}", matchday.getLabel());
+		return seasonId;
+	}
 
-        Matchday matchday;
-        if (matchdayId != null) {
-            matchday = matchdayRepository.findById(matchdayId)
-                    .orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
-            matchday.setLabel(label);
-            matchday.setSortIndex(sortIndex);
-            matchday.setSeason(season);
-        } else {
-            matchday = new Matchday(season, label, sortIndex);
-        }
+	// --- Detail ---
 
-        matchdayRepository.save(matchday);
-        log.info("Saved matchday: {} (season {})", label, seasonId);
-        return matchday;
-    }
+	public List<MatchdayData> getMatchdaysBySeason(UUID seasonId) {
+		return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId).stream()
+				.map(md -> new MatchdayData(md.getId(), md.getLabel(), md.getSortIndex()))
+				.toList();
+	}
 
-    // --- Delete ---
+	// --- Save ---
 
-    @Transactional
-    public UUID deleteMatchday(UUID id) {
-        var matchday = matchdayRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Matchday", id));
-        var seasonId = matchday.getSeason().getId();
-        matchdayRepository.delete(matchday);
-        log.info("Deleted matchday: {}", matchday.getLabel());
-        return seasonId;
-    }
+	@Transactional
+	public MatchdayData createInline(UUID seasonId, String label) {
+		var season = seasonRepository.findById(seasonId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+						"Season not found: " + seasonId));
 
-    // --- By season ID (JSON API) ---
+		var existingMatchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
 
-    public List<MatchdayData> getMatchdaysBySeason(UUID seasonId) {
-        return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId).stream()
-                .map(md -> new MatchdayData(md.getId(), md.getLabel(), md.getSortIndex()))
-                .toList();
-    }
+		boolean duplicateLabel = existingMatchdays.stream()
+				.anyMatch(md -> md.getLabel().equals(label));
+		if (duplicateLabel) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Matchday label already exists in this season: " + label);
+		}
 
-    // --- Create inline (JSON API) ---
+		int nextSortIndex = existingMatchdays.stream()
+				.mapToInt(Matchday::getSortIndex)
+				.max()
+				.orElse(0) + 1;
 
-    @Transactional
-    public MatchdayData createInline(UUID seasonId, String label) {
-        var season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Season not found: " + seasonId));
+		var matchday = matchdayRepository.save(new Matchday(season, label, nextSortIndex));
+		log.info("Created matchday inline: {} (season {})", matchday.getLabel(), season.getName());
 
-        var existingMatchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
+		return new MatchdayData(matchday.getId(), matchday.getLabel(), matchday.getSortIndex());
+	}
 
-        boolean duplicateLabel = existingMatchdays.stream()
-                .anyMatch(md -> md.getLabel().equals(label));
-        if (duplicateLabel) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Matchday label already exists in this season: " + label);
-        }
+	// --- Delete ---
 
-        int nextSortIndex = existingMatchdays.stream()
-                .mapToInt(Matchday::getSortIndex)
-                .max()
-                .orElse(0) + 1;
+	public record MatchdayData(UUID id, String label, int sortIndex) {
+	}
 
-        var matchday = matchdayRepository.save(new Matchday(season, label, nextSortIndex));
-        log.info("Created matchday inline: {} (season {})", matchday.getLabel(), season.getName());
+	// --- By season ID (JSON API) ---
 
-        return new MatchdayData(matchday.getId(), matchday.getLabel(), matchday.getSortIndex());
-    }
+	public record MatchdayListData(List<Matchday> matchdays, UUID selectedSeasonId, List<Season> seasons) {
+	}
+
+	// --- Create inline (JSON API) ---
+
+	public record MatchdayDetailData(Matchday matchday, Map<String, List<RaceLineup>> lineupsByTeam) {
+	}
 }

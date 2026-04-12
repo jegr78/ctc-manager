@@ -1,6 +1,8 @@
 package org.ctc.domain.service;
 
-import org.ctc.domain.model.*;
+import org.ctc.domain.model.AttachmentType;
+import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceAttachment;
 import org.ctc.domain.repository.RaceAttachmentRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,132 +25,135 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class RaceAttachmentServiceTest {
 
-    @Mock private RaceRepository raceRepository;
-    @Mock private RaceAttachmentRepository raceAttachmentRepository;
-    @Mock private FileStorageService fileStorageService;
+	@Mock
+	private RaceRepository raceRepository;
+	@Mock
+	private RaceAttachmentRepository raceAttachmentRepository;
+	@Mock
+	private FileStorageService fileStorageService;
 
-    @InjectMocks
-    private RaceAttachmentService service;
+	@InjectMocks
+	private RaceAttachmentService service;
 
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(service, "uploadDir", "uploads");
-    }
+	@BeforeEach
+	void setUp() {
+		ReflectionTestUtils.setField(service, "uploadDir", "uploads");
+	}
 
-    // --- addLink ---
+	// --- addLink ---
 
-    @Test
-    void givenValidUrl_whenAddLink_thenAttachmentSaved() {
-        // given
-        var raceId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(raceId);
+	@Test
+	void givenValidUrl_whenAddLink_thenAttachmentSaved() {
+		// given
+		var raceId = UUID.randomUUID();
+		var race = new Race();
+		race.setId(raceId);
 
-        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+		when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
 
-        // when
-        var name = service.addLink(raceId, "Replay", "https://youtube.com/watch?v=123");
+		// when
+		var name = service.addLink(raceId, "Replay", "https://youtube.com/watch?v=123");
 
-        // then
-        assertThat(name).isEqualTo("Replay");
-        verify(raceAttachmentRepository).save(any(RaceAttachment.class));
-    }
+		// then
+		assertThat(name).isEqualTo("Replay");
+		verify(raceAttachmentRepository).save(any(RaceAttachment.class));
+	}
 
-    @Test
-    void givenInvalidUrl_whenAddLink_thenThrowsException() {
-        // when / then
-        assertThatThrownBy(() -> service.addLink(UUID.randomUUID(), "Bad", "ftp://invalid"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("http");
-    }
+	@Test
+	void givenInvalidUrl_whenAddLink_thenThrowsException() {
+		// when / then
+		assertThatThrownBy(() -> service.addLink(UUID.randomUUID(), "Bad", "ftp://invalid"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("http");
+	}
 
-    // --- deleteAttachment ---
+	// --- deleteAttachment ---
 
-    @Test
-    void givenFileAttachment_whenDeleteAttachment_thenDeletesFileAndRecord() {
-        // given
-        var attachmentId = UUID.randomUUID();
-        var raceId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(raceId);
+	@Test
+	void givenFileAttachment_whenDeleteAttachment_thenDeletesFileAndRecord() {
+		// given
+		var attachmentId = UUID.randomUUID();
+		var raceId = UUID.randomUUID();
+		var race = new Race();
+		race.setId(raceId);
 
-        var attachment = new RaceAttachment(race, AttachmentType.FILE, "screenshot.png", "/uploads/test.png");
-        attachment.setId(attachmentId);
+		var attachment = new RaceAttachment(race, AttachmentType.FILE, "screenshot.png", "/uploads/test.png");
+		attachment.setId(attachmentId);
 
-        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+		when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
 
-        // when
-        var result = service.deleteAttachment(attachmentId);
+		// when
+		var result = service.deleteAttachment(attachmentId);
 
-        // then
-        assertThat(result).isEqualTo(raceId);
-        verify(fileStorageService).delete("/uploads/test.png");
-        verify(raceAttachmentRepository).delete(attachment);
-    }
+		// then
+		assertThat(result).isEqualTo(raceId);
+		verify(fileStorageService).delete("/uploads/test.png");
+		verify(raceAttachmentRepository).delete(attachment);
+	}
 
-    @Test
-    void givenLinkAttachment_whenDeleteAttachment_thenDoesNotDeleteFile() {
-        // given
-        var attachmentId = UUID.randomUUID();
-        var raceId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(raceId);
+	@Test
+	void givenLinkAttachment_whenDeleteAttachment_thenDoesNotDeleteFile() {
+		// given
+		var attachmentId = UUID.randomUUID();
+		var raceId = UUID.randomUUID();
+		var race = new Race();
+		race.setId(raceId);
 
-        var attachment = new RaceAttachment(race, AttachmentType.LINK, "Replay", "https://youtube.com");
-        attachment.setId(attachmentId);
+		var attachment = new RaceAttachment(race, AttachmentType.LINK, "Replay", "https://youtube.com");
+		attachment.setId(attachmentId);
 
-        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+		when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
 
-        // when
-        service.deleteAttachment(attachmentId);
+		// when
+		service.deleteAttachment(attachmentId);
 
-        // then
-        verify(fileStorageService, never()).delete(any());
-        verify(raceAttachmentRepository).delete(attachment);
-    }
+		// then
+		verify(fileStorageService, never()).delete(any());
+		verify(raceAttachmentRepository).delete(attachment);
+	}
 
-    // --- uploadAttachment ---
+	// --- uploadAttachment ---
 
-    @Test
-    void givenFile_whenUploadAttachment_thenStoresFileAndCreatesAttachment() throws Exception {
-        // given
-        var raceId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(raceId);
+	@Test
+	void givenFile_whenUploadAttachment_thenStoresFileAndCreatesAttachment() throws Exception {
+		// given
+		var raceId = UUID.randomUUID();
+		var race = new Race();
+		race.setId(raceId);
 
-        var file = mock(org.springframework.web.multipart.MultipartFile.class);
-        when(file.getOriginalFilename()).thenReturn("screenshot.png");
+		var file = mock(org.springframework.web.multipart.MultipartFile.class);
+		when(file.getOriginalFilename()).thenReturn("screenshot.png");
 
-        when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
-        when(fileStorageService.store(eq(raceId), any())).thenReturn("/uploads/races/" + raceId + "/screenshot.png");
+		when(raceRepository.findById(raceId)).thenReturn(Optional.of(race));
+		when(fileStorageService.store(eq(raceId), any())).thenReturn("/uploads/races/" + raceId + "/screenshot.png");
 
-        // when
-        var name = service.uploadAttachment(raceId, file);
+		// when
+		var name = service.uploadAttachment(raceId, file);
 
-        // then
-        assertThat(name).isEqualTo("screenshot.png");
-        verify(fileStorageService).store(eq(raceId), any());
-        verify(raceAttachmentRepository).save(argThat(att ->
-                att.getName().equals("screenshot.png") && att.getType() == AttachmentType.FILE));
-    }
+		// then
+		assertThat(name).isEqualTo("screenshot.png");
+		verify(fileStorageService).store(eq(raceId), any());
+		verify(raceAttachmentRepository).save(argThat(att ->
+				att.getName().equals("screenshot.png") && att.getType() == AttachmentType.FILE));
+	}
 
-    // --- downloadAttachment ---
+	// --- downloadAttachment ---
 
-    @Test
-    void givenLinkAttachment_whenDownloadAttachment_thenReturnsBadRequest() {
-        // given
-        var attachmentId = UUID.randomUUID();
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        var attachment = new RaceAttachment(race, AttachmentType.LINK, "Replay", "https://youtube.com");
-        attachment.setId(attachmentId);
+	@Test
+	void givenLinkAttachment_whenDownloadAttachment_thenReturnsBadRequest() {
+		// given
+		var attachmentId = UUID.randomUUID();
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		var attachment = new RaceAttachment(race, AttachmentType.LINK, "Replay", "https://youtube.com");
+		attachment.setId(attachmentId);
 
-        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+		when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
 
-        // when
-        var response = service.downloadAttachment(attachmentId);
+		// when
+		var response = service.downloadAttachment(attachmentId);
 
-        // then
-        assertThat(response.getStatusCode().value()).isEqualTo(400);
-    }
+		// then
+		assertThat(response.getStatusCode().value()).isEqualTo(400);
+	}
 }

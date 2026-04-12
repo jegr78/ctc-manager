@@ -14,25 +14,25 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class SiteGeneratorController {
 
-    private final SiteGeneratorService siteGeneratorService;
+	private final SiteGeneratorService siteGeneratorService;
 
-    @GetMapping
-    public String showGenerate() {
-        return "admin/generate";
-    }
+	@GetMapping
+	public String showGenerate() {
+		return "admin/generate";
+	}
 
-    @PostMapping
-    public String generate(RedirectAttributes redirectAttributes) {
-        var result = siteGeneratorService.generate();
+	@PostMapping
+	public String generate(RedirectAttributes redirectAttributes) {
+		var result = siteGeneratorService.generate();
 
-        if (result.hasErrors()) {
-            redirectAttributes.addFlashAttribute("errorMessage",
-                    "Generation with errors: " + String.join(", ", result.getErrors()));
-        } else {
-            redirectAttributes.addFlashAttribute("successMessage",
-                    "Site generated successfully: " + result.getPagesGenerated() + " pages");
-        }
+		if (result.hasErrors()) {
+			redirectAttributes.addFlashAttribute("errorMessage",
+					"Generation with errors: " + String.join(", ", result.getErrors()));
+		} else {
+			redirectAttributes.addFlashAttribute("successMessage",
+					"Site generated successfully: " + result.getPagesGenerated() + " pages");
+		}
 
-        return "redirect:/admin/generate";
-    }
+		return "redirect:/admin/generate";
+	}
 }

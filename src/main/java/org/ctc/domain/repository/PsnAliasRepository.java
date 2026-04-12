@@ -9,9 +9,9 @@ import java.util.UUID;
 
 public interface PsnAliasRepository extends JpaRepository<PsnAlias, UUID> {
 
-    Optional<PsnAlias> findByAliasIgnoreCase(String alias);
+	Optional<PsnAlias> findByAliasIgnoreCase(String alias);
 
-    boolean existsByAliasIgnoreCase(String alias);
+	boolean existsByAliasIgnoreCase(String alias);
 
-    List<PsnAlias> findByDriverId(UUID driverId);
+	List<PsnAlias> findByDriverId(UUID driverId);
 }

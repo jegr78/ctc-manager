@@ -13,180 +13,183 @@ import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "seasons")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"matchdays", "seasonDrivers", "seasonTeams", "cars", "tracks", "raceScoring", "matchScoring"})
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString(exclude = {"matchdays", "seasonDrivers", "seasonTeams", "cars", "tracks", "raceScoring", "matchScoring"})
 public class Season extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
-    @NotBlank
-    @Column(nullable = false)
-    private String name;
+	@NotBlank
+	@Column(nullable = false)
+	private String name;
 
-    @Column(name = "season_year", nullable = false)
-    private int year;
+	@Column(name = "season_year", nullable = false)
+	private int year;
 
-    @Column(name = "season_number", nullable = false)
-    private int number;
+	@Column(name = "season_number", nullable = false)
+	private int number;
 
-    private String description;
+	private String description;
 
-    private LocalDate startDate;
+	private LocalDate startDate;
 
-    private LocalDate endDate;
+	private LocalDate endDate;
 
-    @Column(nullable = false)
-    private boolean active = false;
+	@Column(nullable = false)
+	private boolean active = false;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SeasonFormat format = SeasonFormat.LEAGUE;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private SeasonFormat format = SeasonFormat.LEAGUE;
 
-    private Integer totalRounds;
+	private Integer totalRounds;
 
-    @Column(nullable = false)
-    private int legs = 1;
+	@Column(nullable = false)
+	private int legs = 1;
 
-    @Column(name = "event_duration_minutes")
-    private Integer eventDurationMinutes;
+	@Column(name = "event_duration_minutes")
+	private Integer eventDurationMinutes;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "race_scoring_id", nullable = false)
-    private RaceScoring raceScoring;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "race_scoring_id", nullable = false)
+	private RaceScoring raceScoring;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "match_scoring_id", nullable = false)
-    private MatchScoring matchScoring;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "match_scoring_id", nullable = false)
+	private MatchScoring matchScoring;
 
-    @OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("sortIndex ASC")
-    private List<Matchday> matchdays = new ArrayList<>();
+	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("sortIndex ASC")
+	private List<Matchday> matchdays = new ArrayList<>();
 
-    @OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<SeasonDriver> seasonDrivers = new ArrayList<>();
+	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<SeasonDriver> seasonDrivers = new ArrayList<>();
 
-    @OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<SeasonTeam> seasonTeams = new ArrayList<>();
+	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<SeasonTeam> seasonTeams = new ArrayList<>();
 
-    @ManyToMany
-    @JoinTable(name = "season_cars",
-            joinColumns = @JoinColumn(name = "season_id"),
-            inverseJoinColumns = @JoinColumn(name = "car_id"))
-    @OrderBy("manufacturer ASC, name ASC")
-    private List<Car> cars = new ArrayList<>();
+	@ManyToMany
+	@JoinTable(name = "season_cars",
+			joinColumns = @JoinColumn(name = "season_id"),
+			inverseJoinColumns = @JoinColumn(name = "car_id"))
+	@OrderBy("manufacturer ASC, name ASC")
+	private List<Car> cars = new ArrayList<>();
 
-    @ManyToMany
-    @JoinTable(name = "season_tracks",
-            joinColumns = @JoinColumn(name = "season_id"),
-            inverseJoinColumns = @JoinColumn(name = "track_id"))
-    @OrderBy("name ASC")
-    private List<Track> tracks = new ArrayList<>();
+	@ManyToMany
+	@JoinTable(name = "season_tracks",
+			joinColumns = @JoinColumn(name = "season_id"),
+			inverseJoinColumns = @JoinColumn(name = "track_id"))
+	@OrderBy("name ASC")
+	private List<Track> tracks = new ArrayList<>();
 
-    public Season(String name) {
-        this.name = name;
-    }
+	public Season(String name) {
+		this.name = name;
+	}
 
-    public Season(String name, int year, int number) {
-        this.name = name;
-        this.year = year;
-        this.number = number;
-    }
+	public Season(String name, int year, int number) {
+		this.name = name;
+		this.year = year;
+		this.number = number;
+	}
 
-    public String getDisplayLabel() {
-        return year + " | #" + number + " | " + name;
-    }
+	public String getDisplayLabel() {
+		return year + " | #" + number + " | " + name;
+	}
 
-    /**
-     * Convenience method: returns the list of Teams participating in this season,
-     * ordered by short name. Derived from the seasonTeams association.
-     */
-    public List<Team> getTeams() {
-        return seasonTeams.stream()
-                .map(SeasonTeam::getTeam)
-                .sorted(Comparator.comparing(Team::getShortName))
-                .collect(Collectors.toCollection(ArrayList::new));
-    }
+	/**
+	 * Convenience method: returns the list of Teams participating in this season,
+	 * ordered by short name. Derived from the seasonTeams association.
+	 */
+	public List<Team> getTeams() {
+		return seasonTeams.stream()
+				.map(SeasonTeam::getTeam)
+				.sorted(Comparator.comparing(Team::getShortName))
+				.collect(Collectors.toCollection(ArrayList::new));
+	}
 
-    /**
-     * Convenience method: adds a team to this season by creating a SeasonTeam entry.
-     * Does nothing if the team is already registered for this season.
-     */
-    public void addTeam(Team team) {
-        boolean alreadyPresent = seasonTeams.stream()
-                .anyMatch(st -> st.getTeam().getId().equals(team.getId()));
-        if (!alreadyPresent) {
-            seasonTeams.add(new SeasonTeam(this, team));
-        }
-    }
+	/**
+	 * Convenience method: adds a team to this season by creating a SeasonTeam entry.
+	 * Does nothing if the team is already registered for this season.
+	 */
+	public void addTeam(Team team) {
+		boolean alreadyPresent = seasonTeams.stream()
+				.anyMatch(st -> st.getTeam().getId().equals(team.getId()));
+		if (!alreadyPresent) {
+			seasonTeams.add(new SeasonTeam(this, team));
+		}
+	}
 
-    /**
-     * Convenience method: removes a team from this season by removing the SeasonTeam entry.
-     */
-    public void removeTeam(Team team) {
-        seasonTeams.removeIf(st -> st.getTeam().getId().equals(team.getId()));
-    }
+	/**
+	 * Convenience method: removes a team from this season by removing the SeasonTeam entry.
+	 */
+	public void removeTeam(Team team) {
+		seasonTeams.removeIf(st -> st.getTeam().getId().equals(team.getId()));
+	}
 
-    /**
-     * Convenience method: removes a team by ID from this season.
-     */
-    public void removeTeamById(UUID teamId) {
-        seasonTeams.removeIf(st -> st.getTeam().getId().equals(teamId));
-    }
+	/**
+	 * Convenience method: removes a team by ID from this season.
+	 */
+	public void removeTeamById(UUID teamId) {
+		seasonTeams.removeIf(st -> st.getTeam().getId().equals(teamId));
+	}
 
-    /**
-     * Convenience method: checks if this season contains the given team.
-     */
-    public boolean containsTeam(Team team) {
-        return seasonTeams.stream().anyMatch(st -> st.getTeam().getId().equals(team.getId()));
-    }
+	/**
+	 * Convenience method: checks if this season contains the given team.
+	 */
+	public boolean containsTeam(Team team) {
+		return seasonTeams.stream().anyMatch(st -> st.getTeam().getId().equals(team.getId()));
+	}
 
-    /**
-     * Convenience method: finds the SeasonTeam entry for the given team.
-     */
-    public Optional<SeasonTeam> findSeasonTeam(Team team) {
-        return seasonTeams.stream()
-                .filter(st -> st.getTeam().getId().equals(team.getId()))
-                .findFirst();
-    }
+	/**
+	 * Convenience method: finds the SeasonTeam entry for the given team.
+	 */
+	public Optional<SeasonTeam> findSeasonTeam(Team team) {
+		return seasonTeams.stream()
+				.filter(st -> st.getTeam().getId().equals(team.getId()))
+				.findFirst();
+	}
 
-    /**
-     * Returns only active (non-replaced) teams, ordered by short name.
-     */
-    public List<Team> getActiveTeams() {
-        return seasonTeams.stream()
-                .filter(st -> !st.isReplaced())
-                .map(SeasonTeam::getTeam)
-                .sorted(Comparator.comparing(Team::getShortName))
-                .collect(Collectors.toCollection(ArrayList::new));
-    }
+	/**
+	 * Returns only active (non-replaced) teams, ordered by short name.
+	 */
+	public List<Team> getActiveTeams() {
+		return seasonTeams.stream()
+				.filter(st -> !st.isReplaced())
+				.map(SeasonTeam::getTeam)
+				.sorted(Comparator.comparing(Team::getShortName))
+				.collect(Collectors.toCollection(ArrayList::new));
+	}
 
-    /**
-     * Returns eligible teams for match pairings: filters out parent teams
-     * that have sub-teams in the season (only sub-teams compete).
-     */
-    public List<Team> getEligibleTeams() {
-        List<Team> activeTeams = getActiveTeams();
-        Set<UUID> parentIdsWithSubs = activeTeams.stream()
-                .filter(Team::isSubTeam)
-                .map(t -> t.getParentTeam().getId())
-                .collect(Collectors.toSet());
-        return activeTeams.stream()
-                .filter(t -> !parentIdsWithSubs.contains(t.getId()))
-                .collect(Collectors.toCollection(ArrayList::new));
-    }
+	/**
+	 * Returns eligible teams for match pairings: filters out parent teams
+	 * that have sub-teams in the season (only sub-teams compete).
+	 */
+	public List<Team> getEligibleTeams() {
+		List<Team> activeTeams = getActiveTeams();
+		Set<UUID> parentIdsWithSubs = activeTeams.stream()
+				.filter(Team::isSubTeam)
+				.map(t -> t.getParentTeam().getId())
+				.collect(Collectors.toSet());
+		return activeTeams.stream()
+				.filter(t -> !parentIdsWithSubs.contains(t.getId()))
+				.collect(Collectors.toCollection(ArrayList::new));
+	}
 
-    /**
-     * Builds a map from replaced team IDs to their final active successor team ID.
-     */
-    public Map<UUID, UUID> buildSuccessionMap() {
-        Map<UUID, UUID> map = new HashMap<>();
-        for (SeasonTeam st : seasonTeams) {
-            if (st.isReplaced()) {
-                UUID activeTeamId = st.getActiveSeasonTeam().getTeam().getId();
-                map.put(st.getTeam().getId(), activeTeamId);
-            }
-        }
-        return map;
-    }
+	/**
+	 * Builds a map from replaced team IDs to their final active successor team ID.
+	 */
+	public Map<UUID, UUID> buildSuccessionMap() {
+		Map<UUID, UUID> map = new HashMap<>();
+		for (SeasonTeam st : seasonTeams) {
+			if (st.isReplaced()) {
+				UUID activeTeamId = st.getActiveSeasonTeam().getTeam().getId();
+				map.put(st.getTeam().getId(), activeTeamId);
+			}
+		}
+		return map;
+	}
 }

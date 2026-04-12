@@ -10,16 +10,16 @@ import org.springframework.security.web.SecurityFilterChain;
 @Profile({"dev", "local"})
 public class OpenSecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .authorizeHttpRequests(authorize -> authorize
-                .anyRequest().permitAll()
-            )
-            .csrf(csrf -> csrf.disable())
-            .headers(headers -> headers
-                .frameOptions(frame -> frame.disable())
-            );
-        return http.build();
-    }
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+		http
+				.authorizeHttpRequests(authorize -> authorize
+						.anyRequest().permitAll()
+				)
+				.csrf(csrf -> csrf.disable())
+				.headers(headers -> headers
+						.frameOptions(frame -> frame.disable())
+				);
+		return http.build();
+	}
 }

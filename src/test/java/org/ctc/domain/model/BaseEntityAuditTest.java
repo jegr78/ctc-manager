@@ -12,43 +12,43 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("dev")
 class BaseEntityAuditTest {
 
-    @Autowired
-    private DriverRepository driverRepository;
+	@Autowired
+	private DriverRepository driverRepository;
 
-    @Test
-    void givenNewEntity_whenSaved_thenCreatedAtAndUpdatedAtAreSet() {
-        // given
-        var driver = new Driver("audit_test_psn", "Audit Test");
-        assertNull(driver.getCreatedAt());
-        assertNull(driver.getUpdatedAt());
+	@Test
+	void givenNewEntity_whenSaved_thenCreatedAtAndUpdatedAtAreSet() {
+		// given
+		var driver = new Driver("audit_test_psn", "Audit Test");
+		assertNull(driver.getCreatedAt());
+		assertNull(driver.getUpdatedAt());
 
-        // when
-        var saved = driverRepository.save(driver);
+		// when
+		var saved = driverRepository.save(driver);
 
-        // then
-        assertNotNull(saved.getCreatedAt());
-        assertNotNull(saved.getUpdatedAt());
-    }
+		// then
+		assertNotNull(saved.getCreatedAt());
+		assertNotNull(saved.getUpdatedAt());
+	}
 
-    @Test
-    void givenSavedEntity_whenUpdated_thenUpdatedAtChangesButCreatedAtDoesNot() throws InterruptedException {
-        // given
-        var driver = new Driver("audit_update_psn", "Audit Update");
-        var saved = driverRepository.save(driver);
+	@Test
+	void givenSavedEntity_whenUpdated_thenUpdatedAtChangesButCreatedAtDoesNot() throws InterruptedException {
+		// given
+		var driver = new Driver("audit_update_psn", "Audit Update");
+		var saved = driverRepository.save(driver);
 
-        var createdAt = saved.getCreatedAt();
-        var updatedAt = saved.getUpdatedAt();
-        assertNotNull(createdAt);
-        assertNotNull(updatedAt);
+		var createdAt = saved.getCreatedAt();
+		var updatedAt = saved.getUpdatedAt();
+		assertNotNull(createdAt);
+		assertNotNull(updatedAt);
 
-        Thread.sleep(50);
+		Thread.sleep(50);
 
-        // when
-        saved.setNickname("Updated Nickname");
-        var updated = driverRepository.save(saved);
+		// when
+		saved.setNickname("Updated Nickname");
+		var updated = driverRepository.save(saved);
 
-        // then
-        assertEquals(createdAt, updated.getCreatedAt());
-        assertTrue(updated.getUpdatedAt().isAfter(updatedAt) || updated.getUpdatedAt().equals(updatedAt));
-    }
+		// then
+		assertEquals(createdAt, updated.getCreatedAt());
+		assertTrue(updated.getUpdatedAt().isAfter(updatedAt) || updated.getUpdatedAt().equals(updatedAt));
+	}
 }
