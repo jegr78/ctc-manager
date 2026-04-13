@@ -744,7 +744,7 @@
             }
 
             try {
-                var response = await fetch('/admin/tools/template-editors/' + templateType + '/preview', {
+                var response = await csrfFetch('/admin/tools/template-editors/' + templateType + '/preview', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                     body: 'template=' + encodeURIComponent(textarea.value)
