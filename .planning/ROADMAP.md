@@ -84,7 +84,9 @@ Plans:
   1. Admin can create a matchday and the form data flows through a MatchdayForm DTO before reaching the service
   2. Admin can edit a matchday and the controller never has a JPA Matchday entity as a @ModelAttribute POST target
   3. No JPA-managed fields (id, version, audit timestamps) are bindable from the matchday form submission
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 29-01-PLAN.md — TDD: MatchdayForm DTO creation, controller refactor, template rebind
 
 ### Phase 30: CSRF and Template Security
 **Goal**: AJAX POST requests carry CSRF tokens in prod/docker, and custom template rendering rejects dangerous content
@@ -168,7 +170,7 @@ Plans:
 | 26. Restore Fictive Team Logos | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 27. Restore Matchday/Result Seed Pipeline | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 28. RaceAttachment Security | v1.5 | 1/1 | Complete    | 2026-04-13 |
-| 29. Mass Assignment Fix | v1.5 | 0/TBD | Not started | - |
+| 29. Mass Assignment Fix | v1.5 | 0/1 | Not started | - |
 | 30. CSRF and Template Security | v1.5 | 0/TBD | Not started | - |
 | 31. Null Safety and Transaction Fix | v1.5 | 0/TBD | Not started | - |
 | 32. Layering and Exception Fix | v1.5 | 0/TBD | Not started | - |
