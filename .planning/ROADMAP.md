@@ -96,8 +96,10 @@ Plans:
   1. Any AJAX POST request sent in prod/docker profile includes the CSRF token and is accepted by Spring Security
   2. Submitting a custom template containing SpEL or OGNL expressions is rejected before rendering
   3. Legitimate custom templates without injection patterns render correctly
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 2 plans
+Plans:
+- [ ] 30-01-PLAN.md — CSRF meta tags + csrfFetch() wrapper in layout.html, update AJAX POST call sites
+- [ ] 30-02-PLAN.md — TDD: Template save-path validation + SpEL T() false-positive fix
 
 ### Phase 31: Null Safety and Transaction Fix
 **Goal**: Multi-race CSV import is atomic and race services handle bye matches and unlinked races without crashing
@@ -171,7 +173,7 @@ Plans:
 | 27. Restore Matchday/Result Seed Pipeline | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 28. RaceAttachment Security | v1.5 | 1/1 | Complete    | 2026-04-13 |
 | 29. Mass Assignment Fix | v1.5 | 1/1 | Complete    | 2026-04-13 |
-| 30. CSRF and Template Security | v1.5 | 0/TBD | Not started | - |
+| 30. CSRF and Template Security | v1.5 | 0/2 | Not started | - |
 | 31. Null Safety and Transaction Fix | v1.5 | 0/TBD | Not started | - |
 | 32. Layering and Exception Fix | v1.5 | 0/TBD | Not started | - |
 | 33. Controller Cleanup | v1.5 | 0/TBD | Not started | - |
