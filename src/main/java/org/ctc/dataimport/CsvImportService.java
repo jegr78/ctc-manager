@@ -127,50 +127,41 @@ public class CsvImportService {
         // Resolve or create matchday
         var matchday = findOrCreateMatchday(season, metadata);
 
-        // Process each row
         var seasonTeams = season.getTeams();
         Map<String, List<ImportRow>> byTeamPair = groupByTeamPair(preview.getRows());
 
+        // Phase 1: Validate all team pairs (no writes)
+        // Resolves teams and checks for duplicates — aborts entirely if any error is found (D-01, D-02, D-03)
+        Map<String, Team[]> resolvedTeams = validateTeamPairs(byTeamPair, seasonTeams, matchday, overwriteExisting, result);
+        if (result.hasErrors()) {
+            return result; // Abort — @Transactional safety net still active, but no writes happened
+        }
+
+        // Phase 2: Import all team pairs (only reached when Phase 1 passes without errors)
         for (var entry : byTeamPair.entrySet()) {
-            var teamParts = entry.getKey().split("\\|");
-            var homeTeam = findTeamFlexible(teamParts[0], seasonTeams);
-            var awayTeam = teamParts.length > 1 ? findTeamFlexible(teamParts[1], seasonTeams) : null;
+            var teams = resolvedTeams.get(entry.getKey());
+            var homeTeam = teams[0];
+            var awayTeam = teams[1];
+            // awayTeam equals homeTeam for solo-team CSVs (bye/solo race)
+            var originalAwayTeam = entry.getKey().contains("|") ? awayTeam : null;
 
-            if (homeTeam == null) {
-                result.addError("Team not found: " + teamParts[0]);
-                continue;
-            }
-            if (awayTeam == null && teamParts.length > 1) {
-                result.addError("Team not found: " + teamParts[1]);
-                continue;
-            }
-
-            var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
-
-            // Duplicate check: same home vs away on this matchday
-            if (matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
-                    matchday.getId(), homeTeam.getId(), effectiveAwayTeam.getId())) {
-                if (overwriteExisting) {
-                    // Delete existing match (cascades to races + results)
-                    var existing = matchRepository.findByMatchdayId(matchday.getId()).stream()
-                            .filter(m -> m.getHomeTeam().getId().equals(homeTeam.getId())
-                                    && m.getAwayTeam() != null
-                                    && m.getAwayTeam().getId().equals(effectiveAwayTeam.getId()))
-                            .findFirst();
-                    existing.ifPresent(m -> {
-                        matchRepository.delete(m);
-                        matchRepository.flush();
-                        log.info("Overwriting existing match: {} vs {} on {}",
-                                homeTeam.getShortName(), effectiveAwayTeam.getShortName(), matchday.getLabel());
-                    });
-                } else {
-                    result.addError("Match already exists: " + homeTeam.getShortName() +
-                            " vs " + effectiveAwayTeam.getShortName() + " on " + matchday.getLabel());
-                    continue;
-                }
+            // Overwrite: delete existing match when requested (duplicate check already passed validation)
+            if (overwriteExisting && matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+                    matchday.getId(), homeTeam.getId(), awayTeam.getId())) {
+                var existing = matchRepository.findByMatchdayId(matchday.getId()).stream()
+                        .filter(m -> m.getHomeTeam().getId().equals(homeTeam.getId())
+                                && m.getAwayTeam() != null
+                                && m.getAwayTeam().getId().equals(awayTeam.getId()))
+                        .findFirst();
+                existing.ifPresent(m -> {
+                    matchRepository.delete(m);
+                    matchRepository.flush();
+                    log.info("Overwriting existing match: {} vs {} on {}",
+                            homeTeam.getShortName(), awayTeam.getShortName(), matchday.getLabel());
+                });
             }
 
-            var match = new Match(matchday, homeTeam, effectiveAwayTeam);
+            var match = new Match(matchday, homeTeam, awayTeam);
             match = matchRepository.save(match);
             var race = new Race();
             race.setMatchday(matchday);
@@ -212,12 +203,49 @@ public class CsvImportService {
             raceRepository.save(race);
             scoringService.aggregateMatchScores(race);
             result.addImportedRace(homeTeam.getShortName() +
-                    (awayTeam != null ? " vs " + awayTeam.getShortName() : ""));
+                    (originalAwayTeam != null ? " vs " + originalAwayTeam.getShortName() : ""));
         }
 
         log.info("Import completed: {} races, {} new drivers, {} errors",
                 result.getImportedRaces().size(), result.getNewDriversCreated(), result.getErrors().size());
         return result;
+    }
+
+    /**
+     * Phase 1: Validates all team pairs before any writes. Adds errors to {@code result} for each
+     * unresolvable team and for duplicate matches when {@code overwriteExisting} is false.
+     * Returns a map from team-pair key to resolved [homeTeam, effectiveAwayTeam] arrays.
+     * The returned map is only meaningful when {@code result.hasErrors()} is false.
+     */
+    private Map<String, Team[]> validateTeamPairs(Map<String, List<ImportRow>> byTeamPair,
+                                                   List<Team> seasonTeams,
+                                                   Matchday matchday,
+                                                   boolean overwriteExisting,
+                                                   ImportResult result) {
+        Map<String, Team[]> resolved = new LinkedHashMap<>();
+        for (var entry : byTeamPair.entrySet()) {
+            var teamParts = entry.getKey().split("\\|");
+            var homeTeam = findTeamFlexible(teamParts[0], seasonTeams);
+            var awayTeam = teamParts.length > 1 ? findTeamFlexible(teamParts[1], seasonTeams) : null;
+
+            if (homeTeam == null) {
+                result.addError("Team not found: " + teamParts[0]);
+            }
+            if (awayTeam == null && teamParts.length > 1) {
+                result.addError("Team not found: " + teamParts[1]);
+            }
+
+            if (homeTeam != null) {
+                var effectiveAwayTeam = awayTeam != null ? awayTeam : homeTeam;
+                if (!overwriteExisting && matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
+                        matchday.getId(), homeTeam.getId(), effectiveAwayTeam.getId())) {
+                    result.addError("Match already exists: " + homeTeam.getShortName() +
+                            " vs " + effectiveAwayTeam.getShortName() + " on " + matchday.getLabel());
+                }
+                resolved.put(entry.getKey(), new Team[]{homeTeam, effectiveAwayTeam});
+            }
+        }
+        return resolved;
     }
 
     private Driver resolveDriver(ImportRow row, Map<String, UUID> confirmedMatches,

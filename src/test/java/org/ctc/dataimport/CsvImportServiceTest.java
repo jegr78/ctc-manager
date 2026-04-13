@@ -556,6 +556,73 @@ class CsvImportServiceTest {
         assertThat(label).isEmpty();
     }
 
+    // --- Atomicity tests: validate-then-import (DATA-01) ---
+
+    @Test
+    void givenTeamNotFound_whenExecuteImport_thenNoMatchesOrRacesCreated() {
+        // given
+        // CRL is in season by default (setUp), but we build a fresh season WITHOUT standaloneTeam2
+        var isolatedSeason = new Season();
+        isolatedSeason.setId(UUID.randomUUID());
+        isolatedSeason.setName("Isolated Season");
+        isolatedSeason.setRaceScoring(new RaceScoring());
+        isolatedSeason.addTeam(standaloneTeam1); // BRV only — CRL intentionally absent
+
+        when(seasonRepository.findById(isolatedSeason.getId())).thenReturn(Optional.of(isolatedSeason));
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+
+        var metadata = new CsvImportService.ImportMetadata(
+                isolatedSeason.getId(), null, null, null, null, matchday.getId());
+        var row1 = new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1));
+        var row2 = new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2));
+
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(row1);
+        preview.addRow(row2);
+
+        // when
+        var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
+
+        // then
+        assertThat(result.hasErrors()).isTrue();
+        assertThat(result.getErrors()).anyMatch(e -> e.contains("Team not found") && e.contains("CRL"));
+        verify(matchRepository, never()).save(any(Match.class));
+        verify(raceRepository, never()).save(any(Race.class));
+        assertThat(result.getImportedRaces()).isEmpty();
+    }
+
+    @Test
+    void givenDuplicateMatchAndOverwriteDisabled_whenExecuteImport_thenNoMatchesOrRacesCreated() {
+        // given
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
+        when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any()))
+                .thenReturn(true); // duplicate exists
+
+        var metadata = new CsvImportService.ImportMetadata(
+                season.getId(), null, null, null, null, matchday.getId());
+        var row1 = new CsvImportService.ImportRow("BRV", "driver1_psn", 1, 1, false,
+                DriverMatchingService.MatchResult.exact("driver1_psn", driver1));
+        var row2 = new CsvImportService.ImportRow("CRL", "driver2_psn", 2, 2, false,
+                DriverMatchingService.MatchResult.exact("driver2_psn", driver2));
+
+        var preview = new CsvImportService.ImportPreview(metadata);
+        preview.addRow(row1);
+        preview.addRow(row2);
+
+        // when
+        var result = csvImportService.executeImport(preview, Map.of(), Set.of(), false);
+
+        // then
+        assertThat(result.hasErrors()).isTrue();
+        assertThat(result.getErrors()).anyMatch(e -> e.contains("Match already exists"));
+        verify(matchRepository, never()).save(any(Match.class));
+        verify(raceRepository, never()).save(any(Race.class));
+        assertThat(result.getImportedRaces()).isEmpty();
+    }
+
     // --- resolveDriver edge case: unconfirmed fuzzy match ---
 
     @Test
