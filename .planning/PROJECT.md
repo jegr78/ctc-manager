@@ -116,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-13 after Phase 28 — RaceAttachment Security (v1.5)*
+*Last updated: 2026-04-13 after Phase 29 — Mass Assignment Fix (v1.5)*
