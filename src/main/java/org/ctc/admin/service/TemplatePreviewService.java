@@ -326,7 +326,7 @@ public class TemplatePreviewService {
         return engine.process(templateContent, ctx);
     }
 
-    void validateTemplateContent(String templateContent) {
+    public void validateTemplateContent(String templateContent) {
         if (templateContent == null) {
             return;
         }
@@ -348,15 +348,22 @@ public class TemplatePreviewService {
 
     private boolean containsSpringElTypeAccess(String content) {
         int idx = 0;
-        while ((idx = content.indexOf('T', idx)) != -1) {
-            int next = idx + 1;
-            while (next < content.length() && content.charAt(next) == ' ') {
-                next++;
+        while ((idx = content.indexOf("${", idx)) != -1) {
+            int end = content.indexOf('}', idx + 2);
+            if (end == -1) break;
+            String expr = content.substring(idx + 2, end);
+            int tIdx = 0;
+            while ((tIdx = expr.indexOf('T', tIdx)) != -1) {
+                int next = tIdx + 1;
+                while (next < expr.length() && expr.charAt(next) == ' ') {
+                    next++;
+                }
+                if (next < expr.length() && expr.charAt(next) == '(') {
+                    return true;
+                }
+                tIdx++;
             }
-            if (next < content.length() && content.charAt(next) == '(') {
-                return true;
-            }
-            idx++;
+            idx = end + 1;
         }
         return false;
     }

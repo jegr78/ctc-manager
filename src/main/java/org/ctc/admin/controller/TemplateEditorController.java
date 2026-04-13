@@ -94,9 +94,13 @@ public class TemplateEditorController {
             return "redirect:/admin/tools/template-editors";
         }
         try {
+            templatePreviewService.validateTemplateContent(template);
             templateServices.get(beanName).saveTemplate(template);
             redirectAttributes.addFlashAttribute("successMessage",
                 TEMPLATE_TYPE_TO_LABEL.get(templateType) + " template saved");
+        } catch (TemplatePreviewService.TemplateSecurityException e) {
+            log.warn("Blocked unsafe template save for type {}: {}", templateType, e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Template contains unsafe expressions");
         } catch (IOException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
         }
