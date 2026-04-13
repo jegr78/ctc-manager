@@ -110,7 +110,11 @@ public class MatchdayController {
         var saved = matchdayService.saveMatchday(
                 form.getLabel(), form.getSortIndex(), form.getSeasonId(), form.getId());
         redirectAttributes.addFlashAttribute("successMessage", "Matchday saved: " + saved.getLabel());
-        return "redirect:/admin/matchdays?seasonId=" + form.getSeasonId();
+        String redirectUrl = "/admin/matchdays";
+        if (form.getSeasonId() != null) {
+            redirectUrl += "?seasonId=" + form.getSeasonId();
+        }
+        return "redirect:" + redirectUrl;
     }
 
     @PostMapping("/{id}/delete")
