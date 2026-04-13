@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.3
-milestone_name: English Test Data
-status: executing
-last_updated: "2026-04-10T19:48:26.061Z"
-last_activity: 2026-04-10
+milestone: v1.5
+milestone_name: Code Review Fixes
+status: planning
+last_updated: "2026-04-13"
+last_activity: 2026-04-13
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 7
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -19,15 +19,15 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-04-07)
 
-**Core value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
-**Current focus:** Phase 26 — Restore Fictive Team Logos
+**Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
+**Current focus:** Phase 28 — RaceAttachment Security
 
 ## Current Position
 
-Phase: 27
+Phase: 28 of 34 (RaceAttachment Security)
 Plan: Not started
-Status: Executing Phase 26
-Last activity: 2026-04-10
+Status: Ready to plan
+Last activity: 2026-04-13 — v1.5 roadmap created
 
 Progress: ░░░░░░░░░░ 0%
 
@@ -35,6 +35,7 @@ Progress: ░░░░░░░░░░ 0%
 
 - v1.0 Technical Debt Cleanup (5 phases, 12 plans) — shipped 2026-04-04
 - v1.1 Codebase Concerns Cleanup (10 phases, 20 plans) — shipped 2026-04-07
+- v1.3 English Test Data (8 phases) — shipped 2026-04-10
 
 ## Performance Metrics
 
@@ -63,19 +64,13 @@ Progress: ░░░░░░░░░░ 0%
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table.
-Full history in .planning/milestones/v1.0-ROADMAP.md and .planning/milestones/v1.1-ROADMAP.md.
 
 ### Blockers/Concerns
 
 None.
 
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260404-jh8 | Fix release workflow: Use RELEASE_TOKEN for branch protection bypass | 2026-04-04 | d4745ee | [260404-jh8-fix-release-workflow-use-release-token-s](./quick/260404-jh8-fix-release-workflow-use-release-token-s/) |
-
 ## Session Continuity
 
-Last session: 2026-04-07
-Milestone v1.1 completed. Start next milestone with `/gsd-new-milestone`.
+Last session: 2026-04-13
+Stopped at: v1.5 roadmap created, ready to plan Phase 28
+Resume file: None

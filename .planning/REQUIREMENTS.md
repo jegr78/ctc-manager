@@ -55,31 +55,31 @@ Requirements for Code Review Fixes milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SECU-01 | — | Pending |
-| SECU-02 | — | Pending |
-| SECU-03 | — | Pending |
-| SECU-04 | — | Pending |
-| SECU-05 | — | Pending |
-| DATA-01 | — | Pending |
-| DATA-02 | — | Pending |
-| DATA-03 | — | Pending |
-| DATA-04 | — | Pending |
-| ARCH-01 | — | Pending |
-| ARCH-02 | — | Pending |
-| ARCH-03 | — | Pending |
-| ARCH-04 | — | Pending |
-| CONV-01 | — | Pending |
-| CONV-02 | — | Pending |
-| CONV-03 | — | Pending |
-| CONV-04 | — | Pending |
-| CONV-05 | — | Pending |
+| SECU-01 | Phase 29 | Pending |
+| SECU-02 | Phase 28 | Pending |
+| SECU-03 | Phase 30 | Pending |
+| SECU-04 | Phase 30 | Pending |
+| SECU-05 | Phase 28 | Pending |
+| DATA-01 | Phase 31 | Pending |
+| DATA-02 | Phase 28 | Pending |
+| DATA-03 | Phase 31 | Pending |
+| DATA-04 | Phase 31 | Pending |
+| ARCH-01 | Phase 32 | Pending |
+| ARCH-02 | Phase 32 | Pending |
+| ARCH-03 | Phase 33 | Pending |
+| ARCH-04 | Phase 33 | Pending |
+| CONV-01 | Phase 34 | Pending |
+| CONV-02 | Phase 34 | Pending |
+| CONV-03 | Phase 34 | Pending |
+| CONV-04 | Phase 34 | Pending |
+| CONV-05 | Phase 34 | Pending |
 
 **Coverage:**
 
 - v1.5 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-13 after initial definition*
+*Last updated: 2026-04-13 after v1.5 roadmap creation*
