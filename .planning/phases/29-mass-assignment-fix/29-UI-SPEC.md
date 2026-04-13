@@ -94,8 +94,8 @@ The matchday form has a single CTA button, a page heading, and flash messages. N
 |---------|------|--------|
 | Page heading (create) | `New Matchday` | existing template line 6 — unchanged |
 | Page heading (edit) | `Edit Matchday` | existing template line 6 — unchanged |
-| Primary CTA | `Save` | existing template line 33 — unchanged |
-| Cancel link | `Cancel` | existing template line 34 — unchanged |
+| Primary CTA | `Save Matchday` | updated — checker fix: verb + noun required |
+| Cancel link | `Back to Matchdays` | updated — checker fix: destination-describing label required |
 | Success flash message | `Matchday saved: {label}` | existing controller redirect — unchanged |
 | Validation error — blank label | Field-level browser required constraint (no custom copy needed) | Jakarta @NotBlank + HTML required attribute |
 | Season select placeholder | `-- Select season --` | existing template line 14 — unchanged |
@@ -145,6 +145,8 @@ This section is the primary design contract for Phase 29. It specifies the exact
 | Season select visibility | `th:if="${matchday.season == null}"` | `th:if="${form.seasonId == null}"` | MatchdayForm has no `season` property — check UUID field directly |
 | Season display | `th:if="${matchday.season != null}"` → `matchday.season.displayLabel` | `th:if="${season != null}"` → `${season.displayLabel}` | D-07: season entity loaded separately into model as `${season}` |
 | Page heading condition | `${matchday.id != null}` | `${form.id != null}` | `matchday` removed from model; use `form` |
+| Primary CTA button text | `Save` | `Save Matchday` | Copywriting contract: verb + noun |
+| Cancel link text | `Cancel` | `Back to Matchdays` | Copywriting contract: destination-describing label |
 
 ### Model attributes per flow
 
