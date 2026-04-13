@@ -56,7 +56,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 
 - [x] **Phase 28: RaceAttachment Security** - Path traversal defense, null content-type handling, header injection prevention in RaceAttachmentService (completed 2026-04-13)
 - [x] **Phase 29: Mass Assignment Fix** - Replace direct JPA entity binding on MatchdayController with MatchdayForm DTO (completed 2026-04-13)
-- [ ] **Phase 30: CSRF and Template Security** - CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation in custom template rendering
+- [x] **Phase 30: CSRF and Template Security** - CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation in custom template rendering (completed 2026-04-13)
 - [ ] **Phase 31: Null Safety and Transaction Fix** - Transactional CSV import, null team guards in race services, season-scoped driver-team fallback
 - [ ] **Phase 32: Layering and Exception Fix** - Remove admin layer imports from domain services, replace ResponseStatusException with domain exceptions
 - [ ] **Phase 33: Controller Cleanup** - Move business logic and data transformation from controllers to service layer, fix RaceLineup usage in SiteGeneratorService
@@ -98,8 +98,8 @@ Plans:
   3. Legitimate custom templates without injection patterns render correctly
 **Plans**: 2 plans
 Plans:
-- [ ] 30-01-PLAN.md — CSRF meta tags + csrfFetch() wrapper in layout.html, update AJAX POST call sites
-- [ ] 30-02-PLAN.md — TDD: Template save-path validation + SpEL T() false-positive fix
+- [x] 30-01-PLAN.md — CSRF meta tags + csrfFetch() wrapper in layout.html, update AJAX POST call sites
+- [x] 30-02-PLAN.md — TDD: Template save-path validation + SpEL T() false-positive fix
 
 ### Phase 31: Null Safety and Transaction Fix
 **Goal**: Multi-race CSV import is atomic and race services handle bye matches and unlinked races without crashing
@@ -173,7 +173,7 @@ Plans:
 | 27. Restore Matchday/Result Seed Pipeline | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 28. RaceAttachment Security | v1.5 | 1/1 | Complete    | 2026-04-13 |
 | 29. Mass Assignment Fix | v1.5 | 1/1 | Complete    | 2026-04-13 |
-| 30. CSRF and Template Security | v1.5 | 0/2 | Not started | - |
+| 30. CSRF and Template Security | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 31. Null Safety and Transaction Fix | v1.5 | 0/TBD | Not started | - |
 | 32. Layering and Exception Fix | v1.5 | 0/TBD | Not started | - |
 | 33. Controller Cleanup | v1.5 | 0/TBD | Not started | - |
