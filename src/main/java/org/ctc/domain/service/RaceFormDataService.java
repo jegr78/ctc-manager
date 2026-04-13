@@ -60,8 +60,8 @@ public class RaceFormDataService {
 
         return new RaceService.RaceFormData(data, matchdayRepository.findAll(), teamRepository.findAll(),
                 season.getCars(), season.getTracks(),
-                getUsedCarIds(season.getId(), race.getHomeTeam().getId(), race.getId()),
-                getUsedTrackIds(season.getId(), race.getHomeTeam().getId(), race.getId()));
+                race.getHomeTeam() != null ? getUsedCarIds(season.getId(), race.getHomeTeam().getId(), race.getId()) : Set.of(),
+                race.getHomeTeam() != null ? getUsedTrackIds(season.getId(), race.getHomeTeam().getId(), race.getId()) : Set.of());
     }
 
     // --- Results form data ---
@@ -73,8 +73,8 @@ public class RaceFormDataService {
         if (data.results().isEmpty()) {
             var seasonId = race.getMatchday().getSeason().getId();
             var results = new ArrayList<RaceService.RaceResultData>();
-            populateDrivers(results, raceId, seasonId, race.getHomeTeam());
-            populateDrivers(results, raceId, seasonId, race.getAwayTeam());
+            if (race.getHomeTeam() != null) populateDrivers(results, raceId, seasonId, race.getHomeTeam());
+            if (race.getAwayTeam() != null) populateDrivers(results, raceId, seasonId, race.getAwayTeam());
             data = new RaceService.RaceData(data.id(), data.matchdayId(), data.homeTeamId(), data.awayTeamId(),
                     data.trackId(), data.carId(), data.dateTime(), results,
                     data.numberOfLaps(), data.tyreWearMultiplier(), data.fuelConsumptionMultiplier(),
@@ -162,7 +162,8 @@ public class RaceFormDataService {
         var settings = race.getSettings();
         return new RaceService.RaceData(
                 race.getId(), race.getMatchday().getId(),
-                race.getHomeTeam().getId(), race.getAwayTeam().getId(),
+                race.getHomeTeam() != null ? race.getHomeTeam().getId() : null,
+                race.getAwayTeam() != null ? race.getAwayTeam().getId() : null,
                 race.getTrack() != null ? race.getTrack().getId() : null,
                 race.getCar() != null ? race.getCar().getId() : null,
                 race.getDateTime(), resultDataList,

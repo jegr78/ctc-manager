@@ -194,6 +194,75 @@ class RaceFormDataServiceTest {
         verify(raceLineupRepository, never()).findByRaceId(any());
     }
 
+    // --- Bye race null safety ---
+
+    @Test
+    void givenByeRaceWithNullHomeTeam_whenGetRaceFormData_thenReturnsFormDataWithEmptyUsedSets() {
+        // given
+        var season = new Season();
+        season.setId(UUID.randomUUID());
+        season.setCars(new ArrayList<>());
+        season.setTracks(new ArrayList<>());
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setSeason(season);
+        var match = new Match();
+        match.setMatchday(matchday);
+        match.setBye(true);
+        // homeTeam and awayTeam are null
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
+        when(teamRepository.findAll()).thenReturn(List.of());
+
+        // when
+        var result = service.getRaceFormData(race.getId());
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.usedCarIds()).isEmpty();
+        assertThat(result.usedTrackIds()).isEmpty();
+        assertThat(result.data().homeTeamId()).isNull();
+        assertThat(result.data().awayTeamId()).isNull();
+    }
+
+    @Test
+    void givenByeRace_whenGetResultsFormData_thenReturnsResultsWithoutNPE() {
+        // given — bye match: homeTeam set, awayTeam null
+        var homeTeam = createTeam("HOM", "Home");
+        var scoring = new RaceScoring("Test", "10,8,6", "3,2,1", 1);
+        var season = new Season();
+        season.setId(UUID.randomUUID());
+        season.setRaceScoring(scoring);
+        var matchday = new Matchday();
+        matchday.setId(UUID.randomUUID());
+        matchday.setSeason(season);
+        var match = new Match();
+        match.setMatchday(matchday);
+        match.setHomeTeam(homeTeam);
+        match.setBye(true);
+        // awayTeam is null
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        race.setMatchday(matchday);
+        race.setMatch(match);
+
+        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+        when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
+        when(seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), homeTeam.getId())).thenReturn(List.of());
+
+        // when
+        var result = service.getResultsFormData(race.getId());
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.data().results()).isEmpty();
+    }
+
     // --- Helper ---
 
     private Team createTeam(String shortName, String name) {
