@@ -1,9 +1,5 @@
-package org.ctc.domain.service;
+package org.ctc.admin.service;
 
-import org.ctc.admin.service.LineupGraphicService;
-import org.ctc.admin.service.OverlayGraphicService;
-import org.ctc.admin.service.ResultsGraphicService;
-import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.RaceAttachmentRepository;
 import org.ctc.domain.repository.RaceRepository;

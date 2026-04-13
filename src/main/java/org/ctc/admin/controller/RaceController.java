@@ -5,7 +5,7 @@ import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.domain.service.RaceAttachmentService;
 import org.ctc.domain.service.RaceCalendarService;
 import org.ctc.domain.service.RaceFormDataService;
-import org.ctc.domain.service.RaceGraphicService;
+import org.ctc.admin.service.RaceGraphicService;
 import org.ctc.domain.service.RaceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
