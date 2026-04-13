@@ -54,7 +54,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 
 ### v1.5 Code Review Fixes (Phases 28-34)
 
-- [ ] **Phase 28: RaceAttachment Security** - Path traversal defense, null content-type handling, header injection prevention in RaceAttachmentService
+- [x] **Phase 28: RaceAttachment Security** - Path traversal defense, null content-type handling, header injection prevention in RaceAttachmentService (completed 2026-04-13)
 - [ ] **Phase 29: Mass Assignment Fix** - Replace direct JPA entity binding on MatchdayController with MatchdayForm DTO
 - [ ] **Phase 30: CSRF and Template Security** - CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation in custom template rendering
 - [ ] **Phase 31: Null Safety and Transaction Fix** - Transactional CSV import, null team guards in race services, season-scoped driver-team fallback
@@ -74,7 +74,7 @@ See: milestones/v1.1-ROADMAP.md for full details
   3. The Content-Disposition filename is sanitized to strip characters that could break the header (newlines, semicolons, quotes)
 **Plans**: 1 plan
 Plans:
-- [ ] 28-01-PLAN.md — TDD: Security tests + fixes for downloadAttachment (path traversal, null MIME, header injection)
+- [x] 28-01-PLAN.md — TDD: Security tests + fixes for downloadAttachment (path traversal, null MIME, header injection)
 
 ### Phase 29: Mass Assignment Fix
 **Goal**: Matchday create/edit forms bind to a DTO, not a JPA entity, eliminating mass assignment risk
@@ -167,7 +167,7 @@ Plans:
 | 25. Fix I18N Regressions | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 26. Restore Fictive Team Logos | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 27. Restore Matchday/Result Seed Pipeline | v1.3 | 1/1 | Complete | 2026-04-10 |
-| 28. RaceAttachment Security | v1.5 | 0/1 | Planning | - |
+| 28. RaceAttachment Security | v1.5 | 1/1 | Complete    | 2026-04-13 |
 | 29. Mass Assignment Fix | v1.5 | 0/TBD | Not started | - |
 | 30. CSRF and Template Security | v1.5 | 0/TBD | Not started | - |
 | 31. Null Safety and Transaction Fix | v1.5 | 0/TBD | Not started | - |
