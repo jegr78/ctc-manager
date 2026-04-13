@@ -7,6 +7,23 @@
     <link rel="apple-touch-icon" sizes="180x180" th:href="@{/admin/img/apple-touch-icon.png}">
     <title th:text="'CTC Admin - ' + ${title}">CTC Admin</title>
     <link rel="stylesheet" th:href="@{/admin/css/admin.css}">
+    <th:block th:if="${_csrf != null}">
+        <meta name="_csrf" th:content="${_csrf.token}">
+        <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    </th:block>
+    <script>
+    function csrfFetch(url, options) {
+        var csrfMeta = document.querySelector('meta[name="_csrf"]');
+        var headerMeta = document.querySelector('meta[name="_csrf_header"]');
+        if (csrfMeta && headerMeta && csrfMeta.content && headerMeta.content) {
+            options = options || {};
+            options.headers = Object.assign({}, options.headers, {
+                [headerMeta.content]: csrfMeta.content
+            });
+        }
+        return fetch(url, options);
+    }
+    </script>
 </head>
 <body>
     <div class="app-layout">
