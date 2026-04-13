@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.MatchdayRepository;
@@ -10,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -216,7 +217,19 @@ class MatchdayServiceTest {
     }
 
     @Test
-    void givenDuplicateLabel_whenCreateInline_thenThrowsException() {
+    void givenMissingSeason_whenCreateInline_thenThrowsEntityNotFoundException() {
+        // given
+        var seasonId = UUID.randomUUID();
+        when(seasonRepository.findById(seasonId)).thenReturn(Optional.empty());
+
+        // when / then
+        assertThatThrownBy(() -> service.createInline(seasonId, "Test"))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessageContaining("Season");
+    }
+
+    @Test
+    void givenDuplicateLabel_whenCreateInline_thenThrowsBusinessRuleException() {
         // given
         var season = new Season();
         season.setId(UUID.randomUUID());
@@ -228,7 +241,7 @@ class MatchdayServiceTest {
 
         // when / then
         assertThatThrownBy(() -> service.createInline(season.getId(), "Existing"))
-                .isInstanceOf(ResponseStatusException.class)
+                .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("already exists");
     }
 }
