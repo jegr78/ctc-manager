@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.RaceLineup;
@@ -9,10 +10,8 @@ import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -129,16 +128,14 @@ public class MatchdayService {
     @Transactional
     public MatchdayData createInline(UUID seasonId, String label) {
         var season = seasonRepository.findById(seasonId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Season not found: " + seasonId));
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
         var existingMatchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
 
         boolean duplicateLabel = existingMatchdays.stream()
                 .anyMatch(md -> md.getLabel().equals(label));
         if (duplicateLabel) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Matchday label already exists in this season: " + label);
+            throw new BusinessRuleException("Matchday label already exists in this season: " + label);
         }
 
         int nextSortIndex = existingMatchdays.stream()
