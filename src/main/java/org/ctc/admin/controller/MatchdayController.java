@@ -1,11 +1,11 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.CreateMatchdayRequest;
+import org.ctc.admin.dto.MatchdayForm;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.MatchdayScheduleGraphicService;
-import org.ctc.domain.model.Matchday;
 import org.ctc.domain.service.MatchService;
 import org.ctc.domain.service.MatchdayService;
 import jakarta.validation.Valid;
@@ -71,36 +71,46 @@ public class MatchdayController {
 
     @GetMapping("/new")
     public String create(@RequestParam(required = false) UUID seasonId, Model model) {
-        var matchday = new Matchday();
+        var form = new MatchdayForm();
         if (seasonId != null) {
-            matchday.setSeason(matchdayService.findSeasonById(seasonId));
+            form.setSeasonId(seasonId);
+            model.addAttribute("season", matchdayService.findSeasonById(seasonId));
         }
-        model.addAttribute("matchday", matchday);
+        model.addAttribute("form", form);
         model.addAttribute("seasons", matchdayService.getAllSeasons());
         return "admin/matchday-form";
     }
 
     @GetMapping("/{id}/edit")
     public String edit(@PathVariable UUID id, Model model) {
-        var data = matchdayService.getMatchdayDetail(id);
-        model.addAttribute("matchday", data.matchday());
+        var matchday = matchdayService.getMatchdayDetail(id).matchday();
+        var form = new MatchdayForm();
+        form.setId(matchday.getId());
+        form.setLabel(matchday.getLabel());
+        form.setSortIndex(matchday.getSortIndex());
+        form.setSeasonId(matchday.getSeason().getId());
+        model.addAttribute("form", form);
+        model.addAttribute("season", matchday.getSeason());
         model.addAttribute("seasons", matchdayService.getAllSeasons());
         return "admin/matchday-form";
     }
 
     @PostMapping("/save")
-    public String save(@Valid @ModelAttribute Matchday matchday,
+    public String save(@Valid @ModelAttribute("form") MatchdayForm form,
                        BindingResult result,
-                       @RequestParam UUID seasonId,
                        RedirectAttributes redirectAttributes,
                        Model model) {
         if (result.hasErrors()) {
             model.addAttribute("seasons", matchdayService.getAllSeasons());
+            if (form.getSeasonId() != null) {
+                model.addAttribute("season", matchdayService.findSeasonById(form.getSeasonId()));
+            }
             return "admin/matchday-form";
         }
-        var saved = matchdayService.saveMatchday(matchday.getLabel(), matchday.getSortIndex(), seasonId, matchday.getId());
+        var saved = matchdayService.saveMatchday(
+                form.getLabel(), form.getSortIndex(), form.getSeasonId(), form.getId());
         redirectAttributes.addFlashAttribute("successMessage", "Matchday saved: " + saved.getLabel());
-        return "redirect:/admin/matchdays?seasonId=" + seasonId;
+        return "redirect:/admin/matchdays?seasonId=" + form.getSeasonId();
     }
 
     @PostMapping("/{id}/delete")

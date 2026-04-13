@@ -3,20 +3,20 @@
       th:replace="~{admin/layout :: layout('Edit Matchday', ~{::section})}">
 <body>
 <section>
-    <h1 th:text="${matchday.id != null ? 'Edit Matchday' : 'New Matchday'}"></h1>
+    <h1 th:text="${form.id != null ? 'Edit Matchday' : 'New Matchday'}"></h1>
     <div class="card">
-        <form th:action="@{/admin/matchdays/save}" th:object="${matchday}" method="post">
+        <form th:action="@{/admin/matchdays/save}" th:object="${form}" method="post">
             <input type="hidden" th:field="*{id}">
-            <input type="hidden" name="seasonId" th:value="${matchday.season != null ? matchday.season.id : ''}">
-            <div class="form-group" th:if="${matchday.season == null}">
+            <input type="hidden" th:field="*{seasonId}" th:if="${form.seasonId != null}">
+            <div class="form-group" th:if="${form.seasonId == null}">
                 <label for="seasonSelect">Season</label>
                 <select id="seasonSelect" name="seasonId" required>
                     <option value="">-- Select season --</option>
                     <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"></option>
                 </select>
             </div>
-            <div th:if="${matchday.season != null}" class="text-dim mb-md">
-                Season: <strong th:text="${matchday.season.displayLabel}"></strong>
+            <div th:if="${season != null}" class="text-dim mb-md">
+                Season: <strong th:text="${season.displayLabel}"></strong>
             </div>
             <div class="form-row">
                 <div class="form-group">
@@ -29,8 +29,8 @@
                 </div>
             </div>
             <div class="actions mt-md">
-                <button type="submit" class="btn btn-primary">Save</button>
-                <a th:href="@{/admin/matchdays}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Matchday</button>
+                <a th:href="@{/admin/matchdays}" class="btn btn-secondary">Back to Matchdays</a>
             </div>
         </form>
     </div>
