@@ -6,11 +6,17 @@ import org.ctc.domain.repository.RaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +25,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 
 @ExtendWith(MockitoExtension.class)
 class RaceAttachmentServiceTest {
@@ -150,5 +158,99 @@ class RaceAttachmentServiceTest {
 
         // then
         assertThat(response.getStatusCode().value()).isEqualTo(400);
+    }
+
+    // --- downloadAttachment security ---
+
+    @Test
+    void givenPathTraversalUrl_whenDownloadAttachment_thenReturnsBadRequest() {
+        // given
+        var attachmentId = UUID.randomUUID();
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var attachment = new RaceAttachment(race, AttachmentType.FILE, "evil", "/uploads/../../etc/passwd");
+        attachment.setId(attachmentId);
+        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+
+        // when
+        var response = service.downloadAttachment(attachmentId);
+
+        // then
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+    }
+
+    @Test
+    void givenNullProbeContentType_whenDownloadAttachment_thenUsesOctetStream(@TempDir Path tempDir) throws Exception {
+        // given
+        ReflectionTestUtils.setField(service, "uploadDir", tempDir.toString());
+        Path racesDir = tempDir.resolve("races").resolve("test-race");
+        Files.createDirectories(racesDir);
+        Path testFile = racesDir.resolve("file.xyz");
+        Files.writeString(testFile, "content");
+
+        var attachmentId = UUID.randomUUID();
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var attachment = new RaceAttachment(race, AttachmentType.FILE, "report", "/uploads/races/test-race/file.xyz");
+        attachment.setId(attachmentId);
+        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class, CALLS_REAL_METHODS)) {
+            mockedFiles.when(() -> Files.probeContentType(any(Path.class))).thenReturn(null);
+
+            // when
+            var response = service.downloadAttachment(attachmentId);
+
+            // then
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_OCTET_STREAM);
+        }
+    }
+
+    @Test
+    void givenFilenameWithInjectionChars_whenDownloadAttachment_thenHeaderIsSanitized(@TempDir Path tempDir) throws Exception {
+        // given
+        ReflectionTestUtils.setField(service, "uploadDir", tempDir.toString());
+        Path racesDir = tempDir.resolve("races").resolve("test-race");
+        Files.createDirectories(racesDir);
+        Path testFile = racesDir.resolve("report.pdf");
+        Files.writeString(testFile, "content");
+
+        var attachmentId = UUID.randomUUID();
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var attachment = new RaceAttachment(race, AttachmentType.FILE,
+                "evil\nX-Injected: header\"test;param", "/uploads/races/test-race/report.pdf");
+        attachment.setId(attachmentId);
+        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+
+        // when
+        var response = service.downloadAttachment(attachmentId);
+
+        // then
+        String disposition = response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
+        assertThat(disposition).isNotNull();
+        assertThat(disposition).doesNotContain("\n");
+        assertThat(disposition).doesNotContain("\r");
+        assertThat(disposition).doesNotContain("\"evil");
+        assertThat(disposition).doesNotContain(";param");
+        assertThat(disposition).contains("evil_X-Injected_ header_test_param");
+    }
+
+    @Test
+    void givenNonExistentFile_whenDownloadAttachment_thenReturnsNotFound() {
+        // given
+        var attachmentId = UUID.randomUUID();
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var attachment = new RaceAttachment(race, AttachmentType.FILE, "missing", "/uploads/races/nonexistent/file.pdf");
+        attachment.setId(attachmentId);
+        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+
+        // when
+        var response = service.downloadAttachment(attachmentId);
+
+        // then
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
     }
 }
