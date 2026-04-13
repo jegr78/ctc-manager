@@ -122,7 +122,10 @@ Plans:
   1. No class under org.ctc.domain.service imports from org.ctc.admin.service
   2. Domain service methods that signal business rule violations throw a domain exception (e.g., ValidationException, EntityNotFoundException) rather than ResponseStatusException
   3. Existing error handling in GlobalExceptionHandler correctly maps the domain exceptions to HTTP responses
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 32-01-PLAN.md — Move RaceGraphicService to admin.service, decouple TeamCardService from RaceService
+- [ ] 32-02-PLAN.md — TDD: Replace ResponseStatusException with domain exceptions in MatchdayService
 
 ### Phase 33: Controller Cleanup
 **Goal**: Controllers delegate all data transformation and business logic to services, and SiteGeneratorService uses RaceLineup as source of truth
@@ -178,6 +181,6 @@ Plans:
 | 29. Mass Assignment Fix | v1.5 | 1/1 | Complete    | 2026-04-13 |
 | 30. CSRF and Template Security | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 31. Null Safety and Transaction Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
-| 32. Layering and Exception Fix | v1.5 | 0/TBD | Not started | - |
+| 32. Layering and Exception Fix | v1.5 | 0/2 | Not started | - |
 | 33. Controller Cleanup | v1.5 | 0/TBD | Not started | - |
 | 34. Convention Fixes | v1.5 | 0/TBD | Not started | - |
