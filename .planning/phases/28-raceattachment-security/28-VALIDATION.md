@@ -1,10 +1,11 @@
 ---
 phase: 28
 slug: raceattachment-security
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-13
+validated: 2026-04-13
 ---
 
 # Phase 28 — Validation Strategy
@@ -38,9 +39,9 @@ created: 2026-04-13
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 28-01-01 | 01 | 1 | SECU-02 | T-28-01 | Path traversal blocked: resolved path must start with upload dir | unit | `./mvnw test -Dtest=RaceAttachmentServiceTest#givenTraversalPath_whenDownload_thenForbidden` | ❌ W0 | ⬜ pending |
-| 28-01-02 | 01 | 1 | DATA-02 | — | Null content-type returns application/octet-stream | unit | `./mvnw test -Dtest=RaceAttachmentServiceTest#givenUnknownMimeType_whenDownload_thenOctetStream` | ❌ W0 | ⬜ pending |
-| 28-01-03 | 01 | 1 | SECU-05 | T-28-02 | Content-Disposition filename sanitized (no \r\n\";) | unit | `./mvnw test -Dtest=RaceAttachmentServiceTest#givenMaliciousFilename_whenDownload_thenSanitized` | ❌ W0 | ⬜ pending |
+| 28-01-01 | 01 | 1 | SECU-02 | T-28-01 | Path traversal blocked: resolved path must start with upload dir | unit | `./mvnw test -Dtest=RaceAttachmentServiceTest#givenPathTraversalUrl_whenDownloadAttachment_thenReturnsBadRequest` | ✅ | ✅ green |
+| 28-01-02 | 01 | 1 | DATA-02 | T-28-03 | Null content-type returns application/octet-stream | unit | `./mvnw test -Dtest=RaceAttachmentServiceTest#givenNullProbeContentType_whenDownloadAttachment_thenUsesOctetStream` | ✅ | ✅ green |
+| 28-01-03 | 01 | 1 | SECU-05 | T-28-02 | Content-Disposition filename sanitized (no \r\n\";) | unit | `./mvnw test -Dtest=RaceAttachmentServiceTest#givenFilenameWithInjectionChars_whenDownloadAttachment_thenHeaderIsSanitized` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -48,9 +49,9 @@ created: 2026-04-13
 
 ## Wave 0 Requirements
 
-- [ ] `RaceAttachmentServiceTest` — test stubs for SECU-02, DATA-02, SECU-05
+- [x] `RaceAttachmentServiceTest` — tests for SECU-02, DATA-02, SECU-05
 
-*Existing infrastructure covers test framework — only new test methods needed.*
+*All Wave 0 tests implemented and passing.*
 
 ---
 
@@ -62,11 +63,20 @@ created: 2026-04-13
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-13
+
+## Validation Audit 2026-04-13
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+All 3 requirements (SECU-02, DATA-02, SECU-05) have automated unit tests passing in `RaceAttachmentServiceTest`. 862 total tests green.
