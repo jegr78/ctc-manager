@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.model.Car;
 import org.ctc.domain.model.Track;
@@ -31,7 +30,6 @@ public class RaceService {
     private final TrackRepository trackRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final ScoringService scoringService;
-    private final TeamCardService teamCardService;
     private final RaceCalendarService raceCalendarService;
 
     // --- Domain records (replacing admin DTOs) ---
@@ -99,7 +97,7 @@ public class RaceService {
 
     // --- Detail ---
 
-    public RaceDetailData getRaceDetailData(UUID raceId) {
+    public RaceDetailData getRaceDetailData(UUID raceId, boolean hasHomeCard, boolean hasAwayCard) {
         var race = raceRepository.findById(raceId).orElseThrow();
 
         int homeTotal = 0;
@@ -130,15 +128,6 @@ public class RaceService {
         // Check if lineup graphic can be generated
         var lineups = raceLineupRepository.findByRaceId(race.getId());
         boolean hasLineup = !lineups.isEmpty();
-        boolean hasHomeCard = false;
-        boolean hasAwayCard = false;
-        if (race.getMatch() != null && race.getHomeTeam() != null && race.getAwayTeam() != null) {
-            var season = race.getMatchday().getSeason();
-            hasHomeCard = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), race.getHomeTeam().getId())
-                    .map(st -> teamCardService.cardExists(st)).orElse(false);
-            hasAwayCard = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), race.getAwayTeam().getId())
-                    .map(st -> teamCardService.cardExists(st)).orElse(false);
-        }
         boolean lineupExists = race.getAttachments().stream()
                 .anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/lineup.png"));
         boolean resultsGraphicExists = race.getAttachments().stream()
@@ -324,6 +313,14 @@ public class RaceService {
     }
 
     // --- Private helpers for car/track uniqueness validation ---
+
+    public Optional<Race> findRaceById(UUID raceId) {
+        return raceRepository.findById(raceId);
+    }
+
+    public Optional<SeasonTeam> findSeasonTeam(UUID seasonId, UUID teamId) {
+        return seasonTeamRepository.findBySeasonIdAndTeamId(seasonId, teamId);
+    }
 
     private Set<UUID> getUsedCarIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
         return raceRepository.findByMatchdaySeasonId(seasonId).stream()

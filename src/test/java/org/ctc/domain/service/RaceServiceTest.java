@@ -1,6 +1,5 @@
 package org.ctc.domain.service;
 
-import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.Test;
@@ -32,7 +31,6 @@ class RaceServiceTest {
     @Mock private TrackRepository trackRepository;
     @Mock private SeasonTeamRepository seasonTeamRepository;
     @Mock private ScoringService scoringService;
-    @Mock private TeamCardService teamCardService;
     @Mock private RaceCalendarService raceCalendarService;
 
     @InjectMocks
@@ -287,7 +285,7 @@ class RaceServiceTest {
                 .thenReturn(List.of(new RaceLineup(race, driver1, homeTeam), new RaceLineup(race, driver2, awayTeam)));
 
         // when
-        var data = service.getRaceDetailData(race.getId());
+        var data = service.getRaceDetailData(race.getId(), false, false);
 
         // then
         assertThat(data.homeTotal()).isEqualTo(20);
@@ -318,7 +316,7 @@ class RaceServiceTest {
         when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
 
         // when
-        var data = service.getRaceDetailData(race.getId());
+        var data = service.getRaceDetailData(race.getId(), false, false);
 
         // then
         assertThat(data.resultsMissing()).isTrue();
@@ -348,7 +346,7 @@ class RaceServiceTest {
         when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
 
         // when
-        var data = service.getRaceDetailData(race.getId());
+        var data = service.getRaceDetailData(race.getId(), false, false);
 
         // then
         assertThat(data.settingsMissing()).isTrue();

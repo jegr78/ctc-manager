@@ -2,10 +2,11 @@ package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
+import org.ctc.admin.service.RaceGraphicService;
+import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.service.RaceAttachmentService;
 import org.ctc.domain.service.RaceCalendarService;
 import org.ctc.domain.service.RaceFormDataService;
-import org.ctc.admin.service.RaceGraphicService;
 import org.ctc.domain.service.RaceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -31,6 +32,7 @@ public class RaceController {
     private final RaceCalendarService raceCalendarService;
     private final RaceAttachmentService raceAttachmentService;
     private final RaceGraphicService raceGraphicService;
+    private final TeamCardService teamCardService;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID matchdayId,
@@ -47,7 +49,20 @@ public class RaceController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
-        var data = raceService.getRaceDetailData(id);
+        boolean hasHomeCard = false;
+        boolean hasAwayCard = false;
+        var raceOpt = raceService.findRaceById(id);
+        if (raceOpt.isPresent()) {
+            var race = raceOpt.get();
+            if (race.getMatch() != null && race.getHomeTeam() != null && race.getAwayTeam() != null) {
+                var seasonId = race.getMatchday().getSeason().getId();
+                hasHomeCard = raceService.findSeasonTeam(seasonId, race.getHomeTeam().getId())
+                        .map(teamCardService::cardExists).orElse(false);
+                hasAwayCard = raceService.findSeasonTeam(seasonId, race.getAwayTeam().getId())
+                        .map(teamCardService::cardExists).orElse(false);
+            }
+        }
+        var data = raceService.getRaceDetailData(id, hasHomeCard, hasAwayCard);
         model.addAttribute("race", data.race());
         model.addAttribute("homeTotal", data.homeTotal());
         model.addAttribute("awayTotal", data.awayTotal());
