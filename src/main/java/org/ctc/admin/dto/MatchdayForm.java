@@ -1,6 +1,7 @@
 package org.ctc.admin.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,5 +18,6 @@ public class MatchdayForm {
 
     private int sortIndex;
 
+    @NotNull
     private UUID seasonId;
 }
