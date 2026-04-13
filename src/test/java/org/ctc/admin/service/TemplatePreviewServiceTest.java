@@ -317,5 +317,37 @@ class TemplatePreviewServiceTest {
             assertThatThrownBy(() -> service.renderPreview("team-cards", template))
                     .isInstanceOf(TemplateSecurityException.class);
         }
+
+        @Test
+        void givenCssTransformFunction_whenValidate_thenAcceptsTemplate() {
+            // given
+            String template = """
+                    <html><head><style>
+                    .element { transform: translateY(10px); }
+                    .rotated { transform: rotateZ(45deg); }
+                    .scaled { transform: scaleX(1.5); }
+                    .transition { transition: all 0.3s ease; }
+                    </style></head><body>
+                    <span th:text="${teamName}">Team</span>
+                    </body></html>
+                    """;
+
+            // when / then (no exception)
+            service.validateTemplateContent(template);
+        }
+
+        @Test
+        void givenTextWithParenthesisAfterT_whenValidate_thenAcceptsTemplate() {
+            // given — team abbreviation patterns like "T (Alpha)" should not be blocked
+            String template = """
+                    <html><body>
+                    <span>T (Alpha Team)</span>
+                    <span>Team T (Home)</span>
+                    </body></html>
+                    """;
+
+            // when / then (no exception)
+            service.validateTemplateContent(template);
+        }
     }
 }

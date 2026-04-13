@@ -297,6 +297,20 @@ class TemplateEditorControllerTest {
     }
 
     @Test
+    void givenMaliciousTemplate_whenSave_thenRedirectsWithError() throws Exception {
+        // given
+        String maliciousTemplate = "<span th:text=\"${T(java.lang.Runtime).getRuntime()}\"></span>";
+
+        // when
+        mockMvc.perform(post("/admin/tools/template-editors/team-cards/save")
+                        .param("template", maliciousTemplate))
+                // then
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/tools/template-editors?tab=team-cards"))
+                .andExpect(flash().attribute("errorMessage", "Template contains unsafe expressions"));
+    }
+
+    @Test
     void givenErrorResponseOnPreview_thenDoesNotExposeExceptionDetails() throws Exception {
         // given — template that causes a rendering error (undefined variable used with strict mode syntax)
         String badTemplate = "<span th:text=\"${#undefined.method()}\"></span>";
