@@ -23,7 +23,7 @@ Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handli
 
 - **Codebase:** 13,731 LOC Java (Prod) + 18,621 LOC Java (Tests), 820 Tests, 82%+ Coverage
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
-- **Security:** HTTP Basic Auth (prod/docker), open (dev/local), SSRF hostname blocklist, path traversal defense
+- **Security:** HTTP Basic Auth (prod/docker), open (dev/local), SSRF hostname blocklist, path traversal defense, Content-Disposition header injection protection, null MIME-type safe defaults
 - **Architecture:** Saubere 3-Tier (Controller → Service → Repository), keine God Services, zentrale Exception-Behandlung, domain services fully decoupled from admin DTOs
 - **Database:** 36 FK-Indexes, 28 @EntityGraph-Annotationen, Flyway-managed
 - **Templates:** CSS utility classes statt inline styles, TemplateManageable generic dispatch
@@ -116,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 after v1.2 milestone start — Driver Merge*
+*Last updated: 2026-04-13 after Phase 28 — RaceAttachment Security (v1.5)*
