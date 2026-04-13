@@ -281,6 +281,32 @@ class RaceAttachmentServiceTest {
     }
 
     @Test
+    void givenFilenameWithExtension_whenDownloadAttachment_thenContentDispositionHasNoDoubleExtension(@TempDir Path tempDir) throws Exception {
+        // given
+        ReflectionTestUtils.setField(service, "uploadDir", tempDir.toString());
+        Path racesDir = tempDir.resolve("races").resolve("test-race");
+        Files.createDirectories(racesDir);
+        Path testFile = racesDir.resolve("screenshot.png");
+        Files.writeString(testFile, "content");
+
+        var attachmentId = UUID.randomUUID();
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var attachment = new RaceAttachment(race, AttachmentType.FILE, "screenshot.png", "/uploads/races/test-race/screenshot.png");
+        attachment.setId(attachmentId);
+        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+
+        // when
+        var response = service.downloadAttachment(attachmentId);
+
+        // then
+        String disposition = response.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
+        assertThat(disposition).isNotNull();
+        assertThat(disposition).contains("screenshot.png");
+        assertThat(disposition).doesNotContain("screenshot.png.png");
+    }
+
+    @Test
     void givenNonExistentFile_whenDownloadAttachment_thenReturnsNotFound() {
         // given
         var attachmentId = UUID.randomUUID();

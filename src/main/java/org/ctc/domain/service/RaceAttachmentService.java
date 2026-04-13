@@ -112,13 +112,8 @@ public class RaceAttachmentService {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + safeName + getExtension(file) + "\"")
+                        "attachment; filename=\"" + safeName + "\"")
                 .body(new FileSystemResource(file));
     }
 
-    private String getExtension(Path file) {
-        String name = file.getFileName().toString();
-        int dot = name.lastIndexOf('.');
-        return dot >= 0 ? name.substring(dot) : "";
-    }
 }
