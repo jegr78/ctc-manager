@@ -1,37 +1,41 @@
 # Requirements: CTC Manager
 
-**Defined:** 2026-04-07
-**Core Value:** Architektur-Konsistenz: Alle Controller delegieren an Services, Exception Handling ist zentral, und die Prod-Umgebung ist abgesichert.
+**Defined:** 2026-04-13
+**Core Value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## v1.2 Requirements
+## v1.5 Requirements
 
-Requirements for Driver Merge milestone. Each maps to roadmap phases.
+Requirements for Code Review Fixes milestone. Each maps to roadmap phases.
 
-### Merge UI
+### Security
 
-- [ ] **MERGE-01**: Admin kann auf der Fahrer-Detailseite einen Merge starten
-- [ ] **MERGE-02**: Admin kann den Ziel-Fahrer auswaehlen, in den gemergt wird
-- [ ] **MERGE-03**: Admin sieht eine Vorschau der betroffenen Referenzen vor dem Merge
-- [ ] **MERGE-04**: Admin muss den Merge explizit bestaetigen
+- [ ] **SECU-01**: Admin can create/edit matchdays via MatchdayForm DTO instead of direct JPA entity binding
+- [ ] **SECU-02**: File download validates resolved path stays within upload directory (path traversal defense)
+- [ ] **SECU-03**: AJAX POST requests include CSRF token for prod/docker profile compatibility
+- [ ] **SECU-04**: Custom template rendering validates content for SpEL/OGNL injection before execution
+- [ ] **SECU-05**: Content-Disposition header uses sanitized filename to prevent header injection
 
-### FK Reassignment
+### Data Integrity
 
-- [ ] **MERGE-05**: Alle SeasonDriver-Eintraege werden vom Quell- auf den Ziel-Fahrer umgehaengt
-- [ ] **MERGE-06**: Alle RaceLineup-Eintraege werden vom Quell- auf den Ziel-Fahrer umgehaengt
-- [ ] **MERGE-07**: Alle RaceResult-Eintraege werden vom Quell- auf den Ziel-Fahrer umgehaengt
-- [ ] **MERGE-08**: Alle PsnAlias-Eintraege werden auf den Ziel-Fahrer uebertragen
-- [ ] **MERGE-09**: PSN-ID des Quell-Fahrers wird als neuer Alias am Ziel-Fahrer angelegt
-- [ ] **MERGE-10**: Quell-Fahrer wird nach erfolgreichem Merge geloescht
+- [ ] **DATA-01**: Multi-race CSV import runs within a single transaction (all-or-nothing)
+- [ ] **DATA-02**: File download handles null content type from probeContentType gracefully
+- [ ] **DATA-03**: Race services handle null home/away teams without NPE (bye matches, unlinked races)
+- [ ] **DATA-04**: Driver-team fallback check filters by current season to prevent cross-season misattribution
 
-### Duplikat-Handling
+### Architecture
 
-- [ ] **MERGE-11**: Unique-Constraint-Konflikte bei SeasonDriver (gleiche Season) werden erkannt und geloest
-- [ ] **MERGE-12**: Unique-Constraint-Konflikte bei RaceLineup (gleiches Race) werden erkannt und geloest
-- [ ] **MERGE-13**: Unique-Constraint-Konflikte bei RaceResult (gleiches Race) werden erkannt und geloest
+- [ ] **ARCH-01**: Domain services do not import from admin service layer (layering fix or relocation)
+- [ ] **ARCH-02**: Domain services use domain exceptions instead of HTTP-specific ResponseStatusException
+- [ ] **ARCH-03**: Controller methods delegate data transformation and business logic to service layer
+- [ ] **ARCH-04**: Site generator uses RaceLineup as source of truth for driver-team assignment
 
-### Audit
+### Convention
 
-- [ ] **MERGE-14**: Merge-Aktion wird geloggt (Quell-Fahrer, Ziel-Fahrer, Zeitpunkt, betroffene Referenzen)
+- [ ] **CONV-01**: PlayoffController.save() validates form input with @Valid and BindingResult
+- [ ] **CONV-02**: SeasonTeam and RaceSettings entities exclude lazy associations from toString
+- [ ] **CONV-03**: All UI text and code comments use English (no German remnants)
+- [ ] **CONV-04**: Race results page uses CSS classes from admin.css instead of inline styles
+- [ ] **CONV-05**: Business rule violations log at warn level, not error level
 
 ## Future Requirements
 
@@ -41,35 +45,41 @@ Requirements for Driver Merge milestone. Each maps to roadmap phases.
 
 | Feature | Reason |
 |---------|--------|
-| Automatischer Duplikat-Erkennung | Manueller Merge reicht fuer Datenuebernahme |
-| Bulk-Merge (mehrere Fahrer gleichzeitig) | Einzelner Merge pro Vorgang genuegt |
-| Undo/Rollback von Merges | Komplexitaet zu hoch, Backup vor Import reicht |
-| Merge von Teams | Nur Fahrer-Merge im Scope |
+| CSRF disabled globally | Only fixing missing tokens on AJAX requests, not changing overall CSRF strategy |
+| Full SpEL sandbox | Validation-based approach sufficient for admin-only templates |
+| Refactor all controller logic | Only fixing identified violations, not comprehensive controller audit |
+| Database schema changes | No Flyway migrations needed for these fixes |
+| New test infrastructure | Fixes verified by existing test suite + targeted new tests |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MERGE-01 | — | Pending |
-| MERGE-02 | — | Pending |
-| MERGE-03 | — | Pending |
-| MERGE-04 | — | Pending |
-| MERGE-05 | — | Pending |
-| MERGE-06 | — | Pending |
-| MERGE-07 | — | Pending |
-| MERGE-08 | — | Pending |
-| MERGE-09 | — | Pending |
-| MERGE-10 | — | Pending |
-| MERGE-11 | — | Pending |
-| MERGE-12 | — | Pending |
-| MERGE-13 | — | Pending |
-| MERGE-14 | — | Pending |
+| SECU-01 | — | Pending |
+| SECU-02 | — | Pending |
+| SECU-03 | — | Pending |
+| SECU-04 | — | Pending |
+| SECU-05 | — | Pending |
+| DATA-01 | — | Pending |
+| DATA-02 | — | Pending |
+| DATA-03 | — | Pending |
+| DATA-04 | — | Pending |
+| ARCH-01 | — | Pending |
+| ARCH-02 | — | Pending |
+| ARCH-03 | — | Pending |
+| ARCH-04 | — | Pending |
+| CONV-01 | — | Pending |
+| CONV-02 | — | Pending |
+| CONV-03 | — | Pending |
+| CONV-04 | — | Pending |
+| CONV-05 | — | Pending |
 
 **Coverage:**
-- v1.2 requirements: 14 total
+
+- v1.5 requirements: 18 total
 - Mapped to phases: 0
-- Unmapped: 14
+- Unmapped: 18
 
 ---
-*Requirements defined: 2026-04-07*
-*Last updated: 2026-04-07 after initial definition*
+*Requirements defined: 2026-04-13*
+*Last updated: 2026-04-13 after initial definition*
