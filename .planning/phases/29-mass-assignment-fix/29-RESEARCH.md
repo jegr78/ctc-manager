@@ -371,12 +371,13 @@ public String save(@Valid @ModelAttribute("form") MatchdayForm form,  // <-- DTO
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Season display for create-with-seasonId flow**
    - What we know: When `/admin/matchdays/new?seasonId=X` is called, the current code calls `matchdayService.findSeasonById(seasonId)` and sets `matchday.setSeason(...)`. With the DTO, the controller should also load the season entity and add it to the model as `"season"` so the display div renders correctly.
    - What's unclear: Whether the planner should include this as part of the create() method refactor or treat it as optional (the template could show the season select even with a pre-filled seasonId, letting the user change it).
    - Recommendation: Add `model.addAttribute("season", matchdayService.findSeasonById(seasonId))` in create() when seasonId is non-null. This matches the edit() flow and the template's display logic.
+   - **RESOLVED:** create() calls `findSeasonById(seasonId)` and adds season to model, consistent with edit() flow and template display logic. Implemented in Plan 29-01 Task 2 step 2b.
 
 ---
 
