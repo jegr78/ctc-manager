@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.TestHelper;
+import org.ctc.admin.dto.MatchdayForm;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
@@ -83,7 +84,7 @@ class MatchdayControllerTest {
                 // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-form"))
-                .andExpect(model().attributeExists("matchday", "seasons"));
+                .andExpect(model().attributeExists("form", "seasons"));
     }
 
     @Test
@@ -95,7 +96,9 @@ class MatchdayControllerTest {
         mockMvc.perform(get("/admin/matchdays/new").param("seasonId", season.getId().toString()))
                 // then
                 .andExpect(status().isOk())
-                .andExpect(view().name("admin/matchday-form"));
+                .andExpect(view().name("admin/matchday-form"))
+                .andExpect(model().attributeExists("form", "season", "seasons"))
+                .andExpect(model().attribute("form", org.hamcrest.Matchers.hasProperty("seasonId", org.hamcrest.Matchers.equalTo(season.getId()))));
     }
 
     @Test
@@ -109,7 +112,7 @@ class MatchdayControllerTest {
                 // then
                 .andExpect(status().isOk())
                 .andExpect(view().name("admin/matchday-form"))
-                .andExpect(model().attributeExists("matchday", "seasons"));
+                .andExpect(model().attributeExists("form", "season", "seasons"));
     }
 
     @Test
@@ -145,6 +148,22 @@ class MatchdayControllerTest {
         // then
         var updated = matchdayRepository.findById(matchday.getId()).orElseThrow();
         assertEquals("Updated Label", updated.getLabel());
+    }
+
+    @Test
+    void givenBlankLabel_whenSaveMatchday_thenReturnsFormWithErrors() throws Exception {
+        // given
+        var season = testHelper.createSeason("MD Validation Season");
+
+        // when
+        mockMvc.perform(post("/admin/matchdays/save")
+                        .param("label", "")
+                        .param("sortIndex", "1")
+                        .param("seasonId", season.getId().toString()))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/matchday-form"))
+                .andExpect(model().attributeHasFieldErrors("form", "label"));
     }
 
     @Test
