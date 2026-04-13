@@ -68,12 +68,11 @@ All sizes from existing `admin.css`. No new type roles introduced.
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Body | 14px | 400 (regular) | 1.6 |
-| Label | 14px | 500 | 1.0 |
+| Body / Label | 14px | 400 (regular) | 1.6 |
 | Heading (h2/h3) | 16px | 600 (Conthrax) | 1.2 |
 | Heading (h1) | 22px | 600 (Conthrax) | 1.2 |
 
-The `.alert` element (primary feedback surface for this phase) uses 14px / weight 400 — matches body role.
+The Label role (small form labels, alert text) uses weight 400 — identical to Body. No weight 500 is used in this phase. The `.alert` element (primary feedback surface for this phase) uses 14px / weight 400 — matches Body/Label role.
 
 Source: `admin.css` lines 149–150 (h1/h2/h3), line 157 (alert font-size), line 37 (body line-height).
 
