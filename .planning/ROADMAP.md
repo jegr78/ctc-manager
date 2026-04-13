@@ -57,7 +57,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 - [x] **Phase 28: RaceAttachment Security** - Path traversal defense, null content-type handling, header injection prevention in RaceAttachmentService (completed 2026-04-13)
 - [x] **Phase 29: Mass Assignment Fix** - Replace direct JPA entity binding on MatchdayController with MatchdayForm DTO (completed 2026-04-13)
 - [x] **Phase 30: CSRF and Template Security** - CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation in custom template rendering (completed 2026-04-13)
-- [ ] **Phase 31: Null Safety and Transaction Fix** - Transactional CSV import, null team guards in race services, season-scoped driver-team fallback
+- [x] **Phase 31: Null Safety and Transaction Fix** - Transactional CSV import, null team guards in race services, season-scoped driver-team fallback (completed 2026-04-13)
 - [ ] **Phase 32: Layering and Exception Fix** - Remove admin layer imports from domain services, replace ResponseStatusException with domain exceptions
 - [ ] **Phase 33: Controller Cleanup** - Move business logic and data transformation from controllers to service layer, fix RaceLineup usage in SiteGeneratorService
 - [ ] **Phase 34: Convention Fixes** - Form validation, toString cleanup, English text, CSS classes, log level corrections
@@ -111,8 +111,8 @@ Plans:
   3. Driver-team fallback lookup in standings/scoring filters by the current season so no cross-season misattribution occurs
 **Plans**: 2 plans
 Plans:
-- [ ] 31-01-PLAN.md — TDD: Validate-then-import two-phase refactor in CsvImportService.executeImport()
-- [ ] 31-02-PLAN.md — TDD: Null safety for bye matches in RaceFormDataService/ScoringService + season-filtered isDriverInTeam fallback
+- [x] 31-01-PLAN.md — TDD: Validate-then-import two-phase refactor in CsvImportService.executeImport()
+- [x] 31-02-PLAN.md — TDD: Null safety for bye matches in RaceFormDataService/ScoringService + season-filtered isDriverInTeam fallback
 
 ### Phase 32: Layering and Exception Fix
 **Goal**: Domain services contain no imports from the admin service layer and use domain exceptions instead of HTTP exceptions
@@ -177,7 +177,7 @@ Plans:
 | 28. RaceAttachment Security | v1.5 | 1/1 | Complete    | 2026-04-13 |
 | 29. Mass Assignment Fix | v1.5 | 1/1 | Complete    | 2026-04-13 |
 | 30. CSRF and Template Security | v1.5 | 2/2 | Complete   | 2026-04-13 |
-| 31. Null Safety and Transaction Fix | v1.5 | 0/2 | Not started | - |
+| 31. Null Safety and Transaction Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 32. Layering and Exception Fix | v1.5 | 0/TBD | Not started | - |
 | 33. Controller Cleanup | v1.5 | 0/TBD | Not started | - |
 | 34. Convention Fixes | v1.5 | 0/TBD | Not started | - |

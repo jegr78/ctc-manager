@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Code Review Fixes
-status: completed
-stopped_at: Phase 31 context gathered
-last_updated: "2026-04-13T21:31:16.912Z"
-last_activity: 2026-04-13 -- Phase 30 complete (2 plans, 866 tests green)
+status: executing
+stopped_at: Phase 31 complete
+last_updated: "2026-04-14T00:15:00.000Z"
+last_activity: 2026-04-14 -- Phase 31 complete
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  completed_phases: 4
+  total_plans: 6
+  completed_plans: 6
+  percent: 86
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-07)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Phase 30 — csrf-and-template-security — COMPLETE
+**Current focus:** Phase 31 — null-safety-and-transaction-fix — COMPLETE
 
 ## Current Position
 
-Phase: 30 (csrf-and-template-security) — COMPLETE
+Phase: 31 (null-safety-and-transaction-fix) — COMPLETE
 Plan: 2 of 2
-Status: Phase 30 complete
-Last activity: 2026-04-13 -- Phase 30 complete (2 plans, 866 tests green)
+Status: Phase 31 complete
+Last activity: 2026-04-14 -- Phase 31 complete
 
-Progress: █████░░░░░ 57%
+Progress: ████████░░ 86%
 
 ## Completed Milestones
 
