@@ -82,6 +82,10 @@ public class RaceAttachmentService {
 
         // SECU-02: resolve path and enforce upload-dir boundary
         String url = attachment.getUrl();
+        if (!url.startsWith("/uploads/")) {
+            log.warn("Attachment URL has unexpected format, attachmentId={}", attachmentId);
+            return ResponseEntity.badRequest().build();
+        }
         Path uploadDirPath = Paths.get(uploadDir).toAbsolutePath().normalize();
         Path file = uploadDirPath.resolve(url.substring("/uploads/".length())).normalize();
         if (!file.startsWith(uploadDirPath)) {

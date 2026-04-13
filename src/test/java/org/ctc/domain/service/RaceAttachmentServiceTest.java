@@ -186,6 +186,23 @@ class RaceAttachmentServiceTest {
         assertThat(response.getStatusCode().value()).isEqualTo(400);
     }
 
+    @Test
+    void givenUnexpectedUrlFormat_whenDownloadAttachment_thenReturnsBadRequest() {
+        // given
+        var attachmentId = UUID.randomUUID();
+        var race = new Race();
+        race.setId(UUID.randomUUID());
+        var attachment = new RaceAttachment(race, AttachmentType.FILE, "report.pdf", "data/races/1/report.pdf");
+        attachment.setId(attachmentId);
+        when(raceAttachmentRepository.findById(attachmentId)).thenReturn(Optional.of(attachment));
+
+        // when
+        var response = service.downloadAttachment(attachmentId);
+
+        // then
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+    }
+
     // --- downloadAttachment security ---
 
     @Test
