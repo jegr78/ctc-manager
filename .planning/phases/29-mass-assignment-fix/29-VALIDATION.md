@@ -1,10 +1,11 @@
 ---
 phase: 29
 slug: mass-assignment-fix
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-13
+validated: 2026-04-13
 ---
 
 # Phase 29 — Validation Strategy
@@ -38,7 +39,7 @@ created: 2026-04-13
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 29-01-01 | 01 | 1 | SECU-01 | T-29-01 | MatchdayForm DTO binds instead of JPA entity | unit | `./mvnw test -Dtest=MatchdayControllerTest` | ✅ | ⬜ pending |
+| 29-01-01 | 01 | 1 | SECU-01 | T-29-01 | MatchdayForm DTO binds instead of JPA entity | unit | `./mvnw test -Dtest=MatchdayControllerTest` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -58,11 +59,20 @@ created: 2026-04-13
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved (2026-04-13)
+
+## Validation Audit 2026-04-13
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+20 MatchdayControllerTest tests pass. SECU-01 fully covered by 6 test methods verifying DTO binding on create, edit, save, and validation error paths.
