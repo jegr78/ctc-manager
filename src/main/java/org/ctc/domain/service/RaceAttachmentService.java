@@ -75,18 +75,36 @@ public class RaceAttachmentService {
         if (attachment.getType() != AttachmentType.FILE) {
             return ResponseEntity.badRequest().build();
         }
+
+        // SECU-02: resolve path and enforce upload-dir boundary
         String url = attachment.getUrl();
-        Path file = Paths.get(uploadDir).toAbsolutePath().normalize()
-                .resolve(url.substring("/uploads/".length()));
+        Path uploadDirPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path file = uploadDirPath.resolve(url.substring("/uploads/".length())).normalize();
+        if (!file.startsWith(uploadDirPath)) {
+            log.warn("Path traversal attempt in download, attachmentId={}", attachmentId);
+            return ResponseEntity.badRequest().build();
+        }
+
         if (!Files.exists(file)) {
             return ResponseEntity.notFound().build();
         }
-        String contentType = "application/octet-stream";
-        try { contentType = Files.probeContentType(file); } catch (IOException e) { log.debug("Could not probe content type for {}", file, e); }
+
+        // DATA-02: null-safe content type
+        String probed = null;
+        try {
+            probed = Files.probeContentType(file);
+        } catch (IOException e) {
+            log.debug("Could not probe content type for {}", file, e);
+        }
+        String contentType = (probed != null) ? probed : "application/octet-stream";
+
+        // SECU-05: sanitize filename to prevent header injection
+        String safeName = attachment.getName().replaceAll("[\\r\\n\";]", "_");
+
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + attachment.getName() + getExtension(file) + "\"")
+                        "attachment; filename=\"" + safeName + getExtension(file) + "\"")
                 .body(new FileSystemResource(file));
     }
 

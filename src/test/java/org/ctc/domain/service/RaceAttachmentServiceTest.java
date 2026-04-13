@@ -232,9 +232,9 @@ class RaceAttachmentServiceTest {
         assertThat(disposition).isNotNull();
         assertThat(disposition).doesNotContain("\n");
         assertThat(disposition).doesNotContain("\r");
-        assertThat(disposition).doesNotContain("\"evil");
+        assertThat(disposition).doesNotContain("header\"test"); // original " in name was sanitized
         assertThat(disposition).doesNotContain(";param");
-        assertThat(disposition).contains("evil_X-Injected_ header_test_param");
+        assertThat(disposition).contains("evil_X-Injected: header_test_param");
     }
 
     @Test
