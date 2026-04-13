@@ -140,6 +140,32 @@ class RaceAttachmentServiceTest {
                 att.getName().equals("screenshot.png") && att.getType() == AttachmentType.FILE));
     }
 
+    @Test
+    void givenNullFilename_whenUploadAttachment_thenThrowsIllegalArgument() {
+        // given
+        var raceId = UUID.randomUUID();
+        var file = mock(org.springframework.web.multipart.MultipartFile.class);
+        when(file.getOriginalFilename()).thenReturn(null);
+
+        // when / then
+        assertThatThrownBy(() -> service.uploadAttachment(raceId, file))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Filename");
+    }
+
+    @Test
+    void givenBlankFilename_whenUploadAttachment_thenThrowsIllegalArgument() {
+        // given
+        var raceId = UUID.randomUUID();
+        var file = mock(org.springframework.web.multipart.MultipartFile.class);
+        when(file.getOriginalFilename()).thenReturn("   ");
+
+        // when / then
+        assertThatThrownBy(() -> service.uploadAttachment(raceId, file))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Filename");
+    }
+
     // --- downloadAttachment ---
 
     @Test

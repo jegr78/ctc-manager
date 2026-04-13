@@ -36,12 +36,16 @@ public class RaceAttachmentService {
 
     @Transactional
     public String uploadAttachment(UUID raceId, MultipartFile file) {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.isBlank()) {
+            throw new IllegalArgumentException("Filename is required");
+        }
         var race = raceRepository.findById(raceId).orElseThrow();
         try {
             String url = fileStorageService.store(raceId, file);
-            var attachment = new RaceAttachment(race, AttachmentType.FILE, file.getOriginalFilename(), url);
+            var attachment = new RaceAttachment(race, AttachmentType.FILE, originalFilename, url);
             raceAttachmentRepository.save(attachment);
-            return file.getOriginalFilename();
+            return originalFilename;
         } catch (IOException e) {
             log.error("Upload failed for race {}", raceId, e);
             throw new RuntimeException(e.getMessage(), e);
