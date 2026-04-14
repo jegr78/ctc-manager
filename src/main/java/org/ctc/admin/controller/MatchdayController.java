@@ -56,16 +56,11 @@ public class MatchdayController {
         model.addAttribute("matchday", matchday);
         model.addAttribute("lineupsByTeam", data.lineupsByTeam());
 
-        // Graphics button status
-        var nonByeMatches = matchday.getMatches().stream().filter(m -> !m.isBye()).toList();
-        model.addAttribute("hasMatches", !nonByeMatches.isEmpty());
-        model.addAttribute("hasSchedule", nonByeMatches.stream()
-                .anyMatch(m -> m.getRaces().stream().anyMatch(r -> r.getDateTime() != null)));
-        long matchesWithDateTime = nonByeMatches.stream()
-                .filter(m -> m.getRaces().stream().anyMatch(r -> r.getDateTime() != null)).count();
-        model.addAttribute("scheduleMissingCount", nonByeMatches.size() - matchesWithDateTime);
-        model.addAttribute("hasResults", nonByeMatches.stream()
-                .anyMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null));
+        // Graphics button status — computed by service
+        model.addAttribute("hasMatches", data.hasMatches());
+        model.addAttribute("hasSchedule", data.hasSchedule());
+        model.addAttribute("scheduleMissingCount", data.scheduleMissingCount());
+        model.addAttribute("hasResults", data.hasResults());
         return "admin/matchday-detail";
     }
 
