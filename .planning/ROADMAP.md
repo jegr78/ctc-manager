@@ -61,7 +61,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 - [x] **Phase 32: Layering and Exception Fix** - Remove admin layer imports from domain services, replace ResponseStatusException with domain exceptions (completed 2026-04-13)
 - [x] **Phase 33: Controller Cleanup** - Move business logic and data transformation from controllers to service layer, fix RaceLineup usage in SiteGeneratorService (completed 2026-04-14)
 - [x] **Phase 34: Convention Fixes** - Form validation, toString cleanup, English text, CSS classes, log level corrections (completed 2026-04-14)
-- [ ] **Phase 35: Site Generator Bye-Race Null Safety** - Null guard for bye races in SiteGeneratorService.toRaceView()
+- [x] **Phase 35: Site Generator Bye-Race Null Safety** - Null guard for bye races in SiteGeneratorService.toRaceView() (completed 2026-04-14)
 - [ ] **Phase 36: Audit Remediation** - Dead JS code removal, REQUIREMENTS.md traceability updates
 
 ## Phase Details
@@ -169,7 +169,7 @@ Plans:
   2. Site generation completes successfully when the race list includes bye matches
 **Plans**: 1 plan
 Plans:
-- [ ] 35-01-PLAN.md — TDD: Bye-race null guard for toRaceView() + integration test
+- [x] 35-01-PLAN.md — TDD: Bye-race null guard for toRaceView() + integration test
 
 ### Phase 36: Audit Remediation
 **Goal**: Close traceability gaps and remove dead code identified by v1.5 milestone audit
@@ -181,7 +181,7 @@ Plans:
   2. REQUIREMENTS.md traceability reflects verified requirements as checked and orphaned requirements as compliant
 **Plans**: 1 plan
 Plans:
-- [ ] 35-01-PLAN.md — TDD: Bye-race null guard for toRaceView() + integration test
+- [x] 35-01-PLAN.md — TDD: Bye-race null guard for toRaceView() + integration test
 
 ## Progress
 
@@ -217,5 +217,5 @@ Plans:
 | 32. Layering and Exception Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 33. Controller Cleanup | v1.5 | 2/2 | Complete   | 2026-04-14 |
 | 34. Convention Fixes | v1.5 | 2/2 | Complete   | 2026-04-14 |
-| 35. Site Generator Bye-Race Null Safety | v1.5 | 0/1 | Planned | — |
+| 35. Site Generator Bye-Race Null Safety | v1.5 | 1/1 | Complete    | 2026-04-14 |
 | 36. Audit Remediation | v1.5 | 0/0 | Pending | — |
