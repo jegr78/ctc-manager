@@ -2,17 +2,22 @@ package org.ctc.domain.service;
 
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
+import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Race;
 import org.ctc.domain.model.Season;
+import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -243,5 +248,159 @@ class MatchdayServiceTest {
         assertThatThrownBy(() -> service.createInline(season.getId(), "Existing"))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("already exists");
+    }
+
+    // --- getMatchdayDetail — graphic status fields ---
+
+    @Nested
+    class GetMatchdayDetailGraphicStatus {
+
+        @Test
+        void givenMatchdayWithNonByeMatchesAndSchedule_whenGetMatchdayDetail_thenHasMatchesTrueAndHasScheduleTrue() {
+            // given
+            var matchdayId = UUID.randomUUID();
+            var matchday = new Matchday();
+            matchday.setId(matchdayId);
+
+            var homeTeam = new Team("Home", "HOM");
+            homeTeam.setId(UUID.randomUUID());
+            var awayTeam = new Team("Away", "AWY");
+            awayTeam.setId(UUID.randomUUID());
+
+            var match = new Match(matchday, homeTeam, awayTeam);
+            match.setId(UUID.randomUUID());
+            match.setBye(false);
+
+            var race = new Race();
+            race.setId(UUID.randomUUID());
+            race.setMatchday(matchday);
+            race.setMatch(match);
+            race.setDateTime(LocalDateTime.now());
+            match.getRaces().add(race);
+            matchday.getMatches().add(match);
+
+            when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+            when(raceLineupRepository.findByRaceMatchdayId(matchdayId)).thenReturn(List.of());
+
+            // when
+            var data = service.getMatchdayDetail(matchdayId);
+
+            // then
+            assertThat(data.hasMatches()).isTrue();
+            assertThat(data.hasSchedule()).isTrue();
+        }
+
+        @Test
+        void givenMatchdayWithAllByeMatches_whenGetMatchdayDetail_thenHasMatchesFalse() {
+            // given
+            var matchdayId = UUID.randomUUID();
+            var matchday = new Matchday();
+            matchday.setId(matchdayId);
+
+            var homeTeam = new Team("Home", "HOM");
+            homeTeam.setId(UUID.randomUUID());
+
+            var match = new Match(matchday, homeTeam, null);
+            match.setId(UUID.randomUUID());
+            match.setBye(true);
+            matchday.getMatches().add(match);
+
+            when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+            when(raceLineupRepository.findByRaceMatchdayId(matchdayId)).thenReturn(List.of());
+
+            // when
+            var data = service.getMatchdayDetail(matchdayId);
+
+            // then
+            assertThat(data.hasMatches()).isFalse();
+        }
+
+        @Test
+        void givenMatchdayWithPartialSchedule_whenGetMatchdayDetail_thenScheduleMissingCountCorrect() {
+            // given
+            var matchdayId = UUID.randomUUID();
+            var matchday = new Matchday();
+            matchday.setId(matchdayId);
+
+            var homeTeam = new Team("Home", "HOM");
+            homeTeam.setId(UUID.randomUUID());
+            var awayTeam = new Team("Away", "AWY");
+            awayTeam.setId(UUID.randomUUID());
+
+            // Match 1: has schedule
+            var match1 = new Match(matchday, homeTeam, awayTeam);
+            match1.setId(UUID.randomUUID());
+            match1.setBye(false);
+            var race1 = new Race();
+            race1.setId(UUID.randomUUID());
+            race1.setMatchday(matchday);
+            race1.setMatch(match1);
+            race1.setDateTime(LocalDateTime.now());
+            match1.getRaces().add(race1);
+
+            // Match 2: no schedule
+            var match2 = new Match(matchday, homeTeam, awayTeam);
+            match2.setId(UUID.randomUUID());
+            match2.setBye(false);
+            var race2 = new Race();
+            race2.setId(UUID.randomUUID());
+            race2.setMatchday(matchday);
+            race2.setMatch(match2);
+            // no dateTime set
+            match2.getRaces().add(race2);
+
+            // Match 3: no schedule
+            var match3 = new Match(matchday, homeTeam, awayTeam);
+            match3.setId(UUID.randomUUID());
+            match3.setBye(false);
+            var race3 = new Race();
+            race3.setId(UUID.randomUUID());
+            race3.setMatchday(matchday);
+            race3.setMatch(match3);
+            // no dateTime set
+            match3.getRaces().add(race3);
+
+            matchday.getMatches().add(match1);
+            matchday.getMatches().add(match2);
+            matchday.getMatches().add(match3);
+
+            when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+            when(raceLineupRepository.findByRaceMatchdayId(matchdayId)).thenReturn(List.of());
+
+            // when
+            var data = service.getMatchdayDetail(matchdayId);
+
+            // then
+            assertThat(data.scheduleMissingCount()).isEqualTo(2);
+        }
+
+        @Test
+        void givenMatchdayWithResults_whenGetMatchdayDetail_thenHasResultsTrue() {
+            // given
+            var matchdayId = UUID.randomUUID();
+            var matchday = new Matchday();
+            matchday.setId(matchdayId);
+
+            var homeTeam = new Team("Home", "HOM");
+            homeTeam.setId(UUID.randomUUID());
+            var awayTeam = new Team("Away", "AWY");
+            awayTeam.setId(UUID.randomUUID());
+
+            var match = new Match(matchday, homeTeam, awayTeam);
+            match.setId(UUID.randomUUID());
+            match.setBye(false);
+            match.setHomeScore(3);
+            match.setAwayScore(1);
+            matchday.getMatches().add(match);
+
+            when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+            when(raceLineupRepository.findByRaceMatchdayId(matchdayId)).thenReturn(List.of());
+
+            // when
+            var data = service.getMatchdayDetail(matchdayId);
+
+            // then
+            assertThat(data.hasResults()).isTrue();
+        }
     }
 }

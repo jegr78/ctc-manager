@@ -675,6 +675,81 @@ class SeasonManagementServiceTest {
     }
 
     @Nested
+    class GetSeasonGroupOptions {
+
+        @Test
+        void givenTwoSeasonsWithSameYearAndNumber_whenGetSeasonGroupOptions_thenGroupedIntoOne() {
+            // given
+            var s1 = createSeason("Season 1A");
+            s1.setYear(2026);
+            s1.setNumber(1);
+            var team1 = createTeam("T1", "Team 1");
+            var team2 = createTeam("T2", "Team 2");
+            season_addTeam(s1, team1);
+            season_addTeam(s1, team2);
+
+            var s2 = createSeason("Season 1B");
+            s2.setYear(2026);
+            s2.setNumber(1);
+            var team3 = createTeam("T3", "Team 3");
+            season_addTeam(s2, team3);
+
+            when(seasonRepository.findAll()).thenReturn(List.of(s1, s2));
+
+            // when
+            var result = service.getSeasonGroupOptions();
+
+            // then
+            assertThat(result).hasSize(1);
+            var option = result.getFirst();
+            assertThat(option.year()).isEqualTo(2026);
+            assertThat(option.number()).isEqualTo(1);
+            assertThat(option.teamCount()).isEqualTo(3);
+        }
+
+        @Test
+        void givenSeasonsFromDifferentYears_whenGetSeasonGroupOptions_thenSortedByYearDescThenNumberDesc() {
+            // given
+            var s1 = createSeason("Season 2025/1");
+            s1.setYear(2025);
+            s1.setNumber(1);
+
+            var s2 = createSeason("Season 2026/2");
+            s2.setYear(2026);
+            s2.setNumber(2);
+
+            when(seasonRepository.findAll()).thenReturn(List.of(s1, s2));
+
+            // when
+            var result = service.getSeasonGroupOptions();
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).year()).isEqualTo(2026);
+            assertThat(result.get(0).number()).isEqualTo(2);
+            assertThat(result.get(1).year()).isEqualTo(2025);
+            assertThat(result.get(1).number()).isEqualTo(1);
+        }
+
+        @Test
+        void givenNoSeasons_whenGetSeasonGroupOptions_thenReturnsEmptyList() {
+            // given
+            when(seasonRepository.findAll()).thenReturn(List.of());
+
+            // when
+            var result = service.getSeasonGroupOptions();
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        private void season_addTeam(Season season, Team team) {
+            var st = new SeasonTeam(season, team);
+            season.getSeasonTeams().add(st);
+        }
+    }
+
+    @Nested
     class FindActiveSeasonTest {
 
         @Test

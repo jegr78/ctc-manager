@@ -397,6 +397,33 @@ class DriverServiceTest {
     }
 
     @Nested
+    class GetMergeFormDrivers {
+
+        @Test
+        void givenDrivers_whenGetMergeFormDrivers_thenExcludesIdAndSortsByCaseInsensitivePsnId() {
+            // given
+            var excludeId = UUID.randomUUID();
+            var zara = new Driver("Zara_PSN", "Zara");
+            zara.setId(excludeId);
+            var alice = new Driver("alice_PSN", "Alice");
+            alice.setId(UUID.randomUUID());
+            var bob = new Driver("Bob_PSN", "Bob");
+            bob.setId(UUID.randomUUID());
+
+            when(driverRepository.findAll()).thenReturn(List.of(zara, alice, bob));
+
+            // when
+            var result = driverService.getMergeFormDrivers(excludeId);
+
+            // then
+            assertThat(result).hasSize(2);
+            assertThat(result).doesNotContain(zara);
+            assertThat(result.get(0).getPsnId()).isEqualTo("alice_PSN");
+            assertThat(result.get(1).getPsnId()).isEqualTo("Bob_PSN");
+        }
+    }
+
+    @Nested
     class DeleteTest {
 
         @Test
