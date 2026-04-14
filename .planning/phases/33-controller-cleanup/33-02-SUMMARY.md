@@ -62,8 +62,7 @@ completed: 2026-04-14
 
 Each task was committed atomically:
 
-1. **Task 1: RED — Failing test for RaceLineup-first resolution** - `a0a77b5` (test)
-2. **Task 2: GREEN — Inject RaceLineupRepository and fix toRaceView()** - `6f698bc` (feat)
+1. **Task 1+2: TDD RaceLineup-first fix** - `5325fc6` (feat — combined inline execution)
 
 _TDD: RED commit (failing test) → GREEN commit (passing implementation)_
 
