@@ -60,7 +60,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 - [x] **Phase 31: Null Safety and Transaction Fix** - Transactional CSV import, null team guards in race services, season-scoped driver-team fallback (completed 2026-04-13)
 - [x] **Phase 32: Layering and Exception Fix** - Remove admin layer imports from domain services, replace ResponseStatusException with domain exceptions (completed 2026-04-13)
 - [x] **Phase 33: Controller Cleanup** - Move business logic and data transformation from controllers to service layer, fix RaceLineup usage in SiteGeneratorService (completed 2026-04-14)
-- [ ] **Phase 34: Convention Fixes** - Form validation, toString cleanup, English text, CSS classes, log level corrections
+- [x] **Phase 34: Convention Fixes** - Form validation, toString cleanup, English text, CSS classes, log level corrections (completed 2026-04-14)
 
 ## Phase Details
 
@@ -152,8 +152,8 @@ Plans:
   5. Log statements for business rule violations (non-fatal application logic rejections) use log.warn() instead of log.error()
 **Plans**: 2 plans
 Plans:
-- [ ] 34-01-PLAN.md — TDD: @Valid + BindingResult form validation on PlayoffController.save()
-- [ ] 34-02-PLAN.md — Extract inline styles from race-results.html to CSS classes in admin.css
+- [x] 34-01-PLAN.md — TDD: @Valid + BindingResult form validation on PlayoffController.save()
+- [x] 34-02-PLAN.md — Extract inline styles from race-results.html to CSS classes in admin.css
 **UI hint**: yes
 **Note**: CONV-02, CONV-03, CONV-05 confirmed already compliant during research — no plans needed (D-06, D-07, D-08)
 
@@ -190,4 +190,4 @@ Plans:
 | 31. Null Safety and Transaction Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 32. Layering and Exception Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 33. Controller Cleanup | v1.5 | 2/2 | Complete   | 2026-04-14 |
-| 34. Convention Fixes | v1.5 | 0/2 | Not started | - |
+| 34. Convention Fixes | v1.5 | 2/2 | Complete   | 2026-04-14 |
