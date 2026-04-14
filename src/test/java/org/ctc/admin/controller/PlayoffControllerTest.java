@@ -264,6 +264,37 @@ class PlayoffControllerTest {
                 .andExpect(status().isInternalServerError());
     }
 
+    // --- POST /admin/playoffs/save — validation failure ---
+
+    @Test
+    void givenBlankName_whenSavePlayoff_thenReturnsFormViewWithErrors() throws Exception {
+        // given — name is blank, seasonId is valid
+        // when
+        mockMvc.perform(post("/admin/playoffs/save")
+                        .param("seasonId", season.getId().toString())
+                        .param("name", "")
+                        .param("numberOfTeams", "4"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/playoff-form"))
+                .andExpect(model().attributeHasFieldErrors("playoffForm", "name"))
+                .andExpect(model().attributeExists("seasons"));
+    }
+
+    @Test
+    void givenMissingSeasonId_whenSavePlayoff_thenReturnsFormViewWithErrors() throws Exception {
+        // given — seasonId is absent (null), name is valid
+        // when
+        mockMvc.perform(post("/admin/playoffs/save")
+                        .param("name", "Valid Name")
+                        .param("numberOfTeams", "4"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/playoff-form"))
+                .andExpect(model().attributeHasFieldErrors("playoffForm", "seasonId"))
+                .andExpect(model().attributeExists("seasons"));
+    }
+
     // --- POST /admin/playoffs/{id}/add-season + remove-season ---
 
     @Test
