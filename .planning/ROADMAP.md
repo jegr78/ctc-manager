@@ -135,7 +135,10 @@ Plans:
   1. Controller methods identified in the review contain no inline data transformation or business rule logic — those calls are delegated to service methods
   2. SiteGeneratorService resolves driver-team assignment from RaceLineup entries, not from SeasonDriver fallback alone
   3. Generated site pages correctly attribute drivers to their sub-teams as recorded in race lineups
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 33-01-PLAN.md — TDD: Extract controller logic to SeasonManagementService, MatchdayService, DriverService
+- [ ] 33-02-PLAN.md — TDD: Fix SiteGeneratorService.toRaceView() to use RaceLineup-first with SeasonDriver fallback
 
 ### Phase 34: Convention Fixes
 **Goal**: Form validation, entity toString, UI language, CSS usage, and log levels all follow project conventions
@@ -182,5 +185,5 @@ Plans:
 | 30. CSRF and Template Security | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 31. Null Safety and Transaction Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 32. Layering and Exception Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
-| 33. Controller Cleanup | v1.5 | 0/TBD | Not started | - |
+| 33. Controller Cleanup | v1.5 | 0/2 | Not started | - |
 | 34. Convention Fixes | v1.5 | 0/TBD | Not started | - |
