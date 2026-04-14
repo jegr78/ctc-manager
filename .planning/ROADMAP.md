@@ -181,7 +181,7 @@ Plans:
   2. REQUIREMENTS.md traceability reflects verified requirements as checked and orphaned requirements as compliant
 **Plans**: 1 plan
 Plans:
-- [x] 35-01-PLAN.md — TDD: Bye-race null guard for toRaceView() + integration test
+- [ ] 36-01-PLAN.md — Dead code removal from race-results.html + REQUIREMENTS.md traceability closure
 
 ## Progress
 
@@ -218,4 +218,4 @@ Plans:
 | 33. Controller Cleanup | v1.5 | 2/2 | Complete   | 2026-04-14 |
 | 34. Convention Fixes | v1.5 | 2/2 | Complete   | 2026-04-14 |
 | 35. Site Generator Bye-Race Null Safety | v1.5 | 1/1 | Complete    | 2026-04-14 |
-| 36. Audit Remediation | v1.5 | 0/0 | Pending | — |
+| 36. Audit Remediation | v1.5 | 0/1 | Pending | — |
