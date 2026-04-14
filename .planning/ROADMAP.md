@@ -167,7 +167,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. SiteGeneratorService.toRaceView() processes a bye race (null homeTeam or awayTeam) without throwing NPE
   2. Site generation completes successfully when the race list includes bye matches
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 35-01-PLAN.md — TDD: Bye-race null guard for toRaceView() + integration test
 
 ### Phase 36: Audit Remediation
 **Goal**: Close traceability gaps and remove dead code identified by v1.5 milestone audit
@@ -177,7 +179,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Dead JS code in race-results.html line 151 (parts.push with inline style) is removed
   2. REQUIREMENTS.md traceability reflects verified requirements as checked and orphaned requirements as compliant
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 35-01-PLAN.md — TDD: Bye-race null guard for toRaceView() + integration test
 
 ## Progress
 
@@ -213,5 +217,5 @@ Plans:
 | 32. Layering and Exception Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 33. Controller Cleanup | v1.5 | 2/2 | Complete   | 2026-04-14 |
 | 34. Convention Fixes | v1.5 | 2/2 | Complete   | 2026-04-14 |
-| 35. Site Generator Bye-Race Null Safety | v1.5 | 0/0 | Pending | — |
+| 35. Site Generator Bye-Race Null Safety | v1.5 | 0/1 | Planned | — |
 | 36. Audit Remediation | v1.5 | 0/0 | Pending | — |
