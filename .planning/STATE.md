@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Code Review Fixes
-status: ready_to_plan
-stopped_at: Phase 35 complete, ready to plan Phase 36
-last_updated: "2026-04-14T18:07:10.057Z"
+status: planning
+stopped_at: Phase 36 context gathered
+last_updated: "2026-04-14T18:10:23.618Z"
 last_activity: 2026-04-14
 progress:
   total_phases: 9
@@ -72,6 +72,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-14
-Stopped at: Phase 35 complete, ready to plan Phase 36
-Resume file: None
+Last session: 2026-04-14T18:10:23.607Z
+Stopped at: Phase 36 context gathered
+Resume file: .planning/phases/36-audit-remediation/36-CONTEXT.md
