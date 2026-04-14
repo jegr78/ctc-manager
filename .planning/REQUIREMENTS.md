@@ -11,30 +11,30 @@ Requirements for Code Review Fixes milestone. Each maps to roadmap phases.
 
 - [x] **SECU-01**: Admin can create/edit matchdays via MatchdayForm DTO instead of direct JPA entity binding
 - [x] **SECU-02**: File download validates resolved path stays within upload directory (path traversal defense)
-- [ ] **SECU-03**: AJAX POST requests include CSRF token for prod/docker profile compatibility
-- [ ] **SECU-04**: Custom template rendering validates content for SpEL/OGNL injection before execution
+- [x] **SECU-03**: AJAX POST requests include CSRF token for prod/docker profile compatibility
+- [x] **SECU-04**: Custom template rendering validates content for SpEL/OGNL injection before execution
 - [x] **SECU-05**: Content-Disposition header uses sanitized filename to prevent header injection
 
 ### Data Integrity
 
-- [ ] **DATA-01**: Multi-race CSV import runs within a single transaction (all-or-nothing)
+- [x] **DATA-01**: Multi-race CSV import runs within a single transaction (all-or-nothing)
 - [x] **DATA-02**: File download handles null content type from probeContentType gracefully
-- [ ] **DATA-03**: Race services handle null home/away teams without NPE (bye matches, unlinked races)
-- [ ] **DATA-04**: Driver-team fallback check filters by current season to prevent cross-season misattribution
+- [x] **DATA-03**: Race services handle null home/away teams without NPE (bye matches, unlinked races)
+- [x] **DATA-04**: Driver-team fallback check filters by current season to prevent cross-season misattribution
 
 ### Architecture
 
-- [ ] **ARCH-01**: Domain services do not import from admin service layer (layering fix or relocation)
-- [ ] **ARCH-02**: Domain services use domain exceptions instead of HTTP-specific ResponseStatusException
-- [ ] **ARCH-03**: Controller methods delegate data transformation and business logic to service layer
-- [ ] **ARCH-04**: Site generator uses RaceLineup as source of truth for driver-team assignment
+- [x] **ARCH-01**: Domain services do not import from admin service layer (layering fix or relocation)
+- [x] **ARCH-02**: Domain services use domain exceptions instead of HTTP-specific ResponseStatusException
+- [x] **ARCH-03**: Controller methods delegate data transformation and business logic to service layer
+- [x] **ARCH-04**: Site generator uses RaceLineup as source of truth for driver-team assignment
 
 ### Convention
 
-- [ ] **CONV-01**: PlayoffController.save() validates form input with @Valid and BindingResult
+- [x] **CONV-01**: PlayoffController.save() validates form input with @Valid and BindingResult
 - [ ] **CONV-02**: SeasonTeam and RaceSettings entities exclude lazy associations from toString
 - [ ] **CONV-03**: All UI text and code comments use English (no German remnants)
-- [ ] **CONV-04**: Race results page uses CSS classes from admin.css instead of inline styles
+- [x] **CONV-04**: Race results page uses CSS classes from admin.css instead of inline styles
 - [ ] **CONV-05**: Business rule violations log at warn level, not error level
 
 ## Future Requirements
@@ -57,32 +57,32 @@ Requirements for Code Review Fixes milestone. Each maps to roadmap phases.
 |-------------|-------|--------|
 | SECU-01 | Phase 29 | Verified |
 | SECU-02 | Phase 28 | Verified |
-| SECU-03 | Phase 30 | Pending |
-| SECU-04 | Phase 30 | Pending |
+| SECU-03 | Phase 30 | Verified |
+| SECU-04 | Phase 30 | Verified |
 | SECU-05 | Phase 28 | Verified |
-| DATA-01 | Phase 31 | Pending |
+| DATA-01 | Phase 31 | Verified |
 | DATA-02 | Phase 28 | Verified |
-| DATA-03 | Phase 31, Phase 35 | Pending |
-| DATA-04 | Phase 31 | Pending |
-| ARCH-01 | Phase 32 | Pending |
-| ARCH-02 | Phase 32 | Pending |
-| ARCH-03 | Phase 33 | Pending |
-| ARCH-04 | Phase 33 | Pending |
-| CONV-01 | Phase 34 | Pending |
+| DATA-03 | Phase 31, Phase 35 | Verified |
+| DATA-04 | Phase 31 | Verified |
+| ARCH-01 | Phase 32 | Verified |
+| ARCH-02 | Phase 32 | Verified |
+| ARCH-03 | Phase 33 | Verified |
+| ARCH-04 | Phase 33 | Verified |
+| CONV-01 | Phase 34 | Verified |
 | CONV-02 | Phase 34 | Compliant (no change needed) |
 | CONV-03 | Phase 34 | Compliant (no change needed) |
-| CONV-04 | Phase 34, Phase 36 | Pending |
+| CONV-04 | Phase 34, Phase 36 | Verified |
 | CONV-05 | Phase 34 | Compliant (no change needed) |
 
 **Coverage:**
 
 - v1.5 requirements: 18 total
 - Mapped to phases: 18
-- Verified: 4 (SECU-01, SECU-02, SECU-05, DATA-02)
+- Verified: 15 (SECU-01 through SECU-05, DATA-01 through DATA-04, ARCH-01 through ARCH-04, CONV-01, CONV-04)
 - Compliant (no change needed): 3 (CONV-02, CONV-03, CONV-05)
-- Pending verification: 11
+- Pending verification: 0
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-14 after gap closure phases added (35-36)*
+*Last updated: 2026-04-14 -- all v1.5 requirements verified/compliant*
