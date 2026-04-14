@@ -9,16 +9,16 @@ Requirements for Code Review Fixes milestone. Each maps to roadmap phases.
 
 ### Security
 
-- [ ] **SECU-01**: Admin can create/edit matchdays via MatchdayForm DTO instead of direct JPA entity binding
-- [ ] **SECU-02**: File download validates resolved path stays within upload directory (path traversal defense)
+- [x] **SECU-01**: Admin can create/edit matchdays via MatchdayForm DTO instead of direct JPA entity binding
+- [x] **SECU-02**: File download validates resolved path stays within upload directory (path traversal defense)
 - [ ] **SECU-03**: AJAX POST requests include CSRF token for prod/docker profile compatibility
 - [ ] **SECU-04**: Custom template rendering validates content for SpEL/OGNL injection before execution
-- [ ] **SECU-05**: Content-Disposition header uses sanitized filename to prevent header injection
+- [x] **SECU-05**: Content-Disposition header uses sanitized filename to prevent header injection
 
 ### Data Integrity
 
 - [ ] **DATA-01**: Multi-race CSV import runs within a single transaction (all-or-nothing)
-- [ ] **DATA-02**: File download handles null content type from probeContentType gracefully
+- [x] **DATA-02**: File download handles null content type from probeContentType gracefully
 - [ ] **DATA-03**: Race services handle null home/away teams without NPE (bye matches, unlinked races)
 - [ ] **DATA-04**: Driver-team fallback check filters by current season to prevent cross-season misattribution
 
@@ -55,31 +55,34 @@ Requirements for Code Review Fixes milestone. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SECU-01 | Phase 29 | Pending |
-| SECU-02 | Phase 28 | Pending |
+| SECU-01 | Phase 29 | Verified |
+| SECU-02 | Phase 28 | Verified |
 | SECU-03 | Phase 30 | Pending |
 | SECU-04 | Phase 30 | Pending |
-| SECU-05 | Phase 28 | Pending |
+| SECU-05 | Phase 28 | Verified |
 | DATA-01 | Phase 31 | Pending |
-| DATA-02 | Phase 28 | Pending |
-| DATA-03 | Phase 31 | Pending |
+| DATA-02 | Phase 28 | Verified |
+| DATA-03 | Phase 31, Phase 35 | Pending |
 | DATA-04 | Phase 31 | Pending |
 | ARCH-01 | Phase 32 | Pending |
 | ARCH-02 | Phase 32 | Pending |
 | ARCH-03 | Phase 33 | Pending |
 | ARCH-04 | Phase 33 | Pending |
 | CONV-01 | Phase 34 | Pending |
-| CONV-02 | Phase 34 | Pending |
-| CONV-03 | Phase 34 | Pending |
-| CONV-04 | Phase 34 | Pending |
-| CONV-05 | Phase 34 | Pending |
+| CONV-02 | Phase 34 | Compliant (no change needed) |
+| CONV-03 | Phase 34 | Compliant (no change needed) |
+| CONV-04 | Phase 34, Phase 36 | Pending |
+| CONV-05 | Phase 34 | Compliant (no change needed) |
 
 **Coverage:**
 
 - v1.5 requirements: 18 total
 - Mapped to phases: 18
+- Verified: 4 (SECU-01, SECU-02, SECU-05, DATA-02)
+- Compliant (no change needed): 3 (CONV-02, CONV-03, CONV-05)
+- Pending verification: 11
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-13*
-*Last updated: 2026-04-13 after v1.5 roadmap creation*
+*Last updated: 2026-04-14 after gap closure phases added (35-36)*

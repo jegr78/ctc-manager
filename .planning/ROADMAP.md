@@ -5,7 +5,7 @@
 - :white_check_mark: **v1.0 Technical Debt Cleanup** — Phases 1-5 (shipped 2026-04-04)
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
 - :white_check_mark: **v1.3 English Test Data** — Phases 20-27 (shipped 2026-04-10)
-- :construction: **v1.5 Code Review Fixes** — Phases 28-34 (in progress)
+- :construction: **v1.5 Code Review Fixes** — Phases 28-36 (in progress)
 
 ## Phases
 
@@ -52,7 +52,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 
 </details>
 
-### v1.5 Code Review Fixes (Phases 28-34)
+### v1.5 Code Review Fixes (Phases 28-36)
 
 - [x] **Phase 28: RaceAttachment Security** - Path traversal defense, null content-type handling, header injection prevention in RaceAttachmentService (completed 2026-04-13)
 - [x] **Phase 29: Mass Assignment Fix** - Replace direct JPA entity binding on MatchdayController with MatchdayForm DTO (completed 2026-04-13)
@@ -61,6 +61,8 @@ See: milestones/v1.1-ROADMAP.md for full details
 - [x] **Phase 32: Layering and Exception Fix** - Remove admin layer imports from domain services, replace ResponseStatusException with domain exceptions (completed 2026-04-13)
 - [x] **Phase 33: Controller Cleanup** - Move business logic and data transformation from controllers to service layer, fix RaceLineup usage in SiteGeneratorService (completed 2026-04-14)
 - [x] **Phase 34: Convention Fixes** - Form validation, toString cleanup, English text, CSS classes, log level corrections (completed 2026-04-14)
+- [ ] **Phase 35: Site Generator Bye-Race Null Safety** - Null guard for bye races in SiteGeneratorService.toRaceView()
+- [ ] **Phase 36: Audit Remediation** - Dead JS code removal, REQUIREMENTS.md traceability updates
 
 ## Phase Details
 
@@ -157,6 +159,26 @@ Plans:
 **UI hint**: yes
 **Note**: CONV-02, CONV-03, CONV-05 confirmed already compliant during research — no plans needed (D-06, D-07, D-08)
 
+### Phase 35: Site Generator Bye-Race Null Safety
+**Goal**: SiteGeneratorService handles bye races (null home/away team) without NPE during site generation
+**Depends on**: Phase 34
+**Requirements**: DATA-03 (extended coverage)
+**Gap Closure**: Closes flow gap from v1.5 milestone audit — SiteGeneratorService.toRaceView() line 274
+**Success Criteria** (what must be TRUE):
+  1. SiteGeneratorService.toRaceView() processes a bye race (null homeTeam or awayTeam) without throwing NPE
+  2. Site generation completes successfully when the race list includes bye matches
+**Plans**: TBD
+
+### Phase 36: Audit Remediation
+**Goal**: Close traceability gaps and remove dead code identified by v1.5 milestone audit
+**Depends on**: Phase 35
+**Requirements**: CONV-04 (dead code residue)
+**Gap Closure**: Closes tech debt and traceability gaps from v1.5 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Dead JS code in race-results.html line 151 (parts.push with inline style) is removed
+  2. REQUIREMENTS.md traceability reflects verified requirements as checked and orphaned requirements as compliant
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -191,3 +213,5 @@ Plans:
 | 32. Layering and Exception Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 33. Controller Cleanup | v1.5 | 2/2 | Complete   | 2026-04-14 |
 | 34. Convention Fixes | v1.5 | 2/2 | Complete   | 2026-04-14 |
+| 35. Site Generator Bye-Race Null Safety | v1.5 | 0/0 | Pending | — |
+| 36. Audit Remediation | v1.5 | 0/0 | Pending | — |
