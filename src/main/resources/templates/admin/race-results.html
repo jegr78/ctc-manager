@@ -145,11 +145,6 @@
 
             // Team totals
             var totalsEl = document.getElementById('teamTotals');
-            var parts = [];
-            for (var t in totals) {
-                var isHome = (t === homeTeam);
-                parts.push('<span style="font-weight:700; color:' + (isHome ? 'var(--accent)' : 'var(--white)') + ';">' + totals[t] + '</span>');
-            }
             totalsEl.textContent = '';
             var first = true;
             for (var t in totals) {
