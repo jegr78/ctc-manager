@@ -36,6 +36,7 @@ public class SiteGeneratorService {
     private final TeamRepository teamRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final RaceResultRepository raceResultRepository;
+    private final RaceLineupRepository raceLineupRepository;
     private final StandingsService standingsService;
     private final DriverRankingService driverRankingService;
     private final PlayoffService playoffService;
@@ -273,10 +274,12 @@ public class SiteGeneratorService {
         var homeTeamId = race.getHomeTeam().getId();
         var results = race.getResults().stream()
                 .map(r -> {
-                    var teamShortName = r.getDriver().getSeasonDrivers().stream()
-                            .filter(sd -> sd.getSeason().getId().equals(season.getId()))
-                            .map(sd -> sd.getTeam().getShortName())
-                            .findFirst().orElse("?");
+                    var teamShortName = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), r.getDriver().getId())
+                            .map(rl -> rl.getTeam().getShortName())
+                            .orElseGet(() -> r.getDriver().getSeasonDrivers().stream()
+                                    .filter(sd -> sd.getSeason().getId().equals(season.getId()))
+                                    .map(sd -> sd.getTeam().getShortName())
+                                    .findFirst().orElse("?"));
                     return new RaceView.ResultView(r.getDriver().getPsnId(), teamShortName,
                             r.getPosition(), r.getQualiPosition(), r.isFastestLap(), r.getPointsTotal());
                 })

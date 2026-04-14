@@ -60,12 +60,17 @@ class SiteGeneratorServiceTest {
     private MatchScoringRepository matchScoringRepository;
 
     @Autowired
+    private RaceLineupRepository raceLineupRepository;
+
+    @Autowired
     private org.ctc.domain.service.ScoringService scoringService;
 
     @TempDir
     Path tempDir;
 
     private Season season;
+    private Race testRace;
+    private Driver driver1;
 
     @BeforeEach
     void setUp() {
@@ -97,7 +102,7 @@ class SiteGeneratorServiceTest {
         season.addTeam(p1r);
         seasonRepository.save(season);
 
-        var driver1 = driverRepository.save(new Driver("gen_panic_" + uniqueSuffix, "panicpotato"));
+        driver1 = driverRepository.save(new Driver("gen_panic_" + uniqueSuffix, "panicpotato"));
         var driver2 = driverRepository.save(new Driver("gen_levit_" + uniqueSuffix, "LEVITIUS"));
         var driver3 = driverRepository.save(new Driver("gen_valky_" + uniqueSuffix, "P1R_Valkyrie"));
         var driver4 = driverRepository.save(new Driver("gen_motor_" + uniqueSuffix, "motorstormhero"));
@@ -129,7 +134,7 @@ class SiteGeneratorServiceTest {
         race.getResults().add(r2);
         race.getResults().add(r3);
         race.getResults().add(r4);
-        raceRepository.save(race);
+        testRace = raceRepository.save(race);
 
         // Set match scores
         match.setHomeScore(r1.getPointsTotal() + r2.getPointsTotal());
@@ -263,5 +268,22 @@ class SiteGeneratorServiceTest {
 
         var links = doc.select("a[href]");
         assertFalse(links.isEmpty(), "Index page should contain links");
+    }
+
+    @Test
+    void givenRaceLineupWithSubTeam_whenGenerate_thenDriverAttributedToSubTeam() throws IOException {
+        // given — create sub-team and RaceLineup pointing driver1 to sub-team
+        var subTeam = new Team("Sub Team " + uniqueSuffix, "GSUB" + uniqueSuffix);
+        subTeam.setParentTeam(testRace.getHomeTeam());
+        teamRepository.save(subTeam);
+        raceLineupRepository.save(new RaceLineup(testRace, driver1, subTeam));
+
+        // when
+        siteGeneratorService.generate();
+
+        // then — matchday page should show sub-team short name for driver1
+        var html = Files.readString(seasonDir().resolve("matchday/spieltag-1.html"));
+        assertTrue(html.contains("GSUB" + uniqueSuffix),
+                "Driver1 should be attributed to sub-team via RaceLineup, not parent team");
     }
 }
