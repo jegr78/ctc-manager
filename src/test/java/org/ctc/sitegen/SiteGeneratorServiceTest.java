@@ -286,4 +286,28 @@ class SiteGeneratorServiceTest {
         assertTrue(html.contains("GSUB" + uniqueSuffix),
                 "Driver1 should be attributed to sub-team via RaceLineup, not parent team");
     }
+
+    @Test
+    void givenByeRaceInSeason_whenGenerate_thenCompletesWithoutNPE() {
+        // given — add a bye race on a separate matchday
+        var byeMatchday = matchdayRepository.save(new Matchday(season, "Bye Matchday", 2));
+        var homeTeam = teamRepository.findAll().stream()
+                .filter(t -> t.getShortName().startsWith("GTNR"))
+                .findFirst().orElseThrow();
+        var byeMatch = new Match(byeMatchday, homeTeam, null);
+        byeMatch.setBye(true);
+        matchRepository.save(byeMatch);
+
+        var byeRace = new Race();
+        byeRace.setMatchday(byeMatchday);
+        byeRace.setMatch(byeMatch);
+        raceRepository.save(byeRace);
+
+        // when
+        var result = siteGeneratorService.generate();
+
+        // then
+        assertFalse(result.hasErrors(), "Bye race should not cause errors: " + result.getErrors());
+        assertTrue(result.getPagesGenerated() > 0);
+    }
 }
