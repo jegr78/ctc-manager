@@ -1,10 +1,11 @@
 ---
 phase: 31
 slug: null-safety-and-transaction-fix
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-13
+audited: 2026-04-14
 ---
 
 # Phase 31 — Validation Strategy
@@ -38,10 +39,10 @@ created: 2026-04-13
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 31-01-01 | 01 | 1 | DATA-01 | — | N/A | unit | `./mvnw test -Dtest=CsvImportServiceTest` | ✅ | ⬜ pending |
-| 31-02-01 | 02 | 1 | DATA-03 | — | N/A | unit | `./mvnw test -Dtest=RaceFormDataServiceTest` | ✅ | ⬜ pending |
-| 31-02-02 | 02 | 1 | DATA-03 | — | N/A | unit | `./mvnw test -Dtest=ScoringServiceTest` | ✅ | ⬜ pending |
-| 31-03-01 | 03 | 1 | DATA-04 | — | N/A | unit | `./mvnw test -Dtest=ScoringServiceTest` | ✅ | ⬜ pending |
+| 31-01-01 | 01 | 1 | DATA-01 | — | N/A | unit | `./mvnw test -Dtest=CsvImportServiceTest` | ✅ | ✅ green |
+| 31-02-01 | 02 | 1 | DATA-03 | — | N/A | unit | `./mvnw test -Dtest=RaceFormDataServiceTest` | ✅ | ✅ green |
+| 31-02-02 | 02 | 1 | DATA-03 | — | N/A | unit | `./mvnw test -Dtest=ScoringServiceTest` | ✅ | ✅ green |
+| 31-03-01 | 03 | 1 | DATA-04 | — | N/A | unit | `./mvnw test -Dtest=ScoringServiceTest` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -59,13 +60,27 @@ created: 2026-04-13
 
 ---
 
+## Validation Audit 2026-04-14
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| Manual-Only | 0 |
+| Automated COVERED | 4 |
+
+All tasks have automated verification via existing test classes. No gaps detected.
+
+---
+
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** validated 2026-04-14
