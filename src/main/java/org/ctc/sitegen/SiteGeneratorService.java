@@ -271,7 +271,9 @@ public class SiteGeneratorService {
     }
 
     private RaceView toRaceView(Race race, Season season) {
-        var homeTeamId = race.getHomeTeam().getId();
+        var homeTeam = race.getHomeTeam();
+        String homeShortName = homeTeam != null ? homeTeam.getShortName() : "Bye";
+
         var results = race.getResults().stream()
                 .map(r -> {
                     var teamShortName = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), r.getDriver().getId())
@@ -288,16 +290,16 @@ public class SiteGeneratorService {
         String awayShortName = race.getAwayTeam() != null ? race.getAwayTeam().getShortName() : "Bye";
 
         int homeTotal = results.stream()
-                .filter(r -> r.getTeamShortName().equals(race.getHomeTeam().getShortName()))
+                .filter(r -> r.getTeamShortName().equals(homeShortName))
                 .mapToInt(RaceView.ResultView::getPointsTotal).sum();
         int awayTotal = results.stream()
-                .filter(r -> !r.getTeamShortName().equals(race.getHomeTeam().getShortName()))
+                .filter(r -> !r.getTeamShortName().equals(homeShortName))
                 .mapToInt(RaceView.ResultView::getPointsTotal).sum();
 
         String trackName = race.getTrack() != null ? race.getTrack().getName() : null;
         String carName = race.getCar() != null ? race.getCar().getDisplayName() : null;
 
-        return new RaceView(race.getHomeTeam().getShortName(), awayShortName,
+        return new RaceView(homeShortName, awayShortName,
                 trackName, carName, homeTotal, awayTotal, !race.getResults().isEmpty(), results);
     }
 
