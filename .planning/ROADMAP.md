@@ -150,8 +150,12 @@ Plans:
   3. All UI text visible in the browser and all code comments are in English (no German strings remain)
   4. The race results page uses CSS classes from admin.css instead of inline style attributes
   5. Log statements for business rule violations (non-fatal application logic rejections) use log.warn() instead of log.error()
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 34-01-PLAN.md — TDD: @Valid + BindingResult form validation on PlayoffController.save()
+- [ ] 34-02-PLAN.md — Extract inline styles from race-results.html to CSS classes in admin.css
 **UI hint**: yes
+**Note**: CONV-02, CONV-03, CONV-05 confirmed already compliant during research — no plans needed (D-06, D-07, D-08)
 
 ## Progress
 
@@ -186,4 +190,4 @@ Plans:
 | 31. Null Safety and Transaction Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 32. Layering and Exception Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 33. Controller Cleanup | v1.5 | 2/2 | Complete   | 2026-04-14 |
-| 34. Convention Fixes | v1.5 | 0/TBD | Not started | - |
+| 34. Convention Fixes | v1.5 | 0/2 | Not started | - |
