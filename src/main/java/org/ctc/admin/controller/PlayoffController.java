@@ -17,8 +17,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import jakarta.validation.Valid;
 
 import java.io.IOException;
 import java.util.UUID;
@@ -63,7 +66,13 @@ public class PlayoffController {
     }
 
     @PostMapping("/save")
-    public String save(@ModelAttribute PlayoffForm form, RedirectAttributes redirectAttributes) {
+    public String save(@Valid @ModelAttribute("playoffForm") PlayoffForm form, BindingResult bindingResult,
+                       Model model, RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            var data = playoffService.getPlayoffListData(null);
+            model.addAttribute("seasons", data.allSeasons());
+            return "admin/playoff-form";
+        }
         try {
             var playoff = playoffService.createPlayoff(
                     form.getSeasonId(), form.getName(), form.getNumberOfTeams(),
@@ -72,7 +81,7 @@ public class PlayoffController {
                     "Playoff created: " + playoff.getName());
             return "redirect:/admin/playoffs?seasonId=" + form.getSeasonId();
         } catch (IllegalArgumentException | IllegalStateException e) {
-            log.error("Error creating playoff", e);
+            log.warn("Error creating playoff: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/new?seasonId=" + form.getSeasonId();
         }
