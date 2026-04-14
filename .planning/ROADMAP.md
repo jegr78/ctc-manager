@@ -59,7 +59,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 - [x] **Phase 30: CSRF and Template Security** - CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation in custom template rendering (completed 2026-04-13)
 - [x] **Phase 31: Null Safety and Transaction Fix** - Transactional CSV import, null team guards in race services, season-scoped driver-team fallback (completed 2026-04-13)
 - [x] **Phase 32: Layering and Exception Fix** - Remove admin layer imports from domain services, replace ResponseStatusException with domain exceptions (completed 2026-04-13)
-- [ ] **Phase 33: Controller Cleanup** - Move business logic and data transformation from controllers to service layer, fix RaceLineup usage in SiteGeneratorService
+- [x] **Phase 33: Controller Cleanup** - Move business logic and data transformation from controllers to service layer, fix RaceLineup usage in SiteGeneratorService (completed 2026-04-14)
 - [ ] **Phase 34: Convention Fixes** - Form validation, toString cleanup, English text, CSS classes, log level corrections
 
 ## Phase Details
@@ -137,8 +137,8 @@ Plans:
   3. Generated site pages correctly attribute drivers to their sub-teams as recorded in race lineups
 **Plans**: 2 plans
 Plans:
-- [ ] 33-01-PLAN.md — TDD: Extract controller logic to SeasonManagementService, MatchdayService, DriverService
-- [ ] 33-02-PLAN.md — TDD: Fix SiteGeneratorService.toRaceView() to use RaceLineup-first with SeasonDriver fallback
+- [x] 33-01-PLAN.md — TDD: Extract controller logic to SeasonManagementService, MatchdayService, DriverService
+- [x] 33-02-PLAN.md — TDD: Fix SiteGeneratorService.toRaceView() to use RaceLineup-first with SeasonDriver fallback
 
 ### Phase 34: Convention Fixes
 **Goal**: Form validation, entity toString, UI language, CSS usage, and log levels all follow project conventions
@@ -185,5 +185,5 @@ Plans:
 | 30. CSRF and Template Security | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 31. Null Safety and Transaction Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
 | 32. Layering and Exception Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
-| 33. Controller Cleanup | v1.5 | 0/2 | Not started | - |
+| 33. Controller Cleanup | v1.5 | 2/2 | Complete   | 2026-04-14 |
 | 34. Convention Fixes | v1.5 | 0/TBD | Not started | - |
