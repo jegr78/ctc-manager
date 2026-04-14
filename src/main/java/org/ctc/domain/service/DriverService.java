@@ -48,6 +48,14 @@ public class DriverService {
     }
 
     @Transactional(readOnly = true)
+    public List<Driver> getMergeFormDrivers(UUID excludeDriverId) {
+        return driverRepository.findAll().stream()
+                .filter(d -> !d.getId().equals(excludeDriverId))
+                .sorted(Comparator.comparing(Driver::getPsnId, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public Driver findById(UUID id) {
         return driverRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Driver", id));

@@ -3,7 +3,6 @@ package org.ctc.admin.controller;
 import org.ctc.admin.dto.DriverForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
-import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PsnAlias;
 import org.ctc.domain.service.DriverMergeService;
 import org.ctc.domain.service.DriverService;
@@ -16,7 +15,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.Comparator;
 import java.util.UUID;
 
 @Slf4j
@@ -108,10 +106,7 @@ public class DriverController {
     @GetMapping("/{id}/merge")
     public String mergeForm(@PathVariable UUID id, Model model) {
         var source = driverService.findById(id);
-        var allDrivers = driverService.findAll().stream()
-                .filter(d -> !d.getId().equals(id))
-                .sorted(Comparator.comparing(Driver::getPsnId, String.CASE_INSENSITIVE_ORDER))
-                .toList();
+        var allDrivers = driverService.getMergeFormDrivers(id);
         model.addAttribute("source", source);
         model.addAttribute("allDrivers", allDrivers);
         return "admin/driver-merge";

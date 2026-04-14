@@ -32,7 +32,9 @@ public class MatchdayService {
 
     public record MatchdayData(UUID id, String label, int sortIndex) {}
     public record MatchdayListData(List<Matchday> matchdays, UUID selectedSeasonId, List<Season> seasons) {}
-    public record MatchdayDetailData(Matchday matchday, Map<String, List<RaceLineup>> lineupsByTeam) {}
+    public record MatchdayDetailData(Matchday matchday, Map<String, List<RaceLineup>> lineupsByTeam,
+                                      boolean hasMatches, boolean hasSchedule, long scheduleMissingCount,
+                                      boolean hasResults) {}
 
     // --- Season helpers (for controller form data) ---
 
@@ -77,7 +79,16 @@ public class MatchdayService {
                         lu -> lu.getTeam().getShortName(),
                         LinkedHashMap::new,
                         Collectors.toList()));
-        return new MatchdayDetailData(matchday, lineupsByTeam);
+        var nonByeMatches = matchday.getMatches().stream().filter(m -> !m.isBye()).toList();
+        boolean hasMatches = !nonByeMatches.isEmpty();
+        boolean hasSchedule = nonByeMatches.stream()
+                .anyMatch(m -> m.getRaces().stream().anyMatch(r -> r.getDateTime() != null));
+        long matchesWithDateTime = nonByeMatches.stream()
+                .filter(m -> m.getRaces().stream().anyMatch(r -> r.getDateTime() != null)).count();
+        long scheduleMissingCount = nonByeMatches.size() - matchesWithDateTime;
+        boolean hasResults = nonByeMatches.stream()
+                .anyMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
+        return new MatchdayDetailData(matchday, lineupsByTeam, hasMatches, hasSchedule, scheduleMissingCount, hasResults);
     }
 
     // --- Save ---

@@ -3,7 +3,6 @@ package org.ctc.admin.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.PowerRankingsGraphicService;
-import org.ctc.domain.model.Season;
 import org.ctc.domain.service.SeasonManagementService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Controller
@@ -29,32 +27,7 @@ public class PowerRankingsController {
     public String index(@RequestParam(required = false) Integer year,
                         @RequestParam(required = false) Integer number,
                         Model model) {
-        // Build season group options
-        List<Season> allSeasons = seasonManagementService.findAll();
-        var seasonGroups = allSeasons.stream()
-                .collect(Collectors.groupingBy(
-                        s -> s.getYear() + "|" + s.getNumber(),
-                        LinkedHashMap::new,
-                        Collectors.toList()))
-                .entrySet().stream()
-                .map(entry -> {
-                    var seasons = entry.getValue();
-                    var first = seasons.getFirst();
-                    int teamCount = seasons.stream()
-                            .mapToInt(s -> s.getSeasonTeams().size())
-                            .sum();
-                    return new SeasonGroupOption(
-                            first.getYear(),
-                            first.getNumber(),
-                            "Season " + first.getNumber() + " (" + first.getYear() + ") — " + teamCount + " Teams",
-                            teamCount
-                    );
-                })
-                .sorted(Comparator.comparingInt(SeasonGroupOption::year).reversed()
-                        .thenComparingInt(SeasonGroupOption::number).reversed())
-                .toList();
-
-        model.addAttribute("seasonGroups", seasonGroups);
+        model.addAttribute("seasonGroups", seasonManagementService.getSeasonGroupOptions());
         model.addAttribute("selectedYear", year);
         model.addAttribute("selectedNumber", number);
 
@@ -84,5 +57,4 @@ public class PowerRankingsController {
         }
     }
 
-    public record SeasonGroupOption(int year, int number, String label, int teamCount) {}
 }

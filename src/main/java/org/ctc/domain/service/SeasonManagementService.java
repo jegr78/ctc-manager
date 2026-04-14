@@ -41,11 +41,37 @@ public class SeasonManagementService {
 
     public record SwissRoundData(Season season, Map<UUID, int[]> raceScores) {}
 
+    public record SeasonGroupOption(int year, int number, String label, int teamCount) {}
+
     // --- Season CRUD ---
 
     @Transactional(readOnly = true)
     public List<Season> findAll() {
         return seasonRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SeasonGroupOption> getSeasonGroupOptions() {
+        return seasonRepository.findAll().stream()
+                .collect(Collectors.groupingBy(
+                        s -> s.getYear() + "|" + s.getNumber(),
+                        java.util.LinkedHashMap::new,
+                        Collectors.toList()))
+                .entrySet().stream()
+                .map(entry -> {
+                    var seasons = entry.getValue();
+                    var first = seasons.getFirst();
+                    int teamCount = seasons.stream()
+                            .mapToInt(s -> s.getSeasonTeams().size())
+                            .sum();
+                    return new SeasonGroupOption(
+                            first.getYear(), first.getNumber(),
+                            "Season " + first.getNumber() + " (" + first.getYear() + ") — " + teamCount + " Teams",
+                            teamCount);
+                })
+                .sorted(Comparator.comparingInt(SeasonGroupOption::year).reversed()
+                        .thenComparing(Comparator.comparingInt(SeasonGroupOption::number).reversed()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
