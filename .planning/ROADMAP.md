@@ -62,7 +62,7 @@ See: milestones/v1.1-ROADMAP.md for full details
 - [x] **Phase 33: Controller Cleanup** - Move business logic and data transformation from controllers to service layer, fix RaceLineup usage in SiteGeneratorService (completed 2026-04-14)
 - [x] **Phase 34: Convention Fixes** - Form validation, toString cleanup, English text, CSS classes, log level corrections (completed 2026-04-14)
 - [x] **Phase 35: Site Generator Bye-Race Null Safety** - Null guard for bye races in SiteGeneratorService.toRaceView() (completed 2026-04-14)
-- [ ] **Phase 36: Audit Remediation** - Dead JS code removal, REQUIREMENTS.md traceability updates
+- [x] **Phase 36: Audit Remediation** - Dead JS code removal, REQUIREMENTS.md traceability updates (completed 2026-04-14)
 
 ## Phase Details
 
@@ -181,7 +181,7 @@ Plans:
   2. REQUIREMENTS.md traceability reflects verified requirements as checked and orphaned requirements as compliant
 **Plans**: 1 plan
 Plans:
-- [ ] 36-01-PLAN.md — Dead code removal from race-results.html + REQUIREMENTS.md traceability closure
+- [x] 36-01-PLAN.md — Dead code removal from race-results.html + REQUIREMENTS.md traceability closure
 
 ## Progress
 
@@ -218,4 +218,4 @@ Plans:
 | 33. Controller Cleanup | v1.5 | 2/2 | Complete   | 2026-04-14 |
 | 34. Convention Fixes | v1.5 | 2/2 | Complete   | 2026-04-14 |
 | 35. Site Generator Bye-Race Null Safety | v1.5 | 1/1 | Complete    | 2026-04-14 |
-| 36. Audit Remediation | v1.5 | 0/1 | Pending | — |
+| 36. Audit Remediation | v1.5 | 1/1 | Complete    | 2026-04-14 |
