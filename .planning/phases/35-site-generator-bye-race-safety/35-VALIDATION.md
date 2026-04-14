@@ -1,10 +1,11 @@
 ---
 phase: 35
 slug: site-generator-bye-race-safety
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-14
+audited: 2026-04-14
 ---
 
 # Phase 35 — Validation Strategy
@@ -38,8 +39,8 @@ created: 2026-04-14
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 35-01-01 | 01 | 1 | DATA-03 | — | N/A | unit | `./mvnw test -pl . -Dtest=SiteGeneratorServiceTest#givenByeRace*` | ❌ W0 | ⬜ pending |
-| 35-01-02 | 01 | 1 | DATA-03 | — | N/A | unit | `./mvnw test -pl . -Dtest=SiteGeneratorServiceTest#givenByeRace*` | ❌ W0 | ⬜ pending |
+| 35-01-01 | 01 | 1 | DATA-03 | — | Bye race does not NPE during site generation | integration | `./mvnw test -pl . -Dtest=SiteGeneratorServiceTest#givenByeRaceInSeason_whenGenerate_thenCompletesWithoutNPE` | ✅ | ✅ green |
+| 35-01-02 | 01 | 1 | DATA-03 | — | Zero unsafe getHomeTeam() calls remain | structural | `grep -c "race.getHomeTeam().getShortName()" SiteGeneratorService.java` (returns 0) | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -47,9 +48,9 @@ created: 2026-04-14
 
 ## Wave 0 Requirements
 
-- [ ] Add bye-race test methods to `SiteGeneratorServiceTest` — stubs for DATA-03 null safety
+- [x] `givenByeRaceInSeason_whenGenerate_thenCompletesWithoutNPE` — added in Plan 01 Task 1 (commit c17a801)
 
-*Existing test infrastructure covers all phase requirements — no new framework or config needed.*
+*All Wave 0 tests implemented and passing.*
 
 ---
 
@@ -59,13 +60,27 @@ created: 2026-04-14
 
 ---
 
+## Validation Audit 2026-04-14
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+| Manual-Only | 0 |
+| Automated COVERED | 2 |
+
+All Wave 0 tests were implemented during phase execution (Plan 01). No new gaps detected.
+
+---
+
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 120s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** validated 2026-04-14
