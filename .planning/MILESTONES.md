@@ -1,5 +1,25 @@
 # Milestones
 
+## v1.5 Code Review Fixes (Shipped: 2026-04-15)
+
+**Phases completed:** 9 phases, 14 plans, 18 tasks
+
+**Key accomplishments:**
+
+- 1. [Rule 1 - Bug] Corrected test assertion for header injection check
+- MatchdayController mass assignment vulnerability eliminated by replacing `@ModelAttribute Matchday` (JPA entity) with `@ModelAttribute("form") MatchdayForm` DTO containing only 4 user-editable fields
+- layout.html
+- One-liner:
+- One-liner:
+- RaceGraphicService relocated from domain.service to admin.service and TeamCardService decoupled from RaceService — zero admin imports now remain in the domain layer
+- One-liner:
+- Season grouping/sorting, matchday graphic status computation, and driver merge filtering extracted from three controllers into their respective service methods using TDD
+- SiteGeneratorService.toRaceView() now resolves driver-team assignments from RaceLineup entries first, falling back to SeasonDriver only when no lineup entry exists — matching the canonical pattern from RaceFormDataService
+- One-liner:
+- 1. classList.add count is 2, not 3 as plan stated
+
+---
+
 ## v1.3 English Test Data (Shipped: 2026-04-10)
 
 **Phases completed:** 8 phases, 9 plans, 17 tasks
