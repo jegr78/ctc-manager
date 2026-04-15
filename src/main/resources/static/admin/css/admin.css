@@ -1915,3 +1915,25 @@ a.season-header-title:hover {
 /* Utility: seed input column */
 .seed-col { width: 60px; }
 .seed-input { width: 50px; }
+
+/* === Race Results === */
+.results-team-name { font-weight: 600; }
+.results-driver-name { font-weight: 500; }
+.results-pos-input {
+    width: 56px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+    color: var(--white);
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.results-totals-row { border-top: 2px solid var(--border); }
+.results-totals-label { text-align: right; font-weight: 600; color: var(--white); }
+.results-total-value { font-weight: 700; font-size: 16px; }
+.results-total-value--home { color: var(--accent); }
+.results-total-value--away { color: var(--white); }
+.results-total-sep { color: var(--text-dim); }

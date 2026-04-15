@@ -236,7 +236,7 @@
                 return;
             }
 
-            fetch('/admin/matchdays/create-inline', {
+            csrfFetch('/admin/matchdays/create-inline', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({seasonId: seasonId, label: label})

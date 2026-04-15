@@ -4,8 +4,8 @@
 
 - :white_check_mark: **v1.0 Technical Debt Cleanup** — Phases 1-5 (shipped 2026-04-04)
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
-- :white_check_mark: **v1.2 Driver Merge** — Phases 16-19 (shipped 2026-04-07)
 - :white_check_mark: **v1.3 English Test Data** — Phases 20-27 (shipped 2026-04-10)
+- :construction: **v1.5 Code Review Fixes** — Phases 28-36 (in progress)
 
 ## Phases
 
@@ -39,30 +39,149 @@ See: milestones/v1.1-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.2 Driver Merge (Phases 16-19) -- SHIPPED 2026-04-07</summary>
-
-- [x] Phase 16: Merge Service Core (1/1 plan) -- completed 2026-04-07
-- [x] Phase 17: Duplicate-Handling (1/1 plan) -- completed 2026-04-07
-- [x] Phase 18: Merge UI (2/2 plans) -- completed 2026-04-07
-- [x] Phase 19: Merge Error Handling (1/1 plan) -- completed 2026-04-07
-
-See: milestones/v1.2-ROADMAP.md for full details
-
-</details>
-
-<details>
 <summary>v1.3 English Test Data (Phases 20-27) -- SHIPPED 2026-04-10</summary>
 
-- [x] Phase 20: English Messages — completed 2026-04-08
-- [x] Phase 21: English Code — completed 2026-04-09
-- [x] Phase 22: Dev Teams & Drivers — completed 2026-04-09
-- [x] Phase 23: Dev Seasons with Results — completed 2026-04-10
-- [x] Phase 24: Restore Fictive Dev Data — Gap Closure (completed 2026-04-10)
-- [x] Phase 25: Fix I18N Regressions — Gap Closure (completed 2026-04-10)
-- [x] Phase 26: Restore Fictive Team Logos — Gap Closure (completed 2026-04-10)
-- [x] Phase 27: Restore Matchday/Result Seed Pipeline — Gap Closure (completed 2026-04-10)
+- [x] Phase 20: English Messages -- completed 2026-04-08
+- [x] Phase 21: English Code -- completed 2026-04-09
+- [x] Phase 22: Dev Teams & Drivers -- completed 2026-04-09
+- [x] Phase 23: Dev Seasons with Results -- completed 2026-04-10
+- [x] Phase 24: Restore Fictive Dev Data -- completed 2026-04-10
+- [x] Phase 25: Fix I18N Regressions -- completed 2026-04-10
+- [x] Phase 26: Restore Fictive Team Logos -- completed 2026-04-10
+- [x] Phase 27: Restore Matchday/Result Seed Pipeline -- completed 2026-04-10
 
 </details>
+
+### v1.5 Code Review Fixes (Phases 28-36)
+
+- [x] **Phase 28: RaceAttachment Security** - Path traversal defense, null content-type handling, header injection prevention in RaceAttachmentService (completed 2026-04-13)
+- [x] **Phase 29: Mass Assignment Fix** - Replace direct JPA entity binding on MatchdayController with MatchdayForm DTO (completed 2026-04-13)
+- [x] **Phase 30: CSRF and Template Security** - CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation in custom template rendering (completed 2026-04-13)
+- [x] **Phase 31: Null Safety and Transaction Fix** - Transactional CSV import, null team guards in race services, season-scoped driver-team fallback (completed 2026-04-13)
+- [x] **Phase 32: Layering and Exception Fix** - Remove admin layer imports from domain services, replace ResponseStatusException with domain exceptions (completed 2026-04-13)
+- [x] **Phase 33: Controller Cleanup** - Move business logic and data transformation from controllers to service layer, fix RaceLineup usage in SiteGeneratorService (completed 2026-04-14)
+- [x] **Phase 34: Convention Fixes** - Form validation, toString cleanup, English text, CSS classes, log level corrections (completed 2026-04-14)
+- [x] **Phase 35: Site Generator Bye-Race Null Safety** - Null guard for bye races in SiteGeneratorService.toRaceView() (completed 2026-04-14)
+- [x] **Phase 36: Audit Remediation** - Dead JS code removal, REQUIREMENTS.md traceability updates (completed 2026-04-14)
+
+## Phase Details
+
+### Phase 28: RaceAttachment Security
+**Goal**: File download in RaceAttachmentService is secure against path traversal, null content-type crashes, and header injection
+**Depends on**: Phase 27 (previous milestone complete)
+**Requirements**: SECU-02, SECU-05, DATA-02
+**Success Criteria** (what must be TRUE):
+  1. Downloading a race attachment resolves a path and confirms it stays within the upload directory before serving
+  2. Downloading a file with no detectable content type returns a safe default (application/octet-stream) instead of throwing NPE
+  3. The Content-Disposition filename is sanitized to strip characters that could break the header (newlines, semicolons, quotes)
+**Plans**: 1 plan
+Plans:
+- [x] 28-01-PLAN.md — TDD: Security tests + fixes for downloadAttachment (path traversal, null MIME, header injection)
+
+### Phase 29: Mass Assignment Fix
+**Goal**: Matchday create/edit forms bind to a DTO, not a JPA entity, eliminating mass assignment risk
+**Depends on**: Phase 28
+**Requirements**: SECU-01
+**Success Criteria** (what must be TRUE):
+  1. Admin can create a matchday and the form data flows through a MatchdayForm DTO before reaching the service
+  2. Admin can edit a matchday and the controller never has a JPA Matchday entity as a @ModelAttribute POST target
+  3. No JPA-managed fields (id, version, audit timestamps) are bindable from the matchday form submission
+**Plans**: 1 plan
+Plans:
+- [x] 29-01-PLAN.md — TDD: MatchdayForm DTO creation, controller refactor, template rebind
+
+### Phase 30: CSRF and Template Security
+**Goal**: AJAX POST requests carry CSRF tokens in prod/docker, and custom template rendering rejects dangerous content
+**Depends on**: Phase 29
+**Requirements**: SECU-03, SECU-04
+**Success Criteria** (what must be TRUE):
+  1. Any AJAX POST request sent in prod/docker profile includes the CSRF token and is accepted by Spring Security
+  2. Submitting a custom template containing SpEL or OGNL expressions is rejected before rendering
+  3. Legitimate custom templates without injection patterns render correctly
+**Plans**: 2 plans
+Plans:
+- [x] 30-01-PLAN.md — CSRF meta tags + csrfFetch() wrapper in layout.html, update AJAX POST call sites
+- [x] 30-02-PLAN.md — TDD: Template save-path validation + SpEL T() false-positive fix
+
+### Phase 31: Null Safety and Transaction Fix
+**Goal**: Multi-race CSV import is atomic and race services handle bye matches and unlinked races without crashing
+**Depends on**: Phase 30
+**Requirements**: DATA-01, DATA-03, DATA-04
+**Success Criteria** (what must be TRUE):
+  1. If any race in a multi-race CSV import fails validation, the entire import is rolled back (no partial imports)
+  2. Race services (scoring, graphic generation) processing a bye match (null home or away team) return a safe result instead of throwing NPE
+  3. Driver-team fallback lookup in standings/scoring filters by the current season so no cross-season misattribution occurs
+**Plans**: 2 plans
+Plans:
+- [x] 31-01-PLAN.md — TDD: Validate-then-import two-phase refactor in CsvImportService.executeImport()
+- [x] 31-02-PLAN.md — TDD: Null safety for bye matches in RaceFormDataService/ScoringService + season-filtered isDriverInTeam fallback
+
+### Phase 32: Layering and Exception Fix
+**Goal**: Domain services contain no imports from the admin service layer and use domain exceptions instead of HTTP exceptions
+**Depends on**: Phase 31
+**Requirements**: ARCH-01, ARCH-02
+**Success Criteria** (what must be TRUE):
+  1. No class under org.ctc.domain.service imports from org.ctc.admin.service
+  2. Domain service methods that signal business rule violations throw a domain exception (e.g., ValidationException, EntityNotFoundException) rather than ResponseStatusException
+  3. Existing error handling in GlobalExceptionHandler correctly maps the domain exceptions to HTTP responses
+**Plans**: 2 plans
+Plans:
+- [x] 32-01-PLAN.md — Move RaceGraphicService to admin.service, decouple TeamCardService from RaceService
+- [x] 32-02-PLAN.md — TDD: Replace ResponseStatusException with domain exceptions in MatchdayService
+
+### Phase 33: Controller Cleanup
+**Goal**: Controllers delegate all data transformation and business logic to services, and SiteGeneratorService uses RaceLineup as source of truth
+**Depends on**: Phase 32
+**Requirements**: ARCH-03, ARCH-04
+**Success Criteria** (what must be TRUE):
+  1. Controller methods identified in the review contain no inline data transformation or business rule logic — those calls are delegated to service methods
+  2. SiteGeneratorService resolves driver-team assignment from RaceLineup entries, not from SeasonDriver fallback alone
+  3. Generated site pages correctly attribute drivers to their sub-teams as recorded in race lineups
+**Plans**: 2 plans
+Plans:
+- [x] 33-01-PLAN.md — TDD: Extract controller logic to SeasonManagementService, MatchdayService, DriverService
+- [x] 33-02-PLAN.md — TDD: Fix SiteGeneratorService.toRaceView() to use RaceLineup-first with SeasonDriver fallback
+
+### Phase 34: Convention Fixes
+**Goal**: Form validation, entity toString, UI language, CSS usage, and log levels all follow project conventions
+**Depends on**: Phase 33
+**Requirements**: CONV-01, CONV-02, CONV-03, CONV-04, CONV-05
+**Success Criteria** (what must be TRUE):
+  1. PlayoffController.save() validates form input via @Valid + BindingResult and returns the form view with errors on validation failure
+  2. SeasonTeam and RaceSettings entity toString methods exclude lazy-loaded associations to prevent accidental N+1 loading
+  3. All UI text visible in the browser and all code comments are in English (no German strings remain)
+  4. The race results page uses CSS classes from admin.css instead of inline style attributes
+  5. Log statements for business rule violations (non-fatal application logic rejections) use log.warn() instead of log.error()
+**Plans**: 2 plans
+Plans:
+- [x] 34-01-PLAN.md — TDD: @Valid + BindingResult form validation on PlayoffController.save()
+- [x] 34-02-PLAN.md — Extract inline styles from race-results.html to CSS classes in admin.css
+**UI hint**: yes
+**Note**: CONV-02, CONV-03, CONV-05 confirmed already compliant during research — no plans needed (D-06, D-07, D-08)
+
+### Phase 35: Site Generator Bye-Race Null Safety
+**Goal**: SiteGeneratorService handles bye races (null home/away team) without NPE during site generation
+**Depends on**: Phase 34
+**Requirements**: DATA-03 (extended coverage)
+**Gap Closure**: Closes flow gap from v1.5 milestone audit — SiteGeneratorService.toRaceView() line 274
+**Success Criteria** (what must be TRUE):
+  1. SiteGeneratorService.toRaceView() processes a bye race (null homeTeam or awayTeam) without throwing NPE
+  2. Site generation completes successfully when the race list includes bye matches
+**Plans**: 1 plan
+Plans:
+- [x] 35-01-PLAN.md — TDD: Bye-race null guard for toRaceView() + integration test
+
+### Phase 36: Audit Remediation
+**Goal**: Close traceability gaps and remove dead code identified by v1.5 milestone audit
+**Depends on**: Phase 35
+**Requirements**: CONV-04 (dead code residue)
+**Gap Closure**: Closes tech debt and traceability gaps from v1.5 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Dead JS code in race-results.html line 151 (parts.push with inline style) is removed
+  2. REQUIREMENTS.md traceability reflects verified requirements as checked and orphaned requirements as compliant
+**Plans**: 1 plan
+Plans:
+- [x] 36-01-PLAN.md — Dead code removal from race-results.html + REQUIREMENTS.md traceability closure
 
 ## Progress
 
@@ -83,10 +202,6 @@ See: milestones/v1.2-ROADMAP.md for full details
 | 13. Layer Cleanup Recovery | v1.1 | 3/3 | Complete | 2026-04-06 |
 | 14. Exception Refinement Recovery | v1.1 | 2/2 | Complete | 2026-04-07 |
 | 15. Alltime Standings Recovery | v1.1 | 1/1 | Complete | 2026-04-07 |
-| 16. Merge Service Core | v1.2 | 1/1 | Complete | 2026-04-07 |
-| 17. Duplicate-Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
-| 18. Merge UI | v1.2 | 2/2 | Complete | 2026-04-07 |
-| 19. Merge Error Handling | v1.2 | 1/1 | Complete | 2026-04-07 |
 | 20. English Messages | v1.3 | — | Complete | 2026-04-08 |
 | 21. English Code | v1.3 | — | Complete | 2026-04-09 |
 | 22. Dev Teams & Drivers | v1.3 | — | Complete | 2026-04-09 |
@@ -94,4 +209,13 @@ See: milestones/v1.2-ROADMAP.md for full details
 | 24. Restore Fictive Dev Data | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 25. Fix I18N Regressions | v1.3 | 1/1 | Complete | 2026-04-10 |
 | 26. Restore Fictive Team Logos | v1.3 | 1/1 | Complete | 2026-04-10 |
-| 27. Restore Matchday/Result Pipeline | v1.3 | 1/1 | Complete | 2026-04-10 |
+| 27. Restore Matchday/Result Seed Pipeline | v1.3 | 1/1 | Complete | 2026-04-10 |
+| 28. RaceAttachment Security | v1.5 | 1/1 | Complete    | 2026-04-13 |
+| 29. Mass Assignment Fix | v1.5 | 1/1 | Complete    | 2026-04-13 |
+| 30. CSRF and Template Security | v1.5 | 2/2 | Complete   | 2026-04-13 |
+| 31. Null Safety and Transaction Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
+| 32. Layering and Exception Fix | v1.5 | 2/2 | Complete   | 2026-04-13 |
+| 33. Controller Cleanup | v1.5 | 2/2 | Complete   | 2026-04-14 |
+| 34. Convention Fixes | v1.5 | 2/2 | Complete   | 2026-04-14 |
+| 35. Site Generator Bye-Race Null Safety | v1.5 | 1/1 | Complete    | 2026-04-14 |
+| 36. Audit Remediation | v1.5 | 1/1 | Complete    | 2026-04-14 |

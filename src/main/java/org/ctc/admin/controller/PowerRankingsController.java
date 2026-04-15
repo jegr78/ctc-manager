@@ -3,24 +3,16 @@ package org.ctc.admin.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.PowerRankingsGraphicService;
-import org.ctc.domain.model.Season;
 import org.ctc.domain.service.SeasonManagementService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Slf4j
 @Controller
@@ -28,68 +20,41 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PowerRankingsController {
 
-	private final PowerRankingsGraphicService powerRankingsGraphicService;
-	private final SeasonManagementService seasonManagementService;
+    private final PowerRankingsGraphicService powerRankingsGraphicService;
+    private final SeasonManagementService seasonManagementService;
 
-	@GetMapping
-	public String index(@RequestParam(required = false) Integer year,
-	                    @RequestParam(required = false) Integer number,
-	                    Model model) {
-		// Build season group options
-		List<Season> allSeasons = seasonManagementService.findAll();
-		var seasonGroups = allSeasons.stream()
-				.collect(Collectors.groupingBy(
-						s -> s.getYear() + "|" + s.getNumber(),
-						LinkedHashMap::new,
-						Collectors.toList()))
-				.entrySet().stream()
-				.map(entry -> {
-					var seasons = entry.getValue();
-					var first = seasons.getFirst();
-					int teamCount = seasons.stream()
-							.mapToInt(s -> s.getSeasonTeams().size())
-							.sum();
-					return new SeasonGroupOption(
-							first.getYear(),
-							first.getNumber(),
-							"Season " + first.getNumber() + " (" + first.getYear() + ") — " + teamCount + " Teams",
-							teamCount
-					);
-				})
-				.sorted(Comparator.comparingInt(SeasonGroupOption::year).reversed()
-						.thenComparingInt(SeasonGroupOption::number).reversed())
-				.toList();
+    @GetMapping
+    public String index(@RequestParam(required = false) Integer year,
+                        @RequestParam(required = false) Integer number,
+                        Model model) {
+        model.addAttribute("seasonGroups", seasonManagementService.getSeasonGroupOptions());
+        model.addAttribute("selectedYear", year);
+        model.addAttribute("selectedNumber", number);
 
-		model.addAttribute("seasonGroups", seasonGroups);
-		model.addAttribute("selectedYear", year);
-		model.addAttribute("selectedNumber", number);
+        // Load teams if season selected
+        if (year != null && number != null) {
+            var teams = powerRankingsGraphicService.loadTeamsForSeasonGroup(year, number);
+            model.addAttribute("teams", teams);
+        }
 
-		// Load teams if season selected
-		if (year != null && number != null) {
-			var teams = powerRankingsGraphicService.loadTeamsForSeasonGroup(year, number);
-			model.addAttribute("teams", teams);
-		}
+        return "admin/power-rankings";
+    }
 
-		return "admin/power-rankings";
-	}
+    @PostMapping("/download")
+    public ResponseEntity<byte[]> download(@RequestParam int year,
+                                           @RequestParam int number,
+                                           @RequestParam(defaultValue = "") String subtitle,
+                                           @RequestParam("teamIds") List<UUID> teamIds) {
+        try {
+            byte[] png = powerRankingsGraphicService.generateRankings(year, number, subtitle, teamIds);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_PNG)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Power Rankings.png\"")
+                    .body(png);
+        } catch (IOException | RuntimeException e) {
+            log.error("Failed to generate power rankings graphic", e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
 
-	@PostMapping("/download")
-	public ResponseEntity<byte[]> download(@RequestParam int year,
-	                                       @RequestParam int number,
-	                                       @RequestParam(defaultValue = "") String subtitle,
-	                                       @RequestParam("teamIds") List<UUID> teamIds) {
-		try {
-			byte[] png = powerRankingsGraphicService.generateRankings(year, number, subtitle, teamIds);
-			return ResponseEntity.ok()
-					.contentType(MediaType.IMAGE_PNG)
-					.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Power Rankings.png\"")
-					.body(png);
-		} catch (IOException | RuntimeException e) {
-			log.error("Failed to generate power rankings graphic", e);
-			return ResponseEntity.internalServerError().build();
-		}
-	}
-
-	public record SeasonGroupOption(int year, int number, String label, int teamCount) {
-	}
 }

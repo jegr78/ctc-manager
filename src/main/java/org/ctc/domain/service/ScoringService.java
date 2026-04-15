@@ -57,6 +57,7 @@ public class ScoringService {
 	@Transactional
 	public void aggregateMatchScores(Race race) {
 		if (race.getResults().isEmpty()) return;
+		if (race.isBye()) return;
 
 		if (race.getMatch() != null && race.getMatch().getHomeTeam() != null) {
 			Match match = race.getMatch();
@@ -134,8 +135,12 @@ public class ScoringService {
 					|| (lineup.get().getTeam().getParentTeam() != null
 					&& lineup.get().getTeam().getParentTeam().getId().equals(teamId));
 		}
-		// Fallback for legacy data without RaceLineup
+		// Fallback for legacy data without RaceLineup — filter by current season (per D-11)
+		var race = raceRepository.findById(raceId).orElse(null);
+		if (race == null || race.getMatchday() == null) return false;
+		var seasonId = race.getMatchday().getSeason().getId();
 		return result.getDriver().getSeasonDrivers().stream()
+				.filter(sd -> sd.getSeason().getId().equals(seasonId))
 				.anyMatch(sd -> sd.getTeam().getId().equals(teamId));
 	}
 }

@@ -2,6 +2,7 @@ package org.ctc.domain.service;
 
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.repository.RaceRepository;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -25,7 +27,7 @@ class ScoringServiceTest {
 	private RaceLineupRepository raceLineupRepository;
 
 	@Mock
-	private org.ctc.domain.repository.RaceRepository raceRepository;
+	private RaceRepository raceRepository;
 
 	@InjectMocks
 	private ScoringService scoringService;
@@ -248,10 +250,11 @@ class ScoringServiceTest {
 			// given
 			var homeTeam = createTeam("Home");
 			var awayTeam = createTeam("Away");
-			var match = createMatch(homeTeam, awayTeam);
-			var race = createRace(match);
 			var season = new Season("Test");
 			season.setId(UUID.randomUUID());
+			var match = createMatch(homeTeam, awayTeam);
+			match.getMatchday().setSeason(season);
+			var race = createRace(match);
 
 			var homeDriver = createDriver("home_d");
 			var awayDriver = createDriver("away_d");
@@ -275,6 +278,7 @@ class ScoringServiceTest {
 			when(raceLineupRepository.findByRaceIdAndDriverId(any(), any()))
 					.thenReturn(Optional.empty());
 			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
+			when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
 
 			// when
 			scoringService.aggregateMatchScores(race);
@@ -339,6 +343,25 @@ class ScoringServiceTest {
 			return race;
 		}
 
+		@Test
+		void givenByeRace_whenAggregateMatchScores_thenReturnsWithoutScoring() {
+			// given
+			var homeTeam = createTeam("Home");
+			var match = createMatch(homeTeam, null);
+			match.setBye(true);
+			var race = createRace(match);
+			var driver = createDriver("d1");
+			var r1 = createResult(race, driver, 10);
+			race.setResults(List.of(r1));
+
+			// when
+			scoringService.aggregateMatchScores(race);
+
+			// then — no scoring happens, no NPE, scores remain unset (null)
+			assertNull(match.getHomeScore());
+			assertNull(match.getAwayScore());
+		}
+
 		private Driver createDriver(String psnId) {
 			var driver = new Driver(psnId, psnId);
 			driver.setId(UUID.randomUUID());
@@ -352,6 +375,113 @@ class ScoringServiceTest {
 			result.setDriver(driver);
 			result.setPointsTotal(totalPoints);
 			return result;
+		}
+	}
+
+	@Nested
+	class IsDriverInTeamFallbackTest {
+
+		@Test
+		void givenNoRaceLineupAndDriverInTeamForDifferentSeason_whenIsDriverInTeam_thenReturnsFalse() {
+			// given
+			var season1 = new Season("Season 1");
+			season1.setId(UUID.randomUUID());
+			var season2 = new Season("Season 2");
+			season2.setId(UUID.randomUUID());
+			var team = new Team("TeamA", "TA");
+			team.setId(UUID.randomUUID());
+
+			var matchday = new Matchday();
+			matchday.setId(UUID.randomUUID());
+			matchday.setSeason(season2);
+			var match = new Match();
+			match.setMatchday(matchday);
+			var race = new Race();
+			race.setId(UUID.randomUUID());
+			race.setMatch(match);
+			race.setMatchday(matchday);
+
+			var driver = new Driver("d1", "d1");
+			driver.setId(UUID.randomUUID());
+			var sd = new SeasonDriver();
+			sd.setTeam(team);
+			sd.setSeason(season1); // driver assigned to teamA in season1, NOT season2
+			driver.setSeasonDrivers(new ArrayList<>(List.of(sd)));
+
+			var result = new RaceResult();
+			result.setDriver(driver);
+			result.setPointsTotal(10);
+
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId()))
+					.thenReturn(Optional.empty());
+			when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+
+			// when
+			boolean inTeam = scoringService.isDriverInTeam(result, race.getId(), team.getId());
+
+			// then
+			assertFalse(inTeam);
+		}
+
+		@Test
+		void givenNoRaceLineupAndDriverInTeamForCurrentSeason_whenIsDriverInTeam_thenReturnsTrue() {
+			// given
+			var season2 = new Season("Season 2");
+			season2.setId(UUID.randomUUID());
+			var team = new Team("TeamA", "TA");
+			team.setId(UUID.randomUUID());
+
+			var matchday = new Matchday();
+			matchday.setId(UUID.randomUUID());
+			matchday.setSeason(season2);
+			var match = new Match();
+			match.setMatchday(matchday);
+			var race = new Race();
+			race.setId(UUID.randomUUID());
+			race.setMatch(match);
+			race.setMatchday(matchday);
+
+			var driver = new Driver("d1", "d1");
+			driver.setId(UUID.randomUUID());
+			var sd = new SeasonDriver();
+			sd.setTeam(team);
+			sd.setSeason(season2); // driver assigned to teamA in season2 (current)
+			driver.setSeasonDrivers(new ArrayList<>(List.of(sd)));
+
+			var result = new RaceResult();
+			result.setDriver(driver);
+			result.setPointsTotal(10);
+
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driver.getId()))
+					.thenReturn(Optional.empty());
+			when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+
+			// when
+			boolean inTeam = scoringService.isDriverInTeam(result, race.getId(), team.getId());
+
+			// then
+			assertTrue(inTeam);
+		}
+
+		@Test
+		void givenNoRaceLineupAndRaceNotFound_whenIsDriverInTeam_thenReturnsFalse() {
+			// given
+			var driver = new Driver("d1", "d1");
+			driver.setId(UUID.randomUUID());
+			driver.setSeasonDrivers(new ArrayList<>());
+			var result = new RaceResult();
+			result.setDriver(driver);
+			var raceId = UUID.randomUUID();
+
+			when(raceLineupRepository.findByRaceIdAndDriverId(raceId, driver.getId()))
+					.thenReturn(Optional.empty());
+			when(raceRepository.findById(raceId)).thenReturn(Optional.empty());
+
+			// when
+			boolean inTeam = scoringService.isDriverInTeam(result, raceId, UUID.randomUUID());
+
+			// then
+			assertFalse(inTeam);
 		}
 	}
 }

@@ -67,21 +67,19 @@
                 <tbody>
                     <tr th:each="result, iter : ${raceForm.results}" class="result-row">
                         <td>
-                            <span th:text="${result.teamShortName}" style="font-weight:600;"></span>
+                            <span th:text="${result.teamShortName}" class="results-team-name"></span>
                             <input type="hidden" th:name="'results[' + ${iter.index} + '].driverId'" th:value="${result.driverId}">
                             <input type="hidden" th:name="'results[' + ${iter.index} + '].driverPsnId'" th:value="${result.driverPsnId}">
                             <input type="hidden" th:name="'results[' + ${iter.index} + '].teamShortName'" th:value="${result.teamShortName}">
                         </td>
-                        <td style="font-weight:500;" th:text="${result.driverPsnId}"></td>
+                        <td class="results-driver-name" th:text="${result.driverPsnId}"></td>
                         <td class="td-center">
-                            <input type="number" class="pos-input" th:name="'results[' + ${iter.index} + '].position'"
-                                   th:value="${result.position}" min="1" max="12" required
-                                   style="width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-input); color:var(--white); font-size:14px; font-weight:600; text-align:center; font-variant-numeric:tabular-nums;">
+                            <input type="number" class="pos-input results-pos-input" th:name="'results[' + ${iter.index} + '].position'"
+                                   th:value="${result.position}" min="1" max="12" required>
                         </td>
                         <td class="td-center">
-                            <input type="number" class="quali-input" th:name="'results[' + ${iter.index} + '].qualiPosition'"
-                                   th:value="${result.qualiPosition}" min="1" max="12" required
-                                   style="width:56px; padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); background:var(--bg-input); color:var(--white); font-size:14px; font-weight:600; text-align:center; font-variant-numeric:tabular-nums;">
+                            <input type="number" class="quali-input results-pos-input" th:name="'results[' + ${iter.index} + '].qualiPosition'"
+                                   th:value="${result.qualiPosition}" min="1" max="12" required>
                         </td>
                         <td class="td-center">
                             <label class="fl-toggle">
@@ -97,8 +95,8 @@
                     </tr>
                 </tbody>
                 <tfoot>
-                    <tr style="border-top:2px solid var(--border);">
-                        <td colspan="5" style="text-align:right; font-weight:600; color:var(--white);">Team Totals</td>
+                    <tr class="results-totals-row">
+                        <td colspan="5" class="results-totals-label">Team Totals</td>
                         <td class="td-center" id="teamTotals"></td>
                     </tr>
                 </tfoot>
@@ -147,25 +145,19 @@
 
             // Team totals
             var totalsEl = document.getElementById('teamTotals');
-            var parts = [];
-            for (var t in totals) {
-                var isHome = (t === homeTeam);
-                parts.push('<span style="font-weight:700; color:' + (isHome ? 'var(--accent)' : 'var(--white)') + ';">' + totals[t] + '</span>');
-            }
             totalsEl.textContent = '';
             var first = true;
             for (var t in totals) {
                 if (!first) {
                     var sep = document.createElement('span');
                     sep.textContent = ' : ';
-                    sep.style.color = 'var(--text-dim)';
+                    sep.classList.add('results-total-sep');
                     totalsEl.appendChild(sep);
                 }
                 var span = document.createElement('span');
                 span.textContent = totals[t];
-                span.style.fontWeight = '700';
-                span.style.fontSize = '16px';
-                span.style.color = (t === homeTeam) ? 'var(--accent)' : 'var(--white)';
+                span.classList.add('results-total-value');
+                span.classList.add((t === homeTeam) ? 'results-total-value--home' : 'results-total-value--away');
                 totalsEl.appendChild(span);
                 first = false;
             }

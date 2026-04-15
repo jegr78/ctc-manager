@@ -1,15 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-last_updated: "2026-04-10T20:27:24.171Z"
-last_activity: 2026-04-10
+milestone: v1.5
+milestone_name: Code Review Fixes
+status: planning
+stopped_at: Phase 36 context gathered
+last_updated: "2026-04-14T21:35:14.117Z"
+last_activity: 2026-04-14
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 9
-  completed_plans: 9
+  total_phases: 9
+  completed_phases: 9
+  total_plans: 14
+  completed_plans: 14
   percent: 100
 ---
 
@@ -17,25 +18,25 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-09)
+See: .planning/PROJECT.md (updated 2026-04-14)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Phase 27 — Restore Matchday/Result Seed Pipeline
+**Current focus:** Phase 36 — audit-remediation
 
 ## Current Position
 
-Phase: 27
+Phase: 36
 Plan: Not started
-Status: Executing Phase 27
-Last activity: 2026-04-10
+Status: Ready to plan Phase 36
+Last activity: 2026-04-14
 
-Progress: [████░░░░░░] 40%
+Progress: ██████████ 100%
 
 ## Completed Milestones
 
 - v1.0 Technical Debt Cleanup (5 phases, 12 plans) — shipped 2026-04-04
 - v1.1 Codebase Concerns Cleanup (10 phases, 20 plans) — shipped 2026-04-07
-- v1.2 Driver Merge (4 phases, 5 plans) — shipped 2026-04-07
+- v1.3 English Test Data (8 phases) — shipped 2026-04-10
 
 ## Performance Metrics
 
@@ -58,31 +59,19 @@ Progress: [████░░░░░░] 40%
 | 13 -- Layer Cleanup Recovery | 3/3 | ~7min |
 | 14 -- Exception Refinement Recovery | 2/2 | ~5min |
 | 15 -- Alltime Standings Recovery | 1/1 | ~5min |
-| 16 -- Merge Service Core | 1/1 | ~15min |
-| 17 -- Duplicate-Handling | 1/1 | ~10min |
-| 18 -- Merge UI | 2/2 | ~12min |
-| 19 -- Merge Error Handling | 1/1 | ~5min |
-| 20 -- English Messages | 1/1 | ~15min |
-| 21 -- English Code | 1/1 | ~5min |
 
 ## Accumulated Context
 
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table.
-Full history in .planning/milestones/v1.0-ROADMAP.md, .planning/milestones/v1.1-ROADMAP.md, and .planning/milestones/v1.2-ROADMAP.md.
 
 ### Blockers/Concerns
 
 None.
 
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260404-jh8 | Fix release workflow: Use RELEASE_TOKEN for branch protection bypass | 2026-04-04 | d4745ee | [260404-jh8-fix-release-workflow-use-release-token-s](./quick/260404-jh8-fix-release-workflow-use-release-token-s/) |
-
 ## Session Continuity
 
-Last session: 2026-04-10T19:51:37.103Z
-Phase 21 (english-code) complete. Next: `/gsd-discuss-phase 22`
+Last session: 2026-04-14T18:10:23.607Z
+Stopped at: Phase 36 context gathered
+Resume file: .planning/phases/36-audit-remediation/36-CONTEXT.md
