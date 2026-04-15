@@ -15,352 +15,352 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class FileStorageServiceTest {
 
-    @TempDir
-    Path tempDir;
+	@TempDir
+	Path tempDir;
 
-    private FileStorageService fileStorageService;
+	private FileStorageService fileStorageService;
 
-    @BeforeEach
-    void setUp() {
-        fileStorageService = new FileStorageService(tempDir.toString());
-    }
+	@BeforeEach
+	void setUp() {
+		fileStorageService = new FileStorageService(tempDir.toString());
+	}
 
-    @Test
-    void givenValidFile_whenStore_thenFileStoredAndUrlReturned() throws IOException {
-        // given
-        var file = new MockMultipartFile("file", "test.png", "image/png", new byte[]{1, 2, 3});
-        var raceId = UUID.randomUUID();
+	@Test
+	void givenValidFile_whenStore_thenFileStoredAndUrlReturned() throws IOException {
+		// given
+		var file = new MockMultipartFile("file", "test.png", "image/png", new byte[]{1, 2, 3});
+		var raceId = UUID.randomUUID();
 
-        // when
-        String url = fileStorageService.store(raceId, file);
+		// when
+		String url = fileStorageService.store(raceId, file);
 
-        // then
-        assertTrue(url.startsWith("/uploads/races/" + raceId + "/"));
-        assertTrue(url.endsWith("_test.png"));
+		// then
+		assertTrue(url.startsWith("/uploads/races/" + raceId + "/"));
+		assertTrue(url.endsWith("_test.png"));
 
-        // Verify file exists on disk
-        Path storedFile = tempDir.resolve(url.substring("/uploads/".length()));
-        assertTrue(Files.exists(storedFile));
-        assertEquals(3, Files.size(storedFile));
-    }
+		// Verify file exists on disk
+		Path storedFile = tempDir.resolve(url.substring("/uploads/".length()));
+		assertTrue(Files.exists(storedFile));
+		assertEquals(3, Files.size(storedFile));
+	}
 
-    @Test
-    void givenEmptyFile_whenStore_thenThrowsException() {
-        // given
-        var file = new MockMultipartFile("file", "empty.png", "image/png", new byte[0]);
+	@Test
+	void givenEmptyFile_whenStore_thenThrowsException() {
+		// given
+		var file = new MockMultipartFile("file", "empty.png", "image/png", new byte[0]);
 
-        // when / then
-        assertThrows(IllegalArgumentException.class,
-                () -> fileStorageService.store(UUID.randomUUID(), file));
-    }
+		// when / then
+		assertThrows(IllegalArgumentException.class,
+				() -> fileStorageService.store(UUID.randomUUID(), file));
+	}
 
-    @Test
-    void givenOversizedFile_whenStore_thenThrowsException() {
-        // given
-        byte[] bigContent = new byte[11 * 1024 * 1024]; // 11 MB
-        var file = new MockMultipartFile("file", "big.png", "image/png", bigContent);
+	@Test
+	void givenOversizedFile_whenStore_thenThrowsException() {
+		// given
+		byte[] bigContent = new byte[11 * 1024 * 1024]; // 11 MB
+		var file = new MockMultipartFile("file", "big.png", "image/png", bigContent);
 
-        // when / then
-        var ex = assertThrows(IllegalArgumentException.class,
-                () -> fileStorageService.store(UUID.randomUUID(), file));
-        assertTrue(ex.getMessage().contains("max 10 MB"));
-    }
+		// when / then
+		var ex = assertThrows(IllegalArgumentException.class,
+				() -> fileStorageService.store(UUID.randomUUID(), file));
+		assertTrue(ex.getMessage().contains("max 10 MB"));
+	}
 
-    @Test
-    void givenDisallowedContentType_whenStore_thenThrowsException() {
-        // given
-        var file = new MockMultipartFile("file", "script.js", "application/javascript", new byte[]{1});
+	@Test
+	void givenDisallowedContentType_whenStore_thenThrowsException() {
+		// given
+		var file = new MockMultipartFile("file", "script.js", "application/javascript", new byte[]{1});
 
-        // when / then
-        var ex = assertThrows(IllegalArgumentException.class,
-                () -> fileStorageService.store(UUID.randomUUID(), file));
-        assertTrue(ex.getMessage().contains("not allowed"));
-    }
+		// when / then
+		var ex = assertThrows(IllegalArgumentException.class,
+				() -> fileStorageService.store(UUID.randomUUID(), file));
+		assertTrue(ex.getMessage().contains("not allowed"));
+	}
 
-    @Test
-    void givenDisallowedExtension_whenStore_thenThrowsException() {
-        // given
-        // Spoofed content type but wrong extension
-        var file = new MockMultipartFile("file", "malicious.exe", "image/png", new byte[]{1});
+	@Test
+	void givenDisallowedExtension_whenStore_thenThrowsException() {
+		// given
+		// Spoofed content type but wrong extension
+		var file = new MockMultipartFile("file", "malicious.exe", "image/png", new byte[]{1});
 
-        // when / then
-        var ex = assertThrows(IllegalArgumentException.class,
-                () -> fileStorageService.store(UUID.randomUUID(), file));
-        assertTrue(ex.getMessage().contains("extension not allowed"));
-    }
+		// when / then
+		var ex = assertThrows(IllegalArgumentException.class,
+				() -> fileStorageService.store(UUID.randomUUID(), file));
+		assertTrue(ex.getMessage().contains("extension not allowed"));
+	}
 
-    @Test
-    void givenStoredFile_whenDelete_thenFileRemoved() throws IOException {
-        // given
-        var file = new MockMultipartFile("file", "delete-me.png", "image/png", new byte[]{1, 2});
-        var raceId = UUID.randomUUID();
-        String url = fileStorageService.store(raceId, file);
+	@Test
+	void givenStoredFile_whenDelete_thenFileRemoved() throws IOException {
+		// given
+		var file = new MockMultipartFile("file", "delete-me.png", "image/png", new byte[]{1, 2});
+		var raceId = UUID.randomUUID();
+		String url = fileStorageService.store(raceId, file);
 
-        Path storedFile = tempDir.resolve(url.substring("/uploads/".length()));
-        assertTrue(Files.exists(storedFile));
+		Path storedFile = tempDir.resolve(url.substring("/uploads/".length()));
+		assertTrue(Files.exists(storedFile));
 
-        // when
-        fileStorageService.delete(url);
+		// when
+		fileStorageService.delete(url);
 
-        // then
-        assertFalse(Files.exists(storedFile));
-    }
+		// then
+		assertFalse(Files.exists(storedFile));
+	}
 
-    @Test
-    void givenNonExistentPath_whenDelete_thenNoExceptionThrown() {
-        // when / then
-        assertDoesNotThrow(() -> fileStorageService.delete("/uploads/races/nonexistent/file.png"));
-    }
+	@Test
+	void givenNonExistentPath_whenDelete_thenNoExceptionThrown() {
+		// when / then
+		assertDoesNotThrow(() -> fileStorageService.delete("/uploads/races/nonexistent/file.png"));
+	}
 
-    @Test
-    void givenPathTraversalUrl_whenDelete_thenTraversalBlocked() throws IOException {
-        // given
-        // Create a file outside the upload dir
-        Path outsideFile = tempDir.getParent().resolve("sensitive.txt");
-        Files.writeString(outsideFile, "secret");
+	@Test
+	void givenPathTraversalUrl_whenDelete_thenTraversalBlocked() throws IOException {
+		// given
+		// Create a file outside the upload dir
+		Path outsideFile = tempDir.getParent().resolve("sensitive.txt");
+		Files.writeString(outsideFile, "secret");
 
-        // when
-        fileStorageService.delete("/uploads/../sensitive.txt");
+		// when
+		fileStorageService.delete("/uploads/../sensitive.txt");
 
-        // then
-        // File should still exist — traversal was blocked
-        assertTrue(Files.exists(outsideFile));
-        Files.deleteIfExists(outsideFile);
-    }
+		// then
+		// File should still exist — traversal was blocked
+		assertTrue(Files.exists(outsideFile));
+		Files.deleteIfExists(outsideFile);
+	}
 
-    @Test
-    void givenFilenameWithSpecialChars_whenStore_thenFilenameIsSanitized() throws IOException {
-        // given
-        var file = new MockMultipartFile("file", "my file (1).png", "image/png", new byte[]{1});
+	@Test
+	void givenFilenameWithSpecialChars_whenStore_thenFilenameIsSanitized() throws IOException {
+		// given
+		var file = new MockMultipartFile("file", "my file (1).png", "image/png", new byte[]{1});
 
-        // when
-        String url = fileStorageService.store(UUID.randomUUID(), file);
+		// when
+		String url = fileStorageService.store(UUID.randomUUID(), file);
 
-        // then
-        // Spaces and parentheses should be replaced with underscores
-        assertTrue(url.contains("my_file__1_.png"));
-    }
+		// then
+		// Spaces and parentheses should be replaced with underscores
+		assertTrue(url.contains("my_file__1_.png"));
+	}
 
-    @Test
-    void givenValidImageFile_whenStoreImage_thenFileStoredAndUrlReturned() throws IOException {
-        // given
-        var file = new MockMultipartFile("file", "logo.png", "image/png", new byte[]{1, 2, 3});
-        var entityId = UUID.randomUUID();
+	@Test
+	void givenValidImageFile_whenStoreImage_thenFileStoredAndUrlReturned() throws IOException {
+		// given
+		var file = new MockMultipartFile("file", "logo.png", "image/png", new byte[]{1, 2, 3});
+		var entityId = UUID.randomUUID();
 
-        // when
-        String url = fileStorageService.storeImage("season-teams", entityId, file);
+		// when
+		String url = fileStorageService.storeImage("season-teams", entityId, file);
 
-        // then
-        assertTrue(url.startsWith("/uploads/season-teams/" + entityId + "/"));
-        assertTrue(url.endsWith("_logo.png"));
+		// then
+		assertTrue(url.startsWith("/uploads/season-teams/" + entityId + "/"));
+		assertTrue(url.endsWith("_logo.png"));
 
-        Path storedFile = tempDir.resolve(url.substring("/uploads/".length()));
-        assertTrue(Files.exists(storedFile));
-        assertEquals(3, Files.size(storedFile));
-    }
+		Path storedFile = tempDir.resolve(url.substring("/uploads/".length()));
+		assertTrue(Files.exists(storedFile));
+		assertEquals(3, Files.size(storedFile));
+	}
 
-    @Test
-    void givenNullFilename_whenStore_thenThrowsException() {
-        // given
-        var file = new MockMultipartFile("file", null, "image/png", new byte[]{1});
+	@Test
+	void givenNullFilename_whenStore_thenThrowsException() {
+		// given
+		var file = new MockMultipartFile("file", null, "image/png", new byte[]{1});
 
-        // when / then
-        assertThrows(IllegalArgumentException.class,
-                () -> fileStorageService.store(UUID.randomUUID(), file));
-    }
+		// when / then
+		assertThrows(IllegalArgumentException.class,
+				() -> fileStorageService.store(UUID.randomUUID(), file));
+	}
 
-    @Test
-    void givenBlankFilename_whenStore_thenThrowsException() {
-        // given
-        var file = new MockMultipartFile("file", "   ", "image/png", new byte[]{1});
+	@Test
+	void givenBlankFilename_whenStore_thenThrowsException() {
+		// given
+		var file = new MockMultipartFile("file", "   ", "image/png", new byte[]{1});
 
-        // when / then
-        var ex = assertThrows(IllegalArgumentException.class,
-                () -> fileStorageService.store(UUID.randomUUID(), file));
-        assertTrue(ex.getMessage().contains("Filename is required"));
-    }
+		// when / then
+		var ex = assertThrows(IllegalArgumentException.class,
+				() -> fileStorageService.store(UUID.randomUUID(), file));
+		assertTrue(ex.getMessage().contains("Filename is required"));
+	}
 
-    @Test
-    void givenFilenameWithoutExtension_whenStore_thenThrowsException() {
-        // given
-        var file = new MockMultipartFile("file", "testfile", "image/png", new byte[]{1});
+	@Test
+	void givenFilenameWithoutExtension_whenStore_thenThrowsException() {
+		// given
+		var file = new MockMultipartFile("file", "testfile", "image/png", new byte[]{1});
 
-        // when / then
-        var ex = assertThrows(IllegalArgumentException.class,
-                () -> fileStorageService.store(UUID.randomUUID(), file));
-        assertTrue(ex.getMessage().contains("extension not allowed"));
-    }
+		// when / then
+		var ex = assertThrows(IllegalArgumentException.class,
+				() -> fileStorageService.store(UUID.randomUUID(), file));
+		assertTrue(ex.getMessage().contains("extension not allowed"));
+	}
 
-    @Test
-    void givenHttpsUrl_whenStoreFromUrl_thenFileStoredAndUrlReturned() throws IOException {
-        // given
-        // Use a file:// URI for actual I/O but we need to test with HTTPS prefix
-        // We test the validation separately; this test verifies HTTPS URLs are accepted structurally
-        // Note: actual HTTPS download would require a running server, so we skip I/O verification here
-        // The existing file-based test is replaced by validation-focused tests below
-        Path sourceFile = tempDir.resolve("source-image.png");
-        Files.write(sourceFile, new byte[]{10, 20, 30});
+	@Test
+	void givenHttpsUrl_whenStoreFromUrl_thenFileStoredAndUrlReturned() throws IOException {
+		// given
+		// Use a file:// URI for actual I/O but we need to test with HTTPS prefix
+		// We test the validation separately; this test verifies HTTPS URLs are accepted structurally
+		// Note: actual HTTPS download would require a running server, so we skip I/O verification here
+		// The existing file-based test is replaced by validation-focused tests below
+		Path sourceFile = tempDir.resolve("source-image.png");
+		Files.write(sourceFile, new byte[]{10, 20, 30});
 
-        var entityId = UUID.randomUUID();
+		var entityId = UUID.randomUUID();
 
-        // when - use file URI (which will be rejected after SSRF protection)
-        // This test now validates that file:// URIs are rejected
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", entityId,
-                sourceFile.toUri().toString(), "car-photo.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Only HTTPS URLs allowed");
-    }
+		// when - use file URI (which will be rejected after SSRF protection)
+		// This test now validates that file:// URIs are rejected
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", entityId,
+				sourceFile.toUri().toString(), "car-photo.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Only HTTPS URLs allowed");
+	}
 
-    @Test
-    void givenHttpUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "http://example.com/image.png", "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Only HTTPS URLs allowed");
-    }
+	@Test
+	void givenHttpUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"http://example.com/image.png", "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Only HTTPS URLs allowed");
+	}
 
-    @Test
-    void givenNullUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                null, "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Only HTTPS URLs allowed");
-    }
+	@Test
+	void givenNullUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				null, "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Only HTTPS URLs allowed");
+	}
 
-    @Test
-    void givenFtpUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "ftp://example.com/file.png", "file.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Only HTTPS URLs allowed");
-    }
+	@Test
+	void givenFtpUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"ftp://example.com/file.png", "file.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Only HTTPS URLs allowed");
+	}
 
-    @Test
-    void givenEmptyUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "", "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Only HTTPS URLs allowed");
-    }
+	@Test
+	void givenEmptyUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"", "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Only HTTPS URLs allowed");
+	}
 
-    // --- SECU-01: SSRF hostname validation tests ---
+	// --- SECU-01: SSRF hostname validation tests ---
 
-    @Test
-    void givenLocalhostUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "https://localhost/image.png", "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("hostname blocked");
-    }
+	@Test
+	void givenLocalhostUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"https://localhost/image.png", "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("hostname blocked");
+	}
 
-    @Test
-    void givenLoopbackIpUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "https://127.0.0.1/image.png", "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("hostname blocked");
-    }
+	@Test
+	void givenLoopbackIpUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"https://127.0.0.1/image.png", "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("hostname blocked");
+	}
 
-    @Test
-    void givenPrivateIp10_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "https://10.0.0.1/image.png", "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("hostname blocked");
-    }
+	@Test
+	void givenPrivateIp10_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"https://10.0.0.1/image.png", "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("hostname blocked");
+	}
 
-    @Test
-    void givenPrivateIp172_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "https://172.16.0.1/image.png", "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("hostname blocked");
-    }
+	@Test
+	void givenPrivateIp172_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"https://172.16.0.1/image.png", "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("hostname blocked");
+	}
 
-    @Test
-    void givenPrivateIp192_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "https://192.168.1.1/image.png", "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("hostname blocked");
-    }
+	@Test
+	void givenPrivateIp192_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"https://192.168.1.1/image.png", "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("hostname blocked");
+	}
 
-    @Test
-    void givenLinkLocalUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "https://169.254.169.254/latest/meta-data/", "metadata"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("hostname blocked");
-    }
+	@Test
+	void givenLinkLocalUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"https://169.254.169.254/latest/meta-data/", "metadata"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("hostname blocked");
+	}
 
-    @Test
-    void givenIpv6LoopbackUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "https://[::1]/image.png", "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("hostname blocked");
-    }
+	@Test
+	void givenIpv6LoopbackUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"https://[::1]/image.png", "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("hostname blocked");
+	}
 
-    @Test
-    void givenPublicUrl_whenStoreFromUrl_thenSsrfCheckPasses() {
-        // when / then - passes hostname check but fails on actual download (no server)
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
-                "https://example.com/image.png", "image.png"))
-                .isInstanceOf(IOException.class);
-    }
+	@Test
+	void givenPublicUrl_whenStoreFromUrl_thenSsrfCheckPasses() {
+		// when / then - passes hostname check but fails on actual download (no server)
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("cars", UUID.randomUUID(),
+				"https://example.com/image.png", "image.png"))
+				.isInstanceOf(IOException.class);
+	}
 
-    // --- SECU-02: Path traversal protection tests ---
+	// --- SECU-02: Path traversal protection tests ---
 
-    @Test
-    void givenPathTraversalFilename_whenStore_thenThrowsIllegalArgument() {
-        // given
-        var file = new MockMultipartFile("file", "../../../etc/passwd.png", "image/png", new byte[]{1});
+	@Test
+	void givenPathTraversalFilename_whenStore_thenThrowsIllegalArgument() {
+		// given
+		var file = new MockMultipartFile("file", "../../../etc/passwd.png", "image/png", new byte[]{1});
 
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.store(UUID.randomUUID(), file))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Path traversal detected");
-    }
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.store(UUID.randomUUID(), file))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Path traversal detected");
+	}
 
-    @Test
-    void givenPathTraversalFilename_whenStoreImage_thenThrowsIllegalArgument() {
-        // given
-        var file = new MockMultipartFile("file", "../../../etc/passwd.png", "image/png", new byte[]{1});
+	@Test
+	void givenPathTraversalFilename_whenStoreImage_thenThrowsIllegalArgument() {
+		// given
+		var file = new MockMultipartFile("file", "../../../etc/passwd.png", "image/png", new byte[]{1});
 
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeImage("cars", UUID.randomUUID(), file))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Path traversal detected");
-    }
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeImage("cars", UUID.randomUUID(), file))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Path traversal detected");
+	}
 
-    @Test
-    void givenAbsolutePathFilename_whenStore_thenThrowsIllegalArgument() {
-        // given
-        var file = new MockMultipartFile("file", "/etc/passwd.png", "image/png", new byte[]{1});
+	@Test
+	void givenAbsolutePathFilename_whenStore_thenThrowsIllegalArgument() {
+		// given
+		var file = new MockMultipartFile("file", "/etc/passwd.png", "image/png", new byte[]{1});
 
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.store(UUID.randomUUID(), file))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Path traversal detected");
-    }
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.store(UUID.randomUUID(), file))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Path traversal detected");
+	}
 
-    @Test
-    void givenPathTraversalSubDir_whenStoreFromUrl_thenThrowsIllegalArgument() {
-        // when / then
-        assertThatThrownBy(() -> fileStorageService.storeFromUrl("../escape", UUID.randomUUID(),
-                "https://example.com/image.png", "image.png"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Path traversal detected");
-    }
+	@Test
+	void givenPathTraversalSubDir_whenStoreFromUrl_thenThrowsIllegalArgument() {
+		// when / then
+		assertThatThrownBy(() -> fileStorageService.storeFromUrl("../escape", UUID.randomUUID(),
+				"https://example.com/image.png", "image.png"))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("Path traversal detected");
+	}
 }

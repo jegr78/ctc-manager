@@ -29,30 +29,32 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("dev")
 class SeasonControllerExceptionTest {
 
-    @Autowired private MockMvc mockMvc;
+	@Autowired
+	private MockMvc mockMvc;
 
-    @MockitoBean private SeasonManagementService seasonManagementService;
+	@MockitoBean
+	private SeasonManagementService seasonManagementService;
 
-    @Test
-    void givenIoException_whenUpdateSeasonTeam_thenRedirectsWithError() throws Exception {
-        // given
-        var seasonId = UUID.randomUUID();
-        var seasonTeamId = UUID.randomUUID();
-        when(seasonManagementService.updateSeasonTeam(any(), any(), anyString(), anyString(), anyString(), any()))
-                .thenThrow(new IOException("logo upload failed"));
-        // stub findAll for common attributes (seasons list in form)
-        when(seasonManagementService.findAll()).thenReturn(List.of());
+	@Test
+	void givenIoException_whenUpdateSeasonTeam_thenRedirectsWithError() throws Exception {
+		// given
+		var seasonId = UUID.randomUUID();
+		var seasonTeamId = UUID.randomUUID();
+		when(seasonManagementService.updateSeasonTeam(any(), any(), anyString(), anyString(), anyString(), any()))
+				.thenThrow(new IOException("logo upload failed"));
+		// stub findAll for common attributes (seasons list in form)
+		when(seasonManagementService.findAll()).thenReturn(List.of());
 
-        // when
-        mockMvc.perform(post("/admin/seasons/" + seasonId + "/update-season-team")
-                        .param("seasonTeamId", seasonTeamId.toString())
-                        .param("rating", "1500")
-                        .param("primaryColor", "#FF0000")
-                        .param("secondaryColor", "#000000")
-                        .param("accentColor", "#FFFFFF"))
-                // then
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/seasons/" + seasonId))
-                .andExpect(flash().attributeExists("errorMessage"));
-    }
+		// when
+		mockMvc.perform(post("/admin/seasons/" + seasonId + "/update-season-team")
+						.param("seasonTeamId", seasonTeamId.toString())
+						.param("rating", "1500")
+						.param("primaryColor", "#FF0000")
+						.param("secondaryColor", "#000000")
+						.param("accentColor", "#FFFFFF"))
+				// then
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/seasons/" + seasonId))
+				.andExpect(flash().attributeExists("errorMessage"));
+	}
 }

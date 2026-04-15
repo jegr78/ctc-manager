@@ -9,11 +9,13 @@ import java.util.UUID;
 
 public interface MatchRepository extends JpaRepository<Match, UUID> {
 
-    @EntityGraph(attributePaths = {"homeTeam", "awayTeam"})
-    List<Match> findByMatchdayId(UUID matchdayId);
+	@EntityGraph(attributePaths = {"homeTeam", "awayTeam"})
+	List<Match> findByMatchdayId(UUID matchdayId);
 
-    @EntityGraph(attributePaths = {"homeTeam", "awayTeam", "matchday"})
-    List<Match> findByMatchdaySeasonId(UUID seasonId);
+	@EntityGraph(attributePaths = {"homeTeam", "awayTeam", "matchday"})
+	List<Match> findByMatchdaySeasonId(UUID seasonId);
 
-    boolean existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
+	boolean existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
+
+	java.util.Optional<Match> findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
 }

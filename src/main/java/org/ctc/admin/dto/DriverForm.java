@@ -9,18 +9,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class DriverForm {
 
-    private UUID id;
+	private UUID id;
 
-    @NotBlank
-    private String psnId;
+	@NotBlank
+	private String psnId;
 
-    @NotBlank
-    private String nickname;
+	@NotBlank
+	private String nickname;
 
-    private boolean active = true;
+	private boolean active = true;
 
-    private List<String> aliases = new ArrayList<>();
+	private List<String> aliases = new ArrayList<>();
 }

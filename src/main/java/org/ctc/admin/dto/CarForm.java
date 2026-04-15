@@ -7,14 +7,16 @@ import lombok.Setter;
 
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class CarForm {
 
-    private UUID id;
+	private UUID id;
 
-    @NotBlank
-    private String manufacturer;
+	@NotBlank
+	private String manufacturer;
 
-    @NotBlank
-    private String name;
+	@NotBlank
+	private String name;
 }

@@ -13,33 +13,36 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "matchdays")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"season", "matches", "races"})
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString(exclude = {"season", "matches", "races"})
 public class Matchday extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "season_id", nullable = false)
-    private Season season;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "season_id", nullable = false)
+	private Season season;
 
-    @NotBlank
-    @Column(nullable = false)
-    private String label;
+	@NotBlank
+	@Column(nullable = false)
+	private String label;
 
-    @Column(nullable = false)
-    private int sortIndex;
+	@Column(nullable = false)
+	private int sortIndex;
 
-    @OneToMany(mappedBy = "matchday", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Match> matches = new ArrayList<>();
+	@OneToMany(mappedBy = "matchday", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Match> matches = new ArrayList<>();
 
-    @OneToMany(mappedBy = "matchday", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Race> races = new ArrayList<>();
+	@OneToMany(mappedBy = "matchday", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<Race> races = new ArrayList<>();
 
-    public Matchday(Season season, String label, int sortIndex) {
-        this.season = season;
-        this.label = label;
-        this.sortIndex = sortIndex;
-    }
+	public Matchday(Season season, String label, int sortIndex) {
+		this.season = season;
+		this.label = label;
+		this.sortIndex = sortIndex;
+	}
 }

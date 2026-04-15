@@ -11,11 +11,11 @@ import java.util.UUID;
 
 public interface SeasonTeamRepository extends JpaRepository<SeasonTeam, UUID> {
 
-    @EntityGraph(attributePaths = {"team"})
-    List<SeasonTeam> findBySeasonId(UUID seasonId);
+	@EntityGraph(attributePaths = {"team"})
+	List<SeasonTeam> findBySeasonId(UUID seasonId);
 
-    Optional<SeasonTeam> findBySeasonIdAndTeamId(UUID seasonId, UUID teamId);
+	Optional<SeasonTeam> findBySeasonIdAndTeamId(UUID seasonId, UUID teamId);
 
-    @Transactional
-    void deleteBySeasonIdAndTeamId(UUID seasonId, UUID teamId);
+	@Transactional
+	void deleteBySeasonIdAndTeamId(UUID seasonId, UUID teamId);
 }

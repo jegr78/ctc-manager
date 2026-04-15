@@ -10,19 +10,19 @@ import java.util.UUID;
 
 public interface RaceLineupRepository extends JpaRepository<RaceLineup, UUID> {
 
-    @EntityGraph(attributePaths = {"driver", "team"})
-    List<RaceLineup> findByRaceId(UUID raceId);
+	@EntityGraph(attributePaths = {"driver", "team"})
+	List<RaceLineup> findByRaceId(UUID raceId);
 
-    @EntityGraph(attributePaths = {"driver", "team"})
-    List<RaceLineup> findByRaceIdAndTeamId(UUID raceId, UUID teamId);
+	@EntityGraph(attributePaths = {"driver", "team"})
+	List<RaceLineup> findByRaceIdAndTeamId(UUID raceId, UUID teamId);
 
-    Optional<RaceLineup> findByRaceIdAndDriverId(UUID raceId, UUID driverId);
+	Optional<RaceLineup> findByRaceIdAndDriverId(UUID raceId, UUID driverId);
 
-    List<RaceLineup> findByDriverId(UUID driverId);
+	List<RaceLineup> findByDriverId(UUID driverId);
 
-    @EntityGraph(attributePaths = {"driver", "team", "race"})
-    List<RaceLineup> findByRaceMatchdayId(UUID matchdayId);
+	@EntityGraph(attributePaths = {"driver", "team", "race"})
+	List<RaceLineup> findByRaceMatchdayId(UUID matchdayId);
 
-    @EntityGraph(attributePaths = {"driver", "team"})
-    List<RaceLineup> findByTeamIdIn(List<UUID> teamIds);
+	@EntityGraph(attributePaths = {"driver", "team"})
+	List<RaceLineup> findByTeamIdIn(List<UUID> teamIds);
 }

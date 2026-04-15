@@ -12,74 +12,77 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "race_scorings")
-@Getter @Setter @NoArgsConstructor @ToString
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString
 public class RaceScoring extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
-    @NotBlank
-    @Column(nullable = false, unique = true)
-    private String name;
+	@NotBlank
+	@Column(nullable = false, unique = true)
+	private String name;
 
-    @Column(name = "race_points", nullable = false)
-    private String racePoints;
+	@Column(name = "race_points", nullable = false)
+	private String racePoints;
 
-    @Column(name = "quali_points")
-    private String qualiPoints;
+	@Column(name = "quali_points")
+	private String qualiPoints;
 
-    @Column(name = "fastest_lap_points", nullable = false)
-    private int fastestLapPoints = 0;
+	@Column(name = "fastest_lap_points", nullable = false)
+	private int fastestLapPoints = 0;
 
-    public RaceScoring(String name, String racePoints, String qualiPoints, int fastestLapPoints) {
-        this.name = name;
-        this.racePoints = racePoints;
-        this.qualiPoints = qualiPoints;
-        this.fastestLapPoints = fastestLapPoints;
-    }
+	public RaceScoring(String name, String racePoints, String qualiPoints, int fastestLapPoints) {
+		this.name = name;
+		this.racePoints = racePoints;
+		this.qualiPoints = qualiPoints;
+		this.fastestLapPoints = fastestLapPoints;
+	}
 
-    public int[] getRacePointsArray() {
-        return parseCsv(racePoints);
-    }
+	private static int[] parseCsv(String csv) {
+		return Arrays.stream(csv.split(","))
+				.map(String::trim)
+				.filter(s -> !s.isEmpty())
+				.mapToInt(Integer::parseInt)
+				.toArray();
+	}
 
-    public int[] getQualiPointsArray() {
-        if (qualiPoints == null || qualiPoints.isBlank()) {
-            return new int[]{};
-        }
-        return parseCsv(qualiPoints);
-    }
+	private static boolean isMonotonicallyDecreasing(int[] values) {
+		for (int i = 1; i < values.length; i++) {
+			if (values[i] > values[i - 1]) {
+				return false;
+			}
+		}
+		return true;
+	}
 
-    public boolean canParse() {
-        try {
-            getRacePointsArray();
-            getQualiPointsArray();
-            return true;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
+	public int[] getRacePointsArray() {
+		return parseCsv(racePoints);
+	}
 
-    public boolean isValid() {
-        if (!canParse()) return false;
-        return isMonotonicallyDecreasing(getRacePointsArray())
-                && isMonotonicallyDecreasing(getQualiPointsArray());
-    }
+	public int[] getQualiPointsArray() {
+		if (qualiPoints == null || qualiPoints.isBlank()) {
+			return new int[]{};
+		}
+		return parseCsv(qualiPoints);
+	}
 
-    private static int[] parseCsv(String csv) {
-        return Arrays.stream(csv.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .mapToInt(Integer::parseInt)
-                .toArray();
-    }
+	public boolean canParse() {
+		try {
+			getRacePointsArray();
+			getQualiPointsArray();
+			return true;
+		} catch (NumberFormatException e) {
+			return false;
+		}
+	}
 
-    private static boolean isMonotonicallyDecreasing(int[] values) {
-        for (int i = 1; i < values.length; i++) {
-            if (values[i] > values[i - 1]) {
-                return false;
-            }
-        }
-        return true;
-    }
+	public boolean isValid() {
+		if (!canParse()) return false;
+		return isMonotonicallyDecreasing(getRacePointsArray())
+				&& isMonotonicallyDecreasing(getQualiPointsArray());
+	}
 }

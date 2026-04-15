@@ -8,5 +8,5 @@ import java.util.UUID;
 
 public interface PlayoffRepository extends JpaRepository<Playoff, UUID> {
 
-    Optional<Playoff> findBySeasonId(UUID seasonId);
+	Optional<Playoff> findBySeasonId(UUID seasonId);
 }

@@ -22,157 +22,159 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class RaceCalendarServiceTest {
 
-    @Mock private RaceRepository raceRepository;
-    @Mock private GoogleCalendarService googleCalendarService;
+	@Mock
+	private RaceRepository raceRepository;
+	@Mock
+	private GoogleCalendarService googleCalendarService;
 
-    @InjectMocks
-    private RaceCalendarService service;
+	@InjectMocks
+	private RaceCalendarService service;
 
-    // --- createOrUpdateCalendarEvent ---
+	// --- createOrUpdateCalendarEvent ---
 
-    @Test
-    void givenRaceWithDateTimeAndTeams_whenCreateOrUpdateCalendarEvent_thenDelegatesToGoogleCalendarService() throws Exception {
-        // given
-        var homeTeam = createTeam("DTR", "Delta Racing");
-        var awayTeam = createTeam("MRL", "Maranello");
-        var season = new Season();
-        season.setId(UUID.randomUUID());
-        season.setEventDurationMinutes(90);
-        var matchday = new Matchday();
-        matchday.setId(UUID.randomUUID());
-        matchday.setLabel("MD 3");
-        matchday.setSeason(season);
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-        race.setDateTime(LocalDateTime.of(2026, 5, 1, 19, 30));
+	@Test
+	void givenRaceWithDateTimeAndTeams_whenCreateOrUpdateCalendarEvent_thenDelegatesToGoogleCalendarService() throws Exception {
+		// given
+		var homeTeam = createTeam("DTR", "Delta Racing");
+		var awayTeam = createTeam("MRL", "Maranello");
+		var season = new Season();
+		season.setId(UUID.randomUUID());
+		season.setEventDurationMinutes(90);
+		var matchday = new Matchday();
+		matchday.setId(UUID.randomUUID());
+		matchday.setLabel("MD 3");
+		matchday.setSeason(season);
+		var match = new Match(matchday, homeTeam, awayTeam);
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setMatchday(matchday);
+		race.setMatch(match);
+		race.setDateTime(LocalDateTime.of(2026, 5, 1, 19, 30));
 
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(true);
-        when(googleCalendarService.createEvent(eq("MD 3 - DTR vs. MRL"),
-                eq(LocalDateTime.of(2026, 5, 1, 19, 30)), eq(90)))
-                .thenReturn("new-event-id");
-        when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
+		when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+		when(googleCalendarService.isAvailable()).thenReturn(true);
+		when(googleCalendarService.createEvent(eq("MD 3 - DTR vs. MRL"),
+				eq(LocalDateTime.of(2026, 5, 1, 19, 30)), eq(90)))
+				.thenReturn("new-event-id");
+		when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        // when
-        service.createOrUpdateCalendarEvent(race.getId());
+		// when
+		service.createOrUpdateCalendarEvent(race.getId());
 
-        // then
-        verify(googleCalendarService).createEvent("MD 3 - DTR vs. MRL",
-                LocalDateTime.of(2026, 5, 1, 19, 30), 90);
-        verify(raceRepository).save(argThat(r -> "new-event-id".equals(r.getCalendarEventId())));
-    }
+		// then
+		verify(googleCalendarService).createEvent("MD 3 - DTR vs. MRL",
+				LocalDateTime.of(2026, 5, 1, 19, 30), 90);
+		verify(raceRepository).save(argThat(r -> "new-event-id".equals(r.getCalendarEventId())));
+	}
 
-    @Test
-    void givenRaceWithExistingCalendarEventId_whenCreateOrUpdateCalendarEvent_thenUpdatesExistingEvent() throws Exception {
-        // given
-        var homeTeam = createTeam("HOM", "Home");
-        var awayTeam = createTeam("AWY", "Away");
-        var season = new Season();
-        season.setId(UUID.randomUUID());
-        season.setEventDurationMinutes(60);
-        var matchday = new Matchday();
-        matchday.setId(UUID.randomUUID());
-        matchday.setLabel("MD 1");
-        matchday.setSeason(season);
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-        race.setDateTime(LocalDateTime.of(2026, 6, 10, 20, 0));
-        race.setCalendarEventId("existing-event-999");
+	@Test
+	void givenRaceWithExistingCalendarEventId_whenCreateOrUpdateCalendarEvent_thenUpdatesExistingEvent() throws Exception {
+		// given
+		var homeTeam = createTeam("HOM", "Home");
+		var awayTeam = createTeam("AWY", "Away");
+		var season = new Season();
+		season.setId(UUID.randomUUID());
+		season.setEventDurationMinutes(60);
+		var matchday = new Matchday();
+		matchday.setId(UUID.randomUUID());
+		matchday.setLabel("MD 1");
+		matchday.setSeason(season);
+		var match = new Match(matchday, homeTeam, awayTeam);
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setMatchday(matchday);
+		race.setMatch(match);
+		race.setDateTime(LocalDateTime.of(2026, 6, 10, 20, 0));
+		race.setCalendarEventId("existing-event-999");
 
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(true);
+		when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+		when(googleCalendarService.isAvailable()).thenReturn(true);
 
-        // when
-        service.createOrUpdateCalendarEvent(race.getId());
+		// when
+		service.createOrUpdateCalendarEvent(race.getId());
 
-        // then
-        verify(googleCalendarService).updateEvent("existing-event-999", "MD 1 - HOM vs. AWY",
-                LocalDateTime.of(2026, 6, 10, 20, 0), 60);
-        verify(googleCalendarService, never()).createEvent(any(), any(), anyInt());
-    }
+		// then
+		verify(googleCalendarService).updateEvent("existing-event-999", "MD 1 - HOM vs. AWY",
+				LocalDateTime.of(2026, 6, 10, 20, 0), 60);
+		verify(googleCalendarService, never()).createEvent(any(), any(), anyInt());
+	}
 
-    @Test
-    void givenCalendarNotAvailable_whenCreateOrUpdateCalendarEvent_thenThrowsIllegalStateException() {
-        // given
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(createMatchday());
+	@Test
+	void givenCalendarNotAvailable_whenCreateOrUpdateCalendarEvent_thenThrowsIllegalStateException() {
+		// given
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setMatchday(createMatchday());
 
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(false);
+		when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+		when(googleCalendarService.isAvailable()).thenReturn(false);
 
-        // when / then
-        assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(race.getId()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("Calendar");
-    }
+		// when / then
+		assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(race.getId()))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("Calendar");
+	}
 
-    @Test
-    void givenRaceWithoutDateTime_whenCreateOrUpdateCalendarEvent_thenThrowsIllegalStateException() {
-        // given
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(createMatchday());
+	@Test
+	void givenRaceWithoutDateTime_whenCreateOrUpdateCalendarEvent_thenThrowsIllegalStateException() {
+		// given
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setMatchday(createMatchday());
 
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(true);
+		when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+		when(googleCalendarService.isAvailable()).thenReturn(true);
 
-        // when / then
-        assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(race.getId()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("date/time");
-    }
+		// when / then
+		assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(race.getId()))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessageContaining("date/time");
+	}
 
-    @Test
-    void givenCalendarServiceThrowsIOException_whenCreateOrUpdateCalendarEvent_thenPropagatesException() throws Exception {
-        // given
-        var homeTeam = createTeam("HOM", "Home");
-        var awayTeam = createTeam("AWY", "Away");
-        var season = new Season();
-        season.setId(UUID.randomUUID());
-        season.setEventDurationMinutes(60);
-        var matchday = new Matchday();
-        matchday.setId(UUID.randomUUID());
-        matchday.setLabel("MD 1");
-        matchday.setSeason(season);
-        var match = new Match(matchday, homeTeam, awayTeam);
-        var race = new Race();
-        race.setId(UUID.randomUUID());
-        race.setMatchday(matchday);
-        race.setMatch(match);
-        race.setDateTime(LocalDateTime.of(2026, 6, 10, 20, 0));
+	@Test
+	void givenCalendarServiceThrowsIOException_whenCreateOrUpdateCalendarEvent_thenPropagatesException() throws Exception {
+		// given
+		var homeTeam = createTeam("HOM", "Home");
+		var awayTeam = createTeam("AWY", "Away");
+		var season = new Season();
+		season.setId(UUID.randomUUID());
+		season.setEventDurationMinutes(60);
+		var matchday = new Matchday();
+		matchday.setId(UUID.randomUUID());
+		matchday.setLabel("MD 1");
+		matchday.setSeason(season);
+		var match = new Match(matchday, homeTeam, awayTeam);
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setMatchday(matchday);
+		race.setMatch(match);
+		race.setDateTime(LocalDateTime.of(2026, 6, 10, 20, 0));
 
-        when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
-        when(googleCalendarService.isAvailable()).thenReturn(true);
-        when(googleCalendarService.createEvent(any(), any(), anyInt()))
-                .thenThrow(new IOException("Calendar API error"));
+		when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
+		when(googleCalendarService.isAvailable()).thenReturn(true);
+		when(googleCalendarService.createEvent(any(), any(), anyInt()))
+				.thenThrow(new IOException("Calendar API error"));
 
-        // when / then
-        assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(race.getId()))
-                .isInstanceOf(IOException.class)
-                .hasMessageContaining("Calendar API error");
-    }
+		// when / then
+		assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(race.getId()))
+				.isInstanceOf(IOException.class)
+				.hasMessageContaining("Calendar API error");
+	}
 
-    // --- Helper ---
+	// --- Helper ---
 
-    private Team createTeam(String shortName, String name) {
-        var team = new Team(name, shortName);
-        team.setId(UUID.randomUUID());
-        return team;
-    }
+	private Team createTeam(String shortName, String name) {
+		var team = new Team(name, shortName);
+		team.setId(UUID.randomUUID());
+		return team;
+	}
 
-    private Matchday createMatchday() {
-        var season = new Season();
-        season.setId(UUID.randomUUID());
-        var matchday = new Matchday();
-        matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
-        return matchday;
-    }
+	private Matchday createMatchday() {
+		var season = new Season();
+		season.setId(UUID.randomUUID());
+		var matchday = new Matchday();
+		matchday.setId(UUID.randomUUID());
+		matchday.setSeason(season);
+		return matchday;
+	}
 }

@@ -7,13 +7,15 @@ import lombok.Setter;
 
 import java.util.UUID;
 
-@Getter @Setter @NoArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
 public class TrackForm {
 
-    private UUID id;
+	private UUID id;
 
-    @NotBlank
-    private String name;
+	@NotBlank
+	private String name;
 
-    private String country;
+	private String country;
 }

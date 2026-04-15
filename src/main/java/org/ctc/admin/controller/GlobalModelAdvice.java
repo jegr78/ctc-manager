@@ -7,11 +7,11 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 @ControllerAdvice
 public class GlobalModelAdvice {
 
-    @Value("${app.version}")
-    private String appVersion;
+	@Value("${app.version}")
+	private String appVersion;
 
-    @ModelAttribute("appVersion")
-    public String appVersion() {
-        return appVersion;
-    }
+	@ModelAttribute("appVersion")
+	public String appVersion() {
+		return appVersion;
+	}
 }

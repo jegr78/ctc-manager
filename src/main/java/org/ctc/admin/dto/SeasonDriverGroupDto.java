@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.Map;
 
 public record SeasonDriverGroupDto(
-        Season season,
-        Map<Team, List<Driver>> driversByTeam
+		Season season,
+		Map<Team, List<Driver>> driversByTeam
 ) {
-    public int totalDriverCount() {
-        return driversByTeam.values().stream().mapToInt(List::size).sum();
-    }
+	public int totalDriverCount() {
+		return driversByTeam.values().stream().mapToInt(List::size).sum();
+	}
 }

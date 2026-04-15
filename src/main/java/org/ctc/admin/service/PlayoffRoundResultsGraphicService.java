@@ -15,33 +15,33 @@ import java.io.IOException;
 @Service
 public class PlayoffRoundResultsGraphicService extends AbstractPlayoffRoundGraphicService {
 
-    private static final String DEFAULT_TEMPLATE = "admin/playoff-round-results-render";
-    private static final String CUSTOM_TEMPLATE_FILE = "playoff-round-results-template.html";
+	private static final String DEFAULT_TEMPLATE = "admin/playoff-round-results-render";
+	private static final String CUSTOM_TEMPLATE_FILE = "playoff-round-results-template.html";
 
-    public PlayoffRoundResultsGraphicService(TemplateEngine templateEngine,
-                                              PlayoffSeedRepository playoffSeedRepository,
-                                              SeasonTeamRepository seasonTeamRepository,
-                                              @Value("${app.upload-dir:uploads}") String uploadDir) {
-        super(templateEngine, playoffSeedRepository, seasonTeamRepository, uploadDir);
-    }
+	public PlayoffRoundResultsGraphicService(TemplateEngine templateEngine,
+	                                         PlayoffSeedRepository playoffSeedRepository,
+	                                         SeasonTeamRepository seasonTeamRepository,
+	                                         @Value("${app.upload-dir:uploads}") String uploadDir) {
+		super(templateEngine, playoffSeedRepository, seasonTeamRepository, uploadDir);
+	}
 
-    public byte[] generateResults(PlayoffRound round) throws IOException {
-        var data = prepareBaseContext(round);
+	public byte[] generateResults(PlayoffRound round) throws IOException {
+		var data = prepareBaseContext(round);
 
-        var ctx = new Context();
-        ctx.setVariable("data", data);
+		var ctx = new Context();
+		ctx.setVariable("data", data);
 
-        String html = renderTemplate(ctx);
-        return renderToBytes(html);
-    }
+		String html = renderTemplate(ctx);
+		return renderToBytes(html);
+	}
 
-    @Override
-    protected String getTemplateFileName() {
-        return CUSTOM_TEMPLATE_FILE;
-    }
+	@Override
+	protected String getTemplateFileName() {
+		return CUSTOM_TEMPLATE_FILE;
+	}
 
-    @Override
-    protected String getDefaultTemplatePath() {
-        return DEFAULT_TEMPLATE;
-    }
+	@Override
+	protected String getDefaultTemplatePath() {
+		return DEFAULT_TEMPLATE;
+	}
 }

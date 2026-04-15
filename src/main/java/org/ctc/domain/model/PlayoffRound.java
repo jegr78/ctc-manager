@@ -14,35 +14,38 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "playoff_rounds")
-@Getter @Setter @NoArgsConstructor @ToString(exclude = {"playoff", "matchups"})
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString(exclude = {"playoff", "matchups"})
 public class PlayoffRound extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+	@Id
+	@GeneratedValue(strategy = GenerationType.UUID)
+	private UUID id;
 
-    @NotNull
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "playoff_id", nullable = false)
-    private Playoff playoff;
+	@NotNull
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "playoff_id", nullable = false)
+	private Playoff playoff;
 
-    @NotBlank
-    @Column(nullable = false)
-    private String label;
+	@NotBlank
+	@Column(nullable = false)
+	private String label;
 
-    @Column(name = "round_index", nullable = false)
-    private int roundIndex;
+	@Column(name = "round_index", nullable = false)
+	private int roundIndex;
 
-    @Column(name = "best_of_legs", nullable = false)
-    private int bestOfLegs = 1;
+	@Column(name = "best_of_legs", nullable = false)
+	private int bestOfLegs = 1;
 
-    @OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("bracketPosition ASC")
-    private List<PlayoffMatchup> matchups = new ArrayList<>();
+	@OneToMany(mappedBy = "round", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("bracketPosition ASC")
+	private List<PlayoffMatchup> matchups = new ArrayList<>();
 
-    public PlayoffRound(Playoff playoff, String label, int roundIndex) {
-        this.playoff = playoff;
-        this.label = label;
-        this.roundIndex = roundIndex;
-    }
+	public PlayoffRound(Playoff playoff, String label, int roundIndex) {
+		this.playoff = playoff;
+		this.label = label;
+		this.roundIndex = roundIndex;
+	}
 }

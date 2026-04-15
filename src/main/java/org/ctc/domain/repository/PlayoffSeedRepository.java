@@ -10,10 +10,10 @@ import java.util.UUID;
 
 public interface PlayoffSeedRepository extends JpaRepository<PlayoffSeed, UUID> {
 
-    @EntityGraph(attributePaths = {"team"})
-    List<PlayoffSeed> findByPlayoffId(UUID playoffId);
+	@EntityGraph(attributePaths = {"team"})
+	List<PlayoffSeed> findByPlayoffId(UUID playoffId);
 
-    Optional<PlayoffSeed> findByPlayoffIdAndTeamId(UUID playoffId, UUID teamId);
+	Optional<PlayoffSeed> findByPlayoffIdAndTeamId(UUID playoffId, UUID teamId);
 
-    void deleteByPlayoffId(UUID playoffId);
+	void deleteByPlayoffId(UUID playoffId);
 }

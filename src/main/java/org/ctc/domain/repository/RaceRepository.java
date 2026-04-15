@@ -9,25 +9,27 @@ import java.util.UUID;
 
 public interface RaceRepository extends JpaRepository<Race, UUID> {
 
-    @EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
-    List<Race> findByMatchdayId(UUID matchdayId);
+	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
+	List<Race> findByMatchdayId(UUID matchdayId);
 
-    @EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
-    List<Race> findByMatchdaySeasonId(UUID seasonId);
+	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
+	List<Race> findByMatchdaySeasonId(UUID seasonId);
 
-    @EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
-    List<Race> findByMatchdaySeasonIdAndPlayoffMatchupIsNull(UUID seasonId);
+	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
+	List<Race> findByMatchdaySeasonIdAndPlayoffMatchupIsNull(UUID seasonId);
 
-    @EntityGraph(attributePaths = {"playoffMatchup", "track", "car"})
-    List<Race> findByPlayoffMatchupId(UUID matchupId);
+	@EntityGraph(attributePaths = {"playoffMatchup", "track", "car"})
+	List<Race> findByPlayoffMatchupId(UUID matchupId);
 
-    @EntityGraph(attributePaths = {"playoffMatchup", "matchday", "track", "car"})
-    List<Race> findByPlayoffMatchupRoundPlayoffId(UUID playoffId);
+	@EntityGraph(attributePaths = {"playoffMatchup", "matchday", "track", "car"})
+	List<Race> findByPlayoffMatchupRoundPlayoffId(UUID playoffId);
 
-    @EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
-    List<Race> findByPlayoffMatchupIsNull();
+	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
+	List<Race> findByPlayoffMatchupIsNull();
 
-    boolean existsByCarId(UUID carId);
+	List<Race> findByMatchId(UUID matchId);
 
-    boolean existsByTrackId(UUID trackId);
+	boolean existsByCarId(UUID carId);
+
+	boolean existsByTrackId(UUID trackId);
 }

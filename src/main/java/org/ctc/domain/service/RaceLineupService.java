@@ -1,13 +1,13 @@
 package org.ctc.domain.service;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.*;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,88 +19,91 @@ import java.util.stream.Stream;
 @RequiredArgsConstructor
 public class RaceLineupService {
 
-    private final RaceRepository raceRepository;
-    private final RaceLineupRepository raceLineupRepository;
-    private final SeasonDriverRepository seasonDriverRepository;
-    private final TeamRepository teamRepository;
-    private final DriverRepository driverRepository;
+	private final RaceRepository raceRepository;
+	private final RaceLineupRepository raceLineupRepository;
+	private final SeasonDriverRepository seasonDriverRepository;
+	private final TeamRepository teamRepository;
+	private final DriverRepository driverRepository;
 
-    // --- Return types ---
+	// --- Return types ---
 
-    public record LineupTeamEntry(Team team, List<SeasonDriver> drivers, List<Team> subTeams, boolean hasSubTeams) {}
-    public record LineupData(Race race, LineupTeamEntry homeEntry, LineupTeamEntry awayEntry) {}
+	public LineupData getLineupData(UUID raceId) {
+		var race = raceRepository.findById(raceId)
+				.orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+		var season = race.getMatchday().getSeason();
+		var seasonTeams = season.getTeams();
 
-    // --- Get lineup data ---
+		var raceTeams = Stream.of(race.getHomeTeam(), race.getAwayTeam())
+				.filter(Objects::nonNull)
+				.toList();
 
-    public LineupData getLineupData(UUID raceId) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
-        var season = race.getMatchday().getSeason();
-        var seasonTeams = season.getTeams();
+		var teamEntries = new ArrayList<LineupTeamEntry>();
 
-        var raceTeams = Stream.of(race.getHomeTeam(), race.getAwayTeam())
-                .filter(Objects::nonNull)
-                .toList();
+		for (var team : raceTeams) {
+			if (team.isSubTeam()) {
+				var parent = team.getParentOrSelf();
+				if (teamEntries.stream().anyMatch(e -> e.team().getId().equals(parent.getId()))) continue;
 
-        var teamEntries = new ArrayList<LineupTeamEntry>();
+				var subTeams = seasonTeams.stream()
+						.filter(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()))
+						.sorted(Comparator.comparing(Team::getShortName))
+						.toList();
+				var drivers = subTeams.stream()
+						.flatMap(sub -> seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), sub.getId()).stream())
+						.toList();
+				teamEntries.add(new LineupTeamEntry(parent, drivers, subTeams, true));
+			} else {
+				var drivers = seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), team.getId());
+				teamEntries.add(new LineupTeamEntry(team, drivers, List.of(), false));
+			}
+		}
 
-        for (var team : raceTeams) {
-            if (team.isSubTeam()) {
-                var parent = team.getParentOrSelf();
-                if (teamEntries.stream().anyMatch(e -> e.team().getId().equals(parent.getId()))) continue;
+		LineupTeamEntry homeEntry = teamEntries.size() > 0 ? teamEntries.get(0) : null;
+		LineupTeamEntry awayEntry = teamEntries.size() > 1 ? teamEntries.get(1) : null;
 
-                var subTeams = seasonTeams.stream()
-                        .filter(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()))
-                        .sorted(Comparator.comparing(Team::getShortName))
-                        .toList();
-                var drivers = subTeams.stream()
-                        .flatMap(sub -> seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), sub.getId()).stream())
-                        .toList();
-                teamEntries.add(new LineupTeamEntry(parent, drivers, subTeams, true));
-            } else {
-                var drivers = seasonDriverRepository.findBySeasonIdAndTeamId(season.getId(), team.getId());
-                teamEntries.add(new LineupTeamEntry(team, drivers, List.of(), false));
-            }
-        }
+		return new LineupData(race, homeEntry, awayEntry);
+	}
 
-        LineupTeamEntry homeEntry = teamEntries.size() > 0 ? teamEntries.get(0) : null;
-        LineupTeamEntry awayEntry = teamEntries.size() > 1 ? teamEntries.get(1) : null;
+	public Map<UUID, UUID> getDriverAssignments(UUID raceId) {
+		var existingLineups = raceLineupRepository.findByRaceId(raceId);
+		var assignments = new HashMap<UUID, UUID>();
+		for (var lineup : existingLineups) {
+			assignments.put(lineup.getDriver().getId(), lineup.getTeam().getId());
+		}
+		return assignments;
+	}
 
-        return new LineupData(race, homeEntry, awayEntry);
-    }
+	// --- Get lineup data ---
 
-    // --- Get driver assignments ---
+	@Transactional
+	public int saveLineup(UUID raceId, Map<UUID, UUID> driverTeamAssignments) {
+		var race = raceRepository.findById(raceId)
+				.orElseThrow(() -> new EntityNotFoundException("Race", raceId));
 
-    public Map<UUID, UUID> getDriverAssignments(UUID raceId) {
-        var existingLineups = raceLineupRepository.findByRaceId(raceId);
-        var assignments = new HashMap<UUID, UUID>();
-        for (var lineup : existingLineups) {
-            assignments.put(lineup.getDriver().getId(), lineup.getTeam().getId());
-        }
-        return assignments;
-    }
+		var existing = raceLineupRepository.findByRaceId(raceId);
+		raceLineupRepository.deleteAll(existing);
 
-    // --- Save lineup ---
+		int count = 0;
+		for (var entry : driverTeamAssignments.entrySet()) {
+			var driver = driverRepository.findById(entry.getKey())
+					.orElseThrow(() -> new EntityNotFoundException("Driver", entry.getKey()));
+			var team = teamRepository.findById(entry.getValue())
+					.orElseThrow(() -> new EntityNotFoundException("Team", entry.getValue()));
+			raceLineupRepository.save(new RaceLineup(race, driver, team));
+			count++;
+		}
 
-    @Transactional
-    public int saveLineup(UUID raceId, Map<UUID, UUID> driverTeamAssignments) {
-        var race = raceRepository.findById(raceId)
-                .orElseThrow(() -> new EntityNotFoundException("Race", raceId));
+		log.info("Saved {} lineup entries for race {}", count, raceId);
+		return count;
+	}
 
-        var existing = raceLineupRepository.findByRaceId(raceId);
-        raceLineupRepository.deleteAll(existing);
+	// --- Get driver assignments ---
 
-        int count = 0;
-        for (var entry : driverTeamAssignments.entrySet()) {
-            var driver = driverRepository.findById(entry.getKey())
-                    .orElseThrow(() -> new EntityNotFoundException("Driver", entry.getKey()));
-            var team = teamRepository.findById(entry.getValue())
-                    .orElseThrow(() -> new EntityNotFoundException("Team", entry.getValue()));
-            raceLineupRepository.save(new RaceLineup(race, driver, team));
-            count++;
-        }
+	public record LineupTeamEntry(Team team, List<SeasonDriver> drivers, List<Team> subTeams, boolean hasSubTeams) {
+	}
 
-        log.info("Saved {} lineup entries for race {}", count, raceId);
-        return count;
-    }
+	// --- Save lineup ---
+
+	public record LineupData(Race race, LineupTeamEntry homeEntry, LineupTeamEntry awayEntry) {
+	}
 }
