@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Static Site Quality
 status: planning
-stopped_at: Defining requirements
+stopped_at: Roadmap created — ready to plan Phase 37
 last_updated: "2026-04-16"
 last_activity: 2026-04-16
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Defining requirements for v1.6
+**Current focus:** v1.6 Static Site Quality — Phase 37 next
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 37 (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-16 — Milestone v1.6 started
+Status: Roadmap created, ready to plan
+Last activity: 2026-04-16 — Roadmap for v1.6 created (5 phases, 22 requirements mapped)
+
+## Progress Bar
+
+```
+v1.6: [ ] Phase 37  [ ] Phase 38  [ ] Phase 39  [ ] Phase 40  [ ] Phase 41
+        0/5 complete
+```
 
 ## Completed Milestones
 
@@ -42,6 +49,24 @@ Last activity: 2026-04-16 — Milestone v1.6 started
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table.
+
+### Phase Structure (v1.6)
+
+| Phase | Name | Requirements | Focus |
+|-------|------|--------------|-------|
+| 37 | Critical Link Fixes | LINK-01..04 | Broken archive slugs, driver ranking 404, absolute paths, team logos |
+| 38 | Season Content & Data Filtering | CONT-01, CONT-06, CONT-07 | Season year/number display, filter test seasons, hide empty match-meta |
+| 39 | Entity Cross-Linking | CONT-02..04, CONT-08 | Links: standings→teams, ranking→drivers, matchday→drivers, team→drivers |
+| 40 | Navigation & Structure | CONT-05, UX-02, UX-03 | Season subnav, active nav state, breadcrumbs |
+| 41 | UX Polish & Accessibility | UX-01, UX-04..09, QUAL-01 | Skip link, winner highlight, scroll indicator, footer, aria, transitions |
+
+### Key Technical Context
+
+- All changes target: `SiteGeneratorService.java`, `templates/site/`, `static/site/css/style.css`
+- No database changes needed for this milestone
+- Season model: `getDisplayLabel()` returns "year | #number | name"
+- Site pages: index, archive, standings, matchday, team-profile, driver-profile, driver-ranking, playoff-bracket
+- Shared nav/footer lives in `layout.html`
 
 ### Blockers/Concerns
 

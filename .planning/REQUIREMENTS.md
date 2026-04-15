@@ -70,36 +70,36 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LINK-01 | — | Pending |
-| LINK-02 | — | Pending |
-| LINK-03 | — | Pending |
-| LINK-04 | — | Pending |
-| CONT-01 | — | Pending |
-| CONT-02 | — | Pending |
-| CONT-03 | — | Pending |
-| CONT-04 | — | Pending |
-| CONT-05 | — | Pending |
-| CONT-06 | — | Pending |
-| CONT-07 | — | Pending |
-| CONT-08 | — | Pending |
-| QUAL-01 | — | Pending |
-| UX-01 | — | Pending |
-| UX-02 | — | Pending |
-| UX-03 | — | Pending |
-| UX-04 | — | Pending |
-| UX-05 | — | Pending |
-| UX-06 | — | Pending |
-| UX-07 | — | Pending |
-| UX-08 | — | Pending |
-| UX-09 | — | Pending |
+| LINK-01 | Phase 37 | Pending |
+| LINK-02 | Phase 37 | Pending |
+| LINK-03 | Phase 37 | Pending |
+| LINK-04 | Phase 37 | Pending |
+| CONT-01 | Phase 38 | Pending |
+| CONT-06 | Phase 38 | Pending |
+| CONT-07 | Phase 38 | Pending |
+| CONT-02 | Phase 39 | Pending |
+| CONT-03 | Phase 39 | Pending |
+| CONT-04 | Phase 39 | Pending |
+| CONT-08 | Phase 39 | Pending |
+| CONT-05 | Phase 40 | Pending |
+| UX-02 | Phase 40 | Pending |
+| UX-03 | Phase 40 | Pending |
+| UX-01 | Phase 41 | Pending |
+| UX-04 | Phase 41 | Pending |
+| UX-05 | Phase 41 | Pending |
+| UX-06 | Phase 41 | Pending |
+| UX-07 | Phase 41 | Pending |
+| UX-08 | Phase 41 | Pending |
+| UX-09 | Phase 41 | Pending |
+| QUAL-01 | Phase 41 | Pending |
 
 **Coverage:**
 
 - v1.6 requirements: 22 total
-- Mapped to phases: 0
-- Unmapped: 22
+- Mapped to phases: 22
+- Unmapped: 0
 
 ---
 
 *Requirements defined: 2026-04-16*
-*Last updated: 2026-04-16 after initial definition*
+*Last updated: 2026-04-16 after roadmap creation*
