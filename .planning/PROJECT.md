@@ -68,7 +68,24 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 ### Active
 
-(None — planning next milestone)
+#### Current Milestone: v1.6 Static Site Quality
+
+**Goal:** Fix broken links, add missing content, improve navigation/cross-linking, and deliver a polished, accessible static site with professional UX.
+
+**Target features:**
+
+- Fix all broken navigation links (archive slug mismatch, driver ranking 404, absolute paths)
+- Display season year and number across all pages
+- Add inline links from standings to teams, from rankings to drivers, from matchdays to profiles
+- Add season subnavigation (matchdays, standings, driver ranking, playoff per season)
+- Filter test seasons from archive, fix empty match-meta and period column
+- Remove inline styles in archive and driver-profile templates
+- Fix broken team logo paths on static site
+- Add skip-link, nav active-state, breadcrumbs for accessibility
+- Highlight match winner in match cards
+- Mobile scroll indicator for tables
+- Footer with useful links
+- Aria-label improvements, hover transitions, cursor:pointer on clickables
 
 ### Out of Scope
 
@@ -109,4 +126,4 @@ Architectural Consistency: All controllers delegate to services, exception handl
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-15 after v1.5 Code Review Fixes milestone*
+*Last updated: 2026-04-16 after v1.6 Static Site Quality milestone started*
