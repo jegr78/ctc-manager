@@ -112,7 +112,8 @@ Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session rem
 * **Tooling:** `gh` CLI for all GitHub operations (PRs, Issues, etc.).
 * **Branching:** Create a separate branch for every feature/fix.
   * Naming: `feature/<short-description>` or `fix/<short-description>`.
-  * Branch off `master`.
+  * Always fetch before branching: `git fetch origin && git checkout -b <branch> origin/master`.
+  * Never branch from a local `master` that may be behind remote.
 * **Pull Requests:** Always merge changes via PRs into `master`; no direct pushes.
   * `gh pr create --assignee jegr78` to create (always assign to jegr78).
   * `gh pr merge --squash` to merge (keeps history clean).
