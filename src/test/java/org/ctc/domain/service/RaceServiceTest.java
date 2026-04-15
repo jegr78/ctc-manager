@@ -76,8 +76,9 @@ class RaceServiceTest {
     }
 
     @Test
-    void givenNoFilter_whenGetRaceListData_thenReturnsEmptyList() {
+    void givenNoFilter_whenGetRaceListData_thenReturnsAllRaces() {
         // given
+        when(raceRepository.findAll()).thenReturn(List.of());
         when(seasonRepository.findAll()).thenReturn(List.of());
 
         // when
@@ -85,7 +86,7 @@ class RaceServiceTest {
 
         // then
         assertThat(result.races()).isEmpty();
-        verify(raceRepository, never()).findAll();
+        verify(raceRepository).findAll();
     }
 
     // --- saveRace ---
@@ -285,7 +286,7 @@ class RaceServiceTest {
                 .thenReturn(List.of(new RaceLineup(race, driver1, homeTeam), new RaceLineup(race, driver2, awayTeam)));
 
         // when
-        var data = service.getRaceDetailData(race.getId(), false, false);
+        var data = service.getRaceDetailData(race.getId());
 
         // then
         assertThat(data.homeTotal()).isEqualTo(20);
@@ -316,7 +317,7 @@ class RaceServiceTest {
         when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
 
         // when
-        var data = service.getRaceDetailData(race.getId(), false, false);
+        var data = service.getRaceDetailData(race.getId());
 
         // then
         assertThat(data.resultsMissing()).isTrue();
@@ -346,7 +347,7 @@ class RaceServiceTest {
         when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of());
 
         // when
-        var data = service.getRaceDetailData(race.getId(), false, false);
+        var data = service.getRaceDetailData(race.getId());
 
         // then
         assertThat(data.settingsMissing()).isTrue();

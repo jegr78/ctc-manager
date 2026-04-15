@@ -290,11 +290,11 @@ public class SiteGeneratorService {
         String awayShortName = race.getAwayTeam() != null ? race.getAwayTeam().getShortName() : "Bye";
 
         int homeTotal = results.stream()
-                .filter(r -> r.getTeamShortName().equals(homeShortName))
-                .mapToInt(RaceView.ResultView::getPointsTotal).sum();
+                .filter(r -> r.teamShortName().equals(homeShortName))
+                .mapToInt(RaceView.ResultView::pointsTotal).sum();
         int awayTotal = results.stream()
-                .filter(r -> !r.getTeamShortName().equals(homeShortName))
-                .mapToInt(RaceView.ResultView::getPointsTotal).sum();
+                .filter(r -> !r.teamShortName().equals(homeShortName))
+                .mapToInt(RaceView.ResultView::pointsTotal).sum();
 
         String trackName = race.getTrack() != null ? race.getTrack().getName() : null;
         String carName = race.getCar() != null ? race.getCar().getDisplayName() : null;

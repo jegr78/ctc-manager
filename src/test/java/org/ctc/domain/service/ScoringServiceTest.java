@@ -26,16 +26,8 @@ class ScoringServiceTest {
 	@Mock
 	private RaceLineupRepository raceLineupRepository;
 
-<<<<<<< HEAD
-    @Mock
-    private RaceRepository raceRepository;
-
-    @InjectMocks
-    private ScoringService scoringService;
-=======
 	@Mock
-	private org.ctc.domain.repository.RaceRepository raceRepository;
->>>>>>> origin/master
+	private RaceRepository raceRepository;
 
 	@InjectMocks
 	private ScoringService scoringService;
@@ -258,10 +250,11 @@ class ScoringServiceTest {
 			// given
 			var homeTeam = createTeam("Home");
 			var awayTeam = createTeam("Away");
-			var match = createMatch(homeTeam, awayTeam);
-			var race = createRace(match);
 			var season = new Season("Test");
 			season.setId(UUID.randomUUID());
+			var match = createMatch(homeTeam, awayTeam);
+			match.getMatchday().setSeason(season);
+			var race = createRace(match);
 
 			var homeDriver = createDriver("home_d");
 			var awayDriver = createDriver("away_d");
