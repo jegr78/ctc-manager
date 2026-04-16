@@ -467,6 +467,42 @@ class SiteGeneratorServiceTest {
         assertTrue(meta.text().contains("#1"), "archive season-meta should contain season number #1");
     }
 
+    @Test
+    void givenSeason_whenGenerate_thenTeamProfileHasSeasonMeta() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var teamDir = seasonDir().resolve("team");
+        try (var files = Files.list(teamDir)) {
+            var firstProfile = files.filter(p -> p.toString().endsWith(".html")).findFirst().orElseThrow();
+            var html = Files.readString(firstProfile);
+            var doc = Jsoup.parse(html);
+            var meta = doc.select(".season-meta");
+            assertFalse(meta.isEmpty(), ".season-meta element should exist on team profile page");
+            assertTrue(meta.text().contains("2026"), "team profile season-meta should contain year 2026");
+            assertTrue(meta.text().contains("#1"), "team profile season-meta should contain season number #1");
+        }
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenDriverProfileHasSeasonMeta() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var driverDir = seasonDir().resolve("driver");
+        try (var files = Files.list(driverDir)) {
+            var firstProfile = files.filter(p -> p.toString().endsWith(".html")).findFirst().orElseThrow();
+            var html = Files.readString(firstProfile);
+            var doc = Jsoup.parse(html);
+            var meta = doc.select(".season-meta");
+            assertFalse(meta.isEmpty(), ".season-meta element should exist on driver profile page");
+            assertTrue(meta.text().contains("2026"), "driver profile season-meta should contain year 2026");
+            assertTrue(meta.text().contains("#1"), "driver profile season-meta should contain season number #1");
+        }
+    }
+
     // --- CONT-06: Test season filtering ---
 
     @Test
