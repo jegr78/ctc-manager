@@ -11,19 +11,19 @@
                     <tr><th>Season</th><th>Period</th><th>Status</th><th></th></tr>
                 </thead>
                 <tbody>
-                    <tr th:each="s : ${seasons}">
-                        <td class="font-bold text-white" th:text="${s.name}"></td>
+                    <tr th:each="entry : ${seasonEntries}">
+                        <td class="font-bold text-white" th:text="${entry.season.name}"></td>
                         <td class="text-dim">
-                            <span th:if="${s.startDate}" th:text="${s.startDate}"></span>
-                            <span th:if="${s.startDate != null and s.endDate != null}"> — </span>
-                            <span th:if="${s.endDate}" th:text="${s.endDate}"></span>
+                            <span th:if="${entry.season.startDate}" th:text="${entry.season.startDate}"></span>
+                            <span th:if="${entry.season.startDate != null and entry.season.endDate != null}"> — </span>
+                            <span th:if="${entry.season.endDate}" th:text="${entry.season.endDate}"></span>
                         </td>
                         <td>
-                            <span th:if="${s.active}" style="color:#4fc3f7;">Active</span>
-                            <span th:unless="${s.active}" class="text-dim">Completed</span>
+                            <span th:if="${entry.season.active}" style="color:#4fc3f7;">Active</span>
+                            <span th:unless="${entry.season.active}" class="text-dim">Completed</span>
                         </td>
                         <td class="text-right">
-                            <a th:href="'season/' + ${#strings.toLowerCase(#strings.replace(s.name, ' ', '-'))} + '/standings.html'"
+                            <a th:href="'season/' + ${entry.slug} + '/standings.html'"
                                style="color:var(--accent); text-decoration:none;">Standings</a>
                         </td>
                     </tr>
