@@ -68,7 +68,7 @@ public class SiteGeneratorService {
                     .toList();
 
             // Generate index
-            generateIndex(outPath, activeSeason, allSeasons, activeSeasonSlug, result);
+            generateIndex(outPath, activeSeason, productionSeasons, activeSeasonSlug, result);
 
             // Generate pages for each season
             for (var season : productionSeasons) {
