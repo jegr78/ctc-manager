@@ -77,7 +77,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 37: Critical Link Fixes** - Fix all broken navigation and asset links that block every other page (completed 2026-04-16)
 - [x] **Phase 38: Season Content & Data Filtering** - Display season metadata on all pages and hide missing/test data (gap closure) (completed 2026-04-16)
 - [x] **Phase 39: Entity Cross-Linking** - Add inline links from standings, rankings, matchdays, and team profiles (completed 2026-04-16)
-- [ ] **Phase 40: Navigation & Structure** - Season subnavigation, active nav state, and breadcrumbs
+- [x] **Phase 40: Navigation & Structure** - Season subnavigation, active nav state, and breadcrumbs (completed 2026-04-16)
 - [ ] **Phase 41: UX Polish & Accessibility** - Skip link, winner highlight, mobile scroll, footer, aria, hover transitions
 
 ## Phase Details
@@ -158,11 +158,11 @@ Plans:
 2. The active navigation item is visually distinct from inactive items (highlighted/underlined/different color)
 3. Subpages display breadcrumbs (e.g. "Home > Season 2025 > Standings") for orientation
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 40-01-PLAN.md — TDD RED: Write failing tests for subnav, active state, breadcrumbs, matchday index
-- [ ] 40-02-PLAN.md — TDD GREEN: Implement service nav context, layout subnav/breadcrumbs, matchdays.html, CSS
+- [x] 40-02-PLAN.md — TDD GREEN: Implement service nav context, layout subnav/breadcrumbs, matchdays.html, CSS
 
 **UI hint**: yes
 
@@ -223,5 +223,5 @@ Plans:
 | 37. Critical Link Fixes | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 38. Season Content & Data Filtering | v1.6 | 3/3 | Complete    | 2026-04-16 |
 | 39. Entity Cross-Linking | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 40. Navigation & Structure | v1.6 | 1/2 | In Progress|  |
+| 40. Navigation & Structure | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 41. UX Polish & Accessibility | v1.6 | 0/? | Not started | - |
