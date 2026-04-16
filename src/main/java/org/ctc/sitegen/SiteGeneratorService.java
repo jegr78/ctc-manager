@@ -1,6 +1,7 @@
 package org.ctc.sitegen;
 
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.*;
 import org.ctc.sitegen.model.RaceView;
@@ -115,9 +116,10 @@ public class SiteGeneratorService {
             var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(activeSeason.getId());
             if (!matchdays.isEmpty()) {
                 var lastMatchday = matchdays.getLast();
+                var indexLineups = raceLineupRepository.findByRaceMatchdaySeasonId(activeSeason.getId());
                 ctx.setVariable("lastMatchday", lastMatchday);
                 ctx.setVariable("lastMatchdayRaces", raceRepository.findByMatchdayId(lastMatchday.getId()).stream()
-                        .map(r -> toRaceView(r, activeSeason, "./season/" + activeSeasonSlug + "/driver/")).toList());
+                        .map(r -> toRaceView(r, activeSeason, "./season/" + activeSeasonSlug + "/driver/", indexLineups)).toList());
             }
         }
 
@@ -178,13 +180,15 @@ public class SiteGeneratorService {
     private void generateMatchdays(Path outPath, Season season, String activeSeasonSlug,
                                     GenerationResult result) throws IOException {
         var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
+        // Pre-fetch all lineups for the season to avoid per-result repository queries in toRaceView
+        var allLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
 
         for (var matchday : matchdays) {
             var ctx = new Context(Locale.ENGLISH);
             ctx.setVariable("season", season);
             ctx.setVariable("matchday", matchday);
             var raceViews = raceRepository.findByMatchdayId(matchday.getId()).stream()
-                    .map(r -> toRaceView(r, season, "../driver/")).toList();
+                    .map(r -> toRaceView(r, season, "../driver/", allLineups)).toList();
             ctx.setVariable("races", raceViews);
 
             ctx.setVariable("currentPage", "matchdays");
@@ -448,7 +452,8 @@ public class SiteGeneratorService {
         log.debug("Copied assets to {}", assetsDir);
     }
 
-    private RaceView toRaceView(Race race, Season season, String driverUrlPrefix) {
+    private RaceView toRaceView(Race race, Season season, String driverUrlPrefix,
+                                List<RaceLineup> seasonLineups) {
         var homeTeam = race.getHomeTeam();
         String homeShortName = homeTeam != null ? homeTeam.getShortName() : "Bye";
 
@@ -456,7 +461,10 @@ public class SiteGeneratorService {
                 .map(r -> {
                     // teamShortName: sub-team name for display (from RaceLineup, falls back to SeasonDriver)
                     // scoringTeamShortName: parent-resolved name for home/away aggregation
-                    var lineupOpt = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), r.getDriver().getId());
+                    var lineupOpt = seasonLineups.stream()
+                            .filter(rl -> rl.getRace().getId().equals(race.getId())
+                                    && rl.getDriver().getId().equals(r.getDriver().getId()))
+                            .findFirst();
                     String teamShortName = lineupOpt
                             .map(rl -> rl.getTeam().getShortName())
                             .orElseGet(() -> r.getDriver().getSeasonDrivers().stream()
