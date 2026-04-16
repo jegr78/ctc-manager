@@ -27,7 +27,9 @@
                         </thead>
                         <tbody>
                             <tr th:each="result : ${race.results}">
-                                <td class="font-bold" th:text="${result.driverPsnId}"></td>
+                                <td class="font-bold">
+                                    <a class="entity-link" th:href="${result.driverProfileUrl}" th:text="${result.driverPsnId}"></a>
+                                </td>
                                 <td class="text-dim" th:text="${result.teamShortName}"></td>
                                 <td class="text-center" th:text="${result.position}"></td>
                                 <td class="text-center" th:text="${result.qualiPosition}"></td>

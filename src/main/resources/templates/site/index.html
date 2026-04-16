@@ -24,7 +24,9 @@
                 <tbody>
                     <tr th:each="s, i : ${standings}">
                         <td class="font-bold text-white" th:text="${i.count}"></td>
-                        <td class="font-bold text-white" th:text="${s.team.shortName}"></td>
+                        <td class="font-bold">
+                            <a class="entity-link" th:href="${teamSlugMap.get(s.team.id)}" th:text="${s.team.shortName}"></a>
+                        </td>
                         <td class="text-center" th:text="${s.played}"></td>
                         <td class="text-center" th:text="${s.wins}"></td>
                         <td class="text-center" th:text="${s.draws}"></td>

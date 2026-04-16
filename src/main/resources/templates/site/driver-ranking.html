@@ -18,7 +18,9 @@
                 <tbody>
                     <tr th:each="r, i : ${driverRanking}">
                         <td class="font-bold text-white" th:text="${i.count}"></td>
-                        <td class="font-bold text-white" th:text="${r.driver.psnId}"></td>
+                        <td class="font-bold">
+                            <a class="entity-link" th:href="${driverSlugMap.get(r.driver.id)}" th:text="${r.driver.psnId}"></a>
+                        </td>
                         <td class="text-dim" th:text="${r.team != null ? r.team.shortName : '-'}"></td>
                         <td class="text-center" th:text="${r.racesCount}"></td>
                         <td class="text-center" th:text="'P' + ${r.bestPosition}"></td>

@@ -32,6 +32,25 @@
             </table>
         </div>
     </div>
+
+    <div class="section" th:if="${drivers != null and not #lists.isEmpty(drivers)}">
+        <h2 class="section-title">Drivers</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Driver</th><th class="text-right">Points</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${drivers}">
+                        <td>
+                            <a class="entity-link font-bold" th:href="${d.driverProfileUrl}" th:text="${d.psnId}"></a>
+                        </td>
+                        <td class="text-right font-bold text-white" th:text="${d.totalPoints}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </section>
 </body>
 </html>
