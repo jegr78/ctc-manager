@@ -338,17 +338,17 @@ void givenSeason_whenGenerate_thenArchiveContainsCorrectSeasonSlug() throws IOEx
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `seasonSlug` be passed via a SeasonEntry record or a Map?**
    - What we know: Archive template iterates `${seasons}`, a `List<Season>`. Adding `slug` per-season needs either a wrapper record, a `LinkedHashMap<Season, String>`, or a parallel `List<String>`.
    - What's unclear: Thymeleaf iteration syntax works for any `Iterable`. A record is more type-safe. A `Map` is harder to iterate in th:each while maintaining season data.
-   - Recommendation: Introduce a `record SeasonEntry(Season season, String slug)` inner type in `SiteGeneratorService` (analogous to `RaceView`). Pass `List<SeasonEntry>` to archive template.
+   - RESOLVED: SeasonEntry record (Plan 37-02 Task 2). Follows the established `RaceView` pattern in the sitegen package.
 
 2. **Does the Driver Ranking nav link need to be hidden when activeSeasonSlug is empty?**
    - What we know: `generate()` sets `activeSeason = findByActiveTrue().orElse(null)`. If null, `activeSeasonSlug = ""`.
    - What's unclear: Should nav hide the link or link to archive as fallback?
-   - Recommendation: Use `th:if` to hide the Driver Ranking nav link when `activeSeasonSlug` is empty. A site with no active season has no meaningful ranking to link to.
+   - RESOLVED: Use `th:if` guard to hide the Driver Ranking nav link when `activeSeasonSlug` is empty (Plan 37-02 Task 1). A site with no active season has no meaningful ranking to link to.
 
 ---
 
