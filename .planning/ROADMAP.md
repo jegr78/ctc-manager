@@ -95,7 +95,12 @@ See: milestones/v1.5-ROADMAP.md for full details
 3. All navigation links work when the static site is opened from any subdirectory (relative paths)
 4. Team logo images display correctly on all static site pages (standings, team-profile, matchday)
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 37-01-PLAN.md — TDD RED: Write failing tests for LINK-01..04 + add uploadDir field
+- [ ] 37-02-PLAN.md — TDD GREEN: Implement all four link fixes (archive slugs, nav links, relative paths, team logos)
+
 **UI hint**: yes
 
 ### Phase 38: Season Content & Data Filtering
@@ -199,7 +204,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 | 34. Convention Fixes | v1.5 | 2/2 | Complete | 2026-04-14 |
 | 35. Site Generator Bye-Race Null Safety | v1.5 | 1/1 | Complete | 2026-04-14 |
 | 36. Audit Remediation | v1.5 | 1/1 | Complete | 2026-04-14 |
-| 37. Critical Link Fixes | v1.6 | 0/? | Not started | - |
+| 37. Critical Link Fixes | v1.6 | 0/2 | Not started | - |
 | 38. Season Content & Data Filtering | v1.6 | 0/? | Not started | - |
 | 39. Entity Cross-Linking | v1.6 | 0/? | Not started | - |
 | 40. Navigation & Structure | v1.6 | 0/? | Not started | - |
