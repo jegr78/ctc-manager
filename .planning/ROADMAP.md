@@ -138,7 +138,12 @@ Plans:
 3. Driver names on matchday result rows link to their driver profile pages
 4. A team's profile page lists the team's drivers, each linking to their driver profile
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 39-01-PLAN.md — TDD RED: Write failing tests for entity cross-link assertions (CONT-02, CONT-03, CONT-04, CONT-08)
+- [ ] 39-02-PLAN.md — TDD GREEN: Implement service data plumbing, template links, and CSS entity-link class
+
 **UI hint**: yes
 
 ### Phase 40: Navigation & Structure
@@ -212,6 +217,6 @@ Plans:
 | 36. Audit Remediation | v1.5 | 1/1 | Complete | 2026-04-14 |
 | 37. Critical Link Fixes | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 38. Season Content & Data Filtering | v1.6 | 3/3 | Complete    | 2026-04-16 |
-| 39. Entity Cross-Linking | v1.6 | 0/? | Not started | - |
+| 39. Entity Cross-Linking | v1.6 | 0/2 | Not started | - |
 | 40. Navigation & Structure | v1.6 | 0/? | Not started | - |
 | 41. UX Polish & Accessibility | v1.6 | 0/? | Not started | - |
