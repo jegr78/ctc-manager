@@ -47,6 +47,10 @@ public class SiteGeneratorService {
     @Value("${ctc.site.output-dir}")
     private String outputDir;
 
+    @lombok.Setter
+    @Value("${app.upload-dir:data/dev/uploads}")
+    private String uploadDir;
+
     @Transactional(readOnly = true)
     public GenerationResult generate() {
         var result = new GenerationResult();
