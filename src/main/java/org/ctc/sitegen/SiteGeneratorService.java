@@ -22,6 +22,7 @@ import org.thymeleaf.context.Context;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Locale;
 
@@ -58,6 +59,7 @@ public class SiteGeneratorService {
         Path outPath = Path.of(outputDir);
 
         try {
+            cleanOutputDirectory(outPath);
             Files.createDirectories(outPath);
 
             // Find active season
@@ -97,6 +99,31 @@ public class SiteGeneratorService {
         }
 
         return result;
+    }
+
+    private void cleanOutputDirectory(Path outPath) throws IOException {
+        if (!Files.exists(outPath)) {
+            return; // D-03: non-existent dir — createDirectories() below handles creation
+        }
+        log.info("Cleaning output directory: {}", outPath);
+        Files.walkFileTree(outPath, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                log.debug("Deleted file: {}", file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                if (exc != null) throw exc;
+                if (!dir.equals(outPath)) {  // D-02: do not delete root itself
+                    Files.delete(dir);
+                    log.debug("Deleted directory: {}", dir);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 
     private void generateIndex(Path outPath, Season activeSeason, List<Season> allSeasons,

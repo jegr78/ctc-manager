@@ -359,8 +359,10 @@ class SiteGeneratorServiceTest {
 
     @Test
     void givenTeamWithLogo_whenGenerate_thenLogoCopiedAndLinkedRelatively() throws IOException {
-        // given — create a fake logo file in a temp uploadDir
-        var uploadBase = tempDir.resolve("uploads");
+        // given — create a fake logo file in a separate temp uploadDir
+        // NOTE: uploadBase must be OUTSIDE tempDir (the output dir) so cleanOutputDirectory
+        // does not delete it before generate() copies logos to assets.
+        var uploadBase = Files.createTempDirectory("ctc-test-uploads-");
         var logoRelPath = "teams/test-uuid/test-logo.png";
         var logoFile = uploadBase.resolve(logoRelPath);
         Files.createDirectories(logoFile.getParent());
