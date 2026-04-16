@@ -78,7 +78,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 38: Season Content & Data Filtering** - Display season metadata on all pages and hide missing/test data (gap closure) (completed 2026-04-16)
 - [x] **Phase 39: Entity Cross-Linking** - Add inline links from standings, rankings, matchdays, and team profiles (completed 2026-04-16)
 - [x] **Phase 40: Navigation & Structure** - Season subnavigation, active nav state, and breadcrumbs (completed 2026-04-16)
-- [ ] **Phase 41: UX Polish & Accessibility** - Skip link, winner highlight, mobile scroll, footer, aria, hover transitions
+- [x] **Phase 41: UX Polish & Accessibility** - Skip link, winner highlight, mobile scroll, footer, aria, hover transitions (completed 2026-04-16)
 
 ## Phase Details
 
@@ -181,11 +181,11 @@ Plans:
 5. Hovering over table rows and links triggers a smooth transition (150-300ms); all clickable elements show cursor:pointer
 6. The nav toggle button has a descriptive aria-label; inline styles are removed from archive.html and driver-profile.html
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 41-01-PLAN.md — TDD RED: Add winner booleans to RaceView, activeSeasonName to writeTemplate, write 4 failing tests
-- [ ] 41-02-PLAN.md — TDD GREEN: Implement all HTML template changes and CSS rules for UX polish and accessibility
+- [x] 41-02-PLAN.md — TDD GREEN: Implement all HTML template changes and CSS rules for UX polish and accessibility
 
 **UI hint**: yes
 
@@ -229,4 +229,4 @@ Plans:
 | 38. Season Content & Data Filtering | v1.6 | 3/3 | Complete    | 2026-04-16 |
 | 39. Entity Cross-Linking | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 40. Navigation & Structure | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 41. UX Polish & Accessibility | v1.6 | 1/2 | In Progress|  |
+| 41. UX Polish & Accessibility | v1.6 | 2/2 | Complete   | 2026-04-16 |
