@@ -782,4 +782,84 @@ class SiteGeneratorServiceTest {
         assertTrue(doc.select(".breadcrumb").isEmpty(),
                 "Archive page should have no breadcrumb");
     }
+
+    // --- UX-01: Skip-link ---
+
+    @Test
+    void givenLayout_whenGenerate_thenSkipLinkIsFirstBodyChild() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("index.html"));
+        var doc = Jsoup.parse(html);
+        var firstBodyChild = doc.body().children().first();
+        assertNotNull(firstBodyChild, "Body should have children");
+        assertEquals("a", firstBodyChild.tagName(), "First body child should be <a> skip-link");
+        assertEquals("#main-content", firstBodyChild.attr("href"), "Skip-link should target #main-content");
+        assertTrue(firstBodyChild.hasClass("skip-link"), "Skip-link should have class 'skip-link'");
+    }
+
+    // --- UX-04: Winner highlight ---
+
+    @Test
+    void givenRaceWithResults_whenGenerate_thenMatchdayShowsWinnerHighlight() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then — find the matchday HTML file in the season directory
+        var seasonDir = seasonDir();
+        var matchdayDir = seasonDir.resolve("matchday");
+        var matchdayFiles = Files.list(matchdayDir)
+                .filter(p -> p.toString().endsWith(".html"))
+                .toList();
+        assertFalse(matchdayFiles.isEmpty(), "Should have at least one matchday HTML file");
+
+        var html = Files.readString(matchdayFiles.getFirst());
+        var doc = Jsoup.parse(html);
+        var winners = doc.select(".match-team-winner");
+        assertFalse(winners.isEmpty(), "Matchday should show at least one winner highlight when race has results");
+    }
+
+    // --- UX-06: Footer links ---
+
+    @Test
+    void givenActiveSeason_whenGenerate_thenFooterContainsUsefulLinks() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("index.html"));
+        var doc = Jsoup.parse(html);
+        var footerLinks = doc.select(".footer .footer-link");
+        assertFalse(footerLinks.isEmpty(), "Footer should contain .footer-link elements");
+        assertTrue(footerLinks.stream().anyMatch(a -> "#".equals(a.attr("href"))),
+                "Footer should have a 'Top' link with href='#'");
+        assertTrue(footerLinks.stream().anyMatch(a -> a.attr("href").contains("archive.html")),
+                "Footer should have an Archive link");
+    }
+
+    // --- UX-07: Nav toggle aria-label ---
+
+    @Test
+    void givenLayout_whenGenerate_thenNavToggleLabelHasAriaLabel() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("index.html"));
+        var doc = Jsoup.parse(html);
+        var label = doc.selectFirst("label.nav-toggle-label");
+        assertNotNull(label, "Nav toggle label should exist");
+        assertEquals("Toggle navigation menu", label.attr("aria-label"),
+                "Nav toggle label should have correct aria-label");
+        assertEquals("button", label.attr("role"),
+                "Nav toggle label should have role=button");
+
+        // Verify aria-label is NOT on the input
+        var input = doc.selectFirst("input.nav-toggle-input");
+        assertNotNull(input, "Nav toggle input should exist");
+        assertTrue(input.attr("aria-label").isEmpty(),
+                "Nav toggle input should NOT have aria-label");
+    }
 }
