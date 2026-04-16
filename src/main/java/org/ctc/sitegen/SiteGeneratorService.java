@@ -63,12 +63,15 @@ public class SiteGeneratorService {
             var activeSeason = seasonRepository.findByActiveTrue().orElse(null);
             String activeSeasonSlug = activeSeason != null ? slugify(activeSeason.getDisplayLabel()) : "";
             var allSeasons = seasonRepository.findAll();
+            var productionSeasons = allSeasons.stream()
+                    .filter(s -> !s.getName().contains("Test"))
+                    .toList();
 
             // Generate index
             generateIndex(outPath, activeSeason, allSeasons, activeSeasonSlug, result);
 
             // Generate pages for each season
-            for (var season : allSeasons) {
+            for (var season : productionSeasons) {
                 generateStandings(outPath, season, activeSeasonSlug, result);
                 generateDriverRanking(outPath, season, activeSeasonSlug, result);
                 generateMatchdays(outPath, season, activeSeasonSlug, result);
@@ -78,7 +81,7 @@ public class SiteGeneratorService {
             }
 
             // Generate archive
-            generateArchive(outPath, allSeasons, activeSeasonSlug, result);
+            generateArchive(outPath, productionSeasons, activeSeasonSlug, result);
 
             // Copy static assets
             copyAssets(outPath, result);
