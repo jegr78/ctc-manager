@@ -673,19 +673,14 @@ class SiteGeneratorServiceTest {
     }
 
     @Test
-    void givenActiveSeason_whenGenerate_thenIndexMatchdayResultDriversHaveLinks() throws IOException {
+    void givenActiveSeason_whenGenerate_thenIndexDoesNotRenderMatchResults() throws IOException {
         // when
         siteGeneratorService.generate();
 
-        // then — if index shows match-results, driver names should be links
+        // then — index page shows match cards but not the detailed match-results table
         var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
-        var resultRows = doc.select(".match-results td");
-        if (!resultRows.isEmpty()) {
-            var driverLinks = doc.select(".match-results td a.entity-link[href*='driver/']");
-            assertFalse(driverLinks.isEmpty(), "Index match results should contain driver profile links");
-        }
-        // Index currently does not render match-results table — this test passes vacuously.
-        // If match-results are added to index in Plan 02, this test will validate the links.
+        assertTrue(doc.select(".match-results").isEmpty(),
+                "Index page should not render match-results table");
     }
 
     // --- CONT-05: Season subnav, matchday index page ---

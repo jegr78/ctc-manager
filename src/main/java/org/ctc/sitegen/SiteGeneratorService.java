@@ -394,8 +394,8 @@ public class SiteGeneratorService {
         context.setVariable("assetsPath", relativeAssets.toString().replace('\\', '/'));
         String rootStr = relativeRoot.toString().replace('\\', '/');
         context.setVariable("rootPath", rootStr.isEmpty() ? "." : rootStr);
-        context.setVariable("activeSeasonSlug", activeSeasonSlug != null ? activeSeasonSlug : "");
-        context.setVariable("activeSeasonName", activeSeasonName != null ? activeSeasonName : "");
+        context.setVariable("activeSeasonSlug", activeSeasonSlug);
+        context.setVariable("activeSeasonName", activeSeasonName);
 
         String html = templateEngine.process(templateName, context);
         Files.writeString(outputFile, html);
