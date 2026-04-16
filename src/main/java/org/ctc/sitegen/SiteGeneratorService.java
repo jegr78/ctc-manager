@@ -97,7 +97,7 @@ public class SiteGeneratorService {
 
     private void generateIndex(Path outPath, Season activeSeason, List<Season> allSeasons,
                                 String activeSeasonSlug, GenerationResult result) throws IOException {
-        var ctx = new Context(Locale.GERMAN);
+        var ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("allSeasons", allSeasons);
 
         if (activeSeason != null) {
@@ -119,7 +119,7 @@ public class SiteGeneratorService {
 
     private void generateStandings(Path outPath, Season season, String activeSeasonSlug,
                                     GenerationResult result) throws IOException {
-        var ctx = new Context(Locale.GERMAN);
+        var ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("season", season);
         ctx.setVariable("standings", standingsService.calculateStandings(season.getId()));
 
@@ -131,7 +131,7 @@ public class SiteGeneratorService {
 
     private void generateDriverRanking(Path outPath, Season season, String activeSeasonSlug,
                                         GenerationResult result) throws IOException {
-        var ctx = new Context(Locale.GERMAN);
+        var ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("season", season);
         ctx.setVariable("driverRanking", driverRankingService.calculateRanking(season.getId()));
 
@@ -146,7 +146,7 @@ public class SiteGeneratorService {
         var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
 
         for (var matchday : matchdays) {
-            var ctx = new Context(Locale.GERMAN);
+            var ctx = new Context(Locale.ENGLISH);
             ctx.setVariable("season", season);
             ctx.setVariable("matchday", matchday);
             var raceViews = raceRepository.findByMatchdayId(matchday.getId()).stream()
@@ -172,7 +172,7 @@ public class SiteGeneratorService {
 
             if (teamStanding == null) continue;
 
-            var ctx = new Context(Locale.GERMAN);
+            var ctx = new Context(Locale.ENGLISH);
             ctx.setVariable("season", season);
             ctx.setVariable("team", team);
             ctx.setVariable("standing", teamStanding);
@@ -202,7 +202,7 @@ public class SiteGeneratorService {
                     .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
                     .toList();
 
-            var ctx = new Context(Locale.GERMAN);
+            var ctx = new Context(Locale.ENGLISH);
             ctx.setVariable("season", season);
             ctx.setVariable("driver", driver);
             ctx.setVariable("team", team);
@@ -227,7 +227,7 @@ public class SiteGeneratorService {
         var playoff = playoffOpt.get();
         var bracket = playoffBracketViewService.getBracketView(playoff.getId());
 
-        var ctx = new Context(Locale.GERMAN);
+        var ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("season", season);
         ctx.setVariable("playoff", playoff);
         ctx.setVariable("bracket", bracket);
@@ -240,7 +240,7 @@ public class SiteGeneratorService {
 
     private void generateArchive(Path outPath, List<Season> allSeasons, String activeSeasonSlug,
                                    GenerationResult result) throws IOException {
-        var ctx = new Context(Locale.GERMAN);
+        var ctx = new Context(Locale.ENGLISH);
         var seasonEntries = allSeasons.stream()
                 .map(s -> new SeasonEntry(s, slugify(s.getDisplayLabel())))
                 .toList();
