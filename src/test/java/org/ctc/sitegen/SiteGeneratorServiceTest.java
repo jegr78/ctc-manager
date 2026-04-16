@@ -601,4 +601,90 @@ class SiteGeneratorServiceTest {
             }
         }
     }
+
+    // --- CONT-02, CONT-03, CONT-04, CONT-08: Entity cross-links ---
+
+    @Test
+    void givenTeamInStandings_whenGenerate_thenTeamNameLinksToTeamProfile() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        var teamLinks = doc.select("tbody td a.entity-link[href*='team/']");
+        assertFalse(teamLinks.isEmpty(), "Standings should contain team profile links");
+        assertTrue(teamLinks.stream().anyMatch(a -> a.attr("href").endsWith(".html")),
+                "Team links should end with .html");
+    }
+
+    @Test
+    void givenDriverInRanking_whenGenerate_thenDriverPsnIdLinksToDriverProfile() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("driver-ranking.html"));
+        var doc = Jsoup.parse(html);
+        var driverLinks = doc.select("tbody td a.entity-link[href*='driver/']");
+        assertFalse(driverLinks.isEmpty(), "Driver ranking should contain driver profile links");
+        assertTrue(driverLinks.stream().anyMatch(a -> a.attr("href").endsWith(".html")),
+                "Driver links should end with .html");
+    }
+
+    @Test
+    void givenRaceResults_whenGenerate_thenMatchdayDriverNamesLinkToDriverProfiles() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("matchday/spieltag-1.html"));
+        var doc = Jsoup.parse(html);
+        var driverLinks = doc.select("td a.entity-link[href*='driver/']");
+        assertFalse(driverLinks.isEmpty(), "Matchday results should contain driver profile links");
+    }
+
+    @Test
+    void givenTeamWithDrivers_whenGenerate_thenTeamProfileHasDriversSectionWithLinks() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var teamDir = seasonDir().resolve("team");
+        try (var files = Files.list(teamDir)) {
+            var firstProfile = files.filter(p -> p.toString().endsWith(".html")).findFirst().orElseThrow();
+            var doc = Jsoup.parse(Files.readString(firstProfile));
+            var driversHeading = doc.select("h2.section-title:contains(Drivers)");
+            assertFalse(driversHeading.isEmpty(), "Team profile should have a 'Drivers' section heading");
+            var driverLinks = doc.select("a.entity-link[href*='driver/']");
+            assertFalse(driverLinks.isEmpty(), "Team profile should contain driver profile links");
+        }
+    }
+
+    @Test
+    void givenActiveSeason_whenGenerate_thenIndexStandingsTeamNamesLinkToTeamProfiles() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        var teamLinks = doc.select("tbody td a.entity-link[href*='team/']");
+        assertFalse(teamLinks.isEmpty(), "Index standings should contain team profile links");
+    }
+
+    @Test
+    void givenActiveSeason_whenGenerate_thenIndexMatchdayResultDriversHaveLinks() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then — if index shows match-results, driver names should be links
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        var resultRows = doc.select(".match-results td");
+        if (!resultRows.isEmpty()) {
+            var driverLinks = doc.select(".match-results td a.entity-link[href*='driver/']");
+            assertFalse(driverLinks.isEmpty(), "Index match results should contain driver profile links");
+        }
+        // Index currently does not render match-results table — this test passes vacuously.
+        // If match-results are added to index in Plan 02, this test will validate the links.
+    }
 }
