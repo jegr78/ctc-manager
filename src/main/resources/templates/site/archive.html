@@ -22,12 +22,11 @@
                             <span th:if="${entry.season.endDate}" th:text="${entry.season.endDate}"></span>
                         </td>
                         <td>
-                            <span th:if="${entry.season.active}" style="color:#4fc3f7;">Active</span>
+                            <span th:if="${entry.season.active}" class="text-accent">Active</span>
                             <span th:unless="${entry.season.active}" class="text-dim">Completed</span>
                         </td>
                         <td class="text-right">
-                            <a th:href="'season/' + ${entry.slug} + '/standings.html'"
-                               style="color:var(--accent); text-decoration:none;">Standings</a>
+                            <a class="entity-link" th:href="'season/' + ${entry.slug} + '/standings.html'">Standings</a>
                         </td>
                     </tr>
                 </tbody>

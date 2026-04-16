@@ -204,6 +204,7 @@ tr:hover { background: var(--bg-hover); }
 .font-bold { font-weight: 700; }
 .text-white { color: var(--white); }
 .text-dim { color: var(--text-dim); }
+.text-accent { color: var(--accent); }
 .text-lg { font-size: 16px; }
 
 /* Match Cards */
