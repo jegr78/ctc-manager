@@ -6,6 +6,7 @@
     <div style="margin-bottom: 24px;">
         <h1 class="text-white" th:text="${driver.psnId}"></h1>
         <p class="text-dim" th:text="${driver.nickname}"></p>
+        <p class="season-meta" th:text="${season.year + ' | Season #' + season.number}"></p>
         <p class="text-dim" th:if="${team != null}" th:text="'Team: ' + ${team.shortName} + ' — ' + ${team.name} + ' (Season ' + ${season.name} + ')'"></p>
     </div>
 
