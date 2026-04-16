@@ -81,8 +81,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | CONT-03 | Phase 39 | Pending |
 | CONT-04 | Phase 39 | Pending |
 | CONT-08 | Phase 39 | Pending |
-| CONT-05 | Phase 40 | Pending |
-| UX-02 | Phase 40 | Pending |
+| CONT-05 | Phase 42 | Pending |
+| UX-02 | Phase 42 | Pending |
 | UX-03 | Phase 40 | Pending |
 | UX-01 | Phase 41 | Pending |
 | UX-04 | Phase 41 | Pending |

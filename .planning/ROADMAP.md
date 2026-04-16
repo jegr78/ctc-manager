@@ -6,7 +6,7 @@
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
 - :white_check_mark: **v1.3 English Test Data** — Phases 20-27 (shipped 2026-04-10)
 - :white_check_mark: **v1.5 Code Review Fixes** — Phases 28-36 (shipped 2026-04-15)
-- **v1.6 Static Site Quality** — Phases 37-41 (in progress)
+- **v1.6 Static Site Quality** — Phases 37-43 (in progress)
 
 ## Phases
 
@@ -79,6 +79,8 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 39: Entity Cross-Linking** - Add inline links from standings, rankings, matchdays, and team profiles (completed 2026-04-16)
 - [x] **Phase 40: Navigation & Structure** - Season subnavigation, active nav state, and breadcrumbs (completed 2026-04-16)
 - [x] **Phase 41: UX Polish & Accessibility** - Skip link, winner highlight, mobile scroll, footer, aria, hover transitions (completed 2026-04-16)
+- [ ] **Phase 42: Navigation Gap Closure** - Fix top-nav active state for index/archive and add playoff subnav guard
+- [ ] **Phase 43: Code Quality Cleanup** - Extract match card fragment, fix vacuous test, remove dead code
 
 ## Phase Details
 
@@ -189,6 +191,33 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 42: Navigation Gap Closure
+
+**Goal**: Top-nav active state works on all pages and playoff subnav link only appears when playoff data exists
+**Depends on**: Phase 41
+**Requirements**: UX-02, CONT-05
+**Gap Closure**: Closes partial gaps from v1.6 audit
+
+**Success Criteria** (what must be TRUE):
+
+1. The top-nav "Standings" link is visually active on the index (home) page
+2. The top-nav "Archive" link is visually active on the archive page
+3. The Playoff subnav link only renders for seasons that have playoff data
+4. Seasons without playoff data show exactly 3 subnav links (no Playoff)
+
+### Phase 43: Code Quality Cleanup
+
+**Goal**: Remove code duplication, fix misleading tests, and remove dead code from static site generator
+**Depends on**: Phase 42
+**Requirements**: —
+**Gap Closure**: Closes tech debt from v1.6 audit (IN-01, IN-03, IN-04)
+
+**Success Criteria** (what must be TRUE):
+
+1. Match card markup exists in a single Thymeleaf fragment, reused by index.html and matchday.html
+2. Driver link test uses explicit negative assertion (no vacuous always-pass)
+3. Dead null guards on activeSeasonSlug/activeSeasonName in writeTemplate are removed
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -230,3 +259,5 @@ Plans:
 | 39. Entity Cross-Linking | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 40. Navigation & Structure | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 41. UX Polish & Accessibility | v1.6 | 2/2 | Complete    | 2026-04-16 |
+| 42. Navigation Gap Closure | v1.6 | 0/0 | Pending | — |
+| 43. Code Quality Cleanup | v1.6 | 0/0 | Pending | — |
