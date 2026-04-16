@@ -349,7 +349,7 @@ public class SiteGeneratorService {
                 .filter(r -> r.teamShortName().equals(homeShortName))
                 .mapToInt(RaceView.ResultView::pointsTotal).sum();
         int awayTotal = results.stream()
-                .filter(r -> !r.teamShortName().equals(homeShortName))
+                .filter(r -> r.teamShortName().equals(awayShortName))
                 .mapToInt(RaceView.ResultView::pointsTotal).sum();
 
         String trackName = race.getTrack() != null ? race.getTrack().getName() : null;
