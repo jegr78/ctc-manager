@@ -310,4 +310,89 @@ class SiteGeneratorServiceTest {
         assertFalse(result.hasErrors(), "Bye race should not cause errors: " + result.getErrors());
         assertTrue(result.getPagesGenerated() > 0);
     }
+
+    @Test
+    void givenSeason_whenGenerate_thenArchiveContainsCorrectSeasonSlug() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("archive.html"));
+        var doc = Jsoup.parse(html);
+        String expectedSlug = slugify(season.getDisplayLabel());
+        var links = doc.select("a[href*='season/" + expectedSlug + "/standings.html']");
+        assertFalse(links.isEmpty(),
+                "Archive should link to season/" + expectedSlug + "/standings.html but found: "
+                + doc.select("a[href*='season/']").stream().map(e -> e.attr("href")).toList());
+    }
+
+    @Test
+    void givenActiveSeason_whenGenerate_thenNavDriverRankingLinksToActiveSeason() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("index.html"));
+        var doc = Jsoup.parse(html);
+        String expectedSlug = slugify(season.getDisplayLabel());
+        var links = doc.select("a[href*='season/" + expectedSlug + "/driver-ranking.html']");
+        assertFalse(links.isEmpty(),
+                "Nav Driver Ranking should link to season/" + expectedSlug + "/driver-ranking.html");
+    }
+
+    @Test
+    void givenActiveSeason_whenGenerate_thenRootPagesHaveNoAbsolutePaths() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("index.html"));
+        var doc = Jsoup.parse(html);
+        var absoluteLinks = doc.select("a[href^='/']");
+        assertTrue(absoluteLinks.isEmpty(),
+                "Root-level pages should have no absolute /... links but found: "
+                + absoluteLinks.stream().map(e -> e.attr("href")).toList());
+    }
+
+    @Test
+    void givenTeamWithLogo_whenGenerate_thenLogoCopiedAndLinkedRelatively() throws IOException {
+        // given — create a fake logo file in a temp uploadDir
+        var uploadBase = tempDir.resolve("uploads");
+        var logoRelPath = "teams/test-uuid/test-logo.png";
+        var logoFile = uploadBase.resolve(logoRelPath);
+        Files.createDirectories(logoFile.getParent());
+        Files.writeString(logoFile, "fake-png-content");
+
+        // Set uploadDir on the service to point to our temp uploads
+        siteGeneratorService.setUploadDir(uploadBase.toString());
+
+        // Set logoUrl on first team (matching the /uploads/ prefix convention)
+        var teams = teamRepository.findAll();
+        var testTeam = teams.stream()
+                .filter(t -> t.getShortName().startsWith("GTNR" + uniqueSuffix))
+                .findFirst().orElseThrow();
+        testTeam.setLogoUrl("/uploads/" + logoRelPath);
+        teamRepository.save(testTeam);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then — logo file copied to assets
+        var copiedLogo = tempDir.resolve("assets/img/logos/" + logoRelPath);
+        assertTrue(Files.exists(copiedLogo),
+                "Logo should be copied to assets/img/logos/" + logoRelPath);
+
+        // then — team-profile HTML uses relative path, not /uploads/
+        var teamProfileDir = seasonDir().resolve("team");
+        var profileSlug = slugify(testTeam.getShortName());
+        var profileHtml = Files.readString(teamProfileDir.resolve(profileSlug + ".html"));
+        var profileDoc = Jsoup.parse(profileHtml);
+        var logoImgs = profileDoc.select("img.team-logo");
+        assertFalse(logoImgs.isEmpty(), "Team profile should have a logo image");
+        var imgSrc = logoImgs.first().attr("src");
+        assertFalse(imgSrc.startsWith("/uploads/"),
+                "Logo src should be a relative static asset path, not /uploads/... but was: " + imgSrc);
+        assertTrue(imgSrc.contains("img/logos/"),
+                "Logo src should contain img/logos/ path but was: " + imgSrc);
+    }
 }
