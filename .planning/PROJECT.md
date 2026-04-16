@@ -72,6 +72,9 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ Nav Driver Ranking link resolves to active season's driver-ranking page — Phase 37
 - ✓ All navigation links use relative paths (rootPath defaults to ".") — Phase 37
 - ✓ Team logo images resolve correctly via copyLogoToAssets with path-traversal guard — Phase 37
+- ✓ Season year and number displayed on all 7 page types (hero, archive, standings, matchday, driver-ranking, team-profile, driver-profile) — Phase 38
+- ✓ Test seasons filtered from archive and page generation (productionSeasons filter) — Phase 38
+- ✓ Empty match-meta (no track/car) hidden via th:if guard on matchday and index pages — Phase 38
 
 ### Active
 
@@ -82,10 +85,10 @@ Architectural Consistency: All controllers delegate to services, exception handl
 **Target features:**
 
 - ~~Fix all broken navigation links (archive slug mismatch, driver ranking 404, absolute paths)~~ — Phase 37 complete
-- Display season year and number across all pages
+- ~~Display season year and number across all pages~~ — Phase 38 complete
 - Add inline links from standings to teams, from rankings to drivers, from matchdays to profiles
 - Add season subnavigation (matchdays, standings, driver ranking, playoff per season)
-- Filter test seasons from archive, fix empty match-meta and period column
+- ~~Filter test seasons from archive, fix empty match-meta and period column~~ — Phase 38 complete
 - Remove inline styles in archive and driver-profile templates
 - ~~Fix broken team logo paths on static site~~ — Phase 37 complete
 - Add skip-link, nav active-state, breadcrumbs for accessibility
@@ -133,4 +136,4 @@ Architectural Consistency: All controllers delegate to services, exception handl
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-16 after v1.6 Static Site Quality milestone started*
+*Last updated: 2026-04-16 after Phase 38 (Season Content & Data Filtering) complete*
