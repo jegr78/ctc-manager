@@ -63,6 +63,9 @@ class SiteGeneratorServiceTest {
     private RaceLineupRepository raceLineupRepository;
 
     @Autowired
+    private PlayoffRepository playoffRepository;
+
+    @Autowired
     private org.ctc.domain.service.ScoringService scoringService;
 
     @TempDir
@@ -861,5 +864,73 @@ class SiteGeneratorServiceTest {
         assertNotNull(input, "Nav toggle input should exist");
         assertTrue(input.attr("aria-label").isEmpty(),
                 "Nav toggle input should NOT have aria-label");
+    }
+
+    // --- Phase 42: Navigation Gap Closure ---
+
+    // UX-02: Top-nav active state for index and archive pages
+
+    @Test
+    void givenIndexPage_whenGenerate_thenStandingsTopNavActive() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("index.html"));
+        var doc = Jsoup.parse(html);
+        var activeTopNavLinks = doc.select(".nav-links .nav-link-active");
+        assertFalse(activeTopNavLinks.isEmpty(),
+                "Index page should have an active top-nav item");
+        assertEquals("Standings", activeTopNavLinks.first().text(),
+                "Index page should highlight Standings in top-nav");
+    }
+
+    @Test
+    void givenArchivePage_whenGenerate_thenArchiveTopNavActive() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("archive.html"));
+        var doc = Jsoup.parse(html);
+        var activeTopNavLinks = doc.select(".nav-links .nav-link-active");
+        assertFalse(activeTopNavLinks.isEmpty(),
+                "Archive page should have an active top-nav item");
+        assertEquals("Archive", activeTopNavLinks.first().text(),
+                "Archive page should highlight Archive in top-nav");
+    }
+
+    // CONT-05: Playoff subnav link guard
+
+    @Test
+    void givenSeasonWithoutPlayoff_whenGenerate_thenSubnavHasNoPlayoffLink() throws IOException {
+        // given — default test season has no playoff record
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        var playoffLinks = doc.select(".subnav-link[href*='playoff.html']");
+        assertTrue(playoffLinks.isEmpty(),
+                "Season without playoff should NOT show Playoff link in subnav");
+    }
+
+    @Test
+    void givenSeasonWithPlayoff_whenGenerate_thenSubnavHasPlayoffLink() throws IOException {
+        // given
+        var playoff = new Playoff(season, "Playoff " + uniqueSuffix);
+        playoffRepository.save(playoff);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        var playoffLinks = doc.select(".subnav-link[href*='playoff.html']");
+        assertEquals(1, playoffLinks.size(),
+                "Season with playoff should show Playoff link in subnav");
     }
 }
