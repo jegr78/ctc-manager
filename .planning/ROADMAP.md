@@ -158,7 +158,12 @@ Plans:
 2. The active navigation item is visually distinct from inactive items (highlighted/underlined/different color)
 3. Subpages display breadcrumbs (e.g. "Home > Season 2025 > Standings") for orientation
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 40-01-PLAN.md — TDD RED: Write failing tests for subnav, active state, breadcrumbs, matchday index
+- [ ] 40-02-PLAN.md — TDD GREEN: Implement service nav context, layout subnav/breadcrumbs, matchdays.html, CSS
+
 **UI hint**: yes
 
 ### Phase 41: UX Polish & Accessibility
@@ -218,5 +223,5 @@ Plans:
 | 37. Critical Link Fixes | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 38. Season Content & Data Filtering | v1.6 | 3/3 | Complete    | 2026-04-16 |
 | 39. Entity Cross-Linking | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 40. Navigation & Structure | v1.6 | 0/? | Not started | - |
+| 40. Navigation & Structure | v1.6 | 0/2 | Planned | - |
 | 41. UX Polish & Accessibility | v1.6 | 0/? | Not started | - |
