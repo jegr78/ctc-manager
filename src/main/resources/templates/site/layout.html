@@ -49,6 +49,7 @@
         <a class="breadcrumb-link" th:href="${rootPath + '/index.html'}">Home</a>
         <span class="breadcrumb-sep" aria-hidden="true"> &gt; </span>
         <a class="breadcrumb-link"
+           th:if="${seasonSlug != null and !#strings.isEmpty(seasonSlug)}"
            th:href="${rootPath + '/season/' + seasonSlug + '/standings.html'}"
            th:text="${seasonName}">Season</a>
         <span class="breadcrumb-sep" aria-hidden="true"> &gt; </span>
