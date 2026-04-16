@@ -82,7 +82,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 42: Navigation Gap Closure** - Fix top-nav active state for index/archive and add playoff subnav guard (completed 2026-04-16)
 - [x] **Phase 43: Code Quality Cleanup** - Extract match card fragment, fix vacuous test, remove dead code (completed 2026-04-16)
 - [x] **Phase 44: Clean Output Directory** - Eliminate stale files by emptying output dir before generation (completed 2026-04-16)
-- [ ] **Phase 45: Footer YouTube Link** - Add YouTube channel link to shared site footer
+- [x] **Phase 45: Footer YouTube Link** - Add YouTube channel link to shared site footer (completed 2026-04-16)
 - [ ] **Phase 46: Configurable Links Page** - New links.html page driven by application properties
 - [ ] **Phase 47: Teams & Drivers Overview Pages** - Cross-season overview pages with client-side season filter
 - [ ] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards
@@ -117,8 +117,8 @@ Plans:
 3. YouTube link appears on pages in season subdirectories (inherited from layout)
 
 Plans:
-- [ ] 45-01-PLAN.md — TDD RED: Write failing tests for footer YouTube link
-- [ ] 45-02-PLAN.md — TDD GREEN: Add YouTube link to layout footer
+- [x] 45-01-PLAN.md — TDD RED: Write failing tests for footer YouTube link
+- [x] 45-02-PLAN.md — TDD GREEN: Add YouTube link to layout footer
 
 ### Phase 46: Configurable Links Page
 
@@ -372,7 +372,7 @@ Plans:
 | 42. Navigation Gap Closure | v1.6 | 1/1 | Complete | 2026-04-16 |
 | 43. Code Quality Cleanup | v1.6 | 1/1 | Complete | 2026-04-16 |
 | 44. Clean Output Directory | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 45. Footer YouTube Link | v1.6 | 0/2 | Pending | — |
+| 45. Footer YouTube Link | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 46. Configurable Links Page | v1.6 | 0/2 | Pending | — |
 | 47. Teams & Drivers Overview Pages | v1.6 | 0/2 | Pending | — |
 | 48. Landing Page Redesign | v1.6 | 0/2 | Pending | — |
