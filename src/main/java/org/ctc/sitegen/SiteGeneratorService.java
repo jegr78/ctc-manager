@@ -397,7 +397,7 @@ public class SiteGeneratorService {
                 trackName, carName, homeTotal, awayTotal, !race.getResults().isEmpty(), results);
     }
 
-    private String slugify(String input) {
+    String slugify(String input) {
         return input.toLowerCase()
                 .replaceAll("[äÄ]", "ae").replaceAll("[öÖ]", "oe").replaceAll("[üÜ]", "ue").replaceAll("ß", "ss")
                 .replaceAll("[^a-z0-9]+", "-")
