@@ -29,8 +29,8 @@
                     <tr th:each="result : ${results}">
                         <td th:text="${result.race.matchday.label}"></td>
                         <td>
-                            <span th:if="${result.race.homeTeam.id != team?.id}" th:text="${result.race.homeTeam.shortName}"></span>
-                            <span th:if="${result.race.awayTeam != null && result.race.awayTeam.id != team?.id}" th:text="${result.race.awayTeam.shortName}"></span>
+                            <span th:if="${result.race.homeTeam?.id != team?.id}" th:text="${result.race.homeTeam?.shortName}"></span>
+                            <span th:if="${result.race.awayTeam != null and result.race.awayTeam.id != team?.id}" th:text="${result.race.awayTeam.shortName}"></span>
                             <span th:if="${result.race.awayTeam == null}">Bye</span>
                         </td>
                         <td class="text-dim" th:text="${result.race.track?.name ?: '-'}"></td>
