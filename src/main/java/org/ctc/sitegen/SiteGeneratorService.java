@@ -184,6 +184,10 @@ public class SiteGeneratorService {
         var teams = teamRepository.findAll();
         var standings = standingsService.calculateStandings(season.getId());
 
+        // Pre-fetch all lineup entries and season drivers for the season to avoid N+1 queries
+        var allLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
+        var allSeasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
+
         for (var team : teams) {
             var teamStanding = standings.stream()
                     .filter(s -> s.getTeam().getId().equals(team.getId()))
@@ -196,12 +200,31 @@ public class SiteGeneratorService {
             ctx.setVariable("team", team);
             ctx.setVariable("standing", teamStanding);
 
-            // Load team drivers for Drivers section (per D-01, D-02, D-03)
-            var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
-            var driverEntries = seasonDrivers.stream()
-                    .filter(sd -> sd.getTeam().getId().equals(team.getId()))
-                    .map(sd -> {
-                        var driver = sd.getDriver();
+            // Load team drivers for Drivers section via RaceLineup (source of truth per CLAUDE.md).
+            // A driver belongs to this team if their lineup entry references the team directly
+            // or references a sub-team whose parent is this team.
+            // Fall back to SeasonDriver only when no lineup entries exist for the season.
+            var lineupDrivers = allLineups.stream()
+                    .filter(rl -> {
+                        var rlTeam = rl.getTeam();
+                        return rlTeam.getId().equals(team.getId())
+                                || (rlTeam.getParentTeam() != null
+                                    && rlTeam.getParentTeam().getId().equals(team.getId()));
+                    })
+                    .map(rl -> rl.getDriver())
+                    .distinct()
+                    .toList();
+
+            var driversToShow = lineupDrivers.isEmpty()
+                    ? allSeasonDrivers.stream()
+                            .filter(sd -> sd.getTeam().getId().equals(team.getId()))
+                            .map(sd -> sd.getDriver())
+                            .distinct()
+                            .toList()
+                    : lineupDrivers;
+
+            var driverEntries = driversToShow.stream()
+                    .map(driver -> {
                         var driverResults = raceResultRepository.findByDriverId(driver.getId()).stream()
                                 .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
                                 .toList();
