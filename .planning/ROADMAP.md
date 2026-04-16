@@ -223,5 +223,5 @@ Plans:
 | 37. Critical Link Fixes | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 38. Season Content & Data Filtering | v1.6 | 3/3 | Complete    | 2026-04-16 |
 | 39. Entity Cross-Linking | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 40. Navigation & Structure | v1.6 | 2/2 | Complete   | 2026-04-16 |
+| 40. Navigation & Structure | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 41. UX Polish & Accessibility | v1.6 | 0/? | Not started | - |
