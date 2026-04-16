@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Static Site Quality
 status: executing
-last_updated: "2026-04-16T16:55:12.085Z"
+last_updated: "2026-04-16T21:50:45.873Z"
 last_activity: 2026-04-16
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 11
-  completed_plans: 11
+  total_phases: 13
+  completed_phases: 6
+  total_plans: 13
+  completed_plans: 13
   percent: 100
 ---
 
@@ -20,13 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Phase 41 — UX Polish & Accessibility
+**Current focus:** Phase 44 — Clean Output Directory
 
 ## Current Position
 
-Phase: 41
-Plan: Not started
-Status: Executing Phase 41
+Phase: 44 (Clean Output Directory) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-16
 
 ## Progress Bar
@@ -48,6 +48,8 @@ v1.6: [ ] Phase 37  [ ] Phase 38  [ ] Phase 39  [ ] Phase 40  [ ] Phase 41
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table.
+
+- [Phase 44]: cleanOutputDirectory uses Files.walkFileTree with SimpleFileVisitor for bottom-up deletion; root dir preserved via !dir.equals guard; IOException propagates to generate() outer catch
 
 ### Phase Structure (v1.6)
 
