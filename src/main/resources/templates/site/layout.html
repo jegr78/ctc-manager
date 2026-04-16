@@ -9,14 +9,15 @@
     <link rel="stylesheet" th:href="${assetsPath != null ? assetsPath + '/css/style.css' : '/assets/css/style.css'}">
 </head>
 <body>
+<a href="#main-content" class="skip-link">Skip to main content</a>
     <nav class="nav">
         <div class="nav-inner">
             <a th:href="${rootPath + '/index.html'}" class="nav-brand">
                 <img th:src="${assetsPath != null ? assetsPath + '/img/ctc-logo-white.png' : '/assets/img/ctc-logo-white.png'}" alt="CTC" class="nav-logo">
                 <span>COMMUNITY TEAM CUP</span>
             </a>
-            <input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-label="Toggle navigation">
-            <label for="nav-toggle" class="nav-toggle-label">
+            <input type="checkbox" id="nav-toggle" class="nav-toggle-input">
+            <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle navigation menu" role="button">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
                 </svg>
@@ -55,11 +56,22 @@
         <span class="breadcrumb-sep" aria-hidden="true"> &gt; </span>
         <span class="breadcrumb-current" th:text="${breadcrumbCurrent}">Page</span>
     </nav>
-    <main class="main">
+    <main class="main" id="main-content">
         <div th:replace="${content}"></div>
     </main>
     <footer class="footer">
-        <p>Community Team Cup — Gran Turismo Racing League</p>
+        <div class="footer-links">
+            <a href="#" class="footer-link">Top</a>
+            <span class="footer-sep" aria-hidden="true">&middot;</span>
+            <a th:href="${rootPath + '/archive.html'}" class="footer-link">Archive</a>
+            <span th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
+                  class="footer-sep" aria-hidden="true">&middot;</span>
+            <a th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
+               th:href="${rootPath + '/season/' + activeSeasonSlug + '/standings.html'}"
+               th:text="${activeSeasonName}"
+               class="footer-link"></a>
+        </div>
+        <p>Community Team Cup &mdash; Gran Turismo Racing League</p>
     </footer>
 </body>
 </html>

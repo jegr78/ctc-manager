@@ -45,10 +45,12 @@
         <div class="match-grid">
             <div class="match-card" th:each="race : ${lastMatchdayRaces}">
                 <div class="match-teams">
-                    <span class="match-team text-white" th:text="${race.homeTeamShortName}"></span>
+                    <span th:class="${race.homeTeamWon ? 'match-team match-team-winner text-white' : 'match-team text-white'}"
+                          th:text="${race.homeTeamShortName}"></span>
                     <span class="match-score" th:if="${race.hasResults}" th:text="${race.score}"></span>
                     <span class="match-score match-score-draw" th:unless="${race.hasResults}">vs</span>
-                    <span class="match-team" th:text="${race.awayTeamShortName}"></span>
+                    <span th:class="${race.awayTeamWon ? 'match-team match-team-winner' : 'match-team'}"
+                          th:text="${race.awayTeamShortName}"></span>
                 </div>
                 <div class="match-meta" th:if="${race.track != null or race.car != null}">
                     <span th:text="${race.track ?: ''}"></span>
