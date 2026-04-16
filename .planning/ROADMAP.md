@@ -116,7 +116,12 @@ Plans:
 3. Match cards with no track or car data do not display empty match-meta sections
 4. Period columns are hidden on match rows that have no period data
 
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 38-01-PLAN.md — TDD RED: Rename test season, write failing tests for CONT-01, CONT-06, CONT-07
+- [ ] 38-02-PLAN.md — TDD GREEN: Implement season filter, season metadata display, match-meta guards
+
 **UI hint**: yes
 
 ### Phase 39: Entity Cross-Linking
@@ -205,7 +210,7 @@ Plans:
 | 35. Site Generator Bye-Race Null Safety | v1.5 | 1/1 | Complete | 2026-04-14 |
 | 36. Audit Remediation | v1.5 | 1/1 | Complete | 2026-04-14 |
 | 37. Critical Link Fixes | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 38. Season Content & Data Filtering | v1.6 | 0/? | Not started | - |
+| 38. Season Content & Data Filtering | v1.6 | 0/2 | Not started | - |
 | 39. Entity Cross-Linking | v1.6 | 0/? | Not started | - |
 | 40. Navigation & Structure | v1.6 | 0/? | Not started | - |
 | 41. UX Polish & Accessibility | v1.6 | 0/? | Not started | - |
