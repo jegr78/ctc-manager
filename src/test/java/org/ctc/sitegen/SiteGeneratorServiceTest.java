@@ -696,7 +696,10 @@ class SiteGeneratorServiceTest {
         var html = Files.readString(seasonDir().resolve("standings.html"));
         var doc = Jsoup.parse(html);
         assertFalse(doc.select(".subnav").isEmpty(), "Season pages should have subnav");
-        assertEquals(4, doc.select(".subnav-link").size(), "Subnav should have exactly 4 links");
+        assertFalse(doc.select(".subnav-link").isEmpty(), "Season pages should have subnav links");
+        assertEquals(1, doc.select(".subnav-link[href*='standings.html']").size(), "Subnav should contain Standings link");
+        assertEquals(1, doc.select(".subnav-link[href*='matchdays.html']").size(), "Subnav should contain Matchdays link");
+        assertEquals(1, doc.select(".subnav-link[href*='driver-ranking.html']").size(), "Subnav should contain Driver Ranking link");
     }
 
     @Test
