@@ -371,7 +371,7 @@ Plans:
 | 41. UX Polish & Accessibility | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 42. Navigation Gap Closure | v1.6 | 1/1 | Complete | 2026-04-16 |
 | 43. Code Quality Cleanup | v1.6 | 1/1 | Complete | 2026-04-16 |
-| 44. Clean Output Directory | v1.6 | 2/2 | Complete   | 2026-04-16 |
+| 44. Clean Output Directory | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 45. Footer YouTube Link | v1.6 | 0/2 | Pending | — |
 | 46. Configurable Links Page | v1.6 | 0/2 | Pending | — |
 | 47. Teams & Drivers Overview Pages | v1.6 | 0/2 | Pending | — |
