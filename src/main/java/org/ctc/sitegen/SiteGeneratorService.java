@@ -390,15 +390,24 @@ public class SiteGeneratorService {
 
         var results = race.getResults().stream()
                 .map(r -> {
-                    var teamShortName = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), r.getDriver().getId())
+                    // teamShortName: sub-team name for display (from RaceLineup, falls back to SeasonDriver)
+                    // scoringTeamShortName: parent-resolved name for home/away aggregation
+                    var lineupOpt = raceLineupRepository.findByRaceIdAndDriverId(race.getId(), r.getDriver().getId());
+                    String teamShortName = lineupOpt
                             .map(rl -> rl.getTeam().getShortName())
                             .orElseGet(() -> r.getDriver().getSeasonDrivers().stream()
                                     .filter(sd -> sd.getSeason().getId().equals(season.getId()))
                                     .map(sd -> sd.getTeam().getShortName())
                                     .findFirst().orElse("?"));
+                    String scoringTeamShortName = lineupOpt
+                            .map(rl -> rl.getTeam().getParentOrSelf().getShortName())
+                            .orElseGet(() -> r.getDriver().getSeasonDrivers().stream()
+                                    .filter(sd -> sd.getSeason().getId().equals(season.getId()))
+                                    .map(sd -> sd.getTeam().getParentOrSelf().getShortName())
+                                    .findFirst().orElse("?"));
                     String driverSlug = slugify(r.getDriver().getPsnId());
                     String driverProfileUrl = driverUrlPrefix + driverSlug + ".html";
-                    return new RaceView.ResultView(r.getDriver().getPsnId(), teamShortName,
+                    return new RaceView.ResultView(r.getDriver().getPsnId(), teamShortName, scoringTeamShortName,
                             r.getPosition(), r.getQualiPosition(), r.isFastestLap(), r.getPointsTotal(),
                             driverProfileUrl);
                 })
@@ -407,10 +416,10 @@ public class SiteGeneratorService {
         String awayShortName = race.getAwayTeam() != null ? race.getAwayTeam().getShortName() : "Bye";
 
         int homeTotal = results.stream()
-                .filter(r -> r.teamShortName().equals(homeShortName))
+                .filter(r -> r.scoringTeamShortName().equals(homeShortName))
                 .mapToInt(RaceView.ResultView::pointsTotal).sum();
         int awayTotal = results.stream()
-                .filter(r -> r.teamShortName().equals(awayShortName))
+                .filter(r -> r.scoringTeamShortName().equals(awayShortName))
                 .mapToInt(RaceView.ResultView::pointsTotal).sum();
 
         String trackName = race.getTrack() != null ? race.getTrack().getName() : null;
