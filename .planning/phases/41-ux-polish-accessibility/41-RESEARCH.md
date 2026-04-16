@@ -475,17 +475,17 @@ void givenLayout_whenGenerate_thenNavToggleLabelHasAriaLabel() throws IOExceptio
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`activeSeasonName` variable availability in footer**
    - What we know: `activeSeasonSlug` is passed via `writeTemplate()` for all pages
    - What's unclear: Should the footer show the full `displayLabel` (e.g. "2026 | #1 | Season Name") or just a short label?
-   - Recommendation: Pass `activeSeason.getDisplayLabel()` as `activeSeasonName` in `writeTemplate()`. The display label is already used throughout the templates.
+   - RESOLVED: Pass `activeSeason.getDisplayLabel()` as `activeSeasonName` in `writeTemplate()`. The display label is already used throughout the templates. Plan 01 Task 1 implements this.
 
 2. **Draw scenario for `.match-team-winner`**
    - What we know: `homeTeamWon = hasResults && homeTotal > awayTotal`; when scores are equal, neither wins
    - What's unclear: No decision in CONTEXT.md for how a draw is styled on match cards
-   - Recommendation: Draw = neither `.match-team-winner` class applied; both teams display in default style. This is consistent with `match-score-draw` class handling.
+   - RESOLVED: Draw = neither `.match-team-winner` class applied; both teams display in default style. This is consistent with `match-score-draw` class handling. Plan 01 Task 1 implements strict `>` comparison.
 
 ---
 
