@@ -79,8 +79,8 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 39: Entity Cross-Linking** - Add inline links from standings, rankings, matchdays, and team profiles (completed 2026-04-16)
 - [x] **Phase 40: Navigation & Structure** - Season subnavigation, active nav state, and breadcrumbs (completed 2026-04-16)
 - [x] **Phase 41: UX Polish & Accessibility** - Skip link, winner highlight, mobile scroll, footer, aria, hover transitions (completed 2026-04-16)
-- [ ] **Phase 42: Navigation Gap Closure** - Fix top-nav active state for index/archive and add playoff subnav guard
-- [ ] **Phase 43: Code Quality Cleanup** - Extract match card fragment, fix vacuous test, remove dead code
+- [x] **Phase 42: Navigation Gap Closure** - Fix top-nav active state for index/archive and add playoff subnav guard (completed 2026-04-16)
+- [x] **Phase 43: Code Quality Cleanup** - Extract match card fragment, fix vacuous test, remove dead code (completed 2026-04-16)
 
 ## Phase Details
 
@@ -259,5 +259,5 @@ Plans:
 | 39. Entity Cross-Linking | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 40. Navigation & Structure | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 41. UX Polish & Accessibility | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 42. Navigation Gap Closure | v1.6 | 0/0 | Pending | — |
-| 43. Code Quality Cleanup | v1.6 | 0/0 | Pending | — |
+| 42. Navigation Gap Closure | v1.6 | 1/1 | Complete | 2026-04-16 |
+| 43. Code Quality Cleanup | v1.6 | 1/1 | Complete | 2026-04-16 |
