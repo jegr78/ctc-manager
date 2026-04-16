@@ -928,4 +928,54 @@ class SiteGeneratorServiceTest {
         assertEquals(1, playoffLinks.size(),
                 "Season with playoff should show Playoff link in subnav");
     }
+
+    // --- Phase 44: Clean Output Directory ---
+
+    // CLEAN-01: Stale file removal
+
+    @Test
+    void givenStaleFile_whenGenerate_thenStaleFileIsRemoved() throws IOException {
+        // given
+        var staleFile = tempDir.resolve("stale-page.html");
+        Files.writeString(staleFile, "<html>stale</html>");
+
+        // when
+        var result = siteGeneratorService.generate();
+
+        // then
+        assertFalse(result.hasErrors(), "Errors: " + result.getErrors());
+        assertFalse(Files.exists(staleFile), "Stale file should be removed before generation");
+    }
+
+    @Test
+    void givenStaleNestedDirectory_whenGenerate_thenNestedDirectoryIsRemoved() throws IOException {
+        // given
+        var staleDir = tempDir.resolve("old-season").resolve("old-subdir");
+        Files.createDirectories(staleDir);
+        Files.writeString(staleDir.resolve("old-page.html"), "<html>old</html>");
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        assertFalse(Files.exists(staleDir), "Stale nested directory should be removed");
+        assertFalse(Files.exists(staleDir.getParent()), "Stale parent directory should be removed");
+    }
+
+    // CLEAN-02: Non-existent output directory
+
+    @Test
+    void givenNonExistentOutputDir_whenGenerate_thenCreatesAndGeneratesPages() throws IOException {
+        // given
+        var freshDir = tempDir.resolve("fresh-output");
+        siteGeneratorService.setOutputDir(freshDir.toString());
+
+        // when
+        var result = siteGeneratorService.generate();
+
+        // then
+        assertFalse(result.hasErrors(), "Errors: " + result.getErrors());
+        assertTrue(result.getPagesGenerated() > 0);
+        assertTrue(Files.exists(freshDir.resolve("index.html")));
+    }
 }
