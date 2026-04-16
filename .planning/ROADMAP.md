@@ -204,7 +204,7 @@ Plans:
 | 34. Convention Fixes | v1.5 | 2/2 | Complete | 2026-04-14 |
 | 35. Site Generator Bye-Race Null Safety | v1.5 | 1/1 | Complete | 2026-04-14 |
 | 36. Audit Remediation | v1.5 | 1/1 | Complete | 2026-04-14 |
-| 37. Critical Link Fixes | v1.6 | 2/2 | Complete   | 2026-04-16 |
+| 37. Critical Link Fixes | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 38. Season Content & Data Filtering | v1.6 | 0/? | Not started | - |
 | 39. Entity Cross-Linking | v1.6 | 0/? | Not started | - |
 | 40. Navigation & Structure | v1.6 | 0/? | Not started | - |
