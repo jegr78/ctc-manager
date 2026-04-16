@@ -41,6 +41,46 @@ Requirements for the Static Site Quality milestone. Each maps to roadmap phases.
 - [ ] **UX-08**: Hover transitions on table rows and links (150-300ms)
 - [ ] **UX-09**: cursor:pointer on all clickable elements in site CSS
 
+### Infrastructure
+
+- [ ] **CLEAN-01**: Output directory is emptied before page generation begins
+- [ ] **CLEAN-02**: Clean operation handles non-existent output directory gracefully
+
+### Landing Page
+
+- [ ] **LAND-01**: Index page displays a YouTube embed iframe as the hero element (video ID scraped from channel page)
+- [ ] **LAND-02**: Index page shows tile navigation cards (Seasons, Standings, Drivers, Teams, Links)
+- [ ] **LAND-03**: Standings table and last matchday section are removed from the index page
+- [ ] **LAND-04**: All tile links resolve to valid generated pages
+- [ ] **LAND-05**: YouTube channel URL is configurable; video ID is scraped automatically via Jsoup
+
+### Links (extended)
+
+- [ ] **LINK-05**: Footer contains a YouTube link to `https://www.youtube.com/@CommunityTeamCup`
+- [ ] **LINK-06**: YouTube footer link is present on all generated pages
+- [ ] **LINK-07**: A `links.html` page is generated as part of the static site
+- [ ] **LINK-08**: Links are configurable via `ctc.site.links` application properties (list of name/url pairs)
+- [ ] **LINK-09**: The links page renders all configured links as clickable elements
+- [ ] **LINK-10**: The links page uses the shared layout (nav, footer, consistent styling)
+
+### Overview Pages
+
+- [ ] **OVER-01**: A `teams.html` page lists all teams across all seasons
+- [ ] **OVER-02**: A `drivers.html` page lists all drivers across all seasons
+- [ ] **OVER-03**: Both overview pages can be filtered by season (client-side JS, static site)
+- [ ] **OVER-04**: Teams overview shows team name, logo, and seasons participated
+- [ ] **OVER-05**: Drivers overview shows PSN ID, team(s), and seasons participated
+- [ ] **OVER-06**: Team/driver names link to their season-specific profile pages
+
+### E2E Validation
+
+- [ ] **E2E-01**: All internal `href` links resolve to existing files in the output directory
+- [ ] **E2E-02**: All pages have consistent navigation structure (nav + footer present)
+- [ ] **E2E-03**: No generated page has empty main content
+- [ ] **E2E-04**: Landing page tiles link to valid generated pages
+- [ ] **E2E-05**: Links page renders all configured links
+- [ ] **E2E-06**: Footer YouTube link present on all page types
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -92,14 +132,39 @@ Deferred to future release. Tracked but not in current roadmap.
 | UX-08 | Phase 41 | Pending |
 | UX-09 | Phase 41 | Pending |
 | QUAL-01 | Phase 41 | Pending |
+| CLEAN-01 | Phase 44 | Pending |
+| CLEAN-02 | Phase 44 | Pending |
+| LINK-05 | Phase 45 | Pending |
+| LINK-06 | Phase 45 | Pending |
+| LINK-07 | Phase 46 | Pending |
+| LINK-08 | Phase 46 | Pending |
+| LINK-09 | Phase 46 | Pending |
+| LINK-10 | Phase 46 | Pending |
+| OVER-01 | Phase 47 | Pending |
+| OVER-02 | Phase 47 | Pending |
+| OVER-03 | Phase 47 | Pending |
+| OVER-04 | Phase 47 | Pending |
+| OVER-05 | Phase 47 | Pending |
+| OVER-06 | Phase 47 | Pending |
+| LAND-01 | Phase 48 | Pending |
+| LAND-02 | Phase 48 | Pending |
+| LAND-03 | Phase 48 | Pending |
+| LAND-04 | Phase 48 | Pending |
+| LAND-05 | Phase 48 | Pending |
+| E2E-01 | Phase 49 | Pending |
+| E2E-02 | Phase 49 | Pending |
+| E2E-03 | Phase 49 | Pending |
+| E2E-04 | Phase 49 | Pending |
+| E2E-05 | Phase 49 | Pending |
+| E2E-06 | Phase 49 | Pending |
 
 **Coverage:**
 
-- v1.6 requirements: 22 total
-- Mapped to phases: 22
+- v1.6 requirements: 48 total (22 original + 26 new)
+- Mapped to phases: 48
 - Unmapped: 0
 
 ---
 
 *Requirements defined: 2026-04-16*
-*Last updated: 2026-04-16 after roadmap creation*
+*Last updated: 2026-04-16 after milestone extension (phases 44-49)*

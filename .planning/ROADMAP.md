@@ -81,6 +81,116 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 41: UX Polish & Accessibility** - Skip link, winner highlight, mobile scroll, footer, aria, hover transitions (completed 2026-04-16)
 - [x] **Phase 42: Navigation Gap Closure** - Fix top-nav active state for index/archive and add playoff subnav guard (completed 2026-04-16)
 - [x] **Phase 43: Code Quality Cleanup** - Extract match card fragment, fix vacuous test, remove dead code (completed 2026-04-16)
+- [ ] **Phase 44: Clean Output Directory** - Eliminate stale files by emptying output dir before generation
+- [ ] **Phase 45: Footer YouTube Link** - Add YouTube channel link to shared site footer
+- [ ] **Phase 46: Configurable Links Page** - New links.html page driven by application properties
+- [ ] **Phase 47: Teams & Drivers Overview Pages** - Cross-season overview pages with client-side season filter
+- [ ] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards
+- [ ] **Phase 49: E2E Site Validation** - Comprehensive link resolution and structure validation tests
+
+### Phase 44: Clean Output Directory
+
+**Goal**: Eliminate stale files by emptying the output directory before generating fresh content
+**Depends on**: Phase 43
+**Requirements**: CLEAN-01, CLEAN-02
+
+**Success Criteria** (what must be TRUE):
+
+1. A file manually placed in the output dir before `generate()` does not exist afterward
+2. Calling `generate()` with a non-existent output directory creates it and generates pages
+3. Nested subdirectories from a previous run are fully removed
+
+Plans:
+- [ ] 44-01-PLAN.md — TDD RED: Write failing tests for output cleanup
+- [ ] 44-02-PLAN.md — TDD GREEN: Implement output directory cleanup
+
+### Phase 45: Footer YouTube Link
+
+**Goal**: Add a YouTube link to the shared footer on all pages
+**Depends on**: Phase 43
+**Requirements**: LINK-05, LINK-06
+
+**Success Criteria** (what must be TRUE):
+
+1. Footer contains a link to `https://www.youtube.com/@CommunityTeamCup`
+2. Link has appropriate label (text or SVG icon)
+3. YouTube link appears on pages in season subdirectories (inherited from layout)
+
+Plans:
+- [ ] 45-01-PLAN.md — TDD RED: Write failing tests for footer YouTube link
+- [ ] 45-02-PLAN.md — TDD GREEN: Add YouTube link to layout footer
+
+### Phase 46: Configurable Links Page
+
+**Goal**: New `links.html` page with external links driven by application properties
+**Depends on**: Phase 44
+**Requirements**: LINK-07, LINK-08, LINK-09, LINK-10
+
+**Success Criteria** (what must be TRUE):
+
+1. `links.html` exists in output root after generation
+2. All links from `ctc.site.links` config render as clickable elements with correct href/name
+3. Links page has shared layout (nav, footer)
+4. Empty config still generates the page (empty state)
+
+Plans:
+- [ ] 46-01-PLAN.md — TDD RED: Config class + failing tests
+- [ ] 46-02-PLAN.md — TDD GREEN: Implement links page generation
+
+### Phase 47: Teams & Drivers Overview Pages
+
+**Goal**: Generate cross-season overview pages for all teams and drivers with client-side season filtering
+**Depends on**: Phase 46
+**Requirements**: OVER-01, OVER-02, OVER-03, OVER-04, OVER-05, OVER-06
+
+**Success Criteria** (what must be TRUE):
+
+1. `teams.html` exists in output root and lists all parent teams (not sub-teams)
+2. `drivers.html` exists in output root and lists all drivers
+3. Each page has a season filter dropdown that shows/hides entries by season
+4. Teams overview shows: team short name, logo (if available), seasons participated
+5. Drivers overview shows: PSN ID, team name(s), seasons participated
+6. Team/driver names link to their season-specific profile pages
+
+Plans:
+- [ ] 47-01-PLAN.md — TDD RED: Failing tests for overview pages
+- [ ] 47-02-PLAN.md — TDD GREEN: Implement overview pages with season filter
+
+### Phase 48: Landing Page Redesign
+
+**Goal**: Transform index.html from content page to landing page with YouTube hero and tile navigation
+**Depends on**: Phase 47
+**Requirements**: LAND-01, LAND-02, LAND-03, LAND-04, LAND-05
+
+**Success Criteria** (what must be TRUE):
+
+1. Index page contains a YouTube iframe embed (video ID scraped from channel page)
+2. Index page has 5 tile navigation cards (Seasons, Standings, Drivers, Teams, Links)
+3. Index page does NOT contain standings table or match-grid
+4. All tiles link to correct targets (archive, standings, drivers.html, teams.html, links.html)
+5. Top nav "Standings" links to active season standings (not to index.html)
+
+Plans:
+- [ ] 48-01-PLAN.md — TDD RED: Failing tests for landing page + YouTube scraper
+- [ ] 48-02-PLAN.md — TDD GREEN: Implement scraper + landing page
+
+### Phase 49: E2E Site Validation
+
+**Goal**: Comprehensive validation tests ensuring all generated pages link correctly and have consistent structure
+**Depends on**: Phases 44-48
+**Requirements**: E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-06
+
+**Success Criteria** (what must be TRUE):
+
+1. A test crawls all .html files and asserts every internal href resolves to an existing file
+2. Every page has nav and footer elements
+3. No page has empty main content
+4. Landing page tile links resolve to existing files
+5. Links page contains configured link URLs
+6. YouTube footer link present on multiple page types
+
+Plans:
+- [ ] 49-01-PLAN.md — RED + GREEN: E2E validation test class
 
 ## Phase Details
 
@@ -261,3 +371,9 @@ Plans:
 | 41. UX Polish & Accessibility | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 42. Navigation Gap Closure | v1.6 | 1/1 | Complete | 2026-04-16 |
 | 43. Code Quality Cleanup | v1.6 | 1/1 | Complete | 2026-04-16 |
+| 44. Clean Output Directory | v1.6 | 0/2 | Pending | — |
+| 45. Footer YouTube Link | v1.6 | 0/2 | Pending | — |
+| 46. Configurable Links Page | v1.6 | 0/2 | Pending | — |
+| 47. Teams & Drivers Overview Pages | v1.6 | 0/2 | Pending | — |
+| 48. Landing Page Redesign | v1.6 | 0/2 | Pending | — |
+| 49. E2E Site Validation | v1.6 | 0/1 | Pending | — |
