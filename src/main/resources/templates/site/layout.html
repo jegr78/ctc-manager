@@ -22,12 +22,37 @@
                 </svg>
             </label>
             <div class="nav-links">
-                <a th:href="${rootPath + '/index.html'}">Standings</a>
+                <a th:href="${rootPath + '/index.html'}"
+                   th:class="${currentPage == 'standings'} ? 'nav-link-active' : ''">Standings</a>
                 <a th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
-                   th:href="${rootPath + '/season/' + activeSeasonSlug + '/driver-ranking.html'}">Driver Ranking</a>
-                <a th:href="${rootPath + '/archive.html'}">Archive</a>
+                   th:href="${rootPath + '/season/' + activeSeasonSlug + '/driver-ranking.html'}"
+                   th:class="${currentPage == 'driver-ranking'} ? 'nav-link-active' : ''">Driver Ranking</a>
+                <a th:href="${rootPath + '/archive.html'}"
+                   th:class="${currentPage == 'archive'} ? 'nav-link-active' : ''">Archive</a>
             </div>
         </div>
+    </nav>
+    <nav class="subnav" th:if="${seasonSlug != null and !#strings.isEmpty(seasonSlug)}">
+        <div class="subnav-inner">
+            <a th:href="${rootPath + '/season/' + seasonSlug + '/standings.html'}"
+               th:class="${currentPage == 'standings'} ? 'subnav-link active' : 'subnav-link'">Standings</a>
+            <a th:href="${rootPath + '/season/' + seasonSlug + '/matchdays.html'}"
+               th:class="${currentPage == 'matchdays'} ? 'subnav-link active' : 'subnav-link'">Matchdays</a>
+            <a th:href="${rootPath + '/season/' + seasonSlug + '/driver-ranking.html'}"
+               th:class="${currentPage == 'driver-ranking'} ? 'subnav-link active' : 'subnav-link'">Driver Ranking</a>
+            <a th:href="${rootPath + '/season/' + seasonSlug + '/playoff.html'}"
+               th:class="${currentPage == 'playoff'} ? 'subnav-link active' : 'subnav-link'">Playoff</a>
+        </div>
+    </nav>
+    <nav class="breadcrumb" aria-label="breadcrumb"
+         th:if="${breadcrumbCurrent != null and !#strings.isEmpty(breadcrumbCurrent)}">
+        <a class="breadcrumb-link" th:href="${rootPath + '/index.html'}">Home</a>
+        <span class="breadcrumb-sep" aria-hidden="true"> &gt; </span>
+        <a class="breadcrumb-link"
+           th:href="${rootPath + '/season/' + seasonSlug + '/standings.html'}"
+           th:text="${seasonName}">Season</a>
+        <span class="breadcrumb-sep" aria-hidden="true"> &gt; </span>
+        <span class="breadcrumb-current" th:text="${breadcrumbCurrent}">Page</span>
     </nav>
     <main class="main">
         <div th:replace="${content}"></div>
