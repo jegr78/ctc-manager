@@ -839,6 +839,38 @@ class SiteGeneratorServiceTest {
                 "Footer should have an Archive link");
     }
 
+    // --- LINK-05, LINK-06: Footer YouTube link ---
+
+    @Test
+    void givenLayout_whenGenerate_thenFooterContainsYouTubeLink() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("index.html"));
+        var doc = Jsoup.parse(html);
+        var youtubeLink = doc.selectFirst(".footer .footer-link[href='https://www.youtube.com/@CommunityTeamCup']");
+        assertNotNull(youtubeLink, "Footer should contain YouTube link");
+        assertEquals("_blank", youtubeLink.attr("target"), "YouTube link must open in new tab");
+        assertEquals("noopener", youtubeLink.attr("rel"), "YouTube link must have rel=noopener");
+        assertEquals("YouTube", youtubeLink.text(), "YouTube link text must be 'YouTube'");
+    }
+
+    @Test
+    void givenSeasonPage_whenGenerate_thenFooterContainsYouTubeLink() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        var youtubeLink = doc.selectFirst(".footer .footer-link[href='https://www.youtube.com/@CommunityTeamCup']");
+        assertNotNull(youtubeLink, "Season subpage footer should contain YouTube link");
+        assertEquals("_blank", youtubeLink.attr("target"), "YouTube link must open in new tab");
+        assertEquals("noopener", youtubeLink.attr("rel"), "YouTube link must have rel=noopener");
+        assertEquals("YouTube", youtubeLink.text(), "YouTube link text must be 'YouTube'");
+    }
+
     // --- UX-07: Nav toggle aria-label ---
 
     @Test
