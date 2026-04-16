@@ -60,10 +60,12 @@ Source: Existing `style.css` measurements confirmed.
 | Display (hero h1) | 28px / 22px mobile | 600 (Conthrax) | 1.2 |
 
 Rules:
-- Exactly 2 weights used: 400 (regular body) and 600 (Conthrax headings, bold cells).
-- `font-weight: 700` is only used for `.match-team`, `.font-bold` utility class — these remain unchanged.
+- Active contract uses 2 weights: 400 (regular body) and 600 (Conthrax headings, bold cells). All new work in this phase uses only these weights.
 - Skip-link: 14px at weight 400, matches body.
 - Footer links: 13px at weight 400, matches existing `.footer` font-size.
+
+Legacy exception:
+- `font-weight: 700` — grandfathered in `.match-team` and `.font-bold` utility class only. These pre-exist from Phase 37 and remain unchanged. No new usage of weight 700 in this phase.
 
 Source: `style.css` — `body` (line-height 1.6), `table` (font-size 14px), `th` (11px), `.section-title` (13px Conthrax), `.hero h1` (28px Conthrax).
 
@@ -92,7 +94,7 @@ Source: `style.css` — `body` (line-height 1.6), `table` (font-size 14px), `th`
 **Winner highlight background:**
 - `.match-team-winner` background: `rgba(79,195,247,0.15)` semi-transparent accent
 - Border-radius: `var(--radius-sm)` (6px)
-- Padding: 2px 6px (xs inner padding for legibility)
+- Padding: 4px 8px (xs/sm on-scale values)
 
 Source: CONTEXT.md D-01; existing `--accent` usage in `style.css`.
 
@@ -139,7 +141,7 @@ Source: CONTEXT.md D-10.
 | Condition | Pre-computed `race.homeTeamWon` / `race.awayTeamWon` boolean fields on `RaceView` |
 | Text color | `var(--accent)` |
 | Background | `rgba(79,195,247,0.15)` |
-| Padding | 2px 6px |
+| Padding | 4px 8px |
 | Border-radius | `var(--radius-sm)` (6px) |
 | No transition | Winner highlight is static — no animation |
 
