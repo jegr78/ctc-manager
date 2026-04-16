@@ -66,6 +66,13 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ @Valid + BindingResult on PlayoffController.save() — Phase 34
 - ✓ CSS classes instead of inline styles on race results page — Phase 34, 36
 
+### Validated (v1.6)
+
+- ✓ Archive links use slugified displayLabel matching actual directory names (SeasonEntry record) — Phase 37
+- ✓ Nav Driver Ranking link resolves to active season's driver-ranking page — Phase 37
+- ✓ All navigation links use relative paths (rootPath defaults to ".") — Phase 37
+- ✓ Team logo images resolve correctly via copyLogoToAssets with path-traversal guard — Phase 37
+
 ### Active
 
 #### Current Milestone: v1.6 Static Site Quality
@@ -74,13 +81,13 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 **Target features:**
 
-- Fix all broken navigation links (archive slug mismatch, driver ranking 404, absolute paths)
+- ~~Fix all broken navigation links (archive slug mismatch, driver ranking 404, absolute paths)~~ — Phase 37 complete
 - Display season year and number across all pages
 - Add inline links from standings to teams, from rankings to drivers, from matchdays to profiles
 - Add season subnavigation (matchdays, standings, driver ranking, playoff per season)
 - Filter test seasons from archive, fix empty match-meta and period column
 - Remove inline styles in archive and driver-profile templates
-- Fix broken team logo paths on static site
+- ~~Fix broken team logo paths on static site~~ — Phase 37 complete
 - Add skip-link, nav active-state, breadcrumbs for accessibility
 - Highlight match winner in match cards
 - Mobile scroll indicator for tables
