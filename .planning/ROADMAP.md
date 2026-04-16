@@ -75,7 +75,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 **Milestone Goal:** Fix broken links, add missing content, improve navigation and cross-linking, and deliver a polished, accessible static site with professional UX.
 
 - [x] **Phase 37: Critical Link Fixes** - Fix all broken navigation and asset links that block every other page (completed 2026-04-16)
-- [ ] **Phase 38: Season Content & Data Filtering** - Display season metadata on all pages and hide missing/test data (gap closure)
+- [x] **Phase 38: Season Content & Data Filtering** - Display season metadata on all pages and hide missing/test data (gap closure) (completed 2026-04-16)
 - [ ] **Phase 39: Entity Cross-Linking** - Add inline links from standings, rankings, matchdays, and team profiles
 - [ ] **Phase 40: Navigation & Structure** - Season subnavigation, active nav state, and breadcrumbs
 - [ ] **Phase 41: UX Polish & Accessibility** - Skip link, winner highlight, mobile scroll, footer, aria, hover transitions
@@ -116,12 +116,12 @@ Plans:
 3. Match cards with no track or car data do not display empty match-meta sections
 4. Period columns are hidden on match rows that have no period data
 
-**Plans:** 3 plans (2 complete, 1 gap closure)
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 38-01-PLAN.md — TDD RED: Rename test season, write failing tests for CONT-01, CONT-06, CONT-07
 - [x] 38-02-PLAN.md — TDD GREEN: Implement season filter, season metadata display, match-meta guards
-- [ ] 38-03-PLAN.md — Gap closure: Add .season-meta to team-profile and driver-profile templates
+- [x] 38-03-PLAN.md — Gap closure: Add .season-meta to team-profile and driver-profile templates
 
 **UI hint**: yes
 
@@ -211,7 +211,7 @@ Plans:
 | 35. Site Generator Bye-Race Null Safety | v1.5 | 1/1 | Complete | 2026-04-14 |
 | 36. Audit Remediation | v1.5 | 1/1 | Complete | 2026-04-14 |
 | 37. Critical Link Fixes | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 38. Season Content & Data Filtering | v1.6 | 2/3 | Gap closure | - |
+| 38. Season Content & Data Filtering | v1.6 | 3/3 | Complete   | 2026-04-16 |
 | 39. Entity Cross-Linking | v1.6 | 0/? | Not started | - |
 | 40. Navigation & Structure | v1.6 | 0/? | Not started | - |
 | 41. UX Polish & Accessibility | v1.6 | 0/? | Not started | - |
