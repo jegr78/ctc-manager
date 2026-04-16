@@ -75,6 +75,10 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ Season year and number displayed on all 7 page types (hero, archive, standings, matchday, driver-ranking, team-profile, driver-profile) — Phase 38
 - ✓ Test seasons filtered from archive and page generation (productionSeasons filter) — Phase 38
 - ✓ Empty match-meta (no track/car) hidden via th:if guard on matchday and index pages — Phase 38
+- ✓ Entity cross-links: team names in standings link to team profiles, driver names in rankings and matchday results link to driver profiles — Phase 39
+- ✓ Team profile lists team's drivers with links to driver profiles (DriverEntry record, SeasonDriver data source) — Phase 39
+- ✓ Index page cross-links consistent with detail pages (D-04) — Phase 39
+- ✓ .entity-link CSS class with accent color (#4fc3f7) and hover state (#b3e5fc + underline) — Phase 39
 
 ### Active
 
@@ -86,7 +90,7 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 - ~~Fix all broken navigation links (archive slug mismatch, driver ranking 404, absolute paths)~~ — Phase 37 complete
 - ~~Display season year and number across all pages~~ — Phase 38 complete
-- Add inline links from standings to teams, from rankings to drivers, from matchdays to profiles
+- ~~Add inline links from standings to teams, from rankings to drivers, from matchdays to profiles~~ — Phase 39 complete
 - Add season subnavigation (matchdays, standings, driver ranking, playoff per season)
 - ~~Filter test seasons from archive, fix empty match-meta and period column~~ — Phase 38 complete
 - Remove inline styles in archive and driver-profile templates
