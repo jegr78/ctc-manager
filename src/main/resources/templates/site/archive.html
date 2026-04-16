@@ -12,7 +12,10 @@
                 </thead>
                 <tbody>
                     <tr th:each="entry : ${seasonEntries}">
-                        <td class="font-bold text-white" th:text="${entry.season.name}"></td>
+                        <td class="font-bold text-white">
+                            <span th:text="${entry.season.name}"></span>
+                            <p class="season-meta" th:text="${entry.season.year + ' | #' + entry.season.number}"></p>
+                        </td>
                         <td class="text-dim">
                             <span th:if="${entry.season.startDate}" th:text="${entry.season.startDate}"></span>
                             <span th:if="${entry.season.startDate != null and entry.season.endDate != null}"> — </span>

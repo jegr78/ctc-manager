@@ -5,6 +5,7 @@
 <section>
     <div class="section">
         <h2 class="section-title" th:text="${matchday.label + ' — ' + season.name}"></h2>
+        <p class="season-meta" th:text="${season.year + ' | Season #' + season.number}"></p>
         <div class="match-grid">
             <div class="match-card" th:each="race : ${races}">
                 <div class="match-teams">
@@ -13,7 +14,7 @@
                     <span class="match-score match-score-draw" th:unless="${race.hasResults}">vs</span>
                     <span class="match-team" th:text="${race.awayTeamShortName}"></span>
                 </div>
-                <div class="match-meta">
+                <div class="match-meta" th:if="${race.track != null or race.car != null}">
                     <span th:text="${race.track ?: ''}"></span>
                     <span th:if="${race.track != null && race.car != null}"> — </span>
                     <span th:text="${race.car ?: ''}"></span>

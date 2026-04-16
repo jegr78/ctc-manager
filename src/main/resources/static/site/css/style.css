@@ -148,6 +148,14 @@ body {
     margin-bottom: 16px;
 }
 
+.season-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
 /* Tables */
 .table-wrap {
     background: var(--bg-card);
