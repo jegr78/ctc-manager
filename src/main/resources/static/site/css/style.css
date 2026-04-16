@@ -188,6 +188,17 @@ td {
 
 tr:hover { background: var(--bg-hover); }
 
+.entity-link {
+    color: var(--accent);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.entity-link:hover {
+    color: #b3e5fc;
+    text-decoration: underline;
+}
+
 .text-right { text-align: right; }
 .text-center { text-align: center; }
 .font-bold { font-weight: 700; }

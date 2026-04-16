@@ -102,14 +102,21 @@ public class SiteGeneratorService {
 
         if (activeSeason != null) {
             ctx.setVariable("season", activeSeason);
-            ctx.setVariable("standings", standingsService.calculateStandings(activeSeason.getId()));
+            var standings = standingsService.calculateStandings(activeSeason.getId());
+            ctx.setVariable("standings", standings);
+            var indexTeamSlugMap = new java.util.HashMap<java.util.UUID, String>();
+            for (var s : standings) {
+                indexTeamSlugMap.put(s.getTeam().getId(),
+                    "./season/" + activeSeasonSlug + "/team/" + slugify(s.getTeam().getShortName()) + ".html");
+            }
+            ctx.setVariable("teamSlugMap", indexTeamSlugMap);
 
             var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(activeSeason.getId());
             if (!matchdays.isEmpty()) {
                 var lastMatchday = matchdays.getLast();
                 ctx.setVariable("lastMatchday", lastMatchday);
                 ctx.setVariable("lastMatchdayRaces", raceRepository.findByMatchdayId(lastMatchday.getId()).stream()
-                        .map(r -> toRaceView(r, activeSeason)).toList());
+                        .map(r -> toRaceView(r, activeSeason, "./season/" + activeSeasonSlug + "/driver/")).toList());
             }
         }
 
@@ -121,7 +128,13 @@ public class SiteGeneratorService {
                                     GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("season", season);
-        ctx.setVariable("standings", standingsService.calculateStandings(season.getId()));
+        var standings = standingsService.calculateStandings(season.getId());
+        var teamSlugMap = new java.util.HashMap<java.util.UUID, String>();
+        for (var s : standings) {
+            teamSlugMap.put(s.getTeam().getId(), "team/" + slugify(s.getTeam().getShortName()) + ".html");
+        }
+        ctx.setVariable("standings", standings);
+        ctx.setVariable("teamSlugMap", teamSlugMap);
 
         var dir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel()));
         Files.createDirectories(dir);
@@ -133,7 +146,13 @@ public class SiteGeneratorService {
                                         GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("season", season);
-        ctx.setVariable("driverRanking", driverRankingService.calculateRanking(season.getId()));
+        var driverRanking = driverRankingService.calculateRanking(season.getId());
+        var driverSlugMap = new java.util.HashMap<java.util.UUID, String>();
+        for (var r : driverRanking) {
+            driverSlugMap.put(r.getDriver().getId(), "driver/" + slugify(r.getDriver().getPsnId()) + ".html");
+        }
+        ctx.setVariable("driverRanking", driverRanking);
+        ctx.setVariable("driverSlugMap", driverSlugMap);
 
         var dir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel()));
         Files.createDirectories(dir);
@@ -150,7 +169,7 @@ public class SiteGeneratorService {
             ctx.setVariable("season", season);
             ctx.setVariable("matchday", matchday);
             var raceViews = raceRepository.findByMatchdayId(matchday.getId()).stream()
-                    .map(r -> toRaceView(r, season)).toList();
+                    .map(r -> toRaceView(r, season, "../driver/")).toList();
             ctx.setVariable("races", raceViews);
 
             var dir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel())).resolve("matchday");
@@ -176,6 +195,22 @@ public class SiteGeneratorService {
             ctx.setVariable("season", season);
             ctx.setVariable("team", team);
             ctx.setVariable("standing", teamStanding);
+
+            // Load team drivers for Drivers section (per D-01, D-02, D-03)
+            var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
+            var driverEntries = seasonDrivers.stream()
+                    .filter(sd -> sd.getTeam().getId().equals(team.getId()))
+                    .map(sd -> {
+                        var driver = sd.getDriver();
+                        var driverResults = raceResultRepository.findByDriverId(driver.getId()).stream()
+                                .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
+                                .toList();
+                        int totalPoints = driverResults.stream().mapToInt(r -> r.getPointsTotal()).sum();
+                        String driverProfileUrl = "../driver/" + slugify(driver.getPsnId()) + ".html";
+                        return new DriverEntry(driver.getPsnId(), driverProfileUrl, totalPoints);
+                    })
+                    .toList();
+            ctx.setVariable("drivers", driverEntries);
 
             // Compute assetsPath for this team profile page (same as writeTemplate does)
             Path teamDir = outPath.resolve("season").resolve(slugify(season.getDisplayLabel())).resolve("team");
@@ -326,7 +361,7 @@ public class SiteGeneratorService {
         log.debug("Copied assets to {}", assetsDir);
     }
 
-    private RaceView toRaceView(Race race, Season season) {
+    private RaceView toRaceView(Race race, Season season, String driverUrlPrefix) {
         var homeTeam = race.getHomeTeam();
         String homeShortName = homeTeam != null ? homeTeam.getShortName() : "Bye";
 
@@ -338,8 +373,11 @@ public class SiteGeneratorService {
                                     .filter(sd -> sd.getSeason().getId().equals(season.getId()))
                                     .map(sd -> sd.getTeam().getShortName())
                                     .findFirst().orElse("?"));
+                    String driverSlug = slugify(r.getDriver().getPsnId());
+                    String driverProfileUrl = driverUrlPrefix + driverSlug + ".html";
                     return new RaceView.ResultView(r.getDriver().getPsnId(), teamShortName,
-                            r.getPosition(), r.getQualiPosition(), r.isFastestLap(), r.getPointsTotal());
+                            r.getPosition(), r.getQualiPosition(), r.isFastestLap(), r.getPointsTotal(),
+                            driverProfileUrl);
                 })
                 .toList();
 
@@ -367,6 +405,8 @@ public class SiteGeneratorService {
     }
 
     record SeasonEntry(Season season, String slug) {}
+
+    record DriverEntry(String psnId, String driverProfileUrl, int totalPoints) {}
 
     public static class GenerationResult {
         private int pagesGenerated;

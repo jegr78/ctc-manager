@@ -10,6 +10,6 @@ public record RaceView(String homeTeamShortName, String awayTeamShortName, Strin
 	}
 
 	public record ResultView(String driverPsnId, String teamShortName, int position, int qualiPosition,
-	                         boolean fastestLap, int pointsTotal) {
+	                         boolean fastestLap, int pointsTotal, String driverProfileUrl) {
 	}
 }
