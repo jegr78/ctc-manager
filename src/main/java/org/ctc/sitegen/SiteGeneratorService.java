@@ -295,9 +295,10 @@ public class SiteGeneratorService {
             ctx.setVariable("driver", driver);
             ctx.setVariable("team", team);
             ctx.setVariable("results", results);
+            int total = results.stream().mapToInt(r -> r.getPointsTotal()).sum();
             ctx.setVariable("totalRaces", results.size());
-            ctx.setVariable("totalPoints", results.stream().mapToInt(r -> r.getPointsTotal()).sum());
-            ctx.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) results.stream().mapToInt(r -> r.getPointsTotal()).sum() / results.size());
+            ctx.setVariable("totalPoints", total);
+            ctx.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) total / results.size());
             ctx.setVariable("bestPosition", results.stream().mapToInt(r -> r.getPosition()).min().orElse(0));
 
             ctx.setVariable("currentPage", "driver");
