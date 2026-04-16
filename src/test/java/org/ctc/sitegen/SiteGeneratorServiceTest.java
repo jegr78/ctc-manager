@@ -395,4 +395,171 @@ class SiteGeneratorServiceTest {
         assertTrue(imgSrc.contains("img/logos/"),
                 "Logo src should contain img/logos/ path but was: " + imgSrc);
     }
+
+    // --- CONT-01: Season year/number display ---
+
+    @Test
+    void givenSeason_whenGenerate_thenStandingsHasSeasonMeta() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        var meta = doc.select(".season-meta");
+        assertFalse(meta.isEmpty(), ".season-meta element should exist on standings page");
+        assertTrue(meta.text().contains("2026"), "season-meta should contain year 2026");
+        assertTrue(meta.text().contains("#1"), "season-meta should contain season number #1");
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenMatchdayHasSeasonMeta() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("matchday/spieltag-1.html"));
+        var doc = Jsoup.parse(html);
+        var meta = doc.select(".season-meta");
+        assertFalse(meta.isEmpty(), ".season-meta element should exist on matchday page");
+        assertTrue(meta.text().contains("2026"), "season-meta should contain year 2026");
+        assertTrue(meta.text().contains("#1"), "season-meta should contain season number #1");
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenDriverRankingHasSeasonMeta() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("driver-ranking.html"));
+        var doc = Jsoup.parse(html);
+        var meta = doc.select(".season-meta");
+        assertFalse(meta.isEmpty(), ".season-meta element should exist on driver-ranking page");
+        assertTrue(meta.text().contains("2026"), "season-meta should contain year 2026");
+        assertTrue(meta.text().contains("#1"), "season-meta should contain season number #1");
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenHeroLabelContainsYear() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("index.html"));
+        var doc = Jsoup.parse(html);
+        var heroLabel = doc.select(".hero-label");
+        assertFalse(heroLabel.isEmpty(), ".hero-label element should exist");
+        assertTrue(heroLabel.text().contains("2026"), "hero-label should contain year 2026");
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenArchiveShowsYearAndNumber() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("archive.html"));
+        var doc = Jsoup.parse(html);
+        var meta = doc.select(".season-meta");
+        assertFalse(meta.isEmpty(), ".season-meta element should exist in archive");
+        assertTrue(meta.text().contains("2026"), "archive season-meta should contain year 2026");
+        assertTrue(meta.text().contains("#1"), "archive season-meta should contain season number #1");
+    }
+
+    // --- CONT-06: Test season filtering ---
+
+    @Test
+    void givenTestSeason_whenGenerate_thenNoSeasonPagesCreated() {
+        // given — create a second season whose name contains "Test"
+        var testSeason = new Season("Test Throwaway " + uniqueSuffix, 2025, 99);
+        testSeason.setRaceScoring(season.getRaceScoring());
+        testSeason.setMatchScoring(season.getMatchScoring());
+        seasonRepository.save(testSeason);
+        var testSeasonDir = tempDir.resolve("season").resolve(
+                slugify(testSeason.getDisplayLabel()));
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        assertFalse(Files.exists(testSeasonDir),
+                "Test season should not generate any pages");
+    }
+
+    @Test
+    void givenTestSeason_whenGenerate_thenNotInArchive() throws IOException {
+        // given — create a second season whose name contains "Test"
+        var testSeason = new Season("Test Throwaway " + uniqueSuffix, 2025, 99);
+        testSeason.setRaceScoring(season.getRaceScoring());
+        testSeason.setMatchScoring(season.getMatchScoring());
+        seasonRepository.save(testSeason);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("archive.html"));
+        var doc = Jsoup.parse(html);
+        assertFalse(doc.select("tbody tr").stream()
+                        .anyMatch(row -> row.text().contains("Test Throwaway")),
+                "Test season should not appear in archive");
+    }
+
+    // --- CONT-07: Empty match-meta and period column ---
+
+    @Test
+    void givenRaceWithNoTrackOrCar_whenGenerate_thenMatchMetaAbsent() throws IOException {
+        // given — remove track and car from the existing race
+        testRace.setTrack(null);
+        testRace.setCar(null);
+        raceRepository.save(testRace);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then — check matchday page
+        var html = Files.readString(seasonDir().resolve("matchday/spieltag-1.html"));
+        var doc = Jsoup.parse(html);
+        assertTrue(doc.select(".match-meta").isEmpty(),
+                "match-meta should not render when both track and car are null");
+    }
+
+    @Test
+    void givenRaceWithOnlyTrack_whenGenerate_thenMatchMetaPresent() throws IOException {
+        // given — remove car but keep track
+        testRace.setCar(null);
+        raceRepository.save(testRace);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then — match-meta should still render with just the track
+        var html = Files.readString(seasonDir().resolve("matchday/spieltag-1.html"));
+        var doc = Jsoup.parse(html);
+        assertFalse(doc.select(".match-meta").isEmpty(),
+                "match-meta should render when track is present (even if car is null)");
+    }
+
+    @Test
+    void givenSeasonWithNoDates_whenGenerate_thenPeriodCellEmpty() throws IOException {
+        // given — setUp() season has null startDate and endDate by default
+
+        // when
+        siteGeneratorService.generate();
+
+        // then — archive period cell should be empty (no "null" text, no orphaned separator)
+        var html = Files.readString(tempDir.resolve("archive.html"));
+        var doc = Jsoup.parse(html);
+        var rows = doc.select("tbody tr");
+        assertFalse(rows.isEmpty(), "archive should have at least one season row");
+        // Find the period cell for our season — check all tds for "null" text
+        for (var row : rows) {
+            var cells = row.select("td");
+            for (var cell : cells) {
+                assertFalse(cell.text().contains("null"),
+                        "Period cell should not contain 'null' text; found: " + cell.text());
+            }
+        }
+    }
 }
