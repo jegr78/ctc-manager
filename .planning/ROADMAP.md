@@ -74,7 +74,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 
 **Milestone Goal:** Fix broken links, add missing content, improve navigation and cross-linking, and deliver a polished, accessible static site with professional UX.
 
-- [ ] **Phase 37: Critical Link Fixes** - Fix all broken navigation and asset links that block every other page
+- [x] **Phase 37: Critical Link Fixes** - Fix all broken navigation and asset links that block every other page (completed 2026-04-16)
 - [ ] **Phase 38: Season Content & Data Filtering** - Display season metadata on all pages and hide missing/test data
 - [ ] **Phase 39: Entity Cross-Linking** - Add inline links from standings, rankings, matchdays, and team profiles
 - [ ] **Phase 40: Navigation & Structure** - Season subnavigation, active nav state, and breadcrumbs
@@ -95,11 +95,11 @@ See: milestones/v1.5-ROADMAP.md for full details
 3. All navigation links work when the static site is opened from any subdirectory (relative paths)
 4. Team logo images display correctly on all static site pages (standings, team-profile, matchday)
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 37-01-PLAN.md — TDD RED: Write failing tests for LINK-01..04 + add uploadDir field
-- [ ] 37-02-PLAN.md — TDD GREEN: Implement all four link fixes (archive slugs, nav links, relative paths, team logos)
+- [x] 37-02-PLAN.md — TDD GREEN: Implement all four link fixes (archive slugs, nav links, relative paths, team logos)
 
 **UI hint**: yes
 
@@ -204,7 +204,7 @@ Plans:
 | 34. Convention Fixes | v1.5 | 2/2 | Complete | 2026-04-14 |
 | 35. Site Generator Bye-Race Null Safety | v1.5 | 1/1 | Complete | 2026-04-14 |
 | 36. Audit Remediation | v1.5 | 1/1 | Complete | 2026-04-14 |
-| 37. Critical Link Fixes | v1.6 | 1/2 | In Progress|  |
+| 37. Critical Link Fixes | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 38. Season Content & Data Filtering | v1.6 | 0/? | Not started | - |
 | 39. Entity Cross-Linking | v1.6 | 0/? | Not started | - |
 | 40. Navigation & Structure | v1.6 | 0/? | Not started | - |
