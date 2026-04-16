@@ -100,7 +100,7 @@ Source: `style.css` lines 12-24 (verified); D-05 from CONTEXT.md.
 **Visual spec:**
 - Container: `background: var(--bg-card)`, `border-bottom: 1px solid var(--border)`, `padding: 0 32px`
 - Inner: `max-width: 1100px`, `margin: 0 auto`, `display: flex`, `gap: 4px`, `height: 44px`, `align-items: center`
-- Link inactive: `color: var(--text-dim)`, `font-size: 12px`, `text-transform: uppercase`, `letter-spacing: 1px`, `padding: 6px 12px`, `border-radius: 4px`, `transition: all 0.2s`
+- Link inactive: `color: var(--text-dim)`, `font-size: 12px`, `text-transform: uppercase`, `letter-spacing: 1px`, `padding: 8px 12px`, `border-radius: 4px`, `transition: all 0.2s`
 - Link hover: `color: var(--white)`, `background: rgba(255,255,255,0.05)`
 - Link active: `color: var(--accent)`, `background: rgba(79,195,247,0.1)` — applied via `.subnav-link.active`
 
@@ -153,7 +153,7 @@ Source: D-05, D-06, D-07 from CONTEXT.md; Pattern 3 from RESEARCH.md.
 - Container: `font-size: 12px`, `padding: 8px 32px`, `color: var(--text-muted)`, `max-width: 1100px`, `margin: 0 auto`
 - Position: between subnav and `<main>` content — inside `layout.html`, outside the `.main` wrapper
 - Breadcrumb link: `color: var(--text-dim)`, `text-decoration: none` — on hover: `color: var(--accent)`
-- Separator `>`: literal `<span class="breadcrumb-sep" aria-hidden="true"> > </span>`, `margin: 0 6px`, `color: var(--text-muted)` — NOT via `th:text` (avoids HTML-entity escaping issue)
+- Separator `>`: literal `<span class="breadcrumb-sep" aria-hidden="true"> > </span>`, `margin: 0 8px`, `color: var(--text-muted)` — NOT via `th:text` (avoids HTML-entity escaping issue)
 - Current page: `<span class="breadcrumb-current">`, `color: var(--text)` — plain text, not a link
 
 **Three-level structure:**
@@ -262,7 +262,7 @@ Source: RESEARCH.md Common Pitfall #2.
 | Item | Decision | Rationale |
 |------|----------|-----------|
 | Index page subnav (D-04) | Omit subnav on index page | Index is the global home; "Standings" in subnav would appear to navigate to the same page as the "Standings" top-nav link. Clean separation: index = home, season pages = seasonal context. |
-| Subnav CSS dimensions | height: 44px, font-size: 12px, gap: 4px, padding: 6px 12px per link | Proportionally smaller than top-nav (60px / 13px) — establishes clear visual hierarchy without being illegible |
+| Subnav CSS dimensions | height: 44px, font-size: 12px, gap: 4px, padding: 8px 12px per link | Proportionally smaller than top-nav (60px / 13px) — establishes clear visual hierarchy without being illegible |
 | Breadcrumb separator | Literal `<span aria-hidden="true"> > </span>` — not via `th:text` | Avoids HTML entity escaping in Jsoup test assertions (Pitfall 5) |
 | Matchday date display | Label-only — no date column | `Matchday.matchDate` field does not exist (A3 verified); no database change in scope |
 | Mobile subnav | Horizontal scroll (not vertical stack) | Maintains tab-bar UX familiar from mobile apps; vertical stack would break the pill design |
