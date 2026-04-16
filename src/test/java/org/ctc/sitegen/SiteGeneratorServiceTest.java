@@ -684,4 +684,99 @@ class SiteGeneratorServiceTest {
         // Index currently does not render match-results table — this test passes vacuously.
         // If match-results are added to index in Plan 02, this test will validate the links.
     }
+
+    // --- CONT-05: Season subnav, matchday index page ---
+
+    @Test
+    void givenSeason_whenGenerate_thenStandingsHasSubnav() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        assertFalse(doc.select(".subnav").isEmpty(), "Season pages should have subnav");
+        assertEquals(4, doc.select(".subnav-link").size(), "Subnav should have exactly 4 links");
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenCreatesMatchdayIndexPage() {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        assertTrue(Files.exists(seasonDir().resolve("matchdays.html")),
+                "matchdays.html should exist in season directory");
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenSubnavMatchdaysLinkCorrect() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        var matchdaysLinks = doc.select(".subnav-link[href*='matchdays.html']");
+        assertFalse(matchdaysLinks.isEmpty(),
+                "Subnav should contain a link to matchdays.html");
+    }
+
+    // --- UX-02: Active nav state ---
+
+    @Test
+    void givenStandingsPage_whenGenerate_thenStandingsNavItemActive() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        var activeLinks = doc.select(".subnav-link.active");
+        assertEquals(1, activeLinks.size(), "Exactly one subnav item should be active");
+        assertEquals("Standings", activeLinks.first().text());
+    }
+
+    // --- UX-03: Breadcrumbs ---
+
+    @Test
+    void givenSeason_whenGenerate_thenStandingsHasBreadcrumb() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        assertFalse(doc.select(".breadcrumb").isEmpty(), "Season pages should have breadcrumb");
+        assertFalse(doc.select(".breadcrumb-current").isEmpty(),
+                "Breadcrumb should have a current-page item");
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenBreadcrumbCurrentNotLink() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(seasonDir().resolve("standings.html"));
+        var doc = Jsoup.parse(html);
+        var current = doc.select(".breadcrumb-current");
+        assertFalse(current.isEmpty(), "Breadcrumb current item should exist");
+        assertTrue(current.select("a").isEmpty(),
+                "Breadcrumb current item should NOT be a link");
+        assertTrue(current.text().contains("Standings"),
+                "Breadcrumb current should say 'Standings'");
+    }
+
+    @Test
+    void givenArchivePage_whenGenerate_thenNoBreadcrumb() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("archive.html"));
+        var doc = Jsoup.parse(html);
+        assertTrue(doc.select(".breadcrumb").isEmpty(),
+                "Archive page should have no breadcrumb");
+    }
 }
