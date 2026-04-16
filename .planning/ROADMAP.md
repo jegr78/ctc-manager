@@ -76,7 +76,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 
 - [x] **Phase 37: Critical Link Fixes** - Fix all broken navigation and asset links that block every other page (completed 2026-04-16)
 - [x] **Phase 38: Season Content & Data Filtering** - Display season metadata on all pages and hide missing/test data (gap closure) (completed 2026-04-16)
-- [ ] **Phase 39: Entity Cross-Linking** - Add inline links from standings, rankings, matchdays, and team profiles
+- [x] **Phase 39: Entity Cross-Linking** - Add inline links from standings, rankings, matchdays, and team profiles (completed 2026-04-16)
 - [ ] **Phase 40: Navigation & Structure** - Season subnavigation, active nav state, and breadcrumbs
 - [ ] **Phase 41: UX Polish & Accessibility** - Skip link, winner highlight, mobile scroll, footer, aria, hover transitions
 
@@ -138,11 +138,11 @@ Plans:
 3. Driver names on matchday result rows link to their driver profile pages
 4. A team's profile page lists the team's drivers, each linking to their driver profile
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 39-01-PLAN.md — TDD RED: Write failing tests for entity cross-link assertions (CONT-02, CONT-03, CONT-04, CONT-08)
-- [ ] 39-02-PLAN.md — TDD GREEN: Implement service data plumbing, template links, and CSS entity-link class
+- [x] 39-02-PLAN.md — TDD GREEN: Implement service data plumbing, template links, and CSS entity-link class
 
 **UI hint**: yes
 
@@ -217,6 +217,6 @@ Plans:
 | 36. Audit Remediation | v1.5 | 1/1 | Complete | 2026-04-14 |
 | 37. Critical Link Fixes | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 38. Season Content & Data Filtering | v1.6 | 3/3 | Complete    | 2026-04-16 |
-| 39. Entity Cross-Linking | v1.6 | 1/2 | In Progress|  |
+| 39. Entity Cross-Linking | v1.6 | 2/2 | Complete   | 2026-04-16 |
 | 40. Navigation & Structure | v1.6 | 0/? | Not started | - |
 | 41. UX Polish & Accessibility | v1.6 | 0/? | Not started | - |
