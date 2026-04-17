@@ -13,6 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -25,6 +26,9 @@ class SiteGeneratorServiceTest {
 
     @Autowired
     private SiteGeneratorService siteGeneratorService;
+
+    @Autowired
+    private SiteProperties siteProperties;
 
     @Autowired
     private SeasonRepository seasonRepository;
@@ -146,6 +150,12 @@ class SiteGeneratorServiceTest {
 
         // Override output dir for test
         siteGeneratorService.setOutputDir(tempDir.toString());
+
+        // Reset links to default (empty-state test mutates this singleton bean)
+        var defaultLink = new SiteProperties.LinkEntry();
+        defaultLink.setName("YouTube");
+        defaultLink.setUrl("https://www.youtube.com/@CommunityTeamCup");
+        siteProperties.setLinks(new java.util.ArrayList<>(List.of(defaultLink)));
     }
 
     private Path seasonDir() {
@@ -1051,9 +1061,8 @@ class SiteGeneratorServiceTest {
 
     @Test
     void givenNoLinksConfigured_whenGenerate_thenLinksPageShowsEmptyState() throws IOException {
-        // given -- default dev config has a link; this test verifies the empty state
-        // After SiteProperties is created (Plan 02), inject it and call setLinks(List.of())
-        // For RED phase: links.html does not exist at all, so this fails at the exists check
+        // given
+        siteProperties.setLinks(List.of());
 
         // when
         siteGeneratorService.generate();
@@ -1061,9 +1070,10 @@ class SiteGeneratorServiceTest {
         // then
         var linksFile = tempDir.resolve("links.html");
         assertTrue(Files.exists(linksFile), "links.html must exist even with no configured links");
-        // Full assertion (will be reached once Plan 02 wires SiteProperties):
-        // var html = Files.readString(linksFile);
-        // assertTrue(html.contains("No links configured."), "Empty state message should appear");
+        var html = Files.readString(linksFile);
+        assertTrue(html.contains("No links configured."), "Empty state message should appear");
+        var doc = Jsoup.parse(html);
+        assertTrue(doc.select(".link-card").isEmpty(), "No link cards should render when links list is empty");
     }
 
     // LINK-10: Shared layout (nav, footer) on links page
