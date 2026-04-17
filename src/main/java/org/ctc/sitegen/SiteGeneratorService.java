@@ -49,6 +49,7 @@ public class SiteGeneratorService {
     private final PlayoffRepository playoffRepository;
     private final SeasonTeamRepository seasonTeamRepository;
     private final SiteProperties siteProperties;
+    private final YouTubeScraperService youTubeScraperService;
 
     @lombok.Setter
     @Value("${app.upload-dir:data/dev/uploads}")
@@ -141,30 +142,17 @@ public class SiteGeneratorService {
     private void generateIndex(Path outPath, Season activeSeason, List<Season> allSeasons,
                                 String activeSeasonSlug, String activeSeasonName, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
-        ctx.setVariable("allSeasons", allSeasons);
 
-        if (activeSeason != null) {
-            ctx.setVariable("season", activeSeason);
-            var standings = standingsService.calculateStandings(activeSeason.getId());
-            ctx.setVariable("standings", standings);
-            var indexTeamSlugMap = new java.util.HashMap<java.util.UUID, String>();
-            for (var s : standings) {
-                indexTeamSlugMap.put(s.getTeam().getId(),
-                    "./season/" + activeSeasonSlug + "/team/" + slugify(s.getTeam().getShortName()) + ".html");
-            }
-            ctx.setVariable("teamSlugMap", indexTeamSlugMap);
+        // Scrape YouTube video ID (fallback to configured value) -- per D-02, D-05
+        String videoId = youTubeScraperService.scrapeVideoId(
+                siteProperties.getYoutubeChannelUrl(),
+                siteProperties.getYoutubeVideoId());
+        ctx.setVariable("videoId", videoId);
 
-            var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(activeSeason.getId());
-            if (!matchdays.isEmpty()) {
-                var lastMatchday = matchdays.getLast();
-                var indexLineups = raceLineupRepository.findByRaceMatchdaySeasonId(activeSeason.getId());
-                ctx.setVariable("lastMatchday", lastMatchday);
-                ctx.setVariable("lastMatchdayRaces", raceRepository.findByMatchdayId(lastMatchday.getId()).stream()
-                        .map(r -> toRaceView(r, activeSeason, "./season/" + activeSeasonSlug + "/driver/", indexLineups)).toList());
-            }
-        }
+        // D-16: No standings, no teamSlugMap, no lastMatchday, no lastMatchdayRaces.
+        // activeSeasonSlug is passed to writeTemplate for Standings tile conditional link (D-10, D-13)
 
-        ctx.setVariable("currentPage", "index");
+        ctx.setVariable("currentPage", "home");  // D-19: was "index"
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
         ctx.setVariable("breadcrumbCurrent", null);

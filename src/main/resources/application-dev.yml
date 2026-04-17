@@ -36,7 +36,7 @@ ctc:
   site:
     output-dir: target/site
     youtube-channel-url: "https://www.youtube.com/@CommunityTeamCup"
-    youtube-video-id: ""
+    youtube-video-id: "dQw4w9WgXcQ"
     links:
       - name: "YouTube"
         url: "https://www.youtube.com/@CommunityTeamCup"

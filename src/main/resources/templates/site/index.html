@@ -1,52 +1,44 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{site/layout :: layout(${season != null ? season.name : 'Community Team Cup'}, ~{::section})}">
+      th:replace="~{site/layout :: layout('Community Team Cup', ~{::section})}">
 <body>
 <section>
     <div class="hero">
-        <div class="hero-label" th:if="${season}" th:text="'Season ' + ${season.name} + ' — ' + ${season.year}"></div>
         <h1>COMMUNITY TEAM CUP</h1>
         <p class="hero-sub">Gran Turismo — Team vs. Team Racing League</p>
     </div>
 
-    <!-- Standings -->
-    <div class="section" th:if="${standings != null && !standings.isEmpty()}">
-        <h2 class="section-title">Team Standings</h2>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>#</th><th>Team</th><th class="text-center">MP</th>
-                        <th class="text-center">W</th><th class="text-center">D</th><th class="text-center">L</th>
-                        <th class="text-center">PR</th><th class="text-right">Pts</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr th:each="s, i : ${standings}">
-                        <td class="font-bold text-white" th:text="${i.count}"></td>
-                        <td class="font-bold">
-                            <a class="entity-link" th:href="${teamSlugMap.get(s.team.id)}" th:text="${s.team.shortName}"></a>
-                        </td>
-                        <td class="text-center" th:text="${s.played}"></td>
-                        <td class="text-center" th:text="${s.wins}"></td>
-                        <td class="text-center" th:text="${s.draws}"></td>
-                        <td class="text-center" th:text="${s.losses}"></td>
-                        <td class="text-center text-dim" th:text="${s.pointsRatio}"></td>
-                        <td class="text-right font-bold text-white text-lg" th:text="${s.points}"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+    <!-- YouTube Hero Video (D-06, D-07, D-08, D-09) -->
+    <div class="landing-hero" th:if="${videoId != null and !#strings.isEmpty(videoId)}">
+        <iframe th:src="'https://www.youtube.com/embed/' + ${videoId}"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen></iframe>
     </div>
 
-    <!-- Last Matchday -->
-    <div class="section" th:if="${lastMatchday != null}">
-        <h2 class="section-title" th:text="${lastMatchday.label}"></h2>
-        <div class="match-grid">
-            <div class="match-card" th:each="race : ${lastMatchdayRaces}">
-                <th:block th:insert="~{site/fragments/match-card :: matchCardBody(${race})}"></th:block>
-            </div>
-        </div>
+    <!-- Tile Navigation (D-10, D-11, D-12, D-13) -->
+    <div class="tile-grid">
+        <a class="tile-card" th:href="${rootPath + '/archive.html'}">
+            <div class="tile-card-label">Seasons</div>
+            <div class="tile-card-desc">Browse all seasons</div>
+        </a>
+        <a class="tile-card"
+           th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
+           th:href="${rootPath + '/season/' + activeSeasonSlug + '/standings.html'}">
+            <div class="tile-card-label">Standings</div>
+            <div class="tile-card-desc">Current standings</div>
+        </a>
+        <a class="tile-card" th:href="${rootPath + '/drivers.html'}">
+            <div class="tile-card-label">Drivers</div>
+            <div class="tile-card-desc">All drivers</div>
+        </a>
+        <a class="tile-card" th:href="${rootPath + '/teams.html'}">
+            <div class="tile-card-label">Teams</div>
+            <div class="tile-card-desc">All teams</div>
+        </a>
+        <a class="tile-card" th:href="${rootPath + '/links.html'}">
+            <div class="tile-card-label">Links</div>
+            <div class="tile-card-desc">Community links</div>
+        </a>
     </div>
 </section>
 </body>
