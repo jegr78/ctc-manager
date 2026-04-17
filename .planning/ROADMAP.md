@@ -83,7 +83,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 43: Code Quality Cleanup** - Extract match card fragment, fix vacuous test, remove dead code (completed 2026-04-16)
 - [x] **Phase 44: Clean Output Directory** - Eliminate stale files by emptying output dir before generation (completed 2026-04-16)
 - [x] **Phase 45: Footer YouTube Link** - Add YouTube channel link to shared site footer (completed 2026-04-16)
-- [ ] **Phase 46: Configurable Links Page** - New links.html page driven by application properties
+- [x] **Phase 46: Configurable Links Page** - New links.html page driven by application properties (completed 2026-04-17)
 - [ ] **Phase 47: Teams & Drivers Overview Pages** - Cross-season overview pages with client-side season filter
 - [ ] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards
 - [ ] **Phase 49: E2E Site Validation** - Comprehensive link resolution and structure validation tests
@@ -134,8 +134,8 @@ Plans:
 4. Empty config still generates the page (empty state)
 
 Plans:
-- [ ] 46-01-PLAN.md — TDD RED: Config class + failing tests
-- [ ] 46-02-PLAN.md — TDD GREEN: Implement links page generation
+- [x] 46-01-PLAN.md — TDD RED: Config class + failing tests
+- [x] 46-02-PLAN.md — TDD GREEN: Implement links page generation
 
 ### Phase 47: Teams & Drivers Overview Pages
 
@@ -373,7 +373,7 @@ Plans:
 | 43. Code Quality Cleanup | v1.6 | 1/1 | Complete | 2026-04-16 |
 | 44. Clean Output Directory | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 45. Footer YouTube Link | v1.6 | 2/2 | Complete    | 2026-04-16 |
-| 46. Configurable Links Page | v1.6 | 0/2 | Pending | — |
+| 46. Configurable Links Page | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 47. Teams & Drivers Overview Pages | v1.6 | 0/2 | Pending | — |
 | 48. Landing Page Redesign | v1.6 | 0/2 | Pending | — |
 | 49. E2E Site Validation | v1.6 | 0/1 | Pending | — |
