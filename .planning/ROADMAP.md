@@ -103,6 +103,11 @@ See: milestones/v1.5-ROADMAP.md for full details
 3. `SiteGeneratorServiceTest` does not make live HTTP calls to YouTube during test execution
 4. `YouTubeScraperService` is mocked/stubbed in integration tests with a deterministic video ID
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] 50-01-PLAN.md — Mock YouTube + fix OVER-06 broken team profile links for 0-game teams
+
 ### Phase 44: Clean Output Directory
 
 **Goal**: Eliminate stale files by emptying the output directory before generating fresh content
@@ -392,4 +397,4 @@ Plans:
 | 47. Teams & Drivers Overview Pages | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 48. Landing Page Redesign | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 49. E2E Site Validation | v1.6 | 1/1 | Complete    | 2026-04-17 |
-| 50. Site Generator Test Robustness | v1.6 | 0/0 | Planned | — |
+| 50. Site Generator Test Robustness | v1.6 | 0/1 | Planned | — |
