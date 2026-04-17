@@ -596,3 +596,86 @@ tr:hover { background: var(--bg-hover); }
     .subnav-inner { height: auto; padding: 8px 0; flex-wrap: nowrap; }
     .breadcrumb { padding: 8px 16px; }
 }
+
+/* Overview pages (Phase 47) */
+.filter-bar {
+    margin-bottom: 20px;
+}
+
+.filter-bar select {
+    background: var(--bg-card);
+    color: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.filter-bar select:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.overview-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    transition: border-color 0.2s;
+}
+
+.overview-card:hover {
+    border-color: var(--accent);
+}
+
+.overview-card-name {
+    font-weight: 700;
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.overview-card-name:hover {
+    text-decoration: underline;
+}
+
+.overview-card-team {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.overview-card-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.overview-card-seasons {
+    margin-top: 8px;
+}
+
+.season-tag {
+    display: inline-block;
+    background: rgba(79, 195, 247, 0.1);
+    color: var(--accent);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    margin: 2px 2px 0 0;
+}
+
+/* Responsive: 1-col on mobile (mirrors .match-grid) */
+@media (max-width: 768px) {
+    .overview-grid {
+        grid-template-columns: 1fr;
+    }
+}
