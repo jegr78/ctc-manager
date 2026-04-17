@@ -70,6 +70,9 @@ class SiteGeneratorServiceTest {
     private PlayoffRepository playoffRepository;
 
     @Autowired
+    private SeasonTeamRepository seasonTeamRepository;
+
+    @Autowired
     private org.ctc.domain.service.ScoringService scoringService;
 
     @TempDir
@@ -1090,5 +1093,164 @@ class SiteGeneratorServiceTest {
         assertNotNull(doc.selectFirst("nav.nav"), "Links page must have top navigation");
         assertNotNull(doc.selectFirst("footer.footer"), "Links page must have footer");
         assertNotNull(doc.selectFirst(".breadcrumb"), "Links page must have breadcrumbs");
+    }
+
+    // --- Phase 47: Teams & Drivers Overview Pages ---
+
+    // OVER-01: teams.html exists
+
+    @Test
+    void whenGenerate_thenCreatesTeamsOverviewPage() {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        assertTrue(Files.exists(tempDir.resolve("teams.html")),
+                "teams.html must exist in output root");
+    }
+
+    // OVER-02: drivers.html exists
+
+    @Test
+    void whenGenerate_thenCreatesDriversOverviewPage() {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        assertTrue(Files.exists(tempDir.resolve("drivers.html")),
+                "drivers.html must exist in output root");
+    }
+
+    // OVER-03: season filter on teams page
+
+    @Test
+    void givenMultipleSeasons_whenGenerate_thenTeamsPageHasSeasonFilter() throws IOException {
+        // given — create a second production season with a team
+        var season2 = new Season("Second Season " + uniqueSuffix, 2025, 1);
+        season2.setRaceScoring(season.getRaceScoring());
+        season2.setMatchScoring(season.getMatchScoring());
+        seasonRepository.save(season2);
+        var extraTeam = teamRepository.save(new Team("Filter Team " + uniqueSuffix, "FLT" + uniqueSuffix));
+        season2.addTeam(extraTeam);
+        seasonRepository.save(season2);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
+        assertNotNull(doc.selectFirst("select#season-filter"), "Season filter dropdown must exist");
+        assertFalse(doc.select("select#season-filter option").isEmpty(), "Filter must have option elements");
+        assertFalse(doc.select(".overview-card[data-seasons]").isEmpty(), "Cards must have data-seasons attribute");
+    }
+
+    // OVER-04: team names and season tags
+
+    @Test
+    void givenTeams_whenGenerate_thenTeamsOverviewShowsNamesAndSeasons() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
+        var cards = doc.select(".overview-card");
+        assertFalse(cards.isEmpty(), "Teams overview must contain overview cards");
+        var html = doc.html();
+        assertTrue(html.contains("GTNR" + uniqueSuffix) || html.contains("GP1R" + uniqueSuffix),
+                "Teams overview must show team short names");
+        assertFalse(doc.select(".season-tag").isEmpty(), "Teams overview must show season tags");
+    }
+
+    // OVER-05: driver PSN IDs and team names
+
+    @Test
+    void givenDrivers_whenGenerate_thenDriversOverviewShowsPsnIdAndTeams() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("drivers.html")));
+        var cards = doc.select(".overview-card");
+        assertFalse(cards.isEmpty(), "Drivers overview must contain overview cards");
+        var html = doc.html();
+        assertTrue(html.contains("gen_panic_" + uniqueSuffix),
+                "Drivers overview must show driver PSN ID");
+        assertTrue(html.contains("GTNR" + uniqueSuffix) || html.contains("GP1R" + uniqueSuffix),
+                "Drivers overview must show team name(s)");
+    }
+
+    // OVER-06: profile links resolve to season-specific paths
+
+    @Test
+    void givenTeamsAndDrivers_whenGenerate_thenOverviewLinksResolveToSeasonProfiles() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var teamsDoc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
+        var teamLinks = teamsDoc.select(".overview-card a[href]");
+        assertFalse(teamLinks.isEmpty(), "Team cards must have profile links");
+        for (var link : teamLinks) {
+            assertTrue(link.attr("href").startsWith("season/"),
+                    "Team profile link must start with season/: " + link.attr("href"));
+            assertTrue(link.attr("href").contains("/team/"),
+                    "Team profile link must contain /team/: " + link.attr("href"));
+        }
+
+        var driversDoc = Jsoup.parse(Files.readString(tempDir.resolve("drivers.html")));
+        var driverLinks = driversDoc.select(".overview-card a[href]");
+        assertFalse(driverLinks.isEmpty(), "Driver cards must have profile links");
+        for (var link : driverLinks) {
+            assertTrue(link.attr("href").startsWith("season/"),
+                    "Driver profile link must start with season/: " + link.attr("href"));
+            assertTrue(link.attr("href").contains("/driver/"),
+                    "Driver profile link must contain /driver/: " + link.attr("href"));
+        }
+    }
+
+    // D-01 guard: sub-teams excluded from teams overview
+
+    @Test
+    void givenSubTeam_whenGenerate_thenSubTeamExcludedFromTeamsOverview() throws IOException {
+        // given — create a sub-team of an existing team and add it to the season
+        var parentTeam = teamRepository.findAll().stream()
+                .filter(t -> t.getShortName().startsWith("GTNR" + uniqueSuffix))
+                .findFirst().orElseThrow();
+        var subTeam = teamRepository.save(new Team("Sub Alpha " + uniqueSuffix, "SUBA" + uniqueSuffix, parentTeam));
+        seasonTeamRepository.save(new SeasonTeam(season, subTeam));
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
+        var html = doc.html();
+        assertFalse(html.contains("SUBA" + uniqueSuffix),
+                "Sub-team must NOT appear in teams overview (D-01)");
+    }
+
+    // D-04 guard: test season not in overview filter
+
+    @Test
+    void givenTestSeason_whenGenerate_thenTestSeasonNotInOverviewFilter() throws IOException {
+        // given — create a season with "Test" in name
+        var testSeason = new Season("Test League " + uniqueSuffix, 2024, 1);
+        testSeason.setRaceScoring(season.getRaceScoring());
+        testSeason.setMatchScoring(season.getMatchScoring());
+        seasonRepository.save(testSeason);
+        var extraTeam = teamRepository.save(new Team("Test Only Team " + uniqueSuffix, "TOT" + uniqueSuffix));
+        testSeason.addTeam(extraTeam);
+        seasonRepository.save(testSeason);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
+        var options = doc.select("select#season-filter option");
+        for (var option : options) {
+            assertFalse(option.text().contains("Test League"),
+                    "Test season must NOT appear in season filter (D-04)");
+        }
     }
 }
