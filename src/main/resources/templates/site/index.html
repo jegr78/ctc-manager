@@ -20,6 +20,7 @@
         tag.src = 'https://www.youtube.com/iframe_api';
         document.head.appendChild(tag);
 
+        var playerReady = false;
         window.onYouTubeIframeAPIReady = function() {
             new YT.Player('yt-hero-player', {
                 videoId: videoId,
@@ -37,12 +38,18 @@
                 },
                 events: {
                     onReady: function(event) {
+                        playerReady = true;
                         event.target.playVideo();
                     },
                     onStateChange: function(event) {
-                        if (event.data === YT.PlayerState.ENDED) {
-                            event.target.seekTo(0);
-                            event.target.playVideo();
+                        if (!playerReady) return;
+                        try {
+                            if (event.data === YT.PlayerState.ENDED) {
+                                event.target.seekTo(0);
+                                event.target.playVideo();
+                            }
+                        } catch (e) {
+                            // player may be unavailable during page unload
                         }
                     }
                 }
