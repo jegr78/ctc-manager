@@ -3,6 +3,7 @@ package org.ctc.sitegen;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
+import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.*;
 import org.ctc.sitegen.model.RaceView;
 import org.ctc.domain.service.DriverRankingService;
@@ -46,6 +47,7 @@ public class SiteGeneratorService {
     private final PlayoffService playoffService;
     private final PlayoffBracketViewService playoffBracketViewService;
     private final PlayoffRepository playoffRepository;
+    private final SeasonTeamRepository seasonTeamRepository;
     private final SiteProperties siteProperties;
 
     @lombok.Setter
@@ -94,6 +96,10 @@ public class SiteGeneratorService {
 
             // Generate links page
             generateLinks(outPath, siteProperties.getLinks(), activeSeasonSlug, activeSeasonName, result);
+
+            // Generate overview pages
+            generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
+            generateDriversOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
 
             // Copy static assets
             copyAssets(outPath, result);
@@ -405,6 +411,18 @@ public class SiteGeneratorService {
         result.incrementPages();
     }
 
+    private void generateTeamsOverview(Path outPath, List<Season> productionSeasons,
+                                       String activeSeasonSlug, String activeSeasonName,
+                                       GenerationResult result) throws IOException {
+        // TDD RED: stub — implementation in plan 47-02
+    }
+
+    private void generateDriversOverview(Path outPath, List<Season> productionSeasons,
+                                         String activeSeasonSlug, String activeSeasonName,
+                                         GenerationResult result) throws IOException {
+        // TDD RED: stub — implementation in plan 47-02
+    }
+
     private void generateMatchdayIndex(Path outPath, Season season, String activeSeasonSlug,
                                         String activeSeasonName, boolean hasPlayoff, GenerationResult result) throws IOException {
         var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
@@ -572,6 +590,14 @@ public class SiteGeneratorService {
     record SeasonEntry(Season season, String slug) {}
 
     record DriverEntry(String psnId, String driverProfileUrl, int totalPoints) {}
+
+    record TeamOverviewEntry(String shortName, String teamSlug, String logoRelPath,
+                             String profileUrl, List<String> seasonSlugs, List<String> seasonLabels) {}
+
+    record DriverOverviewEntry(String psnId, String driverSlug, String teamName,
+                               String profileUrl, List<String> seasonSlugs, List<String> seasonLabels) {}
+
+    record SeasonDriverInfo(Season season, Team team) {}
 
     public static class GenerationResult {
         private int pagesGenerated;
