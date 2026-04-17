@@ -70,7 +70,7 @@ Requirements for the Static Site Quality milestone. Each maps to roadmap phases.
 - [x] **OVER-03**: Both overview pages can be filtered by season (client-side JS, static site)
 - [x] **OVER-04**: Teams overview shows team name, logo, and seasons participated
 - [x] **OVER-05**: Drivers overview shows PSN ID, team(s), and seasons participated
-- [ ] **OVER-06**: Team/driver names link to their season-specific profile pages
+- [x] **OVER-06**: Team/driver names link to their season-specific profile pages
 
 ### E2E Validation
 
@@ -145,7 +145,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | OVER-03 | Phase 47 | Complete |
 | OVER-04 | Phase 47 | Complete |
 | OVER-05 | Phase 47 | Complete |
-| OVER-06 | Phase 50 | Pending |
+| OVER-06 | Phase 50 | Complete |
 | LAND-01 | Phase 48 | Complete |
 | LAND-02 | Phase 48 | Complete |
 | LAND-03 | Phase 48 | Complete |
@@ -162,7 +162,7 @@ Deferred to future release. Tracked but not in current roadmap.
 
 - v1.6 requirements: 48 total (22 original + 26 new)
 - Mapped to phases: 48
-- Complete: 47, Pending: 1 (OVER-06 → Phase 50 gap closure)
+- Complete: 48, Pending: 0
 
 ---
 
