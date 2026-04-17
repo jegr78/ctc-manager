@@ -6,7 +6,7 @@
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
 - :white_check_mark: **v1.3 English Test Data** — Phases 20-27 (shipped 2026-04-10)
 - :white_check_mark: **v1.5 Code Review Fixes** — Phases 28-36 (shipped 2026-04-15)
-- **v1.6 Static Site Quality** — Phases 37-43 (in progress)
+- **v1.6 Static Site Quality** — Phases 37-50 (in progress)
 
 ## Phases
 
@@ -87,6 +87,21 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 47: Teams & Drivers Overview Pages** - Cross-season overview pages with client-side season filter (completed 2026-04-17)
 - [x] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards (completed 2026-04-17)
 - [x] **Phase 49: E2E Site Validation** - Comprehensive link resolution and structure validation tests (completed 2026-04-17)
+- [ ] **Phase 50: Site Generator Test Robustness** - Fix latent OVER-06 broken links and mock YouTube scraper in tests (gap closure)
+
+### Phase 50: Site Generator Test Robustness
+
+**Goal**: Fix latent broken team-profile links for 0-game teams and mock YouTubeScraperService to eliminate live HTTP calls in tests
+**Depends on**: Phase 49
+**Requirements**: OVER-06
+**Gap Closure**: Closes tech debt from v1.6 audit (OVER-06 latent, YouTube test performance)
+
+**Success Criteria** (what must be TRUE):
+
+1. `generateTeamsOverview()` only links to teams that have a generated profile page (teams with standings)
+2. A test with a 0-game team verifies no broken link is generated in `teams.html`
+3. `SiteGeneratorServiceTest` does not make live HTTP calls to YouTube during test execution
+4. `YouTubeScraperService` is mocked/stubbed in integration tests with a deterministic video ID
 
 ### Phase 44: Clean Output Directory
 
@@ -377,3 +392,4 @@ Plans:
 | 47. Teams & Drivers Overview Pages | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 48. Landing Page Redesign | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 49. E2E Site Validation | v1.6 | 1/1 | Complete    | 2026-04-17 |
+| 50. Site Generator Test Robustness | v1.6 | 0/0 | Planned | — |
