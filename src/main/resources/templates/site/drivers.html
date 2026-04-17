@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout('Drivers', ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title">Drivers</h2>
+        <div class="filter-bar">
+            <select id="season-filter">
+                <option value="">All Seasons</option>
+                <option th:each="entry : ${seasonEntries}"
+                        th:value="${entry.slug()}"
+                        th:text="${entry.season().displayLabel}">Season</option>
+            </select>
+        </div>
+        <div class="overview-grid">
+            <div th:each="entry : ${driverEntries}"
+                 class="overview-card"
+                 th:attr="data-seasons=${#strings.listJoin(entry.seasonSlugs(), ' ')}">
+                <a th:href="${entry.profileUrl()}"
+                   th:text="${entry.psnId()}"
+                   class="overview-card-name"></a>
+                <div class="overview-card-team" th:text="${entry.teamName()}"></div>
+                <div class="overview-card-seasons">
+                    <span th:each="label : ${entry.seasonLabels()}"
+                          th:text="${label}"
+                          class="season-tag"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function() {
+            var select = document.getElementById('season-filter');
+            var cards = document.querySelectorAll('.overview-card');
+            select.addEventListener('change', function() {
+                var slug = this.value;
+                cards.forEach(function(card) {
+                    if (!slug) {
+                        card.style.display = '';
+                    } else {
+                        var seasons = card.getAttribute('data-seasons') || '';
+                        card.style.display = seasons.split(' ').indexOf(slug) >= 0 ? '' : 'none';
+                    }
+                });
+            });
+        })();
+    </script>
+</section>
+</body>
+</html>

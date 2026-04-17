@@ -414,13 +414,104 @@ public class SiteGeneratorService {
     private void generateTeamsOverview(Path outPath, List<Season> productionSeasons,
                                        String activeSeasonSlug, String activeSeasonName,
                                        GenerationResult result) throws IOException {
-        // TDD RED: stub — implementation in plan 47-02
+        var sortedSeasons = productionSeasons.stream()
+                .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber))
+                .toList();
+
+        var teamToSeasons = new java.util.LinkedHashMap<Team, java.util.LinkedHashSet<Season>>();
+        for (var season : sortedSeasons) {
+            for (var st : seasonTeamRepository.findBySeasonId(season.getId())) {
+                var team = st.getTeam();
+                if (!team.isSubTeam()) {
+                    teamToSeasons.computeIfAbsent(team, k -> new java.util.LinkedHashSet<>()).add(season);
+                }
+            }
+        }
+
+        String assetsPath = "assets";
+        var teamEntries = teamToSeasons.entrySet().stream()
+                .sorted(java.util.Comparator.comparing(e -> e.getKey().getShortName()))
+                .map(e -> {
+                    var team = e.getKey();
+                    var seasons = new java.util.ArrayList<>(e.getValue());
+                    var latestSeason = seasons.getLast();
+                    String profileUrl = "season/" + slugify(latestSeason.getDisplayLabel())
+                            + "/team/" + slugify(team.getShortName()) + ".html";
+                    String logoRelPath = copyLogoToAssets(team.getLogoUrl(), outPath, assetsPath);
+                    return new TeamOverviewEntry(
+                            team.getShortName(),
+                            slugify(team.getShortName()),
+                            logoRelPath,
+                            profileUrl,
+                            seasons.stream().map(s -> slugify(s.getDisplayLabel())).toList(),
+                            seasons.stream().map(Season::getDisplayLabel).toList()
+                    );
+                })
+                .toList();
+
+        var seasonEntries = sortedSeasons.stream()
+                .map(s -> new SeasonEntry(s, slugify(s.getDisplayLabel())))
+                .toList();
+
+        var ctx = new Context(Locale.ENGLISH);
+        ctx.setVariable("teamEntries", teamEntries);
+        ctx.setVariable("seasonEntries", seasonEntries);
+        ctx.setVariable("currentPage", "teams");
+        ctx.setVariable("seasonSlug", null);
+        ctx.setVariable("seasonName", null);
+        ctx.setVariable("breadcrumbCurrent", "Teams");
+        writeTemplate("site/teams", ctx, outPath.resolve("teams.html"), activeSeasonSlug, activeSeasonName);
+        result.incrementPages();
     }
 
     private void generateDriversOverview(Path outPath, List<Season> productionSeasons,
                                          String activeSeasonSlug, String activeSeasonName,
                                          GenerationResult result) throws IOException {
-        // TDD RED: stub — implementation in plan 47-02
+        var sortedSeasons = productionSeasons.stream()
+                .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber))
+                .toList();
+
+        var driverToSeasonTeams = new java.util.LinkedHashMap<org.ctc.domain.model.Driver, java.util.List<SeasonDriverInfo>>();
+        for (var season : sortedSeasons) {
+            for (var sd : seasonDriverRepository.findBySeasonId(season.getId())) {
+                driverToSeasonTeams.computeIfAbsent(sd.getDriver(), k -> new java.util.ArrayList<>())
+                        .add(new SeasonDriverInfo(season, sd.getTeam()));
+            }
+        }
+
+        var driverEntries = driverToSeasonTeams.entrySet().stream()
+                .sorted(java.util.Comparator.comparing(e -> e.getKey().getPsnId()))
+                .map(e -> {
+                    var driver = e.getKey();
+                    var infos = e.getValue();
+                    var latestInfo = infos.getLast();
+                    String profileUrl = "season/" + slugify(latestInfo.season().getDisplayLabel())
+                            + "/driver/" + slugify(driver.getPsnId()) + ".html";
+                    String teamName = latestInfo.team().getShortName();
+                    return new DriverOverviewEntry(
+                            driver.getPsnId(),
+                            slugify(driver.getPsnId()),
+                            teamName,
+                            profileUrl,
+                            infos.stream().map(i -> slugify(i.season().getDisplayLabel())).toList(),
+                            infos.stream().map(i -> i.season().getDisplayLabel()).toList()
+                    );
+                })
+                .toList();
+
+        var seasonEntries = sortedSeasons.stream()
+                .map(s -> new SeasonEntry(s, slugify(s.getDisplayLabel())))
+                .toList();
+
+        var ctx = new Context(Locale.ENGLISH);
+        ctx.setVariable("driverEntries", driverEntries);
+        ctx.setVariable("seasonEntries", seasonEntries);
+        ctx.setVariable("currentPage", "drivers");
+        ctx.setVariable("seasonSlug", null);
+        ctx.setVariable("seasonName", null);
+        ctx.setVariable("breadcrumbCurrent", "Drivers");
+        writeTemplate("site/drivers", ctx, outPath.resolve("drivers.html"), activeSeasonSlug, activeSeasonName);
+        result.incrementPages();
     }
 
     private void generateMatchdayIndex(Path outPath, Season season, String activeSeasonSlug,
