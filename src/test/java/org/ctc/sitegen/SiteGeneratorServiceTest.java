@@ -1238,16 +1238,22 @@ class SiteGeneratorServiceTest {
 
     // --- Phase 48: Landing Page Redesign ---
 
-    // LAND-01: Index page has YouTube embed iframe
+    // LAND-01/YT-01: Index page has YouTube iFrame Player API setup
     @Test
-    void givenActiveSeason_whenGenerate_thenIndexHasYouTubeIframe() throws IOException {
+    void givenActiveSeason_whenGenerate_thenIndexHasYouTubePlayerApi() throws IOException {
         // when
         siteGeneratorService.generate();
 
         // then
         var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
-        var iframes = doc.select("iframe[src*='youtube.com/embed/']");
-        assertFalse(iframes.isEmpty(), "Index page must have a YouTube embed iframe");
+        var playerDiv = doc.select("#yt-hero-player");
+        assertFalse(playerDiv.isEmpty(), "Index page must have yt-hero-player div for iFrame Player API");
+        var overlay = doc.select(".landing-hero-overlay");
+        assertFalse(overlay.isEmpty(), "Index page must have landing-hero-overlay div");
+        var scripts = doc.select("script");
+        var hasApiScript = scripts.stream()
+                .anyMatch(s -> s.data().contains("onYouTubeIframeAPIReady"));
+        assertTrue(hasApiScript, "Index page must have onYouTubeIframeAPIReady script");
     }
 
     // LAND-02: Index page has 5 tile cards
