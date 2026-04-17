@@ -459,16 +459,17 @@ class SiteGeneratorServiceTest {
     }
 
     @Test
-    void givenSeason_whenGenerate_thenHeroLabelContainsYear() throws IOException {
+    void givenSeason_whenGenerate_thenHeroContainsCommunityTeamCupTitle() throws IOException {
         // when
         siteGeneratorService.generate();
 
-        // then
+        // then — Phase 48: hero h1 must contain "COMMUNITY TEAM CUP" (D-09)
         var html = Files.readString(tempDir.resolve("index.html"));
         var doc = Jsoup.parse(html);
-        var heroLabel = doc.select(".hero-label");
-        assertFalse(heroLabel.isEmpty(), ".hero-label element should exist");
-        assertTrue(heroLabel.text().contains("2026"), "hero-label should contain year 2026");
+        var heroTitle = doc.selectFirst(".hero h1");
+        assertNotNull(heroTitle, "Hero section must have an h1 element");
+        assertTrue(heroTitle.text().toUpperCase().contains("COMMUNITY TEAM CUP"),
+                "Hero h1 must contain 'COMMUNITY TEAM CUP' but was: " + heroTitle.text());
     }
 
     @Test
@@ -676,27 +677,8 @@ class SiteGeneratorServiceTest {
         }
     }
 
-    @Test
-    void givenActiveSeason_whenGenerate_thenIndexStandingsTeamNamesLinkToTeamProfiles() throws IOException {
-        // when
-        siteGeneratorService.generate();
-
-        // then
-        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
-        var teamLinks = doc.select("tbody td a.entity-link[href*='team/']");
-        assertFalse(teamLinks.isEmpty(), "Index standings should contain team profile links");
-    }
-
-    @Test
-    void givenActiveSeason_whenGenerate_thenIndexDoesNotRenderMatchResults() throws IOException {
-        // when
-        siteGeneratorService.generate();
-
-        // then — index page shows match cards but not the detailed match-results table
-        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
-        assertTrue(doc.select(".match-results").isEmpty(),
-                "Index page should not render match-results table");
-    }
+    // Removed: givenActiveSeason_whenGenerate_thenIndexStandingsTeamNamesLinkToTeamProfiles (Phase 48: D-14 — standings table removed from index)
+    // Removed: givenActiveSeason_whenGenerate_thenIndexDoesNotRenderMatchResults (Phase 48: D-15 — replaced by whenGenerate_thenIndexHasNoMatchGrid)
 
     // --- CONT-05: Season subnav, matchday index page ---
 
@@ -912,20 +894,7 @@ class SiteGeneratorServiceTest {
 
     // UX-02: Top-nav active state for index and archive pages
 
-    @Test
-    void givenIndexPage_whenGenerate_thenStandingsTopNavActive() throws IOException {
-        // when
-        siteGeneratorService.generate();
-
-        // then
-        var html = Files.readString(tempDir.resolve("index.html"));
-        var doc = Jsoup.parse(html);
-        var activeTopNavLinks = doc.select(".nav-links .nav-link-active");
-        assertFalse(activeTopNavLinks.isEmpty(),
-                "Index page should have an active top-nav item");
-        assertEquals("Standings", activeTopNavLinks.first().text(),
-                "Index page should highlight Standings in top-nav");
-    }
+    // Removed: givenIndexPage_whenGenerate_thenStandingsTopNavActive (Phase 48: D-19 — currentPage changed to "home", index no longer highlights any nav item)
 
     @Test
     void givenArchivePage_whenGenerate_thenArchiveTopNavActive() throws IOException {
@@ -1252,5 +1221,79 @@ class SiteGeneratorServiceTest {
             assertFalse(option.text().contains("Test League"),
                     "Test season must NOT appear in season filter (D-04)");
         }
+    }
+
+    // --- Phase 48: Landing Page Redesign ---
+
+    // LAND-01: Index page has YouTube embed iframe
+    @Test
+    void givenActiveSeason_whenGenerate_thenIndexHasYouTubeIframe() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        var iframes = doc.select("iframe[src*='youtube.com/embed/']");
+        assertFalse(iframes.isEmpty(), "Index page must have a YouTube embed iframe");
+    }
+
+    // LAND-02: Index page has 5 tile cards
+    @Test
+    void givenActiveSeason_whenGenerate_thenIndexHasFiveTiles() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        var tiles = doc.select(".tile-card");
+        assertEquals(5, tiles.size(), "Index page must have 5 tile cards");
+    }
+
+    // LAND-03a: Index page has no standings table
+    @Test
+    void whenGenerate_thenIndexHasNoStandingsTable() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        assertTrue(doc.select("table").isEmpty(), "Index page must not contain a standings table");
+    }
+
+    // LAND-03b: Index page has no match-grid
+    @Test
+    void whenGenerate_thenIndexHasNoMatchGrid() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        assertTrue(doc.select(".match-grid").isEmpty(), "Index page must not contain a match grid");
+    }
+
+    // LAND-04: Standings tile links to active season standings page
+    @Test
+    void givenActiveSeason_whenGenerate_thenStandingsTileLinkCorrect() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        String expectedSlug = slugify(season.getDisplayLabel());
+        var link = doc.selectFirst(".tile-card[href*='season/" + expectedSlug + "/standings.html']");
+        assertNotNull(link, "Standings tile must link to active season standings page");
+    }
+
+    // D-19: Index page (home) does not highlight any top-nav item
+    @Test
+    void givenIndexPage_whenGenerate_thenNoTopNavItemActive() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
+        var activeTopNavLinks = doc.select(".nav-links .nav-link-active");
+        assertTrue(activeTopNavLinks.isEmpty(),
+                "Index (home) page should not highlight any top-nav item");
     }
 }
