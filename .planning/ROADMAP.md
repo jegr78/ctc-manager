@@ -84,7 +84,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 44: Clean Output Directory** - Eliminate stale files by emptying output dir before generation (completed 2026-04-16)
 - [x] **Phase 45: Footer YouTube Link** - Add YouTube channel link to shared site footer (completed 2026-04-16)
 - [x] **Phase 46: Configurable Links Page** - New links.html page driven by application properties (completed 2026-04-17)
-- [ ] **Phase 47: Teams & Drivers Overview Pages** - Cross-season overview pages with client-side season filter
+- [x] **Phase 47: Teams & Drivers Overview Pages** - Cross-season overview pages with client-side season filter (completed 2026-04-17)
 - [ ] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards
 - [ ] **Phase 49: E2E Site Validation** - Comprehensive link resolution and structure validation tests
 
@@ -153,8 +153,8 @@ Plans:
 6. Team/driver names link to their season-specific profile pages
 
 Plans:
-- [ ] 47-01-PLAN.md — TDD RED: Failing tests for overview pages
-- [ ] 47-02-PLAN.md — TDD GREEN: Implement overview pages with season filter
+- [x] 47-01-PLAN.md — TDD RED: Failing tests for overview pages
+- [x] 47-02-PLAN.md — TDD GREEN: Implement overview pages with season filter
 
 ### Phase 48: Landing Page Redesign
 
@@ -374,6 +374,6 @@ Plans:
 | 44. Clean Output Directory | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 45. Footer YouTube Link | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 46. Configurable Links Page | v1.6 | 2/2 | Complete    | 2026-04-17 |
-| 47. Teams & Drivers Overview Pages | v1.6 | 0/2 | Pending | — |
+| 47. Teams & Drivers Overview Pages | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 48. Landing Page Redesign | v1.6 | 0/2 | Pending | — |
 | 49. E2E Site Validation | v1.6 | 0/1 | Pending | — |
