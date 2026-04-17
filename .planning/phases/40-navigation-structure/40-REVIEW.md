@@ -1,125 +1,145 @@
 ---
 phase: 40-navigation-structure
-reviewed: 2026-04-16T00:00:00Z
+reviewed: 2026-04-17T14:30:00Z
 depth: standard
-files_reviewed: 5
+files_reviewed: 9
 files_reviewed_list:
-  - src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java
-  - src/main/resources/templates/site/matchdays.html
   - src/main/java/org/ctc/sitegen/SiteGeneratorService.java
-  - src/main/resources/templates/site/layout.html
+  - src/main/java/org/ctc/sitegen/model/RaceView.java
   - src/main/resources/static/site/css/style.css
+  - src/main/resources/templates/site/layout.html
+  - src/main/resources/templates/site/matchdays.html
+  - src/main/resources/templates/site/index.html
+  - src/main/resources/templates/site/driver-profile.html
+  - src/main/resources/templates/site/matchday.html
+  - src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java
 findings:
   critical: 0
   warning: 3
-  info: 2
-  total: 5
+  info: 5
+  total: 8
 status: issues_found
 ---
 
 # Phase 40: Code Review Report
 
-**Reviewed:** 2026-04-16
+**Reviewed:** 2026-04-17T14:30:00Z
 **Depth:** standard
-**Files Reviewed:** 5
+**Files Reviewed:** 9
 **Status:** issues_found
 
 ## Summary
 
-Five files reviewed covering the navigation structure and site generation for Phase 40. The implementation is solid overall: path traversal protection in `copyLogoToAssets` is correct, the RaceLineup source-of-truth principle is applied consistently, and test coverage is thorough with good Given-When-Then structure.
+Reviewed the static site generator service, templates, CSS, and test suite across phases 40 (navigation structure) and 41 (UX polish/accessibility). All three warnings from the previous review (2026-04-16) have been resolved: breadcrumb now guards `seasonSlug` with `th:if`, `toRaceView` accepts pre-fetched lineups, and the subnav test uses presence assertions instead of a fragile count.
 
-Three warnings were found:
+The codebase is well-structured overall: navigation logic is correct, breadcrumbs render conditionally, the subnav guards playoff links properly, active nav states are correctly applied, and the test suite is comprehensive with 60+ tests covering all page types, active states, breadcrumbs, skip-link, footer, winner highlights, and edge cases. The match-card fragment, RaceView model, and CSS are clean and consistent.
 
-1. A null-pointer risk in the breadcrumb when `seasonSlug` is null but `breadcrumbCurrent` is non-null (theoretical but possible on team/driver profile pages if a caller omits `seasonSlug`).
-2. A per-result database query inside `toRaceView` that issues one `raceLineupRepository.findByRaceIdAndDriverId` call per race result — this is a correctness concern for reliability under load and contrasts with the pre-fetching approach already used in `generateTeamProfiles`.
-3. A test assertion (`assertEquals(4, doc.select(".subnav-link").size())`) that will fail if a season without a playoff page exists, because the Playoff subnav link always renders — this is a flaky test waiting to happen.
-
-Two info items cover an unreachable dead-code path in `toRaceView` and a minor CSS duplication.
-
----
+Three new warnings were identified: (1) the opponent-display logic in driver-profile.html breaks for sub-team drivers, (2) a misleading "P0" display when a driver has no race results, and (3) the YouTube iframe is missing a `title` attribute required for WCAG accessibility. Five info-level items cover missing `lang` attribute, missing `aria-label` on navigation landmarks, focus outline removal, CSS `!important` usage, and a hardcoded external URL in the footer.
 
 ## Warnings
 
-### WR-01: Breadcrumb renders broken link when `seasonSlug` is null
+### WR-01: Opponent display logic breaks for sub-team drivers
 
-**File:** `src/main/resources/templates/site/layout.html:47-55`
+**File:** `src/main/resources/templates/site/driver-profile.html:32-38`
+**Issue:** The opponent column compares `driverTeamId` (sourced from `SeasonDriver.team` at `SiteGeneratorService.java:320`, which can be a sub-team) against `race.homeTeam.id` and `race.awayTeam.id` (which are always parent teams resolved from Match). When a driver belongs to a sub-team, `driverTeamId` will not match either parent team ID, causing BOTH team names to render as the opponent instead of just one. This violates the project's "Keep Thymeleaf Templates Lean" principle -- the comparison logic should be pre-computed in the service layer.
+**Fix:** Resolve to the parent team ID in `generateDriverProfiles()` and pre-compute the opponent name per result, passing it as a model attribute rather than computing it in the template:
+```java
+// In generateDriverProfiles(), replace passing raw results with a computed list:
+var driverParentId = team != null ? team.getParentOrSelf().getId() : null;
+var resultEntries = results.stream().map(r -> {
+    String opponent;
+    if (r.getRace().getAwayTeam() == null) {
+        opponent = "Bye";
+    } else if (r.getRace().getHomeTeam() != null
+            && r.getRace().getHomeTeam().getId().equals(driverParentId)) {
+        opponent = r.getRace().getAwayTeam().getShortName();
+    } else {
+        opponent = r.getRace().getHomeTeam() != null
+            ? r.getRace().getHomeTeam().getShortName() : "?";
+    }
+    return new DriverResultEntry(r, opponent);
+}).toList();
+ctx.setVariable("resultEntries", resultEntries);
+```
 
-**Issue:** The breadcrumb `<nav>` is guarded only by `breadcrumbCurrent != null`. Inside it, the Season link at line 52 unconditionally concatenates `seasonSlug` into its `href`: `${rootPath + '/season/' + seasonSlug + '/standings.html'}`. If any calling code sets `breadcrumbCurrent` but omits `seasonSlug` (or passes it as `null`), Thymeleaf renders the literal string `"null"` into the href. Currently the service always sets both together, but the template has no guard making this safe. It is a latent bug one refactor away.
+### WR-02: "P0" displayed as best position when driver has no results
 
-**Fix:** Add a null guard on the Season breadcrumb link:
+**File:** `src/main/java/org/ctc/sitegen/SiteGeneratorService.java:334`
+**Issue:** When a driver has no race results, `bestPosition` is set to `0` via `.min().orElse(0)`. The template at `driver-profile.html:64` renders this as `"P0"` (`'P' + ${bestPosition}`), which is misleading -- position 0 does not exist in racing. While the "Race History" section is conditionally hidden when results are empty (line 13: `th:if="${results != null && !results.isEmpty()}"`), the "Statistics" section always renders (lines 51-68) and will display "P0" for drivers with zero results.
+**Fix:** Use a sentinel value and conditionally render:
+```java
+// SiteGeneratorService.java:334
+ctx.setVariable("bestPosition", results.stream()
+    .mapToInt(r -> r.getPosition()).min().orElse(-1));
+```
 ```html
-<a class="breadcrumb-link"
-   th:if="${seasonSlug != null and !#strings.isEmpty(seasonSlug)}"
-   th:href="${rootPath + '/season/' + seasonSlug + '/standings.html'}"
-   th:text="${seasonName}">Season</a>
-```
-Alternatively, add a template-level assertion comment making the coupling explicit.
-
----
-
-### WR-02: Per-result database query inside `toRaceView` (query-per-row pattern)
-
-**File:** `src/main/java/org/ctc/sitegen/SiteGeneratorService.java:459`
-
-**Issue:** `toRaceView` is called once per race, and inside it the lambda at line 459 calls `raceLineupRepository.findByRaceIdAndDriverId(race.getId(), r.getDriver().getId())` for every result entry. For a race with N results this issues N individual database queries. `generateTeamProfiles` (line 207) already demonstrates the correct pattern — pre-fetching all lineups for the season with `raceLineupRepository.findByRaceMatchdaySeasonId(season.getId())` and then filtering in memory. The inconsistency means matchday pages and the index page incur unnecessary per-row queries while team profiles do not.
-
-**Fix:** Pass the pre-fetched lineup list into `toRaceView` and convert the repository call to a list lookup:
-```java
-// In generateMatchdays / generateIndex, before calling toRaceView:
-var allLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
-
-// Change toRaceView signature:
-private RaceView toRaceView(Race race, Season season, String driverUrlPrefix,
-                             List<RaceLineup> seasonLineups) { ... }
-
-// Inside the lambda, replace the repository call with:
-var lineupOpt = seasonLineups.stream()
-    .filter(rl -> rl.getRace().getId().equals(race.getId())
-               && rl.getDriver().getId().equals(r.getDriver().getId()))
-    .findFirst();
+<!-- driver-profile.html:64 -->
+<td th:text="${bestPosition > 0 ? 'P' + bestPosition : '-'}"></td>
 ```
 
----
+### WR-03: YouTube iframe missing `title` attribute (WCAG 2.1 SC 4.1.2)
 
-### WR-03: Subnav link count assertion is fragile — will break for seasons with playoff data
-
-**File:** `src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java:699`
-
-**Issue:** The test at line 699 asserts `assertEquals(4, doc.select(".subnav-link").size(), "Subnav should have exactly 4 links")`. The layout always renders all four subnav links (Standings, Matchdays, Driver Ranking, Playoff) as long as `seasonSlug` is set — the Playoff link is not conditionally hidden when no playoff page exists. If a future test setup or DB state introduces playoff data, or if the layout is changed to conditionally show the playoff link, this hard-coded count will either permanently over-assert or start failing. The assertion ties test stability to an implementation detail of the layout rather than observable behavior.
-
-**Fix:** Replace the count assertion with a presence assertion for the links that matter:
-```java
-assertFalse(doc.select(".subnav-link").isEmpty(), "Season pages should have subnav links");
-assertTrue(doc.select(".subnav-link[href*='standings.html']").size() == 1, "Subnav should contain Standings link");
-assertTrue(doc.select(".subnav-link[href*='matchdays.html']").size() == 1, "Subnav should contain Matchdays link");
-assertTrue(doc.select(".subnav-link[href*='driver-ranking.html']").size() == 1, "Subnav should contain Driver Ranking link");
+**File:** `src/main/resources/templates/site/index.html:13-15`
+**Issue:** The `<iframe>` embedding the YouTube video has no `title` attribute. WCAG 2.1 Success Criterion 4.1.2 (Name, Role, Value) requires all iframes to have a descriptive title so screen readers can identify the embedded content. This is a Level A accessibility violation.
+**Fix:**
+```html
+<iframe th:src="'https://www.youtube.com/embed/' + ${videoId}"
+        title="Community Team Cup - Latest YouTube Video"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen></iframe>
 ```
-
----
 
 ## Info
 
-### IN-01: Dead code path — `currentPage == 'team'` and `currentPage == 'driver'` never activate a subnav item
+### IN-01: Missing `lang` attribute on `<html>` element
 
-**File:** `src/main/java/org/ctc/sitegen/SiteGeneratorService.java:266,298`
-
-**Issue:** `generateTeamProfiles` sets `currentPage` to `"team"` and `generateDriverProfiles` sets it to `"driver"`. Neither value matches any of the four subnav item comparisons in `layout.html` (`standings`, `matchdays`, `driver-ranking`, `playoff`). As a result, no subnav item is highlighted as active when viewing a team or driver profile page. This is likely intentional (sub-pages do not map to a top-level nav item), but if the intent was to highlight the parent section it will silently do nothing. If intentional, a comment documenting the decision would prevent future confusion.
-
-**Fix (if intentional):** Add a comment in the service:
-```java
-// "team" and "driver" are sub-pages; no subnav item corresponds to them.
-// breadcrumb provides context instead.
-ctx.setVariable("currentPage", "team"); // no subnav highlight
+**File:** `src/main/resources/templates/site/layout.html:2`
+**Issue:** The `<html>` element does not specify a `lang` attribute. The generated output HTML should include `lang="en"` for accessibility (WCAG 3.1.1 -- Language of Page). Screen readers rely on this to select correct pronunciation rules.
+**Fix:**
+```html
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
 ```
 
----
+### IN-02: Multiple `<nav>` elements without distinguishing `aria-label`
 
-### IN-02: Minor CSS duplication — `.hero` padding declared twice
+**File:** `src/main/resources/templates/site/layout.html:13,37`
+**Issue:** The page has three `<nav>` elements (main nav at line 13, subnav at line 37, breadcrumb at line 50). The breadcrumb nav correctly has `aria-label="breadcrumb"`, but the main nav and subnav lack `aria-label` attributes. When multiple `<nav>` landmarks exist, each should have a distinct label so assistive technology users can distinguish them.
+**Fix:**
+```html
+<nav class="nav" aria-label="Main navigation">
+...
+<nav class="subnav" aria-label="Season navigation" th:if="...">
+```
 
-**File:** `src/main/resources/static/site/css/style.css:107-113`
+### IN-03: Focus outline removed on select without adequate replacement
 
-**Issue:** The `.hero` rule block declares `padding` twice — once as `padding: 40px 0` on line 110 and again as `padding: 48px 32px` on line 113. The second declaration wins and the first has no effect. This is harmless but creates noise.
+**File:** `src/main/resources/static/site/css/style.css:617`
+**Issue:** `.filter-bar select:focus` sets `outline: none` and relies only on `border-color: var(--accent)` for focus indication. The border color change from `var(--border)` (#2a2a2a) to `var(--accent)` (#4fc3f7) may not meet WCAG 2.1 SC 1.4.11 (Non-text Contrast) minimum 3:1 ratio in all contexts. Consider adding a visible focus ring.
+**Fix:**
+```css
+.filter-bar select:focus {
+    border-color: var(--accent);
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+```
 
+### IN-04: `!important` used in `.nav-link-active` rule
+
+**File:** `src/main/resources/static/site/css/style.css:532`
+**Issue:** The `.nav-link-active` rule uses `color: var(--accent) !important` to override `.nav-links a` default color. This creates a specificity escalation. A more maintainable approach would be to increase selector specificity instead.
+**Fix:**
+```css
+.nav-links .nav-link-active {
+    color: var(--accent);
+    background: rgba(79, 195, 247, 0.1);
+}
+```
+
+### IN-05: Duplicate `padding` declaration in `.hero` CSS
+
+**File:** `src/main/resources/static/site/css/style.css:139-143`
+**Issue:** The `.hero` rule block declares `padding` twice -- `padding: 40px 0` on line 139 and `padding: 48px 32px` on line 143. The second declaration wins and the first has no effect. This is harmless but creates noise. (Carried over from previous review -- not yet addressed.)
 **Fix:** Remove the first `padding` declaration:
 ```css
 .hero {
@@ -132,6 +152,6 @@ ctx.setVariable("currentPage", "team"); // no subnav highlight
 
 ---
 
-_Reviewed: 2026-04-16_
+_Reviewed: 2026-04-17T14:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
