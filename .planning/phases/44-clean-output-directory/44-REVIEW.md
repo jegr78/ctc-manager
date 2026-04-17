@@ -1,45 +1,89 @@
 ---
 phase: 44-clean-output-directory
-reviewed: 2026-04-16T00:00:00Z
+reviewed: 2026-04-17T14:30:00Z
 depth: standard
-files_reviewed: 2
+files_reviewed: 10
 files_reviewed_list:
-  - src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java
   - src/main/java/org/ctc/sitegen/SiteGeneratorService.java
+  - src/main/java/org/ctc/sitegen/SiteProperties.java
+  - src/main/resources/application-dev.yml
+  - src/main/resources/application.yml
+  - src/main/resources/static/site/css/style.css
+  - src/main/resources/templates/site/layout.html
+  - src/main/resources/templates/site/links.html
+  - src/main/resources/templates/site/drivers.html
+  - src/main/resources/templates/site/teams.html
+  - src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java
 findings:
   critical: 0
-  warning: 2
-  info: 2
-  total: 4
+  warning: 3
+  info: 4
+  total: 7
 status: issues_found
 ---
 
-# Phase 44: Code Review Report
+# Phase 44-47: Code Review Report
 
-**Reviewed:** 2026-04-16
+**Reviewed:** 2026-04-17T14:30:00Z
 **Depth:** standard
-**Files Reviewed:** 2
+**Files Reviewed:** 10
 **Status:** issues_found
 
 ## Summary
 
-Two files reviewed: the `SiteGeneratorService` implementation (new `cleanOutputDirectory` logic for Phase 44) and its accompanying integration test. The `cleanOutputDirectory` method itself is correct — it properly guards the root directory from deletion, handles the non-existent-dir case, and the path-traversal guard in `copyLogoToAssets` is sound.
+Reviewed 10 files spanning four phases: Phase 44 (clean output directory), Phase 45 (footer YouTube link), Phase 46 (configurable links page), and Phase 47 (teams/drivers overview pages). The implementation is solid overall -- `cleanOutputDirectory` correctly protects the root directory from deletion and handles the non-existent case, the new `SiteProperties` configuration is well-structured, the links/teams/drivers pages render correctly with proper Thymeleaf escaping, and test coverage is comprehensive with 50+ integration tests covering all new features including edge cases.
 
-Two warnings were found: a `Files.list()` stream left unclosed in the test (resource leak), and a state-field re-read inside `writeTemplate` instead of using the already-resolved `outPath` (thread-safety / correctness risk under concurrent access). Two informational items cover over-fetching of teams and a missing temp-directory cleanup in tests.
+Three warnings were found: an unconditional footer separator that renders adjacent to a conditionally hidden element (producing double dots when no active season exists), an unfixed `writeTemplate` re-read of a mutable field instead of using the already-resolved `outPath`, and an unclosed `Files.list()` stream in a test. Four informational items cover code duplication, a minor test cleanup opportunity, and an over-fetch pattern.
 
 ---
 
 ## Warnings
 
-### WR-01: `Files.list()` stream not closed — resource leak in test
+### WR-01: Footer renders orphaned separator when no active season exists
 
-**File:** `src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java:813`
+**File:** `src/main/resources/templates/site/layout.html:76`
 
-**Issue:** `Files.list(matchdayDir)` returns a `DirectoryStream`-backed `Stream<Path>` that holds a native file-handle. Calling `.toList()` on the stream does NOT close it. Every other `Files.list()` call in this test class correctly wraps the stream in try-with-resources (lines 206–210, 220–225, 482–491, 499–508, 656–664). This instance at line 813 is the sole exception and will leak a file descriptor per test run.
+**Issue:** The separator (middot) on line 76 between the active-season link and the YouTube link is rendered unconditionally. The active-season link on lines 72-75 is conditionally rendered via `th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"`. When there is no active season (e.g., all seasons deactivated), the footer will render: `Archive [dot] [dot] YouTube` -- two adjacent separators with nothing between them. This creates a visible layout defect.
+
+**Fix:** Add the same `th:if` guard to the separator on line 76:
+```html
+<span th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
+      class="footer-sep" aria-hidden="true">&middot;</span>
+<a href="https://www.youtube.com/@CommunityTeamCup"
+   class="footer-link"
+   target="_blank"
+   rel="noopener">YouTube</a>
+```
+
+---
+
+### WR-02: `writeTemplate` reads mutable `siteProperties` instead of using resolved `outPath`
+
+**File:** `src/main/java/org/ctc/sitegen/SiteGeneratorService.java:534`
+
+**Issue:** `writeTemplate` calls `Path.of(siteProperties.getOutputDir())` on line 534 to compute relative asset and root paths. The `generate()` method already resolves this to a local `outPath` variable on line 65. The `setOutputDir()` method is public (line 58) and mutates `siteProperties` directly. If `setOutputDir()` is called between the `generate()` start and a `writeTemplate` invocation (e.g., in a concurrent context or a future refactoring), the relative path calculations will be based on a different root than the actual file output location, producing broken links. While single-threaded today, the design is fragile.
+
+**Fix:** Pass the already-resolved `outPath` as a parameter to `writeTemplate`:
+```java
+private void writeTemplate(String templateName, Context context, Path outputFile,
+                            Path outRoot, String activeSeasonSlug, String activeSeasonName) throws IOException {
+    Path relativeAssets = outputFile.getParent().relativize(outRoot.resolve("assets"));
+    Path relativeRoot = outputFile.getParent().relativize(outRoot);
+    // ... rest unchanged
+}
+```
+All call-sites already have `outPath` in scope and just need to pass it through.
+
+---
+
+### WR-03: `Files.list()` stream not closed in test -- resource leak
+
+**File:** `src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java:808`
+
+**Issue:** `Files.list(matchdayDir)` on line 808 returns a `DirectoryStream`-backed `Stream<Path>` that holds a native file handle. Calling `.toList()` does NOT close the underlying stream. Every other `Files.list()` call in this test class correctly uses try-with-resources (e.g., lines 219-224, 234-238, 496-505, 514-523). This instance is the sole exception and leaks a file descriptor per test run.
 
 **Fix:**
 ```java
-// replace lines 813-815 with:
 List<Path> matchdayFiles;
 try (var stream = Files.list(matchdayDir)) {
     matchdayFiles = stream
@@ -50,64 +94,65 @@ try (var stream = Files.list(matchdayDir)) {
 
 ---
 
-### WR-02: `writeTemplate` reads mutable field `outputDir` instead of using the passed `outPath`
+## Info
 
-**File:** `src/main/java/org/ctc/sitegen/SiteGeneratorService.java:418`
+### IN-01: Duplicate JavaScript for season filter in teams.html and drivers.html
 
-**Issue:** `writeTemplate` calls `Path.of(outputDir)` (line 418) to compute relative asset paths. `outputDir` is a mutable `@lombok.Setter`-annotated field. The `generate()` method receives an already-resolved `outPath = Path.of(outputDir)` at line 59, but this resolved value is never threaded into `writeTemplate`. If `setOutputDir()` is called concurrently (or in a future multi-threaded context), `writeTemplate` will compute paths relative to the new directory while writing files to the old one, producing broken relative links. Even today, in tests the two calls are sequential, but the design is fragile.
+**File:** `src/main/resources/templates/site/teams.html:35-51` and `src/main/resources/templates/site/drivers.html:33-48`
 
-**Fix:** Accept `outPath` as a parameter in `writeTemplate` (or capture it as a local `final` variable in `generate()` and use a lambda/inner-method):
-```java
-// In generate(), capture once:
-final Path outPath = Path.of(outputDir);
+**Issue:** Both templates contain an identical inline `<script>` block implementing the season-filter dropdown behavior. If the filter logic needs updating (e.g., adding URL hash state persistence, accessibility improvements), both files must be edited in lockstep.
 
-// Change writeTemplate signature:
-private void writeTemplate(String templateName, Context context, Path outputFile,
-                            Path outRoot,   // <-- add this
-                            String activeSeasonSlug, String activeSeasonName) throws IOException {
-    Path relativeAssets = outputFile.getParent().relativize(outRoot.resolve("assets"));
-    Path relativeRoot   = outputFile.getParent().relativize(outRoot);
-    // ... rest unchanged
-}
-```
-All call-sites already have `outPath` in scope and just need to pass it through.
+**Fix:** Extract the script into a shared JavaScript file in `static/site/js/season-filter.js` and include it via `<script th:src="...">` in both templates. Low priority since the current duplication is small (~15 lines).
 
 ---
 
-## Info
-
-### IN-01: `generateTeamProfiles` fetches all teams regardless of season
+### IN-02: `generateTeamProfiles` fetches all teams regardless of season
 
 **File:** `src/main/java/org/ctc/sitegen/SiteGeneratorService.java:240`
 
-**Issue:** `teamRepository.findAll()` loads every team in the database (line 240), then silently skips teams with no standing via `if (teamStanding == null) continue` (line 252). For a growing database this is an over-fetch. More importantly, teams from other seasons that happen to have a matching standing entry could theoretically be included (though current `standingsService` scopes by season ID, making this safe today). The intent would be clearer with a season-scoped query.
-
-**Fix:** Add a repository method such as `teamRepository.findBySeasons_Id(season.getId())` or derive the team list directly from `standings`:
+**Issue:** `teamRepository.findAll()` on line 240 loads every team in the database, then silently skips teams with no standing via `if (teamStanding == null) continue` (line 252). For a growing database this is an over-fetch. The intent would be clearer by iterating directly over `standings`:
 ```java
-// derive teams from the already-computed standings list — no extra DB call
 for (var teamStanding : standings) {
     var team = teamStanding.getTeam();
-    // ... same logic, teamStanding is always non-null here
+    // ... same logic, teamStanding is always non-null
 }
 ```
 
 ---
 
-### IN-02: Temporary upload directory not cleaned up in `givenTeamWithLogo` test
+### IN-03: Temporary upload directory not cleaned up in logo test
 
-**File:** `src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java:366`
+**File:** `src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java:378`
 
-**Issue:** `Files.createTempDirectory("ctc-test-uploads-")` creates a temp directory outside `@TempDir` (intentionally, per the comment). JUnit's `@TempDir` auto-deletes `tempDir`, but the manually created `uploadBase` directory is never deleted. Over many test runs this accumulates temp directories in the OS temp folder.
+**Issue:** `Files.createTempDirectory("ctc-test-uploads-")` creates a temp directory outside `@TempDir` management (intentionally, per the comment). This directory is never cleaned up after the test. Over many test runs, temp directories accumulate in the OS temp folder.
 
-**Fix:** Register it for cleanup with a `@AfterEach` field or use `@TempDir` with a second field annotated `@TempDir Path uploadBase` (the note in the comment says it must be outside `tempDir`, which a second `@TempDir` satisfies):
+**Fix:** Declare a second `@TempDir` field in the test class:
 ```java
 @TempDir
 Path uploadBase;   // JUnit manages cleanup; distinct from tempDir
 ```
-Then remove the `Files.createTempDirectory(...)` call from the test body.
+Then remove the `Files.createTempDirectory(...)` call from the test body and use `uploadBase` directly.
 
 ---
 
-_Reviewed: 2026-04-16_
+### IN-04: `cleanOutputDirectory` has no safety guard against dangerously short paths
+
+**File:** `src/main/java/org/ctc/sitegen/SiteGeneratorService.java:117-140`
+
+**Issue:** The `cleanOutputDirectory` method will recursively delete all contents of whatever path is configured in `siteProperties.outputDir`. While the value comes from configuration (not user input), the public `setOutputDir()` method (line 58) allows programmatic mutation. There is no validation that the path is a reasonable subdirectory (e.g., rejecting `/`, `/home`, `/Users`, or paths with fewer than 2 components). This is a defense-in-depth concern rather than an active vulnerability, since only test code and admin endpoints would call `setOutputDir()`.
+
+**Fix:** Add a simple safety check at the start of `cleanOutputDirectory`:
+```java
+private void cleanOutputDirectory(Path outPath) throws IOException {
+    if (outPath.getNameCount() < 2) {
+        throw new IllegalArgumentException("Refusing to clean dangerously short path: " + outPath);
+    }
+    // ... existing logic
+}
+```
+
+---
+
+_Reviewed: 2026-04-17T14:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
