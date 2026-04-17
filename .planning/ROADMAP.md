@@ -108,6 +108,23 @@ See: milestones/v1.5-ROADMAP.md for full details
 Plans:
 - [x] 50-01-PLAN.md — Mock YouTube + fix OVER-06 broken team profile links for 0-game teams
 
+### Phase 51: YouTube Hero Video — Autoplay & Loop mit iFrame Player API
+
+**Goal:** Replace simple YouTube iframe with iFrame Player API for reliable autoplay (muted) and seamless looping via onStateChange event detection
+**Requirements**: YT-01, YT-02, YT-03
+**Depends on:** Phase 50
+**Plans:** 1 plan
+
+**Success Criteria** (what must be TRUE):
+
+1. Index page uses YouTube iFrame Player API (not simple iframe) with autoplay+mute
+2. Video loops seamlessly via onStateChange ENDED -> seekTo(0) + playVideo()
+3. CSS overlay prevents user interaction with YouTube player controls
+4. All existing tests pass with updated assertions for new markup
+
+Plans:
+- [ ] 51-01-PLAN.md — iFrame Player API integration + CSS overlay + test update
+
 ### Phase 44: Clean Output Directory
 
 **Goal**: Eliminate stale files by emptying the output directory before generating fresh content
@@ -398,3 +415,4 @@ Plans:
 | 48. Landing Page Redesign | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 49. E2E Site Validation | v1.6 | 1/1 | Complete    | 2026-04-17 |
 | 50. Site Generator Test Robustness | v1.6 | 1/1 | Complete    | 2026-04-17 |
+| 51. YouTube Hero Video | v1.6 | 0/1 | Planned | — |

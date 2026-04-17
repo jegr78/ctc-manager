@@ -81,6 +81,12 @@ Requirements for the Static Site Quality milestone. Each maps to roadmap phases.
 - [x] **E2E-05**: Links page renders all configured links
 - [x] **E2E-06**: Footer YouTube link present on all page types
 
+### YouTube Hero (Phase 51)
+
+- [ ] **YT-01**: YouTube hero uses iFrame Player API with onStateChange ENDED -> seekTo(0) for reliable autoplay and seamless looping
+- [ ] **YT-02**: CSS overlay div intercepts mouse events to hide YouTube player controls from user interaction
+- [ ] **YT-03**: LAND-01 test updated to assert iFrame Player API markup (yt-hero-player div, overlay, onYouTubeIframeAPIReady script)
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -157,14 +163,17 @@ Deferred to future release. Tracked but not in current roadmap.
 | E2E-04 | Phase 49 | Complete |
 | E2E-05 | Phase 49 | Complete |
 | E2E-06 | Phase 49 | Complete |
+| YT-01 | Phase 51 | Pending |
+| YT-02 | Phase 51 | Pending |
+| YT-03 | Phase 51 | Pending |
 
 **Coverage:**
 
-- v1.6 requirements: 48 total (22 original + 26 new)
-- Mapped to phases: 48
-- Complete: 48, Pending: 0
+- v1.6 requirements: 51 total (22 original + 26 new + 3 YouTube hero)
+- Mapped to phases: 51
+- Complete: 48, Pending: 3
 
 ---
 
 *Requirements defined: 2026-04-16*
-*Last updated: 2026-04-17 after milestone audit (35 checkboxes Pending → Complete, OVER-06 → Phase 50)*
+*Last updated: 2026-04-17 — added YT-01..03 for Phase 51 (YouTube iFrame Player API)*
