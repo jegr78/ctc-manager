@@ -74,12 +74,12 @@ Requirements for the Static Site Quality milestone. Each maps to roadmap phases.
 
 ### E2E Validation
 
-- [ ] **E2E-01**: All internal `href` links resolve to existing files in the output directory
-- [ ] **E2E-02**: All pages have consistent navigation structure (nav + footer present)
-- [ ] **E2E-03**: No generated page has empty main content
-- [ ] **E2E-04**: Landing page tiles link to valid generated pages
-- [ ] **E2E-05**: Links page renders all configured links
-- [ ] **E2E-06**: Footer YouTube link present on all page types
+- [x] **E2E-01**: All internal `href` links resolve to existing files in the output directory
+- [x] **E2E-02**: All pages have consistent navigation structure (nav + footer present)
+- [x] **E2E-03**: No generated page has empty main content
+- [x] **E2E-04**: Landing page tiles link to valid generated pages
+- [x] **E2E-05**: Links page renders all configured links
+- [x] **E2E-06**: Footer YouTube link present on all page types
 
 ## v2 Requirements
 
@@ -151,12 +151,12 @@ Deferred to future release. Tracked but not in current roadmap.
 | LAND-03 | Phase 48 | Complete |
 | LAND-04 | Phase 48 | Complete |
 | LAND-05 | Phase 48 | Complete |
-| E2E-01 | Phase 49 | Pending |
-| E2E-02 | Phase 49 | Pending |
-| E2E-03 | Phase 49 | Pending |
-| E2E-04 | Phase 49 | Pending |
-| E2E-05 | Phase 49 | Pending |
-| E2E-06 | Phase 49 | Pending |
+| E2E-01 | Phase 49 | Complete |
+| E2E-02 | Phase 49 | Complete |
+| E2E-03 | Phase 49 | Complete |
+| E2E-04 | Phase 49 | Complete |
+| E2E-05 | Phase 49 | Complete |
+| E2E-06 | Phase 49 | Complete |
 
 **Coverage:**
 

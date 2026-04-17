@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Static Site Quality
 status: verifying
-last_updated: "2026-04-17T06:42:56.081Z"
+last_updated: "2026-04-17T15:54:35.964Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 13
-  completed_phases: 10
-  total_plans: 21
-  completed_plans: 21
+  completed_phases: 11
+  total_plans: 22
+  completed_plans: 22
   percent: 100
 ---
 
@@ -20,12 +20,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Phase 48 — Landing Page Redesign
+**Current focus:** Phase 49 — E2E Site Validation
 
 ## Current Position
 
-Phase: 49
-Plan: Not started
+Phase: 49 (E2E Site Validation) — EXECUTING
+Plan: 1 of 1
 Status: Phase complete — ready for verification
 Last activity: 2026-04-17
 
@@ -52,6 +52,8 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [Phase 44]: cleanOutputDirectory uses Files.walkFileTree with SimpleFileVisitor for bottom-up deletion; root dir preserved via !dir.equals guard; IOException propagates to generate() outer catch
 - [Phase 48]: Adapted hero test to assert .hero h1 contains COMMUNITY TEAM CUP instead of .hero-label year (D-09)
 - [Phase 48]: Regex pattern uses {11,} for videoId matching (safe chars only); dev profile fallback videoId set for test iframe visibility
+- [Phase 49]: Used @TempDir as @BeforeAll parameter injection (not instance field) for reliable PER_CLASS lifecycle
+- [Phase 49]: Cross-test isolation via Test_ prefix rename on pre-existing seasons to exclude from productionSeasons filter
 
 ### Phase Structure (v1.6)
 

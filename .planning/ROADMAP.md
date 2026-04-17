@@ -86,7 +86,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 46: Configurable Links Page** - New links.html page driven by application properties (completed 2026-04-17)
 - [x] **Phase 47: Teams & Drivers Overview Pages** - Cross-season overview pages with client-side season filter (completed 2026-04-17)
 - [x] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards (completed 2026-04-17)
-- [ ] **Phase 49: E2E Site Validation** - Comprehensive link resolution and structure validation tests
+- [x] **Phase 49: E2E Site Validation** - Comprehensive link resolution and structure validation tests (completed 2026-04-17)
 
 ### Phase 44: Clean Output Directory
 
@@ -190,7 +190,7 @@ Plans:
 6. YouTube footer link present on multiple page types
 
 Plans:
-- [ ] 49-01-PLAN.md — RED + GREEN: E2E validation test class
+- [x] 49-01-PLAN.md — RED + GREEN: E2E validation test class
 
 ## Phase Details
 
@@ -207,7 +207,7 @@ Plans:
 3. All navigation links work when the static site is opened from any subdirectory (relative paths)
 4. Team logo images display correctly on all static site pages (standings, team-profile, matchday)
 
-**Plans:** 2/2 plans complete
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 37-01-PLAN.md — TDD RED: Write failing tests for LINK-01..04 + add uploadDir field
@@ -376,4 +376,4 @@ Plans:
 | 46. Configurable Links Page | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 47. Teams & Drivers Overview Pages | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 48. Landing Page Redesign | v1.6 | 2/2 | Complete    | 2026-04-17 |
-| 49. E2E Site Validation | v1.6 | 0/1 | Pending | — |
+| 49. E2E Site Validation | v1.6 | 1/1 | Complete   | 2026-04-17 |
