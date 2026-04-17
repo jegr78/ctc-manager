@@ -1123,7 +1123,7 @@ class SiteGeneratorServiceTest {
         var doc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
         assertNotNull(doc.selectFirst("select#season-filter"), "Season filter dropdown must exist");
         assertFalse(doc.select("select#season-filter option").isEmpty(), "Filter must have option elements");
-        assertFalse(doc.select(".overview-card[data-seasons]").isEmpty(), "Cards must have data-seasons attribute");
+        assertFalse(doc.select(".overview-row[data-seasons]").isEmpty(), "Rows must have data-seasons attribute");
     }
 
     // OVER-04: team names and season tags
@@ -1135,8 +1135,8 @@ class SiteGeneratorServiceTest {
 
         // then
         var doc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
-        var cards = doc.select(".overview-card");
-        assertFalse(cards.isEmpty(), "Teams overview must contain overview cards");
+        var rows = doc.select(".overview-row");
+        assertFalse(rows.isEmpty(), "Teams overview must contain overview rows");
         var html = doc.html();
         assertTrue(html.contains("GTNR" + uniqueSuffix) || html.contains("GP1R" + uniqueSuffix),
                 "Teams overview must show team short names");
@@ -1152,8 +1152,8 @@ class SiteGeneratorServiceTest {
 
         // then
         var doc = Jsoup.parse(Files.readString(tempDir.resolve("drivers.html")));
-        var cards = doc.select(".overview-card");
-        assertFalse(cards.isEmpty(), "Drivers overview must contain overview cards");
+        var rows = doc.select(".overview-row");
+        assertFalse(rows.isEmpty(), "Drivers overview must contain overview rows");
         var html = doc.html();
         assertTrue(html.contains("gen_panic_" + uniqueSuffix),
                 "Drivers overview must show driver PSN ID");
@@ -1170,8 +1170,8 @@ class SiteGeneratorServiceTest {
 
         // then
         var teamsDoc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
-        var teamLinks = teamsDoc.select(".overview-card a[href]");
-        assertFalse(teamLinks.isEmpty(), "Team cards must have profile links");
+        var teamLinks = teamsDoc.select(".overview-row-name[href]");
+        assertFalse(teamLinks.isEmpty(), "Team rows must have profile links");
         for (var link : teamLinks) {
             assertTrue(link.attr("href").startsWith("season/"),
                     "Team profile link must start with season/: " + link.attr("href"));
@@ -1180,8 +1180,8 @@ class SiteGeneratorServiceTest {
         }
 
         var driversDoc = Jsoup.parse(Files.readString(tempDir.resolve("drivers.html")));
-        var driverLinks = driversDoc.select(".overview-card a[href]");
-        assertFalse(driverLinks.isEmpty(), "Driver cards must have profile links");
+        var driverLinks = driversDoc.select(".overview-row-name[href]");
+        assertFalse(driverLinks.isEmpty(), "Driver rows must have profile links");
         for (var link : driverLinks) {
             assertTrue(link.attr("href").startsWith("season/"),
                     "Driver profile link must start with season/: " + link.attr("href"));
@@ -1248,8 +1248,8 @@ class SiteGeneratorServiceTest {
         var doc = Jsoup.parse(Files.readString(tempDir.resolve("index.html")));
         var playerDiv = doc.select("#yt-hero-player");
         assertFalse(playerDiv.isEmpty(), "Index page must have yt-hero-player div for iFrame Player API");
-        var overlay = doc.select(".landing-hero-overlay");
-        assertFalse(overlay.isEmpty(), "Index page must have landing-hero-overlay div");
+        var overlay = doc.select(".hero-video-overlay");
+        assertFalse(overlay.isEmpty(), "Index page must have hero-video-overlay div");
         var scripts = doc.select("script");
         var hasApiScript = scripts.stream()
                 .anyMatch(s -> s.data().contains("onYouTubeIframeAPIReady"));

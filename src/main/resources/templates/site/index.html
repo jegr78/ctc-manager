@@ -3,15 +3,16 @@
       th:replace="~{site/layout :: layout('Community Team Cup', ~{::section})}">
 <body>
 <section>
-    <div class="hero">
-        <h1>COMMUNITY TEAM CUP</h1>
-        <p class="hero-sub">Gran Turismo — Team vs. Team Racing League</p>
-    </div>
-
-    <!-- YouTube Hero Video — iFrame Player API for reliable autoplay + loop (Phase 51: YT-01, YT-02) -->
-    <div class="landing-hero" th:if="${videoId != null and !#strings.isEmpty(videoId)}">
-        <div id="yt-hero-player"></div>
-        <div class="landing-hero-overlay" aria-hidden="true"></div>
+    <!-- Hero with YouTube background video (Phase 51: YT-01, YT-02) -->
+    <div class="hero" th:classappend="${videoId != null and !#strings.isEmpty(videoId)} ? ' hero--video'">
+        <div class="hero-video-bg" th:if="${videoId != null and !#strings.isEmpty(videoId)}">
+            <div id="yt-hero-player"></div>
+        </div>
+        <div class="hero-video-overlay" th:if="${videoId != null and !#strings.isEmpty(videoId)}" aria-hidden="true"></div>
+        <div class="hero-content">
+            <h1>COMMUNITY TEAM CUP</h1>
+            <p class="hero-sub">Gran Turismo — Team vs. Team Racing League</p>
+        </div>
     </div>
     <script th:if="${videoId != null and !#strings.isEmpty(videoId)}" th:inline="javascript">
     (function() {

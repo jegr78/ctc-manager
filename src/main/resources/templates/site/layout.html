@@ -43,7 +43,7 @@
             <a th:href="${rootPath + '/season/' + seasonSlug + '/driver-ranking.html'}"
                th:class="${currentPage == 'driver-ranking'} ? 'subnav-link active' : 'subnav-link'">Driver Ranking</a>
             <a th:if="${hasPlayoff}"
-               th:href="${rootPath + '/season/' + seasonSlug + '/playoff.html'}"
+               th:href="${rootPath + '/season/' + (playoffSeasonSlug != null ? playoffSeasonSlug : seasonSlug) + '/playoff.html'}"
                th:class="${currentPage == 'playoff'} ? 'subnav-link active' : 'subnav-link'">Playoff</a>
         </div>
     </nav>
@@ -73,14 +73,11 @@
                th:href="${rootPath + '/season/' + activeSeasonSlug + '/standings.html'}"
                th:text="${activeSeasonName}"
                class="footer-link"></a>
-            <span th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
-                  class="footer-sep" aria-hidden="true">&middot;</span>
-            <a href="https://www.youtube.com/@CommunityTeamCup"
-               class="footer-link"
-               target="_blank"
-               rel="noopener">YouTube</a>
         </div>
-        <p>Community Team Cup &mdash; Gran Turismo Racing League</p>
+        <p>Community Team Cup &mdash; <a href="https://www.youtube.com/@CommunityTeamCup"
+           class="footer-link"
+           target="_blank"
+           rel="noopener">YouTube</a></p>
     </footer>
 </body>
 </html>
