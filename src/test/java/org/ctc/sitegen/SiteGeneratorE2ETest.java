@@ -12,6 +12,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -72,11 +76,16 @@ class SiteGeneratorE2ETest {
     @Autowired
     private ScoringService scoringService;
 
+    @MockitoBean
+    private YouTubeScraperService youTubeScraperService;
+
     private String uniqueSuffix;
     private Season season;
 
     @BeforeAll
     void setUp(@TempDir Path injectedTempDir) {
+        given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
+                .willReturn("dQw4w9WgXcQ");
         this.tempDir = injectedTempDir;
         uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
 

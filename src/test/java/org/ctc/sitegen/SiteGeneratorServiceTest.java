@@ -9,6 +9,10 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -75,6 +79,9 @@ class SiteGeneratorServiceTest {
     @Autowired
     private org.ctc.domain.service.ScoringService scoringService;
 
+    @MockitoBean
+    private YouTubeScraperService youTubeScraperService;
+
     @TempDir
     Path tempDir;
 
@@ -84,6 +91,9 @@ class SiteGeneratorServiceTest {
 
     @BeforeEach
     void setUp() {
+        given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
+                .willReturn("dQw4w9WgXcQ");
+
         uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
 
         // Deactivate any previously active seasons
@@ -1298,5 +1308,36 @@ class SiteGeneratorServiceTest {
         var activeTopNavLinks = doc.select(".nav-links .nav-link-active");
         assertTrue(activeTopNavLinks.isEmpty(),
                 "Index (home) page should not highlight any top-nav item");
+    }
+
+    // --- Phase 50: OVER-06 guard — 0-game team broken link prevention ---
+
+    @Test
+    void givenTeamWithZeroGames_whenGenerate_thenTeamsOverviewDoesNotLinkToMissingProfile() throws IOException {
+        // given — add a third team with no races/results (0 played games)
+        var zeroGameTeam = teamRepository.save(new Team("Zero Games Team " + uniqueSuffix, "GZGT" + uniqueSuffix));
+        // Use repository directly to avoid duplicate SeasonTeam inserts via cascade
+        seasonTeamRepository.save(new SeasonTeam(season, zeroGameTeam));
+
+        // when
+        siteGeneratorService.generate();
+
+        // then — team should appear in teams.html text but NOT as a clickable profile link
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
+        var html = doc.html();
+        assertTrue(html.contains("GZGT" + uniqueSuffix),
+                "0-game team should still appear in teams overview");
+
+        // The team profile page should NOT exist (generateTeamProfiles skips 0-played teams)
+        var seasonSlug = slugify(season.getDisplayLabel());
+        var profilePath = tempDir.resolve("season/" + seasonSlug + "/team/" + slugify("GZGT" + uniqueSuffix) + ".html");
+        assertFalse(Files.exists(profilePath),
+                "0-game team should NOT have a generated profile page");
+
+        // The teams.html must NOT contain a link to a non-existent profile for this team
+        var brokenLinks = doc.select("a[href*='" + slugify("GZGT" + uniqueSuffix) + "']");
+        assertTrue(brokenLinks.isEmpty(),
+                "teams.html must NOT link to non-existent profile for 0-game team, but found: "
+                + brokenLinks.stream().map(e -> e.attr("href")).toList());
     }
 }
