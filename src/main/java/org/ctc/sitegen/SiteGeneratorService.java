@@ -12,6 +12,7 @@ import org.ctc.domain.service.StandingsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import java.util.Locale;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@EnableConfigurationProperties(SiteProperties.class)
 public class SiteGeneratorService {
 
     private final TemplateEngine templateEngine;
@@ -44,19 +46,20 @@ public class SiteGeneratorService {
     private final PlayoffService playoffService;
     private final PlayoffBracketViewService playoffBracketViewService;
     private final PlayoffRepository playoffRepository;
-
-    @lombok.Setter
-    @Value("${ctc.site.output-dir}")
-    private String outputDir;
+    private final SiteProperties siteProperties;
 
     @lombok.Setter
     @Value("${app.upload-dir:data/dev/uploads}")
     private String uploadDir;
 
+    public void setOutputDir(String outputDir) {
+        siteProperties.setOutputDir(outputDir);
+    }
+
     @Transactional(readOnly = true)
     public GenerationResult generate() {
         var result = new GenerationResult();
-        Path outPath = Path.of(outputDir);
+        Path outPath = Path.of(siteProperties.getOutputDir());
 
         try {
             cleanOutputDirectory(outPath);
@@ -88,6 +91,9 @@ public class SiteGeneratorService {
 
             // Generate archive
             generateArchive(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
+
+            // Generate links page
+            generateLinks(outPath, siteProperties.getLinks(), activeSeasonSlug, activeSeasonName, result);
 
             // Copy static assets
             copyAssets(outPath, result);
@@ -386,6 +392,19 @@ public class SiteGeneratorService {
         result.incrementPages();
     }
 
+    private void generateLinks(Path outPath, List<SiteProperties.LinkEntry> links,
+                                String activeSeasonSlug, String activeSeasonName,
+                                GenerationResult result) throws IOException {
+        var ctx = new Context(Locale.ENGLISH);
+        ctx.setVariable("links", links);
+        ctx.setVariable("currentPage", "links");
+        ctx.setVariable("seasonSlug", null);
+        ctx.setVariable("seasonName", null);
+        ctx.setVariable("breadcrumbCurrent", "Links");
+        writeTemplate("site/links", ctx, outPath.resolve("links.html"), activeSeasonSlug, activeSeasonName);
+        result.incrementPages();
+    }
+
     private void generateMatchdayIndex(Path outPath, Season season, String activeSeasonSlug,
                                         String activeSeasonName, boolean hasPlayoff, GenerationResult result) throws IOException {
         var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
@@ -415,7 +434,7 @@ public class SiteGeneratorService {
     private void writeTemplate(String templateName, Context context, Path outputFile,
                                 String activeSeasonSlug, String activeSeasonName) throws IOException {
         // Calculate relative paths from the output file location
-        Path outRoot = Path.of(outputDir);
+        Path outRoot = Path.of(siteProperties.getOutputDir());
         Path relativeAssets = outputFile.getParent().relativize(outRoot.resolve("assets"));
         Path relativeRoot = outputFile.getParent().relativize(outRoot);
         context.setVariable("assetsPath", relativeAssets.toString().replace('\\', '/'));

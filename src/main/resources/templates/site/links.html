@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout('Links', ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title">Links</h2>
+        <p th:if="${#lists.isEmpty(links)}" class="text-dim">No links configured.</p>
+        <div th:unless="${#lists.isEmpty(links)}" class="link-grid">
+            <div th:each="link : ${links}" class="link-card">
+                <div class="link-card-name" th:text="${link.name}">Link Name</div>
+                <a th:href="${link.url}" th:text="${link.url}"
+                   target="_blank" rel="noopener" class="link-card-url">https://example.com</a>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

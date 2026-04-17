@@ -40,6 +40,9 @@ google:
 ctc:
   site:
     output-dir: docs/site
+    links:
+      - name: "YouTube"
+        url: "https://www.youtube.com/@CommunityTeamCup"
 
 # Actuator Health-Endpoint (fuer Docker Healthchecks)
 management:

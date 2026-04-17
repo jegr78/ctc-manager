@@ -35,3 +35,6 @@ logging:
 ctc:
   site:
     output-dir: target/site
+    links:
+      - name: "YouTube"
+        url: "https://www.youtube.com/@CommunityTeamCup"
