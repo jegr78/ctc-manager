@@ -21,9 +21,13 @@
                      th:src="${entry.logoRelPath()}"
                      class="overview-card-logo"
                      th:alt="${entry.shortName()}"/>
-                <a th:href="${entry.profileUrl()}"
+                <a th:if="${entry.profileUrl() != null}"
+                   th:href="${entry.profileUrl()}"
                    th:text="${entry.shortName()}"
                    class="overview-card-name"></a>
+                <span th:if="${entry.profileUrl() == null}"
+                      th:text="${entry.shortName()}"
+                      class="overview-card-name"></span>
                 <div class="overview-card-seasons">
                     <span th:each="label : ${entry.seasonLabels()}"
                           th:text="${label}"

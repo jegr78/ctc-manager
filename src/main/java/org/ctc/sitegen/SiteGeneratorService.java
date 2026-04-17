@@ -412,6 +412,18 @@ public class SiteGeneratorService {
                 .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber))
                 .toList();
 
+        // Collect teams that have at least one season with standings (profile page exists)
+        var teamsWithProfiles = new java.util.HashSet<java.util.UUID>();
+        var standingsBySeasonId = new java.util.HashMap<java.util.UUID, java.util.Set<java.util.UUID>>();
+        for (var season : sortedSeasons) {
+            var standings = standingsService.calculateStandings(season.getId());
+            var teamIds = standings.stream()
+                    .map(s -> s.getTeam().getId())
+                    .collect(java.util.stream.Collectors.toSet());
+            standingsBySeasonId.put(season.getId(), teamIds);
+            teamsWithProfiles.addAll(teamIds);
+        }
+
         var teamToSeasons = new java.util.LinkedHashMap<Team, java.util.LinkedHashSet<Season>>();
         for (var season : sortedSeasons) {
             for (var st : seasonTeamRepository.findBySeasonId(season.getId())) {
@@ -428,9 +440,19 @@ public class SiteGeneratorService {
                 .map(e -> {
                     var team = e.getKey();
                     var seasons = new java.util.ArrayList<>(e.getValue());
-                    var latestSeason = seasons.getLast();
-                    String profileUrl = "season/" + slugify(latestSeason.getDisplayLabel())
-                            + "/team/" + slugify(team.getShortName()) + ".html";
+                    boolean hasProfile = teamsWithProfiles.contains(team.getId());
+                    // Find the latest season where the team HAS a profile (standings exist)
+                    String profileUrl = null;
+                    if (hasProfile) {
+                        for (int i = seasons.size() - 1; i >= 0; i--) {
+                            var s = seasons.get(i);
+                            if (standingsBySeasonId.getOrDefault(s.getId(), java.util.Set.of()).contains(team.getId())) {
+                                profileUrl = "season/" + slugify(s.getDisplayLabel())
+                                        + "/team/" + slugify(team.getShortName()) + ".html";
+                                break;
+                            }
+                        }
+                    }
                     String logoRelPath = copyLogoToAssets(team.getLogoUrl(), outPath, assetsPath);
                     return new TeamOverviewEntry(
                             team.getShortName(),
