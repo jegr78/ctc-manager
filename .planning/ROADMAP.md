@@ -171,7 +171,7 @@ Plans:
 5. Top nav "Standings" links to active season standings (not to index.html)
 
 Plans:
-- [ ] 48-01-PLAN.md — TDD RED: Failing tests for landing page + YouTube scraper
+- [x] 48-01-PLAN.md — TDD RED: Failing tests for landing page + YouTube scraper
 - [ ] 48-02-PLAN.md — TDD GREEN: Implement scraper + landing page
 
 ### Phase 49: E2E Site Validation
@@ -207,7 +207,7 @@ Plans:
 3. All navigation links work when the static site is opened from any subdirectory (relative paths)
 4. Team logo images display correctly on all static site pages (standings, team-profile, matchday)
 
-**Plans:** 2/2 plans complete
+**Plans:** 1/2 plans executed
 
 Plans:
 - [x] 37-01-PLAN.md — TDD RED: Write failing tests for LINK-01..04 + add uploadDir field
@@ -375,5 +375,5 @@ Plans:
 | 45. Footer YouTube Link | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 46. Configurable Links Page | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 47. Teams & Drivers Overview Pages | v1.6 | 2/2 | Complete    | 2026-04-17 |
-| 48. Landing Page Redesign | v1.6 | 0/2 | Pending | — |
+| 48. Landing Page Redesign | v1.6 | 1/2 | In Progress|  |
 | 49. E2E Site Validation | v1.6 | 0/1 | Pending | — |

@@ -43,16 +43,16 @@ Requirements for the Static Site Quality milestone. Each maps to roadmap phases.
 
 ### Infrastructure
 
-- [ ] **CLEAN-01**: Output directory is emptied before page generation begins
-- [ ] **CLEAN-02**: Clean operation handles non-existent output directory gracefully
+- [x] **CLEAN-01**: Output directory is emptied before page generation begins
+- [x] **CLEAN-02**: Clean operation handles non-existent output directory gracefully
 
 ### Landing Page
 
-- [ ] **LAND-01**: Index page displays a YouTube embed iframe as the hero element (video ID scraped from channel page)
-- [ ] **LAND-02**: Index page shows tile navigation cards (Seasons, Standings, Drivers, Teams, Links)
-- [ ] **LAND-03**: Standings table and last matchday section are removed from the index page
-- [ ] **LAND-04**: All tile links resolve to valid generated pages
-- [ ] **LAND-05**: YouTube channel URL is configurable; video ID is scraped automatically via Jsoup
+- [x] **LAND-01**: Index page displays a YouTube embed iframe as the hero element (video ID scraped from channel page)
+- [x] **LAND-02**: Index page shows tile navigation cards (Seasons, Standings, Drivers, Teams, Links)
+- [x] **LAND-03**: Standings table and last matchday section are removed from the index page
+- [x] **LAND-04**: All tile links resolve to valid generated pages
+- [x] **LAND-05**: YouTube channel URL is configurable; video ID is scraped automatically via Jsoup
 
 ### Links (extended)
 
@@ -132,8 +132,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | UX-08 | Phase 41 | Pending |
 | UX-09 | Phase 41 | Pending |
 | QUAL-01 | Phase 41 | Pending |
-| CLEAN-01 | Phase 44 | Pending |
-| CLEAN-02 | Phase 44 | Pending |
+| CLEAN-01 | Phase 44 | Complete |
+| CLEAN-02 | Phase 44 | Complete |
 | LINK-05 | Phase 45 | Pending |
 | LINK-06 | Phase 45 | Pending |
 | LINK-07 | Phase 46 | Pending |
@@ -146,11 +146,11 @@ Deferred to future release. Tracked but not in current roadmap.
 | OVER-04 | Phase 47 | Pending |
 | OVER-05 | Phase 47 | Pending |
 | OVER-06 | Phase 47 | Pending |
-| LAND-01 | Phase 48 | Pending |
-| LAND-02 | Phase 48 | Pending |
-| LAND-03 | Phase 48 | Pending |
-| LAND-04 | Phase 48 | Pending |
-| LAND-05 | Phase 48 | Pending |
+| LAND-01 | Phase 48 | Complete |
+| LAND-02 | Phase 48 | Complete |
+| LAND-03 | Phase 48 | Complete |
+| LAND-04 | Phase 48 | Complete |
+| LAND-05 | Phase 48 | Complete |
 | E2E-01 | Phase 49 | Pending |
 | E2E-02 | Phase 49 | Pending |
 | E2E-03 | Phase 49 | Pending |
