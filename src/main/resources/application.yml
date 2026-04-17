@@ -40,6 +40,8 @@ google:
 ctc:
   site:
     output-dir: docs/site
+    youtube-channel-url: "https://www.youtube.com/@CommunityTeamCup"
+    youtube-video-id: ""
     links:
       - name: "YouTube"
         url: "https://www.youtube.com/@CommunityTeamCup"

@@ -14,6 +14,8 @@ public class SiteProperties {
 
     private String outputDir;
     private List<LinkEntry> links = new ArrayList<>();
+    private String youtubeChannelUrl = "https://www.youtube.com/@CommunityTeamCup";
+    private String youtubeVideoId = "";
 
     @Getter
     @Setter
