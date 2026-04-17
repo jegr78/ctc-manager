@@ -24,6 +24,10 @@ public class YouTubeScraperService {
     }
 
     public String scrapeVideoId(String channelUrl, String fallbackVideoId) {
+        if (channelUrl == null || channelUrl.isBlank()) {
+            log.warn("YouTube channel URL is null or blank, using fallback videoId");
+            return fallbackVideoId;
+        }
         try {
             String html = fetchChannelHtml(channelUrl);
             var matcher = VIDEO_ID_PATTERN.matcher(html);
@@ -33,7 +37,7 @@ public class YouTubeScraperService {
                 return videoId;
             }
             log.warn("No videoId found on YouTube channel page: {}", channelUrl);
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.warn("Failed to scrape YouTube channel page {}: {}", channelUrl, e.getMessage());
         }
         return fallbackVideoId;

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,7 +10,7 @@
 </head>
 <body>
 <a href="#main-content" class="skip-link">Skip to main content</a>
-    <nav class="nav">
+    <nav class="nav" aria-label="Main navigation">
         <div class="nav-inner">
             <a th:href="${rootPath + '/index.html'}" class="nav-brand">
                 <img th:src="${assetsPath != null ? assetsPath + '/img/ctc-logo-white.png' : '/assets/img/ctc-logo-white.png'}" alt="CTC" class="nav-logo">
@@ -34,7 +34,7 @@
             </div>
         </div>
     </nav>
-    <nav class="subnav" th:if="${seasonSlug != null and !#strings.isEmpty(seasonSlug)}">
+    <nav class="subnav" aria-label="Season navigation" th:if="${seasonSlug != null and !#strings.isEmpty(seasonSlug)}">
         <div class="subnav-inner">
             <a th:href="${rootPath + '/season/' + seasonSlug + '/standings.html'}"
                th:class="${currentPage == 'standings'} ? 'subnav-link active' : 'subnav-link'">Standings</a>
@@ -73,7 +73,8 @@
                th:href="${rootPath + '/season/' + activeSeasonSlug + '/standings.html'}"
                th:text="${activeSeasonName}"
                class="footer-link"></a>
-            <span class="footer-sep" aria-hidden="true">&middot;</span>
+            <span th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
+                  class="footer-sep" aria-hidden="true">&middot;</span>
             <a href="https://www.youtube.com/@CommunityTeamCup"
                class="footer-link"
                target="_blank"

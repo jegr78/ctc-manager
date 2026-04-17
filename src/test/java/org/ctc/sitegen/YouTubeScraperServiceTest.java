@@ -57,6 +57,24 @@ class YouTubeScraperServiceTest {
     }
 
     @Test
+    void givenNullChannelUrl_whenScrapeVideoId_thenReturnsFallback() {
+        // when
+        var result = service.scrapeVideoId(null, "fallback-id");
+
+        // then
+        assertThat(result).isEqualTo("fallback-id");
+    }
+
+    @Test
+    void givenBlankChannelUrl_whenScrapeVideoId_thenReturnsFallback() {
+        // when
+        var result = service.scrapeVideoId("  ", "fallback-id");
+
+        // then
+        assertThat(result).isEqualTo("fallback-id");
+    }
+
+    @Test
     void givenMultipleVideoIds_whenScrapeVideoId_thenReturnsFirstMatch() throws IOException {
         // given
         var html = "<html><script>{\"videoId\":\"FIRST_ID_1234\",\"videoId\":\"SECOND_ID_567\"}</script></html>";

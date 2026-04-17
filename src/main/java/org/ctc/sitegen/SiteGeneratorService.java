@@ -115,6 +115,9 @@ public class SiteGeneratorService {
     }
 
     private void cleanOutputDirectory(Path outPath) throws IOException {
+        if (outPath.getNameCount() < 2) {
+            throw new IllegalArgumentException("Refusing to clean dangerously short path: " + outPath);
+        }
         if (!Files.exists(outPath)) {
             return; // D-03: non-existent dir — createDirectories() below handles creation
         }
@@ -314,9 +317,11 @@ public class SiteGeneratorService {
     private void generateDriverProfiles(Path outPath, Season season, String activeSeasonSlug,
                                          String activeSeasonName, boolean hasPlayoff, GenerationResult result) throws IOException {
         var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
+        var generatedDriverIds = new java.util.HashSet<java.util.UUID>();
 
         for (var sd : seasonDrivers) {
             var driver = sd.getDriver();
+            if (!generatedDriverIds.add(driver.getId())) continue;
             var team = sd.getTeam();
             var results = raceResultRepository.findByDriverId(driver.getId()).stream()
                     .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
@@ -331,7 +336,8 @@ public class SiteGeneratorService {
             ctx.setVariable("totalRaces", results.size());
             ctx.setVariable("totalPoints", total);
             ctx.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) total / results.size());
-            ctx.setVariable("bestPosition", results.stream().mapToInt(r -> r.getPosition()).min().orElse(0));
+            ctx.setVariable("bestPosition", results.isEmpty() ? null :
+                    results.stream().mapToInt(r -> r.getPosition()).min().orElse(0));
 
             ctx.setVariable("currentPage", "driver");
             ctx.setVariable("seasonSlug", slugify(season.getDisplayLabel()));
@@ -530,8 +536,12 @@ public class SiteGeneratorService {
 
     private void writeTemplate(String templateName, Context context, Path outputFile,
                                 String activeSeasonSlug, String activeSeasonName) throws IOException {
+        writeTemplate(templateName, context, outputFile, Path.of(siteProperties.getOutputDir()), activeSeasonSlug, activeSeasonName);
+    }
+
+    private void writeTemplate(String templateName, Context context, Path outputFile,
+                                Path outRoot, String activeSeasonSlug, String activeSeasonName) throws IOException {
         // Calculate relative paths from the output file location
-        Path outRoot = Path.of(siteProperties.getOutputDir());
         Path relativeAssets = outputFile.getParent().relativize(outRoot.resolve("assets"));
         Path relativeRoot = outputFile.getParent().relativize(outRoot);
         context.setVariable("assetsPath", relativeAssets.toString().replace('\\', '/'));
@@ -685,7 +695,7 @@ public class SiteGeneratorService {
         public void incrementPages() { pagesGenerated++; }
         public void addError(String error) { errors.add(error); }
         public int getPagesGenerated() { return pagesGenerated; }
-        public java.util.List<String> getErrors() { return errors; }
+        public java.util.List<String> getErrors() { return java.util.Collections.unmodifiableList(errors); }
         public boolean hasErrors() { return !errors.isEmpty(); }
     }
 }

@@ -136,18 +136,9 @@ body {
 /* Hero */
 .hero {
     text-align: center;
-    padding: 40px 0;
     background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg) 100%);
     margin: -32px -32px 32px;
     padding: 48px 32px;
-}
-
-.hero-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    color: var(--text-muted);
-    margin-bottom: 8px;
 }
 
 .hero h1 {
@@ -528,8 +519,8 @@ tr:hover { background: var(--bg-hover); }
 }
 
 /* Active nav state (UX-02) — per D-05 */
-.nav-link-active {
-    color: var(--accent) !important;
+.nav-links .nav-link-active {
+    color: var(--accent);
     background: rgba(79, 195, 247, 0.1);
 }
 
@@ -614,7 +605,8 @@ tr:hover { background: var(--bg-hover); }
 
 .filter-bar select:focus {
     border-color: var(--accent);
-    outline: none;
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
 }
 
 .overview-grid {
@@ -707,6 +699,7 @@ tr:hover { background: var(--bg-hover); }
     max-width: 900px;
     margin: 32px auto 0;
     justify-content: center;
+    justify-items: center;
 }
 
 .tile-card {
@@ -737,13 +730,6 @@ tr:hover { background: var(--bg-hover); }
 .tile-card-desc {
     font-size: 13px;
     color: var(--text-dim);
-}
-
-/* 3+2 centered layout: last 2 tiles offset to center */
-@supports (grid-template-columns: repeat(3, 1fr)) {
-    .tile-grid {
-        justify-items: center;
-    }
 }
 
 /* Mobile: stack to single column */

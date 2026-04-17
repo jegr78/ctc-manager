@@ -805,9 +805,12 @@ class SiteGeneratorServiceTest {
         // then — find the matchday HTML file in the season directory
         var seasonDir = seasonDir();
         var matchdayDir = seasonDir.resolve("matchday");
-        var matchdayFiles = Files.list(matchdayDir)
-                .filter(p -> p.toString().endsWith(".html"))
-                .toList();
+        List<Path> matchdayFiles;
+        try (var stream = Files.list(matchdayDir)) {
+            matchdayFiles = stream
+                    .filter(p -> p.toString().endsWith(".html"))
+                    .toList();
+        }
         assertFalse(matchdayFiles.isEmpty(), "Should have at least one matchday HTML file");
 
         var html = Files.readString(matchdayFiles.getFirst());
