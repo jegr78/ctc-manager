@@ -692,6 +692,16 @@ tr:hover { background: var(--bg-hover); }
     border: 0;
 }
 
+.landing-hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    cursor: default;
+}
+
 .tile-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
