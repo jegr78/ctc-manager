@@ -397,4 +397,4 @@ Plans:
 | 47. Teams & Drivers Overview Pages | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 48. Landing Page Redesign | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 49. E2E Site Validation | v1.6 | 1/1 | Complete    | 2026-04-17 |
-| 50. Site Generator Test Robustness | v1.6 | 1/1 | Complete   | 2026-04-17 |
+| 50. Site Generator Test Robustness | v1.6 | 1/1 | Complete    | 2026-04-17 |
