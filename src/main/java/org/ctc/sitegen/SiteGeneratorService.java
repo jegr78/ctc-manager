@@ -150,6 +150,11 @@ public class SiteGeneratorService {
         String videoId = youTubeScraperService.scrapeVideoId(
                 siteProperties.getYoutubeChannelUrl(),
                 siteProperties.getYoutubeVideoId());
+        // WR-01: Sanitise scraped videoId to prevent JS injection via malformed scrape result
+        if (videoId != null && !videoId.matches("[a-zA-Z0-9_\\-]{1,20}")) {
+            log.warn("Scraped videoId '{}' failed safety check, using fallback", videoId);
+            videoId = siteProperties.getYoutubeVideoId();
+        }
         ctx.setVariable("videoId", videoId);
 
         // D-16: No standings, no teamSlugMap, no lastMatchday, no lastMatchdayRaces.
