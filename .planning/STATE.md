@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Static Site Quality
 status: executing
-last_updated: "2026-04-17T17:12:54.047Z"
-last_activity: 2026-04-17
+last_updated: "2026-04-17T17:35:15.433Z"
+last_activity: 2026-04-17 -- Phase 51 execution started
 progress:
-  total_phases: 14
+  total_phases: 15
   completed_phases: 12
-  total_plans: 23
+  total_plans: 24
   completed_plans: 23
-  percent: 100
+  percent: 96
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-16)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Phase 50 — Site Generator Test Robustness
+**Current focus:** Phase 51 — YouTube Hero Video — Autoplay & Loop mit iFrame Player API
 
 ## Current Position
 
-Phase: 50
-Plan: Not started
-Status: Executing Phase 50
-Last activity: 2026-04-17
+Phase: 51 (YouTube Hero Video — Autoplay & Loop mit iFrame Player API) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 51
+Last activity: 2026-04-17 -- Phase 51 execution started
 
 ## Progress Bar
 
@@ -72,6 +72,10 @@ All decisions logged in PROJECT.md Key Decisions table.
 - Season model: `getDisplayLabel()` returns "year | #number | name"
 - Site pages: index, archive, standings, matchday, team-profile, driver-profile, driver-ranking, playoff-bracket
 - Shared nav/footer lives in `layout.html`
+
+### Roadmap Evolution
+
+- Phase 51 added: YouTube Hero Video — Autoplay & Loop mit iFrame Player API
 
 ### Blockers/Concerns
 
