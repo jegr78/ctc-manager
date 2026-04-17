@@ -11,7 +11,7 @@
     <!-- YouTube Hero Video — iFrame Player API for reliable autoplay + loop (Phase 51: YT-01, YT-02) -->
     <div class="landing-hero" th:if="${videoId != null and !#strings.isEmpty(videoId)}">
         <div id="yt-hero-player"></div>
-        <div class="landing-hero-overlay"></div>
+        <div class="landing-hero-overlay" aria-hidden="true"></div>
     </div>
     <script th:if="${videoId != null and !#strings.isEmpty(videoId)}" th:inline="javascript">
     (function() {
