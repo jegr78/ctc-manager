@@ -1012,4 +1012,73 @@ class SiteGeneratorServiceTest {
         assertTrue(result.getPagesGenerated() > 0);
         assertTrue(Files.exists(freshDir.resolve("index.html")));
     }
+
+    // --- Phase 46: Configurable Links Page ---
+
+    // LINK-07: links.html page exists
+
+    @Test
+    void whenGenerate_thenCreatesLinksPage() {
+        // when
+        var result = siteGeneratorService.generate();
+
+        // then
+        assertFalse(result.hasErrors(), "Errors: " + result.getErrors());
+        assertTrue(Files.exists(tempDir.resolve("links.html")),
+                "links.html should exist in output root");
+    }
+
+    // LINK-08, LINK-09: Configured links render as clickable elements
+
+    @Test
+    void whenGenerate_thenLinksPageContainsConfiguredLinks() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var linksFile = tempDir.resolve("links.html");
+        assertTrue(Files.exists(linksFile), "links.html must exist");
+        var doc = Jsoup.parse(Files.readString(linksFile));
+        var linkCards = doc.select(".link-card");
+        assertFalse(linkCards.isEmpty(), "Links page should contain at least one .link-card");
+        var firstLink = linkCards.first().selectFirst("a");
+        assertNotNull(firstLink, "Link card should contain an <a> element");
+        assertEquals("_blank", firstLink.attr("target"), "External link must open in new tab");
+        assertEquals("noopener", firstLink.attr("rel"), "External link must have rel=noopener");
+    }
+
+    // LINK-09: Empty state shows message
+
+    @Test
+    void givenNoLinksConfigured_whenGenerate_thenLinksPageShowsEmptyState() throws IOException {
+        // given -- default dev config has a link; this test verifies the empty state
+        // After SiteProperties is created (Plan 02), inject it and call setLinks(List.of())
+        // For RED phase: links.html does not exist at all, so this fails at the exists check
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var linksFile = tempDir.resolve("links.html");
+        assertTrue(Files.exists(linksFile), "links.html must exist even with no configured links");
+        // Full assertion (will be reached once Plan 02 wires SiteProperties):
+        // var html = Files.readString(linksFile);
+        // assertTrue(html.contains("No links configured."), "Empty state message should appear");
+    }
+
+    // LINK-10: Shared layout (nav, footer) on links page
+
+    @Test
+    void whenGenerate_thenLinksPageHasSharedLayout() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var linksFile = tempDir.resolve("links.html");
+        assertTrue(Files.exists(linksFile), "links.html must exist");
+        var doc = Jsoup.parse(Files.readString(linksFile));
+        assertNotNull(doc.selectFirst("nav.nav"), "Links page must have top navigation");
+        assertNotNull(doc.selectFirst("footer.footer"), "Links page must have footer");
+        assertNotNull(doc.selectFirst(".breadcrumb"), "Links page must have breadcrumbs");
+    }
 }
