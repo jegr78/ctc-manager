@@ -87,7 +87,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 47: Teams & Drivers Overview Pages** - Cross-season overview pages with client-side season filter (completed 2026-04-17)
 - [x] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards (completed 2026-04-17)
 - [x] **Phase 49: E2E Site Validation** - Comprehensive link resolution and structure validation tests (completed 2026-04-17)
-- [ ] **Phase 50: Site Generator Test Robustness** - Fix latent OVER-06 broken links and mock YouTube scraper in tests (gap closure)
+- [x] **Phase 50: Site Generator Test Robustness** - Fix latent OVER-06 broken links and mock YouTube scraper in tests (gap closure) (completed 2026-04-17)
 
 ### Phase 50: Site Generator Test Robustness
 
@@ -103,10 +103,10 @@ See: milestones/v1.5-ROADMAP.md for full details
 3. `SiteGeneratorServiceTest` does not make live HTTP calls to YouTube during test execution
 4. `YouTubeScraperService` is mocked/stubbed in integration tests with a deterministic video ID
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 50-01-PLAN.md — Mock YouTube + fix OVER-06 broken team profile links for 0-game teams
+- [x] 50-01-PLAN.md — Mock YouTube + fix OVER-06 broken team profile links for 0-game teams
 
 ### Phase 44: Clean Output Directory
 
@@ -397,4 +397,4 @@ Plans:
 | 47. Teams & Drivers Overview Pages | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 48. Landing Page Redesign | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 49. E2E Site Validation | v1.6 | 1/1 | Complete    | 2026-04-17 |
-| 50. Site Generator Test Robustness | v1.6 | 0/1 | Planned | — |
+| 50. Site Generator Test Robustness | v1.6 | 1/1 | Complete   | 2026-04-17 |
