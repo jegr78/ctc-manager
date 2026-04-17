@@ -85,7 +85,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 45: Footer YouTube Link** - Add YouTube channel link to shared site footer (completed 2026-04-16)
 - [x] **Phase 46: Configurable Links Page** - New links.html page driven by application properties (completed 2026-04-17)
 - [x] **Phase 47: Teams & Drivers Overview Pages** - Cross-season overview pages with client-side season filter (completed 2026-04-17)
-- [ ] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards
+- [x] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards (completed 2026-04-17)
 - [ ] **Phase 49: E2E Site Validation** - Comprehensive link resolution and structure validation tests
 
 ### Phase 44: Clean Output Directory
@@ -172,7 +172,7 @@ Plans:
 
 Plans:
 - [x] 48-01-PLAN.md — TDD RED: Failing tests for landing page + YouTube scraper
-- [ ] 48-02-PLAN.md — TDD GREEN: Implement scraper + landing page
+- [x] 48-02-PLAN.md — TDD GREEN: Implement scraper + landing page
 
 ### Phase 49: E2E Site Validation
 
@@ -207,7 +207,7 @@ Plans:
 3. All navigation links work when the static site is opened from any subdirectory (relative paths)
 4. Team logo images display correctly on all static site pages (standings, team-profile, matchday)
 
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 37-01-PLAN.md — TDD RED: Write failing tests for LINK-01..04 + add uploadDir field
@@ -375,5 +375,5 @@ Plans:
 | 45. Footer YouTube Link | v1.6 | 2/2 | Complete    | 2026-04-16 |
 | 46. Configurable Links Page | v1.6 | 2/2 | Complete    | 2026-04-17 |
 | 47. Teams & Drivers Overview Pages | v1.6 | 2/2 | Complete    | 2026-04-17 |
-| 48. Landing Page Redesign | v1.6 | 1/2 | In Progress|  |
+| 48. Landing Page Redesign | v1.6 | 2/2 | Complete   | 2026-04-17 |
 | 49. E2E Site Validation | v1.6 | 0/1 | Pending | — |

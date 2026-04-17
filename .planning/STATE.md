@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Static Site Quality
-status: executing
-last_updated: "2026-04-17T06:23:14.633Z"
+status: verifying
+last_updated: "2026-04-17T06:33:12.294Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 13
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 21
-  completed_plans: 20
-  percent: 95
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-16)
 
 Phase: 48 (Landing Page Redesign) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-17
 
 ## Progress Bar
@@ -51,6 +51,7 @@ All decisions logged in PROJECT.md Key Decisions table.
 
 - [Phase 44]: cleanOutputDirectory uses Files.walkFileTree with SimpleFileVisitor for bottom-up deletion; root dir preserved via !dir.equals guard; IOException propagates to generate() outer catch
 - [Phase 48]: Adapted hero test to assert .hero h1 contains COMMUNITY TEAM CUP instead of .hero-label year (D-09)
+- [Phase 48]: Regex pattern uses {11,} for videoId matching (safe chars only); dev profile fallback videoId set for test iframe visibility
 
 ### Phase Structure (v1.6)
 
