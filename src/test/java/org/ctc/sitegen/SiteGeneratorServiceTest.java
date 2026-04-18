@@ -1429,4 +1429,42 @@ class SiteGeneratorServiceTest {
         assertFalse(rankingDoc.select("table").text().contains("test_phantom_" + uniqueSuffix),
                 "Alltime driver ranking should not contain Test season driver");
     }
+
+    // --- Alltime entity cross-links (consistent with season pages) ---
+
+    @Test
+    void whenGenerate_thenAlltimeStandingsHasEntityLinks() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("alltime-standings.html"));
+        var doc = Jsoup.parse(html);
+        var entityLinks = doc.select("a.entity-link");
+        assertFalse(entityLinks.isEmpty(),
+                "Alltime standings should have entity-link anchors on team names");
+        var firstLink = entityLinks.first();
+        assertTrue(firstLink.attr("href").contains("/team/"),
+                "Alltime standings team link should point to a team profile page");
+        assertTrue(firstLink.attr("href").startsWith("season/"),
+                "Alltime standings team link should be relative starting with season/");
+    }
+
+    @Test
+    void whenGenerate_thenAlltimeDriverRankingHasEntityLinks() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var html = Files.readString(tempDir.resolve("alltime-driver-ranking.html"));
+        var doc = Jsoup.parse(html);
+        var entityLinks = doc.select("a.entity-link");
+        assertFalse(entityLinks.isEmpty(),
+                "Alltime driver ranking should have entity-link anchors on driver names");
+        var firstLink = entityLinks.first();
+        assertTrue(firstLink.attr("href").contains("/driver/"),
+                "Alltime driver ranking link should point to a driver profile page");
+        assertTrue(firstLink.attr("href").startsWith("season/"),
+                "Alltime driver ranking link should be relative starting with season/");
+    }
 }
