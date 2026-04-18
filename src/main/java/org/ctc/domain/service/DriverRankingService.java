@@ -62,8 +62,24 @@ public class DriverRankingService {
 	 */
 	@Transactional(readOnly = true)
 	public List<DriverRanking> calculateAlltimeRanking() {
-		List<RaceResult> results = raceResultRepository.findByRacePlayoffMatchupIsNull();
-		List<SeasonDriver> allSeasonDrivers = seasonDriverRepository.findAll();
+		return calculateAlltimeRanking(
+				raceResultRepository.findByRacePlayoffMatchupIsNull(),
+				seasonDriverRepository.findAll());
+	}
+
+	/**
+	 * Calculates alltime driver ranking restricted to the given season IDs.
+	 * Used by the site generator to exclude Test seasons from public pages.
+	 */
+	@Transactional(readOnly = true)
+	public List<DriverRanking> calculateAlltimeRanking(List<UUID> seasonIds) {
+		return calculateAlltimeRanking(
+				raceResultRepository.findByRacePlayoffMatchupIsNullAndRaceMatchdaySeasonIdIn(seasonIds),
+				seasonDriverRepository.findBySeasonIdIn(seasonIds));
+	}
+
+	private List<DriverRanking> calculateAlltimeRanking(List<RaceResult> results,
+	                                                     List<SeasonDriver> allSeasonDrivers) {
 
 		// For each driver, find their most recent team (by season name), resolved to parent
 		Map<UUID, Team> driverTeamMap = allSeasonDrivers.stream()

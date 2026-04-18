@@ -103,9 +103,9 @@ public class SiteGeneratorService {
             generateTeamsOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
             generateDriversOverview(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
 
-            // Generate alltime pages
-            generateAlltimeStandings(outPath, activeSeasonSlug, activeSeasonName, result);
-            generateAlltimeDriverRanking(outPath, activeSeasonSlug, activeSeasonName, result);
+            // Generate alltime pages (filtered to production seasons only)
+            generateAlltimeStandings(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
+            generateAlltimeDriverRanking(outPath, productionSeasons, activeSeasonSlug, activeSeasonName, result);
 
             // Copy static assets
             copyAssets(outPath, result);
@@ -545,10 +545,11 @@ public class SiteGeneratorService {
         result.incrementPages();
     }
 
-    private void generateAlltimeStandings(Path outPath, String activeSeasonSlug,
+    private void generateAlltimeStandings(Path outPath, List<Season> productionSeasons,
+                                           String activeSeasonSlug,
                                            String activeSeasonName, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
-        var standings = standingsService.calculateAlltimeStandings();
+        var standings = standingsService.calculateAlltimeStandings(productionSeasons);
         ctx.setVariable("standings", standings);
         ctx.setVariable("currentPage", "alltime-standings");
         ctx.setVariable("seasonSlug", null);
@@ -559,10 +560,12 @@ public class SiteGeneratorService {
         result.incrementPages();
     }
 
-    private void generateAlltimeDriverRanking(Path outPath, String activeSeasonSlug,
+    private void generateAlltimeDriverRanking(Path outPath, List<Season> productionSeasons,
+                                               String activeSeasonSlug,
                                                String activeSeasonName, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
-        var driverRanking = driverRankingService.calculateAlltimeRanking();
+        var seasonIds = productionSeasons.stream().map(Season::getId).toList();
+        var driverRanking = driverRankingService.calculateAlltimeRanking(seasonIds);
         ctx.setVariable("driverRanking", driverRanking);
         ctx.setVariable("currentPage", "alltime-driver-ranking");
         ctx.setVariable("seasonSlug", null);

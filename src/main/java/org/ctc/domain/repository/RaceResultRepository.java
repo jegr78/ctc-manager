@@ -23,4 +23,7 @@ public interface RaceResultRepository extends JpaRepository<RaceResult, UUID> {
 
 	@EntityGraph(attributePaths = {"driver", "race"})
 	List<RaceResult> findByRacePlayoffMatchupIsNull();
+
+	@EntityGraph(attributePaths = {"driver", "race"})
+	List<RaceResult> findByRacePlayoffMatchupIsNullAndRaceMatchdaySeasonIdIn(List<UUID> seasonIds);
 }

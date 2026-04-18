@@ -22,5 +22,8 @@ public interface SeasonDriverRepository extends JpaRepository<SeasonDriver, UUID
 	List<SeasonDriver> findByDriverId(UUID driverId);
 
 	@EntityGraph(attributePaths = {"driver", "team"})
+	List<SeasonDriver> findBySeasonIdIn(List<UUID> seasonIds);
+
+	@EntityGraph(attributePaths = {"driver", "team"})
 	List<SeasonDriver> findByTeamIdIn(List<UUID> teamIds);
 }

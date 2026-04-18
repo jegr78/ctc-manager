@@ -1386,4 +1386,47 @@ class SiteGeneratorServiceTest {
         assertTrue(doc.select("table").text().contains("gen_panic_" + uniqueSuffix),
                 "Alltime driver ranking should contain driver PSN IDs from test data");
     }
+
+    @Test
+    void givenTestSeason_whenGenerate_thenNotInAlltimePages() throws IOException {
+        // given — create a Test season with its own team, drivers, and race results
+        var testTeam = teamRepository.save(new Team("Test Phantom Racing " + uniqueSuffix, "TPHR" + uniqueSuffix));
+        var testDriver = driverRepository.save(new Driver("test_phantom_" + uniqueSuffix, "PhantomRacer"));
+
+        var testSeason = new Season("Test Throwaway Alltime " + uniqueSuffix, 2025, 99);
+        testSeason.setRaceScoring(season.getRaceScoring());
+        testSeason.setMatchScoring(season.getMatchScoring());
+        testSeason.addTeam(testTeam);
+        seasonRepository.save(testSeason);
+
+        seasonDriverRepository.save(new SeasonDriver(testSeason, testDriver, testTeam));
+
+        var testMatchday = matchdayRepository.save(new Matchday(testSeason, "Test MD 1", 1));
+        var testMatch = matchRepository.save(new Match(testMatchday, testTeam, testTeam));
+        var testRaceEntity = new Race();
+        testRaceEntity.setMatchday(testMatchday);
+        testRaceEntity.setMatch(testMatch);
+        var tr1 = new RaceResult(testRaceEntity, testDriver, 1, 1, false);
+        scoringService.calculatePoints(tr1, testSeason.getRaceScoring());
+        testRaceEntity.getResults().add(tr1);
+        raceRepository.save(testRaceEntity);
+        testMatch.setHomeScore(tr1.getPointsTotal());
+        testMatch.setAwayScore(0);
+        matchRepository.save(testMatch);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then — alltime standings should not contain test team
+        var standingsHtml = Files.readString(tempDir.resolve("alltime-standings.html"));
+        var standingsDoc = Jsoup.parse(standingsHtml);
+        assertFalse(standingsDoc.select("table").text().contains("TPHR" + uniqueSuffix),
+                "Alltime standings should not contain Test season team");
+
+        // then — alltime driver ranking should not contain test driver
+        var rankingHtml = Files.readString(tempDir.resolve("alltime-driver-ranking.html"));
+        var rankingDoc = Jsoup.parse(rankingHtml);
+        assertFalse(rankingDoc.select("table").text().contains("test_phantom_" + uniqueSuffix),
+                "Alltime driver ranking should not contain Test season driver");
+    }
 }
