@@ -1467,4 +1467,59 @@ class SiteGeneratorServiceTest {
         assertTrue(firstLink.attr("href").startsWith("season/"),
                 "Alltime driver ranking link should be relative starting with season/");
     }
+
+    @Test
+    void givenDriverWithTeamChange_whenGenerate_thenAlltimeDriverRankingShowsAllTeams() throws IOException {
+        // given — create a second season where driver1 switches from GTNR to GP1R
+        var raceScoring2 = raceScoringRepository.save(
+                new RaceScoring("Gen RS2 " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
+        var matchScoring2 = matchScoringRepository.save(
+                new MatchScoring("Gen MS2 " + uniqueSuffix, 3, 1, 0));
+
+        var season2 = new Season("Gen Season2 " + uniqueSuffix, 2026, 2);
+        season2.setRaceScoring(raceScoring2);
+        season2.setMatchScoring(matchScoring2);
+        seasonRepository.save(season2);
+
+        // Reuse existing teams from setUp
+        var tnr = teamRepository.findAll().stream()
+                .filter(t -> t.getShortName().equals("GTNR" + uniqueSuffix)).findFirst().orElseThrow();
+        var p1r = teamRepository.findAll().stream()
+                .filter(t -> t.getShortName().equals("GP1R" + uniqueSuffix)).findFirst().orElseThrow();
+
+        season2.addTeam(tnr);
+        season2.addTeam(p1r);
+        seasonRepository.save(season2);
+
+        // driver1 now drives for P1R in season2 (was GTNR in season1)
+        seasonDriverRepository.save(new SeasonDriver(season2, driver1, p1r));
+
+        var md2 = matchdayRepository.save(new Matchday(season2, "Spieltag S2", 1));
+        var match2 = matchRepository.save(new Match(md2, p1r, tnr));
+        var race2 = new Race();
+        race2.setMatchday(md2);
+        race2.setMatch(match2);
+        var rr = new RaceResult(race2, driver1, 1, 1, false);
+        scoringService.calculatePoints(rr, raceScoring2);
+        race2.getResults().add(rr);
+        raceRepository.save(race2);
+        match2.setHomeScore(rr.getPointsTotal());
+        match2.setAwayScore(0);
+        matchRepository.save(match2);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then — driver1's row should contain both team short names
+        var html = Files.readString(tempDir.resolve("alltime-driver-ranking.html"));
+        var doc = Jsoup.parse(html);
+        var driverRow = doc.select("tbody tr").stream()
+                .filter(row -> row.text().contains("gen_panic_" + uniqueSuffix))
+                .findFirst().orElseThrow();
+        var teamCell = driverRow.select("td").get(2).text();
+        assertTrue(teamCell.contains("GTNR" + uniqueSuffix),
+                "Alltime driver ranking should show first team GTNR, but was: " + teamCell);
+        assertTrue(teamCell.contains("GP1R" + uniqueSuffix),
+                "Alltime driver ranking should show second team GP1R, but was: " + teamCell);
+    }
 }
