@@ -130,7 +130,7 @@ Plans:
 **Goal:** Generate alltime-standings.html and alltime-driver-ranking.html for the static site using existing backend services, and update top navigation to link to alltime pages
 **Requirements**: ALLTIME-01, ALLTIME-02, ALLTIME-03, ALLTIME-04, ALLTIME-05
 **Depends on:** Phase 51
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 **Success Criteria** (what must be TRUE):
 
@@ -143,7 +143,7 @@ Plans:
 7. Integration tests verify alltime page generation and nav link targets
 
 Plans:
-- [ ] 52-01-PLAN.md — TDD RED: Write failing tests for alltime pages + update nav test
+- [x] 52-01-PLAN.md — TDD RED: Write failing tests for alltime pages + update nav test
 - [ ] 52-02-PLAN.md — TDD GREEN: Create alltime templates, service methods, and update layout nav
 
 ### Phase 44: Clean Output Directory
@@ -437,4 +437,4 @@ Plans:
 | 49. E2E Site Validation | v1.6 | 1/1 | Complete    | 2026-04-17 |
 | 50. Site Generator Test Robustness | v1.6 | 1/1 | Complete    | 2026-04-17 |
 | 51. YouTube Hero Video | v1.6 | 1/1 | Complete    | 2026-04-17 |
-| 52. Alltime Pages | v1.6 | 0/2 | Planning | — |
+| 52. Alltime Pages | v1.6 | 1/2 | In Progress|  |
