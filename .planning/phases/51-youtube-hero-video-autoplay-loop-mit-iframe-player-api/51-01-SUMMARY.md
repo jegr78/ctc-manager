@@ -40,7 +40,7 @@ The simple `<iframe th:src="...">` embed was replaced with the YouTube iFrame Pl
 3. On `onReady`, calls `event.target.playVideo()` as a fallback trigger
 4. On `onStateChange` with `YT.PlayerState.ENDED`, calls `seekTo(0)` + `playVideo()` for seamless looping
 
-A `.landing-hero-overlay` div (`position:absolute, z-index:2`) was added both in the template and CSS to sit on top of the dynamically-created iframe, intercepting all user mouse events so YouTube controls are never accessible.
+A `.hero-video-overlay` div (`position:absolute, z-index:2`) was added both in the template and CSS to sit on top of the dynamically-created iframe, intercepting all user mouse events so YouTube controls are never accessible.
 
 ## Commits
 
@@ -62,9 +62,9 @@ A `.landing-hero-overlay` div (`position:absolute, z-index:2`) was added both in
 
 2. **Dual-layer loop strategy:** `playerVars loop:1 + playlist:videoId` is the native YouTube loop mechanism (first defense). `onStateChange ENDED -> seekTo(0) + playVideo()` is the JavaScript safety net for the case where the native loop has a gap or doesn't fire correctly — exactly the documented reliability issue with the old embed approach.
 
-3. **CSS overlay pattern:** `.landing-hero-overlay` with `z-index:2` and `cursor:default` sits above the iframe to intercept pointer events, hiding controls (T-51-04). The iframe renders underneath with `z-index` unset (auto/0).
+3. **CSS overlay pattern:** `.hero-video-overlay` with `z-index:2` and `cursor:default` sits above the iframe to intercept pointer events, hiding controls (T-51-04). The iframe renders underneath with `z-index` unset (auto/0).
 
-4. **LAND-01 test update:** The old test asserted `iframe[src*='youtube.com/embed/']` — inapplicable since no iframe exists in static HTML (API creates it dynamically via JS). Updated to assert `#yt-hero-player` div, `.landing-hero-overlay` div, and `onYouTubeIframeAPIReady` in script blocks.
+4. **LAND-01 test update:** The old test asserted `iframe[src*='youtube.com/embed/']` — inapplicable since no iframe exists in static HTML (API creates it dynamically via JS). Updated to assert `#yt-hero-player` div, `.hero-video-overlay` div, and `onYouTubeIframeAPIReady` in script blocks.
 
 ## Test Results
 
@@ -86,8 +86,8 @@ No new threat surface beyond what was documented in the plan's threat model.
 
 ## Self-Check: PASSED
 
-- [x] src/main/resources/templates/site/index.html — contains `onYouTubeIframeAPIReady`, `yt-hero-player`, `landing-hero-overlay`
-- [x] src/main/resources/static/site/css/style.css — contains `.landing-hero-overlay` with `z-index: 2`
+- [x] src/main/resources/templates/site/index.html — contains `onYouTubeIframeAPIReady`, `yt-hero-player`, `hero-video-overlay`
+- [x] src/main/resources/static/site/css/style.css — contains `.hero-video-overlay` with `z-index: 2`
 - [x] src/test/java/org/ctc/sitegen/SiteGeneratorServiceTest.java — contains `givenActiveSeason_whenGenerate_thenIndexHasYouTubePlayerApi`
 - [x] Commit 4c6819f exists
 - [x] Commit e95302a exists
