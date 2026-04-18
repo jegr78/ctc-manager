@@ -87,6 +87,14 @@ Requirements for the Static Site Quality milestone. Each maps to roadmap phases.
 - [ ] **YT-02**: CSS overlay div intercepts mouse events to hide YouTube player controls from user interaction
 - [ ] **YT-03**: LAND-01 test updated to assert iFrame Player API markup (yt-hero-player div, overlay, onYouTubeIframeAPIReady script)
 
+### Alltime Pages (Phase 52)
+
+- [ ] **ALLTIME-01**: An `alltime-standings.html` page is generated listing team standings aggregated across all seasons
+- [ ] **ALLTIME-02**: An `alltime-driver-ranking.html` page is generated listing driver rankings aggregated across all seasons
+- [ ] **ALLTIME-03**: Top nav "Standings" and "Driver Ranking" links point to alltime pages (always visible, no activeSeasonSlug guard)
+- [ ] **ALLTIME-04**: Existing nav test updated to assert alltime page links instead of season-specific links
+- [ ] **ALLTIME-05**: Integration tests verify alltime page existence, table headers, and data content
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -166,14 +174,19 @@ Deferred to future release. Tracked but not in current roadmap.
 | YT-01 | Phase 51 | Pending |
 | YT-02 | Phase 51 | Pending |
 | YT-03 | Phase 51 | Pending |
+| ALLTIME-01 | Phase 52 | Pending |
+| ALLTIME-02 | Phase 52 | Pending |
+| ALLTIME-03 | Phase 52 | Pending |
+| ALLTIME-04 | Phase 52 | Pending |
+| ALLTIME-05 | Phase 52 | Pending |
 
 **Coverage:**
 
-- v1.6 requirements: 51 total (22 original + 26 new + 3 YouTube hero)
-- Mapped to phases: 51
-- Complete: 48, Pending: 3
+- v1.6 requirements: 56 total (22 original + 26 new + 3 YouTube hero + 5 alltime pages)
+- Mapped to phases: 56
+- Complete: 48, Pending: 8
 
 ---
 
 *Requirements defined: 2026-04-16*
-*Last updated: 2026-04-17 — added YT-01..03 for Phase 51 (YouTube iFrame Player API)*
+*Last updated: 2026-04-17 — added ALLTIME-01..05 for Phase 52 (alltime standings and driver ranking pages)*

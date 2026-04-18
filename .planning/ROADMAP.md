@@ -6,7 +6,7 @@
 - :white_check_mark: **v1.1 Codebase Concerns Cleanup** — Phases 6-15 (shipped 2026-04-07)
 - :white_check_mark: **v1.3 English Test Data** — Phases 20-27 (shipped 2026-04-10)
 - :white_check_mark: **v1.5 Code Review Fixes** — Phases 28-36 (shipped 2026-04-15)
-- **v1.6 Static Site Quality** — Phases 37-50 (in progress)
+- **v1.6 Static Site Quality** — Phases 37-52 (in progress)
 
 ## Phases
 
@@ -124,6 +124,27 @@ Plans:
 
 Plans:
 - [x] 51-01-PLAN.md — iFrame Player API integration + CSS overlay + test update
+
+### Phase 52: Alltime Team Standings & Driver Ranking Pages
+
+**Goal:** Generate alltime-standings.html and alltime-driver-ranking.html for the static site using existing backend services, and update top navigation to link to alltime pages
+**Requirements**: ALLTIME-01, ALLTIME-02, ALLTIME-03, ALLTIME-04, ALLTIME-05
+**Depends on:** Phase 51
+**Plans:** 2 plans
+
+**Success Criteria** (what must be TRUE):
+
+1. `alltime-standings.html` exists in output root after generation with team standings across all seasons
+2. `alltime-driver-ranking.html` exists in output root after generation with driver rankings across all seasons
+3. Top nav "Standings" and "Driver Ranking" links point to alltime pages (always visible, no activeSeasonSlug guard)
+4. Alltime pages have breadcrumbs (Home > Alltime Standings / Home > Alltime Driver Ranking)
+5. Alltime pages do NOT show subnav (no seasonSlug context)
+6. Team and driver names are plain text (no entity-links)
+7. Integration tests verify alltime page generation and nav link targets
+
+Plans:
+- [ ] 52-01-PLAN.md — TDD RED: Write failing tests for alltime pages + update nav test
+- [ ] 52-02-PLAN.md — TDD GREEN: Create alltime templates, service methods, and update layout nav
 
 ### Phase 44: Clean Output Directory
 
@@ -416,3 +437,4 @@ Plans:
 | 49. E2E Site Validation | v1.6 | 1/1 | Complete    | 2026-04-17 |
 | 50. Site Generator Test Robustness | v1.6 | 1/1 | Complete    | 2026-04-17 |
 | 51. YouTube Hero Video | v1.6 | 1/1 | Complete    | 2026-04-17 |
+| 52. Alltime Pages | v1.6 | 0/2 | Planning | — |
