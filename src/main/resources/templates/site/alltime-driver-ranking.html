@@ -10,7 +10,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th>#</th><th>Driver</th><th>Team</th>
+                        <th>#</th><th>Driver</th><th>Team(s)</th>
                         <th class="text-center">Races</th><th class="text-center">Best</th>
                         <th class="text-center">Avg</th><th class="text-right">Points</th>
                     </tr>
@@ -21,7 +21,7 @@
                         <td class="font-bold">
                             <a class="entity-link" th:href="${driverSlugMap.get(r.driver.id)}" th:text="${r.driver.psnId}"></a>
                         </td>
-                        <td class="text-dim" th:text="${r.team != null ? r.team.shortName : '-'}"></td>
+                        <td class="text-dim" th:text="${driverTeamsMap.containsKey(r.driver.id) ? #strings.listJoin(driverTeamsMap.get(r.driver.id), ', ') : '-'}"></td>
                         <td class="text-center" th:text="${r.racesCount}"></td>
                         <td class="text-center" th:text="'P' + ${r.bestPosition}"></td>
                         <td class="text-center" th:text="${#numbers.formatDecimal(r.averagePoints, 1, 1)}"></td>

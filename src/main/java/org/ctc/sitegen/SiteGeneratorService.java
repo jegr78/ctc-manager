@@ -586,25 +586,30 @@ public class SiteGeneratorService {
         var seasonIds = productionSeasons.stream().map(Season::getId).toList();
         var driverRanking = driverRankingService.calculateAlltimeRanking(seasonIds);
 
-        // Build driverSlugMap linking to latest season profile (root-relative paths)
-        var sortedSeasons = productionSeasons.stream()
-                .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber).reversed())
+        // Build driverSlugMap (latest season profile) and driverTeamsMap (all teams per driver)
+        var chronologicalSeasons = productionSeasons.stream()
+                .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber))
                 .toList();
         var driverSlugMap = new java.util.HashMap<java.util.UUID, String>();
-        for (var r : driverRanking) {
-            var driverId = r.getDriver().getId();
-            for (var season : sortedSeasons) {
-                var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
-                if (seasonDrivers.stream().anyMatch(sd -> sd.getDriver().getId().equals(driverId))) {
-                    driverSlugMap.put(driverId, "season/" + slugify(season.getDisplayLabel())
-                            + "/driver/" + slugify(r.getDriver().getPsnId()) + ".html");
-                    break;
+        var driverTeamsMap = new java.util.HashMap<java.util.UUID, java.util.List<String>>();
+        for (var season : chronologicalSeasons) {
+            var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
+            for (var sd : seasonDrivers) {
+                var driverId = sd.getDriver().getId();
+                var teamName = sd.getTeam().getParentOrSelf().getShortName();
+                driverTeamsMap.computeIfAbsent(driverId, k -> new java.util.ArrayList<>());
+                if (!driverTeamsMap.get(driverId).contains(teamName)) {
+                    driverTeamsMap.get(driverId).add(teamName);
                 }
+                // Latest season wins for the profile link
+                driverSlugMap.put(driverId, "season/" + slugify(season.getDisplayLabel())
+                        + "/driver/" + slugify(sd.getDriver().getPsnId()) + ".html");
             }
         }
 
         ctx.setVariable("driverRanking", driverRanking);
         ctx.setVariable("driverSlugMap", driverSlugMap);
+        ctx.setVariable("driverTeamsMap", driverTeamsMap);
         ctx.setVariable("currentPage", "alltime-driver-ranking");
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
