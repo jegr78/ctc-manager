@@ -352,18 +352,22 @@ class SiteGeneratorServiceTest {
                 + doc.select("a[href*='season/']").stream().map(e -> e.attr("href")).toList());
     }
 
+    // --- ALLTIME-03, ALLTIME-04: Nav links point to alltime pages ---
+
     @Test
-    void givenActiveSeason_whenGenerate_thenNavDriverRankingLinksToActiveSeason() throws IOException {
+    void whenGenerate_thenNavLinksToAlltimePages() throws IOException {
         // when
         siteGeneratorService.generate();
 
         // then
         var html = Files.readString(tempDir.resolve("index.html"));
         var doc = Jsoup.parse(html);
-        String expectedSlug = slugify(season.getDisplayLabel());
-        var links = doc.select("a[href*='season/" + expectedSlug + "/driver-ranking.html']");
-        assertFalse(links.isEmpty(),
-                "Nav Driver Ranking should link to season/" + expectedSlug + "/driver-ranking.html");
+        var standingsLinks = doc.select(".nav-links a[href*='alltime-standings.html']");
+        assertFalse(standingsLinks.isEmpty(),
+                "Nav should contain link to alltime-standings.html");
+        var driverRankingLinks = doc.select(".nav-links a[href*='alltime-driver-ranking.html']");
+        assertFalse(driverRankingLinks.isEmpty(),
+                "Nav should contain link to alltime-driver-ranking.html");
     }
 
     @Test
@@ -1345,5 +1349,41 @@ class SiteGeneratorServiceTest {
         assertTrue(brokenLinks.isEmpty(),
                 "teams.html must NOT link to non-existent profile for 0-game team, but found: "
                 + brokenLinks.stream().map(e -> e.attr("href")).toList());
+    }
+
+    // --- ALLTIME-01, ALLTIME-05: Alltime standings page ---
+
+    @Test
+    void whenGenerate_thenAlltimeStandingsPageExists() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        assertTrue(Files.exists(tempDir.resolve("alltime-standings.html")),
+                "alltime-standings.html should exist in output root");
+        var html = Files.readString(tempDir.resolve("alltime-standings.html"));
+        var doc = Jsoup.parse(html);
+        assertFalse(doc.select("thead th").isEmpty(), "Alltime standings page should have table headers");
+        assertFalse(doc.select("tbody tr").isEmpty(), "Alltime standings table should have rows");
+        assertTrue(doc.select("table").text().contains("GTNR" + uniqueSuffix)
+                || doc.select("table").text().contains("GP1R" + uniqueSuffix),
+                "Alltime standings should contain team names from test data");
+    }
+
+    // --- ALLTIME-02, ALLTIME-05: Alltime driver ranking page ---
+
+    @Test
+    void whenGenerate_thenAlltimeDriverRankingPageExists() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        assertTrue(Files.exists(tempDir.resolve("alltime-driver-ranking.html")),
+                "alltime-driver-ranking.html should exist in output root");
+        var html = Files.readString(tempDir.resolve("alltime-driver-ranking.html"));
+        var doc = Jsoup.parse(html);
+        assertFalse(doc.select("tbody tr").isEmpty(), "Alltime driver ranking table should have rows");
+        assertTrue(doc.select("table").text().contains("gen_panic_" + uniqueSuffix),
+                "Alltime driver ranking should contain driver PSN IDs from test data");
     }
 }
