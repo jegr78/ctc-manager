@@ -23,12 +23,10 @@
                 </svg>
             </label>
             <div class="nav-links">
-                <a th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
-                   th:href="${rootPath + '/season/' + activeSeasonSlug + '/standings.html'}"
-                   th:class="${currentPage == 'standings'} ? 'nav-link-active' : ''">Standings</a>
-                <a th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
-                   th:href="${rootPath + '/season/' + activeSeasonSlug + '/driver-ranking.html'}"
-                   th:class="${currentPage == 'driver-ranking'} ? 'nav-link-active' : ''">Driver Ranking</a>
+                <a th:href="${rootPath + '/alltime-standings.html'}"
+                   th:class="${currentPage == 'alltime-standings'} ? 'nav-link-active' : ''">Standings</a>
+                <a th:href="${rootPath + '/alltime-driver-ranking.html'}"
+                   th:class="${currentPage == 'alltime-driver-ranking'} ? 'nav-link-active' : ''">Driver Ranking</a>
                 <a th:href="${rootPath + '/archive.html'}"
                    th:class="${currentPage == 'archive'} ? 'nav-link-active' : ''">Archive</a>
             </div>
