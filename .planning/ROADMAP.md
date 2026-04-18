@@ -88,6 +88,21 @@ See: milestones/v1.5-ROADMAP.md for full details
 - [x] **Phase 48: Landing Page Redesign** - YouTube hero video (scraped) + tile navigation cards (completed 2026-04-17)
 - [x] **Phase 49: E2E Site Validation** - Comprehensive link resolution and structure validation tests (completed 2026-04-17)
 - [x] **Phase 50: Site Generator Test Robustness** - Fix latent OVER-06 broken links and mock YouTube scraper in tests (gap closure) (completed 2026-04-17)
+- [ ] **Phase 53: Documentation & Code Cleanup** - Update requirement checkboxes, remove dead parameter, fix SUMMARY doc mismatch (gap closure)
+
+### Phase 53: Documentation & Code Cleanup
+
+**Goal:** Close documentation and code debt from v1.6 milestone audit — update stale requirement checkboxes, remove dead code, fix documentation mismatches
+**Depends on:** Phase 52
+**Requirements**: —
+**Gap Closure**: Closes tech debt from v1.6 audit (8 stale checkboxes, INT-01 dead parameter, SUMMARY mismatch)
+
+**Success Criteria** (what must be TRUE):
+
+1. REQUIREMENTS.md: YT-01..03 and ALLTIME-01..05 checkboxes are `[x]` and traceability status is "Complete"
+2. REQUIREMENTS.md coverage count reflects 56/56 complete, 0 pending
+3. `generateIndex()` method signature no longer accepts the unused `allSeasons` parameter
+4. Phase 51 SUMMARY class name matches actual code (`.hero-video-overlay`)
 
 ### Phase 50: Site Generator Test Robustness
 
@@ -438,3 +453,4 @@ Plans:
 | 50. Site Generator Test Robustness | v1.6 | 1/1 | Complete    | 2026-04-17 |
 | 51. YouTube Hero Video | v1.6 | 1/1 | Complete    | 2026-04-17 |
 | 52. Alltime Pages | v1.6 | 2/2 | Complete    | 2026-04-18 |
+| 53. Documentation & Code Cleanup | v1.6 | — | Pending | — |
