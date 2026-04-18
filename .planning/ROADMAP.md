@@ -104,6 +104,11 @@ See: milestones/v1.5-ROADMAP.md for full details
 3. `generateIndex()` method signature no longer accepts the unused `allSeasons` parameter
 4. Phase 51 SUMMARY class name matches actual code (`.hero-video-overlay`)
 
+**Plans:** 1 plan
+
+Plans:
+- [ ] 53-01-PLAN.md — Verify REQUIREMENTS.md, remove unused allSeasons parameter, fix Phase 51 SUMMARY class name
+
 ### Phase 50: Site Generator Test Robustness
 
 **Goal**: Fix latent broken team-profile links for 0-game teams and mock YouTubeScraperService to eliminate live HTTP calls in tests
