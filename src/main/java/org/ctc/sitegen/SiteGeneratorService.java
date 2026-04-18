@@ -550,7 +550,26 @@ public class SiteGeneratorService {
                                            String activeSeasonName, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         var standings = standingsService.calculateAlltimeStandings(productionSeasons);
+
+        // Build teamSlugMap linking to latest season profile (root-relative paths)
+        var sortedSeasons = productionSeasons.stream()
+                .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber).reversed())
+                .toList();
+        var teamSlugMap = new java.util.HashMap<java.util.UUID, String>();
+        for (var s : standings) {
+            var teamId = s.getTeam().getId();
+            for (var season : sortedSeasons) {
+                var seasonStandings = standingsService.calculateStandings(season.getId());
+                if (seasonStandings.stream().anyMatch(st -> st.getTeam().getId().equals(teamId))) {
+                    teamSlugMap.put(teamId, "season/" + slugify(season.getDisplayLabel())
+                            + "/team/" + slugify(s.getTeam().getShortName()) + ".html");
+                    break;
+                }
+            }
+        }
+
         ctx.setVariable("standings", standings);
+        ctx.setVariable("teamSlugMap", teamSlugMap);
         ctx.setVariable("currentPage", "alltime-standings");
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
@@ -566,7 +585,26 @@ public class SiteGeneratorService {
         var ctx = new Context(Locale.ENGLISH);
         var seasonIds = productionSeasons.stream().map(Season::getId).toList();
         var driverRanking = driverRankingService.calculateAlltimeRanking(seasonIds);
+
+        // Build driverSlugMap linking to latest season profile (root-relative paths)
+        var sortedSeasons = productionSeasons.stream()
+                .sorted(java.util.Comparator.comparing(Season::getYear).thenComparing(Season::getNumber).reversed())
+                .toList();
+        var driverSlugMap = new java.util.HashMap<java.util.UUID, String>();
+        for (var r : driverRanking) {
+            var driverId = r.getDriver().getId();
+            for (var season : sortedSeasons) {
+                var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
+                if (seasonDrivers.stream().anyMatch(sd -> sd.getDriver().getId().equals(driverId))) {
+                    driverSlugMap.put(driverId, "season/" + slugify(season.getDisplayLabel())
+                            + "/driver/" + slugify(r.getDriver().getPsnId()) + ".html");
+                    break;
+                }
+            }
+        }
+
         ctx.setVariable("driverRanking", driverRanking);
+        ctx.setVariable("driverSlugMap", driverSlugMap);
         ctx.setVariable("currentPage", "alltime-driver-ranking");
         ctx.setVariable("seasonSlug", null);
         ctx.setVariable("seasonName", null);
