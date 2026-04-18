@@ -40,6 +40,27 @@ google:
 ctc:
   site:
     output-dir: docs/site
+    youtube-channel-url: "https://www.youtube.com/@CommunityTeamCup"
+    youtube-video-id: ""
+    links:
+      - name: "CTC YT"
+        url: "https://www.youtube.com/@CommunityTeamCup"
+      - name: "Shicuka YT"
+        url: "https://youtube.com/@shicuka85"
+      - name: "DTR YT"
+        url: "https://youtube.com/@dreamteamracing4836"
+      - name: "Kruentis YT"
+        url: "https://youtube.com/@kruentis"
+      - name: "GXR YT"
+        url: "https://youtube.com/@gen-x-racing"
+      - name: "Grey_roc YT"
+        url: "https://youtube.com/@grey_rocgt"
+      - name: "ZFS YT"
+        url: "https://youtube.com/@zfsracing"
+      - name: "TNR YT"
+        url: "https://youtube.com/@theneutralsracing"
+      - name: "JeGr YT"
+        url: "https://youtube.com/@jegr"
 
 # Actuator Health-Endpoint (fuer Docker Healthchecks)
 management:

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout('Teams', ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title">Teams</h2>
+        <div class="filter-bar">
+            <input type="text" id="search-input" class="search-input" placeholder="Search teams..." autocomplete="off"/>
+            <select id="season-filter">
+                <option value="">All Seasons</option>
+                <option th:each="entry : ${seasonEntries}"
+                        th:value="${entry.slug()}"
+                        th:text="${entry.season().displayLabel}">Season</option>
+            </select>
+        </div>
+        <table class="overview-table">
+            <thead>
+                <tr>
+                    <th>Team</th>
+                    <th>Seasons</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="entry : ${teamEntries}"
+                    class="overview-row"
+                    th:attr="data-seasons=${#strings.listJoin(entry.seasonSlugs(), ' ')},
+                             data-search=${#strings.toLowerCase(entry.shortName())}">
+                    <td class="overview-row-team-cell">
+                        <img th:if="${entry.logoRelPath() != null}"
+                             th:src="${entry.logoRelPath()}"
+                             class="overview-row-logo"
+                             th:alt="${entry.shortName()}"/>
+                        <a th:if="${entry.profileUrl() != null}"
+                           th:href="${entry.profileUrl()}"
+                           th:text="${entry.shortName()}"
+                           class="overview-row-name"></a>
+                        <span th:if="${entry.profileUrl() == null}"
+                              th:text="${entry.shortName()}"
+                              class="overview-row-name"></span>
+                    </td>
+                    <td class="overview-row-seasons">
+                        <a th:each="slug, stat : ${entry.seasonSlugs()}"
+                           th:href="${rootPath + '/season/' + slug + '/standings.html'}"
+                           th:text="${entry.seasonLabels()[stat.index]}"
+                           class="season-tag"></a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        (function() {
+            var select = document.getElementById('season-filter');
+            var search = document.getElementById('search-input');
+            var rows = document.querySelectorAll('.overview-row');
+            function filterRows() {
+                var slug = select.value;
+                var query = search.value.toLowerCase().trim();
+                rows.forEach(function(row) {
+                    var matchesSeason = !slug || (row.getAttribute('data-seasons') || '').split(' ').indexOf(slug) >= 0;
+                    var matchesSearch = !query || (row.getAttribute('data-search') || '').indexOf(query) >= 0;
+                    row.style.display = matchesSeason && matchesSearch ? '' : 'none';
+                });
+            }
+            select.addEventListener('change', filterRows);
+            search.addEventListener('input', filterRows);
+        })();
+    </script>
+</section>
+</body>
+</html>

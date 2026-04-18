@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout('Alltime Standings', ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title">Alltime Team Standings</h2>
+        <p class="hero-sub">All seasons combined</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th><th>Team</th><th class="text-center">MP</th>
+                        <th class="text-center">W</th><th class="text-center">D</th><th class="text-center">L</th>
+                        <th class="text-center">PR</th><th class="text-right">Pts</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="s, i : ${standings}">
+                        <td class="font-bold text-white" th:text="${i.count}"></td>
+                        <td>
+                            <a class="entity-link font-bold" th:href="${teamSlugMap.get(s.team.id)}" th:text="${s.team.shortName}"></a>
+                            <span class="text-dim" th:text="' ' + ${s.team.name}"></span>
+                        </td>
+                        <td class="text-center" th:text="${s.played}"></td>
+                        <td class="text-center" th:text="${s.wins}"></td>
+                        <td class="text-center" th:text="${s.draws}"></td>
+                        <td class="text-center" th:text="${s.losses}"></td>
+                        <td class="text-center text-dim" th:text="${s.pointsRatio}"></td>
+                        <td class="text-right font-bold text-white text-lg" th:text="${s.points}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>

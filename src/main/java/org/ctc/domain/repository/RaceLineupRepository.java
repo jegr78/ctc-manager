@@ -25,4 +25,7 @@ public interface RaceLineupRepository extends JpaRepository<RaceLineup, UUID> {
 
 	@EntityGraph(attributePaths = {"driver", "team"})
 	List<RaceLineup> findByTeamIdIn(List<UUID> teamIds);
+
+	@EntityGraph(attributePaths = {"driver", "team"})
+	List<RaceLineup> findByRaceMatchdaySeasonId(UUID seasonId);
 }

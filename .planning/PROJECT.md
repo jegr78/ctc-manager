@@ -66,9 +66,51 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ @Valid + BindingResult on PlayoffController.save() — Phase 34
 - ✓ CSS classes instead of inline styles on race results page — Phase 34, 36
 
+### Validated (v1.6)
+
+- ✓ Archive links use slugified displayLabel matching actual directory names (SeasonEntry record) — Phase 37
+- ✓ Nav Driver Ranking link resolves to active season's driver-ranking page — Phase 37
+- ✓ All navigation links use relative paths (rootPath defaults to ".") — Phase 37
+- ✓ Team logo images resolve correctly via copyLogoToAssets with path-traversal guard — Phase 37
+- ✓ Season year and number displayed on all 7 page types (hero, archive, standings, matchday, driver-ranking, team-profile, driver-profile) — Phase 38
+- ✓ Test seasons filtered from archive and page generation (productionSeasons filter) — Phase 38
+- ✓ Empty match-meta (no track/car) hidden via th:if guard on matchday and index pages — Phase 38
+- ✓ Entity cross-links: team names in standings link to team profiles, driver names in rankings and matchday results link to driver profiles — Phase 39
+- ✓ Team profile lists team's drivers with links to driver profiles (DriverEntry record, SeasonDriver data source) — Phase 39
+- ✓ Index page cross-links consistent with detail pages (D-04) — Phase 39
+- ✓ .entity-link CSS class with accent color (#4fc3f7) and hover state (#b3e5fc + underline) — Phase 39
+- ✓ Season subnavigation with Standings, Matchdays, Driver Ranking, Playoff links — Phase 40
+- ✓ Active navigation state highlighting for top-nav and subnav — Phase 40
+- ✓ Breadcrumbs on subpages (Home > Season > Page) — Phase 40
+- ✓ Matchday index page per season — Phase 40
+- ✓ Skip-to-content link as first focusable element on every page — Phase 41
+- ✓ Match winner visually highlighted with accent background in match cards — Phase 41
+- ✓ Mobile scroll indicator (gradient fade) on wide tables — Phase 41
+- ✓ Footer with working links (Top, Archive, active season) — Phase 41
+- ✓ Nav toggle aria-label on label element with role=button — Phase 41
+- ✓ Hover transitions (200ms) on table rows and links, cursor:pointer on clickables — Phase 41
+- ✓ Inline styles removed from driver-profile.html (CSS classes instead) — Phase 41
+
 ### Active
 
-(None — planning next milestone)
+#### Current Milestone: v1.6 Static Site Quality
+
+**Goal:** Fix broken links, add missing content, improve navigation/cross-linking, and deliver a polished, accessible static site with professional UX.
+
+**Target features:**
+
+- ~~Fix all broken navigation links (archive slug mismatch, driver ranking 404, absolute paths)~~ — Phase 37 complete
+- ~~Display season year and number across all pages~~ — Phase 38 complete
+- ~~Add inline links from standings to teams, from rankings to drivers, from matchdays to profiles~~ — Phase 39 complete
+- ~~Add season subnavigation (matchdays, standings, driver ranking, playoff per season)~~ — Phase 40 complete
+- ~~Filter test seasons from archive, fix empty match-meta and period column~~ — Phase 38 complete
+- ~~Remove inline styles in archive and driver-profile templates~~ — Phase 41 complete
+- ~~Fix broken team logo paths on static site~~ — Phase 37 complete
+- ~~Add skip-link, nav active-state, breadcrumbs for accessibility~~ — Phase 40/41 complete
+- ~~Highlight match winner in match cards~~ — Phase 41 complete
+- ~~Mobile scroll indicator for tables~~ — Phase 41 complete
+- ~~Footer with useful links~~ — Phase 41 complete
+- ~~Aria-label improvements, hover transitions, cursor:pointer on clickables~~ — Phase 41 complete
 
 ### Out of Scope
 
@@ -109,4 +151,4 @@ Architectural Consistency: All controllers delegate to services, exception handl
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-15 after v1.5 Code Review Fixes milestone*
+*Last updated: 2026-04-16 after Phase 41 (UX Polish & Accessibility) complete — v1.6 milestone complete*

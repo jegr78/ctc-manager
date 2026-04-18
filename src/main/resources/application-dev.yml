@@ -35,3 +35,5 @@ logging:
 ctc:
   site:
     output-dir: target/site
+    youtube-channel-url: "https://www.youtube.com/@CommunityTeamCup"
+    youtube-video-id: "epWntosO4gM"

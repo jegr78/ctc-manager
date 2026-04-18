@@ -4,10 +4,11 @@
 <body>
 <section>
     <div class="team-header">
-        <img th:if="${team.logoUrl}" th:src="${team.logoUrl}" class="team-logo" th:alt="${team.shortName}">
+        <img th:if="${teamLogoRelPath}" th:src="${teamLogoRelPath}" class="team-logo" th:alt="${team.shortName}">
         <div>
             <h1 class="text-white" th:text="${team.shortName + ' — ' + team.name}"></h1>
             <p class="text-dim" th:text="'Season ' + ${season.name}"></p>
+            <p class="season-meta" th:text="${season.year + ' | Season #' + season.number}"></p>
         </div>
     </div>
 
@@ -26,6 +27,25 @@
                         <td th:text="${standing.losses}"></td>
                         <td th:text="${standing.pointsRatio}"></td>
                         <td class="text-right font-bold text-white text-lg" th:text="${standing.points}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="section" th:if="${drivers != null and not #lists.isEmpty(drivers)}">
+        <h2 class="section-title">Drivers</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Driver</th><th class="text-right">Points</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="d : ${drivers}">
+                        <td>
+                            <a class="entity-link font-bold" th:href="${d.driverProfileUrl}" th:text="${d.psnId}"></a>
+                        </td>
+                        <td class="text-right font-bold text-white" th:text="${d.totalPoints}"></td>
                     </tr>
                 </tbody>
             </table>

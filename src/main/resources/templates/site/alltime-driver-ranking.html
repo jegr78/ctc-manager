@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout('Alltime Driver Ranking', ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title">Alltime Driver Ranking</h2>
+        <p class="hero-sub">All seasons combined</p>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th><th>Driver</th><th>Team(s)</th>
+                        <th class="text-center">Races</th><th class="text-center">Best</th>
+                        <th class="text-center">Avg</th><th class="text-right">Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="r, i : ${driverRanking}">
+                        <td class="font-bold text-white" th:text="${i.count}"></td>
+                        <td class="font-bold">
+                            <a class="entity-link" th:href="${driverSlugMap.get(r.driver.id)}" th:text="${r.driver.psnId}"></a>
+                        </td>
+                        <td class="text-dim" th:text="${driverTeamsMap.containsKey(r.driver.id) ? #strings.listJoin(driverTeamsMap.get(r.driver.id), ', ') : '-'}"></td>
+                        <td class="text-center" th:text="${r.racesCount}"></td>
+                        <td class="text-center" th:text="'P' + ${r.bestPosition}"></td>
+                        <td class="text-center" th:text="${#numbers.formatDecimal(r.averagePoints, 1, 1)}"></td>
+                        <td class="text-right font-bold text-white text-lg" th:text="${r.totalPoints}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+</body>
+</html>

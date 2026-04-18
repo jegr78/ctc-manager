@@ -74,10 +74,18 @@ public class StandingsService {
 
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateAlltimeStandings() {
-		List<Season> allSeasons = seasonRepository.findAll();
+		return calculateAlltimeStandings(seasonRepository.findAll());
+	}
+
+	/**
+	 * Calculates alltime standings restricted to the given seasons.
+	 * Used by the site generator to exclude Test seasons from public pages.
+	 */
+	@Transactional(readOnly = true)
+	public List<TeamStanding> calculateAlltimeStandings(List<Season> seasons) {
 		Map<UUID, TeamStanding> alltimeMap = new HashMap<>();
 
-		for (Season season : allSeasons) {
+		for (Season season : seasons) {
 			List<TeamStanding> seasonStandings = calculateStandings(season.getId());
 			if (seasonStandings.isEmpty()) continue;
 
@@ -95,7 +103,7 @@ public class StandingsService {
 				.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
 				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
 
-		log.debug("Calculated alltime standings: {} teams across {} seasons", result.size(), allSeasons.size());
+		log.debug("Calculated alltime standings: {} teams across {} seasons", result.size(), seasons.size());
 		return result;
 	}
 

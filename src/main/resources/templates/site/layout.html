@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,30 +9,73 @@
     <link rel="stylesheet" th:href="${assetsPath != null ? assetsPath + '/css/style.css' : '/assets/css/style.css'}">
 </head>
 <body>
-    <nav class="nav">
+<a href="#main-content" class="skip-link">Skip to main content</a>
+    <nav class="nav" aria-label="Main navigation">
         <div class="nav-inner">
             <a th:href="${rootPath + '/index.html'}" class="nav-brand">
                 <img th:src="${assetsPath != null ? assetsPath + '/img/ctc-logo-white.png' : '/assets/img/ctc-logo-white.png'}" alt="CTC" class="nav-logo">
                 <span>COMMUNITY TEAM CUP</span>
             </a>
-            <input type="checkbox" id="nav-toggle" class="nav-toggle-input" aria-label="Toggle navigation">
-            <label for="nav-toggle" class="nav-toggle-label">
+            <input type="checkbox" id="nav-toggle" class="nav-toggle-input">
+            <label for="nav-toggle" class="nav-toggle-label" aria-label="Toggle navigation menu" role="button">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
                 </svg>
             </label>
             <div class="nav-links">
-                <a th:href="${rootPath + '/index.html'}">Standings</a>
-                <a th:href="${rootPath + '/driver-ranking.html'}">Driver Ranking</a>
-                <a th:href="${rootPath + '/archive.html'}">Archive</a>
+                <a th:href="${rootPath + '/alltime-standings.html'}"
+                   th:class="${currentPage == 'alltime-standings'} ? 'nav-link-active' : ''">Standings</a>
+                <a th:href="${rootPath + '/alltime-driver-ranking.html'}"
+                   th:class="${currentPage == 'alltime-driver-ranking'} ? 'nav-link-active' : ''">Driver Ranking</a>
+                <a th:href="${rootPath + '/archive.html'}"
+                   th:class="${currentPage == 'archive'} ? 'nav-link-active' : ''">Archive</a>
             </div>
         </div>
     </nav>
-    <main class="main">
+    <nav class="subnav" aria-label="Season navigation" th:if="${seasonSlug != null and !#strings.isEmpty(seasonSlug)}">
+        <div class="subnav-inner">
+            <a th:href="${rootPath + '/season/' + seasonSlug + '/standings.html'}"
+               th:class="${currentPage == 'standings'} ? 'subnav-link active' : 'subnav-link'">Standings</a>
+            <a th:href="${rootPath + '/season/' + seasonSlug + '/matchdays.html'}"
+               th:class="${currentPage == 'matchdays'} ? 'subnav-link active' : 'subnav-link'">Matchdays</a>
+            <a th:href="${rootPath + '/season/' + seasonSlug + '/driver-ranking.html'}"
+               th:class="${currentPage == 'driver-ranking'} ? 'subnav-link active' : 'subnav-link'">Driver Ranking</a>
+            <a th:if="${hasPlayoff}"
+               th:href="${rootPath + '/season/' + (playoffSeasonSlug != null ? playoffSeasonSlug : seasonSlug) + '/playoff.html'}"
+               th:class="${currentPage == 'playoff'} ? 'subnav-link active' : 'subnav-link'">Playoff</a>
+        </div>
+    </nav>
+    <nav class="breadcrumb" aria-label="breadcrumb"
+         th:if="${breadcrumbCurrent != null and !#strings.isEmpty(breadcrumbCurrent)}">
+        <a class="breadcrumb-link" th:href="${rootPath + '/index.html'}">Home</a>
+        <th:block th:if="${seasonSlug != null and !#strings.isEmpty(seasonSlug)}">
+            <span class="breadcrumb-sep" aria-hidden="true"> &gt; </span>
+            <a class="breadcrumb-link"
+               th:href="${rootPath + '/season/' + seasonSlug + '/standings.html'}"
+               th:text="${seasonName}">Season</a>
+        </th:block>
+        <span class="breadcrumb-sep" aria-hidden="true"> &gt; </span>
+        <span class="breadcrumb-current" th:text="${breadcrumbCurrent}">Page</span>
+    </nav>
+    <main class="main" id="main-content">
         <div th:replace="${content}"></div>
     </main>
     <footer class="footer">
-        <p>Community Team Cup — Gran Turismo Racing League</p>
+        <div class="footer-links">
+            <a href="#" class="footer-link">Top</a>
+            <span class="footer-sep" aria-hidden="true">&middot;</span>
+            <a th:href="${rootPath + '/archive.html'}" class="footer-link">Archive</a>
+            <span th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
+                  class="footer-sep" aria-hidden="true">&middot;</span>
+            <a th:if="${activeSeasonSlug != null and !#strings.isEmpty(activeSeasonSlug)}"
+               th:href="${rootPath + '/season/' + activeSeasonSlug + '/standings.html'}"
+               th:text="${activeSeasonName}"
+               class="footer-link"></a>
+        </div>
+        <p>Community Team Cup &mdash; <a href="https://www.youtube.com/@CommunityTeamCup"
+           class="footer-link"
+           target="_blank"
+           rel="noopener">YouTube</a></p>
     </footer>
 </body>
 </html>

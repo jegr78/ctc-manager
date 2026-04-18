@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{site/layout :: layout('Matchdays — ' + ${season.name}, ~{::section})}">
+<body>
+<section>
+    <div class="section">
+        <h2 class="section-title" th:text="'Matchdays — ' + ${season.name}"></h2>
+        <p class="season-meta" th:text="${season.year + ' | Season #' + season.number}"></p>
+        <div th:if="${matchdays != null and !matchdays.isEmpty()}" class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Matchday</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="md : ${matchdays}">
+                        <td class="font-bold">
+                            <a class="entity-link"
+                               th:href="${matchdayLinkMap.get(md.id)}"
+                               th:text="${md.label}"></a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <p th:if="${matchdays == null or matchdays.isEmpty()}" class="text-dim">No matchdays recorded for this season.</p>
+    </div>
+</section>
+</body>
+</html>
