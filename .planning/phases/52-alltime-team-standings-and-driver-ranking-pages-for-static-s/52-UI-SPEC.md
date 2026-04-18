@@ -15,13 +15,13 @@ created: 2026-04-17
 
 ## Design System
 
-| Property | Value |
-|----------|-------|
-| Tool | none — Thymeleaf server-side rendering, custom CSS |
-| Preset | not applicable |
+| Property         | Value                                                                      |
+| ---------------- | -------------------------------------------------------------------------- |
+| Tool             | none — Thymeleaf server-side rendering, custom CSS                         |
+| Preset           | not applicable                                                             |
 | Component library | none — hand-rolled CSS in `src/main/resources/static/site/css/style.css` |
-| Icon library | none — SVG inline only (nav hamburger) |
-| Font | Conthrax (headings, brand, section-titles) / system-ui stack (body) |
+| Icon library     | none — SVG inline only (nav hamburger)                                     |
+| Font             | Conthrax (headings, brand, section-titles) / system-ui stack (body)        |
 
 Source: detected from `style.css` `@font-face` and `font-family` declarations.
 
@@ -31,15 +31,15 @@ Source: detected from `style.css` `@font-face` and `font-family` declarations.
 
 Declared values (must be multiples of 4):
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| xs | 4px | breadcrumb-sep margins, inline icon gaps |
-| sm | 8px | subnav link padding, footer separator, hero underline margin-top |
-| md | 16px | table cell padding (th/td), section-title margin-bottom, nav link padding-x |
-| lg | 24px | section margin, team-header gap, driver-header margin |
-| xl | 32px | main padding, hero padding, nav horizontal padding |
-| 2xl | 48px | hero vertical padding, footer margin-top |
-| 3xl | 64px | not used in this phase |
+| Token | Value | Usage                                                              |
+| ----- | ----- | ------------------------------------------------------------------ |
+| xs    | 4px   | breadcrumb-sep margins, inline icon gaps                           |
+| sm    | 8px   | subnav link padding, footer separator, hero underline margin-top   |
+| md    | 16px  | table cell padding (th/td), section-title margin-bottom, nav link padding-x |
+| lg    | 24px  | section margin, team-header gap, driver-header margin              |
+| xl    | 32px  | main padding, hero padding, nav horizontal padding                 |
+| 2xl   | 48px  | hero vertical padding, footer margin-top                           |
+| 3xl   | 64px  | not used in this phase                                             |
 
 Exceptions: `subnav-inner` height 44px (touch target minimum for mobile nav tabs — existing pattern, do not change).
 
@@ -49,35 +49,39 @@ Source: extracted from `style.css` existing token usage. Phase 52 reuses all exi
 
 ## Typography
 
-| Role | Size | Weight | Line Height |
-|------|------|--------|-------------|
-| Body / table cell | 14px | 400 (regular) | 1.6 (inherited from body) |
-| Label / table header | 11px | 400 | inherited |
-| Section title | 13px | 600 (Conthrax SB) | inherited |
-| Hero / page heading | 28px | 800 (Conthrax SB) | inherited |
+| Role                          | Size  | Weight      | Line Height              |
+| ----------------------------- | ----- | ----------- | ------------------------ |
+| Body / table cell             | 14px  | 400 (regular) | 1.6 (inherited from body) |
+| Label / table header          | 11px  | 400 (regular) | inherited                |
+| Section title (Conthrax)      | 13px  | 700 (bold)  | inherited                |
+| Hero / page heading (Conthrax) | 28px | 700 (bold)  | inherited                |
+
+Weights: 2 only — 400 (regular) and 700 (bold). No other weights are part of this contract.
 
 Notes:
-- Hero `h1` uses `font-family: 'Conthrax', sans-serif`, `font-size: 28px`, `letter-spacing: 3px`. Source: `.hero h1` in `style.css`.
-- Section titles use `font-family: 'Conthrax', sans-serif`, `font-size: 13px`, `text-transform: uppercase`, `letter-spacing: 2px`. Source: `.section-title`.
-- Table headers `th`: `font-size: 11px`, `text-transform: uppercase`, `letter-spacing: 1px`, `color: var(--text-muted)`. Source: `th` ruleset.
-- Table body `td`: `font-size: 14px`. Source: `table` ruleset.
-- `font-bold text-white text-lg` (rank number + points): `font-weight: 700`, `color: #fff`, `font-size: 16px`. Source: `.text-lg`, `.font-bold`, `.text-white` utilities.
-- Mobile hero: `font-size: 22px` at `max-width: 768px`. Source: responsive block.
 
-Phase 52 introduces no new type sizes. All values are pre-populated from the existing CSS.
+- Hero `h1` uses `font-family: 'Conthrax', sans-serif`, `font-size: 28px`, `letter-spacing: 3px`, `font-weight: 700`. Source: `.hero h1` in `style.css`.
+- Section titles use `font-family: 'Conthrax', sans-serif`, `font-size: 13px`, `text-transform: uppercase`, `letter-spacing: 2px`, `font-weight: 700`. Source: `.section-title`.
+- Table headers `th`: `font-size: 11px`, `text-transform: uppercase`, `letter-spacing: 1px`, `color: var(--text-muted)`, `font-weight: 400`. Source: `th` ruleset.
+- Table body `td`: `font-size: 14px`. Source: `table` ruleset.
+- Rank number and points columns use `.font-bold .text-white .text-lg` utility classes — these apply `font-weight: 700` and `font-size: 16px`. The 16px value is an **inherited pre-existing CSS utility** (`.text-lg`) not a new size declared by this phase. Same applies to `.hero-sub` which sets `font-size: 15px` — also an inherited pre-existing utility, not part of the declared 4-size scale above.
+- Mobile hero: `font-size: 22px` at `max-width: 768px`. Source: responsive block. This is a responsive override of the 28px heading size, not a separate scale entry.
+
+Phase 52 introduces no new type sizes and no new weights. All values are pre-populated from the existing CSS.
 
 ---
 
 ## Color
 
-| Role | Value | Usage |
-|------|-------|-------|
-| Dominant (60%) | `#0a0a0a` (`--bg`) | Page background, body gradient base |
-| Secondary (30%) | `#111` (`--bg-card`) | Table wrapper, nav bar, subnav, footer area, table rows |
-| Accent (10%) | `#4fc3f7` (`--accent`) | Active nav link, active subnav link, entity links, points column glow, skip-link focus bg |
-| Destructive | not applicable — this phase has no destructive actions |
+| Role            | Value                      | Usage                                                                               |
+| --------------- | -------------------------- | ----------------------------------------------------------------------------------- |
+| Dominant (60%)  | `#0a0a0a` (`--bg`)         | Page background, body gradient base                                                 |
+| Secondary (30%) | `#111` (`--bg-card`)       | Table wrapper, nav bar, subnav, footer area, table rows                             |
+| Accent (10%)    | `#4fc3f7` (`--accent`)     | Active nav link, active subnav link, entity links, points column glow, skip-link focus bg |
+| Destructive     | not applicable             | this phase has no destructive actions                                               |
 
 Accent reserved for:
+
 - `.nav-link-active` — active main nav item
 - `.subnav-link.active` — active subnav tab
 - `.entity-link` — clickable team/driver names (NOT used in alltime pages — names are plain text per 52-CONTEXT.md decisions)
@@ -88,6 +92,7 @@ Accent reserved for:
 Alltime pages specifically: team and driver names render as plain `<td>` text — NO `.entity-link` styling. The `--accent` color does NOT appear on names in these tables. Source: 52-CONTEXT.md decisions ("Team name as text (no link)", "Driver name as text (no link)").
 
 Additional color tokens in use:
+
 - `--bg-hover: #1a1a1a` — table row `:hover` background
 - `--border: #2a2a2a` — table, card, nav divider borders
 - `--text: #e0e0e0` — default body text
@@ -104,7 +109,7 @@ Source: `:root` custom properties in `style.css`.
 
 ### alltime-standings.html
 
-```
+```text
 layout fragment: layout('Alltime Standings', ...)
 ├── [inherited] skip-link
 ├── [inherited] nav (.nav) — "Standings" link active (alltime-standings)
@@ -121,6 +126,7 @@ layout fragment: layout('Alltime Standings', ...)
 ```
 
 Column alignment per existing standings.html pattern:
+
 - `#` — left-aligned, `.font-bold .text-white`
 - `Team` — left-aligned, plain text (no entity-link)
 - `MP` — `.text-center`
@@ -132,7 +138,7 @@ Column alignment per existing standings.html pattern:
 
 ### alltime-driver-ranking.html
 
-```
+```text
 layout fragment: layout('Alltime Driver Ranking', ...)
 ├── [inherited] skip-link
 ├── [inherited] nav (.nav) — "Driver Ranking" link active (alltime-driver-ranking)
@@ -149,6 +155,7 @@ layout fragment: layout('Alltime Driver Ranking', ...)
 ```
 
 Column alignment per existing driver-ranking.html pattern:
+
 - `#` — `.font-bold .text-white`
 - `Driver` — `.font-bold`, plain text (no entity-link)
 - `Team` — `.text-dim`, shortName or `-`
@@ -166,6 +173,7 @@ Source: driver-ranking.html existing template pattern + 52-CONTEXT.md column spe
 ### Navigation active state
 
 The alltime pages register as top-level nav items. `currentPage` values:
+
 - `alltime-standings` → "Standings" nav link gets `.nav-link-active`
 - `alltime-driver-ranking` → "Driver Ranking" nav link gets `.nav-link-active`
 
@@ -188,10 +196,10 @@ Transition: `transition: background-color 0.2s` on `tr`. Source: existing `style
 
 Both alltime pages: `Home > {page name}` — no season segment (no `seasonSlug`).
 
-| Page | breadcrumbCurrent |
-|------|-------------------|
-| alltime-standings.html | `Alltime Standings` |
-| alltime-driver-ranking.html | `Alltime Driver Ranking` |
+| Page                          | breadcrumbCurrent        |
+| ----------------------------- | ------------------------ |
+| alltime-standings.html        | `Alltime Standings`      |
+| alltime-driver-ranking.html   | `Alltime Driver Ranking` |
 
 Context variable `seasonSlug` must NOT be set (or set to null/empty) so the season segment in the breadcrumb is skipped. Source: layout.html breadcrumb `th:block th:if="${seasonSlug != null ..."`.
 
@@ -199,20 +207,20 @@ Context variable `seasonSlug` must NOT be set (or set to null/empty) so the seas
 
 ## Copywriting Contract
 
-| Element | Copy |
-|---------|------|
-| Primary CTA | Not applicable — read-only ranking pages, no user actions |
-| Page title (alltime-standings) | `Alltime Team Standings` |
-| Page subtitle (alltime-standings) | `All seasons combined` |
-| Section title (alltime-standings) | `Alltime Team Standings` |
-| Page title (alltime-driver-ranking) | `Alltime Driver Ranking` |
-| Page subtitle (alltime-driver-ranking) | `All seasons combined` |
-| Section title (alltime-driver-ranking) | `Alltime Driver Ranking` |
-| Empty state heading | `No standings data available` |
-| Empty state body | `No races have been recorded yet.` |
-| Error state | Not applicable — static site, no runtime errors surfaced to user |
-| Destructive confirmation | Not applicable — no destructive actions in this phase |
-| Null team in driver ranking | `-` (plain dash in Team column when `r.team == null`) |
+| Element                              | Copy                                                              |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| Primary CTA                          | Not applicable — read-only ranking pages, no user actions         |
+| Page title (alltime-standings)       | `Alltime Team Standings`                                          |
+| Page subtitle (alltime-standings)    | `All seasons combined`                                            |
+| Section title (alltime-standings)    | `Alltime Team Standings`                                          |
+| Page title (alltime-driver-ranking)  | `Alltime Driver Ranking`                                          |
+| Page subtitle (alltime-driver-ranking) | `All seasons combined`                                          |
+| Section title (alltime-driver-ranking) | `Alltime Driver Ranking`                                        |
+| Empty state heading                  | `No standings data available`                                     |
+| Empty state body                     | `No races have been recorded yet.`                                |
+| Error state                          | Not applicable — static site, no runtime errors surfaced to user  |
+| Destructive confirmation             | Not applicable — no destructive actions in this phase             |
+| Null team in driver ranking          | `-` (plain dash in Team column when `r.team == null`)             |
 
 Source: 52-CONTEXT.md decisions (title/subtitle wording). Empty state is a defensive contract — the backend services return empty lists if no data exists.
 
@@ -220,10 +228,10 @@ Source: 52-CONTEXT.md decisions (title/subtitle wording). Empty state is a defen
 
 ## Registry Safety
 
-| Registry | Blocks Used | Safety Gate |
-|----------|-------------|-------------|
-| shadcn official | none — not applicable (no React/shadcn stack) | not required |
-| third-party | none | not required |
+| Registry        | Blocks Used                                    | Safety Gate  |
+| --------------- | ---------------------------------------------- | ------------ |
+| shadcn official | none — not applicable (no React/shadcn stack)  | not required |
+| third-party     | none                                           | not required |
 
 This project uses Thymeleaf server-side rendering. No shadcn, no npm component registry. Registry safety gate is not applicable.
 
