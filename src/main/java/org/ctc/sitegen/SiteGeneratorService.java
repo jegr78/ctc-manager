@@ -78,7 +78,7 @@ public class SiteGeneratorService {
                     .toList();
 
             // Generate index
-            generateIndex(outPath, activeSeason, productionSeasons, activeSeasonSlug, activeSeasonName, result);
+            generateIndex(outPath, activeSeason, activeSeasonSlug, activeSeasonName, result);
 
             // Generate pages for each season
             for (var season : productionSeasons) {
@@ -147,7 +147,7 @@ public class SiteGeneratorService {
         });
     }
 
-    private void generateIndex(Path outPath, Season activeSeason, List<Season> allSeasons,
+    private void generateIndex(Path outPath, Season activeSeason,
                                 String activeSeasonSlug, String activeSeasonName, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
 
