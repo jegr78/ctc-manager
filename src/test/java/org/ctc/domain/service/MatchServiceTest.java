@@ -7,17 +7,20 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -113,6 +116,97 @@ class MatchServiceTest {
 		assertThat(result.isBye()).isTrue();
 		verify(matchRepository).save(any(Match.class));
 		verify(raceRepository).save(any(Race.class));
+	}
+
+	@Test
+	void givenSeasonWithTwoLegs_whenCreateMatch_thenTwoRacesCreatedWithSwappedSecondLeg() {
+		// given
+		var matchdayId = UUID.randomUUID();
+		var homeTeamId = UUID.randomUUID();
+		var awayTeamId = UUID.randomUUID();
+
+		var season = new Season("Test Season");
+		season.setLegs(2);
+		var matchday = new Matchday(season, "MD1", 1);
+		matchday.setId(matchdayId);
+
+		var homeTeam = new Team();
+		homeTeam.setId(homeTeamId);
+		homeTeam.setShortName("HOM");
+
+		var awayTeam = new Team();
+		awayTeam.setId(awayTeamId);
+		awayTeam.setShortName("AWY");
+
+		when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+		when(teamRepository.findById(homeTeamId)).thenReturn(Optional.of(homeTeam));
+		when(teamRepository.findById(awayTeamId)).thenReturn(Optional.of(awayTeam));
+		when(matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(matchdayId, homeTeamId, awayTeamId))
+				.thenReturn(false);
+		when(matchRepository.save(any(Match.class))).thenAnswer(inv -> {
+			Match m = inv.getArgument(0);
+			m.setId(UUID.randomUUID());
+			return m;
+		});
+		when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
+
+		// when
+		var result = service.createMatch(matchdayId, homeTeamId, awayTeamId, false);
+
+		// then
+		var raceCaptor = ArgumentCaptor.forClass(Race.class);
+		verify(raceRepository, times(2)).save(raceCaptor.capture());
+		List<Race> saved = raceCaptor.getAllValues();
+
+		// Match itself keeps the originally supplied home/away — never swapped regardless of legs
+		assertThat(result.getHomeTeam()).isEqualTo(homeTeam);
+		assertThat(result.getAwayTeam()).isEqualTo(awayTeam);
+
+		// Leg 1: no override, resolves to match home/away
+		assertThat(saved.get(0).getHomeTeam()).isEqualTo(homeTeam);
+		assertThat(saved.get(0).getAwayTeam()).isEqualTo(awayTeam);
+
+		// Leg 2: swapped via overrides
+		assertThat(saved.get(1).getHomeTeam()).isEqualTo(awayTeam);
+		assertThat(saved.get(1).getAwayTeam()).isEqualTo(homeTeam);
+	}
+
+	@Test
+	void givenSeasonWithTwoLegsAndBye_whenCreateMatch_thenTwoRacesWithoutSwap() {
+		// given
+		var matchdayId = UUID.randomUUID();
+		var homeTeamId = UUID.randomUUID();
+
+		var season = new Season("Test Season");
+		season.setLegs(2);
+		var matchday = new Matchday(season, "MD1", 1);
+		matchday.setId(matchdayId);
+
+		var homeTeam = new Team();
+		homeTeam.setId(homeTeamId);
+		homeTeam.setShortName("HOM");
+
+		when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
+		when(teamRepository.findById(homeTeamId)).thenReturn(Optional.of(homeTeam));
+		when(matchRepository.save(any(Match.class))).thenAnswer(inv -> {
+			Match m = inv.getArgument(0);
+			m.setId(UUID.randomUUID());
+			return m;
+		});
+		when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
+
+		// when
+		service.createMatch(matchdayId, homeTeamId, null, true);
+
+		// then — bye: both legs have home team, no swap
+		var raceCaptor = ArgumentCaptor.forClass(Race.class);
+		verify(raceRepository, times(2)).save(raceCaptor.capture());
+		List<Race> saved = raceCaptor.getAllValues();
+
+		assertThat(saved.get(0).getHomeTeam()).isEqualTo(homeTeam);
+		assertThat(saved.get(0).getAwayTeam()).isNull();
+		assertThat(saved.get(1).getHomeTeam()).isEqualTo(homeTeam);
+		assertThat(saved.get(1).getAwayTeam()).isNull();
 	}
 
 	@Test

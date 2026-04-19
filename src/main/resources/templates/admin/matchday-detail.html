@@ -77,6 +77,11 @@
                                 <span th:unless="${race.results.isEmpty()}" class="badge badge-active" th:text="${race.results.size() + ' Results'}"></span>
                             </a>
                         </div>
+                        <div th:if="${match.races.size() < matchday.season.legs}" class="leg-add-row">
+                            <form th:action="@{/admin/matches/{id}/add-leg(id=${match.id})}" method="post" class="form-inline">
+                                <button type="submit" class="btn btn-secondary btn-sm">+ Add Leg</button>
+                            </form>
+                        </div>
                         <div th:if="${match.homeScore != null && !match.bye}" class="leg-download-row">
                             <form th:action="@{/admin/matchdays/{mdId}/matches/{mId}/download-match-results(mdId=${matchday.id}, mId=${match.id})}" method="post" class="form-inline">
                                 <button type="submit" class="btn btn-secondary btn-sm">&#11015; Match Results</button>

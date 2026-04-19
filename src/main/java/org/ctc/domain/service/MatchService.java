@@ -58,21 +58,39 @@ public class MatchService {
 					"Match already exists: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName());
 		}
 
-		var match = new Match(matchday, homeTeam, awayTeam);
-		match.setBye(bye);
-		match = matchRepository.save(match);
-
-		// Auto-create first leg (Race) for the match
-		var race = new Race();
-		race.setMatchday(matchday);
-		race.setMatch(match);
-		raceRepository.save(race);
+		var match = createMatchWithLegs(matchday, homeTeam, awayTeam, bye);
 
 		log.info("Created match: {} {} on {}",
 				homeTeam.getShortName(),
 				bye ? "bye" : "vs " + (awayTeam != null ? awayTeam.getShortName() : "?"),
 				matchday.getLabel());
 
+		return match;
+	}
+
+	/**
+	 * Creates a match and one Race per leg configured on the season. The match itself keeps
+	 * the caller-supplied home/away teams (so {@code match.homeTeam} corresponds to leg 1);
+	 * only even-numbered legs (2nd, 4th, ...) get swapped home/away via Race overrides.
+	 * Caller is responsible for duplicate checks and logging.
+	 */
+	@Transactional
+	public Match createMatchWithLegs(Matchday matchday, Team homeTeam, Team awayTeam, boolean bye) {
+		var match = new Match(matchday, homeTeam, awayTeam);
+		match.setBye(bye);
+		match = matchRepository.save(match);
+
+		int legs = matchday.getSeason().getLegs();
+		for (int leg = 0; leg < legs; leg++) {
+			var race = new Race();
+			race.setMatchday(matchday);
+			race.setMatch(match);
+			if (leg % 2 == 1 && !bye) {
+				race.setHomeTeamOverride(awayTeam);
+				race.setAwayTeamOverride(homeTeam);
+			}
+			raceRepository.save(race);
+		}
 		return match;
 	}
 
