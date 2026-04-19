@@ -4,9 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
-import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
-import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,8 +20,7 @@ public class MatchdayGeneratorService {
 
 	private final SeasonRepository seasonRepository;
 	private final MatchdayRepository matchdayRepository;
-	private final MatchRepository matchRepository;
-	private final RaceRepository raceRepository;
+	private final MatchService matchService;
 
 	public GeneratorFormData getFormData(UUID seasonId) {
 		var season = seasonRepository.findById(seasonId)
@@ -152,29 +149,12 @@ public class MatchdayGeneratorService {
 	private void createMatchesForRound(Matchday matchday, List<int[]> pairs, List<Team> teams, boolean reversed) {
 		for (int[] pair : pairs) {
 			if (pair[1] == -1) {
-				createMatchWithRace(matchday, teams.get(pair[0]), null, true);
+				matchService.createMatchWithLegs(matchday, teams.get(pair[0]), null, true);
 			} else if (reversed) {
-				createMatchWithRace(matchday, teams.get(pair[1]), teams.get(pair[0]), false);
+				matchService.createMatchWithLegs(matchday, teams.get(pair[1]), teams.get(pair[0]), false);
 			} else {
-				createMatchWithRace(matchday, teams.get(pair[0]), teams.get(pair[1]), false);
+				matchService.createMatchWithLegs(matchday, teams.get(pair[0]), teams.get(pair[1]), false);
 			}
-		}
-	}
-
-	private void createMatchWithRace(Matchday matchday, Team homeTeam, Team awayTeam, boolean bye) {
-		var match = new Match(matchday, homeTeam, awayTeam);
-		match.setBye(bye);
-		match = matchRepository.save(match);
-		int legs = matchday.getSeason().getLegs();
-		for (int leg = 0; leg < legs; leg++) {
-			var race = new Race();
-			race.setMatchday(matchday);
-			race.setMatch(match);
-			if (leg % 2 == 1 && !bye) { // even legs (2nd, 4th, ...) get swapped home/away
-				race.setHomeTeamOverride(awayTeam);
-				race.setAwayTeamOverride(homeTeam);
-			}
-			raceRepository.save(race);
 		}
 	}
 

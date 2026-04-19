@@ -151,12 +151,16 @@ class MatchServiceTest {
 		when(raceRepository.save(any(Race.class))).thenAnswer(inv -> inv.getArgument(0));
 
 		// when
-		service.createMatch(matchdayId, homeTeamId, awayTeamId, false);
+		var result = service.createMatch(matchdayId, homeTeamId, awayTeamId, false);
 
 		// then
 		var raceCaptor = ArgumentCaptor.forClass(Race.class);
 		verify(raceRepository, times(2)).save(raceCaptor.capture());
 		List<Race> saved = raceCaptor.getAllValues();
+
+		// Match itself keeps the originally supplied home/away — never swapped regardless of legs
+		assertThat(result.getHomeTeam()).isEqualTo(homeTeam);
+		assertThat(result.getAwayTeam()).isEqualTo(awayTeam);
 
 		// Leg 1: no override, resolves to match home/away
 		assertThat(saved.get(0).getHomeTeam()).isEqualTo(homeTeam);

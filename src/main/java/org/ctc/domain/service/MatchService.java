@@ -58,11 +58,28 @@ public class MatchService {
 					"Match already exists: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName());
 		}
 
+		var match = createMatchWithLegs(matchday, homeTeam, awayTeam, bye);
+
+		log.info("Created match: {} {} on {}",
+				homeTeam.getShortName(),
+				bye ? "bye" : "vs " + (awayTeam != null ? awayTeam.getShortName() : "?"),
+				matchday.getLabel());
+
+		return match;
+	}
+
+	/**
+	 * Creates a match and one Race per leg configured on the season. The match itself keeps
+	 * the caller-supplied home/away teams (so {@code match.homeTeam} corresponds to leg 1);
+	 * only even-numbered legs (2nd, 4th, ...) get swapped home/away via Race overrides.
+	 * Caller is responsible for duplicate checks and logging.
+	 */
+	@Transactional
+	public Match createMatchWithLegs(Matchday matchday, Team homeTeam, Team awayTeam, boolean bye) {
 		var match = new Match(matchday, homeTeam, awayTeam);
 		match.setBye(bye);
 		match = matchRepository.save(match);
 
-		// Auto-create one Race per leg configured on the season; swap home/away on even legs (2nd, 4th, ...)
 		int legs = matchday.getSeason().getLegs();
 		for (int leg = 0; leg < legs; leg++) {
 			var race = new Race();
@@ -74,12 +91,6 @@ public class MatchService {
 			}
 			raceRepository.save(race);
 		}
-
-		log.info("Created match: {} {} on {}",
-				homeTeam.getShortName(),
-				bye ? "bye" : "vs " + (awayTeam != null ? awayTeam.getShortName() : "?"),
-				matchday.getLabel());
-
 		return match;
 	}
 
