@@ -290,6 +290,12 @@ th {
     border-bottom: 1px solid var(--border);
 }
 
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--text); }
+th.sortable::after { content: ' \2195'; opacity: 0.4; }
+th.sortable[data-sort="asc"]::after { content: ' \2191'; opacity: 1; }
+th.sortable[data-sort="desc"]::after { content: ' \2193'; opacity: 1; }
+
 td {
     padding: 10px 16px;
     border-bottom: 1px solid rgba(255,255,255,0.03);

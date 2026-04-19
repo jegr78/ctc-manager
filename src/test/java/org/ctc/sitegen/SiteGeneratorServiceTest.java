@@ -459,6 +459,52 @@ class SiteGeneratorServiceTest {
     }
 
     @Test
+    void givenMultipleSeasons_whenGenerate_thenArchiveIsSortedByYearDescending() throws IOException {
+        // given — add a season from an earlier year and one from a later year
+        var earlier = new Season("Earlier Era " + uniqueSuffix, 2023, 1);
+        earlier.setRaceScoring(season.getRaceScoring());
+        earlier.setMatchScoring(season.getMatchScoring());
+        seasonRepository.save(earlier);
+        var later = new Season("Future Era " + uniqueSuffix, 2028, 2);
+        later.setRaceScoring(season.getRaceScoring());
+        later.setMatchScoring(season.getMatchScoring());
+        seasonRepository.save(later);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then — rows should be ordered 2028, 2026, 2023
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("archive.html")));
+        var rows = doc.select("tbody tr");
+        assertTrue(rows.size() >= 3, "archive should list at least the three seasons");
+        var years = rows.stream()
+                .map(r -> Integer.parseInt(r.attr("data-year")))
+                .toList();
+        assertEquals(years.stream().sorted((a, b) -> Integer.compare(b, a)).toList(), years,
+                "archive rows should default to descending year order but were: " + years);
+    }
+
+    @Test
+    void givenArchive_whenGenerate_thenSeasonHeaderIsSortable() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(tempDir.resolve("archive.html")));
+        var sortableHeader = doc.selectFirst("thead th.sortable");
+        assertNotNull(sortableHeader,
+                "archive should expose a sortable season header to let users toggle sort order");
+        assertEquals("desc", sortableHeader.attr("data-sort"),
+                "default sort indicator should be descending");
+        var rows = doc.select("tbody tr");
+        assertFalse(rows.isEmpty(), "archive should have at least one season row");
+        for (var row : rows) {
+            assertFalse(row.attr("data-year").isBlank(),
+                    "every archive row should carry a data-year attribute for client-side sorting");
+        }
+    }
+
+    @Test
     void givenSeason_whenGenerate_thenTeamProfileHasSeasonMeta() throws IOException {
         // when
         siteGeneratorService.generate();

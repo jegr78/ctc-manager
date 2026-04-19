@@ -6,12 +6,18 @@
     <div class="section">
         <h2 class="section-title">Season Archive</h2>
         <div class="table-wrap">
-            <table>
+            <table id="archiveTable">
                 <thead>
-                    <tr><th>Season</th><th>Period</th><th>Status</th><th></th></tr>
+                    <tr>
+                        <th class="sortable" data-sort-key="year" data-sort="desc"
+                            aria-label="Sort by season year">Season</th>
+                        <th>Period</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="entry : ${seasonEntries}">
+                    <tr th:each="entry : ${seasonEntries}" th:attr="data-year=${entry.season.year}">
                         <td class="font-bold text-white">
                             <span th:text="${entry.season.name}"></span>
                             <p class="season-meta" th:text="${entry.season.year + ' | #' + entry.season.number}"></p>
@@ -33,6 +39,26 @@
             </table>
         </div>
     </div>
+    <script>
+        (function() {
+            var table = document.getElementById('archiveTable');
+            if (!table) return;
+            var header = table.querySelector('th.sortable[data-sort-key="year"]');
+            var tbody = table.querySelector('tbody');
+            if (!header || !tbody) return;
+            header.addEventListener('click', function() {
+                var asc = header.getAttribute('data-sort') !== 'asc';
+                header.setAttribute('data-sort', asc ? 'asc' : 'desc');
+                Array.from(tbody.querySelectorAll('tr'))
+                    .sort(function(a, b) {
+                        var ya = parseInt(a.getAttribute('data-year'), 10) || 0;
+                        var yb = parseInt(b.getAttribute('data-year'), 10) || 0;
+                        return asc ? ya - yb : yb - ya;
+                    })
+                    .forEach(function(row) { tbody.appendChild(row); });
+            });
+        })();
+    </script>
 </section>
 </body>
 </html>

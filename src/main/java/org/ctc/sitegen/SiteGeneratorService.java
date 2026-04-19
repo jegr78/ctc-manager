@@ -396,6 +396,9 @@ public class SiteGeneratorService {
                                    String activeSeasonName, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         var seasonEntries = allSeasons.stream()
+                .sorted(java.util.Comparator
+                        .comparingInt(Season::getYear).reversed()
+                        .thenComparing(java.util.Comparator.comparingInt(Season::getNumber).reversed()))
                 .map(s -> new SeasonEntry(s, slugify(s.getDisplayLabel())))
                 .toList();
         ctx.setVariable("seasonEntries", seasonEntries);
