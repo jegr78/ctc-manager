@@ -536,6 +536,44 @@ class SiteGeneratorServiceTest {
         }
     }
 
+    @Test
+    void givenDriverWithAliases_whenGenerate_thenDriverProfileListsAliases() throws IOException {
+        // given
+        driver1.addAlias("panic_alt_" + uniqueSuffix);
+        driver1.addAlias("panic_old_" + uniqueSuffix);
+        driverRepository.save(driver1);
+
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var profile = seasonDir().resolve("driver")
+                .resolve(slugify(driver1.getPsnId()) + ".html");
+        assertTrue(Files.exists(profile), "driver profile should exist for driver1");
+        var html = Files.readString(profile);
+        assertTrue(html.contains("panic_alt_" + uniqueSuffix),
+                "driver profile should list the first PSN alias");
+        assertTrue(html.contains("panic_old_" + uniqueSuffix),
+                "driver profile should list the second PSN alias");
+        var doc = Jsoup.parse(html);
+        var aliasSection = doc.select(".driver-aliases");
+        assertFalse(aliasSection.isEmpty(),
+                ".driver-aliases element should exist on driver profile page");
+    }
+
+    @Test
+    void givenDriverWithoutAliases_whenGenerate_thenDriverProfileOmitsAliasSection() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var profile = seasonDir().resolve("driver")
+                .resolve(slugify(driver1.getPsnId()) + ".html");
+        var doc = Jsoup.parse(Files.readString(profile));
+        assertTrue(doc.select(".driver-aliases").isEmpty(),
+                "alias section should not render when driver has no aliases");
+    }
+
     // --- CONT-06: Test season filtering ---
 
     @Test

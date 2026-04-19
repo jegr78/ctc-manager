@@ -8,6 +8,10 @@
         <p class="text-dim" th:if="${driver.nickname != null and !#strings.isEmpty(driver.nickname)}" th:text="${driver.nickname}"></p>
         <p class="season-meta" th:text="${season.year + ' | Season #' + season.number}"></p>
         <p class="text-dim" th:if="${team != null}" th:text="'Team: ' + ${team.shortName} + ' — ' + ${team.name} + ' (Season ' + ${season.name} + ')'"></p>
+        <p class="text-dim driver-aliases" th:if="${driver.aliases != null and !driver.aliases.isEmpty()}">
+            <span>Also known as: </span>
+            <span th:each="alias, stat : ${driver.aliases}"><span th:text="${alias.alias}"></span><span th:if="${!stat.last}">, </span></span>
+        </p>
     </div>
 
     <div class="section" th:if="${results != null && !results.isEmpty()}">
