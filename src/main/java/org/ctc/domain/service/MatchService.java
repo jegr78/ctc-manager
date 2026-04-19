@@ -62,11 +62,18 @@ public class MatchService {
 		match.setBye(bye);
 		match = matchRepository.save(match);
 
-		// Auto-create first leg (Race) for the match
-		var race = new Race();
-		race.setMatchday(matchday);
-		race.setMatch(match);
-		raceRepository.save(race);
+		// Auto-create one Race per leg configured on the season; swap home/away on even legs (2nd, 4th, ...)
+		int legs = matchday.getSeason().getLegs();
+		for (int leg = 0; leg < legs; leg++) {
+			var race = new Race();
+			race.setMatchday(matchday);
+			race.setMatch(match);
+			if (leg % 2 == 1 && !bye) {
+				race.setHomeTeamOverride(awayTeam);
+				race.setAwayTeamOverride(homeTeam);
+			}
+			raceRepository.save(race);
+		}
 
 		log.info("Created match: {} {} on {}",
 				homeTeam.getShortName(),
