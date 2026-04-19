@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{site/layout :: layout('Matchdays — ' + ${season.name}, ~{::section})}">
+      th:replace="~{site/layout :: layout('Matchdays — ' + ${season.displayLabel}, ~{::section})}">
 <body>
 <section>
     <div class="section">
-        <h2 class="section-title" th:text="'Matchdays — ' + ${season.name}"></h2>
-        <p class="season-meta" th:text="${season.year + ' | Season #' + season.number}"></p>
+        <h2 class="section-title" th:text="'Matchdays — ' + ${season.displayLabel}"></h2>
         <div th:if="${matchdays != null and !matchdays.isEmpty()}" class="table-wrap">
             <table>
                 <thead>

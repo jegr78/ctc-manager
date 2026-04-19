@@ -4,8 +4,7 @@
 <body>
 <section>
     <div class="section">
-        <h2 class="section-title" th:text="${matchday.label + ' — ' + season.name}"></h2>
-        <p class="season-meta" th:text="${season.year + ' | Season #' + season.number}"></p>
+        <h2 class="section-title" th:text="${matchday.label + ' — ' + season.displayLabel}"></h2>
         <div class="match-grid">
             <div class="match-card" th:each="race : ${races}">
                 <th:block th:insert="~{site/fragments/match-card :: matchCardBody(${race})}"></th:block>

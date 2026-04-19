@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{site/layout :: layout('Playoffs ' + ${season.name}, ~{::section})}">
+      th:replace="~{site/layout :: layout('Playoffs ' + ${season.displayLabel}, ~{::section})}">
 <body>
 <section>
     <div class="section">

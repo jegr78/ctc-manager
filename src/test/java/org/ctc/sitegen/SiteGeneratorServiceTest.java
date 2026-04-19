@@ -431,48 +431,6 @@ class SiteGeneratorServiceTest {
     // --- CONT-01: Season year/number display ---
 
     @Test
-    void givenSeason_whenGenerate_thenStandingsHasSeasonMeta() throws IOException {
-        // when
-        siteGeneratorService.generate();
-
-        // then
-        var html = Files.readString(seasonDir().resolve("standings.html"));
-        var doc = Jsoup.parse(html);
-        var meta = doc.select(".season-meta");
-        assertFalse(meta.isEmpty(), ".season-meta element should exist on standings page");
-        assertTrue(meta.text().contains("2026"), "season-meta should contain year 2026");
-        assertTrue(meta.text().contains("#1"), "season-meta should contain season number #1");
-    }
-
-    @Test
-    void givenSeason_whenGenerate_thenMatchdayHasSeasonMeta() throws IOException {
-        // when
-        siteGeneratorService.generate();
-
-        // then
-        var html = Files.readString(seasonDir().resolve("matchday/spieltag-1.html"));
-        var doc = Jsoup.parse(html);
-        var meta = doc.select(".season-meta");
-        assertFalse(meta.isEmpty(), ".season-meta element should exist on matchday page");
-        assertTrue(meta.text().contains("2026"), "season-meta should contain year 2026");
-        assertTrue(meta.text().contains("#1"), "season-meta should contain season number #1");
-    }
-
-    @Test
-    void givenSeason_whenGenerate_thenDriverRankingHasSeasonMeta() throws IOException {
-        // when
-        siteGeneratorService.generate();
-
-        // then
-        var html = Files.readString(seasonDir().resolve("driver-ranking.html"));
-        var doc = Jsoup.parse(html);
-        var meta = doc.select(".season-meta");
-        assertFalse(meta.isEmpty(), ".season-meta element should exist on driver-ranking page");
-        assertTrue(meta.text().contains("2026"), "season-meta should contain year 2026");
-        assertTrue(meta.text().contains("#1"), "season-meta should contain season number #1");
-    }
-
-    @Test
     void givenSeason_whenGenerate_thenHeroContainsCommunityTeamCupTitle() throws IOException {
         // when
         siteGeneratorService.generate();
@@ -572,6 +530,105 @@ class SiteGeneratorServiceTest {
         var doc = Jsoup.parse(Files.readString(profile));
         assertTrue(doc.select(".driver-aliases").isEmpty(),
                 "alias section should not render when driver has no aliases");
+    }
+
+    // --- Season references must always include year + number + name (displayLabel) ---
+
+    @Test
+    void givenSeason_whenGenerate_thenDriverProfileRaceHistoryHeadingContainsSeasonLabel() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var profile = seasonDir().resolve("driver").resolve(slugify(driver1.getPsnId()) + ".html");
+        var doc = Jsoup.parse(Files.readString(profile));
+        var heading = doc.select(".section-title").stream()
+                .filter(h -> h.text().startsWith("Race History"))
+                .findFirst().orElseThrow(() ->
+                        new AssertionError("Race History heading not found on driver profile"));
+        assertTrue(heading.text().contains(season.getDisplayLabel()),
+                "Race History heading should contain season displayLabel but was: " + heading.text());
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenDriverProfileTeamLineContainsSeasonLabel() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var profile = seasonDir().resolve("driver").resolve(slugify(driver1.getPsnId()) + ".html");
+        var header = Jsoup.parse(Files.readString(profile)).selectFirst(".driver-header");
+        assertNotNull(header, ".driver-header should exist");
+        assertTrue(header.text().contains(season.getDisplayLabel()),
+                "driver-header should include season displayLabel but was: " + header.text());
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenStandingsHeadingContainsSeasonLabel() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(seasonDir().resolve("standings.html")));
+        var heading = doc.selectFirst(".section-title");
+        assertNotNull(heading, ".section-title should exist on standings page");
+        assertTrue(heading.text().contains(season.getDisplayLabel()),
+                "standings heading should contain season displayLabel but was: " + heading.text());
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenDriverRankingHeadingContainsSeasonLabel() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(seasonDir().resolve("driver-ranking.html")));
+        var heading = doc.selectFirst(".section-title");
+        assertNotNull(heading, ".section-title should exist on driver-ranking page");
+        assertTrue(heading.text().contains(season.getDisplayLabel()),
+                "driver-ranking heading should contain season displayLabel but was: " + heading.text());
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenMatchdaysOverviewHeadingContainsSeasonLabel() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(seasonDir().resolve("matchdays.html")));
+        var heading = doc.selectFirst(".section-title");
+        assertNotNull(heading, ".section-title should exist on matchdays page");
+        assertTrue(heading.text().contains(season.getDisplayLabel()),
+                "matchdays heading should contain season displayLabel but was: " + heading.text());
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenMatchdayHeadingContainsSeasonLabel() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var doc = Jsoup.parse(Files.readString(seasonDir().resolve("matchday/spieltag-1.html")));
+        var heading = doc.selectFirst(".section-title");
+        assertNotNull(heading, ".section-title should exist on matchday page");
+        assertTrue(heading.text().contains(season.getDisplayLabel()),
+                "matchday heading should contain season displayLabel but was: " + heading.text());
+    }
+
+    @Test
+    void givenSeason_whenGenerate_thenTeamProfileHeaderContainsSeasonLabel() throws IOException {
+        // when
+        siteGeneratorService.generate();
+
+        // then
+        var teamDir = seasonDir().resolve("team");
+        try (var files = Files.list(teamDir)) {
+            var firstProfile = files.filter(p -> p.toString().endsWith(".html")).findFirst().orElseThrow();
+            var header = Jsoup.parse(Files.readString(firstProfile)).selectFirst(".team-header");
+            assertNotNull(header, ".team-header should exist on team profile page");
+            assertTrue(header.text().contains(season.getDisplayLabel()),
+                    "team-header should include season displayLabel but was: " + header.text());
+        }
     }
 
     // --- CONT-06: Test season filtering ---

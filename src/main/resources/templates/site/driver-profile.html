@@ -6,8 +6,8 @@
     <div class="driver-header">
         <h1 class="text-white" th:text="${driver.psnId}"></h1>
         <p class="text-dim" th:if="${driver.nickname != null and !#strings.isEmpty(driver.nickname)}" th:text="${driver.nickname}"></p>
-        <p class="season-meta" th:text="${season.year + ' | Season #' + season.number}"></p>
-        <p class="text-dim" th:if="${team != null}" th:text="'Team: ' + ${team.shortName} + ' — ' + ${team.name} + ' (Season ' + ${season.name} + ')'"></p>
+        <p class="season-meta" th:text="${season.displayLabel}"></p>
+        <p class="text-dim" th:if="${team != null}" th:text="'Team: ' + ${team.shortName} + ' — ' + ${team.name}"></p>
         <p class="text-dim driver-aliases" th:if="${driver.aliases != null and !driver.aliases.isEmpty()}">
             <span>Also known as: </span>
             <span th:each="alias, stat : ${driver.aliases}"><span th:text="${alias.alias}"></span><span th:if="${!stat.last}">, </span></span>
@@ -15,7 +15,7 @@
     </div>
 
     <div class="section" th:if="${results != null && !results.isEmpty()}">
-        <h2 class="section-title" th:text="'Race History — ' + ${season.name}"></h2>
+        <h2 class="section-title" th:text="'Race History — ' + ${season.displayLabel}"></h2>
         <div class="table-wrap">
             <table>
                 <thead>
