@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Bulk Driver Import from Google Sheets
-status: defining_requirements
+status: roadmap_complete
 last_updated: "2026-04-24T00:00:00.000Z"
 last_activity: 2026-04-24
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,20 +20,26 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Defining requirements for v1.8 — Bulk Driver Import from Google Sheets
+**Current focus:** v1.8 — Bulk Driver Import from Google Sheets (roadmap complete, ready to plan Phase 54)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (roadmap complete, awaiting `/gsd-plan-phase 54`)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-24 — Milestone v1.8 started
+Status: Roadmap complete
+Last activity: 2026-04-24 — ROADMAP.md written with 2 phases (54-55), 28/28 requirements mapped
 
 ## Progress Bar
 
 ```
-v1.8: (phases pending roadmap)
+v1.8: [ ][ ]   0 / 2 phases (0%)
+      P54 P55
 ```
+
+Legend: `[x]` complete, `[-]` in progress, `[ ]` not started
+
+- Phase 54: Preview Service & Row Categorization — Not started
+- Phase 55: Admin Import UI & Transactional Execute — Not started
 
 ## Completed Milestones
 
@@ -42,7 +48,7 @@ v1.8: (phases pending roadmap)
 - v1.2 Driver Merge (4 phases, 5 plans) — shipped 2026-04-07
 - v1.3 English Test Data (8 phases) — shipped 2026-04-10
 - v1.5 Code Review Fixes (9 phases, 14 plans) — shipped 2026-04-15
-- v1.6 Static Site Quality (17 phases, 56 requirements) — complete 2026-04-18, archival pending
+- v1.6 Static Site Quality (17 phases, 56 requirements) — shipped 2026-04-18
 
 ## Accumulated Context
 
@@ -54,10 +60,14 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [v1.8 start]: Reuse `GoogleSheetsService`, `DriverMatchingService` (4-stage fuzzy), and `CsvImportService` preview-state pattern — no parallel infrastructure.
 - [v1.8 start]: Missing Seasons/Teams are errors, never auto-created — consistent with "No Fallback Calculations" principle.
 - [v1.8 start]: E2E tests deferred (Playwright × Google Sheets mocking is fragile); Unit + Integration tests must meet 82% coverage gate.
+- [v1.8 roadmap]: Two-phase structure chosen over three-phase split. Rationale: Controller+templates+execute form a single cohesive deliverable — splitting preview-controller from execute-controller would ship a non-verifiable intermediate (preview form with no execute path). Phase 54 delivers a fully unit-tested service; Phase 55 delivers the end-to-end admin flow with integration coverage.
 
 ### Phase Numbering
 
 Continuing from v1.6 (last phase: 53). v1.8 phases start at **Phase 54**.
+
+- Phase 54: Preview Service & Row Categorization (17 requirements)
+- Phase 55: Admin Import UI & Transactional Execute (11 requirements)
 
 ### Key Technical Context
 
@@ -66,7 +76,14 @@ Continuing from v1.6 (last phase: 53). v1.8 phases start at **Phase 54**.
 - Admin entry point: new page at `/admin/drivers/import` (button on `/admin/drivers`).
 - Controller routes: `GET /admin/drivers/import`, `POST /admin/drivers/import/preview`, `POST /admin/drivers/import/execute`.
 - No Flyway migration required.
+- Reuse mandated: `GoogleSheetsService.extractSpreadsheetId()/getSheetNames()/readRangeFromSheet()`, `DriverMatchingService` 4-stage logic, `CsvImportController`/`CsvImportService` `@SessionAttributes` preview-state pattern.
 
 ### Blockers/Concerns
 
 None.
+
+## Session Continuity
+
+**Next action:** `/gsd-plan-phase 54` to decompose the preview service phase into executable plans.
+
+**Branch:** `gsd/v1.8-bulk-driver-import` (do not switch, stash, reset, or checkout; worktree edits only).

@@ -90,40 +90,41 @@ Deferred to future releases. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IMPORT-01 | TBD | Pending |
-| IMPORT-02 | TBD | Pending |
-| IMPORT-03 | TBD | Pending |
-| IMPORT-04 | TBD | Pending |
-| IMPORT-05 | TBD | Pending |
-| IMPORT-06 | TBD | Pending |
-| UX-01 | TBD | Pending |
-| UX-02 | TBD | Pending |
-| UX-03 | TBD | Pending |
-| UX-04 | TBD | Pending |
-| UX-05 | TBD | Pending |
-| UX-06 | TBD | Pending |
-| UX-07 | TBD | Pending |
-| UX-08 | TBD | Pending |
-| MATCH-01 | TBD | Pending |
-| MATCH-02 | TBD | Pending |
-| DATA-01 | TBD | Pending |
-| DATA-02 | TBD | Pending |
-| DATA-03 | TBD | Pending |
-| DATA-04 | TBD | Pending |
-| DATA-05 | TBD | Pending |
-| TEST-01 | TBD | Pending |
-| TEST-02 | TBD | Pending |
-| TEST-03 | TBD | Pending |
-| QUAL-01 | TBD | Pending |
-| QUAL-02 | TBD | Pending |
-| QUAL-03 | TBD | Pending |
-| QUAL-04 | TBD | Pending |
+| IMPORT-01 | Phase 55 | Pending |
+| IMPORT-02 | Phase 54 | Pending |
+| IMPORT-03 | Phase 54 | Pending |
+| IMPORT-04 | Phase 54 | Pending |
+| IMPORT-05 | Phase 54 | Pending |
+| IMPORT-06 | Phase 55 | Pending |
+| UX-01 | Phase 54 | Pending |
+| UX-02 | Phase 54 | Pending |
+| UX-03 | Phase 54 | Pending |
+| UX-04 | Phase 54 | Pending |
+| UX-05 | Phase 54 | Pending |
+| UX-06 | Phase 54 | Pending |
+| UX-07 | Phase 55 | Pending |
+| UX-08 | Phase 55 | Pending |
+| MATCH-01 | Phase 54 | Pending |
+| MATCH-02 | Phase 54 | Pending |
+| DATA-01 | Phase 54 | Pending |
+| DATA-02 | Phase 54 | Pending |
+| DATA-03 | Phase 55 | Pending |
+| DATA-04 | Phase 54 | Pending |
+| DATA-05 | Phase 54 | Pending |
+| TEST-01 | Phase 54 | Pending |
+| TEST-02 | Phase 55 | Pending |
+| TEST-03 | Phase 55 | Pending |
+| QUAL-01 | Phase 55 | Pending |
+| QUAL-02 | Phase 55 | Pending |
+| QUAL-03 | Phase 55 | Pending |
+| QUAL-04 | Phase 55 | Pending |
 
 **Coverage:**
 
 - v1.8 requirements: 28 total (6 Import Flow + 8 Row Categorization + 2 Matching + 5 Data Integrity + 3 Testing + 4 Code Quality)
-- Phase mapping pending (filled by roadmap step)
+- Phase mapping: 28/28 mapped (Phase 54: 17, Phase 55: 11) — no orphans, no duplicates
 
 ---
 
 *Requirements defined: 2026-04-24 — derived from docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md*
+*Traceability updated: 2026-04-24 — phases mapped to Phase 54 (Preview Service) and Phase 55 (Admin Import UI & Execute)*
