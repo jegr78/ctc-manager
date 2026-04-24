@@ -98,7 +98,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 
 **Milestone Goal:** Provide admins a two-phase bulk import (Preview -> Execute) that seeds `Driver` records and `SeasonDriver` assignments from a curated Google Sheet with per-year tabs, reusing the existing CSV-import pattern (`GoogleSheetsService`, `DriverMatchingService`, `CsvImportService` preview-state).
 
-- [ ] **Phase 54: Preview Service & Row Categorization** - Backend service that fetches year-numbered tabs, categorizes rows into six buckets, and is fully unit-tested
+- [x] **Phase 54: Preview Service & Row Categorization** - Backend service that fetches year-numbered tabs, categorizes rows into six buckets, and is fully unit-tested (completed 2026-04-24)
 - [ ] **Phase 55: Admin Import UI & Transactional Execute** - Controller, form DTO, templates, entry button, and transactional execute path with integration coverage
 
 ## Phase Details
@@ -191,5 +191,5 @@ See: milestones/v1.5-ROADMAP.md for full details
 | 51. YouTube Hero Video | v1.6 | 1/1 | Complete | 2026-04-17 |
 | 52. Alltime Pages | v1.6 | 2/2 | Complete | 2026-04-18 |
 | 53. Documentation & Code Cleanup | v1.6 | 1/1 | Complete | 2026-04-18 |
-| 54. Preview Service & Row Categorization | v1.8 | 1/1 | In progress (awaiting verification) | — |
+| 54. Preview Service & Row Categorization | v1.8 | 1/1 | Complete | 2026-04-24 |
 | 55. Admin Import UI & Transactional Execute | v1.8 | 0/? | Not started | — |

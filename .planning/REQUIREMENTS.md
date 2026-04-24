@@ -10,39 +10,39 @@ Requirements for the Bulk Driver Import from Google Sheets milestone. Each maps 
 ### Import Flow
 
 - [ ] **IMPORT-01**: Admin can open a new page at `/admin/drivers/import` (reachable via button on `/admin/drivers`) and submit a Google Sheet URL to load a preview
-- [ ] **IMPORT-02**: Preview auto-detects tabs whose name matches `^\d{4}$` and ignores all non-matching tabs
-- [ ] **IMPORT-03**: Preview reads columns A (`PSN ID`) and C (`Team` short code) from each relevant tab, skipping the header row
-- [ ] **IMPORT-04**: Each detected tab renders as its own preview section, sorted by year ascending
-- [ ] **IMPORT-05**: Each tab preview shows a Season dropdown auto-preselected to the `Season` matching by `name` or `displayLabel`; admin can override before execute
+- [x] **IMPORT-02**: Preview auto-detects tabs whose name matches `^\d{4}$` and ignores all non-matching tabs
+- [x] **IMPORT-03**: Preview reads columns A (`PSN ID`) and C (`Team` short code) from each relevant tab, skipping the header row
+- [x] **IMPORT-04**: Each detected tab renders as its own preview section, sorted by year ascending
+- [x] **IMPORT-05**: Each tab preview shows a Season dropdown auto-preselected via `SeasonRepository.findByYear(int)` (singleton→id; 0/≥2→null + ambiguousReason). [D-13 override: ROADMAP wording said findByName/findByDisplayLabel; final implementation uses findByYear because Season.name is free-text and displayLabel is computed.] Admin can override before execute
 - [ ] **IMPORT-06**: Execute persists Drivers and `SeasonDriver` assignments within a single `@Transactional` boundary with redirect + flash summary on success
 
 ### Row Categorization
 
-- [ ] **UX-01**: `New Drivers` bucket lists rows whose PSN ID is unknown to the system
-- [ ] **UX-02**: `New Assignments` bucket lists rows whose driver exists but has no `SeasonDriver` for the selected season
-- [ ] **UX-03**: `Conflicts` bucket lists rows whose `SeasonDriver` already exists with a different team
-- [ ] **UX-04**: `Fuzzy Match Suggestions` bucket lists rows whose PSN ID matches an existing driver via Levenshtein ≥0.8 (not via exact/CI/alias)
-- [ ] **UX-05**: `Unchanged` bucket lists rows whose driver+team assignment already matches (no-op on execute)
-- [ ] **UX-06**: `Errors` bucket lists rows with blank PSN ID or unknown team code; these rows are excluded from execute
+- [x] **UX-01**: `New Drivers` bucket lists rows whose PSN ID is unknown to the system
+- [x] **UX-02**: `New Assignments` bucket lists rows whose driver exists but has no `SeasonDriver` for the selected season
+- [x] **UX-03**: `Conflicts` bucket lists rows whose `SeasonDriver` already exists with a different team
+- [x] **UX-04**: `Fuzzy Match Suggestions` bucket lists rows whose PSN ID matches an existing driver via Levenshtein ≥0.8 (not via exact/CI/alias)
+- [x] **UX-05**: `Unchanged` bucket lists rows whose driver+team assignment already matches (no-op on execute)
+- [x] **UX-06**: `Errors` bucket lists rows with blank PSN ID or unknown team code; these rows are excluded from execute
 - [ ] **UX-07**: Each conflict row has a `Skip` checkbox; checked → existing assignment retained, unchecked (default) → overwrite with sheet value
 - [ ] **UX-08**: Each fuzzy match row has an `Accept` checkbox; checked → link to suggested driver, unchecked (default) → treat as new driver
 
 ### Driver Matching
 
-- [ ] **MATCH-01**: Existing `DriverMatchingService` 4-stage logic (exact → case-insensitive → alias → Levenshtein ≥0.8) is reused without modification
-- [ ] **MATCH-02**: Same PSN ID appearing in multiple tabs creates the `Driver` exactly once; subsequent tabs attach additional `SeasonDriver` assignments
+- [x] **MATCH-01**: Existing `DriverMatchingService` 4-stage logic (exact → case-insensitive → alias → Levenshtein ≥0.8) is reused without modification
+- [x] **MATCH-02**: Same PSN ID appearing in multiple tabs creates the `Driver` exactly once; subsequent tabs attach additional `SeasonDriver` assignments (preview-layer: same Driver id surfaces in each tab's bucket; de-duplication lives in Phase 55 execute per D-07)
 
 ### Data Integrity
 
-- [ ] **DATA-01**: Missing `Season` (neither by tab name nor via manual override) is reported as a row error; no Season is auto-created
-- [ ] **DATA-02**: Unknown team short code is reported as a row error; no `Team` is auto-created
+- [x] **DATA-01**: Missing `Season` (neither by tab name nor via manual override) is reported as a row error; no Season is auto-created (preview surfaces ambiguousReason; error reporting final in Phase 55 UI)
+- [x] **DATA-02**: Unknown team short code is reported as a row error; no `Team` is auto-created
 - [ ] **DATA-03**: Conflict default behavior is overwrite with sheet value; `Skip`-flagged rows leave the existing `SeasonDriver` untouched
-- [ ] **DATA-04**: No Flyway schema migration is introduced by this milestone (existing `Driver` + `SeasonDriver` schema is sufficient)
-- [ ] **DATA-05**: `RaceLineup` records are never modified by the driver import (respects RaceLineup-is-Source-of-Truth for race-level assignments)
+- [x] **DATA-04**: No Flyway schema migration is introduced by this milestone (existing `Driver` + `SeasonDriver` schema is sufficient)
+- [x] **DATA-05**: `RaceLineup` records are never modified by the driver import (respects RaceLineup-is-Source-of-Truth for race-level assignments)
 
 ### Testing
 
-- [ ] **TEST-01**: Unit tests cover preview categorization with ≥9 given-when-then scenarios (one per bucket + edge cases)
+- [x] **TEST-01**: Unit tests cover preview categorization with ≥9 given-when-then scenarios (one per bucket + edge cases) — 16 @Test methods delivered; JaCoCo 98.9% on DriverSheetImportService
 - [ ] **TEST-02**: Integration tests cover the full controller flow (form → preview → execute) with mocked `GoogleSheetsService`
 - [ ] **TEST-03**: Project line coverage stays ≥82% after new code lands (`./mvnw verify` JaCoCo gate passes)
 
@@ -91,27 +91,27 @@ Deferred to future releases. Tracked but not in current roadmap.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | IMPORT-01 | Phase 55 | Pending |
-| IMPORT-02 | Phase 54 | Pending |
-| IMPORT-03 | Phase 54 | Pending |
-| IMPORT-04 | Phase 54 | Pending |
-| IMPORT-05 | Phase 54 | Pending |
+| IMPORT-02 | Phase 54 | Verified |
+| IMPORT-03 | Phase 54 | Verified |
+| IMPORT-04 | Phase 54 | Verified |
+| IMPORT-05 | Phase 54 | Verified |
 | IMPORT-06 | Phase 55 | Pending |
-| UX-01 | Phase 54 | Pending |
-| UX-02 | Phase 54 | Pending |
-| UX-03 | Phase 54 | Pending |
-| UX-04 | Phase 54 | Pending |
-| UX-05 | Phase 54 | Pending |
-| UX-06 | Phase 54 | Pending |
+| UX-01 | Phase 54 | Verified |
+| UX-02 | Phase 54 | Verified |
+| UX-03 | Phase 54 | Verified |
+| UX-04 | Phase 54 | Verified |
+| UX-05 | Phase 54 | Verified |
+| UX-06 | Phase 54 | Verified |
 | UX-07 | Phase 55 | Pending |
 | UX-08 | Phase 55 | Pending |
-| MATCH-01 | Phase 54 | Pending |
-| MATCH-02 | Phase 54 | Pending |
-| DATA-01 | Phase 54 | Pending |
-| DATA-02 | Phase 54 | Pending |
+| MATCH-01 | Phase 54 | Verified |
+| MATCH-02 | Phase 54 | Verified |
+| DATA-01 | Phase 54 | Verified |
+| DATA-02 | Phase 54 | Verified |
 | DATA-03 | Phase 55 | Pending |
-| DATA-04 | Phase 54 | Pending |
-| DATA-05 | Phase 54 | Pending |
-| TEST-01 | Phase 54 | Pending |
+| DATA-04 | Phase 54 | Verified |
+| DATA-05 | Phase 54 | Verified |
+| TEST-01 | Phase 54 | Verified |
 | TEST-02 | Phase 55 | Pending |
 | TEST-03 | Phase 55 | Pending |
 | QUAL-01 | Phase 55 | Pending |
