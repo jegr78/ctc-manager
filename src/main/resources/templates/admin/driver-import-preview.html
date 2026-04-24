@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Driver Import Preview', ~{::section})}">
+<body>
+<section>
+    <h1>Driver Import Preview</h1>
+
+    <form th:action="@{/admin/drivers/import/execute}" method="post">
+        <input type="hidden" name="sheetUrl" th:value="${sheetUrl}">
+
+        <th:block th:each="tab : ${preview.tabPreviews()}">
+            <div class="card mb-md">
+                <h2 th:text="${tab.year()}"></h2>
+
+                <!-- Season dropdown -->
+                <div class="form-group">
+                    <label th:for="'seasonId_' + ${tab.year()}">Season</label>
+                    <select th:name="'seasonId_' + ${tab.year()}"
+                            th:id="'seasonId_' + ${tab.year()}">
+                        <option value="">-- Select season --</option>
+                        <option th:each="s : ${seasons}"
+                                th:value="${s.id}"
+                                th:text="${s.displayLabel}"
+                                th:selected="${s.id == tab.suggestedSeasonId()}"></option>
+                    </select>
+                    <small th:if="${tab.ambiguousReason() != null}"
+                           class="text-dim"
+                           th:text="${tab.ambiguousReason()}"></small>
+                </div>
+
+                <!-- Bucket: New Drivers -->
+                <th:block th:if="${!tab.newDrivers().isEmpty()}">
+                    <h3 th:text="'New Drivers (' + ${#lists.size(tab.newDrivers())} + ')'"></h3>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>PSN ID</th><th>Team</th></tr></thead>
+                            <tbody>
+                                <tr th:each="row : ${tab.newDrivers()}">
+                                    <td th:text="${row.psnId()}"></td>
+                                    <td th:text="${row.teamShortName()}"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
+
+                <!-- Bucket: New Assignments -->
+                <th:block th:if="${!tab.newAssignments().isEmpty()}">
+                    <h3 th:text="'New Assignments (' + ${#lists.size(tab.newAssignments())} + ')'"></h3>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>PSN ID</th><th>Team</th></tr></thead>
+                            <tbody>
+                                <tr th:each="row : ${tab.newAssignments()}">
+                                    <td th:text="${row.psnId()}"></td>
+                                    <td th:text="${row.teamShortName()}"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
+
+                <!-- Bucket: Conflicts (Skip checkbox) — UX-07 -->
+                <th:block th:if="${!tab.conflicts().isEmpty()}">
+                    <h3 th:text="'Conflicts (' + ${#lists.size(tab.conflicts())} + ')'"></h3>
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>PSN ID</th>
+                                    <th>Current Team</th>
+                                    <th>Sheet Team</th>
+                                    <th>Skip (keep existing)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="row : ${tab.conflicts()}">
+                                    <td th:text="${row.psnId()}"></td>
+                                    <td th:text="${row.existingTeamShortName()}"></td>
+                                    <td th:text="${row.sheetTeamShortName()}"></td>
+                                    <td>
+                                        <input type="checkbox"
+                                               th:name="'skip_' + ${row.psnId()} + '_' + ${tab.year()}"
+                                               value="on">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
+
+                <!-- Bucket: Fuzzy Match Suggestions (Accept checkbox) — UX-08 -->
+                <th:block th:if="${!tab.fuzzySuggestions().isEmpty()}">
+                    <h3 th:text="'Fuzzy Match Suggestions (' + ${#lists.size(tab.fuzzySuggestions())} + ')'"></h3>
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>PSN ID</th>
+                                    <th>Suggested Driver</th>
+                                    <th>Team</th>
+                                    <th>Accept (link to existing)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="row : ${tab.fuzzySuggestions()}">
+                                    <td th:text="${row.psnId()}"></td>
+                                    <td th:text="${row.suggestedPsnId() + ' (' + #numbers.formatDecimal(row.similarity() * 100, 1, 0) + '%)'}"></td>
+                                    <td th:text="${row.teamShortName()}"></td>
+                                    <td>
+                                        <input type="checkbox"
+                                               th:name="'accept_' + ${row.psnId()} + '_' + ${tab.year()}"
+                                               th:value="${row.suggestedDriverId()}">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
+
+                <!-- Bucket: Unchanged (display-only, no DB write on execute) -->
+                <th:block th:if="${!tab.unchanged().isEmpty()}">
+                    <h3 th:text="'Unchanged (' + ${#lists.size(tab.unchanged())} + ')'"></h3>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>PSN ID</th><th>Team</th></tr></thead>
+                            <tbody>
+                                <tr th:each="row : ${tab.unchanged()}">
+                                    <td th:text="${row.psnId()}"></td>
+                                    <td th:text="${row.teamShortName()}"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
+
+                <!-- Bucket: Errors (display-only, never imported) -->
+                <th:block th:if="${!tab.errors().isEmpty()}">
+                    <h3 th:text="'Errors (' + ${#lists.size(tab.errors())} + ')'"></h3>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>PSN ID</th><th>Team Code</th><th>Reason</th></tr></thead>
+                            <tbody>
+                                <tr th:each="row : ${tab.errors()}">
+                                    <td th:text="${row.psnId()}"></td>
+                                    <td th:text="${row.teamCode()}"></td>
+                                    <td th:text="${row.reason().message()}"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </th:block>
+
+            </div>
+        </th:block>
+
+        <!-- Ambiguous-season warning banner — D-16 -->
+        <div class="alert alert-error mb-md"
+             th:if="${preview.tabPreviews().stream().anyMatch(t -> t.suggestedSeasonId() == null)}">
+            <strong>Warning:</strong> Some tabs have no matching season.
+            Tabs with no season selected will be skipped on execute.
+        </div>
+
+        <!-- Execute button — outside per-tab loop, at form bottom -->
+        <div class="actions mt-md">
+            <button type="submit" class="btn btn-primary">Execute Import</button>
+            <a th:href="@{/admin/drivers/import}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</section>
+</body>
+</html>
