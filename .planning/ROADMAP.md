@@ -119,7 +119,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 6. `DriverSheetImportServiceTest` covers preview categorization with at least 9 given-when-then scenarios (one per bucket plus tab-filtering, cross-tab dedup, season-auto-match edge cases) and all assertions pass under `./mvnw verify`
 
 **Plans**: 1 plan
-- [ ] 54-01-PLAN.md — Preview service vertical slice: SeasonRepository.findByYear(int) + DriverSheetImportService (7 inner records + ErrorReason enum + D-12 waterfall preview method) + DriverSheetImportServiceTest (13 given-when-then scenarios) + JaCoCo 82% gate
+- [x] 54-01-PLAN.md — Preview service vertical slice: SeasonRepository.findByYear(int) + DriverSheetImportService (7 inner records + ErrorReason enum + D-12 waterfall preview method) + DriverSheetImportServiceTest (13 given-when-then scenarios) + JaCoCo 82% gate
 
 ### Phase 55: Admin Import UI & Transactional Execute
 
@@ -191,5 +191,5 @@ See: milestones/v1.5-ROADMAP.md for full details
 | 51. YouTube Hero Video | v1.6 | 1/1 | Complete | 2026-04-17 |
 | 52. Alltime Pages | v1.6 | 2/2 | Complete | 2026-04-18 |
 | 53. Documentation & Code Cleanup | v1.6 | 1/1 | Complete | 2026-04-18 |
-| 54. Preview Service & Row Categorization | v1.8 | 0/? | Not started | — |
+| 54. Preview Service & Row Categorization | v1.8 | 1/1 | In progress (awaiting verification) | — |
 | 55. Admin Import UI & Transactional Execute | v1.8 | 0/? | Not started | — |
