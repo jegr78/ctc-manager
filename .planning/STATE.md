@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Bulk Driver Import from Google Sheets
-status: roadmap_complete
-last_updated: "2026-04-24T00:00:00.000Z"
+status: phase_54_context_gathered
+last_updated: "2026-04-24T12:00:00.000Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 2
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** v1.8 — Bulk Driver Import from Google Sheets (roadmap complete, ready to plan Phase 54)
+**Current focus:** v1.8 — Bulk Driver Import from Google Sheets (Phase 54 context gathered, ready to plan)
 
 ## Current Position
 
-Phase: Not started (roadmap complete, awaiting `/gsd-plan-phase 54`)
+Phase: 54 — Preview Service & Row Categorization (context gathered, awaiting `/gsd-plan-phase 54`)
 Plan: —
-Status: Roadmap complete
-Last activity: 2026-04-24 — ROADMAP.md written with 2 phases (54-55), 28/28 requirements mapped
+Status: Phase 54 context gathered
+Last activity: 2026-04-24 — 54-CONTEXT.md captured 13 implementation decisions across Season-Auto-Match, Preview-Datenmodell, Cross-Tab-Driver-Identity, Error-Encoding, Duplicate-Handling; ROADMAP SC#3 deviation documented (findByName/findByDisplayLabel → findByYear(int) + uniqueness)
 
 ## Progress Bar
 
@@ -76,7 +76,7 @@ Continuing from v1.6 (last phase: 53). v1.8 phases start at **Phase 54**.
 - Admin entry point: new page at `/admin/drivers/import` (button on `/admin/drivers`).
 - Controller routes: `GET /admin/drivers/import`, `POST /admin/drivers/import/preview`, `POST /admin/drivers/import/execute`.
 - No Flyway migration required.
-- Reuse mandated: `GoogleSheetsService.extractSpreadsheetId()/getSheetNames()/readRangeFromSheet()`, `DriverMatchingService` 4-stage logic, `CsvImportController`/`CsvImportService` `@SessionAttributes` preview-state pattern.
+- Reuse mandated: `GoogleSheetsService.extractSpreadsheetId()/getSheetNames()/readRangeFromSheet()`, `DriverMatchingService` 4-stage logic. Preview-state between preview and execute uses **re-fetch + form-params** (mirroring `CsvImportController.execute()`), **not** `@SessionAttributes` — confirmed during Phase 54 codebase scout (see `.planning/phases/54-preview-service-row-categorization/54-CONTEXT.md` D-06).
 
 ### Blockers/Concerns
 
