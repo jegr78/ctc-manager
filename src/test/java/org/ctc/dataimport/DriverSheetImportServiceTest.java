@@ -374,6 +374,9 @@ class DriverSheetImportServiceTest {
         TabPreview tab = preview.tabPreviews().get(0);
         assertThat(tab.unchanged()).hasSize(1);
         assertThat(tab.unchanged().get(0).existingDriverId()).isEqualTo(existingDriver.getId());
+        // IR-03: UnchangedRow carries existingSeasonDriverId for symmetry with ConflictRow
+        // so Phase 55 can emit an audit trail without re-fetching SeasonDriver.
+        assertThat(tab.unchanged().get(0).existingSeasonDriverId()).isEqualTo(seasonDriverSameTeam.getId());
         assertThat(tab.conflicts()).isEmpty();
     }
 

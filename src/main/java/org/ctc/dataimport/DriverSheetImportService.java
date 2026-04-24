@@ -156,7 +156,7 @@ public class DriverSheetImportService {
                         var sd = sdOpt.get();
                         if (sd.getTeam().getId().equals(team.getId())) {
                             // Same team → UNCHANGED
-                            unchanged.add(new UnchangedRow(rawPsnId, matchedDriver.getId(), rawTeamCode));
+                            unchanged.add(new UnchangedRow(rawPsnId, matchedDriver.getId(), sd.getId(), rawTeamCode));
                         } else {
                             // Different team → CONFLICT
                             conflicts.add(new ConflictRow(
@@ -250,6 +250,7 @@ public class DriverSheetImportService {
     public record UnchangedRow(
             String psnId,
             UUID existingDriverId,
+            UUID existingSeasonDriverId,
             String teamShortName
     ) {}
 
