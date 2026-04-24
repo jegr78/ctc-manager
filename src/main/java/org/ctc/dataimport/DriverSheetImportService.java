@@ -69,6 +69,131 @@ public class DriverSheetImportService {
         return new DriverSheetImportPreview(tabPreviews);
     }
 
+    /**
+     * Executes a transactional bulk driver import from the given Google Sheet.
+     * Re-fetches the preview inside the transaction (D-06), then walks all tabs
+     * and rows, applying skip/accept decisions from {@code allParams}.
+     *
+     * @param sheetUrl  Google Sheets URL or bare spreadsheet ID
+     * @param allParams form parameters from the execute POST (seasonId_&lt;year&gt;,
+     *                  skip_&lt;psnId&gt;_&lt;year&gt;, accept_&lt;psnId&gt;_&lt;year&gt;=&lt;driverUUID&gt;)
+     * @return accumulated result counters
+     */
+    @Transactional
+    public ExecuteResult execute(String sheetUrl, Map<String, String> allParams) {
+        log.info("Executing driver sheet import: sheetUrl={}", sheetUrl);
+        if (allParams == null) allParams = Map.of();
+        DriverSheetImportPreview fullPreview;
+        try {
+            fullPreview = this.preview(sheetUrl);
+        } catch (IOException e) {
+            throw new IllegalStateException("Sheet read failed: " + e.getMessage(), e);
+        }
+
+        ExecuteResult result = new ExecuteResult();
+        Map<String, Driver> crossTabCreatedDrivers = new HashMap<>();
+
+        for (TabPreview tab : fullPreview.tabPreviews()) {
+            String seasonIdStr = allParams.get("seasonId_" + tab.year());
+            if (seasonIdStr == null || seasonIdStr.isBlank()) {
+                result.addSkippedTab(tab.year());
+                continue;
+            }
+            Season season = seasonRepository
+                    .findById(UUID.fromString(seasonIdStr))
+                    .orElseThrow(() -> new IllegalArgumentException("Season not found: " + seasonIdStr));
+
+            // NEW_DRIVER rows
+            for (NewDriverRow row : tab.newDrivers()) {
+                Driver driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(), psnId -> {
+                    Driver d = new Driver(psnId, psnId);
+                    d.setActive(true);
+                    Driver saved = driverRepository.save(d);
+                    result.incrementNewDrivers();
+                    return saved;
+                });
+                Team team = teamRepository.findByShortName(row.teamShortName())
+                        .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
+                seasonDriverRepository.save(new SeasonDriver(season, driver, team));
+                result.incrementNewAssignments();
+            }
+
+            // NEW_ASSIGNMENT rows
+            for (NewAssignmentRow row : tab.newAssignments()) {
+                Driver driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(),
+                        psnId -> driverRepository.findById(row.existingDriverId())
+                                .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + row.existingDriverId())));
+                Team team = teamRepository.findByShortName(row.teamShortName())
+                        .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
+                boolean alreadyAssigned = seasonDriverRepository
+                        .findBySeasonIdAndDriverId(season.getId(), driver.getId())
+                        .isPresent();
+                if (!alreadyAssigned) {
+                    seasonDriverRepository.save(new SeasonDriver(season, driver, team));
+                    result.incrementNewAssignments();
+                }
+            }
+
+            // CONFLICT rows
+            for (ConflictRow row : tab.conflicts()) {
+                String skipKey = "skip_" + row.psnId() + "_" + tab.year();
+                if ("on".equals(allParams.get(skipKey))) {
+                    result.incrementConflictsSkipped();
+                } else {
+                    SeasonDriver sd = seasonDriverRepository
+                            .findById(row.existingSeasonDriverId())
+                            .orElseThrow(() -> new IllegalArgumentException("SeasonDriver not found: " + row.existingSeasonDriverId()));
+                    Team newTeam = teamRepository.findByShortName(row.sheetTeamShortName())
+                            .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.sheetTeamShortName()));
+                    sd.setTeam(newTeam);
+                    seasonDriverRepository.save(sd);
+                    result.incrementConflictsOverwritten();
+                }
+            }
+
+            // FUZZY_SUGGESTION rows
+            for (FuzzySuggestionRow row : tab.fuzzySuggestions()) {
+                String acceptKey = "accept_" + row.psnId() + "_" + tab.year();
+                String acceptValue = allParams.get(acceptKey);
+                Driver driver;
+                if (acceptValue != null && !acceptValue.isBlank()) {
+                    UUID suggestedDriverId = UUID.fromString(acceptValue);
+                    driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(),
+                            psnId -> driverRepository.findById(suggestedDriverId)
+                                    .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + suggestedDriverId)));
+                } else {
+                    driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(), psnId -> {
+                        Driver d = new Driver(psnId, psnId);
+                        d.setActive(true);
+                        Driver saved = driverRepository.save(d);
+                        result.incrementNewDrivers();
+                        return saved;
+                    });
+                }
+                Team team = teamRepository.findByShortName(row.teamShortName())
+                        .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
+                boolean alreadyAssigned = seasonDriverRepository
+                        .findBySeasonIdAndDriverId(season.getId(), driver.getId())
+                        .isPresent();
+                if (!alreadyAssigned) {
+                    seasonDriverRepository.save(new SeasonDriver(season, driver, team));
+                    result.incrementNewAssignments();
+                }
+            }
+
+            // UNCHANGED (no DB write)
+            result.addUnchanged(tab.unchanged().size());
+
+            // ERRORS (never imported, UX-06)
+            result.addErrors(tab.errors().size());
+
+            log.debug("Tab {} processed: {} new drivers, {} new assignments",
+                    tab.year(), result.getNewDriversCount(), result.getNewAssignmentsCount());
+        }
+
+        return result;
+    }
+
     private TabPreview buildTabPreview(String spreadsheetId, String tabName) throws IOException {
         int year = Integer.parseInt(tabName);
 
