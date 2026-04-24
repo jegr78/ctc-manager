@@ -93,24 +93,26 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 ### Active
 
-#### Current Milestone: v1.6 Static Site Quality
+#### Current Milestone: v1.8 Bulk Driver Import from Google Sheets
 
-**Goal:** Fix broken links, add missing content, improve navigation/cross-linking, and deliver a polished, accessible static site with professional UX.
+**Goal:** Provide admins a two-phase bulk import (Preview → Execute) that seeds `Driver` records and `SeasonDriver` assignments from a curated Google Sheet with per-year tabs, reusing the existing CSV-import pattern.
 
 **Target features:**
 
-- ~~Fix all broken navigation links (archive slug mismatch, driver ranking 404, absolute paths)~~ — Phase 37 complete
-- ~~Display season year and number across all pages~~ — Phase 38 complete
-- ~~Add inline links from standings to teams, from rankings to drivers, from matchdays to profiles~~ — Phase 39 complete
-- ~~Add season subnavigation (matchdays, standings, driver ranking, playoff per season)~~ — Phase 40 complete
-- ~~Filter test seasons from archive, fix empty match-meta and period column~~ — Phase 38 complete
-- ~~Remove inline styles in archive and driver-profile templates~~ — Phase 41 complete
-- ~~Fix broken team logo paths on static site~~ — Phase 37 complete
-- ~~Add skip-link, nav active-state, breadcrumbs for accessibility~~ — Phase 40/41 complete
-- ~~Highlight match winner in match cards~~ — Phase 41 complete
-- ~~Mobile scroll indicator for tables~~ — Phase 41 complete
-- ~~Footer with useful links~~ — Phase 41 complete
-- ~~Aria-label improvements, hover transitions, cursor:pointer on clickables~~ — Phase 41 complete
+- Google Sheet URL input → auto-detect year-numbered tabs (`^\d{4}$`) and render one preview section per tab
+- Per-tab preview with category buckets (New Drivers, New Assignments, Conflicts, Fuzzy Match Suggestions, Unchanged, Errors) and editable Season dropdown
+- Skip checkbox per conflict row (retain existing SeasonDriver) and Accept checkbox per fuzzy match suggestion
+- Transactional Execute phase persisting Drivers + SeasonDriver assignments (4-stage fuzzy match via existing `DriverMatchingService`)
+- Missing Seasons or Teams reported as row errors — no auto-create
+- Integration coverage ≥82%; E2E deferred
+
+**Design spec:** `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md` (authored 2026-04-24 via `/gsd-explore` → brainstorming flow)
+
+#### Shipped Milestone: v1.6 Static Site Quality
+
+**Goal:** Fix broken links, add missing content, improve navigation/cross-linking, and deliver a polished, accessible static site with professional UX.
+
+All 56 requirements complete (22 original + 26 extended + 3 YouTube hero + 5 alltime pages). See REQUIREMENTS.md for full traceability. Pending `/gsd-complete-milestone` archival.
 
 ### Out of Scope
 
@@ -151,4 +153,4 @@ Architectural Consistency: All controllers delegate to services, exception handl
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-16 after Phase 41 (UX Polish & Accessibility) complete — v1.6 milestone complete*
+*Last updated: 2026-04-24 — v1.8 milestone started (Bulk Driver Import from Google Sheets)*

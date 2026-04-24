@@ -1,47 +1,48 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Static Site Quality
-status: executing
-last_updated: "2026-04-18T07:30:32.865Z"
-last_activity: 2026-04-18
+milestone: v1.8
+milestone_name: Bulk Driver Import from Google Sheets
+status: defining_requirements
+last_updated: "2026-04-24T00:00:00.000Z"
+last_activity: 2026-04-24
 progress:
-  total_phases: 17
-  completed_phases: 14
-  total_plans: 27
-  completed_plans: 26
-  percent: 96
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-16)
+See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Phase 53 — Documentation & Code Cleanup
+**Current focus:** Defining requirements for v1.8 — Bulk Driver Import from Google Sheets
 
 ## Current Position
 
-Phase: 53
-Plan: Not started
-Status: Executing Phase 53
-Last activity: 2026-04-18
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-24 — Milestone v1.8 started
 
 ## Progress Bar
 
 ```
-v1.6: [ ] Phase 37  [ ] Phase 38  [ ] Phase 39  [ ] Phase 40  [ ] Phase 41
-        0/5 complete
+v1.8: (phases pending roadmap)
 ```
 
 ## Completed Milestones
 
 - v1.0 Technical Debt Cleanup (5 phases, 12 plans) — shipped 2026-04-04
 - v1.1 Codebase Concerns Cleanup (10 phases, 20 plans) — shipped 2026-04-07
+- v1.2 Driver Merge (4 phases, 5 plans) — shipped 2026-04-07
 - v1.3 English Test Data (8 phases) — shipped 2026-04-10
 - v1.5 Code Review Fixes (9 phases, 14 plans) — shipped 2026-04-15
+- v1.6 Static Site Quality (17 phases, 56 requirements) — complete 2026-04-18, archival pending
 
 ## Accumulated Context
 
@@ -49,34 +50,22 @@ v1.6: [ ] Phase 37  [ ] Phase 38  [ ] Phase 39  [ ] Phase 40  [ ] Phase 41
 
 All decisions logged in PROJECT.md Key Decisions table.
 
-- [Phase 44]: cleanOutputDirectory uses Files.walkFileTree with SimpleFileVisitor for bottom-up deletion; root dir preserved via !dir.equals guard; IOException propagates to generate() outer catch
-- [Phase 48]: Adapted hero test to assert .hero h1 contains COMMUNITY TEAM CUP instead of .hero-label year (D-09)
-- [Phase 48]: Regex pattern uses {11,} for videoId matching (safe chars only); dev profile fallback videoId set for test iframe visibility
-- [Phase 49]: Used @TempDir as @BeforeAll parameter injection (not instance field) for reliable PER_CLASS lifecycle
-- [Phase 49]: Cross-test isolation via Test_ prefix rename on pre-existing seasons to exclude from productionSeasons filter
+- [v1.8 start]: Foundation document is `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md` — authored via `/gsd-explore` brainstorming; approved as canonical design before milestone kickoff.
+- [v1.8 start]: Reuse `GoogleSheetsService`, `DriverMatchingService` (4-stage fuzzy), and `CsvImportService` preview-state pattern — no parallel infrastructure.
+- [v1.8 start]: Missing Seasons/Teams are errors, never auto-created — consistent with "No Fallback Calculations" principle.
+- [v1.8 start]: E2E tests deferred (Playwright × Google Sheets mocking is fragile); Unit + Integration tests must meet 82% coverage gate.
 
-### Phase Structure (v1.6)
+### Phase Numbering
 
-| Phase | Name | Requirements | Focus |
-|-------|------|--------------|-------|
-| 37 | Critical Link Fixes | LINK-01..04 | Broken archive slugs, driver ranking 404, absolute paths, team logos |
-| 38 | Season Content & Data Filtering | CONT-01, CONT-06, CONT-07 | Season year/number display, filter test seasons, hide empty match-meta |
-| 39 | Entity Cross-Linking | CONT-02..04, CONT-08 | Links: standings→teams, ranking→drivers, matchday→drivers, team→drivers |
-| 40 | Navigation & Structure | CONT-05, UX-02, UX-03 | Season subnav, active nav state, breadcrumbs |
-| 41 | UX Polish & Accessibility | UX-01, UX-04..09, QUAL-01 | Skip link, winner highlight, scroll indicator, footer, aria, transitions |
+Continuing from v1.6 (last phase: 53). v1.8 phases start at **Phase 54**.
 
 ### Key Technical Context
 
-- All changes target: `SiteGeneratorService.java`, `templates/site/`, `static/site/css/style.css`
-- No database changes needed for this milestone
-- Season model: `getDisplayLabel()` returns "year | #number | name"
-- Site pages: index, archive, standings, matchday, team-profile, driver-profile, driver-ranking, playoff-bracket
-- Shared nav/footer lives in `layout.html`
-
-### Roadmap Evolution
-
-- Phase 51 added: YouTube Hero Video — Autoplay & Loop mit iFrame Player API
-- Phase 52 added: Alltime team standings and driver ranking pages for static site
+- Target entities: `Driver` (psnId unique, nickname, active, aliases), `SeasonDriver(season, driver, team)`.
+- Sheet structure: tabs named `^\d{4}$`; column A = `PSN ID`, column C = `Team` short code. Hidden column B is ignored.
+- Admin entry point: new page at `/admin/drivers/import` (button on `/admin/drivers`).
+- Controller routes: `GET /admin/drivers/import`, `POST /admin/drivers/import/preview`, `POST /admin/drivers/import/execute`.
+- No Flyway migration required.
 
 ### Blockers/Concerns
 
