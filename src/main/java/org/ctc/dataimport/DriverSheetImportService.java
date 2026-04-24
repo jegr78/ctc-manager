@@ -126,15 +126,15 @@ public class DriverSheetImportService {
             Team team = teamOpt.get();
 
             // D-12 step 4: Duplicate PSN in tab (D-11 first occurrence wins)
-            String normalizedPsn = rawPsnId.trim();
-            if (seenPsnIds.contains(normalizedPsn)) {
+            // rawPsnId is already trimmed by cellToString — no further normalisation needed.
+            if (seenPsnIds.contains(rawPsnId)) {
                 errors.add(new ErrorRow(rawPsnId, rawTeamCode, ErrorReason.DUPLICATE_IN_TAB));
                 continue;
             }
-            seenPsnIds.add(normalizedPsn);
+            seenPsnIds.add(rawPsnId);
 
             // D-12 step 5-7: driver matching via DriverMatchingService
-            MatchResult matchResult = driverMatchingService.findDriver(normalizedPsn);
+            MatchResult matchResult = driverMatchingService.findDriver(rawPsnId);
 
             if (matchResult.type() == MatchType.FUZZY) {
                 // D-12 step 5: FUZZY_SUGGESTION
