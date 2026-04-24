@@ -118,7 +118,8 @@ See: milestones/v1.5-ROADMAP.md for full details
 5. Rows with blank PSN ID or unknown team short code are categorized as `ERROR` and carry a human-readable reason; no auto-create of `Season` or `Team` is attempted
 6. `DriverSheetImportServiceTest` covers preview categorization with at least 9 given-when-then scenarios (one per bucket plus tab-filtering, cross-tab dedup, season-auto-match edge cases) and all assertions pass under `./mvnw verify`
 
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 54-01-PLAN.md — Preview service vertical slice: SeasonRepository.findByYear(int) + DriverSheetImportService (7 inner records + ErrorReason enum + D-12 waterfall preview method) + DriverSheetImportServiceTest (13 given-when-then scenarios) + JaCoCo 82% gate
 
 ### Phase 55: Admin Import UI & Transactional Execute
 
