@@ -17,4 +17,6 @@ public interface SeasonRepository extends JpaRepository<Season, UUID> {
 
 	@EntityGraph(attributePaths = {"raceScoring", "matchScoring"})
 	List<Season> findByYearAndNumber(int year, int number);
+
+	List<Season> findByYear(int year);
 }
