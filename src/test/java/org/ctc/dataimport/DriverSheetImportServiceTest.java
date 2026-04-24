@@ -434,7 +434,7 @@ class DriverSheetImportServiceTest {
         TabPreview tab = preview.tabPreviews().get(0);
         assertThat(tab.errors()).hasSize(1);
         assertThat(tab.errors().get(0).reason()).isEqualTo(ErrorReason.UNKNOWN_TEAM_CODE);
-        assertThat(tab.errors().get(0).rawTeamCode()).isEqualTo("XYZ");
+        assertThat(tab.errors().get(0).teamCode()).isEqualTo("XYZ");
     }
 
     @Test
@@ -461,7 +461,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.newDrivers()).hasSize(1);
         assertThat(tab.errors()).hasSize(1);
         assertThat(tab.errors().get(0).reason()).isEqualTo(ErrorReason.DUPLICATE_IN_TAB);
-        assertThat(tab.errors().get(0).rawTeamCode()).isEqualTo("CRL");
+        assertThat(tab.errors().get(0).teamCode()).isEqualTo("CRL");
     }
 
     // ---------------------------------------------------------------------------

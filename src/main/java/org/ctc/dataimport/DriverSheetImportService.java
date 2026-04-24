@@ -254,8 +254,8 @@ public class DriverSheetImportService {
     ) {}
 
     public record ErrorRow(
-            String rawPsnId,
-            String rawTeamCode,
+            String psnId,
+            String teamCode,
             ErrorReason reason
     ) {}
 
