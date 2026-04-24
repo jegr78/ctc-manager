@@ -4,12 +4,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.DriverMatchingService.MatchResult;
 import org.ctc.dataimport.DriverMatchingService.MatchType;
+import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.*;
@@ -33,6 +37,7 @@ public class DriverSheetImportService {
     private final SeasonRepository seasonRepository;
     private final TeamRepository teamRepository;
     private final SeasonDriverRepository seasonDriverRepository;
+    private final DriverRepository driverRepository;
 
     /**
      * Builds a preview of all year-numbered tabs in the given Google Sheet.
@@ -275,5 +280,30 @@ public class DriverSheetImportService {
         public String message() {
             return message;
         }
+    }
+
+    // ---------------------------------------------------------------------------
+    // ExecuteResult — mutable accumulator for transactional execute() walk (D-05)
+    // ---------------------------------------------------------------------------
+
+    @lombok.Getter
+    public static class ExecuteResult {
+        private int newDriversCount;
+        private int newAssignmentsCount;
+        private int conflictsOverwrittenCount;
+        private int conflictsSkippedCount;
+        private int unchangedCount;
+        private int errorCount;
+        private final java.util.List<Integer> skippedTabYears = new java.util.ArrayList<>();
+
+        void incrementNewDrivers()           { newDriversCount++; }
+        void incrementNewAssignments()       { newAssignmentsCount++; }
+        void incrementConflictsOverwritten() { conflictsOverwrittenCount++; }
+        void incrementConflictsSkipped()     { conflictsSkippedCount++; }
+        void addUnchanged(int n)             { unchangedCount += n; }
+        void addErrors(int n)                { errorCount += n; }
+        void addSkippedTab(int year)         { skippedTabYears.add(year); }
+
+        public boolean hasSkippedTabs() { return !skippedTabYears.isEmpty(); }
     }
 }
