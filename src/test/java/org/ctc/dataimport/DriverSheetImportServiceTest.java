@@ -265,6 +265,36 @@ class DriverSheetImportServiceTest {
         assertThat(tab.unchanged()).isEmpty();
     }
 
+    @Test
+    void givenExistingDriverAndAmbiguousSeason_whenPreview_thenCategorisedAsNewAssignment() throws IOException {
+        // given — two seasons for 2024 → suggestedSeasonId will be null (ambiguous)
+        Season season2024b = new Season();
+        season2024b.setId(UUID.randomUUID());
+        season2024b.setYear(2024);
+        season2024b.setNumber(2);
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("existing_psn", "Existing", "AHR")));
+        when(seasonRepository.findByYear(2024)).thenReturn(List.of(season2024, season2024b));
+        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(driverMatchingService.findDriver("existing_psn"))
+                .thenReturn(MatchResult.exact("existing_psn", existingDriver));
+
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — no season resolved → fall through to NEW_ASSIGNMENT, no SeasonDriver lookup
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.suggestedSeasonId()).isNull();
+        assertThat(tab.ambiguousReason()).contains("Multiple seasons for year 2024");
+        assertThat(tab.newAssignments()).hasSize(1);
+        assertThat(tab.newAssignments().get(0).existingDriverId()).isEqualTo(existingDriver.getId());
+        assertThat(tab.newAssignments().get(0).teamShortName()).isEqualTo("AHR");
+        assertThat(tab.unchanged()).isEmpty();
+        assertThat(tab.conflicts()).isEmpty();
+        // Pins the short-circuit invariant: SeasonDriver MUST NOT be queried when no season is resolved
+        verifyNoInteractions(seasonDriverRepository);
+    }
+
     // ---------------------------------------------------------------------------
     // 5. Bucket: CONFLICT (UX-03)
     // ---------------------------------------------------------------------------
