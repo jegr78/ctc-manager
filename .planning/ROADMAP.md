@@ -135,7 +135,10 @@ See: milestones/v1.5-ROADMAP.md for full details
 4. The controller contains no business logic, no repository calls, and no Google Sheets I/O - it delegates all work to `DriverSheetImportService`; form binding uses the `DriverSheetImportForm` DTO, never a direct JPA entity `@ModelAttribute`; preview-state persistence between preview and execute follows the exact pattern used by `CsvImportController`/`CsvImportService` (no new parallel mechanism)
 5. `DriverSheetImportControllerIT` exercises the full `GET /admin/drivers/import` -> `POST /preview` -> `POST /execute` flow with a mocked `GoogleSheetsService` and asserts DB state plus flash attributes; `./mvnw verify` passes the JaCoCo 82% line-coverage gate with the new code included
 
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 55-01-PLAN.md — Service extension: DriverSheetImportService.execute() + ExecuteResult inner class (@Transactional, cross-tab dedup, all 6 bucket types, IOException wrapping)
+- [ ] 55-02-PLAN.md — Controller + templates + entry button: DriverSheetImportController (3 handlers) + driver-import.html + driver-import-preview.html (6 bucket tables, Skip/Accept controls) + drivers.html D-18 button
+- [ ] 55-03-PLAN.md — Integration tests: DriverSheetImportControllerTest (17 tests, DB assertions) + DriverSheetImportControllerExceptionTest (4 tests) + JaCoCo 82% gate
 **UI hint**: yes
 
 ## Progress
@@ -192,4 +195,4 @@ See: milestones/v1.5-ROADMAP.md for full details
 | 52. Alltime Pages | v1.6 | 2/2 | Complete | 2026-04-18 |
 | 53. Documentation & Code Cleanup | v1.6 | 1/1 | Complete | 2026-04-18 |
 | 54. Preview Service & Row Categorization | v1.8 | 1/1 | Complete | 2026-04-24 |
-| 55. Admin Import UI & Transactional Execute | v1.8 | 0/? | Not started | — |
+| 55. Admin Import UI & Transactional Execute | v1.8 | 0/3 | Not started | — |
