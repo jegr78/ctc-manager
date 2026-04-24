@@ -24,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 ## Current Position
 
-Phase: 55 — Admin Import UI & Transactional Execute (Wave 1 complete, Waves 2-3 pending)
-Plans: 3 plans across 3 sequential waves — 55-01 [x] service.execute() + ExecuteResult | 55-02 controller + 2 templates + entry button | 55-03 integration tests + JaCoCo
-Status: Wave 1 merged. DriverSheetImportService.execute() + ExecuteResult shipped (2 feat commits, 1 docs commit). ./mvnw compile green after merge. Phase 54 tests still passing.
-Last activity: 2026-04-25 — Plan 55-01 complete (executor worktree merged). Next: Wave 2 (Plan 55-02, controller + Thymeleaf templates).
+Phase: 55 — Admin Import UI & Transactional Execute (Waves 1+2 complete, Wave 3 pending)
+Plans: 3 plans across 3 sequential waves — 55-01 [x] service.execute() + ExecuteResult | 55-02 [x] controller + 2 templates + entry button | 55-03 integration tests + JaCoCo
+Status: Waves 1+2 merged. DriverSheetImportController (3 handlers), driver-import.html, driver-import-preview.html, drivers.html entry button shipped (3 feat commits, 1 docs commit). ./mvnw compile green.
+Last activity: 2026-04-25 — Plan 55-02 complete (executor worktree merged). Next: Wave 3 (Plan 55-03, integration tests + JaCoCo gate).
 
 ## Progress Bar
 

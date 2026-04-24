@@ -137,7 +137,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 
 **Plans**: 3 plans
 - [x] 55-01-PLAN.md — Service extension: DriverSheetImportService.execute() + ExecuteResult inner class (@Transactional, cross-tab dedup, all 6 bucket types, IOException wrapping)
-- [ ] 55-02-PLAN.md — Controller + templates + entry button: DriverSheetImportController (3 handlers) + driver-import.html + driver-import-preview.html (6 bucket tables, Skip/Accept controls) + drivers.html D-18 button
+- [x] 55-02-PLAN.md — Controller + templates + entry button: DriverSheetImportController (3 handlers) + driver-import.html + driver-import-preview.html (6 bucket tables, Skip/Accept controls) + drivers.html D-18 button
 - [ ] 55-03-PLAN.md — Integration tests: DriverSheetImportControllerTest (17 tests, DB assertions) + DriverSheetImportControllerExceptionTest (4 tests) + JaCoCo 82% gate
 **UI hint**: yes
 
