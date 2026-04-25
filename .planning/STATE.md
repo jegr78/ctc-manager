@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.8
-milestone_name: Bulk Driver Import from Google Sheets
-status: v1.8_pr_open
-last_updated: "2026-04-25T08:45:00.000Z"
+milestone: none
+milestone_name: "(awaiting next milestone)"
+status: between_milestones
+last_updated: "2026-04-25T09:00:00.000Z"
 last_activity: 2026-04-25
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -20,26 +20,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** v1.8 — Bulk Driver Import from Google Sheets — implementation complete, awaiting release.
+**Current focus:** Between milestones — awaiting `/gsd-new-milestone` to define v1.9 (or next).
 
 ## Current Position
 
-Phase: 55 — Admin Import UI & Transactional Execute (COMPLETE 2026-04-25)
-Plans: 3/3 complete — 55-01 [x] service.execute() + ExecuteResult | 55-02 [x] controller + 2 templates + entry button | 55-03 [x] integration tests + JaCoCo
-Status: ./mvnw verify BUILD SUCCESS — 1064 tests passing, JaCoCo 82% line-coverage gate met. Phase verifier scored 13/13 must-haves PASSED. Code review found 1 critical + 3 warnings, all auto-fixed (4 fix commits). Human UAT items persisted as 55-HUMAN-UAT.md (3 visual checks pending — non-blocking, will surface in audits).
-Last activity: 2026-04-25 — Phase 55 complete and approved by user. v1.8 milestone implementation fully done.
+No active milestone. v1.8 shipped 2026-04-25 (PR #116 squash-merged as `042cfbf`, archived in `.planning/milestones/v1.8-*`).
 
-## Progress Bar
-
-```
-v1.8: [x][x]   2 / 2 phases (100%)
-      P54 P55
-```
-
-Legend: `[x]` complete, `[-]` in progress, `[ ]` not started
-
-- Phase 54: Preview Service & Row Categorization — Complete (1/1 plan, 5 tasks, shipped 2026-04-24)
-- Phase 55: Admin Import UI & Transactional Execute — Complete (3/3 plans, completed 2026-04-25)
+Last activity: 2026-04-25 — v1.8 closed via `/gsd-complete-milestone v1.8`. ROADMAP/REQUIREMENTS/PROJECT.md/MILESTONES.md/RETROSPECTIVE.md all updated. Phase directories moved to `.planning/milestones/v1.8-phases/`. Tag v1.8 ready to push.
 
 ## Completed Milestones
 
@@ -49,6 +36,7 @@ Legend: `[x]` complete, `[-]` in progress, `[ ]` not started
 - v1.3 English Test Data (8 phases) — shipped 2026-04-10
 - v1.5 Code Review Fixes (9 phases, 14 plans) — shipped 2026-04-15
 - v1.6 Static Site Quality (17 phases, 56 requirements) — shipped 2026-04-18
+- v1.8 Bulk Driver Import from Google Sheets (2 phases, 4 plans, +52 tests) — shipped 2026-04-25
 
 ## Accumulated Context
 
@@ -84,12 +72,10 @@ None.
 
 ## Session Continuity
 
-**Next action:** PR #116 ist offen — auf CI warten, dann mergen.
+**Next action:** v1.8 milestone closed and archived. Project is between milestones.
 
-- PR: <https://github.com/jegr78/ctc-manager/pull/116>
-- Branch: `gsd/v1.8-bulk-driver-import-from-google-sheets` → `master`
-- Diff: +11 244 / −539
-- Nach Green-CI: `gh pr merge 116 --squash --subject "feat: v1.8 Bulk Driver Import from Google Sheets — complete milestone"` (Conventional Commit über `--subject`)
-- Nach Merge: lokal `git switch master && git pull && git branch -d gsd/v1.8-…`, dann `/gsd-complete-milestone v1.8`
+- v1.8 Tag pushen: `git push origin v1.8` (lokales Tag wartet)
+- `/gsd-new-milestone` — questioning → research → requirements → roadmap für v1.9 (oder nächste Version)
+- `/gsd-progress` — aktueller Snapshot (zeigt: keine aktive Milestone, alle Phasen archiviert)
 
-**Branch:** `gsd/v1.8-bulk-driver-import-from-google-sheets` (do not switch, stash, reset, or checkout; worktree edits only).
+**Branch:** `master` (after v1.8 merge — feature branch deleted locally and remotely).

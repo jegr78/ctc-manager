@@ -1,5 +1,30 @@
 # Milestones
 
+## v1.8 Bulk Driver Import from Google Sheets (Shipped: 2026-04-25)
+
+**Phases completed:** 2 phases, 4 plans, ~12 tasks
+**PR:** [#116](https://github.com/jegr78/ctc-manager/pull/116) (squash-merged as `042cfbf`)
+**Diff:** +11 246 / −539 across 39 files
+**Tests:** 1064 total project-wide (+52 from baseline 1011)
+**Timeline:** 2 days (2026-04-24 → 2026-04-25)
+
+**Key accomplishments:**
+
+- Stateless preview service (`DriverSheetImportService.preview()`) categorizing Google Sheets driver rows into 6 typed buckets via D-12 waterfall with `SeasonRepository.findByYear(int)` auto-match — 16 unit tests, 98.9% line coverage
+- `@Transactional execute()` method with 6-bucket walk, cross-tab driver dedup, per-row Skip/Accept decisions, mutable `ExecuteResult` accumulator — `IOException` wrapped as `IllegalStateException` for proper rollback semantics
+- Thin Spring MVC `DriverSheetImportController` (3 handlers: GET form, POST preview, POST execute) + 2 Thymeleaf templates with 6 bucket tables and Skip/Accept checkboxes + entry button on `/admin/drivers` toolbar — zero business logic, zero inline styles, zero `th:utext`
+- 21 integration tests (17 happy-path + 4 exception-path) exercising the full GET/POST-preview/POST-execute flow with `@MockitoBean GoogleSheetsService`; JaCoCo 82% line gate met
+- Code review found 1 critical (per-tab cache key for FUZZY/accept) + 3 warnings (exception leakage, missing `@Transactional(readOnly=true)`, dead test setup) — all auto-fixed in 4 atomic commits
+- Reuse pattern reinforced: `GoogleSheetsService`, `DriverMatchingService` (4-stage fuzzy), and `CsvImportController` preview-state pattern reused without modification — no parallel infrastructure introduced
+- Form-binding contract evolved (D-15 override): per-row dynamic keys (`seasonId_<year>`, `skip_<psnId>_<year>`, `accept_<psnId>_<year>`) bound via `@RequestParam` + `Map<String,String>` instead of static DTO
+
+**Known tech debt:**
+
+1. D-15 wording carryover in REQUIREMENTS.md QUAL-03 (override accepted, documented in PROJECT.md)
+2. UAT 3 (ambiguous-season banner) verified by template inspection + integration test instead of live Google-Sheet render
+
+---
+
 ## v1.5 Code Review Fixes (Shipped: 2026-04-15)
 
 **Phases completed:** 9 phases, 14 plans, 18 tasks

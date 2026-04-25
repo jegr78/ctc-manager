@@ -8,9 +8,9 @@ Gran Turismo Racing League Management application (Spring Boot 4 / Thymeleaf / M
 
 Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## Current State (after v1.5)
+## Current State (after v1.8)
 
-- **Codebase:** ~14k LOC Java (Prod) + ~19k LOC Java (Tests), 922 Tests, 82%+ Coverage
+- **Codebase:** ~15k LOC Java (Prod) + ~21k LOC Java (Tests), 1064 Tests, 82%+ Coverage
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), SSRF hostname blocklist, path traversal defense, CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation, Content-Disposition sanitization, MatchdayForm DTO (mass assignment protection)
 - **Architecture:** Clean 3-tier (Controller → Service → Repository), no God Services, centralized exception handling, domain services fully decoupled from admin layer, RaceLineup as source of truth for driver-team assignment
@@ -91,24 +91,18 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ Hover transitions (200ms) on table rows and links, cursor:pointer on clickables — Phase 41
 - ✓ Inline styles removed from driver-profile.html (CSS classes instead) — Phase 41
 
+### Validated (v1.8)
+
+- ✓ Bulk driver import from Google Sheets (admin UI + transactional execute) — Phases 54-55
+- ✓ Per-tab preview with 6 category buckets + Skip/Accept override controls — Phase 55
+- ✓ `SeasonRepository.findByYear(int)` auto-match (D-13 override of original `findByName/findByDisplayLabel` wording) — Phase 54
+- ✓ Reuse of `GoogleSheetsService`, `DriverMatchingService`, `CsvImportController` preview-state pattern (no parallel infrastructure) — Phases 54-55
+- ✓ `@RequestParam` + `Map<String, String>` form-binding (D-15 override of original DTO wording) — Phase 55
+- ✓ JaCoCo 82% line gate met with 1064 tests project-wide (+52 from baseline) — Phase 55
+
 ### Active
 
-#### Current Milestone: v1.8 Bulk Driver Import from Google Sheets — Implementation Complete (2026-04-25)
-
-**Goal (delivered):** Admins can submit a curated Google Sheet URL, review per-tab preview with override controls, and execute a transactional import that seeds `Driver` records and `SeasonDriver` assignments — all via the existing CSV-import pattern (no parallel infrastructure).
-
-**Shipped features:**
-
-- Google Sheet URL input → auto-detected year-numbered tabs (`^\d{4}$`), one preview section per tab
-- Per-tab preview with 6 category buckets (New Drivers, New Assignments, Conflicts, Fuzzy Match Suggestions, Unchanged, Errors) + Season dropdown auto-preselected via `SeasonRepository.findByYear(int)`
-- Skip checkbox per Conflict row (retain existing `SeasonDriver`); Accept checkbox per Fuzzy row (link to existing driver, scoped per-tab)
-- Transactional `execute()` re-fetches preview inside the boundary (D-06 form-params + re-fetch, no `@SessionAttributes`); cross-tab driver dedup
-- Missing Seasons/Teams surface as row errors with no auto-create; ambiguous-season tabs are skipped and flagged in flash
-- 21 integration tests (17 happy-path + 4 exception-path); JaCoCo 82% line gate met (1064 tests total project-wide)
-
-**Pending before release:** 3 visual UAT items (button placement, form rendering, ambiguous-season banner) tracked in `.planning/phases/55-admin-import-ui-transactional-execute/55-HUMAN-UAT.md`.
-
-**Design spec:** `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md` (authored 2026-04-24 via `/gsd-explore` → brainstorming flow)
+(None — awaiting next milestone definition via `/gsd-new-milestone`.)
 
 #### Shipped Milestone: v1.6 Static Site Quality
 
@@ -160,4 +154,4 @@ All 56 requirements complete (22 original + 26 extended + 3 YouTube hero + 5 all
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-25 — v1.8 implementation complete (Phase 55 verified, awaiting visual UAT + release)*
+*Last updated: 2026-04-25 — v1.8 milestone shipped and archived (PR #116 merged as 042cfbf)*

@@ -128,11 +128,54 @@ Living retrospective across milestones. Updated at each milestone completion.
 - Sessions: ~4 (research+plan, execute 16-18, execute 19 + auto-UAT + audit, complete)
 - Notable: Phase 19 inline execution used ~5% of a typical subagent session's tokens
 
+## Milestone: v1.8 — Bulk Driver Import from Google Sheets
+
+**Shipped:** 2026-04-25
+**Phases:** 2 | **Plans:** 4 | **Timeline:** 2026-04-24 → 2026-04-25 (2 days)
+
+### What Was Built
+
+- Stateless preview service (`DriverSheetImportService.preview()`) mit D-12 Waterfall, 7 inneren Records + ErrorReason enum, `findByYear(int)` Auto-Match
+- `@Transactional execute()` mit 6-Bucket-Walk, Cross-Tab-Driver-Dedup, per-row Skip/Accept, mutable `ExecuteResult` Accumulator
+- Thin `DriverSheetImportController` (3 Handler) + 2 Thymeleaf-Templates (6 Bucket-Tabellen, Skip/Accept Checkboxen) + Entry-Button
+- 21 Integration-Tests (17 happy + 4 exception), JaCoCo 82% gehalten
+
+### What Worked
+
+- **Reuse pattern strikt durchgehalten:** GoogleSheetsService + DriverMatchingService + CsvImportController-Preview-State unmodifiziert — keine Parallelinfrastruktur, niedriger Cognitive Load
+- **D-13/D-15 Override-Mechanismus:** ROADMAP-Wording (`findByName/findByDisplayLabel`, `DriverSheetImportForm` DTO) wurde via CONTEXT-Decisions früh durch Implementierungs-Realität ersetzt; Override sauber in PROJECT.md + REQUIREMENTS.md dokumentiert
+- **Code-Review → Auto-Fix-Loop:** 1 Critical (CR-01 cache key) + 3 Warnings → alle 4 atomisch gefixt + Regressionstest hinzugefügt vor Merge
+- **Phase 55 Plan-Split:** Service / Controller+Templates / Tests sauber sequenziell — Plan 03 konnte Plan 02 Bug (SpEL-Lambda im Template) entdecken und dokumentieren
+
+### What Was Inefficient
+
+- **DevDataSeeder-Year-Collision:** Test-Fixture-Years 2024/2023 kollidierten mit `@Profile("dev") TestDataService.seed()` (auto-via CommandLineRunner) — 1 Test-Failure, ~20 Min Debug bis Root-Cause klar war. Fix war trivial (auf 2021/2022 wechseln), aber die Überraschung kostete Zeit. Lesson: integration tests under `@SpringBootTest(profiles=dev)` müssen DevDataSeeder-Annahmen kennen
+- **Stuck-Agent (Plan 55-03):** Executor-Agent hit stream idle timeout nach 35 Min ohne Completion-Signal trotz fast fertiger Arbeit. Worktree-State war intakt, Orchestrator hat manuell weitergemacht (commit + ExceptionTest schreiben + verify). Lesson: Stream-Timeout ist nicht == Failure, immer Worktree inspizieren
+- **Template-SpEL-Lambda-Pitfall:** `th:if="${preview.tabPreviews().stream().anyMatch(...)}"` war structurally invalid für Thymeleaf restricted SpEL. Plan 02 hat es geliefert, Plan 03 Tests haben es entdeckt — sollte schon in Plan 02 Code-Review gefangen werden, nicht erst durch Tests
+
+### Patterns Established
+
+- **Year-Fixture-Isolation:** Integration-Tests mit `@SpringBootTest(profiles=dev)` müssen Years vermeiden, die DevDataSeeder seedet (2023/2024/2026). 2021/2022/2025/2027 sind frei
+- **D-15 Form-Binding-Override:** Bei dynamischen per-row Form-Keys ist `@RequestParam` + `Map<String, String>` der korrekte Pfad, nicht ein statisches DTO — `DriverSheetImportForm` wäre architektonisch falsch gewesen
+- **Per-Tab Cache-Key für FUZZY-Accept:** `crossTabCreatedDrivers.computeIfAbsent(psnId + "_accept_" + year, …)` — der naive `psnId`-Key reicht nur für die NEW-Driver-Branch (Cross-Tab-Dedup OK dort, weil keine User-Choice splittet)
+
+### Key Lessons
+
+- **DevDataSeeder ist Test-Boundary:** Jeder neue `@SpringBootTest(profiles=dev)` muss DevDataSeeder-Years auf der Liste haben. Sollte in `.planning/codebase/TESTING.md` dokumentiert werden
+- **Template-SpEL-Lambda-Allergie:** `th:if`-Lambdas auf Collections funktionieren NICHT mit Thymeleaf default; Berechnung gehört in den Controller (CLAUDE.md "Keep Thymeleaf Templates Lean" wurde durch Plan 02 verletzt, durch Plan 03 wieder hergestellt)
+- **GSD Workflow-Resilience:** Stuck-Agent Recovery hat funktioniert — Plan 55-03 wurde inline finalisiert ohne Datenverlust dank Worktree-Isolation. Keine Anpassung nötig
+
+### Cost Observations
+
+- Model mix: ~70% sonnet (execution + verification), ~30% opus (orchestration + Code-Review-Fix)
+- Sessions: 1 (alle Phasen + UAT + Audit + Ship + Complete in einer durchgehenden Session)
+- Notable: PR-Erstellung + CI + Squash-Merge + lokales Cleanup + Milestone-Close in derselben Session lief sauber durch — `gh` CLI + Memory-Regel `feedback_squash_merge_message.md` haben Friktion vermieden
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v1.1 | v1.2 |
-|--------|------|------|------|
-| Phases | 5 | 10 | 4 |
+| Metric | v1.0 | v1.1 | v1.2 | v1.8 |
+|--------|------|------|------|------|
+| Phases | 5 | 10 | 4 | 2 |
 | Plans | 12 | 20 | 5 |
 | Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 |
 | Coverage | 82%+ | 82%+ | 82%+ |

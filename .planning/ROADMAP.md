@@ -7,7 +7,7 @@
 - :white_check_mark: **v1.3 English Test Data** — Phases 20-27 (shipped 2026-04-10)
 - :white_check_mark: **v1.5 Code Review Fixes** — Phases 28-36 (shipped 2026-04-15)
 - :white_check_mark: **v1.6 Static Site Quality** — Phases 37-53 (shipped 2026-04-18)
-- **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (implementation complete 2026-04-25, awaiting release)
+- :white_check_mark: **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (shipped 2026-04-25)
 
 ## Phases
 
@@ -94,52 +94,15 @@ See: milestones/v1.5-ROADMAP.md for full details
 
 </details>
 
-### v1.8 Bulk Driver Import from Google Sheets
+<details>
+<summary>v1.8 Bulk Driver Import from Google Sheets (Phases 54-55) -- SHIPPED 2026-04-25</summary>
 
-**Milestone Goal:** Provide admins a two-phase bulk import (Preview -> Execute) that seeds `Driver` records and `SeasonDriver` assignments from a curated Google Sheet with per-year tabs, reusing the existing CSV-import pattern (`GoogleSheetsService`, `DriverMatchingService`, `CsvImportService` preview-state).
+- [x] Phase 54: Preview Service & Row Categorization (1/1 plan) -- completed 2026-04-24
+- [x] Phase 55: Admin Import UI & Transactional Execute (3/3 plans) -- completed 2026-04-25
 
-- [x] **Phase 54: Preview Service & Row Categorization** - Backend service that fetches year-numbered tabs, categorizes rows into six buckets, and is fully unit-tested (completed 2026-04-24)
-- [x] **Phase 55: Admin Import UI & Transactional Execute** - Controller, form DTO, templates, entry button, and transactional execute path with integration coverage (completed 2026-04-25)
+See: milestones/v1.8-ROADMAP.md for full details
 
-## Phase Details
-
-### Phase 54: Preview Service & Row Categorization
-
-**Goal**: A backend service exists that, given a Google Sheet URL, returns a structured preview categorizing every relevant row into one of six buckets, with no DB writes
-**Depends on**: Phase 53 (previous milestone complete)
-**Requirements**: IMPORT-02, IMPORT-03, IMPORT-04, IMPORT-05, UX-01, UX-02, UX-03, UX-04, UX-05, UX-06, MATCH-01, MATCH-02, DATA-01, DATA-02, DATA-04, DATA-05, TEST-01
-
-**Success Criteria** (what must be TRUE):
-
-1. `DriverSheetImportService.preview(sheetUrl)` returns a `DriverSheetImportPreview` containing exactly one `TabPreview` per sheet tab whose name matches `^\d{4}$`, sorted ascending by year, and ignores all non-matching tabs
-2. For each tab, every non-header row from columns A (PSN ID) and C (Team short code) is categorized into exactly one of: `NEW_DRIVER`, `NEW_ASSIGNMENT`, `CONFLICT`, `FUZZY_SUGGESTION`, `UNCHANGED`, `ERROR`, matching the definitions in UX-01..06
-3. Each `TabPreview` carries a `suggestedSeasonId` resolved via `SeasonRepository.findByName(tabName)` with fallback to `findByDisplayLabel(tabName)`; null when neither matches
-4. Driver matching delegates to the existing `DriverMatchingService` 4-stage logic (exact -> case-insensitive -> alias -> Levenshtein >=0.8) without modifying that service, and the same PSN ID across multiple tabs resolves to a single `Driver` identity in the preview model
-5. Rows with blank PSN ID or unknown team short code are categorized as `ERROR` and carry a human-readable reason; no auto-create of `Season` or `Team` is attempted
-6. `DriverSheetImportServiceTest` covers preview categorization with at least 9 given-when-then scenarios (one per bucket plus tab-filtering, cross-tab dedup, season-auto-match edge cases) and all assertions pass under `./mvnw verify`
-
-**Plans**: 1 plan
-- [x] 54-01-PLAN.md — Preview service vertical slice: SeasonRepository.findByYear(int) + DriverSheetImportService (7 inner records + ErrorReason enum + D-12 waterfall preview method) + DriverSheetImportServiceTest (13 given-when-then scenarios) + JaCoCo 82% gate
-
-### Phase 55: Admin Import UI & Transactional Execute
-
-**Goal**: An admin can click a button on `/admin/drivers`, submit a Sheet URL, review the per-tab preview with override controls, and execute the import transactionally with a flash summary
-**Depends on**: Phase 54
-**Requirements**: IMPORT-01, IMPORT-06, UX-07, UX-08, DATA-03, TEST-02, TEST-03, QUAL-01, QUAL-02, QUAL-03, QUAL-04
-
-**Success Criteria** (what must be TRUE):
-
-1. Admin navigating to `/admin/drivers` sees an "Import from Google Sheet" button (styled via CSS classes from `admin.css`, no inline styles) that links to `/admin/drivers/import`; submitting the Sheet URL form renders a per-tab preview page with one section per year-tab, each showing a pre-selected Season dropdown and six categorized row buckets with counts
-2. On the preview page, every `CONFLICT` row has a `Skip` checkbox (unchecked = overwrite with sheet value, checked = retain existing `SeasonDriver`), and every `FUZZY_SUGGESTION` row has an `Accept` checkbox (unchecked = treat as new driver, checked = link to suggested existing driver)
-3. Clicking Execute performs all Driver creations and `SeasonDriver` upserts inside a single `@Transactional` boundary, then redirects to `/admin/drivers` with a flash summary listing counts of created drivers, new assignments, overwritten assignments, skipped conflicts, unchanged rows, and errors; `RaceLineup` records remain untouched
-4. The controller contains no business logic, no repository calls, and no Google Sheets I/O - it delegates all work to `DriverSheetImportService`; form binding uses the `DriverSheetImportForm` DTO, never a direct JPA entity `@ModelAttribute`; preview-state persistence between preview and execute follows the exact pattern used by `CsvImportController`/`CsvImportService` (no new parallel mechanism)
-5. `DriverSheetImportControllerIT` exercises the full `GET /admin/drivers/import` -> `POST /preview` -> `POST /execute` flow with a mocked `GoogleSheetsService` and asserts DB state plus flash attributes; `./mvnw verify` passes the JaCoCo 82% line-coverage gate with the new code included
-
-**Plans**: 3 plans
-- [x] 55-01-PLAN.md — Service extension: DriverSheetImportService.execute() + ExecuteResult inner class (@Transactional, cross-tab dedup, all 6 bucket types, IOException wrapping)
-- [x] 55-02-PLAN.md — Controller + templates + entry button: DriverSheetImportController (3 handlers) + driver-import.html + driver-import-preview.html (6 bucket tables, Skip/Accept controls) + drivers.html D-18 button
-- [x] 55-03-PLAN.md — Integration tests: DriverSheetImportControllerTest (17 tests, DB assertions) + DriverSheetImportControllerExceptionTest (4 tests) + JaCoCo 82% gate
-**UI hint**: yes
+</details>
 
 ## Progress
 
