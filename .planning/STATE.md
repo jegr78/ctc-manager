@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.8
 milestone_name: Bulk Driver Import from Google Sheets
-status: v1.8_implementation_complete
-last_updated: "2026-04-25T07:00:00.000Z"
+status: v1.8_pr_open
+last_updated: "2026-04-25T08:45:00.000Z"
 last_activity: 2026-04-25
 progress:
   total_phases: 2
@@ -84,10 +84,12 @@ None.
 
 ## Session Continuity
 
-**Next action:** v1.8 implementation done. Open options:
-- Manuelle UAT der 3 Items aus `55-HUMAN-UAT.md` (playwright-cli auf Desktop + Mobile)
-- `/gsd-ship` — PR vorbereiten (Code-Review + Branch-Push)
-- `/gsd-audit-milestone v1.8` — Milestone-Audit gegen Original-Intent vor Archivierung
-- `/gsd-complete-milestone` — Milestone abschließen, neuen Cycle starten
+**Next action:** PR #116 ist offen — auf CI warten, dann mergen.
+
+- PR: <https://github.com/jegr78/ctc-manager/pull/116>
+- Branch: `gsd/v1.8-bulk-driver-import-from-google-sheets` → `master`
+- Diff: +11 244 / −539
+- Nach Green-CI: `gh pr merge 116 --squash --subject "feat: v1.8 Bulk Driver Import from Google Sheets — complete milestone"` (Conventional Commit über `--subject`)
+- Nach Merge: lokal `git switch master && git pull && git branch -d gsd/v1.8-…`, dann `/gsd-complete-milestone v1.8`
 
 **Branch:** `gsd/v1.8-bulk-driver-import-from-google-sheets` (do not switch, stash, reset, or checkout; worktree edits only).
