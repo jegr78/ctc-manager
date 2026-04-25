@@ -156,7 +156,7 @@
 
         <!-- Ambiguous-season warning banner — D-16 -->
         <div class="alert alert-error mb-md"
-             th:if="${preview.tabPreviews().stream().anyMatch(t -> t.suggestedSeasonId() == null)}">
+             th:if="${hasAmbiguousTabs}">
             <strong>Warning:</strong> Some tabs have no matching season.
             Tabs with no season selected will be skipped on execute.
         </div>

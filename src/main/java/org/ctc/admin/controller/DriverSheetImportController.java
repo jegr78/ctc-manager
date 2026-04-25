@@ -46,6 +46,8 @@ public class DriverSheetImportController {
             var preview = driverSheetImportService.preview(sheetUrl);
             model.addAttribute("preview", preview);
             model.addAttribute("sheetUrl", sheetUrl);
+            model.addAttribute("hasAmbiguousTabs", preview.tabPreviews().stream()
+                    .anyMatch(t -> t.suggestedSeasonId() == null));
             addCommonAttributes(model);
             return "admin/driver-import-preview";
         } catch (IOException | IllegalArgumentException | IllegalStateException e) {
