@@ -93,24 +93,28 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 ### Active
 
-#### Current Milestone: v1.6 Static Site Quality
+#### Current Milestone: v1.8 Bulk Driver Import from Google Sheets — Implementation Complete (2026-04-25)
+
+**Goal (delivered):** Admins can submit a curated Google Sheet URL, review per-tab preview with override controls, and execute a transactional import that seeds `Driver` records and `SeasonDriver` assignments — all via the existing CSV-import pattern (no parallel infrastructure).
+
+**Shipped features:**
+
+- Google Sheet URL input → auto-detected year-numbered tabs (`^\d{4}$`), one preview section per tab
+- Per-tab preview with 6 category buckets (New Drivers, New Assignments, Conflicts, Fuzzy Match Suggestions, Unchanged, Errors) + Season dropdown auto-preselected via `SeasonRepository.findByYear(int)`
+- Skip checkbox per Conflict row (retain existing `SeasonDriver`); Accept checkbox per Fuzzy row (link to existing driver, scoped per-tab)
+- Transactional `execute()` re-fetches preview inside the boundary (D-06 form-params + re-fetch, no `@SessionAttributes`); cross-tab driver dedup
+- Missing Seasons/Teams surface as row errors with no auto-create; ambiguous-season tabs are skipped and flagged in flash
+- 21 integration tests (17 happy-path + 4 exception-path); JaCoCo 82% line gate met (1064 tests total project-wide)
+
+**Pending before release:** 3 visual UAT items (button placement, form rendering, ambiguous-season banner) tracked in `.planning/phases/55-admin-import-ui-transactional-execute/55-HUMAN-UAT.md`.
+
+**Design spec:** `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md` (authored 2026-04-24 via `/gsd-explore` → brainstorming flow)
+
+#### Shipped Milestone: v1.6 Static Site Quality
 
 **Goal:** Fix broken links, add missing content, improve navigation/cross-linking, and deliver a polished, accessible static site with professional UX.
 
-**Target features:**
-
-- ~~Fix all broken navigation links (archive slug mismatch, driver ranking 404, absolute paths)~~ — Phase 37 complete
-- ~~Display season year and number across all pages~~ — Phase 38 complete
-- ~~Add inline links from standings to teams, from rankings to drivers, from matchdays to profiles~~ — Phase 39 complete
-- ~~Add season subnavigation (matchdays, standings, driver ranking, playoff per season)~~ — Phase 40 complete
-- ~~Filter test seasons from archive, fix empty match-meta and period column~~ — Phase 38 complete
-- ~~Remove inline styles in archive and driver-profile templates~~ — Phase 41 complete
-- ~~Fix broken team logo paths on static site~~ — Phase 37 complete
-- ~~Add skip-link, nav active-state, breadcrumbs for accessibility~~ — Phase 40/41 complete
-- ~~Highlight match winner in match cards~~ — Phase 41 complete
-- ~~Mobile scroll indicator for tables~~ — Phase 41 complete
-- ~~Footer with useful links~~ — Phase 41 complete
-- ~~Aria-label improvements, hover transitions, cursor:pointer on clickables~~ — Phase 41 complete
+All 56 requirements complete (22 original + 26 extended + 3 YouTube hero + 5 alltime pages). See REQUIREMENTS.md for full traceability. Pending `/gsd-complete-milestone` archival.
 
 ### Out of Scope
 
@@ -145,10 +149,15 @@ Architectural Consistency: All controllers delegate to services, exception handl
 | RaceGraphicService to admin.service | Fix layering violation — domain must not import admin | ✓ v1.5 |
 | SpEL pattern-based validation | Not a full sandbox — sufficient for admin-only templates | ✓ v1.5 |
 | CONV-02/03/05 already compliant | Research confirmed no code changes needed | ✓ v1.5 |
+| Reuse `GoogleSheetsService` + `DriverMatchingService` + `CsvImportController` preview-state pattern | No parallel import infrastructure | ✓ v1.8 |
+| Form-params re-fetch instead of `@SessionAttributes` (D-06) | Stateless controller, predictable transactional boundary, mirrors `CsvImportController` | ✓ v1.8 |
+| `@RequestParam` primitives + `Map<String, String>` instead of static Form DTO (D-15 override of QUAL-03 wording) | Per-row keys (`seasonId_<year>`, `skip_<psnId>_<year>`, `accept_<psnId>_<year>`) are dynamic — DTO would not fit | ✓ v1.8 |
+| Per-tab cache key for FUZZY-accept driver resolution (CR-01 fix) | Per-tab `accept_<psnId>_<year>` choices must stay isolated; cross-tab dedup keeps plain PSN key for the no-accept branch | ✓ v1.8 |
+| Test years 2021/2022 (not 2023/2024) | DevDataSeeder seeds 2023/2024/2026 on context startup → `findByYear()` ambiguity broke conflict-overwrite assertions | ✓ v1.8 |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-16 after Phase 41 (UX Polish & Accessibility) complete — v1.6 milestone complete*
+*Last updated: 2026-04-25 — v1.8 implementation complete (Phase 55 verified, awaiting visual UAT + release)*

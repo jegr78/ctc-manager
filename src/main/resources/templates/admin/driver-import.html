@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Import Drivers from Sheet', ~{::section})}">
+<body>
+<section>
+    <h1>Import Drivers from Google Sheet</h1>
+
+    <div th:if="${errorMessage}" class="alert alert-error mb-md">
+        <p th:text="${errorMessage}"></p>
+    </div>
+
+    <div class="card">
+        <div th:if="${!sheetsAvailable}" class="alert alert-error mb-md">
+            <p>Google Sheets is not configured. Check service account credentials.</p>
+        </div>
+
+        <form th:if="${sheetsAvailable}" th:action="@{/admin/drivers/import/preview}" method="post">
+            <div class="form-group">
+                <label for="sheetUrl">Google Sheet URL</label>
+                <input type="url" id="sheetUrl" name="sheetUrl"
+                       placeholder="https://docs.google.com/spreadsheets/d/..." required>
+            </div>
+            <div class="actions mt-md">
+                <button type="submit" class="btn btn-primary">Preview</button>
+                <a th:href="@{/admin/drivers}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>

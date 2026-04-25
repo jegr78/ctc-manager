@@ -1,47 +1,54 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.6
-milestone_name: Static Site Quality
-status: executing
-last_updated: "2026-04-18T07:30:32.865Z"
-last_activity: 2026-04-18
+milestone: v1.8
+milestone_name: Bulk Driver Import from Google Sheets
+status: v1.8_pr_open
+last_updated: "2026-04-25T08:45:00.000Z"
+last_activity: 2026-04-25
 progress:
-  total_phases: 17
-  completed_phases: 14
-  total_plans: 27
-  completed_plans: 26
-  percent: 96
+  total_phases: 2
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-16)
+See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Phase 53 — Documentation & Code Cleanup
+**Current focus:** v1.8 — Bulk Driver Import from Google Sheets — implementation complete, awaiting release.
 
 ## Current Position
 
-Phase: 53
-Plan: Not started
-Status: Executing Phase 53
-Last activity: 2026-04-18
+Phase: 55 — Admin Import UI & Transactional Execute (COMPLETE 2026-04-25)
+Plans: 3/3 complete — 55-01 [x] service.execute() + ExecuteResult | 55-02 [x] controller + 2 templates + entry button | 55-03 [x] integration tests + JaCoCo
+Status: ./mvnw verify BUILD SUCCESS — 1064 tests passing, JaCoCo 82% line-coverage gate met. Phase verifier scored 13/13 must-haves PASSED. Code review found 1 critical + 3 warnings, all auto-fixed (4 fix commits). Human UAT items persisted as 55-HUMAN-UAT.md (3 visual checks pending — non-blocking, will surface in audits).
+Last activity: 2026-04-25 — Phase 55 complete and approved by user. v1.8 milestone implementation fully done.
 
 ## Progress Bar
 
 ```
-v1.6: [ ] Phase 37  [ ] Phase 38  [ ] Phase 39  [ ] Phase 40  [ ] Phase 41
-        0/5 complete
+v1.8: [x][x]   2 / 2 phases (100%)
+      P54 P55
 ```
+
+Legend: `[x]` complete, `[-]` in progress, `[ ]` not started
+
+- Phase 54: Preview Service & Row Categorization — Complete (1/1 plan, 5 tasks, shipped 2026-04-24)
+- Phase 55: Admin Import UI & Transactional Execute — Complete (3/3 plans, completed 2026-04-25)
 
 ## Completed Milestones
 
 - v1.0 Technical Debt Cleanup (5 phases, 12 plans) — shipped 2026-04-04
 - v1.1 Codebase Concerns Cleanup (10 phases, 20 plans) — shipped 2026-04-07
+- v1.2 Driver Merge (4 phases, 5 plans) — shipped 2026-04-07
 - v1.3 English Test Data (8 phases) — shipped 2026-04-10
 - v1.5 Code Review Fixes (9 phases, 14 plans) — shipped 2026-04-15
+- v1.6 Static Site Quality (17 phases, 56 requirements) — shipped 2026-04-18
 
 ## Accumulated Context
 
@@ -49,35 +56,40 @@ v1.6: [ ] Phase 37  [ ] Phase 38  [ ] Phase 39  [ ] Phase 40  [ ] Phase 41
 
 All decisions logged in PROJECT.md Key Decisions table.
 
-- [Phase 44]: cleanOutputDirectory uses Files.walkFileTree with SimpleFileVisitor for bottom-up deletion; root dir preserved via !dir.equals guard; IOException propagates to generate() outer catch
-- [Phase 48]: Adapted hero test to assert .hero h1 contains COMMUNITY TEAM CUP instead of .hero-label year (D-09)
-- [Phase 48]: Regex pattern uses {11,} for videoId matching (safe chars only); dev profile fallback videoId set for test iframe visibility
-- [Phase 49]: Used @TempDir as @BeforeAll parameter injection (not instance field) for reliable PER_CLASS lifecycle
-- [Phase 49]: Cross-test isolation via Test_ prefix rename on pre-existing seasons to exclude from productionSeasons filter
+- [v1.8 start]: Foundation document is `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md` — authored via `/gsd-explore` brainstorming; approved as canonical design before milestone kickoff.
+- [v1.8 start]: Reuse `GoogleSheetsService`, `DriverMatchingService` (4-stage fuzzy), and `CsvImportService` preview-state pattern — no parallel infrastructure.
+- [v1.8 start]: Missing Seasons/Teams are errors, never auto-created — consistent with "No Fallback Calculations" principle.
+- [v1.8 start]: E2E tests deferred (Playwright × Google Sheets mocking is fragile); Unit + Integration tests must meet 82% coverage gate.
+- [v1.8 roadmap]: Two-phase structure chosen over three-phase split. Rationale: Controller+templates+execute form a single cohesive deliverable — splitting preview-controller from execute-controller would ship a non-verifiable intermediate (preview form with no execute path). Phase 54 delivers a fully unit-tested service; Phase 55 delivers the end-to-end admin flow with integration coverage.
 
-### Phase Structure (v1.6)
+### Phase Numbering
 
-| Phase | Name | Requirements | Focus |
-|-------|------|--------------|-------|
-| 37 | Critical Link Fixes | LINK-01..04 | Broken archive slugs, driver ranking 404, absolute paths, team logos |
-| 38 | Season Content & Data Filtering | CONT-01, CONT-06, CONT-07 | Season year/number display, filter test seasons, hide empty match-meta |
-| 39 | Entity Cross-Linking | CONT-02..04, CONT-08 | Links: standings→teams, ranking→drivers, matchday→drivers, team→drivers |
-| 40 | Navigation & Structure | CONT-05, UX-02, UX-03 | Season subnav, active nav state, breadcrumbs |
-| 41 | UX Polish & Accessibility | UX-01, UX-04..09, QUAL-01 | Skip link, winner highlight, scroll indicator, footer, aria, transitions |
+Continuing from v1.6 (last phase: 53). v1.8 phases start at **Phase 54**.
+
+- Phase 54: Preview Service & Row Categorization (17 requirements)
+- Phase 55: Admin Import UI & Transactional Execute (11 requirements)
 
 ### Key Technical Context
 
-- All changes target: `SiteGeneratorService.java`, `templates/site/`, `static/site/css/style.css`
-- No database changes needed for this milestone
-- Season model: `getDisplayLabel()` returns "year | #number | name"
-- Site pages: index, archive, standings, matchday, team-profile, driver-profile, driver-ranking, playoff-bracket
-- Shared nav/footer lives in `layout.html`
-
-### Roadmap Evolution
-
-- Phase 51 added: YouTube Hero Video — Autoplay & Loop mit iFrame Player API
-- Phase 52 added: Alltime team standings and driver ranking pages for static site
+- Target entities: `Driver` (psnId unique, nickname, active, aliases), `SeasonDriver(season, driver, team)`.
+- Sheet structure: tabs named `^\d{4}$`; column A = `PSN ID`, column C = `Team` short code. Hidden column B is ignored.
+- Admin entry point: new page at `/admin/drivers/import` (button on `/admin/drivers`).
+- Controller routes: `GET /admin/drivers/import`, `POST /admin/drivers/import/preview`, `POST /admin/drivers/import/execute`.
+- No Flyway migration required.
+- Reuse mandated: `GoogleSheetsService.extractSpreadsheetId()/getSheetNames()/readRangeFromSheet()`, `DriverMatchingService` 4-stage logic. Preview-state between preview and execute uses **re-fetch + form-params** (mirroring `CsvImportController.execute()`), **not** `@SessionAttributes` — confirmed during Phase 54 codebase scout (see `.planning/phases/54-preview-service-row-categorization/54-CONTEXT.md` D-06).
 
 ### Blockers/Concerns
 
 None.
+
+## Session Continuity
+
+**Next action:** PR #116 ist offen — auf CI warten, dann mergen.
+
+- PR: <https://github.com/jegr78/ctc-manager/pull/116>
+- Branch: `gsd/v1.8-bulk-driver-import-from-google-sheets` → `master`
+- Diff: +11 244 / −539
+- Nach Green-CI: `gh pr merge 116 --squash --subject "feat: v1.8 Bulk Driver Import from Google Sheets — complete milestone"` (Conventional Commit über `--subject`)
+- Nach Merge: lokal `git switch master && git pull && git branch -d gsd/v1.8-…`, dann `/gsd-complete-milestone v1.8`
+
+**Branch:** `gsd/v1.8-bulk-driver-import-from-google-sheets` (do not switch, stash, reset, or checkout; worktree edits only).

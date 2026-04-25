@@ -1,192 +1,130 @@
 # Requirements: CTC Manager
 
-**Defined:** 2026-04-16
+**Defined:** 2026-04-24
 **Core Value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## v1.6 Requirements
+## v1.8 Requirements
 
-Requirements for the Static Site Quality milestone. Each maps to roadmap phases.
+Requirements for the Bulk Driver Import from Google Sheets milestone. Each maps to roadmap phases. Source of truth: `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md`.
 
-### Bugfixes
+### Import Flow
 
-- [x] **LINK-01**: Archive page links use slugified displayLabel matching actual directory names
-- [x] **LINK-02**: Nav "Driver Ranking" link resolves to active season's driver-ranking page
-- [x] **LINK-03**: All navigation links use relative paths (not absolute /index.html)
-- [x] **LINK-04**: Team logo images resolve correctly on static site pages
+- [x] **IMPORT-01**: Admin can open a new page at `/admin/drivers/import` (reachable via button on `/admin/drivers`) and submit a Google Sheet URL to load a preview
+- [x] **IMPORT-02**: Preview auto-detects tabs whose name matches `^\d{4}$` and ignores all non-matching tabs
+- [x] **IMPORT-03**: Preview reads columns A (`PSN ID`) and C (`Team` short code) from each relevant tab, skipping the header row
+- [x] **IMPORT-04**: Each detected tab renders as its own preview section, sorted by year ascending
+- [x] **IMPORT-05**: Each tab preview shows a Season dropdown auto-preselected via `SeasonRepository.findByYear(int)` (singleton→id; 0/≥2→null + ambiguousReason). [D-13 override: ROADMAP wording said findByName/findByDisplayLabel; final implementation uses findByYear because Season.name is free-text and displayLabel is computed.] Admin can override before execute
+- [x] **IMPORT-06**: Execute persists Drivers and `SeasonDriver` assignments within a single `@Transactional` boundary with redirect + flash summary on success
 
-### Content
+### Row Categorization
 
-- [x] **CONT-01**: Season year and number are displayed on all pages (archive, standings, hero, profiles)
-- [x] **CONT-02**: Standings table teams link to their team profile pages
-- [x] **CONT-03**: Driver ranking entries link to driver profile pages
-- [x] **CONT-04**: Matchday driver names link to driver profile pages
-- [x] **CONT-05**: Season subnavigation shows links to standings, matchdays, driver ranking, playoff
-- [x] **CONT-06**: Test seasons (name containing "Test") are filtered from the archive
-- [x] **CONT-07**: Empty match-meta (track/car) and empty period column are hidden when no data exists
-- [x] **CONT-08**: Team profile lists the team's drivers with links to their profiles
+- [x] **UX-01**: `New Drivers` bucket lists rows whose PSN ID is unknown to the system
+- [x] **UX-02**: `New Assignments` bucket lists rows whose driver exists but has no `SeasonDriver` for the selected season
+- [x] **UX-03**: `Conflicts` bucket lists rows whose `SeasonDriver` already exists with a different team
+- [x] **UX-04**: `Fuzzy Match Suggestions` bucket lists rows whose PSN ID matches an existing driver via Levenshtein ≥0.8 (not via exact/CI/alias)
+- [x] **UX-05**: `Unchanged` bucket lists rows whose driver+team assignment already matches (no-op on execute)
+- [x] **UX-06**: `Errors` bucket lists rows with blank PSN ID or unknown team code; these rows are excluded from execute
+- [x] **UX-07**: Each conflict row has a `Skip` checkbox; checked → existing assignment retained, unchecked (default) → overwrite with sheet value
+- [x] **UX-08**: Each fuzzy match row has an `Accept` checkbox; checked → link to suggested driver, unchecked (default) → treat as new driver
+
+### Driver Matching
+
+- [x] **MATCH-01**: Existing `DriverMatchingService` 4-stage logic (exact → case-insensitive → alias → Levenshtein ≥0.8) is reused without modification
+- [x] **MATCH-02**: Same PSN ID appearing in multiple tabs creates the `Driver` exactly once; subsequent tabs attach additional `SeasonDriver` assignments (preview-layer: same Driver id surfaces in each tab's bucket; de-duplication lives in Phase 55 execute per D-07)
+
+### Data Integrity
+
+- [x] **DATA-01**: Missing `Season` (neither by tab name nor via manual override) is reported as a row error; no Season is auto-created (preview surfaces ambiguousReason; error reporting final in Phase 55 UI)
+- [x] **DATA-02**: Unknown team short code is reported as a row error; no `Team` is auto-created
+- [x] **DATA-03**: Conflict default behavior is overwrite with sheet value; `Skip`-flagged rows leave the existing `SeasonDriver` untouched
+- [x] **DATA-04**: No Flyway schema migration is introduced by this milestone (existing `Driver` + `SeasonDriver` schema is sufficient)
+- [x] **DATA-05**: `RaceLineup` records are never modified by the driver import (respects RaceLineup-is-Source-of-Truth for race-level assignments)
+
+### Testing
+
+- [x] **TEST-01**: Unit tests cover preview categorization with ≥9 given-when-then scenarios (one per bucket + edge cases) — 16 @Test methods delivered; JaCoCo 98.9% on DriverSheetImportService
+- [x] **TEST-02**: Integration tests cover the full controller flow (form → preview → execute) with mocked `GoogleSheetsService`
+- [x] **TEST-03**: Project line coverage stays ≥82% after new code lands (`./mvnw verify` JaCoCo gate passes)
 
 ### Code Quality
 
-- [x] **QUAL-01**: No inline styles in archive.html and driver-profile.html (CSS classes instead)
+- [x] **QUAL-01**: Admin templates use CSS classes from `admin.css`; no inline styles on buttons or category badges
+- [x] **QUAL-02**: Controller delegates to `DriverSheetImportService`; no business logic, repository calls, or Google Sheets I/O in the controller
+- [x] **QUAL-03**: Form binding uses `@RequestParam` primitives + `Map<String, String>` for dynamic per-row params; no JPA entity `@ModelAttribute` binding [D-15 override: original wording said `DriverSheetImportForm` DTO; final implementation uses `@RequestParam` because the form has only `sheetUrl` plus dynamic per-row keys (`seasonId_<year>`, `skip_<psnId>_<year>`, `accept_<psnId>_<year>`) that don't fit a static DTO shape — mirrors `CsvImportController` precedent]
+- [x] **QUAL-04**: Preview-state persistence between preview and execute follows the existing `CsvImportService` pattern (no new parallel mechanism)
 
-### UX/Design
+## Validated Requirements (Previous Milestones)
 
-- [x] **UX-01**: Skip-to-content link for keyboard navigation
-- [x] **UX-02**: Active navigation item is visually highlighted
-- [x] **UX-03**: Breadcrumbs on subpages (Home > Season > Page)
-- [x] **UX-04**: Match winner team is visually highlighted in match cards
-- [x] **UX-05**: Mobile tables show scroll indicator when horizontally scrollable
-- [x] **UX-06**: Footer contains useful links (back to top, archive, active season)
-- [x] **UX-07**: Nav toggle button has proper aria-label for screen readers
-- [x] **UX-08**: Hover transitions on table rows and links (150-300ms)
-- [x] **UX-09**: cursor:pointer on all clickable elements in site CSS
+Validated requirements from v1.0 through v1.6 are recorded in `PROJECT.md`. See that file for the historical validated list.
 
-### Infrastructure
+## Future Requirements
 
-- [x] **CLEAN-01**: Output directory is emptied before page generation begins
-- [x] **CLEAN-02**: Clean operation handles non-existent output directory gracefully
+Deferred to future releases. Tracked but not in current roadmap.
 
-### Landing Page
+### Extended Import Sources
 
-- [x] **LAND-01**: Index page displays a YouTube embed iframe as the hero element (video ID scraped from channel page)
-- [x] **LAND-02**: Index page shows tile navigation cards (Seasons, Standings, Drivers, Teams, Links)
-- [x] **LAND-03**: Standings table and last matchday section are removed from the index page
-- [x] **LAND-04**: All tile links resolve to valid generated pages
-- [x] **LAND-05**: YouTube channel URL is configurable; video ID is scraped automatically via Jsoup
+- **IMPORT-FUTURE-01**: Bulk import from uploaded CSV file (for teams without Google Sheets access)
+- **IMPORT-FUTURE-02**: Scheduled re-sync with the canonical Google Sheet (detect drift)
 
-### Links (extended)
+### Import-time Enrichment
 
-- [x] **LINK-05**: Footer contains a YouTube link to `https://www.youtube.com/@CommunityTeamCup`
-- [x] **LINK-06**: YouTube footer link is present on all generated pages
-- [x] **LINK-07**: A `links.html` page is generated as part of the static site
-- [x] **LINK-08**: Links are configurable via `ctc.site.links` application properties (list of name/url pairs)
-- [x] **LINK-09**: The links page renders all configured links as clickable elements
-- [x] **LINK-10**: The links page uses the shared layout (nav, footer, consistent styling)
+- **IMPORT-FUTURE-03**: Capture alias entries automatically when a CI-match updates casing (e.g. `art_hockers` → `ART_Hockers`)
+- **IMPORT-FUTURE-04**: Allow admin to enter a richer nickname during preview (default remains `psnId`)
 
-### Overview Pages
+### E2E Coverage
 
-- [x] **OVER-01**: A `teams.html` page lists all teams across all seasons
-- [x] **OVER-02**: A `drivers.html` page lists all drivers across all seasons
-- [x] **OVER-03**: Both overview pages can be filtered by season (client-side JS, static site)
-- [x] **OVER-04**: Teams overview shows team name, logo, and seasons participated
-- [x] **OVER-05**: Drivers overview shows PSN ID, team(s), and seasons participated
-- [x] **OVER-06**: Team/driver names link to their season-specific profile pages
-
-### E2E Validation
-
-- [x] **E2E-01**: All internal `href` links resolve to existing files in the output directory
-- [x] **E2E-02**: All pages have consistent navigation structure (nav + footer present)
-- [x] **E2E-03**: No generated page has empty main content
-- [x] **E2E-04**: Landing page tiles link to valid generated pages
-- [x] **E2E-05**: Links page renders all configured links
-- [x] **E2E-06**: Footer YouTube link present on all page types
-
-### YouTube Hero (Phase 51)
-
-- [x] **YT-01**: YouTube hero uses iFrame Player API with onStateChange ENDED -> seekTo(0) for reliable autoplay and seamless looping
-- [x] **YT-02**: CSS overlay div intercepts mouse events to hide YouTube player controls from user interaction
-- [x] **YT-03**: LAND-01 test updated to assert iFrame Player API markup (yt-hero-player div, overlay, onYouTubeIframeAPIReady script)
-
-### Alltime Pages (Phase 52)
-
-- [x] **ALLTIME-01**: An `alltime-standings.html` page is generated listing team standings aggregated across all seasons
-- [x] **ALLTIME-02**: An `alltime-driver-ranking.html` page is generated listing driver rankings aggregated across all seasons
-- [x] **ALLTIME-03**: Top nav "Standings" and "Driver Ranking" links point to alltime pages (always visible, no activeSeasonSlug guard)
-- [x] **ALLTIME-04**: Existing nav test updated to assert alltime page links instead of season-specific links
-- [x] **ALLTIME-05**: Integration tests verify alltime page existence, table headers, and data content
-
-## v2 Requirements
-
-Deferred to future release. Tracked but not in current roadmap.
-
-### Typography/Branding
-
-- **TYPO-01**: Replace system font body with gaming font pairing (e.g. Russo One / Chakra Petch)
-- **TYPO-02**: Secondary accent color for winners/CTAs (e.g. orange or green)
-
-### Advanced Features
-
-- **ADV-01**: Matchday navigation (prev/next matchday links)
-- **ADV-02**: Driver statistics charts on driver profile pages
-- **ADV-03**: Season comparison view across multiple seasons
+- **TEST-FUTURE-01**: Playwright E2E for the import flow once a stable mock strategy for the Google Sheets API is in place
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Admin UI changes | This milestone focuses exclusively on the static site |
-| Database schema changes | No new data model needed for site improvements |
-| New Flyway migrations | All data already exists, just needs better presentation |
-| Authentication changes | Static site is public, auth is admin-only |
-| Font/branding overhaul | Conthrax font works well, major typography changes deferred to v2 |
+| Auto-create missing Seasons | Contradicts "No Fallback Calculations" — Seasons need editorial definition (dates, structure) |
+| Auto-create missing Teams | Contradicts "No Fallback Calculations" — Teams need name, logo, colors curated by admin |
+| Modify RaceLineup | Race-level assignments remain the responsibility of CSV race import (RaceLineup is source of truth) |
+| Support non-year tab names | Out-of-scope tabs (e.g. `AHR` team sheet) have inconsistent structure; year tabs are canonical |
+| Schema changes | No new Driver/SeasonDriver fields needed; reuse existing entities |
+| Playwright E2E | Google Sheets mocking through Playwright is fragile; unit + integration tests cover the controller contract |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LINK-01 | Phase 37 | Complete |
-| LINK-02 | Phase 37 | Complete |
-| LINK-03 | Phase 37 | Complete |
-| LINK-04 | Phase 37 | Complete |
-| CONT-01 | Phase 38 | Complete |
-| CONT-06 | Phase 38 | Complete |
-| CONT-07 | Phase 38 | Complete |
-| CONT-02 | Phase 39 | Complete |
-| CONT-03 | Phase 39 | Complete |
-| CONT-04 | Phase 39 | Complete |
-| CONT-08 | Phase 39 | Complete |
-| CONT-05 | Phase 42 | Complete |
-| UX-02 | Phase 42 | Complete |
-| UX-03 | Phase 40 | Complete |
-| UX-01 | Phase 41 | Complete |
-| UX-04 | Phase 41 | Complete |
-| UX-05 | Phase 41 | Complete |
-| UX-06 | Phase 41 | Complete |
-| UX-07 | Phase 41 | Complete |
-| UX-08 | Phase 41 | Complete |
-| UX-09 | Phase 41 | Complete |
-| QUAL-01 | Phase 41 | Complete |
-| CLEAN-01 | Phase 44 | Complete |
-| CLEAN-02 | Phase 44 | Complete |
-| LINK-05 | Phase 45 | Complete |
-| LINK-06 | Phase 45 | Complete |
-| LINK-07 | Phase 46 | Complete |
-| LINK-08 | Phase 46 | Complete |
-| LINK-09 | Phase 46 | Complete |
-| LINK-10 | Phase 46 | Complete |
-| OVER-01 | Phase 47 | Complete |
-| OVER-02 | Phase 47 | Complete |
-| OVER-03 | Phase 47 | Complete |
-| OVER-04 | Phase 47 | Complete |
-| OVER-05 | Phase 47 | Complete |
-| OVER-06 | Phase 50 | Complete |
-| LAND-01 | Phase 48 | Complete |
-| LAND-02 | Phase 48 | Complete |
-| LAND-03 | Phase 48 | Complete |
-| LAND-04 | Phase 48 | Complete |
-| LAND-05 | Phase 48 | Complete |
-| E2E-01 | Phase 49 | Complete |
-| E2E-02 | Phase 49 | Complete |
-| E2E-03 | Phase 49 | Complete |
-| E2E-04 | Phase 49 | Complete |
-| E2E-05 | Phase 49 | Complete |
-| E2E-06 | Phase 49 | Complete |
-| YT-01 | Phase 51 | Complete |
-| YT-02 | Phase 51 | Complete |
-| YT-03 | Phase 51 | Complete |
-| ALLTIME-01 | Phase 52 | Complete |
-| ALLTIME-02 | Phase 52 | Complete |
-| ALLTIME-03 | Phase 52 | Complete |
-| ALLTIME-04 | Phase 52 | Complete |
-| ALLTIME-05 | Phase 52 | Complete |
+| IMPORT-01 | Phase 55 | Verified |
+| IMPORT-02 | Phase 54 | Verified |
+| IMPORT-03 | Phase 54 | Verified |
+| IMPORT-04 | Phase 54 | Verified |
+| IMPORT-05 | Phase 54 | Verified |
+| IMPORT-06 | Phase 55 | Verified |
+| UX-01 | Phase 54 | Verified |
+| UX-02 | Phase 54 | Verified |
+| UX-03 | Phase 54 | Verified |
+| UX-04 | Phase 54 | Verified |
+| UX-05 | Phase 54 | Verified |
+| UX-06 | Phase 54 | Verified |
+| UX-07 | Phase 55 | Verified |
+| UX-08 | Phase 55 | Verified |
+| MATCH-01 | Phase 54 | Verified |
+| MATCH-02 | Phase 54 | Verified |
+| DATA-01 | Phase 54 | Verified |
+| DATA-02 | Phase 54 | Verified |
+| DATA-03 | Phase 55 | Verified |
+| DATA-04 | Phase 54 | Verified |
+| DATA-05 | Phase 54 | Verified |
+| TEST-01 | Phase 54 | Verified |
+| TEST-02 | Phase 55 | Verified |
+| TEST-03 | Phase 55 | Verified |
+| QUAL-01 | Phase 55 | Verified |
+| QUAL-02 | Phase 55 | Verified |
+| QUAL-03 | Phase 55 | Verified |
+| QUAL-04 | Phase 55 | Verified |
 
 **Coverage:**
 
-- v1.6 requirements: 56 total (22 original + 26 new + 3 YouTube hero + 5 alltime pages)
-- Mapped to phases: 56
-- Complete: 56, Pending: 0
+- v1.8 requirements: 28 total (6 Import Flow + 8 Row Categorization + 2 Matching + 5 Data Integrity + 3 Testing + 4 Code Quality)
+- Phase mapping: 28/28 mapped (Phase 54: 17, Phase 55: 11) — no orphans, no duplicates
 
 ---
 
-*Requirements defined: 2026-04-16*
-*Last updated: 2026-04-18 — all 56 requirements complete (YT-01..03, ALLTIME-01..05 checkboxes updated after Phase 51/52 verification)*
+*Requirements defined: 2026-04-24 — derived from docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md*
+*Traceability updated: 2026-04-24 — phases mapped to Phase 54 (Preview Service) and Phase 55 (Admin Import UI & Execute)*
