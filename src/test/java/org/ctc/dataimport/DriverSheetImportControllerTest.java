@@ -329,20 +329,9 @@ class DriverSheetImportControllerTest {
 
     @Test
     void givenFuzzyRowWithoutAccept_whenExecute_thenCreatesNewDriver() throws Exception {
-        // given — driver "fz_src" exists; sheet has "fz_srd" → fuzzy match, but accept not set
-        Driver fuzzyDriver = testHelper.createDriver("fz_src", "Fuzzy Source No Accept");
-        stubSheets("https://sheets.test/d/abc", 2021,
-                List.of(
-                        List.of("PSN ID", "Nickname", "Team"),
-                        List.of("fz_srd_2", "fz_srd_2", "I_AHR")
-                ));
-        // "fz_srd_2" (7) vs "fz_src" (6): sim = 1 - 3/7 ≈ 0.57 — not fuzzy
-        // Need a better pair. "fz_src" (6) vs "fz_src2" (7): sim = 1 - 1/7 ≈ 0.857 — OK!
-        // But "fz_src2" exact match will fail since it does not exist — goes to FUZZY if similarity >= 0.8
-        // Actually: Levenshtein("fz_src", "fz_src2") = 1 (append '2'), max=7, sim=1-1/7=0.857 — FUZZY
-        // Let's redo: existingDriver PSN="fz_noacc", sheet PSN="fz_noac0"
-        // "fz_noacc" (8) vs "fz_noac0" (8): dist=1 ('c'→'0'), sim=1-1/8=0.875 — OK!
-        Driver fuzzyDriverNoAccept = testHelper.createDriver("fz_noacc", "Fuzzy No Accept Driver");
+        // given — "fz_noacc" (8 chars) vs sheet PSN "fz_noac0" (8 chars):
+        // Levenshtein dist=1 ('c'→'0'), max=8, similarity=0.875 — FUZZY threshold met
+        testHelper.createDriver("fz_noacc", "Fuzzy No Accept Driver");
         stubSheets("https://sheets.test/d/abc2", 2021,
                 List.of(
                         List.of("PSN ID", "Nickname", "Team"),
@@ -357,8 +346,9 @@ class DriverSheetImportControllerTest {
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"));
 
-        // then — new Driver with PSN "fz_noac0" created
+        // then — new Driver with PSN "fz_noac0" created; original "fz_noacc" still present
         assertThat(driverRepository.findByPsnId("fz_noac0")).isPresent();
+        assertThat(driverRepository.findByPsnId("fz_noacc")).isPresent(); // not modified
     }
 
     @Test
