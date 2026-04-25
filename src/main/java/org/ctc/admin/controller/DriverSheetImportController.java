@@ -50,10 +50,15 @@ public class DriverSheetImportController {
                     .anyMatch(t -> t.suggestedSeasonId() == null));
             addCommonAttributes(model);
             return "admin/driver-import-preview";
-        } catch (IOException | IllegalArgumentException | IllegalStateException e) {
+        } catch (IOException e) {
             log.error("Error reading Google Sheet for driver import", e);
             addCommonAttributes(model);
-            model.addAttribute("errorMessage", "Error reading Google Sheet: " + e.getMessage());
+            model.addAttribute("errorMessage", "Could not read the Google Sheet. Check the URL and service account credentials.");
+            return "admin/driver-import";
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.error("Driver import preview failed", e);
+            addCommonAttributes(model);
+            model.addAttribute("errorMessage", "Preview failed: " + e.getMessage());
             return "admin/driver-import";
         }
     }
@@ -80,10 +85,12 @@ public class DriverSheetImportController {
                    .append(" (no season selected).");
             }
             redirectAttributes.addFlashAttribute("successMessage", msg.toString());
-        } catch (BusinessRuleException | ValidationException |
-                 IllegalArgumentException | IllegalStateException | DataAccessException e) {
+        } catch (BusinessRuleException | ValidationException | IllegalArgumentException e) {
             log.error("Error executing driver sheet import", e);
-            redirectAttributes.addFlashAttribute("errorMessage", "Import error: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", "Import failed: " + e.getMessage());
+        } catch (IllegalStateException | DataAccessException e) {
+            log.error("Error executing driver sheet import", e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Import failed due to an internal error. See server logs for details.");
         }
         return "redirect:/admin/drivers/import";
     }
