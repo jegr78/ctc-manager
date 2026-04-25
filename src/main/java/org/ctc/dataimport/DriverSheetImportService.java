@@ -49,6 +49,7 @@ public class DriverSheetImportService {
      * @return typed preview — no DB writes performed
      * @throws IOException if Google Sheets API call fails
      */
+    @Transactional(readOnly = true)
     public DriverSheetImportPreview preview(String sheetUrl) throws IOException {
         String spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
         log.info("Building driver sheet import preview for spreadsheet {}", spreadsheetId);
