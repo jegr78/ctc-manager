@@ -286,6 +286,48 @@ class DriverSheetImportControllerTest {
     }
 
     @Test
+    void givenSameFuzzyPsnInTwoTabsWithDifferentAcceptUuids_whenExecute_thenEachTabLinksToItsOwnDriver() throws Exception {
+        // given — two drivers that each appear as FUZZY suggestions for the same sheet PSN in different year-tabs.
+        // Sheet PSN: "fz_xtab" (7). DB driver A: "fz_xtab_a" (9), dist=2, sim=1-2/9≈0.78 — too low.
+        // Use shorter pair: sheet PSN "fz_x" (4). DB "fz_a" (4): dist=1, sim=0.75 — too low (threshold 0.8).
+        // "fz_xa" (5) vs DB "fz_xb" (5): dist=1, sim=0.8 — exactly at threshold, FUZZY!
+        // Tab 2021 sheet PSN: "fz_xa" → fuzzy match to driverA ("fz_xb", dist=1, len=5, sim=0.8)
+        // Tab 2022 sheet PSN: "fz_xa" → fuzzy match to driverB ("fz_xc", dist=1, len=5, sim=0.8)
+        // Each tab supplies a different accept UUID — the service must NOT return driverA's result from cache for tab 2022.
+        Driver driverA = testHelper.createDriver("fz_xb", "Fuzzy CrossTab A");
+        Driver driverB = testHelper.createDriver("fz_xc", "Fuzzy CrossTab B");
+
+        List<List<Object>> rows2021 = List.of(
+                List.of("PSN ID", "Nickname", "Team"),
+                List.of("fz_xa", "fz_xa", "I_AHR")
+        );
+        List<List<Object>> rows2022 = List.of(
+                List.of("PSN ID", "Nickname", "Team"),
+                List.of("fz_xa", "fz_xa", "I_CRL")
+        );
+        // stubSheetsForTwoTabs returns tabs sorted by year (2021, 2022)
+        stubSheetsForTwoTabs("https://sheets.test/d/xtab_fuzzy", 2021, rows2021, 2022, rows2022);
+
+        // when — tab 2021 accepts driverA, tab 2022 accepts driverB (different UUIDs for same sheet PSN)
+        mockMvc.perform(post("/admin/drivers/import/execute")
+                        .param("sheetUrl", "https://sheets.test/d/xtab_fuzzy")
+                        .param("seasonId_2021", season2021.getId().toString())
+                        .param("seasonId_2022", season2022.getId().toString())
+                        .param("accept_fz_xa_2021", driverA.getId().toString())
+                        .param("accept_fz_xa_2022", driverB.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/drivers/import"))
+                .andExpect(flash().attributeExists("successMessage"));
+
+        // then — season2021 linked to driverA; season2022 linked to driverB (NOT driverA due to first-tab cache hit)
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2021.getId(), driverA.getId())).isPresent();
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2022.getId(), driverB.getId())).isPresent();
+        // Cross-check: driverB must NOT be linked to season2021, driverA must NOT be linked to season2022
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2021.getId(), driverB.getId())).isEmpty();
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2022.getId(), driverA.getId())).isEmpty();
+    }
+
+    @Test
     void givenFuzzyRowWithoutAccept_whenExecute_thenCreatesNewDriver() throws Exception {
         // given — driver "fz_src" exists; sheet has "fz_srd" → fuzzy match, but accept not set
         Driver fuzzyDriver = testHelper.createDriver("fz_src", "Fuzzy Source No Accept");

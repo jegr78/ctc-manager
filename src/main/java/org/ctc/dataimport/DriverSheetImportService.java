@@ -158,8 +158,10 @@ public class DriverSheetImportService {
                 Driver driver;
                 if (acceptValue != null && !acceptValue.isBlank()) {
                     UUID suggestedDriverId = UUID.fromString(acceptValue);
-                    driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(),
-                            psnId -> driverRepository.findById(suggestedDriverId)
+                    // Use a tab-scoped cache key for the accept path so that different year-tabs
+                    // can independently accept different drivers for the same sheet PSN (D-07).
+                    driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId() + "_accept_" + tab.year(),
+                            ignored -> driverRepository.findById(suggestedDriverId)
                                     .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + suggestedDriverId)));
                 } else {
                     driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(), psnId -> {
