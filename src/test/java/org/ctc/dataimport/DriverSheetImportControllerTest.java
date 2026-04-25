@@ -54,9 +54,12 @@ class DriverSheetImportControllerTest {
     @MockitoBean
     private GoogleSheetsService googleSheetsService;
 
-    // Shared fixtures — reused across multiple test methods
-    // NOTE: years 2021 and 2022 are intentionally used — TestDataService uses 2023/2024/2025/2026,
-    // so these years produce exactly one Season per findByYear() call → correct CONFLICT/UNCHANGED detection.
+    // Shared fixtures — reused across multiple test methods.
+    // NOTE: years 2021 and 2022 are intentionally used. DevDataSeeder (CommandLineRunner
+    // @Profile("dev")) seeds Seasons for years 2023/2024/2026 on context startup, so
+    // those years would yield ambiguous findByYear() results in the categorizer
+    // (suggestedSeasonId = null → NEW_ASSIGNMENT instead of CONFLICT/UNCHANGED).
+    // Years 2021 and 2022 stay clean and produce exactly one Season per findByYear() call.
     private Season season2021;
     private Season season2022;
     private Team teamAhr;
@@ -65,7 +68,6 @@ class DriverSheetImportControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Use unique prefixes to avoid cross-test collision (TestHelper ensures DB isolation via @Transactional)
         season2021 = testHelper.createSeason("ImpTest_2021", 2021, 1);
         season2022 = testHelper.createSeason("ImpTest_2022", 2022, 1);
         teamAhr = testHelper.createTeam("Import Test AHR", "I_AHR");
@@ -126,7 +128,7 @@ class DriverSheetImportControllerTest {
     @Test
     void givenValidSheetUrl_whenPostPreview_thenRendersPreviewTemplate() throws Exception {
         // given
-        stubSheets("https://sheets.test/d/abc", 2024, newDriverRows("prev_new_psn", "I_AHR"));
+        stubSheets("https://sheets.test/d/abc", 2021, newDriverRows("prev_new_psn", "I_AHR"));
 
         // when / then
         mockMvc.perform(post("/admin/drivers/import/preview")
@@ -160,12 +162,12 @@ class DriverSheetImportControllerTest {
     @Test
     void givenNewDriverRow_whenExecute_thenCreatesDriverAndSeasonDriver() throws Exception {
         // given
-        stubSheets("https://sheets.test/d/abc", 2024, newDriverRows("imp_new_d1", "I_AHR"));
+        stubSheets("https://sheets.test/d/abc", 2021, newDriverRows("imp_new_d1", "I_AHR"));
 
         // when / then
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc")
-                        .param("seasonId_2024", season2024.getId().toString()))
+                        .param("seasonId_2021", season2021.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"))
@@ -174,19 +176,19 @@ class DriverSheetImportControllerTest {
         assertThat(driverRepository.findByPsnId("imp_new_d1")).isPresent();
         Driver created = driverRepository.findByPsnId("imp_new_d1").get();
         assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(
-                season2024.getId(), created.getId()
+                season2021.getId(), created.getId()
         )).isPresent();
     }
 
     @Test
     void givenNewAssignmentRow_whenExecute_thenCreatesSeasonDriverForExistingDriver() throws Exception {
         // given — existingDriver already in DB (from setUp); sheet row references them → NEW_ASSIGNMENT
-        stubSheets("https://sheets.test/d/abc", 2024, newDriverRows("imp_existing_drv", "I_AHR"));
+        stubSheets("https://sheets.test/d/abc", 2021, newDriverRows("imp_existing_drv", "I_AHR"));
 
         // when / then
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc")
-                        .param("seasonId_2024", season2024.getId().toString()))
+                        .param("seasonId_2021", season2021.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -195,17 +197,17 @@ class DriverSheetImportControllerTest {
         assertThat(driverRepository.findByPsnId("imp_existing_drv")).isPresent();
         // SeasonDriver created for existing driver
         assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(
-                season2024.getId(), existingDriver.getId()
+                season2021.getId(), existingDriver.getId()
         )).isPresent();
     }
 
     @Test
     void givenConflictRowWithSkipSet_whenExecute_thenExistingSeasonDriverUntouched() throws Exception {
         // given — existing SeasonDriver has teamAhr; sheet row says teamCrl (CONFLICT)
-        SeasonDriver existingSd = testHelper.createSeasonDriver(season2024, existingDriver, teamAhr);
+        SeasonDriver existingSd = testHelper.createSeasonDriver(season2021, existingDriver, teamAhr);
         java.util.UUID existingSdId = existingSd.getId();
         // Sheet row: same PSN, different team → categorized as CONFLICT by preview
-        stubSheets("https://sheets.test/d/abc", 2024,
+        stubSheets("https://sheets.test/d/abc", 2021,
                 List.of(
                         List.of("PSN ID", "Nickname", "Team"),
                         List.of("imp_existing_drv", "imp_existing_drv", "I_CRL")
@@ -214,8 +216,8 @@ class DriverSheetImportControllerTest {
         // when — skip_<psnId>_<year>=on → skip the conflict
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc")
-                        .param("seasonId_2024", season2024.getId().toString())
-                        .param("skip_imp_existing_drv_2024", "on"))
+                        .param("seasonId_2021", season2021.getId().toString())
+                        .param("skip_imp_existing_drv_2021", "on"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -230,9 +232,9 @@ class DriverSheetImportControllerTest {
     @Test
     void givenConflictRowWithoutSkip_whenExecute_thenSeasonDriverTeamOverwritten() throws Exception {
         // given — existing SeasonDriver has teamAhr; sheet row says teamCrl (CONFLICT)
-        SeasonDriver existingSd = testHelper.createSeasonDriver(season2024, existingDriver, teamAhr);
+        SeasonDriver existingSd = testHelper.createSeasonDriver(season2021, existingDriver, teamAhr);
         java.util.UUID existingSdId = existingSd.getId();
-        stubSheets("https://sheets.test/d/abc", 2024,
+        stubSheets("https://sheets.test/d/abc", 2021,
                 List.of(
                         List.of("PSN ID", "Nickname", "Team"),
                         List.of("imp_existing_drv", "imp_existing_drv", "I_CRL")
@@ -241,7 +243,7 @@ class DriverSheetImportControllerTest {
         // when — no skip param → overwrite
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc")
-                        .param("seasonId_2024", season2024.getId().toString()))
+                        .param("seasonId_2021", season2021.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -262,7 +264,7 @@ class DriverSheetImportControllerTest {
         // Use "fz_src" (6) vs "fz_srd" (6): dist=1, sim=1-1/6≈0.833 — OK!
         Driver fuzzyDriver = testHelper.createDriver("fz_src", "Fuzzy Source");
         // Sheet row has "fz_srd" → fuzzy match to fuzzyDriver
-        stubSheets("https://sheets.test/d/abc", 2024,
+        stubSheets("https://sheets.test/d/abc", 2021,
                 List.of(
                         List.of("PSN ID", "Nickname", "Team"),
                         List.of("fz_srd", "fz_srd", "I_AHR")
@@ -271,15 +273,15 @@ class DriverSheetImportControllerTest {
         // when — accept param provides fuzzyDriver's UUID → link to existing driver
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc")
-                        .param("seasonId_2024", season2024.getId().toString())
-                        .param("accept_fz_srd_2024", fuzzyDriver.getId().toString()))
+                        .param("seasonId_2021", season2021.getId().toString())
+                        .param("accept_fz_srd_2021", fuzzyDriver.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"));
 
         // then — no new Driver created; SeasonDriver linked to fuzzyDriver
         assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(
-                season2024.getId(), fuzzyDriver.getId()
+                season2021.getId(), fuzzyDriver.getId()
         )).isPresent();
     }
 
@@ -287,7 +289,7 @@ class DriverSheetImportControllerTest {
     void givenFuzzyRowWithoutAccept_whenExecute_thenCreatesNewDriver() throws Exception {
         // given — driver "fz_src" exists; sheet has "fz_srd" → fuzzy match, but accept not set
         Driver fuzzyDriver = testHelper.createDriver("fz_src", "Fuzzy Source No Accept");
-        stubSheets("https://sheets.test/d/abc", 2024,
+        stubSheets("https://sheets.test/d/abc", 2021,
                 List.of(
                         List.of("PSN ID", "Nickname", "Team"),
                         List.of("fz_srd_2", "fz_srd_2", "I_AHR")
@@ -299,7 +301,7 @@ class DriverSheetImportControllerTest {
         // Let's redo: existingDriver PSN="fz_noacc", sheet PSN="fz_noac0"
         // "fz_noacc" (8) vs "fz_noac0" (8): dist=1 ('c'→'0'), sim=1-1/8=0.875 — OK!
         Driver fuzzyDriverNoAccept = testHelper.createDriver("fz_noacc", "Fuzzy No Accept Driver");
-        stubSheets("https://sheets.test/d/abc2", 2024,
+        stubSheets("https://sheets.test/d/abc2", 2021,
                 List.of(
                         List.of("PSN ID", "Nickname", "Team"),
                         List.of("fz_noac0", "fz_noac0", "I_AHR")
@@ -308,7 +310,7 @@ class DriverSheetImportControllerTest {
         // when — no accept param → create new driver
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc2")
-                        .param("seasonId_2024", season2024.getId().toString()))
+                        .param("seasonId_2021", season2021.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -319,11 +321,11 @@ class DriverSheetImportControllerTest {
 
     @Test
     void givenUnchangedRow_whenExecute_thenNoWrite() throws Exception {
-        // given — existingDriver already assigned to teamAhr in season2024 (UNCHANGED row)
-        testHelper.createSeasonDriver(season2024, existingDriver, teamAhr);
+        // given — existingDriver already assigned to teamAhr in season2021 (UNCHANGED row)
+        testHelper.createSeasonDriver(season2021, existingDriver, teamAhr);
         long countBefore = seasonDriverRepository.count();
 
-        stubSheets("https://sheets.test/d/abc", 2024,
+        stubSheets("https://sheets.test/d/abc", 2021,
                 List.of(
                         List.of("PSN ID", "Nickname", "Team"),
                         List.of("imp_existing_drv", "imp_existing_drv", "I_AHR")
@@ -332,7 +334,7 @@ class DriverSheetImportControllerTest {
         // when
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc")
-                        .param("seasonId_2024", season2024.getId().toString()))
+                        .param("seasonId_2021", season2021.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -345,7 +347,7 @@ class DriverSheetImportControllerTest {
     void givenErrorRow_whenExecute_thenRowExcluded() throws Exception {
         // given — row with blank PSN → ERROR bucket, never imported
         long driverCountBefore = driverRepository.count();
-        stubSheets("https://sheets.test/d/abc", 2024,
+        stubSheets("https://sheets.test/d/abc", 2021,
                 List.of(
                         List.of("PSN ID", "Nickname", "Team"),
                         List.of("", "", "I_AHR")  // blank PSN → ERROR
@@ -354,7 +356,7 @@ class DriverSheetImportControllerTest {
         // when
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc")
-                        .param("seasonId_2024", season2024.getId().toString()))
+                        .param("seasonId_2021", season2021.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -365,22 +367,22 @@ class DriverSheetImportControllerTest {
 
     @Test
     void givenSameNewPsnInTwoTabs_whenExecute_thenSingleDriverCreated() throws Exception {
-        // given — same PSN "xtab_new_psn" in both 2023 and 2024 tabs → only one Driver created
-        List<List<Object>> rows2023 = List.of(
+        // given — same PSN "xtab_new_psn" in both 2022 and 2021 tabs → only one Driver created
+        List<List<Object>> rows2022 = List.of(
                 List.of("PSN ID", "Nickname", "Team"),
                 List.of("xtab_new_psn", "xtab_new_psn", "I_AHR")
         );
-        List<List<Object>> rows2024 = List.of(
+        List<List<Object>> rows2021 = List.of(
                 List.of("PSN ID", "Nickname", "Team"),
                 List.of("xtab_new_psn", "xtab_new_psn", "I_CRL")
         );
-        stubSheetsForTwoTabs("https://sheets.test/d/xtab", 2023, rows2023, 2024, rows2024);
+        stubSheetsForTwoTabs("https://sheets.test/d/xtab", 2022, rows2022, 2021, rows2021);
 
         // when
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/xtab")
-                        .param("seasonId_2023", season2023.getId().toString())
-                        .param("seasonId_2024", season2024.getId().toString()))
+                        .param("seasonId_2022", season2022.getId().toString())
+                        .param("seasonId_2021", season2021.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"));
@@ -389,16 +391,16 @@ class DriverSheetImportControllerTest {
         assertThat(driverRepository.findByPsnId("xtab_new_psn")).isPresent();
         Driver xtabDriver = driverRepository.findByPsnId("xtab_new_psn").get();
         // two SeasonDriver rows — one per season
-        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2023.getId(), xtabDriver.getId())).isPresent();
-        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2024.getId(), xtabDriver.getId())).isPresent();
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2022.getId(), xtabDriver.getId())).isPresent();
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2021.getId(), xtabDriver.getId())).isPresent();
     }
 
     @Test
     void givenTabWithoutSeasonId_whenExecute_thenTabSkippedAndFlaggedInFlash() throws Exception {
-        // given — only one tab (2024); no seasonId_2024 param provided → tab skipped
-        stubSheets("https://sheets.test/d/abc", 2024, newDriverRows("skipped_drv", "I_AHR"));
+        // given — only one tab (2021); no seasonId_2021 param provided → tab skipped
+        stubSheets("https://sheets.test/d/abc", 2021, newDriverRows("skipped_drv", "I_AHR"));
 
-        // when — no seasonId_2024 param → tab is skipped
+        // when — no seasonId_2021 param → tab is skipped
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc"))
                 .andExpect(status().is3xxRedirection())
@@ -415,12 +417,12 @@ class DriverSheetImportControllerTest {
         // given — sheet has a NEW_DRIVER row with a valid team; but the seasonId param
         // references a non-existent UUID → execute() throws IllegalArgumentException ("Season not found")
         // which is caught by the controller catch block → redirect with errorMessage flash
-        stubSheets("https://sheets.test/d/abc", 2024, newDriverRows("rollback_drv", "I_AHR"));
+        stubSheets("https://sheets.test/d/abc", 2021, newDriverRows("rollback_drv", "I_AHR"));
 
         // when — provide a bogus seasonId that does not exist in DB → execute throws
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc")
-                        .param("seasonId_2024", "00000000-0000-0000-0000-000000000000"))
+                        .param("seasonId_2021", "00000000-0000-0000-0000-000000000000"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("errorMessage"));
@@ -432,8 +434,8 @@ class DriverSheetImportControllerTest {
     @Test
     void givenMixedBucketExecute_whenSuccess_thenFlashContainsAggregatedCounts() throws Exception {
         // given — one new driver row + one unchanged row
-        testHelper.createSeasonDriver(season2024, existingDriver, teamAhr);
-        stubSheets("https://sheets.test/d/abc", 2024,
+        testHelper.createSeasonDriver(season2021, existingDriver, teamAhr);
+        stubSheets("https://sheets.test/d/abc", 2021,
                 List.of(
                         List.of("PSN ID", "Nickname", "Team"),
                         List.of("imp_mix_new", "imp_mix_new", "I_AHR"),         // NEW_DRIVER
@@ -443,7 +445,7 @@ class DriverSheetImportControllerTest {
         // when
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc")
-                        .param("seasonId_2024", season2024.getId().toString()))
+                        .param("seasonId_2021", season2021.getId().toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
                 .andExpect(flash().attributeExists("successMessage"))
