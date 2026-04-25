@@ -7,7 +7,7 @@
 - :white_check_mark: **v1.3 English Test Data** — Phases 20-27 (shipped 2026-04-10)
 - :white_check_mark: **v1.5 Code Review Fixes** — Phases 28-36 (shipped 2026-04-15)
 - :white_check_mark: **v1.6 Static Site Quality** — Phases 37-53 (shipped 2026-04-18)
-- **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (in progress)
+- **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (implementation complete 2026-04-25, awaiting release)
 
 ## Phases
 
@@ -99,7 +99,7 @@ See: milestones/v1.5-ROADMAP.md for full details
 **Milestone Goal:** Provide admins a two-phase bulk import (Preview -> Execute) that seeds `Driver` records and `SeasonDriver` assignments from a curated Google Sheet with per-year tabs, reusing the existing CSV-import pattern (`GoogleSheetsService`, `DriverMatchingService`, `CsvImportService` preview-state).
 
 - [x] **Phase 54: Preview Service & Row Categorization** - Backend service that fetches year-numbered tabs, categorizes rows into six buckets, and is fully unit-tested (completed 2026-04-24)
-- [ ] **Phase 55: Admin Import UI & Transactional Execute** - Controller, form DTO, templates, entry button, and transactional execute path with integration coverage
+- [x] **Phase 55: Admin Import UI & Transactional Execute** - Controller, form DTO, templates, entry button, and transactional execute path with integration coverage (completed 2026-04-25)
 
 ## Phase Details
 
@@ -195,4 +195,4 @@ See: milestones/v1.5-ROADMAP.md for full details
 | 52. Alltime Pages | v1.6 | 2/2 | Complete | 2026-04-18 |
 | 53. Documentation & Code Cleanup | v1.6 | 1/1 | Complete | 2026-04-18 |
 | 54. Preview Service & Row Categorization | v1.8 | 1/1 | Complete | 2026-04-24 |
-| 55. Admin Import UI & Transactional Execute | v1.8 | 0/3 | Not started | — |
+| 55. Admin Import UI & Transactional Execute | v1.8 | 3/3 | Complete | 2026-04-25 |

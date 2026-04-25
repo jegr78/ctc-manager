@@ -93,18 +93,20 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 ### Active
 
-#### Current Milestone: v1.8 Bulk Driver Import from Google Sheets
+#### Current Milestone: v1.8 Bulk Driver Import from Google Sheets — Implementation Complete (2026-04-25)
 
-**Goal:** Provide admins a two-phase bulk import (Preview → Execute) that seeds `Driver` records and `SeasonDriver` assignments from a curated Google Sheet with per-year tabs, reusing the existing CSV-import pattern.
+**Goal (delivered):** Admins can submit a curated Google Sheet URL, review per-tab preview with override controls, and execute a transactional import that seeds `Driver` records and `SeasonDriver` assignments — all via the existing CSV-import pattern (no parallel infrastructure).
 
-**Target features:**
+**Shipped features:**
 
-- Google Sheet URL input → auto-detect year-numbered tabs (`^\d{4}$`) and render one preview section per tab
-- Per-tab preview with category buckets (New Drivers, New Assignments, Conflicts, Fuzzy Match Suggestions, Unchanged, Errors) and editable Season dropdown
-- Skip checkbox per conflict row (retain existing SeasonDriver) and Accept checkbox per fuzzy match suggestion
-- Transactional Execute phase persisting Drivers + SeasonDriver assignments (4-stage fuzzy match via existing `DriverMatchingService`)
-- Missing Seasons or Teams reported as row errors — no auto-create
-- Integration coverage ≥82%; E2E deferred
+- Google Sheet URL input → auto-detected year-numbered tabs (`^\d{4}$`), one preview section per tab
+- Per-tab preview with 6 category buckets (New Drivers, New Assignments, Conflicts, Fuzzy Match Suggestions, Unchanged, Errors) + Season dropdown auto-preselected via `SeasonRepository.findByYear(int)`
+- Skip checkbox per Conflict row (retain existing `SeasonDriver`); Accept checkbox per Fuzzy row (link to existing driver, scoped per-tab)
+- Transactional `execute()` re-fetches preview inside the boundary (D-06 form-params + re-fetch, no `@SessionAttributes`); cross-tab driver dedup
+- Missing Seasons/Teams surface as row errors with no auto-create; ambiguous-season tabs are skipped and flagged in flash
+- 21 integration tests (17 happy-path + 4 exception-path); JaCoCo 82% line gate met (1064 tests total project-wide)
+
+**Pending before release:** 3 visual UAT items (button placement, form rendering, ambiguous-season banner) tracked in `.planning/phases/55-admin-import-ui-transactional-execute/55-HUMAN-UAT.md`.
 
 **Design spec:** `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md` (authored 2026-04-24 via `/gsd-explore` → brainstorming flow)
 
@@ -147,10 +149,15 @@ All 56 requirements complete (22 original + 26 extended + 3 YouTube hero + 5 all
 | RaceGraphicService to admin.service | Fix layering violation — domain must not import admin | ✓ v1.5 |
 | SpEL pattern-based validation | Not a full sandbox — sufficient for admin-only templates | ✓ v1.5 |
 | CONV-02/03/05 already compliant | Research confirmed no code changes needed | ✓ v1.5 |
+| Reuse `GoogleSheetsService` + `DriverMatchingService` + `CsvImportController` preview-state pattern | No parallel import infrastructure | ✓ v1.8 |
+| Form-params re-fetch instead of `@SessionAttributes` (D-06) | Stateless controller, predictable transactional boundary, mirrors `CsvImportController` | ✓ v1.8 |
+| `@RequestParam` primitives + `Map<String, String>` instead of static Form DTO (D-15 override of QUAL-03 wording) | Per-row keys (`seasonId_<year>`, `skip_<psnId>_<year>`, `accept_<psnId>_<year>`) are dynamic — DTO would not fit | ✓ v1.8 |
+| Per-tab cache key for FUZZY-accept driver resolution (CR-01 fix) | Per-tab `accept_<psnId>_<year>` choices must stay isolated; cross-tab dedup keeps plain PSN key for the no-accept branch | ✓ v1.8 |
+| Test years 2021/2022 (not 2023/2024) | DevDataSeeder seeds 2023/2024/2026 on context startup → `findByYear()` ambiguity broke conflict-overwrite assertions | ✓ v1.8 |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-24 — v1.8 milestone started (Bulk Driver Import from Google Sheets)*
+*Last updated: 2026-04-25 — v1.8 implementation complete (Phase 55 verified, awaiting visual UAT + release)*
