@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: "(awaiting next milestone)"
-status: between_milestones
-last_updated: "2026-04-25T09:00:00.000Z"
-last_activity: 2026-04-25
+milestone: v1.9
+milestone_name: "Season Phases & Groups"
+status: defining_requirements
+last_updated: "2026-04-26T00:00:00.000Z"
+last_activity: 2026-04-26
 progress:
   total_phases: 0
   completed_phases: 0
@@ -17,16 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24)
+See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Between milestones — awaiting `/gsd-new-milestone` to define v1.9 (or next).
+**Current focus:** v1.9 Season Phases & Groups — Saison als Klammer mit Phasen (Regular/Playoff/Placement) und optionalen Sub-Gruppen, Driver-Import wieder eindeutig.
 
 ## Current Position
 
-No active milestone. v1.8 shipped 2026-04-25 (PR #116 squash-merged as `042cfbf`, archived in `.planning/milestones/v1.8-*`).
-
-Last activity: 2026-04-25 — v1.8 closed via `/gsd-complete-milestone v1.8`. ROADMAP/REQUIREMENTS/PROJECT.md/MILESTONES.md/RETROSPECTIVE.md all updated. Phase directories moved to `.planning/milestones/v1.8-phases/`. Tag v1.8 ready to push.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-26 — Milestone v1.9 started via `/gsd-new-milestone`. Foundation: `/Users/jegr/.claude/plans/ich-bin-mit-dem-pure-gem.md`. Leftover v1.6 phase directories moved to `.planning/milestones/v1.6-phases/` during cleanup.
 
 ## Completed Milestones
 
