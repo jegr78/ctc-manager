@@ -1,16 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.9
-milestone_name: "Season Phases & Groups"
-status: roadmap_ready
-last_updated: "2026-04-26T00:00:00.000Z"
-last_activity: 2026-04-26
+milestone_name: Season Phases & Groups
+status: planning
+last_updated: "2026-04-26T13:22:30.203Z"
+last_activity: 2026-04-26 — Roadmap created for v1.9 (6 phases, 56-61, 33 requirements).
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 ## Current Position
 
-Phase: 56 (Model & Schema Foundation) — not started
+Phase: 56 (Model & Schema Foundation) — context gathered
 Plan: —
-Status: Roadmap created, awaiting phase planning
-Last activity: 2026-04-26 — Roadmap created for v1.9 (6 phases, 56-61, 33 requirements).
+Status: 56-CONTEXT.md written, awaiting `/gsd-plan-phase 56`
+Last activity: 2026-04-26 — Phase 56 discuss complete (4 areas, 6 decisions: parallel additive entity scope, NULLABLE phase_id with NOT-NULL flip in Phase 57, UNIQUE (season_id, phase_type), reuse SeasonFormat + new PhaseType/PhaseLayout enums, default JpaRepository CRUD only).
 
 ## Completed Milestones
 
@@ -53,6 +52,11 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [v1.8 roadmap]: Two-phase structure chosen over three-phase split. Rationale: Controller+templates+execute form a single cohesive deliverable — splitting preview-controller from execute-controller would ship a non-verifiable intermediate (preview form with no execute path). Phase 54 delivers a fully unit-tested service; Phase 55 delivers the end-to-end admin flow with integration coverage.
 - [v1.9 roadmap]: Six-phase structure chosen. Rationale: schema (56) must precede data migration (57) which must precede services (58); MIGR-06 (cleanup drop) is deferred to Phase 61 as a safety gate — old bridge columns remain intact until all services and UI are fully migrated off them. Phase 59 (import + test data) and Phase 60 (UI) both depend on services (58) but are independent of each other and can be planned/executed in parallel if desired.
 - [v1.9 roadmap]: Phase 60 (Admin UI) depends on Phase 58 (Service Layer), not Phase 59 (Import & Test Data) — UI does not depend on the seeder rebuild. Both 59 and 60 unblock Phase 61.
+- [phase 56 discuss]: Entity Java-side scope = **parallel additive**. New entities + new bidirectional fields (`Season.phases`, `Matchday.phase`, `Playoff.phase`) added alongside the old `Season` fields and `season_id` FKs. ROADMAP-Phase-56-SC3 wording reinterpreted: old Season fields stay until Phase 61. Service-layer rewrite stays in Phase 58.
+- [phase 56 discuss]: `matchdays.phase_id` and `playoffs.phase_id` columns are **NULLABLE** in Phase 56's V3 migration; Phase 57's data migration backfills values and flips both to NOT NULL in the same step.
+- [phase 56 discuss]: DB-level uniqueness via `UNIQUE (season_id, phase_type)` on `season_phases` (max 1× per type per season) + `UNIQUE (phase_id, team_id)` on `phase_teams`. No CHECK constraints — `@Enumerated(EnumType.STRING)` plus typed enums cover value validation.
+- [phase 56 discuss]: Existing `SeasonFormat` enum is **reused** for `SeasonPhase.format` (no rename to PhaseFormat). New top-level enums `PhaseType` (REGULAR/PLAYOFF/PLACEMENT) and `PhaseLayout` (LEAGUE/GROUPS/BRACKET) in `org.ctc.domain.model`.
+- [phase 56 discuss]: New repositories ship with default Spring Data CRUD only — no custom finders in Phase 56 (deferred to Phase 58 when services need them).
 
 ### Phase Numbering
 
