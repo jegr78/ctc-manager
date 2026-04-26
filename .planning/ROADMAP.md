@@ -8,6 +8,7 @@
 - :white_check_mark: **v1.5 Code Review Fixes** — Phases 28-36 (shipped 2026-04-15)
 - :white_check_mark: **v1.6 Static Site Quality** — Phases 37-53 (shipped 2026-04-18)
 - :white_check_mark: **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (shipped 2026-04-25)
+- **v1.9 Season Phases & Groups** — Phases 56-61 (active)
 
 ## Phases
 
@@ -104,6 +105,132 @@ See: milestones/v1.8-ROADMAP.md for full details
 
 </details>
 
+<details>
+<summary>v1.9 Season Phases & Groups (Phases 56-61) -- ACTIVE</summary>
+
+- [ ] **Phase 56: Model & Schema Foundation** - New entities (SeasonPhase, SeasonPhaseGroup, PhaseTeam) + Flyway DDL migrations create the new tables
+- [ ] **Phase 57: Data Migration** - Populate new tables from existing data (REGULAR/PLAYOFF phases, matchday re-keying, phase roster)
+- [ ] **Phase 58: Service Layer** - All domain services operate on phase/group scope; new SeasonPhaseService; StandingsService/PlayoffService/etc. phase-aware
+- [ ] **Phase 59: Import & Test Data** - Driver import resolves seasons by (year, number); DevDataSeeder and TestDataService rebuilt on new model
+- [ ] **Phase 60: Admin UI** - Season form slimmed; phase/group CRUD forms; season detail with phase tabs and group sub-tabs; standings and playoff UI on phase
+- [ ] **Phase 61: Cleanup & Quality Gate** - Drop old season columns (MIGR-06); JaCoCo gate; E2E test for GROUPS season; regression test for migrated seasons
+
+</details>
+
+## Phase Details
+
+### Phase 56: Model & Schema Foundation
+
+**Goal**: The new three-level hierarchy (Season -> Phase -> Group) exists as compilable JPA entities backed by Flyway-created tables, with all FK relationships in place and old entities updated to reference the new FK columns.
+
+**Depends on**: Nothing (first phase of v1.9)
+
+**Requirements**: MODEL-01, MODEL-02, MODEL-03, MODEL-04, MODEL-05, MODEL-06, MODEL-07, MODEL-08, MIGR-01, MIGR-07
+
+**Success Criteria** (what must be TRUE):
+
+1. Application starts and all tests pass after adding the three new entity classes and their repositories
+2. Flyway executes cleanly on both H2 (dev/test) and MariaDB (local/docker) creating the `season_phases`, `season_phase_groups`, and `phase_teams` tables with correct columns and constraints
+3. `Season` entity no longer carries format/scoring/dates/totalRounds/legs fields; `Matchday` carries a `phase_id` FK; `Playoff` carries a `phase_id` FK
+4. The UNIQUE constraint preventing more than one REGULAR phase per season is enforced at the database level
+5. No existing Flyway V1 or V2 migration file is modified (checksum integrity preserved)
+
+**Plans**: TBD
+
+### Phase 57: Data Migration
+
+**Goal**: All existing production data is correctly mapped into the new schema — every existing season has a REGULAR phase, every existing playoff has a PLAYOFF phase, every matchday is re-keyed to its phase, and phase rosters are populated — with old FK columns still present as a bridge for backward-compatible code.
+
+**Depends on**: Phase 56
+
+**Requirements**: MIGR-02, MIGR-03, MIGR-04, MIGR-05
+
+**Success Criteria** (what must be TRUE):
+
+1. After migration runs, every existing `Season` row has exactly one corresponding `season_phases` row with `phase_type = REGULAR`
+2. Every existing `Playoff` row is linked to a newly created PLAYOFF-type `SeasonPhase` row via `playoff.phase_id`
+3. Every existing `Matchday` row has its `phase_id` populated pointing to the REGULAR phase of its season
+4. `phase_teams` contains one row per `season_team` entry, associated with that season's REGULAR phase and no group (LEAGUE layout, group NULL)
+5. Old bridge columns (`matchday.season_id`, `playoff.season_id`) remain intact so existing code continues to compile and run during the service migration phase
+
+**Plans**: TBD
+
+### Phase 58: Service Layer
+
+**Goal**: All domain services operate exclusively on the new phase/group model — services accept `phaseId` / `groupId` parameters, standings and driver rankings aggregate correctly per group and combined, and playoff seeding operates on a PLAYOFF phase rather than a season.
+
+**Depends on**: Phase 57
+
+**Requirements**: SVC-01, SVC-02, SVC-03, SVC-04, SVC-05
+
+**Success Criteria** (what must be TRUE):
+
+1. `SeasonPhaseService` provides CRUD operations for phases and groups, and manages the `PhaseTeam` roster; calling it with a valid season ID returns the correct phase hierarchy
+2. `StandingsService.calculateStandings()` accepts a `phaseId` (and optional `groupId`) and returns per-group standings; when called without a `groupId` it returns a combined-view aggregation across all groups of that phase
+3. `PlayoffService` and `PlayoffSeedingService` load and save via `phase_id` instead of `season_id`; existing bracket logic is structurally unchanged
+4. `MatchdayGeneratorService` and `SwissPairingService` generate matchdays linked to a phase (and optionally a group) rather than directly to a season
+5. `DriverRankingService` ranks drivers within a phase and produces a season-wide aggregation across phases
+
+**Plans**: TBD
+
+### Phase 59: Import & Test Data
+
+**Goal**: The driver sheet importer resolves seasons unambiguously via `(year, number)` and resolves group membership through `PhaseTeam`; `TestDataService` and `DevDataSeeder` are fully rebuilt on the new model so all automated and dev-mode data exercises the phase/group structure from the start.
+
+**Depends on**: Phase 58
+
+**Requirements**: IMPORT-01, IMPORT-02, IMPORT-03, IMPORT-04, DATA-01, DATA-02
+
+**Success Criteria** (what must be TRUE):
+
+1. `SeasonRepository.findByYearAndNumber(int, int)` returns exactly one season; the "Multiple seasons" ambiguous-import error no longer occurs for well-formed sheet tabs
+2. A sheet tab named `2025_S2` is resolved to the season with `year=2025, number=2`; a tab named `2025` falls back to the single season in that year or triggers manual-selection if multiple exist
+3. After a successful import run, drivers whose team is assigned to Group A in the REGULAR phase's `PhaseTeam` roster appear linked to Group A in the standings preview — without any manual group override in the sheet
+4. The preview page displays a warning badge for any team in the import that has no `PhaseTeam` entry in the REGULAR phase of the target season
+5. `TestDataService` creates test seasons with at least one GROUPS-layout REGULAR phase and E2E tests pass without referencing any backward-compat helper from the old flat model
+6. `DevDataSeeder` (`dev` / `dev,demo` profiles) seeds at least one season with a GROUPS-layout REGULAR phase containing two named groups and a separate PLAYOFF phase
+
+**Plans**: TBD
+
+### Phase 60: Admin UI
+
+**Goal**: The admin interface fully expresses the new season/phase/group model — the season form is slimmed to identity fields, phase and group CRUD forms exist, the season detail shows phase tabs with group sub-tabs, standings can be filtered per group with a combined view, the playoff UI selects by phase, and the driver import preview shows unambiguous season assignment and group warnings.
+
+**Depends on**: Phase 58
+
+**Requirements**: UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07
+
+**Success Criteria** (what must be TRUE):
+
+1. The season create/edit form contains only `year`, `number`, `name`, `description`, and `active` fields; format/scoring/dates/rounds/legs are absent from this form
+2. The season detail page shows one tab per SeasonPhase (e.g., "Regular Season", "Playoff"); within a GROUPS-layout phase tab, a second tab row shows one sub-tab per group; each sub-tab displays roster, matchdays, and standings for that group
+3. A "New Phase" form at `/admin/seasons/{id}/phases/new` accepts phase type, layout, format, scoring references, date range, rounds, legs, and event duration; submitting a valid form creates the phase and redirects to the season detail
+4. A group form allows adding a named `SeasonPhaseGroup` to a GROUPS-layout phase and assigning teams to it via `PhaseTeam`; adding a team to a group is reflected immediately in the group's roster tab
+5. The standings page offers a phase selector and, when the selected phase has groups, a group selector plus a "Combined" option that aggregates all groups
+6. The driver import preview page shows the unambiguous `year_S{number}` season label for each tab and renders warning rows for teams with no group assignment in the target season's REGULAR phase
+7. The playoff page selects its bracket via the PLAYOFF-type SeasonPhase rather than directly by season; existing bracket display and seeding interaction are preserved
+
+**Plans**: TBD
+
+**UI hint**: yes
+
+### Phase 61: Cleanup & Quality Gate
+
+**Goal**: The old bridge columns and join table are removed from the schema, the codebase is free of dead references, JaCoCo line coverage is at or above 82%, and the full E2E test suite validates a complete GROUPS season workflow and confirms that migrated legacy seasons remain accessible.
+
+**Depends on**: Phase 60
+
+**Requirements**: MIGR-06, QUAL-01, QUAL-02, QUAL-03
+
+**Success Criteria** (what must be TRUE):
+
+1. Flyway cleanup migration executes successfully, dropping `seasons.format`, `seasons.total_rounds`, `seasons.legs`, `seasons.event_duration_minutes`, `seasons.start_date`, `seasons.end_date`, `seasons.race_scoring_id`, `seasons.match_scoring_id`, and the `playoff_seasons` join table; `./mvnw verify` remains green afterwards
+2. `./mvnw verify` reports JaCoCo line coverage >= 82% across all production classes
+3. The E2E Playwright test creates a GROUPS-layout season with two groups, assigns teams, imports drivers from a mocked sheet (group resolved via PhaseTeam), generates matchdays per group, records results, and verifies per-group standings and a combined-view standings table
+4. A regression Playwright test opens a season that existed before the migration and confirms it displays exactly one REGULAR-phase tab with all original matchdays and race results accessible, plus the PLAYOFF tab if a playoff was migrated
+
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -159,3 +286,9 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 53. Documentation & Code Cleanup | v1.6 | 1/1 | Complete | 2026-04-18 |
 | 54. Preview Service & Row Categorization | v1.8 | 1/1 | Complete | 2026-04-24 |
 | 55. Admin Import UI & Transactional Execute | v1.8 | 3/3 | Complete | 2026-04-25 |
+| 56. Model & Schema Foundation | v1.9 | 0/? | Not started | - |
+| 57. Data Migration | v1.9 | 0/? | Not started | - |
+| 58. Service Layer | v1.9 | 0/? | Not started | - |
+| 59. Import & Test Data | v1.9 | 0/? | Not started | - |
+| 60. Admin UI | v1.9 | 0/? | Not started | - |
+| 61. Cleanup & Quality Gate | v1.9 | 0/? | Not started | - |
