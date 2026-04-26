@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: (awaiting next milestone)
-status: between_milestones
-last_updated: "2026-04-26T13:58:19.227Z"
-last_activity: 2026-04-26 -- Phase 56 execution started
+milestone: v1.9
+milestone_name: Season Phases & Groups
+status: executing
+last_updated: "2026-04-26T13:54:58.251Z"
+last_activity: 2026-04-26 -- Phase 56 planning complete
 progress:
-  total_phases: 15
-  completed_phases: 14
-  total_plans: 27
-  completed_plans: 26
-  percent: 96
+  total_phases: 6
+  completed_phases: 0
+  total_plans: 5
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24)
+See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Phase 56 — model-schema-foundation
+
+**Current focus:** v1.9 Season Phases & Groups — Saison als Klammer mit Phasen (Regular/Playoff/Placement) und optionalen Sub-Gruppen, Driver-Import wieder eindeutig.
 
 ## Current Position
 
-Phase: 56 (model-schema-foundation) — EXECUTING
-Plan: 1 of 5
-No active milestone. v1.8 shipped 2026-04-25 (PR #116 squash-merged as `042cfbf`, archived in `.planning/milestones/v1.8-*`).
-
-Last activity: 2026-04-26 -- Phase 56 execution started
+Phase: 56 (Model & Schema Foundation) — context gathered
+Plan: —
+Status: Ready to execute
+Last activity: 2026-04-26 -- Phase 56 planning complete
 
 ## Completed Milestones
 
@@ -49,24 +49,40 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [v1.8 start]: Foundation document is `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md` — authored via `/gsd-explore` brainstorming; approved as canonical design before milestone kickoff.
 - [v1.8 start]: Reuse `GoogleSheetsService`, `DriverMatchingService` (4-stage fuzzy), and `CsvImportService` preview-state pattern — no parallel infrastructure.
 - [v1.8 start]: Missing Seasons/Teams are errors, never auto-created — consistent with "No Fallback Calculations" principle.
-- [v1.8 start]: E2E tests deferred (Playwright × Google Sheets mocking is fragile); Unit + Integration tests must meet 82% coverage gate.
+- [v1.8 start]: E2E tests deferred (Playwright x Google Sheets mocking is fragile); Unit + Integration tests must meet 82% coverage gate.
 - [v1.8 roadmap]: Two-phase structure chosen over three-phase split. Rationale: Controller+templates+execute form a single cohesive deliverable — splitting preview-controller from execute-controller would ship a non-verifiable intermediate (preview form with no execute path). Phase 54 delivers a fully unit-tested service; Phase 55 delivers the end-to-end admin flow with integration coverage.
+- [v1.9 roadmap]: Six-phase structure chosen. Rationale: schema (56) must precede data migration (57) which must precede services (58); MIGR-06 (cleanup drop) is deferred to Phase 61 as a safety gate — old bridge columns remain intact until all services and UI are fully migrated off them. Phase 59 (import + test data) and Phase 60 (UI) both depend on services (58) but are independent of each other and can be planned/executed in parallel if desired.
+- [v1.9 roadmap]: Phase 60 (Admin UI) depends on Phase 58 (Service Layer), not Phase 59 (Import & Test Data) — UI does not depend on the seeder rebuild. Both 59 and 60 unblock Phase 61.
+- [phase 56 discuss]: Entity Java-side scope = **parallel additive**. New entities + new bidirectional fields (`Season.phases`, `Matchday.phase`, `Playoff.phase`) added alongside the old `Season` fields and `season_id` FKs. ROADMAP-Phase-56-SC3 wording reinterpreted: old Season fields stay until Phase 61. Service-layer rewrite stays in Phase 58.
+- [phase 56 discuss]: `matchdays.phase_id` and `playoffs.phase_id` columns are **NULLABLE** in Phase 56's V3 migration; Phase 57's data migration backfills values and flips both to NOT NULL in the same step.
+- [phase 56 discuss]: DB-level uniqueness via `UNIQUE (season_id, phase_type)` on `season_phases` (max 1× per type per season) + `UNIQUE (phase_id, team_id)` on `phase_teams`. No CHECK constraints — `@Enumerated(EnumType.STRING)` plus typed enums cover value validation.
+- [phase 56 discuss]: Existing `SeasonFormat` enum is **reused** for `SeasonPhase.format` (no rename to PhaseFormat). New top-level enums `PhaseType` (REGULAR/PLAYOFF/PLACEMENT) and `PhaseLayout` (LEAGUE/GROUPS/BRACKET) in `org.ctc.domain.model`.
+- [phase 56 discuss]: New repositories ship with default Spring Data CRUD only — no custom finders in Phase 56 (deferred to Phase 58 when services need them).
 
 ### Phase Numbering
 
-Continuing from v1.6 (last phase: 53). v1.8 phases start at **Phase 54**.
+Continuing from v1.8 (last phase: 55). v1.9 phases start at **Phase 56**.
 
-- Phase 54: Preview Service & Row Categorization (17 requirements)
-- Phase 55: Admin Import UI & Transactional Execute (11 requirements)
+- Phase 56: Model & Schema Foundation (MODEL-01..08, MIGR-01, MIGR-07)
+- Phase 57: Data Migration (MIGR-02, MIGR-03, MIGR-04, MIGR-05)
+- Phase 58: Service Layer (SVC-01..05)
+- Phase 59: Import & Test Data (IMPORT-01..04, DATA-01, DATA-02)
+- Phase 60: Admin UI (UI-01..07)
+- Phase 61: Cleanup & Quality Gate (MIGR-06, QUAL-01..03)
 
 ### Key Technical Context
 
-- Target entities: `Driver` (psnId unique, nickname, active, aliases), `SeasonDriver(season, driver, team)`.
-- Sheet structure: tabs named `^\d{4}$`; column A = `PSN ID`, column C = `Team` short code. Hidden column B is ignored.
-- Admin entry point: new page at `/admin/drivers/import` (button on `/admin/drivers`).
-- Controller routes: `GET /admin/drivers/import`, `POST /admin/drivers/import/preview`, `POST /admin/drivers/import/execute`.
-- No Flyway migration required.
-- Reuse mandated: `GoogleSheetsService.extractSpreadsheetId()/getSheetNames()/readRangeFromSheet()`, `DriverMatchingService` 4-stage logic. Preview-state between preview and execute uses **re-fetch + form-params** (mirroring `CsvImportController.execute()`), **not** `@SessionAttributes` — confirmed during Phase 54 codebase scout (see `.planning/phases/54-preview-service-row-categorization/54-CONTEXT.md` D-06).
+- Foundation document: `/Users/jegr/.claude/plans/ich-bin-mit-dem-pure-gem.md` (architecture plan from brainstorming session).
+- New entities: `SeasonPhase` (season_phases), `SeasonPhaseGroup` (season_phase_groups), `PhaseTeam` (phase_teams).
+- FK migrations: `Matchday.season_id` -> `Matchday.phase_id`; `Playoff.season_id` -> `Playoff.phase_id`; M:N `playoff_seasons` table dropped in MIGR-06.
+- Fields migrating from `Season` to `SeasonPhase`: format, totalRounds, legs, eventDurationMinutes, startDate, endDate, raceScoring_id, matchScoring_id.
+- Fields staying in `Season`: id, year, number, name, description, active, audit fields, cars/tracks (season-wide assets).
+- Driver import fix: `findByYearAndNumber(int, int)` replaces `findByYear(int)`; tab pattern extended to `^\d{4}_S\d+$`.
+- Group membership for imported drivers: resolved implicitly via `PhaseTeam` of the REGULAR phase — no per-driver override in sheet.
+- MIGR-06 must be the last migration executed — only safe after all Java code references have been removed from old columns.
+- Constraint: UNIQUE on `(phase_id, team_id)` in `phase_teams`; max 1 REGULAR + max 1 PLAYOFF + max 1 PLACEMENT per season.
+- Critical files to modify (~25-30): Season, Matchday, Playoff entities; SeasonRepository, MatchdayRepository, PlayoffRepository; SeasonManagementService, StandingsService, DriverRankingService, MatchdayGeneratorService, PlayoffService, PlayoffSeedingService, DriverSheetImportService; SeasonController, StandingsController, DriverSheetImportController, MatchdayController, PlayoffController; SeasonForm; 6 Thymeleaf templates; TestDataService + DevDataSeeder.
+- Critical files to create (~12-15): SeasonPhase, SeasonPhaseGroup, PhaseTeam entities; SeasonPhaseRepository, SeasonPhaseGroupRepository, PhaseTeamRepository; SeasonPhaseService; SeasonPhaseController, SeasonPhaseGroupController; SeasonPhaseForm, SeasonPhaseGroupForm, PhaseTeamForm; 6 Flyway migration files; 3 Thymeleaf templates (season-phase-form, season-phase-detail, season-phase-group-form).
 
 ### Blockers/Concerns
 
@@ -74,10 +90,6 @@ None.
 
 ## Session Continuity
 
-**Next action:** v1.8 milestone closed and archived. Project is between milestones.
-
-- v1.8 Tag pushen: `git push origin v1.8` (lokales Tag wartet)
-- `/gsd-new-milestone` — questioning → research → requirements → roadmap für v1.9 (oder nächste Version)
-- `/gsd-progress` — aktueller Snapshot (zeigt: keine aktive Milestone, alle Phasen archiviert)
+**Next action:** Run `/gsd-plan-phase 56` to create the implementation plan for Phase 56 (Model & Schema Foundation).
 
 **Branch:** `master` (after v1.8 merge — feature branch deleted locally and remotely).

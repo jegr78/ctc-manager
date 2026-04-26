@@ -18,6 +18,22 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - **Templates:** CSS utility classes instead of inline styles, TemplateManageable generic dispatch
 - **Data:** All UI text and code comments in English, dev profile with fictive test data
 
+## Current Milestone: v1.9 Season Phases & Groups
+
+**Goal:** Saison vom flachen Container zur Klammer mit mehreren Phasen (Regular / Playoff / Placement) und optionalen Sub-Gruppen pro Phase weiterentwickeln, sodass Gruppen-Saisons ohne Multi-Saison-Workaround abbildbar werden und der Driver-Import wieder eindeutig auflösbar ist.
+
+**Target features:**
+- `SeasonPhase`-Entity (REGULAR/PLAYOFF/PLACEMENT) mit Format/Scoring/Dates auf Phase-Ebene
+- `SeasonPhaseGroup` als Sub-Gruppen einer GROUPS-Phase (eigener Roster, eigene Standings)
+- `PhaseTeam`-Roster (Team↔Phase, optional Group); `SeasonDriver` strukturell unverändert
+- `Playoff` von Saison auf Phase umgehängt; M:N `playoff_seasons` entfällt
+- Mechanische Migration: jede Bestandssaison → 1 REGULAR-Phase + ggf. 1 PLAYOFF-Phase
+- Driver-Import: `findByYearAndNumber` statt `findByYear`; Group implizit über das Team
+- UI: Saison-Detail mit Phasen-Tabs, Gruppen als zweite Tab-Ebene; Standings pro Gruppe + Combined-View
+- `TestDataService` und `DevDataSeeder` direkt im neuen Modell (keine Backward-Compat-Helpers)
+
+**Foundation:** `/Users/jegr/.claude/plans/ich-bin-mit-dem-pure-gem.md` — Architektur-Plan aus Brainstorming-Session, Basis dieses Meilensteins.
+
 ## Requirements
 
 ### Validated (v1.0)
