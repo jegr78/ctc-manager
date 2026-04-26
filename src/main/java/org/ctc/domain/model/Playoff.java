@@ -18,7 +18,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"season", "seasons", "rounds", "seeds"})
+@ToString(exclude = {"season", "phase", "seasons", "rounds", "seeds"})
 public class Playoff extends BaseEntity {
 
 	@Id
@@ -29,6 +29,10 @@ public class Playoff extends BaseEntity {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "season_id", nullable = false, unique = true)
 	private Season season;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "phase_id")
+	private SeasonPhase phase;
 
 	@NotBlank
 	@Column(nullable = false)

@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"matchdays", "seasonDrivers", "seasonTeams", "cars", "tracks", "raceScoring", "matchScoring"})
+@ToString(exclude = {"phases", "matchdays", "seasonDrivers", "seasonTeams", "cars", "tracks", "raceScoring", "matchScoring"})
 public class Season extends BaseEntity {
 
 	@Id
@@ -65,6 +65,10 @@ public class Season extends BaseEntity {
 	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("sortIndex ASC")
 	private List<Matchday> matchdays = new ArrayList<>();
+
+	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("sortIndex ASC")
+	private List<SeasonPhase> phases = new ArrayList<>();
 
 	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<SeasonDriver> seasonDrivers = new ArrayList<>();
