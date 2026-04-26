@@ -135,7 +135,13 @@ See: milestones/v1.8-ROADMAP.md for full details
 4. The UNIQUE constraint preventing more than one REGULAR phase per season is enforced at the database level
 5. No existing Flyway V1 or V2 migration file is modified (checksum integrity preserved)
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+- [ ] 56-01-PLAN.md — Create PhaseType + PhaseLayout enums (Wave 1)
+- [ ] 56-02-PLAN.md — Create SeasonPhase, SeasonPhaseGroup, PhaseTeam entities + 3 default-CRUD repositories (Wave 2)
+- [ ] 56-03-PLAN.md — Flyway V3 migration: 3 new tables + nullable phase_id FKs on matchdays/playoffs + UNIQUE constraints + FK indexes (Wave 2)
+- [ ] 56-04-PLAN.md — Add bidirectional fields Season.phases, Matchday.phase, Matchday.group, Playoff.phase (additive per D-01) (Wave 3)
+- [ ] 56-05-PLAN.md — Integration tests: SeasonPhaseEntityIntegrationTest + PhaseTeamUniquenessIntegrationTest (Wave 4)
 
 ### Phase 57: Data Migration
 
@@ -286,7 +292,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 53. Documentation & Code Cleanup | v1.6 | 1/1 | Complete | 2026-04-18 |
 | 54. Preview Service & Row Categorization | v1.8 | 1/1 | Complete | 2026-04-24 |
 | 55. Admin Import UI & Transactional Execute | v1.8 | 3/3 | Complete | 2026-04-25 |
-| 56. Model & Schema Foundation | v1.9 | 0/? | Not started | - |
+| 56. Model & Schema Foundation | v1.9 | 0/5 | Planned | - |
 | 57. Data Migration | v1.9 | 0/? | Not started | - |
 | 58. Service Layer | v1.9 | 0/? | Not started | - |
 | 59. Import & Test Data | v1.9 | 0/? | Not started | - |
