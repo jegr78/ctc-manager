@@ -181,7 +181,14 @@ See: milestones/v1.8-ROADMAP.md for full details
 4. `MatchdayGeneratorService` and `SwissPairingService` generate matchdays linked to a phase (and optionally a group) rather than directly to a season
 5. `DriverRankingService` ranks drivers within a phase and produces a season-wide aggregation across phases
 
-**Plans**: TBD
+**Plans**: 6 plans
+
+- [ ] 58-01-PLAN.md — SeasonPhaseService + custom finders + PhaseTestFixtures + 3 Repository ITs (Wave 1)
+- [ ] 58-02-PLAN.md — StandingsService phase/group-aware refactor + nullable TeamStanding.group + MatchRepository finder (Wave 2)
+- [ ] 58-03-PLAN.md — DriverRankingService per-phase + aggregateAcrossPhases + RaceLineup fallback + RaceResultRepository finders (Wave 2)
+- [ ] 58-04-PLAN.md — MatchdayGeneratorService + SwissPairingService phase/group-aware + MatchdayRepository finders (Wave 3, depends on 58-02)
+- [ ] 58-05-PLAN.md — PlayoffService auto-creates PLAYOFF phase + PlayoffSeedingService Top-N from REGULAR standings (Wave 4, depends on 58-02)
+- [ ] 58-06-PLAN.md — SeasonManagementService delete-guard + auto-sync + MatchdayService dual-API + SiteGenerator phase-aware (Wave 5)
 
 ### Phase 59: Import & Test Data
 

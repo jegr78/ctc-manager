@@ -1,0 +1,54 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-27T20:48:47.500Z",
+  "phase": "58",
+  "phase_name": "Service Layer",
+  "phase_dir": ".planning/phases/58-service-layer",
+  "plan": null,
+  "task": null,
+  "total_tasks": 12,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "discuss", "name": "Phase 58 discuss-phase complete (16 areas, 26 D-decisions)", "status": "done", "commit": "609b82d"},
+    {"id": "research", "name": "Phase 58 research complete (caller surface, pitfalls, plan decomposition, validation arch)", "status": "done", "commit": "9fa94f9"},
+    {"id": "validation", "name": "Phase 58 VALIDATION.md (Nyquist) created", "status": "done", "commit": "after-9fa94f9"},
+    {"id": "patterns", "name": "Phase 58 PATTERNS.md created (21 files mapped to analogs)", "status": "done", "commit": "after-validation"},
+    {"id": "planning", "name": "6 PLAN.md files written by gsd-planner (58-01 through 58-06, 5 waves)", "status": "done", "commit": "uncommitted"}
+  ],
+  "remaining_tasks": [
+    {"id": "plan-check", "name": "Spawn gsd-plan-checker to verify the 6 PLAN.md files (step 10 of plan-phase workflow)", "status": "not_started"},
+    {"id": "revision-loop", "name": "Plan revision loop if checker raises BLOCKER/WARNING issues (max 3 iterations)", "status": "not_started"},
+    {"id": "req-coverage-gate", "name": "Step 13 — Requirements Coverage Gate (verify SVC-01..05 all covered)", "status": "not_started"},
+    {"id": "decision-coverage-gate", "name": "Step 13a — Decision Coverage Gate (verify D-01..D-26 all referenced)", "status": "not_started"},
+    {"id": "state-record", "name": "Step 13b — Update STATE.md to Ready to execute", "status": "not_started"},
+    {"id": "post-planning-gaps", "name": "Step 13e — Post-Planning Gap Analysis report", "status": "not_started"},
+    {"id": "execute", "name": "Step 15 — Auto-advance to /gsd-execute-phase 58 (per --chain pipeline)", "status": "not_started"}
+  ],
+  "blockers": [],
+  "human_actions_pending": [
+    {"action": "Decide whether to resume the auto-advance pipeline or restart manually with /gsd-plan-phase 58 (which will detect existing plans and offer 'Add more plans / View existing / Replan from scratch')", "context": "User paused mid-pipeline. The 6 PLAN.md files are written but not yet checker-verified or committed.", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "phaseId-only canonical service signatures with seasonId-overload bridge via SeasonPhaseService.findRegularPhase", "rationale": "Phase 58 stays scoped to service-layer; controllers/UI cutover stays in Phase 60. See 58-CONTEXT.md D-01..D-03.", "phase": "58"},
+    {"decision": "Combined-View Standings = flat list with raw points; TeamStanding gains nullable group field; Buchholz per-group only", "rationale": "Pragmatic — combined-view is anzeige-comfort, not championship math. See 58-CONTEXT.md D-04..D-06.", "phase": "58"},
+    {"decision": "Driver-ranking saisonweite Aggregation includes ALL phase types (REGULAR + PLAYOFF + PLACEMENT) — behavior change vs today", "rationale": "User chose all-phases over REGULAR-only. Today's findByRaceMatchdaySeasonId only catches REGULAR; new model widens to playoff race results too. See 58-CONTEXT.md D-07.", "phase": "58"},
+    {"decision": "DriverRankingService API: calculateRankingForPhase(phaseId) primary + aggregateAcrossPhases default-method + @Deprecated calculateRanking(seasonId) bridge", "rationale": "Narrow service; aggregation is a named explicit method, not magic inside calculateRanking. See 58-CONTEXT.md D-09.", "phase": "58"},
+    {"decision": "PhaseTestFixtures helper class (lokal in src/test/) + Mockito-only service tests + @DataJpaTest per new Repository", "rationale": "TestDataService rebuild is Phase 59; Phase 58 needs phase-aware fixtures without touching it. See 58-CONTEXT.md D-11..D-13. Note: research flagged @DataJpaTest has zero precedent in codebase — planner kept D-13 with explanatory comment.", "phase": "58"},
+    {"decision": "Strict Season-delete guard via BusinessRuleException — behavior change vs today", "rationale": "Phase hierarchy makes accidental cascade-deletes much higher impact. Today's delete has no pre-check. See 58-CONTEXT.md D-18.", "phase": "58"},
+    {"decision": "playoffService.createPlayoff auto-creates PLAYOFF phase via SeasonPhaseService.create when absent", "rationale": "Removes need for extra UI step in Phase 60. See 58-CONTEXT.md D-19.", "phase": "58"},
+    {"decision": "PlayoffSeedingService.autoSeedBracket draws Top-N from REGULAR-phase combined-view", "rationale": "Matches today's UX; PLAYOFF roster populated as side-effect of seed. See 58-CONTEXT.md D-15.", "phase": "58"},
+    {"decision": "SiteGenerator brought along in Phase 58 (phase-aware caller-side updates)", "rationale": "Static-site stays correct after Phase 58 without waiting for Phase 60. See 58-CONTEXT.md D-23.", "phase": "58"},
+    {"decision": "Wave structure: 58-01 → (58-02, 58-03 parallel) → 58-04 → 58-05 → 58-06", "rationale": "Adjusted from initial proposal: Swiss depends on Standings (Pitfall 6); Playoff depends on Standings (D-15). Foundation 58-01 first; caller-side 58-06 last. See 58-RESEARCH.md plan decomposition.", "phase": "58"}
+  ],
+  "uncommitted_files": [
+    ".planning/phases/58-service-layer/58-01-PLAN.md",
+    ".planning/phases/58-service-layer/58-02-PLAN.md",
+    ".planning/phases/58-service-layer/58-03-PLAN.md",
+    ".planning/phases/58-service-layer/58-04-PLAN.md",
+    ".planning/phases/58-service-layer/58-05-PLAN.md",
+    ".planning/phases/58-service-layer/58-06-PLAN.md",
+    ".planning/ROADMAP.md (annotated by planner with 6-plan list — replaced 'Plans: TBD')"
+  ],
+  "next_action": "Run `/gsd-resume-work` OR `/gsd-plan-phase 58` to re-enter the pipeline at the plan-checker step. Plans exist on disk so the workflow will offer 'Add more plans / View existing / Replan from scratch' — choose 'View existing' to inspect, then optionally re-run with --skip-verify=false to trigger the checker.",
+  "context_notes": "User invoked /gsd-pause-work after the gsd-planner returned PLANNING COMPLETE but before the plan-checker ran. Auto-advance pipeline (--chain → discuss → plan → execute) was active and was mid-step. The chain was: discuss-phase 58 --chain (done) → plan-phase 58 --auto (planner finished, 6 PLAN.md files written, but plan-check + STATE update + execute have not run). Phase 58 is a backend service-layer refactor — 6 services to refactor + 1 new SeasonPhaseService + 3 new repository IT-tests. Two behavior changes documented (D-07 driver-ranking widens; D-18 strict delete-guard) — these need explicit verification when execution begins."
+}
