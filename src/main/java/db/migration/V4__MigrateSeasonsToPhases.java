@@ -110,6 +110,18 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
             UUID raceScoringId = toUUID(playoff.get("s_race_scoring_id"));
             UUID matchScoringId = toUUID(playoff.get("s_match_scoring_id"));
 
+            // D-05: fail-fast if a PLAYOFF phase for this season already exists
+            // (guards against uk_season_phase_type collision and partial-run idempotency issues)
+            Integer existing = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM season_phases WHERE season_id = ? AND phase_type = 'PLAYOFF'",
+                    Integer.class, seasonId);
+            if (existing != null && existing > 0) {
+                throw new FlywayException(
+                        "PLAYOFF phase for season_id " + seasonId
+                        + " already exists (offending playoff id=" + playoffId
+                        + ") — possible partial re-run or duplicate playoff data");
+            }
+
             UUID newPlayoffPhaseId = UUID.randomUUID();
             jdbcTemplate.update(
                     "INSERT INTO season_phases (id, season_id, sort_index, phase_type, layout, format, "
