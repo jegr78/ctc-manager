@@ -2,7 +2,7 @@
 phase: 58
 slug: service-layer
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-04-27
 ---
@@ -53,7 +53,7 @@ created: 2026-04-27
 | 58-04-01 | 04 | 2b | SVC-04 | — | MatchdayGenerator.generate(phaseId, groupId) requires groupId for GROUPS layout | unit | `./mvnw test -Dtest=MatchdayGeneratorServiceTest#givenGroupsLayoutAndNullGroupId_whenGenerate_thenThrowsIllegalArgument` | ❌ W0 | ⬜ pending |
 | 58-04-02 | 04 | 2b | SVC-04 | — | SwissPairing all 4 methods isolate per-group | unit | `./mvnw test -Dtest=SwissPairingServiceTest#givenGroupsPhase_whenGenerateNextRoundForGroup_thenOnlyThatGroupAdvances` | ❌ W0 | ⬜ pending |
 | 58-05-01 | 05 | 3 | SVC-03 | — | playoffService.createPlayoff auto-creates PLAYOFF phase | unit | `./mvnw test -Dtest=PlayoffServiceTest#givenSeasonWithoutPlayoffPhase_whenCreatePlayoff_thenAutoCreatesPlayoffPhase` | ❌ W0 | ⬜ pending |
-| 58-05-02 | 05 | 3 | SVC-03 | — | playoffService.createPlayoff rejects duplicate PLAYOFF phase | unit | `./mvnw test -Dtest=PlayoffServiceTest#givenSeasonWithExistingPlayoffPhase_whenCreatePlayoff_thenThrowsBusinessRuleException` | ❌ W0 | ⬜ pending |
+| 58-05-02 | 05 | 3 | SVC-03 | — | playoffService.createPlayoff rejects duplicate PLAYOFF phase | unit | `./mvnw test -Dtest=PlayoffServiceTest#givenSeasonWithExistingPlayoffPhaseAndPlayoff_whenCreatePlayoff_thenThrowsBusinessRuleException` | ❌ W0 | ⬜ pending |
 | 58-05-03 | 05 | 3 | SVC-03 | — | playoffSeedingService.autoSeedBracket draws Top-N from REGULAR phase standings | unit | `./mvnw test -Dtest=PlayoffSeedingServiceTest#givenRegularStandings_whenAutoSeedBracket_thenSeedsTopNFromCombinedView` | ❌ W0 | ⬜ pending |
 | 58-05-04 | 05 | 3 | SVC-03 | — | playoffService.addRaceToMatchup links new matchday to PLAYOFF phase (Pitfall 4) | unit | `./mvnw test -Dtest=PlayoffServiceTest#givenPlayoffMatchup_whenAddRaceToMatchup_thenNewMatchdayLinkedToPlayoffPhase` | ❌ W0 | ⬜ pending |
 | 58-06-01 | 06 | 4 | SVC-01 | — | seasonManagementService.delete refuses to delete season with active phase content | unit | `./mvnw test -Dtest=SeasonManagementServiceTest#givenSeasonWithActiveMatchdays_whenDelete_thenThrowsBusinessRuleException` | ❌ W0 | ⬜ pending |
@@ -67,12 +67,12 @@ created: 2026-04-27
 
 ## Wave 0 Requirements
 
-- [ ] `src/test/java/org/ctc/domain/service/PhaseTestFixtures.java` — pure-Java entity builders (CONTEXT.md D-11) — used by both Mockito service tests and `@DataJpaTest` repository IT-tests.
-- [ ] `src/test/java/org/ctc/domain/repository/SeasonPhaseRepositoryIT.java` — `@DataJpaTest` IT-test scaffold for SeasonPhaseRepository (CONTEXT.md D-13).
-- [ ] `src/test/java/org/ctc/domain/repository/SeasonPhaseGroupRepositoryIT.java` — `@DataJpaTest` IT-test scaffold for SeasonPhaseGroupRepository.
-- [ ] `src/test/java/org/ctc/domain/repository/PhaseTeamRepositoryIT.java` — `@DataJpaTest` IT-test scaffold for PhaseTeamRepository.
+- [ ] `src/test/java/org/ctc/domain/service/PhaseTestFixtures.java` — pure-Java entity builders (CONTEXT.md D-11) — used by both Mockito service tests and `@SpringBootTest @ActiveProfiles("dev") @Transactional` repository IT-tests (matches codebase precedent — D-13 revised 2026-04-27).
+- [ ] `src/test/java/org/ctc/domain/repository/SeasonPhaseRepositoryIT.java` — `@SpringBootTest @ActiveProfiles("dev") @Transactional` IT-test scaffold for SeasonPhaseRepository (matches codebase precedent — D-13 revised 2026-04-27).
+- [ ] `src/test/java/org/ctc/domain/repository/SeasonPhaseGroupRepositoryIT.java` — `@SpringBootTest @ActiveProfiles("dev") @Transactional` IT-test scaffold for SeasonPhaseGroupRepository (matches codebase precedent — D-13 revised 2026-04-27).
+- [ ] `src/test/java/org/ctc/domain/repository/PhaseTeamRepositoryIT.java` — `@SpringBootTest @ActiveProfiles("dev") @Transactional` IT-test scaffold for PhaseTeamRepository (matches codebase precedent — D-13 revised 2026-04-27).
 - [ ] No new test framework needed — JUnit 5 + Mockito + Spring Boot test starter all present in `pom.xml`.
-- [ ] No new application config needed — H2 dev profile already active for `@DataJpaTest`.
+- [ ] No new application config needed — H2 dev profile already active for `@SpringBootTest @ActiveProfiles("dev")`.
 
 *Wave 0 must complete before Wave 1 service tests can be written, since `PhaseTestFixtures` is the shared dependency.*
 
@@ -89,12 +89,12 @@ created: 2026-04-27
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies (planner fills as it produces PLANs)
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (`PhaseTestFixtures` + 3 repo IT scaffolds)
-- [ ] No watch-mode flags (Maven runs are one-shot)
-- [ ] Feedback latency < 30s (quick filter) / 180s (full suite)
-- [ ] `nyquist_compliant: true` set in frontmatter (after planner completes plan generation)
-- [ ] JaCoCo line coverage ≥ 82% on `./mvnw verify` (project-wide gate from `pom.xml`)
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (planner fills as it produces PLANs)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [ ] Wave 0 covers all MISSING references (`PhaseTestFixtures` + 3 repo IT scaffolds) — pending Wave 0 execution
+- [x] No watch-mode flags (Maven runs are one-shot)
+- [x] Feedback latency < 30s (quick filter) / 180s (full suite)
+- [x] `nyquist_compliant: true` set in frontmatter (after planner completes plan generation)
+- [ ] JaCoCo line coverage ≥ 82% on `./mvnw verify` (project-wide gate from `pom.xml`) — verified post-execution
 
-**Approval:** pending
+**Approval:** approved 2026-04-27 (planning-time sign-off; runtime gates marked above remain to be confirmed during execution)
