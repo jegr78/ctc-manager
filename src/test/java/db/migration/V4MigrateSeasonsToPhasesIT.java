@@ -137,7 +137,7 @@ class V4MigrateSeasonsToPhasesIT {
         assertThat(playoffRow.get("phase_type")).isEqualTo("PLAYOFF");
         assertThat(playoffRow.get("sort_index")).isEqualTo(10);
         assertThat(playoffRow.get("layout")).isEqualTo("BRACKET");
-        assertThat(playoffRow.get("format")).isEqualTo("LEAGUE"); // D-08: DB DEFAULT
+        assertThat(playoffRow.get("format")).isEqualTo("LEAGUE"); // D-08: explicit value 'LEAGUE' per V4 migration (not DB DEFAULT)
         assertThat(playoffRow.get("legs")).isEqualTo(1);
         assertThat(playoffRow.get("label")).isEqualTo("Phase57-Test-Playoff-1"); // carried from playoff.name per D-08
         assertThat(toUUID(playoffRow.get("season_id"))).isEqualTo(SEASON_1_ID);
