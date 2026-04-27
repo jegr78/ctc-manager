@@ -165,15 +165,18 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
      */
     private void migratePhaseTeams(JdbcTemplate jdbcTemplate, Map<UUID, UUID> seasonToRegularPhaseId) {
         List<Map<String, Object>> seasonTeams = jdbcTemplate.queryForList("SELECT * FROM season_teams");
+        int insertCount = 0;
 
         for (Map<String, Object> st : seasonTeams) {
             UUID seasonId = toUUID(st.get("season_id"));
             UUID teamId = toUUID(st.get("team_id"));
             UUID phaseId = seasonToRegularPhaseId.get(seasonId);
 
+            // D-05: fail-fast on orphan season_teams row — no silent data loss
             if (phaseId == null) {
-                // Defensive: should never happen because step 1 creates one REGULAR phase per season
-                continue;
+                throw new FlywayException(
+                        "season_teams row references unknown season_id " + seasonId
+                        + " — no REGULAR phase exists for this season (orphan FK)");
             }
 
             jdbcTemplate.update(
@@ -181,9 +184,10 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
                     + "VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                     UUID.randomUUID(), phaseId, teamId
             );
+            insertCount++;
         }
 
-        log.info("Migrated {} phase_teams entries (one per season_team)", seasonTeams.size());
+        log.info("Migrated {} phase_teams entries (one per season_team)", insertCount);
     }
 
     /**
