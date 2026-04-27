@@ -297,7 +297,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 54. Preview Service & Row Categorization | v1.8 | 1/1 | Complete | 2026-04-24 |
 | 55. Admin Import UI & Transactional Execute | v1.8 | 3/3 | Complete | 2026-04-25 |
 | 56. Model & Schema Foundation | v1.9 | 5/5 | Complete   | 2026-04-26 |
-| 57. Data Migration | v1.9 | 3/3 | Complete   | 2026-04-27 |
+| 57. Data Migration | v1.9 | 3/3 | Complete    | 2026-04-27 |
 | 58. Service Layer | v1.9 | 0/? | Not started | - |
 | 59. Import & Test Data | v1.9 | 0/? | Not started | - |
 | 60. Admin UI | v1.9 | 0/? | Not started | - |

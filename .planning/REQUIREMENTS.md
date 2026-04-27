@@ -23,10 +23,10 @@ Requirements for milestone v1.9. Each maps to roadmap phases.
 ### MIGR — Flyway Migration
 
 - [ ] **MIGR-01**: Neue V*-Migration legt `season_phases`, `season_phase_groups`, `phase_teams` an (H2 + MariaDB)
-- [ ] **MIGR-02**: Daten-Migration: 1 REGULAR-Phase pro Bestandssaison mit kopierten Format/Scoring/Rounds/Legs/Dates
-- [ ] **MIGR-03**: Daten-Migration: 1 PLAYOFF-Phase pro existierendem Playoff; FK umgehängt
-- [ ] **MIGR-04**: Daten-Migration: `matchday.phase_id` auf REGULAR-Phase gesetzt
-- [ ] **MIGR-05**: Daten-Migration: `phase_teams` aus heutigen `season_teams` abgeleitet (LEAGUE-Layout, group NULL)
+- [x] **MIGR-02**: Daten-Migration: 1 REGULAR-Phase pro Bestandssaison mit kopierten Format/Scoring/Rounds/Legs/Dates
+- [x] **MIGR-03**: Daten-Migration: 1 PLAYOFF-Phase pro existierendem Playoff; FK umgehängt
+- [x] **MIGR-04**: Daten-Migration: `matchday.phase_id` auf REGULAR-Phase gesetzt
+- [x] **MIGR-05**: Daten-Migration: `phase_teams` aus heutigen `season_teams` abgeleitet (LEAGUE-Layout, group NULL)
 - [ ] **MIGR-06**: Cleanup-Migration: alte Spalten aus `seasons` + M:N `playoff_seasons` entfernt
 - [ ] **MIGR-07**: Alle Migrationen additiv (neue V-Files); Bestand-V1/V2 unverändert
 
@@ -109,10 +109,10 @@ Which phases cover which requirements. Filled during roadmap creation.
 | MODEL-07 | 56 | Pending |
 | MODEL-08 | 56 | Pending |
 | MIGR-01 | 56 | Pending |
-| MIGR-02 | 57 | Pending |
-| MIGR-03 | 57 | Pending |
-| MIGR-04 | 57 | Pending |
-| MIGR-05 | 57 | Pending |
+| MIGR-02 | 57 | Complete |
+| MIGR-03 | 57 | Complete |
+| MIGR-04 | 57 | Complete |
+| MIGR-05 | 57 | Complete |
 | MIGR-06 | 61 | Pending |
 | MIGR-07 | 56 | Pending |
 | SVC-01 | 58 | Pending |
