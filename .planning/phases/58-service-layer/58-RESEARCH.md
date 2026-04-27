@@ -657,32 +657,22 @@ class StandingsServicePhaseTest {
 
 **The biggest single risk is A1 (5-step magic-naming).** Plan-checker should sanity-check the deepest finder by writing a TDD-RED test first that boots Spring and asserts the bean is wired.
 
-## Open Questions
+## Open Questions (RESOLVED 2026-04-27)
 
-1. **`@DataJpaTest` vs `@SpringBootTest` for the three new repository IT-tests (D-13)**
+> All five questions resolved during planning round 1 + revision round 2. Resolution notes inline.
+
+1. **`@DataJpaTest` vs `@SpringBootTest` for the three new repository IT-tests (D-13)** — **RESOLVED**: User confirmed override on 2026-04-27. CONTEXT.md D-13 reworded to `@SpringBootTest @ActiveProfiles("dev") @Transactional` matching codebase precedent (zero `@DataJpaTest` usages found). VALIDATION.md Wave 0 Requirements aligned. Plan 58-01 implements as @SpringBootTest. See DISCUSSION-LOG.md for the override rationale and audit trail.
    - What we know: Project precedent has ZERO `@DataJpaTest` usages [VERIFIED: grep]. Existing IT-tests for Phase 56 entities (`SeasonPhaseEntityIntegrationTest`, `PhaseTeamUniquenessIntegrationTest`) use `@SpringBootTest @ActiveProfiles("dev") @Transactional`. Phase 57 migration tests use programmatic Flyway with `@JdbcTest`-style harness.
    - What's unclear: D-13 says `@DataJpaTest` but project precedent says `@SpringBootTest`. Both work; `@DataJpaTest` is faster (only loads JPA-related beans), `@SpringBootTest` is consistent with the rest of the codebase.
    - Recommendation: **Honour D-13 as written** (use `@DataJpaTest`) AND add a comment in the test class explaining the deviation from project precedent — fastest tests, cleanest scope. Plan-checker should not flag this as a discrepancy.
 
-2. **`@SpringBootTest` vs Mockito for the six refactored service tests (D-12)**
-   - What we know: Of the six target services, FOUR existing test classes use `@SpringBootTest` (`PlayoffServiceTest`, `SwissPairingServiceTest`, `MatchdayGeneratorServiceTest`, `SeasonManagementServiceTest` [Mockito here, but cross-cuts heavy]) and TWO use Mockito (`StandingsServiceTest`, `DriverRankingServiceTest`, `PlayoffSeedingServiceTest`, `MatchdayServiceTest`).
-   - What's unclear: D-12 says "Mockito-only" but four existing tests would need to be **converted** to Mockito to honour D-12 — that's invasive and out-of-scope for Phase 58.
-   - Recommendation: **Re-interpret D-12 as "new test methods within the existing service tests use the existing test style of that file."** Mockito tests stay Mockito; SpringBootTest tests stay SpringBootTest. The planner picks new test methods to fit the host file's pattern. `PhaseTestFixtures` (D-11) supports BOTH patterns (entities are valid in both).
+2. **`@SpringBootTest` vs Mockito for the six refactored service tests (D-12)** — **RESOLVED**: Planner discretion on the recommendation. New test methods within existing service test classes follow the host file's pattern (Mockito tests stay Mockito, SpringBootTest tests stay SpringBootTest). PhaseTestFixtures (D-11) provides entity stubs valid in both styles. Each plan's `<behavior>` section explicitly cites "Honor host-file test pattern per Open Question 2".
 
-3. **`MatchdayRepository.findBySeasonIdOrderBySortIndexAsc` callers (existing finder)**
-   - What we know: It's called by `MatchdayGeneratorService.generate` (line 42), `MatchdayService.getMatchdayList` (line 56), `MatchdayService.getMatchdaysBySeason` (line 132), `MatchdayService.createInline` (line 144), `SiteGeneratorService.generateMatchdays` (line 228), and the Swiss pairing flow.
-   - What's unclear: When `findByPhaseId` is added (D-22), do these callers stay on the seasonId variant for Phase 58 (matching the bridge pattern) or do some switch?
-   - Recommendation: D-26 says "controllers stay on `findBySeasonId`"; SiteGenerator (D-23) "calls phase-aware service APIs directly where possible" — the planner picks. Suggest: the four `MatchdayService.*` callers stay seasonId (controllers), but `SiteGeneratorService.generateMatchdays` switches to `phaseId` via `findRegularPhase`. The Swiss/Generator services switch to `phaseId` (locked by D-16/D-17).
+3. **`MatchdayRepository.findBySeasonIdOrderBySortIndexAsc` callers (existing finder)** — **RESOLVED**: Per D-26 and D-23, the four `MatchdayService.*` callers stay on seasonId (Bridge pattern, served by @Deprecated overloads); `SiteGeneratorService.generateMatchdays` switches to phaseId via `SeasonPhaseService.findRegularPhase`; `SwissPairingService` and `MatchdayGeneratorService` fully switch to phaseId (locked by D-16/D-17). Plan 58-04 and Plan 58-06 implement this split.
 
-4. **`SeasonForm` write-path in D-25**
-   - What we know: `SeasonManagementService.save` accepts a long parameter list (id, name, year, number, format, totalRounds, legs, etc.). D-25 says "auto-sync to REGULAR phase" after writing the legacy fields.
-   - What's unclear: Does `save` create a REGULAR phase if missing on a new season, or just update an existing one?
-   - Recommendation: When saving a *new* Season, the service should create the REGULAR phase atomically (in the same transaction) with the same field values. When saving an *existing* Season, find-or-create the REGULAR phase. This avoids Pitfall 7 (404 on view-standings for a newly-created season). Planner finalises.
+4. **`SeasonForm` write-path in D-25** — **RESOLVED**: Find-or-create path implemented in Plan 58-06 Task 2 D-25 acceptance criteria. `SeasonManagementService.save` finds the REGULAR phase via `seasonPhaseService.findByType(seasonId, PhaseType.REGULAR)` and falls back to `orElseGet(() -> seasonPhaseService.create(...))` — atomic in the same `@Transactional` boundary. Both new-season and existing-season save paths go through this. Pitfall 7 (404 on view-standings for new season) is avoided.
 
-5. **PLACEMENT phase support in Phase 58**
-   - What we know: D-07 includes PLACEMENT in season-wide aggregation; D-14 enforces "max 1 PLACEMENT". CONTEXT.md "Deferred Ideas" says "PLACEMENT-phase concrete behavior — only stub support in Phase 58".
-   - What's unclear: Are there test cases that need to validate PLACEMENT behaves correctly?
-   - Recommendation: Tests should include at least one PLACEMENT-phase scenario in `aggregateAcrossPhases` and one duplicate-PLACEMENT case in `SeasonPhaseService.create`. Beyond that — no UI, no specific business rules. Stub validation only.
+5. **PLACEMENT phase support in Phase 58** — **RESOLVED**: Stub-only validation. Plan 58-01 includes a duplicate-PLACEMENT test case (`SeasonPhaseServiceTest#givenExistingPlacementPhase_whenCreatePlacement_thenThrowsBusinessRuleException` — extending D-14's pattern across all three phase types). Plan 58-03 includes one PLACEMENT-phase scenario in `aggregateAcrossPhases` per D-07. No UI or specific business rules in Phase 58 — those defer to a future milestone per CONTEXT.md Deferred Ideas.
 
 ## Environment Availability
 
