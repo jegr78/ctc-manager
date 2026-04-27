@@ -151,11 +151,14 @@
 
 | Option | Description | Selected |
 |--------|-------------|----------|
-| @DataJpaTest pro Repository | Drei IT-Tests für die neuen Repositories. | ✓ |
+| @DataJpaTest pro Repository | Drei IT-Tests für die neuen Repositories. | (initial) |
 | Nur per Service-Test indirekt | Custom-Finders nur indirekt abgedeckt. | |
 | Ein gemeinsamer Repository-IT-Test | Eine PhaseRepositoriesIT-Klasse. | |
+| @SpringBootTest pro Repository (Codebase-Precedent) | @SpringBootTest @ActiveProfiles(dev) @Transactional analog zu allen existierenden IT-Tests. Override nach RESEARCH-Discovery. | ✓ (revised 2026-04-27) |
 
-**User's choice:** @DataJpaTest pro Repository (Recommended)
+**User's choice (initial 2026-04-27):** @DataJpaTest pro Repository (Recommended)
+**User's choice (revised 2026-04-27 after research):** @SpringBootTest pro Repository
+**Override rationale:** RESEARCH Open Question 1 surfaced that the codebase has zero `@DataJpaTest` precedent — every existing IT-test uses `@SpringBootTest @ActiveProfiles("dev") @Transactional`. Introducing the first `@DataJpaTest` would break Codebase conventions and require Wave-0 boilerplate to set up H2 differently. User confirmed override after Plan-Checker flagged the silent override in Plan 58-01 as a BLOCKER. CONTEXT.md D-13 reworded accordingly.
 
 ---
 
