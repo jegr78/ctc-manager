@@ -159,7 +159,11 @@ See: milestones/v1.8-ROADMAP.md for full details
 4. `phase_teams` contains one row per `season_team` entry, associated with that season's REGULAR phase and no group (LEAGUE layout, group NULL)
 5. Old bridge columns (`matchday.season_id`, `playoff.season_id`) remain intact so existing code continues to compile and run during the service migration phase
 
-**Plans**: TBD
+**Plans**: 3 plans
+
+- [ ] 57-01-PLAN.md — TDD-RED: V4MigrateSeasonsToPhasesIT with programmatic Flyway harness + 6 D-16 test methods (Wave 1)
+- [ ] 57-02-PLAN.md — TDD-GREEN: V4__MigrateSeasonsToPhases.java migration class with 5 private steps + dialect-aware NOT-NULL flip (Wave 2)
+- [ ] 57-03-PLAN.md — Smoke + Final Gate: V4MigrationSmokeIT @SpringBootTest + ./mvnw verify + manual MariaDB checklist (Wave 3)
 
 ### Phase 58: Service Layer
 
@@ -293,7 +297,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 54. Preview Service & Row Categorization | v1.8 | 1/1 | Complete | 2026-04-24 |
 | 55. Admin Import UI & Transactional Execute | v1.8 | 3/3 | Complete | 2026-04-25 |
 | 56. Model & Schema Foundation | v1.9 | 5/5 | Complete   | 2026-04-26 |
-| 57. Data Migration | v1.9 | 0/? | Not started | - |
+| 57. Data Migration | v1.9 | 0/3 | Planned | - |
 | 58. Service Layer | v1.9 | 0/? | Not started | - |
 | 59. Import & Test Data | v1.9 | 0/? | Not started | - |
 | 60. Admin UI | v1.9 | 0/? | Not started | - |
