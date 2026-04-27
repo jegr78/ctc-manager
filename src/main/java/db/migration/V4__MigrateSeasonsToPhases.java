@@ -155,6 +155,15 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
                 + "  WHERE sp.season_id = m.season_id AND sp.phase_type = 'REGULAR'"
                 + ")"
         );
+
+        // D-05: fail-fast — any matchday still NULL means an orphan season_id exists
+        Integer nullCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM matchdays WHERE phase_id IS NULL", Integer.class);
+        if (nullCount != null && nullCount > 0) {
+            throw new FlywayException(nullCount + " matchday(s) have no REGULAR phase after FK migration"
+                    + " — possible orphan matchday.season_id");
+        }
+
         log.info("Updated phase_id on {} matchdays", count);
     }
 
