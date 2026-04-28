@@ -50,6 +50,7 @@ class SwissPairingServiceTest {
 	private Season season;
 	private RaceScoring raceScoring;
 	private MatchScoring matchScoring;
+	private SeasonPhase regularPhase; // REGULAR phase backing the season for @Deprecated bridge
 
 	@BeforeEach
 	void setUp() {
@@ -65,6 +66,16 @@ class SwissPairingServiceTest {
 		season.setRaceScoring(raceScoring);
 		season.setMatchScoring(matchScoring);
 		season = seasonRepository.save(season);
+
+		// Create a REGULAR LEAGUE phase so the @Deprecated bridge (generateNextRound(seasonId))
+		// can resolve via seasonPhaseService.findRegularPhase(seasonId).
+		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setFormat(SeasonFormat.SWISS);
+		phase.setTotalRounds(5);
+		phase.setLegs(1);
+		regularPhase = seasonPhaseRepository.save(phase);
 	}
 
 	@Test
@@ -106,10 +117,12 @@ class SwissPairingServiceTest {
 
 	@Test
 	void givenTotalRoundsReached_whenGenerateNextRound_thenThrowsException() {
-		// given
+		// given — set totalRounds=1 on both season and the REGULAR phase
 		addTeams(4);
 		season.setTotalRounds(1);
 		seasonRepository.save(season);
+		regularPhase.setTotalRounds(1);
+		seasonPhaseRepository.save(regularPhase);
 
 		var md = swissPairingService.generateNextRound(season.getId());
 		addDummyResults(md.getId());
@@ -121,24 +134,21 @@ class SwissPairingServiceTest {
 
 	@Test
 	void givenLeagueSeason_whenGenerateNextRound_thenThrowsException() {
-		// given
-		var uniqueSuffix = UUID.randomUUID().toString().substring(0, 4);
-		var raceScoring = raceScoringRepository.save(
-				new RaceScoring("League RS " + uniqueSuffix, "20,17,14", null, 0));
-		var matchScoring = matchScoringRepository.save(
-				new MatchScoring("League MS " + uniqueSuffix, 3, 1, 0));
+		// given — a LEAGUE-format REGULAR LEAGUE-layout phase (format=LEAGUE → not Swiss → should throw)
+		var s = buildTestSeason();
+		var leaguePhase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		leaguePhase.setRaceScoring(raceScoring);
+		leaguePhase.setMatchScoring(matchScoring);
+		leaguePhase.setFormat(SeasonFormat.LEAGUE); // LEAGUE format → not Swiss → should throw
+		leaguePhase.setLegs(1);
+		var saved = seasonPhaseRepository.save(leaguePhase);
+		addTeamsToPhase(saved, null, 4);
 
-		var leagueSeason = new Season("League Test " + uniqueSuffix, 2026, 2);
-		leagueSeason.setFormat(SeasonFormat.LEAGUE);
-		leagueSeason.setRaceScoring(raceScoring);
-		leagueSeason.setMatchScoring(matchScoring);
-		leagueSeason = seasonRepository.save(leagueSeason);
+		UUID phaseId = saved.getId();
 
-		UUID id = leagueSeason.getId();
-
-		// when / then
+		// when / then — LEAGUE format phase cannot generate Swiss rounds
 		assertThrows(IllegalArgumentException.class,
-				() -> swissPairingService.generateNextRound(id));
+				() -> swissPairingService.generateNextRound(phaseId, null));
 	}
 
 	@Test
@@ -205,7 +215,10 @@ class SwissPairingServiceTest {
 
 	@Test
 	void givenReplacedTeam_whenGenerateNextRound_thenReplacedTeamExcluded() {
-		// given
+		// given — register teams[1..3] and replacementTeam in the REGULAR phase roster;
+		// teams[0] (the replaced team) is deliberately NOT added to the phase roster,
+		// so it won't appear in pairings (PhaseTeam is the source of truth in the
+		// canonical path; succession is no longer needed for team-pool filtering).
 		var teams = new ArrayList<Team>();
 		for (int i = 0; i < 4; i++) {
 			var team = teamRepository.save(new Team("SwissT " + i + "_" + UUID.randomUUID().toString().substring(0, 4),
@@ -226,10 +239,16 @@ class SwissPairingServiceTest {
 		stOld.setSuccessor(stNew);
 		season = seasonRepository.saveAndFlush(season);
 
+		// Phase roster: teams[1], teams[2], teams[3] + replacementTeam (teams[0] excluded)
+		phaseTeamRepository.save(new PhaseTeam(regularPhase, teams.get(1)));
+		phaseTeamRepository.save(new PhaseTeam(regularPhase, teams.get(2)));
+		phaseTeamRepository.save(new PhaseTeam(regularPhase, teams.get(3)));
+		phaseTeamRepository.save(new PhaseTeam(regularPhase, replacementTeam));
+
 		// when
 		var matchday = swissPairingService.generateNextRound(season.getId());
 
-		// then — 4 active teams (3 original + 1 replacement), replaced team excluded
+		// then — 4 active teams (teams[1..3] + replacement), replaced team excluded
 		var races = raceRepository.findByMatchdayId(matchday.getId());
 		assertEquals(2, races.size()); // 4 teams = 2 pairings
 
@@ -273,9 +292,12 @@ class SwissPairingServiceTest {
 		addTeamsToPhase(phase, groupA, 4);
 		addTeamsToPhase(phase, groupB, 4);
 
-		// when — generate round 1 for both groups, then round 2 only for group A
-		swissPairingService.generateNextRound(phase.getId(), groupA.getId());
+		// round 1 for both groups
+		var r1A = swissPairingService.generateNextRound(phase.getId(), groupA.getId());
 		swissPairingService.generateNextRound(phase.getId(), groupB.getId());
+		// complete round 1 for group A so round 2 can be generated
+		addDummyResults(r1A.getId());
+
 		// round 2 for group A only
 		swissPairingService.generateNextRound(phase.getId(), groupA.getId());
 
@@ -312,14 +334,18 @@ class SwissPairingServiceTest {
 		addTeamsToPhase(phase, groupA, 4);
 		addTeamsToPhase(phase, groupB, 4);
 
-		// round 1 both groups
-		swissPairingService.generateNextRound(phase.getId(), groupA.getId());
-		swissPairingService.generateNextRound(phase.getId(), groupB.getId());
-		// round 2 only group A (group B's round 1 left with no results — still "complete"
-		// in the sense that no round-2 exists yet, so getCurrentRound=1 and isComplete=true)
+		// round 1 for both groups
+		var r1A = swissPairingService.generateNextRound(phase.getId(), groupA.getId());
+		var r1B = swissPairingService.generateNextRound(phase.getId(), groupB.getId());
+		// complete round 1 for both groups; then generate round 2 only for group A
+		addDummyResults(r1A.getId());
+		addDummyResults(r1B.getId());
+
+		// round 2 only group A
 		swissPairingService.generateNextRound(phase.getId(), groupA.getId());
 
-		// then — group A is at round 2 (incomplete), group B is at round 1 (complete — no pending round)
+		// then — group A is at round 2 (no results yet → incomplete),
+		//         group B is at round 1 (results complete → isComplete=true, no round 2 pending)
 		assertThat(swissPairingService.getCurrentRound(phase.getId(), groupA.getId())).isEqualTo(2);
 		assertThat(swissPairingService.getCurrentRound(phase.getId(), groupB.getId())).isEqualTo(1);
 		assertThat(swissPairingService.isCurrentRoundComplete(phase.getId(), groupA.getId())).isFalse();
@@ -353,9 +379,23 @@ class SwissPairingServiceTest {
 	// Helper factories for phase-aware tests
 	// =========================================================================
 
-	/** Creates and persists a LEAGUE-layout REGULAR phase with SWISS format. */
+	/**
+	 * Creates a fresh test season (separate from the setUp season to avoid
+	 * UNIQUE(season_id, phase_type) conflicts with the regularPhase created in setUp).
+	 */
+	private Season buildTestSeason() {
+		var s = new Season("Phase58-Test-Swiss-" + UUID.randomUUID().toString().substring(0, 4), 9999, 99);
+		s.setFormat(SeasonFormat.SWISS);
+		s.setTotalRounds(5);
+		s.setRaceScoring(raceScoring);
+		s.setMatchScoring(matchScoring);
+		return seasonRepository.save(s);
+	}
+
+	/** Creates and persists a LEAGUE-layout REGULAR phase with SWISS format on a fresh test season. */
 	private SeasonPhase buildSwissLeaguePhase() {
-		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		var s = buildTestSeason();
+		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		phase.setRaceScoring(raceScoring);
 		phase.setMatchScoring(matchScoring);
 		phase.setFormat(SeasonFormat.SWISS);
@@ -364,9 +404,10 @@ class SwissPairingServiceTest {
 		return seasonPhaseRepository.save(phase);
 	}
 
-	/** Creates and persists a GROUPS-layout REGULAR phase with SWISS format and two groups. */
+	/** Creates and persists a GROUPS-layout REGULAR phase with SWISS format and two groups on a fresh test season. */
 	private SeasonPhase buildSwissGroupsPhase() {
-		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
+		var s = buildTestSeason();
+		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
 		phase.setRaceScoring(raceScoring);
 		phase.setMatchScoring(matchScoring);
 		phase.setFormat(SeasonFormat.SWISS);
@@ -396,7 +437,8 @@ class SwissPairingServiceTest {
 	}
 
 	// =========================================================================
-	// Existing legacy helpers (unchanged)
+	// Existing legacy helpers (updated to also populate PhaseTeam for the
+	// regularPhase so the canonical generateNextRound(phaseId, null) finds teams)
 	// =========================================================================
 
 	private void addTeams(int count) {
@@ -404,6 +446,9 @@ class SwissPairingServiceTest {
 			var team = teamRepository.save(new Team("SwissT " + i + "_" + UUID.randomUUID().toString().substring(0, 4),
 					"SW" + i + UUID.randomUUID().toString().substring(0, 2)));
 			season.addTeam(team);
+			// Also register as PhaseTeam on the REGULAR phase so the canonical
+			// generateNextRound(phaseId, null) (called via @Deprecated bridge) finds them
+			phaseTeamRepository.save(new PhaseTeam(regularPhase, team));
 		}
 		seasonRepository.save(season);
 	}

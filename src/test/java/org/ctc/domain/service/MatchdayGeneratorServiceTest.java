@@ -45,6 +45,7 @@ class MatchdayGeneratorServiceTest {
 	private Season season;
 	private RaceScoring raceScoring;
 	private MatchScoring matchScoring;
+	private SeasonPhase regularPhase; // REGULAR phase backing the season for @Deprecated bridge
 
 	@BeforeEach
 	void setUp() {
@@ -59,6 +60,15 @@ class MatchdayGeneratorServiceTest {
 		season.setRaceScoring(raceScoring);
 		season.setMatchScoring(matchScoring);
 		season = seasonRepository.save(season);
+
+		// Create a REGULAR LEAGUE phase so the @Deprecated bridge (generate(seasonId,...))
+		// can resolve via seasonPhaseService.findRegularPhase(seasonId).
+		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setFormat(SeasonFormat.LEAGUE);
+		phase.setLegs(1);
+		regularPhase = seasonPhaseRepository.save(phase);
 	}
 
 	@Test
@@ -204,9 +214,12 @@ class MatchdayGeneratorServiceTest {
 
 	@Test
 	void givenSwissSeason_whenGenerate_thenThrowsException() {
-		// given
+		// given — set SWISS format on both season and the REGULAR phase
+		// (the canonical path checks phase.getFormat(), not season.getFormat())
 		season.setFormat(SeasonFormat.SWISS);
 		seasonRepository.save(season);
+		regularPhase.setFormat(SeasonFormat.SWISS);
+		seasonPhaseRepository.save(regularPhase);
 		addTeams(4);
 
 		// when / then
@@ -227,6 +240,11 @@ class MatchdayGeneratorServiceTest {
 		season.addTeam(sub2);
 		season.addTeam(other);
 		seasonRepository.save(season);
+		// Register only sub-teams and other in the REGULAR phase (parent is excluded from roster —
+		// the canonical path uses PhaseTeam, not season.getEligibleTeams())
+		phaseTeamRepository.save(new PhaseTeam(regularPhase, sub1));
+		phaseTeamRepository.save(new PhaseTeam(regularPhase, sub2));
+		phaseTeamRepository.save(new PhaseTeam(regularPhase, other));
 
 		// when
 		matchdayGeneratorService.generate(season.getId(), 2, false);
@@ -413,19 +431,19 @@ class MatchdayGeneratorServiceTest {
 
 	@Test
 	void givenSeasonId_whenGenerate_thenDelegatesToRegularPhase() {
-		// given — a LEAGUE REGULAR phase that backs the season (via @Deprecated bridge)
-		var phase = buildLeaguePhase();
-		addTeamsToPhase(phase, null, 4);
+		// given — use the regularPhase created in setUp() (backs the shared season);
+		// add teams directly to that phase
+		addTeamsToPhase(regularPhase, null, 4);
 
 		// when — call the @Deprecated seasonId-based overload
 		matchdayGeneratorService.generate(season.getId(), 3, false);
 
 		// then — matchdays are linked to the REGULAR phase of that season
-		var matchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phase.getId());
+		var matchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regularPhase.getId());
 		assertThat(matchdays).hasSize(3);
 		for (var md : matchdays) {
 			assertThat(md.getPhase()).isNotNull();
-			assertThat(md.getPhase().getId()).isEqualTo(phase.getId());
+			assertThat(md.getPhase().getId()).isEqualTo(regularPhase.getId());
 		}
 	}
 
@@ -433,9 +451,22 @@ class MatchdayGeneratorServiceTest {
 	// Helper factories for phase-aware tests
 	// =========================================================================
 
-	/** Creates and persists a LEAGUE-layout REGULAR phase for the shared season. */
+	/**
+	 * Creates a fresh test season (separate from the setUp season to avoid
+	 * UNIQUE(season_id, phase_type) conflicts with the regularPhase created in setUp).
+	 */
+	private Season buildTestSeason() {
+		var s = new Season("Phase58-Test-Gen-" + UUID.randomUUID().toString().substring(0, 4), 9999, 99);
+		s.setFormat(SeasonFormat.LEAGUE);
+		s.setRaceScoring(raceScoring);
+		s.setMatchScoring(matchScoring);
+		return seasonRepository.save(s);
+	}
+
+	/** Creates and persists a LEAGUE-layout REGULAR phase on a fresh test season. */
 	private SeasonPhase buildLeaguePhase() {
-		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		var s = buildTestSeason();
+		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		phase.setRaceScoring(raceScoring);
 		phase.setMatchScoring(matchScoring);
 		phase.setFormat(SeasonFormat.LEAGUE);
@@ -443,9 +474,10 @@ class MatchdayGeneratorServiceTest {
 		return seasonPhaseRepository.save(phase);
 	}
 
-	/** Creates and persists a GROUPS-layout REGULAR phase with two groups (A, B). */
+	/** Creates and persists a GROUPS-layout REGULAR phase on a fresh test season, with two groups (A, B). */
 	private SeasonPhase buildGroupsPhase() {
-		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
+		var s = buildTestSeason();
+		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
 		phase.setRaceScoring(raceScoring);
 		phase.setMatchScoring(matchScoring);
 		phase.setFormat(SeasonFormat.LEAGUE);
@@ -474,7 +506,8 @@ class MatchdayGeneratorServiceTest {
 	}
 
 	// =========================================================================
-	// Existing legacy helpers (unchanged)
+	// Existing legacy helpers (updated to also populate PhaseTeam for the
+	// regularPhase so the canonical generate(phaseId, null, ...) finds teams)
 	// =========================================================================
 
 	private List<Team> addTeams(int count) {
@@ -484,6 +517,9 @@ class MatchdayGeneratorServiceTest {
 			var team = teamRepository.save(new Team("GenT " + i + "_" + suffix,
 					"GT" + i + suffix));
 			season.addTeam(team);
+			// Also register as PhaseTeam on the REGULAR phase so the canonical
+			// generate(phaseId, null, ...) (called via @Deprecated bridge) finds them
+			phaseTeamRepository.save(new PhaseTeam(regularPhase, team));
 			teams.add(team);
 		}
 		seasonRepository.save(season);
