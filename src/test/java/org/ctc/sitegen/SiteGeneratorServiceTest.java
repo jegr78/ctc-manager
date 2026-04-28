@@ -196,6 +196,23 @@ class SiteGeneratorServiceTest {
         return siteGeneratorService.slugify(input);
     }
 
+    /**
+     * Phase 58 D-23 helper: creates a REGULAR phase + LEAGUE PhaseTeam rows for a production
+     * season so that the phase-aware SiteGenerator surface (findRegularPhase) does not throw
+     * EntityNotFoundException at runtime. Required for any production-style season created
+     * outside the @BeforeEach setUp block. Test seasons (name containing "Test") are filtered
+     * before they reach the phase-aware path, so this helper is NOT needed for them.
+     */
+    private void setupRegularPhase(Season s) {
+        var regular = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regular.setRaceScoring(s.getRaceScoring());
+        regular.setMatchScoring(s.getMatchScoring());
+        regular = seasonPhaseRepository.save(regular);
+        for (var st : s.getSeasonTeams()) {
+            phaseTeamRepository.save(new PhaseTeam(regular, st.getTeam()));
+        }
+    }
+
     @Test
     void givenActiveSeason_whenGenerate_thenCreatesIndexPage() {
         // when
@@ -482,10 +499,12 @@ class SiteGeneratorServiceTest {
         earlier.setRaceScoring(season.getRaceScoring());
         earlier.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(earlier);
+        setupRegularPhase(earlier); // Phase 58 D-23: production seasons need a REGULAR phase
         var later = new Season("Future Era " + uniqueSuffix, 2028, 2);
         later.setRaceScoring(season.getRaceScoring());
         later.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(later);
+        setupRegularPhase(later); // Phase 58 D-23
 
         // when
         siteGeneratorService.generate();
@@ -1277,6 +1296,7 @@ class SiteGeneratorServiceTest {
         var extraTeam = teamRepository.save(new Team("Filter Team " + uniqueSuffix, "FLT" + uniqueSuffix));
         season2.addTeam(extraTeam);
         seasonRepository.save(season2);
+        setupRegularPhase(season2); // Phase 58 D-23: production seasons need a REGULAR phase
 
         // when
         siteGeneratorService.generate();

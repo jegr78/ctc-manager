@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -29,6 +30,11 @@ public class SeasonManagementService {
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
     private final ScoringService scoringService;
+    // Phase 58 D-18 / D-25 — strict delete-guard + REGULAR-phase auto-sync
+    private final SeasonPhaseService seasonPhaseService;
+    private final MatchdayRepository matchdayRepository;
+    private final PhaseTeamRepository phaseTeamRepository;
+    private final SeasonPhaseRepository seasonPhaseRepository;
 
     // --- Records for structured return data ---
 
@@ -114,6 +120,15 @@ public class SeasonManagementService {
         return new SeasonEditFormData(season, allTeams, allCars, allTracks, allRaceScorings, allMatchScorings);
     }
 
+    /**
+     * Saves a season form. Phase 58 D-25: in addition to writing the legacy {@link Season}
+     * fields (format, totalRounds, legs, eventDurationMinutes, dates, scoring), the service
+     * additionally find-or-creates the REGULAR {@link SeasonPhase} and synchronises the
+     * same fields onto it, all within a single {@code @Transactional} boundary
+     * (Pitfall 7 mitigation).
+     *
+     * <p>Phase 60 will remove the legacy field writes; Phase 61 will drop the legacy columns.
+     */
     @Transactional
     public Season save(UUID id, String name, int year, int number, String description,
                        LocalDate startDate, LocalDate endDate, boolean active,
@@ -145,6 +160,29 @@ public class SeasonManagementService {
         season.setMatchScoring(matchScoring);
 
         season = seasonRepository.save(season);
+        final UUID savedSeasonId = season.getId(); // effectively-final capture for the lambda below
+
+        // D-25: find-or-create REGULAR phase + write-through fields (Pitfall 7: bootstrap on new season)
+        var regular = seasonPhaseService.findByType(savedSeasonId, PhaseType.REGULAR)
+                .orElseGet(() -> seasonPhaseService.create(savedSeasonId,
+                        PhaseType.REGULAR, PhaseLayout.LEAGUE, /*sortIndex*/ 0,
+                        /*label*/ null,
+                        raceScoring, matchScoring,
+                        format, startDate, endDate,
+                        totalRounds, legs, eventDurationMinutes));
+        // Sync fields onto the existing-or-just-created REGULAR phase (idempotent on the freshly-created path)
+        if (format != null) {
+            regular.setFormat(format);
+        }
+        regular.setTotalRounds(totalRounds);
+        regular.setLegs(legs);
+        regular.setEventDurationMinutes(eventDurationMinutes);
+        regular.setStartDate(startDate);
+        regular.setEndDate(endDate);
+        regular.setRaceScoring(raceScoring);
+        regular.setMatchScoring(matchScoring);
+        seasonPhaseRepository.save(regular);
+
         if (id != null) {
             log.info("Updated season: {}", season.getName());
         } else {
@@ -153,9 +191,25 @@ public class SeasonManagementService {
         return season;
     }
 
+    /**
+     * Deletes a season. Phase 58 D-18 introduces a strict pre-check: if the season has
+     * any active phase content (matchdays, playoffs, or {@code phase_teams} rows),
+     * the delete is refused with {@link BusinessRuleException}. The {@link
+     * org.ctc.admin.controller.GlobalExceptionHandler} maps the exception to HTTP 409
+     * with a "Business Rule Violation" error page.
+     *
+     * <p>BEHAVIOR CHANGE vs pre-Phase-58: was blind cascade, now a fail-loud guard.
+     */
     @Transactional
     public String delete(UUID id) {
         var season = findById(id);
+        // D-18 strict pre-check (BEHAVIOR CHANGE vs blind cascade)
+        if (matchdayRepository.existsByPhaseSeasonId(id)
+                || playoffRepository.existsByPhaseSeasonId(id)
+                || phaseTeamRepository.existsByPhaseSeasonId(id)) {
+            throw new BusinessRuleException(
+                    "Season has active phases — clear matches/teams before deleting");
+        }
         seasonRepository.delete(season);
         log.info("Deleted season: {}", season.getName());
         return season.getName();

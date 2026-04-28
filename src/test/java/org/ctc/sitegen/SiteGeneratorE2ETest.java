@@ -76,6 +76,12 @@ class SiteGeneratorE2ETest {
     @Autowired
     private ScoringService scoringService;
 
+    @Autowired
+    private SeasonPhaseRepository seasonPhaseRepository;
+
+    @Autowired
+    private PhaseTeamRepository phaseTeamRepository;
+
     @MockitoBean
     private YouTubeScraperService youTubeScraperService;
 
@@ -116,6 +122,15 @@ class SiteGeneratorE2ETest {
         season.addTeam(teamBeta);
         seasonRepository.save(season);
 
+        // Phase 58 D-23: SiteGenerator routes through SeasonPhaseService.findByType(REGULAR).
+        // E2E setup must include a REGULAR phase + PhaseTeam rows or the season is skipped.
+        var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regularPhase.setRaceScoring(raceScoring);
+        regularPhase.setMatchScoring(matchScoring);
+        regularPhase = seasonPhaseRepository.save(regularPhase);
+        phaseTeamRepository.save(new PhaseTeam(regularPhase, teamAlpha));
+        phaseTeamRepository.save(new PhaseTeam(regularPhase, teamBeta));
+
         var driver1 = driverRepository.save(new Driver("e2e_driver1_" + uniqueSuffix, "E2E_Racer1"));
         var driver2 = driverRepository.save(new Driver("e2e_driver2_" + uniqueSuffix, "E2E_Racer2"));
         var driver3 = driverRepository.save(new Driver("e2e_driver3_" + uniqueSuffix, "E2E_Racer3"));
@@ -127,6 +142,9 @@ class SiteGeneratorE2ETest {
         seasonDriverRepository.save(new SeasonDriver(season, driver4, teamBeta));
 
         var matchday = matchdayRepository.save(new Matchday(season, "E2E Matchday 1", 1));
+        // Phase 58 D-23: link matchday to REGULAR phase so race-result-by-phase queries find it
+        matchday.setPhase(regularPhase);
+        matchday = matchdayRepository.save(matchday);
         var testTrack = trackRepository.save(new Track("E2E Circuit " + uniqueSuffix, "Japan"));
         var testCar = carRepository.save(new Car("E2E Car " + uniqueSuffix, "GT3 Concept"));
         var match = matchRepository.save(new Match(matchday, teamAlpha, teamBeta));

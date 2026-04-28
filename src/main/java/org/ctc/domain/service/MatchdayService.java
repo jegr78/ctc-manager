@@ -5,6 +5,7 @@ import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonRepository;
@@ -27,6 +28,8 @@ public class MatchdayService {
     private final MatchdayRepository matchdayRepository;
     private final SeasonRepository seasonRepository;
     private final RaceLineupRepository raceLineupRepository;
+    // Phase 58 D-26: phase-aware finders + @Deprecated bridge for findBySeasonId
+    private final SeasonPhaseService seasonPhaseService;
 
     // --- Return types ---
 
@@ -124,6 +127,38 @@ public class MatchdayService {
         matchdayRepository.delete(matchday);
         log.info("Deleted matchday: {}", matchday.getLabel());
         return seasonId;
+    }
+
+    // --- Phase-aware finders (Phase 58 D-26) ---
+
+    /**
+     * Returns all matchdays of a phase, ordered by {@code sortIndex} ascending.
+     * Primary phase-aware finder (Phase 58 D-26).
+     */
+    public List<Matchday> findByPhaseId(UUID phaseId) {
+        return matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phaseId);
+    }
+
+    /**
+     * Returns all matchdays of a (phase, group) tuple, ordered by {@code sortIndex} ascending.
+     * For LEAGUE-layout phases pass {@code groupId == null}; Spring Data derives {@code IS NULL}.
+     */
+    public List<Matchday> findByPhaseIdAndGroupId(UUID phaseId, UUID groupId) {
+        return matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId);
+    }
+
+    /**
+     * Aggregates matchdays across all phases of a season.
+     *
+     * @deprecated Phase 58 D-26: callers should switch to {@link #findByPhaseId(UUID)}
+     *             or {@link #findByPhaseIdAndGroupId(UUID, UUID)}. Removed in Phase 60.
+     */
+    @Deprecated
+    public List<Matchday> findBySeasonId(UUID seasonId) {
+        return seasonPhaseService.findAllPhases(seasonId).stream()
+                .map(SeasonPhase::getId)
+                .flatMap(pid -> findByPhaseId(pid).stream())
+                .toList();
     }
 
     // --- By season ID (JSON API) ---

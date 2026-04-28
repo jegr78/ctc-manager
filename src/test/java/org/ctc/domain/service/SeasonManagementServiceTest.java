@@ -562,7 +562,24 @@ class SeasonManagementServiceTest {
 
         when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
         when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
-        when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> {
+            Season s = inv.getArgument(0);
+            if (s.getId() == null) s.setId(UUID.randomUUID());
+            return s;
+        });
+        // Phase 58 D-25: save now also synchronises a REGULAR phase. For new-season
+        // bootstrap path, findByType returns empty and create is invoked.
+        when(seasonPhaseService.findByType(any(UUID.class), eq(PhaseType.REGULAR)))
+                .thenReturn(Optional.empty());
+        when(seasonPhaseService.create(any(UUID.class), eq(PhaseType.REGULAR), eq(PhaseLayout.LEAGUE),
+                anyInt(), any(), any(RaceScoring.class), any(MatchScoring.class),
+                any(SeasonFormat.class), any(), any(),
+                any(), anyInt(), any()))
+                .thenAnswer(inv -> {
+                    var bootstrapSeason = new Season("bootstrap");
+                    bootstrapSeason.setId(inv.getArgument(0));
+                    return PhaseTestFixtures.regularPhase(bootstrapSeason, rs, ms);
+                });
 
         // when
         var result = service.save(null, "New Season", 2026, 1, null, null, null,
@@ -585,11 +602,15 @@ class SeasonManagementServiceTest {
         var ms = new MatchScoring();
         ms.setId(UUID.randomUUID());
         existing.setMatchScoring(ms);
+        var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
 
         when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
         when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
         when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
+        // Phase 58 D-25: existing-season path finds the REGULAR phase and updates it
+        when(seasonPhaseService.findByType(existing.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(regular));
 
         // when
         var result = service.save(existing.getId(), "Updated Name", 2027, 2, null, null, null,

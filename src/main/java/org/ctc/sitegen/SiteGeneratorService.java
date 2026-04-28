@@ -3,12 +3,14 @@ package org.ctc.sitegen;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.*;
 import org.ctc.sitegen.model.RaceView;
 import org.ctc.domain.service.DriverRankingService;
 import org.ctc.domain.service.PlayoffBracketViewService;
 import org.ctc.domain.service.PlayoffService;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.StandingsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +52,8 @@ public class SiteGeneratorService {
     private final SeasonTeamRepository seasonTeamRepository;
     private final SiteProperties siteProperties;
     private final YouTubeScraperService youTubeScraperService;
+    // Phase 58 D-23: caller-side update — phase-aware standings + ranking access
+    private final SeasonPhaseService seasonPhaseService;
 
     @lombok.Setter
     @Value("${app.upload-dir:data/dev/uploads}")
@@ -82,6 +86,14 @@ public class SiteGeneratorService {
 
             // Generate pages for each season
             for (var season : productionSeasons) {
+                // D-23 / Pitfall 7: Skip seasons without a REGULAR phase. Post-V4 migration every
+                // persisted production Season has one; legacy in-memory test fixtures (Phase 58
+                // pre-DATA-01 era) may not. Skipping mirrors the legacy behaviour where seasons
+                // without standings simply rendered empty pages.
+                if (seasonPhaseService.findByType(season.getId(), org.ctc.domain.model.PhaseType.REGULAR).isEmpty()) {
+                    log.debug("Skipping season {} — no REGULAR phase (Pitfall 7 fixture or pre-V4 data)", season.getName());
+                    continue;
+                }
                 String playoffSeasonSlug = resolvePlayoffSeasonSlug(season);
                 boolean hasPlayoff = playoffSeasonSlug != null;
                 generateStandings(outPath, season, activeSeasonSlug, activeSeasonName, hasPlayoff, playoffSeasonSlug, result);
@@ -177,7 +189,9 @@ public class SiteGeneratorService {
                                     String activeSeasonName, boolean hasPlayoff, String playoffSeasonSlug, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("season", season);
-        var standings = standingsService.calculateStandings(season.getId());
+        // D-23: phase-aware standings via REGULAR phase (templates stay LEAGUE-shaped — Phase 60 introduces per-group rendering)
+        var regularPhase = seasonPhaseService.findRegularPhase(season.getId());
+        var standings = standingsService.calculateStandings(regularPhase.getId(), null);
         var teamSlugMap = new java.util.HashMap<java.util.UUID, String>();
         for (var s : standings) {
             teamSlugMap.put(s.getTeam().getId(), "team/" + slugify(s.getTeam().getShortName()) + ".html");
@@ -202,7 +216,10 @@ public class SiteGeneratorService {
                                         String activeSeasonName, boolean hasPlayoff, String playoffSeasonSlug, GenerationResult result) throws IOException {
         var ctx = new Context(Locale.ENGLISH);
         ctx.setVariable("season", season);
-        var driverRanking = driverRankingService.calculateRanking(season.getId());
+        // D-23 + D-09: aggregate ranking across ALL phases of the season (REGULAR + PLAYOFF + PLACEMENT)
+        var phaseIds = seasonPhaseService.findAllPhases(season.getId()).stream()
+                .map(SeasonPhase::getId).toList();
+        var driverRanking = driverRankingService.aggregateAcrossPhases(phaseIds, season.getId());
         var driverSlugMap = new java.util.HashMap<java.util.UUID, String>();
         for (var r : driverRanking) {
             driverSlugMap.put(r.getDriver().getId(), "driver/" + slugify(r.getDriver().getPsnId()) + ".html");
@@ -254,7 +271,9 @@ public class SiteGeneratorService {
     private void generateTeamProfiles(Path outPath, Season season, String activeSeasonSlug,
                                        String activeSeasonName, boolean hasPlayoff, String playoffSeasonSlug, GenerationResult result) throws IOException {
         var teams = teamRepository.findAll();
-        var standings = standingsService.calculateStandings(season.getId());
+        // D-23: phase-aware standings (REGULAR phase combined-view)
+        var regularPhase = seasonPhaseService.findRegularPhase(season.getId());
+        var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
         // Pre-fetch all lineup entries and season drivers for the season to avoid N+1 queries
         var allLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
@@ -434,7 +453,13 @@ public class SiteGeneratorService {
         var teamsWithProfiles = new java.util.HashSet<java.util.UUID>();
         var standingsBySeasonId = new java.util.HashMap<java.util.UUID, java.util.Set<java.util.UUID>>();
         for (var season : sortedSeasons) {
-            var standings = standingsService.calculateStandings(season.getId());
+            // D-23: phase-aware standings via REGULAR phase. Skip seasons without one (Pitfall 7).
+            var regularPhaseOpt = seasonPhaseService.findByType(season.getId(), org.ctc.domain.model.PhaseType.REGULAR);
+            if (regularPhaseOpt.isEmpty()) {
+                standingsBySeasonId.put(season.getId(), java.util.Set.of());
+                continue;
+            }
+            var standings = standingsService.calculateStandings(regularPhaseOpt.get().getId(), null);
             var teamIds = standings.stream()
                     .map(s -> s.getTeam().getId())
                     .collect(java.util.stream.Collectors.toSet());
@@ -562,7 +587,14 @@ public class SiteGeneratorService {
         for (var s : standings) {
             var teamId = s.getTeam().getId();
             for (var season : sortedSeasons) {
-                var seasonStandings = standingsService.calculateStandings(season.getId());
+                // D-23: phase-aware standings via REGULAR phase when present; fallback to the
+                // legacy seasonId-bridge for pre-Phase-57 seasons without a REGULAR phase row
+                // (e.g., TestDataService-built fixtures). The bridge handles that internally.
+                var regularPhaseOpt = seasonPhaseService.findByType(season.getId(), org.ctc.domain.model.PhaseType.REGULAR);
+                @SuppressWarnings("deprecation")
+                var seasonStandings = regularPhaseOpt.isPresent()
+                        ? standingsService.calculateStandings(regularPhaseOpt.get().getId(), null)
+                        : standingsService.calculateStandings(season.getId());
                 if (seasonStandings.stream().anyMatch(st -> st.getTeam().getId().equals(teamId))) {
                     teamSlugMap.put(teamId, "season/" + slugify(season.getDisplayLabel())
                             + "/team/" + slugify(s.getTeam().getShortName()) + ".html");

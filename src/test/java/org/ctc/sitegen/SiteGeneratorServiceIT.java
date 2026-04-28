@@ -30,6 +30,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -106,7 +107,8 @@ class SiteGeneratorServiceIT {
         ms.setId(UUID.randomUUID());
         ms.setName("MS");
 
-        var season = new Season("Phase58-Test");
+        // Note: name must NOT contain "Test" — generate() filters those out as non-production seasons
+        var season = new Season("Phase58 Production Season");
         season.setId(seasonId);
         season.setYear(2026);
         season.setNumber(1);
@@ -144,11 +146,14 @@ class SiteGeneratorServiceIT {
         // when — full generate() exercises every refactored call site at least once
         sut.generate();
 
-        // then — D-23 caller-side contract: phase-aware API used
-        verify(seasonPhaseService).findRegularPhase(seasonId);
-        verify(standingsService).calculateStandings(regular.getId(), null);
-        verify(driverRankingService).aggregateAcrossPhases(anyList(), eq(seasonId));
-        // explicitly verify the legacy bridges are NOT invoked
+        // then — D-23 caller-side contract: phase-aware API used. SiteGenerator routes
+        // standings through the REGULAR phase from multiple call sites (generateStandings,
+        // generateTeamProfiles, generateTeamsOverview, generateAlltimeStandings inner loop) —
+        // we assert it was called AT LEAST ONCE per refactored surface.
+        verify(seasonPhaseService, atLeastOnce()).findRegularPhase(seasonId);
+        verify(standingsService, atLeastOnce()).calculateStandings(regular.getId(), null);
+        verify(driverRankingService, atLeastOnce()).aggregateAcrossPhases(anyList(), eq(seasonId));
+        // explicitly verify the legacy bridges are NOT invoked (proves swap happened, not just an additive call)
         verify(standingsService, never()).calculateStandings(seasonId);
         verify(driverRankingService, never()).calculateRanking(seasonId);
     }
