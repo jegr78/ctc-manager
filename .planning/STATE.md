@@ -91,6 +91,10 @@ None.
 
 ## Session Continuity
 
-**Next action:** Run `/gsd-plan-phase 56` to create the implementation plan for Phase 56 (Model & Schema Foundation).
+Last session: 2026-04-28 — resumed via `/gsd-resume-work`
+Stopped at: Phase 58, Plan 58-05 (PlayoffService) — partial TDD-RED at commit `cfd21df`. 4/6 plans shipped, 1108 tests/JaCoCo 84%.
+Resume artifacts: `.planning/HANDOFF.json` + `.planning/phases/58-service-layer/.continue-here.md`
 
-**Branch:** `master` (after v1.8 merge — feature branch deleted locally and remotely).
+**Next action:** Resume 58-05 (finish RED tests → GREEN refactor → verify → SUMMARY), then proceed to 58-06 (Wave 5 caller-side wrap-up).
+
+**Branch:** `gsd/v1.9-season-phases-groups` (working tree clean).
