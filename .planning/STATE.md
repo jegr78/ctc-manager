@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Season Phases & Groups
 status: executing
-last_updated: "2026-04-27T21:31:40.198Z"
-last_activity: 2026-04-27 -- Phase 58 execution started
+last_updated: "2026-04-28T06:19:58.770Z"
+last_activity: 2026-04-28
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 8
-  percent: 57
+  completed_plans: 10
+  percent: 71
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 58 (Service Layer) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 58
-Last activity: 2026-04-27 -- Phase 58 execution started
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-04-28
 
 ## Completed Milestones
 
@@ -58,6 +58,7 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [phase 56 discuss]: DB-level uniqueness via `UNIQUE (season_id, phase_type)` on `season_phases` (max 1× per type per season) + `UNIQUE (phase_id, team_id)` on `phase_teams`. No CHECK constraints — `@Enumerated(EnumType.STRING)` plus typed enums cover value validation.
 - [phase 56 discuss]: Existing `SeasonFormat` enum is **reused** for `SeasonPhase.format` (no rename to PhaseFormat). New top-level enums `PhaseType` (REGULAR/PLAYOFF/PLACEMENT) and `PhaseLayout` (LEAGUE/GROUPS/BRACKET) in `org.ctc.domain.model`.
 - [phase 56 discuss]: New repositories ship with default Spring Data CRUD only — no custom finders in Phase 56 (deferred to Phase 58 when services need them).
+- [Phase ?]: Bridge uses findByType (Optional) instead of findRegularPhase to avoid transaction rollback-only poisoning; legacy fallback for pre-V4 seasons
 
 ### Phase Numbering
 
