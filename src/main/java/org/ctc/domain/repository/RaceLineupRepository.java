@@ -28,4 +28,12 @@ public interface RaceLineupRepository extends JpaRepository<RaceLineup, UUID> {
 
 	@EntityGraph(attributePaths = {"driver", "team"})
 	List<RaceLineup> findByRaceMatchdaySeasonId(UUID seasonId);
+
+	/**
+	 * D-10 fallback: returns RaceLineup entries for a specific driver in a specific season.
+	 * Used by DriverRankingService.attributeTeamFromRegularOrLineup to attribute stand-in
+	 * drivers who have no REGULAR-phase PhaseTeam row.
+	 */
+	@EntityGraph(attributePaths = {"driver", "team"})
+	List<RaceLineup> findByDriverIdAndRaceMatchdaySeasonId(UUID driverId, UUID seasonId);
 }

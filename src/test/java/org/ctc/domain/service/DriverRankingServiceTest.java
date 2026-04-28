@@ -47,6 +47,8 @@ class DriverRankingServiceTest {
 	private Team tnr;
 	private Driver panicpotato;
 	private Driver levitius;
+	// Phase-aware mock infrastructure (shared by refactored calculateRanking tests)
+	private SeasonPhase regularPhase;
 
 	@BeforeEach
 	void setUp() {
@@ -61,24 +63,42 @@ class DriverRankingServiceTest {
 
 		levitius = new Driver("LEVITIUS", "LEVITIUS");
 		levitius.setId(UUID.randomUUID());
+
+		// Shared: single REGULAR phase for legacy calculateRanking tests
+		var rs = new RaceScoring("Phase58-Test-RS-Base", "20,15,10", "3,2,1", 2);
+		rs.setId(UUID.randomUUID());
+		var ms = new MatchScoring("Phase58-Test-MS-Base", 3, 1, 0);
+		ms.setId(UUID.randomUUID());
+		regularPhase = PhaseTestFixtures.regularPhase(season, rs, ms);
+	}
+
+	/**
+	 * Sets up the phase-aware mocks used by the refactored calculateRanking(seasonId) bridge.
+	 * calculateRanking now delegates to aggregateAcrossPhases via findAllPhases.
+	 */
+	private void setupSingleRegularPhase(List<RaceResult> results) {
+		when(seasonPhaseService.findAllPhases(season.getId())).thenReturn(List.of(regularPhase));
+		when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR))
+				.thenReturn(java.util.Optional.of(regularPhase));
+		when(seasonPhaseService.findById(regularPhase.getId())).thenReturn(regularPhase);
+		when(raceResultRepository.findByRaceMatchdayPhaseId(regularPhase.getId())).thenReturn(results);
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(regularPhase.getId()))
+				.thenReturn(List.of());
+		when(phaseTeamRepository.findByPhaseId(regularPhase.getId())).thenReturn(List.of());
 	}
 
 	@Test
 	void givenTwoDriversWithDifferentPoints_whenCalculateRanking_thenSortedByTotalPoints() {
 		// given
-		var sd1 = new SeasonDriver(season, panicpotato, tnr);
-		var sd2 = new SeasonDriver(season, levitius, tnr);
-
 		var race = new Race();
 		race.setId(UUID.randomUUID());
 
 		var result1 = createResult(race, panicpotato, 23, 1);
 		var result2 = createResult(race, levitius, 11, 5);
 
-		when(raceResultRepository.findByRaceMatchdaySeasonId(season.getId()))
-				.thenReturn(List.of(result1, result2));
-		when(seasonDriverRepository.findBySeasonId(season.getId()))
-				.thenReturn(List.of(sd1, sd2));
+		setupSingleRegularPhase(List.of(result1, result2));
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(any(UUID.class), any(UUID.class)))
+				.thenReturn(List.of());
 
 		// when
 		var rankings = driverRankingService.calculateRanking(season.getId());
@@ -98,8 +118,6 @@ class DriverRankingServiceTest {
 	@Test
 	void givenDriverWithMultipleRaces_whenCalculateRanking_thenPointsAccumulated() {
 		// given
-		var sd = new SeasonDriver(season, panicpotato, tnr);
-
 		var race1 = new Race();
 		race1.setId(UUID.randomUUID());
 		var race2 = new Race();
@@ -108,10 +126,9 @@ class DriverRankingServiceTest {
 		var result1 = createResult(race1, panicpotato, 23, 1);
 		var result2 = createResult(race2, panicpotato, 17, 2);
 
-		when(raceResultRepository.findByRaceMatchdaySeasonId(season.getId()))
-				.thenReturn(List.of(result1, result2));
-		when(seasonDriverRepository.findBySeasonId(season.getId()))
-				.thenReturn(List.of(sd));
+		setupSingleRegularPhase(List.of(result1, result2));
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(panicpotato.getId(), season.getId()))
+				.thenReturn(List.of());
 
 		// when
 		var rankings = driverRankingService.calculateRanking(season.getId());
@@ -127,10 +144,7 @@ class DriverRankingServiceTest {
 	@Test
 	void givenNoResults_whenCalculateRanking_thenReturnsEmptyList() {
 		// given
-		when(raceResultRepository.findByRaceMatchdaySeasonId(season.getId()))
-				.thenReturn(List.of());
-		when(seasonDriverRepository.findBySeasonId(season.getId()))
-				.thenReturn(List.of());
+		setupSingleRegularPhase(List.of());
 
 		// when
 		var rankings = driverRankingService.calculateRanking(season.getId());
@@ -140,18 +154,18 @@ class DriverRankingServiceTest {
 	}
 
 	@Test
-	void givenDriverWithSeasonDriver_whenCalculateRanking_thenTeamIncludedInRanking() {
-		// given
-		var sd = new SeasonDriver(season, panicpotato, tnr);
-
+	void givenDriverWithRaceLineup_whenCalculateRanking_thenTeamIncludedInRanking() {
+		// given — team now resolved via RaceLineup (Source of Truth per CLAUDE.md), not SeasonDriver
 		var race = new Race();
 		race.setId(UUID.randomUUID());
 		var result = createResult(race, panicpotato, 23, 1);
 
-		when(raceResultRepository.findByRaceMatchdaySeasonId(season.getId()))
-				.thenReturn(List.of(result));
-		when(seasonDriverRepository.findBySeasonId(season.getId()))
-				.thenReturn(List.of(sd));
+		var lineup = new RaceLineup(race, panicpotato, tnr);
+		lineup.setId(UUID.randomUUID());
+
+		setupSingleRegularPhase(List.of(result));
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(panicpotato.getId(), season.getId()))
+				.thenReturn(List.of(lineup));
 
 		// when
 		var rankings = driverRankingService.calculateRanking(season.getId());
@@ -163,8 +177,6 @@ class DriverRankingServiceTest {
 	@Test
 	void givenTiedPointsWithDifferentRaceCounts_whenCalculateRanking_thenFewerRacesRankedFirst() {
 		// given
-		var sd1 = new SeasonDriver(season, panicpotato, tnr);
-		var sd2 = new SeasonDriver(season, levitius, tnr);
 
 		var race1 = new Race();
 		race1.setId(UUID.randomUUID());
