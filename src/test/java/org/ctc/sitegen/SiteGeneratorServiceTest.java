@@ -77,6 +77,12 @@ class SiteGeneratorServiceTest {
     private SeasonTeamRepository seasonTeamRepository;
 
     @Autowired
+    private SeasonPhaseRepository seasonPhaseRepository;
+
+    @Autowired
+    private PhaseTeamRepository phaseTeamRepository;
+
+    @Autowired
     private org.ctc.domain.service.ScoringService scoringService;
 
     @MockitoBean
@@ -132,7 +138,18 @@ class SiteGeneratorServiceTest {
         seasonDriverRepository.save(new SeasonDriver(season, driver3, p1r));
         seasonDriverRepository.save(new SeasonDriver(season, driver4, p1r));
 
+        // Phase setup required by DriverRankingService + StandingsService (D-09 bridge delegates to findAllPhases)
+        var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regularPhase.setRaceScoring(raceScoring);
+        regularPhase.setMatchScoring(matchScoring);
+        regularPhase = seasonPhaseRepository.save(regularPhase);
+        // PhaseTeam rows required by StandingsService.calculateStandings(phaseId)
+        phaseTeamRepository.save(new PhaseTeam(regularPhase, tnr));
+        phaseTeamRepository.save(new PhaseTeam(regularPhase, p1r));
+
         var matchday = matchdayRepository.save(new Matchday(season, "Spieltag 1", 1));
+        matchday.setPhase(regularPhase);
+        matchday = matchdayRepository.save(matchday);
         var testTrack = trackRepository.save(new Track("Tsukuba " + uniqueSuffix, "Japan"));
         var testCar = carRepository.save(new Car("Mazda " + uniqueSuffix, "RX-Vision GT3"));
         var match = matchRepository.save(new Match(matchday, tnr, p1r));

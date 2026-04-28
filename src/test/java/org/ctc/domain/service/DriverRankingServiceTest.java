@@ -177,7 +177,6 @@ class DriverRankingServiceTest {
 	@Test
 	void givenTiedPointsWithDifferentRaceCounts_whenCalculateRanking_thenFewerRacesRankedFirst() {
 		// given
-
 		var race1 = new Race();
 		race1.setId(UUID.randomUUID());
 		var race2 = new Race();
@@ -189,10 +188,9 @@ class DriverRankingServiceTest {
 		var result2 = createResult(race1, levitius, 10, 3);
 		var result3 = createResult(race2, levitius, 10, 4);
 
-		when(raceResultRepository.findByRaceMatchdaySeasonId(season.getId()))
-				.thenReturn(List.of(result1, result2, result3));
-		when(seasonDriverRepository.findBySeasonId(season.getId()))
-				.thenReturn(List.of(sd1, sd2));
+		setupSingleRegularPhase(List.of(result1, result2, result3));
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(any(UUID.class), any(UUID.class)))
+				.thenReturn(List.of());
 
 		// when
 		var rankings = driverRankingService.calculateRanking(season.getId());
@@ -310,8 +308,6 @@ class DriverRankingServiceTest {
 		when(raceResultRepository.findByRaceMatchdayPhaseId(regular.getId())).thenReturn(List.of(result));
 		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(regular.getId())).thenReturn(List.of());
 		when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of());
-		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(panicpotato.getId(), season.getId()))
-				.thenReturn(List.of());
 
 		// when
 		var rankings = driverRankingService.calculateRankingForPhase(regular.getId());
@@ -341,8 +337,6 @@ class DriverRankingServiceTest {
 		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(playoff.getId()))
 				.thenReturn(List.of(result));
 		when(phaseTeamRepository.findByPhaseId(playoff.getId())).thenReturn(List.of());
-		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(panicpotato.getId(), season.getId()))
-				.thenReturn(List.of());
 
 		// when
 		var rankings = driverRankingService.calculateRankingForPhase(playoff.getId());
@@ -474,8 +468,6 @@ class DriverRankingServiceTest {
 		when(raceResultRepository.findByRaceMatchdayPhaseId(placement.getId())).thenReturn(List.of(result));
 		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(placement.getId())).thenReturn(List.of());
 		when(phaseTeamRepository.findByPhaseId(placement.getId())).thenReturn(List.of());
-		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(panicpotato.getId(), season.getId()))
-				.thenReturn(List.of());
 
 		// when
 		var rankings = driverRankingService.calculateRankingForPhase(placement.getId());
