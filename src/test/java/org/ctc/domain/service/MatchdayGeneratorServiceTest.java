@@ -35,15 +35,23 @@ class MatchdayGeneratorServiceTest {
 	private RaceScoringRepository raceScoringRepository;
 	@Autowired
 	private MatchScoringRepository matchScoringRepository;
+	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+	@Autowired
+	private SeasonPhaseGroupRepository seasonPhaseGroupRepository;
+	@Autowired
+	private PhaseTeamRepository phaseTeamRepository;
 
 	private Season season;
+	private RaceScoring raceScoring;
+	private MatchScoring matchScoring;
 
 	@BeforeEach
 	void setUp() {
 		var suffix = UUID.randomUUID().toString().substring(0, 4);
-		var raceScoring = raceScoringRepository.save(
+		raceScoring = raceScoringRepository.save(
 				new RaceScoring("Gen RS " + suffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
-		var matchScoring = matchScoringRepository.save(
+		matchScoring = matchScoringRepository.save(
 				new MatchScoring("Gen MS " + suffix, 3, 1, 0));
 
 		season = new Season("Generator Test " + suffix, 2026, 1);
@@ -332,6 +340,142 @@ class MatchdayGeneratorServiceTest {
 			assertThat(leg2.getAwayTeam().getId()).isEqualTo(match.getHomeTeam().getId());
 		}
 	}
+
+	// =========================================================================
+	// Phase/group-aware tests (D-16, SVC-04) — TDD-RED: new canonical
+	// generate(UUID phaseId, UUID groupId, ...) signature does not exist yet
+	// =========================================================================
+
+	@Test
+	void givenLeaguePhaseAndGroupId_whenGenerate_thenThrowsIllegalArgument() {
+		// given — LEAGUE layout phase + non-null groupId (invalid combination per D-16)
+		var phase = buildLeaguePhase();
+		addTeamsToPhase(phase, null, 4);
+
+		// when / then
+		assertThatThrownBy(() -> matchdayGeneratorService.generate(
+				phase.getId(), UUID.randomUUID(), 3, false))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("LEAGUE");
+	}
+
+	@Test
+	void givenGroupsLayoutAndNullGroupId_whenGenerate_thenThrowsIllegalArgument() {
+		// given — GROUPS layout phase + null groupId (invalid combination per D-16)
+		var phase = buildGroupsPhase();
+
+		// when / then
+		assertThatThrownBy(() -> matchdayGeneratorService.generate(
+				phase.getId(), null, 3, false))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("GROUPS");
+	}
+
+	@Test
+	void givenLeaguePhase_whenGenerate_thenMatchdaysHavePhaseIdAndGroupNull() {
+		// given — LEAGUE layout, groupId=null (valid)
+		var phase = buildLeaguePhase();
+		addTeamsToPhase(phase, null, 4);
+
+		// when
+		matchdayGeneratorService.generate(phase.getId(), null, 3, false);
+
+		// then — each generated matchday links to the phase and has no group
+		var matchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phase.getId());
+		assertThat(matchdays).hasSize(3);
+		for (var md : matchdays) {
+			assertThat(md.getPhase()).isNotNull();
+			assertThat(md.getPhase().getId()).isEqualTo(phase.getId());
+			assertThat(md.getGroup()).isNull();
+		}
+	}
+
+	@Test
+	void givenGroupsPhaseGroupA_whenGenerate_thenMatchdaysHavePhaseIdAndGroupId() {
+		// given — GROUPS layout, groupId non-null (valid)
+		var phase = buildGroupsPhase();
+		var groupA = phase.getGroups().get(0);
+		addTeamsToPhase(phase, groupA, 4);
+
+		// when
+		matchdayGeneratorService.generate(phase.getId(), groupA.getId(), 3, false);
+
+		// then — each generated matchday links to phase AND to groupA
+		var matchdays = matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phase.getId(), groupA.getId());
+		assertThat(matchdays).hasSize(3);
+		for (var md : matchdays) {
+			assertThat(md.getPhase()).isNotNull();
+			assertThat(md.getPhase().getId()).isEqualTo(phase.getId());
+			assertThat(md.getGroup()).isNotNull();
+			assertThat(md.getGroup().getId()).isEqualTo(groupA.getId());
+		}
+	}
+
+	@Test
+	void givenSeasonId_whenGenerate_thenDelegatesToRegularPhase() {
+		// given — a LEAGUE REGULAR phase that backs the season (via @Deprecated bridge)
+		var phase = buildLeaguePhase();
+		addTeamsToPhase(phase, null, 4);
+
+		// when — call the @Deprecated seasonId-based overload
+		matchdayGeneratorService.generate(season.getId(), 3, false);
+
+		// then — matchdays are linked to the REGULAR phase of that season
+		var matchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phase.getId());
+		assertThat(matchdays).hasSize(3);
+		for (var md : matchdays) {
+			assertThat(md.getPhase()).isNotNull();
+			assertThat(md.getPhase().getId()).isEqualTo(phase.getId());
+		}
+	}
+
+	// =========================================================================
+	// Helper factories for phase-aware tests
+	// =========================================================================
+
+	/** Creates and persists a LEAGUE-layout REGULAR phase for the shared season. */
+	private SeasonPhase buildLeaguePhase() {
+		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setFormat(SeasonFormat.LEAGUE);
+		phase.setLegs(1);
+		return seasonPhaseRepository.save(phase);
+	}
+
+	/** Creates and persists a GROUPS-layout REGULAR phase with two groups (A, B). */
+	private SeasonPhase buildGroupsPhase() {
+		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setFormat(SeasonFormat.LEAGUE);
+		phase.setLegs(1);
+		phase = seasonPhaseRepository.save(phase);
+		var groupA = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(phase, "Phase58-Test-Group-A", 0));
+		var groupB = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(phase, "Phase58-Test-Group-B", 1));
+		phase.getGroups().add(groupA);
+		phase.getGroups().add(groupB);
+		return phase;
+	}
+
+	/** Creates teams and assigns them as PhaseTeam entries for the given phase/group. */
+	private List<Team> addTeamsToPhase(SeasonPhase phase, SeasonPhaseGroup group, int count) {
+		var teams = new ArrayList<Team>();
+		var suffix = UUID.randomUUID().toString().substring(0, 4);
+		for (int i = 0; i < count; i++) {
+			var team = teamRepository.save(new Team("Phase58-Test-GT " + i + "_" + suffix,
+					"P8" + i + suffix));
+			var pt = new PhaseTeam(phase, team);
+			pt.setGroup(group);
+			phaseTeamRepository.save(pt);
+			teams.add(team);
+		}
+		return teams;
+	}
+
+	// =========================================================================
+	// Existing legacy helpers (unchanged)
+	// =========================================================================
 
 	private List<Team> addTeams(int count) {
 		var teams = new ArrayList<Team>();

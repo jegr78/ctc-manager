@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -36,15 +38,25 @@ class SwissPairingServiceTest {
 	private RaceScoringRepository raceScoringRepository;
 	@Autowired
 	private MatchScoringRepository matchScoringRepository;
+	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+	@Autowired
+	private SeasonPhaseGroupRepository seasonPhaseGroupRepository;
+	@Autowired
+	private PhaseTeamRepository phaseTeamRepository;
+	@Autowired
+	private MatchdayRepository matchdayRepository;
 
 	private Season season;
+	private RaceScoring raceScoring;
+	private MatchScoring matchScoring;
 
 	@BeforeEach
 	void setUp() {
 		var uniqueSuffix = UUID.randomUUID().toString().substring(0, 4);
-		var raceScoring = raceScoringRepository.save(
+		raceScoring = raceScoringRepository.save(
 				new RaceScoring("Swiss RS " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
-		var matchScoring = matchScoringRepository.save(
+		matchScoring = matchScoringRepository.save(
 				new MatchScoring("Swiss MS " + uniqueSuffix, 3, 1, 0));
 
 		season = new Season("Swiss Test " + uniqueSuffix, 2026, 1);
@@ -229,6 +241,163 @@ class SwissPairingServiceTest {
 			}
 		}
 	}
+
+	// =========================================================================
+	// Phase/group-aware tests (D-17, D-21, SVC-04) — TDD-RED: new canonical
+	// signatures (UUID phaseId, UUID groupId) do not exist yet
+	// =========================================================================
+
+	@Test
+	void givenSwissLeaguePhase_whenGenerateNextRound_thenPairingsCreated() {
+		// given — LEAGUE-layout SWISS phase, groupId=null (valid)
+		var phase = buildSwissLeaguePhase();
+		addTeamsToPhase(phase, null, 4);
+
+		// when
+		var matchday = swissPairingService.generateNextRound(phase.getId(), null);
+
+		// then
+		assertThat(matchday).isNotNull();
+		assertThat(matchday.getPhase()).isNotNull();
+		assertThat(matchday.getPhase().getId()).isEqualTo(phase.getId());
+		var races = raceRepository.findByMatchdayId(matchday.getId());
+		assertThat(races).hasSize(2);
+	}
+
+	@Test
+	void givenSwissGroupsPhase_whenGenerateNextRoundForGroupA_thenOnlyGroupAAdvances() {
+		// given — GROUPS-layout SWISS phase with two groups (A: 4 teams, B: 4 teams)
+		var phase = buildSwissGroupsPhase();
+		var groupA = phase.getGroups().get(0);
+		var groupB = phase.getGroups().get(1);
+		addTeamsToPhase(phase, groupA, 4);
+		addTeamsToPhase(phase, groupB, 4);
+
+		// when — generate round 1 for both groups, then round 2 only for group A
+		swissPairingService.generateNextRound(phase.getId(), groupA.getId());
+		swissPairingService.generateNextRound(phase.getId(), groupB.getId());
+		// round 2 for group A only
+		swissPairingService.generateNextRound(phase.getId(), groupA.getId());
+
+		// then — group A is at round 2, group B is at round 1
+		assertThat(swissPairingService.getCurrentRound(phase.getId(), groupA.getId())).isEqualTo(2);
+		assertThat(swissPairingService.getCurrentRound(phase.getId(), groupB.getId())).isEqualTo(1);
+	}
+
+	@Test
+	void givenGroupsPhaseWithOddTeams_whenGetByeTeamsForGroupA_thenSingleByeTeamForGroupA() {
+		// given — GROUPS-layout SWISS phase; group A has 3 teams (odd), group B has 4 teams
+		var phase = buildSwissGroupsPhase();
+		var groupA = phase.getGroups().get(0);
+		var groupB = phase.getGroups().get(1);
+		addTeamsToPhase(phase, groupA, 3); // odd → generates a bye
+		addTeamsToPhase(phase, groupB, 4);
+
+		// when — generate round 1 for group A (produces a bye)
+		swissPairingService.generateNextRound(phase.getId(), groupA.getId());
+
+		// then — group A has exactly 1 bye team; group B has no byes
+		var byeTeamsA = swissPairingService.getByeTeams(phase.getId(), groupA.getId());
+		var byeTeamsB = swissPairingService.getByeTeams(phase.getId(), groupB.getId());
+		assertThat(byeTeamsA).hasSize(1);
+		assertThat(byeTeamsB).isEmpty();
+	}
+
+	@Test
+	void givenGroupsPhase_whenGroupAAtRound2GroupBAtRound1_thenIsCurrentRoundCompleteIsPerGroup() {
+		// given — GROUPS-layout SWISS phase; 4 teams per group
+		var phase = buildSwissGroupsPhase();
+		var groupA = phase.getGroups().get(0);
+		var groupB = phase.getGroups().get(1);
+		addTeamsToPhase(phase, groupA, 4);
+		addTeamsToPhase(phase, groupB, 4);
+
+		// round 1 both groups
+		swissPairingService.generateNextRound(phase.getId(), groupA.getId());
+		swissPairingService.generateNextRound(phase.getId(), groupB.getId());
+		// round 2 only group A (group B's round 1 left with no results — still "complete"
+		// in the sense that no round-2 exists yet, so getCurrentRound=1 and isComplete=true)
+		swissPairingService.generateNextRound(phase.getId(), groupA.getId());
+
+		// then — group A is at round 2 (incomplete), group B is at round 1 (complete — no pending round)
+		assertThat(swissPairingService.getCurrentRound(phase.getId(), groupA.getId())).isEqualTo(2);
+		assertThat(swissPairingService.getCurrentRound(phase.getId(), groupB.getId())).isEqualTo(1);
+		assertThat(swissPairingService.isCurrentRoundComplete(phase.getId(), groupA.getId())).isFalse();
+		assertThat(swissPairingService.isCurrentRoundComplete(phase.getId(), groupB.getId())).isTrue();
+	}
+
+	@Test
+	void givenLeaguePhaseAndGroupId_whenGenerateNextRound_thenThrowsIllegalArgument() {
+		// given — LEAGUE-layout phase + non-null groupId (invalid per D-17)
+		var phase = buildSwissLeaguePhase();
+		addTeamsToPhase(phase, null, 4);
+
+		// when / then
+		assertThatThrownBy(() -> swissPairingService.generateNextRound(phase.getId(), UUID.randomUUID()))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("LEAGUE");
+	}
+
+	@Test
+	void givenGroupsLayoutAndNullGroupId_whenGenerateNextRound_thenThrowsIllegalArgument() {
+		// given — GROUPS-layout phase + null groupId (invalid per D-17)
+		var phase = buildSwissGroupsPhase();
+
+		// when / then
+		assertThatThrownBy(() -> swissPairingService.generateNextRound(phase.getId(), null))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("GROUPS");
+	}
+
+	// =========================================================================
+	// Helper factories for phase-aware tests
+	// =========================================================================
+
+	/** Creates and persists a LEAGUE-layout REGULAR phase with SWISS format. */
+	private SeasonPhase buildSwissLeaguePhase() {
+		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setFormat(SeasonFormat.SWISS);
+		phase.setTotalRounds(5);
+		phase.setLegs(1);
+		return seasonPhaseRepository.save(phase);
+	}
+
+	/** Creates and persists a GROUPS-layout REGULAR phase with SWISS format and two groups. */
+	private SeasonPhase buildSwissGroupsPhase() {
+		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setFormat(SeasonFormat.SWISS);
+		phase.setTotalRounds(5);
+		phase.setLegs(1);
+		phase = seasonPhaseRepository.save(phase);
+		var groupA = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(phase, "Phase58-Test-Swiss-A", 0));
+		var groupB = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(phase, "Phase58-Test-Swiss-B", 1));
+		phase.getGroups().add(groupA);
+		phase.getGroups().add(groupB);
+		return phase;
+	}
+
+	/** Creates teams and assigns them as PhaseTeam entries for the given phase/group. */
+	private List<Team> addTeamsToPhase(SeasonPhase phase, SeasonPhaseGroup group, int count) {
+		var teams = new ArrayList<Team>();
+		var suffix = UUID.randomUUID().toString().substring(0, 4);
+		for (int i = 0; i < count; i++) {
+			var team = teamRepository.save(new Team("Phase58-Test-SwT " + i + "_" + suffix,
+					"P8S" + i + suffix.substring(0, 2)));
+			var pt = new PhaseTeam(phase, team);
+			pt.setGroup(group);
+			phaseTeamRepository.save(pt);
+			teams.add(team);
+		}
+		return teams;
+	}
+
+	// =========================================================================
+	// Existing legacy helpers (unchanged)
+	// =========================================================================
 
 	private void addTeams(int count) {
 		for (int i = 0; i < count; i++) {
