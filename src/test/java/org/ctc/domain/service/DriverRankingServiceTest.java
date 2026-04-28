@@ -1,6 +1,8 @@
 package org.ctc.domain.service;
 
 import org.ctc.domain.model.*;
+import org.ctc.domain.repository.PhaseTeamRepository;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,8 +15,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,6 +30,15 @@ class DriverRankingServiceTest {
 
 	@Mock
 	private SeasonDriverRepository seasonDriverRepository;
+
+	@Mock
+	private SeasonPhaseService seasonPhaseService;
+
+	@Mock
+	private PhaseTeamRepository phaseTeamRepository;
+
+	@Mock
+	private RaceLineupRepository raceLineupRepository;
 
 	@InjectMocks
 	private DriverRankingService driverRankingService;
@@ -263,6 +277,241 @@ class DriverRankingServiceTest {
 		// then
 		// Should show parent CLR, not sub-team CLR 1
 		assertEquals(clr, rankings.get(0).getTeam());
+	}
+
+	// ---- Phase 58 D-07/D-08/D-09/D-10 new tests ----
+
+	@Test
+	void givenRegularPhase_whenCalculateRankingForPhase_thenAggregatesViaMatchdayPhaseId() {
+		// given
+		var rs = new RaceScoring("Phase58-Test-RS", "20,15,10", "3,2,1", 2);
+		rs.setId(UUID.randomUUID());
+		var ms = new MatchScoring("Phase58-Test-MS", 3, 1, 0);
+		ms.setId(UUID.randomUUID());
+		var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
+
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		var result = createResult(race, panicpotato, 23, 1);
+
+		when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
+		when(raceResultRepository.findByRaceMatchdayPhaseId(regular.getId())).thenReturn(List.of(result));
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(regular.getId())).thenReturn(List.of());
+		when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of());
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(panicpotato.getId(), season.getId()))
+				.thenReturn(List.of());
+
+		// when
+		var rankings = driverRankingService.calculateRankingForPhase(regular.getId());
+
+		// then
+		assertThat(rankings).hasSize(1);
+		assertThat(rankings.get(0).getDriver().getId()).isEqualTo(panicpotato.getId());
+		assertThat(rankings.get(0).getTotalPoints()).isEqualTo(23);
+		verify(raceResultRepository).findByRaceMatchdayPhaseId(regular.getId());
+	}
+
+	@Test
+	void givenPlayoffPhase_whenCalculateRankingForPhase_thenAggregatesViaPlayoffMatchupChain() {
+		// given
+		var rs = new RaceScoring("Phase58-Test-RS2", "20,15,10", "3,2,1", 2);
+		rs.setId(UUID.randomUUID());
+		var ms = new MatchScoring("Phase58-Test-MS2", 3, 1, 0);
+		ms.setId(UUID.randomUUID());
+		var playoff = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-Playoff", rs, ms);
+
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		var result = createResult(race, panicpotato, 20, 1);
+
+		when(seasonPhaseService.findById(playoff.getId())).thenReturn(playoff);
+		when(raceResultRepository.findByRaceMatchdayPhaseId(playoff.getId())).thenReturn(List.of());
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(playoff.getId()))
+				.thenReturn(List.of(result));
+		when(phaseTeamRepository.findByPhaseId(playoff.getId())).thenReturn(List.of());
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(panicpotato.getId(), season.getId()))
+				.thenReturn(List.of());
+
+		// when
+		var rankings = driverRankingService.calculateRankingForPhase(playoff.getId());
+
+		// then
+		assertThat(rankings).hasSize(1);
+		assertThat(rankings.get(0).getTotalPoints()).isEqualTo(20);
+		verify(raceResultRepository).findByRacePlayoffMatchupRoundPlayoffPhaseId(playoff.getId());
+	}
+
+	@Test
+	void givenMultiPhaseSeason_whenAggregateAcrossPhases_thenRegularTeamGuardsAttribution() {
+		// given — driver runs in REGULAR and PLAYOFF; season-wide ranking attributes to REGULAR team
+		var rs = new RaceScoring("Phase58-Test-RS3", "20,15,10", "3,2,1", 2);
+		rs.setId(UUID.randomUUID());
+		var ms = new MatchScoring("Phase58-Test-MS3", 3, 1, 0);
+		ms.setId(UUID.randomUUID());
+		var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
+		var playoff = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-PO", rs, ms);
+
+		var race1 = new Race(); race1.setId(UUID.randomUUID());
+		var race2 = new Race(); race2.setId(UUID.randomUUID());
+		var r1 = createResult(race1, panicpotato, 20, 1);
+		var r2 = createResult(race2, panicpotato, 15, 2);
+
+		// regular-phase lineup returns TNR as team
+		var lineup = new RaceLineup(race1, panicpotato, tnr);
+		lineup.setId(UUID.randomUUID());
+
+		when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
+		when(seasonPhaseService.findById(playoff.getId())).thenReturn(playoff);
+		when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR)).thenReturn(java.util.Optional.of(regular));
+		when(raceResultRepository.findByRaceMatchdayPhaseId(regular.getId())).thenReturn(List.of(r1));
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(regular.getId())).thenReturn(List.of());
+		when(raceResultRepository.findByRaceMatchdayPhaseId(playoff.getId())).thenReturn(List.of());
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(playoff.getId())).thenReturn(List.of(r2));
+		when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of());
+		when(phaseTeamRepository.findByPhaseId(playoff.getId())).thenReturn(List.of());
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(panicpotato.getId(), season.getId()))
+				.thenReturn(List.of(lineup));
+
+		// when
+		var rankings = driverRankingService.aggregateAcrossPhases(
+				List.of(regular.getId(), playoff.getId()), season.getId());
+
+		// then — driver appears once with merged totals (D-07) and REGULAR team (D-08 via RaceLineup)
+		assertThat(rankings).hasSize(1);
+		assertThat(rankings.get(0).getDriver().getId()).isEqualTo(panicpotato.getId());
+		assertThat(rankings.get(0).getTotalPoints()).isEqualTo(35);
+		assertThat(rankings.get(0).getTeam()).isEqualTo(tnr);
+	}
+
+	@Test
+	void givenStandInWithoutRegularPhaseTeam_whenAggregateAcrossPhases_thenRaceLineupFallback() {
+		// given — stand-in driver only in PLAYOFF, no regular-phase lineup; falls back to RaceLineup
+		var rs = new RaceScoring("Phase58-Test-RS4", "20,15,10", "3,2,1", 2);
+		rs.setId(UUID.randomUUID());
+		var ms = new MatchScoring("Phase58-Test-MS4", 3, 1, 0);
+		ms.setId(UUID.randomUUID());
+		var playoff = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-PO2", rs, ms);
+
+		var race = new Race(); race.setId(UUID.randomUUID());
+		var result = createResult(race, levitius, 15, 2);
+
+		// RaceLineup fallback returns TNR as stand-in team
+		var lineup = new RaceLineup(race, levitius, tnr);
+		lineup.setId(UUID.randomUUID());
+
+		when(seasonPhaseService.findById(playoff.getId())).thenReturn(playoff);
+		when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR)).thenReturn(java.util.Optional.empty());
+		when(raceResultRepository.findByRaceMatchdayPhaseId(playoff.getId())).thenReturn(List.of());
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(playoff.getId()))
+				.thenReturn(List.of(result));
+		when(phaseTeamRepository.findByPhaseId(playoff.getId())).thenReturn(List.of());
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(levitius.getId(), season.getId()))
+				.thenReturn(List.of(lineup));
+
+		// when
+		var rankings = driverRankingService.aggregateAcrossPhases(List.of(playoff.getId()), season.getId());
+
+		// then — team comes from RaceLineup fallback (D-10)
+		assertThat(rankings).hasSize(1);
+		assertThat(rankings.get(0).getDriver().getId()).isEqualTo(levitius.getId());
+		assertThat(rankings.get(0).getTeam()).isEqualTo(tnr);
+	}
+
+	@Test
+	void givenSeasonId_whenCalculateRanking_thenDelegatesToAggregateAcrossPhases() {
+		// given
+		var rs = new RaceScoring("Phase58-Test-RS5", "20,15,10", "3,2,1", 2);
+		rs.setId(UUID.randomUUID());
+		var ms = new MatchScoring("Phase58-Test-MS5", 3, 1, 0);
+		ms.setId(UUID.randomUUID());
+		var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
+		var playoff = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-PO3", rs, ms);
+
+		when(seasonPhaseService.findAllPhases(season.getId())).thenReturn(List.of(regular, playoff));
+		when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR)).thenReturn(java.util.Optional.of(regular));
+		when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
+		when(seasonPhaseService.findById(playoff.getId())).thenReturn(playoff);
+		when(raceResultRepository.findByRaceMatchdayPhaseId(any(UUID.class))).thenReturn(List.of());
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(any(UUID.class))).thenReturn(List.of());
+		when(phaseTeamRepository.findByPhaseId(any(UUID.class))).thenReturn(List.of());
+
+		// when
+		var result = driverRankingService.calculateRanking(season.getId());
+
+		// then — deprecated bridge delegates to aggregateAcrossPhases via findAllPhases
+		verify(seasonPhaseService).findAllPhases(season.getId());
+		assertThat(result).isNotNull();
+	}
+
+	@Test
+	void givenPlacementPhase_whenCalculateRankingForPhase_thenIncludesPlacementResults() {
+		// given — PLACEMENT phase results flow into per-phase ranking (D-07)
+		var rs = new RaceScoring("Phase58-Test-RS6", "20,15,10", "3,2,1", 2);
+		rs.setId(UUID.randomUUID());
+		var ms = new MatchScoring("Phase58-Test-MS6", 3, 1, 0);
+		ms.setId(UUID.randomUUID());
+		var placement = new SeasonPhase(season, PhaseType.PLACEMENT, PhaseLayout.LEAGUE, 20);
+		placement.setId(UUID.randomUUID());
+		placement.setRaceScoring(rs);
+		placement.setMatchScoring(ms);
+
+		var race = new Race(); race.setId(UUID.randomUUID());
+		var result = createResult(race, panicpotato, 10, 3);
+
+		when(seasonPhaseService.findById(placement.getId())).thenReturn(placement);
+		when(raceResultRepository.findByRaceMatchdayPhaseId(placement.getId())).thenReturn(List.of(result));
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(placement.getId())).thenReturn(List.of());
+		when(phaseTeamRepository.findByPhaseId(placement.getId())).thenReturn(List.of());
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(panicpotato.getId(), season.getId()))
+				.thenReturn(List.of());
+
+		// when
+		var rankings = driverRankingService.calculateRankingForPhase(placement.getId());
+
+		// then — PLACEMENT results included (D-07: all phase types count)
+		assertThat(rankings).hasSize(1);
+		assertThat(rankings.get(0).getTotalPoints()).isEqualTo(10);
+	}
+
+	@Test
+	void givenAggregateAcrossPhases_whenDriverHasResultsInBothRegularAndPlayoff_thenSinglyListedWithMergedTotalPoints() {
+		// given — same driver in REGULAR and PLAYOFF; should appear once with sum of points (D-09 merge logic)
+		var rs = new RaceScoring("Phase58-Test-RS7", "20,15,10", "3,2,1", 2);
+		rs.setId(UUID.randomUUID());
+		var ms = new MatchScoring("Phase58-Test-MS7", 3, 1, 0);
+		ms.setId(UUID.randomUUID());
+		var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
+		var playoff = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-PO4", rs, ms);
+
+		var race1 = new Race(); race1.setId(UUID.randomUUID());
+		var race2 = new Race(); race2.setId(UUID.randomUUID());
+		var r1 = createResult(race1, panicpotato, 20, 1);
+		var r2 = createResult(race2, panicpotato, 15, 2);
+		var r3 = createResult(race1, levitius, 10, 3);
+
+		when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR)).thenReturn(java.util.Optional.of(regular));
+		when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
+		when(seasonPhaseService.findById(playoff.getId())).thenReturn(playoff);
+		when(raceResultRepository.findByRaceMatchdayPhaseId(regular.getId())).thenReturn(List.of(r1, r3));
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(regular.getId())).thenReturn(List.of());
+		when(raceResultRepository.findByRaceMatchdayPhaseId(playoff.getId())).thenReturn(List.of());
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(playoff.getId())).thenReturn(List.of(r2));
+		when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of());
+		when(phaseTeamRepository.findByPhaseId(playoff.getId())).thenReturn(List.of());
+		when(raceLineupRepository.findByDriverIdAndRaceMatchdaySeasonId(any(UUID.class), any(UUID.class)))
+				.thenReturn(List.of());
+
+		// when
+		var rankings = driverRankingService.aggregateAcrossPhases(
+				List.of(regular.getId(), playoff.getId()), season.getId());
+
+		// then — panicpotato: 20+15=35 total; levitius: 10; both singly listed (not duplicated)
+		assertThat(rankings).hasSize(2);
+		var panicRanking = rankings.stream()
+				.filter(r -> r.getDriver().getId().equals(panicpotato.getId()))
+				.findFirst().orElseThrow();
+		assertThat(panicRanking.getTotalPoints()).isEqualTo(35);
+		assertThat(panicRanking.getRacesCount()).isEqualTo(2);
 	}
 
 	private RaceResult createResult(Race race, Driver driver, int totalPoints, int position) {
