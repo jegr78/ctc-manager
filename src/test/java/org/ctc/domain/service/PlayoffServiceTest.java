@@ -34,6 +34,8 @@ class PlayoffServiceTest {
 	@Autowired
 	private PlayoffSeedingService playoffSeedingService;
 	@Autowired
+	private PlayoffRepository playoffRepository;
+	@Autowired
 	private PlayoffMatchupRepository playoffMatchupRepository;
 	@Autowired
 	private PlayoffSeedRepository playoffSeedRepository;
