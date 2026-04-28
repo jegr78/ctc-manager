@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Season Phases & Groups
 status: executing
-last_updated: "2026-04-28T16:30:00.000Z"
+last_updated: "2026-04-28T17:25:00.000Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 14
-  completed_plans: 13
-  percent: 93
+  completed_phases: 3
+  total_plans: 17
+  completed_plans: 17
+  percent: 50
 ---
 
 # Project State
@@ -21,13 +21,13 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 58 — Service Layer
+**Current focus:** Phase 58 — Service Layer (complete; ready for verification)
 
 ## Current Position
 
-Phase: 58 (Service Layer) — EXECUTING
-Plan: 5 of 6
-Status: Plan 58-05 complete; ready for 58-06 (Wave 5 caller-side wrap-up)
+Phase: 58 (Service Layer) — COMPLETE (pending verification)
+Plan: 6 of 6
+Status: Plan 58-06 complete; all 6/6 plans shipped — Phase 58 SVC-01..SVC-05 closure ready for /gsd-verify
 Last activity: 2026-04-28
 
 ## Completed Milestones
@@ -94,12 +94,19 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-28 — Plan 58-05 completed inline. 5/6 plans shipped, **1117 tests / JaCoCo 86.74%**.
+Last session: 2026-04-28 — Plan 58-06 completed (Wave 5 caller-side wrap-up). 6/6 plans shipped — Phase 58 service-layer cutover complete. **1127 tests / JaCoCo 86.78%**.
 
-**Plan 58-05 commits:**
-- `95dc501` test(58-05): complete TDD-RED tests for PlayoffService + PlayoffSeedingService — Pitfall 4, D-15 Top-N, D-19 duplicate-guard
-- `dd795ab` feat(58-05): refactor PlayoffService + PlayoffSeedingService to phase-aware (D-15, D-19, D-20, Pitfall 4)
+**Plan 58-06 commits:**
 
-**Next action:** Plan 58-06 (Wave 5 caller-side wrap-up) — SeasonManagementService delete-guard (D-18 BEHAVIOR CHANGE) + auto-sync (D-25) + MatchdayService dual-API (D-26) + SiteGenerator phase-aware (D-23) + new SiteGeneratorServiceIT.
+- `4b2cb3d` test(58-06): add failing tests for D-18 delete-guard, D-25 auto-sync, D-26 dual-API, D-23 phase-aware sitegen
+- `7067f31` feat(58-06): SeasonManagementService delete-guard + REGULAR-phase auto-sync + MatchdayService dual-API + SiteGenerator phase-aware (D-18, D-25, D-26, D-23 — 2 BEHAVIOR CHANGES)
+- `fe4e5c2` docs(58-06): complete SeasonManagementService + MatchdayService + SiteGenerator phase-aware plan — SVC-01 closure
 
-**Branch:** `gsd/v1.9-season-phases-groups` (working tree clean post-commit).
+**Behavior changes shipped (must call out at PR time):**
+
+- D-18 strict-delete-guard — `SeasonManagementService.delete` now throws `BusinessRuleException` when matchdays / playoffs / phase-teams reference any phase of the season (previously: blind cascade).
+- D-25 REGULAR-phase auto-sync — `SeasonManagementService.save` now find-or-creates the REGULAR `SeasonPhase` and write-throughs format / totalRounds / legs / eventDurationMinutes / start+end dates / raceScoring / matchScoring on every save (atomic with the Season insert via single `@Transactional`).
+
+**Next action:** `/gsd-verify-work 58` (UAT validation) → then proceed to Phase 59 (Import & Test Data) or Phase 60 (Admin UI) per ROADMAP — both depend on Phase 58 and are independent of each other.
+
+**Branch:** `gsd/v1.9-season-phases-groups` (3 plan-58-06 commits ahead of last checkpoint; working tree has staged STATE.md / ROADMAP.md awaiting tracking-update commit).
