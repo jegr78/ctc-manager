@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -17,6 +18,7 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -43,6 +45,14 @@ class SeasonManagementServiceTest {
     private MatchScoringRepository matchScoringRepository;
     @Mock
     private ScoringService scoringService;
+    @Mock
+    private SeasonPhaseService seasonPhaseService;
+    @Mock
+    private MatchdayRepository matchdayRepository;
+    @Mock
+    private PhaseTeamRepository phaseTeamRepository;
+    @Mock
+    private SeasonPhaseRepository seasonPhaseRepository;
 
     @InjectMocks
     private SeasonManagementService service;
@@ -813,6 +823,182 @@ class SeasonManagementServiceTest {
             // then
             assertThat(result).isEmpty();
         }
+    }
+
+    // --- Phase 58 D-18: strict delete-guard (BEHAVIOR CHANGE) ---
+
+    @Test
+    void givenSeasonWithActiveMatchdays_whenDelete_thenThrowsBusinessRuleException() {
+        // given
+        var season = createSeason("S-Active-MDs");
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.existsByPhaseSeasonId(season.getId())).thenReturn(true);
+
+        // when / then
+        assertThatThrownBy(() -> service.delete(season.getId()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("active phases");
+        verify(seasonRepository, never()).delete(any(Season.class));
+    }
+
+    @Test
+    void givenSeasonWithActivePlayoff_whenDelete_thenThrowsBusinessRuleException() {
+        // given
+        var season = createSeason("S-Active-Playoff");
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.existsByPhaseSeasonId(season.getId())).thenReturn(false);
+        when(playoffRepository.existsByPhaseSeasonId(season.getId())).thenReturn(true);
+
+        // when / then
+        assertThatThrownBy(() -> service.delete(season.getId()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("active phases");
+        verify(seasonRepository, never()).delete(any(Season.class));
+    }
+
+    @Test
+    void givenSeasonWithActivePhaseTeams_whenDelete_thenThrowsBusinessRuleException() {
+        // given
+        var season = createSeason("S-Active-PhaseTeams");
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.existsByPhaseSeasonId(season.getId())).thenReturn(false);
+        when(playoffRepository.existsByPhaseSeasonId(season.getId())).thenReturn(false);
+        when(phaseTeamRepository.existsByPhaseSeasonId(season.getId())).thenReturn(true);
+
+        // when / then
+        assertThatThrownBy(() -> service.delete(season.getId()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("active phases");
+        verify(seasonRepository, never()).delete(any(Season.class));
+    }
+
+    @Test
+    void givenSeasonWithNoActiveContent_whenDelete_thenSucceeds() {
+        // given
+        var season = createSeason("S-Empty");
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(matchdayRepository.existsByPhaseSeasonId(season.getId())).thenReturn(false);
+        when(playoffRepository.existsByPhaseSeasonId(season.getId())).thenReturn(false);
+        when(phaseTeamRepository.existsByPhaseSeasonId(season.getId())).thenReturn(false);
+
+        // when
+        var result = service.delete(season.getId());
+
+        // then
+        assertThat(result).isEqualTo("S-Empty");
+        verify(seasonRepository).delete(season);
+    }
+
+    // --- Phase 58 D-25: REGULAR-phase auto-sync (BEHAVIOR CHANGE) ---
+
+    @Test
+    void givenSeasonSave_whenServiceSavesForm_thenRegularPhaseFieldsSynchronized() {
+        // given
+        var existing = createSeason("Existing");
+        var rs = new RaceScoring();
+        rs.setId(UUID.randomUUID());
+        rs.setName("RS");
+        var ms = new MatchScoring();
+        ms.setId(UUID.randomUUID());
+        ms.setName("MS");
+        var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
+
+        when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
+        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
+        when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(seasonPhaseService.findByType(existing.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(regular));
+
+        var startDate = LocalDate.of(2026, 1, 1);
+        var endDate = LocalDate.of(2026, 12, 31);
+
+        // when
+        service.save(existing.getId(), "Updated Name", 2026, 1, null,
+                startDate, endDate, true,
+                SeasonFormat.LEAGUE, 14, 2, 90, rs.getId(), ms.getId());
+
+        // then — REGULAR phase fields synchronized from Season form values
+        assertThat(regular.getFormat()).isEqualTo(SeasonFormat.LEAGUE);
+        assertThat(regular.getTotalRounds()).isEqualTo(14);
+        assertThat(regular.getLegs()).isEqualTo(2);
+        assertThat(regular.getEventDurationMinutes()).isEqualTo(90);
+        assertThat(regular.getStartDate()).isEqualTo(startDate);
+        assertThat(regular.getEndDate()).isEqualTo(endDate);
+        assertThat(regular.getRaceScoring()).isEqualTo(rs);
+        assertThat(regular.getMatchScoring()).isEqualTo(ms);
+        verify(seasonPhaseRepository).save(regular);
+    }
+
+    @Test
+    void givenNewSeasonSave_whenNoRegularPhaseExists_thenCreatesRegularPhaseAtomically() {
+        // given — Pitfall 7 mitigation: REGULAR phase bootstrap on new season insert
+        var rs = new RaceScoring();
+        rs.setId(UUID.randomUUID());
+        var ms = new MatchScoring();
+        ms.setId(UUID.randomUUID());
+
+        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
+        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
+        when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> {
+            Season s = inv.getArgument(0);
+            if (s.getId() == null) s.setId(UUID.randomUUID());
+            return s;
+        });
+        when(seasonPhaseService.findByType(any(UUID.class), eq(PhaseType.REGULAR)))
+                .thenReturn(Optional.empty());
+        when(seasonPhaseService.create(any(UUID.class), eq(PhaseType.REGULAR), eq(PhaseLayout.LEAGUE),
+                anyInt(), any(), any(RaceScoring.class), any(MatchScoring.class),
+                any(SeasonFormat.class), any(LocalDate.class), any(LocalDate.class),
+                any(Integer.class), anyInt(), any(Integer.class)))
+                .thenAnswer(inv -> {
+                    var season = new Season("Bootstrap");
+                    season.setId(inv.getArgument(0));
+                    return PhaseTestFixtures.regularPhase(season, rs, ms);
+                });
+
+        // when
+        service.save(null, "New Season", 2026, 1, null,
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), true,
+                SeasonFormat.LEAGUE, 10, 1, 60, rs.getId(), ms.getId());
+
+        // then — REGULAR phase creation invoked exactly once with REGULAR/LEAGUE
+        verify(seasonPhaseService).create(any(UUID.class), eq(PhaseType.REGULAR), eq(PhaseLayout.LEAGUE),
+                anyInt(), any(), eq(rs), eq(ms),
+                eq(SeasonFormat.LEAGUE), any(LocalDate.class), any(LocalDate.class),
+                eq(10), eq(1), eq(60));
+    }
+
+    @Test
+    void givenExistingSeasonSave_whenRegularPhaseExists_thenUpdatesExistingRegularPhase() {
+        // given — D-25 update path: pre-existing REGULAR phase is updated, NOT re-created
+        var existing = createSeason("Existing");
+        var rs = new RaceScoring();
+        rs.setId(UUID.randomUUID());
+        var ms = new MatchScoring();
+        ms.setId(UUID.randomUUID());
+        var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
+        regular.setTotalRounds(7); // pre-existing value
+
+        when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
+        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
+        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
+        when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(seasonPhaseService.findByType(existing.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(regular));
+
+        // when
+        service.save(existing.getId(), "Updated", 2026, 1, null,
+                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), true,
+                SeasonFormat.LEAGUE, 14, 2, 90, rs.getId(), ms.getId());
+
+        // then — phase create NOT called (existing was found); existing phase is updated and saved
+        verify(seasonPhaseService, never()).create(any(UUID.class), any(PhaseType.class), any(PhaseLayout.class),
+                anyInt(), any(), any(RaceScoring.class), any(MatchScoring.class),
+                any(SeasonFormat.class), any(LocalDate.class), any(LocalDate.class),
+                any(Integer.class), anyInt(), any(Integer.class));
+        assertThat(regular.getTotalRounds()).isEqualTo(14); // updated from form value
+        verify(seasonPhaseRepository).save(regular);
     }
 
     private Season createSeason(String name) {
