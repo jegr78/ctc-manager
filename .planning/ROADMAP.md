@@ -187,7 +187,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 - [x] 58-02-PLAN.md — StandingsService phase/group-aware refactor + nullable TeamStanding.group + MatchRepository finder (Wave 2)
 - [x] 58-03-PLAN.md — DriverRankingService per-phase + aggregateAcrossPhases + RaceLineup fallback + RaceResultRepository finders (Wave 2)
 - [x] 58-04-PLAN.md — MatchdayGeneratorService + SwissPairingService phase/group-aware + MatchdayRepository finders (Wave 3, depends on 58-02)
-- [ ] 58-05-PLAN.md — PlayoffService auto-creates PLAYOFF phase + PlayoffSeedingService Top-N from REGULAR standings (Wave 4, depends on 58-02)
+- [x] 58-05-PLAN.md — PlayoffService auto-creates PLAYOFF phase + PlayoffSeedingService Top-N from REGULAR standings (Wave 4, depends on 58-02)
 - [ ] 58-06-PLAN.md — SeasonManagementService delete-guard + auto-sync + MatchdayService dual-API + SiteGenerator phase-aware (Wave 5)
 
 ### Phase 59: Import & Test Data
@@ -305,7 +305,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 55. Admin Import UI & Transactional Execute | v1.8 | 3/3 | Complete | 2026-04-25 |
 | 56. Model & Schema Foundation | v1.9 | 5/5 | Complete   | 2026-04-26 |
 | 57. Data Migration | v1.9 | 3/3 | Complete    | 2026-04-27 |
-| 58. Service Layer | v1.9 | 4/6 | In Progress|  |
+| 58. Service Layer | v1.9 | 5/6 | In Progress|  |
 | 59. Import & Test Data | v1.9 | 0/? | Not started | - |
 | 60. Admin UI | v1.9 | 0/? | Not started | - |
 | 61. Cleanup & Quality Gate | v1.9 | 0/? | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Season Phases & Groups
 status: executing
-last_updated: "2026-04-28T07:07:31.744Z"
+last_updated: "2026-04-28T16:30:00.000Z"
 last_activity: 2026-04-28
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 14
-  completed_plans: 12
-  percent: 86
+  completed_plans: 13
+  percent: 93
 ---
 
 # Project State
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 58 (Service Layer) — EXECUTING
-Plan: 4 of 6
-Status: Ready to execute
+Plan: 5 of 6
+Status: Plan 58-05 complete; ready for 58-06 (Wave 5 caller-side wrap-up)
 Last activity: 2026-04-28
 
 ## Completed Milestones
@@ -59,6 +59,9 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [phase 56 discuss]: Existing `SeasonFormat` enum is **reused** for `SeasonPhase.format` (no rename to PhaseFormat). New top-level enums `PhaseType` (REGULAR/PLAYOFF/PLACEMENT) and `PhaseLayout` (LEAGUE/GROUPS/BRACKET) in `org.ctc.domain.model`.
 - [phase 56 discuss]: New repositories ship with default Spring Data CRUD only — no custom finders in Phase 56 (deferred to Phase 58 when services need them).
 - [Phase ?]: Bridge uses findByType (Optional) instead of findRegularPhase to avoid transaction rollback-only poisoning; legacy fallback for pre-V4 seasons
+- [Plan 58-05]: PlayoffService.createPlayoff atomically writes PLAYOFF SeasonPhase + Playoff in single @Transactional boundary (D-19, Pitfall 2 mitigation). Duplicate-playoff exception type swapped from IllegalArgumentException to BusinessRuleException for D-03 consistency.
+- [Plan 58-05]: PlayoffSeedingService.autoSeedBracket dual-flow — manual PlayoffSeed rows have priority (legacy admin workflow); D-15 REGULAR-phase Top-N is the fallback when no manual seeds exist. PhaseTeam roster on PLAYOFF phase populated as side-effect of D-15 seeding (D-20).
+- [Plan 58-05]: Pitfall 4 mitigated — PlayoffService.addRaceToMatchup writes matchday.phase=playoff.getPhase() so playoff race results attribute correctly to PLAYOFF phase in DriverRankingService.
 
 ### Phase Numbering
 
@@ -91,10 +94,12 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-28 — resumed via `/gsd-resume-work`
-Stopped at: Phase 58, Plan 58-05 (PlayoffService) — partial TDD-RED at commit `cfd21df`. 4/6 plans shipped, 1108 tests/JaCoCo 84%.
-Resume artifacts: `.planning/HANDOFF.json` + `.planning/phases/58-service-layer/.continue-here.md`
+Last session: 2026-04-28 — Plan 58-05 completed inline. 5/6 plans shipped, **1117 tests / JaCoCo 86.74%**.
 
-**Next action:** Resume 58-05 (finish RED tests → GREEN refactor → verify → SUMMARY), then proceed to 58-06 (Wave 5 caller-side wrap-up).
+**Plan 58-05 commits:**
+- `95dc501` test(58-05): complete TDD-RED tests for PlayoffService + PlayoffSeedingService — Pitfall 4, D-15 Top-N, D-19 duplicate-guard
+- `dd795ab` feat(58-05): refactor PlayoffService + PlayoffSeedingService to phase-aware (D-15, D-19, D-20, Pitfall 4)
 
-**Branch:** `gsd/v1.9-season-phases-groups` (working tree clean).
+**Next action:** Plan 58-06 (Wave 5 caller-side wrap-up) — SeasonManagementService delete-guard (D-18 BEHAVIOR CHANGE) + auto-sync (D-25) + MatchdayService dual-API (D-26) + SiteGenerator phase-aware (D-23) + new SiteGeneratorServiceIT.
+
+**Branch:** `gsd/v1.9-season-phases-groups` (working tree clean post-commit).

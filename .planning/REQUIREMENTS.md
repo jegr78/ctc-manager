@@ -34,7 +34,7 @@ Requirements for milestone v1.9. Each maps to roadmap phases.
 
 - [ ] **SVC-01**: Neuer `SeasonPhaseService` mit Phase-/Group-CRUD und Roster-Management via `PhaseTeam`
 - [x] **SVC-02**: `StandingsService.calculateStandings(...)` auf `phaseId`/`groupId` umgestellt; Combined-View-Aggregation über Sub-Gruppen
-- [ ] **SVC-03**: `PlayoffService` + `PlayoffSeedingService` operieren auf PLAYOFF-Phase statt Saison
+- [x] **SVC-03**: `PlayoffService` + `PlayoffSeedingService` operieren auf PLAYOFF-Phase statt Saison
 - [x] **SVC-04**: `MatchdayGeneratorService` + `SwissPairingService` phase-/group-aware
 - [x] **SVC-05**: `DriverRankingService` phase-/group-aware (mit Aggregation über Saison)
 
@@ -117,7 +117,7 @@ Which phases cover which requirements. Filled during roadmap creation.
 | MIGR-07 | 56 | Pending |
 | SVC-01 | 58 | Pending |
 | SVC-02 | 58 | Complete |
-| SVC-03 | 58 | Pending |
+| SVC-03 | 58 | Complete |
 | SVC-04 | 58 | Complete |
 | SVC-05 | 58 | Complete |
 | IMPORT-01 | 59 | Pending |
