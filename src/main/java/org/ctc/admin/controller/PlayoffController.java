@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.PlayoffForm;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.admin.dto.SeedForm;
 import org.ctc.admin.service.PlayoffRoundOverviewGraphicService;
@@ -80,7 +81,10 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("successMessage",
                     "Playoff created: " + playoff.getName());
             return "redirect:/admin/playoffs?seasonId=" + form.getSeasonId();
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException | BusinessRuleException e) {
+            // BusinessRuleException added Phase 58 D-19: PlayoffService.createPlayoff now throws
+            // BusinessRuleException for the duplicate-playoff case (replacing IllegalArgumentException)
+            // for D-03 consistency. Caught here to preserve the redirect-with-flash UX.
             log.warn("Error creating playoff: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/new?seasonId=" + form.getSeasonId();
