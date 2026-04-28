@@ -2,8 +2,10 @@ package org.ctc.domain.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchRepository;
+import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
@@ -22,9 +24,164 @@ public class StandingsService {
 	private final TeamRepository teamRepository;
 	private final SeasonRepository seasonRepository;
 	private final RaceRepository raceRepository;
+	private final SeasonPhaseService seasonPhaseService;
+	private final PhaseTeamRepository phaseTeamRepository;
 
+	// ---------------------------------------------------------------------------
+	// Canonical phase-aware methods (SVC-02, D-01, D-04, D-05, D-06)
+	// ---------------------------------------------------------------------------
+
+	/**
+	 * Calculates standings for the given phase and optional group.
+	 *
+	 * <p>For {@code layout=LEAGUE}: {@code groupId} must be null (ignored if provided — returns empty
+	 * list since no PhaseTeam rows match a non-null groupId for a LEAGUE phase).
+	 *
+	 * <p>For {@code layout=GROUPS} with {@code groupId=null}: returns a flat combined-view across all
+	 * sub-groups, sorted by {@code points → pointDifference → pointsFor} (D-04). Each
+	 * {@link TeamStanding#getGroup()} is set to the team's sub-group (D-05).
+	 *
+	 * <p>For {@code layout=GROUPS} with a non-null {@code groupId}: returns standings for that single
+	 * group only (D-04 per-group view).
+	 */
+	@Transactional(readOnly = true)
+	public List<TeamStanding> calculateStandings(UUID phaseId, UUID groupId) {
+		var phase = seasonPhaseService.findById(phaseId);
+		var matchScoring = phase.getMatchScoring();
+		List<Match> matches = matchRepository.findByMatchdayPhaseId(phaseId);
+
+		// Source teams from PhaseTeam, optionally filtered by groupId
+		List<PhaseTeam> rosterRows = (groupId != null)
+				? phaseTeamRepository.findByPhaseIdAndGroupId(phaseId, groupId)
+				: phaseTeamRepository.findByPhaseId(phaseId);
+
+		Map<UUID, TeamStanding> standingsMap = new HashMap<>();
+		for (PhaseTeam pt : rosterRows) {
+			var ts = new TeamStanding(pt.getTeam());
+			ts.setGroup(pt.getGroup()); // D-05: set nullable group
+			standingsMap.put(pt.getTeam().getId(), ts);
+		}
+
+		// Build succession map from the phase's season
+		Map<UUID, UUID> successionMap = phase.getSeason().buildSuccessionMap();
+
+		// If groupId given, filter matches to only those belonging to that group
+		List<Match> filteredMatches = (groupId != null)
+				? matches.stream()
+					.filter(m -> m.getMatchday().getGroup() != null
+							&& m.getMatchday().getGroup().getId().equals(groupId))
+					.toList()
+				: matches;
+
+		for (Match match : filteredMatches) {
+			processMatch(match, standingsMap, matchScoring, successionMap);
+		}
+
+		List<TeamStanding> standings = new ArrayList<>(standingsMap.values());
+		standings.removeIf(s -> s.getPlayed() == 0);
+		standings.sort(Comparator
+				.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
+				.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
+				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+
+		log.debug("Calculated standings for phase {} group {}: {} teams", phaseId, groupId, standings.size());
+		return standings;
+	}
+
+	/**
+	 * Calculates standings with Buchholz tiebreaker for the given phase and optional group.
+	 *
+	 * <p>D-06: For {@code layout=GROUPS} with a non-null {@code groupId}: Buchholz is used as the
+	 * tiebreaker (per-group Swiss pairing, opponents all within the same group).
+	 *
+	 * <p>D-06: For {@code layout=GROUPS} with {@code groupId=null} (combined-view): the {@code buchholz}
+	 * field on each {@link TeamStanding} is populated for display, but Buchholz is NOT used as a
+	 * tiebreaker — falls back to {@code points → pointDifference → pointsFor} to avoid cross-group
+	 * opposition bias.
+	 *
+	 * <p>For {@code layout=LEAGUE} (groupId always null): Buchholz is used as tiebreaker, matching
+	 * legacy behaviour.
+	 */
+	@Transactional(readOnly = true)
+	public List<TeamStanding> calculateStandingsWithBuchholz(UUID phaseId, UUID groupId) {
+		var standings = calculateStandings(phaseId, groupId);
+		if (standings.isEmpty()) return standings;
+
+		var phase = seasonPhaseService.findById(phaseId);
+		boolean isGroupsCombinedView = (phase.getLayout() == PhaseLayout.GROUPS && groupId == null);
+
+		// Populate buchholz field for display (regardless of whether it's used as tiebreaker)
+		Map<UUID, Integer> buchholzScores = calculateBuchholzScoresForPhase(phase, groupId);
+		for (var standing : standings) {
+			standing.setBuchholz(buchholzScores.getOrDefault(standing.getTeam().getId(), 0));
+		}
+
+		if (isGroupsCombinedView) {
+			// D-06: combined-view — Buchholz populated for display but NOT used as tiebreaker
+			standings.sort(Comparator
+					.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
+					.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
+					.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+			log.debug("Calculated combined-view standings with Buchholz (display-only) for phase {}: {} teams",
+					phaseId, standings.size());
+		} else {
+			// LEAGUE or per-group GROUPS: Buchholz used as tiebreaker
+			standings.sort(Comparator
+					.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
+					.thenComparing(TeamStanding::getBuchholz, Comparator.reverseOrder())
+					.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
+					.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+			log.debug("Calculated standings with Buchholz for phase {} group {}: {} teams",
+					phaseId, groupId, standings.size());
+		}
+
+		return standings;
+	}
+
+	// ---------------------------------------------------------------------------
+	// @Deprecated seasonId-overload bridges (D-01, D-03) — remove in Phase 60
+	// ---------------------------------------------------------------------------
+
+	/**
+	 * @deprecated Phase 58: use {@link #calculateStandings(UUID, UUID)}. Remove in Phase 60 alongside UI cutover.
+	 *
+	 * <p>Backward-compat bridge: delegates to the canonical phase-aware method via the REGULAR phase.
+	 * Falls back to the legacy season-based path (via {@code seasonRepository}) if no REGULAR phase
+	 * exists for the season — this covers seasons created before Phase 57 data migration ran
+	 * (e.g., test data created at runtime in integration tests that bypass Flyway's V4 migration).
+	 * Uses {@code findByType} (returns Optional) to avoid marking the transaction rollback-only.
+	 */
+	@Deprecated
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateStandings(UUID seasonId) {
+		var regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
+		if (regularPhaseOpt.isPresent()) {
+			return calculateStandings(regularPhaseOpt.get().getId(), null);
+		}
+		// Pre-Phase-57 season (no REGULAR phase row) — fall back to legacy season-level query
+		log.debug("No REGULAR phase for season {} — falling back to legacy season-level standings", seasonId);
+		return calculateStandingsLegacy(seasonId);
+	}
+
+	/**
+	 * @deprecated Phase 58: use {@link #calculateStandingsWithBuchholz(UUID, UUID)}. Remove in Phase 60 alongside UI cutover.
+	 */
+	@Deprecated
+	@Transactional(readOnly = true)
+	public List<TeamStanding> calculateStandingsWithBuchholz(UUID seasonId) {
+		var regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
+		if (regularPhaseOpt.isPresent()) {
+			return calculateStandingsWithBuchholz(regularPhaseOpt.get().getId(), null);
+		}
+		log.debug("No REGULAR phase for season {} — falling back to legacy season-level Buchholz standings", seasonId);
+		return calculateStandingsWithBuchholzLegacy(seasonId);
+	}
+
+	// Legacy season-level implementations — used by the @Deprecated bridge fallback path
+	// for seasons without a REGULAR SeasonPhase row (pre-Phase-57 test data).
+	// Remove in Phase 60 alongside the @Deprecated overloads.
+
+	private List<TeamStanding> calculateStandingsLegacy(UUID seasonId) {
 		var season = seasonRepository.findById(seasonId).orElse(null);
 		if (season == null) return List.of();
 
@@ -36,7 +193,6 @@ public class StandingsService {
 		for (Team team : season.getActiveTeams()) {
 			standingsMap.put(team.getId(), new TeamStanding(team));
 		}
-
 		for (Match match : matches) {
 			processMatch(match, standingsMap, matchScoring, successionMap);
 		}
@@ -48,13 +204,12 @@ public class StandingsService {
 				.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
 				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
 
-		log.debug("Calculated standings for season {}: {} teams", seasonId, standings.size());
+		log.debug("Calculated standings (legacy) for season {}: {} teams", seasonId, standings.size());
 		return standings;
 	}
 
-	@Transactional(readOnly = true)
-	public List<TeamStanding> calculateStandingsWithBuchholz(UUID seasonId) {
-		var standings = calculateStandings(seasonId);
+	private List<TeamStanding> calculateStandingsWithBuchholzLegacy(UUID seasonId) {
+		var standings = calculateStandingsLegacy(seasonId);
 		if (standings.isEmpty()) return standings;
 
 		Map<UUID, Integer> buchholzScores = calculateBuchholzScores(seasonId);
@@ -68,9 +223,13 @@ public class StandingsService {
 				.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
 				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
 
-		log.debug("Calculated standings with Buchholz for season {}: {} teams", seasonId, standings.size());
+		log.debug("Calculated standings with Buchholz (legacy) for season {}: {} teams", seasonId, standings.size());
 		return standings;
 	}
+
+	// ---------------------------------------------------------------------------
+	// Alltime aggregation (unchanged public API — D-09 structurally stable)
+	// ---------------------------------------------------------------------------
 
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateAlltimeStandings() {
@@ -107,6 +266,10 @@ public class StandingsService {
 		return result;
 	}
 
+	// ---------------------------------------------------------------------------
+	// Private helpers
+	// ---------------------------------------------------------------------------
+
 	private Map<UUID, Integer> calculateBuchholzScores(UUID seasonId) {
 		var season = seasonRepository.findById(seasonId).orElse(null);
 		if (season == null) return Map.of();
@@ -139,6 +302,20 @@ public class StandingsService {
 		}
 
 		return buchholz;
+	}
+
+	/**
+	 * Calculates Buchholz scores for a phase-aware context.
+	 * For LEAGUE phases or per-group GROUPS phases, delegates to the season-level Buchholz
+	 * using the phase's parent season (since the existing raceRepository finder is season-scoped).
+	 * For GROUPS combined-view (groupId=null), calculates from the phase's season as well
+	 * (Buchholz is display-only in combined-view per D-06).
+	 */
+	private Map<UUID, Integer> calculateBuchholzScoresForPhase(SeasonPhase phase, UUID groupId) {
+		// Delegate to season-level calculation — the raceRepository finder is season-scoped.
+		// This is safe: for GROUPS combined-view, Buchholz is display-only (D-06).
+		// For LEAGUE and per-group, the season-level calculation is equivalent.
+		return calculateBuchholzScores(phase.getSeason().getId());
 	}
 
 	private void processMatch(Match match, Map<UUID, TeamStanding> standingsMap,
@@ -201,6 +378,10 @@ public class StandingsService {
 		return successionMap.getOrDefault(teamId, teamId);
 	}
 
+	// ---------------------------------------------------------------------------
+	// Inner class TeamStanding (D-05: nullable group field added)
+	// ---------------------------------------------------------------------------
+
 	public static class TeamStanding {
 		private final Team team;
 		private int wins;
@@ -210,6 +391,7 @@ public class StandingsService {
 		private int pointsFor;
 		private int pointsAgainst;
 		private int buchholz;
+		private SeasonPhaseGroup group; // D-05: nullable — null for LEAGUE, set for GROUPS
 
 		public TeamStanding(Team team) {
 			this.team = team;
@@ -294,6 +476,16 @@ public class StandingsService {
 
 		public void setBuchholz(int buchholz) {
 			this.buchholz = buchholz;
+		}
+
+		/** D-05: nullable — null for LEAGUE-layout phases, set to team's sub-group for GROUPS-layout. */
+		public SeasonPhaseGroup getGroup() {
+			return group;
+		}
+
+		/** D-05: set by StandingsService when GROUPS-layout; leave null for LEAGUE. */
+		public void setGroup(SeasonPhaseGroup group) {
+			this.group = group;
 		}
 
 		public String getMatchRecord() {

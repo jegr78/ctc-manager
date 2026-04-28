@@ -17,13 +17,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
+// LENIENT: existing tests stub seasonRepository.findById which is no longer invoked by the
+// @Deprecated calculateStandings(UUID seasonId) bridge (now delegates to seasonPhaseService).
+// UnnecessaryStubbingException would break regression tests. Lenient mode preserves all
+// existing test logic while allowing the new phase-aware tests to work alongside.
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class StandingsServiceTest {
 
     @Mock
@@ -48,6 +59,7 @@ class StandingsServiceTest {
     private RaceScoring raceScoring;
     private MatchScoring matchScoring;
     private Season season;
+    private SeasonPhase regularPhase; // bridge target for legacy seasonId-overload tests
     private Team tnr;
     private Team p1r;
     private Team clr;
@@ -70,6 +82,99 @@ class StandingsServiceTest {
 
         clr = new Team("Community League Racing", "CLR");
         clr.setId(UUID.randomUUID());
+
+        // Bridge setup for @Deprecated calculateStandings(UUID seasonId) — routes through
+        // seasonPhaseService.findRegularPhase → canonical calculateStandings(phaseId, null).
+        // Uses a seasonId→phaseId cache so each season gets a consistent phaseId.
+        // Lenient mode (@MockitoSettings LENIENT) covers unused seasonRepository.findById stubs
+        // from the 22 legacy tests that no longer trigger that code path.
+        //
+        // IMPORTANT: phases are built dynamically (not cached by value) so that per-test changes
+        // to season.setMatchScoring/setRaceScoring are reflected when findById is called.
+        java.util.Map<UUID, UUID> seasonToPhaseId = new java.util.HashMap<>();
+        regularPhase = PhaseTestFixtures.regularPhase(season, raceScoring, matchScoring);
+        seasonToPhaseId.put(season.getId(), regularPhase.getId());
+
+        // findByType(seasonId, REGULAR): look up or assign a phaseId for the seasonId, then build
+        // a fresh phase from the Season's *current* scoring (capturing per-test overrides).
+        // The @Deprecated bridge calls findByType (returns Optional) to avoid tx rollback-only.
+        lenient().when(seasonPhaseService.findByType(any(UUID.class), any())).thenAnswer(inv -> {
+            UUID sid = inv.getArgument(0);
+            // Look up the Season object via seasonRepository (mocked per-test)
+            var seasonOpt = seasonRepository.findById(sid);
+            if (seasonOpt.isPresent()) {
+                var s = seasonOpt.get();
+                UUID pid = seasonToPhaseId.computeIfAbsent(sid, id -> UUID.randomUUID());
+                var phase = PhaseTestFixtures.regularPhase(s, s.getRaceScoring(), s.getMatchScoring());
+                phase.setId(pid);
+                return Optional.of(phase);
+            }
+            // Primary season (teams added to season before when() is set up per-test):
+            if (sid.equals(season.getId())) {
+                var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+                phase.setId(regularPhase.getId());
+                return Optional.of(phase);
+            }
+            return Optional.empty();
+        });
+
+        // findById: build a fresh phase from the *current* season state to pick up scoring overrides
+        lenient().when(seasonPhaseService.findById(any(UUID.class))).thenAnswer(inv -> {
+            UUID pid = inv.getArgument(0);
+            // Find which seasonId maps to this phaseId
+            for (var entry : seasonToPhaseId.entrySet()) {
+                if (entry.getValue().equals(pid)) {
+                    UUID sid = entry.getKey();
+                    var seasonOpt = seasonRepository.findById(sid);
+                    if (seasonOpt.isPresent()) {
+                        var s = seasonOpt.get();
+                        var phase = PhaseTestFixtures.regularPhase(s, s.getRaceScoring(), s.getMatchScoring());
+                        phase.setId(pid);
+                        return phase;
+                    }
+                    if (sid.equals(season.getId())) {
+                        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+                        phase.setId(pid);
+                        return phase;
+                    }
+                }
+            }
+            return null; // not found — caller should have set up their own stub
+        });
+
+        // Team roster: phaseTeamRepository.findByPhaseId → derive from the season's active teams
+        lenient().when(phaseTeamRepository.findByPhaseId(any(UUID.class))).thenAnswer(inv -> {
+            UUID pid = inv.getArgument(0);
+            for (var entry : seasonToPhaseId.entrySet()) {
+                if (entry.getValue().equals(pid)) {
+                    UUID sid = entry.getKey();
+                    var seasonOpt = seasonRepository.findById(sid);
+                    Season targetSeason = seasonOpt.orElse(sid.equals(season.getId()) ? season : null);
+                    if (targetSeason != null) {
+                        final Season ts = targetSeason;
+                        return ts.getActiveTeams().stream()
+                                .map(t -> {
+                                    var ph = PhaseTestFixtures.regularPhase(ts, ts.getRaceScoring(), ts.getMatchScoring());
+                                    ph.setId(pid);
+                                    return PhaseTestFixtures.assignTeam(ph, t, null);
+                                })
+                                .collect(Collectors.toList());
+                    }
+                }
+            }
+            return java.util.List.of();
+        });
+
+        // Matches: redirect findByMatchdayPhaseId → findByMatchdaySeasonId via the cache
+        lenient().when(matchRepository.findByMatchdayPhaseId(any(UUID.class))).thenAnswer(inv -> {
+            UUID pid = inv.getArgument(0);
+            for (var entry : seasonToPhaseId.entrySet()) {
+                if (entry.getValue().equals(pid)) {
+                    return matchRepository.findByMatchdaySeasonId(entry.getKey());
+                }
+            }
+            return java.util.List.of();
+        });
     }
 
     @Nested
@@ -829,9 +934,10 @@ class StandingsServiceTest {
             // given
             var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
             var ms = new MatchScoring("MS", 3, 1, 0);
-            var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
+            SeasonPhase regular = PhaseTestFixtures.regularPhase(season, rs, ms);
 
-            when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
+            // The @Deprecated bridge uses findByType (Optional) to avoid tx rollback-only (D-01).
+            when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR)).thenReturn(Optional.of(regular));
             when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
             when(matchRepository.findByMatchdayPhaseId(regular.getId())).thenReturn(List.of());
             when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of());
@@ -839,8 +945,8 @@ class StandingsServiceTest {
             // when — @Deprecated bridge (D-01)
             var result = standingsService.calculateStandings(season.getId()); // seasonId-overload
 
-            // then — delegates to findRegularPhase once, then to canonical (D-02)
-            verify(seasonPhaseService).findRegularPhase(season.getId());
+            // then — bridge resolves REGULAR phase via findByType, then delegates to canonical (D-02)
+            verify(seasonPhaseService).findByType(season.getId(), PhaseType.REGULAR);
             verify(matchRepository).findByMatchdayPhaseId(regular.getId());
             assertThat(result).isEmpty();
         }

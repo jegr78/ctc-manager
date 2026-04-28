@@ -15,6 +15,9 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam", "matchday"})
 	List<Match> findByMatchdaySeasonId(UUID seasonId);
 
+	@EntityGraph(attributePaths = {"homeTeam", "awayTeam", "matchday"})
+	List<Match> findByMatchdayPhaseId(UUID phaseId); // D-22: phase-aware finder for StandingsService canonical path
+
 	boolean existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
 
 	java.util.Optional<Match> findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
