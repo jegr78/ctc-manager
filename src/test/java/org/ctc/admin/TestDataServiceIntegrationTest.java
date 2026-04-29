@@ -1,8 +1,16 @@
 package org.ctc.admin;
 
+import org.ctc.domain.model.PhaseLayout;
+import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonFormat;
-import org.ctc.domain.repository.*;
+import org.ctc.domain.model.SeasonPhaseGroup;
+import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.MatchRepository;
+import org.ctc.domain.repository.PhaseTeamRepository;
+import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.RaceResultRepository;
+import org.ctc.domain.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,6 +43,9 @@ class TestDataServiceIntegrationTest {
 	@Autowired
 	private RaceRepository raceRepository;
 
+	@Autowired
+	private PhaseTeamRepository phaseTeamRepository;
+
 	// --- Helper methods ---
 
 	private Season findSeason(int year, String name) {
@@ -51,25 +62,7 @@ class TestDataServiceIntegrationTest {
 						"Season not found: year=" + year + " number=" + number));
 	}
 
-	// --- Task 1 Phase 23: Season structure tests ---
-
-	@Test
-	void givenDevSeed_whenStarted_thenS1GroupAHasFormatRoundRobin() {
-		// given
-		var season = findSeason(2023, "Group A");
-
-		// then
-		assertThat(season.getFormat()).isEqualTo(SeasonFormat.ROUND_ROBIN);
-	}
-
-	@Test
-	void givenDevSeed_whenStarted_thenS1GroupBHasFormatRoundRobin() {
-		// given
-		var season = findSeason(2023, "Group B");
-
-		// then
-		assertThat(season.getFormat()).isEqualTo(SeasonFormat.ROUND_ROBIN);
-	}
+	// --- Season structure tests ---
 
 	@Test
 	void givenDevSeed_whenStarted_thenS2HasFormatSwiss() {
@@ -90,24 +83,6 @@ class TestDataServiceIntegrationTest {
 	}
 
 	@Test
-	void givenDevSeed_whenStarted_thenS1GroupAHasSixTeams() {
-		// given
-		var season = findSeason(2023, "Group A");
-
-		// then
-		assertThat(season.getSeasonTeams()).hasSize(6);
-	}
-
-	@Test
-	void givenDevSeed_whenStarted_thenS1GroupBHasSixTeams() {
-		// given
-		var season = findSeason(2023, "Group B");
-
-		// then
-		assertThat(season.getSeasonTeams()).hasSize(6);
-	}
-
-	@Test
 	void givenDevSeed_whenStarted_thenS4HasFourteenMatchTeams() {
 		// given
 		var season = findSeason(2026, 4);
@@ -125,24 +100,16 @@ class TestDataServiceIntegrationTest {
 	}
 
 	@Test
-	void givenDevSeed_whenStarted_thenS1GroupsContainSubTeams() {
+	void givenDevSeed_whenStarted_thenConsolidated2023ContainsSubTeams() {
 		// given
-		var groupA = findSeason(2023, "Group A");
-		var groupB = findSeason(2023, "Group B");
-
-		// then - at least one sub-team in each group
-		var groupATeams = groupA.getSeasonTeams().stream()
-				.map(st -> st.getTeam())
-				.toList();
-		assertThat(groupATeams).anyMatch(t -> t.getParentTeam() != null);
-
-		var groupBTeams = groupB.getSeasonTeams().stream()
-				.map(st -> st.getTeam())
-				.toList();
-		assertThat(groupBTeams).anyMatch(t -> t.getParentTeam() != null);
+		var season = findSeason(2023, 1);
+		// then — at least one sub-team present in the consolidated roster
+		var teams = season.getSeasonTeams().stream()
+				.map(st -> st.getTeam()).toList();
+		assertThat(teams).anyMatch(t -> t.getParentTeam() != null);
 	}
 
-	// --- Phase 23 Plan 02: Matchday and result tests ---
+	// --- Matchday and result tests ---
 
 	@Test
 	void givenDevSeed_whenStarted_thenLeagueSeasonHasFiveMatchdays() {
@@ -175,33 +142,47 @@ class TestDataServiceIntegrationTest {
 	}
 
 	@Test
-	void givenDevSeed_whenStarted_thenRoundRobinGroupAHasThreeMatchdays() {
+	void givenDevSeed_whenStarted_thenConsolidated2023HasSixMatchdays() {
 		// given
-		var season = findSeason(2023, "Group A");
-
-		// when
+		var season = findSeason(2023, 1);
+		// when — 3 matchdays per group × 2 groups (Group A + Group B)
 		var matchdays = matchdayRepository.findAll().stream()
 				.filter(md -> md.getSeason().getId().equals(season.getId()))
-				.filter(md -> md.getLabel().matches("Matchday \\d+"))
+				.filter(md -> md.getLabel().contains("Matchday"))
 				.count();
-
 		// then
-		assertThat(matchdays).isEqualTo(3);
+		assertThat(matchdays).isEqualTo(6);
 	}
 
 	@Test
-	void givenDevSeed_whenStarted_thenRoundRobinGroupBHasThreeMatchdays() {
+	void givenDevSeed_whenStarted_thenConsolidated2023MatchdaysSplitEvenlyByGroup() {
 		// given
-		var season = findSeason(2023, "Group B");
-
+		var season = findSeason(2023, 1);
 		// when
-		var matchdays = matchdayRepository.findAll().stream()
+		var matchdaysByGroup = matchdayRepository.findAll().stream()
 				.filter(md -> md.getSeason().getId().equals(season.getId()))
-				.filter(md -> md.getLabel().matches("Matchday \\d+"))
-				.count();
-
+				.filter(md -> md.getLabel().contains("Matchday"))
+				.filter(md -> md.getGroup() != null)
+				.collect(java.util.stream.Collectors.groupingBy(
+						md -> md.getGroup().getName(), java.util.stream.Collectors.counting()));
 		// then
-		assertThat(matchdays).isEqualTo(3);
+		assertThat(matchdaysByGroup).containsEntry("Group A", 3L)
+				.containsEntry("Group B", 3L);
+	}
+
+	@Test
+	void givenDevSeed_whenStarted_thenConsolidated2023MatchdaySortIndicesDoNotCollide() {
+		// given — D-13 + W-1: Group A uses sortIndex 1..3, Group B uses 4..6 (no collision)
+		var season = findSeason(2023, 1);
+		// when
+		var sortIndices = matchdayRepository.findAll().stream()
+				.filter(md -> md.getSeason().getId().equals(season.getId()))
+				.filter(md -> md.getLabel().contains("Matchday"))
+				.map(md -> md.getSortIndex())
+				.sorted()
+				.toList();
+		// then — exactly 6 distinct values [1, 2, 3, 4, 5, 6]
+		assertThat(sortIndices).containsExactly(1, 2, 3, 4, 5, 6);
 	}
 
 	@Test
@@ -247,14 +228,14 @@ class TestDataServiceIntegrationTest {
 
 	@Test
 	void givenDevSeed_whenStarted_thenAllMatchesHaveNonNullScores() {
-		// given — filter for seed-created matchdays only (label "Matchday N")
+		// given — filter for seed-created matchdays only (label "Matchday N" or group-prefixed)
 		var devSeasonIds = seasonRepository.findAll().stream()
 				.filter(s -> s.getNumber() < 90) // exclude test seasons
 				.map(s -> s.getId())
 				.collect(Collectors.toSet());
 		var seedMatchdayIds = matchdayRepository.findAll().stream()
 				.filter(md -> devSeasonIds.contains(md.getSeason().getId()))
-				.filter(md -> md.getLabel().matches("Matchday \\d+"))
+				.filter(md -> md.getLabel().contains("Matchday"))
 				.map(md -> md.getId())
 				.collect(Collectors.toSet());
 
@@ -268,7 +249,70 @@ class TestDataServiceIntegrationTest {
 		assertThat(devMatches).allMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
 	}
 
-	// --- Phase 26: Demo logo classpath resource tests ---
+	// --- Phase 59: Consolidated 2023 GROUPS regression tests (D-23) ---
+
+	@Test
+	void givenDevSeed_whenStarted_thenConsolidated2023HasOneRegularGroupsPhase() {
+		// given
+		var season = findSeason(2023, 1);
+		// when
+		var regularPhases = season.getPhases().stream()
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR).toList();
+		// then
+		assertThat(regularPhases).hasSize(1);
+		assertThat(regularPhases.get(0).getLayout()).isEqualTo(PhaseLayout.GROUPS);
+	}
+
+	@Test
+	void givenDevSeed_whenStarted_thenConsolidated2023HasTwoNamedGroupsInOrder() {
+		// given
+		var season = findSeason(2023, 1);
+		var regular = season.getPhases().stream()
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR)
+				.findFirst().orElseThrow();
+		// when
+		var groupNames = regular.getGroups().stream()
+				.sorted(java.util.Comparator.comparingInt(SeasonPhaseGroup::getSortIndex))
+				.map(SeasonPhaseGroup::getName).toList();
+		// then
+		assertThat(groupNames).containsExactly("Group A", "Group B");
+	}
+
+	@Test
+	void givenDevSeed_whenStarted_thenConsolidated2023HasTwelvePhaseTeamsSplitSixSix() {
+		// given
+		var season = findSeason(2023, 1);
+		var regular = season.getPhases().stream()
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR)
+				.findFirst().orElseThrow();
+		// when
+		var phaseTeams = phaseTeamRepository.findByPhaseId(regular.getId());
+		var groupCounts = phaseTeams.stream()
+				.filter(pt -> pt.getGroup() != null)
+				.collect(java.util.stream.Collectors.groupingBy(
+						pt -> pt.getGroup().getName(), java.util.stream.Collectors.counting()));
+		// then
+		assertThat(phaseTeams).hasSize(12);
+		assertThat(groupCounts).containsEntry("Group A", 6L).containsEntry("Group B", 6L);
+	}
+
+	@Test
+	void givenDevSeed_whenStarted_thenLeagueSeasonsHavePhaseTeamsWithNullGroup() {
+		// given — 2026 (S4) has LEAGUE layout
+		var season = findSeason(2026, 4);
+		var regular = season.getPhases().stream()
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR)
+				.findFirst().orElseThrow();
+		// when
+		var phaseTeams = phaseTeamRepository.findByPhaseId(regular.getId());
+		// then
+		assertThat(regular.getLayout()).isEqualTo(PhaseLayout.LEAGUE);
+		assertThat(phaseTeams).isNotEmpty();
+		assertThat(phaseTeams).allMatch(pt -> pt.getGroup() == null);
+		assertThat(phaseTeams.size()).isEqualTo(season.getSeasonTeams().size());
+	}
+
+	// --- Demo logo classpath resource tests ---
 
 	@Test
 	void givenFictiveTeamShortNames_whenLoadingClasspathResource_thenAllTenLogosExist() {
