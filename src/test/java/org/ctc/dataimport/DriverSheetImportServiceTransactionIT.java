@@ -121,6 +121,19 @@ class DriverSheetImportServiceTransactionIT {
     }
 
     @Test
+    void givenTestClass_whenCheckingClassAnnotations_thenIsNotTransactional() {
+        // WR-04: self-protection invariant. The entire CI-protection value of this IT
+        // depends on the absence of @Transactional at the class level — any rollback-only
+        // poisoning at the AOP boundary must surface, not be auto-rolled-back. A future
+        // contributor encountering "flaky cleanup" might reach for @Transactional as the
+        // standard fix; this test fails loudly if that ever happens. See class-level Javadoc.
+        assertThat(DriverSheetImportServiceTransactionIT.class
+                .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class))
+                .as("This IT must NOT carry @Transactional — see class-level Javadoc")
+                .isFalse();
+    }
+
+    @Test
     void givenAmbiguousLegacyTab_whenPreview_thenReturnsTabWithAmbiguousReasonWithoutRollbackException() throws IOException {
         // given — two seasons with year=FRESH_YEAR exist; a legacy '<year>' tab
         //         will hit findUnique(FRESH_YEAR) and trigger BusinessRuleException
