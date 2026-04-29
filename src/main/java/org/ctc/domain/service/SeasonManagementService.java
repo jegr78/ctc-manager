@@ -93,6 +93,45 @@ public class SeasonManagementService {
                 .findFirst();
     }
 
+    /**
+     * Resolves a unique season for the given (year, number) tuple. Wraps
+     * {@link SeasonRepository#findByYearAndNumber} (which returns {@link List}
+     * because no DB UNIQUE constraint exists — see Phase 59 D-17 / D-19) and
+     * enforces the contract:
+     * <ul>
+     *   <li>0 hits → {@link Optional#empty()}</li>
+     *   <li>1 hit  → {@link Optional#of(Season)}</li>
+     *   <li>&gt;1 hits → {@link BusinessRuleException} (D-02)</li>
+     * </ul>
+     */
+    @Transactional(readOnly = true)
+    public Optional<Season> findUnique(int year, int number) {
+        var hits = seasonRepository.findByYearAndNumber(year, number);
+        if (hits.size() > 1) {
+            throw new BusinessRuleException(
+                    "Multiple seasons exist for (" + year + ", " + number
+                    + ") — consolidate them first or rename sheet tab to disambiguate");
+        }
+        return hits.stream().findFirst();
+    }
+
+    /**
+     * Legacy single-arg overload: resolves a unique season by year alone.
+     * Used by the driver-sheet importer when a tab matches the legacy
+     * {@code ^\d{4}$} pattern (Phase 59 D-01). Same 0/1/many contract as
+     * {@link #findUnique(int, int)}.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Season> findUnique(int year) {
+        var hits = seasonRepository.findByYear(year);
+        if (hits.size() > 1) {
+            throw new BusinessRuleException(
+                    "Multiple seasons exist for year " + year
+                    + " — consolidate them first or rename sheet tab to disambiguate");
+        }
+        return hits.stream().findFirst();
+    }
+
     @Transactional(readOnly = true)
     public Optional<Season> findByIdOptional(UUID id) {
         return seasonRepository.findById(id);

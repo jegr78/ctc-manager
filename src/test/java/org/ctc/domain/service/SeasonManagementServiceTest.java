@@ -1022,6 +1022,76 @@ class SeasonManagementServiceTest {
         verify(seasonPhaseRepository).save(regular);
     }
 
+    // --- Phase 59 D-02 / D-18: findUnique service-wrapper ---
+
+    @Test
+    void givenNoSeason_whenFindUniqueByYearAndNumber_thenReturnsEmpty() {
+        // given
+        when(seasonRepository.findByYearAndNumber(2025, 2)).thenReturn(List.of());
+        // when
+        Optional<Season> result = service.findUnique(2025, 2);
+        // then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void givenExactlyOneSeason_whenFindUniqueByYearAndNumber_thenReturnsOptionalOf() {
+        // given
+        var season = makeSeason("Phase59-Test-S2025-2", 2025, 2);
+        when(seasonRepository.findByYearAndNumber(2025, 2)).thenReturn(List.of(season));
+        // when
+        Optional<Season> result = service.findUnique(2025, 2);
+        // then
+        assertThat(result).contains(season);
+    }
+
+    @Test
+    void givenMultipleSeasons_whenFindUniqueByYearAndNumber_thenThrowsBusinessRule() {
+        // given
+        when(seasonRepository.findByYearAndNumber(2023, 1))
+                .thenReturn(List.of(
+                        makeSeason("Phase59-Test-S2023-A", 2023, 1),
+                        makeSeason("Phase59-Test-S2023-B", 2023, 1)));
+        // when / then
+        assertThatThrownBy(() -> service.findUnique(2023, 1))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Multiple seasons exist for (2023, 1)");
+    }
+
+    @Test
+    void givenNoSeason_whenFindUniqueByYear_thenReturnsEmpty() {
+        // given
+        when(seasonRepository.findByYear(2025)).thenReturn(List.of());
+        // when
+        Optional<Season> result = service.findUnique(2025);
+        // then
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void givenExactlyOneSeasonForYear_whenFindUniqueByYear_thenReturnsOptionalOf() {
+        // given
+        var season = makeSeason("Phase59-Test-S2025-1", 2025, 1);
+        when(seasonRepository.findByYear(2025)).thenReturn(List.of(season));
+        // when
+        Optional<Season> result = service.findUnique(2025);
+        // then
+        assertThat(result).contains(season);
+    }
+
+    @Test
+    void givenMultipleSeasonsForYear_whenFindUniqueByYear_thenThrowsBusinessRule() {
+        // given
+        when(seasonRepository.findByYear(2023))
+                .thenReturn(List.of(
+                        makeSeason("Phase59-Test-S2023-A", 2023, 1),
+                        makeSeason("Phase59-Test-S2023-B", 2023, 2)));
+        // when / then
+        assertThatThrownBy(() -> service.findUnique(2023))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Multiple seasons exist for year 2023");
+    }
+
     private Season createSeason(String name) {
         var season = new Season(name);
         season.setId(UUID.randomUUID());
@@ -1032,5 +1102,14 @@ class SeasonManagementServiceTest {
         var team = new Team(name, shortName);
         team.setId(UUID.randomUUID());
         return team;
+    }
+
+    private static Season makeSeason(String name, int year, int number) {
+        var s = new Season();
+        s.setId(java.util.UUID.randomUUID());
+        s.setName(name);
+        s.setYear(year);
+        s.setNumber(number);
+        return s;
     }
 }
