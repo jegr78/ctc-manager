@@ -54,6 +54,14 @@ class DriverSheetImportServiceTransactionIT {
 
     @BeforeEach
     void seedTwoSeasonsForFreshYear() {
+        // Pitfall guard (WR-01): H2 in-memory persists across test contexts (DB_CLOSE_DELAY=-1).
+        // A previous failed cleanup must not leave 2099 rows behind, otherwise findUnique would
+        // see > 2 hits and the regression assertion would silently change shape.
+        var leftover = seasonRepository.findByYear(FRESH_YEAR);
+        if (!leftover.isEmpty()) {
+            leftover.forEach(s -> seasonRepository.deleteById(s.getId()));
+        }
+
         // Borrow scoring config from any existing season (NOT NULL FKs)
         var template = seasonRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new IllegalStateException(
@@ -68,8 +76,11 @@ class DriverSheetImportServiceTransactionIT {
         for (UUID id : createdSeasonIds) {
             try {
                 seasonRepository.deleteById(id);
-            } catch (Exception ignore) {
-                // best-effort cleanup; a failed test must not block subsequent tests
+            } catch (Exception ex) {
+                // Best-effort cleanup; a failed test must not block subsequent tests.
+                // WR-02: promote diagnostic visibility — silent ignore once masked the original bug too.
+                System.err.println("Phase59-TxIT cleanup failed for season " + id + ": "
+                        + ex.getClass().getSimpleName() + ": " + ex.getMessage());
             }
         }
         createdSeasonIds.clear();
