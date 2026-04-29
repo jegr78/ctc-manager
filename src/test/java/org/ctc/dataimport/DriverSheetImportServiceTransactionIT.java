@@ -2,8 +2,12 @@ package org.ctc.dataimport;
 
 import org.ctc.dataimport.DriverSheetImportService.DriverSheetImportPreview;
 import org.ctc.dataimport.DriverSheetImportService.TabPreview;
+import org.ctc.domain.model.MatchScoring;
+import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonFormat;
+import org.ctc.domain.repository.MatchScoringRepository;
+import org.ctc.domain.repository.RaceScoringRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,8 +53,12 @@ class DriverSheetImportServiceTransactionIT {
 
     @Autowired private DriverSheetImportService driverSheetImportService;
     @Autowired private SeasonRepository seasonRepository;
+    @Autowired private RaceScoringRepository raceScoringRepository;
+    @Autowired private MatchScoringRepository matchScoringRepository;
 
     private final List<UUID> createdSeasonIds = new ArrayList<>();
+    private UUID createdRaceScoringId;
+    private UUID createdMatchScoringId;
 
     @BeforeEach
     void seedTwoSeasonsForFreshYear() {
@@ -62,13 +70,19 @@ class DriverSheetImportServiceTransactionIT {
             leftover.forEach(s -> seasonRepository.deleteById(s.getId()));
         }
 
-        // Borrow scoring config from any existing season (NOT NULL FKs)
-        var template = seasonRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new IllegalStateException(
-                        "Dev seed empty — cannot borrow RaceScoring/MatchScoring"));
+        // WR-03: create OWN scoring config (NOT NULL FKs on Season) instead of borrowing
+        // from the dev seed via seasonRepository.findAll().findFirst(). This decouples the
+        // regression IT from DevDataSeeder evolution (seed-data drift, ordering changes,
+        // future scoring-bean refactors) without forcing a new test-profile infrastructure.
+        var raceScoring = raceScoringRepository.save(
+                new RaceScoring("Phase59-TxIT", "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
+        var matchScoring = matchScoringRepository.save(
+                new MatchScoring("Phase59-TxIT", 3, 1, 0));
+        createdRaceScoringId = raceScoring.getId();
+        createdMatchScoringId = matchScoring.getId();
 
-        createdSeasonIds.add(persistFreshSeason("Phase59-TxIT-Extra-A", FRESH_YEAR, 1, template));
-        createdSeasonIds.add(persistFreshSeason("Phase59-TxIT-Extra-B", FRESH_YEAR, 2, template));
+        createdSeasonIds.add(persistFreshSeason("Phase59-TxIT-Extra-A", FRESH_YEAR, 1, raceScoring, matchScoring));
+        createdSeasonIds.add(persistFreshSeason("Phase59-TxIT-Extra-B", FRESH_YEAR, 2, raceScoring, matchScoring));
     }
 
     @AfterEach
@@ -84,6 +98,26 @@ class DriverSheetImportServiceTransactionIT {
             }
         }
         createdSeasonIds.clear();
+
+        // WR-03: also clean up the test-owned scoring rows so repeated runs do not pile up.
+        if (createdMatchScoringId != null) {
+            try {
+                matchScoringRepository.deleteById(createdMatchScoringId);
+            } catch (Exception ex) {
+                System.err.println("Phase59-TxIT cleanup failed for matchScoring " + createdMatchScoringId
+                        + ": " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+            }
+            createdMatchScoringId = null;
+        }
+        if (createdRaceScoringId != null) {
+            try {
+                raceScoringRepository.deleteById(createdRaceScoringId);
+            } catch (Exception ex) {
+                System.err.println("Phase59-TxIT cleanup failed for raceScoring " + createdRaceScoringId
+                        + ": " + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+            }
+            createdRaceScoringId = null;
+        }
     }
 
     @Test
@@ -119,7 +153,8 @@ class DriverSheetImportServiceTransactionIT {
     // Helpers
     // ---------------------------------------------------------------
 
-    private UUID persistFreshSeason(String name, int year, int number, Season template) {
+    private UUID persistFreshSeason(String name, int year, int number,
+                                    RaceScoring raceScoring, MatchScoring matchScoring) {
         var s = new Season();
         s.setName(name);
         s.setYear(year);
@@ -127,8 +162,8 @@ class DriverSheetImportServiceTransactionIT {
         s.setActive(false);
         s.setFormat(SeasonFormat.LEAGUE);
         s.setLegs(1);
-        s.setRaceScoring(template.getRaceScoring());
-        s.setMatchScoring(template.getMatchScoring());
+        s.setRaceScoring(raceScoring);
+        s.setMatchScoring(matchScoring);
         return seasonRepository.save(s).getId();
     }
 }
