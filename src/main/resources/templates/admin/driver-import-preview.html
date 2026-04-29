@@ -28,6 +28,16 @@
                            th:text="${tab.ambiguousReason()}"></small>
                 </div>
 
+                <!-- TabWarning badges: teams with no PhaseTeam in REGULAR phase (IMPORT-04 / D-06) -->
+                <div class="alert alert-warning mb-md"
+                     th:if="${!tab.warnings().isEmpty()}">
+                    <strong>Group assignment warnings</strong>
+                    <ul>
+                        <li th:each="warning : ${tab.warnings()}"
+                            th:text="${warning.teamShortName() + ' — ' + warning.message()}"></li>
+                    </ul>
+                </div>
+
                 <!-- Bucket: New Drivers -->
                 <th:block th:if="${!tab.newDrivers().isEmpty()}">
                     <h3 th:text="'New Drivers (' + ${#lists.size(tab.newDrivers())} + ')'"></h3>

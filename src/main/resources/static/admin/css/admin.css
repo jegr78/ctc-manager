@@ -158,6 +158,9 @@ h3 { font-size: 16px; margin-bottom: 8px; color: var(--white); }
 }
 .alert-success { background: var(--success-bg); color: #66bb6a; border: 1px solid #2e7d32; }
 .alert-error { background: var(--danger-bg); color: #ef5350; border: 1px solid #d32f2f; }
+.alert-warning { background: #3b2e0e; color: #ffb74d; border: 1px solid #b26a00; }
+.alert-warning ul { margin: 6px 0 0 18px; padding: 0; }
+.alert-warning li { margin: 2px 0; }
 
 .card {
     background: var(--bg-card);
