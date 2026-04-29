@@ -40,10 +40,10 @@ Requirements for milestone v1.9. Each maps to roadmap phases.
 
 ### IMPORT — Driver Sheet Import
 
-- [ ] **IMPORT-01**: `SeasonRepository.findByYearAndNumber(int, int)` liefert eindeutige Saison
-- [ ] **IMPORT-02**: `DriverSheetImportService.preview()` löst Tabs über `(year, number)` auf; Tab-Pattern erlaubt `^\d{4}_S\d+$` zusätzlich zu `^\d{4}$`
-- [ ] **IMPORT-03**: Group-Mitgliedschaft eines importierten Drivers wird über `PhaseTeam` der REGULAR-Phase aufgelöst
-- [ ] **IMPORT-04**: Preview emittiert Warnung für Teams ohne Group-Zuordnung in der Ziel-REGULAR-Phase
+- [x] **IMPORT-01**: `SeasonRepository.findByYearAndNumber(int, int)` liefert eindeutige Saison
+- [x] **IMPORT-02**: `DriverSheetImportService.preview()` löst Tabs über `(year, number)` auf; Tab-Pattern erlaubt `^\d{4}_S\d+$` zusätzlich zu `^\d{4}$`
+- [x] **IMPORT-03**: Group-Mitgliedschaft eines importierten Drivers wird über `PhaseTeam` der REGULAR-Phase aufgelöst
+- [x] **IMPORT-04**: Preview emittiert Warnung für Teams ohne Group-Zuordnung in der Ziel-REGULAR-Phase
 
 ### UI — Admin Workflow
 
@@ -57,8 +57,8 @@ Requirements for milestone v1.9. Each maps to roadmap phases.
 
 ### DATA — Test and Dev Data
 
-- [ ] **DATA-01**: `TestDataService` legt Test-Saisons direkt mit Phasen/Gruppen an (Test-Prefix-Konvention bleibt; keine Backward-Compat-Helper für altes Modell)
-- [ ] **DATA-02**: `DevDataSeeder` (Profile `dev` / `dev,demo`) erzeugt fiktive Saison mit mind. einer GROUPS-Saison als Beispiel + Playoff-Phase
+- [x] **DATA-01**: `TestDataService` legt Test-Saisons direkt mit Phasen/Gruppen an (Test-Prefix-Konvention bleibt; keine Backward-Compat-Helper für altes Modell)
+- [x] **DATA-02**: `DevDataSeeder` (Profile `dev` / `dev,demo`) erzeugt fiktive Saison mit mind. einer GROUPS-Saison als Beispiel + Playoff-Phase
 
 ### QUAL — Quality and Coverage
 
@@ -120,10 +120,10 @@ Which phases cover which requirements. Filled during roadmap creation.
 | SVC-03 | 58 | Complete |
 | SVC-04 | 58 | Complete |
 | SVC-05 | 58 | Complete |
-| IMPORT-01 | 59 | Pending |
-| IMPORT-02 | 59 | Pending |
-| IMPORT-03 | 59 | Pending |
-| IMPORT-04 | 59 | Pending |
+| IMPORT-01 | 59 | Complete |
+| IMPORT-02 | 59 | Complete |
+| IMPORT-03 | 59 | Complete |
+| IMPORT-04 | 59 | Complete |
 | UI-01 | 60 | Pending |
 | UI-02 | 60 | Pending |
 | UI-03 | 60 | Pending |
@@ -131,8 +131,8 @@ Which phases cover which requirements. Filled during roadmap creation.
 | UI-05 | 60 | Pending |
 | UI-06 | 60 | Pending |
 | UI-07 | 60 | Pending |
-| DATA-01 | 59 | Pending |
-| DATA-02 | 59 | Pending |
+| DATA-01 | 59 | Complete |
+| DATA-02 | 59 | Complete |
 | QUAL-01 | 61 | Pending |
 | QUAL-02 | 61 | Pending |
 | QUAL-03 | 61 | Pending |
