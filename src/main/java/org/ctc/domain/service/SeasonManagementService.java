@@ -104,7 +104,6 @@ public class SeasonManagementService {
      *   <li>&gt;1 hits → {@link BusinessRuleException} (D-02)</li>
      * </ul>
      */
-    @Transactional(readOnly = true)
     public Optional<Season> findUnique(int year, int number) {
         var hits = seasonRepository.findByYearAndNumber(year, number);
         if (hits.size() > 1) {
@@ -121,7 +120,6 @@ public class SeasonManagementService {
      * {@code ^\d{4}$} pattern (Phase 59 D-01). Same 0/1/many contract as
      * {@link #findUnique(int, int)}.
      */
-    @Transactional(readOnly = true)
     public Optional<Season> findUnique(int year) {
         var hits = seasonRepository.findByYear(year);
         if (hits.size() > 1) {
