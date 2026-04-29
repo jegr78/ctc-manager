@@ -85,8 +85,14 @@ blocked: 1
 
 - truth: "The driver-import preview page renders without server error and displays a yellow/amber 'Group assignment warnings' block listing teams with no PhaseTeam in the REGULAR phase, deduplicated per team"
   status: failed
-  reason: "User reported: 500 — Internal Error: UnexpectedRollbackException: Transaction silently rolled back because it has been marked as rollback-only. Log shows tab 2025 was processed (116 errors, 0 warnings) but outer @Transactional commit on DriverSheetImportService.preview() fails. Root cause likely: SeasonManagementService.findUnique() inner @Transactional(readOnly=true) throws BusinessRuleException, which marks the shared tx rollback-only; preview() catches the exception for control flow but Spring still aborts the commit."
+  reason: "User reported: 500 — Internal Error: UnexpectedRollbackException: Transaction silently rolled back because it has been marked as rollback-only. Log shows tab 2025 was processed (116 errors, 0 warnings) but outer @Transactional commit on DriverSheetImportService.preview() fails."
+  root_cause: "SeasonManagementService.findUnique(int year) and findUnique(int year, int number) carry @Transactional(readOnly=true) with default REQUIRED propagation, joining the outer preview() transaction. When findByYear(2025) returns multiple seasons (dev profile seeds Test-Season 2025 alongside the user's real 2025 season), findUnique throws BusinessRuleException. Spring's TransactionInterceptor marks the shared tx as rollback-only BEFORE the exception returns to Java. buildTabPreview catches BusinessRuleException to populate ambiguousReason (D-03 / D-18), but the tx is already poisoned. When preview() returns normally, Spring's AOP commit aborts with UnexpectedRollbackException."
+  why_tests_miss_it: "DriverSheetImportServiceIT is annotated @Transactional on the class — Spring auto-rolls-back the test tx, so commit-time UnexpectedRollbackException never fires."
+  recommended_fix: "Option C from debug session: remove @Transactional annotations from both findUnique overloads in SeasonManagementService. Mirrors Phase 58 precedent (Bridge uses findByType (Optional) instead of findRegularPhase to avoid transaction rollback-only poisoning). The methods already run inside the caller's transaction context; the readOnly=true annotation is redundant for these single-select methods."
   severity: blocker
   test: 2
-  artifacts: []
-  missing: []
+  debug_session: ".planning/debug/59-tx-rollback-on-preview.md"
+  artifacts:
+    - "src/main/java/org/ctc/domain/service/SeasonManagementService.java"
+  missing:
+    - "Integration test that exercises preview() WITHOUT class-level @Transactional, so commit-time exceptions surface (recommended path: new DriverSheetImportServiceTransactionIT)"
