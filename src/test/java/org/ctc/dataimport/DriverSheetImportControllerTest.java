@@ -3,11 +3,13 @@ package org.ctc.dataimport;
 import jakarta.persistence.EntityManager;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.DriverRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
+import org.ctc.domain.repository.SeasonPhaseRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +55,8 @@ class DriverSheetImportControllerTest {
 
     @MockitoBean
     private GoogleSheetsService googleSheetsService;
+    @Autowired
+    private SeasonPhaseRepository seasonPhaseRepository;
 
     // Shared fixtures — reused across multiple test methods.
     // NOTE: years 2021 and 2022 are intentionally used. DevDataSeeder (CommandLineRunner
@@ -491,5 +495,73 @@ class DriverSheetImportControllerTest {
         mockMvc.perform(get("/admin/drivers"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("/admin/drivers/import")));
+    }
+
+    // --- Phase 60 UI-06: group column + raw tab-name display (D-37, D-39, D-40) ---
+
+    @Test
+    void given2025_S2Tab_whenPreview_thenTemplateRendersRawTabName() throws Exception {
+        // given: a season matching "2025_S2" tab name
+        var season2025S2 = testHelper.createSeason("T-Phase60-DIP-2025S2", 2025, 2);
+        String fakeId = "fake-60-tabname";
+        when(googleSheetsService.extractSpreadsheetId("https://t60-tabname-test")).thenReturn(fakeId);
+        when(googleSheetsService.getSheetNames(fakeId)).thenReturn(List.of("2025_S2"));
+        when(googleSheetsService.readRangeFromSheet(eq(fakeId), eq("2025_S2"), eq("A:C")))
+                .thenReturn(List.of(List.of("PSN ID", "Nickname", "Team")));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/import/preview")
+                        .param("sheetUrl", "https://t60-tabname-test"))
+                // then: preview rendered; tab name "2025_S2" is passed through (D-37 raw tabName)
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/driver-import-preview"))
+                .andExpect(model().attributeExists("preview"));
+        // Visual H2-rendering of raw "2025_S2" name is verified via playwright-cli (Plan 60-05 Task 4)
+    }
+
+    @Test
+    void givenGroupsLayoutTarget_whenPreview_thenShowGroupColumnTrue() throws Exception {
+        // given: season with GROUPS-layout REGULAR phase
+        var season = testHelper.createSeason("T-Phase60-DIP-Groups", 2021, 3);
+        var regular = seasonPhaseRepository.findBySeasonIdAndPhaseType(
+                season.getId(), org.ctc.domain.model.PhaseType.REGULAR).orElseThrow();
+        regular.setLayout(PhaseLayout.GROUPS);
+        seasonPhaseRepository.save(regular);
+
+        String fakeId = "fake-60-groups";
+        when(googleSheetsService.extractSpreadsheetId("https://t60-groups-test")).thenReturn(fakeId);
+        when(googleSheetsService.getSheetNames(fakeId)).thenReturn(List.of("2021_S3"));
+        when(googleSheetsService.readRangeFromSheet(eq(fakeId), eq("2021_S3"), eq("A:C")))
+                .thenReturn(List.of(List.of("PSN ID", "Nickname", "Team")));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/import/preview")
+                        .param("sheetUrl", "https://t60-groups-test"))
+                // then: Phase 60 Plan 60-05 must add showGroupColumn=true when target has GROUPS layout (D-40)
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("showGroupColumn", true));
+    }
+
+    @Test
+    void givenDriverWithNullResolvedGroup_whenPreview_thenRowsPassedThrough() throws Exception {
+        // given: tab with a new driver row where group resolution yields null (no GROUPS phase)
+        var season2021b = testHelper.createSeason("T-Phase60-DIP-NullGroup", 2021, 4);
+        String fakeId = "fake-60-nullgroup";
+        when(googleSheetsService.extractSpreadsheetId("https://t60-nullgroup-test")).thenReturn(fakeId);
+        when(googleSheetsService.getSheetNames(fakeId)).thenReturn(List.of("2021_S4"));
+        when(googleSheetsService.readRangeFromSheet(eq(fakeId), eq("2021_S4"), eq("A:C")))
+                .thenReturn(List.of(
+                        List.of("PSN ID", "Nickname", "Team"),
+                        List.of("t60_nogroup_psn", "T60NoGroup", "I_AHR")
+                ));
+
+        // when
+        mockMvc.perform(post("/admin/drivers/import/preview")
+                        .param("sheetUrl", "https://t60-nullgroup-test"))
+                // then: rows passed through even when resolvedGroupName=null (D-39 inline badge renders "—")
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/driver-import-preview"))
+                .andExpect(model().attributeExists("preview"));
+        // Inline badge for null group is verified visually via playwright-cli (Plan 60-05 Task 4)
     }
 }

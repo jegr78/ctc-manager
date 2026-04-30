@@ -17,8 +17,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.hamcrest.Matchers.hasProperty;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -63,34 +63,42 @@ class SeasonControllerTest {
 				.andExpect(model().attributeExists("seasonForm"));
 	}
 
-	@Test
-	void givenValidScoringRefs_whenSaveSeason_thenRedirects() throws Exception {
-		// given
-		// Season creation via form will need scoring references — this tests the form binding
-		var rs = testHelper.createSeason("Dummy").getRaceScoring();
-		var ms = testHelper.createSeason("Dummy2").getMatchScoring();
+	// --- Phase 60 UI-01: slim Season form (D-25/D-26) ---
 
+	@Test
+	void givenSlimForm_whenSaveSeason_thenRedirectsAndSeasonPersistedWithoutScoringFields() throws Exception {
 		// when
 		mockMvc.perform(post("/admin/seasons/save")
-						.param("name", "MockMvc Test Season")
-						.param("active", "true")
-						.param("raceScoring", rs.getId().toString())
-						.param("matchScoring", ms.getId().toString()))
+						.param("name", "T-Phase60-Slim Save")
+						.param("year", "2027")
+						.param("number", "1")
+						.param("description", "Slim test")
+						.param("active", "true"))
 				// then
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/admin/seasons"));
+
+		var saved = seasonRepository.findAll().stream()
+				.filter(s -> s.getName().equals("T-Phase60-Slim Save")).findFirst().orElseThrow();
+		assertThat(saved.getYear()).isEqualTo(2027);
+	}
+
+	@Test
+	void whenGetNewSeasonForm_thenScoringListsAttributesAbsent() throws Exception {
+		// The slim form does not need raceScorings/matchScorings model attributes (UI-01)
+		mockMvc.perform(get("/admin/seasons/new"))
+				// then
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/season-form"))
+				.andExpect(model().attributeDoesNotExist("raceScorings"))
+				.andExpect(model().attributeDoesNotExist("matchScorings"));
 	}
 
 	@Test
 	void givenBlankName_whenSaveSeason_thenReturnsFormWithErrors() throws Exception {
-		// given
-		var season = testHelper.createSeason("Dummy Blank");
-
-		// when
+		// when: slim form — no scoring params needed
 		mockMvc.perform(post("/admin/seasons/save")
-						.param("name", "")
-						.param("raceScoring", season.getRaceScoring().getId().toString())
-						.param("matchScoring", season.getMatchScoring().getId().toString()))
+						.param("name", ""))
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/season-form"));
@@ -156,13 +164,11 @@ class SeasonControllerTest {
 		// given
 		var season = testHelper.createSeason("Update Test");
 
-		// when
+		// when: UI-01 slim form — no scoring params
 		mockMvc.perform(post("/admin/seasons/save")
 						.param("id", season.getId().toString())
 						.param("name", "Updated Season Name")
-						.param("active", "false")
-						.param("raceScoring", season.getRaceScoring().getId().toString())
-						.param("matchScoring", season.getMatchScoring().getId().toString()))
+						.param("active", "false"))
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/admin/seasons"));
 

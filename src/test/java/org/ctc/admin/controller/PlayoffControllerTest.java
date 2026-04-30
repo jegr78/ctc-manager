@@ -295,6 +295,25 @@ class PlayoffControllerTest {
                 .andExpect(model().attributeExists("seasons"));
     }
 
+    // --- Phase 60 UI-07 (D-43): Add/Remove Season UI removed from bracket page ---
+
+    @Test
+    void givenPlayoff_whenGetBracket_thenAddSeasonButtonNotPresent() throws Exception {
+        // given
+        var playoff = playoffService.createPlayoff(season.getId(), "T-Phase60-NoAddSeason-Playoff", 4);
+
+        // when
+        var html = mockMvc.perform(get("/admin/playoffs/" + playoff.getId()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        // then: D-43 removes Add/Remove Season UI from bracket page; backend endpoints stay functional
+        org.assertj.core.api.Assertions.assertThat(html)
+                .doesNotContain("/admin/playoffs/" + playoff.getId() + "/add-season");
+        org.assertj.core.api.Assertions.assertThat(html)
+                .doesNotContain("/admin/playoffs/" + playoff.getId() + "/remove-season");
+    }
+
     // --- POST /admin/playoffs/{id}/add-season + remove-season ---
 
     @Test

@@ -552,74 +552,90 @@ class SeasonManagementServiceTest {
         assertThat(result.allMatchScorings()).hasSize(1);
     }
 
-    @Test
-    void givenNewSeasonPrimitives_whenSave_thenCreatesSeasonWithScoringLookups() {
-        // given
-        var rs = new RaceScoring();
-        rs.setId(UUID.randomUUID());
-        var ms = new MatchScoring();
-        ms.setId(UUID.randomUUID());
+    // --- Phase 60 UI-01: slim 6-param save (D-25/D-26 Auto-Sync removal) ---
 
-        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
-        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
+    @Test
+    void givenSlimForm_whenSave_thenSeasonPersisted() {
+        // given: slim 6-param signature (Phase 60 UI-01 — replaces 14-param save)
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> {
             Season s = inv.getArgument(0);
             if (s.getId() == null) s.setId(UUID.randomUUID());
             return s;
         });
-        // Phase 58 D-25: save now also synchronises a REGULAR phase. For new-season
-        // bootstrap path, findByType returns empty and create is invoked.
-        when(seasonPhaseService.findByType(any(UUID.class), eq(PhaseType.REGULAR)))
-                .thenReturn(Optional.empty());
-        when(seasonPhaseService.create(any(UUID.class), eq(PhaseType.REGULAR), eq(PhaseLayout.LEAGUE),
-                anyInt(), any(), any(RaceScoring.class), any(MatchScoring.class),
-                any(SeasonFormat.class), any(), any(),
-                any(), anyInt(), any()))
-                .thenAnswer(inv -> {
-                    var bootstrapSeason = new Season("bootstrap");
-                    bootstrapSeason.setId(inv.getArgument(0));
-                    return PhaseTestFixtures.regularPhase(bootstrapSeason, rs, ms);
-                });
+        // slim save: no REGULAR phase bootstrap needed (bootstrapped separately or already exists)
 
         // when
-        var result = service.save(null, "New Season", 2026, 1, null, null, null,
-                true, SeasonFormat.LEAGUE, null, 1, null, rs.getId(), ms.getId());
+        var result = service.save(null, "T-Phase60-SlimSvc", 2028, 1, "desc", true);
 
         // then
-        assertThat(result.getName()).isEqualTo("New Season");
-        assertThat(result.getRaceScoring()).isEqualTo(rs);
-        assertThat(result.getMatchScoring()).isEqualTo(ms);
-        verify(seasonRepository).save(any(Season.class));
+        assertThat(result.getId()).isNotNull();
+        assertThat(result.getName()).isEqualTo("T-Phase60-SlimSvc");
     }
 
     @Test
-    void givenExistingSeasonPrimitives_whenSave_thenUpdatesSeasonFields() {
-        // given
-        var existing = createSeason("Old Name");
+    void givenExistingPhaseWithFormat_whenSeasonSaved_thenPhaseFormatUntouched() {
+        // given: a season with a REGULAR phase that already has format=SWISS
+        var existing = createSeason("T-Phase60-NoSync");
         var rs = new RaceScoring();
         rs.setId(UUID.randomUUID());
-        existing.setRaceScoring(rs);
         var ms = new MatchScoring();
         ms.setId(UUID.randomUUID());
-        existing.setMatchScoring(ms);
         var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
+        regular.setFormat(SeasonFormat.SWISS);
 
         when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
-        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
-        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
-        // Phase 58 D-25: existing-season path finds the REGULAR phase and updates it
-        when(seasonPhaseService.findByType(existing.getId(), PhaseType.REGULAR))
+
+        // when: re-save the season with slim 6-param signature
+        service.save(existing.getId(), existing.getName(), existing.getYear(), existing.getNumber(),
+                existing.getDescription(), existing.isActive());
+
+        // then: REGULAR phase format is still SWISS — Auto-Sync block removed
+        assertThat(regular.getFormat()).isEqualTo(SeasonFormat.SWISS);
+        // seasonPhaseRepository.save NOT called for regular phase (no auto-sync)
+        verify(seasonPhaseRepository, never()).save(regular);
+    }
+
+    @Test
+    void givenPhaseTeamRefs_whenRemoveSeasonTeam_thenThrowsBusinessRule() {
+        // given: season with team that has a PhaseTeam row
+        var season = createSeason("T-Phase60-StrictRemove");
+        var team = createTeam("P60", "T-Phase60-Team1");
+        season.addTeam(team);
+
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
+        // PhaseTeam exists in some phase of the season (D-25 strict guard — season-scoped check)
+        when(phaseTeamRepository.existsByPhaseSeasonId(season.getId())).thenReturn(true);
+
+        // when / then: removal must fail because PhaseTeam still references it
+        assertThatThrownBy(() -> service.removeTeamFromSeason(season.getId(), team.getId()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("phase");
+    }
+
+    @Test
+    void givenAddTeamToSeason_thenPhaseTeamCreatedInRegular() {
+        // given
+        var season = createSeason("T-Phase60-AutoPhaseTeam");
+        var team = createTeam("P62", "T-Phase60-Team2");
+        var rs = new RaceScoring();
+        rs.setId(UUID.randomUUID());
+        var ms = new MatchScoring();
+        ms.setId(UUID.randomUUID());
+        var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
+
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(teamRepository.findById(team.getId())).thenReturn(Optional.of(team));
+        when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR))
                 .thenReturn(Optional.of(regular));
+        when(phaseTeamRepository.save(any(PhaseTeam.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
-        var result = service.save(existing.getId(), "Updated Name", 2027, 2, null, null, null,
-                false, SeasonFormat.SWISS, null, 2, null, rs.getId(), ms.getId());
+        service.addTeamToSeason(season.getId(), team.getId());
 
-        // then
-        assertThat(result.getName()).isEqualTo("Updated Name");
-        assertThat(result.getYear()).isEqualTo(2027);
-        assertThat(result.getFormat()).isEqualTo(SeasonFormat.SWISS);
+        // then: PhaseTeam created in REGULAR phase (D-26 atomic insert)
+        verify(phaseTeamRepository).save(any(PhaseTeam.class));
     }
 
     @Test
@@ -910,57 +926,11 @@ class SeasonManagementServiceTest {
         verify(seasonRepository).delete(season);
     }
 
-    // --- Phase 58 D-25: REGULAR-phase auto-sync (BEHAVIOR CHANGE) ---
+    // --- Phase 60: verify slim save does NOT touch REGULAR phase scoring/format (D-25 Auto-Sync removed) ---
 
     @Test
-    void givenSeasonSave_whenServiceSavesForm_thenRegularPhaseFieldsSynchronized() {
-        // given
-        var existing = createSeason("Existing");
-        var rs = new RaceScoring();
-        rs.setId(UUID.randomUUID());
-        rs.setName("RS");
-        var ms = new MatchScoring();
-        ms.setId(UUID.randomUUID());
-        ms.setName("MS");
-        var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
-
-        when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
-        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
-        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
-        when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(seasonPhaseService.findByType(existing.getId(), PhaseType.REGULAR))
-                .thenReturn(Optional.of(regular));
-
-        var startDate = LocalDate.of(2026, 1, 1);
-        var endDate = LocalDate.of(2026, 12, 31);
-
-        // when
-        service.save(existing.getId(), "Updated Name", 2026, 1, null,
-                startDate, endDate, true,
-                SeasonFormat.LEAGUE, 14, 2, 90, rs.getId(), ms.getId());
-
-        // then — REGULAR phase fields synchronized from Season form values
-        assertThat(regular.getFormat()).isEqualTo(SeasonFormat.LEAGUE);
-        assertThat(regular.getTotalRounds()).isEqualTo(14);
-        assertThat(regular.getLegs()).isEqualTo(2);
-        assertThat(regular.getEventDurationMinutes()).isEqualTo(90);
-        assertThat(regular.getStartDate()).isEqualTo(startDate);
-        assertThat(regular.getEndDate()).isEqualTo(endDate);
-        assertThat(regular.getRaceScoring()).isEqualTo(rs);
-        assertThat(regular.getMatchScoring()).isEqualTo(ms);
-        verify(seasonPhaseRepository).save(regular);
-    }
-
-    @Test
-    void givenNewSeasonSave_whenNoRegularPhaseExists_thenCreatesRegularPhaseAtomically() {
-        // given — Pitfall 7 mitigation: REGULAR phase bootstrap on new season insert
-        var rs = new RaceScoring();
-        rs.setId(UUID.randomUUID());
-        var ms = new MatchScoring();
-        ms.setId(UUID.randomUUID());
-
-        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
-        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
+    void givenNewSeasonSave_whenSlimSave_thenRegularPhaseBootstrappedWithNullFormat() {
+        // given — slim save triggers REGULAR phase bootstrap (format=null, layout=LEAGUE per Pitfall 1 Rec a)
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> {
             Season s = inv.getArgument(0);
             if (s.getId() == null) s.setId(UUID.randomUUID());
@@ -969,57 +939,42 @@ class SeasonManagementServiceTest {
         when(seasonPhaseService.findByType(any(UUID.class), eq(PhaseType.REGULAR)))
                 .thenReturn(Optional.empty());
         when(seasonPhaseService.create(any(UUID.class), eq(PhaseType.REGULAR), eq(PhaseLayout.LEAGUE),
-                anyInt(), any(), any(RaceScoring.class), any(MatchScoring.class),
-                any(SeasonFormat.class), any(LocalDate.class), any(LocalDate.class),
-                any(Integer.class), anyInt(), any(Integer.class)))
+                anyInt(), any(), any(), any(), any(), any(), any(), any(), anyInt(), any()))
                 .thenAnswer(inv -> {
-                    var season = new Season("Bootstrap");
+                    var season = new Season("Bootstrap60");
                     season.setId(inv.getArgument(0));
-                    return PhaseTestFixtures.regularPhase(season, rs, ms);
+                    return PhaseTestFixtures.regularPhase(season, null, null);
                 });
 
-        // when
-        service.save(null, "New Season", 2026, 1, null,
-                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), true,
-                SeasonFormat.LEAGUE, 10, 1, 60, rs.getId(), ms.getId());
+        // when: slim 6-param save (no scoring, no format, no dates)
+        service.save(null, "T-Phase60-BootstrapSeason", 2028, 1, null, true);
 
-        // then — REGULAR phase creation invoked exactly once with REGULAR/LEAGUE
-        verify(seasonPhaseService).create(any(UUID.class), eq(PhaseType.REGULAR), eq(PhaseLayout.LEAGUE),
-                anyInt(), any(), eq(rs), eq(ms),
-                eq(SeasonFormat.LEAGUE), any(LocalDate.class), any(LocalDate.class),
-                eq(10), eq(1), eq(60));
+        // then — REGULAR phase create is invoked (bootstrap), but NOT with scoring or format from Season
+        verify(seasonPhaseService).create(any(UUID.class), eq(PhaseType.REGULAR), any(), anyInt(),
+                any(), any(), any(), any(), any(), any(), any(), anyInt(), any());
     }
 
     @Test
-    void givenExistingSeasonSave_whenRegularPhaseExists_thenUpdatesExistingRegularPhase() {
-        // given — D-25 update path: pre-existing REGULAR phase is updated, NOT re-created
-        var existing = createSeason("Existing");
+    void givenExistingSeasonSlimSave_whenRegularPhaseExists_thenNoPhaseRepositorySave() {
+        // given — D-25 Auto-Sync REMOVED: slim save must NOT call seasonPhaseRepository.save
+        var existing = createSeason("T-Phase60-ExistingSlimSave");
         var rs = new RaceScoring();
         rs.setId(UUID.randomUUID());
         var ms = new MatchScoring();
         ms.setId(UUID.randomUUID());
         var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
-        regular.setTotalRounds(7); // pre-existing value
+        regular.setTotalRounds(7); // pre-existing value should NOT be overwritten
 
         when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
-        when(raceScoringRepository.findById(rs.getId())).thenReturn(Optional.of(rs));
-        when(matchScoringRepository.findById(ms.getId())).thenReturn(Optional.of(ms));
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
-        when(seasonPhaseService.findByType(existing.getId(), PhaseType.REGULAR))
-                .thenReturn(Optional.of(regular));
 
-        // when
-        service.save(existing.getId(), "Updated", 2026, 1, null,
-                LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), true,
-                SeasonFormat.LEAGUE, 14, 2, 90, rs.getId(), ms.getId());
+        // when: slim 6-param save
+        service.save(existing.getId(), "T-Phase60-Updated", 2026, 1, null, true);
 
-        // then — phase create NOT called (existing was found); existing phase is updated and saved
-        verify(seasonPhaseService, never()).create(any(UUID.class), any(PhaseType.class), any(PhaseLayout.class),
-                anyInt(), any(), any(RaceScoring.class), any(MatchScoring.class),
-                any(SeasonFormat.class), any(LocalDate.class), any(LocalDate.class),
-                any(Integer.class), anyInt(), any(Integer.class));
-        assertThat(regular.getTotalRounds()).isEqualTo(14); // updated from form value
-        verify(seasonPhaseRepository).save(regular);
+        // then — D-25 Auto-Sync REMOVED: phase repository NOT called at all
+        verify(seasonPhaseRepository, never()).save(regular);
+        // totalRounds still 7 — not overwritten by slim save
+        assertThat(regular.getTotalRounds()).isEqualTo(7);
     }
 
     // --- Phase 59 D-02 / D-18: findUnique service-wrapper ---
