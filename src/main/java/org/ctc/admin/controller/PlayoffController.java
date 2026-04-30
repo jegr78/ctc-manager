@@ -54,6 +54,18 @@ public class PlayoffController {
         return "admin/playoff-bracket";
     }
 
+    @GetMapping("/{id}")
+    public String detail(@PathVariable UUID id, Model model) {
+        var data = playoffService.getPlayoffDetailData(id);
+        model.addAttribute("seasons", data.allSeasons());
+        if (data.selectedSeasonId() != null) {
+            model.addAttribute("selectedSeasonId", data.selectedSeasonId());
+        }
+        model.addAttribute("playoff", data.playoff());
+        model.addAttribute("bracket", data.bracketView());
+        return "admin/playoff-bracket";
+    }
+
     @GetMapping("/new")
     public String create(@RequestParam(required = false) UUID seasonId, Model model) {
         var form = new PlayoffForm();

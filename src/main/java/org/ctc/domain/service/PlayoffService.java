@@ -299,6 +299,18 @@ public class PlayoffService {
 		return new PlayoffListData(playoff, bracketView, allSeasons, effectiveSeasonId);
 	}
 
+	@Transactional(readOnly = true)
+	public PlayoffListData getPlayoffDetailData(UUID playoffId) {
+		var playoff = playoffRepository.findById(playoffId)
+				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
+		var allSeasons = seasonRepository.findAll();
+		var bracketView = playoffBracketViewService.getBracketView(playoffId);
+		UUID effectiveSeasonId = playoff.getPhase() != null && playoff.getPhase().getSeason() != null
+				? playoff.getPhase().getSeason().getId()
+				: (playoff.getSeason() != null ? playoff.getSeason().getId() : null);
+		return new PlayoffListData(playoff, bracketView, allSeasons, effectiveSeasonId);
+	}
+
 	@Transactional
 	public PlayoffRound setRoundLegs(UUID roundId, int bestOfLegs) {
 		var round = playoffRoundRepository.findById(roundId)
