@@ -90,17 +90,9 @@ public class StandingsController {
 		}
 
 		if (resolvedSeasonId == null) {
-			// No selection — render bare page with dropdown only
-			model.addAttribute("selectedSeason", null);
-			model.addAttribute("selectedSeasonId", null);
-			model.addAttribute("phase", null);
+			// No selection — render bare page with dropdown only.
+			// Do NOT add selectedSeason/standings/driverRanking — tests assert these don't exist.
 			model.addAttribute("hasRegularPhase", false);
-			model.addAttribute("combinedView", false);
-			model.addAttribute("showBuchholz", false);
-			model.addAttribute("showGroupColumn", false);
-			model.addAttribute("standings", List.of());
-			model.addAttribute("allPhases", List.of());
-			model.addAttribute("groups", List.of());
 			return "admin/standings";
 		}
 

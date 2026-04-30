@@ -4,123 +4,140 @@
 <body>
 <section>
     <div class="toolbar">
-        <h1>Standings &amp; Driver Ranking</h1>
+        <div>
+            <h1>Standings</h1>
+            <p th:if="${selectedSeason != null and !isAlltime}" class="text-dim">
+                <span th:text="${selectedSeason.name}"></span>
+                <span th:if="${phase != null}">
+                    <span> — </span>
+                    <span th:text="${phase.label != null and !phase.label.isBlank() ? phase.label : phase.phaseType}"></span>
+                </span>
+            </p>
+        </div>
         <form method="get" th:action="@{/admin/standings}" class="btn-with-hint">
             <select name="seasonId" onchange="this.form.submit()">
                 <option value="">-- Select season --</option>
                 <option value="alltime" th:selected="${isAlltime}">Alltime</option>
                 <option th:each="s : ${seasons}" th:value="${s.id}" th:text="${s.displayLabel}"
-                        th:selected="${selectedSeason != null && s.id == selectedSeason.id}"></option>
+                        th:selected="${selectedSeason != null and s.id == selectedSeason.id}"></option>
             </select>
         </form>
     </div>
 
-    <div th:if="${selectedSeason == null && !isAlltime}" class="card empty-state">
+    <!-- D-29 Two-Row Tabs Row 1: Phase tabs (only when season + REGULAR phase) -->
+    <div th:if="${selectedSeason != null and hasRegularPhase}" class="tab-nav mt-md" role="tablist" aria-label="Phase tabs">
+        <a th:each="p : ${allPhases}"
+           th:href="@{/admin/standings(phase=${p.id})}"
+           th:classappend="${phase != null and p.id == phase.id ? 'tab-active' : ''}"
+           class="tab-btn"
+           th:text="${p.label != null and !p.label.isBlank() ? p.label : p.phaseType}">Tab</a>
+    </div>
+
+    <!-- D-29 Two-Row Tabs Row 2: Group sub-tabs (only when GROUPS layout) -->
+    <div th:if="${phase != null and phase.layout.name() == 'GROUPS'}"
+         class="tab-nav tabs-secondary" role="tablist" aria-label="Group sub-tabs">
+        <a th:href="@{/admin/standings(phase=${phase.id})}"
+           th:classappend="${selectedGroupId == null ? 'tab-active' : ''}"
+           class="tab-btn">Combined</a>
+        <a th:each="g : ${groups}"
+           th:href="@{/admin/standings(phase=${phase.id}, group=${g.id})}"
+           th:classappend="${selectedGroupId != null and selectedGroupId == g.id ? 'tab-active' : ''}"
+           class="tab-btn"
+           th:text="${g.name}">Group A</a>
+    </div>
+
+    <!-- Empty: no season selected and not alltime -->
+    <div th:if="${selectedSeason == null and !isAlltime}" class="card empty-state mt-md">
         <p>Please select a season.</p>
     </div>
 
-    <!-- Team Standings -->
-    <div th:if="${standings != null}" class="card">
-        <h2 th:if="${isAlltime}">Team Standings — Alltime</h2>
-        <h2 th:unless="${isAlltime}">Team Standings — <span th:text="${selectedSeason.name}"></span></h2>
-        <!-- League standings table -->
-        <div class="table-scroll">
-        <table th:if="${!standings.isEmpty() && (selectedSeason == null || selectedSeason.format.name() != 'SWISS')}" id="standingsTable">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Team">Team</th>
-                    <th class="sortable" data-col="2" data-type="num" aria-label="Sort by Matches Played">MP</th>
-                    <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Wins">W</th>
-                    <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Draws">D</th>
-                    <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Losses">L</th>
-                    <th>PR</th>
-                    <th class="sortable td-right" data-col="7" data-type="num" aria-label="Sort by Points">Pts</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="standing, iter : ${standings}" class="data-row">
-                    <td th:text="${iter.count}"></td>
-                    <td><strong th:text="${standing.team.shortName}"></strong>
-                        <span class="text-dim" th:text="' ' + ${standing.team.name}"></span></td>
-                    <td th:text="${standing.played}"></td>
-                    <td th:text="${standing.wins}"></td>
-                    <td th:text="${standing.draws}"></td>
-                    <td th:text="${standing.losses}"></td>
-                    <td th:text="${standing.pointsRatio}"></td>
-                    <td style="text-align:right; font-weight:700; font-size:16px;" th:text="${standing.points}"></td>
-                </tr>
-            </tbody>
-        </table>
-        </div>
-
-        <!-- Swiss standings table -->
-        <div class="table-scroll">
-        <table th:if="${selectedSeason != null && selectedSeason.format.name() == 'SWISS' && !standings.isEmpty()}" id="swissStandingsTable">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Team">Team</th>
-                    <th>Match W-L-T</th>
-                    <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Score">Score</th>
-                    <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Buchholz">Buchholz</th>
-                    <th class="sortable td-right" data-col="5" data-type="num" aria-label="Sort by Points Difference">Pts Diff</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="standing, iter : ${standings}" class="data-row">
-                    <td th:text="${iter.count}"></td>
-                    <td><strong th:text="${standing.team.shortName}"></strong>
-                        <span class="text-dim" th:text="' ' + ${standing.team.name}"></span></td>
-                    <td th:text="${standing.matchRecord}"></td>
-                    <td th:text="${standing.points + '.0'}"></td>
-                    <td th:text="${standing.buchholz}"></td>
-                    <td style="text-align:right; font-weight:700;" th:text="${(standing.pointDifference > 0 ? '+' : '') + standing.pointDifference}"></td>
-                </tr>
-            </tbody>
-        </table>
-        </div>
-
-        <div th:if="${standings.isEmpty()}" class="empty-state"><p>No results yet.</p></div>
+    <!-- D-08 + Pitfall 4: season selected but no REGULAR phase -->
+    <div th:if="${selectedSeason != null and !hasRegularPhase and !isAlltime}" class="card empty-state mt-md">
+        <p>This season has no Regular Phase yet. Create one first to see standings.</p>
+        <a th:href="@{/admin/seasons/{id}/phases/new(id=${selectedSeason.id}, phaseType='REGULAR')}" class="btn btn-primary">+ Add Regular Phase</a>
     </div>
 
-    <!-- Driver Ranking -->
-    <div th:if="${driverRanking != null}" class="card mt-md">
+    <!-- D-36 Empty-state: phase exists but no results -->
+    <div th:if="${phase != null and #lists.isEmpty(standings)}" class="card empty-state mt-md">
+        <p>This phase has no race results yet — standings will appear once results are recorded.</p>
+    </div>
+
+    <!-- Team Standings table (unified with conditional columns D-32, D-33) -->
+    <div th:if="${(phase != null and !#lists.isEmpty(standings)) or (isAlltime and standings != null and !standings.isEmpty())}" class="card mt-md">
+        <h2 th:if="${isAlltime}">Team Standings — Alltime</h2>
+        <h2 th:unless="${isAlltime}">Team Standings</h2>
+        <div class="table-scroll">
+            <table id="standingsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Team">Team</th>
+                        <th th:if="${showGroupColumn}" class="sortable" data-col="2" data-type="text" aria-label="Sort by Group">Group</th>
+                        <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Played">MP</th>
+                        <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Wins">W</th>
+                        <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Draws">D</th>
+                        <th class="sortable" data-col="6" data-type="num" aria-label="Sort by Losses">L</th>
+                        <th class="sortable td-right" data-col="7" data-type="num" aria-label="Sort by Points">Pts</th>
+                        <th th:if="${showBuchholz}" class="sortable" data-col="8" data-type="num" aria-label="Sort by Buchholz">Buchholz</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="standing, iter : ${standings}" class="data-row">
+                        <td th:text="${iter.count}"></td>
+                        <td>
+                            <strong th:text="${standing.team.shortName}"></strong>
+                            <span class="text-dim" th:text="' ' + ${standing.team.name}"></span>
+                        </td>
+                        <td th:if="${showGroupColumn}" th:text="${standing.group != null ? standing.group.name : '-'}"></td>
+                        <td th:text="${standing.played}"></td>
+                        <td th:text="${standing.wins}"></td>
+                        <td th:text="${standing.draws}"></td>
+                        <td th:text="${standing.losses}"></td>
+                        <td class="td-right td-numeric-bold" th:text="${standing.points}"></td>
+                        <td th:if="${showBuchholz}" th:text="${standing.buchholz}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Driver Ranking — render only when driverRanking is non-null + non-empty -->
+    <div th:if="${driverRanking != null and !driverRanking.isEmpty()}" class="card mt-md">
         <div class="section-header mb-sm">
             <div>
                 <h2 th:if="${isAlltime}" class="form-group--inline">Driver Ranking — Alltime</h2>
-                <h2 th:unless="${isAlltime}" class="form-group--inline">Driver Ranking — <span th:text="${selectedSeason.name}"></span></h2>
+                <h2 th:unless="${isAlltime}" class="form-group--inline">Driver Ranking</h2>
             </div>
             <input type="text" id="driverSearch" placeholder="Search drivers..." aria-label="Search drivers"
                    class="search-input">
         </div>
         <div class="table-scroll">
-        <table th:if="${!driverRanking.isEmpty()}" id="driverRankingTable">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Driver">Driver</th>
-                    <th class="sortable" data-col="2" data-type="text" aria-label="Sort by Team">Team</th>
-                    <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Races">Races</th>
-                    <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Best Position">Best Pos.</th>
-                    <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Average Points">Avg</th>
-                    <th class="sortable td-right" data-col="6" data-type="num" aria-label="Sort by Points">Points</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr th:each="ranking, iter : ${driverRanking}" class="data-row">
-                    <td th:text="${iter.count}"></td>
-                    <td><strong th:text="${ranking.driver.psnId}"></strong></td>
-                    <td th:text="${ranking.team != null ? ranking.team.shortName : '-'}"></td>
-                    <td th:text="${ranking.racesCount}"></td>
-                    <td th:text="${ranking.bestPosition}"></td>
-                    <td th:text="${#numbers.formatDecimal(ranking.averagePoints, 1, 1)}"></td>
-                    <td style="text-align:right; font-weight:700; font-size:16px;" th:text="${ranking.totalPoints}"></td>
-                </tr>
-            </tbody>
-        </table>
+            <table id="driverRankingTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th class="sortable" data-col="1" data-type="text" aria-label="Sort by Driver">Driver</th>
+                        <th class="sortable" data-col="2" data-type="text" aria-label="Sort by Team">Team</th>
+                        <th class="sortable" data-col="3" data-type="num" aria-label="Sort by Races">Races</th>
+                        <th class="sortable" data-col="4" data-type="num" aria-label="Sort by Best Position">Best Pos.</th>
+                        <th class="sortable" data-col="5" data-type="num" aria-label="Sort by Average Points">Avg</th>
+                        <th class="sortable td-right" data-col="6" data-type="num" aria-label="Sort by Points">Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="ranking, iter : ${driverRanking}" class="data-row">
+                        <td th:text="${iter.count}"></td>
+                        <td><strong th:text="${ranking.driver.psnId}"></strong></td>
+                        <td th:text="${ranking.team != null ? ranking.team.shortName : '-'}"></td>
+                        <td th:text="${ranking.racesCount}"></td>
+                        <td th:text="${ranking.bestPosition}"></td>
+                        <td th:text="${#numbers.formatDecimal(ranking.averagePoints, 1, 1)}"></td>
+                        <td class="td-right td-numeric-bold" th:text="${ranking.totalPoints}"></td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-        <div id="noResults" style="display:none" class="empty-state" aria-live="polite"><p>No matching drivers found.</p></div>
+        <div id="noResults" class="empty-state hidden" aria-live="polite"><p>No matching drivers found.</p></div>
         <div class="pagination pagination-bar" id="pagination" aria-label="Driver ranking pagination">
             <span id="pageInfo" class="text-dim"></span>
             <div class="actions">
@@ -128,12 +145,10 @@
                 <button id="nextPage" class="btn btn-secondary btn-sm">Next</button>
             </div>
         </div>
-        <div th:if="${driverRanking.isEmpty()}" class="empty-state"><p>No results yet.</p></div>
     </div>
 
     <script th:inline="javascript">
     (function() {
-        // Reusable sort function for tables with .sortable columns
         function initSortableTable(tableId) {
             const table = document.getElementById(tableId);
             if (!table) return;
@@ -149,7 +164,7 @@
 
                     if (lastSorted) { sortAsc = !sortAsc; } else {
                         table.querySelectorAll('.sortable').forEach(h => h._lastSorted = false);
-                        sortAsc = type === 'num' ? false : true; // numbers: descending first
+                        sortAsc = type === 'num' ? false : true;
                     }
                     lastSorted = true;
                     this._lastSorted = true;
@@ -169,18 +184,14 @@
                         return sortAsc ? aText.localeCompare(bText) : bText.localeCompare(aText);
                     });
                     rows.forEach(r => tbody.appendChild(r));
-
-                    // Re-number rank column
                     rows.forEach((r, i) => { r.children[0].textContent = i + 1; });
                 });
             });
         }
 
         initSortableTable('standingsTable');
-        initSortableTable('swissStandingsTable');
         initSortableTable('driverRankingTable');
 
-        // Driver Ranking: Search + Pagination
         const drTable = document.getElementById('driverRankingTable');
         if (!drTable) return;
 
@@ -202,14 +213,14 @@
             const start = currentPage * PAGE_SIZE;
             const end = start + PAGE_SIZE;
 
-            rows.forEach(r => r.style.display = 'none');
-            filteredRows.slice(start, end).forEach(r => r.style.display = '');
+            rows.forEach(r => r.classList.add('hidden'));
+            filteredRows.slice(start, end).forEach(r => r.classList.remove('hidden'));
 
             pageInfo.textContent = filteredRows.length + ' drivers — Page ' + (currentPage + 1) + ' of ' + totalPages;
             prevBtn.disabled = currentPage === 0;
             nextBtn.disabled = currentPage >= totalPages - 1;
-            noResults.style.display = filteredRows.length === 0 ? '' : 'none';
-            drTable.style.display = filteredRows.length === 0 ? 'none' : '';
+            noResults.classList.toggle('hidden', filteredRows.length !== 0);
+            drTable.classList.toggle('hidden', filteredRows.length === 0);
         }
 
         search.addEventListener('input', function() {
