@@ -5,8 +5,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.SeasonForm;
+import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.service.MatchdayGeneratorService;
 import org.ctc.domain.service.SeasonManagementService;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.SwissPairingService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,18 +29,34 @@ import java.util.UUID;
 public class SeasonController {
 
 	private final SeasonManagementService seasonManagementService;
+	private final SeasonPhaseService seasonPhaseService;
 	private final SwissPairingService swissPairingService;
 	private final MatchdayGeneratorService matchdayGeneratorService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable UUID id, Model model) {
-		var data = seasonManagementService.getDetailData(id);
-		model.addAttribute("season", data.season());
-		model.addAttribute("playoff", data.playoff());
-		model.addAttribute("isSwiss", data.isSwiss());
-		model.addAttribute("canGenerate", data.canGenerate());
-		model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(id));
-		return "admin/season-detail";
+		var season = seasonManagementService.findById(id);
+		var regular = seasonPhaseService.findByType(id, PhaseType.REGULAR);
+
+		if (regular.isEmpty()) {
+			// D-08: Render Empty-State card instead of redirecting.
+			var allPhases = seasonPhaseService.findAllPhases(id);
+			model.addAttribute("season", season);
+			model.addAttribute("phase", null);
+			model.addAttribute("allPhases", allPhases);
+			model.addAttribute("groups", List.of());
+			model.addAttribute("phaseTeams", List.of());
+			model.addAttribute("matchdays", List.of());
+			model.addAttribute("selectedGroupId", null);
+			model.addAttribute("hasRegularPhase", false);
+			model.addAttribute("effectivePhaseLabel", "");
+			model.addAttribute("combinedView", false);
+			model.addAttribute("showGroupColumn", false);
+			model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(id));
+			return "admin/season-detail";
+		}
+		// Auto-redirect to REGULAR phase tab
+		return "redirect:/admin/seasons/" + id + "/phases/" + regular.get().getId();
 	}
 
 	@GetMapping
