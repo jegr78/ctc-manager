@@ -227,7 +227,15 @@ See: milestones/v1.8-ROADMAP.md for full details
 6. The driver import preview page shows the unambiguous `year_S{number}` season label for each tab and renders warning rows for teams with no group assignment in the target season's REGULAR phase
 7. The playoff page selects its bracket via the PLAYOFF-type SeasonPhase rather than directly by season; existing bracket display and seeding interaction are preserved
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+- [ ] 60-01-PLAN.md — Wave 0 TDD-RED tests (UI-01..UI-07) (Wave 0)
+- [ ] 60-02-PLAN.md — DTOs + SeasonPhaseService extensions + SeasonPhaseController + SeasonPhaseGroupController (UI-03, UI-04 backend) (Wave 1)
+- [ ] 60-03-PLAN.md — Slim SeasonForm + SeasonController + SeasonManagementService Auto-Sync removal + atomic SeasonTeam↔PhaseTeam (UI-01, D-25, D-26) (Wave 1)
+- [ ] 60-04-PLAN.md — Saison-Detail Two-Row-Tabs + slim season-form + Phase/Group form templates + admin.css (UI-01, UI-02, UI-03, UI-04 frontend) (Wave 2)
+- [ ] 60-05-PLAN.md — Standings two-row tabs + Driver-Import-Preview group column (UI-05, UI-06) (Wave 3)
+- [ ] 60-06-PLAN.md — Playoff bracket UI cutover + SeasonController swiss/generate phaseId-canonical (UI-07, D-44 prep) (Wave 3)
+- [ ] 60-07-PLAN.md — D-44 conservative @Deprecated cleanup + JaCoCo + E2E final gate (Wave 4)
 
 **UI hint**: yes
 
@@ -307,5 +315,5 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 57. Data Migration | v1.9 | 3/3 | Complete    | 2026-04-27 |
 | 58. Service Layer | v1.9 | 6/6 | Complete   | 2026-04-28 |
 | 59. Import & Test Data | v1.9 | 5/5 | Complete    | 2026-04-29 |
-| 60. Admin UI | v1.9 | 0/? | Not started | - |
+| 60. Admin UI | v1.9 | 0/7 | Planned | - |
 | 61. Cleanup & Quality Gate | v1.9 | 0/? | Not started | - |
