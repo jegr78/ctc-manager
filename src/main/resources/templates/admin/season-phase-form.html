@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${seasonPhaseForm.id != null ? 'Edit Phase' : 'New Phase'}, ~{::section})}">
+<body>
+<section>
+    <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="back-link">&larr; Back to Season</a>
+    <h1 th:text="${(seasonPhaseForm.id != null ? 'Edit Phase' : 'New Phase') + ' — ' + season.name}"></h1>
+
+    <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+
+    <div class="card">
+        <form th:action="@{/admin/seasons/{sid}/phases/save(sid=${season.id})}"
+              th:object="${seasonPhaseForm}" method="post">
+            <input type="hidden" th:field="*{id}">
+            <!-- W-7: NO hidden seasonId — DTO no longer carries seasonId; the path variable {sid} on
+                 the form action is the single source of truth (Mass-Assignment / IDOR hardening). -->
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="phaseType">Phase Type</label>
+                    <!-- W-9: phaseType is immutable post-create; render disabled in edit mode and
+                         mirror the value via a hidden input so the form binds correctly. -->
+                    <select id="phaseType" th:field="*{phaseType}" required
+                            th:disabled="${phaseTypeReadonly}">
+                        <option th:each="pt : ${phaseTypes}" th:value="${pt}"
+                                th:text="${phaseTypeLabels[pt]}"></option>
+                    </select>
+                    <input type="hidden" th:if="${phaseTypeReadonly}" name="phaseType" th:value="${seasonPhaseForm.phaseType}">
+                    <span class="field-error" th:if="${#fields.hasErrors('phaseType')}" th:errors="*{phaseType}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="layout">Layout</label>
+                    <select id="layout" th:field="*{layout}" required>
+                        <option th:each="l : ${phaseLayouts}" th:value="${l}"
+                                th:text="${layoutLabels[l]}"></option>
+                    </select>
+                    <span class="field-error" th:if="${#fields.hasErrors('layout')}" th:errors="*{layout}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="format">Format</label>
+                    <select id="format" th:field="*{format}" required>
+                        <option th:each="f : ${seasonFormats}" th:value="${f}"
+                                th:text="${formatLabels[f]}"></option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="label">Label (optional)</label>
+                    <input type="text" id="label" th:field="*{label}" placeholder="e.g. Regular Season Spring 2025">
+                </div>
+                <div class="form-group">
+                    <label for="raceScoringId">Race Scoring</label>
+                    <select id="raceScoringId" th:field="*{raceScoringId}">
+                        <option value="">-- Select --</option>
+                        <option th:each="rs : ${raceScorings}" th:value="${rs.id}" th:text="${rs.name}"></option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="matchScoringId">Match Scoring</label>
+                    <select id="matchScoringId" th:field="*{matchScoringId}">
+                        <option value="">-- Select --</option>
+                        <option th:each="ms : ${matchScorings}" th:value="${ms.id}" th:text="${ms.name}"></option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="startDate">Start Date</label>
+                    <input type="date" id="startDate" th:field="*{startDate}">
+                </div>
+                <div class="form-group">
+                    <label for="endDate">End Date</label>
+                    <input type="date" id="endDate" th:field="*{endDate}">
+                </div>
+                <div class="form-group">
+                    <label for="totalRounds">Total Rounds</label>
+                    <input type="number" id="totalRounds" th:field="*{totalRounds}" min="1">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="legs">Legs</label>
+                    <input type="number" id="legs" th:field="*{legs}" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="eventDurationMinutes">Event Duration (minutes)</label>
+                    <input type="number" id="eventDurationMinutes" th:field="*{eventDurationMinutes}" min="1">
+                </div>
+                <div class="form-group">
+                    <label for="sortIndex">Sort Index (auto if blank)</label>
+                    <input type="number" id="sortIndex" th:field="*{sortIndex}" min="0">
+                </div>
+            </div>
+
+            <div class="actions mt-md">
+                <button type="submit" class="btn btn-primary">Save Phase</button>
+                <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>

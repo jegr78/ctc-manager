@@ -34,69 +34,6 @@
                     <input type="text" id="description" th:field="*{description}" placeholder="e.g. Group A">
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="startDate">Start Date</label>
-                    <input type="date" id="startDate" name="startDate" th:value="${seasonForm.startDate != null ? seasonForm.startDate.toString() : ''}">
-                </div>
-                <div class="form-group">
-                    <label for="endDate">End Date</label>
-                    <input type="date" id="endDate" name="endDate" th:value="${seasonForm.endDate != null ? seasonForm.endDate.toString() : ''}">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="format">Format</label>
-                    <select id="format" th:field="*{format}">
-                        <option value="LEAGUE">League</option>
-                        <option value="SWISS">Swiss</option>
-                        <option value="ROUND_ROBIN">Round Robin</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="totalRounds">Total Rounds</label>
-                    <input type="number" id="totalRounds" th:field="*{totalRounds}" min="1" max="20" placeholder="e.g. 8">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group form-group--max-200">
-                    <label for="legs">Legs per Match</label>
-                    <input type="number" id="legs" th:field="*{legs}" min="1" value="1">
-                </div>
-                <div class="form-group form-group--max-200">
-                    <label for="eventDurationMinutes">Event Duration (min)</label>
-                    <input type="number" id="eventDurationMinutes" th:field="*{eventDurationMinutes}" min="10" max="480" placeholder="e.g. 90">
-                </div>
-            </div>
-
-            <!-- Scoring -->
-            <div class="scoring-card">
-                <h3 style="color:var(--accent); margin-bottom:12px;">Scoring</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="raceScoring">Race-Scoring *</label>
-                        <select id="raceScoring" name="raceScoring" required>
-                            <option value="">-- Select --</option>
-                            <option th:each="rs : ${allRaceScorings}" th:value="${rs.id}"
-                                    th:text="${rs.name}"
-                                    th:selected="${season != null && season.raceScoring != null && season.raceScoring.id == rs.id}"></option>
-                        </select>
-                        <div th:if="${season != null && season.raceScoring != null}" class="text-dim" style="font-size:11px; margin-top:2px;"
-                             th:text="${season.raceScoring.racePoints + (season.raceScoring.qualiPoints != null ? ' · Quali ' + season.raceScoring.qualiPoints : '') + ' · FL ' + season.raceScoring.fastestLapPoints}"></div>
-                    </div>
-                    <div class="form-group">
-                        <label for="matchScoring">Match-Scoring *</label>
-                        <select id="matchScoring" name="matchScoring" required>
-                            <option value="">-- Select --</option>
-                            <option th:each="ms : ${allMatchScorings}" th:value="${ms.id}"
-                                    th:text="${ms.name}"
-                                    th:selected="${season != null && season.matchScoring != null && season.matchScoring.id == ms.id}"></option>
-                        </select>
-                        <div th:if="${season != null && season.matchScoring != null}" class="text-dim" style="font-size:11px; margin-top:2px;"
-                             th:text="'S ' + ${season.matchScoring.pointsWin} + ' · U ' + ${season.matchScoring.pointsDraw} + ' · N ' + ${season.matchScoring.pointsLoss}"></div>
-                    </div>
-                </div>
-            </div>
 
             <div class="actions mt-md">
                 <button type="submit" class="btn btn-primary">Save</button>
@@ -144,7 +81,6 @@
             <button type="submit" class="btn btn-primary btn-sm">Add</button>
         </form>
     </div>
-
     <!-- Car Pool (only when editing) -->
     <div th:if="${seasonForm.id != null}" class="card mt-md" id="carPool">
         <h2 th:text="'Car Pool (' + ${season.cars.size()} + ')'">Car Pool</h2>

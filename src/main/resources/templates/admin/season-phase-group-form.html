@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${form.id != null ? 'Edit Group' : 'New Group'}, ~{::section})}">
+<body>
+<section>
+    <a th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${phase.id})}" class="back-link">&larr; Back to Phase</a>
+    <h1 th:text="${(form.id != null ? 'Edit Group' : 'New Group') + ' — ' + (phase.label != null and !phase.label.isBlank() ? phase.label : phase.phaseType)}"></h1>
+
+    <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+
+    <div class="card">
+        <form th:action="@{/admin/seasons/{sid}/phases/{pid}/groups/save(sid=${season.id}, pid=${phase.id})}"
+              th:object="${form}" method="post">
+            <input type="hidden" th:field="*{id}">
+            <input type="hidden" th:field="*{phaseId}">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" th:field="*{name}" placeholder="e.g. Group A" required>
+                    <span class="field-error" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="form-group">
+                    <label for="sortIndex">Sort Order (auto if blank)</label>
+                    <input type="number" id="sortIndex" th:field="*{sortIndex}" min="0">
+                </div>
+            </div>
+
+            <div class="actions mt-md">
+                <button type="submit" class="btn btn-primary">Save Group</button>
+                <a th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${phase.id})}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <p class="text-dim mt-md">After saving, you can assign teams to this group from the phase detail page.</p>
+</section>
+</body>
+</html>
