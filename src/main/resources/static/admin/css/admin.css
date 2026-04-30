@@ -354,6 +354,8 @@ select option {
 }
 .badge-active { background: var(--success-bg); color: #66bb6a; }
 .badge-inactive { background: #222; color: #999; }
+.badge-warning { background: #3b2e0e; color: #ffb74d; }
+.hidden { display: none !important; }
 
 .result-grid {
     display: grid;
