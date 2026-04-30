@@ -1952,12 +1952,28 @@ a.season-header-title:hover {
 /* Secondary tab row (Group sub-tabs) — D-29 */
 .tabs-secondary {
     margin-top: 0;
+    padding: 6px 8px 0;
     border-bottom: 1px solid var(--border);
     background: var(--bg-card);
+    gap: 4px;
 }
 .tabs-secondary .tab-btn {
-    padding: 8px 16px;
+    padding: 8px 14px;
     font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+.tabs-secondary .tab-btn:hover {
+    background: var(--bg-hover);
+    color: var(--white);
+}
+.tabs-secondary .tab-btn.tab-active {
+    color: var(--accent);
+    background: var(--bg-hover);
+    border-bottom-color: var(--accent);
 }
 
 /* "+ Add Phase" / "+ Add Group" CTA tab styling */
