@@ -23,7 +23,7 @@ class SeasonPhaseFormTest {
     void givenNullPhaseType_whenValidate_thenViolation() {
         // given
         var form = new SeasonPhaseForm();
-        form.setSeasonId(UUID.randomUUID());
+        // NOTE: seasonId is INTENTIONALLY absent from SeasonPhaseForm (W-7 IDOR hardening, Plan 60-02)
         form.setLayout(PhaseLayout.LEAGUE);
         form.setFormat(SeasonFormat.LEAGUE);
         // phaseType is null — intentionally not set
@@ -39,7 +39,6 @@ class SeasonPhaseFormTest {
     void givenNullLayout_whenValidate_thenViolation() {
         // given
         var form = new SeasonPhaseForm();
-        form.setSeasonId(UUID.randomUUID());
         form.setPhaseType(PhaseType.REGULAR);
         form.setFormat(SeasonFormat.LEAGUE);
         // layout is null — intentionally not set
@@ -55,7 +54,6 @@ class SeasonPhaseFormTest {
     void givenNullFormat_whenValidate_thenViolation() {
         // given
         var form = new SeasonPhaseForm();
-        form.setSeasonId(UUID.randomUUID());
         form.setPhaseType(PhaseType.REGULAR);
         form.setLayout(PhaseLayout.LEAGUE);
         // format is null (overriding default) — intentionally set to null for test
@@ -70,25 +68,28 @@ class SeasonPhaseFormTest {
 
     @Test
     void givenNullSeasonId_whenValidate_thenViolation() {
+        // NOTE: seasonId is INTENTIONALLY absent from SeasonPhaseForm (W-7 IDOR hardening, Plan 60-02).
+        // The @PathVariable {seasonId} on SeasonPhaseController is the sole source of truth.
+        // This test verifies that a form with all required fields passes validation (no spurious violations).
         // given
         var form = new SeasonPhaseForm();
         form.setPhaseType(PhaseType.REGULAR);
         form.setLayout(PhaseLayout.LEAGUE);
         form.setFormat(SeasonFormat.LEAGUE);
-        // seasonId is null — intentionally not set
 
         // when
         var violations = validator.validate(form);
 
-        // then
-        assertThat(violations).extracting(v -> v.getPropertyPath().toString()).contains("seasonId");
+        // then — no violations since phaseType, layout, format are all provided; seasonId is not a DTO field
+        assertThat(violations).noneMatch(v -> v.getPropertyPath().toString().equals("phaseType")
+                || v.getPropertyPath().toString().equals("layout")
+                || v.getPropertyPath().toString().equals("format"));
     }
 
     @Test
     void givenAllRequiredFields_whenValidate_thenNoViolation() {
         // given
         var form = new SeasonPhaseForm();
-        form.setSeasonId(UUID.randomUUID());
         form.setPhaseType(PhaseType.REGULAR);
         form.setLayout(PhaseLayout.LEAGUE);
         form.setFormat(SeasonFormat.LEAGUE);

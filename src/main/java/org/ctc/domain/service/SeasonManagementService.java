@@ -30,7 +30,7 @@ public class SeasonManagementService {
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
     private final ScoringService scoringService;
-    // Phase 58 D-18 / D-25 — strict delete-guard + REGULAR-phase auto-sync
+    // Phase 58 D-18 / Phase 60 D-25/D-26 — strict delete-guard + REGULAR-phase team sync
     private final SeasonPhaseService seasonPhaseService;
     private final MatchdayRepository matchdayRepository;
     private final PhaseTeamRepository phaseTeamRepository;
@@ -158,74 +158,50 @@ public class SeasonManagementService {
     }
 
     /**
-     * Saves a season form. Phase 58 D-25: in addition to writing the legacy {@link Season}
-     * fields (format, totalRounds, legs, eventDurationMinutes, dates, scoring), the service
-     * additionally find-or-creates the REGULAR {@link SeasonPhase} and synchronises the
-     * same fields onto it, all within a single {@code @Transactional} boundary
-     * (Pitfall 7 mitigation).
+     * Saves a season with the slim 6-param signature (Phase 60 UI-01).
      *
-     * <p>Phase 60 will remove the legacy field writes; Phase 61 will drop the legacy columns.
+     * <p>Phase 58 D-25 Auto-Sync block (format/scoring/dates copied to REGULAR phase)
+     * is INTENTIONALLY REMOVED in Phase 60 — phase fields are now managed exclusively
+     * via the Phase form (SeasonPhaseController).
+     *
+     * <p>Pitfall 1 Recommendation (a): for new seasons, auto-bootstrap a REGULAR
+     * {@link SeasonPhase} with null scoring/format/dates so that TestHelper.createSeason
+     * continues to produce a Season with a REGULAR phase and downstream tests pass.
      */
     @Transactional
-    public Season save(UUID id, String name, int year, int number, String description,
-                       LocalDate startDate, LocalDate endDate, boolean active,
-                       SeasonFormat format, Integer totalRounds, int legs,
-                       Integer eventDurationMinutes, UUID raceScoringId, UUID matchScoringId) {
-        var raceScoring = raceScoringRepository.findById(raceScoringId)
-                .orElseThrow(() -> new EntityNotFoundException("RaceScoring", raceScoringId));
-        var matchScoring = matchScoringRepository.findById(matchScoringId)
-                .orElseThrow(() -> new EntityNotFoundException("MatchScoring", matchScoringId));
-
+    public Season save(UUID id, String name, int year, int number, String description, boolean active) {
         Season season;
-        if (id != null) {
-            season = findById(id);
-        } else {
+        boolean isNew = (id == null);
+        if (isNew) {
             season = new Season();
+        } else {
+            season = seasonRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Season", id));
         }
         season.setName(name);
         season.setYear(year);
         season.setNumber(number);
         season.setDescription(description);
-        season.setStartDate(startDate);
-        season.setEndDate(endDate);
         season.setActive(active);
-        season.setFormat(format);
-        season.setTotalRounds(totalRounds);
-        season.setLegs(legs);
-        season.setEventDurationMinutes(eventDurationMinutes);
-        season.setRaceScoring(raceScoring);
-        season.setMatchScoring(matchScoring);
+        var saved = seasonRepository.save(season);
 
-        season = seasonRepository.save(season);
-        final UUID savedSeasonId = season.getId(); // effectively-final capture for the lambda below
-
-        // D-25: find-or-create REGULAR phase + write-through fields (Pitfall 7: bootstrap on new season)
-        var regular = seasonPhaseService.findByType(savedSeasonId, PhaseType.REGULAR)
-                .orElseGet(() -> seasonPhaseService.create(savedSeasonId,
-                        PhaseType.REGULAR, PhaseLayout.LEAGUE, /*sortIndex*/ 0,
-                        /*label*/ null,
-                        raceScoring, matchScoring,
-                        format, startDate, endDate,
-                        totalRounds, legs, eventDurationMinutes));
-        // Sync fields onto the existing-or-just-created REGULAR phase (idempotent on the freshly-created path)
-        if (format != null) {
-            regular.setFormat(format);
+        // Pitfall 1 Recommendation (a): auto-bootstrap REGULAR phase for new seasons.
+        // The Phase 58 D-25 Auto-Sync block (which copied format/scoring/dates onto the REGULAR phase)
+        // is INTENTIONALLY REMOVED in Phase 60 — phase fields are now managed exclusively via the Phase form.
+        if (isNew) {
+            seasonPhaseService.findByType(saved.getId(), PhaseType.REGULAR)
+                    .orElseGet(() -> seasonPhaseService.create(saved.getId(),
+                            PhaseType.REGULAR, PhaseLayout.LEAGUE, /*sortIndex*/ 0,
+                            /*label*/ null,
+                            /*raceScoring*/ null, /*matchScoring*/ null,
+                            /*format*/ null,
+                            /*startDate*/ null, /*endDate*/ null,
+                            /*totalRounds*/ null, /*legs*/ 1, /*eventDurationMinutes*/ null));
+            log.info("Auto-bootstrapped REGULAR phase for new season {}", saved.getId());
         }
-        regular.setTotalRounds(totalRounds);
-        regular.setLegs(legs);
-        regular.setEventDurationMinutes(eventDurationMinutes);
-        regular.setStartDate(startDate);
-        regular.setEndDate(endDate);
-        regular.setRaceScoring(raceScoring);
-        regular.setMatchScoring(matchScoring);
-        seasonPhaseRepository.save(regular);
 
-        if (id != null) {
-            log.info("Updated season: {}", season.getName());
-        } else {
-            log.info("Created season: {}", season.getName());
-        }
-        return season;
+        log.info("Saved season {} (year={}, number={})", saved.getId(), year, number);
+        return saved;
     }
 
     /**
@@ -309,6 +285,7 @@ public class SeasonManagementService {
 
     /**
      * Adds a team to a season. Auto-adds the parent team when adding a sub-team.
+     * D-26: atomically inserts a {@link PhaseTeam} into the REGULAR phase (group=NULL).
      * Returns the team's short name for flash messages.
      */
     @Transactional
@@ -326,6 +303,15 @@ public class SeasonManagementService {
             season.addTeam(team);
             seasonRepository.save(season);
             log.info("Added team {} to season {}", team.getShortName(), season.getName());
+
+            // D-26: atomic PhaseTeam insert into REGULAR phase with group=NULL
+            seasonPhaseService.findByType(seasonId, PhaseType.REGULAR).ifPresent(regular -> {
+                var existing = phaseTeamRepository.findByPhaseIdAndTeamId(regular.getId(), teamId);
+                if (existing.isEmpty()) {
+                    phaseTeamRepository.save(new PhaseTeam(regular, team));
+                    log.info("Auto-added team {} to REGULAR phase {} (group=NULL)", teamId, regular.getId());
+                }
+            });
         }
 
         return team.getShortName();
@@ -333,8 +319,8 @@ public class SeasonManagementService {
 
     /**
      * Removes a team from a season with sub-team constraint check.
+     * D-25 strict guard: refuses removal if any PhaseTeam in the season references the team.
      * Auto-removes the parent team if no more sub-teams remain.
-     * Throws IllegalStateException if trying to remove a parent team with sub-teams still in the season.
      */
     @Transactional
     public String removeTeamFromSeason(UUID seasonId, UUID teamId) {
@@ -342,6 +328,13 @@ public class SeasonManagementService {
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         var team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
+
+        // D-25 strict guard: if any PhaseTeam in this season references any team, refuse
+        if (phaseTeamRepository.existsByPhaseSeasonId(seasonId)) {
+            throw new BusinessRuleException(
+                    "Cannot remove team from season: team is still assigned to one or more phase rosters. " +
+                    "Remove it from all phases first.");
+        }
 
         if (!team.isSubTeam()) {
             boolean hasSubs = season.getTeams().stream()
