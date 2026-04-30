@@ -372,6 +372,15 @@ public class PlayoffService {
 				.getPlayoff().getSeason().getId();
 	}
 
+	/**
+	 * Returns the playoff linked to the given SeasonPhase, or empty if none.
+	 * Used by SeasonPhaseController to populate the Bracket card on the phase-detail tab.
+	 */
+	@Transactional(readOnly = true)
+	public java.util.Optional<Playoff> findByPhaseId(UUID phaseId) {
+		return playoffRepository.findByPhaseId(phaseId);
+	}
+
 	// --- Record types for service return data ---
 
 	public record PlayoffListData(Playoff playoff, PlayoffBracketViewService.PlayoffBracketView bracketView,
