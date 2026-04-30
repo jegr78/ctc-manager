@@ -16,9 +16,15 @@ public interface MatchdayRepository extends JpaRepository<Matchday, UUID> {
 	@EntityGraph(attributePaths = {"season", "phase"})
 	List<Matchday> findByPhaseIdOrderBySortIndexAsc(UUID phaseId);
 
+	// Phase 60: count-only variant (no ordering overhead) used in guard checks
+	List<Matchday> findByPhaseId(UUID phaseId);
+
 	@EntityGraph(attributePaths = {"season", "phase", "group"})
 	List<Matchday> findByPhaseIdAndGroupIdOrderBySortIndexAsc(UUID phaseId, UUID groupId);
 
 	// D-18: Delete-guard — existsBy check used by SeasonManagementService.delete
 	boolean existsByPhaseSeasonId(UUID seasonId);
+
+	// Phase 60 D-28: Group delete-guard — check if matchdays exist for a given group
+	List<Matchday> findByGroupId(UUID groupId);
 }
