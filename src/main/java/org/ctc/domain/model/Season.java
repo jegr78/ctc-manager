@@ -55,11 +55,11 @@ public class Season extends BaseEntity {
 	private Integer eventDurationMinutes;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "race_scoring_id", nullable = false)
+	@JoinColumn(name = "race_scoring_id")
 	private RaceScoring raceScoring;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "match_scoring_id", nullable = false)
+	@JoinColumn(name = "match_scoring_id")
 	private MatchScoring matchScoring;
 
 	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
