@@ -199,19 +199,21 @@ public class SeasonController {
 	@GetMapping("/{id}/swiss")
 	public String swissRounds(@PathVariable UUID id, Model model) {
 		var data = seasonManagementService.getSwissRoundData(id);
+		var regular = seasonPhaseService.findRegularPhase(id);
 		model.addAttribute("season", data.season());
 		model.addAttribute("raceScores", data.raceScores());
-		model.addAttribute("currentRound", swissPairingService.getCurrentRound(id));
+		model.addAttribute("currentRound", swissPairingService.getCurrentRound(regular.getId(), null));
 		model.addAttribute("canGenerateNext",
-				swissPairingService.isCurrentRoundComplete(id)
+				swissPairingService.isCurrentRoundComplete(regular.getId(), null)
 						&& (data.season().getTotalRounds() == null || data.season().getMatchdays().size() < data.season().getTotalRounds()));
 		return "admin/swiss-rounds";
 	}
 
 	@PostMapping("/{id}/swiss/generate")
 	public String generateSwissRound(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		var regular = seasonPhaseService.findRegularPhase(id);
 		try {
-			swissPairingService.generateNextRound(id);
+			swissPairingService.generateNextRound(regular.getId(), null);
 			redirectAttributes.addFlashAttribute("successMessage", "Next round generated successfully");
 		} catch (IllegalStateException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -241,8 +243,9 @@ public class SeasonController {
 			redirectAttributes.addFlashAttribute("errorMessage", "Invalid input: number of rounds must be at least 1");
 			return "redirect:/admin/seasons/" + id + "/generate";
 		}
+		var regular = seasonPhaseService.findRegularPhase(id);
 		try {
-			matchdayGeneratorService.generate(id, form.getNumberOfRounds(), form.isHomeAndAway());
+			matchdayGeneratorService.generate(regular.getId(), null, form.getNumberOfRounds(), form.isHomeAndAway());
 			redirectAttributes.addFlashAttribute("successMessage", "Matchdays generated successfully");
 		} catch (IllegalStateException | IllegalArgumentException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
