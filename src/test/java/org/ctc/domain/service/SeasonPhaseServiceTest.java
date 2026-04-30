@@ -18,6 +18,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -241,8 +242,181 @@ class SeasonPhaseServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // Helpers
+    // Phase 60: update / delete / updateGroup / deleteGroup / assignTeamsToPhase
     // ---------------------------------------------------------------------------
+
+    @Test
+    void givenPhaseWithMatchdays_whenChangeLayout_thenThrowsBusinessRule() {
+        // given: existing LEAGUE-layout phase that has matchdays
+        var season = buildSeason("Phase60-Test-Season-Layout");
+        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var matchday = mock(Matchday.class);
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of(matchday));
+
+        // when / then — changing layout when matchdays exist must throw
+        assertThatThrownBy(() -> seasonPhaseService.update(
+                phase.getId(), PhaseLayout.GROUPS, phase.getFormat(),
+                null, null, null, null, null, phase.getLegs(), null, null, phase.getSortIndex()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("matchdays");
+    }
+
+    @Test
+    void givenPhaseWithMatchdays_whenDelete_thenThrowsBusinessRule() {
+        // given
+        var season = buildSeason("Phase60-Test-Season-Delete");
+        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var matchday = mock(Matchday.class);
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of(matchday));
+
+        // when / then
+        assertThatThrownBy(() -> seasonPhaseService.delete(phase.getId()))
+                .isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    void givenEmptyPhase_whenDelete_thenSucceeds() {
+        // given
+        var season = buildSeason("Phase60-Test-Season-EmptyDelete");
+        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of());
+        when(phaseTeamRepository.findByPhaseId(phase.getId())).thenReturn(List.of());
+
+        // when
+        seasonPhaseService.delete(phase.getId());
+
+        // then
+        verify(seasonPhaseRepository).delete(phase);
+    }
+
+    @Test
+    void givenGroupWithNewName_whenUpdateGroup_thenGroupNameUpdated() {
+        // given
+        var season = buildSeason("Phase60-Test-Season-UpdateGroup");
+        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var group = new SeasonPhaseGroup(phase, "Phase60-Original-Name", 0);
+        group.setId(UUID.randomUUID());
+        when(seasonPhaseGroupRepository.findById(group.getId())).thenReturn(Optional.of(group));
+        when(seasonPhaseGroupRepository.save(any(SeasonPhaseGroup.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // when
+        seasonPhaseService.updateGroup(group.getId(), "Phase60-Renamed-Group", null);
+
+        // then
+        assertThat(group.getName()).isEqualTo("Phase60-Renamed-Group");
+        verify(seasonPhaseGroupRepository).save(group);
+    }
+
+    @Test
+    void givenGroupWithPhaseTeams_whenDeleteGroup_thenThrowsBusinessRule() {
+        // given: group with at least one PhaseTeam (D-28 strict guard)
+        var season = buildSeason("Phase60-Test-Season-DeleteGroup");
+        var phase = PhaseTestFixtures.groupsRegularPhase(season, season.getRaceScoring(), season.getMatchScoring(), "Phase60-Group-A");
+        var group = phase.getGroups().get(0);
+        var phaseTeam = mock(PhaseTeam.class);
+        when(seasonPhaseGroupRepository.findById(group.getId())).thenReturn(Optional.of(group));
+        when(phaseTeamRepository.findByPhaseIdAndGroupId(phase.getId(), group.getId()))
+                .thenReturn(List.of(phaseTeam));
+
+        // when / then
+        assertThatThrownBy(() -> seasonPhaseService.deleteGroup(group.getId()))
+                .isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    void givenRosterDiff_whenAssignTeamsToPhase_thenInsertsUpdatesAndDeletes() {
+        // given: existing PhaseTeams [T1@GroupA, T2@null]
+        var season = buildSeasonWithTeams("Phase60-Test-Season-Roster", 3);
+        var teams = season.getSeasonTeams().stream().map(SeasonTeam::getTeam).toList();
+        var teamT1 = teams.get(0);
+        var teamT2 = teams.get(1);
+        var teamT3 = teams.get(2);
+
+        var phase = PhaseTestFixtures.groupsRegularPhase(season, season.getRaceScoring(), season.getMatchScoring(), "Phase60-Group-A", "Phase60-Group-B");
+        var groupA = phase.getGroups().get(0);
+        var groupB = phase.getGroups().get(1);
+
+        // Existing roster: T1 in GroupA, T2 unassigned
+        var existingPtT1 = PhaseTestFixtures.assignTeam(phase, teamT1, groupA);
+        var existingPtT2 = PhaseTestFixtures.assignTeam(phase, teamT2, null);
+
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(phaseTeamRepository.findByPhaseId(phase.getId())).thenReturn(List.of(existingPtT1, existingPtT2));
+        when(seasonPhaseGroupRepository.findById(groupB.getId())).thenReturn(Optional.of(groupB));
+        when(phaseTeamRepository.save(any(PhaseTeam.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // New assignments: T1@GroupB (update group), T2 not included (delete), T3@null (insert)
+        var assignments = List.of(
+                new SeasonPhaseService.Assignment(teamT1.getId(), true, groupB.getId()),
+                new SeasonPhaseService.Assignment(teamT2.getId(), false, null),
+                new SeasonPhaseService.Assignment(teamT3.getId(), true, null)
+        );
+
+        // when
+        seasonPhaseService.assignTeamsToPhase(phase.getId(), assignments);
+
+        // then: T3 inserted (save), T1 updated (save), T2 removed (delete)
+        var savedCaptor = ArgumentCaptor.forClass(PhaseTeam.class);
+        verify(phaseTeamRepository, atLeastOnce()).save(savedCaptor.capture());
+        verify(phaseTeamRepository).delete(existingPtT2);
+        // T1's group updated to GroupB
+        assertThat(existingPtT1.getGroup()).isEqualTo(groupB);
+    }
+
+    @Test
+    void givenAssignmentUnchanged_whenAssignTeamsToPhase_thenNoWrite() {
+        // given: T1 is already in GroupA and the new assignment says T1@GroupA included
+        var season = buildSeasonWithTeams("Phase60-Test-Season-NoOp", 1);
+        var teamT1 = season.getSeasonTeams().stream().map(SeasonTeam::getTeam).findFirst().orElseThrow();
+        var phase = PhaseTestFixtures.groupsRegularPhase(season, season.getRaceScoring(), season.getMatchScoring(), "Phase60-Group-NoOp");
+        var groupA = phase.getGroups().get(0);
+        var existingPt = PhaseTestFixtures.assignTeam(phase, teamT1, groupA);
+
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(phaseTeamRepository.findByPhaseId(phase.getId())).thenReturn(List.of(existingPt));
+        when(seasonPhaseGroupRepository.findById(groupA.getId())).thenReturn(Optional.of(groupA));
+
+        // New assignment: T1@GroupA unchanged
+        var assignments = List.of(new SeasonPhaseService.Assignment(teamT1.getId(), true, groupA.getId()));
+
+        // when
+        seasonPhaseService.assignTeamsToPhase(phase.getId(), assignments);
+
+        // then: no save or delete on phaseTeamRepository (no-op)
+        verify(phaseTeamRepository, never()).save(any(PhaseTeam.class));
+        verify(phaseTeamRepository, never()).delete(any(PhaseTeam.class));
+    }
+
+    // W-11: phaseType immutability — update() signature must not accept phaseType
+    @Test
+    void givenExistingPhase_whenUpdateWithSameLayout_thenPhaseTypePersisted() {
+        // given: existing REGULAR phase
+        var season = buildSeason("Phase60-Test-Season-PhaseTypeImmutable");
+        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
+        when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of());
+        when(seasonPhaseRepository.save(any(SeasonPhase.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // when: update() is called — no phaseType parameter exists in this signature (W-11)
+        seasonPhaseService.update(phase.getId(), phase.getLayout(), phase.getFormat(),
+                null, null, null, null, null, phase.getLegs(), null, "T-Phase60-Renamed",
+                phase.getSortIndex());
+
+        // then: phaseType is unchanged (update signature does not accept phaseType → W-11)
+        var captor = ArgumentCaptor.forClass(SeasonPhase.class);
+        verify(seasonPhaseRepository).save(captor.capture());
+        assertThat(captor.getValue().getPhaseType()).isEqualTo(PhaseType.REGULAR);
+    }
+
+    // ---------------------------------------------------------------------------
+    // Helpers (Phase 60 additions)
+    // ---------------------------------------------------------------------------
+
+    @Mock
+    private MatchdayRepository matchdayRepository;
 
     private Season buildSeason(String name) {
         var rs = new RaceScoring();

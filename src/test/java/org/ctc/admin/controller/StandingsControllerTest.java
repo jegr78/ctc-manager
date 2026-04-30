@@ -4,8 +4,13 @@ import org.ctc.TestHelper;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.SeasonPhaseRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.service.SeasonPhaseService;
+import org.ctc.domain.model.PhaseLayout;
+import org.ctc.domain.model.PhaseType;
+import org.ctc.domain.model.SeasonFormat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +44,10 @@ class StandingsControllerTest {
 	private MatchdayRepository matchdayRepository;
 	@Autowired
 	private MatchRepository matchRepository;
+	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+	@Autowired
+	private SeasonPhaseService seasonPhaseService;
 
 	private Season activeSeason;
 	private Season inactiveSeason;
@@ -153,5 +162,56 @@ class StandingsControllerTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(model().attribute("seasons", hasSize(greaterThanOrEqualTo(2))));
+	}
+
+	// --- Phase 60 UI-05: phase-scoped standings (D-12, D-30, D-31, D-32, D-33) ---
+
+	@Test
+	void givenLegacySeasonParam_whenGetStandings_thenResolvesToRegularPhase() throws Exception {
+		// given
+		var season = testHelper.createSeason("T-Phase60-LegacyURL");
+
+		// when: legacy ?seasonId= param
+		mockMvc.perform(get("/admin/standings").param("seasonId", season.getId().toString()))
+				// then: Phase 60 implementation must add "phase" to model (D-12 bridge)
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/standings"))
+				.andExpect(model().attributeExists("phase"));
+	}
+
+	@Test
+	void givenGroupsPhase_whenGetStandingsWithoutGroup_thenCombinedViewWithGroupColumn() throws Exception {
+		// given: GROUPS-layout REGULAR phase with 2 groups
+		var season = testHelper.createSeason("T-Phase60-CombinedView");
+		var regular = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+		regular.setLayout(PhaseLayout.GROUPS);
+		var groupA = seasonPhaseService.createGroup(regular.getId(), "T-Phase60-Group-A", 0);
+		var groupB = seasonPhaseService.createGroup(regular.getId(), "T-Phase60-Group-B", 1);
+
+		// when: ?phase=X without &group= → combined view
+		mockMvc.perform(get("/admin/standings").param("phase", regular.getId().toString()))
+				// then: Phase 60 implementation must add these model attrs (D-30, D-31)
+				.andExpect(status().isOk())
+				.andExpect(model().attribute("combinedView", true))
+				.andExpect(model().attribute("showGroupColumn", true));
+	}
+
+	@Test
+	void givenSwissPerGroup_whenGetStandings_thenShowBuchholzTrue() throws Exception {
+		// given: GROUPS+SWISS phase with a specific group
+		var season = testHelper.createSeason("T-Phase60-SwissGroup");
+		var regular = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+		regular.setLayout(PhaseLayout.GROUPS);
+		regular.setFormat(SeasonFormat.SWISS);
+		seasonPhaseRepository.save(regular);
+		var group = seasonPhaseService.createGroup(regular.getId(), "T-Phase60-Swiss-Group-A", 0);
+
+		// when: ?phase=X&group=Y → Buchholz mode
+		mockMvc.perform(get("/admin/standings")
+						.param("phase", regular.getId().toString())
+						.param("group", group.getId().toString()))
+				// then: Phase 60 implementation must set showBuchholz=true for SWISS (D-33)
+				.andExpect(status().isOk())
+				.andExpect(model().attribute("showBuchholz", true));
 	}
 }
