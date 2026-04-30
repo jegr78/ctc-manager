@@ -80,7 +80,7 @@ class SeasonPhaseGroupControllerTest {
         // assignments[0]: team1 included=true (update or keep)
         // assignments[1]: team2 included=false (remove)
         // assignments[2]: team3 included=true (insert)
-        mockMvc.perform(post("/admin/seasons/{sid}/phases/{pid}/roster",
+        mockMvc.perform(post("/admin/seasons/{sid}/phases/{pid}/groups/roster",
                         season.getId(), phaseId)
                         .param("phaseId", phaseId.toString())
                         .param("assignments[0].teamId", team1.getId().toString())

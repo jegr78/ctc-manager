@@ -36,6 +36,9 @@ class SeasonPhaseServiceTest {
     @Mock
     private SeasonRepository seasonRepository;
 
+    @Mock
+    private TeamRepository teamRepository;
+
     @InjectMocks
     private SeasonPhaseService seasonPhaseService;
 
@@ -347,6 +350,8 @@ class SeasonPhaseServiceTest {
         when(phaseTeamRepository.findByPhaseId(phase.getId())).thenReturn(List.of(existingPtT1, existingPtT2));
         when(seasonPhaseGroupRepository.findById(groupB.getId())).thenReturn(Optional.of(groupB));
         when(phaseTeamRepository.save(any(PhaseTeam.class))).thenAnswer(inv -> inv.getArgument(0));
+        // T3 is an INSERT — service calls teamRepository.findById to resolve the Team entity
+        when(teamRepository.findById(teamT3.getId())).thenReturn(Optional.of(teamT3));
 
         // New assignments: T1@GroupB (update group), T2 not included (delete), T3@null (insert)
         var assignments = List.of(
@@ -377,7 +382,7 @@ class SeasonPhaseServiceTest {
 
         when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
         when(phaseTeamRepository.findByPhaseId(phase.getId())).thenReturn(List.of(existingPt));
-        when(seasonPhaseGroupRepository.findById(groupA.getId())).thenReturn(Optional.of(groupA));
+        // Note: seasonPhaseGroupRepository.findById NOT stubbed — no-op path avoids the group lookup
 
         // New assignment: T1@GroupA unchanged
         var assignments = List.of(new SeasonPhaseService.Assignment(teamT1.getId(), true, groupA.getId()));

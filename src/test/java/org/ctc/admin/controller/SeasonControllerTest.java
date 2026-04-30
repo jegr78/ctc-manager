@@ -118,16 +118,14 @@ class SeasonControllerTest {
 	}
 
 	@Test
-	void givenExistingSeason_whenGetSeasonDetail_thenReturnsDetailView() throws Exception {
-		// given
+	void givenExistingSeason_whenGetSeasonDetail_thenRedirectsToRegularPhaseTab() throws Exception {
+		// given: season with auto-bootstrapped REGULAR phase (TestHelper)
 		var season = testHelper.createSeason("Detail Test");
 
-		// when
+		// when / then: D-08 + D-03 redirect to REGULAR phase tab (3xx), NOT direct 200 render
 		mockMvc.perform(get("/admin/seasons/" + season.getId()))
-				// then
-				.andExpect(status().isOk())
-				.andExpect(view().name("admin/season-detail"))
-				.andExpect(model().attributeExists("season"));
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrlPattern("/admin/seasons/" + season.getId() + "/phases/*"));
 	}
 
 	@Test

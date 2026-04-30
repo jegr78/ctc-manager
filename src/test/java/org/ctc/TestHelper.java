@@ -14,6 +14,7 @@ public class TestHelper {
 	private final RaceScoringRepository raceScoringRepository;
 	private final MatchScoringRepository matchScoringRepository;
 	private final SeasonRepository seasonRepository;
+	private final SeasonPhaseRepository seasonPhaseRepository;
 	private final MatchdayRepository matchdayRepository;
 	private final TeamRepository teamRepository;
 	private final MatchRepository matchRepository;
@@ -25,6 +26,11 @@ public class TestHelper {
 		return createSeason(name, 2026, 1);
 	}
 
+	/**
+	 * Creates a Season with a bootstrapped REGULAR phase (LEAGUE layout, sortIndex=0).
+	 * Mirrors the bootstrap performed by SeasonManagementService.save — ensures tests that
+	 * call seasonPhaseRepository.findBySeasonIdAndPhaseType(id, REGULAR) find a result.
+	 */
 	public Season createSeason(String name, int year, int number) {
 		var suffix = UUID.randomUUID().toString().substring(0, 4);
 		var rs = raceScoringRepository.save(
@@ -34,7 +40,10 @@ public class TestHelper {
 		var season = new Season(name, year, number);
 		season.setRaceScoring(rs);
 		season.setMatchScoring(ms);
-		return seasonRepository.save(season);
+		var saved = seasonRepository.save(season);
+		// Bootstrap REGULAR phase to mirror SeasonManagementService.save behaviour
+		seasonPhaseRepository.save(new SeasonPhase(saved, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
+		return saved;
 	}
 
 	public Matchday createMatchday(Season season, String label, int sortIndex) {
