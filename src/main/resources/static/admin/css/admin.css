@@ -1946,3 +1946,38 @@ a.season-header-title:hover {
 .results-total-value--home { color: var(--accent); }
 .results-total-value--away { color: var(--white); }
 .results-total-sep { color: var(--text-dim); }
+
+/* === Phase 60: Two-row tabs (Saison-Detail + Standings) === */
+
+/* Secondary tab row (Group sub-tabs) — D-29 */
+.tabs-secondary {
+    margin-top: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+}
+.tabs-secondary .tab-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+/* "+ Add Phase" / "+ Add Group" CTA tab styling */
+.tab-btn.tab-add {
+    color: var(--accent);
+    font-weight: 600;
+}
+.tab-btn.tab-add:hover {
+    color: var(--white);
+    border-bottom-color: var(--accent);
+}
+
+/* Mobile: horizontal scroll for both tab rows — D-11 */
+@media (max-width: 768px) {
+    .tab-nav {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tab-nav .tab-btn {
+        flex-shrink: 0;
+    }
+}
