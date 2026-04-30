@@ -1011,32 +1011,34 @@ Aus `grep` Analysis:
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All five questions are resolved. The original "Recommendation:" lines are adopted as the binding decision per question — the Phase 60 plans implement them as written.
 
 1. **Soll bei neuer Saison automatisch eine REGULAR-Phase angelegt werden?**
    - What we know: pure-gem.md Z. 18 sagt "1× **REGULAR**" als hartes Modell. UI-01 nimmt das Auto-Sync raus.
    - What's unclear: Soll `SeasonManagementService.save` selbst eine leere REGULAR-Phase mitanlegen (mit `format=null`) oder soll der User explizit über D-08 Empty-State eine Phase anlegen müssen?
-   - Recommendation: Auto-Bootstrap mit `format=null` — User füllt das Format dann via Phase-Edit-Form. Vermeidet Pitfall 1 + D-08 ist nur defensive Sicherheit, nicht Standard-Workflow.
+   - RESOLVED: Auto-Bootstrap mit `format=null` — User füllt das Format dann via Phase-Edit-Form. Vermeidet Pitfall 1 + D-08 ist nur defensive Sicherheit, nicht Standard-Workflow. (Plan 60-03 Task 2 implementiert das.)
 
 2. **Sollen Phase-Routes auch eigenständig erreichbar sein, oder nur als Sub-Tab in Saison-Detail?**
    - What we know: D-03 sagt `/admin/seasons/{id}/phases/{phaseId}` — eingebettet.
    - What's unclear: Soll `/admin/phases/{phaseId}` als short-cut existieren?
-   - Recommendation: NEIN — D-03 ist klar; ein flacher `/admin/phases/{id}` würde die Saison-Hierarchie verstecken.
+   - RESOLVED: NEIN — D-03 ist binding; kein flacher `/admin/phases/{id}` Shortcut. Würde die Saison-Hierarchie verstecken. (Plan 60-02 SeasonPhaseController nutzt ausschliesslich den Saison-eingebetteten Pfad.)
 
 3. **Was tun bei Saison ohne SeasonTeams aber mit REGULAR-Phase?**
    - What we know: D-26 sagt SeasonTeam-Add füllt PhaseTeam mit. D-20 sagt GROUPS-Phase startet leer.
    - What's unclear: Wenn ein User eine Saison ohne SeasonTeams hat und die REGULAR-Phase auf GROUPS umstellt — der Roster-Editor zeigt eine leere Tabelle ("No teams").
-   - Recommendation: Empty-State-Banner "Add teams to season first via the Saison-Header"-Hinweis. Klare User-Guidance.
+   - RESOLVED: Empty-State-Banner "Add teams to season first via the Saison-Header" als klare User-Guidance. (Plan 60-04 season-detail.html Roster-Section rendert ein Hinweis-Banner wenn `season.seasonTeams` leer ist.)
 
 4. **Wie behandeln wir Standings, wenn die Phase noch keine Matchdays hat?**
    - What we know: D-36 sagt Empty-State-Banner.
    - What's unclear: Soll das Banner einen "+ Generate Matchdays"-CTA haben?
-   - Recommendation: Ja, Action-orientiert — verlinke auf `/admin/seasons/{sid}/phases/{pid}/generate` (oder wo auch immer der phase-aware Generate-Endpoint sitzt).
+   - RESOLVED: Ja, Action-orientiert — Banner verlinkt auf den phase-aware Matchday-Generate-Pfad. (Plan 60-05 standings.html D-36 Empty-State enthält den CTA-Link.)
 
 5. **Phase-Edit für PLAYOFF-Phase: kann man phaseType in PLAYOFF→REGULAR umändern?**
    - What we know: D-16 sagt alle Felder editierbar. D-22 sagt Layout-Format-Kompatibilität serverseitig validiert.
    - What's unclear: PhaseType-Wechsel bricht Playoff (FK ist `phase_id`).
-   - Recommendation: SeasonPhaseService.update wirft `BusinessRuleException` wenn `oldPhase.phaseType == PLAYOFF` und Playoff-Row existiert + Wechsel auf REGULAR/PLACEMENT versucht wird. Generell sollten phaseType-Wechsel-Cases sehr restriktiv sein.
+   - RESOLVED: phaseType ist nach Create immutable — `SeasonPhaseService.update` akzeptiert phaseType NICHT im Update-Signature; UI rendert den phaseType-Selector im Edit-Mode als `disabled` (W-9) und ein no-op-Test (W-11) sichert die Immutabilität. Vermeidet jegliche FK-Brüche und reduziert die Validierungs-Komplexität auf Layout/Format-Kompatibilität.
 
 ---
 
