@@ -4,9 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.ctc.domain.model.SeasonFormat;
 
-import java.time.LocalDate;
 import java.util.UUID;
 
 @Getter
@@ -25,17 +23,5 @@ public class SeasonForm {
 
 	private String description;
 
-	private LocalDate startDate;
-
-	private LocalDate endDate;
-
 	private boolean active;
-
-	private SeasonFormat format = SeasonFormat.LEAGUE;
-
-	private Integer totalRounds;
-
-	private int legs = 1;
-
-	private Integer eventDurationMinutes;
 }

@@ -50,7 +50,6 @@ public class SeasonController {
 	@GetMapping("/new")
 	public String create(Model model) {
 		model.addAttribute("seasonForm", new SeasonForm());
-		addScoringLists(model);
 		return "admin/season-form";
 	}
 
@@ -64,36 +63,24 @@ public class SeasonController {
 		form.setYear(season.getYear());
 		form.setNumber(season.getNumber());
 		form.setDescription(season.getDescription());
-		form.setStartDate(season.getStartDate());
-		form.setEndDate(season.getEndDate());
 		form.setActive(season.isActive());
-		form.setFormat(season.getFormat());
-		form.setTotalRounds(season.getTotalRounds());
-		form.setLegs(season.getLegs());
-		form.setEventDurationMinutes(season.getEventDurationMinutes());
 		model.addAttribute("seasonForm", form);
 		model.addAttribute("season", season);
 		model.addAttribute("allTeams", data.allTeams());
 		model.addAttribute("allCars", data.allCars());
 		model.addAttribute("allTracks", data.allTracks());
-		model.addAttribute("allRaceScorings", data.allRaceScorings());
-		model.addAttribute("allMatchScorings", data.allMatchScorings());
 		return "admin/season-form";
 	}
 
 	@PostMapping("/save")
-	public String save(@Valid @ModelAttribute("seasonForm") SeasonForm form, BindingResult result,
-	                   @RequestParam UUID raceScoring,
-	                   @RequestParam UUID matchScoring,
-	                   RedirectAttributes redirectAttributes, Model model) {
+	public String save(@Valid @ModelAttribute("seasonForm") SeasonForm form,
+	                   BindingResult result,
+	                   RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
-			addScoringLists(model);
 			return "admin/season-form";
 		}
-		var season = seasonManagementService.save(form.getId(), form.getName(), form.getYear(),
-				form.getNumber(), form.getDescription(), form.getStartDate(), form.getEndDate(),
-				form.isActive(), form.getFormat(), form.getTotalRounds(), form.getLegs(),
-				form.getEventDurationMinutes(), raceScoring, matchScoring);
+		var season = seasonManagementService.save(form.getId(), form.getName(),
+				form.getYear(), form.getNumber(), form.getDescription(), form.isActive());
 		redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
 		return "redirect:/admin/seasons";
 	}
@@ -244,10 +231,5 @@ public class SeasonController {
 			return "redirect:/admin/seasons/" + id + "/generate";
 		}
 		return "redirect:/admin/seasons/" + id;
-	}
-
-	private void addScoringLists(Model model) {
-		model.addAttribute("allRaceScorings", seasonManagementService.getAllRaceScorings());
-		model.addAttribute("allMatchScorings", seasonManagementService.getAllMatchScorings());
 	}
 }
