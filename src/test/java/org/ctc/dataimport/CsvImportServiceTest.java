@@ -453,8 +453,11 @@ class CsvImportServiceTest {
 	@Test
 	void givenNonExistentMatchday_whenCheckDuplicate_thenReturnsFalse() {
 		// given
+		// Phase 61 CR-01: checkDuplicate now resolves matchdays via the REGULAR phase finder
+		// (findByPhaseIdOrderBySortIndexAsc) instead of the legacy season-id finder.
 		when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-		when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of());
+		when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(matchday.getPhase().getId()))
+				.thenReturn(List.of());
 
 		var metadata = new CsvImportService.ImportMetadata(season.getId(), "NonExistent MD", null, null);
 		var preview = new CsvImportService.ImportPreview(metadata);

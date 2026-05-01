@@ -164,7 +164,11 @@ public class MatchdayService {
         // Phase 61 MIGR-06: matchday.season is gone; bind via REGULAR phase instead.
         var regular = seasonPhaseService.findRegularPhase(season.getId());
 
-        var existingMatchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
+        // Phase 61 CR-01: scope existing-matchday lookup to the REGULAR phase. The previous
+        // findBySeasonIdOrderBySortIndexAsc returned matchdays from BOTH phases, which (1) let
+        // playoff matchdays (sortIndex >= 100) poison the next REGULAR sortIndex and (2) made
+        // the duplicate-label check collide across phases.
+        var existingMatchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId());
 
         boolean duplicateLabel = existingMatchdays.stream()
                 .anyMatch(md -> md.getLabel().equals(label));

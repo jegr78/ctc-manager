@@ -442,13 +442,17 @@ public class CsvImportService {
 					.orElseThrow(() -> new ValidationException(
 							"Matchday not found in CSV import: " + metadata.matchdayId()));
 		}
-		return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
+		// Phase 61 CR-01: scope lookup + sortIndex calculation to the REGULAR phase. The previous
+		// findBySeasonIdOrderBySortIndexAsc returned matchdays from BOTH phases (REGULAR + PLAYOFF),
+		// which let PLAYOFF sortIndex (>= 100) poison the next REGULAR sortIndex and made the
+		// label-equality match accidentally pick up a PLAYOFF matchday with the same label.
+		var regular = seasonPhaseService.findRegularPhase(season.getId());
+		var regularMatchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId());
+		return regularMatchdays.stream()
 				.filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
 				.findFirst()
 				.orElseGet(() -> {
-					// Phase 61 MIGR-06: matchday.season is gone; bind via REGULAR phase.
-					var regular = seasonPhaseService.findRegularPhase(season.getId());
-					var maxIndex = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
+					var maxIndex = regularMatchdays.stream()
 							.mapToInt(Matchday::getSortIndex)
 							.max().orElse(0);
 					var md = new Matchday(regular, metadata.matchdayLabel(), maxIndex + 1);
@@ -508,7 +512,10 @@ public class CsvImportService {
 		if (metadata.hasMatchdayId()) {
 			matchday = matchdayRepository.findById(metadata.matchdayId()).orElse(null);
 		} else {
-			matchday = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
+			// Phase 61 CR-01: scope label lookup to the REGULAR phase to avoid cross-phase
+			// label collisions (a REGULAR "Round 1" must not match a PLAYOFF "Round 1").
+			var regular = seasonPhaseService.findRegularPhase(season.getId());
+			matchday = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId()).stream()
 					.filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
 					.findFirst().orElse(null);
 		}
