@@ -235,7 +235,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 - [x] 60-04-PLAN.md — Saison-Detail Two-Row-Tabs + slim season-form + Phase/Group form templates + admin.css (UI-01, UI-02, UI-03, UI-04 frontend) (Wave 2)
 - [x] 60-05-PLAN.md — Standings two-row tabs + Driver-Import-Preview group column (UI-05, UI-06) (Wave 3)
 - [x] 60-06-PLAN.md — Playoff bracket UI cutover + SeasonController swiss/generate phaseId-canonical (UI-07, D-44 prep) (Wave 3)
-- [ ] 60-07-PLAN.md — D-44 conservative @Deprecated cleanup + JaCoCo + E2E final gate (Wave 4)
+- [x] 60-07-PLAN.md — D-44 conservative @Deprecated cleanup + JaCoCo + E2E final gate (Wave 4)
 
 **UI hint**: yes
 
@@ -315,5 +315,5 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 57. Data Migration | v1.9 | 3/3 | Complete    | 2026-04-27 |
 | 58. Service Layer | v1.9 | 6/6 | Complete   | 2026-04-28 |
 | 59. Import & Test Data | v1.9 | 5/5 | Complete    | 2026-04-29 |
-| 60. Admin UI | v1.9 | 6/7 | In Progress|  |
+| 60. Admin UI | v1.9 | 7/7 | Complete   | 2026-05-01 |
 | 61. Cleanup & Quality Gate | v1.9 | 0/? | Not started | - |
