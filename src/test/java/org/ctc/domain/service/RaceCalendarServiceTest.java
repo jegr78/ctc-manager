@@ -37,7 +37,7 @@ class RaceCalendarServiceTest {
 		// given
 		var homeTeam = createTeam("DTR", "Delta Racing");
 		var awayTeam = createTeam("MRL", "Maranello");
-		// Phase 61 MIGR-06: eventDurationMinutes is owned by the REGULAR phase.
+		// eventDurationMinutes is owned by the REGULAR phase.
 		var matchday = matchdayWithEventDuration(90);
 		matchday.setLabel("MD 3");
 		var match = new Match(matchday, homeTeam, awayTeam);
@@ -68,7 +68,7 @@ class RaceCalendarServiceTest {
 		// given
 		var homeTeam = createTeam("HOM", "Home");
 		var awayTeam = createTeam("AWY", "Away");
-		// Phase 61 MIGR-06: eventDurationMinutes is owned by the REGULAR phase.
+		// eventDurationMinutes is owned by the REGULAR phase.
 		var matchday = matchdayWithEventDuration(60);
 		matchday.setLabel("MD 1");
 		var match = new Match(matchday, homeTeam, awayTeam);
@@ -128,7 +128,7 @@ class RaceCalendarServiceTest {
 		// given
 		var homeTeam = createTeam("HOM", "Home");
 		var awayTeam = createTeam("AWY", "Away");
-		// Phase 61 MIGR-06: eventDurationMinutes is owned by the REGULAR phase.
+		// eventDurationMinutes is owned by the REGULAR phase.
 		var matchday = matchdayWithEventDuration(60);
 		matchday.setLabel("MD 1");
 		var match = new Match(matchday, homeTeam, awayTeam);
@@ -167,7 +167,7 @@ class RaceCalendarServiceTest {
 	}
 
 	/**
-	 * Phase 61 MIGR-06: builds a Matchday wired to a REGULAR phase carrying
+	 * builds a Matchday wired to a REGULAR phase carrying
 	 * the given {@code eventDurationMinutes}. Replaces the legacy pattern of
 	 * {@code season.setEventDurationMinutes(...)} + {@code matchday.setSeason(...)}.
 	 */

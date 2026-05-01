@@ -206,7 +206,7 @@ class MatchdayGeneratorServiceTest {
 
 	@Test
 	void givenSwissSeason_whenGenerate_thenThrowsException() {
-		// given — Phase 61 MIGR-06: format lives only on SeasonPhase.
+		// given — format lives only on SeasonPhase.
 		regularPhase.setFormat(SeasonFormat.SWISS);
 		regularPhase = seasonPhaseRepository.save(regularPhase);
 		addTeams(4);
@@ -299,7 +299,7 @@ class MatchdayGeneratorServiceTest {
 	@Test
 	void givenSeasonWith2Legs_whenGenerate_thenEachMatchHas2Races() {
 		// given
-		// Phase 61 MIGR-06: legs lives on the phase. Configure two legs.
+		// legs lives on the phase. Configure two legs.
 		regularPhase.setLegs(2);
 		regularPhase = seasonPhaseRepository.save(regularPhase);
 		seasonRepository.save(season);
@@ -319,7 +319,7 @@ class MatchdayGeneratorServiceTest {
 	@Test
 	void givenSeasonWith2Legs_whenGenerate_thenLeg2HasSwappedHomeAway() {
 		// given
-		// Phase 61 MIGR-06: legs lives on the phase. Configure two legs.
+		// legs lives on the phase. Configure two legs.
 		regularPhase.setLegs(2);
 		regularPhase = seasonPhaseRepository.save(regularPhase);
 		seasonRepository.save(season);
@@ -359,7 +359,7 @@ class MatchdayGeneratorServiceTest {
 
 	@Test
 	void givenLeaguePhaseAndGroupId_whenGenerate_thenThrowsIllegalArgument() {
-		// given — LEAGUE layout phase + non-null groupId (invalid combination per D-16)
+		// given — LEAGUE layout phase + non-null groupId (invalid combination)
 		var phase = buildLeaguePhase();
 		addTeamsToPhase(phase, null, 4);
 
@@ -372,7 +372,7 @@ class MatchdayGeneratorServiceTest {
 
 	@Test
 	void givenGroupsLayoutAndNullGroupId_whenGenerate_thenThrowsIllegalArgument() {
-		// given — GROUPS layout phase + null groupId (invalid combination per D-16)
+		// given — GROUPS layout phase + null groupId (invalid combination)
 		var phase = buildGroupsPhase();
 
 		// when / then

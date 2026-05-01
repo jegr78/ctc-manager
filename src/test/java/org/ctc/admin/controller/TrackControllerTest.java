@@ -158,7 +158,7 @@ class TrackControllerTest {
 		var ms = matchScoringRepository.save(new MatchScoring("TT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Track Test Season", 2026, 1);
 		var season = seasonRepository.save(s);
-		// Phase 61 MIGR-06: persist a REGULAR phase, then bind the matchday to it.
+		// persist a REGULAR phase, then bind the matchday to it.
 		var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		regularPhase.setRaceScoring(rs);
 		regularPhase.setMatchScoring(ms);

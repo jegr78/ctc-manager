@@ -130,7 +130,7 @@ class SeasonPhaseServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // create — duplicate guard (D-14)
+    // create — duplicate guard
     // ---------------------------------------------------------------------------
 
     @Test
@@ -182,7 +182,7 @@ class SeasonPhaseServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // create — PhaseTeam auto-derivation (D-20)
+    // create — PhaseTeam auto-derivation
     // ---------------------------------------------------------------------------
 
     @Test
@@ -423,7 +423,7 @@ class SeasonPhaseServiceTest {
     @Mock
     private MatchdayRepository matchdayRepository;
 
-    // Phase 61 MIGR-06: scoring lives on SeasonPhase. The test-class stashes per-season RS/MS
+    // scoring lives on SeasonPhase. The test-class stashes per-season RS/MS
     // so test methods can pass them into PhaseTestFixtures without needing a phase fixture upfront.
     private final java.util.Map<UUID, RaceScoring> rsBySeason = new java.util.HashMap<>();
     private final java.util.Map<UUID, MatchScoring> msBySeason = new java.util.HashMap<>();

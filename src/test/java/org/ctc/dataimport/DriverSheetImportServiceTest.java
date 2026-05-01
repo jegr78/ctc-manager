@@ -529,7 +529,7 @@ class DriverSheetImportServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // 10. MATCH-02: same PSN in multiple tabs → independent bucketing (D-07)
+    // 10. MATCH-02: same PSN in multiple tabs → independent bucketing
     // ---------------------------------------------------------------------------
 
     @Test
@@ -567,7 +567,7 @@ class DriverSheetImportServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // 11. Phase 59 D-01: legacy tab pattern with single season auto-resolution
+    // 11. legacy tab pattern with single season auto-resolution
     // ---------------------------------------------------------------------------
 
     @Test
@@ -591,7 +591,7 @@ class DriverSheetImportServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // 12. Phase 59 D-01 + D-02: new pattern 2025_S2 resolved via two-arg findUnique
+    // 12. Phase 59 new pattern 2025_S2 resolved via two-arg findUnique
     // ---------------------------------------------------------------------------
 
     @Test
@@ -619,7 +619,7 @@ class DriverSheetImportServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // 13. Phase 59 D-18: ambiguous legacy tab surfaces BusinessRuleException as ambiguousReason
+    // 13. ambiguous legacy tab surfaces BusinessRuleException as ambiguousReason
     // ---------------------------------------------------------------------------
 
     @Test
@@ -638,7 +638,7 @@ class DriverSheetImportServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // 14. Phase 59 D-18: ambiguous numbered tab surfaces BusinessRuleException
+    // 14. ambiguous numbered tab surfaces BusinessRuleException
     // ---------------------------------------------------------------------------
 
     @Test
@@ -657,7 +657,7 @@ class DriverSheetImportServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // 15. Phase 59 D-05: group resolution via PhaseTeam
+    // 15. group resolution via PhaseTeam
     // ---------------------------------------------------------------------------
 
     @Test
@@ -688,7 +688,7 @@ class DriverSheetImportServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // 16. Phase 59 D-06: warning emitted when team has no PhaseTeam
+    // 16. warning emitted when team has no PhaseTeam
     // ---------------------------------------------------------------------------
 
     @Test
@@ -716,7 +716,7 @@ class DriverSheetImportServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // 17. Phase 59 D-06: warning deduplicated per team across multiple rows
+    // 17. warning deduplicated per team across multiple rows
     // ---------------------------------------------------------------------------
 
     @Test
@@ -747,7 +747,7 @@ class DriverSheetImportServiceTest {
     }
 
     // ---------------------------------------------------------------------------
-    // 18. Phase 59 D-05: when REGULAR phase missing, no warnings emitted, resolvedGroupName stays null
+    // 18. when REGULAR phase missing, no warnings emitted, resolvedGroupName stays null
     // ---------------------------------------------------------------------------
 
     @Test

@@ -9,20 +9,20 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 
 /**
  * QUAL-03 regression gate -- proves a season migrated by V4 + cleaned by V6 still opens
- * correctly in the post-Phase-60 admin UI. Per Phase 61 D-19, two {@code @Test} methods cover
+ * correctly in the post-migration admin UI. Per , two {@code @Test} methods cover
  * both ROADMAP-SC4 sub-cases (without playoff + with playoff). Both use {@link Sql} to pre-insert
  * the legacy fixture shape into the post-V6 schema; the test then exercises the read-only admin
- * paths only (D-18). No write/edit/save UI is invoked.
+ * paths only. No write/edit/save UI is invoked.
  *
  * <p><b>Selector reality vs. plan template:</b> The plan referenced placeholder selectors like
  * {@code .phase-tab}, {@code .matchday-row}, {@code .race-row}, {@code .standings-row}. The
- * real templates (Phase 60 D-29 two-row tab nav) use {@code .tab-nav .tab-btn} for phase tabs;
+ * real templates (two-row tab nav) use {@code .tab-nav .tab-btn} for phase tabs;
  * matchdays render as {@code <ul><li><a>} inside {@code section#matchdays}; standings render
  * inside {@code table#standingsTable tbody tr.data-row}. The fixtures intentionally seed NO
  * race-results, so the standings table is empty and the controller renders the
  * empty-state card instead -- the legacy URL ({@code /admin/standings?seasonId=}) bridge is
  * verified by asserting the page rendered for the seeded season + the REGULAR phase tab is
- * highlighted (Phase 60 D-12 / D-31: server-side phase resolution, not HTTP redirect).
+ * highlighted (/ D-31: server-side phase resolution, not HTTP redirect).
  */
 class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 
@@ -74,7 +74,7 @@ class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 		assertThat(page.locator(".back-link")).isVisible();
 
 		// (f) Legacy-Standings-URL ?seasonId= server-side resolves to REGULAR phase
-		// (Phase 60 D-12 / D-31). The controller does NOT redirect; instead the standings page
+		// (/ D-31). The controller does NOT redirect; instead the standings page
 		// renders with phase != null and the REGULAR tab marked active.
 		page.navigate(url("/admin/standings?seasonId=" + SEASON_WITHOUT_PLAYOFF_ID));
 		assertThat(page.locator("h1")).containsText("Standings");

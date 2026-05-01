@@ -84,7 +84,7 @@ class SeasonPhaseGroupRepositoryIT {
     // --- helpers ---
 
     private Season newSeason(String name, int year, int number) {
-        // Phase 61 MIGR-06: scoring lives on the SeasonPhase, not the Season.
+        // scoring lives on the SeasonPhase, not the Season.
         return new Season(name, year, number);
     }
 

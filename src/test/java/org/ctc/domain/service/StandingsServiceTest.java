@@ -69,7 +69,7 @@ class StandingsServiceTest {
         raceScoring = new RaceScoring("CTC Standard", "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2);
         matchScoring = new MatchScoring("Standard 3-1-0", 3, 1, 0);
 
-        // Phase 61 MIGR-06: scoring lives on the SeasonPhase only (regularPhase below).
+        // scoring lives on the SeasonPhase only (regularPhase below).
         season = new Season("2026");
         season.setId(UUID.randomUUID());
 
@@ -94,7 +94,7 @@ class StandingsServiceTest {
         regularPhase = PhaseTestFixtures.regularPhase(season, raceScoring, matchScoring);
         seasonToPhaseId.put(season.getId(), regularPhase.getId());
 
-        // Phase 61 MIGR-06: scoring lives on SeasonPhase. Build phases from the test-class-level
+        // scoring lives on SeasonPhase. Build phases from the test-class-level
         // raceScoring/matchScoring fields (per-test overrides assign new values to those fields).
         lenient().when(seasonPhaseService.findByType(any(UUID.class), any())).thenAnswer(inv -> {
             UUID sid = inv.getArgument(0);
@@ -166,7 +166,7 @@ class StandingsServiceTest {
                         final Season ts = targetSeason;
                         return ts.getActiveTeams().stream()
                                 .map(t -> {
-                                    // Phase 61 MIGR-06: scoring lives on the phase; reuse class-level fields.
+                                    // scoring lives on the phase; reuse class-level fields.
                                     var ph = PhaseTestFixtures.regularPhase(ts, raceScoring, matchScoring);
                                     ph.setId(pid);
                                     return PhaseTestFixtures.assignTeam(ph, t, null);
@@ -249,7 +249,7 @@ class StandingsServiceTest {
 
         @Test
         void givenCustomMatchScoring_whenCalculateStandings_thenCustomPointsApplied() {
-            // given — Phase 61 MIGR-06: scoring lives on the SeasonPhase. Override the
+            // given — scoring lives on the SeasonPhase. Override the
             // class-level matchScoring field so the seasonPhaseService mocks build phases
             // with the custom 2-1-0 scoring rule.
             matchScoring = new MatchScoring("Classic 2-1-0", 2, 1, 0);
@@ -647,7 +647,7 @@ class StandingsServiceTest {
 
             // then
             assertThat(result).hasSize(2);
-            assertThat(result).allMatch(s -> s.getGroup() == null); // LEAGUE => group is null (D-05)
+            assertThat(result).allMatch(s -> s.getGroup() == null); // LEAGUE => group is null
         }
 
         @Test
@@ -687,10 +687,10 @@ class StandingsServiceTest {
             when(matchRepository.findByMatchdayPhaseId(groupsPhase.getId())).thenReturn(List.of(matchA, matchB));
             when(phaseTeamRepository.findByPhaseId(groupsPhase.getId())).thenReturn(List.of(ptA1, ptA2, ptB1, ptB2));
 
-            // when — combined view: groupId=null (D-04)
+            // when — combined view: groupId=null
             var result = standingsService.calculateStandings(groupsPhase.getId(), null);
 
-            // then — flat list with all 4 teams, each has group set (D-05)
+            // then — flat list with all 4 teams, each has group set
             assertThat(result).hasSize(4);
             assertThat(result).allMatch(s -> s.getGroup() != null);
         }
@@ -720,7 +720,7 @@ class StandingsServiceTest {
             when(matchRepository.findByMatchdayPhaseId(groupsPhase.getId())).thenReturn(List.of(matchA));
             when(phaseTeamRepository.findByPhaseIdAndGroupId(groupsPhase.getId(), groupA.getId())).thenReturn(List.of(ptA1, ptA2));
 
-            // when — per-group view (D-04)
+            // when — per-group view
             var result = standingsService.calculateStandings(groupsPhase.getId(), groupA.getId());
 
             // then — only 2 teams from group A
@@ -735,16 +735,16 @@ class StandingsServiceTest {
             var ms = new MatchScoring("MS", 3, 1, 0);
             SeasonPhase regular = PhaseTestFixtures.regularPhase(season, rs, ms);
 
-            // Phase 61 MIGR-06: bridge now resolves via findRegularPhase (not findByType).
+            // bridge now resolves via findRegularPhase (not findByType).
             when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
             when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
             when(matchRepository.findByMatchdayPhaseId(regular.getId())).thenReturn(List.of());
             when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of());
 
-            // when — @Deprecated bridge (D-01)
+            // when — @Deprecated bridge
             var result = standingsService.calculateStandings(season.getId()); // seasonId-overload
 
-            // then — bridge resolves REGULAR phase via findRegularPhase, then delegates to canonical (D-02).
+            // then — bridge resolves REGULAR phase via findRegularPhase, then delegates to canonical.
             verify(seasonPhaseService).findRegularPhase(season.getId());
             verify(matchRepository).findByMatchdayPhaseId(regular.getId());
             assertThat(result).isEmpty();
@@ -752,7 +752,7 @@ class StandingsServiceTest {
 
         @Test
         void givenSwissGroups_whenCalculateStandingsCombined_thenBuchholzNotUsedAsTiebreaker() {
-            // given — GROUPS layout, combined-view; Buchholz must NOT affect sort order (D-06)
+            // given — GROUPS layout, combined-view; Buchholz must NOT affect sort order
             var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
             var ms = new MatchScoring("MS", 3, 1, 0);
             var groupsPhase = PhaseTestFixtures.groupsRegularPhase(season, rs, ms, "Phase58-Test-Group-A", "Phase58-Test-Group-B");
@@ -788,7 +788,7 @@ class StandingsServiceTest {
             when(matchRepository.findByMatchdayPhaseId(groupsPhase.getId())).thenReturn(List.of(matchA, matchB));
             when(phaseTeamRepository.findByPhaseId(groupsPhase.getId())).thenReturn(List.of(ptA1, ptA2, ptB1, ptB2));
 
-            // when — combined view with groupId=null; Buchholz ignored in sorting (D-06)
+            // when — combined view with groupId=null; Buchholz ignored in sorting
             var result = standingsService.calculateStandingsWithBuchholz(groupsPhase.getId(), null);
 
             // then — sorted by points -> pointDifference -> pointsFor only (NOT buchholz)
@@ -800,7 +800,7 @@ class StandingsServiceTest {
 
         @Test
         void givenSwissGroupsAndGroupId_whenCalculateStandingsWithBuchholz_thenBuchholzUsedAsTiebreaker() {
-            // given — GROUPS phase, per-group Buchholz allowed (D-06)
+            // given — GROUPS phase, per-group Buchholz allowed
             var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
             var ms = new MatchScoring("MS", 3, 1, 0);
             var groupsPhase = PhaseTestFixtures.groupsRegularPhase(season, rs, ms, "Phase58-Test-Group-X");
@@ -824,7 +824,7 @@ class StandingsServiceTest {
             when(phaseTeamRepository.findByPhaseIdAndGroupId(groupsPhase.getId(), groupX.getId())).thenReturn(List.of(ptX1, ptX2));
             when(raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId())).thenReturn(List.of());
 
-            // when — per-group Buchholz (D-06)
+            // when — per-group Buchholz
             var result = standingsService.calculateStandingsWithBuchholz(groupsPhase.getId(), groupX.getId());
 
             // then — list returned with Buchholz populated
@@ -834,7 +834,7 @@ class StandingsServiceTest {
 
         @Test
         void givenSwissGroupsAndNullGroupId_whenCalculateStandingsWithBuchholz_thenStillFlatListWithBuchholzPopulatedButFallbackTiebreaker() {
-            // given — GROUPS phase, combined-view; buchholz field populated for display but NOT used as tiebreaker (D-06)
+            // given — GROUPS phase, combined-view; buchholz field populated for display but NOT used as tiebreaker
             var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
             var ms = new MatchScoring("MS", 3, 1, 0);
             var groupsPhase = PhaseTestFixtures.groupsRegularPhase(season, rs, ms, "Phase58-Test-Group-Y", "Phase58-Test-Group-Z");

@@ -81,7 +81,7 @@ class SeasonPhaseEntityIntegrationTest {
 		var season = newSeason("Phase56-Test-S1", 9999, 1);
 		var savedSeason = seasonRepository.save(season);
 		var phase = new SeasonPhase(savedSeason, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
-		// Phase 61 MIGR-06: scoring is now phase-owned; pull from repositories.
+		// scoring is now phase-owned; pull from repositories.
 		phase.setRaceScoring(raceScoringRepository.findAll().get(0));
 		phase.setMatchScoring(matchScoringRepository.findAll().get(0));
 		assertThat(phase.getId()).isNull();
@@ -166,7 +166,7 @@ class SeasonPhaseEntityIntegrationTest {
 		// given
 		var season = seasonRepository.save(newSeason("Phase56-Test-S5", 9999, 5));
 		var phase = newSavedPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
-		// Phase 61 MIGR-06: Matchday is bound exclusively via phase.
+		// Matchday is bound exclusively via phase.
 		var matchday = new Matchday(phase, "Phase56-Test-MD1", 0);
 
 		// when
@@ -184,7 +184,7 @@ class SeasonPhaseEntityIntegrationTest {
 		// given
 		var season = seasonRepository.save(newSeason("Phase56-Test-S6", 9999, 6));
 		var phase = newSavedPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 1);
-		// Phase 61 MIGR-06: Playoff is bound exclusively via phase.
+		// Playoff is bound exclusively via phase.
 		var playoff = new Playoff(phase, "Phase56-Test-Playoff");
 
 		// when
@@ -200,7 +200,7 @@ class SeasonPhaseEntityIntegrationTest {
 	// --- helpers -----------------------------------------------------------
 
 	private Season newSeason(String name, int year, int number) {
-		// Phase 61 MIGR-06: scoring lives on the SeasonPhase, not the Season.
+		// scoring lives on the SeasonPhase, not the Season.
 		return new Season(name, year, number);
 	}
 

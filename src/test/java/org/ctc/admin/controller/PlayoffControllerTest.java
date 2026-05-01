@@ -295,7 +295,7 @@ class PlayoffControllerTest {
                 .andExpect(model().attributeExists("seasons"));
     }
 
-    // --- Phase 60 UI-07 (D-43): Add/Remove Season UI removed from bracket page ---
+    // --- Phase 60 UI-07: Add/Remove Season UI removed from bracket page ---
 
     @Test
     void givenPlayoff_whenGetBracket_thenAddSeasonButtonNotPresent() throws Exception {
@@ -315,12 +315,12 @@ class PlayoffControllerTest {
     }
 
     // --- POST /admin/playoffs/{id}/add-season + remove-season — D-03 negative-route guards ---
-    // Phase 61 MIGR-06: legacy endpoints removed (Tracked Behavior Change).
+    // legacy endpoints removed (Tracked Behavior Change).
     // These tests guard against accidental re-introduction of the routes.
 
     @Test
     void givenLegacyAddSeasonEndpointRemoved_whenPostRequest_thenDoesNotSucceed() throws Exception {
-        // Phase 61 MIGR-06 (D-03): legacy /add-season POST must not succeed — guards
+        // legacy /add-season POST must not succeed — guards
         // against accidental re-introduction of the route. The runtime maps the missing
         // route to NoResourceFoundException; GlobalExceptionHandler wraps it as a 500
         // error page (rather than a 404) for this admin app, so the assertion is
@@ -338,7 +338,7 @@ class PlayoffControllerTest {
 
     @Test
     void givenLegacyRemoveSeasonEndpointRemoved_whenPostRequest_thenDoesNotSucceed() throws Exception {
-        // Phase 61 MIGR-06 (D-03): legacy /remove-season POST must not succeed.
+        // legacy /remove-season POST must not succeed.
         mockMvc.perform(post("/admin/playoffs/" + UUID.randomUUID() + "/remove-season")
                         .param("seasonId", UUID.randomUUID().toString()))
                 .andExpect(result -> {

@@ -77,7 +77,7 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			// Phase 61 MIGR-06: Playoff is bound to a SeasonPhase, not the Season directly.
+			// Playoff is bound to a SeasonPhase, not the Season directly.
 			var playoff = PhaseTestFixtures.playoffForSeason(season,"Test Playoff");
 			playoff.setId(playoffId);
 
@@ -109,7 +109,7 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			// Phase 61 MIGR-06: Playoff is bound to a SeasonPhase, not the Season directly.
+			// Playoff is bound to a SeasonPhase, not the Season directly.
 			var playoff = PhaseTestFixtures.playoffForSeason(season,"Points Test");
 			playoff.setId(playoffId);
 
@@ -161,7 +161,7 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			// Phase 61 MIGR-06: Playoff is bound to a SeasonPhase, not the Season directly.
+			// Playoff is bound to a SeasonPhase, not the Season directly.
 			var playoff = PhaseTestFixtures.playoffForSeason(season,"Seed Test");
 			playoff.setId(playoffId);
 
@@ -199,7 +199,7 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			// Phase 61 MIGR-06: Playoff is bound to a SeasonPhase, not the Season directly.
+			// Playoff is bound to a SeasonPhase, not the Season directly.
 			var playoff = PhaseTestFixtures.playoffForSeason(season,"Winner Test");
 			playoff.setId(playoffId);
 
@@ -235,7 +235,7 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			// Phase 61 MIGR-06: Playoff is bound to a SeasonPhase, not the Season directly.
+			// Playoff is bound to a SeasonPhase, not the Season directly.
 			var playoff = PhaseTestFixtures.playoffForSeason(season,"Empty Legs Test");
 			playoff.setId(playoffId);
 

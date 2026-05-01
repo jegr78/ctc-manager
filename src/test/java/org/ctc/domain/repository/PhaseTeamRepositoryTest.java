@@ -15,7 +15,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Repository tests for the Phase 59 D-05 finder {@code findByPhaseIdAndTeamId}.
+ * Repository tests for the finder {@code findByPhaseIdAndTeamId}.
  *
  * Test data uses the "Phase59-Test-PT-" prefix per CLAUDE.md "Isolate Test Data Completely".
  * {@code @Transactional} rolls back each test — no rows leak between tests.
@@ -105,7 +105,7 @@ class PhaseTeamRepositoryTest {
     // --- helpers ---
 
     private Season newSeason(String name, int year, int number) {
-        // Phase 61 MIGR-06: scoring lives on the SeasonPhase, not the Season.
+        // scoring lives on the SeasonPhase, not the Season.
         return new Season(name, year, number);
     }
 

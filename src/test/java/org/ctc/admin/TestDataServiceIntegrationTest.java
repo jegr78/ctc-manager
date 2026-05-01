@@ -75,7 +75,7 @@ class TestDataServiceIntegrationTest {
 		var regular = seasonPhaseRepository
 				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 
-		// then — Phase 61 MIGR-06: format moved to REGULAR phase.
+		// then — format moved to REGULAR phase.
 		assertThat(regular.getFormat()).isEqualTo(SeasonFormat.SWISS);
 	}
 
@@ -86,7 +86,7 @@ class TestDataServiceIntegrationTest {
 		var regular = seasonPhaseRepository
 				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 
-		// then — Phase 61 MIGR-06: format moved to REGULAR phase.
+		// then — format moved to REGULAR phase.
 		assertThat(regular.getFormat()).isEqualTo(SeasonFormat.LEAGUE);
 	}
 
@@ -257,7 +257,7 @@ class TestDataServiceIntegrationTest {
 		assertThat(devMatches).allMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
 	}
 
-	// --- Phase 59: Consolidated 2023 GROUPS regression tests (D-23) ---
+	// --- Phase 59: Consolidated 2023 GROUPS regression tests ---
 
 	@Test
 	void givenDevSeed_whenStarted_thenConsolidated2023HasOneRegularGroupsPhase() {

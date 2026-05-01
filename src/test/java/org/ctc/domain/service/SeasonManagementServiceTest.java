@@ -551,7 +551,7 @@ class SeasonManagementServiceTest {
         var ms = new MatchScoring();
         ms.setId(UUID.randomUUID());
         var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
-        // Phase 61 MIGR-06: explicitly set format=SWISS to verify the auto-sync block stays removed.
+        // explicitly set format=SWISS to verify the auto-sync block stays removed.
         regular.setFormat(SeasonFormat.SWISS);
 
         when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
@@ -678,7 +678,7 @@ class SeasonManagementServiceTest {
         match.getRaces().add(race);
         matchday.getRaces().add(race);
         matchday.getMatches().add(match);
-        // Phase 61 MIGR-06: Season.getMatchdays() is now a derived convenience getter (immutable list).
+        // Season.getMatchdays() is now a derived convenience getter (immutable list).
         // Add to the matchday's phase + season.phases to wire it through the canonical structure.
         var phase = matchday.getPhase();
         phase.getMatchdays().add(matchday);
@@ -836,7 +836,7 @@ class SeasonManagementServiceTest {
         }
     }
 
-    // --- Phase 58 D-18: strict delete-guard (BEHAVIOR CHANGE) ---
+    // --- strict delete-guard (BEHAVIOR CHANGE) ---
 
     @Test
     void givenSeasonWithActiveMatchdays_whenDelete_thenThrowsBusinessRuleException() {
@@ -951,7 +951,7 @@ class SeasonManagementServiceTest {
         assertThat(regular.getTotalRounds()).isEqualTo(7);
     }
 
-    // --- Phase 59 D-02 / D-18: findUnique service-wrapper ---
+    // --- / D-18: findUnique service-wrapper ---
 
     @Test
     void givenNoSeason_whenFindUniqueByYearAndNumber_thenReturnsEmpty() {

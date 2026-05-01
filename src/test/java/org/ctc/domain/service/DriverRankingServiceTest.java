@@ -286,7 +286,7 @@ class DriverRankingServiceTest {
 		assertEquals(clr, rankings.get(0).getTeam());
 	}
 
-	// ---- Phase 58 D-07/D-08/D-09/D-10 new tests ----
+	// ---- /D-08/D-09/D-10 new tests ----
 
 	@Test
 	void givenRegularPhase_whenCalculateRankingForPhase_thenAggregatesViaMatchdayPhaseId() {
@@ -379,7 +379,7 @@ class DriverRankingServiceTest {
 		var rankings = driverRankingService.aggregateAcrossPhases(
 				List.of(regular.getId(), playoff.getId()), season.getId());
 
-		// then — driver appears once with merged totals (D-07) and REGULAR team (D-08 via RaceLineup)
+		// then — driver appears once with merged totals and REGULAR team (D-08 via RaceLineup)
 		assertThat(rankings).hasSize(1);
 		assertThat(rankings.get(0).getDriver().getId()).isEqualTo(panicpotato.getId());
 		assertThat(rankings.get(0).getTotalPoints()).isEqualTo(35);
@@ -414,7 +414,7 @@ class DriverRankingServiceTest {
 		// when
 		var rankings = driverRankingService.aggregateAcrossPhases(List.of(playoff.getId()), season.getId());
 
-		// then — team comes from RaceLineup fallback (D-10)
+		// then — team comes from RaceLineup fallback
 		assertThat(rankings).hasSize(1);
 		assertThat(rankings.get(0).getDriver().getId()).isEqualTo(levitius.getId());
 		assertThat(rankings.get(0).getTeam()).isEqualTo(tnr);
@@ -422,7 +422,7 @@ class DriverRankingServiceTest {
 
 	@Test
 	void givenPlacementPhase_whenCalculateRankingForPhase_thenIncludesPlacementResults() {
-		// given — PLACEMENT phase results flow into per-phase ranking (D-07)
+		// given — PLACEMENT phase results flow into per-phase ranking
 		var rs = new RaceScoring("Phase58-Test-RS6", "20,15,10", "3,2,1", 2);
 		rs.setId(UUID.randomUUID());
 		var ms = new MatchScoring("Phase58-Test-MS6", 3, 1, 0);

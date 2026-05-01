@@ -12,7 +12,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Bean-Validation unit tests for SeasonPhaseForm @NotNull constraints (D-22).
+ * Bean-Validation unit tests for SeasonPhaseForm @NotNull constraints.
  * Tests are RED in Wave 0 — SeasonPhaseForm does not yet exist.
  */
 class SeasonPhaseFormTest {
@@ -54,7 +54,7 @@ class SeasonPhaseFormTest {
         var form = new SeasonPhaseForm();
         form.setPhaseType(PhaseType.REGULAR);
         form.setLayout(PhaseLayout.LEAGUE);
-        // Phase 61 MIGR-06: SeasonPhaseForm.format defaults to LEAGUE, must explicitly null it here
+        // SeasonPhaseForm.format defaults to LEAGUE, must explicitly null it here
         // to exercise the @NotNull validation.
         form.setFormat(null);
 

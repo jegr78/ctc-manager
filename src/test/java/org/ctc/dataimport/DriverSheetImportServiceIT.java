@@ -40,9 +40,9 @@ import static org.mockito.Mockito.when;
  * <p>Runs against the live Spring context with the consolidated 2023 GROUPS season
  * seeded by {@link org.ctc.admin.TestDataService} (delivered by Phase 59 Plan 03).
  * {@link GoogleSheetsService} is replaced by a {@link MockitoBean} so no real Sheets
- * API call happens in CI (Phase 59 D-22).
+ * API call happens in CI.
  *
- * <p>Test-shape override per Phase 58 D-13: {@code @SpringBootTest @ActiveProfiles("dev") @Transactional}.
+ * <p>Test-shape override per {@code @SpringBootTest @ActiveProfiles("dev") @Transactional}.
  * Each test runs in its own rolled-back transaction.
  */
 @SpringBootTest
@@ -128,7 +128,7 @@ class DriverSheetImportServiceIT {
         TabPreview tab = preview.tabPreviews().get(0);
         assertThat(tab.tabName()).isEqualTo("2024");
         assertThat(tab.year()).isEqualTo(2024);
-        assertThat(tab.number()).isNull();    // legacy tab → null number per D-01
+        assertThat(tab.number()).isNull();    // legacy tab → null number
         assertThat(tab.suggestedSeasonId()).isEqualTo(season2024.getId());
         assertThat(tab.ambiguousReason()).isNull();
     }
@@ -170,7 +170,7 @@ class DriverSheetImportServiceIT {
         extra2024.setYear(2024);
         extra2024.setNumber(5);
         extra2024.setActive(false);
-        // Phase 61 MIGR-06: scoring lives on the SeasonPhase (not Season). The seasons.race_scoring_id /
+        // scoring lives on the SeasonPhase (not Season). The seasons.race_scoring_id /
         // match_scoring_id columns are nullable post-V5; tests do not need to populate them on Season directly.
         seasonRepository.save(extra2024);
 
@@ -179,14 +179,14 @@ class DriverSheetImportServiceIT {
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
 
-        // then — BusinessRuleException routed to ambiguousReason per D-18
+        // then — BusinessRuleException routed to ambiguousReason
         TabPreview tab = preview.tabPreviews().get(0);
         assertThat(tab.suggestedSeasonId()).isNull();
         assertThat(tab.ambiguousReason()).startsWith("Multiple seasons exist for year 2024");
     }
 
     // ---------------------------------------------------------------------
-    // 4. Group resolution — driver in roster of Group A (D-05)
+    // 4. Group resolution — driver in roster of Group A
     // ---------------------------------------------------------------------
 
     @Test
@@ -210,7 +210,7 @@ class DriverSheetImportServiceIT {
     }
 
     // ---------------------------------------------------------------------
-    // 5. Group resolution — driver in roster of Group B (D-05)
+    // 5. Group resolution — driver in roster of Group B
     // ---------------------------------------------------------------------
 
     @Test
@@ -233,7 +233,7 @@ class DriverSheetImportServiceIT {
     }
 
     // ---------------------------------------------------------------------
-    // 6. TabWarning — team not in REGULAR PhaseTeam roster, deduplicated per team (D-06)
+    // 6. TabWarning — team not in REGULAR PhaseTeam roster, deduplicated per team
     // ---------------------------------------------------------------------
 
     @Test
@@ -306,7 +306,7 @@ class DriverSheetImportServiceIT {
     }
 
     // ---------------------------------------------------------------------
-    // 8. Execute against team without PhaseTeam — SeasonDriver written, PhaseTeam still untouched (D-07)
+    // 8. Execute against team without PhaseTeam — SeasonDriver written, PhaseTeam still untouched
     // ---------------------------------------------------------------------
 
     @Test
@@ -342,7 +342,7 @@ class DriverSheetImportServiceIT {
                 .findBySeasonIdAndDriverId(season2023.getId(), newDriver.getId()))
                 .isPresent();
 
-        // then — PhaseTeam count UNCHANGED — Roster pflege bleibt Phase 60 (D-07)
+        // then — PhaseTeam count UNCHANGED — Roster pflege bleibt Phase 60
         int phaseTeamCountAfter = phaseTeamRepository.findByPhaseId(regular2023.getId()).size();
         assertThat(phaseTeamCountAfter).isEqualTo(phaseTeamCountBefore);
         // Specifically: no new PhaseTeam for the orphan team

@@ -255,7 +255,7 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        // Phase 61 MIGR-06: matchday.getSeason() derives from phase; wire a phase.
+        // matchday.getSeason() derives from phase; wire a phase.
         matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
@@ -307,7 +307,7 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        // Phase 61 MIGR-06: matchday.getSeason() derives from phase; wire a phase.
+        // matchday.getSeason() derives from phase; wire a phase.
         matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
@@ -338,7 +338,7 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        // Phase 61 MIGR-06: matchday.getSeason() derives from phase; wire a phase.
+        // matchday.getSeason() derives from phase; wire a phase.
         matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
@@ -469,7 +469,7 @@ class RaceServiceTest {
     }
 
     private Race createRaceWithScoring() {
-        // Phase 61 MIGR-06: scoring lives on the SeasonPhase, not the Season.
+        // scoring lives on the SeasonPhase, not the Season.
         var scoring = new RaceScoring("Test", "10,8,6,4,2,1", "3,2,1", 1);
         var season = new Season();
         season.setId(UUID.randomUUID());
@@ -500,7 +500,7 @@ class RaceServiceTest {
         season.setTracks(new ArrayList<>());
         var scoring = new RaceScoring("Default", "10,8,6", "3,2,1", 1);
 
-        // Phase 61 MIGR-06: matchday.getSeason() now derives from phase; wire a phase carrying scoring.
+        // matchday.getSeason() now derives from phase; wire a phase carrying scoring.
         var phase = PhaseTestFixtures.regularPhase(season, scoring, null);
         phase.setRaceScoring(scoring);
         var matchday = new Matchday();

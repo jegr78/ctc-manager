@@ -51,12 +51,12 @@ class SeasonPhaseControllerTest {
     }
 
     // UI-02 (D-08 empty state)
-    // Phase 61 MIGR-06: TestHelper.createSeason now auto-bootstraps a REGULAR phase that
+    // TestHelper.createSeason now auto-bootstraps a REGULAR phase that
     // is hard to remove from within a @Transactional test (orphanRemoval interactions with
     // the OSIV-cached SeasonPhase need a more elaborate fixture rewrite). The controller's
     // empty-state branch is still exercised by the 60-02 IT suite. Skipped here to keep the
     // 61-02 cascade GREEN; tracked for follow-up in Plan 61-04 (test-suite hardening).
-    @org.junit.jupiter.api.Disabled("Phase 61 MIGR-06: requires fixture rework — see Plan 61-04 (deferred-items.md)")
+    @org.junit.jupiter.api.Disabled("requires fixture rework — see Plan 61-04 (deferred-items.md)")
     @Test
     void givenSeasonWithoutRegularPhase_whenGetSeasonDetail_thenRendersEmptyStateCard() throws Exception {
         // given

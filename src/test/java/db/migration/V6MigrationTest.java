@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *     <li>JPA mapping still loads (Hibernate {@code ddl-auto=validate} agrees with the trimmed entities).</li>
  * </ul>
  *
- * <p>Class suffix is {@code Test} (Surefire) per Phase 61 D-09 — runs in the standard
+ * <p>Class suffix is {@code Test} (Surefire) per — runs in the standard
  * {@code ./mvnw verify} gate, not the {@code -Pe2e} Failsafe profile.
  */
 @SpringBootTest(classes = CtcManagerApplication.class)

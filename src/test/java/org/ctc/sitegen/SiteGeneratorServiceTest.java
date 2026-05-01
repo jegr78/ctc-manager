@@ -117,7 +117,7 @@ class SiteGeneratorServiceTest {
         matchScoring = matchScoringRepository.save(
                 new MatchScoring("Gen MS " + uniqueSuffix, 3, 1, 0));
 
-        // Phase 61 MIGR-06: scoring lives on SeasonPhase, attached below.
+        // scoring lives on SeasonPhase, attached below.
         season = new Season("Gen Season " + uniqueSuffix, 2026, 1);
         season.setActive(true);
         seasonRepository.save(season);
@@ -140,12 +140,12 @@ class SiteGeneratorServiceTest {
         seasonDriverRepository.save(new SeasonDriver(season, driver4, p1r));
 
         // Phase setup required by DriverRankingService + StandingsService (D-09 bridge delegates to findAllPhases)
-        // Phase 61 MIGR-06: scoring lives on the SeasonPhase, attach the test-class scoring fields here.
+        // scoring lives on the SeasonPhase, attach the test-class scoring fields here.
         var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
         regularPhase.setRaceScoring(raceScoring);
         regularPhase.setMatchScoring(matchScoring);
         regularPhase = seasonPhaseRepository.save(regularPhase);
-        // Phase 61 MIGR-06: ensure season.getPhases() exposes the persisted phase so that
+        // ensure season.getPhases() exposes the persisted phase so that
         // PhaseTestFixtures.matchdayInRegularPhase can find it (avoids a transient phase reference).
         season.getPhases().add(regularPhase);
         // PhaseTeam rows required by StandingsService.calculateStandings(phaseId)
@@ -200,14 +200,14 @@ class SiteGeneratorServiceTest {
     }
 
     /**
-     * Phase 58 D-23 helper: creates a REGULAR phase + LEAGUE PhaseTeam rows for a production
+     * creates a REGULAR phase + LEAGUE PhaseTeam rows for a production
      * season so that the phase-aware SiteGenerator surface (findRegularPhase) does not throw
      * EntityNotFoundException at runtime. Required for any production-style season created
      * outside the @BeforeEach setUp block. Test seasons (name containing "Test") are filtered
      * before they reach the phase-aware path, so this helper is NOT needed for them.
      */
     private void setupRegularPhase(Season s) {
-        // Phase 61 MIGR-06: scoring lives on SeasonPhase only — reuse the test-class scoring fields.
+        // scoring lives on SeasonPhase only — reuse the test-class scoring fields.
         var regular = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
         regular.setRaceScoring(raceScoring);
         regular.setMatchScoring(matchScoring);
@@ -355,7 +355,7 @@ class SiteGeneratorServiceTest {
     @Test
     void givenByeRaceInSeason_whenGenerate_thenCompletesWithoutNPE() {
         // given — add a bye race on a separate matchday
-        // Phase 61 MIGR-06: re-fetch the persisted REGULAR phase so the matchday FK resolves.
+        // re-fetch the persisted REGULAR phase so the matchday FK resolves.
         var bByeRegular = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
         var byeMatchday = matchdayRepository.save(new Matchday(bByeRegular, "Bye Matchday", 2));
         var homeTeam = teamRepository.findAll().stream()
@@ -476,7 +476,7 @@ class SiteGeneratorServiceTest {
         // when
         siteGeneratorService.generate();
 
-        // then — Phase 48: hero h1 must contain "COMMUNITY TEAM CUP" (D-09)
+        // then — Phase 48: hero h1 must contain "COMMUNITY TEAM CUP"
         var html = Files.readString(tempDir.resolve("index.html"));
         var doc = Jsoup.parse(html);
         var heroTitle = doc.selectFirst(".hero h1");
@@ -502,14 +502,13 @@ class SiteGeneratorServiceTest {
     @Test
     void givenMultipleSeasons_whenGenerate_thenArchiveIsSortedByYearDescending() throws IOException {
         // given — add a season from an earlier year and one from a later year
-        // Phase 61 MIGR-06: scoring lives on the REGULAR phase, set inside setupRegularPhase.
+        // scoring lives on the REGULAR phase, set inside setupRegularPhase.
         var earlier = new Season("Earlier Era " + uniqueSuffix, 2023, 1);
         seasonRepository.save(earlier);
-        setupRegularPhase(earlier); // Phase 58 D-23: production seasons need a REGULAR phase
+        setupRegularPhase(earlier); // production seasons need a REGULAR phase
         var later = new Season("Future Era " + uniqueSuffix, 2028, 2);
         seasonRepository.save(later);
-        setupRegularPhase(later); // Phase 58 D-23
-
+        setupRegularPhase(later); // 
         // when
         siteGeneratorService.generate();
 
@@ -1125,7 +1124,7 @@ class SiteGeneratorServiceTest {
     @Test
     void givenSeasonWithPlayoff_whenGenerate_thenSubnavHasPlayoffLink() throws IOException {
         // given
-        // Phase 61 MIGR-06: Playoff is bound to a SeasonPhase. Need a persisted PLAYOFF phase.
+        // Playoff is bound to a SeasonPhase. Need a persisted PLAYOFF phase.
         var playoffPhase = new org.ctc.domain.model.SeasonPhase(season,
                 org.ctc.domain.model.PhaseType.PLAYOFF,
                 org.ctc.domain.model.PhaseLayout.BRACKET, 10);
@@ -1302,7 +1301,7 @@ class SiteGeneratorServiceTest {
         var extraTeam = teamRepository.save(new Team("Filter Team " + uniqueSuffix, "FLT" + uniqueSuffix));
         season2.addTeam(extraTeam);
         seasonRepository.save(season2);
-        setupRegularPhase(season2); // Phase 58 D-23: production seasons need a REGULAR phase
+        setupRegularPhase(season2); // production seasons need a REGULAR phase
 
         // when
         siteGeneratorService.generate();
@@ -1396,7 +1395,7 @@ class SiteGeneratorServiceTest {
         var doc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
         var html = doc.html();
         assertFalse(html.contains("SUBA" + uniqueSuffix),
-                "Sub-team must NOT appear in teams overview (D-01)");
+                "Sub-team must NOT appear in teams overview");
     }
 
     // D-04 guard: test season not in overview filter
@@ -1418,7 +1417,7 @@ class SiteGeneratorServiceTest {
         var options = doc.select("select#season-filter option");
         for (var option : options) {
             assertFalse(option.text().contains("Test League"),
-                    "Test season must NOT appear in season filter (D-04)");
+                    "Test season must NOT appear in season filter");
         }
     }
 
@@ -1489,7 +1488,7 @@ class SiteGeneratorServiceTest {
         assertNotNull(link, "Standings tile must link to active season standings page");
     }
 
-    // D-19: Index page (home) does not highlight any top-nav item
+    // Index page (home) does not highlight any top-nav item
     @Test
     void givenIndexPage_whenGenerate_thenNoTopNavItemActive() throws IOException {
         // when
@@ -1581,7 +1580,7 @@ class SiteGeneratorServiceTest {
 
         seasonDriverRepository.save(new SeasonDriver(testSeason, testDriver, testTeam));
 
-        // Phase 61 MIGR-06: persist a REGULAR phase carrying scoring before binding the matchday.
+        // persist a REGULAR phase carrying scoring before binding the matchday.
         var testRegularPhase = new SeasonPhase(testSeason, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
         testRegularPhase.setRaceScoring(raceScoring);
         testRegularPhase.setMatchScoring(matchScoring);
@@ -1593,7 +1592,7 @@ class SiteGeneratorServiceTest {
         testRaceEntity.setMatchday(testMatchday);
         testRaceEntity.setMatch(testMatch);
         var tr1 = new RaceResult(testRaceEntity, testDriver, 1, 1, false);
-        // Phase 61 MIGR-06: scoring lives on the SeasonPhase; pull from the matchday's phase.
+        // scoring lives on the SeasonPhase; pull from the matchday's phase.
         scoringService.calculatePoints(tr1, testMatchday.getPhase().getRaceScoring());
         testRaceEntity.getResults().add(tr1);
         raceRepository.save(testRaceEntity);
@@ -1679,7 +1678,7 @@ class SiteGeneratorServiceTest {
         // driver1 now drives for P1R in season2 (was GTNR in season1)
         seasonDriverRepository.save(new SeasonDriver(season2, driver1, p1r));
 
-        // Phase 61 MIGR-06: persist a REGULAR phase for season2 so the matchday FK resolves.
+        // persist a REGULAR phase for season2 so the matchday FK resolves.
         var regularPhase2 = new SeasonPhase(season2, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
         regularPhase2.setRaceScoring(raceScoring2);
         regularPhase2.setMatchScoring(matchScoring2);

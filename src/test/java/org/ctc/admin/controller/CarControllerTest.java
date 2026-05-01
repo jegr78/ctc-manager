@@ -160,7 +160,7 @@ class CarControllerTest {
 		ms = matchScoringRepository.save(ms);
 		var s = new Season("Car Test Season", 2026, 1);
 		var season = seasonRepository.save(s);
-		// Phase 61 MIGR-06: scoring + format live on the SeasonPhase.
+		// scoring + format live on the SeasonPhase.
 		var regular = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		regular.setRaceScoring(rs);
 		regular.setMatchScoring(ms);

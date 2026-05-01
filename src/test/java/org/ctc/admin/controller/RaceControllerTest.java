@@ -89,7 +89,7 @@ class RaceControllerTest {
 		var ms = matchScoringRepository.save(new MatchScoring("RT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Race Test Season", 2026, 1);
 		season = seasonRepository.save(s);
-		// Phase 61 MIGR-06: persist a REGULAR phase carrying scoring; bind matchday to it.
+		// persist a REGULAR phase carrying scoring; bind matchday to it.
 		var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		regularPhase.setRaceScoring(rs);
 		regularPhase.setMatchScoring(ms);
@@ -387,7 +387,7 @@ class RaceControllerTest {
 		raceRepository.save(race);
 
 		// Create a second matchday for the second race
-		// Phase 61 MIGR-06: bind matchday to the season's persisted REGULAR phase.
+		// bind matchday to the season's persisted REGULAR phase.
 		var regularPhase2 = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 		var matchday2 = matchdayRepository.save(new Matchday(regularPhase2, "RT Matchday 2", 2));
 
@@ -553,7 +553,7 @@ class RaceControllerTest {
 		race.setTrack(track);
 		raceRepository.save(race);
 
-		// Phase 61 MIGR-06: bind matchday to the season's persisted REGULAR phase.
+		// bind matchday to the season's persisted REGULAR phase.
 		var regularPhaseDt = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 		var matchday2 = matchdayRepository.save(new Matchday(regularPhaseDt, "RT Matchday DT", 3));
 

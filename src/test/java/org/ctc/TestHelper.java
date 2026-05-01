@@ -32,8 +32,8 @@ public class TestHelper {
 	 * Creates a Season with a bootstrapped REGULAR phase (LEAGUE layout, sortIndex=0).
 	 * Mirrors the bootstrap performed by SeasonManagementService.save — ensures tests that
 	 * call seasonPhaseRepository.findBySeasonIdAndPhaseType(id, REGULAR) find a result.
-	 *
-	 * <p>Phase 61 MIGR-06: scoring lives on the REGULAR SeasonPhase, not on the Season itself.
+	 * Scoring lives on the REGULAR SeasonPhase, so the helper attaches a generated
+	 * RaceScoring + MatchScoring there.
 	 */
 	public Season createSeason(String name, int year, int number) {
 		var suffix = UUID.randomUUID().toString().substring(0, 4);
@@ -43,23 +43,21 @@ public class TestHelper {
 				new MatchScoring("MS " + suffix, 3, 1, 0));
 		var season = new Season(name, year, number);
 		var saved = seasonRepository.save(season);
-		// Bootstrap REGULAR phase carrying scoring + format (Phase 61 MIGR-06).
+		// Bootstrap REGULAR phase carrying scoring + format.
 		var regular = new SeasonPhase(saved, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		regular.setFormat(SeasonFormat.LEAGUE);
 		regular.setLegs(1);
 		regular.setRaceScoring(rs);
 		regular.setMatchScoring(ms);
 		regular = seasonPhaseRepository.save(regular);
-		// Phase 61 MIGR-06: keep the Java-side season.phases collection in sync so that
-		// downstream PhaseTestFixtures.matchdayInRegularPhase(saved, ...) can find it
-		// without relying on lazy-load (some unit-style IT tests run outside an OSIV session).
+		// Keep the Java-side season.phases collection in sync so downstream callers can
+		// find the phase without relying on lazy-load (some unit-style ITs run outside OSIV).
 		saved.getPhases().add(regular);
 		return saved;
 	}
 
 	/**
-	 * Creates a Matchday wired to the season's REGULAR phase. Replaces the legacy
-	 * {@code createMatchday(season, ...)} factory post-MIGR-06.
+	 * Creates a Matchday wired to the season's REGULAR phase.
 	 */
 	public Matchday createMatchdayInRegularPhase(Season season, String label, int sortIndex) {
 		var regular = seasonPhaseRepository
@@ -70,14 +68,14 @@ public class TestHelper {
 
 	/**
 	 * Creates a Playoff for a season. Delegates to PlayoffService.createPlayoff which
-	 * atomically writes a PLAYOFF SeasonPhase + Playoff (Phase 58 D-19).
+	 * atomically writes a PLAYOFF SeasonPhase + Playoff.
 	 */
 	public Playoff createPlayoffInPhase(Season season, String name, int teamCount) {
 		return playoffService.createPlayoff(season.getId(), name, teamCount);
 	}
 
 	/**
-	 * @deprecated Phase 61 MIGR-06: prefer {@link #createMatchdayInRegularPhase(Season, String, int)}.
+	 * @deprecated prefer {@link #createMatchdayInRegularPhase(Season, String, int)}.
 	 * Kept as a thin alias so existing callers keep compiling — internally now binds via the REGULAR phase.
 	 */
 	public Matchday createMatchday(Season season, String label, int sortIndex) {
@@ -85,8 +83,7 @@ public class TestHelper {
 	}
 
 	/**
-	 * Phase 61 MIGR-06 helper: returns the RaceScoring assigned to the season's REGULAR phase.
-	 * Replaces the legacy {@code season.getRaceScoring()} call in tests.
+	 * Returns the RaceScoring assigned to the season's REGULAR phase.
 	 */
 	public RaceScoring getRaceScoring(Season season) {
 		return seasonPhaseRepository
@@ -96,8 +93,7 @@ public class TestHelper {
 	}
 
 	/**
-	 * Phase 61 MIGR-06 helper: returns the MatchScoring assigned to the season's REGULAR phase.
-	 * Replaces the legacy {@code season.getMatchScoring()} call in tests.
+	 * Returns the MatchScoring assigned to the season's REGULAR phase.
 	 */
 	public MatchScoring getMatchScoring(Season season) {
 		return seasonPhaseRepository

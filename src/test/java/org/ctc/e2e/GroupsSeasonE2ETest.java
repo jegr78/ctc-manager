@@ -49,7 +49,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
 /**
  * QUAL-02 E2E gate — exercises the full GROUPS-Saison workflow end-to-end.
  *
- * <p>Per Phase 61 D-11 a single {@code @Test} covers the entire ROADMAP-SC3 path:
+ * <p>Per a single {@code @Test} covers the entire ROADMAP-SC3 path:
  * Saison-anlegen → REGULAR-Phase auf GROUPS umschalten → 2 Groups anlegen → 4 Teams +
  * Roster-Zuweisung → Driver-Import (gemockter Sheet-Service) → Matchday/Race-Setup →
  * Race-Results UI-eintragen → per-group + combined-view Standings verifizieren.
@@ -67,7 +67,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
  * creation, team creation, season-team add, roster assign, driver-import preview +
  * execute, race-result form, per-group + combined-view standings navigation.
  *
- * <p>Test data isolation per D-14 + CLAUDE.md "Isolate Test Data Completely":
+ * <p>Test data isolation + CLAUDE.md "Isolate Test Data Completely":
  * year=2099, season "Test-GROUPS Season 2099", teams T-GA-1/T-GA-2/T-GB-1/T-GB-2,
  * driver PSN IDs T_groups_drv01..T_groups_drv12.
  */
@@ -94,7 +94,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 	void setUp() {
 		setupPage();
 		// Idempotent cleanup: drop a leftover Test-GROUPS Season 2099 from a previous run.
-		// Year/Number is unique (Phase 56 D-03); cleanup avoids form-validation collisions on re-runs.
+		// Year/Number is unique; cleanup avoids form-validation collisions on re-runs.
 		seasonRepository.findByYearAndNumber(2099, 1).forEach(s -> {
 			try {
 				seasonManagementService.delete(s.getId());
@@ -131,7 +131,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		assertThat(page.locator(".alert-success")).containsText("Season saved");
 
 		// Resolve UUIDs for downstream UI navigation. SeasonRepository.findByYearAndNumber
-		// returns a List<Season> (Phase 59 D-02); pick the single hit.
+		// returns a List<Season>; pick the single hit.
 		List<Season> hits = seasonRepository.findByYearAndNumber(2099, 1);
 		org.junit.jupiter.api.Assertions.assertEquals(1, hits.size(),
 				"Expected exactly 1 Test-GROUPS Season 2099 after creation");
@@ -143,7 +143,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		// ============================================================================
 		// STEP 2 — UI: flip REGULAR phase to GROUPS layout via phase-edit form.
 		// The phase-edit form requires legs (>=1), format, and uses path
-		// /admin/seasons/{seasonId}/phases/{phaseId}/edit (Phase 60 D-22 path canonicalised).
+		// /admin/seasons/{seasonId}/phases/{phaseId}/edit (path canonicalised).
 		// Race + match scoring also wired here so race-result entry (STEP 7) can compute points.
 		// ============================================================================
 		var raceScoring = raceScoringRepository.findAll().stream()
@@ -162,7 +162,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 
 		// ============================================================================
 		// STEP 3 — UI: create 2 groups (Group A + Group B) for the GROUPS-layout phase.
-		// Endpoint POST /admin/seasons/{sid}/phases/{pid}/groups/save (Phase 60 D-19 form)
+		// Endpoint POST /admin/seasons/{sid}/phases/{pid}/groups/save (form)
 		// ============================================================================
 		for (String groupName : List.of("Group A", "Group B")) {
 			page.navigate(url("/admin/seasons/" + season.getId()
@@ -205,7 +205,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		}
 
 		// STEP 4c — UI: bulk roster save assigns each team to its target group via the
-		// roster form on /admin/seasons/{sid}/phases/{pid} (Phase 60 D-20 indexed properties).
+		// roster form on /admin/seasons/{sid}/phases/{pid} (indexed properties).
 		// The roster form lives inside a collapsed <details> element ("Edit Roster"); we open
 		// it via JavaScript so the submit button becomes visible to Playwright clicks.
 		// The form already renders one row per seasonTeam with hidden assignments[i].teamId +
@@ -234,7 +234,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		rosterForm.getByRole(AriaRole.BUTTON, new com.microsoft.playwright.Locator.GetByRoleOptions().setName("Save Roster")).click();
 		assertThat(page.locator(".alert-success")).containsText("Roster updated");
 
-		// Hybrid assert (D-13): DB-state confirms 4 PhaseTeam rows with non-null group_ids.
+		// Hybrid assert: DB-state confirms 4 PhaseTeam rows with non-null group_ids.
 		var phaseTeams = phaseTeamRepository.findByPhaseId(regularPhase.getId());
 		org.junit.jupiter.api.Assertions.assertEquals(4, phaseTeams.size(),
 				"Expected 4 PhaseTeam rows after roster save");
@@ -261,7 +261,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Execute Import")).click();
 		assertThat(page.locator(".alert-success")).containsText("Import successful");
 
-		// Hybrid assert (D-13): DB-state confirms 12 drivers + 12 SeasonDriver rows persisted.
+		// Hybrid assert: DB-state confirms 12 drivers + 12 SeasonDriver rows persisted.
 		long importedDriverCount = driverRepository.findAll().stream()
 				.filter(d -> d.getPsnId().startsWith("T_groups_drv"))
 				.count();
@@ -273,7 +273,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		// Deviation (Rule 3): no UI exists for group-bound matchday/race generation as of
 		// Phase 60. Per D-15, the *race-result entry* must be UI-driven (STEP 7); structural
 		// matchday/match/race construction happens here at the repository layer.
-		// Layout: 2 matchdays/group × 1 match/matchday × 1 race/match = 4 races total (D-16).
+		// Layout: 2 matchdays/group × 1 match/matchday × 1 race/match = 4 races total.
 		// ============================================================================
 		List<UUID> raceIdsGroupA = new ArrayList<>();
 		List<UUID> raceIdsGroupB = new ArrayList<>();
@@ -323,7 +323,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		org.junit.jupiter.api.Assertions.assertEquals(2, raceIdsGroupB.size());
 
 		// ============================================================================
-		// STEP 7 — UI: enter race results via the /admin/races/{id}/results form (D-15).
+		// STEP 7 — UI: enter race results via the /admin/races/{id}/results form.
 		// The form is pre-populated with all 6 lineup driver rows per race; we click the
 		// position inputs and Save. Driver-Ranking values picked for deterministic standings.
 		// CTC Standard race scoring: 20,17,14,12,10,8 — each driver is ranked 1..6 within race.
@@ -376,7 +376,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		assertThat(page.locator("#standingsTable tbody tr.data-row")).hasCount(4);
 
 		// ============================================================================
-		// STEP 9 — DB-state hybrid assertions (D-13).
+		// STEP 9 — DB-state hybrid assertions.
 		// ============================================================================
 		var refreshedRegular = seasonPhaseRepository.findBySeasonIdAndPhaseType(
 				season.getId(), PhaseType.REGULAR).orElseThrow();
@@ -431,7 +431,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 	}
 
 	/**
-	 * UI race-result entry per D-15: navigate to /admin/races/{raceId}/results, fill the
+	 * UI race-result entry: navigate to /admin/races/{raceId}/results, fill the
 	 * position input for each driver in the order they should finish 1..N, and click Save.
 	 *
 	 * <p>The race-results template renders one row per RaceLineup with hidden inputs for
@@ -460,7 +460,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 	}
 
 	// =========================================================================
-	// @TestConfiguration — stub GoogleSheetsService (D-12)
+	// @TestConfiguration — stub GoogleSheetsService
 	// =========================================================================
 
 	@TestConfiguration
@@ -470,7 +470,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		GoogleSheetsService googleSheetsService() {
 			// Stub returns one synthetic year-tab "2099" with a header row + 12 driver rows
 			// keyed to the 4 GROUPS-layout test teams. Group resolution occurs server-side
-			// via PhaseTeam (Phase 59 D-05) so we do not emit a Group column.
+			// via PhaseTeam so we do not emit a Group column.
 			return new GoogleSheetsService("") {
 				@Override
 				public boolean isAvailable() {

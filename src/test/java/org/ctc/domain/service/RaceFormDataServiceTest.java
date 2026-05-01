@@ -46,7 +46,7 @@ class RaceFormDataServiceTest {
 
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        // Phase 61 MIGR-06: matchday's season is derived from phase.season; wire a phase.
+        // matchday's season is derived from phase.season; wire a phase.
         matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
 
         when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
@@ -97,7 +97,7 @@ class RaceFormDataServiceTest {
         season.setTracks(new ArrayList<>());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        // Phase 61 MIGR-06: matchday's season is derived from phase.season; wire a phase.
+        // matchday's season is derived from phase.season; wire a phase.
         matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
@@ -133,7 +133,7 @@ class RaceFormDataServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        // Phase 61 MIGR-06: matchday's season is derived from phase; phase carries scoring.
+        // matchday's season is derived from phase; phase carries scoring.
         var phaseLineup = PhaseTestFixtures.regularPhase(season, scoring, null);
         phaseLineup.setRaceScoring(scoring);
         matchday.setPhase(phaseLineup);
@@ -172,7 +172,7 @@ class RaceFormDataServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        // Phase 61 MIGR-06: matchday's season is derived from phase.season; wire a phase.
+        // matchday's season is derived from phase.season; wire a phase.
         // getResultsFormData reads scoring via matchday.getPhase().getRaceScoring().
         var phase = PhaseTestFixtures.regularPhase(season, scoring, null);
         phase.setRaceScoring(scoring);
@@ -212,7 +212,7 @@ class RaceFormDataServiceTest {
         season.setTracks(new ArrayList<>());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        // Phase 61 MIGR-06: matchday's season is derived from phase.season; wire a phase.
+        // matchday's season is derived from phase.season; wire a phase.
         matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match();
         match.setMatchday(matchday);
@@ -247,7 +247,7 @@ class RaceFormDataServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        // Phase 61 MIGR-06: matchday's season is derived from phase.season; wire a phase.
+        // matchday's season is derived from phase.season; wire a phase.
         matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match();
         match.setMatchday(matchday);

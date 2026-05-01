@@ -63,7 +63,7 @@ class PlayoffSeedingServiceTest {
 		var season = new Season("Test Season");
 		season.setId(UUID.randomUUID());
 
-		// Phase 61 MIGR-06: Playoff is bound to a SeasonPhase, not the Season directly.
+		// Playoff is bound to a SeasonPhase, not the Season directly.
 		playoff = PhaseTestFixtures.playoffForSeason(season, "Test Playoff");
 		playoff.setId(playoffId);
 

@@ -99,7 +99,7 @@ class CsvImportServiceTest {
 		driver2 = new Driver("driver2_psn", "Driver Two");
 		driver2.setId(UUID.randomUUID());
 
-		// Phase 61 MIGR-06: scoring lives on the REGULAR SeasonPhase. Provide a default
+		// scoring lives on the REGULAR SeasonPhase. Provide a default
 		// stub for every test so any callsite reading findRegularPhase().getRaceScoring()
 		// finds a non-null RaceScoring without each test re-stubbing the lookup.
 		var stubPhase = matchday.getPhase();
@@ -453,7 +453,7 @@ class CsvImportServiceTest {
 	@Test
 	void givenNonExistentMatchday_whenCheckDuplicate_thenReturnsFalse() {
 		// given
-		// Phase 61 CR-01: checkDuplicate now resolves matchdays via the REGULAR phase finder
+		// checkDuplicate now resolves matchdays via the REGULAR phase finder
 		// (findByPhaseIdOrderBySortIndexAsc) instead of the legacy season-id finder.
 		when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 		when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(matchday.getPhase().getId()))

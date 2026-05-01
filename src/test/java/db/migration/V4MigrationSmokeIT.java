@@ -18,7 +18,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Smoke test for V4 migration end-to-end (Phase 57 D-18).
+ * Smoke test for V4 migration end-to-end.
  *
  * <p>Verifies that the full Spring Boot context loads cleanly after V4 has run as part of the
  * standard Flyway autoload flow. Indirectly proves: V1+V2+V3+V4 schemas align; JPA + Hibernate
@@ -70,7 +70,7 @@ class V4MigrationSmokeIT {
                 + "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 SMOKE_MATCH_SCORING_ID, "Phase57-Smoke-MatchScoring", 3, 1, 0);
 
-        // Insert one season — post-V6 schema (Phase 61 MIGR-06 dropped format/legs/race_scoring_id/match_scoring_id
+        // Insert one season — post-V6 schema (dropped format/legs/race_scoring_id/match_scoring_id
         // from seasons; scoring + format now live on the SeasonPhase row inserted below).
         jdbcTemplate.update(
                 "INSERT INTO seasons (id, name, season_year, season_number, active, "

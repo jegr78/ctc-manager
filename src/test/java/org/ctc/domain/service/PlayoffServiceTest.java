@@ -78,7 +78,7 @@ class PlayoffServiceTest {
 		matchScoring = matchScoringRepository.save(
 				new MatchScoring("Test MS " + uniqueSuffix, 3, 1, 0));
 
-		// Phase 61 MIGR-06: scoring lives on the REGULAR SeasonPhase only.
+		// scoring lives on the REGULAR SeasonPhase only.
 		season = new Season("Playoff Test " + UUID.randomUUID().toString().substring(0, 8), 2026, 1);
 		season.setActive(true);
 		season = seasonRepository.save(season);
@@ -208,7 +208,7 @@ class PlayoffServiceTest {
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
 
-			// Phase 61 MIGR-06: Matchday is bound to a SeasonPhase (PLAYOFF here).
+			// Matchday is bound to a SeasonPhase (PLAYOFF here).
 			var matchday = matchdayRepository.save(new Matchday(playoff.getPhase(), "HF Hinspiel", 1));
 			var matchup = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
 
@@ -270,7 +270,7 @@ class PlayoffServiceTest {
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
 
-			// Phase 61 MIGR-06: Matchday is bound to a SeasonPhase (PLAYOFF here).
+			// Matchday is bound to a SeasonPhase (PLAYOFF here).
 			var matchday = matchdayRepository.save(new Matchday(playoff.getPhase(), "HF", 1));
 			var matchup = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
 
@@ -841,7 +841,7 @@ class PlayoffServiceTest {
 		@Test
 		void givenSeasonWithPlayoffPhaseButNoPlayoff_whenCreatePlayoff_thenReusesExistingPlayoffPhase() {
 			// given — manually create a PLAYOFF phase but do NOT yet create a Playoff record.
-			// Phase 61 MIGR-06: scoring lives on the SeasonPhase; reuse the test-class-level
+			// scoring lives on the SeasonPhase; reuse the test-class-level
 			// raceScoring + matchScoring fields here.
 			var existingPhase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10);
 			existingPhase = seasonPhaseRepository.save(existingPhase);
@@ -897,5 +897,5 @@ class PlayoffServiceTest {
 		}
 	}
 
-	// Phase 61 MIGR-06: @Nested DeprecatedM2NMethods removed; methods deleted in PlayoffService.
+	// @Nested DeprecatedM2NMethods removed; methods deleted in PlayoffService.
 }

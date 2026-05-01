@@ -64,7 +64,7 @@ class SwissPairingServiceTest {
 		season = seasonRepository.save(season);
 
 		// Create a REGULAR phase wired for SWISS format so SwissPairingService accepts it.
-		// Phase 61 MIGR-06: format/scoring live on the phase.
+		// format/scoring live on the phase.
 		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		phase.setFormat(SeasonFormat.SWISS);
 		phase.setRaceScoring(raceScoring);
@@ -113,7 +113,7 @@ class SwissPairingServiceTest {
 	@Test
 	void givenTotalRoundsReached_whenGenerateNextRound_thenThrowsException() {
 		// given — set totalRounds=1 on both season and the REGULAR phase
-		// Phase 61 MIGR-06: totalRounds lives on the phase only.
+		// totalRounds lives on the phase only.
 		regularPhase.setTotalRounds(1);
 		addTeams(4);
 		seasonRepository.save(season);
@@ -346,7 +346,7 @@ class SwissPairingServiceTest {
 
 	@Test
 	void givenLeaguePhaseAndGroupId_whenGenerateNextRound_thenThrowsIllegalArgument() {
-		// given — LEAGUE-layout phase + non-null groupId (invalid per D-17)
+		// given — LEAGUE-layout phase + non-null groupId (invalid)
 		var phase = buildSwissLeaguePhase();
 		addTeamsToPhase(phase, null, 4);
 
@@ -358,7 +358,7 @@ class SwissPairingServiceTest {
 
 	@Test
 	void givenGroupsLayoutAndNullGroupId_whenGenerateNextRound_thenThrowsIllegalArgument() {
-		// given — GROUPS-layout phase + null groupId (invalid per D-17)
+		// given — GROUPS-layout phase + null groupId (invalid)
 		var phase = buildSwissGroupsPhase();
 
 		// when / then
@@ -384,7 +384,7 @@ class SwissPairingServiceTest {
 	private SeasonPhase buildSwissLeaguePhase() {
 		var s = buildTestSeason();
 		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
-		// Phase 61 MIGR-06: format/scoring/totalRounds live on the phase.
+		// format/scoring/totalRounds live on the phase.
 		phase.setFormat(SeasonFormat.SWISS);
 		phase.setRaceScoring(raceScoring);
 		phase.setMatchScoring(matchScoring);
@@ -396,7 +396,7 @@ class SwissPairingServiceTest {
 	private SeasonPhase buildSwissGroupsPhase() {
 		var s = buildTestSeason();
 		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
-		// Phase 61 MIGR-06: format/scoring live on the phase.
+		// format/scoring live on the phase.
 		phase.setFormat(SeasonFormat.SWISS);
 		phase.setRaceScoring(raceScoring);
 		phase.setMatchScoring(matchScoring);

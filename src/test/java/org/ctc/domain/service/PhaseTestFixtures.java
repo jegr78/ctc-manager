@@ -39,12 +39,12 @@ public final class PhaseTestFixtures {
      * Creates a REGULAR phase with LEAGUE layout at sortIndex=0.
      * The returned entity has a random id assigned (Mockito tests require non-null ids).
      * <p>
-     * Phase 61 MIGR-06: scoring lives on the SeasonPhase. The {@code rs}/{@code ms} parameters
+     * scoring lives on the SeasonPhase. The {@code rs}/{@code ms} parameters
      * are now wired onto the phase so tests building phases via this helper see the scoring
      * propagated. Pass {@code null} when scoring is not relevant for the test.
      */
     public static SeasonPhase regularPhase(Season season, RaceScoring rs, MatchScoring ms) {
-        // Phase 61 MIGR-06: format/legs/totalRounds live exclusively on the SeasonPhase.
+        // format/legs/totalRounds live exclusively on the SeasonPhase.
         // Tests must explicitly set these via the returned phase if non-default values are required.
         var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
         phase.setId(UUID.randomUUID());
@@ -73,14 +73,13 @@ public final class PhaseTestFixtures {
 
     /**
      * Creates a PLAYOFF phase with BRACKET layout at sortIndex=10.
-     * Format is set to LEAGUE as a DB-default workaround (Phase 57 D-08).
+     * Format is set to LEAGUE as a DB-default workaround.
      */
     public static SeasonPhase playoffPhase(Season season, String label, RaceScoring rs, MatchScoring ms) {
         var phase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10);
         phase.setId(UUID.randomUUID());
         phase.setLabel(label);
-        phase.setFormat(SeasonFormat.LEAGUE); // DB-default workaround per Phase 57 D-08
-        // Phase 61 MIGR-06: wire scoring onto the phase so callers can read it back.
+        phase.setFormat(SeasonFormat.LEAGUE); // DB-default workaround per         // wire scoring onto the phase so callers can read it back.
         if (rs != null) phase.setRaceScoring(rs);
         if (ms != null) phase.setMatchScoring(ms);
         return phase;
@@ -100,7 +99,7 @@ public final class PhaseTestFixtures {
     }
 
     /**
-     * Phase 61 MIGR-06 helper: creates a Matchday bound to a REGULAR phase for the given Season.
+     * helper: creates a Matchday bound to a REGULAR phase for the given Season.
      * <p>
      * If the {@code season} has an existing REGULAR phase in {@code season.getPhases()} (typical
      * for IT tests where {@code TestHelper.createSeason} bootstrapped one), reuses that persisted
@@ -115,7 +114,7 @@ public final class PhaseTestFixtures {
                     .findFirst()
                     .orElseGet(() -> regularPhase(season, null, null));
         } catch (org.hibernate.LazyInitializationException e) {
-            // Phase 61 MIGR-06: when called outside an OSIV session (e.g. an IT test that
+            // when called outside an OSIV session (e.g. an IT test that
             // re-fetches a Season via repo without an open transaction), fall back to a
             // synthetic transient phase. Callers needing a persisted phase should pass it
             // explicitly via new Matchday(phase, ...).
@@ -125,7 +124,7 @@ public final class PhaseTestFixtures {
     }
 
     /**
-     * Phase 61 MIGR-06 helper: creates a Playoff bound to a PLAYOFF phase for the given Season.
+     * helper: creates a Playoff bound to a PLAYOFF phase for the given Season.
      * <p>
      * If the {@code season} has an existing PLAYOFF phase in {@code season.getPhases()},
      * reuses that persisted phase. Otherwise creates a synthetic transient PLAYOFF phase

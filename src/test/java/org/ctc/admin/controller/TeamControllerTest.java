@@ -91,7 +91,7 @@ class TeamControllerTest {
 		var sub = teamRepository.save(new Team("Grouped Racing A", "GRP A", parent));
 
 		var season = seasonRepository.findByActiveTrue().orElseThrow();
-		// Phase 61 MIGR-06: bind matchday to the season's persisted REGULAR phase to satisfy FK_MATCHDAY_PHASE.
+		// bind matchday to the season's persisted REGULAR phase to satisfy FK_MATCHDAY_PHASE.
 		var regularPhase = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 		var matchday = matchdayRepository.save(new Matchday(regularPhase, "GRP MD", 99));
 		var match = new Match();
@@ -138,7 +138,7 @@ class TeamControllerTest {
 		var sub = teamRepository.save(new Team("Parent Inc A", "PIN A", parent));
 
 		var season = seasonRepository.findByActiveTrue().orElseThrow();
-		// Phase 61 MIGR-06: bind matchday to the season's persisted REGULAR phase to satisfy FK_MATCHDAY_PHASE.
+		// bind matchday to the season's persisted REGULAR phase to satisfy FK_MATCHDAY_PHASE.
 		var regularPhase = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 		var matchday = matchdayRepository.save(new Matchday(regularPhase, "PIN MD", 98));
 		var match = new Match();
@@ -171,7 +171,7 @@ class TeamControllerTest {
 		var sub = teamRepository.save(new Team("Own Inc A", "OWN A", parent));
 
 		var season = seasonRepository.findByActiveTrue().orElseThrow();
-		// Phase 61 MIGR-06: bind matchday to the season's persisted REGULAR phase to satisfy FK_MATCHDAY_PHASE.
+		// bind matchday to the season's persisted REGULAR phase to satisfy FK_MATCHDAY_PHASE.
 		var regularPhase = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 		var matchday = matchdayRepository.save(new Matchday(regularPhase, "OWN MD", 97));
 		var match = new Match();

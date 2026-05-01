@@ -106,7 +106,7 @@ class MatchdayServiceTest {
         var seasonId = UUID.randomUUID();
         var season = new Season();
         season.setId(seasonId);
-        // Phase 61 MIGR-06: saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
+        // saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
         var regular = PhaseTestFixtures.regularPhase(season, null, null);
         when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
 
@@ -130,7 +130,7 @@ class MatchdayServiceTest {
         var matchdayId = UUID.randomUUID();
         var season = new Season();
         season.setId(seasonId);
-        // Phase 61 MIGR-06: saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
+        // saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
         var regular = PhaseTestFixtures.regularPhase(season, null, null);
         when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
         var existing = new Matchday();
@@ -161,7 +161,7 @@ class MatchdayServiceTest {
         season.setId(seasonId);
         var matchday = new Matchday();
         matchday.setId(matchdayId);
-        // Phase 61 MIGR-06: matchday.getSeason() derives from phase; wire a phase so deleteMatchday can read seasonId.
+        // matchday.getSeason() derives from phase; wire a phase so deleteMatchday can read seasonId.
         matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
 
         when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
@@ -263,7 +263,7 @@ class MatchdayServiceTest {
     }
 
     /**
-     * Phase 61 CR-01 regression: REGULAR matchday creation must not be poisoned by PLAYOFF
+     * REGULAR matchday creation must not be poisoned by PLAYOFF
      * matchdays. The pre-fix bug used {@code findBySeasonIdOrderBySortIndexAsc}, which
      * returns matchdays from BOTH the REGULAR and PLAYOFF phases. Playoff matchdays carry
      * sortIndex >= 100 (see {@code PlayoffService.addRaceToMatchup}), so the next REGULAR
@@ -299,7 +299,7 @@ class MatchdayServiceTest {
     }
 
     /**
-     * Phase 61 CR-01 regression: a duplicate-label check must be scoped to the REGULAR phase.
+     * a duplicate-label check must be scoped to the REGULAR phase.
      * Pre-fix, label "Round 1" in REGULAR was rejected when "Round 1" already existed in
      * PLAYOFF — a cross-phase false positive.
      */
@@ -483,7 +483,7 @@ class MatchdayServiceTest {
         }
     }
 
-    // --- Phase 58 D-26: phase-aware finders + @Deprecated bridge ---
+    // --- phase-aware finders + @Deprecated bridge ---
 
     @Test
     void givenRegularAndPlayoffMatchdays_whenFindByPhaseId_thenSegmentedCorrectly() {
