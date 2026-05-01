@@ -207,7 +207,8 @@ class MatchdayGeneratorServiceTest {
 	@Test
 	void givenSwissSeason_whenGenerate_thenThrowsException() {
 		// given — Phase 61 MIGR-06: format lives only on SeasonPhase.
-		seasonPhaseRepository.save(regularPhase);
+		regularPhase.setFormat(SeasonFormat.SWISS);
+		regularPhase = seasonPhaseRepository.save(regularPhase);
 		addTeams(4);
 
 		// when / then
@@ -298,6 +299,9 @@ class MatchdayGeneratorServiceTest {
 	@Test
 	void givenSeasonWith2Legs_whenGenerate_thenEachMatchHas2Races() {
 		// given
+		// Phase 61 MIGR-06: legs lives on the phase. Configure two legs.
+		regularPhase.setLegs(2);
+		regularPhase = seasonPhaseRepository.save(regularPhase);
 		seasonRepository.save(season);
 		addTeams(4);
 
@@ -315,6 +319,9 @@ class MatchdayGeneratorServiceTest {
 	@Test
 	void givenSeasonWith2Legs_whenGenerate_thenLeg2HasSwappedHomeAway() {
 		// given
+		// Phase 61 MIGR-06: legs lives on the phase. Configure two legs.
+		regularPhase.setLegs(2);
+		regularPhase = seasonPhaseRepository.save(regularPhase);
 		seasonRepository.save(season);
 		addTeams(4);
 

@@ -54,7 +54,9 @@ class SeasonPhaseFormTest {
         var form = new SeasonPhaseForm();
         form.setPhaseType(PhaseType.REGULAR);
         form.setLayout(PhaseLayout.LEAGUE);
-        // format is null (overriding default) — intentionally set to null for test
+        // Phase 61 MIGR-06: SeasonPhaseForm.format defaults to LEAGUE, must explicitly null it here
+        // to exercise the @NotNull validation.
+        form.setFormat(null);
 
         // when
         var violations = validator.validate(form);

@@ -47,6 +47,8 @@ public class TestHelper {
 		var regular = new SeasonPhase(saved, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		regular.setFormat(SeasonFormat.LEAGUE);
 		regular.setLegs(1);
+		regular.setRaceScoring(rs);
+		regular.setMatchScoring(ms);
 		regular = seasonPhaseRepository.save(regular);
 		// Phase 61 MIGR-06: keep the Java-side season.phases collection in sync so that
 		// downstream PhaseTestFixtures.matchdayInRegularPhase(saved, ...) can find it

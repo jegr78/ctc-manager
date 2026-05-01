@@ -113,9 +113,11 @@ class SwissPairingServiceTest {
 	@Test
 	void givenTotalRoundsReached_whenGenerateNextRound_thenThrowsException() {
 		// given — set totalRounds=1 on both season and the REGULAR phase
+		// Phase 61 MIGR-06: totalRounds lives on the phase only.
+		regularPhase.setTotalRounds(1);
 		addTeams(4);
 		seasonRepository.save(season);
-		seasonPhaseRepository.save(regularPhase);
+		regularPhase = seasonPhaseRepository.save(regularPhase);
 
 		var md = swissPairingService.generateNextRound(regularPhase.getId(), null);
 		addDummyResults(md.getId());
