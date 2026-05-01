@@ -955,62 +955,27 @@ public class TestDataService {
 		log.info("Created 2023 Playoffs via autoSeedBracket");
 
 		// === 2024 PLAYOFFS: FINAL (2 teams) ===
-		var s2Results = raceResultRepository.findByRaceMatchdaySeasonId(s2.getId());
+		// Phase 61 WR-07: align with the 2023 branch — autoSeedBracket pulls Top-N from the
+		// canonical REGULAR-phase standings (D-15) instead of the previous hand-rolled team-score
+		// aggregation, which double-counted drivers that swapped teams mid-season (Phase 56 D-04
+		// succession case) and diverged from StandingsService.
+		var playoff2024 = playoffService.createPlayoff(s2.getId(), "2024 Playoffs", 2);
+		playoffSeedingService.autoSeedBracket(playoff2024.getId());
 
-		// Calculate 2024 standings
-		var s2TeamScores = new java.util.LinkedHashMap<Team, Integer>();
-		for (var result : s2Results) {
-			var team = result.getRace().getMatch().getHomeTeam();
-			if (team != null) {
-				var homeTeamId = team.getId();
-				var teamResults = s2Results.stream()
-						.filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getHomeTeam() != null && r.getRace().getMatch().getHomeTeam().getId().equals(homeTeamId))
-						.toList();
-				s2TeamScores.putIfAbsent(team, scoringService.calculateTeamTotal(teamResults));
+		var finalRound = playoff2024.getRounds().getFirst();
+		finalRound.setBestOfLegs(2);
+		playoffRoundRepository.save(finalRound);
 
-				var awayTeam = result.getRace().getMatch().getAwayTeam();
-				if (awayTeam != null) {
-					var awayTeamId = awayTeam.getId();
-					var awayTeamResults = s2Results.stream()
-							.filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getAwayTeam() != null && r.getRace().getMatch().getAwayTeam().getId().equals(awayTeamId))
-							.toList();
-					s2TeamScores.putIfAbsent(awayTeam, scoringService.calculateTeamTotal(awayTeamResults));
-				}
-			}
+		// Phase 61 MIGR-06: matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
+		var playoffMatchday2024 = matchdayRepository.save(new Matchday(playoff2024.getPhase(), "2024 Playoffs", 5));
+
+		// Reload to read teams set by autoSeedBracket onto the matchup.
+		var reloaded2024 = playoffRepository.findById(playoff2024.getId()).orElseThrow();
+		for (var matchup : reloaded2024.getRounds().getFirst().getMatchups()) {
+			createPlayoffRaces(playoffMatchday2024, matchup, s2, raceScoring, 2);
 		}
 
-		var s2Sorted = s2TeamScores.entrySet().stream()
-				.sorted((a, b) -> b.getValue().compareTo(a.getValue()))
-				.map(java.util.Map.Entry::getKey)
-				.toList();
-
-		if (s2Sorted.size() < 2) {
-			log.warn("Not enough teams in 2024 season to create playoff");
-		} else {
-			var topTeam = s2Sorted.get(0);
-			var runnerUpTeam = s2Sorted.get(1);
-
-			// Create 2024 Playoff
-			var playoff2024 = playoffService.createPlayoff(s2.getId(), "2024 Playoffs", 2);
-			var finalRound = playoff2024.getRounds().getFirst();
-			finalRound.setBestOfLegs(2);
-			playoffRoundRepository.save(finalRound);
-
-			// Wire matchup
-			var matchup = finalRound.getMatchups().getFirst();
-			matchup.setTeam1(topTeam);
-			matchup.setTeam2(runnerUpTeam);
-			playoffMatchupRepository.save(matchup);
-
-			// Phase 61 MIGR-06: matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
-			var playoffMatchday = matchdayRepository.save(new Matchday(playoff2024.getPhase(), "2024 Playoffs", 5));
-
-			// Create races for Final (2 total)
-			createPlayoffRaces(playoffMatchday, matchup, s2, raceScoring, 2);
-
-			log.info("Created 2024 Playoffs: {} vs {}",
-					topTeam.getShortName(), runnerUpTeam.getShortName());
-		}
+		log.info("Created 2024 Playoffs via autoSeedBracket");
 
 		log.info("Seeded playoffs: {} playoff entities, {} playoff races",
 				playoffRepository.count(), raceRepository.count());
