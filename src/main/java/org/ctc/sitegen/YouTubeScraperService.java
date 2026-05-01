@@ -14,7 +14,7 @@ public class YouTubeScraperService {
     private static final Pattern VIDEO_ID_PATTERN =
             Pattern.compile("\"videoId\":\"([a-zA-Z0-9_-]{11,})\"");
 
-    // package-private for testability via @Spy (per D-02, D-04)
+    // package-private for testability via @Spy.
     String fetchChannelHtml(String channelUrl) throws IOException {
         return Jsoup.connect(channelUrl)
                 .timeout(10_000)

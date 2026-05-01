@@ -132,7 +132,6 @@ public class CsvImportService {
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
 				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
 
-		// Phase 61 MIGR-06: scoring now lives on the REGULAR phase.
 		var raceScoring = seasonPhaseService.findRegularPhase(season.getId()).getRaceScoring();
 
 		// Resolve or create matchday
@@ -266,7 +265,6 @@ public class CsvImportService {
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
 				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
 
-		// Phase 61 MIGR-06: scoring now lives on the REGULAR phase.
 		var raceScoring = seasonPhaseService.findRegularPhase(season.getId()).getRaceScoring();
 
 		// Resolve or create matchday
@@ -442,10 +440,9 @@ public class CsvImportService {
 					.orElseThrow(() -> new ValidationException(
 							"Matchday not found in CSV import: " + metadata.matchdayId()));
 		}
-		// Phase 61 CR-01: scope lookup + sortIndex calculation to the REGULAR phase. The previous
-		// findBySeasonIdOrderBySortIndexAsc returned matchdays from BOTH phases (REGULAR + PLAYOFF),
-		// which let PLAYOFF sortIndex (>= 100) poison the next REGULAR sortIndex and made the
-		// label-equality match accidentally pick up a PLAYOFF matchday with the same label.
+		// Scope lookup + sortIndex calculation to the REGULAR phase: a season-wide query
+		// would let PLAYOFF sortIndex (>= 100) poison the next REGULAR sortIndex and let
+		// the label-equality match accidentally pick up a PLAYOFF matchday with the same label.
 		var regular = seasonPhaseService.findRegularPhase(season.getId());
 		var regularMatchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId());
 		return regularMatchdays.stream()
@@ -512,8 +509,8 @@ public class CsvImportService {
 		if (metadata.hasMatchdayId()) {
 			matchday = matchdayRepository.findById(metadata.matchdayId()).orElse(null);
 		} else {
-			// Phase 61 CR-01: scope label lookup to the REGULAR phase to avoid cross-phase
-			// label collisions (a REGULAR "Round 1" must not match a PLAYOFF "Round 1").
+			// Scope label lookup to the REGULAR phase to avoid cross-phase label collisions
+			// (a REGULAR "Round 1" must not match a PLAYOFF "Round 1").
 			var regular = seasonPhaseService.findRegularPhase(season.getId());
 			matchday = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId()).stream()
 					.filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
