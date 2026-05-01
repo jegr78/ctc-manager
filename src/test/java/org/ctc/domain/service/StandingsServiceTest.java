@@ -735,8 +735,8 @@ class StandingsServiceTest {
             var ms = new MatchScoring("MS", 3, 1, 0);
             SeasonPhase regular = PhaseTestFixtures.regularPhase(season, rs, ms);
 
-            // The @Deprecated bridge uses findByType (Optional) to avoid tx rollback-only (D-01).
-            when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR)).thenReturn(Optional.of(regular));
+            // Phase 61 MIGR-06: bridge now resolves via findRegularPhase (not findByType).
+            when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
             when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
             when(matchRepository.findByMatchdayPhaseId(regular.getId())).thenReturn(List.of());
             when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of());
@@ -744,8 +744,8 @@ class StandingsServiceTest {
             // when — @Deprecated bridge (D-01)
             var result = standingsService.calculateStandings(season.getId()); // seasonId-overload
 
-            // then — bridge resolves REGULAR phase via findByType, then delegates to canonical (D-02)
-            verify(seasonPhaseService).findByType(season.getId(), PhaseType.REGULAR);
+            // then — bridge resolves REGULAR phase via findRegularPhase, then delegates to canonical (D-02).
+            verify(seasonPhaseService).findRegularPhase(season.getId());
             verify(matchRepository).findByMatchdayPhaseId(regular.getId());
             assertThat(result).isEmpty();
         }

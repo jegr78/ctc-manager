@@ -582,6 +582,8 @@ class SeasonManagementServiceTest {
         var ms = new MatchScoring();
         ms.setId(UUID.randomUUID());
         var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
+        // Phase 61 MIGR-06: explicitly set format=SWISS to verify the auto-sync block stays removed.
+        regular.setFormat(SeasonFormat.SWISS);
 
         when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));

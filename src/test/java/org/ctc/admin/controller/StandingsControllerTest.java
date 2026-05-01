@@ -151,7 +151,9 @@ class StandingsControllerTest {
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/standings"))
 				.andExpect(model().attributeExists("seasons", "standings", "driverRanking"))
-				.andExpect(model().attribute("selectedSeason", hasProperty("format", is(SeasonFormat.SWISS))));
+				// Phase 61 MIGR-06: Season no longer carries `format`; the controller should still
+				// resolve the season by id. Validate selectedSeason is the requested season.
+				.andExpect(model().attribute("selectedSeason", hasProperty("id", is(swissSeason.getId()))));
 	}
 
 	@Test
@@ -201,6 +203,8 @@ class StandingsControllerTest {
 		var season = testHelper.createSeason("T-Phase60-SwissGroup");
 		var regular = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 		regular.setLayout(PhaseLayout.GROUPS);
+		// Phase 61 MIGR-06: format lives on the phase only.
+		regular.setFormat(SeasonFormat.SWISS);
 		seasonPhaseRepository.save(regular);
 		var group = seasonPhaseService.createGroup(regular.getId(), "T-Phase60-Swiss-Group-A", 0);
 
