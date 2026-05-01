@@ -38,9 +38,6 @@ public class SeasonManagementService {
 
     // --- Records for structured return data ---
 
-    public record SeasonDetailData(Season season, Playoff playoff, boolean hasTeams,
-                                   boolean hasMatchdays, boolean canGenerate, boolean isSwiss) {}
-
     public record SeasonEditFormData(Season season, List<Team> allTeams, List<Car> allCars,
                                      List<Track> allTracks, List<RaceScoring> allRaceScorings,
                                      List<MatchScoring> allMatchScorings) {}
@@ -133,18 +130,6 @@ public class SeasonManagementService {
     @Transactional(readOnly = true)
     public Optional<Season> findByIdOptional(UUID id) {
         return seasonRepository.findById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public SeasonDetailData getDetailData(UUID id) {
-        var season = findById(id);
-        var playoff = playoffRepository.findBySeasonId(id).orElse(null);
-        boolean hasTeams = !season.getSeasonTeams().isEmpty();
-        boolean hasMatchdays = !season.getMatchdays().isEmpty();
-        // Phase 61 MIGR-06: format moved to REGULAR phase.
-        boolean isSwiss = seasonPhaseService.findRegularPhase(season.getId()).getFormat() == SeasonFormat.SWISS;
-        boolean canGenerate = !isSwiss && !hasMatchdays && season.getEligibleTeams().size() >= 2;
-        return new SeasonDetailData(season, playoff, hasTeams, hasMatchdays, canGenerate, isSwiss);
     }
 
     @Transactional(readOnly = true)

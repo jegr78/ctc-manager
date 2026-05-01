@@ -464,37 +464,6 @@ class SeasonManagementServiceTest {
     }
 
     @Test
-    void givenExistingId_whenGetDetailData_thenReturnsSeasonWithPlayoffAndComputedFlags() {
-        // given
-        var season = createSeason("Detail Season");
-        var team1 = createTeam("T1", "Team 1");
-        var team2 = createTeam("T2", "Team 2");
-        season.addTeam(team1);
-        season.addTeam(team2);
-
-        var playoff = new Playoff();
-        playoff.setId(UUID.randomUUID());
-
-        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-        when(playoffRepository.findBySeasonId(season.getId())).thenReturn(Optional.of(playoff));
-        // Phase 61 MIGR-06: getDetailData reads format/legs/totalRounds via the REGULAR phase.
-        var regular = PhaseTestFixtures.regularPhase(season, null, null);
-        regular.setFormat(SeasonFormat.LEAGUE);
-        when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
-
-        // when
-        var result = service.getDetailData(season.getId());
-
-        // then
-        assertThat(result.season()).isEqualTo(season);
-        assertThat(result.playoff()).isEqualTo(playoff);
-        assertThat(result.hasTeams()).isTrue();
-        assertThat(result.hasMatchdays()).isFalse();
-        assertThat(result.canGenerate()).isTrue(); // LEAGUE + no matchdays + >=2 teams
-        assertThat(result.isSwiss()).isFalse();
-    }
-
-    @Test
     void givenExistingId_whenGetEditFormData_thenReturnsSeasonWithAllTeamsCarsTracksScorings() {
         // given
         var season = createSeason("Edit Season");
