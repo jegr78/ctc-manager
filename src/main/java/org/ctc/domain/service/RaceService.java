@@ -254,7 +254,8 @@ public class RaceService {
 
 			var driver = driverRepository.findById(rd.driverId()).orElseThrow();
 			var result = new RaceResult(race, driver, rd.position(), rd.qualiPosition(), rd.fastestLap());
-			scoringService.calculatePoints(result, race.getMatchday().getSeason().getRaceScoring());
+			// Phase 61 MIGR-06: scoring lives on the matchday's phase.
+			scoringService.calculatePoints(result, race.getMatchday().getPhase().getRaceScoring());
 			race.getResults().add(result);
 		}
 

@@ -72,8 +72,8 @@ public class SwissPairingService {
 		}
 
 		int roundNumber = currentRound + 1;
-		var matchday = new Matchday(phase.getSeason(), "Round " + roundNumber, roundNumber);
-		matchday.setPhase(phase);                                   // T-58-04-01 mitigation
+		// Phase 61 MIGR-06: Matchday is bound exclusively via phase.
+		var matchday = new Matchday(phase, "Round " + roundNumber, roundNumber);
 		SeasonPhaseGroup group = resolveGroup(groupId);
 		if (group != null) matchday.setGroup(group);               // T-58-04-02 mitigation
 		matchday = matchdayRepository.save(matchday);

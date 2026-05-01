@@ -83,7 +83,8 @@ public class RaceFormDataService {
                     data.availableTyres(), data.mandatoryTyres());
         }
 
-        return new RaceService.ResultsFormData(data, race, race.getMatchday().getSeason().getRaceScoring());
+        // Phase 61 MIGR-06: scoring lives on the matchday's phase.
+        return new RaceService.ResultsFormData(data, race, race.getMatchday().getPhase().getRaceScoring());
     }
 
     // --- Used selections ---

@@ -71,6 +71,7 @@ public class RaceCalendarService {
 				return playoffDuration;
 			}
 		}
-		return race.getMatchday().getSeason().getEventDurationMinutes();
+		// Phase 61 MIGR-06: eventDurationMinutes lives on the SeasonPhase.
+		return race.getMatchday().getPhase().getEventDurationMinutes();
 	}
 }

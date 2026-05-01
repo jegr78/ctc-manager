@@ -86,10 +86,10 @@ public class MatchdayGeneratorService {
 
 		List<List<int[]>> rounds = circleMethod(teams.size(), numberOfRounds);
 
+		// Phase 61 MIGR-06: Matchday is bound exclusively via phase.
 		int sortIndex = 1;
 		for (var round : rounds) {
-			var matchday = new Matchday(phase.getSeason(), "MD " + sortIndex, sortIndex);
-			matchday.setPhase(phase);                               // T-58-04-01 mitigation
+			var matchday = new Matchday(phase, "MD " + sortIndex, sortIndex);
 			if (group != null) matchday.setGroup(group);            // T-58-04-02 mitigation
 			matchday = matchdayRepository.save(matchday);
 			createMatchesForRound(matchday, round, teams, false);
@@ -98,8 +98,7 @@ public class MatchdayGeneratorService {
 
 		if (homeAndAway) {
 			for (var round : rounds) {
-				var matchday = new Matchday(phase.getSeason(), "MD " + sortIndex, sortIndex);
-				matchday.setPhase(phase);
+				var matchday = new Matchday(phase, "MD " + sortIndex, sortIndex);
 				if (group != null) matchday.setGroup(group);
 				matchday = matchdayRepository.save(matchday);
 				createMatchesForRound(matchday, round, teams, true);
