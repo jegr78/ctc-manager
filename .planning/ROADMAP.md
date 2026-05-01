@@ -249,7 +249,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 
 **Success Criteria** (what must be TRUE):
 
-1. Flyway cleanup migration executes successfully, dropping `seasons.format`, `seasons.total_rounds`, `seasons.legs`, `seasons.event_duration_minutes`, `seasons.start_date`, `seasons.end_date`, `seasons.race_scoring_id`, `seasons.match_scoring_id`, and the `playoff_seasons` join table; `./mvnw verify` remains green afterwards
+1. Flyway cleanup migration executes successfully, dropping `seasons.format`, `seasons.total_rounds`, `seasons.legs`, `seasons.event_duration_minutes`, `seasons.start_date`, `seasons.end_date`, `seasons.race_scoring_id`, `seasons.match_scoring_id`, the `matchdays.season_id` and `playoffs.season_id` bridge FK columns, and the `playoff_seasons` join table; `./mvnw verify` remains green afterwards
 2. `./mvnw verify` reports JaCoCo line coverage >= 82% across all production classes
 3. The E2E Playwright test creates a GROUPS-layout season with two groups, assigns teams, imports drivers from a mocked sheet (group resolved via PhaseTeam), generates matchdays per group, records results, and verifies per-group standings and a combined-view standings table
 4. A regression Playwright test opens a season that existed before the migration and confirms it displays exactly one REGULAR-phase tab with all original matchdays and race results accessible, plus the PLAYOFF tab if a playoff was migrated
