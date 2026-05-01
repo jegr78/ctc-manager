@@ -13,13 +13,12 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam"})
 	List<Match> findByMatchdayId(UUID matchdayId);
 
-	// Phase 61 MIGR-06: post-V6 matchdays.season_id is gone — resolve via matchday.phase.season.id.
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam", "matchday"})
 	@Query("SELECT m FROM Match m WHERE m.matchday.phase.season.id = :seasonId")
 	List<Match> findByMatchdaySeasonId(UUID seasonId);
 
 	@EntityGraph(attributePaths = {"homeTeam", "awayTeam", "matchday"})
-	List<Match> findByMatchdayPhaseId(UUID phaseId); // D-22: phase-aware finder for StandingsService canonical path
+	List<Match> findByMatchdayPhaseId(UUID phaseId);
 
 	boolean existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
 

@@ -88,9 +88,7 @@ public class Season extends BaseEntity {
 
 	/**
 	 * Convenience method: returns all matchdays across all phases of this season,
-	 * sorted first by phase sortIndex, then by matchday sortIndex. Derived from the phases association
-	 * — replaces the legacy {@code @OneToMany(mappedBy = "season")} mapping that was dropped in
-	 * Phase 61 alongside MIGR-06 (matchday.season_id bridge column removed in V6).
+	 * sorted first by phase sortIndex, then by matchday sortIndex. Derived from the phases association.
 	 */
 	public List<Matchday> getMatchdays() {
 		return phases.stream()

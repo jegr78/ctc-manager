@@ -11,9 +11,9 @@ public interface PhaseTeamRepository extends JpaRepository<PhaseTeam, UUID> {
 
     List<PhaseTeam> findByPhaseId(UUID phaseId);
 
-    List<PhaseTeam> findByPhaseIdAndGroupId(UUID phaseId, UUID groupId); // groupId=null derives IS NULL
+    List<PhaseTeam> findByPhaseIdAndGroupId(UUID phaseId, UUID groupId);
 
-    Optional<PhaseTeam> findByPhaseIdAndTeamId(UUID phaseId, UUID teamId); // Phase 59 D-05 — UNIQUE (phase_id, team_id) → at most one hit
+    Optional<PhaseTeam> findByPhaseIdAndTeamId(UUID phaseId, UUID teamId);
 
-    boolean existsByPhaseSeasonId(UUID seasonId); // for D-18 delete-guard
+    boolean existsByPhaseSeasonId(UUID seasonId);
 }

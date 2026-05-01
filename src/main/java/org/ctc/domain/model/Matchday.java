@@ -52,9 +52,6 @@ public class Matchday extends BaseEntity {
 
 	/**
 	 * Convenience getter — derives season via {@code getPhase().getSeason()}.
-	 * The {@code matchdays.season_id} bridge column was dropped in V6 (Plan 61-03);
-	 * the phase association is now the single source of truth in Java and in the schema.
-	 * Returns {@code null} only if {@code phase} is unset, which should not occur post-V4.
 	 */
 	public Season getSeason() {
 		return phase != null ? phase.getSeason() : null;

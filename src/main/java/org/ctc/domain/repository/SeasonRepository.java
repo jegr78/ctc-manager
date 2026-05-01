@@ -11,8 +11,6 @@ public interface SeasonRepository extends JpaRepository<Season, UUID> {
 
 	Optional<Season> findByActiveTrue();
 
-	// Phase 61 MIGR-06: raceScoring + matchScoring moved to SeasonPhase; @EntityGraph
-	// for those attribute paths is no longer valid. Lazy fetch on phases works under OSIV.
 	List<Season> findBySeasonTeamsTeamId(UUID teamId);
 
 	List<Season> findByYearAndNumber(int year, int number);

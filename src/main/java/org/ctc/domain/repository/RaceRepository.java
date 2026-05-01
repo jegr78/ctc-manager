@@ -13,7 +13,6 @@ public interface RaceRepository extends JpaRepository<Race, UUID> {
 	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
 	List<Race> findByMatchdayId(UUID matchdayId);
 
-	// Phase 61 MIGR-06: post-V6 matchdays.season_id is gone — resolve via matchday.phase.season.id.
 	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
 	@Query("SELECT r FROM Race r WHERE r.matchday.phase.season.id = :seasonId")
 	List<Race> findByMatchdaySeasonId(UUID seasonId);
