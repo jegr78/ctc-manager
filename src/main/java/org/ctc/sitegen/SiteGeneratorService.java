@@ -587,14 +587,14 @@ public class SiteGeneratorService {
         for (var s : standings) {
             var teamId = s.getTeam().getId();
             for (var season : sortedSeasons) {
-                // D-23: phase-aware standings via REGULAR phase when present; fallback to the
-                // legacy seasonId-bridge for pre-Phase-57 seasons without a REGULAR phase row
-                // (e.g., TestDataService-built fixtures). The bridge handles that internally.
+                // D-23 / Phase 61 MIGR-06: phase-aware standings via the REGULAR phase. Seasons
+                // without a REGULAR phase are skipped at the outer generate() loop (line ~93), so
+                // the previous seasonId-bridge fallback is unreachable here; the bridge itself was
+                // removed by V6 and StandingsService.calculateStandings(seasonId) now throws when
+                // the REGULAR phase is missing.
                 var regularPhaseOpt = seasonPhaseService.findByType(season.getId(), org.ctc.domain.model.PhaseType.REGULAR);
-                @SuppressWarnings("deprecation")
-                var seasonStandings = regularPhaseOpt.isPresent()
-                        ? standingsService.calculateStandings(regularPhaseOpt.get().getId(), null)
-                        : standingsService.calculateStandings(season.getId());
+                if (regularPhaseOpt.isEmpty()) continue;
+                var seasonStandings = standingsService.calculateStandings(regularPhaseOpt.get().getId(), null);
                 if (seasonStandings.stream().anyMatch(st -> st.getTeam().getId().equals(teamId))) {
                     teamSlugMap.put(teamId, "season/" + slugify(season.getDisplayLabel())
                             + "/team/" + slugify(s.getTeam().getShortName()) + ".html");
