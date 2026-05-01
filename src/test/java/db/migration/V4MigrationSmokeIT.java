@@ -70,13 +70,13 @@ class V4MigrationSmokeIT {
                 + "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                 SMOKE_MATCH_SCORING_ID, "Phase57-Smoke-MatchScoring", 3, 1, 0);
 
-        // Insert one season (pre-V4 style: no phase_id on season itself)
+        // Insert one season — post-V6 schema (Phase 61 MIGR-06 dropped format/legs/race_scoring_id/match_scoring_id
+        // from seasons; scoring + format now live on the SeasonPhase row inserted below).
         jdbcTemplate.update(
-                "INSERT INTO seasons (id, name, season_year, season_number, format, legs, active, "
-                + "race_scoring_id, match_scoring_id, created_at, updated_at) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                SMOKE_SEASON_ID, "Phase57-Smoke-Season", 2099, 99, "LEAGUE", 2, false,
-                SMOKE_RACE_SCORING_ID, SMOKE_MATCH_SCORING_ID);
+                "INSERT INTO seasons (id, name, season_year, season_number, active, "
+                + "created_at, updated_at) "
+                + "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                SMOKE_SEASON_ID, "Phase57-Smoke-Season", 2099, 99, false);
 
         // Insert one REGULAR season_phase row — simulates V4 backfill for this season
         jdbcTemplate.update(
