@@ -7,6 +7,7 @@ import org.ctc.domain.exception.ValidationException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.ctc.domain.service.ScoringService;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class CsvImportService {
 	private final PlayoffRepository playoffRepository;
 	private final ScoringService scoringService;
 	private final RaceLineupRepository raceLineupRepository;
+	private final SeasonPhaseService seasonPhaseService;
 
 	/**
 	 * Returns all seasons for the import form.
@@ -130,6 +132,9 @@ public class CsvImportService {
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
 				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
 
+		// Phase 61 MIGR-06: scoring now lives on the REGULAR phase.
+		var raceScoring = seasonPhaseService.findRegularPhase(season.getId()).getRaceScoring();
+
 		// Resolve or create matchday
 		var matchday = findOrCreateMatchday(season, metadata);
 
@@ -226,7 +231,7 @@ public class CsvImportService {
 					ensureSeasonDriver(season, driver, row.teamShortName());
 
 					var raceResult = new RaceResult(race, driver, row.position(), row.qualiPosition(), row.fastestLap());
-					scoringService.calculatePoints(raceResult, season.getRaceScoring());
+					scoringService.calculatePoints(raceResult, raceScoring);
 					race.getResults().add(raceResult);
 
 					// Create RaceLineup for all teams
@@ -260,6 +265,9 @@ public class CsvImportService {
 		// Resolve season
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
 				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
+
+		// Phase 61 MIGR-06: scoring now lives on the REGULAR phase.
+		var raceScoring = seasonPhaseService.findRegularPhase(season.getId()).getRaceScoring();
 
 		// Resolve or create matchday
 		var matchday = findOrCreateMatchday(season, metadata);
@@ -332,7 +340,7 @@ public class CsvImportService {
 				ensureSeasonDriver(season, driver, row.teamShortName());
 
 				var raceResult = new RaceResult(race, driver, row.position(), row.qualiPosition(), row.fastestLap());
-				scoringService.calculatePoints(raceResult, season.getRaceScoring());
+				scoringService.calculatePoints(raceResult, raceScoring);
 				race.getResults().add(raceResult);
 
 				// Create RaceLineup for all teams
@@ -438,10 +446,12 @@ public class CsvImportService {
 				.filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
 				.findFirst()
 				.orElseGet(() -> {
+					// Phase 61 MIGR-06: matchday.season is gone; bind via REGULAR phase.
+					var regular = seasonPhaseService.findRegularPhase(season.getId());
 					var maxIndex = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
 							.mapToInt(Matchday::getSortIndex)
 							.max().orElse(0);
-					var md = new Matchday(season, metadata.matchdayLabel(), maxIndex + 1);
+					var md = new Matchday(regular, metadata.matchdayLabel(), maxIndex + 1);
 					return matchdayRepository.save(md);
 				});
 	}

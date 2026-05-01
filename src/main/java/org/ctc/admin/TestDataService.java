@@ -12,7 +12,6 @@ import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.PhaseTeam;
 import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.Playoff;
 import org.ctc.domain.model.PlayoffMatchup;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
@@ -189,7 +188,7 @@ public class TestDataService {
 
 		// D-09 + D-13: ONE consolidated 2023 season with GROUPS-layout REGULAR phase
 		var s1 = createSeason("Season 2023", 2023, 1, "Round Robin — two groups", scorings);
-		s1.setFormat(SeasonFormat.ROUND_ROBIN);
+		// Phase 61 MIGR-06: format moved to REGULAR phase (s1Regular.setFormat below).
 		// 12-team roster (Group A + Group B combined). All 12 must be on Season.seasonTeams so
 		// SeasonDriver / RaceLineup downstream code keeps working.
 		java.util.stream.Stream.of(
@@ -230,7 +229,7 @@ public class TestDataService {
 
 		// S2 2024: Swiss format (10 parent teams only) per D-05
 		var s2 = createSeason("Regular Season", 2024, 2, "Round Robin", scorings);
-		s2.setFormat(SeasonFormat.SWISS);
+		// Phase 61 MIGR-06: format moved to REGULAR phase (s2Regular.setFormat below).
 		parentTeams.forEach(s2::addTeam);
 
 		// Attach LEAGUE-layout REGULAR phase for 2024 (D-12)
@@ -260,7 +259,7 @@ public class TestDataService {
 		// VRX, SGM, TBR parents do NOT participate as match teams
 		var s4 = createSeason("Regular Season", 2026, 4, null, scorings);
 		s4.setActive(true);
-		s4.setFormat(SeasonFormat.LEAGUE);
+		// Phase 61 MIGR-06: format moved to REGULAR phase (s4Regular.setFormat below).
 		List.of(
 				findSub.apply("VRX A"),
 				findSub.apply("VRX B"),
@@ -409,10 +408,10 @@ public class TestDataService {
 	}
 
 	private Season createSeason(String name, int year, int number, String description, ScoringDefaults scorings) {
+		// Phase 61 MIGR-06: scoring moved to SeasonPhase. The `scorings` argument is preserved
+		// so callers attach RaceScoring/MatchScoring to the REGULAR phase explicitly.
 		var season = new Season(name, year, number);
 		season.setDescription(description);
-		season.setRaceScoring(scorings.raceScoring());
-		season.setMatchScoring(scorings.matchScoring());
 		return season;
 	}
 
@@ -698,12 +697,10 @@ public class TestDataService {
 	                              RaceScoring raceScoring) {
 		// 5 matchdays, 7 matches per MD (14 teams), 1 race per match
 		var regular = season.getPhases().stream()
-				.filter(p -> p.getPhaseType() == PhaseType.REGULAR).findFirst().orElse(null);
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR).findFirst()
+				.orElseThrow(() -> new IllegalStateException("REGULAR phase missing for season " + season.getId()));
 		for (int mdIndex = 0; mdIndex < 5; mdIndex++) {
-			var matchday = new Matchday(season, "Matchday " + (mdIndex + 1), mdIndex + 1);
-			if (regular != null) {
-				matchday.setPhase(regular);
-			}
+			var matchday = new Matchday(regular, "Matchday " + (mdIndex + 1), mdIndex + 1);
 			var md = matchdayRepository.save(matchday);
 			// Pair teams: rotate away teams each matchday
 			for (int matchIdx = 0; matchIdx < 7; matchIdx++) {
@@ -725,12 +722,10 @@ public class TestDataService {
 	                             RaceScoring raceScoring) {
 		// 5 matchdays, 5 matches per MD (10 teams), 2 races per match
 		var regular = season.getPhases().stream()
-				.filter(p -> p.getPhaseType() == PhaseType.REGULAR).findFirst().orElse(null);
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR).findFirst()
+				.orElseThrow(() -> new IllegalStateException("REGULAR phase missing for season " + season.getId()));
 		for (int mdIndex = 0; mdIndex < 5; mdIndex++) {
-			var matchday = new Matchday(season, "Matchday " + (mdIndex + 1), mdIndex + 1);
-			if (regular != null) {
-				matchday.setPhase(regular);
-			}
+			var matchday = new Matchday(regular, "Matchday " + (mdIndex + 1), mdIndex + 1);
 			var md = matchdayRepository.save(matchday);
 			for (int matchIdx = 0; matchIdx < 5; matchIdx++) {
 				int homeIdx = matchIdx;
@@ -763,8 +758,7 @@ public class TestDataService {
 			String label = (groupLabel != null)
 					? "%s — Matchday %d".formatted(groupLabel, mdIndex + 1)
 					: "Matchday %d".formatted(mdIndex + 1);
-			var matchday = new Matchday(season, label, sortIndex);
-			matchday.setPhase(phase);                              // Phase 56 / Phase 58 — phase_id required
+			var matchday = new Matchday(phase, label, sortIndex);
 			if (group != null) {
 				matchday.setGroup(group);                          // Phase 56 — Matchday.group_id distinguishes GROUPS layout
 			}
@@ -867,7 +861,7 @@ public class TestDataService {
 			phaseTeamRepository.save(new PhaseTeam(testSeason1Regular, st.getTeam()));
 		}
 
-		var md1 = matchdayRepository.save(new Matchday(testSeason1, "Test MD 1", 1));
+		var md1 = matchdayRepository.save(new Matchday(testSeason1Regular, "Test MD 1", 1));
 
 		var match1 = new Match();
 		match1.setMatchday(md1);
@@ -901,9 +895,16 @@ public class TestDataService {
 		// Test-Season 2025: T-ALF vs T-BRV (multi-season test)
 		var testSeason2 = createSeason("Test-Season 2025", 2025, 98, "Test", scorings);
 		List.of(testAlpha, testBravo).forEach(testSeason2::addTeam);
+		// Phase 61 MIGR-06: matchdays bind via REGULAR phase, so attach one to test-season-2.
+		var testSeason2Regular = new SeasonPhase(testSeason2, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		testSeason2Regular.setRaceScoring(scorings.raceScoring());
+		testSeason2Regular.setMatchScoring(scorings.matchScoring());
+		testSeason2Regular.setFormat(SeasonFormat.LEAGUE);
+		testSeason2Regular.setLegs(1);
+		testSeason2.getPhases().add(testSeason2Regular);
 		seasonRepository.save(testSeason2);
 
-		var md2 = matchdayRepository.save(new Matchday(testSeason2, "Test MD 1", 1));
+		var md2 = matchdayRepository.save(new Matchday(testSeason2Regular, "Test MD 1", 1));
 		var match3 = new Match();
 		match3.setMatchday(md2);
 		match3.setHomeTeam(testAlpha);
@@ -929,7 +930,7 @@ public class TestDataService {
 
 		// === 2023 PLAYOFFS: SEMIFINAL (4 teams) ===
 		// D-14: 2023 PLAYOFF — auto-seed Top-4 from the consolidated REGULAR phase combined-view standings
-		// (Phase 58 D-15 + D-19 + D-20). Eliminates the legacy playoff.getSeasons().add(s1b) hack.
+		// (Phase 58 D-15 + D-19 + D-20). Eliminates the legacy M:N season-link hack (Phase 61 MIGR-06).
 		var s1 = allSeasons.stream()
 				.filter(s -> s.getYear() == 2023 && s.getNumber() == 1).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("Season", "(2023, 1)"));
@@ -937,8 +938,8 @@ public class TestDataService {
 		var playoff2023 = playoffService.createPlayoff(s1.getId(), "2023 Playoffs", 4);
 		playoffSeedingService.autoSeedBracket(playoff2023.getId());
 
-		// Create matchday for playoff races (linked to s1 consolidated season)
-		var playoffMatchday2023 = matchdayRepository.save(new Matchday(s1, "2023 Playoffs", 4));
+		// Phase 61 MIGR-06: matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
+		var playoffMatchday2023 = matchdayRepository.save(new Matchday(playoff2023.getPhase(), "2023 Playoffs", 4));
 
 		// Reload updated playoff to access matchup with teams set by autoSeedBracket
 		var reloadedPlayoff2023 = playoffRepository.findById(playoff2023.getId()).orElseThrow();
@@ -1001,8 +1002,8 @@ public class TestDataService {
 			matchup.setTeam2(runnerUpTeam);
 			playoffMatchupRepository.save(matchup);
 
-			// Create matchday for playoff races
-			var playoffMatchday = matchdayRepository.save(new Matchday(s2, "2024 Playoffs", 5));
+			// Phase 61 MIGR-06: matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
+			var playoffMatchday = matchdayRepository.save(new Matchday(playoff2024.getPhase(), "2024 Playoffs", 5));
 
 			// Create races for Final (2 total)
 			createPlayoffRaces(playoffMatchday, matchup, s2, raceScoring, 2);

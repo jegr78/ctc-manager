@@ -112,22 +112,6 @@ public class PlayoffController {
         return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForRound(roundId);
     }
 
-    @PostMapping("/{id}/add-season")
-    public String addSeason(@PathVariable UUID id, @RequestParam UUID seasonId,
-                            RedirectAttributes redirectAttributes) {
-        playoffService.addSeasonToPlayoff(id, seasonId);
-        redirectAttributes.addFlashAttribute("successMessage", "Season linked");
-        return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForPlayoff(id);
-    }
-
-    @PostMapping("/{id}/remove-season")
-    public String removeSeason(@PathVariable UUID id, @RequestParam UUID seasonId,
-                               RedirectAttributes redirectAttributes) {
-        playoffService.removeSeasonFromPlayoff(id, seasonId);
-        redirectAttributes.addFlashAttribute("successMessage", "Season removed");
-        return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForPlayoff(id);
-    }
-
     @GetMapping("/{id}/seed")
     public String seed(@PathVariable UUID id, Model model) {
         var data = playoffSeedingService.getSeedingData(id);

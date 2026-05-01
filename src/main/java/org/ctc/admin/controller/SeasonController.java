@@ -200,12 +200,14 @@ public class SeasonController {
 	public String swissRounds(@PathVariable UUID id, Model model) {
 		var data = seasonManagementService.getSwissRoundData(id);
 		var regular = seasonPhaseService.findRegularPhase(id);
+		// Phase 61 MIGR-06: totalRounds moved to REGULAR phase.
+		Integer totalRounds = regular.getTotalRounds();
 		model.addAttribute("season", data.season());
 		model.addAttribute("raceScores", data.raceScores());
 		model.addAttribute("currentRound", swissPairingService.getCurrentRound(regular.getId(), null));
 		model.addAttribute("canGenerateNext",
 				swissPairingService.isCurrentRoundComplete(regular.getId(), null)
-						&& (data.season().getTotalRounds() == null || data.season().getMatchdays().size() < data.season().getTotalRounds()));
+						&& (totalRounds == null || data.season().getMatchdays().size() < totalRounds));
 		return "admin/swiss-rounds";
 	}
 
@@ -226,7 +228,9 @@ public class SeasonController {
 		var formData = matchdayGeneratorService.getFormData(id);
 		var season = formData.season();
 		var form = new MatchdayGeneratorForm();
-		form.setNumberOfRounds(season.getTotalRounds() != null ? season.getTotalRounds() : formData.optimalRounds());
+		// Phase 61 MIGR-06: totalRounds moved to REGULAR phase.
+		Integer rounds = seasonPhaseService.findRegularPhase(id).getTotalRounds();
+		form.setNumberOfRounds(rounds != null ? rounds : formData.optimalRounds());
 		model.addAttribute("season", season);
 		model.addAttribute("generatorForm", form);
 		model.addAttribute("teamCount", formData.teamCount());
