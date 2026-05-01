@@ -84,7 +84,7 @@ class SwissPairingServiceTest {
 		addTeams(6);
 
 		// when
-		var matchday = swissPairingService.generateNextRound(season.getId());
+		var matchday = swissPairingService.generateNextRound(regularPhase.getId(), null);
 
 		// then
 		assertEquals("Round 1", matchday.getLabel());
@@ -101,7 +101,7 @@ class SwissPairingServiceTest {
 		addTeams(5);
 
 		// when
-		var matchday = swissPairingService.generateNextRound(season.getId());
+		var matchday = swissPairingService.generateNextRound(regularPhase.getId(), null);
 
 		// then
 		var races = raceRepository.findByMatchdayId(matchday.getId());
@@ -124,12 +124,12 @@ class SwissPairingServiceTest {
 		regularPhase.setTotalRounds(1);
 		seasonPhaseRepository.save(regularPhase);
 
-		var md = swissPairingService.generateNextRound(season.getId());
+		var md = swissPairingService.generateNextRound(regularPhase.getId(), null);
 		addDummyResults(md.getId());
 
 		// when / then
 		assertThrows(IllegalStateException.class,
-				() -> swissPairingService.generateNextRound(season.getId()));
+				() -> swissPairingService.generateNextRound(regularPhase.getId(), null));
 	}
 
 	@Test
@@ -156,7 +156,7 @@ class SwissPairingServiceTest {
 		// given
 		addTeams(8);
 
-		var md1 = swissPairingService.generateNextRound(season.getId());
+		var md1 = swissPairingService.generateNextRound(regularPhase.getId(), null);
 		addDummyResults(md1.getId());
 
 		var races1 = raceRepository.findByMatchdayId(md1.getId());
@@ -167,7 +167,7 @@ class SwissPairingServiceTest {
 		}
 
 		// when
-		var md2 = swissPairingService.generateNextRound(season.getId());
+		var md2 = swissPairingService.generateNextRound(regularPhase.getId(), null);
 		var races2 = raceRepository.findByMatchdayId(md2.getId());
 
 		// then
@@ -185,11 +185,11 @@ class SwissPairingServiceTest {
 		// given
 		addTeams(4);
 
-		swissPairingService.generateNextRound(season.getId());
+		swissPairingService.generateNextRound(regularPhase.getId(), null);
 
 		// when / then
 		var ex = assertThrows(IllegalStateException.class,
-				() -> swissPairingService.generateNextRound(season.getId()));
+				() -> swissPairingService.generateNextRound(regularPhase.getId(), null));
 		assertTrue(ex.getMessage().toLowerCase().contains("incomplete"),
 				"Expected message to contain 'incomplete', got: " + ex.getMessage());
 	}
@@ -199,7 +199,7 @@ class SwissPairingServiceTest {
 		// given
 		addTeams(4);
 
-		var md = swissPairingService.generateNextRound(season.getId());
+		var md = swissPairingService.generateNextRound(regularPhase.getId(), null);
 		addDummyResults(md.getId());
 
 		// when
@@ -246,7 +246,7 @@ class SwissPairingServiceTest {
 		phaseTeamRepository.save(new PhaseTeam(regularPhase, replacementTeam));
 
 		// when
-		var matchday = swissPairingService.generateNextRound(season.getId());
+		var matchday = swissPairingService.generateNextRound(regularPhase.getId(), null);
 
 		// then — 4 active teams (teams[1..3] + replacement), replaced team excluded
 		var races = raceRepository.findByMatchdayId(matchday.getId());

@@ -73,13 +73,10 @@ class DriverRankingServiceTest {
 	}
 
 	/**
-	 * Sets up the phase-aware mocks used by the refactored calculateRanking(seasonId) bridge.
-	 * calculateRanking now delegates to aggregateAcrossPhases via findAllPhases.
+	 * Sets up the phase-aware mocks for tests that call
+	 * {@code aggregateAcrossPhases(List.of(regularPhase.getId()), season.getId())}.
 	 */
 	private void setupSingleRegularPhase(List<RaceResult> results) {
-		when(seasonPhaseService.findAllPhases(season.getId())).thenReturn(List.of(regularPhase));
-		when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR))
-				.thenReturn(java.util.Optional.of(regularPhase));
 		when(seasonPhaseService.findById(regularPhase.getId())).thenReturn(regularPhase);
 		when(raceResultRepository.findByRaceMatchdayPhaseId(regularPhase.getId())).thenReturn(results);
 		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(regularPhase.getId()))
@@ -101,7 +98,7 @@ class DriverRankingServiceTest {
 				.thenReturn(List.of());
 
 		// when
-		var rankings = driverRankingService.calculateRanking(season.getId());
+		var rankings = driverRankingService.aggregateAcrossPhases(List.of(regularPhase.getId()), season.getId());
 
 		// then
 		assertEquals(2, rankings.size());
@@ -131,7 +128,7 @@ class DriverRankingServiceTest {
 				.thenReturn(List.of());
 
 		// when
-		var rankings = driverRankingService.calculateRanking(season.getId());
+		var rankings = driverRankingService.aggregateAcrossPhases(List.of(regularPhase.getId()), season.getId());
 
 		// then
 		assertEquals(1, rankings.size());
@@ -147,7 +144,7 @@ class DriverRankingServiceTest {
 		setupSingleRegularPhase(List.of());
 
 		// when
-		var rankings = driverRankingService.calculateRanking(season.getId());
+		var rankings = driverRankingService.aggregateAcrossPhases(List.of(regularPhase.getId()), season.getId());
 
 		// then
 		assertTrue(rankings.isEmpty());
@@ -168,7 +165,7 @@ class DriverRankingServiceTest {
 				.thenReturn(List.of(lineup));
 
 		// when
-		var rankings = driverRankingService.calculateRanking(season.getId());
+		var rankings = driverRankingService.aggregateAcrossPhases(List.of(regularPhase.getId()), season.getId());
 
 		// then
 		assertEquals(tnr, rankings.get(0).getTeam());
@@ -193,7 +190,7 @@ class DriverRankingServiceTest {
 				.thenReturn(List.of());
 
 		// when
-		var rankings = driverRankingService.calculateRanking(season.getId());
+		var rankings = driverRankingService.aggregateAcrossPhases(List.of(regularPhase.getId()), season.getId());
 
 		// then
 		// Same total points, panicpotato has fewer races → ranked first
@@ -421,32 +418,6 @@ class DriverRankingServiceTest {
 		assertThat(rankings).hasSize(1);
 		assertThat(rankings.get(0).getDriver().getId()).isEqualTo(levitius.getId());
 		assertThat(rankings.get(0).getTeam()).isEqualTo(tnr);
-	}
-
-	@Test
-	void givenSeasonId_whenCalculateRanking_thenDelegatesToAggregateAcrossPhases() {
-		// given
-		var rs = new RaceScoring("Phase58-Test-RS5", "20,15,10", "3,2,1", 2);
-		rs.setId(UUID.randomUUID());
-		var ms = new MatchScoring("Phase58-Test-MS5", 3, 1, 0);
-		ms.setId(UUID.randomUUID());
-		var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
-		var playoff = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-PO3", rs, ms);
-
-		when(seasonPhaseService.findAllPhases(season.getId())).thenReturn(List.of(regular, playoff));
-		when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR)).thenReturn(java.util.Optional.of(regular));
-		when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
-		when(seasonPhaseService.findById(playoff.getId())).thenReturn(playoff);
-		when(raceResultRepository.findByRaceMatchdayPhaseId(any(UUID.class))).thenReturn(List.of());
-		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(any(UUID.class))).thenReturn(List.of());
-		when(phaseTeamRepository.findByPhaseId(any(UUID.class))).thenReturn(List.of());
-
-		// when
-		var result = driverRankingService.calculateRanking(season.getId());
-
-		// then — deprecated bridge delegates to aggregateAcrossPhases via findAllPhases
-		verify(seasonPhaseService).findAllPhases(season.getId());
-		assertThat(result).isNotNull();
 	}
 
 	@Test

@@ -536,7 +536,7 @@ class StandingsServiceTest {
                     .thenReturn(List.of(race1, race2));
 
             // when
-            var standings = standingsService.calculateStandingsWithBuchholz(season.getId());
+            var standings = standingsService.calculateStandingsWithBuchholz(regularPhase.getId(), null);
 
             // then
             assertFalse(standings.isEmpty());
@@ -568,7 +568,7 @@ class StandingsServiceTest {
                     .thenReturn(List.of());
 
             // when
-            var standings = standingsService.calculateStandingsWithBuchholz(season.getId());
+            var standings = standingsService.calculateStandingsWithBuchholz(regularPhase.getId(), null);
 
             // then
             assertEquals(2, standings.size());
@@ -584,7 +584,7 @@ class StandingsServiceTest {
             when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of());
 
             // when
-            var standings = standingsService.calculateStandingsWithBuchholz(season.getId());
+            var standings = standingsService.calculateStandingsWithBuchholz(regularPhase.getId(), null);
 
             // then
             assertTrue(standings.isEmpty());

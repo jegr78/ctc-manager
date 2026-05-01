@@ -110,20 +110,6 @@ public class DriverRankingService {
 	}
 
 	/**
-	 * @deprecated Phase 58 D-09: use {@link #calculateRankingForPhase(UUID)} or
-	 *             {@link #aggregateAcrossPhases(List, UUID)}.
-	 *             Remove in Phase 60.
-	 */
-	@Deprecated
-	@Transactional(readOnly = true)
-	public List<DriverRanking> calculateRanking(UUID seasonId) {
-		var phaseIds = seasonPhaseService.findAllPhases(seasonId).stream()
-				.map(SeasonPhase::getId)
-				.toList();
-		return aggregateAcrossPhases(phaseIds, seasonId);
-	}
-
-	/**
 	 * Calculates alltime driver ranking across all seasons.
 	 *
 	 * <p>Note: Uses {@code seasonDriverRepository.findAll()} intentionally — alltime rankings

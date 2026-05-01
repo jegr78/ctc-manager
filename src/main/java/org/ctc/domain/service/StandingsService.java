@@ -163,23 +163,10 @@ public class StandingsService {
 		return calculateStandingsLegacy(seasonId);
 	}
 
-	/**
-	 * @deprecated Phase 58: use {@link #calculateStandingsWithBuchholz(UUID, UUID)}. Remove in Phase 60 alongside UI cutover.
-	 */
-	@Deprecated
-	@Transactional(readOnly = true)
-	public List<TeamStanding> calculateStandingsWithBuchholz(UUID seasonId) {
-		var regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
-		if (regularPhaseOpt.isPresent()) {
-			return calculateStandingsWithBuchholz(regularPhaseOpt.get().getId(), null);
-		}
-		log.debug("No REGULAR phase for season {} — falling back to legacy season-level Buchholz standings", seasonId);
-		return calculateStandingsWithBuchholzLegacy(seasonId);
-	}
-
-	// Legacy season-level implementations — used by the @Deprecated bridge fallback path
-	// for seasons without a REGULAR SeasonPhase row (pre-Phase-57 test data).
-	// Remove in Phase 60 alongside the @Deprecated overloads.
+	// Legacy season-level implementation — kept only for the @Deprecated calculateStandings(UUID seasonId)
+	// bridge fallback path on seasons without a REGULAR SeasonPhase row. The Buchholz variant of this
+	// fallback was removed in Phase 60 alongside the @Deprecated calculateStandingsWithBuchholz(seasonId)
+	// overload — Phase 61 MIGR-06 will remove the remaining season-level path.
 
 	private List<TeamStanding> calculateStandingsLegacy(UUID seasonId) {
 		var season = seasonRepository.findById(seasonId).orElse(null);
@@ -205,25 +192,6 @@ public class StandingsService {
 				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
 
 		log.debug("Calculated standings (legacy) for season {}: {} teams", seasonId, standings.size());
-		return standings;
-	}
-
-	private List<TeamStanding> calculateStandingsWithBuchholzLegacy(UUID seasonId) {
-		var standings = calculateStandingsLegacy(seasonId);
-		if (standings.isEmpty()) return standings;
-
-		Map<UUID, Integer> buchholzScores = calculateBuchholzScores(seasonId);
-		for (var standing : standings) {
-			standing.setBuchholz(buchholzScores.getOrDefault(standing.getTeam().getId(), 0));
-		}
-
-		standings.sort(Comparator
-				.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
-				.thenComparing(TeamStanding::getBuchholz, Comparator.reverseOrder())
-				.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
-				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
-
-		log.debug("Calculated standings with Buchholz (legacy) for season {}: {} teams", seasonId, standings.size());
 		return standings;
 	}
 

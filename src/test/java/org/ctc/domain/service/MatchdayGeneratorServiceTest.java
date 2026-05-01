@@ -77,7 +77,7 @@ class MatchdayGeneratorServiceTest {
 		addTeams(6);
 
 		// when
-		matchdayGeneratorService.generate(season.getId(), 5, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 5, false);
 
 		// then
 		var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
@@ -114,7 +114,7 @@ class MatchdayGeneratorServiceTest {
 		var teams = addTeams(4);
 
 		// when
-		matchdayGeneratorService.generate(season.getId(), 3, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 3, false);
 
 		// then
 		var allMatches = matchRepository.findByMatchdaySeasonId(season.getId());
@@ -134,7 +134,7 @@ class MatchdayGeneratorServiceTest {
 		addTeams(4);
 
 		// when
-		matchdayGeneratorService.generate(season.getId(), 3, true);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 3, true);
 
 		// then
 		var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
@@ -171,7 +171,7 @@ class MatchdayGeneratorServiceTest {
 		addTeams(5);
 
 		// when
-		matchdayGeneratorService.generate(season.getId(), 5, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 5, false);
 
 		// then
 		var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
@@ -195,10 +195,10 @@ class MatchdayGeneratorServiceTest {
 	void givenExistingMatchdays_whenGenerate_thenThrowsException() {
 		// given
 		addTeams(4);
-		matchdayGeneratorService.generate(season.getId(), 3, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 3, false);
 
 		// when / then
-		assertThatThrownBy(() -> matchdayGeneratorService.generate(season.getId(), 3, false))
+		assertThatThrownBy(() -> matchdayGeneratorService.generate(regularPhase.getId(), null, 3, false))
 				.isInstanceOf(IllegalStateException.class);
 	}
 
@@ -208,7 +208,7 @@ class MatchdayGeneratorServiceTest {
 		addTeams(1);
 
 		// when / then
-		assertThatThrownBy(() -> matchdayGeneratorService.generate(season.getId(), 1, false))
+		assertThatThrownBy(() -> matchdayGeneratorService.generate(regularPhase.getId(), null, 1, false))
 				.isInstanceOf(IllegalStateException.class);
 	}
 
@@ -223,7 +223,7 @@ class MatchdayGeneratorServiceTest {
 		addTeams(4);
 
 		// when / then
-		assertThatThrownBy(() -> matchdayGeneratorService.generate(season.getId(), 3, false))
+		assertThatThrownBy(() -> matchdayGeneratorService.generate(regularPhase.getId(), null, 3, false))
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
@@ -247,7 +247,7 @@ class MatchdayGeneratorServiceTest {
 		phaseTeamRepository.save(new PhaseTeam(regularPhase, other));
 
 		// when
-		matchdayGeneratorService.generate(season.getId(), 2, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 2, false);
 
 		// then — 3 eligible teams (sub1, sub2, other), parent excluded
 		var allMatches = matchRepository.findByMatchdaySeasonId(season.getId());
@@ -265,7 +265,7 @@ class MatchdayGeneratorServiceTest {
 		addTeams(6);
 
 		// when
-		matchdayGeneratorService.generate(season.getId(), 5, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 5, false);
 
 		// then — each team should have 2-3 home and 2-3 away games (balanced for 5 rounds)
 		var allMatches = matchRepository.findByMatchdaySeasonId(season.getId());
@@ -294,7 +294,7 @@ class MatchdayGeneratorServiceTest {
 		addTeams(4);
 
 		// when
-		matchdayGeneratorService.generate(season.getId(), 3, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 3, false);
 
 		// then
 		var allRaces = raceRepository.findByMatchdaySeasonId(season.getId());
@@ -315,7 +315,7 @@ class MatchdayGeneratorServiceTest {
 		addTeams(4);
 
 		// when
-		matchdayGeneratorService.generate(season.getId(), 3, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 3, false);
 
 		// then
 		var allRaces = raceRepository.findByMatchdaySeasonId(season.getId());
@@ -333,7 +333,7 @@ class MatchdayGeneratorServiceTest {
 		addTeams(4);
 
 		// when
-		matchdayGeneratorService.generate(season.getId(), 3, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 3, false);
 
 		// then — verify via races grouped by match
 		var allRaces = raceRepository.findByMatchdaySeasonId(season.getId());
@@ -436,7 +436,7 @@ class MatchdayGeneratorServiceTest {
 		addTeamsToPhase(regularPhase, null, 4);
 
 		// when — call the @Deprecated seasonId-based overload
-		matchdayGeneratorService.generate(season.getId(), 3, false);
+		matchdayGeneratorService.generate(regularPhase.getId(), null, 3, false);
 
 		// then — matchdays are linked to the REGULAR phase of that season
 		var matchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regularPhase.getId());

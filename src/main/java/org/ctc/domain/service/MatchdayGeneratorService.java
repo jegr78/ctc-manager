@@ -111,21 +111,6 @@ public class MatchdayGeneratorService {
 	}
 
 	// ---------------------------------------------------------------------------
-	// @Deprecated seasonId-overload bridge (D-01, D-03) — remove in Phase 60
-	// ---------------------------------------------------------------------------
-
-	/**
-	 * @deprecated Phase 58 D-01: use {@link #generate(UUID, UUID, int, boolean)} with phaseId.
-	 * Delegates to the REGULAR phase of the season with groupId=null.
-	 * Remove in Phase 60 alongside UI cutover.
-	 */
-	@Deprecated
-	@Transactional
-	public void generate(UUID seasonId, int numberOfRounds, boolean homeAndAway) {
-		generate(seasonPhaseService.findRegularPhase(seasonId).getId(), null, numberOfRounds, homeAndAway);
-	}
-
-	// ---------------------------------------------------------------------------
 	// Form data
 	// ---------------------------------------------------------------------------
 

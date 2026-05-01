@@ -2,13 +2,10 @@ package org.ctc.domain.service;
 
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
-import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
@@ -450,40 +447,4 @@ class MatchdayServiceTest {
         verify(matchdayRepository).findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId);
     }
 
-    @Test
-    void givenSeasonWithMultiplePhases_whenFindBySeasonIdDeprecated_thenAggregatesAcrossPhases() {
-        // given
-        var seasonId = UUID.randomUUID();
-        var rs = new RaceScoring();
-        rs.setId(UUID.randomUUID());
-        var ms = new MatchScoring();
-        ms.setId(UUID.randomUUID());
-        var season = new Season("Multi-Phase");
-        season.setId(seasonId);
-
-        var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
-        var playoff = PhaseTestFixtures.playoffPhase(season, "Cup", rs, ms);
-
-        var regMd1 = new Matchday();
-        regMd1.setId(UUID.randomUUID());
-        var regMd2 = new Matchday();
-        regMd2.setId(UUID.randomUUID());
-        var poMd = new Matchday();
-        poMd.setId(UUID.randomUUID());
-
-        when(seasonPhaseService.findAllPhases(seasonId))
-                .thenReturn(List.of(regular, playoff));
-        when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId()))
-                .thenReturn(List.of(regMd1, regMd2));
-        when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(playoff.getId()))
-                .thenReturn(List.of(poMd));
-
-        // when — @Deprecated bridge aggregates per-phase results
-        @SuppressWarnings("deprecation")
-        var result = service.findBySeasonId(seasonId);
-
-        // then
-        verify(seasonPhaseService).findAllPhases(seasonId);
-        assertThat(result).containsExactly(regMd1, regMd2, poMd);
-    }
 }
