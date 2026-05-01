@@ -30,7 +30,6 @@ public class SeasonManagementService {
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
     private final ScoringService scoringService;
-    // Phase 58 D-18 / Phase 60 D-25/D-26 — strict delete-guard + REGULAR-phase team sync
     private final SeasonPhaseService seasonPhaseService;
     private final MatchdayRepository matchdayRepository;
     private final PhaseTeamRepository phaseTeamRepository;
@@ -93,12 +92,11 @@ public class SeasonManagementService {
     /**
      * Resolves a unique season for the given (year, number) tuple. Wraps
      * {@link SeasonRepository#findByYearAndNumber} (which returns {@link List}
-     * because no DB UNIQUE constraint exists — see Phase 59 D-17 / D-19) and
-     * enforces the contract:
+     * because no DB UNIQUE constraint exists) and enforces the contract:
      * <ul>
      *   <li>0 hits → {@link Optional#empty()}</li>
      *   <li>1 hit  → {@link Optional#of(Season)}</li>
-     *   <li>&gt;1 hits → {@link BusinessRuleException} (D-02)</li>
+     *   <li>&gt;1 hits → {@link BusinessRuleException}</li>
      * </ul>
      */
     public Optional<Season> findUnique(int year, int number) {
@@ -114,7 +112,7 @@ public class SeasonManagementService {
     /**
      * Legacy single-arg overload: resolves a unique season by year alone.
      * Used by the driver-sheet importer when a tab matches the legacy
-     * {@code ^\d{4}$} pattern (Phase 59 D-01). Same 0/1/many contract as
+     * {@code ^\d{4}$} pattern. Same 0/1/many contract as
      * {@link #findUnique(int, int)}.
      */
     public Optional<Season> findUnique(int year) {
@@ -144,15 +142,11 @@ public class SeasonManagementService {
     }
 
     /**
-     * Saves a season with the slim 6-param signature (Phase 60 UI-01).
+     * Saves a season. Phase fields (format/scoring/dates) are managed exclusively via
+     * the Phase form (SeasonPhaseController), not here.
      *
-     * <p>Phase 58 D-25 Auto-Sync block (format/scoring/dates copied to REGULAR phase)
-     * is INTENTIONALLY REMOVED in Phase 60 — phase fields are now managed exclusively
-     * via the Phase form (SeasonPhaseController).
-     *
-     * <p>Pitfall 1 Recommendation (a): for new seasons, auto-bootstrap a REGULAR
-     * {@link SeasonPhase} with null scoring/format/dates so that TestHelper.createSeason
-     * continues to produce a Season with a REGULAR phase and downstream tests pass.
+     * <p>For new seasons, auto-bootstraps a REGULAR {@link SeasonPhase} with null
+     * scoring/format/dates so the season has a phase to attach matchdays to.
      */
     @Transactional
     public Season save(UUID id, String name, int year, int number, String description, boolean active) {
@@ -171,9 +165,6 @@ public class SeasonManagementService {
         season.setActive(active);
         var saved = seasonRepository.save(season);
 
-        // Pitfall 1 Recommendation (a): auto-bootstrap REGULAR phase for new seasons.
-        // The Phase 58 D-25 Auto-Sync block (which copied format/scoring/dates onto the REGULAR phase)
-        // is INTENTIONALLY REMOVED in Phase 60 — phase fields are now managed exclusively via the Phase form.
         if (isNew) {
             seasonPhaseService.findByType(saved.getId(), PhaseType.REGULAR)
                     .orElseGet(() -> seasonPhaseService.create(saved.getId(),
@@ -191,18 +182,14 @@ public class SeasonManagementService {
     }
 
     /**
-     * Deletes a season. Phase 58 D-18 introduces a strict pre-check: if the season has
-     * any active phase content (matchdays, playoffs, or {@code phase_teams} rows),
-     * the delete is refused with {@link BusinessRuleException}. The {@link
-     * org.ctc.admin.controller.GlobalExceptionHandler} maps the exception to HTTP 409
-     * with a "Business Rule Violation" error page.
-     *
-     * <p>BEHAVIOR CHANGE vs pre-Phase-58: was blind cascade, now a fail-loud guard.
+     * Deletes a season. Strict pre-check: if the season has any active phase content
+     * (matchdays, playoffs, or {@code phase_teams} rows), the delete is refused with
+     * {@link BusinessRuleException} (mapped to HTTP 409 by
+     * {@link org.ctc.admin.controller.GlobalExceptionHandler}).
      */
     @Transactional
     public String delete(UUID id) {
         var season = findById(id);
-        // D-18 strict pre-check (BEHAVIOR CHANGE vs blind cascade)
         if (matchdayRepository.existsByPhaseSeasonId(id)
                 || playoffRepository.existsByPhaseSeasonId(id)
                 || phaseTeamRepository.existsByPhaseSeasonId(id)) {
@@ -271,7 +258,7 @@ public class SeasonManagementService {
 
     /**
      * Adds a team to a season. Auto-adds the parent team when adding a sub-team.
-     * D-26: atomically inserts a {@link PhaseTeam} into the REGULAR phase (group=NULL).
+     * Atomically inserts a {@link PhaseTeam} into the REGULAR phase (group=NULL).
      * Returns the team's short name for flash messages.
      */
     @Transactional
@@ -290,7 +277,6 @@ public class SeasonManagementService {
             seasonRepository.save(season);
             log.info("Added team {} to season {}", team.getShortName(), season.getName());
 
-            // D-26: atomic PhaseTeam insert into REGULAR phase with group=NULL
             seasonPhaseService.findByType(seasonId, PhaseType.REGULAR).ifPresent(regular -> {
                 var existing = phaseTeamRepository.findByPhaseIdAndTeamId(regular.getId(), teamId);
                 if (existing.isEmpty()) {
@@ -305,7 +291,7 @@ public class SeasonManagementService {
 
     /**
      * Removes a team from a season with sub-team constraint check.
-     * D-25 strict guard: refuses removal if any PhaseTeam in the season references the team.
+     * Strict guard: refuses removal if any PhaseTeam in the season references the team.
      * Auto-removes the parent team if no more sub-teams remain.
      */
     @Transactional
@@ -315,7 +301,6 @@ public class SeasonManagementService {
         var team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 
-        // D-25 strict guard: if any PhaseTeam in this season references any team, refuse
         if (phaseTeamRepository.existsByPhaseSeasonId(seasonId)) {
             throw new BusinessRuleException(
                     "Cannot remove team from season: team is still assigned to one or more phase rosters. " +

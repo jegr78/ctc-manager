@@ -40,17 +40,14 @@ public class PlayoffService {
 	private final MatchdayRepository matchdayRepository;
 	private final ScoringService scoringService;
 	private final PlayoffBracketViewService playoffBracketViewService;
-	// D-19: PLAYOFF SeasonPhase auto-creation
 	private final SeasonPhaseService seasonPhaseService;
 
-	@Transactional  // D-19: single boundary covers SeasonPhase + Playoff writes (atomicity per Pitfall 2)
+	@Transactional
 	public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams) {
 		if (!DEFAULT_ROUND_LABELS.containsKey(numberOfTeams)) {
 			throw new IllegalArgumentException("Number of teams must be 2, 4 or 8, got: " + numberOfTeams);
 		}
 
-		// D-19: duplicate-Playoff guard — replaces IllegalArgumentException with BusinessRuleException
-		// for D-03 consistency (BusinessRuleException maps to 409 via GlobalExceptionHandler).
 		if (playoffRepository.findBySeasonId(seasonId).isPresent()) {
 			throw new BusinessRuleException("Season already has a playoff phase");
 		}
@@ -58,11 +55,10 @@ public class PlayoffService {
 		Season season = seasonRepository.findById(seasonId)
 				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
-		// Phase 61 MIGR-06: scoring now lives on the REGULAR phase, not on the season.
 		SeasonPhase regular = seasonPhaseService.findRegularPhase(seasonId);
 
-		// D-19: find-or-create the PLAYOFF SeasonPhase. Auto-creates with BRACKET layout,
-		// LEAGUE format (D-08 DB-default workaround), sortIndex=10, scoring copied from REGULAR phase.
+		// Find-or-create PLAYOFF SeasonPhase: BRACKET layout, LEAGUE format,
+		// sortIndex=10, scoring copied from REGULAR phase.
 		SeasonPhase phase = seasonPhaseService.findByType(seasonId, PhaseType.PLAYOFF)
 				.orElseGet(() -> seasonPhaseService.create(
 						seasonId,
@@ -72,14 +68,13 @@ public class PlayoffService {
 						name,
 						regular.getRaceScoring(),
 						regular.getMatchScoring(),
-						SeasonFormat.LEAGUE,                            // D-08 DB-default workaround
+						SeasonFormat.LEAGUE,
 						/*startDate*/ null,
 						/*endDate*/ null,
 						/*totalRounds*/ null,
 						/*legs*/ 1,
 						/*eventDurationMinutes*/ null));
 
-		// Phase 61 MIGR-06: Playoff is bound to PLAYOFF SeasonPhase only; season derived via Convenience-Getter.
 		Playoff playoff = new Playoff(phase, name);
 		playoff = playoffRepository.save(playoff);
 
@@ -124,8 +119,6 @@ public class PlayoffService {
 	public List<Team> getPlayoffTeams(UUID playoffId) {
 		Playoff playoff = playoffRepository.findById(playoffId)
 				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-		// Phase 61 MIGR-06: M:N playoff_seasons is gone. Teams come from the playoff's
-		// canonical season (resolved via Convenience-Getter playoff.getSeason()).
 		Map<UUID, Team> teamMap = new LinkedHashMap<>();
 		for (Team team : playoff.getSeason().getTeams()) {
 			teamMap.putIfAbsent(team.getId(), team);
@@ -154,7 +147,6 @@ public class PlayoffService {
 
 		UUID team1Id = matchup.getTeam1().getId();
 
-		// Use shared ScoringService.calculateTeamTotals (per D-06 no duplication)
 		int team1Total = 0;
 		int team2Total = 0;
 		for (Race leg : legs) {
@@ -273,7 +265,6 @@ public class PlayoffService {
 				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
 		var allSeasons = seasonRepository.findAll();
 		var bracketView = playoffBracketViewService.getBracketView(playoffId);
-		// Phase 61 MIGR-06: Convenience-Getter playoff.getSeason() delegates to phase.getSeason().
 		UUID effectiveSeasonId = playoff.getSeason() != null ? playoff.getSeason().getId() : null;
 		return new PlayoffListData(playoff, bracketView, allSeasons, effectiveSeasonId);
 	}
@@ -314,9 +305,7 @@ public class PlayoffService {
 		var playoff = matchup.getRound().getPlayoff();
 		int legNumber = existingLegs + 1;
 		String label = matchup.getRound().getLabel() + " - Leg " + legNumber;
-		// Phase 61 MIGR-06: link matchday to PLAYOFF phase directly. Season is derived via
-		// matchday.getSeason() Convenience-Getter (delegates to phase.getSeason()).
-		// Pitfall 4: link to PLAYOFF phase, not REGULAR — otherwise playoff race results
+		// Link matchday to PLAYOFF phase, NOT REGULAR — otherwise playoff race results
 		// are misattributed to REGULAR by DriverRankingService.calculateRankingForPhase.
 		var matchday = new Matchday(playoff.getPhase(), label,
 				100 + matchup.getRound().getRoundIndex() * 10 + legNumber);

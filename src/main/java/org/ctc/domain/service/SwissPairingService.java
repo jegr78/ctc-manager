@@ -30,17 +30,11 @@ public class SwissPairingService {
 	private final PhaseTeamRepository phaseTeamRepository;
 	private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
 
-	// ---------------------------------------------------------------------------
-	// Canonical phase/group-aware methods (D-17, D-21, SVC-04)
-	// ---------------------------------------------------------------------------
-
 	/**
 	 * Generates the next Swiss round for the given phase and group.
 	 *
-	 * <p>D-17 layout validation: LEAGUE requires {@code groupId=null}; GROUPS requires non-null groupId.
-	 * D-21 per-group isolation: each group tracks its own round counter and bye list.
-	 * Pitfall 6: calls {@link StandingsService#calculateStandings(UUID, UUID)} with the phase-aware
-	 * signature (depends on Plan 58-02 having shipped first).
+	 * <p>Layout validation: LEAGUE requires {@code groupId=null}; GROUPS requires non-null groupId.
+	 * Per-group isolation: each group tracks its own round counter and bye list.
 	 */
 	@Transactional
 	public Matchday generateNextRound(UUID phaseId, UUID groupId) {
@@ -72,13 +66,11 @@ public class SwissPairingService {
 		}
 
 		int roundNumber = currentRound + 1;
-		// Phase 61 MIGR-06: Matchday is bound exclusively via phase.
 		var matchday = new Matchday(phase, "Round " + roundNumber, roundNumber);
 		SeasonPhaseGroup group = resolveGroup(groupId);
-		if (group != null) matchday.setGroup(group);               // T-58-04-02 mitigation
+		if (group != null) matchday.setGroup(group);
 		matchday = matchdayRepository.save(matchday);
 
-		// Teams from PhaseTeam roster (D-17 per-group isolation)
 		var rosterRows = (groupId != null)
 				? phaseTeamRepository.findByPhaseIdAndGroupId(phaseId, groupId)
 				: phaseTeamRepository.findByPhaseId(phaseId);
@@ -106,7 +98,7 @@ public class SwissPairingService {
 	/**
 	 * Returns the set of team IDs that have already received a bye in this phase/group.
 	 *
-	 * <p>D-21: per-group isolation — only byes from races in this group's matchdays are considered.
+	 * <p>Per-group isolation — only byes from races in this group's matchdays are considered.
 	 */
 	public Set<UUID> getByeTeams(UUID phaseId, UUID groupId) {
 		var phase = seasonPhaseService.findById(phaseId);
@@ -126,7 +118,7 @@ public class SwissPairingService {
 	/**
 	 * Returns the current round number (= number of matchdays generated) for this phase/group.
 	 *
-	 * <p>D-21: per-group isolation — counts only matchdays belonging to this group.
+	 * <p>Per-group isolation — counts only matchdays belonging to this group.
 	 */
 	public int getCurrentRound(UUID phaseId, UUID groupId) {
 		var phase = seasonPhaseService.findById(phaseId);
@@ -138,7 +130,7 @@ public class SwissPairingService {
 	 * Returns true if the current (last) round for this phase/group is complete, i.e. all
 	 * races have results or the round doesn't exist yet.
 	 *
-	 * <p>D-21: per-group isolation — only inspects this group's matchdays.
+	 * <p>Per-group isolation — only inspects this group's matchdays.
 	 */
 	public boolean isCurrentRoundComplete(UUID phaseId, UUID groupId) {
 		var phase = seasonPhaseService.findById(phaseId);
@@ -205,7 +197,7 @@ public class SwissPairingService {
 	}
 
 	/**
-	 * D-17 layout validation: LEAGUE requires groupId=null; GROUPS requires non-null groupId.
+	 * Layout validation: LEAGUE requires groupId=null; GROUPS requires non-null groupId.
 	 */
 	private void validateLayoutAndGroupId(SeasonPhase phase, UUID groupId) {
 		if (phase.getLayout() == PhaseLayout.LEAGUE && groupId != null) {
@@ -223,7 +215,6 @@ public class SwissPairingService {
 
 	private List<Race> generateSubsequentRoundPairings(Matchday matchday, List<Team> teams,
 	                                                    UUID phaseId, UUID groupId, Season season) {
-		// Pitfall 6: use phase-aware StandingsService (depends on Plan 58-02 GREEN)
 		var standings = standingsService.calculateStandings(phaseId, groupId);
 		Map<UUID, Integer> pointsMap = standings.stream()
 				.collect(Collectors.toMap(s -> s.getTeam().getId(), StandingsService.TeamStanding::getPoints));
@@ -240,7 +231,6 @@ public class SwissPairingService {
 		// Get played opponents for each team (resolved through succession) — per phase/group scope
 		Map<UUID, Set<UUID>> playedOpponents = getPlayedOpponentsForPhaseGroup(phaseId, groupId, successionMap);
 
-		// Get teams that already had a bye (per group scope — D-21)
 		Set<UUID> byeTeamIds = getByeTeams(phaseId, groupId);
 
 		return createSwissPairings(matchday, teams, playedOpponents, byeTeamIds);
@@ -339,7 +329,7 @@ public class SwissPairingService {
 	}
 
 	/**
-	 * Returns played opponents scoped to the given phase/group's matchdays (D-21 per-group isolation).
+	 * Returns played opponents scoped to the given phase/group's matchdays.
 	 */
 	private Map<UUID, Set<UUID>> getPlayedOpponentsForPhaseGroup(UUID phaseId, UUID groupId,
 	                                                              Map<UUID, UUID> successionMap) {

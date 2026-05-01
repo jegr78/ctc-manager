@@ -135,7 +135,7 @@ public class ScoringService {
 					|| (lineup.get().getTeam().getParentTeam() != null
 					&& lineup.get().getTeam().getParentTeam().getId().equals(teamId));
 		}
-		// Fallback for legacy data without RaceLineup — filter by current season (per D-11)
+		// Fallback for legacy data without RaceLineup — filter by current season.
 		var race = raceRepository.findById(raceId).orElse(null);
 		if (race == null || race.getMatchday() == null) return false;
 		var seasonId = race.getMatchday().getSeason().getId();

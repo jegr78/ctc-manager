@@ -12,7 +12,6 @@ import java.util.UUID;
 
 /**
  * Service for managing Google Calendar events for races.
- * Extracted from RaceService per D-09.
  */
 @Slf4j
 @Service
@@ -71,9 +70,8 @@ public class RaceCalendarService {
 				return playoffDuration;
 			}
 		}
-		// Phase 61 MIGR-06 / WR-06: eventDurationMinutes lives on the SeasonPhase. Guard the
-		// matchday + phase chain — null returns surface as the IllegalStateException at the
-		// caller (line 49) instead of an opaque NPE.
+		// eventDurationMinutes lives on the SeasonPhase. Guarding the matchday + phase chain
+		// surfaces missing config as the IllegalStateException at the caller, not an opaque NPE.
 		var matchday = race.getMatchday();
 		if (matchday == null || matchday.getPhase() == null) {
 			return null;

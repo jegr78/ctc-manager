@@ -25,14 +25,14 @@ public class DriverRankingService {
 	private final RaceLineupRepository raceLineupRepository;
 
 	/**
-	 * D-09: Primary per-phase entry point.
+	 * Primary per-phase entry point.
 	 *
-	 * <p>Union-merges race results from both finders (D-07):
+	 * <p>Union-merges race results from both finders to ensure PLAYOFF phases produce
+	 * non-empty rankings:
 	 * <ul>
 	 *   <li>{@code findByRaceMatchdayPhaseId} — REGULAR matchday-linked races</li>
 	 *   <li>{@code findByRacePlayoffMatchupRoundPlayoffPhaseId} — PLAYOFF matchup-linked races</li>
 	 * </ul>
-	 * This ensures PLAYOFF phases produce non-empty rankings (D-07 behavior change).
 	 *
 	 * <p>Team attribution for the per-phase ranking uses RaceLineup (Source of Truth per CLAUDE.md).
 	 */
@@ -40,7 +40,6 @@ public class DriverRankingService {
 	public List<DriverRanking> calculateRankingForPhase(UUID phaseId) {
 		seasonPhaseService.findById(phaseId); // validate phase exists
 
-		// D-07: union-merge REGULAR matchday-linked + PLAYOFF matchup-linked results
 		List<RaceResult> regularResults = raceResultRepository.findByRaceMatchdayPhaseId(phaseId);
 		List<RaceResult> playoffResults = raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(phaseId);
 		List<RaceResult> all = new ArrayList<>(regularResults.size() + playoffResults.size());
@@ -69,16 +68,14 @@ public class DriverRankingService {
 	}
 
 	/**
-	 * D-09: Season-wide aggregation across all specified phases.
-	 *
-	 * <p>D-07 behavior change: REGULAR + PLAYOFF + PLACEMENT all contribute.
-	 * <p>D-08: Driver-team attribution = REGULAR-phase team (via RaceLineup for that driver's season races).
-	 * <p>D-10: Stand-ins without REGULAR-phase RaceLineup fall back to any season RaceLineup.
+	 * Season-wide aggregation across all specified phases. REGULAR + PLAYOFF + PLACEMENT
+	 * results all contribute. Driver-team attribution uses the REGULAR-phase team (via
+	 * RaceLineup for that driver's season races); stand-ins without a REGULAR-phase
+	 * RaceLineup fall back to any season RaceLineup.
 	 */
 	@Transactional(readOnly = true)
 	public List<DriverRanking> aggregateAcrossPhases(List<UUID> phaseIds, UUID seasonId) {
-		// D-08: prepare REGULAR-phase team set for attribution guard
-		// (PhaseTeam maps phase→team; driver→team comes from RaceLineup)
+		// PhaseTeam maps phase→team; driver→team comes from RaceLineup
 		Optional<SeasonPhase> regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
 		Set<UUID> regularPhaseTeamIds = regularPhaseOpt
 				.map(rp -> phaseTeamRepository.findByPhaseId(rp.getId()).stream()
@@ -91,7 +88,6 @@ public class DriverRankingService {
 			for (DriverRanking phaseRanking : calculateRankingForPhase(phaseId)) {
 				UUID driverId = phaseRanking.getDriver().getId();
 				rankingMap.computeIfAbsent(driverId, id -> {
-					// D-08 + D-10: attribute to REGULAR-phase team via RaceLineup, with fallback
 					Team team = attributeTeamFromRegularOrLineup(
 							regularPhaseTeamIds, driverId, seasonId, phaseRanking.getDriver());
 					return new DriverRanking(phaseRanking.getDriver(), team);
@@ -112,13 +108,10 @@ public class DriverRankingService {
 	/**
 	 * Calculates alltime driver ranking across all seasons.
 	 *
-	 * <p>Note: Uses {@code seasonDriverRepository.findAll()} intentionally — alltime rankings
-	 * by definition span all seasons. A scoped alternative would require N+1 queries
-	 * (one per driver) which is worse for this small-scale admin dataset. (QUAL-02 disposition)
-	 *
-	 * <p>D-09: public API structurally unchanged; internally uses SeasonDriver for team attribution
-	 * to preserve existing alltime behavior (alltime only covers REGULAR-phase results via
-	 * {@code findByRacePlayoffMatchupIsNull}).
+	 * <p>Uses {@code seasonDriverRepository.findAll()} intentionally — alltime rankings
+	 * by definition span all seasons; a scoped alternative would require N+1 queries.
+	 * Alltime only covers REGULAR-phase results (via {@code findByRacePlayoffMatchupIsNull}),
+	 * so SeasonDriver is sufficient for team attribution.
 	 */
 	@Transactional(readOnly = true)
 	public List<DriverRanking> calculateAlltimeRanking() {
@@ -130,8 +123,6 @@ public class DriverRankingService {
 	/**
 	 * Calculates alltime driver ranking restricted to the given season IDs.
 	 * Used by the site generator to exclude Test seasons from public pages.
-	 *
-	 * <p>D-09: public API structurally unchanged.
 	 */
 	@Transactional(readOnly = true)
 	public List<DriverRanking> calculateAlltimeRanking(List<UUID> seasonIds) {
@@ -175,9 +166,8 @@ public class DriverRankingService {
 	}
 
 	/**
-	 * D-10: Resolves team attribution from RaceLineup for the season, preferring REGULAR-phase
-	 * team members (regularPhaseTeamIds guard). Falls back to any season lineup if no REGULAR-phase
-	 * lineup found.
+	 * Resolves team attribution from RaceLineup for the season, preferring REGULAR-phase
+	 * team members. Falls back to any season lineup if no REGULAR-phase lineup is found.
 	 *
 	 * @param regularPhaseTeamIds set of team IDs enrolled in the REGULAR phase — used to prefer
 	 *                            the REGULAR-phase team when a driver is in multiple teams
@@ -192,23 +182,19 @@ public class DriverRankingService {
 		if (lineups.isEmpty()) {
 			return null;
 		}
-		// D-08: prefer a lineup entry whose team is enrolled in the REGULAR phase
 		return lineups.stream()
 				.filter(rl -> regularPhaseTeamIds.contains(rl.getTeam().getId()))
 				.findFirst()
 				.map(RaceLineup::getTeam)
-				// D-10 fallback: any lineup entry for the season
 				.orElseGet(() -> lineups.get(0).getTeam());
 	}
 
 	/**
 	 * Resolves per-race team from RaceLineup for a single race result (Source of Truth per CLAUDE.md).
-	 * Returns {@code null} if no lineup entry is found.
+	 * Per-phase ranking team attribution is intentionally left null; season-wide aggregation
+	 * handles attribution via {@link #attributeTeamFromRegularOrLineup}.
 	 */
 	private Team resolveTeamFromLineup(UUID driverId, Race race) {
-		// RaceLineup is the Source of Truth; no lookup here for per-phase ranking (team is display only)
-		// Per-phase ranking team attribution is intentionally left null when no PhaseTeam exists
-		// (aggregateAcrossPhases handles season-wide attribution via D-08/D-10)
 		return null;
 	}
 

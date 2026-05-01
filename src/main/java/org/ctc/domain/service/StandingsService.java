@@ -27,10 +27,6 @@ public class StandingsService {
 	private final SeasonPhaseService seasonPhaseService;
 	private final PhaseTeamRepository phaseTeamRepository;
 
-	// ---------------------------------------------------------------------------
-	// Canonical phase-aware methods (SVC-02, D-01, D-04, D-05, D-06)
-	// ---------------------------------------------------------------------------
-
 	/**
 	 * Calculates standings for the given phase and optional group.
 	 *
@@ -38,11 +34,11 @@ public class StandingsService {
 	 * list since no PhaseTeam rows match a non-null groupId for a LEAGUE phase).
 	 *
 	 * <p>For {@code layout=GROUPS} with {@code groupId=null}: returns a flat combined-view across all
-	 * sub-groups, sorted by {@code points → pointDifference → pointsFor} (D-04). Each
-	 * {@link TeamStanding#getGroup()} is set to the team's sub-group (D-05).
+	 * sub-groups, sorted by {@code points → pointDifference → pointsFor}. Each
+	 * {@link TeamStanding#getGroup()} is set to the team's sub-group.
 	 *
 	 * <p>For {@code layout=GROUPS} with a non-null {@code groupId}: returns standings for that single
-	 * group only (D-04 per-group view).
+	 * group only.
 	 */
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateStandings(UUID phaseId, UUID groupId) {
@@ -58,7 +54,7 @@ public class StandingsService {
 		Map<UUID, TeamStanding> standingsMap = new HashMap<>();
 		for (PhaseTeam pt : rosterRows) {
 			var ts = new TeamStanding(pt.getTeam());
-			ts.setGroup(pt.getGroup()); // D-05: set nullable group
+			ts.setGroup(pt.getGroup());
 			standingsMap.put(pt.getTeam().getId(), ts);
 		}
 
@@ -91,16 +87,15 @@ public class StandingsService {
 	/**
 	 * Calculates standings with Buchholz tiebreaker for the given phase and optional group.
 	 *
-	 * <p>D-06: For {@code layout=GROUPS} with a non-null {@code groupId}: Buchholz is used as the
-	 * tiebreaker (per-group Swiss pairing, opponents all within the same group).
+	 * <p>For {@code layout=GROUPS} with a non-null {@code groupId}: Buchholz is the tiebreaker
+	 * (per-group Swiss pairing, opponents all within the same group).
 	 *
-	 * <p>D-06: For {@code layout=GROUPS} with {@code groupId=null} (combined-view): the {@code buchholz}
+	 * <p>For {@code layout=GROUPS} with {@code groupId=null} (combined-view): the {@code buchholz}
 	 * field on each {@link TeamStanding} is populated for display, but Buchholz is NOT used as a
 	 * tiebreaker — falls back to {@code points → pointDifference → pointsFor} to avoid cross-group
 	 * opposition bias.
 	 *
-	 * <p>For {@code layout=LEAGUE} (groupId always null): Buchholz is used as tiebreaker, matching
-	 * legacy behaviour.
+	 * <p>For {@code layout=LEAGUE} (groupId always null): Buchholz is used as tiebreaker.
 	 */
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateStandingsWithBuchholz(UUID phaseId, UUID groupId) {
@@ -117,7 +112,7 @@ public class StandingsService {
 		}
 
 		if (isGroupsCombinedView) {
-			// D-06: combined-view — Buchholz populated for display but NOT used as tiebreaker
+			// Combined-view: Buchholz populated for display but NOT used as tiebreaker
 			standings.sort(Comparator
 					.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
 					.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
@@ -144,8 +139,7 @@ public class StandingsService {
 
 	/**
 	 * Convenience overload: resolves the REGULAR phase for the given season and delegates
-	 * to {@link #calculateStandings(UUID, UUID)}. Phase 61 MIGR-06: every post-V4 season has
-	 * a REGULAR phase, so the legacy season-level fallback was removed.
+	 * to {@link #calculateStandings(UUID, UUID)}.
 	 */
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateStandings(UUID seasonId) {
@@ -153,9 +147,7 @@ public class StandingsService {
 		return calculateStandings(regular.getId(), null);
 	}
 
-	// ---------------------------------------------------------------------------
-	// Alltime aggregation (unchanged public API — D-09 structurally stable)
-	// ---------------------------------------------------------------------------
+	// --- Alltime aggregation ---
 
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateAlltimeStandings() {
@@ -231,16 +223,12 @@ public class StandingsService {
 	}
 
 	/**
-	 * Calculates Buchholz scores for a phase-aware context.
-	 * For LEAGUE phases or per-group GROUPS phases, delegates to the season-level Buchholz
-	 * using the phase's parent season (since the existing raceRepository finder is season-scoped).
-	 * For GROUPS combined-view (groupId=null), calculates from the phase's season as well
-	 * (Buchholz is display-only in combined-view per D-06).
+	 * Calculates Buchholz scores for a phase-aware context. Delegates to the season-level
+	 * Buchholz using the phase's parent season (the underlying race finder is season-scoped).
+	 * Safe because: for GROUPS combined-view Buchholz is display-only, and for LEAGUE / per-group
+	 * the season-level calculation is equivalent.
 	 */
 	private Map<UUID, Integer> calculateBuchholzScoresForPhase(SeasonPhase phase, UUID groupId) {
-		// Delegate to season-level calculation — the raceRepository finder is season-scoped.
-		// This is safe: for GROUPS combined-view, Buchholz is display-only (D-06).
-		// For LEAGUE and per-group, the season-level calculation is equivalent.
 		return calculateBuchholzScores(phase.getSeason().getId());
 	}
 
@@ -304,10 +292,6 @@ public class StandingsService {
 		return successionMap.getOrDefault(teamId, teamId);
 	}
 
-	// ---------------------------------------------------------------------------
-	// Inner class TeamStanding (D-05: nullable group field added)
-	// ---------------------------------------------------------------------------
-
 	public static class TeamStanding {
 		private final Team team;
 		private int wins;
@@ -317,7 +301,7 @@ public class StandingsService {
 		private int pointsFor;
 		private int pointsAgainst;
 		private int buchholz;
-		private SeasonPhaseGroup group; // D-05: nullable — null for LEAGUE, set for GROUPS
+		private SeasonPhaseGroup group;
 
 		public TeamStanding(Team team) {
 			this.team = team;
@@ -404,12 +388,11 @@ public class StandingsService {
 			this.buchholz = buchholz;
 		}
 
-		/** D-05: nullable — null for LEAGUE-layout phases, set to team's sub-group for GROUPS-layout. */
+		/** Nullable — null for LEAGUE-layout phases, set to team's sub-group for GROUPS-layout. */
 		public SeasonPhaseGroup getGroup() {
 			return group;
 		}
 
-		/** D-05: set by StandingsService when GROUPS-layout; leave null for LEAGUE. */
 		public void setGroup(SeasonPhaseGroup group) {
 			this.group = group;
 		}

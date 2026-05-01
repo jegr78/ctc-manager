@@ -98,7 +98,6 @@ public class MatchdayService {
     public Matchday saveMatchday(String label, int sortIndex, UUID seasonId, UUID matchdayId) {
         var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
-        // Phase 61 MIGR-06: matchday.season is gone; bind via REGULAR phase instead.
         var regular = seasonPhaseService.findRegularPhase(season.getId());
 
         Matchday matchday;
@@ -129,11 +128,10 @@ public class MatchdayService {
         return seasonId;
     }
 
-    // --- Phase-aware finders (Phase 58 D-26) ---
+    // --- Phase-aware finders ---
 
     /**
      * Returns all matchdays of a phase, ordered by {@code sortIndex} ascending.
-     * Primary phase-aware finder (Phase 58 D-26).
      */
     public List<Matchday> findByPhaseId(UUID phaseId) {
         return matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phaseId);
@@ -161,13 +159,11 @@ public class MatchdayService {
     public MatchdayData createInline(UUID seasonId, String label) {
         var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
-        // Phase 61 MIGR-06: matchday.season is gone; bind via REGULAR phase instead.
         var regular = seasonPhaseService.findRegularPhase(season.getId());
 
-        // Phase 61 CR-01: scope existing-matchday lookup to the REGULAR phase. The previous
-        // findBySeasonIdOrderBySortIndexAsc returned matchdays from BOTH phases, which (1) let
-        // playoff matchdays (sortIndex >= 100) poison the next REGULAR sortIndex and (2) made
-        // the duplicate-label check collide across phases.
+        // Scope to the REGULAR phase: a season-wide lookup would (1) let playoff matchdays
+        // (sortIndex >= 100) poison the next REGULAR sortIndex and (2) make the duplicate-label
+        // check collide across phases.
         var existingMatchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId());
 
         boolean duplicateLabel = existingMatchdays.stream()

@@ -17,19 +17,19 @@ import java.util.stream.Collectors;
  * Central phase resolver and CRUD service for {@link SeasonPhase}, {@link SeasonPhaseGroup},
  * and {@link PhaseTeam}.
  *
- * <p>Key decisions implemented:
+ * <p>Contract highlights:
  * <ul>
- *   <li>D-02: {@link #findRegularPhase(UUID)} is the single resolution point for the REGULAR phase.
- *       Fails loud ({@link EntityNotFoundException}) if no REGULAR phase exists.</li>
- *   <li>D-14: {@link #create} enforces the "max 1 phase per type per season" rule before INSERT.
- *       DB {@code UNIQUE(season_id, phase_type)} is the belt; this service guard is the suspenders.</li>
- *   <li>D-20: REGULAR+LEAGUE creation auto-derives {@link PhaseTeam} from existing {@link SeasonTeam}
+ *   <li>{@link #findRegularPhase(UUID)} is the single resolution point for the REGULAR phase
+ *       and fails loud ({@link EntityNotFoundException}) if none exists.</li>
+ *   <li>{@link #create} enforces the "max 1 phase per type per season" rule before INSERT.
+ *       The DB {@code UNIQUE(season_id, phase_type)} is the belt; this service guard is the suspenders.</li>
+ *   <li>{@link #create} for REGULAR+LEAGUE auto-derives {@link PhaseTeam} from existing {@link SeasonTeam}
  *       rows. PLAYOFF, PLACEMENT, and REGULAR+GROUPS leave the roster empty.</li>
- *   <li>D-21: {@link #update} blocks layout changes when matchdays exist (strict guard).</li>
- *   <li>D-23: {@link #delete} blocks deletion when matchdays, phase teams, or playoff bracket exist.</li>
- *   <li>D-28: {@link #deleteGroup} blocks deletion when group has teams or matchdays.</li>
- *   <li>W-6: {@link #createBootstrap} idempotent REGULAR-phase auto-bootstrap for new seasons.</li>
- *   <li>W-8: {@link #getRosterEditorState} single-query service-side data prep for roster editor.</li>
+ *   <li>{@link #update} blocks layout changes when matchdays exist.</li>
+ *   <li>{@link #delete} blocks deletion when matchdays, phase teams, or a playoff bracket exist.</li>
+ *   <li>{@link #deleteGroup} blocks deletion when the group has teams or matchdays.</li>
+ *   <li>{@link #createBootstrap} is idempotent REGULAR-phase auto-bootstrap for new seasons.</li>
+ *   <li>{@link #getRosterEditorState} provides single-query service-side data prep for the roster editor.</li>
  * </ul>
  */
 @Slf4j
@@ -41,14 +41,10 @@ public class SeasonPhaseService {
     private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
     private final PhaseTeamRepository phaseTeamRepository;
     private final SeasonRepository seasonRepository;
-    // Phase 60 D-21/D-23: guard checks require matchday + phase-team counts
     private final MatchdayRepository matchdayRepository;
-    // Phase 60 D-20 assignTeamsToPhase: need Team entity lookup
     private final TeamRepository teamRepository;
-    // Phase 60 update: resolve scoring entities by ID
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
-    // Phase 60 D-23: PLAYOFF phase guard — check if a playoff bracket exists
     private final PlayoffRepository playoffRepository;
 
     // ---------------------------------------------------------------------------
@@ -56,12 +52,12 @@ public class SeasonPhaseService {
     // ---------------------------------------------------------------------------
 
     /**
-     * Input record for {@link #assignTeamsToPhase} bulk diff logic (D-20, RESEARCH Pitfall 8).
+     * Input record for {@link #assignTeamsToPhase} bulk diff logic.
      */
     public record Assignment(UUID teamId, boolean included, UUID groupId) {}
 
     /**
-     * Service-side data preparation for the roster editor (W-8 — single repo call per Lean-Templates rule).
+     * Service-side data preparation for the roster editor — single repo call per Lean-Templates rule.
      */
     public record RosterEditorState(Set<UUID> assignedTeamIds,
                                     Map<UUID, UUID> currentGroupByTeamId) {}
@@ -72,17 +68,16 @@ public class SeasonPhaseService {
 
     /**
      * Returns the REGULAR phase for the given season, or throws {@link EntityNotFoundException}
-     * if none exists (D-02 fail-loud — should never happen post-V4 migration).
+     * if none exists.
      */
     @Transactional(readOnly = true)
     public SeasonPhase findRegularPhase(UUID seasonId) {
         return seasonPhaseRepository.findBySeasonIdAndPhaseType(seasonId, PhaseType.REGULAR)
-                .orElseThrow(() -> new EntityNotFoundException("Regular SeasonPhase for season", seasonId)); // D-02
+                .orElseThrow(() -> new EntityNotFoundException("Regular SeasonPhase for season", seasonId));
     }
 
     /**
      * Returns the phase of the given type for the season, or {@link Optional#empty()} if absent.
-     * Used by D-19 (PlayoffService.createPlayoff) and D-25 (SeasonManagementService.save).
      */
     @Transactional(readOnly = true)
     public Optional<SeasonPhase> findByType(UUID seasonId, PhaseType type) {
@@ -100,8 +95,6 @@ public class SeasonPhaseService {
 
     /**
      * Returns all phases for the season ordered by {@code sortIndex} ascending.
-     * Used by D-09 (DriverRankingService.aggregateAcrossPhases bridge) and
-     * D-26 (MatchdayService.findBySeasonId bridge).
      */
     @Transactional(readOnly = true)
     public List<SeasonPhase> findAllPhases(UUID seasonId) {
@@ -110,11 +103,11 @@ public class SeasonPhaseService {
 
     /**
      * Service-side data preparation for the roster editor — single repo call per CLAUDE.md
-     * "Keep Thymeleaf Templates Lean" (W-8).
+     * "Keep Thymeleaf Templates Lean".
      */
     @Transactional(readOnly = true)
     public RosterEditorState getRosterEditorState(UUID phaseId) {
-        var pts = phaseTeamRepository.findByPhaseId(phaseId);   // single repo call (W-8)
+        var pts = phaseTeamRepository.findByPhaseId(phaseId);
         var assignedTeamIds = pts.stream()
                 .map(pt -> pt.getTeam().getId())
                 .collect(Collectors.toSet());
@@ -133,11 +126,10 @@ public class SeasonPhaseService {
     /**
      * Creates a new {@link SeasonPhase} for the given season.
      *
-     * <p>D-14 duplicate guard: throws {@link BusinessRuleException} if a phase of this type
-     * already exists for the season. DB UNIQUE is the belt; this guard is the suspenders
-     * for meaningful error messages.
+     * <p>Throws {@link BusinessRuleException} if a phase of this type already exists for the
+     * season. DB UNIQUE is the belt; this guard is the suspenders for meaningful error messages.
      *
-     * <p>D-20 roster init: REGULAR+LEAGUE auto-derives {@link PhaseTeam} rows from existing
+     * <p>Roster init: REGULAR+LEAGUE auto-derives {@link PhaseTeam} rows from existing
      * {@link SeasonTeam} entries. All other phase types / layouts start with an empty roster.
      */
     @Transactional
@@ -146,7 +138,6 @@ public class SeasonPhaseService {
                               SeasonFormat format, LocalDate startDate, LocalDate endDate,
                               Integer totalRounds, int legs, Integer eventDurationMinutes) {
 
-        // D-14: belt-and-suspenders duplicate guard
         if (seasonPhaseRepository.findBySeasonIdAndPhaseType(seasonId, type).isPresent()) {
             throw new BusinessRuleException("Season already has " + type + " phase");
         }
@@ -169,7 +160,6 @@ public class SeasonPhaseService {
 
         phase = seasonPhaseRepository.save(phase);
 
-        // D-20: REGULAR+LEAGUE auto-derives PhaseTeam from SeasonTeam; other types leave roster empty
         if (type == PhaseType.REGULAR && layout == PhaseLayout.LEAGUE) {
             for (SeasonTeam st : season.getSeasonTeams()) {
                 phaseTeamRepository.save(new PhaseTeam(phase, st.getTeam()));
@@ -181,15 +171,14 @@ public class SeasonPhaseService {
     }
 
     /**
-     * Idempotent REGULAR-phase auto-bootstrap for newly-created seasons (W-6).
+     * Idempotent REGULAR-phase auto-bootstrap for newly-created seasons.
      *
-     * <p>Null-tolerant create that re-uses Phase 58 D-14 UNIQUE pre-check path so we never
-     * bypass invariants. If a REGULAR phase already exists, returns it (idempotent — safe
+     * <p>Null-tolerant; reuses the duplicate-check path from {@link #create} so invariants
+     * are never bypassed. If a REGULAR phase already exists, returns it (idempotent — safe
      * to call after a partial save).
      */
     @Transactional
     public SeasonPhase createBootstrap(Season season) {
-        // W-6: idempotent — return existing REGULAR phase if present
         var existing = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR);
         if (existing.isPresent()) {
             return existing.get();
@@ -203,11 +192,11 @@ public class SeasonPhaseService {
     }
 
     /**
-     * Updates mutable fields of an existing {@link SeasonPhase} (D-21, D-22).
+     * Updates mutable fields of an existing {@link SeasonPhase}.
      *
-     * <p>D-21 strict guard: blocks layout changes when matchdays exist.
-     * D-22 compatibility: BRACKET layout only valid for PLAYOFF phases.
-     * Note: phaseType is immutable post-create (W-11) — update signature intentionally omits it.
+     * <p>Layout changes are blocked when matchdays exist; BRACKET layout is only valid for
+     * PLAYOFF phases. {@code phaseType} is immutable post-create — the update signature
+     * intentionally omits it.
      */
     @Transactional
     public SeasonPhase update(UUID phaseId,
@@ -225,13 +214,11 @@ public class SeasonPhaseService {
         var phase = seasonPhaseRepository.findById(phaseId)
                 .orElseThrow(() -> new EntityNotFoundException("SeasonPhase", phaseId));
 
-        // D-21 strict guard: layout change blocked if matchdays exist
         var matchdays = matchdayRepository.findByPhaseId(phaseId);
         if (!matchdays.isEmpty() && phase.getLayout() != layout) {
             throw new BusinessRuleException(
                     "Phase has " + matchdays.size() + " matchdays — changing layout requires deleting them first.");
         }
-        // D-22 layout/format compatibility: BRACKET only allowed for PLAYOFF
         if (layout == PhaseLayout.BRACKET && phase.getPhaseType() != PhaseType.PLAYOFF) {
             throw new BusinessRuleException("BRACKET layout is only valid for PLAYOFF phases.");
         }
@@ -258,7 +245,7 @@ public class SeasonPhaseService {
     }
 
     /**
-     * Deletes a {@link SeasonPhase} after strict guards (D-23).
+     * Deletes a {@link SeasonPhase} after strict guards.
      *
      * <p>Refuses deletion when the phase has matchdays, phase-team roster entries, or a
      * playoff bracket. User must clear those first — no silent cascade per CLAUDE.md
@@ -301,7 +288,7 @@ public class SeasonPhaseService {
     }
 
     /**
-     * Updates name and/or sortIndex of an existing {@link SeasonPhaseGroup} (D-24).
+     * Updates name and/or sortIndex of an existing {@link SeasonPhaseGroup}.
      */
     @Transactional
     public SeasonPhaseGroup updateGroup(UUID groupId, String name, Integer sortIndex) {
@@ -314,9 +301,8 @@ public class SeasonPhaseService {
     }
 
     /**
-     * Deletes a {@link SeasonPhaseGroup} after strict guards (D-28).
-     *
-     * <p>Refuses deletion when the group has team assignments or matchdays.
+     * Deletes a {@link SeasonPhaseGroup}. Refuses deletion when the group has team
+     * assignments or matchdays.
      */
     @Transactional
     public void deleteGroup(UUID groupId) {
@@ -357,7 +343,7 @@ public class SeasonPhaseService {
     }
 
     /**
-     * Bulk diff-save for the roster editor (D-20, RESEARCH Pitfall 8).
+     * Bulk diff-save for the roster editor.
      *
      * <p>Compares the submitted {@link Assignment} list against the current {@link PhaseTeam} rows
      * and applies minimal inserts, updates (group change), and deletes in a single transaction.

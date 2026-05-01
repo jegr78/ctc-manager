@@ -30,10 +30,8 @@ public class PlayoffSeedingService {
 	private final TeamRepository teamRepository;
 	private final PlayoffBracketViewService playoffBracketViewService;
 	private final EntityManager entityManager;
-	// D-15: Top-N seed pool from REGULAR-phase standings
 	private final SeasonPhaseService seasonPhaseService;
 	private final StandingsService standingsService;
-	// D-20 side-effect: PhaseTeam roster on PLAYOFF phase
 	private final PhaseTeamRepository phaseTeamRepository;
 
 	@Transactional
@@ -61,8 +59,6 @@ public class PlayoffSeedingService {
 				.filter(r -> r.getRoundIndex() == 0)
 				.findFirst().orElseThrow(() -> new EntityNotFoundException("PlayoffRound", "index=0"));
 
-		// Phase 61 MIGR-06: M:N playoff_seasons is gone. Teams come from the playoff's
-		// canonical season (resolved via Convenience-Getter playoff.getSeason()).
 		Map<UUID, Team> teamMap = new LinkedHashMap<>();
 		for (Team team : playoff.getSeason().getTeams()) {
 			teamMap.putIfAbsent(team.getId(), team);
@@ -121,20 +117,17 @@ public class PlayoffSeedingService {
 	}
 
 	/**
-	 * Auto-seeds the bracket. Two flows are supported (legacy backward-compat + D-15):
+	 * Auto-seeds the bracket. Two flows are supported:
 	 *
-	 * <p><b>Legacy/manual flow (priority):</b> When manually-saved {@link PlayoffSeed} rows exist
-	 * (via {@link #saveSeedNumbers}), they are used directly — preserves the pre-Phase-58
-	 * "admin set seeds, then auto-pair the bracket" workflow.
+	 * <p><b>Manual flow (priority):</b> When manually-saved {@link PlayoffSeed} rows exist
+	 * (via {@link #saveSeedNumbers}), they are used directly.
 	 *
-	 * <p><b>D-15 flow:</b> When NO manual seeds exist, the season's REGULAR phase is consulted:
-	 * Top-N teams are pulled from {@code standingsService.calculateStandings(regularPhaseId, null)}
-	 * (combined-view across groups when GROUPS-layout, per D-04). Each seeded team is persisted as
-	 * a {@link PlayoffSeed} row (so subsequent calls / getSeedingData stay coherent) and added to
-	 * the PLAYOFF phase's {@code PhaseTeam} roster as a side-effect (D-20).
+	 * <p><b>Auto flow:</b> When NO manual seeds exist, Top-N teams are pulled from the
+	 * REGULAR phase standings (combined-view across groups for GROUPS-layout). Each seeded
+	 * team is persisted as a {@link PlayoffSeed} row and added to the PLAYOFF phase's
+	 * {@link PhaseTeam} roster.
 	 *
-	 * <p>If neither source yields seeds, throws {@link IllegalStateException}
-	 * ("No seed numbers assigned yet").
+	 * <p>If neither source yields seeds, throws {@link IllegalStateException}.
 	 */
 	@Transactional
 	public void autoSeedBracket(UUID playoffId) {
@@ -143,15 +136,13 @@ public class PlayoffSeedingService {
 		List<Team> sortedTeams;
 
 		if (!seeds.isEmpty()) {
-			// Legacy/manual flow: use manually-saved PlayoffSeed rows
 			sortedTeams = seeds.stream()
 					.sorted(Comparator.comparingInt(PlayoffSeed::getSeed))
 					.map(PlayoffSeed::getTeam)
 					.toList();
 		} else {
-			// D-15: derive Top-N from REGULAR-phase standings.
-			// If the playoff or round can't be resolved, treat as "no seeds available"
-			// (preserves the legacy IllegalStateException contract for the no-seeds case).
+			// Derive Top-N from REGULAR-phase standings.
+			// If the playoff or round can't be resolved, treat as "no seeds available".
 			var playoffOpt = playoffRepository.findById(playoffId);
 			if (playoffOpt.isEmpty()) {
 				throw new IllegalStateException("No seed numbers assigned yet");
@@ -196,12 +187,12 @@ public class PlayoffSeedingService {
 	}
 
 	/**
-	 * D-15: Pulls Top-N teams from the REGULAR phase standings when available.
-	 * Returns {@code null} when no REGULAR phase exists or standings are insufficient — caller falls
-	 * back to manual seeds. Side-effects when a successful pull occurs:
+	 * Pulls Top-N teams from the REGULAR phase standings when available.
+	 * Returns {@code null} when no REGULAR phase exists or standings are insufficient — caller
+	 * falls back to manual seeds. On a successful pull:
 	 * <ul>
 	 *   <li>Replaces any existing {@link PlayoffSeed} rows with the Top-N seeding (1..N).</li>
-	 *   <li>D-20: adds each seeded team as a {@link PhaseTeam} on the PLAYOFF phase if not already present.</li>
+	 *   <li>Adds each seeded team as a {@link PhaseTeam} on the PLAYOFF phase if not already present.</li>
 	 * </ul>
 	 */
 	private List<Team> tryLoadFromRegularStandings(Playoff playoff, int totalTeams) {
@@ -211,10 +202,9 @@ public class PlayoffSeedingService {
 			return null;
 		}
 		var regularPhase = regularPhaseOpt.get();
-		// D-04: combined-view (groupId=null) for GROUPS-layout; flat list for LEAGUE
+		// Combined-view (groupId=null) for GROUPS-layout; flat list for LEAGUE.
 		var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 		if (standings.size() < totalTeams) {
-			// Insufficient standings — fall back to manual seeds
 			return null;
 		}
 
@@ -232,7 +222,7 @@ public class PlayoffSeedingService {
 			playoffSeedRepository.save(new PlayoffSeed(playoff, t, seedNumber++));
 		}
 
-		// D-20 side-effect: each seeded team becomes a PhaseTeam row on the PLAYOFF phase
+		// Side-effect: each seeded team becomes a PhaseTeam row on the PLAYOFF phase.
 		if (playoff.getPhase() != null) {
 			Set<UUID> existingTeamIds = phaseTeamRepository.findByPhaseId(playoff.getPhase().getId())
 					.stream().map(pt -> pt.getTeam().getId()).collect(Collectors.toSet());
@@ -243,7 +233,7 @@ public class PlayoffSeedingService {
 			}
 		}
 
-		log.debug("D-15: pulled Top-{} from REGULAR phase {} for playoff {}",
+		log.debug("Pulled Top-{} from REGULAR phase {} for playoff {}",
 				totalTeams, regularPhase.getId(), playoff.getId());
 		return topTeams;
 	}

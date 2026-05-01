@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 /**
  * Read-only service for assembling race form data.
- * Extracted from RaceService per D-08.
  */
 @Slf4j
 @Service
@@ -83,7 +82,6 @@ public class RaceFormDataService {
                     data.availableTyres(), data.mandatoryTyres());
         }
 
-        // Phase 61 MIGR-06: scoring lives on the matchday's phase.
         return new RaceService.ResultsFormData(data, race, race.getMatchday().getPhase().getRaceScoring());
     }
 

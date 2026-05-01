@@ -27,14 +27,10 @@ public class MatchdayGeneratorService {
 	private final PhaseTeamRepository phaseTeamRepository;
 	private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
 
-	// ---------------------------------------------------------------------------
-	// Canonical phase/group-aware method (D-16, SVC-04)
-	// ---------------------------------------------------------------------------
-
 	/**
 	 * Generates matchdays for the given phase and optional group.
 	 *
-	 * <p>D-16 layout validation:
+	 * <p>Layout validation:
 	 * <ul>
 	 *   <li>For {@code layout=LEAGUE}: {@code groupId} MUST be null — throws {@link IllegalArgumentException} if not.</li>
 	 *   <li>For {@code layout=GROUPS}: {@code groupId} MUST be non-null — throws {@link IllegalArgumentException} if null.</li>
@@ -47,7 +43,6 @@ public class MatchdayGeneratorService {
 	public void generate(UUID phaseId, UUID groupId, int numberOfRounds, boolean homeAndAway) {
 		var phase = seasonPhaseService.findById(phaseId);
 
-		// D-16 layout validation
 		if (phase.getLayout() == PhaseLayout.LEAGUE && groupId != null) {
 			throw new IllegalArgumentException(
 					"LEAGUE layout requires groupId=null, got: " + groupId);
@@ -70,7 +65,6 @@ public class MatchdayGeneratorService {
 			throw new IllegalStateException("Phase/group already has matchdays — delete them first");
 		}
 
-		// Teams from PhaseTeam roster (D-16 — replaces season.getEligibleTeams())
 		var rosterRows = (groupId != null)
 				? phaseTeamRepository.findByPhaseIdAndGroupId(phaseId, groupId)
 				: phaseTeamRepository.findByPhaseId(phaseId);
@@ -86,11 +80,10 @@ public class MatchdayGeneratorService {
 
 		List<List<int[]>> rounds = circleMethod(teams.size(), numberOfRounds);
 
-		// Phase 61 MIGR-06: Matchday is bound exclusively via phase.
 		int sortIndex = 1;
 		for (var round : rounds) {
 			var matchday = new Matchday(phase, "MD " + sortIndex, sortIndex);
-			if (group != null) matchday.setGroup(group);            // T-58-04-02 mitigation
+			if (group != null) matchday.setGroup(group);
 			matchday = matchdayRepository.save(matchday);
 			createMatchesForRound(matchday, round, teams, false);
 			sortIndex++;
