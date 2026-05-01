@@ -189,7 +189,16 @@ public class SeasonPhaseController {
         return "admin/season-phase-form";
     }
 
-    /** POST /admin/seasons/{seasonId}/phases/save. */
+    /**
+     * POST /admin/seasons/{seasonId}/phases/save.
+     *
+     * <p>Creates or updates a phase. PLAYOFF creation is auto-routed through
+     * {@link PlayoffService#createPlayoff} which atomically creates the SeasonPhase plus
+     * the playoff bracket. REGULAR/PLACEMENT creation goes through
+     * {@link SeasonPhaseService#create} with auto-derived sortIndex.
+     *
+     * <p>{@code phaseType} is immutable post-create; the update call ignores it.
+     */
     @PostMapping("/save")
     public String save(@PathVariable UUID seasonId,
                        @Valid @ModelAttribute("seasonPhaseForm") SeasonPhaseForm form,

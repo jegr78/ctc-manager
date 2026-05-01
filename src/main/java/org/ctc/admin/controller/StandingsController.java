@@ -31,6 +31,23 @@ public class StandingsController {
 	private final SeasonManagementService seasonManagementService;
 	private final SeasonPhaseService seasonPhaseService;
 
+	/**
+	 * GET {@code /admin/standings} — renders the standings + driver ranking page.
+	 *
+	 * <p>Resolution priority for {@code phase}, {@code seasonId}, and {@code group}:
+	 * <ol>
+	 *   <li>{@code seasonId=alltime} → all-time aggregation across every season.</li>
+	 *   <li>Explicit {@code phase} UUID → the canonical phase-keyed view.</li>
+	 *   <li>Legacy {@code seasonId=<uuid>} → auto-resolves to the season's REGULAR phase
+	 *       (no 404 if the season has no REGULAR phase; the page renders with empty data).</li>
+	 *   <li>No params → falls back to the active season's REGULAR phase, or an empty page
+	 *       if no active season exists.</li>
+	 * </ol>
+	 *
+	 * <p>{@code group} narrows the view to a single sub-group when the resolved phase has
+	 * GROUPS layout. {@code phase} takes precedence if both {@code phase} and
+	 * {@code seasonId} are present.
+	 */
 	@GetMapping
 	public String standings(@RequestParam(required = false) UUID phase,
 	                        @RequestParam(required = false) UUID group,

@@ -142,11 +142,13 @@ public class SeasonManagementService {
     }
 
     /**
-     * Saves a season. Phase fields (format/scoring/dates) are managed exclusively via
-     * the Phase form (SeasonPhaseController), not here.
+     * Persists a season and, for new seasons, atomically bootstraps a REGULAR
+     * {@link SeasonPhase} with LEAGUE layout, sortIndex 0, and null scoring/format/dates.
+     * The bootstrap ensures every freshly-created season has a REGULAR phase to attach
+     * matchdays to.
      *
-     * <p>For new seasons, auto-bootstraps a REGULAR {@link SeasonPhase} with null
-     * scoring/format/dates so the season has a phase to attach matchdays to.
+     * <p>Phase-owned fields (format, scoring, dates) are NOT updated here — they are
+     * managed exclusively via the Phase form (SeasonPhaseController).
      */
     @Transactional
     public Season save(UUID id, String name, int year, int number, String description, boolean active) {
