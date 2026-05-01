@@ -1,41 +1,98 @@
 ---
 phase: 61-cleanup-quality-gate
 verified: 2026-05-01T20:30:00Z
+updated: 2026-05-01T22:15:00Z
 status: gaps_found
-score: 4/4 ROADMAP-SCs verified, but 1 BLOCKER from code review affects production correctness
+score: 4/4 ROADMAP-SCs verified; CR-01 resolved post-verification; user-driven Clean Code sweep added as additional gaps
 overrides_applied: 0
 re_verification:
-  previous_status: null
-  previous_score: null
-  gaps_closed: []
+  previous_status: gaps_found
+  previous_score: 4/4 ROADMAP-SCs verified, 1 BLOCKER (CR-01)
+  gaps_closed:
+    - "CR-01 — sortIndex cross-phase collision (fixed in commit 98bcfe2 + 2 regression tests; documented in 61-REVIEW-FIX.md)"
+    - "WR-01 through WR-07 — code review warnings (all 7 fixed; documented in 61-REVIEW-FIX.md)"
   gaps_remaining: []
   regressions: []
 gaps:
-  - truth: "Codebase is free of dead references (Phase Goal verbatim)"
-    status: failed
-    reason: |
-      CR-01 (BLOCKER from 61-REVIEW.md): MatchdayService.createInline (line 167) and
-      CsvImportService.findOrCreateMatchday (lines 445, 451) call
-      MatchdayRepository.findBySeasonIdOrderBySortIndexAsc which now returns matchdays from
-      ALL phases (REGULAR + PLAYOFF). For seasons with playoffs:
-      (a) sortIndex of next REGULAR matchday gets poisoned by playoff matchday's sortIndex
-          (PlayoffService writes 100+roundIdx*10+legNum, so REGULAR jumps to >=101).
-      (b) duplicate-label check now collides across phases (REGULAR "Round 1" rejected when
-          PLAYOFF "Round 1" already exists).
-      This is a logic regression introduced by Wave 2 cascade migration. Surefire gate did
-      NOT catch it because no test creates a season with both REGULAR + PLAYOFF matchdays
-      then exercises createInline/findOrCreateMatchday afterwards.
-      Phase 61 is the LAST phase of milestone v1.9 — no later phase can absorb this.
+  - truth: "Codebase is free of dead references (Phase Goal verbatim) — CR-01 cross-phase finder regression"
+    status: resolved
+    resolution: |
+      Fixed in commit 98bcfe2 via /gsd-code-review-fix workflow (2026-05-01).
+      MatchdayService.createInline + CsvImportService.findOrCreateMatchday + checkDuplicate
+      now use findByPhaseIdOrderBySortIndexAsc(regular.getId()) — phase-scoped finder.
+      2 regression tests added. Final test gate: 1172 Surefire tests, BUILD SUCCESS.
+      See 61-REVIEW-FIX.md for full per-finding remediation report.
     artifacts:
       - path: "src/main/java/org/ctc/domain/service/MatchdayService.java"
-        issue: "Line 167 uses cross-phase finder; sortIndex calculation includes playoff matchdays"
+        issue: "RESOLVED — line 167 now phase-scoped"
       - path: "src/main/java/org/ctc/dataimport/CsvImportService.java"
-        issue: "Lines 445 + 451 use the same cross-phase finder for findOrCreateMatchday"
+        issue: "RESOLVED — lines 445 + 451 now phase-scoped"
+  - truth: "Codebase is free of stale comments (Clean Code sweep — user-driven scope addition 2026-05-01)"
+    status: failed
+    reason: |
+      Phase 61 cascade migration (Wave 2) added narrative comments referencing
+      transient state ("Wave 2 cascade migration", "transitional bridge field",
+      "used by X", "added for Y flow") that violate CLAUDE.md guidance: "Don't
+      explain WHAT the code does ... don't reference the current task, fix, or
+      callers — those belong in the PR description and rot as the codebase
+      evolves." User explicitly requested codebase-wide sweep on 2026-05-01.
+    scope: "Komplette Codebase (src/main + src/test) — nicht nur Phase-61-touched files"
     missing:
-      - "Replace findBySeasonIdOrderBySortIndexAsc(season.getId()) with findByPhaseIdOrderBySortIndexAsc(regular.getId()) in MatchdayService.createInline"
-      - "Replace both findBySeasonIdOrderBySortIndexAsc(season.getId()) calls in CsvImportService.findOrCreateMatchday with phase-scoped finder"
-      - "Add regression test: create season with playoff seeded, call createInline, assert new matchday sortIndex == lastRegularSortIndex+1 (NOT >100)"
-      - "Add regression test: REGULAR Round 1 + PLAYOFF Round 1 do not collide on duplicate-label check"
+      - "Identify all stale comments via grep + manual review across src/main/**/*.java + src/test/**/*.java"
+      - "Remove comments that describe WHAT (not WHY)"
+      - "Remove comments referencing concrete tasks/PRs/incidents (e.g. 'cascade migration', 'D-XX', 'bridge field')"
+      - "Remove obsolete @deprecated tags whose target was already removed"
+      - "Verify removal does not break javadoc-dependent tooling (IDE, linters, doc generation)"
+  - truth: "Codebase is free of dead code branches (Clean Code sweep — user-driven scope addition 2026-05-01)"
+    status: failed
+    reason: |
+      Phase 61 review (61-REVIEW.md) found WR-02 (dead getDetailData), WR-01
+      (dead alltime-standings fallback), and deferred-items.md tracks
+      PlayoffService.playoffSeedRepository unused field. These are likely
+      symptoms of a broader pattern: cascade migration left dead branches,
+      ungenutzte private methods, dead imports, and unused fields. CLAUDE.md
+      rule: "Don't add error handling, fallbacks, or validation for scenarios
+      that can't happen."
+    scope: "Komplette Codebase — verify each potentially-dead branch via grep + coverage data"
+    missing:
+      - "Grep all @Deprecated annotations and verify removal targets"
+      - "Identify unreachable if/else branches via static analysis (IntelliJ inspections or similar)"
+      - "Identify unused private methods + fields via grep + coverage map"
+      - "Identify dead imports across all src files"
+      - "Remove each only after confirming via test coverage that no uncovered code path needs it"
+      - "Maintain 82% line coverage threshold (D-21 — never lower)"
+  - truth: "Codebase has appropriate validation boundaries (Clean Code sweep — user-driven scope addition 2026-05-01)"
+    status: failed
+    reason: |
+      CLAUDE.md hard rule: "Don't add error handling, fallbacks, or validation
+      for scenarios that can't happen. Trust internal code and framework
+      guarantees. Only validate at system boundaries (user input, external
+      APIs)." Cascade migration likely added defensive Objects.requireNonNull
+      and similar at internal-API boundaries where the framework already
+      guarantees non-null contracts.
+    scope: "Komplette Codebase — focus on services + repositories (not controllers, where Mass Assignment validation IS appropriate)"
+    missing:
+      - "Identify Objects.requireNonNull calls at internal-API boundaries (between services, between service+repository)"
+      - "Identify defensive null guards on @Autowired fields (Spring guarantees non-null)"
+      - "Identify try/catch blocks that wrap impossible exceptions"
+      - "Distinguish: controllers + system boundaries (KEEP validation) vs internal services (REMOVE redundant validation)"
+      - "Each removal MUST have a regression test confirming the removed validation was unreachable"
+  - truth: "Public APIs have accurate javadoc (Clean Code sweep — user-driven scope addition 2026-05-01)"
+    status: failed
+    reason: |
+      Phase 61 review found IN-03 (SeasonRepository finders lack post-V6
+      javadoc explaining new phase indirection), IN-05 (StandingsService
+      contradicting javadoc). After cascade migration, javadoc on services
+      and repositories likely drifted from current behavior — common
+      symptom: javadoc says "returns regular matchdays" but method now
+      returns all-phase matchdays.
+    scope: "Komplette Codebase public APIs — domain.service, domain.repository, admin.service, admin.controller"
+    missing:
+      - "Audit javadoc on every public method in domain.service + domain.repository"
+      - "Fix outdated javadoc that contradicts current behavior"
+      - "Add javadoc to public methods that lack it (esp. those with non-obvious semantics post-cascade)"
+      - "Reference: SeasonRepository finders, MatchdayRepository finders, StandingsService.calculateBuchholzScoresForPhase, anything touching phase-vs-season boundary"
+      - "Do NOT add docstring boilerplate — only add javadoc when WHY is non-obvious (CLAUDE.md guidance)"
 deferred: []
 human_verification:
   - test: "GROUPS-Saison E2E flow visual smoke check"
@@ -180,5 +237,43 @@ However, the broader Phase Goal sentence includes the sub-clause **"the codebase
 
 ---
 
+## Re-Verification Update — 2026-05-01T22:15:00Z (User-Driven Scope Addition)
+
+### CR-01 + WR-01..07 Resolved
+
+The original BLOCKER (CR-01) and all 7 WARNINGs (WR-01 through WR-07) from `61-REVIEW.md` were resolved post-verification via the `/gsd-code-review-fix 61` workflow. See `61-REVIEW-FIX.md` for full per-finding remediation report. Final test gate: 1172 Surefire tests, BUILD SUCCESS. The original `gaps_found` reason for CR-01 is now closed.
+
+### Additional Gaps — Clean Code Sweep (User Request)
+
+The user (Jens, 2026-05-01) flagged that Phase 61's Goal sub-clause *"codebase is free of dead references"* is interpreted too narrowly if it only addresses functional dead references (à la CR-01). A clean cleanup must also address Clean Code hygiene at the comment/branch/validation/javadoc level, codebase-wide.
+
+The user explicitly chose:
+
+- **Scope:** Komplette Codebase (entire `src/main` + `src/test`), not only Phase-61-touched files
+- **Issue classes (4 selected):**
+  1. **Stale comments** — comments describing WHAT (not WHY), referencing concrete tasks/PRs/cascade-migration narrative, obsolete @deprecated tags
+  2. **Dead code branches** — unreachable if/else, unused private methods/fields, dead imports
+  3. **Defensive over-validation** — `Objects.requireNonNull` at internal-API boundaries where the framework already guarantees non-null (CLAUDE.md: "only validate at system boundaries")
+  4. **Missing/wrong javadoc** — public APIs without javadoc, or javadoc that contradicts current post-cascade behavior
+
+### Why Gap-Closure (not new Phase 62)
+
+Phase 61's Goal explicitly contains the sub-clause "codebase is free of dead references" — Clean Code hygiene is in-scope. Routing this through Phase 61 gap-closure (`/gsd-plan-phase 61 --gaps` → `/gsd-execute-phase 61 --gaps-only` → re-verify) keeps milestone v1.9's plan intact. A new Phase 62 would dilute the milestone boundary and is not warranted.
+
+### Constraints for Gap Plans
+
+- **Test gate preserved:** Each removal MUST keep `./mvnw verify -Pe2e` BUILD SUCCESS and JaCoCo line coverage ≥ 82% (D-21 — never lower threshold).
+- **Atomic commits:** One logical removal per commit (e.g., "refactor(61): remove stale 'Wave 2 cascade' comments from domain.service") so any regression can be bisected.
+- **Wave-aligned:** Plans should split by file-group (e.g., domain.model, domain.service, domain.repository, admin.controller, dataimport, sitegen, admin.service, test) so subagent work fits within token budget — Wave 2 hit a 2.6h timeout at 277 tool calls; aim for <60 tool calls per plan.
+- **Defensive removal:** Each "dead code" removal MUST verify via grep + coverage that no uncovered path reaches it. False-positive dead-code removal regressions are unacceptable.
+- **Cascade aware:** Phase 61 itself recently touched many of these files. The planner MUST consult `61-REVIEW.md` + `61-REVIEW-FIX.md` to avoid re-introducing fixed issues or removing recently-added intentional code.
+
+### Original Gaps (Snapshot @ 2026-05-01T20:30:00Z) Below
+
+The `## Goal Achievement` and `## Gaps Summary` sections above are preserved as the original verification snapshot. The `frontmatter.gaps[]` list reflects the current state (CR-01 resolved + 4 new clean-code gaps).
+
+---
+
 _Verified: 2026-05-01T20:30:00Z_
+_Re-verified scope addition: 2026-05-01T22:15:00Z (user-driven Clean Code sweep)_
 _Verifier: Claude (gsd-verifier)_
