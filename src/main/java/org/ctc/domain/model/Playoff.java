@@ -2,7 +2,6 @@ package org.ctc.domain.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -18,20 +17,15 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"season", "phase", "seasons", "rounds", "seeds"})
+@ToString(exclude = {"phase", "rounds", "seeds"})
 public class Playoff extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;
 
-	@NotNull
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "season_id", nullable = false, unique = true)
-	private Season season;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "phase_id")
+	@JoinColumn(name = "phase_id", nullable = false, unique = true)
 	private SeasonPhase phase;
 
 	@NotBlank
@@ -45,13 +39,6 @@ public class Playoff extends BaseEntity {
 	@Column(name = "event_duration_minutes")
 	private Integer eventDurationMinutes;
 
-	@ManyToMany
-	@JoinTable(name = "playoff_seasons",
-			joinColumns = @JoinColumn(name = "playoff_id"),
-			inverseJoinColumns = @JoinColumn(name = "season_id"))
-	@OrderBy("name ASC")
-	private List<Season> seasons = new ArrayList<>();
-
 	@OneToMany(mappedBy = "playoff", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("roundIndex ASC")
 	private List<PlayoffRound> rounds = new ArrayList<>();
@@ -60,8 +47,17 @@ public class Playoff extends BaseEntity {
 	@OrderBy("seed ASC")
 	private List<PlayoffSeed> seeds = new ArrayList<>();
 
-	public Playoff(Season season, String name) {
-		this.season = season;
+	public Playoff(SeasonPhase phase, String name) {
+		this.phase = phase;
 		this.name = name;
+	}
+
+	/**
+	 * Convenience getter — derives season via {@code getPhase().getSeason()}.
+	 * The {@code playoffs.season_id} bridge column and the {@code playoff_seasons} M:N join table
+	 * were both dropped in V6 (MIGR-06); the phase association is now the single source of truth.
+	 */
+	public Season getSeason() {
+		return phase != null ? phase.getSeason() : null;
 	}
 }

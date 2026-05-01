@@ -16,7 +16,7 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"season", "phase", "group", "matches", "races"})
+@ToString(exclude = {"phase", "group", "matches", "races"})
 public class Matchday extends BaseEntity {
 
 	@Id
@@ -24,11 +24,7 @@ public class Matchday extends BaseEntity {
 	private UUID id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "season_id", nullable = false)
-	private Season season;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "phase_id")
+	@JoinColumn(name = "phase_id", nullable = false)
 	private SeasonPhase phase;
 
 	@ManyToOne(fetch = FetchType.LAZY)
@@ -48,9 +44,19 @@ public class Matchday extends BaseEntity {
 	@OneToMany(mappedBy = "matchday", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<Race> races = new ArrayList<>();
 
-	public Matchday(Season season, String label, int sortIndex) {
-		this.season = season;
+	public Matchday(SeasonPhase phase, String label, int sortIndex) {
+		this.phase = phase;
 		this.label = label;
 		this.sortIndex = sortIndex;
+	}
+
+	/**
+	 * Convenience getter — derives season via {@code getPhase().getSeason()}.
+	 * The {@code matchdays.season_id} bridge column was dropped in V6 (MIGR-06);
+	 * the phase association is now the single source of truth.
+	 * Returns {@code null} only if {@code phase} is unset, which should not occur post-V4.
+	 */
+	public Season getSeason() {
+		return phase != null ? phase.getSeason() : null;
 	}
 }
