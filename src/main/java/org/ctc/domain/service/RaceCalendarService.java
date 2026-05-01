@@ -71,7 +71,13 @@ public class RaceCalendarService {
 				return playoffDuration;
 			}
 		}
-		// Phase 61 MIGR-06: eventDurationMinutes lives on the SeasonPhase.
-		return race.getMatchday().getPhase().getEventDurationMinutes();
+		// Phase 61 MIGR-06 / WR-06: eventDurationMinutes lives on the SeasonPhase. Guard the
+		// matchday + phase chain — null returns surface as the IllegalStateException at the
+		// caller (line 49) instead of an opaque NPE.
+		var matchday = race.getMatchday();
+		if (matchday == null || matchday.getPhase() == null) {
+			return null;
+		}
+		return matchday.getPhase().getEventDurationMinutes();
 	}
 }
