@@ -2,7 +2,6 @@ package org.ctc.domain.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
@@ -106,7 +105,7 @@ public class StandingsService {
 		boolean isGroupsCombinedView = (phase.getLayout() == PhaseLayout.GROUPS && groupId == null);
 
 		// Populate buchholz field for display (regardless of whether it's used as tiebreaker)
-		Map<UUID, Integer> buchholzScores = calculateBuchholzScoresForPhase(phase, groupId);
+		Map<UUID, Integer> buchholzScores = calculateBuchholzScoresForPhase(phase);
 		for (var standing : standings) {
 			standing.setBuchholz(buchholzScores.getOrDefault(standing.getTeam().getId(), 0));
 		}
@@ -223,12 +222,15 @@ public class StandingsService {
 	}
 
 	/**
-	 * Calculates Buchholz scores for a phase-aware context. Delegates to the season-level
-	 * Buchholz using the phase's parent season (the underlying race finder is season-scoped).
-	 * Safe because: for GROUPS combined-view Buchholz is display-only, and for LEAGUE / per-group
-	 * the season-level calculation is equivalent.
+	 * Calculates Buchholz scores for a phase. Delegates to the season-level Buchholz using
+	 * the phase's parent season because the underlying race finder is season-scoped.
+	 *
+	 * <p>This is correct for the current consumers: for GROUPS combined-view Buchholz is
+	 * display-only (NOT used as a tiebreaker), and for LEAGUE / per-group GROUPS the
+	 * season-level calculation produces equivalent values because the phase's matchdays
+	 * are the only matchdays.
 	 */
-	private Map<UUID, Integer> calculateBuchholzScoresForPhase(SeasonPhase phase, UUID groupId) {
+	private Map<UUID, Integer> calculateBuchholzScoresForPhase(SeasonPhase phase) {
 		return calculateBuchholzScores(phase.getSeason().getId());
 	}
 

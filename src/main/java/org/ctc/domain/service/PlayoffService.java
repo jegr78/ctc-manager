@@ -42,6 +42,16 @@ public class PlayoffService {
 	private final PlayoffBracketViewService playoffBracketViewService;
 	private final SeasonPhaseService seasonPhaseService;
 
+	/**
+	 * Creates a playoff for a season. Atomically auto-creates a PLAYOFF
+	 * {@link org.ctc.domain.model.SeasonPhase} (BRACKET layout, sortIndex 10) if one does
+	 * not exist, copies scoring from the REGULAR phase, and wires up rounds and matchups
+	 * for {@code numberOfTeams} ∈ {2, 4, 8}.
+	 *
+	 * @throws BusinessRuleException when the season already has a playoff
+	 *         (HTTP 409 via {@link org.ctc.admin.controller.GlobalExceptionHandler}).
+	 * @throws IllegalArgumentException when {@code numberOfTeams} is not 2, 4, or 8.
+	 */
 	@Transactional
 	public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams) {
 		if (!DEFAULT_ROUND_LABELS.containsKey(numberOfTeams)) {
@@ -115,6 +125,10 @@ public class PlayoffService {
 		return playoff;
 	}
 
+	/**
+	 * Returns the teams eligible for the playoff, derived from the playoff's canonical
+	 * season via {@code playoff.getSeason().getTeams()}.
+	 */
 	@Transactional(readOnly = true)
 	public List<Team> getPlayoffTeams(UUID playoffId) {
 		Playoff playoff = playoffRepository.findById(playoffId)

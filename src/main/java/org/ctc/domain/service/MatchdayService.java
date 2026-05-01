@@ -156,6 +156,11 @@ public class MatchdayService {
     // --- Create inline (JSON API) ---
 
     @Transactional
+    /**
+     * Creates a matchday inline (JSON API) bound to the season's REGULAR phase. The duplicate-label
+     * guard and {@code sortIndex} computation are scoped to the REGULAR phase to avoid cross-phase
+     * collisions with PLAYOFF matchdays (which use sortIndex &gt;= 100).
+     */
     public MatchdayData createInline(UUID seasonId, String label) {
         var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
