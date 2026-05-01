@@ -47,13 +47,13 @@ Requirements for milestone v1.9. Each maps to roadmap phases.
 
 ### UI — Admin Workflow
 
-- [ ] **UI-01**: Saison-Form schlanker (year/number/name/description/active); Format/Scoring/Dates entfallen aus dieser Form
-- [ ] **UI-02**: Saison-Detail mit Phasen-Tabs; bei GROUPS-Phase zweite Tab-Ebene pro Gruppe (Roster, Matchdays, Standings je Tab)
-- [ ] **UI-03**: Neue Phase-Form für `SeasonPhase`-CRUD (Typ, Layout, Format, Scoring, Zeitraum, Rounds, Legs)
-- [ ] **UI-04**: Neue Group-Form für `SeasonPhaseGroup`-CRUD inkl. Team-Zuordnung via `PhaseTeam`
-- [ ] **UI-05**: Standings-UI mit Phase-/Group-Auswahl + Combined-View-Tab über Sub-Gruppen
-- [ ] **UI-06**: Driver-Import-Preview-Template zeigt eindeutige Saison-Zuordnung + Warnungen für unzugeordnete Teams
-- [ ] **UI-07**: Playoff-UI auf PLAYOFF-Phase umgestellt (statt Saison)
+- [x] **UI-01**: Saison-Form schlanker (year/number/name/description/active); Format/Scoring/Dates entfallen aus dieser Form
+- [x] **UI-02**: Saison-Detail mit Phasen-Tabs; bei GROUPS-Phase zweite Tab-Ebene pro Gruppe (Roster, Matchdays, Standings je Tab)
+- [x] **UI-03**: Neue Phase-Form für `SeasonPhase`-CRUD (Typ, Layout, Format, Scoring, Zeitraum, Rounds, Legs)
+- [x] **UI-04**: Neue Group-Form für `SeasonPhaseGroup`-CRUD inkl. Team-Zuordnung via `PhaseTeam`
+- [x] **UI-05**: Standings-UI mit Phase-/Group-Auswahl + Combined-View-Tab über Sub-Gruppen
+- [x] **UI-06**: Driver-Import-Preview-Template zeigt eindeutige Saison-Zuordnung + Warnungen für unzugeordnete Teams
+- [x] **UI-07**: Playoff-UI auf PLAYOFF-Phase umgestellt (statt Saison)
 
 ### DATA — Test and Dev Data
 
@@ -124,13 +124,13 @@ Which phases cover which requirements. Filled during roadmap creation.
 | IMPORT-02 | 59 | Complete |
 | IMPORT-03 | 59 | Complete |
 | IMPORT-04 | 59 | Complete |
-| UI-01 | 60 | Pending |
-| UI-02 | 60 | Pending |
-| UI-03 | 60 | Pending |
-| UI-04 | 60 | Pending |
-| UI-05 | 60 | Pending |
-| UI-06 | 60 | Pending |
-| UI-07 | 60 | Pending |
+| UI-01 | 60 | Complete |
+| UI-02 | 60 | Complete |
+| UI-03 | 60 | Complete |
+| UI-04 | 60 | Complete |
+| UI-05 | 60 | Complete |
+| UI-06 | 60 | Complete |
+| UI-07 | 60 | Complete |
 | DATA-01 | 59 | Complete |
 | DATA-02 | 59 | Complete |
 | QUAL-01 | 61 | Pending |
