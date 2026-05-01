@@ -6,7 +6,7 @@
 -- Compatible with H2 2.x and MariaDB 10.7+.
 -- IRREVERSIBLE -- ops must take a backup before applying to prod (Tracked Behavior Change).
 
-DROP TABLE playoff_seasons;
+DROP TABLE IF EXISTS playoff_seasons;
 
 -- Drop named FK/UK constraints explicitly before dropping the columns they reference.
 -- MariaDB 10.7+ does NOT auto-cascade named-constraint drops on column drop; H2 ignores
