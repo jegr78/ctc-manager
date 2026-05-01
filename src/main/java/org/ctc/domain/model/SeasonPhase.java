@@ -14,7 +14,7 @@ import java.util.*;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"season", "groups", "raceScoring", "matchScoring"})
+@ToString(exclude = {"season", "groups", "matchdays", "raceScoring", "matchScoring"})
 public class SeasonPhase extends BaseEntity {
 
 	@Id
@@ -65,6 +65,10 @@ public class SeasonPhase extends BaseEntity {
 	@OneToMany(mappedBy = "phase", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("sortIndex ASC")
 	private List<SeasonPhaseGroup> groups = new ArrayList<>();
+
+	@OneToMany(mappedBy = "phase", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OrderBy("sortIndex ASC")
+	private List<Matchday> matchdays = new ArrayList<>();
 
 	public SeasonPhase(Season season, PhaseType phaseType, PhaseLayout layout, int sortIndex) {
 		this.season = season;
