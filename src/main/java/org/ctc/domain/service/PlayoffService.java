@@ -33,7 +33,6 @@ public class PlayoffService {
 	private final PlayoffRepository playoffRepository;
 	private final PlayoffRoundRepository playoffRoundRepository;
 	private final PlayoffMatchupRepository playoffMatchupRepository;
-	private final PlayoffSeedRepository playoffSeedRepository;
 	private final RaceRepository raceRepository;
 	private final SeasonRepository seasonRepository;
 	private final TeamRepository teamRepository;

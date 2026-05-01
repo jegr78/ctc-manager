@@ -7,7 +7,6 @@ import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 public class StandingsService {
 
 	private final MatchRepository matchRepository;
-	private final TeamRepository teamRepository;
 	private final SeasonRepository seasonRepository;
 	private final RaceRepository raceRepository;
 	private final SeasonPhaseService seasonPhaseService;
@@ -188,6 +186,7 @@ public class StandingsService {
 	// ---------------------------------------------------------------------------
 
 	private Map<UUID, Integer> calculateBuchholzScores(UUID seasonId) {
+		// Boundary: callers may pass a phase-derived seasonId that points to an unflushed test fixture.
 		var season = seasonRepository.findById(seasonId).orElse(null);
 		if (season == null) return Map.of();
 
