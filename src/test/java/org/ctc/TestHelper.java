@@ -3,6 +3,7 @@ package org.ctc;
 import lombok.RequiredArgsConstructor;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.domain.service.PlayoffService;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -21,6 +22,7 @@ public class TestHelper {
 	private final RaceRepository raceRepository;
 	private final DriverRepository driverRepository;
 	private final SeasonDriverRepository seasonDriverRepository;
+	private final PlayoffService playoffService;
 
 	public Season createSeason(String name) {
 		return createSeason(name, 2026, 1);
@@ -30,6 +32,8 @@ public class TestHelper {
 	 * Creates a Season with a bootstrapped REGULAR phase (LEAGUE layout, sortIndex=0).
 	 * Mirrors the bootstrap performed by SeasonManagementService.save — ensures tests that
 	 * call seasonPhaseRepository.findBySeasonIdAndPhaseType(id, REGULAR) find a result.
+	 *
+	 * <p>Phase 61 MIGR-06: scoring lives on the REGULAR SeasonPhase, not on the Season itself.
 	 */
 	public Season createSeason(String name, int year, int number) {
 		var suffix = UUID.randomUUID().toString().substring(0, 4);
@@ -38,16 +42,42 @@ public class TestHelper {
 		var ms = matchScoringRepository.save(
 				new MatchScoring("MS " + suffix, 3, 1, 0));
 		var season = new Season(name, year, number);
-		season.setRaceScoring(rs);
-		season.setMatchScoring(ms);
 		var saved = seasonRepository.save(season);
-		// Bootstrap REGULAR phase to mirror SeasonManagementService.save behaviour
-		seasonPhaseRepository.save(new SeasonPhase(saved, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
+		// Bootstrap REGULAR phase carrying scoring + format (Phase 61 MIGR-06).
+		var regular = new SeasonPhase(saved, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		regular.setFormat(SeasonFormat.LEAGUE);
+		regular.setLegs(1);
+		regular.setRaceScoring(rs);
+		regular.setMatchScoring(ms);
+		seasonPhaseRepository.save(regular);
 		return saved;
 	}
 
+	/**
+	 * Creates a Matchday wired to the season's REGULAR phase. Replaces the legacy
+	 * {@code createMatchday(season, ...)} factory post-MIGR-06.
+	 */
+	public Matchday createMatchdayInRegularPhase(Season season, String label, int sortIndex) {
+		var regular = seasonPhaseRepository
+				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR)
+				.orElseThrow(() -> new IllegalStateException("No REGULAR phase for season " + season.getId()));
+		return matchdayRepository.save(new Matchday(regular, label, sortIndex));
+	}
+
+	/**
+	 * Creates a Playoff for a season. Delegates to PlayoffService.createPlayoff which
+	 * atomically writes a PLAYOFF SeasonPhase + Playoff (Phase 58 D-19).
+	 */
+	public Playoff createPlayoffInPhase(Season season, String name, int teamCount) {
+		return playoffService.createPlayoff(season.getId(), name, teamCount);
+	}
+
+	/**
+	 * @deprecated Phase 61 MIGR-06: prefer {@link #createMatchdayInRegularPhase(Season, String, int)}.
+	 * Kept as a thin alias so existing callers keep compiling — internally now binds via the REGULAR phase.
+	 */
 	public Matchday createMatchday(Season season, String label, int sortIndex) {
-		return matchdayRepository.save(new Matchday(season, label, sortIndex));
+		return createMatchdayInRegularPhase(season, label, sortIndex);
 	}
 
 	public Team createTeam(String name, String shortName) {
