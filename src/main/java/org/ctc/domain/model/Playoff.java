@@ -32,6 +32,19 @@ public class Playoff extends BaseEntity {
 	@Column(nullable = false)
 	private String name;
 
+	/**
+	 * Phase 61 WR-04 follow-up: {@code startDate} / {@code endDate} / {@code eventDurationMinutes}
+	 * are also present on {@link SeasonPhase} (the parent PLAYOFF phase) and were backfilled by
+	 * V4. The Playoff form ({@code PlayoffService.createPlayoff(6-arg)}) writes here; the Phase
+	 * form ({@code SeasonPhaseController}) writes onto {@link SeasonPhase}. The two values can
+	 * silently diverge when only one form is edited.
+	 *
+	 * <p>{@code RaceCalendarService.resolveEventDuration} reads
+	 * {@code playoff.eventDurationMinutes} first, so the Playoff fields below are currently
+	 * authoritative for Google Calendar event durations. A follow-up V7 migration is planned
+	 * to drop these duplicate columns and route all Playoff date/duration access through the
+	 * parent SeasonPhase as the single source of truth.
+	 */
 	private LocalDate startDate;
 
 	private LocalDate endDate;
