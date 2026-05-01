@@ -39,7 +39,7 @@ public class SeasonController {
 		var regular = seasonPhaseService.findByType(id, PhaseType.REGULAR);
 
 		if (regular.isEmpty()) {
-			// D-08: Render Empty-State card instead of redirecting.
+			// Render Empty-State card instead of redirecting when no REGULAR phase exists.
 			var allPhases = seasonPhaseService.findAllPhases(id);
 			model.addAttribute("season", season);
 			model.addAttribute("phase", null);
@@ -200,11 +200,9 @@ public class SeasonController {
 	public String swissRounds(@PathVariable UUID id, Model model) {
 		var data = seasonManagementService.getSwissRoundData(id);
 		var regular = seasonPhaseService.findRegularPhase(id);
-		// Phase 61 MIGR-06: totalRounds moved to REGULAR phase.
 		Integer totalRounds = regular.getTotalRounds();
 		model.addAttribute("season", data.season());
 		model.addAttribute("raceScores", data.raceScores());
-		// Phase 61 MIGR-06: totalRounds is phase-owned now; expose explicitly to the template.
 		model.addAttribute("totalRounds", totalRounds);
 		model.addAttribute("currentRound", swissPairingService.getCurrentRound(regular.getId(), null));
 		model.addAttribute("canGenerateNext",
@@ -230,7 +228,6 @@ public class SeasonController {
 		var formData = matchdayGeneratorService.getFormData(id);
 		var season = formData.season();
 		var form = new MatchdayGeneratorForm();
-		// Phase 61 MIGR-06: totalRounds moved to REGULAR phase.
 		Integer rounds = seasonPhaseService.findRegularPhase(id).getTotalRounds();
 		form.setNumberOfRounds(rounds != null ? rounds : formData.optimalRounds());
 		model.addAttribute("season", season);

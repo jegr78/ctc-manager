@@ -93,7 +93,7 @@ public class TestDataService {
 		seedSubTeams(teams);
 		copyDemoLogos(teams);
 		seedSeasons(teams, scorings);
-		seedPhaseTeams();                  // D-12 / D-13: PhaseTeam roster for all seeded REGULAR phases
+		seedPhaseTeams();
 		seedDrivers();
 		seedAliases();
 		seedSeasonDrivers();
@@ -186,9 +186,8 @@ public class TestDataService {
 						.filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
 						.findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
-		// D-09 + D-13: ONE consolidated 2023 season with GROUPS-layout REGULAR phase
+		// === Season 2023: ONE consolidated season with GROUPS-layout REGULAR phase ===
 		var s1 = createSeason("Season 2023", 2023, 1, "Round Robin — two groups", scorings);
-		// Phase 61 MIGR-06: format moved to REGULAR phase (s1Regular.setFormat below).
 		// 12-team roster (Group A + Group B combined). All 12 must be on Season.seasonTeams so
 		// SeasonDriver / RaceLineup downstream code keeps working.
 		java.util.stream.Stream.of(
@@ -210,7 +209,7 @@ public class TestDataService {
 		s1Regular.getGroups().add(s1GroupA);
 		s1Regular.getGroups().add(s1GroupB);
 
-		s1 = seasonRepository.save(s1);  // cascade-saves phase + groups (Phase 56 D-01)
+		s1 = seasonRepository.save(s1);  // cascade-saves phase + groups
 
 		// Apply the rating overrides — same teams as before, single season now
 		s1.findSeasonTeam(findParent.apply("ADR")).ifPresent(st -> st.setRating(88));   // 93 - 5
@@ -227,12 +226,10 @@ public class TestDataService {
 		s1.findSeasonTeam(findSub.apply("TBR R")).ifPresent(st -> st.setRating(80));    // 85 - 5
 		seasonRepository.save(s1);
 
-		// S2 2024: Swiss format (10 parent teams only) per D-05
+		// === Season 2024: Swiss format (10 parent teams only) ===
 		var s2 = createSeason("Regular Season", 2024, 2, "Round Robin", scorings);
-		// Phase 61 MIGR-06: format moved to REGULAR phase (s2Regular.setFormat below).
 		parentTeams.forEach(s2::addTeam);
 
-		// Attach LEAGUE-layout REGULAR phase for 2024 (D-12)
 		var s2Regular = new SeasonPhase(s2, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		s2Regular.setRaceScoring(scorings.raceScoring());
 		s2Regular.setMatchScoring(scorings.matchScoring());
@@ -255,11 +252,10 @@ public class TestDataService {
 		s2.findSeasonTeam(findParent.apply("TBR")).ifPresent(st -> st.setRating(84));   // avg(85,84,83) - 3 = 81 rounded
 		seasonRepository.save(s2);
 
-		// Season 4 - 2026: 14 match teams (7 standalone parents + 7 sub-teams) per D-04
-		// VRX, SGM, TBR parents do NOT participate as match teams
+		// === Season 2026: 14 match teams (7 standalone parents + 7 sub-teams) ===
+		// VRX, SGM, TBR parents do NOT participate as match teams.
 		var s4 = createSeason("Regular Season", 2026, 4, null, scorings);
 		s4.setActive(true);
-		// Phase 61 MIGR-06: format moved to REGULAR phase (s4Regular.setFormat below).
 		List.of(
 				findSub.apply("VRX A"),
 				findSub.apply("VRX B"),
@@ -277,7 +273,6 @@ public class TestDataService {
 				findParent.apply("PWR")
 		).forEach(s4::addTeam);
 
-		// Attach LEAGUE-layout REGULAR phase for 2026 (D-12)
 		var s4Regular = new SeasonPhase(s4, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		s4Regular.setRaceScoring(scorings.raceScoring());
 		s4Regular.setMatchScoring(scorings.matchScoring());
@@ -310,7 +305,7 @@ public class TestDataService {
 	}
 
 	/**
-	 * D-12 / D-13: Populates phase_teams for every seeded REGULAR phase.
+	 * Populates {@code phase_teams} for every seeded REGULAR phase.
 	 *
 	 * <p>Layout per season:
 	 * <ul>
@@ -345,7 +340,7 @@ public class TestDataService {
 				.filter(g -> g.getName().equals("Group B")).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("Group B in", s1Regular.getId().toString()));
 
-		// Group A: ADR/ICL/SVT/NFR/HMS/VRX-A (D-13)
+		// Group A: ADR/ICL/SVT/NFR/HMS/VRX-A
 		for (var team : List.of(findParent.apply("ADR"), findParent.apply("ICL"),
 				findParent.apply("SVT"), findParent.apply("NFR"),
 				findParent.apply("HMS"), findSub.apply("VRX A"))) {
@@ -353,7 +348,7 @@ public class TestDataService {
 			pt.setGroup(groupA);
 			phaseTeamRepository.save(pt);
 		}
-		// Group B: EGP/PWR/VRX-B/SGM-B/SGM-S/TBR-R (D-13)
+		// Group B: EGP/PWR/VRX-B/SGM-B/SGM-S/TBR-R
 		for (var team : List.of(findParent.apply("EGP"), findParent.apply("PWR"),
 				findSub.apply("VRX B"), findSub.apply("SGM B"),
 				findSub.apply("SGM S"), findSub.apply("TBR R"))) {
@@ -362,7 +357,7 @@ public class TestDataService {
 			phaseTeamRepository.save(pt);
 		}
 
-		// LEAGUE rosters — group=null for every SeasonTeam (D-12)
+		// LEAGUE rosters — group=null for every SeasonTeam
 		seedLeaguePhaseTeams(allSeasons, 2024, 2);
 		seedLeaguePhaseTeams(allSeasons, 2026, 4);
 	}
@@ -379,7 +374,7 @@ public class TestDataService {
 			return;
 		}
 		for (var st : s.getSeasonTeams()) {
-			phaseTeamRepository.save(new PhaseTeam(regular, st.getTeam())); // group=null per D-12 LEAGUE
+			phaseTeamRepository.save(new PhaseTeam(regular, st.getTeam()));
 		}
 	}
 
@@ -408,8 +403,8 @@ public class TestDataService {
 	}
 
 	private Season createSeason(String name, int year, int number, String description, ScoringDefaults scorings) {
-		// Phase 61 MIGR-06: scoring moved to SeasonPhase. The `scorings` argument is preserved
-		// so callers attach RaceScoring/MatchScoring to the REGULAR phase explicitly.
+		// The `scorings` argument is preserved (unused here) so callers attach
+		// RaceScoring/MatchScoring to the REGULAR phase explicitly.
 		var season = new Season(name, year, number);
 		season.setDescription(description);
 		return season;
@@ -477,7 +472,7 @@ public class TestDataService {
 			}
 		}
 
-		// D-09: consolidated 2023 — single season carries all 12 teams' drivers
+		// Consolidated 2023 season carries all 12 teams' drivers.
 		var s1 = allSeasons.stream()
 				.filter(s -> s.getYear() == 2023 && s.getNumber() == 1)
 				.findFirst().orElseThrow(() -> new EntityNotFoundException("Season", "(2023, 1)"));
@@ -556,7 +551,6 @@ public class TestDataService {
 		// Season lookups
 		var s4 = allSeasons.stream().filter(s -> s.getYear() == 2026 && s.getNumber() == 4).findFirst().orElseThrow();
 		var s2 = allSeasons.stream().filter(s -> s.getYear() == 2024 && s.getNumber() == 2).findFirst().orElseThrow();
-		// D-09: consolidated 2023 season
 		var s1 = allSeasons.stream()
 				.filter(s -> s.getYear() == 2023 && s.getNumber() == 1).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("Season", "(2023, 1)"));
@@ -760,7 +754,7 @@ public class TestDataService {
 					: "Matchday %d".formatted(mdIndex + 1);
 			var matchday = new Matchday(phase, label, sortIndex);
 			if (group != null) {
-				matchday.setGroup(group);                          // Phase 56 — Matchday.group_id distinguishes GROUPS layout
+				matchday.setGroup(group);
 			}
 			var md = matchdayRepository.save(matchday);
 			// Round-robin pairing: pair team[i] with team[5-i], rotating each matchday
@@ -846,7 +840,6 @@ public class TestDataService {
 		var testSeason1 = createSeason("Test-Season 2026", 2026, 99, "Test", scorings);
 		List.of(testAlpha, testBravo, testBravo1, testBravo2).forEach(testSeason1::addTeam);
 
-		// Attach LEAGUE-layout REGULAR phase for test season (D-12)
 		var testSeason1Regular = new SeasonPhase(testSeason1, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		testSeason1Regular.setRaceScoring(scorings.raceScoring());
 		testSeason1Regular.setMatchScoring(scorings.matchScoring());
@@ -856,7 +849,6 @@ public class TestDataService {
 
 		seasonRepository.save(testSeason1);
 
-		// Add PhaseTeam rows for test season (D-12)
 		for (var st : testSeason1.getSeasonTeams()) {
 			phaseTeamRepository.save(new PhaseTeam(testSeason1Regular, st.getTeam()));
 		}
@@ -895,7 +887,7 @@ public class TestDataService {
 		// Test-Season 2025: T-ALF vs T-BRV (multi-season test)
 		var testSeason2 = createSeason("Test-Season 2025", 2025, 98, "Test", scorings);
 		List.of(testAlpha, testBravo).forEach(testSeason2::addTeam);
-		// Phase 61 MIGR-06: matchdays bind via REGULAR phase, so attach one to test-season-2.
+		// Matchdays bind via REGULAR phase, so attach one to test-season-2.
 		var testSeason2Regular = new SeasonPhase(testSeason2, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		testSeason2Regular.setRaceScoring(scorings.raceScoring());
 		testSeason2Regular.setMatchScoring(scorings.matchScoring());
@@ -929,8 +921,7 @@ public class TestDataService {
 		var s2 = allSeasons.stream().filter(s -> s.getYear() == 2024 && s.getNumber() == 2).findFirst().orElseThrow();
 
 		// === 2023 PLAYOFFS: SEMIFINAL (4 teams) ===
-		// D-14: 2023 PLAYOFF — auto-seed Top-4 from the consolidated REGULAR phase combined-view standings
-		// (Phase 58 D-15 + D-19 + D-20). Eliminates the legacy M:N season-link hack (Phase 61 MIGR-06).
+		// Auto-seed Top-4 from the consolidated REGULAR phase combined-view standings.
 		var s1 = allSeasons.stream()
 				.filter(s -> s.getYear() == 2023 && s.getNumber() == 1).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("Season", "(2023, 1)"));
@@ -938,7 +929,7 @@ public class TestDataService {
 		var playoff2023 = playoffService.createPlayoff(s1.getId(), "2023 Playoffs", 4);
 		playoffSeedingService.autoSeedBracket(playoff2023.getId());
 
-		// Phase 61 MIGR-06: matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
+		// Matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
 		var playoffMatchday2023 = matchdayRepository.save(new Matchday(playoff2023.getPhase(), "2023 Playoffs", 4));
 
 		// Reload updated playoff to access matchup with teams set by autoSeedBracket
@@ -955,10 +946,9 @@ public class TestDataService {
 		log.info("Created 2023 Playoffs via autoSeedBracket");
 
 		// === 2024 PLAYOFFS: FINAL (2 teams) ===
-		// Phase 61 WR-07: align with the 2023 branch — autoSeedBracket pulls Top-N from the
-		// canonical REGULAR-phase standings (D-15) instead of the previous hand-rolled team-score
-		// aggregation, which double-counted drivers that swapped teams mid-season (Phase 56 D-04
-		// succession case) and diverged from StandingsService.
+		// autoSeedBracket pulls Top-N from the canonical REGULAR-phase standings, which avoids
+		// the double-counting that hand-rolled team-score aggregation produces when drivers
+		// swap teams mid-season.
 		var playoff2024 = playoffService.createPlayoff(s2.getId(), "2024 Playoffs", 2);
 		playoffSeedingService.autoSeedBracket(playoff2024.getId());
 
@@ -966,7 +956,7 @@ public class TestDataService {
 		finalRound.setBestOfLegs(2);
 		playoffRoundRepository.save(finalRound);
 
-		// Phase 61 MIGR-06: matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
+		// Matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
 		var playoffMatchday2024 = matchdayRepository.save(new Matchday(playoff2024.getPhase(), "2024 Playoffs", 5));
 
 		// Reload to read teams set by autoSeedBracket onto the matchup.

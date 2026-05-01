@@ -66,10 +66,10 @@ public class StandingsController {
 			resolvedPhase = seasonPhaseService.findById(phase);
 			resolvedSeasonId = resolvedPhase.getSeason().getId();
 		} else if (seasonId != null && !seasonId.isBlank()) {
-			// D-12 legacy bridge: ?seasonId={uuid} → auto-resolve to REGULAR phase (Optional — no 404)
+			// Legacy bridge: ?seasonId={uuid} → auto-resolve to REGULAR phase (no 404).
 			try {
 				resolvedSeasonId = UUID.fromString(seasonId);
-				// Pitfall 4: use findByType (Optional) not findRegularPhase (throws)
+				// Use findByType (Optional) not findRegularPhase (which throws).
 				var regularOpt = seasonPhaseService.findByType(resolvedSeasonId, PhaseType.REGULAR);
 				if (regularOpt.isPresent()) {
 					resolvedPhase = regularOpt.get();
@@ -105,7 +105,7 @@ public class StandingsController {
 		model.addAttribute("allPhases", seasonPhaseService.findAllPhases(finalResolvedSeasonId));
 
 		if (resolvedPhase == null) {
-			// Legacy ?seasonId= but season has no REGULAR phase (D-08 / Pitfall 4)
+			// Legacy ?seasonId= but season has no REGULAR phase.
 			model.addAttribute("phase", null);
 			model.addAttribute("hasRegularPhase", false);
 			model.addAttribute("combinedView", false);
@@ -133,13 +133,11 @@ public class StandingsController {
 		model.addAttribute("showGroupColumn", showGroupColumn);
 		model.addAttribute("showBuchholz", showBuchholz);
 
-		// Compute standings using phase-canonical service methods (D-04, D-06)
 		var standings = showBuchholz
 				? standingsService.calculateStandingsWithBuchholz(resolvedPhase.getId(), group)
 				: standingsService.calculateStandings(resolvedPhase.getId(), group);
 		model.addAttribute("standings", standings);
 
-		// Driver ranking: use phase-canonical method
 		model.addAttribute("driverRanking", driverRankingService.calculateRankingForPhase(resolvedPhase.getId()));
 
 		log.debug("Standings for phase={} group={}: combinedView={} showBuchholz={} showGroupColumn={}",

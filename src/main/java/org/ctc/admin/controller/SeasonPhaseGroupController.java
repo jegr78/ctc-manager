@@ -23,11 +23,8 @@ import java.util.stream.Collectors;
  * Thin controller for Group CRUD and bulk roster save under
  * {@code /admin/seasons/{seasonId}/phases/{phaseId}/groups}.
  *
- * <p>Implements D-19 (Group Step-1 form), D-20 (bulk roster diff via PhaseTeamForm),
- * D-24 (auto-increment sortIndex), D-28 (strict delete guard), and D-09 IDOR validation.
- *
- * <p>All business logic is delegated to {@link SeasonPhaseService}. Controllers are thin
- * per CLAUDE.md "Keep Controllers Thin".
+ * <p>All business logic is delegated to {@link SeasonPhaseService}. Includes IDOR ownership
+ * validation, auto-increment sortIndex on create, and strict delete guards.
  */
 @Slf4j
 @Controller
@@ -38,13 +35,13 @@ public class SeasonPhaseGroupController {
     private final SeasonPhaseService seasonPhaseService;
     private final SeasonManagementService seasonManagementService;
 
-    /** GET /admin/seasons/{seasonId}/phases/{phaseId}/groups/new — D-19 Step 1 form. */
+    /** GET /admin/seasons/{seasonId}/phases/{phaseId}/groups/new — Step 1 form. */
     @GetMapping("/new")
     public String create(@PathVariable UUID seasonId,
                          @PathVariable UUID phaseId,
                          Model model) {
         var phase = seasonPhaseService.findById(phaseId);
-        validateOwnership(phase.getSeason().getId(), seasonId);  // D-09 IDOR
+        validateOwnership(phase.getSeason().getId(), seasonId);
         var form = new SeasonPhaseGroupForm();
         form.setPhaseId(phaseId);
         model.addAttribute("season", seasonManagementService.findById(seasonId));
@@ -60,7 +57,7 @@ public class SeasonPhaseGroupController {
                        @PathVariable UUID groupId,
                        Model model) {
         var phase = seasonPhaseService.findById(phaseId);
-        validateOwnership(phase.getSeason().getId(), seasonId);  // D-09 IDOR
+        validateOwnership(phase.getSeason().getId(), seasonId);
         var group = phase.getGroups().stream()
                 .filter(g -> g.getId().equals(groupId))
                 .findFirst()
@@ -78,7 +75,7 @@ public class SeasonPhaseGroupController {
         return "admin/season-phase-group-form";
     }
 
-    /** POST /admin/seasons/{seasonId}/phases/{phaseId}/groups/save — D-19 Step 1 save. */
+    /** POST /admin/seasons/{seasonId}/phases/{phaseId}/groups/save — Step 1 save. */
     @PostMapping("/save")
     public String save(@PathVariable UUID seasonId,
                        @PathVariable UUID phaseId,
@@ -87,7 +84,7 @@ public class SeasonPhaseGroupController {
                        RedirectAttributes redirectAttributes,
                        Model model) {
         var phase = seasonPhaseService.findById(phaseId);
-        validateOwnership(phase.getSeason().getId(), seasonId);  // D-09 IDOR
+        validateOwnership(phase.getSeason().getId(), seasonId);
 
         if (result.hasErrors()) {
             model.addAttribute("season", seasonManagementService.findById(seasonId));
@@ -99,7 +96,7 @@ public class SeasonPhaseGroupController {
                 seasonPhaseService.updateGroup(form.getId(), form.getName(), form.getSortIndex());
                 redirectAttributes.addFlashAttribute("successMessage", "Group updated: " + form.getName());
             } else {
-                // D-24: auto-increment sortIndex = max+1 when not specified
+                // Auto-increment sortIndex = max+1 when not specified.
                 Integer sortIndex = form.getSortIndex();
                 if (sortIndex == null) {
                     sortIndex = phase.getGroups().stream()
@@ -119,14 +116,14 @@ public class SeasonPhaseGroupController {
         }
     }
 
-    /** POST /admin/seasons/{seasonId}/phases/{phaseId}/groups/{groupId}/delete — D-28 strict guard. */
+    /** POST /admin/seasons/{seasonId}/phases/{phaseId}/groups/{groupId}/delete. */
     @PostMapping("/{groupId}/delete")
     public String delete(@PathVariable UUID seasonId,
                          @PathVariable UUID phaseId,
                          @PathVariable UUID groupId,
                          RedirectAttributes redirectAttributes) {
         var phase = seasonPhaseService.findById(phaseId);
-        validateOwnership(phase.getSeason().getId(), seasonId);  // D-09 IDOR
+        validateOwnership(phase.getSeason().getId(), seasonId);
         try {
             seasonPhaseService.deleteGroup(groupId);
             redirectAttributes.addFlashAttribute("successMessage", "Group deleted");
@@ -138,13 +135,13 @@ public class SeasonPhaseGroupController {
     }
 
     /**
-     * POST /admin/seasons/{seasonId}/phases/{phaseId}/groups/roster — D-20 bulk save.
+     * POST /admin/seasons/{seasonId}/phases/{phaseId}/groups/roster — bulk roster save.
      *
      * <p>Receives a {@link PhaseTeamForm} with indexed-property binding, converts each
      * {@link PhaseTeamForm.Assignment} to a {@link SeasonPhaseService.Assignment} record,
      * and delegates diff-logic to {@link SeasonPhaseService#assignTeamsToPhase}.
      *
-     * <p>T-60-02-02 DoS guard: caps assignment list to 100 entries.
+     * <p>DoS guard: caps assignment list to 100 entries.
      */
     @PostMapping("/roster")
     public String saveRoster(@PathVariable UUID seasonId,
@@ -152,9 +149,8 @@ public class SeasonPhaseGroupController {
                              @ModelAttribute("phaseTeamForm") PhaseTeamForm form,
                              RedirectAttributes redirectAttributes) {
         var phase = seasonPhaseService.findById(phaseId);
-        validateOwnership(phase.getSeason().getId(), seasonId);  // D-09 IDOR
+        validateOwnership(phase.getSeason().getId(), seasonId);
 
-        // T-60-02-02 DoS guard: cap assignment list to 100 entries
         if (form.getAssignments() != null && form.getAssignments().size() > 100) {
             redirectAttributes.addFlashAttribute("errorMessage", "Too many roster entries (max 100)");
             return "redirect:/admin/seasons/" + seasonId + "/phases/" + phaseId;
@@ -175,7 +171,7 @@ public class SeasonPhaseGroupController {
         return "redirect:/admin/seasons/" + seasonId + "/phases/" + phaseId;
     }
 
-    /** D-09 IDOR ownership validation — throws EntityNotFoundException → 404 (not 403). */
+    /** IDOR ownership validation — throws EntityNotFoundException → 404 (not 403). */
     private void validateOwnership(UUID actualSeasonId, UUID expectedSeasonId) {
         if (!actualSeasonId.equals(expectedSeasonId)) {
             throw new EntityNotFoundException("Group not found for season", expectedSeasonId);

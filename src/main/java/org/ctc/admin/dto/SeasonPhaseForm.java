@@ -40,6 +40,6 @@ public class SeasonPhaseForm {
     private Integer totalRounds;     // optional → boxed
     private int legs = 1;            // mandatory default → primitive
     private Integer eventDurationMinutes;
-    private String label;            // optional, falls back to phaseType.displayName per D-05
-    private Integer sortIndex;       // null → service auto-sets per D-10
+    private String label;            // optional, falls back to phaseType.displayName
+    private Integer sortIndex;       // null → service auto-sets
 }

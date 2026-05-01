@@ -18,7 +18,7 @@ public class SeasonPhaseGroupForm {
     @NotBlank
     private String name;
 
-    private Integer sortIndex;       // null → service auto-set max+1 per D-24
+    private Integer sortIndex;       // null → service auto-set max+1
 
     @NotNull
     private UUID phaseId;

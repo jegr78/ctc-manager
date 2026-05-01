@@ -29,12 +29,13 @@ import java.util.UUID;
 /**
  * Thin controller for Phase CRUD under {@code /admin/seasons/{seasonId}/phases}.
  *
- * <p>Implements D-03 routing, D-06 form-page navigation, D-09 IDOR ownership validation,
- * D-17 form defaults from REGULAR phase, D-21/D-23 strict-guard flash-redirects,
- * and D-42 PLAYOFF auto-create via PlayoffService.
+ * <p>Routes phase form pages, enforces IDOR ownership validation, prefills the create-form
+ * defaults from the REGULAR phase, surfaces strict-guard violations as flash redirects, and
+ * auto-creates PLAYOFF phases via {@link PlayoffService} when the user submits a PLAYOFF
+ * type.
  *
- * <p>All business logic is delegated to {@link SeasonPhaseService}. Controllers are thin
- * per CLAUDE.md "Keep Controllers Thin".
+ * <p>All business logic is delegated to {@link SeasonPhaseService} per CLAUDE.md
+ * "Keep Controllers Thin".
  */
 @Slf4j
 @Controller
@@ -51,16 +52,16 @@ public class SeasonPhaseController {
     private final MatchScoringRepository matchScoringRepository;
     private final PlayoffService playoffService;
 
-    /** GET /admin/seasons/{seasonId}/phases/{phaseId} — Phase-Tab view (D-04 sections). */
+    /** GET /admin/seasons/{seasonId}/phases/{phaseId} — Phase-Tab view. */
     @GetMapping("/{phaseId}")
     public String detail(@PathVariable UUID seasonId,
                          @PathVariable UUID phaseId,
                          Model model) {
         var phase = seasonPhaseService.findById(phaseId);
-        validateOwnership(phase.getSeason().getId(), seasonId);  // D-09 IDOR
+        validateOwnership(phase.getSeason().getId(), seasonId);
         var season = seasonManagementService.findById(seasonId);
         var allPhases = seasonPhaseService.findAllPhases(seasonId);
-        var rosterState = seasonPhaseService.getRosterEditorState(phaseId);  // W-8 service-side prep
+        var rosterState = seasonPhaseService.getRosterEditorState(phaseId);
 
         model.addAttribute("season", season);
         model.addAttribute("phase", phase);
@@ -68,23 +69,19 @@ public class SeasonPhaseController {
         model.addAttribute("groups", phase.getGroups());
         model.addAttribute("phaseTeams", phaseTeamRepository.findByPhaseId(phaseId));
         model.addAttribute("matchdays", matchdayService.findByPhaseId(phaseId));
-        model.addAttribute("selectedGroupId", null);  // top-level phase view
-        model.addAttribute("effectivePhaseLabel", effectiveLabel(phase));  // Pitfall 9
-        model.addAttribute("hasRegularPhase", true);                        // D-08 flag (Plan 60-04 Task 2)
+        model.addAttribute("selectedGroupId", null);
+        model.addAttribute("effectivePhaseLabel", effectiveLabel(phase));
+        model.addAttribute("hasRegularPhase", true);
 
-        // B-2 Roster-Editor model attributes (consumed by season-detail.html roster editor; W-8 service-side)
         model.addAttribute("assignedTeamIds", rosterState.assignedTeamIds());
         model.addAttribute("currentGroupByTeamId", rosterState.currentGroupByTeamId());
 
-        // W-5 server-side flag — replaces SpEL string comparison in template
         boolean isGroupsLayout = phase.getLayout() == PhaseLayout.GROUPS;
-        boolean isPlayoffLayout = phase.getPhaseType() == PhaseType.PLAYOFF;  // B-3 PLAYOFF Bracket section flag
+        boolean isPlayoffLayout = phase.getPhaseType() == PhaseType.PLAYOFF;
         model.addAttribute("isGroupsLayout", isGroupsLayout);
         model.addAttribute("isPlayoffLayout", isPlayoffLayout);
 
-        // B-3 PLAYOFF Bracket entrypoint — when phaseType=PLAYOFF, season-detail.html renders a
-        // Bracket card linking to /admin/playoffs/{playoffId} + a seed summary inline. Resolve the
-        // playoff entity here so the template can read seeds without extra queries.
+        // Resolve the playoff entity so the template can read seeds without extra queries.
         if (isPlayoffLayout) {
             playoffService.findByPhaseId(phaseId).ifPresent(p -> {
                 model.addAttribute("playoff", p);
@@ -92,7 +89,7 @@ public class SeasonPhaseController {
             });
         }
 
-        // Server-flags (combined/showGroupColumn used by Standings reuse on the same template)
+        // Flags driving conditional column rendering on the shared standings template.
         model.addAttribute("combinedView", isGroupsLayout);
         model.addAttribute("showGroupColumn", isGroupsLayout);
 
@@ -106,9 +103,9 @@ public class SeasonPhaseController {
                               @PathVariable UUID groupId,
                               Model model) {
         var phase = seasonPhaseService.findById(phaseId);
-        validateOwnership(phase.getSeason().getId(), seasonId);  // D-09 IDOR
+        validateOwnership(phase.getSeason().getId(), seasonId);
         var season = seasonManagementService.findById(seasonId);
-        var rosterState = seasonPhaseService.getRosterEditorState(phaseId);  // W-8
+        var rosterState = seasonPhaseService.getRosterEditorState(phaseId);
 
         model.addAttribute("season", season);
         model.addAttribute("phase", phase);
@@ -120,11 +117,9 @@ public class SeasonPhaseController {
         model.addAttribute("effectivePhaseLabel", effectiveLabel(phase));
         model.addAttribute("hasRegularPhase", true);
 
-        // B-2 Roster-Editor model attributes (W-8 service-side)
         model.addAttribute("assignedTeamIds", rosterState.assignedTeamIds());
         model.addAttribute("currentGroupByTeamId", rosterState.currentGroupByTeamId());
 
-        // W-5 server-side flags
         boolean isGroupsLayout = phase.getLayout() == PhaseLayout.GROUPS;
         boolean isPlayoffLayout = phase.getPhaseType() == PhaseType.PLAYOFF;
         model.addAttribute("isGroupsLayout", isGroupsLayout);
@@ -143,17 +138,16 @@ public class SeasonPhaseController {
         return "admin/season-detail";
     }
 
-    /** GET /admin/seasons/{seasonId}/phases/new — D-06 + D-17 form prefill. */
+    /** GET /admin/seasons/{seasonId}/phases/new — form with REGULAR-phase prefill. */
     @GetMapping("/new")
     public String create(@PathVariable UUID seasonId,
                          @RequestParam(required = false) PhaseType phaseType,
                          Model model) {
         var season = seasonManagementService.findById(seasonId);
         var form = new SeasonPhaseForm();
-        // W-7: no form.setSeasonId — DTO no longer carries seasonId; @PathVariable is the truth.
         if (phaseType != null) form.setPhaseType(phaseType);
 
-        // D-17 defaults: copy non-identity fields from REGULAR phase
+        // Defaults: copy non-identity fields from REGULAR phase
         seasonPhaseService.findByType(seasonId, PhaseType.REGULAR).ifPresent(regular -> {
             if (form.getFormat() == SeasonFormat.LEAGUE) form.setFormat(regular.getFormat());
             if (regular.getRaceScoring() != null) form.setRaceScoringId(regular.getRaceScoring().getId());
@@ -173,12 +167,11 @@ public class SeasonPhaseController {
                        @PathVariable UUID phaseId,
                        Model model) {
         var phase = seasonPhaseService.findById(phaseId);
-        validateOwnership(phase.getSeason().getId(), seasonId);  // D-09 IDOR
+        validateOwnership(phase.getSeason().getId(), seasonId);
         var season = seasonManagementService.findById(seasonId);
 
         var form = new SeasonPhaseForm();
         form.setId(phase.getId());
-        // W-7: no form.setSeasonId — @PathVariable is the truth.
         form.setPhaseType(phase.getPhaseType());
         form.setLayout(phase.getLayout());
         form.setFormat(phase.getFormat() != null ? phase.getFormat() : SeasonFormat.LEAGUE);
@@ -211,7 +204,7 @@ public class SeasonPhaseController {
 
         try {
             if (form.getId() != null) {
-                // UPDATE — phaseType immutable (W-11): only layout, format, scoring, dates, rounds, etc.
+                // UPDATE — phaseType is immutable post-create.
                 seasonPhaseService.update(form.getId(), form.getLayout(), form.getFormat(),
                         form.getRaceScoringId(), form.getMatchScoringId(),
                         form.getStartDate(), form.getEndDate(),
@@ -221,11 +214,10 @@ public class SeasonPhaseController {
                 return "redirect:/admin/seasons/" + seasonId + "/phases/" + form.getId();
             }
 
-            // CREATE — D-42 PLAYOFF auto-route via PlayoffService.createPlayoff
+            // CREATE — PLAYOFF auto-routes via PlayoffService (which auto-creates the SeasonPhase).
             if (form.getPhaseType() == PhaseType.PLAYOFF) {
                 var playoffName = form.getLabel() != null && !form.getLabel().isBlank()
                         ? form.getLabel() : "Playoff";
-                // D-42: PlayoffService.createPlayoff auto-creates the PLAYOFF SeasonPhase (D-19)
                 var playoff = playoffService.createPlayoff(seasonId, playoffName,
                         /* numberOfTeams */ 4,
                         form.getStartDate(), form.getEndDate(),
@@ -234,7 +226,7 @@ public class SeasonPhaseController {
                 return "redirect:/admin/seasons/" + seasonId;
             }
 
-            // Standard CREATE for REGULAR / PLACEMENT — sortIndex auto-set per D-10
+            // Standard CREATE for REGULAR / PLACEMENT.
             int sortIndex = form.getSortIndex() != null ? form.getSortIndex() : autoSortIndex(form.getPhaseType());
             // Resolve scoring entities (nullable in DTO; service allows null for bootstrap phases)
             var raceScoring = form.getRaceScoringId() != null
@@ -260,13 +252,13 @@ public class SeasonPhaseController {
         }
     }
 
-    /** POST /admin/seasons/{seasonId}/phases/{phaseId}/delete — D-23 strict guard. */
+    /** POST /admin/seasons/{seasonId}/phases/{phaseId}/delete. */
     @PostMapping("/{phaseId}/delete")
     public String delete(@PathVariable UUID seasonId,
                          @PathVariable UUID phaseId,
                          RedirectAttributes redirectAttributes) {
         var phase = seasonPhaseService.findById(phaseId);
-        validateOwnership(phase.getSeason().getId(), seasonId);  // D-09 IDOR
+        validateOwnership(phase.getSeason().getId(), seasonId);
         try {
             seasonPhaseService.delete(phaseId);
             redirectAttributes.addFlashAttribute("successMessage", "Phase deleted");
@@ -280,14 +272,14 @@ public class SeasonPhaseController {
 
     // === helpers ===
 
-    /** D-09 IDOR ownership validation — throws EntityNotFoundException → 404 (not 403). */
+    /** IDOR ownership validation — throws EntityNotFoundException → 404 (not 403). */
     private void validateOwnership(UUID actualSeasonId, UUID expectedSeasonId) {
         if (!actualSeasonId.equals(expectedSeasonId)) {
             throw new EntityNotFoundException("Phase not found for season", expectedSeasonId);
         }
     }
 
-    /** D-05 effective label fallback: label field → phaseType default name. */
+    /** Effective label fallback: label field → phaseType default name. */
     private static String effectiveLabel(org.ctc.domain.model.SeasonPhase phase) {
         if (phase.getLabel() != null && !phase.getLabel().isBlank()) return phase.getLabel();
         return switch (phase.getPhaseType()) {
@@ -297,7 +289,7 @@ public class SeasonPhaseController {
         };
     }
 
-    /** D-10 fixed sort indices: REGULAR=0, PLAYOFF=10, PLACEMENT=20. */
+    /** Fixed sort indices: REGULAR=0, PLAYOFF=10, PLACEMENT=20. */
     private static int autoSortIndex(PhaseType type) {
         return switch (type) {
             case REGULAR -> 0;
@@ -307,9 +299,10 @@ public class SeasonPhaseController {
     }
 
     /**
-     * Populates model attributes shared by create and edit form views.
-     * W-4: enum lists + display-label maps for form selects (no SpEL string comparisons in template).
-     * W-9: phaseTypeReadonly=true when editing (phaseType is immutable post-create per W-11).
+     * Populates model attributes shared by create and edit form views. Provides enum lists
+     * and display-label maps so the templates avoid SpEL string comparisons. The
+     * {@code phaseTypeReadonly} flag is set when editing because {@code phaseType} is
+     * immutable post-create.
      */
     private void addFormModelAttributes(Model model, Object season, SeasonPhaseForm form) {
         model.addAttribute("season", season);
@@ -317,7 +310,6 @@ public class SeasonPhaseController {
         model.addAttribute("raceScorings", raceScoringRepository.findAll());
         model.addAttribute("matchScorings", matchScoringRepository.findAll());
 
-        // W-4: enum lists + display-label maps for the form selects
         model.addAttribute("phaseTypes", PhaseType.values());
         model.addAttribute("phaseLayouts", PhaseLayout.values());
         model.addAttribute("seasonFormats", SeasonFormat.values());
@@ -334,7 +326,6 @@ public class SeasonPhaseController {
                 SeasonFormat.SWISS, "Swiss",
                 SeasonFormat.ROUND_ROBIN, "Round Robin"));
 
-        // W-9: phaseType is immutable post-create — UI renders the select as disabled when editing.
         model.addAttribute("phaseTypeReadonly", form.getId() != null);
     }
 }

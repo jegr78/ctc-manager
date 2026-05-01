@@ -52,8 +52,8 @@ public class DriverSheetImportController {
             model.addAttribute("sheetUrl", sheetUrl);
             model.addAttribute("hasAmbiguousTabs", preview.tabPreviews().stream()
                     .anyMatch(t -> t.suggestedSeasonId() == null));
-            // D-40 / B-4: single boolean per preview — true if ANY resolved target season has a
-            // REGULAR phase with GROUPS layout. Tabs without a resolved season contribute nothing.
+            // True if ANY resolved target season has a REGULAR phase with GROUPS layout;
+            // tabs without a resolved season contribute nothing.
             boolean showGroupColumn = preview.tabPreviews().stream()
                     .map(t -> t.suggestedSeasonId())
                     .filter(java.util.Objects::nonNull)
