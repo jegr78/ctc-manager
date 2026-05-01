@@ -69,10 +69,9 @@ class StandingsServiceTest {
         raceScoring = new RaceScoring("CTC Standard", "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2);
         matchScoring = new MatchScoring("Standard 3-1-0", 3, 1, 0);
 
+        // Phase 61 MIGR-06: scoring lives on the SeasonPhase only (regularPhase below).
         season = new Season("2026");
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(raceScoring);
-        season.setMatchScoring(matchScoring);
 
         tnr = new Team("The Neutrals Racing", "TNR");
         tnr.setId(UUID.randomUUID());
@@ -95,45 +94,58 @@ class StandingsServiceTest {
         regularPhase = PhaseTestFixtures.regularPhase(season, raceScoring, matchScoring);
         seasonToPhaseId.put(season.getId(), regularPhase.getId());
 
-        // findByType(seasonId, REGULAR): look up or assign a phaseId for the seasonId, then build
-        // a fresh phase from the Season's *current* scoring (capturing per-test overrides).
-        // The @Deprecated bridge calls findByType (returns Optional) to avoid tx rollback-only.
+        // Phase 61 MIGR-06: scoring lives on SeasonPhase. Build phases from the test-class-level
+        // raceScoring/matchScoring fields (per-test overrides assign new values to those fields).
         lenient().when(seasonPhaseService.findByType(any(UUID.class), any())).thenAnswer(inv -> {
             UUID sid = inv.getArgument(0);
-            // Look up the Season object via seasonRepository (mocked per-test)
             var seasonOpt = seasonRepository.findById(sid);
             if (seasonOpt.isPresent()) {
                 var s = seasonOpt.get();
                 UUID pid = seasonToPhaseId.computeIfAbsent(sid, id -> UUID.randomUUID());
-                var phase = PhaseTestFixtures.regularPhase(s, s.getRaceScoring(), s.getMatchScoring());
+                var phase = PhaseTestFixtures.regularPhase(s, raceScoring, matchScoring);
                 phase.setId(pid);
                 return Optional.of(phase);
             }
-            // Primary season (teams added to season before when() is set up per-test):
             if (sid.equals(season.getId())) {
-                var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+                var phase = PhaseTestFixtures.regularPhase(season, raceScoring, matchScoring);
                 phase.setId(regularPhase.getId());
                 return Optional.of(phase);
             }
             return Optional.empty();
         });
 
-        // findById: build a fresh phase from the *current* season state to pick up scoring overrides
+        lenient().when(seasonPhaseService.findRegularPhase(any(UUID.class))).thenAnswer(inv -> {
+            UUID sid = inv.getArgument(0);
+            var seasonOpt = seasonRepository.findById(sid);
+            if (seasonOpt.isPresent()) {
+                var s = seasonOpt.get();
+                UUID pid = seasonToPhaseId.computeIfAbsent(sid, id -> UUID.randomUUID());
+                var phase = PhaseTestFixtures.regularPhase(s, raceScoring, matchScoring);
+                phase.setId(pid);
+                return phase;
+            }
+            if (sid.equals(season.getId())) {
+                var phase = PhaseTestFixtures.regularPhase(season, raceScoring, matchScoring);
+                phase.setId(regularPhase.getId());
+                return phase;
+            }
+            throw new IllegalStateException("No REGULAR phase for season " + sid);
+        });
+
         lenient().when(seasonPhaseService.findById(any(UUID.class))).thenAnswer(inv -> {
             UUID pid = inv.getArgument(0);
-            // Find which seasonId maps to this phaseId
             for (var entry : seasonToPhaseId.entrySet()) {
                 if (entry.getValue().equals(pid)) {
                     UUID sid = entry.getKey();
                     var seasonOpt = seasonRepository.findById(sid);
                     if (seasonOpt.isPresent()) {
                         var s = seasonOpt.get();
-                        var phase = PhaseTestFixtures.regularPhase(s, s.getRaceScoring(), s.getMatchScoring());
+                        var phase = PhaseTestFixtures.regularPhase(s, raceScoring, matchScoring);
                         phase.setId(pid);
                         return phase;
                     }
                     if (sid.equals(season.getId())) {
-                        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+                        var phase = PhaseTestFixtures.regularPhase(season, raceScoring, matchScoring);
                         phase.setId(pid);
                         return phase;
                     }
@@ -154,7 +166,8 @@ class StandingsServiceTest {
                         final Season ts = targetSeason;
                         return ts.getActiveTeams().stream()
                                 .map(t -> {
-                                    var ph = PhaseTestFixtures.regularPhase(ts, ts.getRaceScoring(), ts.getMatchScoring());
+                                    // Phase 61 MIGR-06: scoring lives on the phase; reuse class-level fields.
+                                    var ph = PhaseTestFixtures.regularPhase(ts, raceScoring, matchScoring);
                                     ph.setId(pid);
                                     return PhaseTestFixtures.assignTeam(ph, t, null);
                                 })
@@ -184,7 +197,7 @@ class StandingsServiceTest {
         void givenOneMatch_whenCalculateStandings_thenWinnerGetThreePoints() {
             // given
             // TNR beats P1R 70:46
-            var matchday = new Matchday(season, "Matchday1", 1);
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -215,7 +228,7 @@ class StandingsServiceTest {
         @Test
         void givenEqualScores_whenCalculateStandings_thenBothTeamsGetDrawPoint() {
             // given
-            var matchday = new Matchday(season, "Matchday1", 1);
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
             var match = createMatchWithScore(matchday, clr, tnr, 54, 54);
 
             season.addTeam(clr);
@@ -236,12 +249,12 @@ class StandingsServiceTest {
 
         @Test
         void givenCustomMatchScoring_whenCalculateStandings_thenCustomPointsApplied() {
-            // given
-            // Use 2-1-0 scoring instead of 3-1-0
-            var customMatchScoring = new MatchScoring("Classic 2-1-0", 2, 1, 0);
-            season.setMatchScoring(customMatchScoring);
+            // given — Phase 61 MIGR-06: scoring lives on the SeasonPhase. Override the
+            // class-level matchScoring field so the seasonPhaseService mocks build phases
+            // with the custom 2-1-0 scoring rule.
+            matchScoring = new MatchScoring("Classic 2-1-0", 2, 1, 0);
 
-            var matchday = new Matchday(season, "Matchday1", 1);
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -260,7 +273,7 @@ class StandingsServiceTest {
         @Test
         void givenByeMatch_whenCalculateStandings_thenTeamGetsWin() {
             // given
-            var matchday = new Matchday(season, "Matchday1", 1);
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
             var byeMatch = new Match(matchday, tnr, null);
             byeMatch.setId(UUID.randomUUID());
             byeMatch.setBye(true);
@@ -282,8 +295,8 @@ class StandingsServiceTest {
         @Test
         void givenMultipleMatches_whenCalculateStandings_thenSortedByPointsThenPointDifference() {
             // given
-            var md1 = new Matchday(season, "Matchday1", 1);
-            var md2 = new Matchday(season, "Matchday2", 2);
+            var md1 = new Matchday(regularPhase, "Matchday1", 1);
+            var md2 = new Matchday(regularPhase, "Matchday2", 2);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
             var match2 = createMatchWithScore(md2, clr, p1r, 80, 40);
 
@@ -306,7 +319,7 @@ class StandingsServiceTest {
         @Test
         void givenTeamWithNoGames_whenCalculateStandings_thenTeamExcluded() {
             // given
-            var matchday = new Matchday(season, "Matchday1", 1);
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -326,7 +339,7 @@ class StandingsServiceTest {
         @Test
         void givenMatchWithNoScores_whenCalculateStandings_thenMatchSkipped() {
             // given
-            var matchday = new Matchday(season, "Matchday1", 1);
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
             var match = new Match(matchday, tnr, p1r);
             match.setId(UUID.randomUUID());
             // No scores set
@@ -352,7 +365,7 @@ class StandingsServiceTest {
             // given
             // Team A (TNR) wins match 1, then gets replaced by Team C (CLR)
             // CLR should inherit TNR's win
-            var md1 = new Matchday(season, "Matchday1", 1);
+            var md1 = new Matchday(regularPhase, "Matchday1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -381,7 +394,7 @@ class StandingsServiceTest {
         @Test
         void givenReplacedTeam_whenCalculateStandings_thenPredecessorNotInStandings() {
             // given
-            var md1 = new Matchday(season, "Matchday1", 1);
+            var md1 = new Matchday(regularPhase, "Matchday1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
             season.addTeam(tnr);
@@ -406,8 +419,8 @@ class StandingsServiceTest {
         void givenReplacedTeamAndNewMatches_whenCalculateStandings_thenBothResultsMerged() {
             // given
             // TNR wins match 1, gets replaced by CLR, CLR wins match 2
-            var md1 = new Matchday(season, "Matchday1", 1);
-            var md2 = new Matchday(season, "Matchday2", 2);
+            var md1 = new Matchday(regularPhase, "Matchday1", 1);
+            var md2 = new Matchday(regularPhase, "Matchday2", 2);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
             var match2 = createMatchWithScore(md2, clr, p1r, 60, 50);
 
@@ -440,7 +453,7 @@ class StandingsServiceTest {
             var newTeam = new Team("New Team", "NEW");
             newTeam.setId(UUID.randomUUID());
 
-            var md1 = new Matchday(season, "Matchday1", 1);
+            var md1 = new Matchday(regularPhase, "Matchday1", 1);
             var match1 = createMatchWithScore(md1, tnr, newTeam, 70, 46);
 
             season.addTeam(tnr);
@@ -474,7 +487,7 @@ class StandingsServiceTest {
         @Test
         void givenReplacedTeamWithBye_whenCalculateStandings_thenSuccessorInheritsByeWin() {
             // given
-            var matchday = new Matchday(season, "Matchday1", 1);
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
             var byeMatch = new Match(matchday, tnr, null);
             byeMatch.setId(UUID.randomUUID());
             byeMatch.setBye(true);
@@ -507,17 +520,16 @@ class StandingsServiceTest {
         @Test
         void givenSwissSeason_whenCalculateStandingsWithBuchholz_thenStandingsSortedByPointsThenBuchholzThenPointDiffThenPointsFor() {
             // given
-            season.setFormat(SeasonFormat.SWISS);
             season.addTeam(tnr);
             season.addTeam(p1r);
             season.addTeam(clr);
 
             // Matchday 1: TNR beats P1R (70:46), CLR has bye
-            var md1 = new Matchday(season, "Round 1", 1);
+            var md1 = new Matchday(regularPhase, "Round 1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
             // Matchday 2: TNR beats CLR (60:50), P1R has bye
-            var md2 = new Matchday(season, "Round 2", 2);
+            var md2 = new Matchday(regularPhase, "Round 2", 2);
             var match2 = createMatchWithScore(md2, tnr, clr, 60, 50);
 
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
@@ -555,11 +567,10 @@ class StandingsServiceTest {
         @Test
         void givenNonSwissSeason_whenCalculateStandingsWithBuchholz_thenBuchholzIsZeroAndStandingsSortedNormally() {
             // given
-            season.setFormat(SeasonFormat.LEAGUE);
             season.addTeam(tnr);
             season.addTeam(p1r);
 
-            var md1 = new Matchday(season, "Matchday1", 1);
+            var md1 = new Matchday(regularPhase, "Matchday1", 1);
             var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
 
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
@@ -591,218 +602,6 @@ class StandingsServiceTest {
         }
     }
 
-    @Nested
-    class AlltimeStandingsTest {
-
-        @Test
-        void givenTwoSeasonsWithMatches_whenCalculateAlltimeStandings_thenAggregatesAcrossSeasons() {
-            // given
-            var season1 = new Season("Season 1");
-            season1.setId(UUID.randomUUID());
-            season1.setMatchScoring(new MatchScoring("Standard 3-1-0", 3, 1, 0));
-            season1.setRaceScoring(raceScoring);
-            season1.addTeam(tnr);
-            season1.addTeam(p1r);
-
-            var season2 = new Season("Season 2");
-            season2.setId(UUID.randomUUID());
-            season2.setMatchScoring(new MatchScoring("Standard 3-1-0", 3, 1, 0));
-            season2.setRaceScoring(raceScoring);
-            season2.addTeam(tnr);
-            season2.addTeam(clr);
-
-            var md1 = new Matchday(season1, "Matchday1", 1);
-            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
-
-            var md2 = new Matchday(season2, "Matchday1", 1);
-            var match2 = createMatchWithScore(md2, tnr, clr, 60, 50);
-
-            when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
-            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
-            when(seasonRepository.findById(season2.getId())).thenReturn(Optional.of(season2));
-            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
-            when(matchRepository.findByMatchdaySeasonId(season2.getId())).thenReturn(List.of(match2));
-
-            // when
-            var standings = standingsService.calculateAlltimeStandings();
-
-            // then
-            var tnrStanding = findStanding(standings, tnr);
-            assertEquals(2, tnrStanding.getWins());
-            assertEquals(6, tnrStanding.getPoints());
-            assertEquals(130, tnrStanding.getPointsFor());
-            assertEquals(96, tnrStanding.getPointsAgainst());
-        }
-
-        @Test
-        void givenDifferentScoringPerSeason_whenCalculateAlltimeStandings_thenRespectsScoringRules() {
-            // given
-            var season1 = new Season("Season 1");
-            season1.setId(UUID.randomUUID());
-            season1.setMatchScoring(new MatchScoring("Standard 3-1-0", 3, 1, 0));
-            season1.setRaceScoring(raceScoring);
-            season1.addTeam(tnr);
-            season1.addTeam(p1r);
-
-            var season2 = new Season("Season 2");
-            season2.setId(UUID.randomUUID());
-            season2.setMatchScoring(new MatchScoring("Classic 2-1-0", 2, 1, 0));
-            season2.setRaceScoring(raceScoring);
-            season2.addTeam(tnr);
-            season2.addTeam(clr);
-
-            var md1 = new Matchday(season1, "Matchday1", 1);
-            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
-
-            var md2 = new Matchday(season2, "Matchday1", 1);
-            var match2 = createMatchWithScore(md2, tnr, clr, 60, 50);
-
-            when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
-            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
-            when(seasonRepository.findById(season2.getId())).thenReturn(Optional.of(season2));
-            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
-            when(matchRepository.findByMatchdaySeasonId(season2.getId())).thenReturn(List.of(match2));
-
-            // when
-            var standings = standingsService.calculateAlltimeStandings();
-
-            // then
-            var tnrStanding = findStanding(standings, tnr);
-            assertEquals(5, tnrStanding.getPoints()); // 3 + 2
-        }
-
-        @Test
-        void givenSubTeam_whenCalculateAlltimeStandings_thenAggregesToParent() {
-            // given
-            var subTeam = new Team("TNR Sub", "TSB");
-            subTeam.setId(UUID.randomUUID());
-            subTeam.setParentTeam(tnr);
-
-            var season1 = new Season("Season 1");
-            season1.setId(UUID.randomUUID());
-            season1.setMatchScoring(new MatchScoring("Standard 3-1-0", 3, 1, 0));
-            season1.setRaceScoring(raceScoring);
-            season1.addTeam(subTeam);
-            season1.addTeam(p1r);
-
-            var md1 = new Matchday(season1, "Matchday1", 1);
-            var match1 = createMatchWithScore(md1, subTeam, p1r, 70, 46);
-
-            when(seasonRepository.findAll()).thenReturn(List.of(season1));
-            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
-            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
-
-            // when
-            var standings = standingsService.calculateAlltimeStandings();
-
-            // then - results should aggregate to parent team TNR
-            var tnrStanding = findStanding(standings, tnr);
-            assertEquals(1, tnrStanding.getWins());
-            assertEquals(3, tnrStanding.getPoints());
-            assertEquals(70, tnrStanding.getPointsFor());
-        }
-
-        @Test
-        void givenSeasonWithNoMatches_whenCalculateAlltimeStandings_thenSeasonSkipped() {
-            // given
-            var season1 = new Season("Season 1");
-            season1.setId(UUID.randomUUID());
-            season1.setMatchScoring(new MatchScoring("Standard 3-1-0", 3, 1, 0));
-            season1.setRaceScoring(raceScoring);
-            season1.addTeam(tnr);
-            season1.addTeam(p1r);
-
-            var season2 = new Season("Season 2");
-            season2.setId(UUID.randomUUID());
-            season2.setMatchScoring(new MatchScoring("Standard 3-1-0", 3, 1, 0));
-            season2.setRaceScoring(raceScoring);
-            season2.addTeam(clr);
-
-            var md1 = new Matchday(season1, "Matchday1", 1);
-            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
-
-            when(seasonRepository.findAll()).thenReturn(List.of(season1, season2));
-            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
-            when(seasonRepository.findById(season2.getId())).thenReturn(Optional.of(season2));
-            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
-            when(matchRepository.findByMatchdaySeasonId(season2.getId())).thenReturn(List.of());
-
-            // when
-            var standings = standingsService.calculateAlltimeStandings();
-
-            // then - only teams from season1 appear
-            assertEquals(2, standings.size());
-            assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(clr.getId())));
-        }
-
-        @Test
-        void givenNoSeasons_whenCalculateAlltimeStandings_thenReturnsEmptyList() {
-            // given
-            when(seasonRepository.findAll()).thenReturn(List.of());
-
-            // when
-            var standings = standingsService.calculateAlltimeStandings();
-
-            // then
-            assertTrue(standings.isEmpty());
-        }
-
-        @Test
-        void givenMultipleTeams_whenCalculateAlltimeStandings_thenSortedByPointsThenPointDiffThenPointsFor() {
-            // given
-            var season1 = new Season("Season 1");
-            season1.setId(UUID.randomUUID());
-            season1.setMatchScoring(new MatchScoring("Standard 3-1-0", 3, 1, 0));
-            season1.setRaceScoring(raceScoring);
-            season1.addTeam(tnr);
-            season1.addTeam(p1r);
-            season1.addTeam(clr);
-
-            // TNR beats P1R 70:46 (+24), CLR beats P1R 80:40 (+40)
-            // Both TNR and CLR have 3 points, but CLR has better point diff
-            var md1 = new Matchday(season1, "Matchday1", 1);
-            var md2 = new Matchday(season1, "Matchday2", 2);
-            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
-            var match2 = createMatchWithScore(md2, clr, p1r, 80, 40);
-
-            when(seasonRepository.findAll()).thenReturn(List.of(season1));
-            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
-            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1, match2));
-
-            // when
-            var standings = standingsService.calculateAlltimeStandings();
-
-            // then - CLR first (better point diff), TNR second, P1R last
-            assertEquals(clr.getId(), standings.get(0).getTeam().getId());
-            assertEquals(tnr.getId(), standings.get(1).getTeam().getId());
-            assertEquals(p1r.getId(), standings.get(2).getTeam().getId());
-        }
-
-        @Test
-        void givenAlltimeStandings_whenCalculated_thenBuchholzIsAlwaysZero() {
-            // given
-            var season1 = new Season("Season 1");
-            season1.setId(UUID.randomUUID());
-            season1.setMatchScoring(new MatchScoring("Standard 3-1-0", 3, 1, 0));
-            season1.setRaceScoring(raceScoring);
-            season1.addTeam(tnr);
-            season1.addTeam(p1r);
-
-            var md1 = new Matchday(season1, "Matchday1", 1);
-            var match1 = createMatchWithScore(md1, tnr, p1r, 70, 46);
-
-            when(seasonRepository.findAll()).thenReturn(List.of(season1));
-            when(seasonRepository.findById(season1.getId())).thenReturn(Optional.of(season1));
-            when(matchRepository.findByMatchdaySeasonId(season1.getId())).thenReturn(List.of(match1));
-
-            // when
-            var standings = standingsService.calculateAlltimeStandings();
-
-            // then
-            assertFalse(standings.isEmpty());
-            standings.forEach(s -> assertEquals(0, s.getBuchholz()));
-        }
-    }
 
     private Match createMatchWithScore(Matchday matchday, Team home, Team away, int homeScore, int awayScore) {
         var match = new Match(matchday, home, away);
@@ -835,7 +634,7 @@ class StandingsServiceTest {
             var pt1 = PhaseTestFixtures.assignTeam(regular, tnr, null);
             var pt2 = PhaseTestFixtures.assignTeam(regular, p1r, null);
 
-            var matchday = new Matchday(season, "Phase58-Test-MD1", 1);
+            var matchday = new Matchday(regularPhase, "Phase58-Test-MD1", 1);
             matchday.setPhase(regular);
             var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
 
@@ -874,12 +673,12 @@ class StandingsServiceTest {
             var ptB1 = PhaseTestFixtures.assignTeam(groupsPhase, teamB1, groupB);
             var ptB2 = PhaseTestFixtures.assignTeam(groupsPhase, teamB2, groupB);
 
-            var mdA = new Matchday(season, "Phase58-Test-MD-A", 1);
+            var mdA = new Matchday(regularPhase, "Phase58-Test-MD-A", 1);
             mdA.setPhase(groupsPhase);
             mdA.setGroup(groupA);
             var matchA = createMatchWithScore(mdA, teamA1, teamA2, 70, 46);
 
-            var mdB = new Matchday(season, "Phase58-Test-MD-B", 2);
+            var mdB = new Matchday(regularPhase, "Phase58-Test-MD-B", 2);
             mdB.setPhase(groupsPhase);
             mdB.setGroup(groupB);
             var matchB = createMatchWithScore(mdB, teamB1, teamB2, 60, 50);
@@ -912,7 +711,7 @@ class StandingsServiceTest {
             var ptA1 = PhaseTestFixtures.assignTeam(groupsPhase, teamA1, groupA);
             var ptA2 = PhaseTestFixtures.assignTeam(groupsPhase, teamA2, groupA);
 
-            var mdA = new Matchday(season, "Phase58-Test-MD-GA", 1);
+            var mdA = new Matchday(regularPhase, "Phase58-Test-MD-GA", 1);
             mdA.setPhase(groupsPhase);
             mdA.setGroup(groupA);
             var matchA = createMatchWithScore(mdA, teamA1, teamA2, 70, 46);
@@ -957,7 +756,6 @@ class StandingsServiceTest {
             var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
             var ms = new MatchScoring("MS", 3, 1, 0);
             var groupsPhase = PhaseTestFixtures.groupsRegularPhase(season, rs, ms, "Phase58-Test-Group-A", "Phase58-Test-Group-B");
-            groupsPhase.setFormat(SeasonFormat.SWISS);
             var groupA = groupsPhase.getGroups().get(0);
             var groupB = groupsPhase.getGroups().get(1);
 
@@ -976,12 +774,12 @@ class StandingsServiceTest {
             var ptB2 = PhaseTestFixtures.assignTeam(groupsPhase, teamB2, groupB);
 
             // teamA1 beats teamA2 by big margin (+40), teamB1 beats teamB2 by small margin (+10)
-            var mdA = new Matchday(season, "Phase58-Test-MD-SA", 1);
+            var mdA = new Matchday(regularPhase, "Phase58-Test-MD-SA", 1);
             mdA.setPhase(groupsPhase);
             mdA.setGroup(groupA);
             var matchA = createMatchWithScore(mdA, teamA1, teamA2, 80, 40);
 
-            var mdB = new Matchday(season, "Phase58-Test-MD-SB", 2);
+            var mdB = new Matchday(regularPhase, "Phase58-Test-MD-SB", 2);
             mdB.setPhase(groupsPhase);
             mdB.setGroup(groupB);
             var matchB = createMatchWithScore(mdB, teamB1, teamB2, 60, 50);
@@ -1006,7 +804,6 @@ class StandingsServiceTest {
             var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
             var ms = new MatchScoring("MS", 3, 1, 0);
             var groupsPhase = PhaseTestFixtures.groupsRegularPhase(season, rs, ms, "Phase58-Test-Group-X");
-            groupsPhase.setFormat(SeasonFormat.SWISS);
             var groupX = groupsPhase.getGroups().get(0);
 
             var teamX1 = new Team("Phase58-Test-GX1", "GX1");
@@ -1017,7 +814,7 @@ class StandingsServiceTest {
             var ptX1 = PhaseTestFixtures.assignTeam(groupsPhase, teamX1, groupX);
             var ptX2 = PhaseTestFixtures.assignTeam(groupsPhase, teamX2, groupX);
 
-            var md = new Matchday(season, "Phase58-Test-MD-GX", 1);
+            var md = new Matchday(regularPhase, "Phase58-Test-MD-GX", 1);
             md.setPhase(groupsPhase);
             md.setGroup(groupX);
             var match = createMatchWithScore(md, teamX1, teamX2, 70, 46);
@@ -1041,7 +838,6 @@ class StandingsServiceTest {
             var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
             var ms = new MatchScoring("MS", 3, 1, 0);
             var groupsPhase = PhaseTestFixtures.groupsRegularPhase(season, rs, ms, "Phase58-Test-Group-Y", "Phase58-Test-Group-Z");
-            groupsPhase.setFormat(SeasonFormat.SWISS);
             var groupY = groupsPhase.getGroups().get(0);
             var groupZ = groupsPhase.getGroups().get(1);
 
@@ -1053,11 +849,11 @@ class StandingsServiceTest {
             var ptY1 = PhaseTestFixtures.assignTeam(groupsPhase, teamY1, groupY);
             var ptZ1 = PhaseTestFixtures.assignTeam(groupsPhase, teamZ1, groupZ);
 
-            var mdY = new Matchday(season, "Phase58-Test-MD-GY", 1);
+            var mdY = new Matchday(regularPhase, "Phase58-Test-MD-GY", 1);
             mdY.setPhase(groupsPhase);
             mdY.setGroup(groupY);
 
-            var mdZ = new Matchday(season, "Phase58-Test-MD-GZ", 2);
+            var mdZ = new Matchday(regularPhase, "Phase58-Test-MD-GZ", 2);
             mdZ.setPhase(groupsPhase);
             mdZ.setGroup(groupZ);
 

@@ -154,6 +154,7 @@ class SiteGeneratorServiceIT {
         verify(driverRankingService, atLeastOnce()).aggregateAcrossPhases(anyList(), eq(seasonId));
         // explicitly verify the legacy bridges are NOT invoked (proves swap happened, not just an additive call)
         verify(standingsService, never()).calculateStandings(seasonId);
-        verify(driverRankingService, never()).calculateRanking(seasonId);
+        // Phase 61 MIGR-06: DriverRankingService.calculateRanking(seasonId) was removed entirely
+        // (legacy season-aware bridge gone); only calculateRankingForPhase + aggregateAcrossPhases remain.
     }
 }

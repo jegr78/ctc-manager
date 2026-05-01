@@ -429,8 +429,6 @@ class DriverRankingServiceTest {
 		ms.setId(UUID.randomUUID());
 		var placement = new SeasonPhase(season, PhaseType.PLACEMENT, PhaseLayout.LEAGUE, 20);
 		placement.setId(UUID.randomUUID());
-		placement.setRaceScoring(rs);
-		placement.setMatchScoring(ms);
 
 		var race = new Race(); race.setId(UUID.randomUUID());
 		var result = createResult(race, panicpotato, 10, 3);

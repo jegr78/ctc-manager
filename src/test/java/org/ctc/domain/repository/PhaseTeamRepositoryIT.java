@@ -134,16 +134,14 @@ class PhaseTeamRepositoryIT {
     // --- helpers ---
 
     private Season newSeason(String name, int year, int number) {
-        var season = new Season(name, year, number);
-        season.setRaceScoring(raceScoringRepository.findAll().get(0));
-        season.setMatchScoring(matchScoringRepository.findAll().get(0));
-        return season;
+        // Phase 61 MIGR-06: scoring lives on the SeasonPhase, not the Season.
+        return new Season(name, year, number);
     }
 
     private SeasonPhase newPhase(Season season, PhaseType phaseType, PhaseLayout layout, int sortIndex) {
         var phase = new SeasonPhase(season, phaseType, layout, sortIndex);
-        phase.setRaceScoring(season.getRaceScoring());
-        phase.setMatchScoring(season.getMatchScoring());
+        phase.setRaceScoring(raceScoringRepository.findAll().get(0));
+        phase.setMatchScoring(matchScoringRepository.findAll().get(0));
         return phase;
     }
 }

@@ -19,7 +19,7 @@ class RaceTest {
 		// given
 		var home = teamWithId("H");
 		var away = teamWithId("A");
-		var matchday = new Matchday(new Season("S", 2026, 1), "MD 1", 1);
+		var matchday = new Matchday(new SeasonPhase(new Season("S", 2026, 1), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0), "MD 1", 1);
 		var match = new Match(matchday, home, away);
 
 		var race = new Race();
@@ -35,7 +35,7 @@ class RaceTest {
 		// given
 		var home = teamWithId("H");
 		var away = teamWithId("A");
-		var matchday = new Matchday(new Season("S", 2026, 1), "MD 1", 1);
+		var matchday = new Matchday(new SeasonPhase(new Season("S", 2026, 1), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0), "MD 1", 1);
 		var match = new Match(matchday, home, away);
 
 		var race = new Race();
@@ -53,7 +53,7 @@ class RaceTest {
 		// given
 		var home = teamWithId("H");
 		var away = teamWithId("A");
-		var matchday = new Matchday(new Season("S", 2026, 1), "MD 1", 1);
+		var matchday = new Matchday(new SeasonPhase(new Season("S", 2026, 1), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0), "MD 1", 1);
 		var match = new Match(matchday, home, away);
 
 		var race = new Race();

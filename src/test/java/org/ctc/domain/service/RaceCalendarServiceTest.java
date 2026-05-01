@@ -39,11 +39,9 @@ class RaceCalendarServiceTest {
 		var awayTeam = createTeam("MRL", "Maranello");
 		var season = new Season();
 		season.setId(UUID.randomUUID());
-		season.setEventDurationMinutes(90);
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 3");
-		matchday.setSeason(season);
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
 		race.setId(UUID.randomUUID());
@@ -74,11 +72,9 @@ class RaceCalendarServiceTest {
 		var awayTeam = createTeam("AWY", "Away");
 		var season = new Season();
 		season.setId(UUID.randomUUID());
-		season.setEventDurationMinutes(60);
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		matchday.setSeason(season);
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
 		race.setId(UUID.randomUUID());
@@ -138,11 +134,9 @@ class RaceCalendarServiceTest {
 		var awayTeam = createTeam("AWY", "Away");
 		var season = new Season();
 		season.setId(UUID.randomUUID());
-		season.setEventDurationMinutes(60);
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		matchday.setSeason(season);
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
 		race.setId(UUID.randomUUID());
@@ -174,7 +168,6 @@ class RaceCalendarServiceTest {
 		season.setId(UUID.randomUUID());
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
-		matchday.setSeason(season);
 		return matchday;
 	}
 }

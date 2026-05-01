@@ -88,7 +88,7 @@ class TeamControllerTest {
 		var sub = teamRepository.save(new Team("Grouped Racing A", "GRP A", parent));
 
 		var season = seasonRepository.findByActiveTrue().orElseThrow();
-		var matchday = matchdayRepository.save(new Matchday(season, "GRP MD", 99));
+		var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "GRP MD", 99));
 		var match = new Match();
 		match.setMatchday(matchday);
 		match.setHomeTeam(parent);
@@ -133,7 +133,7 @@ class TeamControllerTest {
 		var sub = teamRepository.save(new Team("Parent Inc A", "PIN A", parent));
 
 		var season = seasonRepository.findByActiveTrue().orElseThrow();
-		var matchday = matchdayRepository.save(new Matchday(season, "PIN MD", 98));
+		var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "PIN MD", 98));
 		var match = new Match();
 		match.setMatchday(matchday);
 		match.setHomeTeam(parent);
@@ -164,7 +164,7 @@ class TeamControllerTest {
 		var sub = teamRepository.save(new Team("Own Inc A", "OWN A", parent));
 
 		var season = seasonRepository.findByActiveTrue().orElseThrow();
-		var matchday = matchdayRepository.save(new Matchday(season, "OWN MD", 97));
+		var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "OWN MD", 97));
 		var match = new Match();
 		match.setMatchday(matchday);
 		match.setHomeTeam(parent);

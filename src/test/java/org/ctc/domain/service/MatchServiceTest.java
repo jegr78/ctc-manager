@@ -49,7 +49,7 @@ class MatchServiceTest {
 		var awayTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();
@@ -91,7 +91,7 @@ class MatchServiceTest {
 		var homeTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();
@@ -126,8 +126,7 @@ class MatchServiceTest {
 		var awayTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		season.setLegs(2);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();
@@ -178,8 +177,7 @@ class MatchServiceTest {
 		var homeTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		season.setLegs(2);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();
@@ -217,7 +215,7 @@ class MatchServiceTest {
 		var awayTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();
@@ -249,8 +247,7 @@ class MatchServiceTest {
 		var matchdayId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		season.setLegs(3);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();
@@ -283,8 +280,7 @@ class MatchServiceTest {
 		// given
 		var matchId = UUID.randomUUID();
 		var season = new Season("Test Season");
-		season.setLegs(2);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		var homeTeam = new Team();
@@ -318,8 +314,7 @@ class MatchServiceTest {
 		// given
 		var matchId = UUID.randomUUID();
 		var season = new Season("Test Season");
-		season.setLegs(3);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		var homeTeam = new Team();
@@ -356,7 +351,7 @@ class MatchServiceTest {
 		var matchdayId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();

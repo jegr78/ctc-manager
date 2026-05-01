@@ -43,7 +43,7 @@ class MatchdayControllerTest {
     void givenExistingMatchday_whenGetMatchdayDetail_thenReturnsDetailView() throws Exception {
         // given
         var season = testHelper.createSeason("MD Detail Season");
-        var matchday = matchdayRepository.save(new Matchday(season, "Test Matchday", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Test Matchday", 1));
 
         // when
         mockMvc.perform(get("/admin/matchdays/" + matchday.getId()))
@@ -67,7 +67,7 @@ class MatchdayControllerTest {
     void givenSeasonId_whenGetMatchdaysBySeasonId_thenReturnsFilteredMatchdays() throws Exception {
         // given
         var season = testHelper.createSeason("MD List Season");
-        matchdayRepository.save(new Matchday(season, "List MD1", 1));
+        matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "List MD1", 1));
 
         // when
         mockMvc.perform(get("/admin/matchdays").param("seasonId", season.getId().toString()))
@@ -105,7 +105,7 @@ class MatchdayControllerTest {
     void givenExistingMatchday_whenGetEditForm_thenReturnsMatchdayForm() throws Exception {
         // given
         var season = testHelper.createSeason("MD Edit Season");
-        var matchday = matchdayRepository.save(new Matchday(season, "Edit MD", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Edit MD", 1));
 
         // when
         mockMvc.perform(get("/admin/matchdays/" + matchday.getId() + "/edit"))
@@ -134,7 +134,7 @@ class MatchdayControllerTest {
     void givenExistingMatchday_whenSaveUpdatedMatchday_thenRedirectsAndUpdates() throws Exception {
         // given
         var season = testHelper.createSeason("MD Update Season");
-        var matchday = matchdayRepository.save(new Matchday(season, "Original", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Original", 1));
 
         // when
         mockMvc.perform(post("/admin/matchdays/save")
@@ -170,7 +170,7 @@ class MatchdayControllerTest {
     void givenExistingMatchday_whenDeleteMatchday_thenRedirectsAndRemoves() throws Exception {
         // given
         var season = testHelper.createSeason("MD Delete Season");
-        var matchday = matchdayRepository.save(new Matchday(season, "Delete MD", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Delete MD", 1));
 
         // when
         mockMvc.perform(post("/admin/matchdays/" + matchday.getId() + "/delete"))
@@ -185,7 +185,7 @@ class MatchdayControllerTest {
     void givenSeasonWithMatchday_whenGetMatchdaysBySeasonJson_thenReturnsJsonArray() throws Exception {
         // given
         var season = testHelper.createSeason("MD JSON Season");
-        matchdayRepository.save(new Matchday(season, "JSON MD1", 1));
+        matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "JSON MD1", 1));
 
         // when
         mockMvc.perform(get("/admin/matchdays/by-season")
@@ -240,7 +240,7 @@ class MatchdayControllerTest {
     void givenMatchdayWithNoMatches_whenGetDetail_thenHasMatchesFalse() throws Exception {
         // given
         var season = testHelper.createSeason("GfxEmpty Season");
-        var matchday = matchdayRepository.save(new Matchday(season, "GfxEmpty MD", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "GfxEmpty MD", 1));
 
         // when
         mockMvc.perform(get("/admin/matchdays/" + matchday.getId()))
@@ -253,7 +253,7 @@ class MatchdayControllerTest {
     void givenDuplicateLabel_whenCreateInlineMatchday_thenReturnsConflict() throws Exception {
         // given
         var season = testHelper.createSeason("MD Dup Inline Season");
-        matchdayRepository.save(new Matchday(season, "Existing MD", 1));
+        matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Existing MD", 1));
 
         // when
         mockMvc.perform(post("/admin/matchdays/create-inline")
@@ -269,7 +269,7 @@ class MatchdayControllerTest {
     void givenRuntimeException_whenGenerateOverviewGraphic_thenReturns500() throws Exception {
         // given
         var season = testHelper.createSeason("MD OvEx Season");
-        var matchday = matchdayRepository.save(new Matchday(season, "OvEx MD", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "OvEx MD", 1));
         when(overviewGraphicService.generateOverview(any())).thenThrow(new RuntimeException("Playwright failure"));
 
         // when
@@ -282,7 +282,7 @@ class MatchdayControllerTest {
     void givenRuntimeException_whenGenerateScheduleGraphic_thenReturns500() throws Exception {
         // given
         var season = testHelper.createSeason("MD SchEx Season");
-        var matchday = matchdayRepository.save(new Matchday(season, "SchEx MD", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "SchEx MD", 1));
         when(scheduleGraphicService.generateSchedule(any())).thenThrow(new RuntimeException("Playwright failure"));
 
         // when
@@ -295,7 +295,7 @@ class MatchdayControllerTest {
     void givenRuntimeException_whenGenerateResultsGraphic_thenReturns500() throws Exception {
         // given
         var season = testHelper.createSeason("MD ResEx Season");
-        var matchday = matchdayRepository.save(new Matchday(season, "ResEx MD", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "ResEx MD", 1));
         when(resultsGraphicService.generateResults(any())).thenThrow(new RuntimeException("Playwright failure"));
 
         // when

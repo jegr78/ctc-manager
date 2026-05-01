@@ -53,7 +53,7 @@ class AbstractMatchdayGraphicServiceTest {
 	}
 
 	private Matchday createMatchdayWithMatches(Season season, Team homeTeam, Team awayTeam) {
-		var matchday = new Matchday(season, "Match Day 3", 3);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Match Day 3", 3);
 		matchday.setId(UUID.randomUUID());
 		var match = new Match(matchday, homeTeam, awayTeam);
 		match.setId(UUID.randomUUID());

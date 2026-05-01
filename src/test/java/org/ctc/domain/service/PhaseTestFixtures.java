@@ -1,9 +1,11 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.PhaseTeam;
 import org.ctc.domain.model.PhaseType;
+import org.ctc.domain.model.Playoff;
 import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonFormat;
@@ -38,17 +40,10 @@ public final class PhaseTestFixtures {
      * The returned entity has a random id assigned (Mockito tests require non-null ids).
      */
     public static SeasonPhase regularPhase(Season season, RaceScoring rs, MatchScoring ms) {
+        // Phase 61 MIGR-06: format/legs/totalRounds live exclusively on the SeasonPhase.
+        // Tests must explicitly set these via the returned phase if non-default values are required.
         var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
         phase.setId(UUID.randomUUID());
-        phase.setRaceScoring(rs);
-        phase.setMatchScoring(ms);
-        if (season.getFormat() != null) {
-            phase.setFormat(season.getFormat());
-        }
-        if (season.getTotalRounds() != null) {
-            phase.setTotalRounds(season.getTotalRounds());
-        }
-        phase.setLegs(season.getLegs());
         return phase;
     }
 
@@ -78,8 +73,6 @@ public final class PhaseTestFixtures {
         var phase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10);
         phase.setId(UUID.randomUUID());
         phase.setLabel(label);
-        phase.setRaceScoring(rs);
-        phase.setMatchScoring(ms);
         phase.setFormat(SeasonFormat.LEAGUE); // DB-default workaround per Phase 57 D-08
         return phase;
     }
@@ -95,5 +88,24 @@ public final class PhaseTestFixtures {
         pt.setId(UUID.randomUUID());
         pt.setGroup(group);
         return pt;
+    }
+
+    /**
+     * Phase 61 MIGR-06 helper: creates a Matchday bound to a synthetic REGULAR phase
+     * for the given Season. Convenience for pure-Java unit tests that do not have a
+     * persisted phase available.
+     */
+    public static Matchday matchdayInRegularPhase(Season season, String label, int sortIndex) {
+        var phase = regularPhase(season, null, null);
+        return new Matchday(phase, label, sortIndex);
+    }
+
+    /**
+     * Phase 61 MIGR-06 helper: creates a Playoff bound to a synthetic PLAYOFF phase
+     * for the given Season. Convenience for pure-Java unit tests.
+     */
+    public static Playoff playoffForSeason(Season season, String name) {
+        var phase = playoffPhase(season, name, null, null);
+        return new Playoff(phase, name);
     }
 }

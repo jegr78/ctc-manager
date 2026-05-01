@@ -10,6 +10,7 @@ import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.RaceResultRepository;
+import org.ctc.domain.repository.SeasonPhaseRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,9 @@ class TestDataServiceIntegrationTest {
 	@Autowired
 	private PhaseTeamRepository phaseTeamRepository;
 
+	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+
 	// --- Helper methods ---
 
 	private Season findSeason(int year, String name) {
@@ -68,18 +72,22 @@ class TestDataServiceIntegrationTest {
 	void givenDevSeed_whenStarted_thenS2HasFormatSwiss() {
 		// given
 		var season = findSeason(2024, "Regular Season");
+		var regular = seasonPhaseRepository
+				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 
-		// then
-		assertThat(season.getFormat()).isEqualTo(SeasonFormat.SWISS);
+		// then — Phase 61 MIGR-06: format moved to REGULAR phase.
+		assertThat(regular.getFormat()).isEqualTo(SeasonFormat.SWISS);
 	}
 
 	@Test
 	void givenDevSeed_whenStarted_thenS4HasFormatLeague() {
 		// given
 		var season = findSeason(2026, 4);
+		var regular = seasonPhaseRepository
+				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 
-		// then
-		assertThat(season.getFormat()).isEqualTo(SeasonFormat.LEAGUE);
+		// then — Phase 61 MIGR-06: format moved to REGULAR phase.
+		assertThat(regular.getFormat()).isEqualTo(SeasonFormat.LEAGUE);
 	}
 
 	@Test

@@ -111,8 +111,6 @@ class SiteGeneratorE2ETest {
 
         season = new Season("E2E Season " + uniqueSuffix, 2026, 1);
         season.setActive(true);
-        season.setRaceScoring(raceScoring);
-        season.setMatchScoring(matchScoring);
         seasonRepository.save(season);
 
         var teamAlpha = teamRepository.save(new Team("E2E Team Alpha " + uniqueSuffix, "EALP" + uniqueSuffix));
@@ -125,8 +123,6 @@ class SiteGeneratorE2ETest {
         // Phase 58 D-23: SiteGenerator routes through SeasonPhaseService.findByType(REGULAR).
         // E2E setup must include a REGULAR phase + PhaseTeam rows or the season is skipped.
         var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
-        regularPhase.setRaceScoring(raceScoring);
-        regularPhase.setMatchScoring(matchScoring);
         regularPhase = seasonPhaseRepository.save(regularPhase);
         phaseTeamRepository.save(new PhaseTeam(regularPhase, teamAlpha));
         phaseTeamRepository.save(new PhaseTeam(regularPhase, teamBeta));
@@ -141,7 +137,7 @@ class SiteGeneratorE2ETest {
         seasonDriverRepository.save(new SeasonDriver(season, driver3, teamBeta));
         seasonDriverRepository.save(new SeasonDriver(season, driver4, teamBeta));
 
-        var matchday = matchdayRepository.save(new Matchday(season, "E2E Matchday 1", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "E2E Matchday 1", 1));
         // Phase 58 D-23: link matchday to REGULAR phase so race-result-by-phase queries find it
         matchday.setPhase(regularPhase);
         matchday = matchdayRepository.save(matchday);

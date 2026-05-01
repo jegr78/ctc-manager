@@ -47,8 +47,6 @@ public class TestHelper {
 		var regular = new SeasonPhase(saved, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		regular.setFormat(SeasonFormat.LEAGUE);
 		regular.setLegs(1);
-		regular.setRaceScoring(rs);
-		regular.setMatchScoring(ms);
 		seasonPhaseRepository.save(regular);
 		return saved;
 	}
@@ -78,6 +76,28 @@ public class TestHelper {
 	 */
 	public Matchday createMatchday(Season season, String label, int sortIndex) {
 		return createMatchdayInRegularPhase(season, label, sortIndex);
+	}
+
+	/**
+	 * Phase 61 MIGR-06 helper: returns the RaceScoring assigned to the season's REGULAR phase.
+	 * Replaces the legacy {@code season.getRaceScoring()} call in tests.
+	 */
+	public RaceScoring getRaceScoring(Season season) {
+		return seasonPhaseRepository
+				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR)
+				.orElseThrow(() -> new IllegalStateException("No REGULAR phase for season " + season.getId()))
+				.getRaceScoring();
+	}
+
+	/**
+	 * Phase 61 MIGR-06 helper: returns the MatchScoring assigned to the season's REGULAR phase.
+	 * Replaces the legacy {@code season.getMatchScoring()} call in tests.
+	 */
+	public MatchScoring getMatchScoring(Season season) {
+		return seasonPhaseRepository
+				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR)
+				.orElseThrow(() -> new IllegalStateException("No REGULAR phase for season " + season.getId()))
+				.getMatchScoring();
 	}
 
 	public Team createTeam(String name, String shortName) {

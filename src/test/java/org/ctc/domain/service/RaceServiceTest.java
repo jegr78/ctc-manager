@@ -170,7 +170,7 @@ class RaceServiceTest {
 
         // then
         assertThat(message).contains("Results saved");
-        verify(scoringService).calculatePoints(any(RaceResult.class), eq(race.getMatchday().getSeason().getRaceScoring()));
+        verify(scoringService).calculatePoints(any(RaceResult.class), eq(race.getMatchday().getPhase().getRaceScoring()));
         verify(scoringService).aggregateMatchScores(race);
     }
 
@@ -255,7 +255,6 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -306,7 +305,6 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -336,7 +334,6 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -466,14 +463,16 @@ class RaceServiceTest {
     }
 
     private Race createRaceWithScoring() {
+        // Phase 61 MIGR-06: scoring lives on the SeasonPhase, not the Season.
         var scoring = new RaceScoring("Test", "10,8,6,4,2,1", "3,2,1", 1);
         var season = new Season();
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(scoring);
+        var phase = PhaseTestFixtures.regularPhase(season, scoring, null);
+        phase.setRaceScoring(scoring);
 
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        matchday.setPhase(phase);
 
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
@@ -494,11 +493,9 @@ class RaceServiceTest {
         season.setCars(new ArrayList<>());
         season.setTracks(new ArrayList<>());
         var scoring = new RaceScoring("Default", "10,8,6", "3,2,1", 1);
-        season.setRaceScoring(scoring);
 
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
         return matchday;
     }
 

@@ -66,6 +66,7 @@ class PlayoffServiceTest {
 
 	private Season season;
 	private RaceScoring raceScoring;
+	private MatchScoring matchScoring;
 	private List<Team> teams;
 
 	@BeforeEach
@@ -74,14 +75,17 @@ class PlayoffServiceTest {
 		var uniqueSuffix = UUID.randomUUID().toString().substring(0, 4);
 		raceScoring = raceScoringRepository.save(
 				new RaceScoring("Test RS " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
-		var matchScoring = matchScoringRepository.save(
+		matchScoring = matchScoringRepository.save(
 				new MatchScoring("Test MS " + uniqueSuffix, 3, 1, 0));
 
+		// Phase 61 MIGR-06: scoring lives on the REGULAR SeasonPhase only.
 		season = new Season("Playoff Test " + UUID.randomUUID().toString().substring(0, 8), 2026, 1);
 		season.setActive(true);
-		season.setRaceScoring(raceScoring);
-		season.setMatchScoring(matchScoring);
 		season = seasonRepository.save(season);
+		var regular = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		regular.setRaceScoring(raceScoring);
+		regular.setMatchScoring(matchScoring);
+		seasonPhaseRepository.save(regular);
 
 		teams = new java.util.ArrayList<>();
 		String[] names = {"TA1", "TB2", "TC3", "TD4", "TE5", "TF6", "TG7", "TH8"};
@@ -204,7 +208,8 @@ class PlayoffServiceTest {
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
 
-			var matchday = matchdayRepository.save(new Matchday(season, "HF Hinspiel", 1));
+			// Phase 61 MIGR-06: Matchday is bound to a SeasonPhase (PLAYOFF here).
+			var matchday = matchdayRepository.save(new Matchday(playoff.getPhase(), "HF Hinspiel", 1));
 			var matchup = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
 
 			var race = new Race();
@@ -265,7 +270,8 @@ class PlayoffServiceTest {
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
 
-			var matchday = matchdayRepository.save(new Matchday(season, "HF", 1));
+			// Phase 61 MIGR-06: Matchday is bound to a SeasonPhase (PLAYOFF here).
+			var matchday = matchdayRepository.save(new Matchday(playoff.getPhase(), "HF", 1));
 			var matchup = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
 
 			var race = new Race();
@@ -834,13 +840,10 @@ class PlayoffServiceTest {
 
 		@Test
 		void givenSeasonWithPlayoffPhaseButNoPlayoff_whenCreatePlayoff_thenReusesExistingPlayoffPhase() {
-			// given — manually create a PLAYOFF phase but do NOT yet create a Playoff record
-			var raceScoring = season.getRaceScoring();
-			var matchScoring = season.getMatchScoring();
+			// given — manually create a PLAYOFF phase but do NOT yet create a Playoff record.
+			// Phase 61 MIGR-06: scoring lives on the SeasonPhase; reuse the test-class-level
+			// raceScoring + matchScoring fields here.
 			var existingPhase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10);
-			existingPhase.setRaceScoring(raceScoring);
-			existingPhase.setMatchScoring(matchScoring);
-			existingPhase.setFormat(SeasonFormat.LEAGUE);
 			existingPhase = seasonPhaseRepository.save(existingPhase);
 			entityManager.flush();
 			entityManager.clear();
@@ -894,53 +897,5 @@ class PlayoffServiceTest {
 		}
 	}
 
-	@Nested
-	class DeprecatedM2NMethods {
-
-		@Test
-		void givenPlayoffWithSeasons_whenAddSeasonToPlayoff_thenSeasonAddedToM2N() {
-			// given — create another season to add as linked season
-			var playoff = playoffService.createPlayoff(season.getId(), "Phase58-Test-M2N-Add", 4);
-			var linkedSeason = new Season("Phase58-Test-LinkedSeason", 2025, 99);
-			linkedSeason.setRaceScoring(season.getRaceScoring());
-			linkedSeason.setMatchScoring(season.getMatchScoring());
-			linkedSeason = seasonRepository.save(linkedSeason);
-			entityManager.flush();
-			entityManager.clear();
-			var linkedSeasonId = linkedSeason.getId();
-
-			// when — @Deprecated but still functional (Pitfall 5)
-			playoffService.addSeasonToPlayoff(playoff.getId(), linkedSeasonId);
-			entityManager.flush();
-			entityManager.clear();
-
-			// then — linked season appears in M:N collection
-			var reloaded = playoffRepository.findById(playoff.getId()).orElseThrow();
-			assertThat(reloaded.getSeasons()).extracting(Season::getId).contains(linkedSeasonId);
-		}
-
-		@Test
-		void givenPlayoffWithSeasons_whenRemoveSeasonFromPlayoff_thenSeasonRemovedFromM2N() {
-			// given — create and link a season, then remove it
-			var playoff = playoffService.createPlayoff(season.getId(), "Phase58-Test-M2N-Remove", 4);
-			var linkedSeason = new Season("Phase58-Test-RemoveSeason", 2025, 98);
-			linkedSeason.setRaceScoring(season.getRaceScoring());
-			linkedSeason.setMatchScoring(season.getMatchScoring());
-			linkedSeason = seasonRepository.save(linkedSeason);
-			entityManager.flush();
-			var linkedSeasonId = linkedSeason.getId();
-			playoffService.addSeasonToPlayoff(playoff.getId(), linkedSeasonId);
-			entityManager.flush();
-			entityManager.clear();
-
-			// when — @Deprecated but still functional (Pitfall 5)
-			playoffService.removeSeasonFromPlayoff(playoff.getId(), linkedSeasonId);
-			entityManager.flush();
-			entityManager.clear();
-
-			// then — linked season no longer in M:N collection
-			var reloaded = playoffRepository.findById(playoff.getId()).orElseThrow();
-			assertThat(reloaded.getSeasons()).extracting(Season::getId).doesNotContain(linkedSeasonId);
-		}
-	}
+	// Phase 61 MIGR-06: @Nested DeprecatedM2NMethods removed; methods deleted in PlayoffService.
 }

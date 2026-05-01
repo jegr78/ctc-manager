@@ -314,23 +314,21 @@ class PlayoffControllerTest {
                 .doesNotContain("/admin/playoffs/" + playoff.getId() + "/remove-season");
     }
 
-    // --- POST /admin/playoffs/{id}/add-season + remove-season ---
+    // --- POST /admin/playoffs/{id}/add-season + remove-season — D-03 negative-route guards ---
+    // Phase 61 MIGR-06: legacy endpoints removed (Tracked Behavior Change).
+    // These tests guard against accidental re-introduction of the routes.
 
     @Test
-    void givenPlayoffAndOtherSeason_whenAddAndRemoveSeasonFromPlayoff_thenBothSucceed() throws Exception {
-        // given
-        var playoff = playoffService.createPlayoff(season.getId(), "Season Link Test", 4);
-        var otherSeason = testHelper.createSeason("Other Playoff Season");
+    void givenLegacyAddSeasonEndpointRemoved_whenPostRequest_thenReturns404() throws Exception {
+        mockMvc.perform(post("/admin/playoffs/" + UUID.randomUUID() + "/add-season")
+                        .param("seasonId", UUID.randomUUID().toString()))
+                .andExpect(status().isNotFound());
+    }
 
-        // when / then
-        mockMvc.perform(post("/admin/playoffs/" + playoff.getId() + "/add-season")
-                        .param("seasonId", otherSeason.getId().toString()))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(flash().attribute("successMessage", "Season linked"));
-
-        mockMvc.perform(post("/admin/playoffs/" + playoff.getId() + "/remove-season")
-                        .param("seasonId", otherSeason.getId().toString()))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(flash().attribute("successMessage", "Season removed"));
+    @Test
+    void givenLegacyRemoveSeasonEndpointRemoved_whenPostRequest_thenReturns404() throws Exception {
+        mockMvc.perform(post("/admin/playoffs/" + UUID.randomUUID() + "/remove-season")
+                        .param("seasonId", UUID.randomUUID().toString()))
+                .andExpect(status().isNotFound());
     }
 }

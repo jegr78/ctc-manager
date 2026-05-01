@@ -155,7 +155,6 @@ class MatchdayServiceTest {
         season.setId(seasonId);
         var matchday = new Matchday();
         matchday.setId(matchdayId);
-        matchday.setSeason(season);
 
         when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
 
@@ -204,7 +203,7 @@ class MatchdayServiceTest {
         var season = new Season();
         season.setId(UUID.randomUUID());
         season.setName("Test Season");
-        var existing = new Matchday(season, "MD1", 3);
+        var existing = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 3);
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
         when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(existing));
@@ -240,7 +239,7 @@ class MatchdayServiceTest {
         var season = new Season();
         season.setId(UUID.randomUUID());
         season.setName("Test Season");
-        var existing = new Matchday(season, "Existing", 1);
+        var existing = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Existing", 1);
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
         when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(existing));

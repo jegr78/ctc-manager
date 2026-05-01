@@ -46,7 +46,6 @@ class RaceFormDataServiceTest {
 
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
 
         when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
         when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
@@ -96,7 +95,6 @@ class RaceFormDataServiceTest {
         season.setTracks(new ArrayList<>());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -129,10 +127,8 @@ class RaceFormDataServiceTest {
         var scoring = new RaceScoring("Test", "10,8,6", "3,2,1", 1);
         var season = new Season();
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(scoring);
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -166,10 +162,8 @@ class RaceFormDataServiceTest {
         var scoring = new RaceScoring("Test", "10,8,6", "3,2,1", 1);
         var season = new Season();
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(scoring);
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -205,7 +199,6 @@ class RaceFormDataServiceTest {
         season.setTracks(new ArrayList<>());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
         var match = new Match();
         match.setMatchday(matchday);
         match.setBye(true);
@@ -237,10 +230,8 @@ class RaceFormDataServiceTest {
         var scoring = new RaceScoring("Test", "10,8,6", "3,2,1", 1);
         var season = new Season();
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(scoring);
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
         var match = new Match();
         match.setMatchday(matchday);
         match.setHomeTeam(homeTeam);

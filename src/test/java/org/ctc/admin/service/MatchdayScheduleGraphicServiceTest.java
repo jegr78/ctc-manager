@@ -67,7 +67,7 @@ class MatchdayScheduleGraphicServiceTest {
 		season.addTeam(teamE);
 		season.addTeam(teamF);
 
-		var matchday = new Matchday(season, "MD 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD 1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		// Match 1: Friday

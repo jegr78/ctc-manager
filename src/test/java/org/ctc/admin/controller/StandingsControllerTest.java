@@ -100,7 +100,7 @@ class StandingsControllerTest {
 	@Test
 	void whenGetAlltimeStandings_thenReturnsAlltimeView() throws Exception {
 		// given - create a matchday and match with scores for activeSeason
-		var matchday = new Matchday(activeSeason, "Spieltag 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(activeSeason, "Spieltag 1", 1);
 		matchday = matchdayRepository.save(matchday);
 		var teamA = activeSeason.getSeasonTeams().stream()
 				.map(SeasonTeam::getTeam).findFirst().orElseThrow();
@@ -143,7 +143,6 @@ class StandingsControllerTest {
 	void givenSwissSeason_whenGetStandingsForSeason_thenReturnsSwissSeasonStandings() throws Exception {
 		// given
 		var swissSeason = testHelper.createSeason("Swiss Season " + UUID.randomUUID().toString().substring(0, 8));
-		swissSeason.setFormat(SeasonFormat.SWISS);
 		swissSeason = seasonRepository.save(swissSeason);
 
 		// when
@@ -202,7 +201,6 @@ class StandingsControllerTest {
 		var season = testHelper.createSeason("T-Phase60-SwissGroup");
 		var regular = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
 		regular.setLayout(PhaseLayout.GROUPS);
-		regular.setFormat(SeasonFormat.SWISS);
 		seasonPhaseRepository.save(regular);
 		var group = seasonPhaseService.createGroup(regular.getId(), "T-Phase60-Swiss-Group-A", 0);
 

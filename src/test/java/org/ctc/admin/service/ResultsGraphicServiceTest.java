@@ -49,7 +49,7 @@ class ResultsGraphicServiceTest {
 
 		var race = new Race();
 		race.setId(UUID.randomUUID());
-		var match = new Match(new Matchday(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
+		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
 		race.setMatch(match);
 
 		var r1 = createResult(race, "HomeTop", "Nick_HT", homeTeam, 1, 20);
@@ -93,7 +93,7 @@ class ResultsGraphicServiceTest {
 
 		var race = new Race();
 		race.setId(UUID.randomUUID());
-		var match = new Match(new Matchday(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
+		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
 		race.setMatch(match);
 
 		// Same points, different positions — lower position should come first
@@ -124,7 +124,7 @@ class ResultsGraphicServiceTest {
 
 		var race = new Race();
 		race.setId(UUID.randomUUID());
-		var match = new Match(new Matchday(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
+		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
 		race.setMatch(match);
 
 		var r1 = createResult(race, "H1", "Nick_H1", homeTeam, 1, 20);
@@ -164,7 +164,7 @@ class ResultsGraphicServiceTest {
 
 		var race = new Race();
 		race.setId(UUID.randomUUID());
-		var match = new Match(new Matchday(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
+		var match = new Match(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1), homeTeam, awayTeam);
 		race.setMatch(match);
 
 		var r1 = createResult(race, "HomeNoNick", "", homeTeam, 1, 20);

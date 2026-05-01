@@ -50,7 +50,7 @@ class SeasonPhaseServiceTest {
     void givenSeasonWithRegularPhase_whenFindRegularPhase_thenReturnsPhase() {
         // given
         var season = buildSeason("Phase58-Test-Season-1");
-        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var phase = PhaseTestFixtures.regularPhase(season, getRs(season), getMs(season));
         when(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR))
                 .thenReturn(Optional.of(phase));
 
@@ -82,7 +82,7 @@ class SeasonPhaseServiceTest {
     void givenSeasonWithPlayoffPhase_whenFindByTypePlayoff_thenReturnsOptionalOfPhase() {
         // given
         var season = buildSeason("Phase58-Test-Season-2");
-        var playoffPhase = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-Playoff", season.getRaceScoring(), season.getMatchScoring());
+        var playoffPhase = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-Playoff", getRs(season), getMs(season));
         when(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.PLAYOFF))
                 .thenReturn(Optional.of(playoffPhase));
 
@@ -116,8 +116,8 @@ class SeasonPhaseServiceTest {
     void givenSeasonWithMultiplePhases_whenFindAllPhases_thenReturnsOrderedBySortIndex() {
         // given
         var season = buildSeason("Phase58-Test-Season-3");
-        var regular = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
-        var playoff = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-Playoff", season.getRaceScoring(), season.getMatchScoring());
+        var regular = PhaseTestFixtures.regularPhase(season, getRs(season), getMs(season));
+        var playoff = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-Playoff", getRs(season), getMs(season));
         when(seasonPhaseRepository.findBySeasonIdOrderBySortIndex(season.getId()))
                 .thenReturn(List.of(regular, playoff));
 
@@ -137,7 +137,7 @@ class SeasonPhaseServiceTest {
     void givenExistingRegularPhase_whenCreateRegular_thenThrowsBusinessRuleException() {
         // given
         var season = buildSeason("Phase58-Test-Season-4");
-        var existingPhase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var existingPhase = PhaseTestFixtures.regularPhase(season, getRs(season), getMs(season));
         when(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR))
                 .thenReturn(Optional.of(existingPhase));
 
@@ -152,7 +152,7 @@ class SeasonPhaseServiceTest {
     void givenExistingPlayoffPhase_whenCreatePlayoff_thenThrowsBusinessRuleException() {
         // given
         var season = buildSeason("Phase58-Test-Season-5");
-        var existing = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-Playoff", season.getRaceScoring(), season.getMatchScoring());
+        var existing = PhaseTestFixtures.playoffPhase(season, "Phase58-Test-Playoff", getRs(season), getMs(season));
         when(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.PLAYOFF))
                 .thenReturn(Optional.of(existing));
 
@@ -169,8 +169,8 @@ class SeasonPhaseServiceTest {
         var season = buildSeason("Phase58-Test-Season-6");
         var existing = new SeasonPhase(season, PhaseType.PLACEMENT, PhaseLayout.LEAGUE, 20);
         existing.setId(UUID.randomUUID());
-        existing.setRaceScoring(season.getRaceScoring());
-        existing.setMatchScoring(season.getMatchScoring());
+        existing.setRaceScoring(getRs(season));
+        existing.setMatchScoring(getMs(season));
         when(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.PLACEMENT))
                 .thenReturn(Optional.of(existing));
 
@@ -192,13 +192,13 @@ class SeasonPhaseServiceTest {
         when(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR))
                 .thenReturn(Optional.empty());
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-        var savedPhase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var savedPhase = PhaseTestFixtures.regularPhase(season, getRs(season), getMs(season));
         when(seasonPhaseRepository.save(any(SeasonPhase.class))).thenReturn(savedPhase);
         when(phaseTeamRepository.save(any(PhaseTeam.class))).thenAnswer(inv -> inv.getArgument(0));
 
         // when
         seasonPhaseService.create(season.getId(), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0,
-                null, season.getRaceScoring(), season.getMatchScoring(),
+                null, getRs(season), getMs(season),
                 SeasonFormat.LEAGUE, null, null, null, 1, null);
 
         // then — exactly 3 PhaseTeam rows created
@@ -212,12 +212,12 @@ class SeasonPhaseServiceTest {
         when(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.PLAYOFF))
                 .thenReturn(Optional.empty());
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-        var savedPhase = PhaseTestFixtures.playoffPhase(season, "Phase58-Playoff", season.getRaceScoring(), season.getMatchScoring());
+        var savedPhase = PhaseTestFixtures.playoffPhase(season, "Phase58-Playoff", getRs(season), getMs(season));
         when(seasonPhaseRepository.save(any(SeasonPhase.class))).thenReturn(savedPhase);
 
         // when
         seasonPhaseService.create(season.getId(), PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10,
-                "Phase58-Playoff", season.getRaceScoring(), season.getMatchScoring(),
+                "Phase58-Playoff", getRs(season), getMs(season),
                 SeasonFormat.LEAGUE, null, null, null, 1, null);
 
         // then — no PhaseTeam rows created (PLAYOFF starts empty)
@@ -231,13 +231,13 @@ class SeasonPhaseServiceTest {
         when(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR))
                 .thenReturn(Optional.empty());
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-        var savedPhase = PhaseTestFixtures.groupsRegularPhase(season, season.getRaceScoring(), season.getMatchScoring(),
+        var savedPhase = PhaseTestFixtures.groupsRegularPhase(season, getRs(season), getMs(season),
                 "Phase58-Group-A", "Phase58-Group-B");
         when(seasonPhaseRepository.save(any(SeasonPhase.class))).thenReturn(savedPhase);
 
         // when
         seasonPhaseService.create(season.getId(), PhaseType.REGULAR, PhaseLayout.GROUPS, 0,
-                null, season.getRaceScoring(), season.getMatchScoring(),
+                null, getRs(season), getMs(season),
                 SeasonFormat.LEAGUE, null, null, null, 1, null);
 
         // then — no PhaseTeam rows created (GROUPS roster starts empty)
@@ -252,7 +252,7 @@ class SeasonPhaseServiceTest {
     void givenPhaseWithMatchdays_whenChangeLayout_thenThrowsBusinessRule() {
         // given: existing LEAGUE-layout phase that has matchdays
         var season = buildSeason("Phase60-Test-Season-Layout");
-        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var phase = PhaseTestFixtures.regularPhase(season, getRs(season), getMs(season));
         var matchday = mock(Matchday.class);
         when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
         when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of(matchday));
@@ -269,7 +269,7 @@ class SeasonPhaseServiceTest {
     void givenPhaseWithMatchdays_whenDelete_thenThrowsBusinessRule() {
         // given
         var season = buildSeason("Phase60-Test-Season-Delete");
-        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var phase = PhaseTestFixtures.regularPhase(season, getRs(season), getMs(season));
         var matchday = mock(Matchday.class);
         when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
         when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of(matchday));
@@ -283,7 +283,7 @@ class SeasonPhaseServiceTest {
     void givenEmptyPhase_whenDelete_thenSucceeds() {
         // given
         var season = buildSeason("Phase60-Test-Season-EmptyDelete");
-        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var phase = PhaseTestFixtures.regularPhase(season, getRs(season), getMs(season));
         when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
         when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of());
         when(phaseTeamRepository.findByPhaseId(phase.getId())).thenReturn(List.of());
@@ -299,7 +299,7 @@ class SeasonPhaseServiceTest {
     void givenGroupWithNewName_whenUpdateGroup_thenGroupNameUpdated() {
         // given
         var season = buildSeason("Phase60-Test-Season-UpdateGroup");
-        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var phase = PhaseTestFixtures.regularPhase(season, getRs(season), getMs(season));
         var group = new SeasonPhaseGroup(phase, "Phase60-Original-Name", 0);
         group.setId(UUID.randomUUID());
         when(seasonPhaseGroupRepository.findById(group.getId())).thenReturn(Optional.of(group));
@@ -317,7 +317,7 @@ class SeasonPhaseServiceTest {
     void givenGroupWithPhaseTeams_whenDeleteGroup_thenThrowsBusinessRule() {
         // given: group with at least one PhaseTeam (D-28 strict guard)
         var season = buildSeason("Phase60-Test-Season-DeleteGroup");
-        var phase = PhaseTestFixtures.groupsRegularPhase(season, season.getRaceScoring(), season.getMatchScoring(), "Phase60-Group-A");
+        var phase = PhaseTestFixtures.groupsRegularPhase(season, getRs(season), getMs(season), "Phase60-Group-A");
         var group = phase.getGroups().get(0);
         var phaseTeam = mock(PhaseTeam.class);
         when(seasonPhaseGroupRepository.findById(group.getId())).thenReturn(Optional.of(group));
@@ -338,7 +338,7 @@ class SeasonPhaseServiceTest {
         var teamT2 = teams.get(1);
         var teamT3 = teams.get(2);
 
-        var phase = PhaseTestFixtures.groupsRegularPhase(season, season.getRaceScoring(), season.getMatchScoring(), "Phase60-Group-A", "Phase60-Group-B");
+        var phase = PhaseTestFixtures.groupsRegularPhase(season, getRs(season), getMs(season), "Phase60-Group-A", "Phase60-Group-B");
         var groupA = phase.getGroups().get(0);
         var groupB = phase.getGroups().get(1);
 
@@ -376,7 +376,7 @@ class SeasonPhaseServiceTest {
         // given: T1 is already in GroupA and the new assignment says T1@GroupA included
         var season = buildSeasonWithTeams("Phase60-Test-Season-NoOp", 1);
         var teamT1 = season.getSeasonTeams().stream().map(SeasonTeam::getTeam).findFirst().orElseThrow();
-        var phase = PhaseTestFixtures.groupsRegularPhase(season, season.getRaceScoring(), season.getMatchScoring(), "Phase60-Group-NoOp");
+        var phase = PhaseTestFixtures.groupsRegularPhase(season, getRs(season), getMs(season), "Phase60-Group-NoOp");
         var groupA = phase.getGroups().get(0);
         var existingPt = PhaseTestFixtures.assignTeam(phase, teamT1, groupA);
 
@@ -400,7 +400,7 @@ class SeasonPhaseServiceTest {
     void givenExistingPhase_whenUpdateWithSameLayout_thenPhaseTypePersisted() {
         // given: existing REGULAR phase
         var season = buildSeason("Phase60-Test-Season-PhaseTypeImmutable");
-        var phase = PhaseTestFixtures.regularPhase(season, season.getRaceScoring(), season.getMatchScoring());
+        var phase = PhaseTestFixtures.regularPhase(season, getRs(season), getMs(season));
         when(seasonPhaseRepository.findById(phase.getId())).thenReturn(Optional.of(phase));
         when(matchdayRepository.findByPhaseId(phase.getId())).thenReturn(List.of());
         when(seasonPhaseRepository.save(any(SeasonPhase.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -423,6 +423,11 @@ class SeasonPhaseServiceTest {
     @Mock
     private MatchdayRepository matchdayRepository;
 
+    // Phase 61 MIGR-06: scoring lives on SeasonPhase. The test-class stashes per-season RS/MS
+    // so test methods can pass them into PhaseTestFixtures without needing a phase fixture upfront.
+    private final java.util.Map<UUID, RaceScoring> rsBySeason = new java.util.HashMap<>();
+    private final java.util.Map<UUID, MatchScoring> msBySeason = new java.util.HashMap<>();
+
     private Season buildSeason(String name) {
         var rs = new RaceScoring();
         rs.setId(UUID.randomUUID());
@@ -430,9 +435,17 @@ class SeasonPhaseServiceTest {
         ms.setId(UUID.randomUUID());
         var season = new Season(name, 9997, 1);
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(rs);
-        season.setMatchScoring(ms);
+        rsBySeason.put(season.getId(), rs);
+        msBySeason.put(season.getId(), ms);
         return season;
+    }
+
+    private RaceScoring getRs(Season season) {
+        return rsBySeason.get(season.getId());
+    }
+
+    private MatchScoring getMs(Season season) {
+        return msBySeason.get(season.getId());
     }
 
     private Season buildSeasonWithTeams(String name, int teamCount) {

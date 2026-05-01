@@ -170,12 +170,8 @@ class DriverSheetImportServiceIT {
         extra2024.setYear(2024);
         extra2024.setNumber(5);
         extra2024.setActive(false);
-        extra2024.setFormat(SeasonFormat.LEAGUE);
-        extra2024.setLegs(1);
-        // RaceScoring / MatchScoring required by NOT-NULL FKs — borrow from existing 2024 season
-        var existing2024 = findSeason(2024, 2);
-        extra2024.setRaceScoring(existing2024.getRaceScoring());
-        extra2024.setMatchScoring(existing2024.getMatchScoring());
+        // Phase 61 MIGR-06: scoring lives on the SeasonPhase (not Season). The seasons.race_scoring_id /
+        // match_scoring_id columns are nullable post-V5; tests do not need to populate them on Season directly.
         seasonRepository.save(extra2024);
 
         setupSheetsStub(Map.of("2024", oneDataRow("ADR_Driver01", "Adr One", "ADR")));

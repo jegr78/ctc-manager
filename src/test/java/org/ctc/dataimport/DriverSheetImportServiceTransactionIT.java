@@ -173,10 +173,6 @@ class DriverSheetImportServiceTransactionIT {
         s.setYear(year);
         s.setNumber(number);
         s.setActive(false);
-        s.setFormat(SeasonFormat.LEAGUE);
-        s.setLegs(1);
-        s.setRaceScoring(raceScoring);
-        s.setMatchScoring(matchScoring);
         return seasonRepository.save(s).getId();
     }
 }

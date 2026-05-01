@@ -56,18 +56,11 @@ class MatchdayGeneratorServiceTest {
 				new MatchScoring("Gen MS " + suffix, 3, 1, 0));
 
 		season = new Season("Generator Test " + suffix, 2026, 1);
-		season.setFormat(SeasonFormat.LEAGUE);
-		season.setRaceScoring(raceScoring);
-		season.setMatchScoring(matchScoring);
 		season = seasonRepository.save(season);
 
 		// Create a REGULAR LEAGUE phase so the @Deprecated bridge (generate(seasonId,...))
 		// can resolve via seasonPhaseService.findRegularPhase(seasonId).
 		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
-		phase.setRaceScoring(raceScoring);
-		phase.setMatchScoring(matchScoring);
-		phase.setFormat(SeasonFormat.LEAGUE);
-		phase.setLegs(1);
 		regularPhase = seasonPhaseRepository.save(phase);
 	}
 
@@ -109,7 +102,6 @@ class MatchdayGeneratorServiceTest {
 	@Test
 	void givenRoundRobinWith4Teams_whenGenerate3Rounds_thenEachPairPlaysOnce() {
 		// given
-		season.setFormat(SeasonFormat.ROUND_ROBIN);
 		seasonRepository.save(season);
 		var teams = addTeams(4);
 
@@ -214,11 +206,7 @@ class MatchdayGeneratorServiceTest {
 
 	@Test
 	void givenSwissSeason_whenGenerate_thenThrowsException() {
-		// given — set SWISS format on both season and the REGULAR phase
-		// (the canonical path checks phase.getFormat(), not season.getFormat())
-		season.setFormat(SeasonFormat.SWISS);
-		seasonRepository.save(season);
-		regularPhase.setFormat(SeasonFormat.SWISS);
+		// given — Phase 61 MIGR-06: format lives only on SeasonPhase.
 		seasonPhaseRepository.save(regularPhase);
 		addTeams(4);
 
@@ -310,7 +298,6 @@ class MatchdayGeneratorServiceTest {
 	@Test
 	void givenSeasonWith2Legs_whenGenerate_thenEachMatchHas2Races() {
 		// given
-		season.setLegs(2);
 		seasonRepository.save(season);
 		addTeams(4);
 
@@ -328,7 +315,6 @@ class MatchdayGeneratorServiceTest {
 	@Test
 	void givenSeasonWith2Legs_whenGenerate_thenLeg2HasSwappedHomeAway() {
 		// given
-		season.setLegs(2);
 		seasonRepository.save(season);
 		addTeams(4);
 
@@ -457,9 +443,6 @@ class MatchdayGeneratorServiceTest {
 	 */
 	private Season buildTestSeason() {
 		var s = new Season("Phase58-Test-Gen-" + UUID.randomUUID().toString().substring(0, 4), 9999, 99);
-		s.setFormat(SeasonFormat.LEAGUE);
-		s.setRaceScoring(raceScoring);
-		s.setMatchScoring(matchScoring);
 		return seasonRepository.save(s);
 	}
 
@@ -467,10 +450,6 @@ class MatchdayGeneratorServiceTest {
 	private SeasonPhase buildLeaguePhase() {
 		var s = buildTestSeason();
 		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
-		phase.setRaceScoring(raceScoring);
-		phase.setMatchScoring(matchScoring);
-		phase.setFormat(SeasonFormat.LEAGUE);
-		phase.setLegs(1);
 		return seasonPhaseRepository.save(phase);
 	}
 
@@ -478,10 +457,6 @@ class MatchdayGeneratorServiceTest {
 	private SeasonPhase buildGroupsPhase() {
 		var s = buildTestSeason();
 		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
-		phase.setRaceScoring(raceScoring);
-		phase.setMatchScoring(matchScoring);
-		phase.setFormat(SeasonFormat.LEAGUE);
-		phase.setLegs(1);
 		phase = seasonPhaseRepository.save(phase);
 		var groupA = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(phase, "Phase58-Test-Group-A", 0));
 		var groupB = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(phase, "Phase58-Test-Group-B", 1));

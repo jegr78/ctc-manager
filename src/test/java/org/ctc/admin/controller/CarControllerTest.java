@@ -48,6 +48,9 @@ class CarControllerTest {
 	@Autowired
 	private MatchScoringRepository matchScoringRepository;
 
+	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+
 	private Car car;
 
 	@BeforeEach
@@ -156,10 +159,13 @@ class CarControllerTest {
 		var ms = new MatchScoring("CT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0);
 		ms = matchScoringRepository.save(ms);
 		var s = new Season("Car Test Season", 2026, 1);
-		s.setRaceScoring(rs);
-		s.setMatchScoring(ms);
 		var season = seasonRepository.save(s);
-		var matchday = matchdayRepository.save(new Matchday(season, "CT Matchday", 1));
+		// Phase 61 MIGR-06: scoring + format live on the SeasonPhase.
+		var regular = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		regular.setRaceScoring(rs);
+		regular.setMatchScoring(ms);
+		regular = seasonPhaseRepository.save(regular);
+		var matchday = matchdayRepository.save(new Matchday(regular, "CT Matchday", 1));
 		var home = teamRepository.save(new Team("Home Team", "HOM"));
 		var away = teamRepository.save(new Team("Away Team", "AWY"));
 		var match = matchRepository.save(new Match(matchday, home, away));

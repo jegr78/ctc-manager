@@ -110,7 +110,7 @@ class RaceLineupServiceTest {
 		season.addTeam(homeTeam);
 		season.addTeam(awayTeam);
 
-		var matchday = new Matchday(season, "MD 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD 1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		var match = new Match(matchday, homeTeam, awayTeam);
@@ -159,7 +159,7 @@ class RaceLineupServiceTest {
 		season.addTeam(sub2);
 		season.addTeam(awayTeam);
 
-		var matchday = new Matchday(season, "MD 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD 1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		var match = new Match(matchday, sub1, awayTeam);

@@ -85,10 +85,8 @@ class RaceControllerTest {
 		var rs = raceScoringRepository.save(new RaceScoring("RT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
 		var ms = matchScoringRepository.save(new MatchScoring("RT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Race Test Season", 2026, 1);
-		s.setRaceScoring(rs);
-		s.setMatchScoring(ms);
 		season = seasonRepository.save(s);
-		matchday = matchdayRepository.save(new Matchday(season, "RT Matchday", 1));
+		matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "RT Matchday", 1));
 		home = teamRepository.save(new Team("Home Racing", "HRC"));
 		away = teamRepository.save(new Team("Away Racing", "ARC"));
 		var match = matchRepository.save(new Match(matchday, home, away));
@@ -381,7 +379,7 @@ class RaceControllerTest {
 		raceRepository.save(race);
 
 		// Create a second matchday for the second race
-		var matchday2 = matchdayRepository.save(new Matchday(season, "RT Matchday 2", 2));
+		var matchday2 = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "RT Matchday 2", 2));
 
 		// when
 		mockMvc.perform(post("/admin/races/save")
@@ -545,7 +543,7 @@ class RaceControllerTest {
 		race.setTrack(track);
 		raceRepository.save(race);
 
-		var matchday2 = matchdayRepository.save(new Matchday(season, "RT Matchday DT", 3));
+		var matchday2 = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "RT Matchday DT", 3));
 
 		// when
 		mockMvc.perform(post("/admin/races/save")

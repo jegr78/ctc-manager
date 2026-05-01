@@ -296,8 +296,6 @@ class SeasonControllerTest {
 	void givenSwissSeason_whenGetSwissRoundsPage_thenReturnsSwissView() throws Exception {
 		// given
 		var season = testHelper.createSeason("Swiss Test Season");
-		season.setFormat(SeasonFormat.SWISS);
-		season.setTotalRounds(5);
 		seasonRepository.save(season);
 
 		// when

@@ -94,6 +94,8 @@ class SiteGeneratorServiceTest {
     private Season season;
     private Race testRace;
     private Driver driver1;
+    private org.ctc.domain.model.RaceScoring raceScoring;
+    private org.ctc.domain.model.MatchScoring matchScoring;
 
     @BeforeEach
     void setUp() {
@@ -110,15 +112,14 @@ class SiteGeneratorServiceTest {
             }
         });
 
-        var raceScoring = raceScoringRepository.save(
+        raceScoring = raceScoringRepository.save(
                 new RaceScoring("Gen RS " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
-        var matchScoring = matchScoringRepository.save(
+        matchScoring = matchScoringRepository.save(
                 new MatchScoring("Gen MS " + uniqueSuffix, 3, 1, 0));
 
+        // Phase 61 MIGR-06: scoring lives on SeasonPhase, attached below.
         season = new Season("Gen Season " + uniqueSuffix, 2026, 1);
         season.setActive(true);
-        season.setRaceScoring(raceScoring);
-        season.setMatchScoring(matchScoring);
         seasonRepository.save(season);
 
         var tnr = teamRepository.save(new Team("The Neutrals Racing " + uniqueSuffix, "GTNR" + uniqueSuffix));
@@ -140,14 +141,12 @@ class SiteGeneratorServiceTest {
 
         // Phase setup required by DriverRankingService + StandingsService (D-09 bridge delegates to findAllPhases)
         var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
-        regularPhase.setRaceScoring(raceScoring);
-        regularPhase.setMatchScoring(matchScoring);
         regularPhase = seasonPhaseRepository.save(regularPhase);
         // PhaseTeam rows required by StandingsService.calculateStandings(phaseId)
         phaseTeamRepository.save(new PhaseTeam(regularPhase, tnr));
         phaseTeamRepository.save(new PhaseTeam(regularPhase, p1r));
 
-        var matchday = matchdayRepository.save(new Matchday(season, "Spieltag 1", 1));
+        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Spieltag 1", 1));
         matchday.setPhase(regularPhase);
         matchday = matchdayRepository.save(matchday);
         var testTrack = trackRepository.save(new Track("Tsukuba " + uniqueSuffix, "Japan"));
@@ -204,9 +203,8 @@ class SiteGeneratorServiceTest {
      * before they reach the phase-aware path, so this helper is NOT needed for them.
      */
     private void setupRegularPhase(Season s) {
+        // Phase 61 MIGR-06: scoring lives on SeasonPhase only — reuse the test-class scoring fields.
         var regular = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
-        regular.setRaceScoring(s.getRaceScoring());
-        regular.setMatchScoring(s.getMatchScoring());
         regular = seasonPhaseRepository.save(regular);
         for (var st : s.getSeasonTeams()) {
             phaseTeamRepository.save(new PhaseTeam(regular, st.getTeam()));
@@ -350,7 +348,7 @@ class SiteGeneratorServiceTest {
     @Test
     void givenByeRaceInSeason_whenGenerate_thenCompletesWithoutNPE() {
         // given — add a bye race on a separate matchday
-        var byeMatchday = matchdayRepository.save(new Matchday(season, "Bye Matchday", 2));
+        var byeMatchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Bye Matchday", 2));
         var homeTeam = teamRepository.findAll().stream()
                 .filter(t -> t.getShortName().startsWith("GTNR"))
                 .findFirst().orElseThrow();
@@ -495,14 +493,11 @@ class SiteGeneratorServiceTest {
     @Test
     void givenMultipleSeasons_whenGenerate_thenArchiveIsSortedByYearDescending() throws IOException {
         // given — add a season from an earlier year and one from a later year
+        // Phase 61 MIGR-06: scoring lives on the REGULAR phase, set inside setupRegularPhase.
         var earlier = new Season("Earlier Era " + uniqueSuffix, 2023, 1);
-        earlier.setRaceScoring(season.getRaceScoring());
-        earlier.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(earlier);
         setupRegularPhase(earlier); // Phase 58 D-23: production seasons need a REGULAR phase
         var later = new Season("Future Era " + uniqueSuffix, 2028, 2);
-        later.setRaceScoring(season.getRaceScoring());
-        later.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(later);
         setupRegularPhase(later); // Phase 58 D-23
 
@@ -719,8 +714,6 @@ class SiteGeneratorServiceTest {
     void givenTestSeason_whenGenerate_thenNoSeasonPagesCreated() {
         // given — create a second season whose name contains "Test"
         var testSeason = new Season("Test Throwaway " + uniqueSuffix, 2025, 99);
-        testSeason.setRaceScoring(season.getRaceScoring());
-        testSeason.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(testSeason);
         var testSeasonDir = tempDir.resolve("season").resolve(
                 slugify(testSeason.getDisplayLabel()));
@@ -737,8 +730,6 @@ class SiteGeneratorServiceTest {
     void givenTestSeason_whenGenerate_thenNotInArchive() throws IOException {
         // given — create a second season whose name contains "Test"
         var testSeason = new Season("Test Throwaway " + uniqueSuffix, 2025, 99);
-        testSeason.setRaceScoring(season.getRaceScoring());
-        testSeason.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(testSeason);
 
         // when
@@ -1125,7 +1116,15 @@ class SiteGeneratorServiceTest {
     @Test
     void givenSeasonWithPlayoff_whenGenerate_thenSubnavHasPlayoffLink() throws IOException {
         // given
-        var playoff = new Playoff(season, "Playoff " + uniqueSuffix);
+        // Phase 61 MIGR-06: Playoff is bound to a SeasonPhase. Need a persisted PLAYOFF phase.
+        var playoffPhase = new org.ctc.domain.model.SeasonPhase(season,
+                org.ctc.domain.model.PhaseType.PLAYOFF,
+                org.ctc.domain.model.PhaseLayout.BRACKET, 10);
+        playoffPhase.setRaceScoring(raceScoring);
+        playoffPhase.setMatchScoring(matchScoring);
+        playoffPhase.setFormat(org.ctc.domain.model.SeasonFormat.LEAGUE);
+        seasonPhaseRepository.save(playoffPhase);
+        var playoff = new Playoff(playoffPhase, "Playoff " + uniqueSuffix);
         playoffRepository.save(playoff);
 
         // when
@@ -1290,8 +1289,6 @@ class SiteGeneratorServiceTest {
     void givenMultipleSeasons_whenGenerate_thenTeamsPageHasSeasonFilter() throws IOException {
         // given — create a second production season with a team
         var season2 = new Season("Second Season " + uniqueSuffix, 2025, 1);
-        season2.setRaceScoring(season.getRaceScoring());
-        season2.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(season2);
         var extraTeam = teamRepository.save(new Team("Filter Team " + uniqueSuffix, "FLT" + uniqueSuffix));
         season2.addTeam(extraTeam);
@@ -1399,8 +1396,6 @@ class SiteGeneratorServiceTest {
     void givenTestSeason_whenGenerate_thenTestSeasonNotInOverviewFilter() throws IOException {
         // given — create a season with "Test" in name
         var testSeason = new Season("Test League " + uniqueSuffix, 2024, 1);
-        testSeason.setRaceScoring(season.getRaceScoring());
-        testSeason.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(testSeason);
         var extraTeam = teamRepository.save(new Team("Test Only Team " + uniqueSuffix, "TOT" + uniqueSuffix));
         testSeason.addTeam(extraTeam);
@@ -1572,20 +1567,25 @@ class SiteGeneratorServiceTest {
         var testDriver = driverRepository.save(new Driver("test_phantom_" + uniqueSuffix, "PhantomRacer"));
 
         var testSeason = new Season("Test Throwaway Alltime " + uniqueSuffix, 2025, 99);
-        testSeason.setRaceScoring(season.getRaceScoring());
-        testSeason.setMatchScoring(season.getMatchScoring());
         testSeason.addTeam(testTeam);
         seasonRepository.save(testSeason);
 
         seasonDriverRepository.save(new SeasonDriver(testSeason, testDriver, testTeam));
 
-        var testMatchday = matchdayRepository.save(new Matchday(testSeason, "Test MD 1", 1));
+        // Phase 61 MIGR-06: persist a REGULAR phase carrying scoring before binding the matchday.
+        var testRegularPhase = new SeasonPhase(testSeason, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        testRegularPhase.setRaceScoring(raceScoring);
+        testRegularPhase.setMatchScoring(matchScoring);
+        testRegularPhase = seasonPhaseRepository.save(testRegularPhase);
+
+        var testMatchday = matchdayRepository.save(new Matchday(testRegularPhase, "Test MD 1", 1));
         var testMatch = matchRepository.save(new Match(testMatchday, testTeam, testTeam));
         var testRaceEntity = new Race();
         testRaceEntity.setMatchday(testMatchday);
         testRaceEntity.setMatch(testMatch);
         var tr1 = new RaceResult(testRaceEntity, testDriver, 1, 1, false);
-        scoringService.calculatePoints(tr1, testSeason.getRaceScoring());
+        // Phase 61 MIGR-06: scoring lives on the SeasonPhase; pull from the matchday's phase.
+        scoringService.calculatePoints(tr1, testMatchday.getPhase().getRaceScoring());
         testRaceEntity.getResults().add(tr1);
         raceRepository.save(testRaceEntity);
         testMatch.setHomeScore(tr1.getPointsTotal());
@@ -1655,8 +1655,6 @@ class SiteGeneratorServiceTest {
                 new MatchScoring("Gen MS2 " + uniqueSuffix, 3, 1, 0));
 
         var season2 = new Season("Gen Season2 " + uniqueSuffix, 2026, 2);
-        season2.setRaceScoring(raceScoring2);
-        season2.setMatchScoring(matchScoring2);
         seasonRepository.save(season2);
 
         // Reuse existing teams from setUp
@@ -1672,7 +1670,7 @@ class SiteGeneratorServiceTest {
         // driver1 now drives for P1R in season2 (was GTNR in season1)
         seasonDriverRepository.save(new SeasonDriver(season2, driver1, p1r));
 
-        var md2 = matchdayRepository.save(new Matchday(season2, "Spieltag S2", 1));
+        var md2 = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season2, "Spieltag S2", 1));
         var match2 = matchRepository.save(new Match(md2, p1r, tnr));
         var race2 = new Race();
         race2.setMatchday(md2);

@@ -63,7 +63,8 @@ class PlayoffSeedingServiceTest {
 		var season = new Season("Test Season");
 		season.setId(UUID.randomUUID());
 
-		playoff = new Playoff(season, "Test Playoff");
+		// Phase 61 MIGR-06: Playoff is bound to a SeasonPhase, not the Season directly.
+		playoff = PhaseTestFixtures.playoffForSeason(season, "Test Playoff");
 		playoff.setId(playoffId);
 
 		team1 = createTeam("T1");
@@ -306,8 +307,6 @@ class PlayoffSeedingServiceTest {
 			ms.setId(UUID.randomUUID());
 
 			var season = playoff.getSeason();
-			season.setRaceScoring(rs);
-			season.setMatchScoring(ms);
 
 			var regularPhase = PhaseTestFixtures.regularPhase(season, rs, ms);
 			var playoffPhase = PhaseTestFixtures.playoffPhase(season, "Cup", rs, ms);
@@ -372,8 +371,6 @@ class PlayoffSeedingServiceTest {
 			ms.setId(UUID.randomUUID());
 
 			var season = playoff.getSeason();
-			season.setRaceScoring(rs);
-			season.setMatchScoring(ms);
 
 			var regularPhase = PhaseTestFixtures.groupsRegularPhase(season, rs, ms, "A", "B");
 			var playoffPhase = PhaseTestFixtures.playoffPhase(season, "Cup", rs, ms);
@@ -437,8 +434,6 @@ class PlayoffSeedingServiceTest {
 			ms.setId(UUID.randomUUID());
 
 			var season = playoff.getSeason();
-			season.setRaceScoring(rs);
-			season.setMatchScoring(ms);
 
 			var regularPhase = PhaseTestFixtures.regularPhase(season, rs, ms);
 			var playoffPhase = PhaseTestFixtures.playoffPhase(season, "Cup", rs, ms);

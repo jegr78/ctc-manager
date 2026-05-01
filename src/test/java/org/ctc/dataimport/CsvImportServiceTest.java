@@ -66,9 +66,8 @@ class CsvImportServiceTest {
 		season.setId(UUID.randomUUID());
 		season.setName("Season 1");
 		var raceScoring = new RaceScoring();
-		season.setRaceScoring(raceScoring);
 
-		matchday = new Matchday(season, "Matchday 1", 1);
+		matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Matchday 1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		var parentTeam = new Team("Alpha Racing", "AHR");

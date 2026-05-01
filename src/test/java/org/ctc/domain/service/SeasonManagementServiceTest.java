@@ -471,7 +471,6 @@ class SeasonManagementServiceTest {
         var team2 = createTeam("T2", "Team 2");
         season.addTeam(team1);
         season.addTeam(team2);
-        season.setFormat(SeasonFormat.LEAGUE);
 
         var playoff = new Playoff();
         playoff.setId(UUID.randomUUID());
@@ -498,11 +497,9 @@ class SeasonManagementServiceTest {
         var rs = new RaceScoring();
         rs.setId(UUID.randomUUID());
         rs.setName("Default");
-        season.setRaceScoring(rs);
         var ms = new MatchScoring();
         ms.setId(UUID.randomUUID());
         ms.setName("Default");
-        season.setMatchScoring(ms);
 
         var team = createTeam("T1", "Team 1");
         var car = new Car();
@@ -581,7 +578,6 @@ class SeasonManagementServiceTest {
         var ms = new MatchScoring();
         ms.setId(UUID.randomUUID());
         var regular = PhaseTestFixtures.regularPhase(existing, rs, ms);
-        regular.setFormat(SeasonFormat.SWISS);
 
         when(seasonRepository.findById(existing.getId())).thenReturn(Optional.of(existing));
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -685,7 +681,6 @@ class SeasonManagementServiceTest {
     void givenSeasonWithSwissFormat_whenGetSwissRoundData_thenReturnsRoundDataWithDriverTeamInfo() {
         // given
         var season = createSeason("Swiss Season");
-        season.setFormat(SeasonFormat.SWISS);
 
         var homeTeam = createTeam("HOM", "Home Team");
         var awayTeam = createTeam("AWY", "Away Team");
@@ -693,7 +688,7 @@ class SeasonManagementServiceTest {
         season.addTeam(awayTeam);
 
         // Create a matchday with a race that has match scores
-        var matchday = new Matchday(season, "Round 1", 1);
+        var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Round 1", 1);
         matchday.setId(UUID.randomUUID());
 
         var match = new Match(matchday, homeTeam, awayTeam);

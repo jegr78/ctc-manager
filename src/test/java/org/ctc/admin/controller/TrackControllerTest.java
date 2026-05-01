@@ -154,10 +154,8 @@ class TrackControllerTest {
 		var rs = raceScoringRepository.save(new RaceScoring("TT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0));
 		var ms = matchScoringRepository.save(new MatchScoring("TT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Track Test Season", 2026, 1);
-		s.setRaceScoring(rs);
-		s.setMatchScoring(ms);
 		var season = seasonRepository.save(s);
-		var matchday = matchdayRepository.save(new Matchday(season, "TT Matchday", 1));
+		var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "TT Matchday", 1));
 		var home = teamRepository.save(new Team("Home Team", "HOM"));
 		var away = teamRepository.save(new Team("Away Team", "AWY"));
 		var match = matchRepository.save(new Match(matchday, home, away));
@@ -203,8 +201,6 @@ class TrackControllerTest {
 		var rs = raceScoringRepository.save(new RaceScoring("TP RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0));
 		var ms = matchScoringRepository.save(new MatchScoring("TP MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Pool Test Season", 2026, 1);
-		s.setRaceScoring(rs);
-		s.setMatchScoring(ms);
 		var season = seasonRepository.save(s);
 		season.getTracks().add(track);
 		seasonRepository.save(season);

@@ -25,7 +25,6 @@ class SeasonPhaseFormTest {
         var form = new SeasonPhaseForm();
         // NOTE: seasonId is INTENTIONALLY absent from SeasonPhaseForm (W-7 IDOR hardening, Plan 60-02)
         form.setLayout(PhaseLayout.LEAGUE);
-        form.setFormat(SeasonFormat.LEAGUE);
         // phaseType is null — intentionally not set
 
         // when
@@ -40,7 +39,6 @@ class SeasonPhaseFormTest {
         // given
         var form = new SeasonPhaseForm();
         form.setPhaseType(PhaseType.REGULAR);
-        form.setFormat(SeasonFormat.LEAGUE);
         // layout is null — intentionally not set
 
         // when
@@ -57,7 +55,6 @@ class SeasonPhaseFormTest {
         form.setPhaseType(PhaseType.REGULAR);
         form.setLayout(PhaseLayout.LEAGUE);
         // format is null (overriding default) — intentionally set to null for test
-        form.setFormat(null);
 
         // when
         var violations = validator.validate(form);
@@ -75,7 +72,6 @@ class SeasonPhaseFormTest {
         var form = new SeasonPhaseForm();
         form.setPhaseType(PhaseType.REGULAR);
         form.setLayout(PhaseLayout.LEAGUE);
-        form.setFormat(SeasonFormat.LEAGUE);
 
         // when
         var violations = validator.validate(form);
@@ -92,7 +88,6 @@ class SeasonPhaseFormTest {
         var form = new SeasonPhaseForm();
         form.setPhaseType(PhaseType.REGULAR);
         form.setLayout(PhaseLayout.LEAGUE);
-        form.setFormat(SeasonFormat.LEAGUE);
 
         // when
         var violations = validator.validate(form);

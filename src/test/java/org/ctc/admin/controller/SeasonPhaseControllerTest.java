@@ -82,8 +82,8 @@ class SeasonPhaseControllerTest {
     void givenExistingRegular_whenCreateSecondRegular_thenFlashError() throws Exception {
         // given
         var season = testHelper.createSeason("T-Phase60-Dup");
-        var rs = season.getRaceScoring();
-        var ms = season.getMatchScoring();
+        var rs = testHelper.getRaceScoring(season);
+        var ms = testHelper.getMatchScoring(season);
 
         // when / then
         mockMvc.perform(post("/admin/seasons/{id}/phases/save", season.getId())
@@ -102,8 +102,8 @@ class SeasonPhaseControllerTest {
     void givenSeasonWithoutPlayoff_whenAddPhasePLAYOFF_thenPlayoffServiceAutoCreatesPlayoff() throws Exception {
         // given
         var season = testHelper.createSeason("T-Phase60-PlayoffAutoCreate");
-        var rs = season.getRaceScoring();
-        var ms = season.getMatchScoring();
+        var rs = testHelper.getRaceScoring(season);
+        var ms = testHelper.getMatchScoring(season);
 
         // when / then
         mockMvc.perform(post("/admin/seasons/{id}/phases/save", season.getId())

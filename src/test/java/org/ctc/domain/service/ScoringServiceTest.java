@@ -253,7 +253,8 @@ class ScoringServiceTest {
 			var season = new Season("Test");
 			season.setId(UUID.randomUUID());
 			var match = createMatch(homeTeam, awayTeam);
-			match.getMatchday().setSeason(season);
+			// Phase 61 MIGR-06: Matchday is no longer directly bound to a Season;
+			// the SeasonDriver fallback below uses the season variable directly.
 			var race = createRace(match);
 
 			var homeDriver = createDriver("home_d");
@@ -393,7 +394,6 @@ class ScoringServiceTest {
 
 			var matchday = new Matchday();
 			matchday.setId(UUID.randomUUID());
-			matchday.setSeason(season2);
 			var match = new Match();
 			match.setMatchday(matchday);
 			var race = new Race();
@@ -433,7 +433,6 @@ class ScoringServiceTest {
 
 			var matchday = new Matchday();
 			matchday.setId(UUID.randomUUID());
-			matchday.setSeason(season2);
 			var match = new Match();
 			match.setMatchday(matchday);
 			var race = new Race();
