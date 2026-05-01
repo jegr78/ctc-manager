@@ -4,7 +4,9 @@ Items discovered during plan 61-02 execution that are out of scope and tracked h
 
 ## Pre-existing Unused Fields
 
-- `PlayoffService.playoffSeedRepository` (src/main/java/org/ctc/domain/service/PlayoffService.java:36) — declared but never referenced. Predates plan 61-02. Not removed because removal is unrelated to MIGR-06 cleanup; can be cleaned in a separate refactor commit if desired.
+_Resolved by 61-gap-06 (commit 451eca8): `PlayoffService.playoffSeedRepository` was removed
+along with `StandingsService.teamRepository`. No outstanding pre-existing unused fields
+remain in the touched scope._
 
 ## Disabled Tests (Plan 61-04 follow-up)
 
