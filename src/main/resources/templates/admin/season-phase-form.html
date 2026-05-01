@@ -23,7 +23,7 @@
                     <select id="phaseType" th:field="*{phaseType}" required
                             th:disabled="${phaseTypeReadonly}">
                         <option th:each="pt : ${phaseTypes}" th:value="${pt}"
-                                th:text="${phaseTypeLabels[pt]}"></option>
+                                th:text="${phaseTypeLabels.get(pt)}"></option>
                     </select>
                     <input type="hidden" th:if="${phaseTypeReadonly}" name="phaseType" th:value="${seasonPhaseForm.phaseType}">
                     <span class="field-error" th:if="${#fields.hasErrors('phaseType')}" th:errors="*{phaseType}"></span>
@@ -32,7 +32,7 @@
                     <label for="layout">Layout</label>
                     <select id="layout" th:field="*{layout}" required>
                         <option th:each="l : ${phaseLayouts}" th:value="${l}"
-                                th:text="${layoutLabels[l]}"></option>
+                                th:text="${layoutLabels.get(l)}"></option>
                     </select>
                     <span class="field-error" th:if="${#fields.hasErrors('layout')}" th:errors="*{layout}"></span>
                 </div>
@@ -40,7 +40,7 @@
                     <label for="format">Format</label>
                     <select id="format" th:field="*{format}" required>
                         <option th:each="f : ${seasonFormats}" th:value="${f}"
-                                th:text="${formatLabels[f]}"></option>
+                                th:text="${formatLabels.get(f)}"></option>
                     </select>
                 </div>
             </div>

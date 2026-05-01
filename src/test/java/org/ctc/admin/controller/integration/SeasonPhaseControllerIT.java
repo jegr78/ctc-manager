@@ -12,6 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -66,5 +67,30 @@ class SeasonPhaseControllerIT {
                 .andExpect(status().isOk())
                 .andExpect(model().attributeExists("phase"))
                 .andExpect(model().attributeExists("season"));
+    }
+
+    // Phase 61 gap-10: phase edit form must render non-empty option labels for
+    // Phase Type, Layout, and Format dropdowns (Thymeleaf [enumKey] indexer
+    // into Map<Enum, String> regression — labels rendered empty pre-fix).
+    @Test
+    void givenExistingPhase_whenGetEditForm_thenDropdownOptionsHaveNonEmptyLabels() throws Exception {
+        // given
+        var season = testHelper.createSeason("T-Phase61-EditFormLabels");
+        var regular = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+
+        // when / then
+        mockMvc.perform(get("/admin/seasons/{sid}/phases/{pid}/edit", season.getId(), regular.getId()))
+                .andExpect(status().isOk())
+                // PhaseType labels
+                .andExpect(content().string(containsString(">Regular Season</option>")))
+                .andExpect(content().string(containsString(">Playoff</option>")))
+                .andExpect(content().string(containsString(">Placement</option>")))
+                // Layout labels
+                .andExpect(content().string(containsString(">League</option>")))
+                .andExpect(content().string(containsString(">Groups</option>")))
+                .andExpect(content().string(containsString(">Bracket</option>")))
+                // Format labels
+                .andExpect(content().string(containsString(">Swiss</option>")))
+                .andExpect(content().string(containsString(">Round Robin</option>")));
     }
 }
