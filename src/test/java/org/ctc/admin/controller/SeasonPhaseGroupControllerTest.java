@@ -3,7 +3,6 @@ package org.ctc.admin.controller;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.SeasonFormat;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.SeasonPhaseRepository;
 import org.ctc.domain.service.SeasonPhaseService;

@@ -5,7 +5,6 @@ import org.ctc.dataimport.DriverSheetImportService.TabPreview;
 import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonFormat;
 import org.ctc.domain.repository.MatchScoringRepository;
 import org.ctc.domain.repository.RaceScoringRepository;
 import org.ctc.domain.repository.SeasonRepository;

@@ -1,24 +1,19 @@
 package org.ctc.dataimport;
 
 import org.ctc.dataimport.DriverMatchingService.MatchResult;
-import org.ctc.dataimport.DriverMatchingService.MatchType;
 import org.ctc.dataimport.DriverSheetImportService.DriverSheetImportPreview;
 import org.ctc.dataimport.DriverSheetImportService.ErrorReason;
 import org.ctc.dataimport.DriverSheetImportService.TabPreview;
-import org.ctc.dataimport.DriverSheetImportService.TabWarning;
 import org.ctc.dataimport.DriverSheetImportService.WarningType;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PhaseTeam;
-import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.SeasonPhase;
-import org.ctc.domain.model.SeasonPhaseGroup;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;

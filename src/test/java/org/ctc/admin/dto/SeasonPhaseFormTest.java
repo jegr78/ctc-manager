@@ -4,10 +4,8 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.SeasonFormat;
 import org.junit.jupiter.api.Test;
 
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

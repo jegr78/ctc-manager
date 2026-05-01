@@ -2,7 +2,6 @@ package org.ctc.admin.controller;
 
 import org.ctc.TestHelper;
 import org.ctc.domain.model.Car;
-import org.ctc.domain.model.SeasonFormat;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.model.Track;
 import org.ctc.domain.repository.CarRepository;

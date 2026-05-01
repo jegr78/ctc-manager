@@ -8,9 +8,7 @@ import org.ctc.dataimport.DriverSheetImportService.TabWarning;
 import org.ctc.dataimport.DriverSheetImportService.WarningType;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonFormat;
 import org.ctc.domain.model.SeasonPhase;
-import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
@@ -28,7 +26,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.lenient;
