@@ -141,7 +141,8 @@ public class SeasonManagementService {
         var playoff = playoffRepository.findBySeasonId(id).orElse(null);
         boolean hasTeams = !season.getSeasonTeams().isEmpty();
         boolean hasMatchdays = !season.getMatchdays().isEmpty();
-        boolean isSwiss = season.getFormat() == SeasonFormat.SWISS;
+        // Phase 61 MIGR-06: format moved to REGULAR phase.
+        boolean isSwiss = seasonPhaseService.findRegularPhase(season.getId()).getFormat() == SeasonFormat.SWISS;
         boolean canGenerate = !isSwiss && !hasMatchdays && season.getEligibleTeams().size() >= 2;
         return new SeasonDetailData(season, playoff, hasTeams, hasMatchdays, canGenerate, isSwiss);
     }

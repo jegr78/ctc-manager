@@ -58,8 +58,11 @@ public class PlayoffService {
 		Season season = seasonRepository.findById(seasonId)
 				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
+		// Phase 61 MIGR-06: scoring now lives on the REGULAR phase, not on the season.
+		SeasonPhase regular = seasonPhaseService.findRegularPhase(seasonId);
+
 		// D-19: find-or-create the PLAYOFF SeasonPhase. Auto-creates with BRACKET layout,
-		// LEAGUE format (D-08 DB-default workaround), sortIndex=10, scoring copied from season.
+		// LEAGUE format (D-08 DB-default workaround), sortIndex=10, scoring copied from REGULAR phase.
 		SeasonPhase phase = seasonPhaseService.findByType(seasonId, PhaseType.PLAYOFF)
 				.orElseGet(() -> seasonPhaseService.create(
 						seasonId,
@@ -67,8 +70,8 @@ public class PlayoffService {
 						PhaseLayout.BRACKET,
 						/*sortIndex*/ 10,
 						name,
-						season.getRaceScoring(),
-						season.getMatchScoring(),
+						regular.getRaceScoring(),
+						regular.getMatchScoring(),
 						SeasonFormat.LEAGUE,                            // D-08 DB-default workaround
 						/*startDate*/ null,
 						/*endDate*/ null,
@@ -76,8 +79,8 @@ public class PlayoffService {
 						/*legs*/ 1,
 						/*eventDurationMinutes*/ null));
 
-		Playoff playoff = new Playoff(season, name);
-		playoff.setPhase(phase);  // D-19: bind to PLAYOFF SeasonPhase
+		// Phase 61 MIGR-06: Playoff is bound to PLAYOFF SeasonPhase only; season derived via Convenience-Getter.
+		Playoff playoff = new Playoff(phase, name);
 		playoff = playoffRepository.save(playoff);
 
 		List<String> labels = DEFAULT_ROUND_LABELS.get(numberOfTeams);
@@ -117,48 +120,13 @@ public class PlayoffService {
 		return playoff;
 	}
 
-	/**
-	 * @deprecated Phase 58 D-03: M:N {@code playoff_seasons} is removed in Phase 61 alongside MIGR-06 cleanup.
-	 * Kept functional so existing PlayoffController add-season action continues to work.
-	 * Remove in Phase 61.
-	 */
-	@Deprecated
-	@Transactional
-	public void addSeasonToPlayoff(UUID playoffId, UUID seasonId) {
-		Playoff playoff = playoffRepository.findById(playoffId)
-				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-		Season season = seasonRepository.findById(seasonId)
-				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
-		if (!playoff.getSeasons().contains(season)) {
-			playoff.getSeasons().add(season);
-			playoffRepository.save(playoff);
-		}
-	}
-
-	/**
-	 * @deprecated Phase 58 D-03: see {@link #addSeasonToPlayoff}. Remove in Phase 61.
-	 */
-	@Deprecated
-	@Transactional
-	public void removeSeasonFromPlayoff(UUID playoffId, UUID seasonId) {
-		Playoff playoff = playoffRepository.findById(playoffId)
-				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-		playoff.getSeasons().removeIf(s -> s.getId().equals(seasonId));
-		playoffRepository.save(playoff);
-	}
-
 	@Transactional(readOnly = true)
 	public List<Team> getPlayoffTeams(UUID playoffId) {
 		Playoff playoff = playoffRepository.findById(playoffId)
 				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-		// Collect teams from all linked seasons, deduplicate by ID
+		// Phase 61 MIGR-06: M:N playoff_seasons is gone. Teams come from the playoff's
+		// canonical season (resolved via Convenience-Getter playoff.getSeason()).
 		Map<UUID, Team> teamMap = new LinkedHashMap<>();
-		for (Season season : playoff.getSeasons()) {
-			for (Team team : season.getTeams()) {
-				teamMap.putIfAbsent(team.getId(), team);
-			}
-		}
-		// Also include teams from the main season
 		for (Team team : playoff.getSeason().getTeams()) {
 			teamMap.putIfAbsent(team.getId(), team);
 		}
@@ -305,9 +273,8 @@ public class PlayoffService {
 				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
 		var allSeasons = seasonRepository.findAll();
 		var bracketView = playoffBracketViewService.getBracketView(playoffId);
-		UUID effectiveSeasonId = playoff.getPhase() != null && playoff.getPhase().getSeason() != null
-				? playoff.getPhase().getSeason().getId()
-				: (playoff.getSeason() != null ? playoff.getSeason().getId() : null);
+		// Phase 61 MIGR-06: Convenience-Getter playoff.getSeason() delegates to phase.getSeason().
+		UUID effectiveSeasonId = playoff.getSeason() != null ? playoff.getSeason().getId() : null;
 		return new PlayoffListData(playoff, bracketView, allSeasons, effectiveSeasonId);
 	}
 
@@ -345,14 +312,14 @@ public class PlayoffService {
 
 		// Auto-create matchday for this playoff leg
 		var playoff = matchup.getRound().getPlayoff();
-		var season = playoff.getSeason();
 		int legNumber = existingLegs + 1;
 		String label = matchup.getRound().getLabel() + " - Leg " + legNumber;
-		var matchday = new Matchday(season, label,
+		// Phase 61 MIGR-06: link matchday to PLAYOFF phase directly. Season is derived via
+		// matchday.getSeason() Convenience-Getter (delegates to phase.getSeason()).
+		// Pitfall 4: link to PLAYOFF phase, not REGULAR — otherwise playoff race results
+		// are misattributed to REGULAR by DriverRankingService.calculateRankingForPhase.
+		var matchday = new Matchday(playoff.getPhase(), label,
 				100 + matchup.getRound().getRoundIndex() * 10 + legNumber);
-		// Pitfall 4: link new matchday to PLAYOFF phase, not REGULAR — otherwise playoff race
-		// results are misattributed to REGULAR by DriverRankingService.calculateRankingForPhase.
-		matchday.setPhase(playoff.getPhase());
 		matchday = matchdayRepository.save(matchday);
 
 		var race = new Race();

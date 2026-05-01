@@ -27,6 +27,7 @@ public class MatchdayService {
     private final MatchdayRepository matchdayRepository;
     private final SeasonRepository seasonRepository;
     private final RaceLineupRepository raceLineupRepository;
+    private final SeasonPhaseService seasonPhaseService;
 
     // --- Return types ---
 
@@ -97,6 +98,8 @@ public class MatchdayService {
     public Matchday saveMatchday(String label, int sortIndex, UUID seasonId, UUID matchdayId) {
         var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        // Phase 61 MIGR-06: matchday.season is gone; bind via REGULAR phase instead.
+        var regular = seasonPhaseService.findRegularPhase(season.getId());
 
         Matchday matchday;
         if (matchdayId != null) {
@@ -104,9 +107,9 @@ public class MatchdayService {
                     .orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
             matchday.setLabel(label);
             matchday.setSortIndex(sortIndex);
-            matchday.setSeason(season);
+            matchday.setPhase(regular);
         } else {
-            matchday = new Matchday(season, label, sortIndex);
+            matchday = new Matchday(regular, label, sortIndex);
         }
 
         matchdayRepository.save(matchday);
@@ -158,6 +161,8 @@ public class MatchdayService {
     public MatchdayData createInline(UUID seasonId, String label) {
         var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        // Phase 61 MIGR-06: matchday.season is gone; bind via REGULAR phase instead.
+        var regular = seasonPhaseService.findRegularPhase(season.getId());
 
         var existingMatchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
 
@@ -172,7 +177,7 @@ public class MatchdayService {
                 .max()
                 .orElse(0) + 1;
 
-        var matchday = matchdayRepository.save(new Matchday(season, label, nextSortIndex));
+        var matchday = matchdayRepository.save(new Matchday(regular, label, nextSortIndex));
         log.info("Created matchday inline: {} (season {})", matchday.getLabel(), season.getName());
 
         return new MatchdayData(matchday.getId(), matchday.getLabel(), matchday.getSortIndex());

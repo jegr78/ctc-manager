@@ -122,7 +122,6 @@ class SiteGeneratorServiceIT {
         when(seasonRepository.findByActiveTrue()).thenReturn(java.util.Optional.empty());
         when(seasonRepository.findAll()).thenReturn(List.of(season));
         when(playoffRepository.findBySeasonId(seasonId)).thenReturn(java.util.Optional.empty());
-        when(playoffRepository.findByLinkedSeasonId(seasonId)).thenReturn(java.util.Optional.empty());
         when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId)).thenReturn(List.of());
         when(raceLineupRepository.findByRaceMatchdaySeasonId(seasonId)).thenReturn(List.of());
         when(seasonDriverRepository.findBySeasonId(seasonId)).thenReturn(List.of());

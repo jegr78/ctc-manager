@@ -3,6 +3,7 @@ package org.ctc.domain.repository;
 import org.ctc.domain.model.Race;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.UUID;
@@ -12,10 +13,13 @@ public interface RaceRepository extends JpaRepository<Race, UUID> {
 	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
 	List<Race> findByMatchdayId(UUID matchdayId);
 
+	// Phase 61 MIGR-06: post-V6 matchdays.season_id is gone — resolve via matchday.phase.season.id.
 	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
+	@Query("SELECT r FROM Race r WHERE r.matchday.phase.season.id = :seasonId")
 	List<Race> findByMatchdaySeasonId(UUID seasonId);
 
 	@EntityGraph(attributePaths = {"matchday", "match", "track", "car"})
+	@Query("SELECT r FROM Race r WHERE r.matchday.phase.season.id = :seasonId AND r.playoffMatchup IS NULL")
 	List<Race> findByMatchdaySeasonIdAndPlayoffMatchupIsNull(UUID seasonId);
 
 	@EntityGraph(attributePaths = {"playoffMatchup", "track", "car"})

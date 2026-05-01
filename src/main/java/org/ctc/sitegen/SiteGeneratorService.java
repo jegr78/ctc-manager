@@ -703,15 +703,11 @@ public class SiteGeneratorService {
     }
 
     private String resolvePlayoffSeasonSlug(Season season) {
-        // Check if this season has a direct playoff
+        // Phase 61 MIGR-06: M:N playoff_seasons table is gone — only the direct playoff
+        // (resolved via phase.season.id) remains relevant.
         var directPlayoff = playoffRepository.findBySeasonId(season.getId());
         if (directPlayoff.isPresent()) {
             return slugify(season.getDisplayLabel());
-        }
-        // Check if this season is linked to another season's playoff
-        var linkedPlayoff = playoffRepository.findByLinkedSeasonId(season.getId());
-        if (linkedPlayoff.isPresent()) {
-            return slugify(linkedPlayoff.get().getSeason().getDisplayLabel());
         }
         return null;
     }

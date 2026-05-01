@@ -139,60 +139,18 @@ public class StandingsService {
 	}
 
 	// ---------------------------------------------------------------------------
-	// @Deprecated seasonId-overload bridges (D-01, D-03) — remove in Phase 60
+	// SeasonId convenience overload — delegates to the canonical phase-aware method
 	// ---------------------------------------------------------------------------
 
 	/**
-	 * @deprecated Phase 58: use {@link #calculateStandings(UUID, UUID)}. Remove in Phase 60 alongside UI cutover.
-	 *
-	 * <p>Backward-compat bridge: delegates to the canonical phase-aware method via the REGULAR phase.
-	 * Falls back to the legacy season-based path (via {@code seasonRepository}) if no REGULAR phase
-	 * exists for the season — this covers seasons created before Phase 57 data migration ran
-	 * (e.g., test data created at runtime in integration tests that bypass Flyway's V4 migration).
-	 * Uses {@code findByType} (returns Optional) to avoid marking the transaction rollback-only.
+	 * Convenience overload: resolves the REGULAR phase for the given season and delegates
+	 * to {@link #calculateStandings(UUID, UUID)}. Phase 61 MIGR-06: every post-V4 season has
+	 * a REGULAR phase, so the legacy season-level fallback was removed.
 	 */
-	@Deprecated
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateStandings(UUID seasonId) {
-		var regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
-		if (regularPhaseOpt.isPresent()) {
-			return calculateStandings(regularPhaseOpt.get().getId(), null);
-		}
-		// Pre-Phase-57 season (no REGULAR phase row) — fall back to legacy season-level query
-		log.debug("No REGULAR phase for season {} — falling back to legacy season-level standings", seasonId);
-		return calculateStandingsLegacy(seasonId);
-	}
-
-	// Legacy season-level implementation — kept only for the @Deprecated calculateStandings(UUID seasonId)
-	// bridge fallback path on seasons without a REGULAR SeasonPhase row. The Buchholz variant of this
-	// fallback was removed in Phase 60 alongside the @Deprecated calculateStandingsWithBuchholz(seasonId)
-	// overload — Phase 61 MIGR-06 will remove the remaining season-level path.
-
-	private List<TeamStanding> calculateStandingsLegacy(UUID seasonId) {
-		var season = seasonRepository.findById(seasonId).orElse(null);
-		if (season == null) return List.of();
-
-		var matchScoring = season.getMatchScoring();
-		List<Match> matches = matchRepository.findByMatchdaySeasonId(seasonId);
-		Map<UUID, TeamStanding> standingsMap = new HashMap<>();
-		Map<UUID, UUID> successionMap = season.buildSuccessionMap();
-
-		for (Team team : season.getActiveTeams()) {
-			standingsMap.put(team.getId(), new TeamStanding(team));
-		}
-		for (Match match : matches) {
-			processMatch(match, standingsMap, matchScoring, successionMap);
-		}
-
-		List<TeamStanding> standings = new ArrayList<>(standingsMap.values());
-		standings.removeIf(s -> s.getPlayed() == 0);
-		standings.sort(Comparator
-				.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
-				.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
-				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
-
-		log.debug("Calculated standings (legacy) for season {}: {} teams", seasonId, standings.size());
-		return standings;
+		var regular = seasonPhaseService.findRegularPhase(seasonId);
+		return calculateStandings(regular.getId(), null);
 	}
 
 	// ---------------------------------------------------------------------------

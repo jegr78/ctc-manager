@@ -61,13 +61,9 @@ public class PlayoffSeedingService {
 				.filter(r -> r.getRoundIndex() == 0)
 				.findFirst().orElseThrow(() -> new EntityNotFoundException("PlayoffRound", "index=0"));
 
-		// Collect all teams from linked seasons and the main season
+		// Phase 61 MIGR-06: M:N playoff_seasons is gone. Teams come from the playoff's
+		// canonical season (resolved via Convenience-Getter playoff.getSeason()).
 		Map<UUID, Team> teamMap = new LinkedHashMap<>();
-		for (Season season : playoff.getSeasons()) {
-			for (Team team : season.getTeams()) {
-				teamMap.putIfAbsent(team.getId(), team);
-			}
-		}
 		for (Team team : playoff.getSeason().getTeams()) {
 			teamMap.putIfAbsent(team.getId(), team);
 		}
