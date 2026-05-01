@@ -9,7 +9,7 @@
             <h1 th:text="'Swiss Rounds — ' + ${season.displayLabel}"></h1>
         </div>
         <div class="actions">
-            <span class="text-dim" th:text="'Round ' + ${currentRound} + ' of ' + ${season.totalRounds}"></span>
+            <span class="text-dim" th:text="'Round ' + ${currentRound} + ' of ' + ${totalRounds}"></span>
             <form th:if="${canGenerateNext}" th:action="@{/admin/seasons/{id}/swiss/generate(id=${season.id})}" method="post">
                 <button type="submit" class="btn btn-primary">Generate Next Round</button>
             </form>
@@ -66,8 +66,8 @@
     </th:block>
 
     <!-- Show pending rounds -->
-    <th:block th:if="${season.totalRounds != null}">
-        <div th:each="i : ${#numbers.sequence(season.matchdays.size() + 1, season.totalRounds)}" class="card">
+    <th:block th:if="${totalRounds != null}">
+        <div th:each="i : ${#numbers.sequence(season.matchdays.size() + 1, totalRounds)}" class="card">
             <h2 th:text="'Round ' + ${i}"></h2>
             <div class="empty-state" style="padding:16px;color:var(--accent);"><p>matches pending</p></div>
         </div>

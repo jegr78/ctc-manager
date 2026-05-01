@@ -418,7 +418,7 @@ public class SiteGeneratorService {
                 .sorted(java.util.Comparator
                         .comparingInt(Season::getYear).reversed()
                         .thenComparing(java.util.Comparator.comparingInt(Season::getNumber).reversed()))
-                .map(s -> new SeasonEntry(s, slugify(s.getDisplayLabel())))
+                .map(this::buildSeasonEntry)
                 .toList();
         ctx.setVariable("seasonEntries", seasonEntries);
         ctx.setVariable("currentPage", "archive");
@@ -509,7 +509,7 @@ public class SiteGeneratorService {
                 .toList();
 
         var seasonEntries = sortedSeasons.stream()
-                .map(s -> new SeasonEntry(s, slugify(s.getDisplayLabel())))
+                .map(this::buildSeasonEntry)
                 .toList();
 
         var ctx = new Context(Locale.ENGLISH);
@@ -559,7 +559,7 @@ public class SiteGeneratorService {
                 .toList();
 
         var seasonEntries = sortedSeasons.stream()
-                .map(s -> new SeasonEntry(s, slugify(s.getDisplayLabel())))
+                .map(this::buildSeasonEntry)
                 .toList();
 
         var ctx = new Context(Locale.ENGLISH);
@@ -833,7 +833,23 @@ public class SiteGeneratorService {
                 .replaceAll("^-|-$", "");
     }
 
-    record SeasonEntry(Season season, String slug) {}
+    /**
+     * Phase 61 MIGR-06: startDate/endDate live on the REGULAR SeasonPhase, not on Season.
+     * Pre-computed here so archive.html does not need SpEL traversal logic.
+     */
+    record SeasonEntry(Season season, String slug, java.time.LocalDate startDate, java.time.LocalDate endDate) {}
+
+    /**
+     * Phase 61 MIGR-06 builder: constructs a SeasonEntry pulling startDate/endDate from the
+     * REGULAR SeasonPhase. If no REGULAR phase exists, the dates default to {@code null}
+     * (the archive template guards both fields with {@code th:if}).
+     */
+    private SeasonEntry buildSeasonEntry(Season s) {
+        var regular = seasonPhaseService.findByType(s.getId(), org.ctc.domain.model.PhaseType.REGULAR);
+        var startDate = regular.map(org.ctc.domain.model.SeasonPhase::getStartDate).orElse(null);
+        var endDate = regular.map(org.ctc.domain.model.SeasonPhase::getEndDate).orElse(null);
+        return new SeasonEntry(s, slugify(s.getDisplayLabel()), startDate, endDate);
+    }
 
     record DriverEntry(String psnId, String driverProfileUrl, int totalPoints) {}
 

@@ -47,7 +47,11 @@ public class TestHelper {
 		var regular = new SeasonPhase(saved, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
 		regular.setFormat(SeasonFormat.LEAGUE);
 		regular.setLegs(1);
-		seasonPhaseRepository.save(regular);
+		regular = seasonPhaseRepository.save(regular);
+		// Phase 61 MIGR-06: keep the Java-side season.phases collection in sync so that
+		// downstream PhaseTestFixtures.matchdayInRegularPhase(saved, ...) can find it
+		// without relying on lazy-load (some unit-style IT tests run outside an OSIV session).
+		saved.getPhases().add(regular);
 		return saved;
 	}
 

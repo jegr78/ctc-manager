@@ -48,6 +48,9 @@ class TrackControllerTest {
 	@Autowired
 	private MatchScoringRepository matchScoringRepository;
 
+	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+
 	private Track track;
 
 	@BeforeEach
@@ -155,7 +158,12 @@ class TrackControllerTest {
 		var ms = matchScoringRepository.save(new MatchScoring("TT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Track Test Season", 2026, 1);
 		var season = seasonRepository.save(s);
-		var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "TT Matchday", 1));
+		// Phase 61 MIGR-06: persist a REGULAR phase, then bind the matchday to it.
+		var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		regularPhase.setRaceScoring(rs);
+		regularPhase.setMatchScoring(ms);
+		regularPhase = seasonPhaseRepository.save(regularPhase);
+		var matchday = matchdayRepository.save(new Matchday(regularPhase, "TT Matchday", 1));
 		var home = teamRepository.save(new Team("Home Team", "HOM"));
 		var away = teamRepository.save(new Team("Away Team", "AWY"));
 		var match = matchRepository.save(new Match(matchday, home, away));

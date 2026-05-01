@@ -204,6 +204,8 @@ public class SeasonController {
 		Integer totalRounds = regular.getTotalRounds();
 		model.addAttribute("season", data.season());
 		model.addAttribute("raceScores", data.raceScores());
+		// Phase 61 MIGR-06: totalRounds is phase-owned now; expose explicitly to the template.
+		model.addAttribute("totalRounds", totalRounds);
 		model.addAttribute("currentRound", swissPairingService.getCurrentRound(regular.getId(), null));
 		model.addAttribute("canGenerateNext",
 				swissPairingService.isCurrentRoundComplete(regular.getId(), null)

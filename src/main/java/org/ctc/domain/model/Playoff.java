@@ -28,6 +28,15 @@ public class Playoff extends BaseEntity {
 	@JoinColumn(name = "phase_id", nullable = false, unique = true)
 	private SeasonPhase phase;
 
+	/**
+	 * Phase 61 MIGR-06 transitional bridge column — the {@code playoffs.season_id} column
+	 * is still {@code NOT NULL} (and {@code UNIQUE}) in the V1-V5 schema. Plan 61-03 introduces
+	 * V6 to drop it; until then we auto-fill it from {@code phase.getSeason()} in
+	 * {@link #syncSeasonBridge()}. Read-only after persist — {@link #phase} is canonical.
+	 */
+	@Column(name = "season_id", nullable = false, updatable = false)
+	private UUID seasonId;
+
 	@NotBlank
 	@Column(nullable = false)
 	private String name;
@@ -59,5 +68,16 @@ public class Playoff extends BaseEntity {
 	 */
 	public Season getSeason() {
 		return phase != null ? phase.getSeason() : null;
+	}
+
+	/**
+	 * Phase 61 MIGR-06: keeps the {@code playoffs.season_id NOT NULL} V1 bridge column populated
+	 * pre-V6. Auto-derives the value from the phase before INSERT so callers do not have to.
+	 */
+	@PrePersist
+	void syncSeasonBridge() {
+		if (seasonId == null && phase != null && phase.getSeason() != null) {
+			seasonId = phase.getSeason().getId();
+		}
 	}
 }

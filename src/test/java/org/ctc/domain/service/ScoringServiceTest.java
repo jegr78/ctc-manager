@@ -253,8 +253,10 @@ class ScoringServiceTest {
 			var season = new Season("Test");
 			season.setId(UUID.randomUUID());
 			var match = createMatch(homeTeam, awayTeam);
-			// Phase 61 MIGR-06: Matchday is no longer directly bound to a Season;
-			// the SeasonDriver fallback below uses the season variable directly.
+			// Phase 61 MIGR-06: matchday's season is derived from phase; rebind the matchday's
+			// phase to this test's `season` so the SeasonDriver fallback (matched on season.id)
+			// resolves correctly.
+			match.getMatchday().setPhase(PhaseTestFixtures.regularPhase(season, null, null));
 			var race = createRace(match);
 
 			var homeDriver = createDriver("home_d");
@@ -326,8 +328,13 @@ class ScoringServiceTest {
 		}
 
 		private Match createMatch(Team home, Team away) {
+			// Phase 61 MIGR-06: matchday now derives season via phase; wire a synthetic phase
+			// so matchday.getSeason() does not return null in scoring fallback paths.
+			var season = new Season("Test");
+			season.setId(UUID.randomUUID());
 			var matchday = new Matchday();
 			matchday.setId(UUID.randomUUID());
+			matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
 			var match = new Match();
 			match.setId(UUID.randomUUID());
 			match.setMatchday(matchday);
@@ -394,6 +401,8 @@ class ScoringServiceTest {
 
 			var matchday = new Matchday();
 			matchday.setId(UUID.randomUUID());
+			// Phase 61 MIGR-06: matchday's season is derived from phase.season; wire season2.
+			matchday.setPhase(PhaseTestFixtures.regularPhase(season2, null, null));
 			var match = new Match();
 			match.setMatchday(matchday);
 			var race = new Race();
@@ -433,6 +442,8 @@ class ScoringServiceTest {
 
 			var matchday = new Matchday();
 			matchday.setId(UUID.randomUUID());
+			// Phase 61 MIGR-06: matchday's season is derived from phase.season; wire season2 (current).
+			matchday.setPhase(PhaseTestFixtures.regularPhase(season2, null, null));
 			var match = new Match();
 			match.setMatchday(matchday);
 			var race = new Race();

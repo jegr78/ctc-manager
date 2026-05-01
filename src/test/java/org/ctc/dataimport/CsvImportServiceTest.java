@@ -47,6 +47,8 @@ class CsvImportServiceTest {
 	private ScoringService scoringService;
 	@Mock
 	private RaceLineupRepository raceLineupRepository;
+	@Mock
+	private org.ctc.domain.service.SeasonPhaseService seasonPhaseService;
 
 	@InjectMocks
 	private CsvImportService csvImportService;
@@ -96,6 +98,13 @@ class CsvImportServiceTest {
 
 		driver2 = new Driver("driver2_psn", "Driver Two");
 		driver2.setId(UUID.randomUUID());
+
+		// Phase 61 MIGR-06: scoring lives on the REGULAR SeasonPhase. Provide a default
+		// stub for every test so any callsite reading findRegularPhase().getRaceScoring()
+		// finds a non-null RaceScoring without each test re-stubbing the lookup.
+		var stubPhase = matchday.getPhase();
+		stubPhase.setRaceScoring(new RaceScoring());
+		lenient().when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(stubPhase);
 	}
 
 	private void setupCommonMocks() {

@@ -38,12 +38,18 @@ public final class PhaseTestFixtures {
     /**
      * Creates a REGULAR phase with LEAGUE layout at sortIndex=0.
      * The returned entity has a random id assigned (Mockito tests require non-null ids).
+     * <p>
+     * Phase 61 MIGR-06: scoring lives on the SeasonPhase. The {@code rs}/{@code ms} parameters
+     * are now wired onto the phase so tests building phases via this helper see the scoring
+     * propagated. Pass {@code null} when scoring is not relevant for the test.
      */
     public static SeasonPhase regularPhase(Season season, RaceScoring rs, MatchScoring ms) {
         // Phase 61 MIGR-06: format/legs/totalRounds live exclusively on the SeasonPhase.
         // Tests must explicitly set these via the returned phase if non-default values are required.
         var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
         phase.setId(UUID.randomUUID());
+        if (rs != null) phase.setRaceScoring(rs);
+        if (ms != null) phase.setMatchScoring(ms);
         return phase;
     }
 
@@ -74,6 +80,9 @@ public final class PhaseTestFixtures {
         phase.setId(UUID.randomUUID());
         phase.setLabel(label);
         phase.setFormat(SeasonFormat.LEAGUE); // DB-default workaround per Phase 57 D-08
+        // Phase 61 MIGR-06: wire scoring onto the phase so callers can read it back.
+        if (rs != null) phase.setRaceScoring(rs);
+        if (ms != null) phase.setMatchScoring(ms);
         return phase;
     }
 
@@ -91,21 +100,42 @@ public final class PhaseTestFixtures {
     }
 
     /**
-     * Phase 61 MIGR-06 helper: creates a Matchday bound to a synthetic REGULAR phase
-     * for the given Season. Convenience for pure-Java unit tests that do not have a
-     * persisted phase available.
+     * Phase 61 MIGR-06 helper: creates a Matchday bound to a REGULAR phase for the given Season.
+     * <p>
+     * If the {@code season} has an existing REGULAR phase in {@code season.getPhases()} (typical
+     * for IT tests where {@code TestHelper.createSeason} bootstrapped one), reuses that persisted
+     * phase so the resulting Matchday's FK to {@code season_phases.id} resolves correctly.
+     * Otherwise falls back to a synthetic transient phase (pure-Java unit tests without a DB).
      */
     public static Matchday matchdayInRegularPhase(Season season, String label, int sortIndex) {
-        var phase = regularPhase(season, null, null);
+        SeasonPhase phase;
+        try {
+            phase = season.getPhases().stream()
+                    .filter(p -> p.getPhaseType() == PhaseType.REGULAR)
+                    .findFirst()
+                    .orElseGet(() -> regularPhase(season, null, null));
+        } catch (org.hibernate.LazyInitializationException e) {
+            // Phase 61 MIGR-06: when called outside an OSIV session (e.g. an IT test that
+            // re-fetches a Season via repo without an open transaction), fall back to a
+            // synthetic transient phase. Callers needing a persisted phase should pass it
+            // explicitly via new Matchday(phase, ...).
+            phase = regularPhase(season, null, null);
+        }
         return new Matchday(phase, label, sortIndex);
     }
 
     /**
-     * Phase 61 MIGR-06 helper: creates a Playoff bound to a synthetic PLAYOFF phase
-     * for the given Season. Convenience for pure-Java unit tests.
+     * Phase 61 MIGR-06 helper: creates a Playoff bound to a PLAYOFF phase for the given Season.
+     * <p>
+     * If the {@code season} has an existing PLAYOFF phase in {@code season.getPhases()},
+     * reuses that persisted phase. Otherwise creates a synthetic transient PLAYOFF phase
+     * (pure-Java unit tests without a DB).
      */
     public static Playoff playoffForSeason(Season season, String name) {
-        var phase = playoffPhase(season, name, null, null);
+        SeasonPhase phase = season.getPhases().stream()
+                .filter(p -> p.getPhaseType() == PhaseType.PLAYOFF)
+                .findFirst()
+                .orElseGet(() -> playoffPhase(season, name, null, null));
         return new Playoff(phase, name);
     }
 }

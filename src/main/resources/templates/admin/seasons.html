@@ -13,8 +13,6 @@
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Start</th>
-                        <th>End</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -22,8 +20,7 @@
                 <tbody>
                     <tr th:each="season : ${seasons}">
                         <td><a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="detail-link" th:text="${season.displayLabel}"></a></td>
-                        <td th:text="${season.startDate}"></td>
-                        <td th:text="${season.endDate}"></td>
+                        <!-- Phase 61 MIGR-06: Start/End dates moved to SeasonPhase; visible on phase detail tab. -->
                         <td>
                             <span th:if="${season.active}" class="badge badge-active">● Active</span>
                             <span th:unless="${season.active}" class="badge badge-inactive">○ Inactive</span>

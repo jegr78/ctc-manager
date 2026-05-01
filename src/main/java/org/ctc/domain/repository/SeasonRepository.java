@@ -1,7 +1,6 @@
 package org.ctc.domain.repository;
 
 import org.ctc.domain.model.Season;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,10 +11,10 @@ public interface SeasonRepository extends JpaRepository<Season, UUID> {
 
 	Optional<Season> findByActiveTrue();
 
-	@EntityGraph(attributePaths = {"raceScoring", "matchScoring"})
+	// Phase 61 MIGR-06: raceScoring + matchScoring moved to SeasonPhase; @EntityGraph
+	// for those attribute paths is no longer valid. Lazy fetch on phases works under OSIV.
 	List<Season> findBySeasonTeamsTeamId(UUID teamId);
 
-	@EntityGraph(attributePaths = {"raceScoring", "matchScoring"})
 	List<Season> findByYearAndNumber(int year, int number);
 
 	List<Season> findByYear(int year);

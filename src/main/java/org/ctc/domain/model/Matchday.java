@@ -31,6 +31,15 @@ public class Matchday extends BaseEntity {
 	@JoinColumn(name = "group_id")
 	private SeasonPhaseGroup group;
 
+	/**
+	 * Phase 61 MIGR-06 transitional bridge column — the {@code matchdays.season_id} column
+	 * is still {@code NOT NULL} in the V1-V5 schema. Plan 61-03 introduces V6 to drop it;
+	 * until then we auto-fill it from {@code phase.getSeason()} in {@link #syncSeasonBridge()}.
+	 * Read-only after persist — the canonical association is {@link #phase}.
+	 */
+	@Column(name = "season_id", nullable = false, updatable = false)
+	private UUID seasonId;
+
 	@NotBlank
 	@Column(nullable = false)
 	private String label;
@@ -52,11 +61,22 @@ public class Matchday extends BaseEntity {
 
 	/**
 	 * Convenience getter — derives season via {@code getPhase().getSeason()}.
-	 * The {@code matchdays.season_id} bridge column was dropped in V6 (MIGR-06);
-	 * the phase association is now the single source of truth.
+	 * The {@code matchdays.season_id} bridge column survives until V6 (Plan 61-03)
+	 * but the phase association is the single source of truth in Java.
 	 * Returns {@code null} only if {@code phase} is unset, which should not occur post-V4.
 	 */
 	public Season getSeason() {
 		return phase != null ? phase.getSeason() : null;
+	}
+
+	/**
+	 * Phase 61 MIGR-06: keeps the {@code matchdays.season_id NOT NULL} V1 bridge column populated
+	 * pre-V6. Auto-derives the value from the phase before INSERT so callers do not have to.
+	 */
+	@PrePersist
+	void syncSeasonBridge() {
+		if (seasonId == null && phase != null && phase.getSeason() != null) {
+			seasonId = phase.getSeason().getId();
+		}
 	}
 }

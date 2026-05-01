@@ -106,6 +106,9 @@ class MatchdayServiceTest {
         var seasonId = UUID.randomUUID();
         var season = new Season();
         season.setId(seasonId);
+        // Phase 61 MIGR-06: saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
+        var regular = PhaseTestFixtures.regularPhase(season, null, null);
+        when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
 
         when(seasonRepository.findById(seasonId)).thenReturn(Optional.of(season));
         when(matchdayRepository.save(any(Matchday.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -127,6 +130,9 @@ class MatchdayServiceTest {
         var matchdayId = UUID.randomUUID();
         var season = new Season();
         season.setId(seasonId);
+        // Phase 61 MIGR-06: saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
+        var regular = PhaseTestFixtures.regularPhase(season, null, null);
+        when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
         var existing = new Matchday();
         existing.setId(matchdayId);
         existing.setLabel("Old");
@@ -155,6 +161,8 @@ class MatchdayServiceTest {
         season.setId(seasonId);
         var matchday = new Matchday();
         matchday.setId(matchdayId);
+        // Phase 61 MIGR-06: matchday.getSeason() derives from phase; wire a phase so deleteMatchday can read seasonId.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
 
         when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
 

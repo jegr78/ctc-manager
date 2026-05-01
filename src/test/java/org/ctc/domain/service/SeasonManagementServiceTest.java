@@ -477,6 +477,10 @@ class SeasonManagementServiceTest {
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
         when(playoffRepository.findBySeasonId(season.getId())).thenReturn(Optional.of(playoff));
+        // Phase 61 MIGR-06: getDetailData reads format/legs/totalRounds via the REGULAR phase.
+        var regular = PhaseTestFixtures.regularPhase(season, null, null);
+        regular.setFormat(SeasonFormat.LEAGUE);
+        when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
 
         // when
         var result = service.getDetailData(season.getId());
@@ -703,7 +707,11 @@ class SeasonManagementServiceTest {
         match.getRaces().add(race);
         matchday.getRaces().add(race);
         matchday.getMatches().add(match);
-        season.getMatchdays().add(matchday);
+        // Phase 61 MIGR-06: Season.getMatchdays() is now a derived convenience getter (immutable list).
+        // Add to the matchday's phase + season.phases to wire it through the canonical structure.
+        var phase = matchday.getPhase();
+        phase.getMatchdays().add(matchday);
+        if (!season.getPhases().contains(phase)) season.getPhases().add(phase);
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 

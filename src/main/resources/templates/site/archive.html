@@ -23,9 +23,9 @@
                             <p class="season-meta" th:text="${entry.season.year + ' | #' + entry.season.number}"></p>
                         </td>
                         <td class="text-dim">
-                            <span th:if="${entry.season.startDate}" th:text="${entry.season.startDate}"></span>
-                            <span th:if="${entry.season.startDate != null and entry.season.endDate != null}"> — </span>
-                            <span th:if="${entry.season.endDate}" th:text="${entry.season.endDate}"></span>
+                            <span th:if="${entry.startDate}" th:text="${entry.startDate}"></span>
+                            <span th:if="${entry.startDate != null and entry.endDate != null}"> — </span>
+                            <span th:if="${entry.endDate}" th:text="${entry.endDate}"></span>
                         </td>
                         <td>
                             <span th:if="${entry.season.active}" class="text-accent">Active</span>

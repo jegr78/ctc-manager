@@ -255,6 +255,8 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
+        // Phase 61 MIGR-06: matchday.getSeason() derives from phase; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -305,6 +307,8 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
+        // Phase 61 MIGR-06: matchday.getSeason() derives from phase; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -334,6 +338,8 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
+        // Phase 61 MIGR-06: matchday.getSeason() derives from phase; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -494,8 +500,12 @@ class RaceServiceTest {
         season.setTracks(new ArrayList<>());
         var scoring = new RaceScoring("Default", "10,8,6", "3,2,1", 1);
 
+        // Phase 61 MIGR-06: matchday.getSeason() now derives from phase; wire a phase carrying scoring.
+        var phase = PhaseTestFixtures.regularPhase(season, scoring, null);
+        phase.setRaceScoring(scoring);
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
+        matchday.setPhase(phase);
         return matchday;
     }
 

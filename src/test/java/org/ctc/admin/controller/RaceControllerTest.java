@@ -69,6 +69,9 @@ class RaceControllerTest {
 	private RaceAttachmentRepository raceAttachmentRepository;
 
 	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+
+	@Autowired
 	private TestHelper testHelper;
 
 	@Value("${app.upload-dir:uploads}")
@@ -86,7 +89,12 @@ class RaceControllerTest {
 		var ms = matchScoringRepository.save(new MatchScoring("RT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Race Test Season", 2026, 1);
 		season = seasonRepository.save(s);
-		matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "RT Matchday", 1));
+		// Phase 61 MIGR-06: persist a REGULAR phase carrying scoring; bind matchday to it.
+		var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		regularPhase.setRaceScoring(rs);
+		regularPhase.setMatchScoring(ms);
+		regularPhase = seasonPhaseRepository.save(regularPhase);
+		matchday = matchdayRepository.save(new Matchday(regularPhase, "RT Matchday", 1));
 		home = teamRepository.save(new Team("Home Racing", "HRC"));
 		away = teamRepository.save(new Team("Away Racing", "ARC"));
 		var match = matchRepository.save(new Match(matchday, home, away));
@@ -379,7 +387,9 @@ class RaceControllerTest {
 		raceRepository.save(race);
 
 		// Create a second matchday for the second race
-		var matchday2 = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "RT Matchday 2", 2));
+		// Phase 61 MIGR-06: bind matchday to the season's persisted REGULAR phase.
+		var regularPhase2 = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+		var matchday2 = matchdayRepository.save(new Matchday(regularPhase2, "RT Matchday 2", 2));
 
 		// when
 		mockMvc.perform(post("/admin/races/save")
@@ -543,7 +553,9 @@ class RaceControllerTest {
 		race.setTrack(track);
 		raceRepository.save(race);
 
-		var matchday2 = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "RT Matchday DT", 3));
+		// Phase 61 MIGR-06: bind matchday to the season's persisted REGULAR phase.
+		var regularPhaseDt = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+		var matchday2 = matchdayRepository.save(new Matchday(regularPhaseDt, "RT Matchday DT", 3));
 
 		// when
 		mockMvc.perform(post("/admin/races/save")

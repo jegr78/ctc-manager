@@ -140,15 +140,19 @@ class SiteGeneratorServiceTest {
         seasonDriverRepository.save(new SeasonDriver(season, driver4, p1r));
 
         // Phase setup required by DriverRankingService + StandingsService (D-09 bridge delegates to findAllPhases)
+        // Phase 61 MIGR-06: scoring lives on the SeasonPhase, attach the test-class scoring fields here.
         var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regularPhase.setRaceScoring(raceScoring);
+        regularPhase.setMatchScoring(matchScoring);
         regularPhase = seasonPhaseRepository.save(regularPhase);
+        // Phase 61 MIGR-06: ensure season.getPhases() exposes the persisted phase so that
+        // PhaseTestFixtures.matchdayInRegularPhase can find it (avoids a transient phase reference).
+        season.getPhases().add(regularPhase);
         // PhaseTeam rows required by StandingsService.calculateStandings(phaseId)
         phaseTeamRepository.save(new PhaseTeam(regularPhase, tnr));
         phaseTeamRepository.save(new PhaseTeam(regularPhase, p1r));
 
-        var matchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Spieltag 1", 1));
-        matchday.setPhase(regularPhase);
-        matchday = matchdayRepository.save(matchday);
+        var matchday = matchdayRepository.save(new Matchday(regularPhase, "Spieltag 1", 1));
         var testTrack = trackRepository.save(new Track("Tsukuba " + uniqueSuffix, "Japan"));
         var testCar = carRepository.save(new Car("Mazda " + uniqueSuffix, "RX-Vision GT3"));
         var match = matchRepository.save(new Match(matchday, tnr, p1r));
@@ -205,7 +209,10 @@ class SiteGeneratorServiceTest {
     private void setupRegularPhase(Season s) {
         // Phase 61 MIGR-06: scoring lives on SeasonPhase only — reuse the test-class scoring fields.
         var regular = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regular.setRaceScoring(raceScoring);
+        regular.setMatchScoring(matchScoring);
         regular = seasonPhaseRepository.save(regular);
+        s.getPhases().add(regular);
         for (var st : s.getSeasonTeams()) {
             phaseTeamRepository.save(new PhaseTeam(regular, st.getTeam()));
         }
@@ -348,7 +355,9 @@ class SiteGeneratorServiceTest {
     @Test
     void givenByeRaceInSeason_whenGenerate_thenCompletesWithoutNPE() {
         // given — add a bye race on a separate matchday
-        var byeMatchday = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Bye Matchday", 2));
+        // Phase 61 MIGR-06: re-fetch the persisted REGULAR phase so the matchday FK resolves.
+        var bByeRegular = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+        var byeMatchday = matchdayRepository.save(new Matchday(bByeRegular, "Bye Matchday", 2));
         var homeTeam = teamRepository.findAll().stream()
                 .filter(t -> t.getShortName().startsWith("GTNR"))
                 .findFirst().orElseThrow();
@@ -1670,7 +1679,14 @@ class SiteGeneratorServiceTest {
         // driver1 now drives for P1R in season2 (was GTNR in season1)
         seasonDriverRepository.save(new SeasonDriver(season2, driver1, p1r));
 
-        var md2 = matchdayRepository.save(org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season2, "Spieltag S2", 1));
+        // Phase 61 MIGR-06: persist a REGULAR phase for season2 so the matchday FK resolves.
+        var regularPhase2 = new SeasonPhase(season2, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regularPhase2.setRaceScoring(raceScoring2);
+        regularPhase2.setMatchScoring(matchScoring2);
+        regularPhase2 = seasonPhaseRepository.save(regularPhase2);
+        season2.getPhases().add(regularPhase2);
+
+        var md2 = matchdayRepository.save(new Matchday(regularPhase2, "Spieltag S2", 1));
         var match2 = matchRepository.save(new Match(md2, p1r, tnr));
         var race2 = new Race();
         race2.setMatchday(md2);

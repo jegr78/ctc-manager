@@ -63,9 +63,13 @@ class SwissPairingServiceTest {
 		season = new Season("Swiss Test " + uniqueSuffix, 2026, 1);
 		season = seasonRepository.save(season);
 
-		// Create a REGULAR LEAGUE phase so the @Deprecated bridge (generateNextRound(seasonId))
-		// can resolve via seasonPhaseService.findRegularPhase(seasonId).
+		// Create a REGULAR phase wired for SWISS format so SwissPairingService accepts it.
+		// Phase 61 MIGR-06: format/scoring live on the phase.
 		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		phase.setFormat(SeasonFormat.SWISS);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setTotalRounds(99);
 		regularPhase = seasonPhaseRepository.save(phase);
 	}
 
@@ -378,6 +382,11 @@ class SwissPairingServiceTest {
 	private SeasonPhase buildSwissLeaguePhase() {
 		var s = buildTestSeason();
 		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		// Phase 61 MIGR-06: format/scoring/totalRounds live on the phase.
+		phase.setFormat(SeasonFormat.SWISS);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setTotalRounds(99);
 		return seasonPhaseRepository.save(phase);
 	}
 
@@ -385,6 +394,11 @@ class SwissPairingServiceTest {
 	private SeasonPhase buildSwissGroupsPhase() {
 		var s = buildTestSeason();
 		var phase = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
+		// Phase 61 MIGR-06: format/scoring live on the phase.
+		phase.setFormat(SeasonFormat.SWISS);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setTotalRounds(99);
 		phase = seasonPhaseRepository.save(phase);
 		var groupA = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(phase, "Phase58-Test-Swiss-A", 0));
 		var groupB = seasonPhaseGroupRepository.save(new SeasonPhaseGroup(phase, "Phase58-Test-Swiss-B", 1));

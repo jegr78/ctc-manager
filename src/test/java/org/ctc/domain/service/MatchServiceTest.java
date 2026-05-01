@@ -51,6 +51,8 @@ class MatchServiceTest {
 		var season = new Season("Test Season");
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
+		// Phase 61 MIGR-06: legs lives on the phase; explicit single-leg setup for this test.
+		matchday.getPhase().setLegs(1);
 
 		var homeTeam = new Team();
 		homeTeam.setId(homeTeamId);
@@ -128,6 +130,8 @@ class MatchServiceTest {
 		var season = new Season("Test Season");
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
+		// Phase 61 MIGR-06: legs lives on the phase. Configure two legs for this scenario.
+		matchday.getPhase().setLegs(2);
 
 		var homeTeam = new Team();
 		homeTeam.setId(homeTeamId);
@@ -179,6 +183,8 @@ class MatchServiceTest {
 		var season = new Season("Test Season");
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
+		// Phase 61 MIGR-06: legs lives on the phase. Configure two legs for this scenario.
+		matchday.getPhase().setLegs(2);
 
 		var homeTeam = new Team();
 		homeTeam.setId(homeTeamId);
@@ -249,6 +255,8 @@ class MatchServiceTest {
 		var season = new Season("Test Season");
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
+		// Phase 61 MIGR-06: legs lives on the phase. Allow more than 1 leg for addLeg tests.
+		matchday.getPhase().setLegs(99);
 
 		var homeTeam = new Team();
 		homeTeam.setShortName("HOM");
@@ -282,6 +290,8 @@ class MatchServiceTest {
 		var season = new Season("Test Season");
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(UUID.randomUUID());
+		// Phase 61 MIGR-06: legs lives on the phase. Allow more legs for addLeg tests.
+		matchday.getPhase().setLegs(99);
 
 		var homeTeam = new Team();
 		homeTeam.setId(UUID.randomUUID());
@@ -316,6 +326,8 @@ class MatchServiceTest {
 		var season = new Season("Test Season");
 		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(UUID.randomUUID());
+		// Phase 61 MIGR-06: legs lives on the phase. Allow more legs for addLeg tests.
+		matchday.getPhase().setLegs(99);
 
 		var homeTeam = new Team();
 		homeTeam.setId(UUID.randomUUID());
