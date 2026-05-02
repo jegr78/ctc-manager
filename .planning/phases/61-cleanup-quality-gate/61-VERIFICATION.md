@@ -382,3 +382,11 @@ The Goal Achievement / Required Artifacts / Anti-Patterns Found / Behavioral Spo
 | UAT-03 (V5/V6 MariaDB compatibility) | RESOLVED — commit 6db56d4 + V5MigrationTest |
 | Test 2 (Legacy season visual smoke) | DEFERRED — user verifies locally |
 | Phase Status | `human_needed` until Test 2 confirmed |
+
+### Post-UAT Hardening + Coverage Reconciliation
+
+After UAT-01 + UAT-03 closure, three follow-up items were addressed:
+
+1. **MariaDB CI smoke gate added** — new workflow `.github/workflows/mariadb-migration-smoke.yml` (commit `bed0ffd`). Spins up MariaDB 11 as a service container, builds the JAR, runs it against the live database on the `local` profile, asserts Flyway applies V1..VN cleanly and `/actuator/health = UP`. Triggered on changes to migration files / application*.yml / pom.xml / the workflow itself. **Closes the missing pre-merge gate that allowed both V5 (Phase 60) and V6 (Phase 61) to ship without MariaDB exposure.**
+2. **JaCoCo class-file warning** — earlier `./mvnw verify` runs reported `Execution data for class org/ctc/domain/service/SeasonPhaseService$RosterEditorState does not match`. Reproduced and confirmed harmless: stale incremental `target/` artifacts. `./mvnw clean verify` produces no warning.
+3. **Coverage baseline reconciled** — VERIFICATION.md's `87.03%` claim was inconsistent with actual measurement. Verified via git worktree: at commit `78abcb2` (pre-UAT-fix snapshot), `./mvnw clean verify` actually produces `84.95%` line coverage (5434 / 6397). At HEAD post-UAT-fix, `85.17%` (5483 / 6438). Coverage **improved** by +0.22 pp, not dropped. The `87.03%` figure was likely measured under a different profile or test set; the source of the discrepancy was not pursued further because the actual coverage comfortably exceeds the 0.82 threshold (`3.17 pp` headroom).
