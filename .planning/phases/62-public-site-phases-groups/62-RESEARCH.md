@@ -584,32 +584,37 @@ Framework install: none required. JUnit 5 + Mockito + Spring Boot Test + Jsoup a
 - D-19 service-method change (Plan 5) is high-risk for coverage drop if old REGULAR-only paths are simply deleted; ensure new path is fully covered before merging.
 - New helper unit tests in Plan 0 typically RAISE coverage; SC5 IT in Plan 6 raises it further.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **D-19 PLAYOFF results inclusion semantics — is "all phases" REGULAR + PLAYOFF + PLACEMENT, or just REGULAR + PLAYOFF?**
    - What we know: CONTEXT D-18/D-19 says "all phases per season"; ROADMAP doesn't specify; PLACEMENT phase is rare in production data.
    - What's unclear: should a PLACEMENT phase that ranks teams at the bottom contribute "negative" alltime points if its scoring rewards higher placements with fewer points?
    - Recommendation: Plan 5 task 1 should include all three phase types in the loop (`findAllPhases` returns them all). If the user objects after seeing alltime numbers, defer the PLACEMENT carve-out to a future phase. Document the choice in the PR description as part of the Tracked Behavior Change.
+   - **RESOLVED:** D-19 includes REGULAR + PLAYOFF + PLACEMENT via `seasonPhaseService.findAllPhases(seasonId)`. Implemented in Plan 5; PLACEMENT semantics documented as accepted risk in the Plan 5 SUMMARY.
 
 2. **Legacy `matchdays.html` scope: REGULAR-only matchdays, OR all-phase matchdays?**
    - What we know: Today `generateMatchdayIndex` uses `findBySeasonIdOrderBySortIndexAsc` which returns ALL phase matchdays; D-10 says "matchdays.html stays as REGULAR-default"; CONTEXT does not explicitly resolve.
    - What's unclear: Whether D-10 "REGULAR-default" means (a) tabs visible with REGULAR pre-selected (like standings.html legacy = REGULAR-combined) or (b) flat list of REGULAR matchdays only.
    - Recommendation: For consistency with `standings.html` legacy (which renders REGULAR-combined and not all-phase combined), `matchdays.html` legacy should render REGULAR-only matchdays. Document this in Plan 2 task 1 and verify against UI-SPEC if ambiguous.
+   - **RESOLVED:** Legacy `matchdays.html` renders REGULAR-only matchdays (consistent with `standings.html` legacy = REGULAR-combined). Implemented in Plan 2 via `findByPhaseIdOrderBySortIndexAsc(regularPhase.getId())`.
 
 3. **`PhaseTabView` / `GroupTabView` model — record location?**
    - What we know: New model objects (label, href, active boolean, ariaControlsId) are needed for clean Thymeleaf templates.
    - What's unclear: Should they live in `org.ctc.sitegen.model` (alongside `RaceView`) or in a deeper `org.ctc.sitegen.model.tabs` namespace?
    - Recommendation: `org.ctc.sitegen.model` (flat) — current convention has `RaceView` directly in this package. Planner may decide otherwise.
+   - **RESOLVED:** `PhaseTabView`, `GroupSubTabView`, `PhaseBreakdownEntry` live in `org.ctc.sitegen.model` (flat package, alongside `RaceView`). Created in Plan 0.
 
 4. **Helper-class boundary: split `MatchdayIndexPageGenerator` from `MatchdayDetailPageGenerator`?**
    - What we know: Today they are two methods (`generateMatchdayIndex` and `generateMatchdays`) on the same class; Risk 9 surfaces the naming question.
    - What's unclear: Whether they share enough state to warrant one class.
    - Recommendation: One class `MatchdaysPageGenerator` with TWO distinct entry methods (`generateIndex(ctx, result)` and `generateDetails(ctx, result)`) called by orchestrator separately. Cohesion is high (both about matchdays); separation by file is unjustified.
+   - **RESOLVED:** `MatchdaysPageGenerator` is ONE class with two methods `generateIndex(ctx, result)` and `generateDetails(ctx, result)`, called separately by the orchestrator. Implemented in Plan 0.
 
 5. **D-19 release-note language: where does it appear?**
    - What we know: CLAUDE.md mentions PR descriptions; project memory `feedback_docs_update` says README + Wiki update on every feature release.
    - What's unclear: Whether the v1.9 milestone release note (when v1.9 ships) is the canonical home, or each plan PR.
    - Recommendation: Each plan PR with D-19 changes calls it out in PR body; final v1.9 release notes consolidate. Planner sets this in Plan 5 task 5 SUMMARY.md guidance.
+   - **RESOLVED:** D-19 release-notes appear in each plan PR body that touches alltime, and the final v1.9 release notes consolidate them. The canonical pre-release artifact is the release-note bullet drafted in Plan 5 Task 3 (`62-05-SUMMARY.md`).
 
 ## Sources
 
