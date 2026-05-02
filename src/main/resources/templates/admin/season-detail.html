@@ -53,9 +53,9 @@
                         <tr th:each="st : ${season.seasonTeams}" th:classappend="${st.replaced ? 'replaced-team' : ''}">
                             <td class="col-color">
                                 <div th:if="${st.effectivePrimaryColor != null}" class="color-swatch-row">
-                                    <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectivePrimaryColor}"></span>
-                                    <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectiveSecondaryColor}"></span>
-                                    <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectiveAccentColor}"></span>
+                                    <span class="color-swatch-chip" th:style="'background:' + ${st.effectivePrimaryColor}"></span>
+                                    <span class="color-swatch-chip" th:style="'background:' + ${st.effectiveSecondaryColor}"></span>
+                                    <span class="color-swatch-chip" th:style="'background:' + ${st.effectiveAccentColor}"></span>
                                 </div>
                             </td>
                             <td>

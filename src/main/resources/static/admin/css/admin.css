@@ -1135,6 +1135,13 @@ a.season-header-title:hover {
     gap: 3px;
 }
 
+.color-swatch-chip {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+}
+
 /* === Score Banner === */
 .score-banner {
     background: var(--bg-card);
