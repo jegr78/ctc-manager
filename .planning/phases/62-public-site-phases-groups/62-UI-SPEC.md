@@ -58,7 +58,7 @@ All values read from `static/site/css/style.css`.
 | Body | 14px | 400 (regular) | 1.6 | `table` default, `td` cells |
 | Label | 12px | 400 (regular) | 1.4 | `.section-title`, `th`, `.subnav-link`, `.breadcrumb-*` |
 | Heading | 13px | 600 (semibold, Conthrax) | 1.2 | `.section-title` (Conthrax, uppercase, letter-spacing 2px) |
-| Display | 28px | 800 (bold, Conthrax) | 1.2 | `.hero h1` |
+| Display | 28px | 600 (Conthrax SB — verified: `@font-face font-weight: 600`) | 1.2 | `.hero h1` |
 
 Weights declared: 400 (regular system font) and 600 (Conthrax SB / semibold system font). No additional weights.
 
@@ -93,6 +93,8 @@ Supporting tokens (not 60/30/10 but used for depth):
 - `--text-dim: #888` — secondary/dimmed text
 - `--text-muted: #555` — metadata, `th` cells, section titles
 
+Note on `--accent-secondary`: `--accent-secondary: #7c4dff` exists in `:root` (style.css line 25) and is used for decorative gradients only (`.hero h1::after`, `.tile-card::before`). Must not be used on any new Phase 62 elements — doing so would break the 60/30/10 ratio.
+
 ---
 
 ## New CSS Classes — Phase Tab Rows
@@ -115,7 +117,7 @@ Visibility rule (server-side flag `showPhaseTabs`): rendered only when season ha
 ```
 .group-tab-row       — wrapper; same shape as .phase-tab-row but height 36px (secondary, more compact)
 .group-tab-row-inner — flex container; max-width: 1100px, height: 36px, gap: 4px
-.group-tab           — single tab anchor; same as .subnav-link but font-size: 11px
+.group-tab           — single tab anchor; reuses .subnav-link styles exactly (font-size: 12px, same as .subnav-link)
 .group-tab.active    — active state; same accent/background as .subnav-link.active
 ```
 
@@ -135,6 +137,8 @@ Banner appears inside `.section` above the standings table when phase has 0 race
 ## Tab Navigation Interaction Contract
 
 Decision locked in CONTEXT.md D-07: **each phase variant is its own static HTML file**. No JS toggle, no `:target` selectors.
+
+On sub-pages with no hero (standings, matchdays, driver-ranking pages), the phase-tab row is the primary visual anchor; the rank column in the standings table is the secondary anchor.
 
 ### Mechanism: Inter-file anchor links
 
