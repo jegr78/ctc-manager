@@ -1,15 +1,27 @@
 ---
-status: partial
+status: gaps_resolved_test2_deferred
 phase: 61-cleanup-quality-gate
 source:
   - 61-VERIFICATION.md (human_verification)
 started: 2026-05-01T21:44:38Z
-updated: 2026-05-02T00:15:00Z
+updated: 2026-05-02T00:40:00Z
+gap_fixes:
+  - id: UAT-01
+    test: 1
+    severity: blocker
+    commit: f5b10bc
+    summary: "fix(61-uat-01): render non-empty option labels on phase edit form"
+  - id: UAT-03
+    test: 3
+    severity: blocker
+    commit: 6db56d4
+    summary: "fix(61-uat-03): convert V5 and V6 to dialect-aware Java migrations"
+test2_status: deferred_to_user_local_verification
 ---
 
 ## Current Test
 
-[testing complete]
+[testing complete — UAT-01 + UAT-03 fixed and merged into branch; Test 2 deferred]
 
 ## Tests
 
@@ -98,8 +110,18 @@ skipped: 1
 ## Gaps
 
 - truth: "Manuell GROUPS-Layout-Saison anlegen, Teams Gruppen zuweisen, Matchdays generieren, per-group + combined Standings rendern"
-  status: failed
+  status: resolved
   reason: "User reported: Auswahlboxen Phase Type/Layout/Format auf phase-edit sind leer (keine Option-Texte). Verifiziert mit playwright-cli — option value-Attribute korrekt, Textinhalt leer."
+  resolution: |
+    Closed in commit f5b10bc (fix(61-uat-01)). Template
+    src/main/resources/templates/admin/season-phase-form.html updated to use
+    ${labels.get(enum)} explicit method invocation instead of [enum] bracket
+    indexer. Regression test added to SeasonPhaseControllerIT verifying all 8
+    expected label strings render in the edit-form HTML. Note: the actual
+    GROUPS standings rendering was not subsequently re-verified manually —
+    the user moved to Test 3 once the dropdown bug was fixed and committed.
+    Test 1's GROUPS smoke remains DEFERRED with Test 2 for the user's local
+    verification pass.
   severity: blocker
   test: 1
   artifacts:
@@ -111,10 +133,26 @@ skipped: 1
       issue: "Map.of(Enum, String) Befüllung — Lookup via Thymeleaf [pt] greift vermutlich nicht"
   missing:
     - "Integrationstest, der gerenderte Option-Texte auf phase-form prüft"
+  closure_evidence:
+    - commit: "f5b10bc"
+    - test: "SeasonPhaseControllerIT#givenExistingPhase_whenGetEditForm_thenDropdownOptionsHaveNonEmptyLabels"
 
 - truth: "V6 Flyway-Migration läuft sauber gegen MariaDB durch (Plan 61-03 D-23 IRREVERSIBLE)"
-  status: failed
+  status: resolved
   reason: "User reported (eigene Verifikation): Stack via docker compose up gestartet — App-Container crasht bereits bei V5 (V6 wird nie erreicht). MariaDB error 1064 'syntax error near NOT NULL at line 9'. Ursache: V5__nullable_legacy_scoring_columns.sql:9 nutzt PostgreSQL/H2-only Syntax 'ALTER COLUMN ... DROP NOT NULL' — MariaDB versteht das nicht."
+  resolution: |
+    Closed in commit 6db56d4 (fix(61-uat-03)). Two escapes resolved together:
+    (a) V5 (Phase 60 escape, commit f746d10) — converted from .sql to a Java
+    migration with dialect-branching (H2: ALTER COLUMN ... DROP NOT NULL;
+    MariaDB: MODIFY COLUMN <name> UUID NULL). (b) V6 (Phase 61 escape) — same
+    class of bug surfaced after V5 was fixed: 'DROP INDEX IF EXISTS name'
+    standalone is H2-portable but MariaDB requires 'DROP INDEX name ON
+    tablename'. V6 also converted to a Java migration; explicit DROP INDEX
+    statements removed entirely (both engines auto-drop indexes when the
+    underlying column is dropped). Old .sql files deleted. New
+    V5MigrationTest added (Surefire, INFORMATION_SCHEMA assertion against
+    season_phases.race_scoring_id / match_scoring_id IS_NULLABLE = 'YES').
+    V6MigrationTest unchanged (dialect-agnostic).
   severity: blocker
   test: 3
   artifacts:
@@ -124,8 +162,17 @@ skipped: 1
     - path: "src/main/resources/db/migration/V5__nullable_legacy_scoring_columns.sql"
       lines: "7"
       issue: "Kommentar 'Compatible with H2 2.x and MariaDB 10.7+.' ist nachweislich falsch"
+    - path: "src/main/resources/db/migration/V6__cleanup_legacy_season_columns.sql"
+      lines: "21-22"
+      issue: "DROP INDEX IF EXISTS name ohne ON tablename ist H2-portable aber MariaDB-syntax error 1064"
   missing:
     - "CI-Smoke-Test: docker compose up + Healthcheck als Job in .github/workflows/"
     - "V5MigrationTest analog V6MigrationTest, aber gegen MariaDB-Container (Testcontainers)"
     - "Pre-Merge-Gate: alle Migrations müssen gegen H2 UND MariaDB laufen"
-  origin: "Phase 60 (commit f746d10) — Phase-60-Escape, von Phase-61-UAT aufgedeckt"
+  origin: "Phase 60 (commit f746d10) für V5 + Phase 61 für V6 — beide Escapes aus dem unbelegten 'compatible with H2 + MariaDB'-Pattern; aufgedeckt von Phase-61-UAT"
+  closure_evidence:
+    - commit: "6db56d4"
+    - test: "V5MigrationTest#givenV5HasRun_whenQueryInformationSchema_thenSeasonPhasesScoringColumnsAreNullable"
+    - smoke: "docker compose up --build -d → MariaDB 11.8, V1→V6 alle Migrating-Logs ohne ERROR, /actuator/health = UP"
+  follow_up:
+    - "B1 (CI-Smoke gegen MariaDB) als nächster Schritt — verhindert Future-Escapes derselben Klasse"
