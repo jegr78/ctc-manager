@@ -325,7 +325,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 
 **Depends on**: Phase 61
 
-**Requirements**: TBD (to be derived during /gsd-discuss-phase from REQUIREMENTS.md UI-* + the gap below)
+**Requirements**: UI-02, UI-05, UI-07, QUAL-01, QUAL-02 (mirrored on the public site; derived 2026-05-02 from CONTEXT.md `<canonical_refs>` + RESEARCH.md `<phase_requirements>` mapping table — UI-02 → phase tab row, UI-05 → standings phase/group selector, UI-07 → PLAYOFF tab routing, QUAL-01 → JaCoCo ≥82%, QUAL-02 → SC5 regression IT)
 
 **Success Criteria** (what must be TRUE):
 
@@ -341,5 +341,14 @@ See: milestones/v1.8-ROADMAP.md for full details
 - `src/main/resources/templates/site/standings.html` — zero references to phase / group / PhaseLayout; rendering is single-table LEAGUE-shape.
 - Admin-side analog to mirror: `src/main/resources/templates/admin/season-detail.html` (phase tab row + GROUPS sub-tab row + per-group standings table).
 
+**Plans:** 8 plans
+
 Plans:
-- [ ] TBD (run /gsd-plan-phase 62 to break down)
+- [ ] 62-00-PLAN.md — Helper-Class Extraction + Golden Snapshot Capture (Wave 1)
+- [ ] 62-01-PLAN.md — Phase-Aware Standings Template + Per-Phase / Per-Group Variants + CSS Tab Rows (Wave 2)
+- [ ] 62-02-PLAN.md — Phase-Aware Matchdays Template + Per-Phase / Per-Group Variants (Wave 3)
+- [ ] 62-03-PLAN.md — Phase-Aware Driver-Ranking Template + Per-Phase Variants (Wave 4)
+- [ ] 62-04-PLAN.md — Team-/Driver-Profile Phase Breakdown Sections (Wave 5)
+- [ ] 62-05-PLAN.md — D-19 Alltime Cross-Phase Aggregation (TRACKED BEHAVIOR CHANGE) (Wave 6)
+- [ ] 62-06-PLAN.md — SC5 Regression IT (SiteGeneratorPhaseAwarenessIT) (Wave 7)
+- [ ] 62-07-PLAN.md — Visual + A11y Final Sweep (Manual playwright-cli; autonomous=false) (Wave 8)
