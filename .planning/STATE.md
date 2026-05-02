@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Season Phases & Groups
 status: executing
-last_updated: "2026-05-01T10:22:04.018Z"
+last_updated: "2026-05-01T20:26:54.547Z"
 last_activity: 2026-05-01 -- Phase 61 execution started
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 31
-  completed_plans: 26
-  percent: 84
+  total_plans: 40
+  completed_plans: 31
+  percent: 78
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 61 (cleanup-quality-gate) — EXECUTING
-Plan: 1 of 5
+Plan: 1 of 14
 Status: Executing Phase 61
 Last activity: 2026-05-01 -- Phase 61 execution started
 
@@ -73,6 +73,11 @@ Continuing from v1.8 (last phase: 55). v1.9 phases start at **Phase 56**.
 - Phase 59: Import & Test Data (IMPORT-01..04, DATA-01, DATA-02)
 - Phase 60: Admin UI (UI-01..07)
 - Phase 61: Cleanup & Quality Gate (MIGR-06, QUAL-01..03)
+- Phase 62: Public Site Phase + Group Awareness (TBD — to be derived during /gsd-discuss-phase)
+
+### Roadmap Evolution
+
+- 2026-05-02: Phase 62 (Public Site Phase + Group Awareness) added at end of v1.9 milestone. Discovered during Phase 61 UAT — admin-side phase/group model is fully wired but invisible on the public static site. Without Phase 62 the v1.9 feature ships externally invisible.
 
 ### Key Technical Context
 

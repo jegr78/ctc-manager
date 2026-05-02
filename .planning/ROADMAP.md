@@ -8,7 +8,7 @@
 - :white_check_mark: **v1.5 Code Review Fixes** — Phases 28-36 (shipped 2026-04-15)
 - :white_check_mark: **v1.6 Static Site Quality** — Phases 37-53 (shipped 2026-04-18)
 - :white_check_mark: **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (shipped 2026-04-25)
-- **v1.9 Season Phases & Groups** — Phases 56-61 (active)
+- **v1.9 Season Phases & Groups** — Phases 56-62 (active)
 
 ## Phases
 
@@ -106,7 +106,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.9 Season Phases & Groups (Phases 56-61) -- ACTIVE</summary>
+<summary>v1.9 Season Phases & Groups (Phases 56-62) -- ACTIVE</summary>
 
 - [x] **Phase 56: Model & Schema Foundation** - New entities (SeasonPhase, SeasonPhaseGroup, PhaseTeam) + Flyway DDL migrations create the new tables ✅ shipped 2026-04-26
 - [ ] **Phase 57: Data Migration** - Populate new tables from existing data (REGULAR/PLAYOFF phases, matchday re-keying, phase roster)
@@ -114,6 +114,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 - [ ] **Phase 59: Import & Test Data** - Driver import resolves seasons by (year, number); DevDataSeeder and TestDataService rebuilt on new model
 - [ ] **Phase 60: Admin UI** - Season form slimmed; phase/group CRUD forms; season detail with phase tabs and group sub-tabs; standings and playoff UI on phase
 - [ ] **Phase 61: Cleanup & Quality Gate** - Drop old season columns (MIGR-06); JaCoCo gate; E2E test for GROUPS season; regression test for migrated seasons
+- [ ] **Phase 62: Public Site Phase + Group Awareness** - Mirror the admin-side phase model on the public static site: phase tabs, GROUPS layout per-group standings + combined view, PLAYOFF phase content; SiteGeneratorService and templates/site no longer LEAGUE-only
 
 </details>
 
@@ -317,3 +318,28 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 59. Import & Test Data | v1.9 | 5/5 | Complete    | 2026-04-29 |
 | 60. Admin UI | v1.9 | 7/7 | Complete    | 2026-05-01 |
 | 61. Cleanup & Quality Gate | v1.9 | 5/5 | Complete   | 2026-05-01 |
+
+### Phase 62: Public Site Phase + Group Awareness
+
+**Goal**: The public static site exposes the same phase/group model that Phase 60 introduced on the admin side. Each season's public page renders one tab per phase (REGULAR / PLAYOFF / PLACEMENT), GROUPS-layout phases render per-group standings plus a combined view, and PLAYOFF-phase content (bracket / final standings) is reachable from the phase tab. SiteGeneratorService no longer assumes LEAGUE shape on a single REGULAR phase, and `templates/site/standings.html` is phase- and group-aware analogous to `templates/admin/season-detail.html`.
+
+**Depends on**: Phase 61
+
+**Requirements**: TBD (to be derived during /gsd-discuss-phase from REQUIREMENTS.md UI-* + the gap below)
+
+**Success Criteria** (what must be TRUE):
+
+1. A GROUPS-layout season on the public site renders per-group standings tables plus a combined view; the layout matches admin-side QUAL-02 acceptance criteria
+2. A multi-phase season on the public site renders one tab per phase; switching tabs swaps the standings rendering accordingly
+3. A PLAYOFF-phase tab on the public site reaches the playoff bracket / final standings without requiring a manual URL
+4. Existing single-REGULAR-phase LEAGUE seasons continue to render identically (no visible regression on the v1.6 public-site quality bar)
+5. A regression test for at least one GROUPS-layout season + one multi-phase season exists in the sitegen test suite
+
+**Discovered**: Phase 61 UAT (2026-05-02). The user noticed that the season-phases-groups feature is fully wired on the admin side but invisible on the public static site. Without this phase the v1.9 milestone ships an externally invisible feature. Concrete starting points:
+
+- `src/main/java/org/ctc/sitegen/SiteGeneratorService.java:190` — current code uses only the REGULAR phase (`Phase-aware standings via REGULAR phase (templates stay LEAGUE-shaped)`).
+- `src/main/resources/templates/site/standings.html` — zero references to phase / group / PhaseLayout; rendering is single-table LEAGUE-shape.
+- Admin-side analog to mirror: `src/main/resources/templates/admin/season-detail.html` (phase tab row + GROUPS sub-tab row + per-group standings table).
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 62 to break down)
