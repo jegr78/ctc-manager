@@ -14,12 +14,14 @@ import org.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
@@ -98,6 +100,25 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/new?seasonId=" + form.getSeasonId();
         }
+    }
+
+    /**
+     * Returns 410 Gone for the legacy add-season / remove-season URLs. These
+     * endpoints were removed in v1.9 when the Season → SeasonPhase → Playoff
+     * model replaced the M:N playoff_seasons join. Old bookmarks land here with
+     * a user-meaningful message instead of falling through to a generic 5xx.
+     */
+    @PostMapping({"/{id}/add-season", "/{id}/remove-season"})
+    public ModelAndView retiredPlayoffSeasonEndpoint(@PathVariable UUID id) {
+        log.info("Retired playoff-season endpoint hit for playoff {} — returning 410 Gone", id);
+        var mav = new ModelAndView("admin/error");
+        mav.setStatus(HttpStatus.GONE);
+        mav.addObject("status", HttpStatus.GONE.value());
+        mav.addObject("error", "Endpoint Retired");
+        mav.addObject("message",
+                "This endpoint was retired in v1.9. Playoff seasons are now managed via the Phase tabs on the Season detail page.");
+        mav.addObject("showDetails", false);
+        return mav;
     }
 
     @PostMapping("/round/{roundId}/set-legs")
