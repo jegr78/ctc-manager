@@ -1,10 +1,10 @@
 ---
-status: gaps_resolved_test2_deferred
+status: complete
 phase: 61-cleanup-quality-gate
 source:
   - 61-VERIFICATION.md (human_verification)
 started: 2026-05-01T21:44:38Z
-updated: 2026-05-02T00:40:00Z
+updated: 2026-05-02T11:05:00Z
 gap_fixes:
   - id: UAT-01
     test: 1
@@ -17,11 +17,12 @@ gap_fixes:
     commit: 6db56d4
     summary: "fix(61-uat-03): convert V5 and V6 to dialect-aware Java migrations"
 test2_status: deferred_to_user_local_verification
+re_verification: "Test 1 re-verified pass post-fix (GROUPS smoke flow works end-to-end)"
 ---
 
 ## Current Test
 
-[testing complete — UAT-01 + UAT-03 fixed and merged into branch; Test 2 deferred]
+[testing complete — Tests 1, 3, 4 pass; Test 2 deferred]
 
 ## Tests
 
@@ -30,7 +31,9 @@ expected: |
   Manually create a GROUPS-layout season with 2 groups via /admin/seasons/new,
   assign teams, generate matchdays per group; verify per-group standings + the
   combined-view rendering matches expectations from QUAL-02 acceptance criteria.
-result: issue
+result: pass
+prior_result: issue
+re_test_note: "Re-verified post-fix f5b10bc — GROUPS smoke flow works end-to-end"
 reported: |
   Auf /admin/seasons/{id}/phases/{pid}/edit sind die Auswahlboxen Phase Type,
   Layout und Format leer (keine Option-Texte sichtbar). Ohne Layout-Umschaltung
@@ -91,6 +94,8 @@ artifacts:
 missing:
   - "CI-Smoke-Test: docker compose up startet App gegen MariaDB ohne Flyway-Fehler"
   - "V5MigrationTest analog zu V6MigrationTest, aber gegen MariaDB-Container (Testcontainers)"
+re_test_result: pass
+re_test_note: "Resolved + smoke-verified per gap closure_evidence (commit 6db56d4 + docker compose smoke)"
 
 ### 4. Legacy URL bookmark regression
 expected: |
@@ -102,10 +107,11 @@ result: pass
 ## Summary
 
 total: 4
-passed: 1
-issues: 2
+passed: 2
+issues_resolved: 2
 pending: 0
 skipped: 1
+note: "Both blocker issues resolved in-branch (UAT-01 f5b10bc, UAT-03 6db56d4); Test 1 re-verified post-fix; Test 2 deferred to user's local pass."
 
 ## Gaps
 
