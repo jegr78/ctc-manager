@@ -1,10 +1,22 @@
 ---
-status: diagnosed
+status: resolved
 phase: 59
 issue_summary: "UnexpectedRollbackException on POST /admin/drivers/import/preview when sheet tab '2025' matches multiple seasons in the dev-seeded DB (year=2025 exists as 'Test-Season 2025' with number=98, and the user's real 2025 season also exists, triggering BusinessRuleException inside a shared transaction that marks the outer tx rollback-only)"
 created: 2026-04-29
-updated: 2026-04-29
+updated: 2026-05-02
+resolved: 2026-04-29
 related_uat: .planning/phases/59-import-test-data/59-UAT.md
+fix_commit: 2084543
+verification_commits:
+  - 13c7852  # test(59-05) failing TransactionIT reproducer
+  - 2084543  # fix(59-05) drop @Transactional from findUnique overloads (GREEN)
+  - f3cb515  # fix(59) WR-01/WR-02 pre-state probe + diagnostic cleanup
+  - a5473fe  # fix(59) WR-03 decouple TxIT from DevDataSeeder
+  - bedee45  # fix(59) WR-04 pin no-class-level-Transactional invariant
+files_changed:
+  - src/main/java/org/ctc/domain/service/SeasonManagementService.java
+  - src/test/java/org/ctc/dataimport/DriverSheetImportServiceTransactionIT.java
+verification: "Option C applied per recommendation. Both @Transactional annotations removed from findUnique overloads. New DriverSheetImportServiceTransactionIT (no class-level @Transactional, isolates own scoring config) reproduces the original failure path and asserts ambiguousReason is set without UnexpectedRollbackException. Self-protection invariant test pins the no-@Transactional contract. Verified 2026-05-02: ./mvnw test -Dtest=DriverSheetImportServiceTransactionIT → 2 tests pass."
 ---
 
 ## Current Focus
@@ -12,7 +24,7 @@ related_uat: .planning/phases/59-import-test-data/59-UAT.md
 hypothesis: "CONFIRMED — SeasonManagementService.findUnique(int year) throws BusinessRuleException when multiple seasons share the same year. Spring's REQUIRED propagation causes the inner @Transactional(readOnly=true) to JOIN the outer @Transactional(readOnly=true) on preview(). The caught exception still marks the shared transaction as rollback-only. When preview() tries to commit at the Spring AOP boundary, it finds the tx poisoned and throws UnexpectedRollbackException."
 evidence_count: 7
 eliminated_count: 1
-next_action: "Implement chosen fix option (C or B) via /gsd-plan-phase --gaps"
+next_action: "RESOLVED 2026-04-29 via Phase 59-05 hotfix (commit 2084543). Option C applied: @Transactional removed from both findUnique overloads. Regression IT (DriverSheetImportServiceTransactionIT) added in commit 13c7852 with class-level no-@Transactional invariant pinned by self-test in bedee45."
 
 ## Symptoms
 
