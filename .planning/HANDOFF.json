@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-02T10:55:48.122Z",
+  "phase": "62",
+  "phase_name": "public-site-phases-groups",
+  "phase_dir": ".planning/phases/62-public-site-phases-groups",
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "workflow": "gsd-plan-phase",
+  "branch": "gsd/v1.9-season-phases-groups",
+  "completed_tasks": [
+    {"id": 1, "name": "Init + phase validation (gsd-sdk query init.plan-phase 62)", "status": "done"},
+    {"id": 2, "name": "Research: 62-RESEARCH.md (682 lines, gsd-phase-researcher)", "status": "done", "commit": "b7171f7"},
+    {"id": 3, "name": "Validation strategy: 62-VALIDATION.md (Nyquist sampling contract)", "status": "done", "commit": "12e26ea"},
+    {"id": 4, "name": "Pattern mapping: 62-PATTERNS.md (807 lines, gsd-pattern-mapper)", "status": "done_uncommitted"}
+  ],
+  "remaining_tasks": [
+    {"id": 5, "name": "Spawn gsd-planner — paused right before this step (user rejected planner Task call)", "status": "not_started"},
+    {"id": 6, "name": "Verify plans with gsd-plan-checker (revision loop, max 3 iterations)", "status": "not_started"},
+    {"id": 7, "name": "Requirements + Decision coverage gates (steps 13, 13a)", "status": "not_started"},
+    {"id": 8, "name": "Annotate ROADMAP wave dependencies + commit plans (steps 13b, 13c, 13d)", "status": "not_started"},
+    {"id": 9, "name": "Post-planning gap analysis + final status (steps 13e, 14)", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "User rejected the gsd-planner Task spawn — likely wants to adjust the planner prompt before re-running", "type": "human_action", "workaround": "Re-read the prompt drafted in the previous turn from conversation transcript, ask user what to change, then re-spawn"}
+  ],
+  "human_actions_pending": [
+    {"action": "Decide whether to adjust the planner prompt (per-plan goal sketch, hard invariants, or open-question resolutions) before re-spawning gsd-planner", "context": "The drafted planner prompt locked Open Questions 1-5 with recommended answers (D-19 = REGULAR+PLAYOFF+PLACEMENT, legacy matchdays.html = REGULAR-only, view records flat in org.ctc.sitegen.model, MatchdaysPageGenerator = ONE class with two methods, D-19 release notes per-plan + consolidated). User may want different choices.", "blocking": true}
+  ],
+  "decisions": [
+    {"decision": "Researcher run BEFORE planner (Research first, empfohlen)", "rationale": "CONTEXT.md lists ~10 'Planner verifies whether...' items — verification gaps needed live-code lookup", "phase": "62"},
+    {"decision": "Sequential plans on gsd/v1.9-season-phases-groups branch, NO worktrees", "rationale": "D-27 carry-over from Phase 60/61. feedback_subagent_stability + feedback_branch_from_origin take precedence over parallel speedup for UI-template phase", "phase": "62"},
+    {"decision": "8-plan decomposition matches D-28 sketch: 0 helper extraction, 1 standings, 2 matchdays, 3 driver-ranking, 4 profiles, 5 alltime D-19, 6 SC5 IT, 7 visual sweep", "rationale": "RESEARCH.md confirmed Plan 0 helper boundaries via line-range inspection; Plan 5 needs internal-iteration approach (no public signature change); Plan 7 autonomous=false because manual playwright-cli", "phase": "62"},
+    {"decision": "VALIDATION.md created from RESEARCH.md '## Validation Architecture' section (Surefire IT, NOT Failsafe / Playwright E2E)", "rationale": "D-24: SC5 = sitegen Surefire IT pattern. Playwright remains compile-scope dependency only (CLAUDE.md constraint)", "phase": "62"}
+  ],
+  "uncommitted_files": [
+    ".planning/phases/62-public-site-phases-groups/62-PATTERNS.md"
+  ],
+  "next_action": "Resume /gsd-plan-phase 62 — first commit the uncommitted PATTERNS.md (gsd-sdk query commit), then ask user whether to adjust the planner prompt (especially Open Question resolutions) or spawn gsd-planner as drafted. Planner prompt template is in transcript at the rejected Agent call.",
+  "context_notes": "Phase 62 is mid-/gsd-plan-phase orchestration. Init→Research→Validation→PatternMapping done. Planner spawn was the next step but user interrupted — not a workflow problem, just a checkpoint. CONTEXT.md is unusually thorough (D-01..D-29), UI-SPEC.md is approved, RESEARCH.md verified all CONTEXT.md 'Planner verifies...' items including SiteGeneratorService line numbers (still 868 LOC), Repository APIs (all already exist post-V6), and the D-19 implementation path (internal iteration without public signature change). PATTERNS.md mapped 28 files with 27 analogs (1 first-of-kind: golden snapshot baseline). Planner prompt was drafted with: hard invariants (SC4 byte-identical, no inline styles, lean Thymeleaf, OSIV active, coverage ≥82%, D-19 tracked behavior change, PLAYOFF tab uses existing playoff.html), per-plan goal sketches for Plans 0-7, sequential dependency chain, and resolutions to RESEARCH.md's 5 open questions."
+}
