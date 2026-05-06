@@ -34,7 +34,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
  */
 @SpringBootTest
 @ActiveProfiles("dev")
-@Disabled("Run manually to refresh SC4 baseline. See Phase 62 Plan 0 docs.")
+@Disabled("Run manually to refresh SC4 baselines. See Phase 62 Plan 0 / Plan 4 docs.")
 class SiteGeneratorBaselineCaptureTest {
 
     @Autowired private SiteGeneratorService siteGeneratorService;
@@ -57,5 +57,35 @@ class SiteGeneratorBaselineCaptureTest {
         Path baseline = Path.of("src/test/resources/sitegen/baseline/single-league-standings.html");
         Files.createDirectories(baseline.getParent());
         Files.copy(generated, baseline, StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    /**
+     * Phase 62 Plan 4 — capture pre-Phase-62 team-profile and driver-profile baselines for the
+     * SC4 byte-identity invariant. Run ONCE (with @Disabled removed) BEFORE the Plan 4 template
+     * rewrite to lock the legacy markup of a single-REGULAR-LEAGUE team-profile and driver-profile.
+     *
+     * <p>Baseline candidates (from TestDataService Season 2026, single REGULAR LEAGUE phase):
+     * <ul>
+     *   <li>Team: ADR (parent team participating in Season 2026)</li>
+     *   <li>Driver: ADR_Driver01 (PSN slug: {@code adr-driver01})</li>
+     * </ul>
+     */
+    @Test
+    void captureLeagueOnlyTeamAndDriverProfileBaselines(@TempDir Path outputDir) throws IOException {
+        given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
+                .willReturn("dQw4w9WgXcQ");
+        siteProperties.setOutputDir(outputDir.toString());
+        testDataService.seed();
+        siteGeneratorService.generate();
+
+        Path seasonDir = outputDir.resolve("season").resolve("2026-4-regular-season");
+        Path generatedTeam = seasonDir.resolve("team").resolve("adr.html");
+        Path generatedDriver = seasonDir.resolve("driver").resolve("adr-driver01.html");
+
+        Path teamBaseline = Path.of("src/test/resources/sitegen/baseline/single-league-team-profile.html");
+        Path driverBaseline = Path.of("src/test/resources/sitegen/baseline/single-league-driver-profile.html");
+        Files.createDirectories(teamBaseline.getParent());
+        Files.copy(generatedTeam, teamBaseline, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(generatedDriver, driverBaseline, StandardCopyOption.REPLACE_EXISTING);
     }
 }
