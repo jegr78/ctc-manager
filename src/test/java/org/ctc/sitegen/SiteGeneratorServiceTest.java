@@ -85,6 +85,9 @@ class SiteGeneratorServiceTest {
     @Autowired
     private org.ctc.domain.service.ScoringService scoringService;
 
+    @Autowired
+    private SiteSlugger siteSlugger;
+
     @MockitoBean
     private YouTubeScraperService youTubeScraperService;
 
@@ -196,7 +199,7 @@ class SiteGeneratorServiceTest {
     }
 
     private String slugify(String input) {
-        return siteGeneratorService.slugify(input);
+        return siteSlugger.slugify(input);
     }
 
     /**

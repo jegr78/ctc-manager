@@ -22,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.thymeleaf.TemplateEngine;
 
 import java.util.List;
 import java.util.UUID;
@@ -54,7 +53,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class SiteGeneratorServiceIT {
 
-    @Mock private TemplateEngine templateEngine;
     @Mock private SeasonRepository seasonRepository;
     @Mock private MatchdayRepository matchdayRepository;
     @Mock private RaceRepository raceRepository;
@@ -71,13 +69,14 @@ class SiteGeneratorServiceIT {
     @Mock private SiteProperties siteProperties;
     @Mock private YouTubeScraperService youTubeScraperService;
     @Mock private SeasonPhaseService seasonPhaseService;
+    @Mock private SiteSlugger siteSlugger;
+    @Mock private TemplateWriter templateWriter;
 
     private SiteGeneratorService buildSut() {
         // Use the all-args-style constructor exposed by Lombok @RequiredArgsConstructor.
-        // SeasonPhaseService is added in Task 2 — once present, it must be the FINAL
-        // constructor argument (after all existing finals).
+        // Phase-62 Plan-0 Task-1 extraction: TemplateEngine dropped (moved to TemplateWriter);
+        // SiteSlugger + TemplateWriter added as final-ordered constructor params.
         return new SiteGeneratorService(
-                templateEngine,
                 seasonRepository,
                 matchdayRepository,
                 raceRepository,
@@ -93,7 +92,9 @@ class SiteGeneratorServiceIT {
                 seasonTeamRepository,
                 siteProperties,
                 youTubeScraperService,
-                seasonPhaseService);
+                seasonPhaseService,
+                siteSlugger,
+                templateWriter);
     }
 
     @Test
@@ -117,6 +118,11 @@ class SiteGeneratorServiceIT {
 
         when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
         when(seasonPhaseService.findAllPhases(seasonId)).thenReturn(List.of(regular));
+        // Phase-62 Plan-0 Task-1: generate() short-circuits seasons whose REGULAR-phase
+        // findByType is empty (line 91 productionSeasons skip). Stub it so the test fixture
+        // season survives into the per-season helper loop.
+        when(seasonPhaseService.findByType(seasonId, org.ctc.domain.model.PhaseType.REGULAR))
+                .thenReturn(java.util.Optional.of(regular));
         when(standingsService.calculateStandings(regular.getId(), null)).thenReturn(List.of());
         when(driverRankingService.aggregateAcrossPhases(anyList(), eq(seasonId))).thenReturn(List.of());
         when(seasonRepository.findByActiveTrue()).thenReturn(java.util.Optional.empty());
@@ -127,7 +133,10 @@ class SiteGeneratorServiceIT {
         when(seasonDriverRepository.findBySeasonId(seasonId)).thenReturn(List.of());
         when(seasonTeamRepository.findBySeasonId(seasonId)).thenReturn(List.of());
         when(teamRepository.findAll()).thenReturn(List.of());
-        when(templateEngine.process(any(String.class), any())).thenReturn("<html/>");
+        // Phase-62 Plan-0 Task-1: SiteSlugger is a Spring-injected collaborator; default Mockito returns
+        // null for slugify(...), which would NPE in path-resolve calls. Stub it to return a
+        // deterministic slug so generate() can complete without filesystem failure.
+        when(siteSlugger.slugify(any(String.class))).thenReturn("slug");
 
         // siteProperties returns a fresh tempDir-style path so generate() doesn't fail on cleanOutputDirectory
         var tempDir = java.nio.file.Files.createTempDirectory("sitegen-it-").toString();

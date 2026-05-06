@@ -82,6 +82,9 @@ class SiteGeneratorE2ETest {
     @Autowired
     private PhaseTeamRepository phaseTeamRepository;
 
+    @Autowired
+    private SiteSlugger siteSlugger;
+
     @MockitoBean
     private YouTubeScraperService youTubeScraperService;
 
@@ -201,7 +204,7 @@ class SiteGeneratorE2ETest {
     }
 
     private String slugify(String input) {
-        return siteGeneratorService.slugify(input);
+        return siteSlugger.slugify(input);
     }
 
     // --- E2E-01: All internal links resolve ---
