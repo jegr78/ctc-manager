@@ -2,7 +2,16 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{site/layout :: layout('Driver Ranking ' + ${season.displayLabel}, ~{::section})}">
 <body>
-<section>
+<section><nav th:if="${showPhaseTabs}" class="phase-tab-row" role="tablist" aria-label="Phase navigation">
+        <div class="phase-tab-row-inner">
+            <a th:each="t : ${phaseTabs}"
+               th:href="@{${t.href}}"
+               th:class="${t.active} ? 'phase-tab active' : 'phase-tab'"
+               role="tab"
+               th:attr="aria-selected=${t.active} ? 'true' : 'false', aria-controls=${t.ariaControlsId}"
+               th:text="${t.label}">Tab</a>
+        </div>
+    </nav>
     <div class="section">
         <h2 class="section-title" th:text="'Driver Ranking — ' + ${season.displayLabel}"></h2>
         <div class="table-wrap">
