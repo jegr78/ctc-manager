@@ -1,15 +1,10 @@
 package org.ctc.sitegen;
 
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.*;
-import org.ctc.sitegen.model.RaceView;
 import org.ctc.domain.service.DriverRankingService;
 import org.ctc.domain.service.PlayoffBracketViewService;
-import org.ctc.domain.service.PlayoffService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.StandingsService;
 import lombok.RequiredArgsConstructor;
@@ -36,15 +31,9 @@ import java.util.Locale;
 public class SiteGeneratorService {
 
     private final SeasonRepository seasonRepository;
-    private final MatchdayRepository matchdayRepository;
-    private final RaceRepository raceRepository;
-    private final TeamRepository teamRepository;
     private final SeasonDriverRepository seasonDriverRepository;
-    private final RaceResultRepository raceResultRepository;
-    private final RaceLineupRepository raceLineupRepository;
     private final StandingsService standingsService;
     private final DriverRankingService driverRankingService;
-    private final PlayoffService playoffService;
     private final PlayoffBracketViewService playoffBracketViewService;
     private final PlayoffRepository playoffRepository;
     private final SeasonTeamRepository seasonTeamRepository;
@@ -53,13 +42,30 @@ public class SiteGeneratorService {
     private final SeasonPhaseService seasonPhaseService;
     private final SiteSlugger siteSlugger;
     private final TemplateWriter templateWriter;
+    private final StandingsPageGenerator standingsPageGenerator;
+    private final DriverRankingPageGenerator driverRankingPageGenerator;
+    private final MatchdaysPageGenerator matchdaysPageGenerator;
+    private final TeamProfilePageGenerator teamProfilePageGenerator;
+    private final DriverProfilePageGenerator driverProfilePageGenerator;
 
-    @lombok.Setter
     @Value("${app.upload-dir:data/dev/uploads}")
     private String uploadDir;
 
     public void setOutputDir(String outputDir) {
         siteProperties.setOutputDir(outputDir);
+    }
+
+    /**
+     * Sets {@code uploadDir} on the orchestrator AND forwards to the
+     * {@link TeamProfilePageGenerator} helper which keeps its own copy of the value for
+     * the per-team-profile {@code copyLogoToAssets} flow (Phase-62 Plan-0 Task-2 split —
+     * the orchestrator and the helper each carry an independent {@code uploadDir} field
+     * because they each implement {@code copyLogoToAssets} independently per the plan's
+     * choice-(b) duplication strategy).
+     */
+    public void setUploadDir(String uploadDir) {
+        this.uploadDir = uploadDir;
+        teamProfilePageGenerator.setUploadDir(uploadDir);
     }
 
     @Transactional(readOnly = true)
@@ -94,12 +100,15 @@ public class SiteGeneratorService {
                 }
                 String playoffSeasonSlug = resolvePlayoffSeasonSlug(season);
                 boolean hasPlayoff = playoffSeasonSlug != null;
-                generateStandings(outPath, season, activeSeasonSlug, activeSeasonName, hasPlayoff, playoffSeasonSlug, result);
-                generateDriverRanking(outPath, season, activeSeasonSlug, activeSeasonName, hasPlayoff, playoffSeasonSlug, result);
-                generateMatchdays(outPath, season, activeSeasonSlug, activeSeasonName, hasPlayoff, playoffSeasonSlug, result);
-                generateMatchdayIndex(outPath, season, activeSeasonSlug, activeSeasonName, hasPlayoff, playoffSeasonSlug, result);
-                generateTeamProfiles(outPath, season, activeSeasonSlug, activeSeasonName, hasPlayoff, playoffSeasonSlug, result);
-                generateDriverProfiles(outPath, season, activeSeasonSlug, activeSeasonName, hasPlayoff, playoffSeasonSlug, result);
+                var ctx = new org.ctc.sitegen.model.GenerationContext(
+                        outPath, season, activeSeasonSlug, activeSeasonName,
+                        hasPlayoff, playoffSeasonSlug);
+                standingsPageGenerator.generate(ctx, result);
+                driverRankingPageGenerator.generate(ctx, result);
+                matchdaysPageGenerator.generateDetails(ctx, result);
+                matchdaysPageGenerator.generateIndex(ctx, result);
+                teamProfilePageGenerator.generate(ctx, result);
+                driverProfilePageGenerator.generate(ctx, result);
                 generatePlayoffBracket(outPath, season, activeSeasonSlug, activeSeasonName, result);
             }
 
@@ -181,207 +190,6 @@ public class SiteGeneratorService {
         ctx.setVariable("breadcrumbCurrent", null);
         templateWriter.write("site/index", ctx, outPath.resolve("index.html"), activeSeasonSlug, activeSeasonName);
         result.incrementPages();
-    }
-
-    private void generateStandings(Path outPath, Season season, String activeSeasonSlug,
-                                    String activeSeasonName, boolean hasPlayoff, String playoffSeasonSlug, GenerationResult result) throws IOException {
-        var ctx = new Context(Locale.ENGLISH);
-        ctx.setVariable("season", season);
-        // Phase-aware standings via REGULAR phase (templates stay LEAGUE-shaped).
-        var regularPhase = seasonPhaseService.findRegularPhase(season.getId());
-        var standings = standingsService.calculateStandings(regularPhase.getId(), null);
-        var teamSlugMap = new java.util.HashMap<java.util.UUID, String>();
-        for (var s : standings) {
-            teamSlugMap.put(s.getTeam().getId(), "team/" + siteSlugger.slugify(s.getTeam().getShortName()) + ".html");
-        }
-        ctx.setVariable("standings", standings);
-        ctx.setVariable("teamSlugMap", teamSlugMap);
-
-        ctx.setVariable("currentPage", "standings");
-        ctx.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
-        ctx.setVariable("seasonName", season.getName());
-        ctx.setVariable("hasPlayoff", hasPlayoff);
-        ctx.setVariable("playoffSeasonSlug", playoffSeasonSlug);
-        ctx.setVariable("breadcrumbCurrent", "Standings");
-
-        var dir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel()));
-        Files.createDirectories(dir);
-        templateWriter.write("site/standings", ctx, dir.resolve("standings.html"), activeSeasonSlug, activeSeasonName);
-        result.incrementPages();
-    }
-
-    private void generateDriverRanking(Path outPath, Season season, String activeSeasonSlug,
-                                        String activeSeasonName, boolean hasPlayoff, String playoffSeasonSlug, GenerationResult result) throws IOException {
-        var ctx = new Context(Locale.ENGLISH);
-        ctx.setVariable("season", season);
-        // Aggregate ranking across ALL phases of the season (REGULAR + PLAYOFF + PLACEMENT).
-        var phaseIds = seasonPhaseService.findAllPhases(season.getId()).stream()
-                .map(SeasonPhase::getId).toList();
-        var driverRanking = driverRankingService.aggregateAcrossPhases(phaseIds, season.getId());
-        var driverSlugMap = new java.util.HashMap<java.util.UUID, String>();
-        for (var r : driverRanking) {
-            driverSlugMap.put(r.getDriver().getId(), "driver/" + siteSlugger.slugify(r.getDriver().getPsnId()) + ".html");
-        }
-        ctx.setVariable("driverRanking", driverRanking);
-        ctx.setVariable("driverSlugMap", driverSlugMap);
-
-        ctx.setVariable("currentPage", "driver-ranking");
-        ctx.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
-        ctx.setVariable("seasonName", season.getName());
-        ctx.setVariable("hasPlayoff", hasPlayoff);
-        ctx.setVariable("playoffSeasonSlug", playoffSeasonSlug);
-        ctx.setVariable("breadcrumbCurrent", "Driver Ranking");
-
-        var dir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel()));
-        Files.createDirectories(dir);
-        templateWriter.write("site/driver-ranking", ctx, dir.resolve("driver-ranking.html"), activeSeasonSlug, activeSeasonName);
-        result.incrementPages();
-    }
-
-    private void generateMatchdays(Path outPath, Season season, String activeSeasonSlug,
-                                    String activeSeasonName, boolean hasPlayoff, String playoffSeasonSlug, GenerationResult result) throws IOException {
-        var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
-        // Pre-fetch all lineups for the season to avoid per-result repository queries in toRaceView
-        var allLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
-
-        for (var matchday : matchdays) {
-            var ctx = new Context(Locale.ENGLISH);
-            ctx.setVariable("season", season);
-            ctx.setVariable("matchday", matchday);
-            var raceViews = raceRepository.findByMatchdayId(matchday.getId()).stream()
-                    .map(r -> toRaceView(r, season, "../driver/", allLineups)).toList();
-            ctx.setVariable("races", raceViews);
-
-            ctx.setVariable("currentPage", "matchdays");
-            ctx.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
-            ctx.setVariable("seasonName", season.getName());
-            ctx.setVariable("hasPlayoff", hasPlayoff);
-            ctx.setVariable("playoffSeasonSlug", playoffSeasonSlug);
-            ctx.setVariable("breadcrumbCurrent", matchday.getLabel());
-
-            var dir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("matchday");
-            Files.createDirectories(dir);
-            templateWriter.write("site/matchday", ctx, dir.resolve(siteSlugger.slugify(matchday.getLabel()) + ".html"), activeSeasonSlug, activeSeasonName);
-            result.incrementPages();
-        }
-    }
-
-    private void generateTeamProfiles(Path outPath, Season season, String activeSeasonSlug,
-                                       String activeSeasonName, boolean hasPlayoff, String playoffSeasonSlug, GenerationResult result) throws IOException {
-        var teams = teamRepository.findAll();
-        // Phase-aware standings (REGULAR phase combined-view).
-        var regularPhase = seasonPhaseService.findRegularPhase(season.getId());
-        var standings = standingsService.calculateStandings(regularPhase.getId(), null);
-
-        // Pre-fetch all lineup entries and season drivers for the season to avoid N+1 queries
-        var allLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
-        var allSeasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
-
-        for (var team : teams) {
-            var teamStanding = standings.stream()
-                    .filter(s -> s.getTeam().getId().equals(team.getId()))
-                    .findFirst().orElse(null);
-
-            if (teamStanding == null) continue;
-
-            var ctx = new Context(Locale.ENGLISH);
-            ctx.setVariable("season", season);
-            ctx.setVariable("team", team);
-            ctx.setVariable("standing", teamStanding);
-
-            // Load team drivers for Drivers section via RaceLineup (source of truth per CLAUDE.md).
-            // A driver belongs to this team if their lineup entry references the team directly
-            // or references a sub-team whose parent is this team.
-            // Fall back to SeasonDriver only when no lineup entries exist for the season.
-            var lineupDrivers = allLineups.stream()
-                    .filter(rl -> {
-                        var rlTeam = rl.getTeam();
-                        return rlTeam.getId().equals(team.getId())
-                                || (rlTeam.getParentTeam() != null
-                                    && rlTeam.getParentTeam().getId().equals(team.getId()));
-                    })
-                    .map(rl -> rl.getDriver())
-                    .distinct()
-                    .toList();
-
-            var driversToShow = lineupDrivers.isEmpty()
-                    ? allSeasonDrivers.stream()
-                            .filter(sd -> sd.getTeam().getId().equals(team.getId()))
-                            .map(sd -> sd.getDriver())
-                            .distinct()
-                            .toList()
-                    : lineupDrivers;
-
-            var driverEntries = driversToShow.stream()
-                    .map(driver -> {
-                        var driverResults = raceResultRepository.findByDriverId(driver.getId()).stream()
-                                .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
-                                .toList();
-                        int totalPoints = driverResults.stream().mapToInt(r -> r.getPointsTotal()).sum();
-                        String driverProfileUrl = "../driver/" + siteSlugger.slugify(driver.getPsnId()) + ".html";
-                        return new DriverEntry(driver.getPsnId(), driverProfileUrl, totalPoints);
-                    })
-                    .toList();
-            ctx.setVariable("drivers", driverEntries);
-
-            // Compute assetsPath for this team profile page (same as writeTemplate does)
-            Path teamDir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("team");
-            String assetsPath = teamDir.relativize(outPath.resolve("assets")).toString().replace('\\', '/');
-
-            // Copy logo and get relative path (null if no logo or file missing)
-            String teamLogoRelPath = copyLogoToAssets(team.getLogoUrl(), outPath, assetsPath);
-            ctx.setVariable("teamLogoRelPath", teamLogoRelPath);
-
-            ctx.setVariable("currentPage", "team");
-            ctx.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
-            ctx.setVariable("seasonName", season.getName());
-            ctx.setVariable("hasPlayoff", hasPlayoff);
-            ctx.setVariable("playoffSeasonSlug", playoffSeasonSlug);
-            ctx.setVariable("breadcrumbCurrent", team.getShortName());
-
-            Files.createDirectories(teamDir);
-            templateWriter.write("site/team-profile", ctx, teamDir.resolve(siteSlugger.slugify(team.getShortName()) + ".html"), activeSeasonSlug, activeSeasonName);
-            result.incrementPages();
-        }
-    }
-
-    private void generateDriverProfiles(Path outPath, Season season, String activeSeasonSlug,
-                                         String activeSeasonName, boolean hasPlayoff, String playoffSeasonSlug, GenerationResult result) throws IOException {
-        var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
-        var generatedDriverIds = new java.util.HashSet<java.util.UUID>();
-
-        for (var sd : seasonDrivers) {
-            var driver = sd.getDriver();
-            if (!generatedDriverIds.add(driver.getId())) continue;
-            var team = sd.getTeam();
-            var results = raceResultRepository.findByDriverId(driver.getId()).stream()
-                    .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
-                    .toList();
-
-            var ctx = new Context(Locale.ENGLISH);
-            ctx.setVariable("season", season);
-            ctx.setVariable("driver", driver);
-            ctx.setVariable("team", team);
-            ctx.setVariable("results", results);
-            int total = results.stream().mapToInt(r -> r.getPointsTotal()).sum();
-            ctx.setVariable("totalRaces", results.size());
-            ctx.setVariable("totalPoints", total);
-            ctx.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) total / results.size());
-            ctx.setVariable("bestPosition", results.isEmpty() ? null :
-                    results.stream().mapToInt(r -> r.getPosition()).min().orElse(0));
-
-            ctx.setVariable("currentPage", "driver");
-            ctx.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
-            ctx.setVariable("seasonName", season.getName());
-            ctx.setVariable("hasPlayoff", hasPlayoff);
-            ctx.setVariable("playoffSeasonSlug", playoffSeasonSlug);
-            ctx.setVariable("breadcrumbCurrent", driver.getPsnId());
-
-            var dir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("driver");
-            Files.createDirectories(dir);
-            templateWriter.write("site/driver-profile", ctx, dir.resolve(siteSlugger.slugify(driver.getPsnId()) + ".html"), activeSeasonSlug, activeSeasonName);
-            result.incrementPages();
-        }
     }
 
     private void generatePlayoffBracket(Path outPath, Season season, String activeSeasonSlug,
@@ -650,33 +458,6 @@ public class SiteGeneratorService {
         result.incrementPages();
     }
 
-    private void generateMatchdayIndex(Path outPath, Season season, String activeSeasonSlug,
-                                        String activeSeasonName, boolean hasPlayoff, String playoffSeasonSlug, GenerationResult result) throws IOException {
-        var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
-
-        var ctx = new Context(Locale.ENGLISH);
-        ctx.setVariable("season", season);
-        ctx.setVariable("matchdays", matchdays);
-
-        // Pre-compute relative links from season/{slug}/ level
-        var matchdayLinkMap = new java.util.LinkedHashMap<java.util.UUID, String>();
-        for (var md : matchdays) {
-            matchdayLinkMap.put(md.getId(), "matchday/" + siteSlugger.slugify(md.getLabel()) + ".html");
-        }
-        ctx.setVariable("matchdayLinkMap", matchdayLinkMap);
-        ctx.setVariable("currentPage", "matchdays");
-        ctx.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
-        ctx.setVariable("seasonName", season.getName());
-        ctx.setVariable("hasPlayoff", hasPlayoff);
-        ctx.setVariable("playoffSeasonSlug", playoffSeasonSlug);
-        ctx.setVariable("breadcrumbCurrent", "Matchdays");
-
-        var dir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel()));
-        Files.createDirectories(dir);
-        templateWriter.write("site/matchdays", ctx, dir.resolve("matchdays.html"), activeSeasonSlug, activeSeasonName);
-        result.incrementPages();
-    }
-
     private String resolvePlayoffSeasonSlug(Season season) {
         var directPlayoff = playoffRepository.findBySeasonId(season.getId());
         if (directPlayoff.isPresent()) {
@@ -746,59 +527,6 @@ public class SiteGeneratorService {
         log.debug("Copied assets to {}", assetsDir);
     }
 
-    private RaceView toRaceView(Race race, Season season, String driverUrlPrefix,
-                                List<RaceLineup> seasonLineups) {
-        var homeTeam = race.getHomeTeam();
-        String homeShortName = homeTeam != null ? homeTeam.getShortName() : "Bye";
-
-        var results = race.getResults().stream()
-                .map(r -> {
-                    // teamShortName: sub-team name for display (from RaceLineup, falls back to SeasonDriver)
-                    // scoringTeamShortName: parent-resolved name for home/away aggregation
-                    var lineupOpt = seasonLineups.stream()
-                            .filter(rl -> rl.getRace().getId().equals(race.getId())
-                                    && rl.getDriver().getId().equals(r.getDriver().getId()))
-                            .findFirst();
-                    String teamShortName = lineupOpt
-                            .map(rl -> rl.getTeam().getShortName())
-                            .orElseGet(() -> r.getDriver().getSeasonDrivers().stream()
-                                    .filter(sd -> sd.getSeason().getId().equals(season.getId()))
-                                    .map(sd -> sd.getTeam().getShortName())
-                                    .findFirst().orElse("?"));
-                    String scoringTeamShortName = lineupOpt
-                            .map(rl -> rl.getTeam().getParentOrSelf().getShortName())
-                            .orElseGet(() -> r.getDriver().getSeasonDrivers().stream()
-                                    .filter(sd -> sd.getSeason().getId().equals(season.getId()))
-                                    .map(sd -> sd.getTeam().getParentOrSelf().getShortName())
-                                    .findFirst().orElse("?"));
-                    String driverSlug = siteSlugger.slugify(r.getDriver().getPsnId());
-                    String driverProfileUrl = driverUrlPrefix + driverSlug + ".html";
-                    return new RaceView.ResultView(r.getDriver().getPsnId(), teamShortName, scoringTeamShortName,
-                            r.getPosition(), r.getQualiPosition(), r.isFastestLap(), r.getPointsTotal(),
-                            driverProfileUrl);
-                })
-                .toList();
-
-        String awayShortName = race.getAwayTeam() != null ? race.getAwayTeam().getShortName() : "Bye";
-
-        int homeTotal = results.stream()
-                .filter(r -> r.scoringTeamShortName().equals(homeShortName))
-                .mapToInt(RaceView.ResultView::pointsTotal).sum();
-        int awayTotal = results.stream()
-                .filter(r -> r.scoringTeamShortName().equals(awayShortName))
-                .mapToInt(RaceView.ResultView::pointsTotal).sum();
-
-        String trackName = race.getTrack() != null ? race.getTrack().getName() : null;
-        String carName = race.getCar() != null ? race.getCar().getDisplayName() : null;
-
-        boolean hasResults = !race.getResults().isEmpty();
-        boolean homeTeamWon = hasResults && homeTotal > awayTotal;
-        boolean awayTeamWon = hasResults && awayTotal > homeTotal;
-        return new RaceView(homeShortName, awayShortName,
-                trackName, carName, homeTotal, awayTotal, hasResults,
-                homeTeamWon, awayTeamWon, results);
-    }
-
     /**
      * startDate/endDate live on the REGULAR SeasonPhase, not on Season; pre-computed here
      * so {@code archive.html} does not need SpEL traversal logic.
@@ -817,7 +545,7 @@ public class SiteGeneratorService {
         return new SeasonEntry(s, siteSlugger.slugify(s.getDisplayLabel()), startDate, endDate);
     }
 
-    record DriverEntry(String psnId, String driverProfileUrl, int totalPoints) {}
+    public record DriverEntry(String psnId, String driverProfileUrl, int totalPoints) {}
 
     record TeamOverviewEntry(String shortName, String teamSlug, String logoRelPath,
                              String profileUrl, List<String> seasonSlugs, List<String> seasonLabels) {}

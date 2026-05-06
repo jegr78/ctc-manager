@@ -3,19 +3,13 @@ package org.ctc.sitegen;
 import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.model.Season;
-import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.PlayoffRepository;
-import org.ctc.domain.repository.RaceLineupRepository;
-import org.ctc.domain.repository.RaceRepository;
-import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.SeasonTeamRepository;
-import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.service.DriverRankingService;
 import org.ctc.domain.service.PhaseTestFixtures;
 import org.ctc.domain.service.PlayoffBracketViewService;
-import org.ctc.domain.service.PlayoffService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.StandingsService;
 import org.junit.jupiter.api.Test;
@@ -28,7 +22,6 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -37,15 +30,14 @@ import static org.mockito.Mockito.when;
 /**
  * Mockito-style contract test for {@link SiteGeneratorService} D-23 caller-side update.
  *
- * <p>This IT proves that {@link SiteGeneratorService#generateStandings} (and friends)
- * route through the new phase-aware service surface introduced by Plans 58-01..58-03,
- * not through the legacy seasonId-overloads.
- *
- * <p>Per-method invocation pattern: instantiate the SUT directly with mocks (no Spring
- * context), call private rendering methods via reflection-free path through the
- * {@link SiteGeneratorService#generate} entry point would also test disk I/O —
- * we want a pure contract test, so we build a minimal scenario that exercises the
- * standings + ranking call sites and asserts the phase-aware API is used.
+ * <p>Phase-62 Plan-0 Task-2 update: per-page generation methods have been extracted into
+ * 5 helper Spring beans ({@code StandingsPageGenerator}, {@code DriverRankingPageGenerator},
+ * {@code MatchdaysPageGenerator}, {@code TeamProfilePageGenerator},
+ * {@code DriverProfilePageGenerator}). The orchestrator now delegates per-season work to
+ * these helpers via mock invocations. The remaining direct calls into
+ * {@code StandingsService}/{@code DriverRankingService} live in the orchestrator's own
+ * {@code generateTeamsOverview} / {@code generateAlltimeStandings} /
+ * {@code generateAlltimeDriverRanking} paths.
  *
  * <p>NOTE: This test does NOT use Spring context — that ensures we are testing
  * the caller-side wiring (D-23 contract), not the runtime bean-graph.
@@ -54,15 +46,9 @@ import static org.mockito.Mockito.when;
 class SiteGeneratorServiceIT {
 
     @Mock private SeasonRepository seasonRepository;
-    @Mock private MatchdayRepository matchdayRepository;
-    @Mock private RaceRepository raceRepository;
-    @Mock private TeamRepository teamRepository;
     @Mock private SeasonDriverRepository seasonDriverRepository;
-    @Mock private RaceResultRepository raceResultRepository;
-    @Mock private RaceLineupRepository raceLineupRepository;
     @Mock private StandingsService standingsService;
     @Mock private DriverRankingService driverRankingService;
-    @Mock private PlayoffService playoffService;
     @Mock private PlayoffBracketViewService playoffBracketViewService;
     @Mock private PlayoffRepository playoffRepository;
     @Mock private SeasonTeamRepository seasonTeamRepository;
@@ -71,22 +57,24 @@ class SiteGeneratorServiceIT {
     @Mock private SeasonPhaseService seasonPhaseService;
     @Mock private SiteSlugger siteSlugger;
     @Mock private TemplateWriter templateWriter;
+    @Mock private StandingsPageGenerator standingsPageGenerator;
+    @Mock private DriverRankingPageGenerator driverRankingPageGenerator;
+    @Mock private MatchdaysPageGenerator matchdaysPageGenerator;
+    @Mock private TeamProfilePageGenerator teamProfilePageGenerator;
+    @Mock private DriverProfilePageGenerator driverProfilePageGenerator;
 
     private SiteGeneratorService buildSut() {
-        // Use the all-args-style constructor exposed by Lombok @RequiredArgsConstructor.
-        // Phase-62 Plan-0 Task-1 extraction: TemplateEngine dropped (moved to TemplateWriter);
-        // SiteSlugger + TemplateWriter added as final-ordered constructor params.
+        // Lombok @RequiredArgsConstructor field order:
+        // SeasonRepository, SeasonDriverRepository, StandingsService, DriverRankingService,
+        // PlayoffBracketViewService, PlayoffRepository, SeasonTeamRepository, SiteProperties,
+        // YouTubeScraperService, SeasonPhaseService, SiteSlugger, TemplateWriter,
+        // StandingsPageGenerator, DriverRankingPageGenerator, MatchdaysPageGenerator,
+        // TeamProfilePageGenerator, DriverProfilePageGenerator
         return new SiteGeneratorService(
                 seasonRepository,
-                matchdayRepository,
-                raceRepository,
-                teamRepository,
                 seasonDriverRepository,
-                raceResultRepository,
-                raceLineupRepository,
                 standingsService,
                 driverRankingService,
-                playoffService,
                 playoffBracketViewService,
                 playoffRepository,
                 seasonTeamRepository,
@@ -94,11 +82,16 @@ class SiteGeneratorServiceIT {
                 youTubeScraperService,
                 seasonPhaseService,
                 siteSlugger,
-                templateWriter);
+                templateWriter,
+                standingsPageGenerator,
+                driverRankingPageGenerator,
+                matchdaysPageGenerator,
+                teamProfilePageGenerator,
+                driverProfilePageGenerator);
     }
 
     @Test
-    void givenSeasonWithRegularPhase_whenGenerateStandings_thenUsesPhaseAwareApi() throws Exception {
+    void givenSeasonWithRegularPhase_whenGenerate_thenDelegatesToHelpersAndPhaseAwareApi() throws Exception {
         // given
         UUID seasonId = UUID.randomUUID();
         var rs = new RaceScoring();
@@ -116,26 +109,17 @@ class SiteGeneratorServiceIT {
 
         var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
 
-        when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
-        when(seasonPhaseService.findAllPhases(seasonId)).thenReturn(List.of(regular));
-        // Phase-62 Plan-0 Task-1: generate() short-circuits seasons whose REGULAR-phase
-        // findByType is empty (line 91 productionSeasons skip). Stub it so the test fixture
-        // season survives into the per-season helper loop.
+        // generate() short-circuits seasons whose REGULAR-phase findByType is empty (productionSeasons
+        // skip). Stub findByType so the fixture season survives into the per-season helper loop.
         when(seasonPhaseService.findByType(seasonId, org.ctc.domain.model.PhaseType.REGULAR))
                 .thenReturn(java.util.Optional.of(regular));
-        when(standingsService.calculateStandings(regular.getId(), null)).thenReturn(List.of());
-        when(driverRankingService.aggregateAcrossPhases(anyList(), eq(seasonId))).thenReturn(List.of());
         when(seasonRepository.findByActiveTrue()).thenReturn(java.util.Optional.empty());
         when(seasonRepository.findAll()).thenReturn(List.of(season));
         when(playoffRepository.findBySeasonId(seasonId)).thenReturn(java.util.Optional.empty());
-        when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId)).thenReturn(List.of());
-        when(raceLineupRepository.findByRaceMatchdaySeasonId(seasonId)).thenReturn(List.of());
         when(seasonDriverRepository.findBySeasonId(seasonId)).thenReturn(List.of());
         when(seasonTeamRepository.findBySeasonId(seasonId)).thenReturn(List.of());
-        when(teamRepository.findAll()).thenReturn(List.of());
-        // Phase-62 Plan-0 Task-1: SiteSlugger is a Spring-injected collaborator; default Mockito returns
-        // null for slugify(...), which would NPE in path-resolve calls. Stub it to return a
-        // deterministic slug so generate() can complete without filesystem failure.
+        // SiteSlugger is a collaborator; default Mockito returns null for slugify(...), which would
+        // NPE in path-resolve calls inside the orchestrator. Stub deterministic slug.
         when(siteSlugger.slugify(any(String.class))).thenReturn("slug");
 
         // siteProperties returns a fresh tempDir-style path so generate() doesn't fail on cleanOutputDirectory
@@ -145,7 +129,7 @@ class SiteGeneratorServiceIT {
         when(siteProperties.getYoutubeChannelUrl()).thenReturn("https://example.com");
         when(siteProperties.getYoutubeVideoId()).thenReturn("abcDEF12345");
 
-        // standings/alltime calls used by overview pages
+        // standings/alltime calls used by overview + alltime paths still inside the orchestrator
         when(standingsService.calculateAlltimeStandings(anyList())).thenReturn(List.of());
         when(driverRankingService.calculateAlltimeRanking(anyList())).thenReturn(List.of());
 
@@ -154,16 +138,19 @@ class SiteGeneratorServiceIT {
         // when — full generate() exercises every refactored call site at least once
         sut.generate();
 
-        // then — D-23 caller-side contract: phase-aware API used. SiteGenerator routes
-        // standings through the REGULAR phase from multiple call sites (generateStandings,
-        // generateTeamProfiles, generateTeamsOverview, generateAlltimeStandings inner loop) —
-        // we assert it was called AT LEAST ONCE per refactored surface.
-        verify(seasonPhaseService, atLeastOnce()).findRegularPhase(seasonId);
-        verify(standingsService, atLeastOnce()).calculateStandings(regular.getId(), null);
-        verify(driverRankingService, atLeastOnce()).aggregateAcrossPhases(anyList(), eq(seasonId));
+        // then — Phase-62 Plan-0 contract: orchestrator delegates per-page work to the 5 helpers.
+        verify(standingsPageGenerator, atLeastOnce()).generate(any(), any());
+        verify(driverRankingPageGenerator, atLeastOnce()).generate(any(), any());
+        verify(matchdaysPageGenerator, atLeastOnce()).generateIndex(any(), any());
+        verify(matchdaysPageGenerator, atLeastOnce()).generateDetails(any(), any());
+        verify(teamProfilePageGenerator, atLeastOnce()).generate(any(), any());
+        verify(driverProfilePageGenerator, atLeastOnce()).generate(any(), any());
+
+        // D-23 caller-side contract preserved on the still-inline alltime/overview paths:
+        // alltime aggregation uses calculateAlltimeStandings (NOT the legacy seasonId overload).
+        verify(standingsService, atLeastOnce()).calculateAlltimeStandings(anyList());
+        verify(driverRankingService, atLeastOnce()).calculateAlltimeRanking(anyList());
         // explicitly verify the legacy bridges are NOT invoked (proves swap happened, not just an additive call)
         verify(standingsService, never()).calculateStandings(seasonId);
-        // DriverRankingService.calculateRanking(seasonId) was removed entirely
-        // (legacy season-aware bridge gone); only calculateRankingForPhase + aggregateAcrossPhases remain.
     }
 }
