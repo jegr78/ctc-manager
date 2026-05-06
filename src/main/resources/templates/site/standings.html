@@ -2,16 +2,37 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{site/layout :: layout('Standings ' + ${season.displayLabel}, ~{::section})}">
 <body>
-<section>
+<section><nav th:if="${showPhaseTabs}" class="phase-tab-row" role="tablist" aria-label="Phase navigation">
+        <div class="phase-tab-row-inner">
+            <a th:each="t : ${phaseTabs}"
+               th:href="@{${t.href}}"
+               th:class="${t.active} ? 'phase-tab active' : 'phase-tab'"
+               role="tab"
+               th:attr="aria-selected=${t.active} ? 'true' : 'false', aria-controls=${t.ariaControlsId}"
+               th:text="${t.label}">Tab</a>
+        </div>
+    </nav><nav th:if="${showGroupTabs}" class="group-tab-row" role="tablist" aria-label="Group navigation">
+        <div class="group-tab-row-inner">
+            <a th:each="g : ${groupTabs}"
+               th:href="@{${g.href}}"
+               th:class="${g.active} ? 'group-tab active' : 'group-tab'"
+               role="tab"
+               th:attr="aria-selected=${g.active} ? 'true' : 'false', aria-controls=${g.ariaControlsId}"
+               th:text="${g.label}">Group</a>
+        </div>
+    </nav>
     <div class="section">
-        <h2 class="section-title" th:text="'Team Standings — ' + ${season.displayLabel}"></h2>
+        <h2 class="section-title" th:text="'Team Standings — ' + ${season.displayLabel}"></h2><div th:if="${emptyState}" class="empty-phase-banner">
+            <h2 th:text="${emptyStateHeading}">No results recorded yet.</h2>
+            <p th:text="${emptyStateBody}">Standings will appear once race results are recorded.</p>
+        </div>
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
-                        <th>#</th><th>Team</th><th class="text-center">MP</th>
+                        <th>#</th><th>Team</th><th th:if="${showGroupColumn}" class="text-center">Group</th><th class="text-center">MP</th>
                         <th class="text-center">W</th><th class="text-center">D</th><th class="text-center">L</th>
-                        <th class="text-center">PR</th><th class="text-right">Pts</th>
+                        <th class="text-center">PR</th><th th:if="${showBuchholz}" class="text-center">Buchholz</th><th class="text-right">Pts</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -20,12 +41,12 @@
                         <td>
                             <a class="entity-link font-bold" th:href="${teamSlugMap.get(s.team.id)}" th:text="${s.team.shortName}"></a>
                             <span class="text-dim" th:text="' ' + ${s.team.name}"></span>
-                        </td>
+                        </td><td th:if="${showGroupColumn}" class="text-center" th:text="${s.group != null ? s.group.name : '-'}"></td>
                         <td class="text-center" th:text="${s.played}"></td>
                         <td class="text-center" th:text="${s.wins}"></td>
                         <td class="text-center" th:text="${s.draws}"></td>
                         <td class="text-center" th:text="${s.losses}"></td>
-                        <td class="text-center text-dim" th:text="${s.pointsRatio}"></td>
+                        <td class="text-center text-dim" th:text="${s.pointsRatio}"></td><td th:if="${showBuchholz}" class="text-center" th:text="${s.buchholz}"></td>
                         <td class="text-right font-bold text-white text-lg" th:text="${s.points}"></td>
                     </tr>
                 </tbody>

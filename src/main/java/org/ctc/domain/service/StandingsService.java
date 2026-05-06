@@ -72,10 +72,14 @@ public class StandingsService {
 
 		List<TeamStanding> standings = new ArrayList<>(standingsMap.values());
 		standings.removeIf(s -> s.getPlayed() == 0);
+		// Stable tiebreaker on Team.shortName ensures deterministic ordering for tied teams
+		// (Phase 62 Plan 1 Rule 1 fix — pre-existing HashMap-iteration non-determinism broke
+		// the SC4 byte-identity invariant for the public site standings.html).
 		standings.sort(Comparator
 				.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
 				.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
-				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder())
+				.thenComparing(s -> s.getTeam().getShortName()));
 
 		log.debug("Calculated standings for phase {} group {}: {} teams", phaseId, groupId, standings.size());
 		return standings;
@@ -113,7 +117,8 @@ public class StandingsService {
 			standings.sort(Comparator
 					.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
 					.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
-					.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+					.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder())
+					.thenComparing(s -> s.getTeam().getShortName()));
 			log.debug("Calculated combined-view standings with Buchholz (display-only) for phase {}: {} teams",
 					phaseId, standings.size());
 		} else {
@@ -122,7 +127,8 @@ public class StandingsService {
 					.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
 					.thenComparing(TeamStanding::getBuchholz, Comparator.reverseOrder())
 					.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
-					.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+					.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder())
+					.thenComparing(s -> s.getTeam().getShortName()));
 			log.debug("Calculated standings with Buchholz for phase {} group {}: {} teams",
 					phaseId, groupId, standings.size());
 		}
@@ -175,7 +181,8 @@ public class StandingsService {
 		result.sort(Comparator
 				.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
 				.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
-				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder()));
+				.thenComparing(TeamStanding::getPointsFor, Comparator.reverseOrder())
+				.thenComparing(s -> s.getTeam().getShortName()));
 
 		log.debug("Calculated alltime standings: {} teams across {} seasons", result.size(), seasons.size());
 		return result;

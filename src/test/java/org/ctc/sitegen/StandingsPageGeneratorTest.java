@@ -8,7 +8,9 @@ import static org.mockito.BDDMockito.given;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javax.sql.DataSource;
 import org.ctc.admin.TestDataService;
+import org.flywaydb.core.Flyway;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.BeforeAll;
@@ -46,6 +48,7 @@ class StandingsPageGeneratorTest {
     @Autowired private SiteGeneratorService siteGeneratorService;
     @Autowired private SiteProperties siteProperties;
     @Autowired private TestDataService testDataService;
+    @Autowired private DataSource dataSource;
 
     @MockitoBean private YouTubeScraperService youTubeScraperService;
 
@@ -55,6 +58,24 @@ class StandingsPageGeneratorTest {
                 .willReturn("dQw4w9WgXcQ");
         this.tempDir = injectedTempDir;
         siteProperties.setOutputDir(tempDir.toString());
+
+        // Flyway clean+migrate guarantees a fresh DB state regardless of preceding test classes
+        // having seeded data into the shared H2 in-memory DB (DB_CLOSE_DELAY=-1 keeps the DB
+        // alive across Spring context reloads). Without this, TestDataService.seed() short-circuits
+        // because seasonRepository.count() > 0 from preceding tests, leaving Season 2026 / 2023
+        // fixtures absent.
+        Flyway.configure()
+                .dataSource(dataSource)
+                .cleanDisabled(false)
+                .locations("classpath:db/migration")
+                .load()
+                .clean();
+        Flyway.configure()
+                .dataSource(dataSource)
+                .locations("classpath:db/migration")
+                .load()
+                .migrate();
+
         testDataService.seed();
         try {
             siteGeneratorService.generate();
