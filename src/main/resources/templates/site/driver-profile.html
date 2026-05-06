@@ -14,7 +14,7 @@
         </p>
     </div>
 
-    <div class="section" th:if="${results != null && !results.isEmpty()}">
+    <div class="section" th:if="${!showPhaseBreakdown && results != null && !results.isEmpty()}">
         <h2 class="section-title" th:text="'Race History — ' + ${season.displayLabel}"></h2>
         <div class="table-wrap">
             <table>
@@ -31,6 +31,42 @@
                 </thead>
                 <tbody>
                     <tr th:each="result : ${results}">
+                        <td th:text="${result.race.matchday.label}"></td>
+                        <td>
+                            <th:block th:with="driverTeamId=${team != null ? team.id : null}">
+                                <span th:if="${result.race.homeTeam != null and result.race.homeTeam.id != driverTeamId}"
+                                      th:text="${result.race.homeTeam.shortName}"></span>
+                                <span th:if="${result.race.awayTeam != null and result.race.awayTeam.id != driverTeamId}"
+                                      th:text="${result.race.awayTeam.shortName}"></span>
+                                <span th:if="${result.race.awayTeam == null}">Bye</span>
+                            </th:block>
+                        </td>
+                        <td class="text-dim" th:text="${result.race.track?.name ?: '-'}"></td>
+                        <td class="text-center" th:text="${result.position}"></td>
+                        <td class="text-center" th:text="${result.qualiPosition}"></td>
+                        <td class="text-center" th:text="${result.fastestLap ? 'FL' : ''}"></td>
+                        <td class="text-right font-bold text-white" th:text="${result.pointsTotal}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div><div class="section" th:if="${showPhaseBreakdown}" th:each="entry : ${resultsByPhase}">
+        <h3 class="section-title" th:text="${phaseHeadings[entry.key]}">Regular Season Results</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Matchday</th>
+                        <th>Opponent</th>
+                        <th>Track</th>
+                        <th class="text-center">Pos</th>
+                        <th class="text-center">Quali</th>
+                        <th class="text-center">FL</th>
+                        <th class="text-right">Points</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="result : ${entry.value}">
                         <td th:text="${result.race.matchday.label}"></td>
                         <td>
                             <th:block th:with="driverTeamId=${team != null ? team.id : null}">

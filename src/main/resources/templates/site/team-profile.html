@@ -49,6 +49,21 @@
                 </tbody>
             </table>
         </div>
+    </div><div class="section section-gap" th:if="${showPhaseBreakdown}">
+        <h2 class="section-title">Phase Breakdown</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Phase</th><th class="text-right">Result</th></tr>
+                </thead>
+                <tbody>
+                    <tr th:each="entry : ${phaseBreakdown}">
+                        <td th:text="${entry.label}"></td>
+                        <td class="text-right" th:text="${entry.summary}"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </section>
 </body>
