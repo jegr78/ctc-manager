@@ -118,13 +118,18 @@ class MatchdaysPageGeneratorTest {
     /**
      * Open Question 2 lock: multi-phase legacy matchdays.html lists REGULAR-phase matchdays only.
      * Season 2023 has a PLAYOFF matchday labeled "2023 Playoffs" (TestDataService line 933) —
-     * it MUST NOT appear in the legacy index.
+     * it MUST NOT appear in the legacy index's matchday table. (The phase-tab row label
+     * "2023 Playoffs" is allowed in the page chrome — that's the PLAYOFF phase's display label.)
      */
     @Test
     void givenMultiPhaseSeason_whenGenerateIndex_thenLegacyContainsOnlyRegularPhaseMatchdays() throws IOException {
         Path file = tempDir.resolve("season").resolve("2023-1-season-2023").resolve("matchdays.html");
         Document doc = Jsoup.parse(Files.readString(file));
-        assertThat(doc.text()).doesNotContain("2023 Playoffs");
+        // Assert the matchday table (tbody) does not contain the PLAYOFF matchday row.
+        var tableText = doc.select("tbody").text();
+        assertThat(tableText).doesNotContain("2023 Playoffs");
+        // Assert all expected REGULAR matchday rows are present (Group A 1-3 + Group B 1-3 = 6 rows).
+        assertThat(doc.select("tbody tr").size()).isEqualTo(6);
     }
 
     /**

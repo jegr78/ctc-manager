@@ -2,17 +2,30 @@ package org.ctc.sitegen;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.PhaseLayout;
+import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonPhase;
+import org.ctc.domain.model.SeasonPhaseGroup;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.SeasonPhaseGroupRepository;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.sitegen.model.GenerationContext;
+import org.ctc.sitegen.model.GroupSubTabView;
+import org.ctc.sitegen.model.PhaseTabView;
 import org.ctc.sitegen.model.RaceView;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
@@ -21,52 +34,200 @@ import org.thymeleaf.context.Context;
  * Helper bean for {@code site/matchday.html} (per-matchday detail) and
  * {@code site/matchdays.html} (index list) generation.
  *
- * <p>Phase-62 Plan-0 extraction (Open Question 4): one class with two public entry methods —
+ * <p>Plan 0 (Open Question 4): one class with two public entry methods —
  * {@link #generateIndex(GenerationContext, SiteGeneratorService.GenerationResult)} writes the
- * list page (legacy {@code generateMatchdayIndex}, lines 653-678 pre-extraction);
- * {@link #generateDetails(GenerationContext, SiteGeneratorService.GenerationResult)} writes
- * per-matchday detail pages (legacy {@code generateMatchdays}, lines 241-267 pre-extraction).
- * The private {@code toRaceView} helper (lines 770-821 pre-extraction) moves with this class
- * because only the matchday-detail flow calls it. Behavior is byte-identical to the legacy
- * private methods (SC4 invariant).
+ * list page; {@link #generateDetails(GenerationContext, SiteGeneratorService.GenerationResult)}
+ * writes per-matchday detail pages. Detail pages stay phase-agnostic in Plan 2 — their slugs
+ * are unique per season already.
+ *
+ * <p>Phase 62 Plan 2 — phase- and group-aware index. Generates the legacy
+ * {@code /season/{slug}/matchdays.html} (REGULAR-only matchdays — Open Question 2 lock) plus
+ * per-phase variants {@code matchdays-{phaseSlug}.html} (skip PLAYOFF — D-08) plus per-group
+ * variants {@code matchdays-{phaseSlug}-group-{groupSlug}.html} for GROUPS-layout phases.
+ *
+ * <p>Single-REGULAR-LEAGUE seasons render no tab rows on matchdays.html (SC4 backward-compat).
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MatchdaysPageGenerator {
 
+    private static final String ARIA_CONTROLS_ID = "main-content";
+
     private final TemplateWriter templateWriter;
     private final SiteSlugger siteSlugger;
     private final MatchdayRepository matchdayRepository;
     private final RaceRepository raceRepository;
     private final RaceLineupRepository raceLineupRepository;
+    private final SeasonPhaseService seasonPhaseService;
+    private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
 
     public void generateIndex(GenerationContext ctx, SiteGeneratorService.GenerationResult result) throws IOException {
         var season = ctx.season();
-        var matchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
+        var allPhases = seasonPhaseService.findAllPhases(season.getId());
+        var regularPhase = allPhases.stream()
+                .filter(p -> p.getPhaseType() == PhaseType.REGULAR)
+                .findFirst()
+                .orElseThrow();
 
-        var context = new Context(Locale.ENGLISH);
-        context.setVariable("season", season);
-        context.setVariable("matchdays", matchdays);
+        boolean showPhaseTabs = allPhases.size() >= 2;
+        String seasonSlug = siteSlugger.slugify(season.getDisplayLabel());
+        Path dir = ctx.outPath().resolve("season").resolve(seasonSlug);
+        Files.createDirectories(dir);
 
-        // Pre-compute relative links from season/{slug}/ level
-        var matchdayLinkMap = new java.util.LinkedHashMap<java.util.UUID, String>();
+        // 1) Legacy /season/{slug}/matchdays.html — REGULAR-only (Open Question 2 locked)
+        writeIndexVariant(ctx, dir, "matchdays.html",
+                matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regularPhase.getId()),
+                allPhases, regularPhase, /* groupId */ null,
+                /* isLegacyView */ true, showPhaseTabs, result);
+
+        // 2) Per-phase variants — skip PLAYOFF (D-08; PLAYOFF tab links to playoff.html)
+        for (SeasonPhase phase : allPhases) {
+            if (phase.getPhaseType() == PhaseType.PLAYOFF) {
+                continue; // D-08: never generate matchdays-playoff.html
+            }
+            String phaseSlug = phaseSlug(phase);
+            String phaseFileBase = "matchdays-" + phaseSlug;
+
+            // 2a) Per-phase combined (or LEAGUE) page
+            writeIndexVariant(ctx, dir, phaseFileBase + ".html",
+                    matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phase.getId()),
+                    allPhases, phase, /* groupId */ null,
+                    /* isLegacyView */ false, showPhaseTabs, result);
+
+            // 2b) Per-group variants for GROUPS-layout phases
+            if (phase.getLayout() == PhaseLayout.GROUPS) {
+                for (SeasonPhaseGroup group : seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phase.getId())) {
+                    String groupSlug = siteSlugger.slugify(group.getName());
+                    String groupFileBase = phaseFileBase + "-group-" + groupSlug;
+                    writeIndexVariant(ctx, dir, groupFileBase + ".html",
+                            matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phase.getId(), group.getId()),
+                            allPhases, phase, group.getId(),
+                            /* isLegacyView */ false, showPhaseTabs, result);
+                }
+            }
+        }
+    }
+
+    /**
+     * Writes a single matchdays-index HTML file for the given phase (and optional group).
+     *
+     * @param filename the output filename ("matchdays.html", "matchdays-regular.html",
+     *     "matchdays-regular-group-group-a.html", etc.)
+     * @param matchdays the matchday rows to render in the index table
+     * @param currentPhase the phase whose page is currently being rendered (drives tab actives)
+     * @param currentGroupId nullable; non-null on per-group view (drives group-tab actives)
+     * @param isLegacyView true for the legacy {@code matchdays.html}; drives REGULAR-tab href
+     *     to "matchdays.html" (instead of "matchdays-regular.html") and Combined-tab href to
+     *     "matchdays.html"
+     */
+    private void writeIndexVariant(GenerationContext ctx, Path dir, String filename,
+                                    List<Matchday> matchdays,
+                                    List<SeasonPhase> allPhases, SeasonPhase currentPhase, UUID currentGroupId,
+                                    boolean isLegacyView, boolean showPhaseTabs,
+                                    SiteGeneratorService.GenerationResult result) throws IOException {
+        var season = ctx.season();
+        boolean isGroupsLayout = currentPhase.getLayout() == PhaseLayout.GROUPS;
+
+        // Phase tab row (visible when ≥2 phases)
+        List<PhaseTabView> phaseTabs = showPhaseTabs
+                ? buildPhaseTabs(allPhases, currentPhase.getPhaseType(), isLegacyView)
+                : List.of();
+
+        // Group sub-tab row (visible when current phase is GROUPS-layout)
+        boolean showGroupTabs = isGroupsLayout;
+        List<GroupSubTabView> groupTabs = showGroupTabs
+                ? buildGroupTabs(currentPhase, isLegacyView ? "matchdays" : "matchdays-" + phaseSlug(currentPhase),
+                        currentGroupId)
+                : List.of();
+
+        // Pre-compute relative links from season/{slug}/ level (matchday detail pages stay
+        // phase-agnostic per plan — their slugs are unique per season already)
+        var matchdayLinkMap = new LinkedHashMap<UUID, String>();
         for (var md : matchdays) {
             matchdayLinkMap.put(md.getId(), "matchday/" + siteSlugger.slugify(md.getLabel()) + ".html");
         }
-        context.setVariable("matchdayLinkMap", matchdayLinkMap);
-        context.setVariable("currentPage", "matchdays");
-        context.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
-        context.setVariable("seasonName", season.getName());
-        context.setVariable("hasPlayoff", ctx.hasPlayoff());
-        context.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
-        context.setVariable("breadcrumbCurrent", "Matchdays");
 
-        var dir = ctx.outPath().resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel()));
-        Files.createDirectories(dir);
-        templateWriter.write("site/matchdays", context, dir.resolve("matchdays.html"),
+        var tplCtx = new Context(Locale.ENGLISH);
+        tplCtx.setVariable("season", season);
+        tplCtx.setVariable("matchdays", matchdays);
+        tplCtx.setVariable("matchdayLinkMap", matchdayLinkMap);
+        tplCtx.setVariable("currentPage", "matchdays"); // D-09: sub-nav stays coarse
+        tplCtx.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
+        tplCtx.setVariable("seasonName", season.getName());
+        tplCtx.setVariable("hasPlayoff", ctx.hasPlayoff());
+        tplCtx.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
+        tplCtx.setVariable("breadcrumbCurrent", "Matchdays");
+        tplCtx.setVariable("showPhaseTabs", showPhaseTabs);
+        tplCtx.setVariable("phaseTabs", phaseTabs);
+        tplCtx.setVariable("showGroupTabs", showGroupTabs);
+        tplCtx.setVariable("groupTabs", groupTabs);
+
+        templateWriter.write("site/matchdays", tplCtx, dir.resolve(filename),
                 ctx.activeSeasonSlug(), ctx.activeSeasonName());
         result.incrementPages();
+    }
+
+    /**
+     * Builds the phase-tab row entries for any matchdays-index page.
+     *
+     * @param currentPhaseType the phase type whose page is currently being rendered (for active flag)
+     * @param isLegacyView true when rendering the legacy {@code matchdays.html}; drives REGULAR
+     *     tab href to "matchdays.html" instead of "matchdays-regular.html"
+     */
+    private List<PhaseTabView> buildPhaseTabs(List<SeasonPhase> phases, PhaseType currentPhaseType,
+                                              boolean isLegacyView) {
+        var tabs = new ArrayList<PhaseTabView>();
+        for (SeasonPhase p : phases) {
+            String label = (p.getLabel() != null && !p.getLabel().isBlank())
+                    ? p.getLabel()
+                    : capitalize(p.getPhaseType().name());
+            String href;
+            if (p.getPhaseType() == PhaseType.PLAYOFF) {
+                href = "playoff.html"; // D-08
+            } else if (isLegacyView && p.getPhaseType() == PhaseType.REGULAR) {
+                href = "matchdays.html"; // legacy URL is the REGULAR canonical
+            } else {
+                href = "matchdays-" + phaseSlug(p) + ".html";
+            }
+            boolean active = (p.getPhaseType() == currentPhaseType);
+            tabs.add(new PhaseTabView(label, href, active, ARIA_CONTROLS_ID));
+        }
+        return tabs;
+    }
+
+    /**
+     * Builds the group sub-tab row entries (Combined first, then one per group in sortIndex order).
+     *
+     * @param phase the GROUPS-layout phase whose sub-tabs are being rendered
+     * @param phaseFileBase legacy={@code "matchdays"} or per-phase={@code "matchdays-{phaseSlug}"}
+     * @param activeGroupId nullable; null on combined view, set on per-group view
+     */
+    private List<GroupSubTabView> buildGroupTabs(SeasonPhase phase, String phaseFileBase,
+                                                 UUID activeGroupId) {
+        var tabs = new ArrayList<GroupSubTabView>();
+        String combinedHref = phaseFileBase + ".html";
+        boolean combinedActive = (activeGroupId == null);
+        tabs.add(new GroupSubTabView("Combined", combinedHref, combinedActive, ARIA_CONTROLS_ID));
+        for (SeasonPhaseGroup g : seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phase.getId())) {
+            String groupSlug = siteSlugger.slugify(g.getName());
+            String href = phaseFileBase + "-group-" + groupSlug + ".html";
+            boolean active = (activeGroupId != null && activeGroupId.equals(g.getId()));
+            tabs.add(new GroupSubTabView(g.getName(), href, active, ARIA_CONTROLS_ID));
+        }
+        return tabs;
+    }
+
+    /**
+     * D-02 phase slug = lowercased PhaseType name (regular / playoff / placement).
+     */
+    private String phaseSlug(SeasonPhase phase) {
+        return phase.getPhaseType().name().toLowerCase(Locale.ENGLISH);
+    }
+
+    private String capitalize(String input) {
+        if (input == null || input.isEmpty()) return input;
+        return input.charAt(0) + input.substring(1).toLowerCase(Locale.ENGLISH);
     }
 
     public void generateDetails(GenerationContext ctx, SiteGeneratorService.GenerationResult result) throws IOException {
