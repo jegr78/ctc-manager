@@ -11,24 +11,24 @@ Requirements for milestone v1.9. Each maps to roadmap phases.
 
 ### MODEL — Schema & Entities
 
-- [ ] **MODEL-01**: `SeasonPhase`-Entity mit `phaseType` (REGULAR/PLAYOFF/PLACEMENT), `layout` (LEAGUE/GROUPS/BRACKET), `format` (LEAGUE/SWISS/ROUND_ROBIN), `sortIndex`, `label`, `startDate`/`endDate`, `totalRounds`, `legs`, `eventDurationMinutes`, FKs zu `RaceScoring`/`MatchScoring`
-- [ ] **MODEL-02**: Constraint: max. 1 REGULAR + ≤1 PLAYOFF + ≤1 PLACEMENT pro Saison
-- [ ] **MODEL-03**: `SeasonPhaseGroup`-Entity (`name`, `sortIndex`, FK zu Phase) — nur bei `layout=GROUPS`
-- [ ] **MODEL-04**: `PhaseTeam`-Roster-Entity `(phase_id, team_id, group_id?)`, UNIQUE auf `(phase_id, team_id)`
-- [ ] **MODEL-05**: `Matchday.season_id` → `Matchday.phase_id` (NOT NULL) + optional `Matchday.group_id`
-- [ ] **MODEL-06**: `Playoff.season_id` → `Playoff.phase_id` (UNIQUE); M:N `playoff_seasons` entfällt
-- [ ] **MODEL-07**: `Season` reduziert auf Identitäts-/Audit-Felder; format/scoring/dates/totalRounds/legs entfallen aus Season
-- [ ] **MODEL-08**: `SeasonDriver` + `SeasonTeam` strukturell unverändert; `SeasonTeam` behält saisonweite Farben-/Logo-Overrides
+- [x] **MODEL-01**: `SeasonPhase`-Entity mit `phaseType` (REGULAR/PLAYOFF/PLACEMENT), `layout` (LEAGUE/GROUPS/BRACKET), `format` (LEAGUE/SWISS/ROUND_ROBIN), `sortIndex`, `label`, `startDate`/`endDate`, `totalRounds`, `legs`, `eventDurationMinutes`, FKs zu `RaceScoring`/`MatchScoring`
+- [x] **MODEL-02**: Constraint: max. 1 REGULAR + ≤1 PLAYOFF + ≤1 PLACEMENT pro Saison
+- [x] **MODEL-03**: `SeasonPhaseGroup`-Entity (`name`, `sortIndex`, FK zu Phase) — nur bei `layout=GROUPS`
+- [x] **MODEL-04**: `PhaseTeam`-Roster-Entity `(phase_id, team_id, group_id?)`, UNIQUE auf `(phase_id, team_id)`
+- [x] **MODEL-05**: `Matchday.season_id` → `Matchday.phase_id` (NOT NULL) + optional `Matchday.group_id`
+- [x] **MODEL-06**: `Playoff.season_id` → `Playoff.phase_id` (UNIQUE); M:N `playoff_seasons` entfällt
+- [x] **MODEL-07**: `Season` reduziert auf Identitäts-/Audit-Felder; format/scoring/dates/totalRounds/legs entfallen aus Season
+- [x] **MODEL-08**: `SeasonDriver` + `SeasonTeam` strukturell unverändert; `SeasonTeam` behält saisonweite Farben-/Logo-Overrides
 
 ### MIGR — Flyway Migration
 
-- [ ] **MIGR-01**: Neue V*-Migration legt `season_phases`, `season_phase_groups`, `phase_teams` an (H2 + MariaDB)
+- [x] **MIGR-01**: Neue V*-Migration legt `season_phases`, `season_phase_groups`, `phase_teams` an (H2 + MariaDB)
 - [x] **MIGR-02**: Daten-Migration: 1 REGULAR-Phase pro Bestandssaison mit kopierten Format/Scoring/Rounds/Legs/Dates
 - [x] **MIGR-03**: Daten-Migration: 1 PLAYOFF-Phase pro existierendem Playoff; FK umgehängt
 - [x] **MIGR-04**: Daten-Migration: `matchday.phase_id` auf REGULAR-Phase gesetzt
 - [x] **MIGR-05**: Daten-Migration: `phase_teams` aus heutigen `season_teams` abgeleitet (LEAGUE-Layout, group NULL)
-- [ ] **MIGR-06**: Cleanup-Migration: alte Spalten aus `seasons` + M:N `playoff_seasons` entfernt
-- [ ] **MIGR-07**: Alle Migrationen additiv (neue V-Files); Bestand-V1/V2 unverändert
+- [x] **MIGR-06**: Cleanup-Migration: alte Spalten aus `seasons` + M:N `playoff_seasons` entfernt
+- [x] **MIGR-07**: Alle Migrationen additiv (neue V-Files); Bestand-V1/V2 unverändert
 
 ### SVC — Domain Service Layer
 
@@ -64,7 +64,7 @@ Requirements for milestone v1.9. Each maps to roadmap phases.
 
 - [x] **QUAL-01**: JaCoCo Line-Coverage ≥ 82 % gehalten
 - [x] **QUAL-02**: E2E-Test deckt GROUPS-Saison: Anlegen, Roster pro Group, Matchdays pro Group, Driver-Import mit Group-Auflösung, Standings pro Group + Combined
-- [ ] **QUAL-03**: Regression-Test: Bestandssaison öffnet nach Migration mit 1 REGULAR-Phase + allen Race-Daten erreichbar
+- [x] **QUAL-03**: Regression-Test: Bestandssaison öffnet nach Migration mit 1 REGULAR-Phase + allen Race-Daten erreichbar
 
 ### SITE — Public-Site Phase Awareness
 
@@ -108,21 +108,21 @@ Which phases cover which requirements. Filled during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MODEL-01 | 56 | Pending |
-| MODEL-02 | 56 | Pending |
-| MODEL-03 | 56 | Pending |
-| MODEL-04 | 56 | Pending |
-| MODEL-05 | 56 | Pending |
-| MODEL-06 | 56 | Pending |
-| MODEL-07 | 56 | Pending |
-| MODEL-08 | 56 | Pending |
-| MIGR-01 | 56 | Pending |
+| MODEL-01 | 56 | Complete |
+| MODEL-02 | 56 | Complete |
+| MODEL-03 | 56 | Complete |
+| MODEL-04 | 56 | Complete |
+| MODEL-05 | 56 | Complete |
+| MODEL-06 | 56 | Complete |
+| MODEL-07 | 56 | Complete |
+| MODEL-08 | 56 | Complete |
+| MIGR-01 | 56 | Complete |
 | MIGR-02 | 57 | Complete |
 | MIGR-03 | 57 | Complete |
 | MIGR-04 | 57 | Complete |
 | MIGR-05 | 57 | Complete |
-| MIGR-06 | 61 | Pending |
-| MIGR-07 | 56 | Pending |
+| MIGR-06 | 61 | Complete |
+| MIGR-07 | 56 | Complete |
 | SVC-01 | 58 | Complete |
 | SVC-02 | 58 | Complete |
 | SVC-03 | 58 | Complete |
@@ -143,7 +143,7 @@ Which phases cover which requirements. Filled during roadmap creation.
 | DATA-02 | 59 | Complete |
 | QUAL-01 | 61 | Complete |
 | QUAL-02 | 61 | Complete |
-| QUAL-03 | 61 | Pending |
+| QUAL-03 | 61 | Complete |
 | SITE-01 | 62 | Complete |
 | SITE-02 | 62 | Complete |
 | SITE-03 | 62 | Complete |
