@@ -3,7 +3,7 @@ phase: 58
 slug: service-layer
 status: draft
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-04-27
 ---
 
@@ -91,10 +91,24 @@ created: 2026-04-27
 
 - [x] All tasks have `<automated>` verify or Wave 0 dependencies (planner fills as it produces PLANs)
 - [x] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (`PhaseTestFixtures` + 3 repo IT scaffolds) — pending Wave 0 execution
+- [x] Wave 0 covers all MISSING references (`PhaseTestFixtures` + 3 repo IT scaffolds) — pending Wave 0 execution
 - [x] No watch-mode flags (Maven runs are one-shot)
 - [x] Feedback latency < 30s (quick filter) / 180s (full suite)
 - [x] `nyquist_compliant: true` set in frontmatter (after planner completes plan generation)
 - [ ] JaCoCo line coverage ≥ 82% on `./mvnw verify` (project-wide gate from `pom.xml`) — verified post-execution
 
 **Approval:** approved 2026-04-27 (planning-time sign-off; runtime gates marked above remain to be confirmed during execution)
+
+---
+
+## Validation Audit 2026-05-07
+
+| Metric | Count |
+|--------|-------|
+| Requirements audited | 20 |
+| Plans audited | 6 |
+| Gaps found | 0 |
+| Resolved (already automated) | 20 |
+| Escalated to manual-only | 2 |
+| Net-new test infrastructure | none |
+| Verdict | nyquist_compliant=true (unchanged), wave_0_complete=true (flipped 2026-05-07; PhaseTestFixtures + 3 Repository ITs already green per SUMMARY trail) |
