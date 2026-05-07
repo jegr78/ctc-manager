@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Season Phases & Groups
-status: completed
-last_updated: "2026-05-07T17:07:25.722Z"
-last_activity: 2026-05-07 -- Phase 65 Plan 03 executed; atomic commit 6523959; E2E 31/31 green; ready for /gsd-verify-work 65
+status: executing
+last_updated: "2026-05-07T17:22:53.198Z"
+last_activity: 2026-05-07 -- Phase 66 execution started
 progress:
   total_phases: 11
   completed_phases: 10
-  total_plans: 55
+  total_plans: 56
   completed_plans: 55
-  percent: 100
+  percent: 98
 ---
 
 # Project State
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 65 — Graphics Services Bridge Migration (last v1.9 phase)
+**Current focus:** Phase 66 — team-shortname-collision-fix
 
 ## Current Position
 
-Phase: 65 — COMPLETE
-Plan: 3/3 complete
-Status: Phase 65 complete — calculateStandings(UUID seasonId) bridge deleted; SC1=0; JaCoCo 87.8%; all 3 plans shipped
-Last activity: 2026-05-07 -- Phase 65 Plan 03 executed; atomic commit 6523959; E2E 31/31 green; ready for /gsd-verify-work 65
+Phase: 66 (team-shortname-collision-fix) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 66
+Last activity: 2026-05-07 -- Phase 66 execution started
 
 ## Completed Milestones
 
