@@ -148,11 +148,15 @@ public class StandingsPageGenerator {
                 ? buildPhaseTabs(allPhases, phase.getPhaseType(), isLegacyView)
                 : List.of();
 
-        // Group sub-tab row (visible when current phase is GROUPS-layout)
+        // Group sub-tab row (visible when current phase is GROUPS-layout).
+        // phaseFileBase is ALWAYS per-phase (group sub-tab files only exist as
+        // standings-{phaseSlug}-group-{groupSlug}.html — there is no legacy group variant).
+        // combinedHref is the legacy URL on the combined-REGULAR view, per-phase URL otherwise.
         boolean showGroupTabs = isGroupsLayout;
+        String perPhaseFileBase = "standings-" + phaseSlug(phase);
+        String combinedHref = isLegacyView ? "standings.html" : perPhaseFileBase + ".html";
         List<GroupSubTabView> groupTabs = showGroupTabs
-                ? buildGroupTabs(phase, isLegacyView ? "standings" : "standings-" + phaseSlug(phase),
-                        isLegacyView, groupId)
+                ? buildGroupTabs(phase, perPhaseFileBase, combinedHref, groupId)
                 : List.of();
 
         boolean showGroupColumn = isGroupsLayout && isCombinedView;
@@ -216,15 +220,16 @@ public class StandingsPageGenerator {
      * Builds the group sub-tab row entries (Combined first, then one per group in sortIndex order).
      *
      * @param phase the GROUPS-layout phase whose sub-tabs are being rendered
-     * @param phaseFileBase legacy=&quot;standings&quot; or per-phase=&quot;standings-{phaseSlug}&quot;
-     * @param isLegacyView true for the legacy combined URL; "Combined" tab href becomes
-     *     {@code standings.html} instead of {@code standings-{phaseSlug}.html}
+     * @param phaseFileBase always per-phase ({@code "standings-{phaseSlug}"}) — group sub-tab files
+     *     only exist as {@code standings-{phaseSlug}-group-{groupSlug}.html}; there is no legacy
+     *     group variant
+     * @param combinedHref the "Combined" tab href: {@code standings.html} on the legacy view,
+     *     {@code standings-{phaseSlug}.html} on the per-phase view
      * @param activeGroupId nullable; null on combined view, set on per-group view
      */
     private List<GroupSubTabView> buildGroupTabs(SeasonPhase phase, String phaseFileBase,
-                                                 boolean isLegacyView, UUID activeGroupId) {
+                                                 String combinedHref, UUID activeGroupId) {
         var tabs = new ArrayList<GroupSubTabView>();
-        String combinedHref = phaseFileBase + ".html";
         boolean combinedActive = (activeGroupId == null);
         tabs.add(new GroupSubTabView("Combined", combinedHref, combinedActive, ARIA_CONTROLS_ID));
         for (SeasonPhaseGroup g : seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phase.getId())) {
