@@ -7,6 +7,7 @@ import com.microsoft.playwright.Playwright;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonTeam;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.StandingsService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -35,13 +36,16 @@ public class TeamCardService implements TemplateManageable {
 
 	private final TemplateEngine templateEngine;
 	private final StandingsService standingsService;
+	private final SeasonPhaseService seasonPhaseService;
 	private final Path uploadDir;
 
 	public TeamCardService(TemplateEngine templateEngine,
 	                       StandingsService standingsService,
+	                       SeasonPhaseService seasonPhaseService,
 	                       @Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.templateEngine = templateEngine;
 		this.standingsService = standingsService;
+		this.seasonPhaseService = seasonPhaseService;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
 
@@ -49,7 +53,8 @@ public class TeamCardService implements TemplateManageable {
 		var team = seasonTeam.getTeam();
 		var season = seasonTeam.getSeason();
 
-		var standings = standingsService.calculateStandings(season.getId());
+		var regularPhase = seasonPhaseService.findRegularPhase(season.getId());
+		var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 		var teamStanding = standings.stream()
 				.filter(s -> s.getTeam().getId().equals(team.getId()))
 				.findFirst()

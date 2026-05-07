@@ -1,11 +1,14 @@
 package org.ctc.admin.service;
 
-import org.ctc.domain.model.Driver;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceLineup;
-import org.ctc.domain.model.Team;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.PlayoffSeedRepository;
+import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.service.PhaseTestFixtures;
+import org.ctc.domain.service.StandingsService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -17,6 +20,13 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class LineupGraphicServiceTest {
 
@@ -221,6 +231,48 @@ class LineupGraphicServiceTest {
 
 		// then
 		assertThat(result).isNull();
+	}
+
+	@Test
+	void givenLeagueRace_whenGenerateLineup_thenStandingsCalledWithPhaseIdAndNullGroup() throws Exception {
+		// given
+		var standingsService = mock(StandingsService.class);
+		var raceLineupRepository = mock(RaceLineupRepository.class);
+		var playoffSeedRepository = mock(PlayoffSeedRepository.class);
+		var templateEngine = mock(TemplateEngine.class);
+		when(templateEngine.process(anyString(), any(Context.class))).thenReturn("<html></html>");
+		var service = new LineupGraphicService(templateEngine, standingsService, raceLineupRepository, playoffSeedRepository, tempDir.toString());
+
+		var season = new Season("Test", 2026, 1);
+		season.setId(UUID.randomUUID());
+		var home = new Team("H", "H"); home.setId(UUID.randomUUID());
+		var away = new Team("A", "A"); away.setId(UUID.randomUUID());
+		var matchday = PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
+		matchday.setId(UUID.randomUUID());
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setMatchday(matchday);
+		race.setHomeTeamOverride(home);
+		race.setAwayTeamOverride(away);
+
+		// create team-card files so encodeCardBase64 does not return null before the standings call
+		Path cardDir = tempDir.resolve("team-cards").resolve(season.getId().toString());
+		Files.createDirectories(cardDir);
+		var img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+		ImageIO.write(img, "png", cardDir.resolve("H.png").toFile());
+		ImageIO.write(img, "png", cardDir.resolve("A.png").toFile());
+
+		var driver = new Driver();
+		driver.setPsnId("TestDriver");
+		var lineup = new RaceLineup(race, driver, home);
+		when(raceLineupRepository.findByRaceId(race.getId())).thenReturn(List.of(lineup));
+		when(standingsService.calculateStandings(eq(matchday.getPhase().getId()), isNull())).thenReturn(List.of());
+
+		// when — renderScreenshot may throw after standings call; catch and verify standings fired
+		try { service.generateLineup(race); } catch (Exception ignored) {}
+
+		// then
+		verify(standingsService).calculateStandings(eq(matchday.getPhase().getId()), isNull());
 	}
 
 	@Test

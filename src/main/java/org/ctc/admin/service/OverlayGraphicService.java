@@ -49,13 +49,17 @@ public class OverlayGraphicService extends AbstractGraphicService implements Tem
 		var homeTeam = race.getHomeTeam();
 		var awayTeam = race.getAwayTeam();
 		var season = race.getMatchday().getSeason();
+		var phase = race.getMatchday().getPhase();
+		var group = race.getMatchday().getGroup();
 
 		Map<UUID, SeasonTeam> seasonTeamMap = new HashMap<>();
 		for (var st : seasonTeamRepository.findBySeasonId(season.getId())) {
 			seasonTeamMap.put(st.getTeam().getId(), st);
 		}
 
-		var standings = standingsService.calculateStandings(season.getId());
+		var standings = standingsService.calculateStandings(
+				phase.getId(),
+				group != null ? group.getId() : null);
 		Map<UUID, TeamStanding> standingMap = new HashMap<>();
 		for (var standing : standings) {
 			standingMap.put(standing.getTeam().getId(), standing);

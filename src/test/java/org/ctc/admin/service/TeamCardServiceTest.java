@@ -3,15 +3,34 @@ package org.ctc.admin.service;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.service.PhaseTestFixtures;
+import org.ctc.domain.service.SeasonPhaseService;
+import org.ctc.domain.service.StandingsService;
+import org.ctc.domain.service.StandingsService.TeamStanding;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
+import java.nio.file.Path;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TeamCardServiceTest {
 
-	private final TeamCardService service = new TeamCardService(null, null, "uploads");
+	@TempDir
+	Path tempDir;
+
+	private final TeamCardService service = new TeamCardService(null, null, null, "uploads");
 
 	@Test
 	void givenTeamWithSimpleShortName_whenGetCardPath_thenReturnsExpectedPath() {
@@ -81,5 +100,34 @@ class TeamCardServiceTest {
 
 		// when / then
 		assertThat(service.cardExists(seasonTeam)).isFalse();
+	}
+
+	@Test
+	void givenLeagueSeason_whenGenerateCard_thenStandingsCalledWithRegularPhaseIdAndNullGroup() throws Exception {
+		// given
+		var standingsService = mock(StandingsService.class);
+		var seasonPhaseService = mock(SeasonPhaseService.class);
+		var templateEngine = mock(TemplateEngine.class);
+		when(templateEngine.process(anyString(), any(Context.class))).thenReturn("<html></html>");
+		var testService = new TeamCardService(templateEngine, standingsService, seasonPhaseService, tempDir.toString());
+
+		var season = new Season("Test", 2026, 1);
+		season.setId(UUID.randomUUID());
+		var team = new Team("TestTeam", "TT");
+		team.setId(UUID.randomUUID());
+		var seasonTeam = new SeasonTeam(season, team);
+
+		var regularPhase = PhaseTestFixtures.regularPhase(season, null, null);
+		when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regularPhase);
+		var standing = new TeamStanding(team);
+		when(standingsService.calculateStandings(eq(regularPhase.getId()), isNull()))
+				.thenReturn(List.of(standing));
+
+		// when
+		testService.generateCard(seasonTeam);
+
+		// then
+		verify(seasonPhaseService).findRegularPhase(season.getId());
+		verify(standingsService).calculateStandings(eq(regularPhase.getId()), isNull());
 	}
 }
