@@ -160,20 +160,26 @@ public class StandingsService {
 	/**
 	 * Calculates alltime standings restricted to the given seasons.
 	 * Used by the site generator to exclude Test seasons from public pages.
+	 *
+	 * <p><strong>Tracked Behavior Change (v1.9 / D-19):</strong> Aggregation now spans ALL phases of
+	 * each season (REGULAR + PLAYOFF + PLACEMENT), not REGULAR-only. Multi-phase seasons contribute
+	 * their full points total to the alltime standings.
 	 */
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateAlltimeStandings(List<Season> seasons) {
 		Map<UUID, TeamStanding> alltimeMap = new HashMap<>();
 
 		for (Season season : seasons) {
-			List<TeamStanding> seasonStandings = calculateStandings(season.getId());
-			if (seasonStandings.isEmpty()) continue;
+			for (SeasonPhase phase : seasonPhaseService.findAllPhases(season.getId())) {
+				List<TeamStanding> phaseStandings = calculateStandings(phase.getId(), null);
+				if (phaseStandings.isEmpty()) continue;
 
-			for (TeamStanding standing : seasonStandings) {
-				Team parentTeam = standing.getTeam().getParentOrSelf();
-				TeamStanding alltime = alltimeMap.computeIfAbsent(
-						parentTeam.getId(), id -> new TeamStanding(parentTeam));
-				alltime.merge(standing);
+				for (TeamStanding standing : phaseStandings) {
+					Team parentTeam = standing.getTeam().getParentOrSelf();
+					TeamStanding alltime = alltimeMap.computeIfAbsent(
+							parentTeam.getId(), id -> new TeamStanding(parentTeam));
+					alltime.merge(standing);
+				}
 			}
 		}
 

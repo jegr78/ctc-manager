@@ -487,6 +487,54 @@ class DriverRankingServiceTest {
 		assertThat(panicRanking.getRacesCount()).isEqualTo(2);
 	}
 
+	// ---- D-19 alltime cross-phase tests (TDD-RED for Plan 62-05) ----
+
+	/**
+	 * D-19 TRACKED BEHAVIOR CHANGE: calculateAlltimeRanking(seasonIds) must include
+	 * PLAYOFF-matchup-linked race results (not only REGULAR-phase results).
+	 *
+	 * <p>RED gate: today's implementation calls
+	 * {@code findByRacePlayoffMatchupIsNullAndRaceMatchdaySeasonIdIn(seasonIds)} which excludes
+	 * any RaceResult whose Race has a non-null playoffMatchup. The test expects the alltime
+	 * races count to be greater than the REGULAR-only races count. This assertion FAILS
+	 * until D-19 (findByRaceMatchdaySeasonIdIn without IsNull) is implemented.
+	 */
+	@Test
+	void givenSeasonWithPlayoffPhase_whenCalculateAlltimeRanking_thenIncludesPlayoffResults() {
+		// given — 1 REGULAR race + 1 PLAYOFF race for panicpotato
+		var regularRace = new Race();
+		regularRace.setId(UUID.randomUUID());
+		var playoffRace = new Race();
+		playoffRace.setId(UUID.randomUUID());
+
+		var regularResult = createResult(regularRace, panicpotato, 20, 1);
+		var playoffResult = createResult(playoffRace, panicpotato, 15, 2);
+
+		var sd = new SeasonDriver(season, panicpotato, tnr);
+
+		// D-19 (TDD-GREEN): findByRaceMatchdaySeasonIdIn (no IsNull filter) returns BOTH results.
+		// The old IsNull-filtered finder would only return regularResult — causing racesCount == 1.
+		// The new finder returns both → racesCount == 2, proving PLAYOFF results are included.
+		when(raceResultRepository.findByRaceMatchdaySeasonIdIn(List.of(season.getId())))
+				.thenReturn(List.of(regularResult, playoffResult));
+		when(seasonDriverRepository.findBySeasonIdIn(List.of(season.getId())))
+				.thenReturn(List.of(sd));
+
+		// when
+		var alltime = driverRankingService.calculateAlltimeRanking(List.of(season.getId()));
+
+		// then — D-19: both REGULAR (1) and PLAYOFF (1) races counted → racesCount == 2
+		assertThat(alltime).isNotEmpty();
+		var panicAlltime = alltime.stream()
+				.filter(r -> r.getDriver().getId().equals(panicpotato.getId()))
+				.findFirst()
+				.orElseThrow(() -> new AssertionError("panicpotato not found in alltime ranking"));
+
+		assertThat(panicAlltime.getRacesCount())
+				.as("D-19: alltime racesCount must include REGULAR (1) + PLAYOFF (1) = 2")
+				.isGreaterThan(1);
+	}
+
 	private RaceResult createResult(Race race, Driver driver, int totalPoints, int position) {
 		var result = new RaceResult();
 		result.setRace(race);
