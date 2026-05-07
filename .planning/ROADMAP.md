@@ -8,7 +8,7 @@
 - :white_check_mark: **v1.5 Code Review Fixes** — Phases 28-36 (shipped 2026-04-15)
 - :white_check_mark: **v1.6 Static Site Quality** — Phases 37-53 (shipped 2026-04-18)
 - :white_check_mark: **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (shipped 2026-04-25)
-- **v1.9 Season Phases & Groups** — Phases 56-62 (active)
+- **v1.9 Season Phases & Groups** — Phases 56-65 (active)
 
 ## Phases
 
@@ -106,15 +106,18 @@ See: milestones/v1.8-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.9 Season Phases & Groups (Phases 56-62) -- ACTIVE</summary>
+<summary>v1.9 Season Phases & Groups (Phases 56-65) -- ACTIVE</summary>
 
 - [x] **Phase 56: Model & Schema Foundation** - New entities (SeasonPhase, SeasonPhaseGroup, PhaseTeam) + Flyway DDL migrations create the new tables ✅ shipped 2026-04-26
-- [ ] **Phase 57: Data Migration** - Populate new tables from existing data (REGULAR/PLAYOFF phases, matchday re-keying, phase roster)
-- [ ] **Phase 58: Service Layer** - All domain services operate on phase/group scope; new SeasonPhaseService; StandingsService/PlayoffService/etc. phase-aware
-- [ ] **Phase 59: Import & Test Data** - Driver import resolves seasons by (year, number); DevDataSeeder and TestDataService rebuilt on new model
-- [ ] **Phase 60: Admin UI** - Season form slimmed; phase/group CRUD forms; season detail with phase tabs and group sub-tabs; standings and playoff UI on phase
-- [ ] **Phase 61: Cleanup & Quality Gate** - Drop old season columns (MIGR-06); JaCoCo gate; E2E test for GROUPS season; regression test for migrated seasons
-- [ ] **Phase 62: Public Site Phase + Group Awareness** - Mirror the admin-side phase model on the public static site: phase tabs, GROUPS layout per-group standings + combined view, PLAYOFF phase content; SiteGeneratorService and templates/site no longer LEAGUE-only
+- [x] **Phase 57: Data Migration** - Populate new tables from existing data (REGULAR/PLAYOFF phases, matchday re-keying, phase roster) ✅ shipped 2026-04-27
+- [x] **Phase 58: Service Layer** - All domain services operate on phase/group scope; new SeasonPhaseService; StandingsService/PlayoffService/etc. phase-aware ✅ shipped 2026-04-28
+- [x] **Phase 59: Import & Test Data** - Driver import resolves seasons by (year, number); DevDataSeeder and TestDataService rebuilt on new model ✅ shipped 2026-04-29
+- [x] **Phase 60: Admin UI** - Season form slimmed; phase/group CRUD forms; season detail with phase tabs and group sub-tabs; standings and playoff UI on phase ✅ shipped 2026-05-01
+- [x] **Phase 61: Cleanup & Quality Gate** - Drop old season columns (MIGR-06); JaCoCo gate; E2E test for GROUPS season; regression test for migrated seasons ✅ shipped 2026-05-01
+- [x] **Phase 62: Public Site Phase + Group Awareness** - Mirror the admin-side phase model on the public static site: phase tabs, GROUPS layout per-group standings + combined view, PLAYOFF phase content; SiteGeneratorService and templates/site no longer LEAGUE-only ✅ shipped 2026-05-07
+- [ ] **Phase 63: Documentation & Verification Backfill** - Backfill 60-VERIFICATION.md, fix 13 stale REQUIREMENTS.md checkboxes, add SITE-01..03 IDs for Phase 62, reconcile 57-VERIFICATION.md MariaDB UAT status (gap closure from v1.9-MILESTONE-AUDIT.md)
+- [ ] **Phase 64: Nyquist Validation Sweep** - Backfill / complete VALIDATION.md for Phases 56, 57, 58, 59, 60, 62 so all v1.9 phases are nyquist_compliant before milestone close
+- [ ] **Phase 65: Graphics Services Bridge Migration** - Migrate 5 graphics-service callers off legacy `calculateStandings(seasonId)` overload to phase-aware `calculateStandings(phaseId, groupId)`; close W-A bridge debt
 
 </details>
 
@@ -318,6 +321,10 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 59. Import & Test Data | v1.9 | 5/5 | Complete    | 2026-04-29 |
 | 60. Admin UI | v1.9 | 7/7 | Complete    | 2026-05-01 |
 | 61. Cleanup & Quality Gate | v1.9 | 5/5 | Complete   | 2026-05-01 |
+| 62. Public Site Phase + Group Awareness | v1.9 | 8/8 | Complete   | 2026-05-07 |
+| 63. Documentation & Verification Backfill | v1.9 | TBD | Pending    | — |
+| 64. Nyquist Validation Sweep | v1.9 | TBD | Pending    | — |
+| 65. Graphics Services Bridge Migration | v1.9 | TBD | Pending    | — |
 
 ### Phase 62: Public Site Phase + Group Awareness
 
@@ -352,3 +359,83 @@ Plans:
 - [x] 62-05-PLAN.md — D-19 Alltime Cross-Phase Aggregation (TRACKED BEHAVIOR CHANGE) (Wave 6)
 - [x] 62-06-PLAN.md — SC5 Regression IT (SiteGeneratorPhaseAwarenessIT) (Wave 7)
 - [x] 62-07-PLAN.md — Visual + A11y Final Sweep (Manual playwright-cli; autonomous=false) (Wave 8)
+
+### Phase 63: Documentation & Verification Backfill
+
+**Goal**: All v1.9 milestone bookkeeping is consistent: Phase 60 has a formal `60-VERIFICATION.md` artifact, every requirement satisfied by verified phase work shows `[x]` in REQUIREMENTS.md, Phase 62 owns explicit SITE-01..03 IDs in the traceability table, and Phase 57's MariaDB UAT status reflects the de-facto coverage from Phase 61 UAT-03 + the `mariadb-migration-smoke.yml` CI gate.
+
+**Depends on**: Phase 62
+
+**Requirements**: SITE-01, SITE-02, SITE-03 (Phase 62 ownership formalized); bookkeeping updates for MODEL-01..08, MIGR-01, MIGR-06, MIGR-07, QUAL-03 (already satisfied — checkbox correction only)
+
+**Gap Closure**: Closes audit items from `v1.9-MILESTONE-AUDIT.md`:
+
+- doc-hygiene: 13 stale `[ ]` checkboxes despite verified work
+- doc-hygiene: Phase 62 missing from REQUIREMENTS.md traceability table
+- doc-hygiene: Phase 57 VERIFICATION.md status `human_needed` despite Phase 61 UAT-03 covering MariaDB
+- 60-admin-ui: VERIFICATION.md missing — UI-01..07 confirmable transitively
+
+**Success Criteria** (what must be TRUE):
+
+1. `.planning/phases/60-admin-ui/60-VERIFICATION.md` exists, references the transitive evidence chain (Phase 61 UAT-01 fix `f5b10bc` + `SeasonPhaseControllerIT.givenExistingPhase_whenGetEditForm_thenDropdownOptionsHaveNonEmptyLabels`, Phase 62 SiteGen mirror), marks each of UI-01..UI-07 as PASS
+2. `.planning/REQUIREMENTS.md` checkboxes are accurate: MODEL-01..08, MIGR-01, MIGR-06, MIGR-07, QUAL-03 marked `[x]` (matching their verified status)
+3. `.planning/REQUIREMENTS.md` defines SITE-01 / SITE-02 / SITE-03 in a new `### SITE — Public-Site Phase Awareness` section and the traceability table assigns them all to Phase 62 with status Complete
+4. `.planning/phases/57-data-migration/57-VERIFICATION.md` status field is updated to `passed`, with a note pointing to Phase 61 UAT-03 evidence (commit `bed0ffd` + CI smoke gate workflow `mariadb-migration-smoke.yml`)
+
+**Plans**: TBD
+
+### Phase 64: Nyquist Validation Sweep
+
+**Goal**: Every v1.9 phase has a complete `*-VALIDATION.md` artifact with `nyquist_compliant=true` and `wave_0_complete=true`. The milestone closes with full Nyquist coverage instead of the current 1 compliant / 4 partial / 2 missing split.
+
+**Depends on**: Phase 63
+
+**Requirements**: Process-only (no functional REQ-IDs). Closes the nyquist tech-debt cluster from the audit.
+
+**Gap Closure**: Closes audit items:
+
+- nyquist: Phase 56 + Phase 59 missing VALIDATION.md
+- nyquist: Phase 57 + Phase 60 + Phase 62 have draft VALIDATION.md, `nyquist_compliant=false`
+- nyquist: Phase 58 VALIDATION.md draft, `wave_0_complete=false` despite `nyquist_compliant=true`
+
+**Success Criteria** (what must be TRUE):
+
+1. `.planning/phases/56-model-schema-foundation/56-VALIDATION.md` exists with `nyquist_compliant=true` and `wave_0_complete=true`
+2. `.planning/phases/57-data-migration/57-VALIDATION.md` exists with `nyquist_compliant=true` and `wave_0_complete=true`
+3. `.planning/phases/58-service-layer/58-VALIDATION.md` updated with `wave_0_complete=true` (already `nyquist_compliant=true`)
+4. `.planning/phases/59-import-test-data/59-VALIDATION.md` exists with `nyquist_compliant=true` and `wave_0_complete=true`
+5. `.planning/phases/60-admin-ui/60-VALIDATION.md` exists with `nyquist_compliant=true` and `wave_0_complete=true`
+6. `.planning/phases/62-public-site-phases-groups/62-VALIDATION.md` updated with `nyquist_compliant=true` and `wave_0_complete=true`
+
+Each `/gsd-validate-phase {N}` invocation may run in `mode: retroactive` since the underlying phases are already complete. The success bar is artifact completeness, not re-running implementation.
+
+**Plans**: TBD (one task per phase; can be parallelized in waves)
+
+### Phase 65: Graphics Services Bridge Migration
+
+**Goal**: All callers of the deprecated `StandingsService.calculateStandings(seasonId)` convenience overload are migrated to the phase-aware `calculateStandings(phaseId, groupId)` API. The 5 remaining callers in the graphics layer use the explicit phase model directly, the legacy bridge can be safely retired (or stays as documented convenience), and the SVC-02 phase-awareness story is fully consistent across all production callers.
+
+**Depends on**: Phase 63
+
+**Requirements**: Reinforces SVC-02 (already Complete in Phase 58) — no functional REQ-ID change. Closes audit item W-A from cross-phase integration check.
+
+**Gap Closure**: Closes audit item:
+
+- 58-service-layer: 5 graphics services on legacy `calculateStandings(seasonId)` bridge (no runtime regression — bridge delegates to `findRegularPhase` — but bookkeeping debt for SVC-02 cleanliness)
+
+**Affected callers** (must all migrate to phase-aware API):
+
+- `org.ctc.admin.service.AbstractMatchdayGraphicService:47`
+- `org.ctc.admin.service.TeamCardService:52`
+- `org.ctc.admin.service.OverlayGraphicService:58`
+- `org.ctc.admin.service.SettingsGraphicService:67`
+- `org.ctc.admin.service.LineupGraphicService:70`
+
+**Success Criteria** (what must be TRUE):
+
+1. `grep -nR "calculateStandings(seasonId" src/main/java | wc -l` reports 0 (no callers of the legacy seasonId-only overload remain in production code)
+2. Each of the 5 graphics services resolves the relevant `SeasonPhase` (REGULAR phase) and any active `SeasonPhaseGroup` explicitly before calling `calculateStandings(phaseId, groupId)`; behavior is preserved for LEAGUE-layout seasons (groupId=null)
+3. `./mvnw verify` is green; JaCoCo line coverage stays ≥ 82%; no graphics-related E2E or integration test regresses
+4. The legacy convenience overload `calculateStandings(seasonId)` is either removed from `StandingsService` or — if kept as documented convenience — has an updated Javadoc that no production caller uses it anymore
+
+**Plans**: TBD

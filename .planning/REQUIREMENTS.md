@@ -66,6 +66,14 @@ Requirements for milestone v1.9. Each maps to roadmap phases.
 - [x] **QUAL-02**: E2E-Test deckt GROUPS-Saison: Anlegen, Roster pro Group, Matchdays pro Group, Driver-Import mit Group-Auflösung, Standings pro Group + Combined
 - [ ] **QUAL-03**: Regression-Test: Bestandssaison öffnet nach Migration mit 1 REGULAR-Phase + allen Race-Daten erreichbar
 
+### SITE — Public-Site Phase Awareness
+
+Added 2026-05-07 during gap closure (Phase 63) to formalize Phase 62 ownership in the traceability table. Phase 62 originally borrowed UI-02 / UI-05 / UI-07 IDs; SITE-01..03 give it unambiguous ownership.
+
+- [x] **SITE-01**: Public-site phase + group awareness — multi-phase season renders one tab per phase (REGULAR / PLAYOFF / PLACEMENT); GROUPS-layout phases render per-group standings tables plus a combined view
+- [x] **SITE-02**: PLAYOFF-phase tab on the public site reaches the playoff bracket / final standings without requiring a manual URL
+- [x] **SITE-03**: Byte-identical LEAGUE-only baseline — single-REGULAR-phase LEAGUE seasons continue to render identically (no v1.6 public-site quality bar regression)
+
 ## Future Requirements
 
 Deferred to future milestones. Tracked but not in current roadmap.
@@ -136,3 +144,6 @@ Which phases cover which requirements. Filled during roadmap creation.
 | QUAL-01 | 61 | Complete |
 | QUAL-02 | 61 | Complete |
 | QUAL-03 | 61 | Pending |
+| SITE-01 | 62 | Complete |
+| SITE-02 | 62 | Complete |
+| SITE-03 | 62 | Complete |
