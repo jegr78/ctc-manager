@@ -476,7 +476,7 @@ Plans:
 
 **Depends on:** Phase 67
 
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 68-01-PLAN.md — Pin Lombok 1.18.46 + JEP 498 argLine flag in Surefire/Failsafe + atomic verify gate (Wave 1)
+- [x] 68-01-PLAN.md — Pin Lombok 1.18.46 + JEP 498 argLine flag in Surefire/Failsafe + atomic verify gate (Wave 1)
