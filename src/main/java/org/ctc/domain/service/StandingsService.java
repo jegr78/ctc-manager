@@ -136,20 +136,6 @@ public class StandingsService {
 		return standings;
 	}
 
-	// ---------------------------------------------------------------------------
-	// SeasonId convenience overload — delegates to the canonical phase-aware method
-	// ---------------------------------------------------------------------------
-
-	/**
-	 * Convenience overload: resolves the REGULAR phase for the given season and delegates
-	 * to {@link #calculateStandings(UUID, UUID)}.
-	 */
-	@Transactional(readOnly = true)
-	public List<TeamStanding> calculateStandings(UUID seasonId) {
-		var regular = seasonPhaseService.findRegularPhase(seasonId);
-		return calculateStandings(regular.getId(), null);
-	}
-
 	// --- Alltime aggregation ---
 
 	@Transactional(readOnly = true)

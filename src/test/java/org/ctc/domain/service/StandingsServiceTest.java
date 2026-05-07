@@ -23,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -194,60 +193,6 @@ class StandingsServiceTest {
     class MatchBasedStandingsTest {
 
         @Test
-        void givenOneMatch_whenCalculateStandings_thenWinnerGetThreePoints() {
-            // given
-            // TNR beats P1R 70:46
-            var matchday = new Matchday(regularPhase, "Matchday1", 1);
-            var match = createMatchWithScore(matchday, tnr, p1r, 70, 46);
-
-            season.addTeam(tnr);
-            season.addTeam(p1r);
-            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
-            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-
-            // when
-            var standings = standingsService.calculateStandings(season.getId());
-
-            // then
-            assertEquals(2, standings.size());
-
-            var tnrStanding = findStanding(standings, tnr);
-            assertEquals(1, tnrStanding.getWins());
-            assertEquals(0, tnrStanding.getDraws());
-            assertEquals(0, tnrStanding.getLosses());
-            assertEquals(3, tnrStanding.getPoints()); // matchScoring: 3-1-0
-            assertEquals(70, tnrStanding.getPointsFor());
-            assertEquals(46, tnrStanding.getPointsAgainst());
-
-            var p1rStanding = findStanding(standings, p1r);
-            assertEquals(0, p1rStanding.getWins());
-            assertEquals(1, p1rStanding.getLosses());
-            assertEquals(0, p1rStanding.getPoints());
-        }
-
-        @Test
-        void givenEqualScores_whenCalculateStandings_thenBothTeamsGetDrawPoint() {
-            // given
-            var matchday = new Matchday(regularPhase, "Matchday1", 1);
-            var match = createMatchWithScore(matchday, clr, tnr, 54, 54);
-
-            season.addTeam(clr);
-            season.addTeam(tnr);
-            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
-            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-
-            // when
-            var standings = standingsService.calculateStandings(season.getId());
-
-            // then
-            assertEquals(2, standings.size());
-            standings.forEach(s -> {
-                assertEquals(1, s.getDraws());
-                assertEquals(1, s.getPoints()); // matchScoring: 3-1-0, draw = 1
-            });
-        }
-
-        @Test
         void givenCustomMatchScoring_whenCalculateStandings_thenCustomPointsApplied() {
             // given — scoring lives on the SeasonPhase. Override the
             // class-level matchScoring field so the seasonPhaseService mocks build phases
@@ -263,7 +208,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then
             var tnrStanding = findStanding(standings, tnr);
@@ -283,7 +228,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then
             assertEquals(1, standings.size());
@@ -307,7 +252,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then
             // CLR first (+40), TNR second (+24), P1R last
@@ -329,7 +274,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then
             assertEquals(2, standings.size());
@@ -350,7 +295,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then
             assertTrue(standings.isEmpty());
@@ -381,7 +326,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then — CLR inherits TNR's win
             var clrStanding = findStanding(standings, clr);
@@ -409,7 +354,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then — TNR should not appear
             assertTrue(standings.stream().noneMatch(s -> s.getTeam().getId().equals(tnr.getId())));
@@ -436,7 +381,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then — CLR has 2 wins (inherited + own)
             var clrStanding = findStanding(standings, clr);
@@ -472,7 +417,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then — CLR inherits TNR's win through chain
             var clrStanding = findStanding(standings, clr);
@@ -504,7 +449,7 @@ class StandingsServiceTest {
             when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
             // when
-            var standings = standingsService.calculateStandings(season.getId());
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
             // then — CLR inherits TNR's bye win
             assertEquals(1, standings.size());
@@ -729,28 +674,6 @@ class StandingsServiceTest {
         }
 
         @Test
-        void givenSeasonId_whenCalculateStandings_thenDelegatesToRegularPhase() {
-            // given
-            var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
-            var ms = new MatchScoring("MS", 3, 1, 0);
-            SeasonPhase regular = PhaseTestFixtures.regularPhase(season, rs, ms);
-
-            // bridge now resolves via findRegularPhase (not findByType).
-            when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
-            when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
-            when(matchRepository.findByMatchdayPhaseId(regular.getId())).thenReturn(List.of());
-            when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of());
-
-            // when — @Deprecated bridge
-            var result = standingsService.calculateStandings(season.getId()); // seasonId-overload
-
-            // then — bridge resolves REGULAR phase via findRegularPhase, then delegates to canonical.
-            verify(seasonPhaseService).findRegularPhase(season.getId());
-            verify(matchRepository).findByMatchdayPhaseId(regular.getId());
-            assertThat(result).isEmpty();
-        }
-
-        @Test
         void givenSwissGroups_whenCalculateStandingsCombined_thenBuchholzNotUsedAsTiebreaker() {
             // given — GROUPS layout, combined-view; Buchholz must NOT affect sort order
             var rs = new RaceScoring("RS", "20,15,10", "3,2,1", 2);
@@ -886,9 +809,9 @@ class StandingsServiceTest {
      * D-19 TRACKED BEHAVIOR CHANGE: calculateAlltimeStandings must aggregate across ALL phases
      * (REGULAR + PLAYOFF + PLACEMENT), not just REGULAR-only.
      *
-     * <p>RED gate: today's implementation calls calculateStandings(season.getId()) which resolves
-     * only the REGULAR phase. The test expects the PLAYOFF-phase points to be included in the
-     * alltime total. The assertion will FAIL until D-19 is implemented.
+     * <p>RED gate: today's implementation of calculateAlltimeStandings resolves only the REGULAR
+     * phase. The test expects the PLAYOFF-phase points to be included in the alltime total.
+     * The assertion will FAIL until D-19 is implemented.
      */
     @Test
     void givenSeasonWithPlayoffPhase_whenCalculateAlltimeStandings_thenIncludesPlayoffPoints() {

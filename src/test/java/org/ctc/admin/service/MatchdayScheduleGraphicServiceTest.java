@@ -92,7 +92,7 @@ class MatchdayScheduleGraphicServiceTest {
 
 		matchday.getMatches().addAll(List.of(match1, match2, match3));
 
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of());
+		when(standingsService.calculateStandings(matchday.getPhase().getId(), null)).thenReturn(List.of());
 		when(seasonTeamRepository.findBySeasonId(season.getId()))
 				.thenReturn(List.copyOf(season.getSeasonTeams()));
 

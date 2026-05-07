@@ -23,7 +23,6 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -150,7 +149,5 @@ class SiteGeneratorServiceIT {
         // alltime aggregation uses calculateAlltimeStandings (NOT the legacy seasonId overload).
         verify(standingsService, atLeastOnce()).calculateAlltimeStandings(anyList());
         verify(driverRankingService, atLeastOnce()).calculateAlltimeRanking(anyList());
-        // explicitly verify the legacy bridges are NOT invoked (proves swap happened, not just an additive call)
-        verify(standingsService, never()).calculateStandings(seasonId);
     }
 }
