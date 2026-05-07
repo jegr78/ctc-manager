@@ -234,8 +234,6 @@ public class PlayoffService {
 				.orElseThrow(() -> new EntityNotFoundException("PlayoffRound", id));
 	}
 
-	// --- New service methods (extracted from PlayoffController) ---
-
 	@Transactional
 	public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams,
 	                             LocalDate startDate, LocalDate endDate,
@@ -361,8 +359,6 @@ public class PlayoffService {
 	public java.util.Optional<Playoff> findByPhaseId(UUID phaseId) {
 		return playoffRepository.findByPhaseId(phaseId);
 	}
-
-	// --- Record types for service return data ---
 
 	public record PlayoffListData(Playoff playoff, PlayoffBracketViewService.PlayoffBracketView bracketView,
 	                              List<Season> allSeasons, UUID selectedSeasonId) {

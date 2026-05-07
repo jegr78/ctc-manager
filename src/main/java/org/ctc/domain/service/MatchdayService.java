@@ -29,15 +29,11 @@ public class MatchdayService {
     private final RaceLineupRepository raceLineupRepository;
     private final SeasonPhaseService seasonPhaseService;
 
-    // --- Return types ---
-
     public record MatchdayData(UUID id, String label, int sortIndex) {}
     public record MatchdayListData(List<Matchday> matchdays, UUID selectedSeasonId, List<Season> seasons) {}
     public record MatchdayDetailData(Matchday matchday, Map<String, List<RaceLineup>> lineupsByTeam,
                                       boolean hasMatches, boolean hasSchedule, long scheduleMissingCount,
                                       boolean hasResults) {}
-
-    // --- Season helpers (for controller form data) ---
 
     public List<Season> getAllSeasons() {
         return seasonRepository.findAll();
@@ -46,8 +42,6 @@ public class MatchdayService {
     public Season findSeasonById(UUID id) {
         return seasonRepository.findById(id).orElse(null);
     }
-
-    // --- List ---
 
     public MatchdayListData getMatchdayList(UUID seasonId) {
         List<Matchday> matchdays;
@@ -69,8 +63,6 @@ public class MatchdayService {
         return new MatchdayListData(matchdays, selectedSeasonId, seasonRepository.findAll());
     }
 
-    // --- Detail ---
-
     public MatchdayDetailData getMatchdayDetail(UUID id) {
         var matchday = matchdayRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Matchday", id));
@@ -91,8 +83,6 @@ public class MatchdayService {
                 .anyMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
         return new MatchdayDetailData(matchday, lineupsByTeam, hasMatches, hasSchedule, scheduleMissingCount, hasResults);
     }
-
-    // --- Save ---
 
     @Transactional
     public Matchday saveMatchday(String label, int sortIndex, UUID seasonId, UUID matchdayId) {
@@ -116,8 +106,6 @@ public class MatchdayService {
         return matchday;
     }
 
-    // --- Delete ---
-
     @Transactional
     public UUID deleteMatchday(UUID id) {
         var matchday = matchdayRepository.findById(id)
@@ -127,8 +115,6 @@ public class MatchdayService {
         log.info("Deleted matchday: {}", matchday.getLabel());
         return seasonId;
     }
-
-    // --- Phase-aware finders ---
 
     /**
      * Returns all matchdays of a phase, ordered by {@code sortIndex} ascending.
@@ -145,15 +131,11 @@ public class MatchdayService {
         return matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId);
     }
 
-    // --- By season ID (JSON API) ---
-
     public List<MatchdayData> getMatchdaysBySeason(UUID seasonId) {
         return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId).stream()
                 .map(md -> new MatchdayData(md.getId(), md.getLabel(), md.getSortIndex()))
                 .toList();
     }
-
-    // --- Create inline (JSON API) ---
 
     @Transactional
     /**

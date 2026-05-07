@@ -72,9 +72,9 @@ public class StandingsService {
 
 		List<TeamStanding> standings = new ArrayList<>(standingsMap.values());
 		standings.removeIf(s -> s.getPlayed() == 0);
-		// Stable tiebreaker on Team.shortName ensures deterministic ordering for tied teams
-		// (Phase 62 Plan 1 Rule 1 fix — pre-existing HashMap-iteration non-determinism broke
-		// the SC4 byte-identity invariant for the public site standings.html).
+		// Stable tiebreaker on Team.shortName ensures deterministic ordering for tied teams.
+		// Without this, HashMap iteration order makes the public site standings.html non-byte-stable
+		// across runs, breaking the byte-identity invariant of the static-site generator.
 		standings.sort(Comparator
 				.comparing(TeamStanding::getPoints, Comparator.reverseOrder())
 				.thenComparing(TeamStanding::getPointDifference, Comparator.reverseOrder())
@@ -136,8 +136,6 @@ public class StandingsService {
 		return standings;
 	}
 
-	// --- Alltime aggregation ---
-
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateAlltimeStandings() {
 		return calculateAlltimeStandings(seasonRepository.findAll());
@@ -147,9 +145,8 @@ public class StandingsService {
 	 * Calculates alltime standings restricted to the given seasons.
 	 * Used by the site generator to exclude Test seasons from public pages.
 	 *
-	 * <p><strong>Tracked Behavior Change (v1.9 / D-19):</strong> Aggregation now spans ALL phases of
-	 * each season (REGULAR + PLAYOFF + PLACEMENT), not REGULAR-only. Multi-phase seasons contribute
-	 * their full points total to the alltime standings.
+	 * <p>Aggregation spans ALL phases of each season (REGULAR + PLAYOFF + PLACEMENT). Multi-phase
+	 * seasons contribute their full points total to the alltime standings.
 	 */
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateAlltimeStandings(List<Season> seasons) {
@@ -179,10 +176,6 @@ public class StandingsService {
 		log.debug("Calculated alltime standings: {} teams across {} seasons", result.size(), seasons.size());
 		return result;
 	}
-
-	// ---------------------------------------------------------------------------
-	// Private helpers
-	// ---------------------------------------------------------------------------
 
 	/**
 	 * Calculates Buchholz scores for a phase. The underlying race finder is season-scoped

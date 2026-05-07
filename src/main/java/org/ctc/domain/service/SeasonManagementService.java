@@ -35,8 +35,6 @@ public class SeasonManagementService {
     private final PhaseTeamRepository phaseTeamRepository;
     private final SeasonPhaseRepository seasonPhaseRepository;
 
-    // --- Records for structured return data ---
-
     public record SeasonEditFormData(Season season, List<Team> allTeams, List<Car> allCars,
                                      List<Track> allTracks, List<RaceScoring> allRaceScorings,
                                      List<MatchScoring> allMatchScorings) {}
@@ -44,8 +42,6 @@ public class SeasonManagementService {
     public record SwissRoundData(Season season, Map<UUID, int[]> raceScores) {}
 
     public record SeasonGroupOption(int year, int number, String label, int teamCount) {}
-
-    // --- Season CRUD ---
 
     @Transactional(readOnly = true)
     public List<Season> findAll() {
@@ -203,8 +199,6 @@ public class SeasonManagementService {
         return season.getName();
     }
 
-    // --- Scoring lookups ---
-
     @Transactional(readOnly = true)
     public List<RaceScoring> getAllRaceScorings() {
         return raceScoringRepository.findAll();
@@ -214,8 +208,6 @@ public class SeasonManagementService {
     public List<MatchScoring> getAllMatchScorings() {
         return matchScoringRepository.findAll();
     }
-
-    // --- Swiss round data ---
 
     @Transactional(readOnly = true)
     public SwissRoundData getSwissRoundData(UUID seasonId) {

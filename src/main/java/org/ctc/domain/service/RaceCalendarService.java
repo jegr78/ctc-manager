@@ -21,13 +21,9 @@ public class RaceCalendarService {
 	private final RaceRepository raceRepository;
 	private final GoogleCalendarService googleCalendarService;
 
-	// --- Availability check ---
-
 	public boolean isCalendarAvailable() {
 		return googleCalendarService.isAvailable();
 	}
-
-	// --- Calendar event ---
 
 	@Transactional
 	public void createOrUpdateCalendarEvent(UUID raceId) throws IOException {

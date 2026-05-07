@@ -16,10 +16,10 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * V4 Flyway Java migration: backfills all existing production data into the Phase-schema
- * introduced in Phase 56 (V3__add_season_phase_tables.sql).
+ * V4 Flyway Java migration: backfills existing production data into the Phase schema introduced
+ * by V3__add_season_phase_tables.sql.
  *
- * <p>Steps (in fixed order per D-02 / D-13):
+ * <p>Steps (fixed order):
  * <ol>
  *   <li>migrateRegularPhases — one REGULAR season_phase per Season (fields copied 1:1 from Season)</li>
  *   <li>migratePlayoffPhases — one PLAYOFF season_phase per Playoff; playoffs.phase_id updated</li>
@@ -28,7 +28,7 @@ import java.util.UUID;
  *   <li>flipNotNullConstraints — matchdays.phase_id + playoffs.phase_id flipped to NOT NULL (LAST)</li>
  * </ol>
  *
- * <p>Runs in a single Flyway-managed transaction (canExecuteInTransaction() = true, D-04).
+ * <p>Runs in a single Flyway-managed transaction ({@code canExecuteInTransaction() = true}).
  * Safe no-op on empty databases (dev/test H2 with no seed data).
  */
 public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
@@ -52,8 +52,7 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
     }
 
     /**
-     * Creates one REGULAR season_phase per Season (D-06).
-     * Fields copied 1:1 from the seasons table.
+     * Creates one REGULAR season_phase per Season. Fields copied 1:1 from the seasons table.
      *
      * @return map from season_id to newly created REGULAR phase_id (used in step 4)
      */
@@ -66,7 +65,7 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
             UUID raceScoringId = toUUID(season.get("race_scoring_id"));
             UUID matchScoringId = toUUID(season.get("match_scoring_id"));
 
-            // D-05: fail-fast on null scoring — migration aborts, application fails to start
+            // fail-fast on null scoring — migration aborts, application fails to start
             if (raceScoringId == null) {
                 throw new FlywayException("Season " + seasonId + " has null race_scoring_id");
             }
@@ -95,9 +94,9 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
     }
 
     /**
-     * Creates one PLAYOFF season_phase per Playoff (D-07, D-08, D-09).
-     * Scoring is inherited from playoff.season; playoffs.phase_id is updated immediately.
-     * Bridge columns (playoffs.season_id, playoff_seasons M:N) are NOT touched (ROADMAP-SC5).
+     * Creates one PLAYOFF season_phase per Playoff. Scoring is inherited from playoff.season;
+     * playoffs.phase_id is updated immediately. Bridge columns (playoffs.season_id,
+     * playoff_seasons M:N) are NOT touched.
      */
     private void migratePlayoffPhases(JdbcTemplate jdbcTemplate) {
         List<Map<String, Object>> playoffs = jdbcTemplate.queryForList(
@@ -110,7 +109,7 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
             UUID raceScoringId = toUUID(playoff.get("s_race_scoring_id"));
             UUID matchScoringId = toUUID(playoff.get("s_match_scoring_id"));
 
-            // D-05: fail-fast if a PLAYOFF phase for this season already exists
+            // fail-fast if a PLAYOFF phase for this season already exists
             // (guards against uk_season_phase_type collision and partial-run idempotency issues)
             Integer existing = jdbcTemplate.queryForObject(
                     "SELECT COUNT(*) FROM season_phases WHERE season_id = ? AND phase_type = 'PLAYOFF'",
@@ -136,7 +135,7 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
                     raceScoringId, matchScoringId
             );
 
-            // D-09: update playoffs.phase_id to link this playoff to its new PLAYOFF phase
+            // link this playoff to its new PLAYOFF phase
             jdbcTemplate.update("UPDATE playoffs SET phase_id = ? WHERE id = ?", newPlayoffPhaseId, playoffId);
         }
 
@@ -144,9 +143,9 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
     }
 
     /**
-     * Sets matchdays.phase_id via a single correlated UPDATE (D-10).
-     * Each matchday is linked to the REGULAR phase of its own season.
-     * matchdays.group_id stays NULL; matchdays.season_id is NOT touched (ROADMAP-SC5).
+     * Sets matchdays.phase_id via a single correlated UPDATE. Each matchday is linked to the
+     * REGULAR phase of its own season. matchdays.group_id stays NULL; matchdays.season_id is
+     * NOT touched.
      */
     private void migrateMatchdayFKs(JdbcTemplate jdbcTemplate) {
         int count = jdbcTemplate.update(
@@ -156,7 +155,7 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
                 + ")"
         );
 
-        // D-05: fail-fast — any matchday still NULL means an orphan season_id exists
+        // fail-fast — any matchday still NULL means an orphan season_id exists
         Integer nullCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM matchdays WHERE phase_id IS NULL", Integer.class);
         if (nullCount != null && nullCount > 0) {
@@ -168,9 +167,8 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
     }
 
     /**
-     * Derives phase_teams 1:1 from season_teams (D-11).
-     * Each phase_team points to the REGULAR phase of the corresponding season.
-     * group_id stays NULL (LEAGUE layout — no groups in legacy data).
+     * Derives phase_teams 1:1 from season_teams. Each phase_team points to the REGULAR phase
+     * of the corresponding season. group_id stays NULL (LEAGUE layout — no groups in legacy data).
      */
     private void migratePhaseTeams(JdbcTemplate jdbcTemplate, Map<UUID, UUID> seasonToRegularPhaseId) {
         List<Map<String, Object>> seasonTeams = jdbcTemplate.queryForList("SELECT * FROM season_teams");
@@ -181,7 +179,7 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
             UUID teamId = toUUID(st.get("team_id"));
             UUID phaseId = seasonToRegularPhaseId.get(seasonId);
 
-            // D-05: fail-fast on orphan season_teams row — no silent data loss
+            // fail-fast on orphan season_teams row — no silent data loss
             if (phaseId == null) {
                 throw new FlywayException(
                         "season_teams row references unknown season_id " + seasonId
@@ -200,17 +198,15 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
     }
 
     /**
-     * Flips matchdays.phase_id and playoffs.phase_id from NULLABLE to NOT NULL (D-12, D-13).
-     * Must be the LAST step — all rows must have phase_id populated before the flip (D-13).
-     * Dialect detection via getDatabaseProductName() (D-12):
-     *   H2: ALTER TABLE x ALTER COLUMN y SET NOT NULL
-     *   MariaDB (and other): ALTER TABLE x MODIFY COLUMN y UUID NOT NULL
+     * Flips matchdays.phase_id and playoffs.phase_id from NULLABLE to NOT NULL.
+     * Must be the LAST step — all rows must have phase_id populated before the flip.
+     * Dialect detection via {@code getDatabaseProductName()}:
+     *   H2: {@code ALTER TABLE x ALTER COLUMN y SET NOT NULL}
+     *   MariaDB (and other): {@code ALTER TABLE x MODIFY COLUMN y UUID NOT NULL}
      *
      * <p>Guard: skips the flip when no seasons exist (empty database). On an empty dev/test H2,
-     * V4 is a pure no-op; the DevDataSeeder and TestDataService (both updated in Phase 59) must
-     * insert matchdays with a valid phase_id after Phase 59 lands. Until then, the nullable
-     * column remains nullable on empty databases so that pre-Phase-59 seeders continue to work.
-     * On a non-empty production database the flip always executes.
+     * V4 is a pure no-op; seeders that insert matchdays must populate phase_id. On a non-empty
+     * production database the flip always executes.
      */
     private void flipNotNullConstraints(JdbcTemplate jdbcTemplate, String dialect) {
         Integer seasonCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM seasons", Integer.class);
@@ -231,8 +227,8 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
     }
 
     /**
-     * Defensive UUID conversion helper (D-14 / Pitfall 1 in RESEARCH.md).
-     * H2 returns java.util.UUID; MariaDB may return byte[] or String.
+     * H2 returns {@link UUID}; MariaDB may return {@code byte[]} or {@link String}. This helper
+     * normalises across both dialects.
      *
      * @param value the raw JDBC column value from queryForList / queryForMap
      * @return a UUID, or null if value is null

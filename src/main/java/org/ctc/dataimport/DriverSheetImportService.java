@@ -426,10 +426,6 @@ public class DriverSheetImportService {
         return Optional.of(matches.get(0));
     }
 
-    // ---------------------------------------------------------------------------
-    // Public inner types
-    // ---------------------------------------------------------------------------
-
     public record DriverSheetImportPreview(
             List<TabPreview> tabPreviews
     ) {}
@@ -491,7 +487,6 @@ public class DriverSheetImportService {
             ErrorReason reason
     ) {}
 
-    // Tab-level warning + enum, sibling style to ErrorRow / ErrorReason.
     public record TabWarning(
             WarningType type,
             String teamShortName,
@@ -528,10 +523,6 @@ public class DriverSheetImportService {
             return message;
         }
     }
-
-    // ---------------------------------------------------------------------------
-    // ExecuteResult — mutable accumulator for transactional execute() walk
-    // ---------------------------------------------------------------------------
 
     @lombok.Getter
     public static class ExecuteResult {

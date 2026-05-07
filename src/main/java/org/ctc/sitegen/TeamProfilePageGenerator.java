@@ -71,9 +71,9 @@ public class TeamProfilePageGenerator {
         var allLineups = raceLineupRepository.findByRaceMatchdaySeasonId(season.getId());
         var allSeasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
 
-        // Phase 62 D-13/D-14: pre-compute per-phase standings lists once per season (avoids N x M
-        // calculateStandings calls when there are many teams). The map is keyed by phase id; each
-        // value is the standings list for that phase's combined view (groupId=null, per D-14).
+        // Pre-compute per-phase standings lists once per season (avoids N x M calculateStandings
+        // calls when there are many teams). The map is keyed by phase id; each value is the
+        // standings list for that phase's combined view (groupId=null).
         boolean seasonHasMultiplePhases = allPhases.size() >= 2;
         java.util.Map<java.util.UUID, List<StandingsService.TeamStanding>> phaseStandingsMap =
                 new java.util.HashMap<>();
@@ -96,9 +96,9 @@ public class TeamProfilePageGenerator {
             context.setVariable("team", team);
             context.setVariable("standing", teamStanding);
 
-            // Phase 62 D-13: build the Phase Breakdown entries for this team. Visible only when
-            // (a) the season has >=2 phases AND (b) the team participated in >=2 of them. Otherwise
-            // showPhaseBreakdown is false and the section emits zero bytes (SC4 byte-identity).
+            // Build the Phase Breakdown entries for this team. Visible only when (a) the season has
+            // >=2 phases AND (b) the team participated in >=2 of them. Otherwise showPhaseBreakdown
+            // is false and the section emits zero bytes (preserves byte-identity of generated HTML).
             boolean showPhaseBreakdown = seasonHasMultiplePhases;
             List<PhaseBreakdownEntry> phaseBreakdown = new ArrayList<>();
             if (showPhaseBreakdown) {

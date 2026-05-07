@@ -27,8 +27,6 @@ public class RaceFormDataService {
     private final SeasonDriverRepository seasonDriverRepository;
     private final RaceLineupRepository raceLineupRepository;
 
-    // --- Form data for new race ---
-
     public RaceService.RaceFormData getNewRaceFormData(UUID matchdayId) {
         UUID effectiveMatchdayId = matchdayId;
         List<Car> seasonCars = List.of();
@@ -50,8 +48,6 @@ public class RaceFormDataService {
                 seasonCars, seasonTracks, Set.of(), Set.of());
     }
 
-    // --- Form data for edit ---
-
     public RaceService.RaceFormData getRaceFormData(UUID raceId) {
         var race = raceRepository.findById(raceId).orElseThrow();
         var data = toRaceData(race);
@@ -62,8 +58,6 @@ public class RaceFormDataService {
                 race.getHomeTeam() != null ? getUsedCarIds(season.getId(), race.getHomeTeam().getId(), race.getId()) : Set.of(),
                 race.getHomeTeam() != null ? getUsedTrackIds(season.getId(), race.getHomeTeam().getId(), race.getId()) : Set.of());
     }
-
-    // --- Results form data ---
 
     public RaceService.ResultsFormData getResultsFormData(UUID raceId) {
         var race = raceRepository.findById(raceId).orElseThrow();
@@ -85,15 +79,11 @@ public class RaceFormDataService {
         return new RaceService.ResultsFormData(data, race, race.getMatchday().getPhase().getRaceScoring());
     }
 
-    // --- Used selections ---
-
     public Map<String, Set<UUID>> getUsedSelections(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
         return Map.of(
                 "usedCarIds", getUsedCarIds(seasonId, homeTeamId, excludeRaceId),
                 "usedTrackIds", getUsedTrackIds(seasonId, homeTeamId, excludeRaceId));
     }
-
-    // --- Private helpers ---
 
     private Set<UUID> getUsedCarIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
         return raceRepository.findByMatchdaySeasonId(seasonId).stream()

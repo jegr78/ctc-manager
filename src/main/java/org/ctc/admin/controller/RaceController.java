@@ -258,8 +258,6 @@ public class RaceController {
 		return raceFormDataService.getUsedSelections(seasonId, homeTeamId, excludeRaceId);
 	}
 
-	// --- Private helper: Map domain RaceData to admin RaceForm for Thymeleaf templates ---
-
 	private RaceForm toRaceForm(RaceService.RaceData data) {
 		var form = new RaceForm();
 		form.setId(data.id());

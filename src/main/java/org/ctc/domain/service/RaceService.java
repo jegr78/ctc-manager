@@ -32,8 +32,6 @@ public class RaceService {
 	private final TeamCardService teamCardService;
 	private final RaceCalendarService raceCalendarService;
 
-	// --- Domain records (replacing admin DTOs) ---
-
 	public RaceListData getRaceListData(UUID matchdayId, UUID seasonId) {
 		List<Race> races;
 		Matchday matchday = null;
@@ -145,8 +143,6 @@ public class RaceService {
 				hasMatch && !overlayExists, overlayExists,
 				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent);
 	}
-
-	// --- Return types ---
 
 	@Transactional
 	public SaveResult saveRace(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
@@ -303,8 +299,6 @@ public class RaceService {
 				.collect(Collectors.toSet());
 	}
 
-	// --- List ---
-
 	private Set<UUID> getUsedTrackIds(UUID seasonId, UUID homeTeamId, UUID excludeRaceId) {
 		return raceRepository.findByMatchdaySeasonId(seasonId).stream()
 				.filter(r -> !r.isBye())
@@ -314,8 +308,6 @@ public class RaceService {
 				.map(r -> r.getTrack().getId())
 				.collect(Collectors.toSet());
 	}
-
-	// --- Detail ---
 
 	public record RaceData(UUID id, UUID matchdayId, UUID homeTeamId, UUID awayTeamId,
 	                       UUID trackId, UUID carId, LocalDateTime dateTime,
@@ -327,19 +319,13 @@ public class RaceService {
 	                       String timeOfDay, String availableTyres, String mandatoryTyres) {
 	}
 
-	// --- Save race ---
-
 	public record RaceResultData(UUID driverId, String driverPsnId, String teamShortName,
 	                             int position, int qualiPosition, boolean fastestLap) {
 	}
 
-	// --- Save results ---
-
 	public record RaceListData(List<Race> races, Map<UUID, int[]> raceScores,
 	                           Matchday matchday, UUID selectedSeasonId, List<Season> seasons) {
 	}
-
-	// --- Quick score ---
 
 	public record RaceDetailData(Race race, int homeTotal, int awayTotal,
 	                             Map<UUID, String> driverTeamMap, boolean canGenerateLineup,
@@ -351,12 +337,8 @@ public class RaceService {
 	                             boolean canCreateCalendarEvent) {
 	}
 
-	// --- Delete race ---
-
 	public record ResultsFormData(RaceData data, Race race, RaceScoring raceScoring) {
 	}
-
-	// --- Private helpers for car/track uniqueness validation ---
 
 	public record RaceFormData(RaceData data, List<Matchday> matchdays, List<Team> teams,
 	                           List<Car> seasonCars, List<Track> seasonTracks,

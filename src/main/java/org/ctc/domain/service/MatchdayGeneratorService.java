@@ -102,10 +102,6 @@ public class MatchdayGeneratorService {
 		log.info("Generated {} matchdays for phase {} group {}", sortIndex - 1, phaseId, groupId);
 	}
 
-	// ---------------------------------------------------------------------------
-	// Form data
-	// ---------------------------------------------------------------------------
-
 	public GeneratorFormData getFormData(UUID seasonId) {
 		var season = seasonRepository.findById(seasonId)
 				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
@@ -116,10 +112,6 @@ public class MatchdayGeneratorService {
 		int optimalRounds = (n % 2 == 0) ? n - 1 : n;
 		return new GeneratorFormData(season, phase, n, optimalRounds);
 	}
-
-	// ---------------------------------------------------------------------------
-	// Algorithm helpers (private — unchanged)
-	// ---------------------------------------------------------------------------
 
 	/**
 	 * Circle method (polygon scheduling) for round-robin tournament scheduling.
@@ -212,16 +204,9 @@ public class MatchdayGeneratorService {
 		}
 	}
 
-	// ---------------------------------------------------------------------------
-	// GeneratorFormData record (A7 shape: keep Season for template compat, add SeasonPhase phase)
-	// ---------------------------------------------------------------------------
-
 	/**
-	 * Form data for the matchday generator UI.
-	 *
-	 * <p>Carries both {@link Season} (for backward-compat template references) and
-	 * {@link SeasonPhase} (for Phase-60 UI cutover). Phase-60 can remove {@code season}
-	 * once templates are updated. (A7 minimum-churn shape.)
+	 * Form data for the matchday generator UI. Carries both {@link Season} and
+	 * {@link SeasonPhase} for template compatibility.
 	 */
 	public record GeneratorFormData(Season season, SeasonPhase phase, int teamCount, int optimalRounds) {
 	}

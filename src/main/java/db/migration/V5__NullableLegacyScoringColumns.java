@@ -11,17 +11,14 @@ import java.sql.Statement;
 /**
  * V5 Flyway Java migration: legacy scoring FK columns become nullable.
  *
- * <p>The slim Season form (Phase 60 UI-01) no longer requires
- * {@code raceScoring}/{@code matchScoring} at season-creation time; scoring is
- * configured per-phase via the new Phase form. The auto-bootstrapped REGULAR
- * phase starts with scoring={@code null} and the user fills it in from the
+ * <p>The slim Season form no longer requires {@code raceScoring}/{@code matchScoring}
+ * at season-creation time; scoring is configured per-phase. The auto-bootstrapped
+ * REGULAR phase starts with scoring={@code null} and the user fills it in from the
  * Phase tab. The columns themselves remain (existing data preserved).
  *
- * <p>Originally shipped as V5__nullable_legacy_scoring_columns.sql, but that
- * version used PostgreSQL/H2-only {@code ALTER COLUMN ... DROP NOT NULL} syntax
- * which raises MariaDB error 1064 — production deploys to MariaDB never
- * succeeded. Replaced with this dialect-aware Java migration following the
- * pattern established by V4__MigrateSeasonsToPhases.
+ * <p>Java migration (not SQL) because {@code ALTER COLUMN ... DROP NOT NULL} is H2-only —
+ * MariaDB requires {@code MODIFY COLUMN ... NULL}. Dialect detection via
+ * {@code getDatabaseProductName()}.
  */
 public class V5__NullableLegacyScoringColumns extends BaseJavaMigration {
 

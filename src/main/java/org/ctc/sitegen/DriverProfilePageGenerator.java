@@ -60,7 +60,7 @@ public class DriverProfilePageGenerator {
         var seasonDrivers = seasonDriverRepository.findBySeasonId(season.getId());
         var generatedDriverIds = new java.util.HashSet<java.util.UUID>();
 
-        // Phase 62 D-15: showPhaseBreakdown is gated by season.phases.size() >= 2 (server-side flag).
+        // showPhaseBreakdown is gated by season.phases.size() >= 2 (server-side flag).
         boolean seasonHasMultiplePhases =
                 seasonPhaseService.findAllPhases(season.getId()).size() >= 2;
 
@@ -72,9 +72,8 @@ public class DriverProfilePageGenerator {
                     .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
                     .toList();
 
-            // Phase 62 D-15: split results into a LinkedHashMap (REGULAR -> PLAYOFF -> PLACEMENT
-            // canonical order). Filter on result.getRace().getMatchday().getPhase().getPhaseType()
-            // per RESEARCH.md Verified API Surface (in-Java filter, no new repository method).
+            // Split results into a LinkedHashMap (REGULAR -> PLAYOFF -> PLACEMENT canonical order),
+            // filtered in Java on race.matchday.phase.phaseType (no dedicated repository method).
             //
             // Phase participation is detected via RaceLineup, NOT RaceResult: TestDataService creates
             // PLAYOFF Race+RaceLineup but no RaceResult rows yet, so a RaceResult-only check would

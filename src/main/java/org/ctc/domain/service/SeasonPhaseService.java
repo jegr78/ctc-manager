@@ -47,10 +47,6 @@ public class SeasonPhaseService {
     private final MatchScoringRepository matchScoringRepository;
     private final PlayoffRepository playoffRepository;
 
-    // ---------------------------------------------------------------------------
-    // Records
-    // ---------------------------------------------------------------------------
-
     /**
      * Input record for {@link #assignTeamsToPhase} bulk diff logic.
      */
@@ -61,10 +57,6 @@ public class SeasonPhaseService {
      */
     public record RosterEditorState(Set<UUID> assignedTeamIds,
                                     Map<UUID, UUID> currentGroupByTeamId) {}
-
-    // ---------------------------------------------------------------------------
-    // Read methods
-    // ---------------------------------------------------------------------------
 
     /**
      * Returns the REGULAR phase for the given season, or throws {@link EntityNotFoundException}
@@ -118,10 +110,6 @@ public class SeasonPhaseService {
                         pt -> pt.getGroup().getId()));
         return new RosterEditorState(assignedTeamIds, currentGroupByTeamId);
     }
-
-    // ---------------------------------------------------------------------------
-    // Write methods
-    // ---------------------------------------------------------------------------
 
     /**
      * Creates a new {@link SeasonPhase} for the given season.

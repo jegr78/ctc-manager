@@ -135,10 +135,6 @@ public class DriverRankingService {
 				seasonDriverRepository.findBySeasonIdIn(seasonIds));
 	}
 
-	// ---------------------------------------------------------------------------
-	// Private helpers
-	// ---------------------------------------------------------------------------
-
 	private List<DriverRanking> calculateAlltimeRanking(List<RaceResult> results,
 	                                                     List<SeasonDriver> allSeasonDrivers) {
 

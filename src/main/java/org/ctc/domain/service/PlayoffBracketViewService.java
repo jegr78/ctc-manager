@@ -111,8 +111,6 @@ public class PlayoffBracketViewService {
 		);
 	}
 
-	// --- View classes ---
-
 	public record PlayoffBracketView(UUID playoffId, String name, List<RoundView> rounds) {
 	}
 

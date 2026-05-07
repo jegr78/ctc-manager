@@ -256,8 +256,6 @@ public class PlayoffSeedingService {
 				.orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 	}
 
-	// --- Record types ---
-
 	public record SeedEntry(UUID matchupId, int slot, UUID teamId, Integer seedNumber) {
 	}
 

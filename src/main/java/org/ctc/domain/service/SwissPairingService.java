@@ -144,10 +144,6 @@ public class SwissPairingService {
 						|| (r.getHomeScore() != null && r.getAwayScore() != null));
 	}
 
-	// ---------------------------------------------------------------------------
-	// Private helpers
-	// ---------------------------------------------------------------------------
-
 	private List<Matchday> getMatchdaysForPhaseGroup(UUID phaseId, UUID groupId) {
 		return (groupId != null)
 				? matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId)

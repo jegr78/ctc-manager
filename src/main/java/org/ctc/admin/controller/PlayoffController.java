@@ -218,8 +218,6 @@ public class PlayoffController {
         }
     }
 
-    // --- Round graphic download endpoints ---
-
     @PostMapping("/round/{roundId}/download-overview")
     public ResponseEntity<byte[]> downloadRoundOverview(@PathVariable UUID roundId) {
         try {

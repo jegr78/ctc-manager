@@ -25,8 +25,6 @@ public class RaceLineupService {
 	private final TeamRepository teamRepository;
 	private final DriverRepository driverRepository;
 
-	// --- Return types ---
-
 	public LineupData getLineupData(UUID raceId) {
 		var race = raceRepository.findById(raceId)
 				.orElseThrow(() -> new EntityNotFoundException("Race", raceId));
@@ -73,8 +71,6 @@ public class RaceLineupService {
 		return assignments;
 	}
 
-	// --- Get lineup data ---
-
 	@Transactional
 	public int saveLineup(UUID raceId, Map<UUID, UUID> driverTeamAssignments) {
 		var race = raceRepository.findById(raceId)
@@ -97,12 +93,8 @@ public class RaceLineupService {
 		return count;
 	}
 
-	// --- Get driver assignments ---
-
 	public record LineupTeamEntry(Team team, List<SeasonDriver> drivers, List<Team> subTeams, boolean hasSubTeams) {
 	}
-
-	// --- Save lineup ---
 
 	public record LineupData(Race race, LineupTeamEntry homeEntry, LineupTeamEntry awayEntry) {
 	}
