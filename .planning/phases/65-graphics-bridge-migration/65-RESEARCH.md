@@ -524,17 +524,13 @@ Not applicable — this phase is a pure refactoring of an internal service API. 
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **SettingsGraphicService test file existence**
-   - What we know: `find` on `src/test/java/org/ctc/admin/service/` did not return `SettingsGraphicServiceTest.java`
-   - What's unclear: Whether a test file exists elsewhere or was excluded from the listing
-   - Recommendation: Planner should `grep -r SettingsGraphicService src/test/` to confirm before writing new tests
+1. **SettingsGraphicService test file existence — RESOLVED 2026-05-07**
+   - Resolution: Plan 65-01 Task 4 creates `SettingsGraphicServiceTest.java` from scratch and includes a `grep -r SettingsGraphicService src/test/` pre-flight check in its action text. Confirmed missing via `find src/test -name 'SettingsGraphic*'` returning empty.
 
-2. **`matchdayInRegularPhase` fixture return type in AbstractMatchdayGraphicServiceTest**
-   - What we know: The helper returns a `Matchday` with `getPhase()` already set to a `regularPhase`
-   - What's unclear: Whether `regularPhase.getId()` is stable across multiple test calls within the same test method (i.e., whether the same UUID is returned each time)
-   - Recommendation: Capture `var phaseId = matchday.getPhase().getId()` immediately after creating the matchday and use it consistently in the stub and verify calls
+2. **`matchdayInRegularPhase` fixture return type in AbstractMatchdayGraphicServiceTest — RESOLVED 2026-05-07**
+   - Resolution: Plan 65-01 Task 2 captures `var phaseId = matchday.getPhase().getId()` immediately after fixture creation and uses it consistently in both `when(...).thenReturn(...)` and `Mockito.verify(...)` calls. UUID stability concern is moot once the value is captured once and reused.
 
 ---
 
