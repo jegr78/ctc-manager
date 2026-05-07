@@ -194,12 +194,21 @@ public class DriverRankingService {
 	}
 
 	/**
-	 * Resolves per-race team from RaceLineup for a single race result (Source of Truth per CLAUDE.md).
-	 * Per-phase ranking team attribution is intentionally left null; season-wide aggregation
-	 * handles attribution via {@link #attributeTeamFromRegularOrLineup}.
+	 * Resolves per-race team from RaceLineup (Source of Truth per CLAUDE.md
+	 * `feedback_racelineup_source_of_truth`). The first race result a driver has in the
+	 * phase fixes their per-phase team attribution; later races in the same phase keep
+	 * the same team because the result accumulator only triggers
+	 * {@code computeIfAbsent} once per driver.
+	 *
+	 * @return the driver's team for the specific race, or {@code null} if no RaceLineup
+	 *         row exists (e.g. test fixture race with results but no lineup — the season-
+	 *         wide aggregation in {@link #aggregateAcrossPhases} compensates via
+	 *         {@link #attributeTeamFromRegularOrLineup})
 	 */
 	private Team resolveTeamFromLineup(UUID driverId, Race race) {
-		return null;
+		return raceLineupRepository.findByRaceIdAndDriverId(race.getId(), driverId)
+				.map(RaceLineup::getTeam)
+				.orElse(null);
 	}
 
 	private void sortRankings(List<DriverRanking> rankings) {

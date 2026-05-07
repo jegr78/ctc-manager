@@ -344,6 +344,44 @@ class DriverRankingServiceTest {
 		verify(raceResultRepository).findByRacePlayoffMatchupRoundPlayoffPhaseId(playoff.getId());
 	}
 
+	/**
+	 * W-1 regression: per-phase {@code calculateRankingForPhase} must populate the
+	 * {@code Team} field on each {@link DriverRanking} via {@link RaceLineup} (Source of
+	 * Truth per CLAUDE.md feedback_racelineup_source_of_truth). Pre-fix
+	 * {@code resolveTeamFromLineup} was a dead-stub returning {@code null}, leaving the
+	 * Team column empty on every per-phase {@code driver-ranking-{phaseSlug}.html} variant.
+	 */
+	@Test
+	void givenPerPhaseRanking_whenRaceLineupExists_thenTeamPopulatedFromLineup() {
+		// given
+		var rs = new RaceScoring("W1-RS", "20,15,10", "3,2,1", 2);
+		rs.setId(UUID.randomUUID());
+		var ms = new MatchScoring("W1-MS", 3, 1, 0);
+		ms.setId(UUID.randomUUID());
+		var regular = PhaseTestFixtures.regularPhase(season, rs, ms);
+
+		var race = new Race();
+		race.setId(UUID.randomUUID());
+		var result = createResult(race, panicpotato, 23, 1);
+		var lineup = new RaceLineup(race, panicpotato, tnr);
+
+		when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
+		when(raceResultRepository.findByRaceMatchdayPhaseId(regular.getId())).thenReturn(List.of(result));
+		when(raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(regular.getId())).thenReturn(List.of());
+		when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of());
+		when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), panicpotato.getId()))
+				.thenReturn(java.util.Optional.of(lineup));
+
+		// when
+		var rankings = driverRankingService.calculateRankingForPhase(regular.getId());
+
+		// then
+		assertThat(rankings).hasSize(1);
+		assertThat(rankings.get(0).getTeam())
+				.as("per-phase ranking must populate Team via RaceLineup (W-1 fix)")
+				.isEqualTo(tnr);
+	}
+
 	@Test
 	void givenMultiPhaseSeason_whenAggregateAcrossPhases_thenRegularTeamGuardsAttribution() {
 		// given — driver runs in REGULAR and PLAYOFF; season-wide ranking attributes to REGULAR team
