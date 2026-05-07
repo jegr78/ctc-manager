@@ -53,6 +53,22 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+/**
+ * Seeds deterministic test fixtures into the H2 in-memory database for the {@code dev} profile.
+ *
+ * <p>Fixtures seeded:
+ * <ul>
+ *   <li><strong>Season 2023</strong> (REGULAR-GROUPS + PLAYOFF) — multi-phase + GROUPS-layout coverage
+ *       (SC1, SC2, SC3). Slug: {@code 2023-1-season-2023}.</li>
+ *   <li><strong>Season 2024 — Regular Season</strong> (single-REGULAR-LEAGUE, Swiss format) — baseline
+ *       LEAGUE season. Slug: {@code 2024-2-regular-season}.</li>
+ *   <li><strong>Season 2026 — Regular Season</strong> (single-REGULAR-LEAGUE, League format, active) —
+ *       SC4 byte-identity source for Plan 0 golden snapshot. Slug: {@code 2026-4-regular-season}.</li>
+ *   <li><strong>Season 2024 — Empty Phase</strong> (REGULAR-only, zero matchdays, zero results) —
+ *       D-22 empty-state coverage. Full 4-team roster at 0 points. Slug: {@code 2024-3-season-2024-empty-phase}.
+ *       Used by Plan 6 D-22 IT method and Plan 7 visual sweep.</li>
+ * </ul>
+ */
 @Slf4j
 @Service
 @Profile("dev")
@@ -302,6 +318,21 @@ public class TestDataService {
 		s4.findSeasonTeam(findParent.apply("HMS")).ifPresent(st -> st.setRating(88));
 		s4.findSeasonTeam(findParent.apply("PWR")).ifPresent(st -> st.setRating(86));
 		seasonRepository.save(s4);
+
+		// === Season 2024 — Empty Phase: D-22 empty-state coverage ===
+		// Single REGULAR phase, LEAGUE layout, zero matchdays, zero race results.
+		// Full 4-team PhaseTeam roster so D-22 renders teams at 0 points.
+		// Slug: 2024-3-season-2024-empty-phase
+		var sEmpty = createSeason("Season 2024 — Empty Phase", 2024, 3, null, scorings);
+		var sEmptyRegular = new SeasonPhase(sEmpty, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		sEmptyRegular.setRaceScoring(scorings.raceScoring());
+		sEmptyRegular.setMatchScoring(scorings.matchScoring());
+		sEmptyRegular.setFormat(SeasonFormat.LEAGUE);
+		sEmptyRegular.setLegs(1);
+		sEmpty.getPhases().add(sEmptyRegular);
+		List.of(findParent.apply("ADR"), findParent.apply("ICL"),
+				findParent.apply("SVT"), findParent.apply("NFR")).forEach(sEmpty::addTeam);
+		seasonRepository.save(sEmpty);
 	}
 
 	/**
@@ -360,6 +391,8 @@ public class TestDataService {
 		// LEAGUE rosters — group=null for every SeasonTeam
 		seedLeaguePhaseTeams(allSeasons, 2024, 2);
 		seedLeaguePhaseTeams(allSeasons, 2026, 4);
+		// D-22 empty-phase fixture: 4 teams, LEAGUE layout, zero matchdays/results
+		seedLeaguePhaseTeams(allSeasons, 2024, 3);
 	}
 
 	private void seedLeaguePhaseTeams(java.util.List<Season> seasons, int year, int number) {
