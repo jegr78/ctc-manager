@@ -24,7 +24,7 @@
         </form>
     </div>
 
-    <!-- D-29 Two-Row Tabs Row 1: Phase tabs (only when season + REGULAR phase) -->
+    <!-- Two-Row Tabs Row 1: Phase tabs (only when season + REGULAR phase) -->
     <div th:if="${selectedSeason != null and hasRegularPhase}" class="tab-nav mt-md" role="tablist" aria-label="Phase tabs">
         <a th:each="p : ${allPhases}"
            th:href="@{/admin/standings(phase=${p.id})}"
@@ -33,7 +33,7 @@
            th:text="${p.label != null and !p.label.isBlank() ? p.label : p.phaseType}">Tab</a>
     </div>
 
-    <!-- D-29 Two-Row Tabs Row 2: Group sub-tabs (only when GROUPS layout) -->
+    <!-- Two-Row Tabs Row 2: Group sub-tabs (only when GROUPS layout) -->
     <div th:if="${phase != null and phase.layout.name() == 'GROUPS'}"
          class="tab-nav tabs-secondary" role="tablist" aria-label="Group sub-tabs">
         <a th:href="@{/admin/standings(phase=${phase.id})}"
@@ -51,18 +51,18 @@
         <p>Please select a season.</p>
     </div>
 
-    <!-- D-08 + Pitfall 4: season selected but no REGULAR phase -->
+    <!-- Empty-state: season selected but no REGULAR phase -->
     <div th:if="${selectedSeason != null and !hasRegularPhase and !isAlltime}" class="card empty-state mt-md">
         <p>This season has no Regular Phase yet. Create one first to see standings.</p>
         <a th:href="@{/admin/seasons/{id}/phases/new(id=${selectedSeason.id}, phaseType='REGULAR')}" class="btn btn-primary">+ Add Regular Phase</a>
     </div>
 
-    <!-- D-36 Empty-state: phase exists but no results -->
+    <!-- Empty-state: phase exists but no results -->
     <div th:if="${phase != null and #lists.isEmpty(standings)}" class="card empty-state mt-md">
         <p>This phase has no race results yet — standings will appear once results are recorded.</p>
     </div>
 
-    <!-- Team Standings table (unified with conditional columns D-32, D-33) -->
+    <!-- Team Standings table (unified with conditional columns) -->
     <div th:if="${(phase != null and !#lists.isEmpty(standings)) or (isAlltime and standings != null and !standings.isEmpty())}" class="card mt-md">
         <h2 th:if="${isAlltime}">Team Standings — Alltime</h2>
         <h2 th:unless="${isAlltime}">Team Standings</h2>
