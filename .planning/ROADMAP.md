@@ -439,3 +439,16 @@ Each `/gsd-validate-phase {N}` invocation may run in `mode: retroactive` since t
 4. The legacy convenience overload `calculateStandings(seasonId)` is either removed from `StandingsService` or — if kept as documented convenience — has an updated Javadoc that no production caller uses it anymore
 
 **Plans**: TBD
+
+### Phase 66: Team ShortName Collision Fix (Driver Import)
+
+**Goal:** Driver sheet import must not crash when two teams share the same `shortName` (e.g. ZFS parent + ZFS sub-team). When multiple matches exist, the parent team (`parentTeam IS NULL`) is resolved; otherwise the single match is used; otherwise the existing `UNKNOWN_TEAM_CODE` error flow applies.
+
+**Requirements**: Hotfix — discovered during v1.9 UAT. `DriverSheetImportService` (5 call sites: lines 135, 146, 166, 195, 296) crashes with `IncorrectResultSizeDataAccessException` because `TeamRepository.findByShortName` returns `Optional<Team>` but `teams.short_name` has no UNIQUE constraint and parent/sub-teams can collide on shortName.
+
+**Depends on:** Phase 65
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 66 to break down)

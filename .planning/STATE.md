@@ -78,6 +78,7 @@ Continuing from v1.8 (last phase: 55). v1.9 phases start at **Phase 56**.
 ### Roadmap Evolution
 
 - 2026-05-02: Phase 62 (Public Site Phase + Group Awareness) added at end of v1.9 milestone. Discovered during Phase 61 UAT — admin-side phase/group model is fully wired but invisible on the public static site. Without Phase 62 the v1.9 feature ships externally invisible.
+- 2026-05-07: Phase 66 (Team ShortName Collision Fix — Driver Import) added at end of v1.9 milestone. Discovered during v1.9 UAT — `DriverSheetImportService` crashes with `IncorrectResultSizeDataAccessException` when parent + sub-team share the same `shortName` (e.g. ZFS parent + ZFS sub). 5 call sites in the import service share the same `findByShortName`-on-non-unique-column bug. Resolution policy: prefer parent (`parentTeam IS NULL`) on multi-match.
 
 ### Key Technical Context
 
