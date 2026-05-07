@@ -116,7 +116,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 - [x] **Phase 61: Cleanup & Quality Gate** - Drop old season columns (MIGR-06); JaCoCo gate; E2E test for GROUPS season; regression test for migrated seasons ✅ shipped 2026-05-01
 - [x] **Phase 62: Public Site Phase + Group Awareness** - Mirror the admin-side phase model on the public static site: phase tabs, GROUPS layout per-group standings + combined view, PLAYOFF phase content; SiteGeneratorService and templates/site no longer LEAGUE-only ✅ shipped 2026-05-07
 - [ ] **Phase 63: Documentation & Verification Backfill** - Backfill 60-VERIFICATION.md, fix 13 stale REQUIREMENTS.md checkboxes, add SITE-01..03 IDs for Phase 62, reconcile 57-VERIFICATION.md MariaDB UAT status (gap closure from v1.9-MILESTONE-AUDIT.md)
-- [ ] **Phase 64: Nyquist Validation Sweep** - Backfill / complete VALIDATION.md for Phases 56, 57, 58, 59, 60, 62 so all v1.9 phases are nyquist_compliant before milestone close
+- [x] **Phase 64: Nyquist Validation Sweep** - Backfill / complete VALIDATION.md for Phases 56, 57, 58, 59, 60, 62 so all v1.9 phases are nyquist_compliant before milestone close ✅ shipped 2026-05-07
 - [ ] **Phase 65: Graphics Services Bridge Migration** - Migrate 5 graphics-service callers off legacy `calculateStandings(seasonId)` overload to phase-aware `calculateStandings(phaseId, groupId)`; close W-A bridge debt
 
 </details>
