@@ -4,7 +4,9 @@ phase: 61-cleanup-quality-gate
 source:
   - 61-VERIFICATION.md (human_verification)
 started: 2026-05-01T21:44:38Z
-updated: 2026-05-02T11:05:00Z
+updated: 2026-05-07T00:00:00Z
+resumed: 2026-05-07T00:00:00Z
+resume_reason: "Test 2 (Legacy migrated season visual smoke) wurde am 02.05. deferred — am 07.05. nachgeholt und passed"
 gap_fixes:
   - id: UAT-01
     test: 1
@@ -22,7 +24,7 @@ re_verification: "Test 1 re-verified pass post-fix (GROUPS smoke flow works end-
 
 ## Current Test
 
-[testing complete — Tests 1, 3, 4 pass; Test 2 deferred]
+[testing complete — all 4 tests resolved (3 pass, 1 issue resolved post-fix); Test 2 nachgeholt am 07.05.]
 
 ## Tests
 
@@ -54,8 +56,10 @@ expected: |
   Open an actual pre-v1.9 season (one that was migrated by V4) in the running app
   and verify exactly 1 REGULAR phase tab + all matchdays accessible + race detail
   loads + standings render — both with and without playoff.
-result: skipped
-reason: "User: kann ich so aktuell nicht machen, verschiebe ich auf später"
+result: pass
+prior_result: skipped
+prior_reason: "User: kann ich so aktuell nicht machen, verschiebe ich auf später (02.05.)"
+re_test_note: "User-Verifikation 07.05. — pre-v1.9-migrierte Saison öffnet sauber, 1 REGULAR phase tab, alle matchdays + race detail + standings rendern (mit und ohne playoff)"
 
 ### 3. V6 migration on MariaDB (docker profile)
 expected: |
@@ -107,11 +111,11 @@ result: pass
 ## Summary
 
 total: 4
-passed: 2
+passed: 3
 issues_resolved: 2
 pending: 0
-skipped: 1
-note: "Both blocker issues resolved in-branch (UAT-01 f5b10bc, UAT-03 6db56d4); Test 1 re-verified post-fix; Test 2 deferred to user's local pass."
+skipped: 0
+note: "Both blocker issues resolved in-branch (UAT-01 f5b10bc, UAT-03 6db56d4); Test 1 re-verified post-fix; Test 2 nachgeholt 07.05. — passed."
 
 ## Gaps
 
