@@ -198,20 +198,26 @@ public class StandingsService {
 	// Private helpers
 	// ---------------------------------------------------------------------------
 
-	private Map<UUID, Integer> calculateBuchholzScores(UUID seasonId) {
-		// Boundary: callers may pass a phase-derived seasonId that points to an unflushed test fixture.
-		var season = seasonRepository.findById(seasonId).orElse(null);
+	/**
+	 * Calculates Buchholz scores for a phase. The underlying race finder is season-scoped
+	 * (bye-aware, excludes playoff races); this is correct for current consumers because
+	 * the phase's matchdays are the only matchdays in the season-scoped query for LEAGUE
+	 * and per-group GROUPS, and for GROUPS combined-view Buchholz is display-only (not a
+	 * tiebreaker).
+	 */
+	private Map<UUID, Integer> calculateBuchholzScoresForPhase(SeasonPhase phase) {
+		var season = phase.getSeason();
 		if (season == null) return Map.of();
 
 		Map<UUID, UUID> successionMap = season.buildSuccessionMap();
 
-		// Build points map from standings
-		var standings = calculateStandings(seasonId);
+		// Build points map from canonical phase-aware standings (no seasonId roundtrip)
+		var standings = calculateStandings(phase.getId(), null);
 		Map<UUID, Integer> pointsMap = standings.stream()
 				.collect(Collectors.toMap(s -> s.getTeam().getId(), TeamStanding::getPoints));
 
-		// Build opponents map from races (same logic as SwissPairingService.getPlayedOpponents)
-		List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(seasonId);
+		// Build opponents map from races (excludes byes + playoff matchups)
+		List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId());
 		Map<UUID, Set<UUID>> opponents = new HashMap<>();
 		for (Race race : races) {
 			if (race.isBye() || race.getAwayTeam() == null) continue;
@@ -221,7 +227,7 @@ public class StandingsService {
 			opponents.computeIfAbsent(away, k -> new HashSet<>()).add(home);
 		}
 
-		// Calculate Buchholz as sum of opponents' points
+		// Buchholz = sum of opponents' points
 		Map<UUID, Integer> buchholz = new HashMap<>();
 		for (var entry : opponents.entrySet()) {
 			int sum = entry.getValue().stream()
@@ -231,19 +237,6 @@ public class StandingsService {
 		}
 
 		return buchholz;
-	}
-
-	/**
-	 * Calculates Buchholz scores for a phase. Delegates to the season-level Buchholz using
-	 * the phase's parent season because the underlying race finder is season-scoped.
-	 *
-	 * <p>This is correct for the current consumers: for GROUPS combined-view Buchholz is
-	 * display-only (NOT used as a tiebreaker), and for LEAGUE / per-group GROUPS the
-	 * season-level calculation produces equivalent values because the phase's matchdays
-	 * are the only matchdays.
-	 */
-	private Map<UUID, Integer> calculateBuchholzScoresForPhase(SeasonPhase phase) {
-		return calculateBuchholzScores(phase.getSeason().getId());
 	}
 
 	private void processMatch(Match match, Map<UUID, TeamStanding> standingsMap,

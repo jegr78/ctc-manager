@@ -9,7 +9,6 @@ import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonPhaseGroupRepository;
-import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +20,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SwissPairingService {
 
-	private final SeasonRepository seasonRepository;
 	private final RaceRepository raceRepository;
 	private final MatchRepository matchRepository;
 	private final MatchdayRepository matchdayRepository;
@@ -147,41 +145,7 @@ public class SwissPairingService {
 	}
 
 	// ---------------------------------------------------------------------------
-	// Buchholz (unchanged public API — delegates to season-level legacy)
-	// ---------------------------------------------------------------------------
-
-	public Map<UUID, Integer> calculateBuchholz(UUID seasonId) {
-		var season = seasonRepository.findById(seasonId)
-				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
-		Map<UUID, UUID> successionMap = season.buildSuccessionMap();
-
-		var standings = standingsService.calculateStandings(seasonId);
-		Map<UUID, Integer> pointsMap = standings.stream()
-				.collect(Collectors.toMap(s -> s.getTeam().getId(), StandingsService.TeamStanding::getPoints));
-
-		Map<UUID, Set<UUID>> opponents = getPlayedOpponents(seasonId, successionMap);
-		Map<UUID, Integer> buchholz = new HashMap<>();
-
-		for (var entry : opponents.entrySet()) {
-			int sum = entry.getValue().stream()
-					.mapToInt(oppId -> pointsMap.getOrDefault(oppId, 0))
-					.sum();
-			buchholz.put(entry.getKey(), sum);
-		}
-
-		return buchholz;
-	}
-
-	// ---------------------------------------------------------------------------
-	// Public helpers for external callers (legacy API surface)
-	// ---------------------------------------------------------------------------
-
-	public Map<UUID, Set<UUID>> getPlayedOpponents(UUID seasonId) {
-		return getPlayedOpponents(seasonId, Map.of());
-	}
-
-	// ---------------------------------------------------------------------------
-	// Private helpers — unchanged algorithm, only callers updated
+	// Private helpers
 	// ---------------------------------------------------------------------------
 
 	private List<Matchday> getMatchdaysForPhaseGroup(UUID phaseId, UUID groupId) {
@@ -311,21 +275,6 @@ public class SwissPairingService {
 		race.setMatchday(matchday);
 		race.setMatch(match);
 		return race;
-	}
-
-	private Map<UUID, Set<UUID>> getPlayedOpponents(UUID seasonId, Map<UUID, UUID> successionMap) {
-		List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(seasonId);
-		Map<UUID, Set<UUID>> opponents = new HashMap<>();
-
-		for (Race race : races) {
-			if (race.isBye() || race.getAwayTeam() == null) continue;
-			UUID home = successionMap.getOrDefault(race.getHomeTeam().getId(), race.getHomeTeam().getId());
-			UUID away = successionMap.getOrDefault(race.getAwayTeam().getId(), race.getAwayTeam().getId());
-			opponents.computeIfAbsent(home, k -> new HashSet<>()).add(away);
-			opponents.computeIfAbsent(away, k -> new HashSet<>()).add(home);
-		}
-
-		return opponents;
 	}
 
 	/**

@@ -187,25 +187,6 @@ class SwissPairingServiceTest {
 	}
 
 	@Test
-	void givenOneCompletedRound_whenCalculateBuchholz_thenReturnsOpponentScoreSums() {
-		// given
-		addTeams(4);
-
-		var md = swissPairingService.generateNextRound(regularPhase.getId(), null);
-		addDummyResults(md.getId());
-
-		// when
-		var buchholz = swissPairingService.calculateBuchholz(season.getId());
-
-		// then
-		assertEquals(4, buchholz.size());
-
-		var values = new ArrayList<>(buchholz.values());
-		Collections.sort(values);
-		assertEquals(List.of(0, 0, 3, 3), values);
-	}
-
-	@Test
 	void givenReplacedTeam_whenGenerateNextRound_thenReplacedTeamExcluded() {
 		// given — register teams[1..3] and replacementTeam in the REGULAR phase roster;
 		// teams[0] (the replaced team) is deliberately NOT added to the phase roster,
