@@ -39,7 +39,6 @@ class MatchServiceTest {
 	@InjectMocks
 	private MatchService service;
 
-	// --- createMatch ---
 
 	@Test
 	void givenValidTeamsAndMatchday_whenCreateMatch_thenMatchAndFirstRaceCreated() {
@@ -244,7 +243,6 @@ class MatchServiceTest {
 				.hasMessageContaining("Match already exists");
 	}
 
-	// --- addLeg ---
 
 	@Test
 	void givenExistingMatch_whenAddLeg_thenAdditionalRaceCreated() {
@@ -354,7 +352,6 @@ class MatchServiceTest {
 		assertThat(savedRace.getAwayTeam()).isEqualTo(awayTeam);
 	}
 
-	// --- deleteMatch ---
 
 	@Test
 	void givenExistingMatch_whenDeleteMatch_thenDeletesAndReturnsMatchdayId() {

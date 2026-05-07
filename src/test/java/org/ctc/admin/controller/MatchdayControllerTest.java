@@ -220,7 +220,6 @@ class MatchdayControllerTest {
                 .andExpect(jsonPath("$.label").value("Inline MD"));
     }
 
-    // --- Graphics endpoint tests ---
 
     @Test
     void givenMatchdayWithMatches_whenGetDetail_thenGraphicFlagsPresent() throws Exception {
@@ -262,7 +261,6 @@ class MatchdayControllerTest {
                 .andExpect(status().isConflict());
     }
 
-    // --- Exception handling tests for graphic endpoints ---
 
     @Test
     void givenRuntimeException_whenGenerateOverviewGraphic_thenReturns500() throws Exception {

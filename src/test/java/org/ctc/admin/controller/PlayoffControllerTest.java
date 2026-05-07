@@ -185,7 +185,6 @@ class PlayoffControllerTest {
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
-    // --- POST /admin/playoffs/matchup/{id}/add-race ---
 
     @Test
     void givenMatchupWithBothTeamsSeeded_whenAddRaceToMatchup_thenRedirectsWithSuccess() throws Exception {
@@ -220,7 +219,6 @@ class PlayoffControllerTest {
                 .andExpect(flash().attribute("errorMessage", "Both teams must be set"));
     }
 
-    // --- POST /admin/playoffs/matchup/{id}/determine-winner ---
 
     @Test
     void givenMatchupWithSeededTeams_whenDetermineWinner_thenRedirects() throws Exception {
@@ -242,7 +240,6 @@ class PlayoffControllerTest {
         // Either success or error flash attribute should be present
     }
 
-    // --- Round graphic download endpoints ---
 
     @Test
     void givenUnknownRoundId_whenDownloadRoundOverview_thenReturns500() throws Exception {
@@ -265,7 +262,6 @@ class PlayoffControllerTest {
                 .andExpect(status().isInternalServerError());
     }
 
-    // --- POST /admin/playoffs/save — validation failure ---
 
     @Test
     void givenBlankName_whenSavePlayoff_thenReturnsFormViewWithErrors() throws Exception {
@@ -296,7 +292,6 @@ class PlayoffControllerTest {
                 .andExpect(model().attributeExists("seasons"));
     }
 
-    // --- Phase 60 UI-07: Add/Remove Season UI removed from bracket page ---
 
     @Test
     void givenPlayoff_whenGetBracket_thenAddSeasonButtonNotPresent() throws Exception {
@@ -315,7 +310,6 @@ class PlayoffControllerTest {
                 .doesNotContain("/admin/playoffs/" + playoff.getId() + "/remove-season");
     }
 
-    // --- POST /admin/playoffs/{id}/add-season + remove-season — D-03 negative-route guards ---
     // legacy endpoints removed (Tracked Behavior Change).
     // These tests guard against accidental re-introduction of the routes.
 

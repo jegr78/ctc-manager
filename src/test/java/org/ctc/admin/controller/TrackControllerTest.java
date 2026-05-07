@@ -58,7 +58,6 @@ class TrackControllerTest {
 		track = trackRepository.save(new Track("Tsukuba Circuit", "Japan"));
 	}
 
-	// --- GET /admin/tracks ---
 
 	@Test
 	void whenGetTracks_thenReturnsTracksView() throws Exception {
@@ -70,7 +69,6 @@ class TrackControllerTest {
 				.andExpect(model().attributeExists("tracks"));
 	}
 
-	// --- GET /admin/tracks/new ---
 
 	@Test
 	void whenGetNewTrackForm_thenReturnsTrackForm() throws Exception {
@@ -82,7 +80,6 @@ class TrackControllerTest {
 				.andExpect(model().attributeExists("trackForm"));
 	}
 
-	// --- GET /admin/tracks/{id}/edit ---
 
 	@Test
 	void givenExistingTrack_whenGetEditForm_thenReturnsTrackForm() throws Exception {
@@ -94,7 +91,6 @@ class TrackControllerTest {
 				.andExpect(model().attributeExists("trackForm"));
 	}
 
-	// --- POST /admin/tracks/save ---
 
 	@Test
 	void givenValidTrackForm_whenSaveNewTrack_thenRedirectsAndPersists() throws Exception {
@@ -137,7 +133,6 @@ class TrackControllerTest {
 				.andExpect(view().name("admin/track-form"));
 	}
 
-	// --- POST /admin/tracks/{id}/delete ---
 
 	@Test
 	void givenUnreferencedTrack_whenDeleteTrack_thenRedirectsAndRemoves() throws Exception {
@@ -183,7 +178,6 @@ class TrackControllerTest {
 		assertTrue(trackRepository.findById(track.getId()).isPresent());
 	}
 
-	// --- POST /admin/tracks/{id}/image ---
 
 	@Test
 	void givenImageFile_whenUploadTrackImage_thenRedirectsAndSetsImageUrl() throws Exception {

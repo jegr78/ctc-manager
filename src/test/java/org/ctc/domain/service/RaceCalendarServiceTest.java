@@ -30,7 +30,6 @@ class RaceCalendarServiceTest {
 	@InjectMocks
 	private RaceCalendarService service;
 
-	// --- createOrUpdateCalendarEvent ---
 
 	@Test
 	void givenRaceWithDateTimeAndTeams_whenCreateOrUpdateCalendarEvent_thenDelegatesToGoogleCalendarService() throws Exception {
@@ -149,7 +148,6 @@ class RaceCalendarServiceTest {
 				.hasMessageContaining("Calendar API error");
 	}
 
-	// --- Helper ---
 
 	private Team createTeam(String shortName, String name) {
 		var team = new Team(name, shortName);

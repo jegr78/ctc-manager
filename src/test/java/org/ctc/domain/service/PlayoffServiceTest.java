@@ -796,9 +796,7 @@ class PlayoffServiceTest {
 		}
 	}
 
-	// =========================================================================
-	// Phase 58-05: D-19 auto-create + Pitfall 4 + @Deprecated M:N regression
-	// =========================================================================
+	// auto-create + @Deprecated M:N regression
 
 	@Nested
 	class PhaseAutoCreate {

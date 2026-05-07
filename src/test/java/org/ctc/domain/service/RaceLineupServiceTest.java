@@ -35,7 +35,6 @@ class RaceLineupServiceTest {
 	@InjectMocks
 	private RaceLineupService service;
 
-	// --- saveLineup ---
 
 	@Test
 	void givenDriverTeamMapping_whenSaveLineup_thenCreatesEntries() {
@@ -95,7 +94,6 @@ class RaceLineupServiceTest {
 		verify(raceLineupRepository).save(any(RaceLineup.class));
 	}
 
-	// --- getLineupData ---
 
 	@Test
 	void givenRaceWithRegularTeams_whenGetLineupData_thenReturnsCorrectEntries() {
@@ -186,7 +184,6 @@ class RaceLineupServiceTest {
 		assertThat(data.awayEntry().hasSubTeams()).isFalse();
 	}
 
-	// --- getDriverAssignments ---
 
 	@Test
 	void givenLineupWithTwoDrivers_whenGetDriverAssignments_thenReturnsDriverTeamMap() {

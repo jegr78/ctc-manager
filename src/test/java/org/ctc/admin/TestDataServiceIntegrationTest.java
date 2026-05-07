@@ -50,7 +50,6 @@ class TestDataServiceIntegrationTest {
 	@Autowired
 	private SeasonPhaseRepository seasonPhaseRepository;
 
-	// --- Helper methods ---
 
 	private Season findSeason(int year, String name) {
 		return seasonRepository.findAll().stream()
@@ -66,7 +65,6 @@ class TestDataServiceIntegrationTest {
 						"Season not found: year=" + year + " number=" + number));
 	}
 
-	// --- Season structure tests ---
 
 	@Test
 	void givenDevSeed_whenStarted_thenS2HasFormatSwiss() {
@@ -117,7 +115,6 @@ class TestDataServiceIntegrationTest {
 		assertThat(teams).anyMatch(t -> t.getParentTeam() != null);
 	}
 
-	// --- Matchday and result tests ---
 
 	@Test
 	void givenDevSeed_whenStarted_thenLeagueSeasonHasFiveMatchdays() {
@@ -257,7 +254,6 @@ class TestDataServiceIntegrationTest {
 		assertThat(devMatches).allMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
 	}
 
-	// --- Phase 59: Consolidated 2023 GROUPS regression tests ---
 
 	@Test
 	void givenDevSeed_whenStarted_thenConsolidated2023HasOneRegularGroupsPhase() {
@@ -320,7 +316,6 @@ class TestDataServiceIntegrationTest {
 		assertThat(phaseTeams.size()).isEqualTo(season.getSeasonTeams().size());
 	}
 
-	// --- Demo logo classpath resource tests ---
 
 	@Test
 	void givenFictiveTeamShortNames_whenLoadingClasspathResource_thenAllTenLogosExist() {

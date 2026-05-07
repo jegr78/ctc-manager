@@ -40,7 +40,6 @@ class PlayoffBracketViewServiceTest {
 		return season;
 	}
 
-	// --- Helper methods ---
 
 	private Team createTeam(String name) {
 		var team = new Team(name, name);

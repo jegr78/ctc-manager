@@ -127,9 +127,7 @@ class DriverSheetImportServiceTest {
         );
     }
 
-    // ---------------------------------------------------------------------------
     // 1. Tab filtering and sorting (IMPORT-02, IMPORT-04)
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenMixedTabNames_whenPreview_thenOnlyFourDigitTabsIncluded() throws IOException {
@@ -190,9 +188,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.errors().get(0).reason()).isEqualTo(ErrorReason.BLANK_TEAM_CODE);
     }
 
-    // ---------------------------------------------------------------------------
     // 2. Season auto-match (IMPORT-05, DATA-01 — D-01..D-03)
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenMultipleSeasonsForYear_whenPreview_thenSuggestedSeasonNullWithAmbiguousReason() throws IOException {
@@ -229,9 +225,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.ambiguousReason()).contains("No season found for year 2024");
     }
 
-    // ---------------------------------------------------------------------------
     // 3. Bucket: NEW_DRIVER (UX-01)
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenNewPsnId_whenPreview_thenCategorisedAsNewDriver() throws IOException {
@@ -256,9 +250,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.errors()).isEmpty();
     }
 
-    // ---------------------------------------------------------------------------
     // 4. Bucket: NEW_ASSIGNMENT (UX-02)
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenExistingDriverNoSeasonDriver_whenPreview_thenCategorisedAsNewAssignment() throws IOException {
@@ -311,9 +303,7 @@ class DriverSheetImportServiceTest {
         verifyNoInteractions(seasonDriverRepository);
     }
 
-    // ---------------------------------------------------------------------------
     // 5. Bucket: CONFLICT (UX-03)
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenExistingSeasonDriverDifferentTeam_whenPreview_thenCategorisedAsConflict() throws IOException {
@@ -342,9 +332,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.unchanged()).isEmpty();
     }
 
-    // ---------------------------------------------------------------------------
     // 6. Bucket: FUZZY_SUGGESTION (UX-04, MATCH-01)
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenFuzzyCandidate_whenPreview_thenSuggestedMatchAwaitsUserOptIn() throws IOException {
@@ -372,9 +360,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.newDrivers()).isEmpty();
     }
 
-    // ---------------------------------------------------------------------------
     // 7. Bucket: UNCHANGED (UX-05)
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenExistingSeasonDriverSameTeam_whenPreview_thenCategorisedAsUnchanged() throws IOException {
@@ -402,9 +388,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.conflicts()).isEmpty();
     }
 
-    // ---------------------------------------------------------------------------
     // 8. ERROR buckets (UX-06, DATA-02)
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenBlankPsnId_whenPreview_thenRowErroredWithBlankPsn() throws IOException {
@@ -497,9 +481,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.errors().get(0).teamCode()).isEqualTo("CRL");
     }
 
-    // ---------------------------------------------------------------------------
     // 9. MATCH-01: case-insensitive matching delegates to DriverMatchingService
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenExistingPsnIdDifferentCase_whenPreview_thenResolvedViaCaseInsensitive() throws IOException {
@@ -523,9 +505,7 @@ class DriverSheetImportServiceTest {
         verify(driverMatchingService).findDriver("EXISTING_PSN");
     }
 
-    // ---------------------------------------------------------------------------
     // 10. MATCH-02: same PSN in multiple tabs → independent bucketing
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenSamePsnInMultipleTabs_whenPreview_thenEachTabCategorisedIndependently() throws IOException {
@@ -561,9 +541,7 @@ class DriverSheetImportServiceTest {
         verify(driverMatchingService, times(2)).findDriver("cross_psn");
     }
 
-    // ---------------------------------------------------------------------------
     // 11. legacy tab pattern with single season auto-resolution
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenLegacyFourDigitTab_whenPreview_thenSeasonResolvedViaFindUniqueByYear() throws IOException {
@@ -585,9 +563,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.ambiguousReason()).isNull();
     }
 
-    // ---------------------------------------------------------------------------
     // 12. Phase 59 new pattern 2025_S2 resolved via two-arg findUnique
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenNumberedTab_whenPreview_thenSeasonResolvedViaFindUniqueByYearAndNumber() throws IOException {
@@ -613,9 +589,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.ambiguousReason()).isNull();
     }
 
-    // ---------------------------------------------------------------------------
     // 13. ambiguous legacy tab surfaces BusinessRuleException as ambiguousReason
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenAmbiguousLegacyTab_whenPreview_thenSurfacesBusinessRuleMessage() throws IOException {
@@ -632,9 +606,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.ambiguousReason()).contains("Multiple seasons exist for year 2023");
     }
 
-    // ---------------------------------------------------------------------------
     // 14. ambiguous numbered tab surfaces BusinessRuleException
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenAmbiguousNumberedTab_whenPreview_thenSurfacesBusinessRuleMessage() throws IOException {
@@ -651,9 +623,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.ambiguousReason()).contains("Multiple seasons exist for (2023, 1)");
     }
 
-    // ---------------------------------------------------------------------------
     // 15. group resolution via PhaseTeam
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenTeamInGroupA_whenPreview_thenResolvedGroupNameSet() throws IOException {
@@ -682,9 +652,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.warnings()).isEmpty();
     }
 
-    // ---------------------------------------------------------------------------
     // 16. warning emitted when team has no PhaseTeam
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenTeamMissingFromRegularPhase_whenPreview_thenWarningEmitted() throws IOException {
@@ -710,9 +678,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.warnings().get(0).message()).contains("AHR");
     }
 
-    // ---------------------------------------------------------------------------
     // 17. warning deduplicated per team across multiple rows
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenTwoRowsSameMissingTeam_whenPreview_thenSingleWarningEmitted() throws IOException {
@@ -741,9 +707,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.newDrivers()).hasSize(2);
     }
 
-    // ---------------------------------------------------------------------------
     // 18. when REGULAR phase missing, no warnings emitted, resolvedGroupName stays null
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenNoRegularPhase_whenPreview_thenResolvedGroupNameIsNullAndNoWarnings() throws IOException {
@@ -763,9 +727,7 @@ class DriverSheetImportServiceTest {
         verifyNoInteractions(phaseTeamRepository);
     }
 
-    // ---------------------------------------------------------------------------
     // 19. Phase 66 / D-11 — multi-match collision: parent + sub-team share shortName
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenTeamsWithSameShortNameParentAndSub_whenPreview_thenResolvesParentTeam() throws IOException {
@@ -794,9 +756,7 @@ class DriverSheetImportServiceTest {
         assertThat(tab.errors()).isEmpty();
     }
 
-    // ---------------------------------------------------------------------------
     // 20. Phase 66 / D-12 — defensive: two parent teams with same shortName
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenTwoParentTeamsWithSameShortName_whenPreview_thenFirstWinsWithoutException() throws IOException {

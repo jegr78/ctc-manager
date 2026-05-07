@@ -35,7 +35,6 @@ class RaceServiceTest {
     @InjectMocks
     private RaceService service;
 
-    // --- getRaceListData ---
 
     @Test
     void givenMatchdayId_whenGetRaceListData_thenReturnsFilteredRaces() {
@@ -88,7 +87,6 @@ class RaceServiceTest {
         verify(raceRepository).findAll();
     }
 
-    // --- saveRace ---
 
     @Test
     void givenNewRaceData_whenSaveRace_thenCreatesMatchAndSaves() {
@@ -145,7 +143,6 @@ class RaceServiceTest {
         assertThat(result.message()).contains("Car is not in this season's pool");
     }
 
-    // --- saveResults ---
 
     @Test
     void givenResultData_whenSaveResults_thenCalculatesPointsAndAggregates() {
@@ -192,7 +189,6 @@ class RaceServiceTest {
         verify(driverRepository, never()).findById(any());
     }
 
-    // --- quickScore ---
 
     @Test
     void givenRace_whenQuickScore_thenMatchScoresUpdated() {
@@ -213,7 +209,6 @@ class RaceServiceTest {
         assertThat(race.getMatch().getAwayScore()).isEqualTo(38);
     }
 
-    // --- deleteRace ---
 
     @Test
     void givenExistingRace_whenDeleteRace_thenReturnsMatchdayId() {
@@ -243,7 +238,6 @@ class RaceServiceTest {
         verify(raceRepository).delete(race);
     }
 
-    // --- getRaceDetailData ---
 
     @Test
     void givenRaceWithResults_whenGetRaceDetailData_thenReturnsScoresAndFlags() {
@@ -326,7 +320,6 @@ class RaceServiceTest {
         assertThat(data.resultsExist()).isFalse();
     }
 
-    // --- getRaceDetailData settings flags ---
 
     @Test
     void givenRaceWithoutSettings_whenGetRaceDetailData_thenFlagsSettingsMissing() {
@@ -357,7 +350,6 @@ class RaceServiceTest {
         assertThat(data.settingsExist()).isFalse();
     }
 
-    // --- saveRace with settings ---
 
     @Test
     void givenRaceDataWithSettings_whenSaveRace_thenRaceSettingsCreated() {
@@ -390,7 +382,6 @@ class RaceServiceTest {
         assertThat(result.success()).isTrue();
     }
 
-    // --- saveRace edit ---
 
     @Test
     void givenExistingRace_whenSaveRace_thenUpdatesRaceWithoutCreatingMatch() {
@@ -420,7 +411,6 @@ class RaceServiceTest {
         verify(matchRepository, never()).save(any());
     }
 
-    // --- saveRace track not in pool ---
 
     @Test
     void givenTrackNotInSeasonPool_whenSaveRace_thenReturnsError() {
@@ -450,7 +440,6 @@ class RaceServiceTest {
         assertThat(result.message()).contains("Track is not in this season's pool");
     }
 
-    // --- Helper methods ---
 
     private Race createRaceWithScore(int homeScore, int awayScore) {
         var homeTeam = createTeam("HOM", "Home");

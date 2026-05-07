@@ -247,7 +247,6 @@ class PlayoffSeedingServiceTest {
 		}
 	}
 
-	// --- Helper methods ---
 
 	@Nested
 	class SaveSeed {
@@ -290,9 +289,7 @@ class PlayoffSeedingServiceTest {
 		}
 	}
 
-	// =========================================================================
-	// Phase 58-05: D-15 Top-N from REGULAR phase standings + D-20 PhaseTeam side-effect
-	// =========================================================================
+	// Top-N from REGULAR phase standings + PhaseTeam side-effect
 
 	@Nested
 	class AutoSeedFromRegularStandings {

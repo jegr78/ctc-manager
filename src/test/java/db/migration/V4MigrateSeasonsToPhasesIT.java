@@ -84,9 +84,7 @@ class V4MigrateSeasonsToPhasesIT {
                 .migrate();
     }
 
-    // -------------------------------------------------------------------------
     // Test methods (D-16 locked method names — do NOT rename or abbreviate)
-    // -------------------------------------------------------------------------
 
     @Test
     void givenLegacySeasons_whenMigrationRuns_thenEachSeasonHasOneRegularPhase() {
@@ -231,9 +229,7 @@ class V4MigrateSeasonsToPhasesIT {
                         org.springframework.jdbc.UncategorizedSQLException.class);
     }
 
-    // -------------------------------------------------------------------------
     // Seed helper (pre-V4 state per D-17)
-    // -------------------------------------------------------------------------
 
     private void seedLegacyData() {
         // Insert 1 race_scoring + 1 match_scoring (FK constraints on seasons)
@@ -336,10 +332,8 @@ class V4MigrateSeasonsToPhasesIT {
                 LocalDate.of(2025, 7, 1), LocalDate.of(2025, 8, 31), 60);
     }
 
-    // -------------------------------------------------------------------------
     // UUID helper — defensive conversion for queryForMap results
     // H2 returns java.util.UUID; MariaDB may return byte[] (Pitfall 1 in RESEARCH.md)
-    // -------------------------------------------------------------------------
 
     private static UUID toUUID(Object value) {
         if (value == null) return null;

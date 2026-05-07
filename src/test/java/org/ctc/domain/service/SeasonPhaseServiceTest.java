@@ -41,9 +41,7 @@ class SeasonPhaseServiceTest {
     @InjectMocks
     private SeasonPhaseService seasonPhaseService;
 
-    // ---------------------------------------------------------------------------
     // findRegularPhase
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenSeasonWithRegularPhase_whenFindRegularPhase_thenReturnsPhase() {
@@ -73,9 +71,7 @@ class SeasonPhaseServiceTest {
                 .isInstanceOf(EntityNotFoundException.class);
     }
 
-    // ---------------------------------------------------------------------------
     // findByType
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenSeasonWithPlayoffPhase_whenFindByTypePlayoff_thenReturnsOptionalOfPhase() {
@@ -107,9 +103,7 @@ class SeasonPhaseServiceTest {
         assertThat(result).isEmpty();
     }
 
-    // ---------------------------------------------------------------------------
     // findAllPhases
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenSeasonWithMultiplePhases_whenFindAllPhases_thenReturnsOrderedBySortIndex() {
@@ -128,9 +122,7 @@ class SeasonPhaseServiceTest {
         assertThat(result.get(0).getSortIndex()).isLessThanOrEqualTo(result.get(1).getSortIndex());
     }
 
-    // ---------------------------------------------------------------------------
     // create — duplicate guard
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenExistingRegularPhase_whenCreateRegular_thenThrowsBusinessRuleException() {
@@ -180,9 +172,7 @@ class SeasonPhaseServiceTest {
                 .hasMessageContaining("Season already has PLACEMENT phase");
     }
 
-    // ---------------------------------------------------------------------------
     // create — PhaseTeam auto-derivation
-    // ---------------------------------------------------------------------------
 
     @Test
     void givenSeasonWith3SeasonTeams_whenCreateRegularLeaguePhase_then3PhaseTeamsCreated() {
@@ -243,9 +233,7 @@ class SeasonPhaseServiceTest {
         verify(phaseTeamRepository, never()).save(any(PhaseTeam.class));
     }
 
-    // ---------------------------------------------------------------------------
-    // Phase 60: update / delete / updateGroup / deleteGroup / assignTeamsToPhase
-    // ---------------------------------------------------------------------------
+    // update / delete / updateGroup / deleteGroup / assignTeamsToPhase
 
     @Test
     void givenPhaseWithMatchdays_whenChangeLayout_thenThrowsBusinessRule() {
@@ -415,9 +403,7 @@ class SeasonPhaseServiceTest {
         assertThat(captor.getValue().getPhaseType()).isEqualTo(PhaseType.REGULAR);
     }
 
-    // ---------------------------------------------------------------------------
-    // Helpers (Phase 60 additions)
-    // ---------------------------------------------------------------------------
+    // Helpers
 
     @Mock
     private MatchdayRepository matchdayRepository;

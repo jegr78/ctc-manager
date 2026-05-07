@@ -81,7 +81,6 @@ class SeasonPhaseGroupRepositoryIT {
         assertThat(result).isEmpty();
     }
 
-    // --- helpers ---
 
     private Season newSeason(String name, int year, int number) {
         // scoring lives on the SeasonPhase, not the Season.

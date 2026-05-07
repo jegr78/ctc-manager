@@ -38,7 +38,6 @@ class MatchdayServiceTest {
     @InjectMocks
     private MatchdayService service;
 
-    // --- getMatchdayList ---
 
     @Test
     void givenSeasonId_whenGetMatchdayList_thenReturnsFilteredMatchdays() {
@@ -98,7 +97,6 @@ class MatchdayServiceTest {
         assertThat(result.selectedSeasonId()).isNull();
     }
 
-    // --- saveMatchday ---
 
     @Test
     void givenNewMatchday_whenSaveMatchday_thenCreatesMatchday() {
@@ -150,7 +148,6 @@ class MatchdayServiceTest {
         assertThat(result.getSeason()).isEqualTo(season);
     }
 
-    // --- deleteMatchday ---
 
     @Test
     void givenExistingMatchday_whenDeleteMatchday_thenReturnsSeasonId() {
@@ -174,7 +171,6 @@ class MatchdayServiceTest {
         verify(matchdayRepository).delete(matchday);
     }
 
-    // --- getMatchdaysBySeason ---
 
     @Test
     void givenSeasonWithMatchdays_whenGetMatchdaysBySeason_thenReturnsMatchdayDataList() {
@@ -203,7 +199,6 @@ class MatchdayServiceTest {
         assertThat(result.get(1).label()).isEqualTo("Round 2");
     }
 
-    // --- createInline ---
 
     @Test
     void givenExistingMatchdays_whenCreateInline_thenCalculatesNextSortIndex() {
@@ -329,7 +324,6 @@ class MatchdayServiceTest {
         assertThat(result.sortIndex()).isEqualTo(1);
     }
 
-    // --- getMatchdayDetail — graphic status fields ---
 
     @Nested
     class GetMatchdayDetailGraphicStatus {
@@ -483,7 +477,6 @@ class MatchdayServiceTest {
         }
     }
 
-    // --- phase-aware finders + @Deprecated bridge ---
 
     @Test
     void givenRegularAndPlayoffMatchdays_whenFindByPhaseId_thenSegmentedCorrectly() {

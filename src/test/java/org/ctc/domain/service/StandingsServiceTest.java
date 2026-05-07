@@ -562,9 +562,7 @@ class StandingsServiceTest {
                 .findFirst().orElseThrow();
     }
 
-    // -------------------------------------------------------------------------
-    // Phase 58: phase/group/Buchholz/bridge tests (SVC-02, D-01, D-04, D-05, D-06)
-    // -------------------------------------------------------------------------
+    // phase/group/Buchholz/bridge tests
 
     @Nested
     class PhaseAwareStandingsTest {
@@ -803,7 +801,6 @@ class StandingsServiceTest {
         }
     }
 
-    // ---- D-19 alltime cross-phase tests (TDD-RED for Plan 62-05) ----
 
     /**
      * D-19 TRACKED BEHAVIOR CHANGE: calculateAlltimeStandings must aggregate across ALL phases

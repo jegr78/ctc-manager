@@ -69,7 +69,7 @@ class SeasonPhaseControllerIT {
                 .andExpect(model().attributeExists("season"));
     }
 
-    // Phase 61 gap-10: phase edit form must render non-empty option labels for
+    // phase edit form must render non-empty option labels for
     // Phase Type, Layout, and Format dropdowns (Thymeleaf [enumKey] indexer
     // into Map<Enum, String> regression — labels rendered empty pre-fix).
     @Test

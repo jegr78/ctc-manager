@@ -191,7 +191,6 @@ class SiteGeneratorE2ETest {
         assertTrue(result.getPagesGenerated() > 0, "Site must generate at least one page");
     }
 
-    // --- Helper methods ---
 
     private boolean isInternal(String href) {
         return !href.isEmpty()
@@ -207,7 +206,6 @@ class SiteGeneratorE2ETest {
         return siteSlugger.slugify(input);
     }
 
-    // --- E2E-01: All internal links resolve ---
 
     @Test
     void whenSiteGenerated_thenAllInternalLinksResolve() throws IOException {
@@ -239,7 +237,6 @@ class SiteGeneratorE2ETest {
                 "Broken internal links found:\n" + String.join("\n", brokenLinks));
     }
 
-    // --- E2E-02: All pages have nav ---
 
     @Test
     void whenSiteGenerated_thenAllPagesHaveNav() throws IOException {
@@ -264,7 +261,6 @@ class SiteGeneratorE2ETest {
                 "Pages missing nav.nav:\n" + String.join("\n", violations));
     }
 
-    // --- E2E-02: All pages have footer ---
 
     @Test
     void whenSiteGenerated_thenAllPagesHaveFooter() throws IOException {
@@ -289,7 +285,6 @@ class SiteGeneratorE2ETest {
                 "Pages missing footer.footer:\n" + String.join("\n", violations));
     }
 
-    // --- E2E-03: No page has empty main content ---
 
     @Test
     void whenSiteGenerated_thenNoPageHasEmptyMainContent() throws IOException {
@@ -315,7 +310,6 @@ class SiteGeneratorE2ETest {
                 "Pages with empty #main-content:\n" + String.join("\n", violations));
     }
 
-    // --- E2E-04: Landing page tile links resolve ---
 
     @Test
     void whenSiteGenerated_thenLandingTilesResolve() throws IOException {
@@ -341,7 +335,6 @@ class SiteGeneratorE2ETest {
                 "Broken tile card links:\n" + String.join("\n", brokenTileLinks));
     }
 
-    // --- E2E-05: Links page has configured links ---
 
     @Test
     void whenSiteGenerated_thenLinksPageHasConfiguredLinks() throws IOException {
@@ -357,7 +350,6 @@ class SiteGeneratorE2ETest {
                 "Links page must contain Discord URL");
     }
 
-    // --- E2E-06: YouTube footer link on multiple page types ---
 
     @Test
     void whenSiteGenerated_thenFooterYouTubePresentOnAllPageTypes() throws IOException {
@@ -387,7 +379,6 @@ class SiteGeneratorE2ETest {
                 "Pages missing YouTube footer link:\n" + String.join("\n", missing));
     }
 
-    // --- D-17: Overview pages have season filter ---
 
     @Test
     void whenSiteGenerated_thenOverviewPagesHaveSeasonFilter() throws IOException {

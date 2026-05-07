@@ -78,7 +78,6 @@ class DriverSheetImportControllerTest {
         existingDriver = testHelper.createDriver("imp_existing_drv", "Imp Existing Driver");
     }
 
-    // --- Helper methods ---
 
     /**
      * Stubs GoogleSheetsService to return one year-tab with provided data rows.
@@ -117,7 +116,6 @@ class DriverSheetImportControllerTest {
         );
     }
 
-    // --- Test methods ---
 
     @Test
     void whenGetImportPage_thenShowsImportFormWithSeasonsAndSheetsAvailable() throws Exception {
@@ -496,7 +494,6 @@ class DriverSheetImportControllerTest {
                 .andExpect(content().string(containsString("/admin/drivers/import")));
     }
 
-    // --- Phase 60 UI-06: group column + raw tab-name display (D-37, D-39, D-40) ---
 
     @Test
     void given2025_S2Tab_whenPreview_thenTemplateRendersRawTabName() throws Exception {

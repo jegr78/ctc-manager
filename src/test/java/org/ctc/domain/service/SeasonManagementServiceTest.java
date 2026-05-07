@@ -421,7 +421,6 @@ class SeasonManagementServiceTest {
         }
     }
 
-    // --- Season CRUD tests ---
 
     @Test
     void whenFindAll_thenReturnsAllSeasons() {
@@ -522,7 +521,6 @@ class SeasonManagementServiceTest {
         assertThat(result.allMatchScorings()).hasSize(1);
     }
 
-    // --- Phase 60 UI-01: slim 6-param save (D-25/D-26 Auto-Sync removal) ---
 
     @Test
     void givenSlimForm_whenSave_thenSeasonPersisted() {
@@ -836,7 +834,6 @@ class SeasonManagementServiceTest {
         }
     }
 
-    // --- strict delete-guard (BEHAVIOR CHANGE) ---
 
     @Test
     void givenSeasonWithActiveMatchdays_whenDelete_thenThrowsBusinessRuleException() {
@@ -900,7 +897,6 @@ class SeasonManagementServiceTest {
         verify(seasonRepository).delete(season);
     }
 
-    // --- Phase 60: verify slim save does NOT touch REGULAR phase scoring/format (D-25 Auto-Sync removed) ---
 
     @Test
     void givenNewSeasonSave_whenSlimSave_thenRegularPhaseBootstrappedWithNullFormat() {
@@ -951,7 +947,6 @@ class SeasonManagementServiceTest {
         assertThat(regular.getTotalRounds()).isEqualTo(7);
     }
 
-    // --- / D-18: findUnique service-wrapper ---
 
     @Test
     void givenNoSeason_whenFindUniqueByYearAndNumber_thenReturnsEmpty() {

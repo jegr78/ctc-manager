@@ -36,7 +36,6 @@ class RaceGraphicServiceTest {
 	@InjectMocks
 	private RaceGraphicService service;
 
-	// --- generateResults ---
 
 	@Test
 	void givenRace_whenGenerateResults_thenCreatesAttachment() throws Exception {
@@ -82,7 +81,6 @@ class RaceGraphicServiceTest {
 				.hasMessageContaining("Playwright failed");
 	}
 
-	// --- generateSettings ---
 
 	@Test
 	void givenRace_whenGenerateSettings_thenCreatesAttachment() throws Exception {
@@ -128,7 +126,6 @@ class RaceGraphicServiceTest {
 				.hasMessageContaining("Playwright failed");
 	}
 
-	// --- generateLineup ---
 
 	@Test
 	void givenRace_whenGenerateLineup_thenCreatesAttachment() throws Exception {
@@ -159,7 +156,6 @@ class RaceGraphicServiceTest {
 						&& att.getType() == AttachmentType.FILE));
 	}
 
-	// --- Helper methods ---
 
 	private Team createTeam(String shortName, String name) {
 		var team = new Team(name, shortName);

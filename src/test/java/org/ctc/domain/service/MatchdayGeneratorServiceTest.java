@@ -352,10 +352,8 @@ class MatchdayGeneratorServiceTest {
 		}
 	}
 
-	// =========================================================================
 	// Phase/group-aware tests (D-16, SVC-04) — TDD-RED: new canonical
 	// generate(UUID phaseId, UUID groupId, ...) signature does not exist yet
-	// =========================================================================
 
 	@Test
 	void givenLeaguePhaseAndGroupId_whenGenerate_thenThrowsIllegalArgument() {
@@ -440,9 +438,7 @@ class MatchdayGeneratorServiceTest {
 		}
 	}
 
-	// =========================================================================
 	// Helper factories for phase-aware tests
-	// =========================================================================
 
 	/**
 	 * Creates a fresh test season (separate from the setUp season to avoid
@@ -487,10 +483,8 @@ class MatchdayGeneratorServiceTest {
 		return teams;
 	}
 
-	// =========================================================================
 	// Existing legacy helpers (updated to also populate PhaseTeam for the
 	// regularPhase so the canonical generate(phaseId, null, ...) finds teams)
-	// =========================================================================
 
 	private List<Team> addTeams(int count) {
 		var teams = new ArrayList<Team>();

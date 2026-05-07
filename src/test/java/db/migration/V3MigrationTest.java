@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Surefire-side regression guard for V3__add_season_phase_tables.sql.
  *
- * <p>Asserts via INFORMATION_SCHEMA that the additive Phase 56 migration ran
+ * <p>Asserts via INFORMATION_SCHEMA that the additive V3 migration ran
  * successfully: the three new tables exist with their required columns, the
  * nullable {@code phase_id} and {@code group_id} FK columns were added to
  * existing tables, the three UNIQUE constraints are present, and the ten
@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * <p>Class suffix is {@code Test} (Surefire) — runs in the standard
  * {@code ./mvnw verify} gate, not the {@code -Pe2e} Failsafe profile.
- * Modelled on V5MigrationTest / V6MigrationTest (Phase 61 pattern).
+ * Modelled on V5MigrationTest / V6MigrationTest.
  */
 @SpringBootTest(classes = CtcManagerApplication.class)
 @ActiveProfiles("dev")
@@ -28,9 +28,7 @@ class V3MigrationTest {
 
     @Autowired private JdbcTemplate jdbcTemplate;
 
-    // -------------------------------------------------------------------------
     // REQ MIGR-01: V3 creates the three new tables
-    // -------------------------------------------------------------------------
 
     @Test
     void givenV3HasRun_whenQueryInformationSchema_thenSeasonPhasesTableExists() {
@@ -68,11 +66,9 @@ class V3MigrationTest {
                 .isEqualTo(1);
     }
 
-    // -------------------------------------------------------------------------
     // REQ MODEL-02 / D-03: UNIQUE (season_id, phase_type) on season_phases
     // REQ MODEL-04 / D-03: UNIQUE (phase_id, team_id) on phase_teams
     // REQ MODEL-06 / D-02: UNIQUE (phase_id) on playoffs
-    // -------------------------------------------------------------------------
 
     @Test
     void givenV3HasRun_whenQueryInformationSchema_thenUniqueConstraintsExist() {
@@ -90,10 +86,8 @@ class V3MigrationTest {
         }
     }
 
-    // -------------------------------------------------------------------------
     // REQ MODEL-05 / D-02: matchdays.phase_id and matchdays.group_id are nullable
     // REQ MODEL-06 / D-02: playoffs.phase_id is nullable
-    // -------------------------------------------------------------------------
 
     @Test
     void givenV3HasRun_whenQueryInformationSchema_thenMatchdaysNewColumnsAreNullable() {
@@ -125,10 +119,8 @@ class V3MigrationTest {
                 .isEqualTo("YES");
     }
 
-    // -------------------------------------------------------------------------
     // REQ MODEL-01 / MIGR-01: season_phases carries required columns
     // (phase_type, layout, format, label — key structural columns for the entity contract)
-    // -------------------------------------------------------------------------
 
     @Test
     void givenV3HasRun_whenQueryInformationSchema_thenSeasonPhasesHasRequiredColumns() {
@@ -147,11 +139,9 @@ class V3MigrationTest {
         }
     }
 
-    // -------------------------------------------------------------------------
     // REQ MIGR-07: V1 and V2 are untouched — verified structurally by checking
     // that original V1 tables still have their expected primary structure
     // (seasons, matchdays, teams, race_scorings, match_scorings all exist)
-    // -------------------------------------------------------------------------
 
     @Test
     void givenV3HasRun_whenQueryInformationSchema_thenOriginalV1TablesAreUntouched() {

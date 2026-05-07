@@ -234,10 +234,8 @@ class SwissPairingServiceTest {
 		}
 	}
 
-	// =========================================================================
 	// Phase/group-aware tests (D-17, D-21, SVC-04) — TDD-RED: new canonical
 	// signatures (UUID phaseId, UUID groupId) do not exist yet
-	// =========================================================================
 
 	@Test
 	void givenSwissLeaguePhase_whenGenerateNextRound_thenPairingsCreated() {
@@ -348,9 +346,7 @@ class SwissPairingServiceTest {
 				.hasMessageContaining("GROUPS");
 	}
 
-	// =========================================================================
 	// Helper factories for phase-aware tests
-	// =========================================================================
 
 	/**
 	 * Creates a fresh test season (separate from the setUp season to avoid
@@ -405,10 +401,8 @@ class SwissPairingServiceTest {
 		return teams;
 	}
 
-	// =========================================================================
 	// Existing legacy helpers (updated to also populate PhaseTeam for the
 	// regularPhase so the canonical generateNextRound(phaseId, null) finds teams)
-	// =========================================================================
 
 	private void addTeams(int count) {
 		for (int i = 0; i < count; i++) {

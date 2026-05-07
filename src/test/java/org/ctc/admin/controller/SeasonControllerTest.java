@@ -62,7 +62,6 @@ class SeasonControllerTest {
 				.andExpect(model().attributeExists("seasonForm"));
 	}
 
-	// --- Phase 60 UI-01: slim Season form (D-25/D-26) ---
 
 	@Test
 	void givenSlimForm_whenSaveSeason_thenRedirectsAndSeasonPersistedWithoutScoringFields() throws Exception {
@@ -174,7 +173,6 @@ class SeasonControllerTest {
 		assertEquals("Updated Season Name", updated.getName());
 	}
 
-	// --- POST /admin/seasons/{id}/remove-team ---
 
 	@Test
 	void givenSeasonWithTeam_whenRemoveTeamFromSeason_thenRedirectsWithSuccess() throws Exception {
@@ -193,7 +191,6 @@ class SeasonControllerTest {
 				.andExpect(flash().attributeExists("successMessage"));
 	}
 
-	// --- POST /admin/seasons/{id}/cars/add + remove ---
 
 	@Test
 	void givenSeasonAndCar_whenAddCarsToSeason_thenRedirectsWithSuccess() throws Exception {
@@ -227,7 +224,6 @@ class SeasonControllerTest {
 				.andExpect(flash().attributeExists("successMessage"));
 	}
 
-	// --- POST /admin/seasons/{id}/tracks/add + remove ---
 
 	@Test
 	void givenSeasonAndTrack_whenAddTracksToSeason_thenRedirectsWithSuccess() throws Exception {
@@ -261,7 +257,6 @@ class SeasonControllerTest {
 				.andExpect(flash().attributeExists("successMessage"));
 	}
 
-	// --- POST /admin/seasons/{id}/replace-team ---
 
 	@Test
 	void givenValidTeams_whenReplaceTeam_thenRedirectsWithSuccess() throws Exception {
@@ -289,7 +284,6 @@ class SeasonControllerTest {
 		assertTrue(stOld.isReplaced());
 	}
 
-	// --- GET /admin/seasons/{id}/swiss ---
 
 	@Test
 	void givenSwissSeason_whenGetSwissRoundsPage_thenReturnsSwissView() throws Exception {

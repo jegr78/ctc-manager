@@ -58,7 +58,6 @@ class CarControllerTest {
 		car = carRepository.save(new Car("Mazda", "RX-Vision GT3 Concept"));
 	}
 
-	// --- GET /admin/cars ---
 
 	@Test
 	void whenGetCars_thenReturnsCarsView() throws Exception {
@@ -70,7 +69,6 @@ class CarControllerTest {
 				.andExpect(model().attributeExists("cars"));
 	}
 
-	// --- GET /admin/cars/new ---
 
 	@Test
 	void whenGetNewCarForm_thenReturnsCarForm() throws Exception {
@@ -82,7 +80,6 @@ class CarControllerTest {
 				.andExpect(model().attributeExists("carForm"));
 	}
 
-	// --- GET /admin/cars/{id}/edit ---
 
 	@Test
 	void givenExistingCar_whenGetEditForm_thenReturnsCarForm() throws Exception {
@@ -94,7 +91,6 @@ class CarControllerTest {
 				.andExpect(model().attributeExists("carForm"));
 	}
 
-	// --- POST /admin/cars/save ---
 
 	@Test
 	void givenValidCarForm_whenSaveNewCar_thenRedirectsAndPersists() throws Exception {
@@ -137,7 +133,6 @@ class CarControllerTest {
 				.andExpect(view().name("admin/car-form"));
 	}
 
-	// --- POST /admin/cars/{id}/delete ---
 
 	@Test
 	void givenUnreferencedCar_whenDeleteCar_thenRedirectsAndRemoves() throws Exception {
@@ -185,7 +180,6 @@ class CarControllerTest {
 		assertTrue(carRepository.findById(car.getId()).isPresent());
 	}
 
-	// --- POST /admin/cars/{id}/image ---
 
 	@Test
 	void givenImageFile_whenUploadCarImage_thenRedirectsAndSetsImageUrl() throws Exception {

@@ -197,7 +197,6 @@ class SeasonPhaseEntityIntegrationTest {
 		assertThat(reloaded.getSeason().getId()).isEqualTo(season.getId());
 	}
 
-	// --- helpers -----------------------------------------------------------
 
 	private Season newSeason(String name, int year, int number) {
 		// scoring lives on the SeasonPhase, not the Season.

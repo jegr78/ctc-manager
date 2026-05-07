@@ -286,7 +286,6 @@ class DriverRankingServiceTest {
 		assertEquals(clr, rankings.get(0).getTeam());
 	}
 
-	// ---- /D-08/D-09/D-10 new tests ----
 
 	@Test
 	void givenRegularPhase_whenCalculateRankingForPhase_thenAggregatesViaMatchdayPhaseId() {
@@ -525,7 +524,6 @@ class DriverRankingServiceTest {
 		assertThat(panicRanking.getRacesCount()).isEqualTo(2);
 	}
 
-	// ---- D-19 alltime cross-phase tests (TDD-RED for Plan 62-05) ----
 
 	/**
 	 * D-19 TRACKED BEHAVIOR CHANGE: calculateAlltimeRanking(seasonIds) must include

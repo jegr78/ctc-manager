@@ -161,9 +161,7 @@ class DriverSheetImportServiceTransactionIT {
                 .startsWith("Multiple seasons exist for year " + FRESH_YEAR);
     }
 
-    // ---------------------------------------------------------------
     // Helpers
-    // ---------------------------------------------------------------
 
     private UUID persistFreshSeason(String name, int year, int number,
                                     RaceScoring raceScoring, MatchScoring matchScoring) {

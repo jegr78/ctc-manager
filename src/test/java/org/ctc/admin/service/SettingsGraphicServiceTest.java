@@ -94,7 +94,6 @@ class SettingsGraphicServiceTest {
 		verify(standingsService).calculateStandings(eq(phaseId), eq(groupId));
 	}
 
-	// --- helpers ---
 
 	private Race createReadyRace(boolean groupAttached) throws IOException {
 		var season = new Season("S", 2026, 1); season.setId(UUID.randomUUID());

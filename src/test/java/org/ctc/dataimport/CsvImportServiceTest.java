@@ -404,7 +404,6 @@ class CsvImportServiceTest {
 		assertThat(preview.getRows()).isEmpty();
 	}
 
-	// --- checkDuplicate ---
 
 	@Test
 	void givenExistingMatch_whenCheckDuplicate_thenReturnsTrue() {
@@ -473,7 +472,6 @@ class CsvImportServiceTest {
 		assertThat(isDuplicate).isFalse();
 	}
 
-	// --- getPlayoffMatchups ---
 
 	@Test
 	void whenGetPlayoffMatchups_thenReturnsReadyMatchups() {
@@ -508,7 +506,6 @@ class CsvImportServiceTest {
 		assertThat(matchups.getFirst().roundLabel()).isEqualTo("Quarterfinal");
 	}
 
-	// --- parseAndPreview edge cases ---
 
 	@Test
 	void givenCsvWithInvalidPosition_whenParseAndPreview_thenAddsError() throws Exception {
@@ -544,7 +541,6 @@ class CsvImportServiceTest {
 		assertThat(preview.hasErrors()).isFalse();
 	}
 
-	// --- getMatchdayLabel ---
 
 	@Test
 	void givenExistingMatchday_whenGetMatchdayLabel_thenReturnsLabel() {
@@ -572,7 +568,6 @@ class CsvImportServiceTest {
 		assertThat(label).isEmpty();
 	}
 
-	// --- resolveDriver edge case: unconfirmed fuzzy match ---
 
 	@Test
 	void givenUnconfirmedFuzzyMatch_whenExecuteImport_thenAddsError() {
@@ -602,7 +597,6 @@ class CsvImportServiceTest {
 		assertThat(result.getErrors().getFirst()).contains("could not be assigned");
 	}
 
-	// --- Multi-race import tests ---
 
 	@Test
 	void givenMultipleRacePreviewsForSameTeamPair_whenExecuteMultiRaceImport_thenCreatesOneMatchWithMultipleRaces() {
@@ -846,7 +840,6 @@ class CsvImportServiceTest {
 		assertThat(result.hasErrors()).isFalse();
 	}
 
-	// --- Coverage Tests: Uncovered Code Paths ---
 
 	@Test
 	void givenPreviewWithEmptyRowsList_whenExecuteMultiRaceImport_thenAddsError() {

@@ -396,7 +396,6 @@ class SiteGeneratorServiceTest {
                 + doc.select("a[href*='season/']").stream().map(e -> e.attr("href")).toList());
     }
 
-    // --- ALLTIME-03, ALLTIME-04: Nav links point to alltime pages ---
 
     @Test
     void whenGenerate_thenNavLinksToAlltimePages() throws IOException {
@@ -472,7 +471,6 @@ class SiteGeneratorServiceTest {
                 "Logo src should contain img/logos/ path but was: " + imgSrc);
     }
 
-    // --- CONT-01: Season year/number display ---
 
     @Test
     void givenSeason_whenGenerate_thenHeroContainsCommunityTeamCupTitle() throws IOException {
@@ -620,7 +618,6 @@ class SiteGeneratorServiceTest {
                 "alias section should not render when driver has no aliases");
     }
 
-    // --- Season references must always include year + number + name (displayLabel) ---
 
     @Test
     void givenSeason_whenGenerate_thenDriverProfileRaceHistoryHeadingContainsSeasonLabel() throws IOException {
@@ -719,7 +716,6 @@ class SiteGeneratorServiceTest {
         }
     }
 
-    // --- CONT-06: Test season filtering ---
 
     @Test
     void givenTestSeason_whenGenerate_thenNoSeasonPagesCreated() {
@@ -754,7 +750,6 @@ class SiteGeneratorServiceTest {
                 "Test season should not appear in archive");
     }
 
-    // --- CONT-07: Empty match-meta and period column ---
 
     @Test
     void givenRaceWithNoTrackOrCar_whenGenerate_thenMatchMetaAbsent() throws IOException {
@@ -811,7 +806,6 @@ class SiteGeneratorServiceTest {
         }
     }
 
-    // --- CONT-02, CONT-03, CONT-04, CONT-08: Entity cross-links ---
 
     @Test
     void givenTeamInStandings_whenGenerate_thenTeamNameLinksToTeamProfile() throws IOException {
@@ -873,7 +867,6 @@ class SiteGeneratorServiceTest {
     // Removed: givenActiveSeason_whenGenerate_thenIndexStandingsTeamNamesLinkToTeamProfiles (Phase 48: D-14 — standings table removed from index)
     // Removed: givenActiveSeason_whenGenerate_thenIndexDoesNotRenderMatchResults (Phase 48: D-15 — replaced by whenGenerate_thenIndexHasNoMatchGrid)
 
-    // --- CONT-05: Season subnav, matchday index page ---
 
     @Test
     void givenSeason_whenGenerate_thenStandingsHasSubnav() throws IOException {
@@ -913,7 +906,6 @@ class SiteGeneratorServiceTest {
                 "Subnav should contain a link to matchdays.html");
     }
 
-    // --- UX-02: Active nav state ---
 
     @Test
     void givenStandingsPage_whenGenerate_thenStandingsNavItemActive() throws IOException {
@@ -928,7 +920,6 @@ class SiteGeneratorServiceTest {
         assertEquals("Standings", activeLinks.first().text());
     }
 
-    // --- UX-03: Breadcrumbs ---
 
     @Test
     void givenSeason_whenGenerate_thenStandingsHasBreadcrumb() throws IOException {
@@ -971,7 +962,6 @@ class SiteGeneratorServiceTest {
                 "Archive page should have no breadcrumb");
     }
 
-    // --- UX-01: Skip-link ---
 
     @Test
     void givenLayout_whenGenerate_thenSkipLinkIsFirstBodyChild() throws IOException {
@@ -988,7 +978,6 @@ class SiteGeneratorServiceTest {
         assertTrue(firstBodyChild.hasClass("skip-link"), "Skip-link should have class 'skip-link'");
     }
 
-    // --- UX-04: Winner highlight ---
 
     @Test
     void givenRaceWithResults_whenGenerate_thenMatchdayShowsWinnerHighlight() throws IOException {
@@ -1012,7 +1001,6 @@ class SiteGeneratorServiceTest {
         assertFalse(winners.isEmpty(), "Matchday should show at least one winner highlight when race has results");
     }
 
-    // --- UX-06: Footer links ---
 
     @Test
     void givenActiveSeason_whenGenerate_thenFooterContainsUsefulLinks() throws IOException {
@@ -1030,7 +1018,6 @@ class SiteGeneratorServiceTest {
                 "Footer should have an Archive link");
     }
 
-    // --- LINK-05, LINK-06: Footer YouTube link ---
 
     @Test
     void givenLayout_whenGenerate_thenFooterContainsYouTubeLink() throws IOException {
@@ -1062,7 +1049,6 @@ class SiteGeneratorServiceTest {
         assertEquals("YouTube", youtubeLink.text(), "YouTube link text must be 'YouTube'");
     }
 
-    // --- UX-07: Nav toggle aria-label ---
 
     @Test
     void givenLayout_whenGenerate_thenNavToggleLabelHasAriaLabel() throws IOException {
@@ -1086,7 +1072,6 @@ class SiteGeneratorServiceTest {
                 "Nav toggle input should NOT have aria-label");
     }
 
-    // --- Phase 42: Navigation Gap Closure ---
 
     // UX-02: Top-nav active state for index and archive pages
 
@@ -1149,7 +1134,6 @@ class SiteGeneratorServiceTest {
                 "Season with playoff should show Playoff link in subnav");
     }
 
-    // --- Phase 44: Clean Output Directory ---
 
     // CLEAN-01: Stale file removal
 
@@ -1199,7 +1183,6 @@ class SiteGeneratorServiceTest {
         assertTrue(Files.exists(freshDir.resolve("index.html")));
     }
 
-    // --- Phase 46: Configurable Links Page ---
 
     // LINK-07: links.html page exists
 
@@ -1268,7 +1251,6 @@ class SiteGeneratorServiceTest {
         assertNotNull(doc.selectFirst(".breadcrumb"), "Links page must have breadcrumbs");
     }
 
-    // --- Phase 47: Teams & Drivers Overview Pages ---
 
     // OVER-01: teams.html exists
 
@@ -1424,7 +1406,6 @@ class SiteGeneratorServiceTest {
         }
     }
 
-    // --- Phase 48: Landing Page Redesign ---
 
     // LAND-01/YT-01: Index page has YouTube iFrame Player API setup
     @Test
@@ -1504,7 +1485,6 @@ class SiteGeneratorServiceTest {
                 "Index (home) page should not highlight any top-nav item");
     }
 
-    // --- Phase 50: OVER-06 guard — 0-game team broken link prevention ---
 
     @Test
     void givenTeamWithZeroGames_whenGenerate_thenTeamsOverviewDoesNotLinkToMissingProfile() throws IOException {
@@ -1535,7 +1515,6 @@ class SiteGeneratorServiceTest {
                 + brokenLinks.stream().map(e -> e.attr("href")).toList());
     }
 
-    // --- ALLTIME-01, ALLTIME-05: Alltime standings page ---
 
     @Test
     void whenGenerate_thenAlltimeStandingsPageExists() throws IOException {
@@ -1554,7 +1533,6 @@ class SiteGeneratorServiceTest {
                 "Alltime standings should contain team names from test data");
     }
 
-    // --- ALLTIME-02, ALLTIME-05: Alltime driver ranking page ---
 
     @Test
     void whenGenerate_thenAlltimeDriverRankingPageExists() throws IOException {
@@ -1619,7 +1597,6 @@ class SiteGeneratorServiceTest {
                 "Alltime driver ranking should not contain Test season driver");
     }
 
-    // --- Alltime entity cross-links (consistent with season pages) ---
 
     @Test
     void whenGenerate_thenAlltimeStandingsHasEntityLinks() throws IOException {

@@ -60,9 +60,7 @@ class DriverSheetImportServiceIT {
     @Autowired private SeasonDriverRepository seasonDriverRepository;
     @Autowired private org.ctc.domain.repository.DriverRepository driverRepository;
 
-    // ---------------------------------------------------------------------
     // Helpers
-    // ---------------------------------------------------------------------
 
     /**
      * Stubs GoogleSheetsService to return the given tabs and rows.
@@ -107,9 +105,7 @@ class DriverSheetImportServiceIT {
                         "REGULAR phase not found for season " + season.getName()));
     }
 
-    // ---------------------------------------------------------------------
     // 1. Tab pattern — legacy ^\d{4}$ resolves single-season-per-year (D-01 + D-04)
-    // ---------------------------------------------------------------------
 
     @Test
     void givenLegacyYearTab_whenPreview_thenSeasonAutoResolvedToUniqueYearSeason() throws IOException {
@@ -138,9 +134,7 @@ class DriverSheetImportServiceIT {
         assertThat(tab.ambiguousReason()).isNull();
     }
 
-    // ---------------------------------------------------------------------
     // 2. Tab pattern — new ^\d{4}_S\d+$ resolves via findUnique(year, number) (D-01 + D-02)
-    // ---------------------------------------------------------------------
 
     @Test
     void givenYearAndNumberTab_whenPreview_thenSeasonResolvedViaFindUniqueByNumber() throws IOException {
@@ -161,9 +155,7 @@ class DriverSheetImportServiceIT {
         assertThat(tab.ambiguousReason()).isNull();
     }
 
-    // ---------------------------------------------------------------------
     // 3. Tab pattern — legacy form with multiple seasons in year (ambiguous, D-03 + D-18)
-    // ---------------------------------------------------------------------
 
     @Test
     void givenLegacyTabWithMultipleSeasons_whenPreview_thenAmbiguousReasonStartsWithMultipleSeasons() throws IOException {
@@ -190,9 +182,7 @@ class DriverSheetImportServiceIT {
         assertThat(tab.ambiguousReason()).startsWith("Multiple seasons exist for year 2024");
     }
 
-    // ---------------------------------------------------------------------
     // 4. Group resolution — driver in roster of Group A
-    // ---------------------------------------------------------------------
 
     @Test
     void givenDriverInGroupATeam_whenPreview_thenResolvedGroupNameIsGroupA() throws IOException {
@@ -214,9 +204,7 @@ class DriverSheetImportServiceIT {
         assertThat(row.resolvedGroupName()).isEqualTo("Group A");
     }
 
-    // ---------------------------------------------------------------------
     // 5. Group resolution — driver in roster of Group B
-    // ---------------------------------------------------------------------
 
     @Test
     void givenDriverInGroupBTeam_whenPreview_thenResolvedGroupNameIsGroupB() throws IOException {
@@ -237,9 +225,7 @@ class DriverSheetImportServiceIT {
         assertThat(row.resolvedGroupName()).isEqualTo("Group B");
     }
 
-    // ---------------------------------------------------------------------
     // 6. TabWarning — team not in REGULAR PhaseTeam roster, deduplicated per team
-    // ---------------------------------------------------------------------
 
     @Test
     void givenTeamNotInRegularPhase_whenPreview_thenSingleTabWarningEmittedAndDeduplicated() throws IOException {
@@ -271,9 +257,7 @@ class DriverSheetImportServiceIT {
         assertThat(tab.newDrivers()).allMatch(r -> r.resolvedGroupName() == null);
     }
 
-    // ---------------------------------------------------------------------
     // 7. Execute writes only SeasonDriver, NEVER PhaseTeam (D-07 + D-16)
-    // ---------------------------------------------------------------------
 
     @Test
     void givenNewDriverRowOnConsolidated2023_whenExecute_thenOnlySeasonDriverIsWritten() throws IOException {
@@ -310,9 +294,7 @@ class DriverSheetImportServiceIT {
         assertThat(phaseTeamCountAfter).isEqualTo(phaseTeamCountBefore);
     }
 
-    // ---------------------------------------------------------------------
     // 8. Execute against team without PhaseTeam — SeasonDriver written, PhaseTeam still untouched
-    // ---------------------------------------------------------------------
 
     @Test
     void givenTeamWithoutPhaseTeam_whenExecute_thenSeasonDriverWrittenAndPhaseTeamUnchanged() throws IOException {

@@ -28,7 +28,6 @@ class RaceFormDataServiceTest {
     @InjectMocks
     private RaceFormDataService service;
 
-    // --- getNewRaceFormData ---
 
     @Test
     void givenMatchdayId_whenGetNewRaceFormData_thenReturnsPopulatedFormDataWithSeasonPools() {
@@ -84,7 +83,6 @@ class RaceFormDataServiceTest {
         assertThat(result.usedTrackIds()).isEmpty();
     }
 
-    // --- getRaceFormData ---
 
     @Test
     void givenExistingRace_whenGetRaceFormData_thenReturnsPrePopulatedFormData() {
@@ -121,7 +119,6 @@ class RaceFormDataServiceTest {
         assertThat(result.teams()).hasSize(2);
     }
 
-    // --- getResultsFormData ---
 
     @Test
     void givenRaceWithLineupAndNoResults_whenGetResultsFormData_thenReturnsResultsFormDataWithDriversFromLineup() {
@@ -201,7 +198,6 @@ class RaceFormDataServiceTest {
         verify(raceLineupRepository, never()).findByRaceId(any());
     }
 
-    // --- Bye race null safety ---
 
     @Test
     void givenByeRaceWithNullHomeTeam_whenGetRaceFormData_thenReturnsFormDataWithEmptyUsedSets() {
@@ -271,7 +267,6 @@ class RaceFormDataServiceTest {
         assertThat(result.data().results()).isEmpty();
     }
 
-    // --- Helper ---
 
     private Team createTeam(String shortName, String name) {
         var team = new Team(name, shortName);

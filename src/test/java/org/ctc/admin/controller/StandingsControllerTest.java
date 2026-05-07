@@ -165,7 +165,6 @@ class StandingsControllerTest {
 				.andExpect(model().attribute("seasons", hasSize(greaterThanOrEqualTo(2))));
 	}
 
-	// --- Phase 60 UI-05: phase-scoped standings (D-12, D-30, D-31, D-32, D-33) ---
 
 	@Test
 	void givenLegacySeasonParam_whenGetStandings_thenResolvesToRegularPhase() throws Exception {

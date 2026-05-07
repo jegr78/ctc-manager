@@ -197,7 +197,6 @@ class GoogleSheetsServiceTest {
 			assertEquals("Matchday 1", raceSheets.get(0));
 		}
 
-		// --- Coverage Tests: Additional edge cases ---
 
 		@Test
 		void givenEmptySheetNames_whenFilterRaceSheets_thenReturnsEmpty() {

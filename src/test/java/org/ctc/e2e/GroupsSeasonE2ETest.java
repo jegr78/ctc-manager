@@ -118,9 +118,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 
 	@Test
 	void givenGroupsLayout_whenFullSeasonWorkflow_thenStandingsCorrect() {
-		// ============================================================================
 		// STEP 1 — UI: create "Test-GROUPS Season 2099" via slim season form
-		// ============================================================================
 		page.navigate(url("/admin/seasons/new"));
 		page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Name").setExact(true))
 				.fill("Test-GROUPS Season 2099");
@@ -139,12 +137,10 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		var regularPhase = seasonPhaseRepository.findBySeasonIdAndPhaseType(
 				season.getId(), PhaseType.REGULAR).orElseThrow();
 
-		// ============================================================================
 		// STEP 2 — UI: flip REGULAR phase to GROUPS layout via phase-edit form.
 		// The phase-edit form requires legs (>=1), format, and uses path
 		// /admin/seasons/{seasonId}/phases/{phaseId}/edit (path canonicalised).
 		// Race + match scoring also wired here so race-result entry (STEP 7) can compute points.
-		// ============================================================================
 		var raceScoring = raceScoringRepository.findAll().stream()
 				.filter(rs -> "CTC Standard".equals(rs.getName())).findFirst().orElseThrow();
 		var matchScoring = matchScoringRepository.findAll().stream()
@@ -159,10 +155,8 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Save Phase")).click();
 		assertThat(page.locator(".alert-success")).containsText("Phase updated");
 
-		// ============================================================================
 		// STEP 3 — UI: create 2 groups (Group A + Group B) for the GROUPS-layout phase.
 		// Endpoint POST /admin/seasons/{sid}/phases/{pid}/groups/save (form)
-		// ============================================================================
 		for (String groupName : List.of("Group A", "Group B")) {
 			page.navigate(url("/admin/seasons/" + season.getId()
 					+ "/phases/" + regularPhase.getId() + "/groups/new"));
@@ -178,9 +172,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		var groupA = groupsList.get(0);
 		var groupB = groupsList.get(1);
 
-		// ============================================================================
 		// STEP 4 — UI: create 4 teams (T-GA-1, T-GA-2, T-GB-1, T-GB-2)
-		// ============================================================================
 		for (String shortName : List.of("T-GA-1", "T-GA-2", "T-GB-1", "T-GB-2")) {
 			page.navigate(url("/admin/teams/new"));
 			page.getByRole(AriaRole.TEXTBOX, new Page.GetByRoleOptions().setName("Name").setExact(true))
@@ -241,10 +233,8 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 				phaseTeams.stream().allMatch(pt -> pt.getGroup() != null),
 				"All 4 PhaseTeam rows must have a non-null group_id (GROUPS layout)");
 
-		// ============================================================================
 		// STEP 5 — UI: driver-import preview + execute via stubbed GoogleSheetsService.
 		// The TestGoogleSheetsConfig (below) returns a single tab "2099" with 12 driver rows.
-		// ============================================================================
 		page.navigate(url("/admin/drivers/import"));
 		// The form's <input type="url"> enforces HTML5 URL validation client-side; supply a
 		// well-formed URL even though the stubbed GoogleSheetsService.extractSpreadsheetId
@@ -267,13 +257,12 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		org.junit.jupiter.api.Assertions.assertEquals(12, importedDriverCount,
 				"Expected 12 imported drivers with PSN-ID prefix T_groups_drv");
 
-		// ============================================================================
 		// STEP 6 — Repository setup: matchdays + matches + races + lineups.
-		// Deviation (Rule 3): no UI exists for group-bound matchday/race generation as of
-		// Phase 60. Per D-15, the *race-result entry* must be UI-driven (STEP 7); structural
+		// Deviation (Rule 3): no UI exists for group-bound matchday/race generation;
+		// the canonical MatchdayController only binds matchdays to the REGULAR phase.
+		// The *race-result entry* must be UI-driven (STEP 7); structural
 		// matchday/match/race construction happens here at the repository layer.
 		// Layout: 2 matchdays/group × 1 match/matchday × 1 race/match = 4 races total.
-		// ============================================================================
 		List<UUID> raceIdsGroupA = new ArrayList<>();
 		List<UUID> raceIdsGroupB = new ArrayList<>();
 		// Reload phase + groups inside the transaction so JPA sees managed entities.
@@ -321,7 +310,6 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		org.junit.jupiter.api.Assertions.assertEquals(2, raceIdsGroupA.size());
 		org.junit.jupiter.api.Assertions.assertEquals(2, raceIdsGroupB.size());
 
-		// ============================================================================
 		// STEP 7 — UI: enter race results via the /admin/races/{id}/results form.
 		// The form is pre-populated with all 6 lineup driver rows per race; we click the
 		// position inputs and Save. Driver-Ranking values picked for deterministic standings.
@@ -339,7 +327,6 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		//   so we vary Race 2 slightly: GB-2 takes 1,2,3 with race-points 51, GB-1 takes 4,5,6=30).
 		//   Final Group B leader = GB-1 by tie-break (alphabetical short-name); standings still
 		//   render exactly 2 rows. The combined-view assertion only checks row count + top points.
-		// ============================================================================
 		// Group A — Match-Day 1: GA-1 sweeps top 3 (1, 2, 3); GA-2 takes 4, 5, 6.
 		fillRaceResultsByPsnIdOrder(raceIdsGroupA.get(0),
 				List.of("T_groups_drv01", "T_groups_drv02", "T_groups_drv03",
@@ -357,11 +344,9 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 				List.of("T_groups_drv07", "T_groups_drv08", "T_groups_drv09",
 						"T_groups_drv10", "T_groups_drv11", "T_groups_drv12"));
 
-		// ============================================================================
 		// STEP 8 — UI: assert per-group standings + combined-view standings (D-13 hybrid).
 		// Standings URL params (StandingsController): ?phase={phaseId} for combined view,
 		// ?phase={phaseId}&group={groupId} for per-group view. Top row = leader.
-		// ============================================================================
 		// Per-group: Group A — leader = T-GA-1 (6 match-points)
 		page.navigate(url("/admin/standings?phase=" + regularPhase.getId() + "&group=" + groupA.getId()));
 		assertThat(page.locator("#standingsTable tbody tr").first()).containsText("T-GA-1");
@@ -374,9 +359,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		page.navigate(url("/admin/standings?phase=" + regularPhase.getId()));
 		assertThat(page.locator("#standingsTable tbody tr.data-row")).hasCount(4);
 
-		// ============================================================================
 		// STEP 9 — DB-state hybrid assertions.
-		// ============================================================================
 		var refreshedRegular = seasonPhaseRepository.findBySeasonIdAndPhaseType(
 				season.getId(), PhaseType.REGULAR).orElseThrow();
 		org.junit.jupiter.api.Assertions.assertEquals(PhaseLayout.GROUPS, refreshedRegular.getLayout(),
@@ -389,9 +372,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		org.junit.jupiter.api.Assertions.assertEquals(2, groupBTeamCount, "Group B must contain 2 teams");
 	}
 
-	// =========================================================================
 	// Helpers
-	// =========================================================================
 
 	/**
 	 * Persists a Race + RaceSettings + RaceLineups for one match. Track/Car are left null
@@ -458,9 +439,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		assertThat(page.locator(".alert-success")).containsText("Results saved");
 	}
 
-	// =========================================================================
 	// @TestConfiguration — stub GoogleSheetsService
-	// =========================================================================
 
 	@TestConfiguration
 	static class TestGoogleSheetsConfig {

@@ -174,7 +174,6 @@ class RaceControllerTest {
 				.andExpect(model().attributeExists("raceForm", "race", "raceScoring"));
 	}
 
-	// --- POST /admin/races/save ---
 
 	@Test
 	void givenMatchdayAndTeams_whenSaveNewRace_thenRedirectsWithSuccess() throws Exception {
@@ -190,7 +189,6 @@ class RaceControllerTest {
 				.andExpect(flash().attributeExists("successMessage"));
 	}
 
-	// --- POST /admin/races/{id}/results ---
 
 	@Test
 	void givenTwoDrivers_whenSaveResults_thenRedirectsAndPersistsAndAllowsRepopulate() throws Exception {
@@ -228,7 +226,6 @@ class RaceControllerTest {
 		assertEquals(1, updated.getResults().size());
 	}
 
-	// --- POST /admin/races/{id}/quick-score ---
 
 	@Test
 	void givenValidReturnUrl_whenQuickScore_thenRedirectsToReturnUrlAndPersistsScore() throws Exception {
@@ -282,7 +279,6 @@ class RaceControllerTest {
 				.andExpect(redirectedUrl("/admin/races"));
 	}
 
-	// --- POST /admin/races/{id}/attachments/link ---
 
 	@Test
 	void givenValidHttpLink_whenAddLink_thenRedirectsWithSuccess() throws Exception {
@@ -320,7 +316,6 @@ class RaceControllerTest {
 				.andExpect(flash().attribute("errorMessage", "Link must start with http:// or https://"));
 	}
 
-	// --- POST /admin/races/{id}/delete ---
 
 	@Test
 	void givenExistingRace_whenDeleteRace_thenRedirectsAndRemoves() throws Exception {
@@ -334,7 +329,6 @@ class RaceControllerTest {
 		assertFalse(raceRepository.findById(race.getId()).isPresent());
 	}
 
-	// --- GET /admin/races/used-selections ---
 
 	@Test
 	void givenRaceWithCar_whenGetUsedSelections_thenReturnsUsedCarIds() throws Exception {
@@ -375,7 +369,6 @@ class RaceControllerTest {
 				.andExpect(jsonPath("$.usedCarIds").isEmpty());
 	}
 
-	// --- Uniqueness validation ---
 
 	@Test
 	void givenHomeTeamAlreadyUsedCar_whenSaveRaceWithSameCar_thenRedirectsWithError() throws Exception {
@@ -403,7 +396,6 @@ class RaceControllerTest {
 						home.getShortName() + " has already used " + car.getDisplayName() + " this season"));
 	}
 
-	// --- Pool validation ---
 
 	@Test
 	void givenCarNotInSeasonPool_whenSaveRace_thenRedirectsWithError() throws Exception {
@@ -439,7 +431,6 @@ class RaceControllerTest {
 				.andExpect(flash().attribute("errorMessage", "Track is not in this season's pool"));
 	}
 
-	// --- POST /admin/races/{id}/attachments/upload ---
 
 	@Test
 	void givenImageFile_whenUploadAttachment_thenRedirectsWithSuccess() throws Exception {
@@ -456,7 +447,6 @@ class RaceControllerTest {
 				.andExpect(flash().attribute("successMessage", "File uploaded: test-image.png"));
 	}
 
-	// --- POST /admin/races/attachments/{id}/delete ---
 
 	@Test
 	void givenLinkAttachment_whenDeleteAttachment_thenRedirectsAndRemoves() throws Exception {
@@ -491,7 +481,6 @@ class RaceControllerTest {
 		assertFalse(raceAttachmentRepository.findById(attachment.getId()).isPresent());
 	}
 
-	// --- GET /admin/races/attachments/{id}/download ---
 
 	@Test
 	void givenExistingFileAttachment_whenDownloadAttachment_thenReturnsFileWithContentDisposition() throws Exception {
@@ -542,7 +531,6 @@ class RaceControllerTest {
 				.andExpect(status().isNotFound());
 	}
 
-	// --- Duplicate track validation ---
 
 	@Test
 	void givenHomeTeamAlreadyUsedTrack_whenSaveRaceWithSameTrack_thenRedirectsWithError() throws Exception {
@@ -569,7 +557,6 @@ class RaceControllerTest {
 						home.getShortName() + " has already used " + track.getName() + " this season"));
 	}
 
-	// --- Race detail with results ---
 
 	@Test
 	void givenRaceWithResults_whenGetRaceDetail_thenReturnsDetailWithScores() throws Exception {
@@ -599,7 +586,6 @@ class RaceControllerTest {
 				.andExpect(model().attributeExists("race", "homeTotal", "awayTotal", "driverTeamMap"));
 	}
 
-	// --- Race detail with results-graphic flags ---
 
 	@Test
 	void givenRaceWithoutResults_whenGetRaceDetail_thenReturnsCorrectResultsGraphicFlags() throws Exception {
@@ -613,7 +599,6 @@ class RaceControllerTest {
 				.andExpect(model().attribute("canGenerateResults", false));
 	}
 
-	// --- POST /admin/races/{id}/generate-results ---
 
 	@Test
 	void givenRaceWithoutResults_whenGenerateResults_thenRedirectsWithError() throws Exception {
@@ -625,7 +610,6 @@ class RaceControllerTest {
 				.andExpect(flash().attributeExists("errorMessage"));
 	}
 
-	// --- POST /admin/races/{id}/generate-settings ---
 
 	@Test
 	void givenRaceWithoutSettings_whenGenerateSettings_thenRedirectsWithError() throws Exception {
@@ -637,7 +621,6 @@ class RaceControllerTest {
 				.andExpect(flash().attributeExists("errorMessage"));
 	}
 
-	// --- POST /admin/races/{id}/generate-overlay ---
 
 	@Test
 	void givenRaceWithNoMatch_whenGenerateOverlay_thenRedirectsWithError() throws Exception {
@@ -654,7 +637,6 @@ class RaceControllerTest {
 				.andExpect(flash().attributeExists("errorMessage"));
 	}
 
-	// --- GET detail with settings flags ---
 
 	@Test
 	void givenRaceWithoutSettings_whenGetRaceDetail_thenReturnsCorrectSettingsFlags() throws Exception {
@@ -671,7 +653,6 @@ class RaceControllerTest {
 				.andExpect(model().attribute("overlayExists", false));
 	}
 
-	// --- List races with scores ---
 
 	@Test
 	void givenMatchWithScores_whenGetRaces_thenReturnsRaceScoresInModel() throws Exception {
