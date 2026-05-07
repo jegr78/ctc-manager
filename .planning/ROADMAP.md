@@ -461,12 +461,12 @@ Plans:
 
 **Depends on:** Phase 66
 
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 67-01-PLAN.md — Production sweep: src/main/java (~22 files; sectional decoration, V4/V5 Javadoc trim, sitegen prefix-strip) (Wave 1)
-- [ ] 67-02-PLAN.md — Templates sweep: 4 admin/site templates with decision-attribution noise (74 clean templates untouched) (Wave 2)
-- [ ] 67-03-PLAN.md — Tests sweep: 35 of 121 test files (BDD markers preserved); phase-final ./mvnw verify gate (Wave 3)
+- [x] 67-01-PLAN.md — Production sweep: src/main/java (~22 files; sectional decoration, V4/V5 Javadoc trim, sitegen prefix-strip) (Wave 1)
+- [x] 67-02-PLAN.md — Templates sweep: 4 admin/site templates with decision-attribution noise (74 clean templates untouched) (Wave 2)
+- [x] 67-03-PLAN.md — Tests sweep: 35 of 121 test files (BDD markers preserved); phase-final ./mvnw verify gate (Wave 3)
 
 ### Phase 68: Lombok Unsafe Deprecation Warning Fix
 
