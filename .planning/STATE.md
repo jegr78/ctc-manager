@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Season Phases & Groups
-status: executing
-last_updated: "2026-05-07T16:10:00.000Z"
-last_activity: 2026-05-07 -- Phase 65 context gathered (discuss --chain, 5 areas covered, 1 moot); auto-advancing to plan-phase
+status: "Phase 65 complete — calculateStandings(UUID seasonId) bridge deleted; SC1=0; JaCoCo 87.8%; all 3 plans shipped"
+last_updated: "2026-05-07T18:40:00Z"
+last_activity: 2026-05-07 -- Phase 65 Plan 03 executed; atomic commit 6523959; E2E green; SUMMARY created
 progress:
   total_phases: 10
-  completed_phases: 9
-  total_plans: 52
-  completed_plans: 52
+  completed_phases: 10
+  total_plans: 55
+  completed_plans: 55
   percent: 100
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 ## Current Position
 
-Phase: 65 — context captured
-Plan: pending (chain mode auto-advancing to /gsd-plan-phase 65 --auto)
-Status: 65-CONTEXT.md committed; key decisions: REMOVE bridge entirely; migrate all 7 callers (not just 5 in ROADMAP); 3-plan structure
-Last activity: 2026-05-07 -- Phase 65 discuss-phase complete; chain mode dispatching to plan-phase
+Phase: 65 — COMPLETE
+Plan: 3/3 complete
+Status: Phase 65 complete — calculateStandings(UUID seasonId) bridge deleted; SC1=0; JaCoCo 87.8%; all 3 plans shipped
+Last activity: 2026-05-07 -- Phase 65 Plan 03 executed; atomic commit 6523959; E2E 31/31 green; ready for /gsd-verify-work 65
 
 ## Completed Milestones
 
@@ -99,7 +99,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-07T11:18:12.959Z
+Last session: 2026-05-07T18:40:00Z
 
 **Plan 58-06 commits:**
 
