@@ -476,7 +476,7 @@ Plans:
 
 **Depends on:** Phase 67
 
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 68 to break down)
+- [ ] 68-01-PLAN.md — Pin Lombok 1.18.46 + JEP 498 argLine flag in Surefire/Failsafe + atomic verify gate (Wave 1)
