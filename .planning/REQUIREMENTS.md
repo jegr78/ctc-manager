@@ -62,8 +62,8 @@ Requirements for milestone v1.9. Each maps to roadmap phases.
 
 ### QUAL — Quality and Coverage
 
-- [ ] **QUAL-01**: JaCoCo Line-Coverage ≥ 82 % gehalten
-- [ ] **QUAL-02**: E2E-Test deckt GROUPS-Saison: Anlegen, Roster pro Group, Matchdays pro Group, Driver-Import mit Group-Auflösung, Standings pro Group + Combined
+- [x] **QUAL-01**: JaCoCo Line-Coverage ≥ 82 % gehalten
+- [x] **QUAL-02**: E2E-Test deckt GROUPS-Saison: Anlegen, Roster pro Group, Matchdays pro Group, Driver-Import mit Group-Auflösung, Standings pro Group + Combined
 - [ ] **QUAL-03**: Regression-Test: Bestandssaison öffnet nach Migration mit 1 REGULAR-Phase + allen Race-Daten erreichbar
 
 ## Future Requirements
@@ -133,6 +133,6 @@ Which phases cover which requirements. Filled during roadmap creation.
 | UI-07 | 60 | Complete |
 | DATA-01 | 59 | Complete |
 | DATA-02 | 59 | Complete |
-| QUAL-01 | 61 | Pending |
-| QUAL-02 | 61 | Pending |
+| QUAL-01 | 61 | Complete |
+| QUAL-02 | 61 | Complete |
 | QUAL-03 | 61 | Pending |

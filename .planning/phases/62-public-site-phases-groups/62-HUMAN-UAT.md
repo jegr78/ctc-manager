@@ -1,14 +1,15 @@
 ---
-status: partial
+status: resolved
 phase: 62-public-site-phases-groups
 source: [62-VERIFICATION.md]
 started: 2026-05-07T07:50:00Z
-updated: 2026-05-07T08:10:00Z
+updated: 2026-05-07T09:05:00Z
+resolved_at: 2026-05-07T09:05:00Z
 ---
 
 ## Current Test
 
-[3 of 4 tests already exercised during Plan 62-07 visual sweep; 1 of 4 closed via W-1 code fix. Awaiting user "approved" to mark all resolved.]
+[All 4 items resolved: 1 via W-1 code fix (commit f850cc4), 3 via Plan 62-07 visual sweep evidence. Re-verification (commit 0e941d5) confirmed status `passed` 11/11 must-haves.]
 
 ## Tests
 
@@ -35,7 +36,7 @@ result: **pass (visual sweep)** — Plan 62-07 captured both source pages and th
 ## Summary
 
 total: 4
-passed: 0
+passed: 4
 issues: 0
 pending: 0
 skipped: 0
