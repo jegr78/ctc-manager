@@ -289,6 +289,23 @@ th {
     border-bottom: 1px solid var(--border);
 }
 
+/* Desktop: sticky table headers for long tables (alltime-driver-ranking 70+ rows).
+   Skipped on mobile because .table-wrap uses overflow-x: auto for horizontal scroll
+   (v1.6 Phase 41), which establishes a scroll container that breaks sticky against
+   the body. On desktop, .table-wrap's overflow is reset to visible so sticky th
+   can stick to viewport top during body scroll. */
+@media (min-width: 768px) {
+    .table-wrap {
+        overflow-x: visible;
+    }
+    table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--bg-card);
+    }
+}
+
 th.sortable { cursor: pointer; user-select: none; }
 th.sortable:hover { color: var(--text); }
 th.sortable::after { content: ' \2195'; opacity: 0.4; }
