@@ -461,10 +461,12 @@ Plans:
 
 **Depends on:** Phase 66
 
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 67 to break down)
+- [ ] 67-01-PLAN.md — Production sweep: src/main/java (~22 files; sectional decoration, V4/V5 Javadoc trim, sitegen prefix-strip) (Wave 1)
+- [ ] 67-02-PLAN.md — Templates sweep: 4 admin/site templates with decision-attribution noise (74 clean templates untouched) (Wave 2)
+- [ ] 67-03-PLAN.md — Tests sweep: 35 of 121 test files (BDD markers preserved); phase-final ./mvnw verify gate (Wave 3)
 
 ### Phase 68: Lombok Unsafe Deprecation Warning Fix
 
