@@ -341,7 +341,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 - `src/main/resources/templates/site/standings.html` — zero references to phase / group / PhaseLayout; rendering is single-table LEAGUE-shape.
 - Admin-side analog to mirror: `src/main/resources/templates/admin/season-detail.html` (phase tab row + GROUPS sub-tab row + per-group standings table).
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans complete
 
 Plans:
 - [x] 62-00-PLAN.md — Helper-Class Extraction + Golden Snapshot Capture (Wave 1)
@@ -351,4 +351,4 @@ Plans:
 - [x] 62-04-PLAN.md — Team-/Driver-Profile Phase Breakdown Sections (Wave 5)
 - [x] 62-05-PLAN.md — D-19 Alltime Cross-Phase Aggregation (TRACKED BEHAVIOR CHANGE) (Wave 6)
 - [x] 62-06-PLAN.md — SC5 Regression IT (SiteGeneratorPhaseAwarenessIT) (Wave 7)
-- [ ] 62-07-PLAN.md — Visual + A11y Final Sweep (Manual playwright-cli; autonomous=false) (Wave 8)
+- [x] 62-07-PLAN.md — Visual + A11y Final Sweep (Manual playwright-cli; autonomous=false) (Wave 8)
