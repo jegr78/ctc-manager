@@ -457,7 +457,7 @@ Plans:
 
 **Goal:** Re-enforce the CLAUDE.md comment policy (*"Default to writing no comments. Only add one when the WHY is non-obvious"*). Long, narrative, what-the-code-does comments and stale "(removed)" / task-history references have crept back into the production code since the v1.9 milestone started — sweep them out and lock the rule in CI / pre-commit so the next milestone doesn't regress.
 
-**Requirements**: Discovered during v1.9 UAT review. Same policy as the earlier cleanup work in Phases 20–21 / 53 / 61, but the v1.9 cluster (56–66) re-introduced WHAT-style comments. Sweep is repo-wide across `src/main/java` and `src/main/resources/templates`. Out of scope: production-grade Javadoc on public APIs (those are kept where the WHY is non-obvious — judgement call, not a blanket strip).
+**Requirements**: Discovered during v1.9 UAT review. Same policy as the earlier cleanup work in Phases 20–21 / 53 / 61, but the v1.9 cluster (56–66) re-introduced WHAT-style comments. Sweep is repo-wide across `src/main/java`, `src/main/resources/templates`, AND `src/test/java` (test files re-accumulated narrative comments too — explicitly in scope). Out of scope: production-grade Javadoc on public APIs (those are kept where the WHY is non-obvious — judgement call, not a blanket strip); BDD given/when/then block-comments (`// given` / `// when` / `// then`) are KEPT — they're the project's mandatory test-structure markers per CLAUDE.md § Development Approach, not narrative noise.
 
 **Depends on:** Phase 66
 
