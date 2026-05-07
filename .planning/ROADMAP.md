@@ -322,7 +322,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 | 60. Admin UI | v1.9 | 7/7 | Complete    | 2026-05-01 |
 | 61. Cleanup & Quality Gate | v1.9 | 5/5 | Complete   | 2026-05-01 |
 | 62. Public Site Phase + Group Awareness | v1.9 | 8/8 | Complete   | 2026-05-07 |
-| 63. Documentation & Verification Backfill | v1.9 | TBD | Pending    | — |
+| 63. Documentation & Verification Backfill | v1.9 | 3/3 | Complete    | 2026-05-07 |
 | 64. Nyquist Validation Sweep | v1.9 | TBD | Pending    | — |
 | 65. Graphics Services Bridge Migration | v1.9 | TBD | Pending    | — |
 
