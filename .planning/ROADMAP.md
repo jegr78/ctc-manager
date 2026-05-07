@@ -452,3 +452,29 @@ Each `/gsd-validate-phase {N}` invocation may run in `mode: retroactive` since t
 
 Plans:
 - [x] 66-01-PLAN.md — Add findAllByShortName + parent-precedence resolveTeamByShortName helper, migrate 5 call sites + 18 test stubs, 2 new TDD tests (Wave 1)
+
+### Phase 67: Comment Cleanup Re-Sweep
+
+**Goal:** Re-enforce the CLAUDE.md comment policy (*"Default to writing no comments. Only add one when the WHY is non-obvious"*). Long, narrative, what-the-code-does comments and stale "(removed)" / task-history references have crept back into the production code since the v1.9 milestone started — sweep them out and lock the rule in CI / pre-commit so the next milestone doesn't regress.
+
+**Requirements**: Discovered during v1.9 UAT review. Same policy as the earlier cleanup work in Phases 20–21 / 53 / 61, but the v1.9 cluster (56–66) re-introduced WHAT-style comments. Sweep is repo-wide across `src/main/java` and `src/main/resources/templates`. Out of scope: production-grade Javadoc on public APIs (those are kept where the WHY is non-obvious — judgement call, not a blanket strip).
+
+**Depends on:** Phase 66
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 67 to break down)
+
+### Phase 68: Lombok Unsafe Deprecation Warning Fix
+
+**Goal:** Eliminate the JDK 24+ build/runtime warnings emitted by `lombok.permit.Permit` calling `sun.misc.Unsafe::objectFieldOffset` (terminally deprecated; will be removed in a future Java release). The build and `./mvnw spring-boot:run` must complete without `WARNING: A terminally deprecated method in sun.misc.Unsafe has been called` (and the three follow-up Lombok-attribution lines).
+
+**Requirements**: Hotfix — currently shipping Lombok `1.18.44` on Java 25. The official upstream fix landed in newer Lombok point releases that switched the `Permit` helper from `sun.misc.Unsafe` to `MethodHandles.privateLookupIn`. Plan must verify the resolved version transitively (Spring Boot starter parent governs the version), pin an override in `pom.xml` if necessary, and confirm the warning is gone for `./mvnw verify`, `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`, and Surefire/Failsafe runs. CLAUDE.md backwards-compatibility constraint applies: no breaking change to Java version or framework upgrade.
+
+**Depends on:** Phase 67
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 68 to break down)

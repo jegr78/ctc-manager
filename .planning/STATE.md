@@ -79,6 +79,8 @@ Continuing from v1.8 (last phase: 55). v1.9 phases start at **Phase 56**.
 
 - 2026-05-02: Phase 62 (Public Site Phase + Group Awareness) added at end of v1.9 milestone. Discovered during Phase 61 UAT — admin-side phase/group model is fully wired but invisible on the public static site. Without Phase 62 the v1.9 feature ships externally invisible.
 - 2026-05-07: Phase 66 (Team ShortName Collision Fix — Driver Import) added at end of v1.9 milestone. Discovered during v1.9 UAT — `DriverSheetImportService` crashes with `IncorrectResultSizeDataAccessException` when parent + sub-team share the same `shortName` (e.g. ZFS parent + ZFS sub). 5 call sites in the import service share the same `findByShortName`-on-non-unique-column bug. Resolution policy: prefer parent (`parentTeam IS NULL`) on multi-match.
+- 2026-05-07: Phase 67 (Comment Cleanup Re-Sweep) added — UAT review found WHAT-style / narrative comments re-introduced across the v1.9 cluster (Phases 56–66). Same CLAUDE.md policy as Phases 20-21/53/61 but enforcement regressed. Sweep production code + ideally lock the rule with a CI / pre-commit guard.
+- 2026-05-07: Phase 68 (Lombok Unsafe Deprecation Warning Fix) added — JDK 24+/25 emits terminally-deprecated warnings from `lombok.permit.Permit` calling `sun.misc.Unsafe::objectFieldOffset`. Currently shipping Lombok 1.18.44; upstream fix is in newer point releases that switched `Permit` to `MethodHandles.privateLookupIn`. Plan: verify the resolved version under the Spring Boot starter parent, pin a property override in `pom.xml` if needed, and confirm warnings are gone in `./mvnw verify` + `./mvnw spring-boot:run`.
 
 ### Key Technical Context
 
