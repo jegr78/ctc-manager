@@ -112,10 +112,18 @@ class DriverSheetImportServiceIT {
     // ---------------------------------------------------------------------
 
     @Test
-    void givenLegacyYearTab_whenPreview_thenSeasonAutoResolvedToLeague2024() throws IOException {
-        // given — the seed has exactly one 2024 season (year=2024, number=2)
-        var season2024 = findSeason(2024, 2);
-        setupSheetsStub(Map.of("2024", oneDataRow("ADR_Driver01", "Adr One", "ADR")));
+    void givenLegacyYearTab_whenPreview_thenSeasonAutoResolvedToUniqueYearSeason() throws IOException {
+        // given — insert a fresh single-season year so legacy ^\d{4}$ tab path is unambiguous.
+        // Avoids coupling to seed years where additional same-year seasons may exist
+        // (e.g. (2024,2) + (2024,3) D-22 empty-state). @Transactional rolls back after test.
+        var season = new Season();
+        season.setName("Phase59-IT-Legacy-2027");
+        season.setYear(2027);
+        season.setNumber(1);
+        season.setActive(false);
+        seasonRepository.save(season);
+
+        setupSheetsStub(Map.of("2027", oneDataRow("ADR_Driver01", "Adr One", "ADR")));
 
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
@@ -123,10 +131,10 @@ class DriverSheetImportServiceIT {
         // then
         assertThat(preview.tabPreviews()).hasSize(1);
         TabPreview tab = preview.tabPreviews().get(0);
-        assertThat(tab.tabName()).isEqualTo("2024");
-        assertThat(tab.year()).isEqualTo(2024);
+        assertThat(tab.tabName()).isEqualTo("2027");
+        assertThat(tab.year()).isEqualTo(2027);
         assertThat(tab.number()).isNull();    // legacy tab → null number
-        assertThat(tab.suggestedSeasonId()).isEqualTo(season2024.getId());
+        assertThat(tab.suggestedSeasonId()).isEqualTo(season.getId());
         assertThat(tab.ambiguousReason()).isNull();
     }
 

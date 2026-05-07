@@ -12,6 +12,7 @@ import org.ctc.domain.model.SeasonFormat;
 import org.ctc.domain.repository.MatchScoringRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.RaceScoringRepository;
+import org.ctc.domain.repository.SeasonPhaseGroupRepository;
 import org.ctc.domain.service.MatchdayService;
 import org.ctc.domain.service.PlayoffService;
 import org.ctc.domain.service.SeasonManagementService;
@@ -48,6 +49,7 @@ public class SeasonPhaseController {
     private final MatchdayService matchdayService;
     private final StandingsService standingsService;
     private final PhaseTeamRepository phaseTeamRepository;
+    private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
     private final PlayoffService playoffService;
@@ -66,7 +68,7 @@ public class SeasonPhaseController {
         model.addAttribute("season", season);
         model.addAttribute("phase", phase);
         model.addAttribute("allPhases", allPhases);
-        model.addAttribute("groups", phase.getGroups());
+        model.addAttribute("groups", seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phaseId));
         model.addAttribute("phaseTeams", phaseTeamRepository.findByPhaseId(phaseId));
         model.addAttribute("matchdays", matchdayService.findByPhaseId(phaseId));
         model.addAttribute("selectedGroupId", null);
@@ -110,7 +112,7 @@ public class SeasonPhaseController {
         model.addAttribute("season", season);
         model.addAttribute("phase", phase);
         model.addAttribute("allPhases", seasonPhaseService.findAllPhases(seasonId));
-        model.addAttribute("groups", phase.getGroups());
+        model.addAttribute("groups", seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phaseId));
         model.addAttribute("phaseTeams", phaseTeamRepository.findByPhaseIdAndGroupId(phaseId, groupId));
         model.addAttribute("matchdays", matchdayService.findByPhaseIdAndGroupId(phaseId, groupId));
         model.addAttribute("selectedGroupId", groupId);

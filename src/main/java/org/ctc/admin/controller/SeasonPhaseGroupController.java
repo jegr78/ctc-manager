@@ -7,6 +7,7 @@ import org.ctc.admin.dto.PhaseTeamForm;
 import org.ctc.admin.dto.SeasonPhaseGroupForm;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
+import org.ctc.domain.repository.SeasonPhaseGroupRepository;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.springframework.stereotype.Controller;
@@ -34,6 +35,7 @@ public class SeasonPhaseGroupController {
 
     private final SeasonPhaseService seasonPhaseService;
     private final SeasonManagementService seasonManagementService;
+    private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
 
     /** GET /admin/seasons/{seasonId}/phases/{phaseId}/groups/new — Step 1 form. */
     @GetMapping("/new")
@@ -58,10 +60,11 @@ public class SeasonPhaseGroupController {
                        Model model) {
         var phase = seasonPhaseService.findById(phaseId);
         validateOwnership(phase.getSeason().getId(), seasonId);
-        var group = phase.getGroups().stream()
-                .filter(g -> g.getId().equals(groupId))
-                .findFirst()
+        var group = seasonPhaseGroupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", groupId));
+        if (!group.getPhase().getId().equals(phaseId)) {
+            throw new EntityNotFoundException("SeasonPhaseGroup", groupId);
+        }
 
         var form = new SeasonPhaseGroupForm();
         form.setId(group.getId());
@@ -99,7 +102,7 @@ public class SeasonPhaseGroupController {
                 // Auto-increment sortIndex = max+1 when not specified.
                 Integer sortIndex = form.getSortIndex();
                 if (sortIndex == null) {
-                    sortIndex = phase.getGroups().stream()
+                    sortIndex = seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phaseId).stream()
                             .mapToInt(g -> g.getSortIndex() + 1)
                             .max()
                             .orElse(0);
