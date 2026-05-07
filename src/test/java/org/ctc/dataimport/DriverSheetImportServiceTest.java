@@ -240,7 +240,7 @@ class DriverSheetImportServiceTest {
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("brand_new_psn"))
                 .thenReturn(MatchResult.noMatch("brand_new_psn"));
 
@@ -267,7 +267,7 @@ class DriverSheetImportServiceTest {
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("existing_psn"))
                 .thenReturn(MatchResult.exact("existing_psn", existingDriver));
         when(seasonDriverRepository.findBySeasonIdAndDriverId(season2024.getId(), existingDriver.getId()))
@@ -291,7 +291,7 @@ class DriverSheetImportServiceTest {
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("existing_psn", "Existing", "AHR")));
         when(seasonManagementService.findUnique(2024)).thenThrow(
                 new BusinessRuleException("Multiple seasons exist for year 2024 — consolidate them first or rename sheet tab to disambiguate"));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("existing_psn"))
                 .thenReturn(MatchResult.exact("existing_psn", existingDriver));
 
@@ -322,7 +322,7 @@ class DriverSheetImportServiceTest {
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findByShortName("CRL")).thenReturn(Optional.of(teamCrl));
+        when(teamRepository.findAllByShortName("CRL")).thenReturn(List.of(teamCrl));
         when(driverMatchingService.findDriver("existing_psn"))
                 .thenReturn(MatchResult.exact("existing_psn", existingDriver));
         // SeasonDriver records driver under AHR
@@ -353,7 +353,7 @@ class DriverSheetImportServiceTest {
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("existng_psn"))
                 .thenReturn(MatchResult.fuzzy("existng_psn", existingDriver, 0.9));
 
@@ -383,7 +383,7 @@ class DriverSheetImportServiceTest {
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("existing_psn"))
                 .thenReturn(MatchResult.exact("existing_psn", existingDriver));
         when(seasonDriverRepository.findBySeasonIdAndDriverId(season2024.getId(), existingDriver.getId()))
@@ -456,7 +456,7 @@ class DriverSheetImportServiceTest {
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findByShortName("XYZ")).thenReturn(Optional.empty());
+        when(teamRepository.findAllByShortName("XYZ")).thenReturn(List.of());
 
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
@@ -481,8 +481,8 @@ class DriverSheetImportServiceTest {
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         // Both team codes must be resolvable so duplicate check (step 4) fires before team check (step 3)
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
-        when(teamRepository.findByShortName("CRL")).thenReturn(Optional.of(teamCrl));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
+        when(teamRepository.findAllByShortName("CRL")).thenReturn(List.of(teamCrl));
         when(driverMatchingService.findDriver("dup_psn"))
                 .thenReturn(MatchResult.noMatch("dup_psn"));
 
@@ -508,7 +508,7 @@ class DriverSheetImportServiceTest {
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("EXISTING_PSN"))
                 .thenReturn(MatchResult.exact("EXISTING_PSN", existingDriver));
         when(seasonDriverRepository.findBySeasonIdAndDriverId(season2024.getId(), existingDriver.getId()))
@@ -540,8 +540,8 @@ class DriverSheetImportServiceTest {
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2023.getId()));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
-        when(teamRepository.findByShortName("CRL")).thenReturn(Optional.of(teamCrl));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
+        when(teamRepository.findAllByShortName("CRL")).thenReturn(List.of(teamCrl));
         // Both tabs: driver is brand-new (NONE match)
         when(driverMatchingService.findDriver("cross_psn"))
                 .thenReturn(MatchResult.noMatch("cross_psn"));
@@ -570,7 +570,7 @@ class DriverSheetImportServiceTest {
         // given
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("ahr-d1", "Driver", "AHR")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(driverMatchingService.findDriver("ahr-d1")).thenReturn(MatchResult.noMatch("ahr-d1"));
@@ -598,7 +598,7 @@ class DriverSheetImportServiceTest {
         season2025s2.setNumber(2);
         setupSheetsStub(SHEET_URL, Map.of("2025_S2", oneDataRow("psn", "X", "AHR")));
         when(seasonManagementService.findUnique(2025, 2)).thenReturn(Optional.of(season2025s2));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(seasonPhaseService.findRegularPhase(season2025s2.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2025s2.getId()));
         when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
@@ -669,7 +669,7 @@ class DriverSheetImportServiceTest {
         setupSheetsStub(SHEET_URL, Map.of("2023_S1", oneDataRow("psn", "X", "AHR")));
         when(seasonManagementService.findUnique(2023, 1)).thenReturn(Optional.of(season2023));
         when(seasonPhaseService.findRegularPhase(season2023.getId())).thenReturn(regularPhase);
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), teamAhr.getId()))
                 .thenReturn(Optional.of(phaseTeamGroupA));
         when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
@@ -696,7 +696,7 @@ class DriverSheetImportServiceTest {
         setupSheetsStub(SHEET_URL, Map.of("2023_S1", oneDataRow("psn", "X", "AHR")));
         when(seasonManagementService.findUnique(2023, 1)).thenReturn(Optional.of(season2023));
         when(seasonPhaseService.findRegularPhase(season2023.getId())).thenReturn(regularPhase);
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), teamAhr.getId()))
                 .thenReturn(Optional.empty());
         when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
@@ -729,7 +729,7 @@ class DriverSheetImportServiceTest {
 
         when(seasonManagementService.findUnique(2023, 1)).thenReturn(Optional.of(season2023));
         when(seasonPhaseService.findRegularPhase(season2023.getId())).thenReturn(regularPhase);
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), teamAhr.getId()))
                 .thenReturn(Optional.empty());
         when(driverMatchingService.findDriver(anyString())).thenReturn(MatchResult.noMatch("psn"));
@@ -752,7 +752,7 @@ class DriverSheetImportServiceTest {
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
         when(seasonPhaseService.findRegularPhase(season2024.getId()))
                 .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findByShortName("AHR")).thenReturn(Optional.of(teamAhr));
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);

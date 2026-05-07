@@ -132,7 +132,7 @@ public class DriverSheetImportService {
                     result.incrementNewDrivers();
                     return saved;
                 });
-                Team team = teamRepository.findByShortName(row.teamShortName())
+                Team team = resolveTeamByShortName(row.teamShortName())
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 seasonDriverRepository.save(new SeasonDriver(season, driver, team));
                 result.incrementNewAssignments();
@@ -143,7 +143,7 @@ public class DriverSheetImportService {
                 Driver driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(),
                         psnId -> driverRepository.findById(row.existingDriverId())
                                 .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + row.existingDriverId())));
-                Team team = teamRepository.findByShortName(row.teamShortName())
+                Team team = resolveTeamByShortName(row.teamShortName())
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 boolean alreadyAssigned = seasonDriverRepository
                         .findBySeasonIdAndDriverId(season.getId(), driver.getId())
@@ -163,7 +163,7 @@ public class DriverSheetImportService {
                     SeasonDriver sd = seasonDriverRepository
                             .findById(row.existingSeasonDriverId())
                             .orElseThrow(() -> new IllegalArgumentException("SeasonDriver not found: " + row.existingSeasonDriverId()));
-                    Team newTeam = teamRepository.findByShortName(row.sheetTeamShortName())
+                    Team newTeam = resolveTeamByShortName(row.sheetTeamShortName())
                             .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.sheetTeamShortName()));
                     sd.setTeam(newTeam);
                     seasonDriverRepository.save(sd);
@@ -192,7 +192,7 @@ public class DriverSheetImportService {
                         return saved;
                     });
                 }
-                Team team = teamRepository.findByShortName(row.teamShortName())
+                Team team = resolveTeamByShortName(row.teamShortName())
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 boolean alreadyAssigned = seasonDriverRepository
                         .findBySeasonIdAndDriverId(season.getId(), driver.getId())
@@ -293,7 +293,7 @@ public class DriverSheetImportService {
             }
 
             // Step 3: Unknown team short code
-            Optional<Team> teamOpt = teamRepository.findByShortName(rawTeamCode);
+            Optional<Team> teamOpt = resolveTeamByShortName(rawTeamCode);
             if (teamOpt.isEmpty()) {
                 errors.add(new ErrorRow(rawPsnId, rawTeamCode, ErrorReason.UNKNOWN_TEAM_CODE));
                 continue;
@@ -393,6 +393,37 @@ public class DriverSheetImportService {
         }
         Object cell = row.get(index);
         return cell == null ? "" : cell.toString().trim();
+    }
+
+    /**
+     * Resolves a team by shortName with parent-precedence semantics.
+     * <p>
+     * The {@code teams.short_name} column is intentionally non-unique — a parent team and
+     * one of its sub-teams may share the same shortName (e.g. parent {@code ZFS} + sub
+     * {@code ZFS}). When the import sheet references such a code, this resolver picks the
+     * <strong>parent</strong> (where {@code parentTeam == null}) so the assignment lands
+     * on the canonical team. Falls back to the first match if no parent is among the
+     * candidates (defensive — data-integrity case logged at WARN).
+     *
+     * @param shortName trimmed team short code from the sheet
+     * @return the resolved team (parent preferred), or empty if no team matches
+     */
+    private Optional<Team> resolveTeamByShortName(String shortName) {
+        List<Team> matches = teamRepository.findAllByShortName(shortName);
+        if (matches.isEmpty()) {
+            return Optional.empty();
+        }
+        if (matches.size() == 1) {
+            return Optional.of(matches.get(0));
+        }
+        Optional<Team> parent = matches.stream()
+                .filter(t -> t.getParentTeam() == null)
+                .findFirst();
+        if (parent.isPresent()) {
+            return parent;
+        }
+        log.warn("Multiple teams share shortName '{}' with no parent — picking first deterministically (data-integrity issue)", shortName);
+        return Optional.of(matches.get(0));
     }
 
     // ---------------------------------------------------------------------------
