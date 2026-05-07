@@ -8,15 +8,16 @@ Gran Turismo Racing League Management application (Spring Boot 4 / Thymeleaf / M
 
 Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## Current State (after v1.8)
+## Current State (after v1.9)
 
-- **Codebase:** ~15k LOC Java (Prod) + ~21k LOC Java (Tests), 1064 Tests, 82%+ Coverage
+- **Codebase:** ~17k LOC Java (Prod) + ~25k LOC Java (Tests), 1246 Tests (1215 Surefire + 31 Failsafe), 87.24% Line Coverage
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), SSRF hostname blocklist, path traversal defense, CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation, Content-Disposition sanitization, MatchdayForm DTO (mass assignment protection)
-- **Architecture:** Clean 3-tier (Controller → Service → Repository), no God Services, centralized exception handling, domain services fully decoupled from admin layer, RaceLineup as source of truth for driver-team assignment
-- **Database:** 36 FK-Indexes, 28 @EntityGraph annotations, Flyway-managed
-- **Templates:** CSS utility classes instead of inline styles, TemplateManageable generic dispatch
-- **Data:** All UI text and code comments in English, dev profile with fictive test data
+- **Architecture:** Clean 3-tier (Controller → Service → Repository), no God Services, centralized exception handling, domain services fully decoupled from admin layer, RaceLineup as source of truth for driver-team assignment, sitegen decomposed into 5 page-generator beans + SiteSlugger + TemplateWriter (D-20)
+- **Database:** 36 FK-Indexes, 28 @EntityGraph annotations, Flyway-managed; Phase/Group model: `season_phases`, `season_phase_groups`, `phase_teams` tables driving Matchday and Playoff phase association
+- **Templates:** CSS utility classes instead of inline styles, TemplateManageable generic dispatch, phase-/group-aware public site templates (`standings.html`, `matchdays.html`, `driver-ranking.html`, `team-profile.html`, `driver-profile.html`)
+- **Data:** All UI text and code comments in English, dev profile with fictive test data including GROUPS multi-phase fixture (Season 2023) + Empty-Phase fixture for D-22 coverage
+- **Public Site:** Phase-tab row + group-sub-tab row, per-phase URL variants, Phase Breakdown sections on team/driver profiles, alltime aggregation across all phases (D-19 TRACKED BEHAVIOR CHANGE), desktop sticky table headers
 
 ## Current Milestone: v1.9 Season Phases & Groups
 
@@ -116,6 +117,23 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ `@RequestParam` + `Map<String, String>` form-binding (D-15 override of original DTO wording) — Phase 55
 - ✓ JaCoCo 82% line gate met with 1064 tests project-wide (+52 from baseline) — Phase 55
 
+### Validated (v1.9)
+
+- ✓ `SeasonPhase` entity (REGULAR/PLAYOFF/PLACEMENT) with format/scoring/dates at phase level — Phase 56
+- ✓ `SeasonPhaseGroup` as sub-groups of GROUPS-layout phases (independent roster + standings) — Phase 56
+- ✓ `PhaseTeam` roster (Team↔Phase, optional Group); `SeasonDriver` structurally unchanged — Phase 56
+- ✓ Mechanical migration of existing seasons → 1 REGULAR phase (+ 1 PLAYOFF if existed); old `season_id` columns dropped in V6 — Phases 57, 61
+- ✓ `Playoff` re-anchored from Season to Phase; M:N `playoff_seasons` table dropped — Phases 57, 61
+- ✓ Domain services (`StandingsService`, `DriverRankingService`, `MatchdayService`, `PlayoffService`, `PlayoffSeedingService`, `SeasonManagementService`) phase-aware with delete-guard, REGULAR auto-sync, dual-API surface (D-18, D-25, D-26 v1.9) — Phase 58
+- ✓ Driver import: `findByYearAndNumber(int, int)` replaces `findByYear(int)`; tab pattern `^\d{4}_S\d+$` — Phase 59
+- ✓ `TestDataService` and `DevDataSeeder` directly in new model with multi-phase + GROUPS fixture (Season 2023) + Empty-Phase fixture (Season 2024-3) — Phases 59, 62
+- ✓ Admin UI: Saison-Detail with phase tabs, group sub-tabs, per-phase standings + combined view — Phase 60
+- ✓ Cleanup quality gate: bridge columns dropped, no admin code referencing legacy `season_id` on Matchday/Playoff — Phase 61
+- ✓ Public static site phase- and group-aware (analogous to admin season-detail): per-phase URL variants, group sub-tab row, PLAYOFF tab routing to playoff.html (D-08), Phase Breakdown sections on team/driver profiles, byte-identity preserved for single-LEAGUE seasons (SC4) — Phase 62
+- ✓ D-19 TRACKED BEHAVIOR CHANGE: alltime aggregation spans all phases (REGULAR + PLAYOFF + PLACEMENT) — Phase 62
+- ✓ Cross-cutting regression IT (`SiteGeneratorPhaseAwarenessIT`, 9 @Test methods covering SC1-SC5 + D-22 + D-26) — Phase 62
+- ✓ JaCoCo 82% line gate held with 1246 tests project-wide (1215 Surefire + 31 Failsafe), 87.24% line coverage — Phase 62
+
 ### Active
 
 (None — awaiting next milestone definition via `/gsd-new-milestone`.)
@@ -171,4 +189,4 @@ All 56 requirements complete (22 original + 26 extended + 3 YouTube hero + 5 all
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-25 — v1.8 milestone shipped and archived (PR #116 merged as 042cfbf)*
+*Last updated: 2026-05-07 — v1.9 milestone shipped: Season Phases & Groups, last phase Phase 62 (Public Site Phase + Group Awareness) verified PASSED 11/11 must-haves, JaCoCo 87.24%, 1246 tests*
