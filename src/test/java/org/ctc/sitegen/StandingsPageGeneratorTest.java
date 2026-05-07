@@ -192,6 +192,36 @@ class StandingsPageGeneratorTest {
     }
 
     /**
+     * Legacy {@code standings.html} group sub-tab hrefs MUST point to the actual per-phase
+     * group files {@code standings-{phaseSlug}-group-{groupSlug}.html}, not to
+     * {@code standings-group-{groupSlug}.html} (which does not exist — there is no
+     * legacy group variant). Caught during Plan 7 visual sweep — broken click-through
+     * on the GROUPS multi-phase landing page.
+     */
+    @Test
+    void givenGroupsLayoutSeason_whenGenerateLegacyView_thenGroupSubTabHrefsIncludePhaseSlug() throws IOException {
+        Document doc = Jsoup.parse(
+                Files.readString(tempDir.resolve("season").resolve("2023-1-season-2023").resolve("standings.html")));
+        var groupTabs = doc.select("nav.group-tab-row a.group-tab");
+        assertThat(groupTabs).as("Legacy standings.html must render Combined + per-group sub-tabs").hasSizeGreaterThan(1);
+        for (var tab : groupTabs) {
+            String href = tab.attr("href");
+            String label = tab.text();
+            if ("Combined".equalsIgnoreCase(label)) {
+                assertThat(href).as("Combined sub-tab on legacy standings.html").isEqualTo("standings.html");
+            } else {
+                assertThat(href)
+                        .as("Group '%s' sub-tab href on legacy standings.html must include phase slug", label)
+                        .matches("standings-regular-group-[a-z0-9-]+\\.html")
+                        .doesNotMatch("standings-group-[a-z0-9-]+\\.html");
+                assertThat(tempDir.resolve("season").resolve("2023-1-season-2023").resolve(href).toFile())
+                        .as("Group sub-tab href '%s' must point to an actually generated file", href)
+                        .exists();
+            }
+        }
+    }
+
+    /**
      * D-32: GROUPS combined view shows the Group column with the team's group name.
      */
     @Test

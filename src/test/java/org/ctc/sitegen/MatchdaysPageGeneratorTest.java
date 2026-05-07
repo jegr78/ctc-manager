@@ -188,6 +188,35 @@ class MatchdaysPageGeneratorTest {
     }
 
     /**
+     * Legacy {@code matchdays.html} group sub-tab hrefs MUST point to the actual per-phase
+     * group files {@code matchdays-{phaseSlug}-group-{groupSlug}.html}, not to
+     * {@code matchdays-group-{groupSlug}.html} (which does not exist). Caught during Plan 7
+     * visual sweep — broken click-through on the GROUPS multi-phase landing page.
+     */
+    @Test
+    void givenGroupsLayoutSeason_whenGenerateLegacyIndex_thenGroupSubTabHrefsIncludePhaseSlug() throws IOException {
+        Document doc = Jsoup.parse(
+                Files.readString(tempDir.resolve("season").resolve("2023-1-season-2023").resolve("matchdays.html")));
+        var groupTabs = doc.select("nav.group-tab-row a.group-tab");
+        assertThat(groupTabs).as("Legacy matchdays.html must render Combined + per-group sub-tabs").hasSizeGreaterThan(1);
+        for (var tab : groupTabs) {
+            String href = tab.attr("href");
+            String label = tab.text();
+            if ("Combined".equalsIgnoreCase(label)) {
+                assertThat(href).as("Combined sub-tab on legacy matchdays.html").isEqualTo("matchdays.html");
+            } else {
+                assertThat(href)
+                        .as("Group '%s' sub-tab href on legacy matchdays.html must include phase slug", label)
+                        .matches("matchdays-regular-group-[a-z0-9-]+\\.html")
+                        .doesNotMatch("matchdays-group-[a-z0-9-]+\\.html");
+                assertThat(tempDir.resolve("season").resolve("2023-1-season-2023").resolve(href).toFile())
+                        .as("Group sub-tab href '%s' must point to an actually generated file", href)
+                        .exists();
+            }
+        }
+    }
+
+    /**
      * SC4 invariant for matchdays page: single-REGULAR-LEAGUE matchdays.html does not contain
      * either tab-row marker substring.
      */
