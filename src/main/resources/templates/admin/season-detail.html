@@ -3,7 +3,7 @@
       th:replace="~{admin/layout :: layout('Season: ' + ${season.name} + (phase != null ? ' — ' + ${effectivePhaseLabel} : ''), ~{::section})}">
 <body>
 <section>
-    <!-- Saison-Header (D-02, D-07): saison-wide actions only -->
+    <!-- Saison-Header: saison-wide actions only -->
     <div class="toolbar">
         <div>
             <a th:href="@{/admin/seasons}" class="back-link">&larr; Back to Seasons</a>
@@ -18,7 +18,7 @@
         </div>
     </div>
 
-    <!-- Saison-Stamm-Display (D-15) -->
+    <!-- Saison-Stamm-Display -->
     <div class="card">
         <div class="detail-fields">
             <span class="label">Name</span>
@@ -256,14 +256,14 @@
         </div>
     </div>
 
-    <!-- D-08 Empty-State: no REGULAR phase -->
+    <!-- Empty-State: no REGULAR phase -->
     <div th:if="${!hasRegularPhase}" class="card empty-state mt-md">
         <h2>No Regular Phase yet</h2>
         <p>This season needs a Regular Phase before matchdays, standings, or rosters can be configured.</p>
         <a th:href="@{/admin/seasons/{id}/phases/new(id=${season.id}, phaseType='REGULAR')}" class="btn btn-primary">+ Add Regular Phase</a>
     </div>
 
-    <!-- D-01 Phase-Tabs Row 1 (only when REGULAR phase exists) -->
+    <!-- Phase-Tabs Row 1 (only when REGULAR phase exists) -->
     <div th:if="${hasRegularPhase}" class="tab-nav mt-md" role="tablist" aria-label="Phase tabs">
         <a th:each="p : ${allPhases}"
            th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${p.id})}"
@@ -274,7 +274,7 @@
            class="tab-btn tab-add">+ Add Phase</a>
     </div>
 
-    <!-- D-29 Group-Sub-Tabs Row 2 (only when GROUPS layout) -->
+    <!-- Group-Sub-Tabs Row 2 (only when GROUPS layout) -->
     <div th:if="${phase != null and isGroupsLayout}"
          class="tab-nav tabs-secondary" role="tablist" aria-label="Group sub-tabs">
         <a th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${phase.id})}"
@@ -289,10 +289,10 @@
            class="tab-btn tab-add">+ Add Group</a>
     </div>
 
-    <!-- Per-Phase content (D-13 sub-title, D-04 sections) -->
+    <!-- Per-Phase content -->
     <div th:if="${phase != null}">
 
-        <!-- Per-Phase Header with Edit/Delete actions (D-07) -->
+        <!-- Per-Phase Header with Edit/Delete actions -->
         <div class="toolbar mt-md">
             <h2 th:text="${effectivePhaseLabel}"></h2>
             <div class="actions">
@@ -304,7 +304,7 @@
             </div>
         </div>
 
-        <!-- D-04 Roster Section -->
+        <!-- Roster Section -->
         <section id="roster" class="card mt-md">
             <h3>Roster</h3>
             <p th:if="${#lists.isEmpty(phaseTeams)}" class="text-dim">No teams in this phase yet.</p>
@@ -323,7 +323,7 @@
                 </tbody>
             </table>
 
-            <!-- D-20 Multi-select Roster Editor (inline; submits to SeasonPhaseGroupController.saveRoster) -->
+            <!-- Multi-select Roster Editor (inline; submits to SeasonPhaseGroupController.saveRoster) -->
             <details class="mt-md">
                 <summary>Edit Roster</summary>
                 <form th:action="@{/admin/seasons/{sid}/phases/{pid}/groups/roster(sid=${season.id}, pid=${phase.id})}"
@@ -363,7 +363,7 @@
             </details>
         </section>
 
-        <!-- B-3 PLAYOFF Bracket Section (only when PLAYOFF layout) -->
+        <!-- PLAYOFF Bracket Section (only when PLAYOFF layout) -->
         <section th:if="${isPlayoffLayout and playoff != null}" id="bracket" class="card mt-md">
             <h3>Bracket</h3>
             <p class="text-dim">Full bracket UI lives at the Playoff page.</p>
@@ -385,7 +385,7 @@
             <p class="text-dim">No bracket has been created for this PLAYOFF phase yet.</p>
         </section>
 
-        <!-- D-04 Matchdays Section (placeholder; full content in Plan 60-06) -->
+        <!-- Matchdays Section -->
         <section id="matchdays" class="card mt-md">
             <h3>Matchdays</h3>
             <p th:if="${#lists.isEmpty(matchdays)}" class="text-dim">No matchdays in this phase yet.</p>
@@ -396,7 +396,7 @@
             </ul>
         </section>
 
-        <!-- D-04 Standings Section (placeholder; full UI in Plan 60-05) -->
+        <!-- Standings Section -->
         <section id="standings" class="card mt-md">
             <h3>Standings</h3>
             <a th:href="@{/admin/standings(phase=${phase.id}, group=${selectedGroupId})}" class="btn btn-secondary btn-sm">View standings</a>

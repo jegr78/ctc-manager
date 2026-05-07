@@ -10,10 +10,10 @@
 
         <th:block th:each="tab : ${preview.tabPreviews()}">
             <div class="card mb-md">
-                <!-- D-37 / Pitfall 10: heading uses raw tabName (e.g. "2025_S2") not just the year -->
+                <!-- heading uses raw tabName (e.g. "2025_S2") not just the year -->
                 <h2 th:text="${tab.tabName()}"></h2>
 
-                <!-- D-38: ambiguous-tab plain banner — clear, never hidden behind a small caption -->
+                <!-- ambiguous-tab plain banner — clear, never hidden behind a small caption -->
                 <div th:if="${tab.ambiguousReason() != null}" class="alert alert-warning mb-md">
                     <strong>Ambiguous tab</strong> — rename to <code>{year}_S{N}</code> to disambiguate.
                     <span> Reason: </span>
@@ -33,7 +33,7 @@
                     </select>
                 </div>
 
-                <!-- TabWarning badges: teams with no PhaseTeam in REGULAR phase (IMPORT-04 / D-06) -->
+                <!-- TabWarning badges: teams with no PhaseTeam in REGULAR phase -->
                 <div class="alert alert-warning mb-md"
                      th:if="${!tab.warnings().isEmpty()}">
                     <strong>Group assignment warnings</strong>
@@ -43,7 +43,7 @@
                     </ul>
                 </div>
 
-                <!-- Bucket: New Drivers (D-39 inline badge, D-40 conditional Group column) -->
+                <!-- Bucket: New Drivers (inline badge, conditional Group column) -->
                 <th:block th:if="${!tab.newDrivers().isEmpty()}">
                     <h3 th:text="'New Drivers (' + ${#lists.size(tab.newDrivers())} + ')'"></h3>
                     <div class="table-scroll">
@@ -67,7 +67,7 @@
                     </div>
                 </th:block>
 
-                <!-- Bucket: New Assignments (D-39, D-40) -->
+                <!-- Bucket: New Assignments -->
                 <th:block th:if="${!tab.newAssignments().isEmpty()}">
                     <h3 th:text="'New Assignments (' + ${#lists.size(tab.newAssignments())} + ')'"></h3>
                     <div class="table-scroll">
@@ -91,7 +91,7 @@
                     </div>
                 </th:block>
 
-                <!-- Bucket: Conflicts (Skip checkbox) — UX-07, D-40 -->
+                <!-- Bucket: Conflicts (Skip checkbox) -->
                 <th:block th:if="${!tab.conflicts().isEmpty()}">
                     <h3 th:text="'Conflicts (' + ${#lists.size(tab.conflicts())} + ')'"></h3>
                     <div class="table-scroll">
@@ -125,7 +125,7 @@
                     </div>
                 </th:block>
 
-                <!-- Bucket: Fuzzy Match Suggestions (Accept checkbox) — UX-08, D-40 -->
+                <!-- Bucket: Fuzzy Match Suggestions (Accept checkbox) -->
                 <th:block th:if="${!tab.fuzzySuggestions().isEmpty()}">
                     <h3 th:text="'Fuzzy Match Suggestions (' + ${#lists.size(tab.fuzzySuggestions())} + ')'"></h3>
                     <div class="table-scroll">
@@ -159,7 +159,7 @@
                     </div>
                 </th:block>
 
-                <!-- Bucket: Unchanged (display-only, no DB write on execute) — D-40 -->
+                <!-- Bucket: Unchanged (display-only, no DB write on execute) -->
                 <th:block th:if="${!tab.unchanged().isEmpty()}">
                     <h3 th:text="'Unchanged (' + ${#lists.size(tab.unchanged())} + ')'"></h3>
                     <div class="table-scroll">
@@ -203,7 +203,7 @@
             </div>
         </th:block>
 
-        <!-- Ambiguous-season warning banner — D-16 -->
+        <!-- Ambiguous-season warning banner -->
         <div class="alert alert-error mb-md"
              th:if="${hasAmbiguousTabs}">
             <strong>Warning:</strong> Some tabs have no matching season.
