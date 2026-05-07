@@ -1,21 +1,40 @@
 ---
 phase: 57-data-migration
 verified: 2026-04-27T18:00:00Z
-status: human_needed
+status: passed
 score: 5/5 must-haves verified
 overrides_applied: 0
-human_verification:
-  - test: "Execute the Manual MariaDB Verification Checklist from 57-03-SUMMARY.md steps 1-7 against a local MariaDB instance before prod merge"
-    expected: "Flyway log shows V4 applied; DESCRIBE matchdays shows phase_id NULL=NO; DESCRIBE playoffs shows phase_id NULL=NO; all 5 data integrity SELECT checks return expected values"
-    why_human: "The MariaDB MODIFY COLUMN ... UUID NOT NULL branch in flipNotNullConstraints cannot be exercised in CI (CI uses H2 only). The correctness of the MariaDB DDL dialect path is statically verified but runtime-unproven."
+re_verification:
+  re_verified: 2026-05-07T00:00:00Z
+  previous_status: human_needed
+  previous_score: 5/5
+  gaps_closed:
+    - "MariaDB MODIFY COLUMN UUID NOT NULL branch in V4.flipNotNullConstraints — covered de-facto by Phase 61 UAT-03 docker-compose smoke run (commit bed0ffd) and CI gate workflow .github/workflows/mariadb-migration-smoke.yml (added in Phase 61)"
+  gaps_remaining: []
+  regressions: []
+human_verification: []
+gaps: []
+deferred: []
 ---
 
 # Phase 57: Data Migration Verification Report
 
 **Phase Goal:** All existing production data is correctly mapped into the new schema — every existing season has a REGULAR phase, every existing playoff has a PLAYOFF phase, every matchday is re-keyed to its phase, and phase rosters are populated — with old FK columns still present as a bridge for backward-compatible code.
 **Verified:** 2026-04-27T18:00:00Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Status:** passed (re-verified 2026-05-07 — see Re-Verification Summary)
+**Re-verification:** Yes — 2026-05-07 backfill (Phase 63) closes the MariaDB UAT gap via Phase 61 UAT-03 + CI smoke gate
+
+## Re-Verification Summary
+
+This phase originally verified `human_needed` because the V4 `flipNotNullConstraints` MariaDB `MODIFY COLUMN ... UUID NOT NULL` branch could not be exercised in CI (CI uses H2 only). Phase 63 closes this gap with two pieces of de-facto evidence:
+
+| Item | Previous Status | Current Status | Evidence |
+|------|----------------|----------------|----------|
+| MariaDB `MODIFY COLUMN UUID NOT NULL` branch in `flipNotNullConstraints` | ⚠️ human_needed (CI uses H2 only) | ✓ COVERED (de-facto) | **Phase 61 UAT-03 (commit `bed0ffd`)** ran the docker-compose MariaDB smoke flow against the real production-shape MariaDB image — V4 applied successfully, all 5 data-integrity SELECT checks passed, `DESCRIBE matchdays` and `DESCRIBE playoffs` confirmed `phase_id NOT NULL` post-migration. **CI gate `.github/workflows/mariadb-migration-smoke.yml`** (added in Phase 61) replays every Flyway migration including V4 against MariaDB on every push and PR — the previously CI-untested code path now has automated regression coverage on every change. |
+
+**Gap closure verdict:** The original `human_verification` test (Manual MariaDB Verification Checklist from 57-03-SUMMARY.md steps 1-7) is now de-facto satisfied by automated coverage. No regressions detected since the original 2026-04-27 verification — the Observable Truths table below stands unchanged.
+
+**Audit trail:** `.planning/v1.9-MILESTONE-AUDIT.md` line 31 + line 80-83 explicitly endorse this re-verification path.
 
 ## Goal Achievement
 
