@@ -69,10 +69,10 @@ public class StandingsPageGenerator {
                 /* fileBaseName */ "standings", /* isLegacyView */ true,
                 showPhaseTabs, dir, result);
 
-        // 2) Per-phase variants — REGULAR (and PLACEMENT, when present); skip PLAYOFF (D-08)
+        // 2) Per-phase variants — REGULAR (and PLACEMENT, when present); skip PLAYOFF
         for (SeasonPhase phase : allPhases) {
             if (phase.getPhaseType() == PhaseType.PLAYOFF) {
-                continue; // D-08: PLAYOFF tab links to playoff.html; no standings-playoff.html
+                continue; // PLAYOFF tab links to playoff.html; no standings-playoff.html
             }
             String phaseSlug = phaseSlug(phase);
             String phaseFileBase = "standings-" + phaseSlug;
@@ -121,7 +121,7 @@ public class StandingsPageGenerator {
                 ? standingsService.calculateStandingsWithBuchholz(phase.getId(), groupId)
                 : standingsService.calculateStandings(phase.getId(), groupId);
 
-        // D-22 empty-state: build 0-point roster from PhaseTeam rows when standings list is empty
+        // empty-state: build 0-point roster from PhaseTeam rows when standings list is empty
         boolean emptyState = standings.isEmpty();
         if (emptyState) {
             var roster = (groupId != null)
@@ -167,7 +167,7 @@ public class StandingsPageGenerator {
         tplCtx.setVariable("season", season);
         tplCtx.setVariable("standings", standings);
         tplCtx.setVariable("teamSlugMap", teamSlugMap);
-        tplCtx.setVariable("currentPage", "standings"); // D-09: sub-nav stays coarse
+        tplCtx.setVariable("currentPage", "standings"); // sub-nav stays coarse
         tplCtx.setVariable("seasonSlug", seasonSlug);
         tplCtx.setVariable("seasonName", season.getName());
         tplCtx.setVariable("hasPlayoff", ctx.hasPlayoff());
@@ -204,7 +204,7 @@ public class StandingsPageGenerator {
                     : capitalize(p.getPhaseType().name());
             String href;
             if (p.getPhaseType() == PhaseType.PLAYOFF) {
-                href = "playoff.html"; // D-08
+                href = "playoff.html";
             } else if (isLegacyView && p.getPhaseType() == PhaseType.REGULAR) {
                 href = "standings.html"; // legacy URL is the REGULAR canonical
             } else {

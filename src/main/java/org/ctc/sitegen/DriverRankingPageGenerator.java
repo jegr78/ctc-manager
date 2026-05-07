@@ -122,7 +122,7 @@ public class DriverRankingPageGenerator {
         }
         tplCtx.setVariable("driverSlugMap", driverSlugMap);
 
-        tplCtx.setVariable("currentPage", "driver-ranking"); // D-09: sub-nav stays coarse
+        tplCtx.setVariable("currentPage", "driver-ranking"); // sub-nav stays coarse
         tplCtx.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
         tplCtx.setVariable("seasonName", season.getName());
         tplCtx.setVariable("hasPlayoff", ctx.hasPlayoff());

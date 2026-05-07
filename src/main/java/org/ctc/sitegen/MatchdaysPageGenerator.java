@@ -81,10 +81,10 @@ public class MatchdaysPageGenerator {
                 allPhases, regularPhase, /* groupId */ null,
                 /* isLegacyView */ true, showPhaseTabs, result);
 
-        // 2) Per-phase variants — skip PLAYOFF (D-08; PLAYOFF tab links to playoff.html)
+        // 2) Per-phase variants — skip PLAYOFF (PLAYOFF tab links to playoff.html)
         for (SeasonPhase phase : allPhases) {
             if (phase.getPhaseType() == PhaseType.PLAYOFF) {
-                continue; // D-08: never generate matchdays-playoff.html
+                continue; // never generate matchdays-playoff.html
             }
             String phaseSlug = phaseSlug(phase);
             String phaseFileBase = "matchdays-" + phaseSlug;
@@ -156,7 +156,7 @@ public class MatchdaysPageGenerator {
         tplCtx.setVariable("season", season);
         tplCtx.setVariable("matchdays", matchdays);
         tplCtx.setVariable("matchdayLinkMap", matchdayLinkMap);
-        tplCtx.setVariable("currentPage", "matchdays"); // D-09: sub-nav stays coarse
+        tplCtx.setVariable("currentPage", "matchdays"); // sub-nav stays coarse
         tplCtx.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));
         tplCtx.setVariable("seasonName", season.getName());
         tplCtx.setVariable("hasPlayoff", ctx.hasPlayoff());
@@ -188,7 +188,7 @@ public class MatchdaysPageGenerator {
                     : capitalize(p.getPhaseType().name());
             String href;
             if (p.getPhaseType() == PhaseType.PLAYOFF) {
-                href = "playoff.html"; // D-08
+                href = "playoff.html";
             } else if (isLegacyView && p.getPhaseType() == PhaseType.REGULAR) {
                 href = "matchdays.html"; // legacy URL is the REGULAR canonical
             } else {
