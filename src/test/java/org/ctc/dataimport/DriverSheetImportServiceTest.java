@@ -762,4 +762,66 @@ class DriverSheetImportServiceTest {
         assertThat(tab.newDrivers().get(0).resolvedGroupName()).isNull();
         verifyNoInteractions(phaseTeamRepository);
     }
+
+    // ---------------------------------------------------------------------------
+    // 19. Phase 66 / D-11 — multi-match collision: parent + sub-team share shortName
+    // ---------------------------------------------------------------------------
+
+    @Test
+    void givenTeamsWithSameShortNameParentAndSub_whenPreview_thenResolvesParentTeam() throws IOException {
+        // given — two teams in DB share shortName "ZFS": one parent (parentTeam == null)
+        // and one sub-team (parentTeam != null). The resolver MUST pick the parent.
+        Team parentZfs = new Team("ZF Schweinfurt", "ZFS");
+        parentZfs.setId(UUID.randomUUID());
+        Team subZfs = new Team("ZF Schweinfurt B", "ZFS", parentZfs);
+        subZfs.setId(UUID.randomUUID());
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("zfs_driver", "ZFS Driver", "ZFS")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(seasonPhaseService.findRegularPhase(season2024.getId()))
+                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
+        when(teamRepository.findAllByShortName("ZFS")).thenReturn(List.of(parentZfs, subZfs));
+        when(driverMatchingService.findDriver("zfs_driver"))
+                .thenReturn(MatchResult.noMatch("zfs_driver"));
+
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — preview succeeds (no exception), row routed to NEW_DRIVER, parent resolved
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.newDrivers()).hasSize(1);
+        assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("ZFS");
+        assertThat(tab.errors()).isEmpty();
+    }
+
+    // ---------------------------------------------------------------------------
+    // 20. Phase 66 / D-12 — defensive: two parent teams with same shortName
+    // ---------------------------------------------------------------------------
+
+    @Test
+    void givenTwoParentTeamsWithSameShortName_whenPreview_thenFirstWinsWithoutException() throws IOException {
+        // given — data-integrity edge case: two teams with parentTeam == null share shortName.
+        // The resolver MUST log.warn and pick the first deterministically; import does NOT crash.
+        Team parentA = new Team("Alpha", "DUP");
+        parentA.setId(UUID.randomUUID());
+        Team parentB = new Team("Bravo", "DUP");
+        parentB.setId(UUID.randomUUID());
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("dup_driver", "Dup Driver", "DUP")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(seasonPhaseService.findRegularPhase(season2024.getId()))
+                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
+        when(teamRepository.findAllByShortName("DUP")).thenReturn(List.of(parentA, parentB));
+        when(driverMatchingService.findDriver("dup_driver"))
+                .thenReturn(MatchResult.noMatch("dup_driver"));
+
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — preview succeeds (no exception), row routed to NEW_DRIVER, no error row
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.newDrivers()).hasSize(1);
+        assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("DUP");
+        assertThat(tab.errors()).isEmpty();
+    }
 }
