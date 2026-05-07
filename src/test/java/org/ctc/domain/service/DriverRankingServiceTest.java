@@ -512,22 +512,18 @@ class DriverRankingServiceTest {
 
 		var sd = new SeasonDriver(season, panicpotato, tnr);
 
-		// TODAY: findByRacePlayoffMatchupIsNullAndRaceMatchdaySeasonIdIn returns only the REGULAR result
-		// (IsNull filter excludes playoffResult whose Race.playoffMatchup is non-null)
-		when(raceResultRepository.findByRacePlayoffMatchupIsNullAndRaceMatchdaySeasonIdIn(List.of(season.getId())))
-				.thenReturn(List.of(regularResult));
+		// D-19 (TDD-GREEN): findByRaceMatchdaySeasonIdIn (no IsNull filter) returns BOTH results.
+		// The old IsNull-filtered finder would only return regularResult — causing racesCount == 1.
+		// The new finder returns both → racesCount == 2, proving PLAYOFF results are included.
+		when(raceResultRepository.findByRaceMatchdaySeasonIdIn(List.of(season.getId())))
+				.thenReturn(List.of(regularResult, playoffResult));
 		when(seasonDriverRepository.findBySeasonIdIn(List.of(season.getId())))
 				.thenReturn(List.of(sd));
 
 		// when
 		var alltime = driverRankingService.calculateAlltimeRanking(List.of(season.getId()));
 
-		// then — D-19: both REGULAR (1) and PLAYOFF (1) races must be counted → racesCount >= 2
-		// TODAY this assertion FAILS: IsNull filter produces only 1 race.
-		// After D-19 (findByRaceMatchdaySeasonIdIn replaces the IsNull variant),
-		// the mock must return both results. For now the mock is wired to only the old finder;
-		// the test proves the RED gate: today's path yields 1, expected ≥2.
-		// NOTE: The GREEN test will re-wire the mock to findByRaceMatchdaySeasonIdIn returning both results.
+		// then — D-19: both REGULAR (1) and PLAYOFF (1) races counted → racesCount == 2
 		assertThat(alltime).isNotEmpty();
 		var panicAlltime = alltime.stream()
 				.filter(r -> r.getDriver().getId().equals(panicpotato.getId()))

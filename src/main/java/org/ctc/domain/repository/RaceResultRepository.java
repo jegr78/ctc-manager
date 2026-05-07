@@ -30,6 +30,18 @@ public interface RaceResultRepository extends JpaRepository<RaceResult, UUID> {
 	@Query("SELECT rr FROM RaceResult rr WHERE rr.race.playoffMatchup IS NULL AND rr.race.matchday.phase.season.id IN :seasonIds")
 	List<RaceResult> findByRacePlayoffMatchupIsNullAndRaceMatchdaySeasonIdIn(List<UUID> seasonIds);
 
+	/**
+	 * Returns all race results for the given season IDs, including results from PLAYOFF-matchup-linked
+	 * races. This is the D-19 replacement for
+	 * {@link #findByRacePlayoffMatchupIsNullAndRaceMatchdaySeasonIdIn} in the alltime-ranking path.
+	 *
+	 * <p><strong>Tracked Behavior Change (v1.9 / D-19):</strong> Used by
+	 * {@code DriverRankingService.calculateAlltimeRanking} to include PLAYOFF results in alltime totals.
+	 */
+	@EntityGraph(attributePaths = {"driver", "race"})
+	@Query("SELECT rr FROM RaceResult rr WHERE rr.race.matchday.phase.season.id IN :seasonIds")
+	List<RaceResult> findByRaceMatchdaySeasonIdIn(List<UUID> seasonIds);
+
 	@EntityGraph(attributePaths = {"driver", "race"})
 	List<RaceResult> findByRaceMatchdayPhaseId(UUID phaseId);
 
