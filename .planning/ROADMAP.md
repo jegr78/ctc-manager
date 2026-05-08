@@ -448,7 +448,7 @@ Each `/gsd-validate-phase {N}` invocation may run in `mode: retroactive` since t
 
 **Depends on:** Phase 65
 
-**Plans:** 1/1 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 66-01-PLAN.md — Add findAllByShortName + parent-precedence resolveTeamByShortName helper, migrate 5 call sites + 18 test stubs, 2 new TDD tests (Wave 1)
