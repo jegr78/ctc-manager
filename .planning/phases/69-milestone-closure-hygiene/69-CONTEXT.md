@@ -56,10 +56,10 @@ Out of scope: any new test code beyond Nyquist auto-fill triggered by genuine ga
 
 ### SC7 — Branch hygiene
 - **D-18:** Active branch `gsd/v1.9-season-phases-groups` at every checkpoint and at commit time (mirrors Phase 67's verified Gate 19). Subagent prompts MUST forbid `git stash`, `git checkout`, `git reset`, branch switching (per CLAUDE.md Subagent Rules + `feedback_subagent_stability`). Post-dispatch validation block (current branch + last 3 commits + diff stat) immediately after EVERY subagent.
-- **D-19:** No worktree for Phase 69 — work is bookkeeping (markdown edits + frontmatter flips + at most 1-2 auto-fill test files). Inline on `gsd/v1.9-season-phases-groups`, commits stay atomic per SC.
+- **D-19** [informational]: No worktree for Phase 69 — work is bookkeeping (markdown edits + frontmatter flips + at most 1-2 auto-fill test files). Inline on `gsd/v1.9-season-phases-groups`, commits stay atomic per SC. (Process meta-decision; reflected by the absence of worktree commands in every plan.)
 
 ### Plan organisation (Claude's discretion)
-- **D-20:** Planner is free to choose 1 mega-plan vs. 4-7 focused plans (one per SC or grouped). Constraint: each plan must be atomically executable per CLAUDE.md "Atomic Tasks" rule. Recommended grouping (planner refines): Plan 69-01 = SC1+SC2 (VERIFICATION.md authoring); Plan 69-02 = SC3+SC4 (status flips, including Auto-UAT for UAT-01); Plan 69-03 = SC5 (SUMMARY-frontmatter sweep); Plan 69-04 = SC6 (Nyquist sweep + final verify gate); SC7 is invariant maintained by every plan, not its own plan.
+- **D-20** [informational]: Planner is free to choose 1 mega-plan vs. 4-7 focused plans (one per SC or grouped). Constraint: each plan must be atomically executable per CLAUDE.md "Atomic Tasks" rule. Recommended grouping (planner refines): Plan 69-01 = SC1+SC2 (VERIFICATION.md authoring); Plan 69-02 = SC3+SC4 (status flips, including Auto-UAT for UAT-01); Plan 69-03 = SC5 (SUMMARY-frontmatter sweep); Plan 69-04 = SC6 (Nyquist sweep + final verify gate); SC7 is invariant maintained by every plan, not its own plan. (Planner discretion meta-decision; reflected by the actual 4-plan structure delivered.)
 
 ### Claude's Discretion
 - Exact wording of override / defer / closure addendums (must include date, rationale, sign-off citation)
