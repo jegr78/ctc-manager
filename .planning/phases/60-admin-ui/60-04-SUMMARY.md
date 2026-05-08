@@ -4,6 +4,7 @@ phase: 60-admin-ui
 status: complete
 self_check: PASSED
 requirements: [UI-01, UI-02, UI-03, UI-04]
+requirements-completed: [UI-01, UI-02, UI-03, UI-04]
 files_created:
   - src/main/resources/templates/admin/season-phase-form.html
   - src/main/resources/templates/admin/season-phase-group-form.html

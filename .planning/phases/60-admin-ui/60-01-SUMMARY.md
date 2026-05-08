@@ -29,6 +29,7 @@ decisions:
   - "Used existsByPhaseSeasonId (existing method) instead of non-existent existsByPhaseSeasonIdAndTeamId for D-25 strict remove guard in unit test; implementation will use the appropriate check"
   - "W-11 phaseType immutability documented via givenExistingPhase_whenUpdateWithSameLayout_thenPhaseTypePersisted test in SeasonPhaseServiceTest"
   - "DriverSheetImportControllerTest new tests use real DriverSheetImportService with mocked GoogleSheetsService — no separate service mock needed"
+requirements-completed: [UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07]
 metrics:
   duration: "~90 minutes (resumed from prior session)"
   completed: "2026-04-30"

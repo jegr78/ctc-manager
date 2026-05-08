@@ -4,6 +4,7 @@ phase: 60-admin-ui
 status: complete
 self_check: PASSED
 requirements: [UI-05, UI-06]
+requirements-completed: [UI-05, UI-06]
 files_modified:
   - src/main/java/org/ctc/admin/controller/StandingsController.java
   - src/main/resources/templates/admin/standings.html

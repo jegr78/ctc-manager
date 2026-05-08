@@ -4,6 +4,7 @@ phase: 60-admin-ui
 status: complete
 self_check: PASSED
 requirements: [UI-07]
+requirements-completed: [UI-07]
 files_modified:
   - src/main/resources/templates/admin/playoff-bracket.html
   - src/main/java/org/ctc/admin/controller/PlayoffController.java

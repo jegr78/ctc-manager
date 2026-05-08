@@ -27,6 +27,7 @@ decisions:
   - "D-42: PLAYOFF create routes through PlayoffService.createPlayoff (auto-creates PLAYOFF SeasonPhase per D-19)"
   - "W-11: SeasonPhaseService.update() signature omits phaseType — phaseType is immutable post-create"
   - "Rule 3 deviation: MatchdayRepository.findByPhaseId + findByGroupId added for guard checks; PlayoffService.findByPhaseId delegation method added"
+requirements-completed: [UI-03, UI-04]
 metrics:
   duration: "~25 minutes"
   completed: "2026-04-30"

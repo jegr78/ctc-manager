@@ -23,6 +23,7 @@ decisions:
   - "SeasonPhaseFormTest.setSeasonId calls removed (Rule 3 blocking deviation) — W-7 IDOR hardening from Plan 60-02 omits seasonId from SeasonPhaseForm"
   - "SeasonControllerTest failures for template errors are out of scope (Plan 60-04 template), NOT fixed here"
   - "SeasonControllerTest givenSlimForm 500 error is a Plan 60-02 gap (race_scoring_id NOT NULL on seasons table requires Flyway V4 to relax)"
+requirements-completed: [UI-01]
 metrics:
   duration: "~40 minutes"
   completed: "2026-04-30"

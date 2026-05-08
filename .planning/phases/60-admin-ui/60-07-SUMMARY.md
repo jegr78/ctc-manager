@@ -4,6 +4,7 @@ phase: 60-admin-ui
 status: complete
 self_check: PASSED
 requirements: [UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07]
+requirements-completed: [UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07]
 files_modified:
   - src/main/java/org/ctc/domain/service/MatchdayService.java
   - src/main/java/org/ctc/domain/service/MatchdayGeneratorService.java
