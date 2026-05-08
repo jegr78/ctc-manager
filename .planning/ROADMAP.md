@@ -8,7 +8,7 @@
 - :white_check_mark: **v1.5 Code Review Fixes** — Phases 28-36 (shipped 2026-04-15)
 - :white_check_mark: **v1.6 Static Site Quality** — Phases 37-53 (shipped 2026-04-18)
 - :white_check_mark: **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (shipped 2026-04-25)
-- **v1.9 Season Phases & Groups** — Phases 56-65 (active)
+- **v1.9 Season Phases & Groups** — Phases 56-69 (active)
 
 ## Phases
 
@@ -106,7 +106,7 @@ See: milestones/v1.8-ROADMAP.md for full details
 </details>
 
 <details>
-<summary>v1.9 Season Phases & Groups (Phases 56-65) -- ACTIVE</summary>
+<summary>v1.9 Season Phases & Groups (Phases 56-69) -- ACTIVE</summary>
 
 - [x] **Phase 56: Model & Schema Foundation** - New entities (SeasonPhase, SeasonPhaseGroup, PhaseTeam) + Flyway DDL migrations create the new tables ✅ shipped 2026-04-26
 - [x] **Phase 57: Data Migration** - Populate new tables from existing data (REGULAR/PLAYOFF phases, matchday re-keying, phase roster) ✅ shipped 2026-04-27
@@ -118,6 +118,10 @@ See: milestones/v1.8-ROADMAP.md for full details
 - [x] **Phase 63: Documentation & Verification Backfill** - Backfill 60-VERIFICATION.md, fix 13 stale REQUIREMENTS.md checkboxes, add SITE-01..03 IDs for Phase 62, reconcile 57-VERIFICATION.md MariaDB UAT status (gap closure from v1.9-MILESTONE-AUDIT.md) ✅ shipped 2026-05-07
 - [x] **Phase 64: Nyquist Validation Sweep** - Backfill / complete VALIDATION.md for Phases 56, 57, 58, 59, 60, 62 so all v1.9 phases are nyquist_compliant before milestone close ✅ shipped 2026-05-07
 - [x] **Phase 65: Graphics Services Bridge Migration** - Migrate 5 graphics-service callers off legacy `calculateStandings(seasonId)` overload to phase-aware `calculateStandings(phaseId, groupId)`; close W-A bridge debt ✅ shipped 2026-05-07
+- [x] **Phase 66: Team ShortName Collision Fix (Driver Import)** - Resolver returns Optional via `findAllByShortName`; multi-match prefers PhaseTeam in REGULAR phase; layout-gated GROUPS warnings ✅ shipped 2026-05-08
+- [x] **Phase 67: Comment Cleanup Re-Sweep** - Repo-wide CLAUDE.md comment policy enforcement; 5 D-19 grep gates pass ✅ shipped 2026-05-07
+- [x] **Phase 68: Lombok Unsafe Deprecation Warning Fix** - Pin Lombok 1.18.46 + JEP 498 flag in compile/Surefire/Failsafe forks ✅ shipped 2026-05-07
+- [ ] **Phase 69: v1.9 Milestone Closure Hygiene** - Backfill 64+65 VERIFICATION.md, SUMMARY-frontmatter sweep, Phase 61/67 human_needed resolution, Nyquist sweep for phases 65-68 (final v1.9 bookkeeping)
 
 </details>
 
@@ -480,3 +484,33 @@ Plans:
 
 Plans:
 - [x] 68-01-PLAN.md — Pin Lombok 1.18.46 + JEP 498 argLine flag in Surefire/Failsafe + atomic verify gate (Wave 1)
+
+### Phase 69: v1.9 Milestone Closure Hygiene
+
+**Goal:** All v1.9 milestone bookkeeping is consistent and Nyquist-compliant before milestone close: Phase 64 + Phase 65 each have a formal `*-VERIFICATION.md` artifact (sweep + UAT-derived), every plan SUMMARY's `requirements-completed` frontmatter accurately lists the REQ-IDs satisfied by that plan, Phase 61's `human_needed` status is resolved (UAT-01 + UAT-02 either run or formally deferred), Phase 67's `human_needed` status is resolved (residue ACCEPT/RE-OPEN decision recorded), and Phases 65–68 carry `nyquist_compliant: true` / `wave_0_complete: true` VALIDATION.md (analog to Phase 64's sweep methodology).
+
+**Depends on:** Phases 61, 64, 65, 67, 68
+
+**Requirements:** No new REQ-IDs — closes the tech_debt bucket from `v1.9-MILESTONE-AUDIT.md` (2026-05-08). All 36 v1.9 REQ-IDs already SATISFIED; this phase is pure hygiene/bookkeeping closure.
+
+**Gap Closure (from v1.9-MILESTONE-AUDIT.md):**
+
+- Phase 61: VERIFICATION status `human_needed` (UAT-01 GROUPS visual smoke not re-confirmed after `f5b10bc` fix; UAT-02 legacy season visual smoke deferred)
+- Phase 64: no `64-VERIFICATION.md` (sweep phase)
+- Phase 65: no `65-VERIFICATION.md` (has `65-UAT.md status: complete` instead)
+- Phase 67: VERIFICATION status `human_needed` (residue ~124 attribution markers — scope-vs-goal-alignment decision pending)
+- Nyquist: 65/66/67/68 VALIDATION.md drafts (`nyquist_compliant: false`) — Phase 64 swept 56-62 only
+- Bookkeeping: SUMMARY-frontmatter `requirements-completed` incomplete for SVC-01..05, IMPORT-01/02/04, UI-01..07, DATA-01/02 (~20 REQ-IDs across 8 plan SUMMARYs)
+
+**Success Criteria** (what must be TRUE):
+
+1. `.planning/phases/64-nyquist-validation-sweep/64-VERIFICATION.md` exists with status `passed` and 7/7 SCs verified (mirrors Phase 64 SUMMARY content)
+2. `.planning/phases/65-graphics-bridge-migration/65-VERIFICATION.md` exists with status `passed` and references the 3/3 UAT tests in `65-UAT.md` plus the SC1=0 grep proof
+3. Phase 61 `61-VERIFICATION.md` status flipped from `human_needed` to `passed` — either via user-confirmed UAT-01/UAT-02 manual run (record in `61-HUMAN-UAT.md`) or via formal deferral note signed off by user
+4. Phase 67 `67-VERIFICATION.md` status flipped from `human_needed` to `passed` — either via formal ACCEPT (override note added; residue documented as deferred) or RE-OPEN (Plan 67-04 added that strips the remaining markers)
+5. SUMMARY-frontmatter sweep: `requirements-completed` lists are complete for plans 58-01..06 (SVC-01..05), 59-01..05 (IMPORT-01/02/04, DATA-01/02), 60-01..07 (UI-01..07) — verified via `gsd-sdk query summary-extract` returning non-empty arrays
+6. Phases 65, 66, 67, 68 each carry `nyquist_compliant: true` / `wave_0_complete: true` in VALIDATION.md frontmatter (analog to Phase 64 sweep methodology); audit per phase against existing test infrastructure; auto-fill any genuine gaps; `./mvnw verify` exits 0 with JaCoCo line coverage ≥ 82%
+7. Active branch is `gsd/v1.9-season-phases-groups` (or worktree branch with merge-back) at every checkpoint and at commit time
+
+**Plans:** TBD (will be created via `/gsd-plan-phase 69`)
+
