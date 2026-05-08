@@ -1,9 +1,10 @@
 ---
 phase: 67
 slug: comment-cleanup-resweep
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: n/a
+wave_0_complete: n/a
+rationale: "Comments-only diff (5 D-19 grep gates GREEN; no bytecode change). Cannot regress test coverage by construction. Mirrors Phase 63 docs-only treatment per Phase 69 D-12."
 created: 2026-05-07
 ---
 
@@ -100,3 +101,18 @@ None — comments-only diff. Existing test infrastructure covers all phase requi
 - [ ] `nyquist_compliant: true` set in frontmatter (after Plan 67-03 verifies all D-19 + D-20 gates green)
 
 **Approval:** pending
+
+---
+
+## Validation Audit 2026-05-08 (Phase 69 SC6)
+
+**Verdict:** `n/a` — by design. Phase 67 was a comments-only diff per CONTEXT.md D-13/D-19 of Phase 67. The 5 quantitative grep gates (Phase-attribution markers, Artifact references, Gap-tracking remnants, Long decoration separators, Short 3-dash sectional separators) returned 0; no production bytecode changed. Test coverage cannot regress under a comments-only diff because the bytecode is byte-identical pre- and post-sweep.
+
+**Methodology:** Mirrors Phase 63 docs-only treatment (no VALIDATION.md authored in Phase 64 sweep because the phase modifies no code). Phase 67's slight-stronger case: VALIDATION.md exists but is conceptually a stub; Phase 69 D-12 formalises the n/a verdict.
+
+**Coverage delta vs. baseline:** `JaCoCo line` measured at Phase 67 close: 0.8561 (Phase 67 VERIFICATION.md). Pre-Phase-67 baseline: same (comments-only diff). Delta: 0.0 within measurement noise.
+
+**Why Manual (Phase 64 standard, D-15):** The single Manual-Only row above (V4/V5 Flyway Javadoc spot-check) is correctly classified — automated grep cannot distinguish "history" from "contract" in Javadoc text; borderline judgement requires human reading of the migration purpose paragraphs.
+
+_Authored 2026-05-08 (Phase 69 SC6 — milestone closure hygiene)_
+_Branch: gsd/v1.9-season-phases-groups_
