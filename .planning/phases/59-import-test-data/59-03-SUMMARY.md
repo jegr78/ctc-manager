@@ -19,6 +19,7 @@ decisions:
   - D-12/D-13: seedPhaseTeams() populates 12 PhaseTeam rows for GROUPS phase (6/group) + LEAGUE phases (group=null)
   - D-14: autoSeedBracket() replaces manual s1aSorted/s1bSorted playoff seeding
   - Rule-1-Bug: VRX driver deduplication — consolidated season requires VRX 1-10 registered once (was 1-6 + 5-10 in separate seasons)
+requirements-completed: [DATA-01, DATA-02]
 metrics:
   duration: approx 45 minutes
   completed: 2026-04-29

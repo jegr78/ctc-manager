@@ -31,6 +31,7 @@ key_files:
     - src/test/java/org/ctc/dataimport/DriverSheetImportServiceTransactionIT.java
 
 requirements_completed: [IMPORT-02 — gap closure for UAT-59 Test 2]
+requirements-completed: [IMPORT-02]
 
 metrics:
   tasks_completed: 3

@@ -41,6 +41,8 @@ decisions:
   - "Execute path left completely unchanged per D-16 — seasonPhaseService and phaseTeamRepository only called from buildTabPreview, never from execute()"
   - "warnedTeams dedup uses Set.add() return value to emit exactly one TabWarning per team short name"
 
+requirements-completed: [IMPORT-01, IMPORT-03, IMPORT-04]
+
 metrics:
   duration_minutes: ~35
   tasks_completed: 3

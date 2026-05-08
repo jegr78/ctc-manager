@@ -30,6 +30,8 @@ decisions:
   - "Overload findUnique(int year) added as service-side helper so importer has a single API to call (D-02 option 2)"
   - "Exception messages verbatim-locked: 'Multiple seasons exist for (year, number) — consolidate them first or rename sheet tab to disambiguate' and 'Multiple seasons exist for year {year} — consolidate them first or rename sheet tab to disambiguate'"
 
+requirements-completed: [IMPORT-02]
+
 metrics:
   duration_minutes: ~8
   tasks_completed: 2
