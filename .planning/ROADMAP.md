@@ -512,11 +512,11 @@ Plans:
 6. Phases 65, 66, 67, 68 each carry `nyquist_compliant: true` / `wave_0_complete: true` in VALIDATION.md frontmatter (analog to Phase 64 sweep methodology); audit per phase against existing test infrastructure; auto-fill any genuine gaps; `./mvnw verify` exits 0 with JaCoCo line coverage ≥ 82%
 7. Active branch is `gsd/v1.9-season-phases-groups` (or worktree branch with merge-back) at every checkpoint and at commit time
 
-**Plans:** 4 plans
+**Plans:** 4/4 plans complete
 
 Plans:
-- [ ] 69-01-PLAN.md — SC1+SC2 author 64-VERIFICATION.md + 65-VERIFICATION.md (Wave 1, autonomous)
-- [ ] 69-02-PLAN.md — SC3+SC4 close Phase 61 (auto-uat UAT-01 + defer UAT-02) + Phase 67 (ACCEPT override) (Wave 1, has human-verify checkpoint)
-- [ ] 69-03-PLAN.md — SC5 SUMMARY-frontmatter requirements-completed sweep across 58/59/60 (Wave 1, autonomous)
-- [ ] 69-04-PLAN.md — SC6 Nyquist sweep + flip 65/66/67/68 VALIDATION + final ./mvnw verify -Pe2e (Wave 2, depends_on 69-01/02/03)
+- [x] 69-01-PLAN.md — SC1+SC2 author 64-VERIFICATION.md + 65-VERIFICATION.md (Wave 1, autonomous)
+- [x] 69-02-PLAN.md — SC3+SC4 close Phase 61 (auto-uat UAT-01 + defer UAT-02) + Phase 67 (ACCEPT override) (Wave 1, has human-verify checkpoint)
+- [x] 69-03-PLAN.md — SC5 SUMMARY-frontmatter requirements-completed sweep across 58/59/60 (Wave 1, autonomous)
+- [x] 69-04-PLAN.md — SC6 Nyquist sweep + flip 65/66/67/68 VALIDATION + final ./mvnw verify -Pe2e (Wave 2, depends_on 69-01/02/03)
 
