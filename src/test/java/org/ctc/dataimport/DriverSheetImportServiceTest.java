@@ -800,7 +800,67 @@ class DriverSheetImportServiceTest {
         assertThat(tab.errors()).isEmpty();
         assertThat(tab.warnings()).hasSize(1);
         assertThat(tab.warnings().get(0).type()).isEqualTo(WarningType.TEAM_NOT_IN_REGULAR_PHASE);
-        verify(phaseTeamRepository).findByPhaseIdAndTeamId(regularPhase.getId(), parentZfs.getId());
+        // parentZfs is consulted twice (resolver fallback step + buildTabPreview's group resolution
+        // for the chosen team); subZfs is consulted exactly once (resolver fallback only).
+        verify(phaseTeamRepository, atLeastOnce()).findByPhaseIdAndTeamId(regularPhase.getId(), parentZfs.getId());
         verify(phaseTeamRepository).findByPhaseIdAndTeamId(regularPhase.getId(), subZfs.getId());
+    }
+
+    // 21. Gap-66-02 — legacy season with no REGULAR phase: collision falls back to parent precedence
+
+    @Test
+    void givenSeasonHasNoRegularPhase_whenPreviewWithCollision_thenFallsBackToParentPrecedence() throws IOException {
+        // given — season without REGULAR phase + parent + sub collision
+        Team parentZfs = new Team("ZF Schweinfurt", "ZFS");
+        parentZfs.setId(UUID.randomUUID());
+        Team subZfs = new Team("ZF Schweinfurt 1", "ZFS", parentZfs);
+        subZfs.setId(UUID.randomUUID());
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("zfs_driver", "ZFS Driver", "ZFS")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(seasonPhaseService.findRegularPhase(season2024.getId()))
+                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
+        when(teamRepository.findAllByShortName("ZFS")).thenReturn(List.of(parentZfs, subZfs));
+        when(driverMatchingService.findDriver("zfs_driver"))
+                .thenReturn(MatchResult.noMatch("zfs_driver"));
+
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — parent picked (legacy fallback), no PhaseTeam interactions, no warnings
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.newDrivers()).hasSize(1);
+        assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("ZFS");
+        assertThat(tab.errors()).isEmpty();
+        assertThat(tab.warnings()).isEmpty();
+        verifyNoInteractions(phaseTeamRepository);
+    }
+
+    // 22. Phase 66 D-12 retained — two parent teams with same shortName, no REGULAR phase: first wins, no exception
+
+    @Test
+    void givenLegacyPath_whenTwoParentTeamsCollideWithoutRegularPhase_thenFirstParentWinsWithoutException() throws IOException {
+        // given — data-integrity edge: two parents share shortName, no REGULAR phase
+        Team parentA = new Team("Alpha", "DUP");
+        parentA.setId(UUID.randomUUID());
+        Team parentB = new Team("Bravo", "DUP");
+        parentB.setId(UUID.randomUUID());
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("dup_driver", "Dup Driver", "DUP")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(seasonPhaseService.findRegularPhase(season2024.getId()))
+                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
+        when(teamRepository.findAllByShortName("DUP")).thenReturn(List.of(parentA, parentB));
+        when(driverMatchingService.findDriver("dup_driver"))
+                .thenReturn(MatchResult.noMatch("dup_driver"));
+
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — first parent wins via WARN log (preserved Phase 66 D-07 semantics)
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.newDrivers()).hasSize(1);
+        assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("DUP");
+        assertThat(tab.errors()).isEmpty();
     }
 }

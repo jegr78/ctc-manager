@@ -1,7 +1,7 @@
 # Phase 66: Team ShortName Collision Fix (Driver Import) - Context
 
 **Gathered:** 2026-05-07
-**Status:** Ready for planning
+**Status:** Revised by gap-closure plan 02 — see Revision History at the bottom of `<decisions>`. (Original: Ready for planning.)
 
 <domain>
 ## Phase Boundary
@@ -52,15 +52,20 @@ Fix the runtime crash in `DriverSheetImportService` (preview + execute) when two
 
 ### Resolver semantics
 
-- **D-06:** Algorithm:
+- **D-06:** Algorithm (revised in gap-closure plan 66-02 after UAT diagnosis — see `66-UAT.md` Gap 1 and `.planning/debug/shortname-resolver-picks-parent-without-phaseteam.md`):
   ```
   1. matches = teamRepository.findAllByShortName(shortName)
   2. if matches.isEmpty()      → return Optional.empty()
   3. if matches.size() == 1    → return Optional.of(matches.get(0))
-  4. parent = matches.stream().filter(t -> t.getParentTeam() == null).findFirst()
-  5. if parent.isPresent()     → return parent
-  6. else                      → log.warn(...); return Optional.of(matches.get(0))
+  4. if regularPhase != null:
+       for c in matches:
+         if phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.id, c.id).isPresent():
+           return Optional.of(c)               // sub-team-with-PhaseTeam wins
+  5. parent = matches.stream().filter(t -> t.parentTeam == null).findFirst()
+  6. if parent.isPresent()     → return parent  // legacy fallback (no regularPhase OR no candidate in REGULAR phase)
+  7. else                      → log.warn(...); return Optional.of(matches.get(0))
   ```
+  Original Phase 66 algorithm (parent-unconditionally) rested on a false assumption: it assumed parents are canonical race entities, but the user's data has parents as organisational buckets without `PhaseTeam(REGULAR)` rows. The season-aware step (4) preserves Phase 66's parent-precedence as a fallback for legacy seasons.
 - **D-07:** **Multi-parent edge case** (data inconsistency: 2+ teams with `parentTeam == null` and the same shortName) → log a warning at WARN level and pick first deterministically. Do NOT fail the import — that's the original bug. The warning is enough for ops visibility; this case is a data-integrity issue out of scope here.
 - **D-08:** **No new TabWarning surfaced** for the multi-match case in this phase. The user wants the import to succeed silently when parent precedence resolves the collision (it's the intended data model). Adding a UI warning is a usability decision for a future phase.
 
@@ -100,6 +105,10 @@ Fix the runtime crash in `DriverSheetImportService` (preview + execute) when two
 
 - **D-17:** **Whether to add a one-line Javadoc on the helper** is the planner's call (the helper's behavior is non-obvious — parent-precedence — so a short note is justified per CLAUDE.md "comment when WHY is non-obvious").
 - **D-18:** **Where in `DriverSheetImportService` to place the helper** (top of class vs. near the call sites, near `cellToString`) is the planner's call. Suggested: alongside `cellToString` for symmetry (both private utility helpers).
+
+### Revision History
+
+- **D-06 revised (gap-closure plan 66-02, 2026-05-08)** — added season-aware step 4 (prefer candidate with PhaseTeam in target REGULAR phase) before falling back to parent precedence. Resolver signature changed from `resolveTeamByShortName(String)` to `resolveTeamByShortName(String, SeasonPhase)`. All 5 call sites migrated; 4 execute sites resolve `regularPhase` once per tab via `seasonPhaseService.findRegularPhase(...)` with `EntityNotFoundException → null` graceful fallback.
 
 </decisions>
 
