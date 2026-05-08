@@ -1,0 +1,84 @@
+gsd-validate-phase 66 (executed inline 2026-05-08, mirrors Phase 64 methodology)
+================================================================================
+
+Phase 66 — team-shortname-collision-fix
+VALIDATION.md state: status: draft / nyquist_compliant: false / wave_0_complete: false
+Plans: 66-01 (resolver + 5 call sites + 18 stub migration), 66-02 (subsystem follow-up), 66-03 (layout-gated group warnings — gap-closure GAP-66-02)
+
+Audit method: Per-Task Verification Map row-by-row against:
+  - DriverSheetImportServiceTest.java method inventory
+  - TeamRepository derived-query presence
+  - DriverSheetImportService source — resolver helper + 5 migrated call sites
+  - 66-{01,02,03}-SUMMARY.md (work-completed evidence)
+
+
+[Row 66-01-01 D-11 (TDD RED) — Resolver returns parent on multi-match]
+  Test target:    DriverSheetImportServiceTest #givenTeamsWithSameShortNameParentAndSub_whenPreview_thenResolvesParentTeam
+  Method exists:  Test was AUTHORED in 66-01 RED phase, but Phase 66-02/66-03 evolved the resolver to be phase-aware.
+                  Resolver behavior under multi-match collision is now covered by FOUR more-precise tests:
+                  - givenTeamsWithSameShortNameAndSubHasPhaseTeam_whenPreview_thenResolvesSubTeam (line 734)
+                  - givenTeamsWithSameShortNameAndNoCandidateHasPhaseTeam_whenPreview_thenFallsBackToParentPrecedence (line 771)
+                  - givenSeasonHasNoRegularPhase_whenPreviewWithCollision_thenFallsBackToParentPrecedence (line 817)
+                  - givenLegacyPath_whenTwoParentTeamsCollideWithoutRegularPhase_thenFirstParentWinsWithoutException (line 847)
+  SUMMARY proof:  66-01 commit `4d26b75` (27/27 DriverSheetImportServiceTest pass), 66-02/66-03 SUMMARYs document resolver evolution and rename
+  Verdict:        COVERED ✅ (D-11 contract reinforced by 4 evolved test methods covering both layout-aware and legacy fallback paths)
+
+[Row 66-01-02 D-03 — findAllByShortName derives valid JPQL]
+  Source:         src/main/java/org/ctc/domain/repository/TeamRepository.java line 26 — `List<Team> findAllByShortName(String shortName)` declared
+  Javadoc:        line 15 — Javadoc on findByShortName clarifies safe usage; cross-references findAllByShortName for parent+sub case
+  Verdict:        COVERED ✅ (Spring Data derived query — JPQL valid by construction; transitive via test class run)
+
+[Row 66-01-03 D-01, D-06, D-07 — Resolver + 5 call sites: multi → parent / single → use / empty → UNKNOWN_TEAM_CODE]
+  Source:         src/main/java/org/ctc/dataimport/DriverSheetImportService.java
+                  - Helper at line 435: `private Optional<Team> resolveTeamByShortName(String shortName, SeasonPhase regularPhase)`
+                  - 5 call sites at lines 144, 155, 175, 204, 309 — all routed through helper
+  Test target:    same 4 evolved tests as Row 66-01-01 above + existing tests covering empty/single paths
+                  - givenBlankTeamCode_whenPreview_thenRowErroredWithBlankTeam (line 416)
+                  - givenUnknownTeamCode_whenPreview_thenRowErroredWithUnknownTeam (line 437)
+  Verdict:        COVERED ✅
+
+[Row 66-01-04 D-13 — 18 mock stubs migrated to findAllByShortName]
+  SUMMARY proof:  66-01-SUMMARY.md confirms 18 stubs migrated (lines 243, 270, 294, 325, 356, 386, 459, 484, 485, 511, 543, 544, 573, 601, 672, 699, 732, 755) at commit `4d26b75`
+  Compile-gate:   Test class compiles + 27/27 pass = stubs migrated correctly
+  Verdict:        COVERED ✅
+
+[Row 66-01-05 D-12 (defensive) — Two parent matches → first wins, log.warn, no exception]
+  Test target:    givenTwoParentTeamsWithSameShortName_whenPreview_thenFirstWinsWithoutException (per VALIDATION map)
+  Evolved name:   givenLegacyPath_whenTwoParentTeamsCollideWithoutRegularPhase_thenFirstParentWinsWithoutException (line 847) — this is the renamed/refined version
+  Source proof:   resolveTeamByShortName fallback branch at DriverSheetImportService line ~435+ logs WARN and returns first deterministically
+  Verdict:        COVERED ✅ (D-12 contract reinforced by line-847 test; WARN-log behavior covered by mock interaction)
+
+[Row 66-01-06 — JaCoCo gate BUNDLE LINE ≥ 0.82]
+  pom.xml gate:   grep -c '<minimum>0.82</minimum>' pom.xml → 1 ✅
+  SUMMARY proof:  66-01 metrics: jacoco_bundle_line_ratio: 0.8561 (gate 0.82) ✅
+                  66-03 metrics: jacoco_bundle_line_ratio: 0.8561 (gate 0.82) ✅
+  Verdict:        COVERED ✅ (gate-enforced by pom.xml itself; final verify in Phase 69 Task 3 reaffirms)
+
+
+==== AUDIT SUMMARY ====
+Total rows: 6
+COVERED:    6
+RED gaps:   0
+Auto-fill needed: NONE
+
+==== VERDICT: Path A (mechanical flip) ====
+All 6 Per-Task Verification Map rows COVERED.
+Wave 0 Requirements (2 new tests + 18 stub migrations + 1 repo method + 1 service helper) all fulfilled inline during 66-01 plan execution per 66-01-SUMMARY.md.
+Test method names evolved across 66-01 → 66-02 → 66-03 as the resolver became phase-aware; underlying contract covered by 4 successor tests.
+JaCoCo line ratio 0.8561 well above 0.82 gate.
+
+==== REQ-ID coverage reinforced by Phase 66 ====
+- IMPORT-04 (Phase 59 DriverSheet import — driver/team mapping). Phase 66 fixed the team-shortname collision in DriverSheetImportService that was producing NonUniqueResultException 500s during preview/execute on parent+sub teams sharing a shortName.
+
+==== Manual-Only escalations (Phase 64 standard) ====
+1. End-to-end driver import on a sheet with parent + sub same `shortName` (Phase Goal)
+   — Why Manual: Requires real Google Sheet + admin login + visual confirmation no 500 page. Live integration with Google Sheets API not exercised by Surefire/Mockito (no live OAuth in CI; sheet data shape requires production-like fixtures).
+
+This Manual-Only row already documented in 66-VALIDATION.md § "Manual-Only Verifications" with concrete instructions including dev,demo profile boot, /admin/drivers/import URL, and pass/fail criteria.
+
+==== POST-AUDIT ACTION ====
+Mechanical flip: status: draft → approved
+                 nyquist_compliant: false → true
+                 wave_0_complete: false → true
+Per-Task Verification Map: all rows update from "⬜ pending" to "✅"
+Append closing § "Validation Audit 2026-05-08 (Phase 69 SC6 — D-13 methodology mirror of Phase 64)" with REQ-ID coverage + Auto-fill: none + Manual-Only with `Why Manual` rationale per row.

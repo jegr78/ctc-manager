@@ -1,0 +1,123 @@
+gsd-validate-phase 65 (executed inline 2026-05-08, mirrors Phase 64 methodology)
+================================================================================
+
+Phase 65 — graphics-bridge-migration
+VALIDATION.md state: status: draft / nyquist_compliant: false / wave_0_complete: false
+Plans: 65-01 (caller migration), 65-02 (Buchholz cleanup), 65-03 (bridge deletion + SC1 grep gate)
+
+Audit method: Per-Task Verification Map row-by-row against:
+  - existing test infrastructure (src/test/java/...)
+  - SC1 grep gate (project-wide)
+  - existing JaCoCo line gate (pom.xml <minimum>0.82</minimum>)
+  - 65-{01,02,03}-SUMMARY.md (work-completed evidence)
+
+
+[Row 65-01-T? D-03a — AbstractMatchdayGraphicService: matchday.getPhase().getId() + matchday.getGroup()]
+  File:           src/test/java/org/ctc/admin/service/AbstractMatchdayGraphicServiceTest.java
+  Exists:         YES (13750 bytes)
+  Method count:   D-11 + D-12 marker methods present (grep -c "givenLeagueLayoutMatchday_whenPrepareBaseContext_thenStandingsCalledWithPhaseIdAndNullGroup|givenGroupsLayoutMatchday_whenPrepareBaseContext_thenStandingsCalledWithPhaseAndMatchdayGroup" returned 2)
+  SUMMARY proof:  65-01-SUMMARY.md "Test Results" → All 5 targeted classes PASSED (exit 0)
+  Verdict:        COVERED ✅
+
+[Row 65-01-T? D-03b — TeamCardService: findRegularPhase(seasonId).getId() + null]
+  File:           src/test/java/org/ctc/admin/service/TeamCardServiceTest.java
+  Exists:         YES (4300 bytes)
+  Method count:   D-11 marker present (grep -c "givenLeagueSeason_whenGenerateCard_thenStandingsCalledWithRegularPhaseIdAndNullGroup" returned 1)
+  SUMMARY proof:  65-01-SUMMARY.md "TeamCardService Constructor Signature Change" — constructor expanded with SeasonPhaseService, test updated
+  Verdict:        COVERED ✅
+
+[Row 65-01-T? D-03c — OverlayGraphicService: race.getMatchday().getPhase().getId() + matchday.getGroup()]
+  File:           src/test/java/org/ctc/admin/service/OverlayGraphicServiceTest.java
+  Exists:         YES (5587 bytes)
+  Method count:   D-11 + D-12 marker methods present (grep -c "givenLeagueRace_whenGenerateOverlay|givenGroupsLayoutRace_whenGenerateOverlay_thenStandingsCalledWithPhaseAndMatchdayGroup" returned 2)
+  SUMMARY proof:  65-01-SUMMARY.md "5 LEAGUE-Regression Tests" + "3 GROUPS-Tests" tables
+  Verdict:        COVERED ✅
+
+[Row 65-01-T? D-03d — SettingsGraphicService (NEW FILE — Wave 0)]
+  File:           src/test/java/org/ctc/admin/service/SettingsGraphicServiceTest.java
+  Exists:         YES (5089 bytes; created during 65-01 plan execution per SUMMARY)
+  Method count:   D-11 + D-12 marker methods present (grep returned 2)
+  SUMMARY proof:  65-01-SUMMARY.md "NEW FILE: SettingsGraphicServiceTest.java" — created from scratch
+  Verdict:        COVERED ✅ (Wave 0 fulfilled inline during 65-01 execution)
+
+[Row 65-01-T? D-03e — LineupGraphicService: race.getMatchday().getPhase() + group (non-playoff)]
+  File:           src/test/java/org/ctc/admin/service/LineupGraphicServiceTest.java
+  Exists:         YES (10260 bytes)
+  Method count:   D-11 marker present (grep -c "givenLeagueRace_whenGenerateLineup_thenStandingsCalledWithPhaseIdAndNullGroup" returned 1)
+  SUMMARY proof:  65-01-SUMMARY.md "Deviation 1 [Rule 1 - Bug]" — card-not-found precedence fix; test now asserts on standings call
+  Verdict:        COVERED ✅
+
+[Row 65-01-T? D-11 — LEAGUE-regression Mockito.verify(eq(phaseId), isNull()) for all 5 callers]
+  Files:          all 5 graphic test classes above
+  Method count:   5 of 5 LEAGUE methods confirmed by grep across all 5 test classes
+  SUMMARY proof:  65-01-SUMMARY.md "5 LEAGUE-Regression Tests Added (D-11)" table — all 5 tests listed
+  Verdict:        COVERED ✅
+
+[Row 65-01-T? D-12 — GROUPS-scope Mockito.verify(eq(phaseId), eq(groupId)) for Abstract, Overlay, Settings]
+  Files:          AbstractMatchdayGraphicServiceTest, OverlayGraphicServiceTest, SettingsGraphicServiceTest
+  Method count:   3 of 3 GROUPS methods confirmed by grep
+  SUMMARY proof:  65-01-SUMMARY.md "3 GROUPS-Tests Added (D-12)" table — all 3 tests listed
+  Verdict:        COVERED ✅
+
+[Row 65-02-T? D-04a — SwissPairingService.calculateBuchholz deleted]
+  Source check:   grep -n "calculateBuchholz" src/main/java/org/ctc/domain/service/SwissPairingService.java → empty
+  Test check:     SwissPairingServiceTest exists at src/test/java/org/ctc/domain/service/SwissPairingServiceTest.java
+  SUMMARY proof:  65-02-SUMMARY.md (Buchholz cleanup plan)
+  Verdict:        COVERED ✅ (compilation gate — method absent, callers compile clean)
+
+[Row 65-02-T? D-04b — calculateBuchholzScores private helper inlined]
+  File:           StandingsServiceTest exists at src/test/java/org/ctc/domain/service/StandingsServiceTest.java (41099 bytes)
+  SUMMARY proof:  65-02-SUMMARY.md
+  Verdict:        COVERED ✅ (existing Buchholz tests stay green via inline)
+
+[Row 65-03-T? D-01 / SC1 — calculateStandings(seasonId) bridge removed]
+  Grep gate:      grep -nR "calculateStandings(seasonId" src/main/java | wc -l → 0 ✅
+  SUMMARY proof:  65-03-SUMMARY.md (bridge deletion plan)
+  Verdict:        COVERED ✅ (SC1 gate explicitly green at audit time)
+
+[Row 65-03-T? D-09 — StandingsServiceTest bridge-tests triaged]
+  File:           src/test/java/org/ctc/domain/service/StandingsServiceTest.java exists
+  SUMMARY proof:  65-03-SUMMARY.md "3 deleted, 10 rewritten on canonical API"
+  Verdict:        COVERED ✅
+
+[Row 65-03-T? — SiteGeneratorServiceIT line 154 negative-verify removed]
+  File:           src/test/java/org/ctc/sitegen/SiteGeneratorServiceIT.java exists
+  SUMMARY proof:  65-03-SUMMARY.md
+  Verdict:        COVERED ✅
+
+[Row 65-03-T? QUAL-01 / SC3 — JaCoCo line ≥ 0.82]
+  pom.xml gate:   grep -c '<minimum>0.82</minimum>' pom.xml → 1 ✅
+  SUMMARY proof:  65-01/02/03 SUMMARY metrics: jacoco_bundle_line_ratio: 0.8561 (well above 0.82)
+  Verdict:        COVERED ✅ (gate-enforced by pom.xml itself; final verify in Phase 69 Task 3 reaffirms)
+
+
+==== AUDIT SUMMARY ====
+Total rows: 12
+COVERED:    12
+RED gaps:   0
+Auto-fill needed: NONE
+
+==== VERDICT: Path A (mechanical flip) ====
+All 12 Per-Task Verification Map rows COVERED by existing test infrastructure.
+Wave 0 Requirements list (8 new test methods + 1 NEW FILE) all fulfilled inline during 65-01 execution per 65-01-SUMMARY.md.
+SC1 grep gate green (0 callers project-wide).
+JaCoCo line ratio 0.8561 well above 0.82 gate.
+
+==== REQ-ID coverage reinforced by Phase 65 ====
+- SVC-02 (Phase 58 calculateStandings(phaseId, groupId) API contract) — Phase 65 wires the 5 graphics services to this canonical surface; 5 LEAGUE + 3 GROUPS tests reinforce the contract.
+- SVC-04 (Phase 58 SwissPairingService) — Phase 65-02 deleted dead calculateBuchholz public method.
+
+==== Manual-Only escalations (Phase 64 standard) ====
+1. Graphics generation pixel-identical for LEAGUE seasons after migration (SC2 behavior preservation)
+   — Why Manual: Visual-Quality-Bar — Playwright graphics generation is compile-scope only; no automated screenshot diff in suite. Pixel-identical confirmation requires human judgement.
+2. GROUPS-layout graphic shows that group's standings (smoke for D-12)
+   — Why Manual: Visual-Quality-Bar — Mockito tests verify the API call shape; visual match between rendered standings and Group A is human-judgement.
+
+Both Manual-Only rows already documented in 65-VALIDATION.md § "Manual-Only Verifications" with concrete instructions.
+
+==== POST-AUDIT ACTION ====
+Mechanical flip: status: draft → approved
+                 nyquist_compliant: false → true
+                 wave_0_complete: false → true
+Per-Task Verification Map: all rows update from "⬜ pending" to "✅"
+Append closing § "Validation Audit 2026-05-08 (Phase 69 SC6 — D-13 methodology mirror of Phase 64)" with REQ-ID coverage + Auto-fill: none + Manual-Only with `Why Manual` rationale per row.
