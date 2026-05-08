@@ -1,9 +1,9 @@
 ---
 phase: 65
 slug: graphics-bridge-migration
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-07
 ---
 
@@ -41,19 +41,19 @@ created: 2026-05-07
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|----------|-----------|-------------------|-------------|--------|
-| 65-01-T? | 01 | 1 | D-03a | — | AbstractMatchdayGraphicService uses `matchday.getPhase().getId()` + `matchday.getGroup()` | unit | `./mvnw test -Dtest=AbstractMatchdayGraphicServiceTest` | ✅ | ⬜ pending |
-| 65-01-T? | 01 | 1 | D-03b | — | TeamCardService uses `findRegularPhase(seasonId).getId()` + `null` | unit | `./mvnw test -Dtest=TeamCardServiceTest` | ✅ (constructor change required) | ⬜ pending |
-| 65-01-T? | 01 | 1 | D-03c | — | OverlayGraphicService uses `race.getMatchday().getPhase().getId()` + `race.getMatchday().getGroup()` | unit | `./mvnw test -Dtest=OverlayGraphicServiceTest` | ✅ | ⬜ pending |
-| 65-01-T? | 01 | 1 | D-03d | — | SettingsGraphicService uses `race.getMatchday().getPhase()` + group (non-playoff branch only) | unit | `./mvnw test -Dtest=SettingsGraphicServiceTest` | ❌ W0 — new test class needed | ⬜ pending |
-| 65-01-T? | 01 | 1 | D-03e | — | LineupGraphicService uses `race.getMatchday().getPhase()` + group (non-playoff branch only) | unit | `./mvnw test -Dtest=LineupGraphicServiceTest` | ✅ | ⬜ pending |
-| 65-01-T? | 01 | 1 | D-11 | — | LEAGUE-regression — each caller invokes `calculateStandings(eq(phaseId), isNull())` for LEAGUE-layout matchdays | unit (Mockito.verify) | same as D-03a..e | ❌ W0 — 5 new test methods | ⬜ pending |
-| 65-01-T? | 01 | 1 | D-12 | — | GROUPS-scope — Abstract, Overlay, Settings invoke `calculateStandings(eq(phaseId), eq(groupId))` for GROUPS-layout matchdays | unit (Mockito.verify) | `./mvnw test -Dtest='AbstractMatchdayGraphicServiceTest,OverlayGraphicServiceTest,SettingsGraphicServiceTest'` | ❌ W0 — 3 new test methods | ⬜ pending |
-| 65-02-T? | 02 | 2 | D-04a | — | SwissPairingService.calculateBuchholz deleted (compile-time gate) + corresponding test deleted | compilation | `./mvnw test -Dtest=SwissPairingServiceTest` | ✅ (1 test deleted alongside method) | ⬜ pending |
-| 65-02-T? | 02 | 2 | D-04b | — | calculateBuchholzScores private helper inlined into calculateBuchholzScoresForPhase | unit | `./mvnw test -Dtest=StandingsServiceTest` (existing Buchholz tests stay green) | ✅ | ⬜ pending |
-| 65-03-T? | 03 | 3 | D-01 / SC1 | — | `StandingsService.calculateStandings(UUID seasonId)` removed | grep gate | `grep -nR "calculateStandings(seasonId" src/main/java \| wc -l` MUST equal 0 | n/a (grep gate) | ⬜ pending |
-| 65-03-T? | 03 | 3 | D-09 | — | StandingsServiceTest bridge-tests triaged (3 deleted, 10 rewritten on canonical API) | unit | `./mvnw test -Dtest=StandingsServiceTest` (all green post-triage) | ✅ | ⬜ pending |
-| 65-03-T? | 03 | 3 | — | — | SiteGeneratorServiceIT line 154 negative-verify removed | unit | `./mvnw test -Dtest=SiteGeneratorServiceIT` | ✅ | ⬜ pending |
-| 65-03-T? | 03 | 3 | QUAL-01 / SC3 | — | JaCoCo line coverage stays ≥ 82% | gate | `./mvnw verify` | ✅ (automated gate) | ⬜ pending |
+| 65-01-T? | 01 | 1 | D-03a | — | AbstractMatchdayGraphicService uses `matchday.getPhase().getId()` + `matchday.getGroup()` | unit | `./mvnw test -Dtest=AbstractMatchdayGraphicServiceTest` | ✅ | ✅ |
+| 65-01-T? | 01 | 1 | D-03b | — | TeamCardService uses `findRegularPhase(seasonId).getId()` + `null` | unit | `./mvnw test -Dtest=TeamCardServiceTest` | ✅ (constructor change required) | ✅ |
+| 65-01-T? | 01 | 1 | D-03c | — | OverlayGraphicService uses `race.getMatchday().getPhase().getId()` + `race.getMatchday().getGroup()` | unit | `./mvnw test -Dtest=OverlayGraphicServiceTest` | ✅ | ✅ |
+| 65-01-T? | 01 | 1 | D-03d | — | SettingsGraphicService uses `race.getMatchday().getPhase()` + group (non-playoff branch only) | unit | `./mvnw test -Dtest=SettingsGraphicServiceTest` | ❌ W0 — new test class needed | ✅ |
+| 65-01-T? | 01 | 1 | D-03e | — | LineupGraphicService uses `race.getMatchday().getPhase()` + group (non-playoff branch only) | unit | `./mvnw test -Dtest=LineupGraphicServiceTest` | ✅ | ✅ |
+| 65-01-T? | 01 | 1 | D-11 | — | LEAGUE-regression — each caller invokes `calculateStandings(eq(phaseId), isNull())` for LEAGUE-layout matchdays | unit (Mockito.verify) | same as D-03a..e | ❌ W0 — 5 new test methods | ✅ |
+| 65-01-T? | 01 | 1 | D-12 | — | GROUPS-scope — Abstract, Overlay, Settings invoke `calculateStandings(eq(phaseId), eq(groupId))` for GROUPS-layout matchdays | unit (Mockito.verify) | `./mvnw test -Dtest='AbstractMatchdayGraphicServiceTest,OverlayGraphicServiceTest,SettingsGraphicServiceTest'` | ❌ W0 — 3 new test methods | ✅ |
+| 65-02-T? | 02 | 2 | D-04a | — | SwissPairingService.calculateBuchholz deleted (compile-time gate) + corresponding test deleted | compilation | `./mvnw test -Dtest=SwissPairingServiceTest` | ✅ (1 test deleted alongside method) | ✅ |
+| 65-02-T? | 02 | 2 | D-04b | — | calculateBuchholzScores private helper inlined into calculateBuchholzScoresForPhase | unit | `./mvnw test -Dtest=StandingsServiceTest` (existing Buchholz tests stay green) | ✅ | ✅ |
+| 65-03-T? | 03 | 3 | D-01 / SC1 | — | `StandingsService.calculateStandings(UUID seasonId)` removed | grep gate | `grep -nR "calculateStandings(seasonId" src/main/java \| wc -l` MUST equal 0 | n/a (grep gate) | ✅ |
+| 65-03-T? | 03 | 3 | D-09 | — | StandingsServiceTest bridge-tests triaged (3 deleted, 10 rewritten on canonical API) | unit | `./mvnw test -Dtest=StandingsServiceTest` (all green post-triage) | ✅ | ✅ |
+| 65-03-T? | 03 | 3 | — | — | SiteGeneratorServiceIT line 154 negative-verify removed | unit | `./mvnw test -Dtest=SiteGeneratorServiceIT` | ✅ | ✅ |
+| 65-03-T? | 03 | 3 | QUAL-01 / SC3 | — | JaCoCo line coverage stays ≥ 82% | gate | `./mvnw verify` | ✅ (automated gate) | ✅ |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -96,3 +96,32 @@ Wave 0 work is folded into Plan 65-01 (new test methods are added alongside prod
 - [ ] SC1 grep gate verified by Plan 65-03 acceptance: `grep -nR "calculateStandings(seasonId" src/main/java | wc -l` returns 0
 
 **Approval:** pending — to be flipped to `approved` after gsd-plan-checker confirms the per-task verification map covers all D-* decisions and Wave 0 gaps are listed in their owning plans.
+
+---
+
+## Validation Audit 2026-05-08 (Phase 69 SC6 — D-13 methodology mirror of Phase 64)
+
+**Verdict:** `nyquist_compliant: true` / `wave_0_complete: true`. All 12 Per-Task Verification Map rows confirmed COVERED by tests committed during Phase 65 plan execution (plans 65-01, 65-02, 65-03). Audit log: `.planning/phases/69-milestone-closure-hygiene/.work/65-validate-phase.log`.
+
+**Methodology:** Mirrors Phase 64 sweep (`64-01-SUMMARY.md`). Each Per-Task row audited row-by-row against the actual `src/test/java/...` source tree + the `65-{01,02,03}-SUMMARY.md` evidence chain. No auto-fill required — Wave 0's 8 new test methods + 1 NEW FILE (`SettingsGraphicServiceTest.java`) all confirmed present and confirmed exercised by the existing Surefire run (per 65-01-SUMMARY.md "Test Results" — all 5 targeted classes PASSED).
+
+**REQ-ID coverage reinforced by Phase 65:**
+- **SVC-02** (Phase 58 calculateStandings(phaseId, groupId) API contract) — Phase 65 wires the 5 graphics services (AbstractMatchdayGraphicService, TeamCardService, OverlayGraphicService, SettingsGraphicService, LineupGraphicService) to this canonical surface. 5 LEAGUE-regression tests (D-11) + 3 GROUPS-tests (D-12) reinforce the contract at the caller boundary.
+- **SVC-04** (Phase 58 SwissPairingService) — Phase 65-02 deleted the dead public `calculateBuchholz` method; compile-gate confirms zero callers remain.
+- **SC1 grep gate** — `grep -nR "calculateStandings(seasonId" src/main/java | wc -l` returns **0** at audit time (project-wide bridge fully removed by Plan 65-03).
+
+**Auto-fill triggered:** none. Path A (mechanical flip) per D-13 first branch.
+
+**Manual-Only escalations (per D-15 — concrete `Why Manual` rationale):**
+
+| # | Behavior | Why Manual |
+|---|----------|------------|
+| 1 | Graphics generation pixel-identical for LEAGUE seasons after migration (SC2) | **Why Manual:** Visual-Quality-Bar — Playwright graphics generation is compile-scope only; the project ships no automated screenshot diff in the test suite. Pixel-identical confirmation requires human eye on rendered PNG output. |
+| 2 | GROUPS-layout graphic shows that group's standings (smoke for D-12) | **Why Manual:** Visual-Quality-Bar — Mockito `verify(...)` proves the API call shape (`eq(phaseId), eq(groupId)`); the visual match between rendered standings and "Group A only" requires human judgement on the painted output. |
+
+Both Manual-Only rows are documented in § "Manual-Only Verifications" above with concrete Test Instructions (boot dev,demo profile + URL + click-through + screenshot capture path).
+
+**Coverage delta vs. baseline:** `JaCoCo line` measured at Phase 65 close: 0.8561 (Phase 65/66 metrics chain). Pre-Phase-65 baseline: 0.8561 (Phase 64 close). Delta: 0.0 (refactoring at constant coverage; bridge deletion absorbed by canonical-API tests).
+
+_Audited 2026-05-08 (Phase 69 SC6 — milestone closure hygiene)_
+_Branch: gsd/v1.9-season-phases-groups_
