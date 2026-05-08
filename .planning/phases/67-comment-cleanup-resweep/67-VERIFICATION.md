@@ -1,9 +1,9 @@
 ---
 phase: 67-comment-cleanup-resweep
 verified: 2026-05-07T22:10:00Z
-status: human_needed
+status: passed
 score: 20/20 checklist items pass on the documented acceptance criteria; one policy-vs-criteria scope question requires human decision
-overrides_applied: 0
+overrides_applied: 1
 gaps: []
 deferred:
   - truth: "Surviving attribution-style markers (D-NN, Pitfall N, SC4, UX-NN, IMPORT-NN, embedded `Phase 5X/6X`) inside `//` comments across ~40 src/main + src/test files (~124 occurrences total)"
@@ -152,3 +152,39 @@ After verifier flagged the 3 sitegen page generators as plan-scope misses (8 D-N
 **Out-of-scope acknowledgment:** The remaining ~115 broader-pattern attribution markers across other files (e.g. `// then: Phase 60 ...`, `// Pitfall 4 ...`, `// IMPORT-04 ...`, `// SC1 ...`) are NOT addressed in this phase. They're known coverage gap of the D-19 grep regexes and belong in the deferred CI / pre-commit comment-noise guard work captured in CONTEXT.md `<deferred>`.
 
 ## PHASE COMPLETE
+
+---
+
+## ACCEPT-Override Addendum — 2026-05-08 (Phase 69 SC4)
+
+**Status flip:** `human_needed` → `passed`. **Override applied:** 1 (Option A — ACCEPT residue). **Date:** 2026-05-08. **Closed by:** Phase 69 SC4 milestone-closure hygiene.
+
+### Decision
+
+Per CONTEXT.md D-04 (Phase 69), the user has formally ACCEPTED the ~124 surviving attribution markers (D-NN, Pitfall N, embedded `Phase NN`, SC4, UX-NN, IMPORT-NN) in `//` comments across ~40 files in `src/main` + `src/test`. The 5 D-19 quantitative grep gates (Phase 67 acceptance contract) are 5/5 GREEN; the per-file judgement methodology (CONTEXT.md D-13 of Phase 67 explicitly forbade automated regex bulk delete because of Javadoc false-positive risk) deliberately produced this residue. The verifier's lean toward Option A — recorded in the existing `## Recommended Disposition` section above — is hereby formalised.
+
+### Rationale (cites verifier's existing Option A reasoning)
+
+- The 5 D-19 gates ARE the contract. Gates are GREEN.
+- Broader sweep was explicitly out-of-scope per CONTEXT.md D-13 of Phase 67 (false-positive risk on Javadoc).
+- Phase 67's `<deferred>` block already flagged "CI / pre-commit comment-noise guard" as the appropriate vehicle for the broader sweep — i.e., the residue was a known and documented outcome, not an oversight.
+
+### Forward-looking commitment (D-06)
+
+The 124-marker residue is explicitly captured for a future "Quality Gate Lock" / CI-pre-commit-guard phase in the next milestone, NOT a v1.9 backlog item. Concrete shape:
+
+- Maven Enforcer plugin or pre-commit hook or CI grep gate that blocks NEW commits introducing `// D-NN`, `// Pitfall N`, embedded `// Phase NN` mid-sentence, etc.
+- Out of v1.9 scope (would re-open the milestone).
+- Captured for the next milestone's backlog. Phase 69 does NOT add a new phase to v1.9 ROADMAP for this work — that would re-open v1.9.
+
+### Audit-trail preservation
+
+The `deferred:` and `human_verification:` frontmatter blocks are preserved verbatim per Phase 69 D-05 (audit trail of the original residue inventory and the scope-vs-criteria question stays intact). Only top-level `status` and `overrides_applied` flip; this addendum formalises the answer.
+
+### Source
+
+- This file's existing `## Recommended Disposition` section ("Verifier's lean: Option A")
+- `.planning/phases/69-milestone-closure-hygiene/69-CONTEXT.md` D-04/D-05/D-06
+
+_Addendum authored 2026-05-08 (Phase 69 SC4 — milestone closure hygiene)_
+_Branch: gsd/v1.9-season-phases-groups_
