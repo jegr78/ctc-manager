@@ -863,4 +863,55 @@ class DriverSheetImportServiceTest {
         assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("DUP");
         assertThat(tab.errors()).isEmpty();
     }
+
+    // 23. Gap-66-03 — LEAGUE-layout REGULAR phase: no warning, usesGroups=false, no PhaseTeam lookup invoked
+
+    @Test
+    void givenLeagueLayoutRegularPhaseAndTeamWithoutGroup_whenPreview_thenNoWarningAndUsesGroupsFalse() throws IOException {
+        // given — LEAGUE layout (regularPhase) — group resolution must be short-circuited
+        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
+        var ms = new MatchScoring("ms", 3, 1, 0);
+        var regularPhase = PhaseTestFixtures.regularPhase(season2024, rs, ms);  // PhaseLayout.LEAGUE
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("psn", "X", "AHR")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(seasonPhaseService.findRegularPhase(season2024.getId())).thenReturn(regularPhase);
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
+        when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+        // then — empty warnings, usesGroups=false, no PhaseTeam lookup at all
+        var tab = preview.tabPreviews().get(0);
+        assertThat(tab.warnings()).isEmpty();
+        assertThat(tab.usesGroups()).isFalse();
+        assertThat(tab.newDrivers().get(0).resolvedGroupName()).isNull();
+        verifyNoInteractions(phaseTeamRepository);
+    }
+
+    // 24. Gap-66-03 — GROUPS-layout REGULAR phase: usesGroups=true; resolvedGroupName preserved
+
+    @Test
+    void givenGroupsLayoutRegularPhase_whenPreview_thenUsesGroupsTrue() throws IOException {
+        // given
+        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
+        var ms = new MatchScoring("ms", 3, 1, 0);
+        var regularPhase = PhaseTestFixtures.groupsRegularPhase(season2023, rs, ms, "Group A");
+        var groupA = regularPhase.getGroups().get(0);
+        var phaseTeam = PhaseTestFixtures.assignTeam(regularPhase, teamAhr, groupA);
+
+        setupSheetsStub(SHEET_URL, Map.of("2023_S1", oneDataRow("psn", "X", "AHR")));
+        when(seasonManagementService.findUnique(2023, 1)).thenReturn(Optional.of(season2023));
+        when(seasonPhaseService.findRegularPhase(season2023.getId())).thenReturn(regularPhase);
+        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), teamAhr.getId()))
+                .thenReturn(Optional.of(phaseTeam));
+        when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+        // then
+        var tab = preview.tabPreviews().get(0);
+        assertThat(tab.usesGroups()).isTrue();
+        assertThat(tab.warnings()).isEmpty();
+        assertThat(tab.newDrivers().get(0).resolvedGroupName()).isEqualTo("Group A");
+    }
 }
