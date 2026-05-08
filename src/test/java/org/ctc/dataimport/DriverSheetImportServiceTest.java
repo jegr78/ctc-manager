@@ -727,61 +727,80 @@ class DriverSheetImportServiceTest {
         verifyNoInteractions(phaseTeamRepository);
     }
 
-    // 19. Phase 66 / D-11 — multi-match collision: parent + sub-team share shortName
+    // 19. Phase 66 / D-06 (revised) — multi-match collision: prefer sub-team with PhaseTeam in REGULAR phase
 
     @Test
-    void givenTeamsWithSameShortNameParentAndSub_whenPreview_thenResolvesParentTeam() throws IOException {
-        // given — two teams in DB share shortName "ZFS": one parent (parentTeam == null)
-        // and one sub-team (parentTeam != null). The resolver MUST pick the parent.
+    void givenTeamsWithSameShortNameAndSubHasPhaseTeam_whenPreview_thenResolvesSubTeam() throws IOException {
+        // given — parent (no PhaseTeam) + sub-team (HAS PhaseTeam in target REGULAR phase)
         Team parentZfs = new Team("ZF Schweinfurt", "ZFS");
         parentZfs.setId(UUID.randomUUID());
-        Team subZfs = new Team("ZF Schweinfurt B", "ZFS", parentZfs);
+        Team subZfs = new Team("ZF Schweinfurt 1", "ZFS", parentZfs);
         subZfs.setId(UUID.randomUUID());
+
+        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
+        var ms = new MatchScoring("ms", 3, 1, 0);
+        var regularPhase = PhaseTestFixtures.regularPhase(season2024, rs, ms);
+        var subPhaseTeam = PhaseTestFixtures.assignTeam(regularPhase, subZfs, null);
 
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("zfs_driver", "ZFS Driver", "ZFS")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
+        when(seasonPhaseService.findRegularPhase(season2024.getId())).thenReturn(regularPhase);
         when(teamRepository.findAllByShortName("ZFS")).thenReturn(List.of(parentZfs, subZfs));
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), parentZfs.getId()))
+                .thenReturn(Optional.empty());
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), subZfs.getId()))
+                .thenReturn(Optional.of(subPhaseTeam));
         when(driverMatchingService.findDriver("zfs_driver"))
                 .thenReturn(MatchResult.noMatch("zfs_driver"));
 
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
 
-        // then — preview succeeds (no exception), row routed to NEW_DRIVER, parent resolved
+        // then — sub-team wins via PhaseTeam, no warning, no error
         TabPreview tab = preview.tabPreviews().get(0);
         assertThat(tab.newDrivers()).hasSize(1);
         assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("ZFS");
         assertThat(tab.errors()).isEmpty();
+        assertThat(tab.warnings()).isEmpty();
     }
 
-    // 20. Phase 66 / D-12 — defensive: two parent teams with same shortName
+    // 20. Phase 66 / D-06 (revised) — fallback: no candidate has PhaseTeam → parent precedence
 
     @Test
-    void givenTwoParentTeamsWithSameShortName_whenPreview_thenFirstWinsWithoutException() throws IOException {
-        // given — data-integrity edge case: two teams with parentTeam == null share shortName.
-        // The resolver MUST log.warn and pick the first deterministically; import does NOT crash.
-        Team parentA = new Team("Alpha", "DUP");
-        parentA.setId(UUID.randomUUID());
-        Team parentB = new Team("Bravo", "DUP");
-        parentB.setId(UUID.randomUUID());
+    void givenTeamsWithSameShortNameAndNoCandidateHasPhaseTeam_whenPreview_thenFallsBackToParentPrecedence() throws IOException {
+        // given — neither parent nor sub has a PhaseTeam in the target REGULAR phase
+        Team parentZfs = new Team("ZF Schweinfurt", "ZFS");
+        parentZfs.setId(UUID.randomUUID());
+        Team subZfs = new Team("ZF Schweinfurt 1", "ZFS", parentZfs);
+        subZfs.setId(UUID.randomUUID());
 
-        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("dup_driver", "Dup Driver", "DUP")));
+        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
+        var ms = new MatchScoring("ms", 3, 1, 0);
+        var regularPhase = PhaseTestFixtures.regularPhase(season2024, rs, ms);
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("zfs_driver", "ZFS Driver", "ZFS")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findAllByShortName("DUP")).thenReturn(List.of(parentA, parentB));
-        when(driverMatchingService.findDriver("dup_driver"))
-                .thenReturn(MatchResult.noMatch("dup_driver"));
+        when(seasonPhaseService.findRegularPhase(season2024.getId())).thenReturn(regularPhase);
+        when(teamRepository.findAllByShortName("ZFS")).thenReturn(List.of(parentZfs, subZfs));
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), parentZfs.getId()))
+                .thenReturn(Optional.empty());
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), subZfs.getId()))
+                .thenReturn(Optional.empty());
+        when(driverMatchingService.findDriver("zfs_driver"))
+                .thenReturn(MatchResult.noMatch("zfs_driver"));
 
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
 
-        // then — preview succeeds (no exception), row routed to NEW_DRIVER, no error row
+        // then — parent picked as legacy fallback, legitimate warning emitted (no candidate is in REGULAR phase)
+        //        AND resolver MUST consult phaseTeamRepository for both candidates (this fails today — RED gate)
         TabPreview tab = preview.tabPreviews().get(0);
         assertThat(tab.newDrivers()).hasSize(1);
-        assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("DUP");
+        assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("ZFS");
         assertThat(tab.errors()).isEmpty();
+        assertThat(tab.warnings()).hasSize(1);
+        assertThat(tab.warnings().get(0).type()).isEqualTo(WarningType.TEAM_NOT_IN_REGULAR_PHASE);
+        verify(phaseTeamRepository).findByPhaseIdAndTeamId(regularPhase.getId(), parentZfs.getId());
+        verify(phaseTeamRepository).findByPhaseIdAndTeamId(regularPhase.getId(), subZfs.getId());
     }
 }
