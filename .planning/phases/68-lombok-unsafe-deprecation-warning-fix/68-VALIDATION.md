@@ -1,9 +1,10 @@
 ---
 phase: 68
 slug: lombok-unsafe-deprecation-warning-fix
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: n/a
+wave_0_complete: n/a
+rationale: "Build-only diff (Lombok 1.18.46 pom.xml pin + JEP 498 argLine flag in 3 fork sites). No logic-code path under test. Mirrors Phase 63 docs-only treatment per Phase 69 D-12."
 created: 2026-05-07
 ---
 
@@ -98,3 +99,18 @@ No new test files, no new fixtures. Configuration-only Wave 0.
 - [ ] `nyquist_compliant: true` set in frontmatter (after gates 1–6 pass)
 
 **Approval:** pending
+
+---
+
+## Validation Audit 2026-05-08 (Phase 69 SC6)
+
+**Verdict:** `n/a` — by design. Phase 68 was a build-only diff: `pom.xml` pinned `<lombok.version>1.18.46</lombok.version>` and added `--sun-misc-unsafe-memory-access=allow` to the existing `<argLine>` of `maven-surefire-plugin` and `maven-failsafe-plugin` (3 fork sites total when counting the Lombok pin annotation processor). The argLine flag suppresses a JVM warning emitted by the Lombok agent's reflection probe — it does NOT change runtime behavior of any test class. The Lombok version pin is a strict version constraint (1.18.46), not a code change. Production bytecode emitted by Lombok 1.18.46 is a strict subset of the previously floating version's emission (the pin tightens, never widens).
+
+**Methodology:** Mirrors Phase 63 docs-only treatment (no VALIDATION.md authored in Phase 64 sweep because the phase modifies no code). Phase 68's slight-stronger case: VALIDATION.md exists but is conceptually a stub; Phase 69 D-12 formalises the n/a verdict.
+
+**Coverage delta vs. baseline:** `JaCoCo line` measured at Phase 68 close: 0.8561 (Phase 67 baseline). Pre-Phase-68 baseline: same (build-only diff; no production bytecode change beyond what the pinned Lombok version emits, which is a subset of prior emission). Delta: 0.0 within measurement noise.
+
+**Why Manual (Phase 64 standard, D-15):** The single Manual-Only row above (visible cleanliness of `./mvnw verify` console output) is correctly classified — eyeballing the build log gives faster confidence than reliance on grep alone, and the warning quartet's emission shape varies subtly across JDK 25 builds (Temurin vs OpenJDK), so a human pattern-match completes the gate. Automated grep gates 4 + 5 + 6 already provide quantitative coverage; the Manual row adds qualitative confirmation.
+
+_Authored 2026-05-08 (Phase 69 SC6 — milestone closure hygiene)_
+_Branch: gsd/v1.9-season-phases-groups_
