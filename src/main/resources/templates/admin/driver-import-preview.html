@@ -58,8 +58,9 @@
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.teamShortName()}"></td>
                                     <td th:if="${showGroupColumn}">
-                                        <span th:if="${row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -82,8 +83,9 @@
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.teamShortName()}"></td>
                                     <td th:if="${showGroupColumn}">
-                                        <span th:if="${row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -111,8 +113,9 @@
                                     <td th:text="${row.existingTeamShortName()}"></td>
                                     <td th:text="${row.sheetTeamShortName()}"></td>
                                     <td th:if="${showGroupColumn}">
-                                        <span th:if="${row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
                                     </td>
                                     <td>
                                         <input type="checkbox"
@@ -145,8 +148,9 @@
                                     <td th:text="${row.suggestedPsnId() + ' (' + #numbers.formatDecimal(row.similarity() * 100, 1, 0) + '%)'}"></td>
                                     <td th:text="${row.teamShortName()}"></td>
                                     <td th:if="${showGroupColumn}">
-                                        <span th:if="${row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
                                     </td>
                                     <td>
                                         <input type="checkbox"
@@ -174,8 +178,9 @@
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.teamShortName()}"></td>
                                     <td th:if="${showGroupColumn}">
-                                        <span th:if="${row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
+                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
+                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
                                     </td>
                                 </tr>
                             </tbody>

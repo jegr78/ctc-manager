@@ -7,6 +7,7 @@ import org.ctc.dataimport.DriverMatchingService.MatchType;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.SeasonPhase;
@@ -262,6 +263,10 @@ public class DriverSheetImportService {
                 log.debug("No REGULAR phase for season {}; group resolution disabled", suggestedSeasonId);
             }
         }
+        // gap-66-03 — layout gate: only GROUPS-layout REGULAR phases drive group-resolution UX.
+        // For LEAGUE-layout phases (every team trivially has PhaseTeam.group == null), suppress
+        // both the warning emission below and the per-row "No group" badge in the template.
+        boolean usesGroups = regularPhase != null && regularPhase.getLayout() == PhaseLayout.GROUPS;
 
         List<List<Object>> rows = googleSheetsService.readRangeFromSheet(spreadsheetId, tabName, "A:C");
 
@@ -317,8 +322,10 @@ public class DriverSheetImportService {
             seenPsnIds.add(rawPsnId);
 
             // Resolve group via PhaseTeam(REGULAR) — null when team is not in the REGULAR roster.
+            // gap-66-03 — gate on GROUPS layout: LEAGUE-layout phases never have groups by design,
+            // so the warning emission here is pure noise and is suppressed entirely.
             String resolvedGroupName = null;
-            if (regularPhase != null) {
+            if (regularPhase != null && regularPhase.getLayout() == PhaseLayout.GROUPS) {
                 Optional<org.ctc.domain.model.PhaseTeam> ptOpt =
                         phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), team.getId());
                 if (ptOpt.isPresent() && ptOpt.get().getGroup() != null) {
@@ -388,7 +395,7 @@ public class DriverSheetImportService {
                 fuzzySuggestions.size(), unchanged.size(), errors.size(), warnings.size());
 
         return new TabPreview(tabName, year, number, suggestedSeasonId, ambiguousReason, warnings,
-                newDrivers, newAssignments, conflicts, fuzzySuggestions, unchanged, errors);
+                newDrivers, newAssignments, conflicts, fuzzySuggestions, unchanged, errors, usesGroups);
     }
 
     /**
@@ -466,7 +473,8 @@ public class DriverSheetImportService {
             List<ConflictRow> conflicts,
             List<FuzzySuggestionRow> fuzzySuggestions,
             List<UnchangedRow> unchanged,
-            List<ErrorRow> errors
+            List<ErrorRow> errors,
+            boolean usesGroups                    // true iff regularPhase has GROUPS layout (gap-66-03)
     ) {}
 
     public record NewDriverRow(String psnId, String teamShortName, String resolvedGroupName) {}

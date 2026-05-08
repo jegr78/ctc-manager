@@ -652,14 +652,14 @@ class DriverSheetImportServiceTest {
         assertThat(tab.warnings()).isEmpty();
     }
 
-    // 16. warning emitted when team has no PhaseTeam
+    // 16. warning emitted when team has no PhaseTeam — only under GROUPS layout (gap-66-03 contract)
 
     @Test
-    void givenTeamMissingFromRegularPhase_whenPreview_thenWarningEmitted() throws IOException {
+    void givenGroupsLayoutAndTeamMissingFromRegularPhase_whenPreview_thenWarningEmitted() throws IOException {
         // given
         var rs = new RaceScoring("rs", "10,8,6", "1", 0);
         var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.regularPhase(season2023, rs, ms);
+        var regularPhase = PhaseTestFixtures.groupsRegularPhase(season2023, rs, ms, "Group A", "Group B");
 
         setupSheetsStub(SHEET_URL, Map.of("2023_S1", oneDataRow("psn", "X", "AHR")));
         when(seasonManagementService.findUnique(2023, 1)).thenReturn(Optional.of(season2023));
@@ -676,16 +676,17 @@ class DriverSheetImportServiceTest {
         assertThat(tab.warnings().get(0).type()).isEqualTo(WarningType.TEAM_NOT_IN_REGULAR_PHASE);
         assertThat(tab.warnings().get(0).teamShortName()).isEqualTo("AHR");
         assertThat(tab.warnings().get(0).message()).contains("AHR");
+        assertThat(tab.usesGroups()).isTrue();
     }
 
-    // 17. warning deduplicated per team across multiple rows
+    // 17. warning deduplicated per team across multiple rows — only under GROUPS layout (gap-66-03 contract)
 
     @Test
-    void givenTwoRowsSameMissingTeam_whenPreview_thenSingleWarningEmitted() throws IOException {
+    void givenGroupsLayoutAndTwoRowsSameMissingTeam_whenPreview_thenSingleWarningEmitted() throws IOException {
         // given
         var rs = new RaceScoring("rs", "10,8,6", "1", 0);
         var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.regularPhase(season2023, rs, ms);
+        var regularPhase = PhaseTestFixtures.groupsRegularPhase(season2023, rs, ms, "Group A");
 
         Map<String, List<List<Object>>> tabs = Map.of("2023_S1", List.of(
                 List.of("PSN ID", "Name", "Team"),
@@ -764,11 +765,15 @@ class DriverSheetImportServiceTest {
         assertThat(tab.warnings()).isEmpty();
     }
 
-    // 20. Phase 66 / D-06 (revised) — fallback: no candidate has PhaseTeam → parent precedence
+    // 20. Phase 66 / D-06 (revised) — fallback: no candidate has PhaseTeam → parent precedence (under GROUPS layout per gap-66-03)
 
     @Test
     void givenTeamsWithSameShortNameAndNoCandidateHasPhaseTeam_whenPreview_thenFallsBackToParentPrecedence() throws IOException {
         // given — neither parent nor sub has a PhaseTeam in the target REGULAR phase
+        // gap-66-03 — fixture flipped from regularPhase (LEAGUE) to groupsRegularPhase (GROUPS):
+        // the legitimate-warning contract this test encodes is now layout-gated. The resolver
+        // PhaseTeam lookup itself is NOT layout-gated, so the dual-candidate verify assertions
+        // remain valid.
         Team parentZfs = new Team("ZF Schweinfurt", "ZFS");
         parentZfs.setId(UUID.randomUUID());
         Team subZfs = new Team("ZF Schweinfurt 1", "ZFS", parentZfs);
@@ -776,7 +781,7 @@ class DriverSheetImportServiceTest {
 
         var rs = new RaceScoring("rs", "10,8,6", "1", 0);
         var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.regularPhase(season2024, rs, ms);
+        var regularPhase = PhaseTestFixtures.groupsRegularPhase(season2024, rs, ms, "Group A");
 
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("zfs_driver", "ZFS Driver", "ZFS")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
