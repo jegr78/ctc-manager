@@ -2,7 +2,8 @@
 phase: 61-cleanup-quality-gate
 verified: 2026-05-01T20:30:00Z
 updated: 2026-05-02T00:35:00Z
-status: human_needed
+status: passed
+uat_closed: 2026-05-08
 score: 4/4 ROADMAP-SCs verified; CR-01..03 + WR-01..07 + G2..G5 + UAT-01 + UAT-03 all resolved; 1 human-verification item remains (Test 2)
 overrides_applied: 0
 re_verification:
@@ -390,3 +391,28 @@ After UAT-01 + UAT-03 closure, three follow-up items were addressed:
 1. **MariaDB CI smoke gate added** — new workflow `.github/workflows/mariadb-migration-smoke.yml` (commit `bed0ffd`). Spins up MariaDB 11 as a service container, builds the JAR, runs it against the live database on the `local` profile, asserts Flyway applies V1..VN cleanly and `/actuator/health = UP`. Triggered on changes to migration files / application*.yml / pom.xml / the workflow itself. **Closes the missing pre-merge gate that allowed both V5 (Phase 60) and V6 (Phase 61) to ship without MariaDB exposure.**
 2. **JaCoCo class-file warning** — earlier `./mvnw verify` runs reported `Execution data for class org/ctc/domain/service/SeasonPhaseService$RosterEditorState does not match`. Reproduced and confirmed harmless: stale incremental `target/` artifacts. `./mvnw clean verify` produces no warning.
 3. **Coverage baseline reconciled** — VERIFICATION.md's `87.03%` claim was inconsistent with actual measurement. Verified via git worktree: at commit `78abcb2` (pre-UAT-fix snapshot), `./mvnw clean verify` actually produces `84.95%` line coverage (5434 / 6397). At HEAD post-UAT-fix, `85.17%` (5483 / 6438). Coverage **improved** by +0.22 pp, not dropped. The `87.03%` figure was likely measured under a different profile or test set; the source of the discrepancy was not pursued further because the actual coverage comfortably exceeds the 0.82 threshold (`3.17 pp` headroom).
+
+---
+
+## UAT-Closure Addendum — 2026-05-08 (Phase 69 SC3)
+
+**Status flip:** `human_needed` → `passed`. **Date:** 2026-05-08. **Closed by:** Phase 69 SC3 milestone-closure hygiene.
+
+### Closure path
+
+- **UAT-01 (GROUPS visual smoke post-`f5b10bc`):** PASSED via Auto-UAT 2026-05-08 (`playwright-cli` against `dev,demo` profile on Season 2023 GROUPS fixture). 5 screenshots captured in `.screenshots/69-uat-01-*.png`. Evidence + per-screenshot description recorded in `.planning/phases/61-cleanup-quality-gate/61-HUMAN-UAT.md` (UAT-01 entry).
+- **UAT-02 (Legacy season visual smoke with real pre-V4 data):** DEFERRED with formal sign-off 2026-05-08. Local fixtures only exercise the empty-state standings path (D-18 read-only); not release-blocking. User verifies opportunistically after next production deploy. Recorded in `61-HUMAN-UAT.md` (UAT-02 entry).
+- **UAT-03 (V6 migration on MariaDB):** Already RESOLVED in commit `6db56d4` (recorded in original UAT Closure Update 2026-05-02T00:35:00Z above) — no action in Phase 69.
+- **UAT-04 (Legacy URL bookmark regression):** Already PASSED at original UAT 2026-05-02 — no action in Phase 69.
+
+### Audit-trail preservation
+
+The `human_verification:` frontmatter array is preserved verbatim per Phase 69 D-03 (audit trail of original UAT items + their closure narratives stays intact). Only the top-level `status` flips and a new `uat_closed` field is added; the `human_verification:` block tells the historical story, this addendum tells the closure story.
+
+### Source
+
+- `.planning/phases/61-cleanup-quality-gate/61-HUMAN-UAT.md` (UAT-01 PASS + UAT-02 DEFER evidence)
+- `.planning/phases/69-milestone-closure-hygiene/69-CONTEXT.md` D-01/D-02/D-03
+
+_Addendum authored 2026-05-08 (Phase 69 SC3 — milestone closure hygiene)_
+_Branch: gsd/v1.9-season-phases-groups_
