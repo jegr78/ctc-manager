@@ -28,6 +28,7 @@ decisions:
   - "D-14: BusinessRuleException thrown before INSERT if duplicate phase type detected — DB UNIQUE is belt, service guard is suspenders"
   - "D-20: REGULAR+LEAGUE auto-derives PhaseTeam from SeasonTeam; PLAYOFF/PLACEMENT/GROUPS start empty"
   - "TDD-RED commit 83f8093 precedes GREEN commit b0bb02b — gate sequence verified"
+requirements-completed: [SVC-01]
 metrics:
   duration: "~25 minutes (continuation from partial wave executor)"
   completed: "2026-04-28"

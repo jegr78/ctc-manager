@@ -22,6 +22,7 @@ decisions:
   - "resolveTeamFromLineup in calculateRankingForPhase always returns null (per-phase team attribution is display-only, aggregation handles season-wide attribution)"
   - "SiteGeneratorServiceTest.setUp requires SeasonPhase + PhaseTeam rows so calculateRanking bridge (delegating to findAllPhases) produces non-empty rankings — Rule 1 fix"
   - "D-07 BEHAVIOR CHANGE: PLAYOFF race results now flow into season-wide driver ranking via aggregateAcrossPhases union-merge"
+requirements-completed: [SVC-05]
 metrics:
   duration_minutes: 110
   completed_date: "2026-04-28"

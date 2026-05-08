@@ -27,6 +27,7 @@ decisions:
   - @Deprecated bridges use findByType (Optional) fallback not findRegularPhase to preserve SeasonControllerTest compat
   - Legacy fallback methods added to SwissPairingService for pre-Phase-57 seasons without REGULAR phase row
   - New phase-aware test helpers create fresh seasons to avoid UNIQUE(season_id, phase_type) constraint conflicts
+requirements-completed: [SVC-04]
 metrics:
   duration_seconds: 1436
   completed: 2026-04-28

@@ -41,6 +41,7 @@ decisions:
   - "D-26 dual-API: MatchdayService.findByPhaseId/findByPhaseIdAndGroupId added; legacy findBySeasonId becomes @Deprecated bridge using seasonPhaseService.findAllPhases flatMap."
   - "D-23 caller-side: SiteGeneratorService routes standings + driver-ranking through the phase-aware service surface; falls back to the @Deprecated calculateStandings(seasonId) bridge for pre-Phase-57 seasons in the alltime teamSlugMap loop."
   - "Pitfall 7 mitigation: SiteGeneratorService.generate skips seasons without a REGULAR phase (legacy in-memory test fixtures); the persistence-layer guarantee (V4 migration + D-25 auto-sync at save-time) keeps production data unaffected."
+requirements-completed: [SVC-01, SVC-02, SVC-04, SVC-05]
 metrics:
   tests_added: 11   # 7 SeasonMgmt + 3 Matchday + 1 SiteGenIT
   tests_total_after: 1127

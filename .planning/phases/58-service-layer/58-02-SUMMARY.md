@@ -21,6 +21,7 @@ decisions:
   - "Legacy fallback calculateStandingsLegacy(seasonId) added for pre-V4-migration seasons without SeasonPhase rows"
   - "@MockitoSettings(strictness=LENIENT) applied class-wide due to existing tests' seasonRepository stubs becoming unreachable via bridge"
   - "Buchholz combined-view (groupId=null, GROUPS layout) populates field for display but falls back to standard points-pointDifference-pointsFor tiebreaker chain (D-06)"
+requirements-completed: [SVC-02]
 metrics:
   duration_minutes: 95
   completed_date: "2026-04-28"

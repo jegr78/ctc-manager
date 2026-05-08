@@ -30,6 +30,7 @@ decisions:
   - autoSeedBracket prefers manually-saved PlayoffSeed rows (legacy admin workflow) and falls back to D-15 REGULAR-phase Top-N when none exist — backward-compatible by design
   - Pitfall 4 mitigation grep-anchored — production code contains exactly one matchday.setPhase(playoff.getPhase()) call site in addRaceToMatchup
   - PlayoffController catches BusinessRuleException in save flow to preserve redirect-with-flash UX after the IllegalArgumentException → BusinessRuleException swap
+requirements-completed: [SVC-03]
 metrics:
   duration_seconds: 1100
   completed: 2026-04-28
