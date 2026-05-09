@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Season Phases & Groups
 status: executing
-last_updated: "2026-05-09T13:27:04.761Z"
+last_updated: "2026-05-09T13:33:40Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
-  percent: 71
+  completed_plans: 6
+  percent: 86
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 ## Current Position
 
 Phase: 70 (driver-import-parent-only-team-resolution) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-05-09
 
@@ -63,6 +63,7 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [Plan 58-05]: PlayoffSeedingService.autoSeedBracket dual-flow — manual PlayoffSeed rows have priority (legacy admin workflow); D-15 REGULAR-phase Top-N is the fallback when no manual seeds exist. PhaseTeam roster on PLAYOFF phase populated as side-effect of D-15 seeding (D-20).
 - [Plan 58-05]: Pitfall 4 mitigated — PlayoffService.addRaceToMatchup writes matchday.phase=playoff.getPhase() so playoff race results attribute correctly to PLAYOFF phase in DriverRankingService.
 - [Phase ?]: [Plan 70-01]: Inverted Phase 66 D-04 sub-team resolver to parent-precedence; removed group-resolution branch in DriverSheetImportService. Production compile clean.
+- [Phase 70]: [Plan 70-02]: UX decommission — DriverSheetImportController no longer computes showGroupColumn (3 imports + seasonPhaseService field + 10-line GROUPS-detection block deleted); driver-import-preview.html renders no Group column / no warning box across 5 buckets; DriverSheetImportControllerTest @Test count 21 -> 19 (two GROUPS-/null-resolved-group tests deleted, dead PhaseLayout import + SeasonPhaseRepository field removed). Production compile clean (./mvnw clean compile -> BUILD SUCCESS, 182 source files). Service-side test compile remains intentionally RED until Plan 70-03 (Wave 2).
 
 ### Phase Numbering
 
@@ -104,19 +105,16 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-09T13:26:59.293Z
+Last session: 2026-05-09T13:33:40Z
 
-**Plan 58-06 commits:**
+**Plan 70-02 commits:**
 
-- `4b2cb3d` test(58-06): add failing tests for D-18 delete-guard, D-25 auto-sync, D-26 dual-API, D-23 phase-aware sitegen
-- `7067f31` feat(58-06): SeasonManagementService delete-guard + REGULAR-phase auto-sync + MatchdayService dual-API + SiteGenerator phase-aware (D-18, D-25, D-26, D-23 — 2 BEHAVIOR CHANGES)
-- `fe4e5c2` docs(58-06): complete SeasonManagementService + MatchdayService + SiteGenerator phase-aware plan — SVC-01 closure
+- `974d5cc` refactor(70-02): drop showGroupColumn + GROUPS-detection from DriverSheetImportController (D-09)
+- `beb9e91` refactor(70-02): remove Group column + warning box from driver-import-preview template (D-09)
+- `c1ae3f1` test(70-02): drop showGroupColumn / resolvedGroupName test cases from DriverSheetImportControllerTest (D-09, D-11)
 
-**Behavior changes shipped (must call out at PR time):**
+**Stopped at:** Completed Plan 70-02; SUMMARY.md committed in subsequent docs(70-02) commit. Wave-1 (Plans 70-01 + 70-02) is now complete.
 
-- D-18 strict-delete-guard — `SeasonManagementService.delete` now throws `BusinessRuleException` when matchdays / playoffs / phase-teams reference any phase of the season (previously: blind cascade).
-- D-25 REGULAR-phase auto-sync — `SeasonManagementService.save` now find-or-creates the REGULAR `SeasonPhase` and write-throughs format / totalRounds / legs / eventDurationMinutes / start+end dates / raceScoring / matchScoring on every save (atomic with the Season insert via single `@Transactional`).
+**Next action:** Execute Plan 70-03 (Wave 2, depends on 70-01 + 70-02): delete superseded service-test cases (#16, #19, #20, #23, #24); preserve #21/#22; add D-13 parent-always test; write Phase-66-VERIFICATION.md addendum (D-15..D-17); run final `./mvnw verify -Pe2e` gate (D-21).
 
-**Next action:** `/gsd-verify-work 58` (UAT validation) → then proceed to Phase 59 (Import & Test Data) or Phase 60 (Admin UI) per ROADMAP — both depend on Phase 58 and are independent of each other.
-
-**Branch:** `gsd/v1.9-season-phases-groups` (3 plan-58-06 commits ahead of last checkpoint; working tree has staged STATE.md / ROADMAP.md awaiting tracking-update commit).
+**Branch:** `gsd/v1.9-season-phases-groups` (3 plan-70-02 commits ahead of plan-70-01 metadata commit `cb5f3eb`).
