@@ -141,7 +141,7 @@ public class DriverSheetImportService {
                     result.incrementNewDrivers();
                     return saved;
                 });
-                Team team = resolveTeamByShortName(row.teamShortName(), regularPhase)
+                Team team = resolveTeamByShortName(row.teamShortName())
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 seasonDriverRepository.save(new SeasonDriver(season, driver, team));
                 result.incrementNewAssignments();
@@ -152,7 +152,7 @@ public class DriverSheetImportService {
                 Driver driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(),
                         psnId -> driverRepository.findById(row.existingDriverId())
                                 .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + row.existingDriverId())));
-                Team team = resolveTeamByShortName(row.teamShortName(), regularPhase)
+                Team team = resolveTeamByShortName(row.teamShortName())
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 boolean alreadyAssigned = seasonDriverRepository
                         .findBySeasonIdAndDriverId(season.getId(), driver.getId())
@@ -172,7 +172,7 @@ public class DriverSheetImportService {
                     SeasonDriver sd = seasonDriverRepository
                             .findById(row.existingSeasonDriverId())
                             .orElseThrow(() -> new IllegalArgumentException("SeasonDriver not found: " + row.existingSeasonDriverId()));
-                    Team newTeam = resolveTeamByShortName(row.sheetTeamShortName(), regularPhase)
+                    Team newTeam = resolveTeamByShortName(row.sheetTeamShortName())
                             .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.sheetTeamShortName()));
                     sd.setTeam(newTeam);
                     seasonDriverRepository.save(sd);
@@ -201,7 +201,7 @@ public class DriverSheetImportService {
                         return saved;
                     });
                 }
-                Team team = resolveTeamByShortName(row.teamShortName(), regularPhase)
+                Team team = resolveTeamByShortName(row.teamShortName())
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 boolean alreadyAssigned = seasonDriverRepository
                         .findBySeasonIdAndDriverId(season.getId(), driver.getId())
@@ -306,7 +306,7 @@ public class DriverSheetImportService {
             }
 
             // Step 3: Unknown team short code
-            Optional<Team> teamOpt = resolveTeamByShortName(rawTeamCode, regularPhase);
+            Optional<Team> teamOpt = resolveTeamByShortName(rawTeamCode);
             if (teamOpt.isEmpty()) {
                 errors.add(new ErrorRow(rawPsnId, rawTeamCode, ErrorReason.UNKNOWN_TEAM_CODE));
                 continue;
@@ -411,41 +411,30 @@ public class DriverSheetImportService {
     }
 
     /**
-     * Resolves a team by shortName with season-aware precedence.
+     * Resolves a team by shortName with parent-precedence on multi-match.
      * <p>
      * The {@code teams.short_name} column is intentionally non-unique — a parent team and
      * one of its sub-teams may share the same shortName (e.g. parent {@code ZFS} + sub
-     * {@code ZFS}). When the import sheet references such a code:
+     * {@code ZFS}). Per Phase 70 (D-01..D-05) the import always assigns the parent at the
+     * season level; sub-team variation is per-match (RaceLineup), not per-season.
      * <ol>
-     *   <li><b>Multi-match in a season with REGULAR phase:</b> prefer the candidate that has
-     *       a {@code PhaseTeam} in the target REGULAR phase (the team actually rostered).</li>
-     *   <li><b>Multi-match without a REGULAR phase, or no candidate in the REGULAR phase:</b>
-     *       fall back to parent precedence ({@code parentTeam == null}).</li>
-     *   <li><b>Multi-parent edge case (no parent among candidates):</b> log a WARN and pick
-     *       the first deterministically (data-integrity issue logged for ops).</li>
+     *   <li><b>0 matches:</b> empty — caller emits {@code UNKNOWN_TEAM_CODE}.</li>
+     *   <li><b>1 match:</b> return it (parent or solo-sub with its own unique shortName, both legitimate).</li>
+     *   <li><b>N matches:</b> return the first {@code parentTeam == null} candidate.
+     *       If no candidate is a parent (data-integrity edge), log WARN and return the first deterministically.</li>
      * </ol>
-     * Revised in gap-closure plan 66-02 — see {@code 66-CONTEXT.md} D-06.
+     * Inverts Phase 66 D-04 — see {@code 70-CONTEXT.md} D-05.
      *
-     * @param shortName    trimmed team short code from the sheet
-     * @param regularPhase REGULAR phase of the target season, or {@code null} for legacy /
-     *                     no-REGULAR-phase data (then parent precedence applies)
-     * @return the resolved team (sub-team-with-PhaseTeam preferred, parent fallback), or
-     *         empty if no team matches
+     * @param shortName trimmed team short code from the sheet
+     * @return the resolved team (parent precedence on multi-match), or empty if no team matches
      */
-    private Optional<Team> resolveTeamByShortName(String shortName, SeasonPhase regularPhase) {
+    private Optional<Team> resolveTeamByShortName(String shortName) {
         List<Team> matches = teamRepository.findAllByShortName(shortName);
         if (matches.isEmpty()) {
             return Optional.empty();
         }
         if (matches.size() == 1) {
             return Optional.of(matches.get(0));
-        }
-        if (regularPhase != null) {
-            for (Team candidate : matches) {
-                if (phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), candidate.getId()).isPresent()) {
-                    return Optional.of(candidate);
-                }
-            }
         }
         Optional<Team> parent = matches.stream()
                 .filter(t -> t.getParentTeam() == null)
