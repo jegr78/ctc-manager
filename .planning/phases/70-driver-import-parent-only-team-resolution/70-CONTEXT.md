@@ -34,9 +34,9 @@ Korrektur an v1.9-Phase-66. Phase 66 hat einen Sub-Team-Resolver eingebaut (CONT
 
 ### Domänenmodell (vom User explizit bestätigt 2026-05-09)
 
-- **D-01:** Teams treten für eine **komplette Saison** an. Alle Fahrer eines Teams sind am **Haupt-/Parent-Team** hinterlegt — `SeasonDriver.team_id` zeigt **immer** auf das Parent (oder ein Solo-Team ohne Subs). Sub-Team-Aufteilung erfolgt **pro Match** über `RaceLineup.team_id`, nicht pro Phase oder Saison.
+- **D-01** [informational]: Teams treten für eine **komplette Saison** an. Alle Fahrer eines Teams sind am **Haupt-/Parent-Team** hinterlegt — `SeasonDriver.team_id` zeigt **immer** auf das Parent (oder ein Solo-Team ohne Subs). Sub-Team-Aufteilung erfolgt **pro Match** über `RaceLineup.team_id`, nicht pro Phase oder Saison.
 - **D-02:** Fahrer können nur bei **Saisonwechsel** zu einem anderen Parent-Team wechseln. Innerhalb einer Saison ist `SeasonDriver.team_id` stabil; Sub-Team-Variationen geschehen ausschließlich auf RaceLineup-Ebene.
-- **D-03:** Sub-Teams können **eigenständige shortNames** haben (z.B. `MRL` parent + `MRL 1`/`MRL 2` Subs). Sie können denselben shortName wie der Parent haben (z.B. `ZFS`/`ZFS` aus Phase-66-CONTEXT) — beide Fälle sind valide. Der shortName-Lookup darf von beiden Konventionen nicht abhängen.
+- **D-03** [informational]: Sub-Teams können **eigenständige shortNames** haben (z.B. `MRL` parent + `MRL 1`/`MRL 2` Subs). Sie können denselben shortName wie der Parent haben (z.B. `ZFS`/`ZFS` aus Phase-66-CONTEXT) — beide Fälle sind valide. Der shortName-Lookup darf von beiden Konventionen nicht abhängen.
 - **D-04:** Im Driver-Sheet steht **immer der Parent-shortName** (User bestätigt 2026-05-09). Sheet-Werte wie `MRL 1` / `MRL 2` (Sub-shortName) sind **nicht** zu erwarten und werden nicht speziell behandelt — falls sie auftauchen und als unique shortName matchen, gibt der Single-Match-Pfad das Sub direkt zurück (kein Parent-Lookup), was per `resolveTeamByShortName(matches.size()==1)` bereits heute korrekt funktioniert.
 
 ### Driver-Import-Resolver (invertiert Phase 66 D-04)
@@ -59,7 +59,7 @@ Korrektur an v1.9-Phase-66. Phase 66 hat einen Sub-Team-Resolver eingebaut (CONT
   - `TabPreview.usesGroups` Field
   - `DriverSheetImportController` `showGroupColumn` Model-Attribute + zugehörige Page-wide GROUPS-Detection
   - Template `driver-import-preview.html`: Group-Spalten-Header + 5 per-row Group-Cells + Warning-Box für TEAM_NOT_IN_REGULAR_PHASE
-- **D-10:** Verbleibende Fehlerkategorien im Driver-Import-Preview:
+- **D-10** [informational]: Verbleibende Fehlerkategorien im Driver-Import-Preview:
   - `BLANK_PSN_ID`, `BLANK_TEAM_CODE`, `UNKNOWN_TEAM_CODE`, `DUPLICATE_IN_TAB` — alle bleiben unverändert
   - Keine neue Warning-Kategorie ersetzt `TEAM_NOT_IN_REGULAR_PHASE`. Die Frage „in welcher Group fährt der Fahrer?" gehört Match-Phase, nicht Import-Phase.
 
@@ -91,8 +91,8 @@ Korrektur an v1.9-Phase-66. Phase 66 hat einen Sub-Team-Resolver eingebaut (CONT
 ### Branch + Commit-Hygiene
 
 - **D-18:** Aktive Branch `gsd/v1.9-season-phases-groups` an jedem Checkpoint und Commit (D-18 von Phase 67 + 69 wiederverwendet). Subagent-Prompts MÜSSEN explizit `git stash`, `git checkout`, `git reset`, Branch-Switching verbieten (CLAUDE.md Subagent Rules + `feedback_subagent_stability`).
-- **D-19:** Kein Worktree für Phase 70 — Scope ist klein (~1 Service-Klasse + 5 Records + 1 Controller + 1 Template + Test-Suite). Inline auf `gsd/v1.9-season-phases-groups`.
-- **D-20:** Conventional-Commit-Prefix-Strategie:
+- **D-19** [informational]: Kein Worktree für Phase 70 — Scope ist klein (~1 Service-Klasse + 5 Records + 1 Controller + 1 Template + Test-Suite). Inline auf `gsd/v1.9-season-phases-groups`.
+- **D-20** [informational]: Conventional-Commit-Prefix-Strategie:
   - `refactor(70-NN): ...` für die Resolver-Logik-Inversion (kein Bug-Fix-Tag, weil Phase 66 D-04 ein bewusster Architektur-Default war, kein Bug)
   - `refactor(70-NN): ...` für Group-Resolution-Removal (UX-Decommission)
   - `test(70-NN): ...` für neue Tests / invertierte Tests
@@ -102,15 +102,15 @@ Korrektur an v1.9-Phase-66. Phase 66 hat einen Sub-Team-Resolver eingebaut (CONT
 ### Final Verify Gate
 
 - **D-21:** Phase 70 schließt mit **`./mvnw verify -Pe2e`** (eine final-Verify, analog zu Phase 69 D-16). Surefire (1235 Tests) + Failsafe Playwright E2E (31 Tests) + JaCoCo line ≥ 0.82. Erwartete Test-Anzahl-Änderung: -3 bis -5 (gelöschte Phase-66-Tests) +1 (neuer Parent-Always-Test) = ~1230 Surefire-Tests danach. JaCoCo-Coverage darf nicht unter 0.82 fallen.
-- **D-22:** Manuelles UAT durch den User auf der lokalen MariaDB nach dem `./mvnw verify -Pe2e`: Driver-Import auf Saison 2023 (parent MRL + MRL 1 in Group 2 + MRL 2 in Group 1) muss ohne Warnung durchlaufen, alle MRL-Fahrer müssen `SeasonDriver.team = MRL parent` bekommen. Auto-UAT über `playwright-cli` ist machbar (analog Phase 69 D-01), aber NICHT zwingend in Phase 70 erforderlich — der Plan-Phase entscheidet, ob er Auto-UAT als Plan-Schritt aufnimmt oder dem User die manuelle Verifikation überlässt.
+- **D-22** [informational]: Manuelles UAT durch den User auf der lokalen MariaDB nach dem `./mvnw verify -Pe2e`: Driver-Import auf Saison 2023 (parent MRL + MRL 1 in Group 2 + MRL 2 in Group 1) muss ohne Warnung durchlaufen, alle MRL-Fahrer müssen `SeasonDriver.team = MRL parent` bekommen. Auto-UAT über `playwright-cli` ist machbar (analog Phase 69 D-01), aber NICHT zwingend in Phase 70 erforderlich — der Plan-Phase entscheidet, ob er Auto-UAT als Plan-Schritt aufnimmt oder dem User die manuelle Verifikation überlässt.
 
 ### Plan-Organisation (Claude's Discretion)
 
-- **D-23:** Planner darf 1-3 Plans wählen. Empfohlene Gruppierung:
+- **D-23** [informational]: Planner darf 1-3 Plans wählen. Empfohlene Gruppierung:
   - **Plan 70-01**: Resolver-Inversion (`DriverSheetImportService.resolveTeamByShortName` parent-precedence; entfernt Group-Resolution-Block; entfernt `regularPhase`-Parameter wo möglich; entfernt `WarningType.TEAM_NOT_IN_REGULAR_PHASE`)
   - **Plan 70-02**: UX-Decommission (5 Records `resolvedGroupName` weg; `TabPreview.usesGroups` weg; Controller `showGroupColumn` weg; Template Group-Spalte + Warning-Box weg)
   - **Plan 70-03**: Test-Anpassung + Phase-66-Doku-Addendum + finaler `./mvnw verify -Pe2e`
-- **D-24:** Wave-Strategie: Plan 70-01 + 70-02 können in Wave 1 parallel laufen (disjunkte Files: Service vs. Records+Controller+Template). Plan 70-03 in Wave 2 (depends_on 70-01 + 70-02, weil Tests nur grün sein können nachdem die Refactors landen). Final-Verify gehört in Plan 70-03.
+- **D-24** [informational]: Wave-Strategie: Plan 70-01 + 70-02 können in Wave 1 parallel laufen (disjunkte Files: Service vs. Records+Controller+Template). Plan 70-03 in Wave 2 (depends_on 70-01 + 70-02, weil Tests nur grün sein können nachdem die Refactors landen). Final-Verify gehört in Plan 70-03.
 
 </decisions>
 
