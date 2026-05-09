@@ -16,6 +16,7 @@ import org.ctc.domain.service.SeasonManagementService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -630,6 +631,51 @@ class DriverSheetImportServiceTest {
         assertThat(tab.newDrivers()).hasSize(1);
         assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("DUP");
         assertThat(tab.errors()).isEmpty();
+    }
+
+    // 23. Phase 70 D-13 — parent-always regression: parent MRL + 2 subs in 2 groups,
+    // sheet references parent shortName "T-MRL" → resolved team is parent, no warning, no errors.
+    // Test-data prefix per CLAUDE.md `Isolate Test Data Completely` (D-14).
+
+    @Test
+    void givenSheetReferencesParentShortNameWithSubsInGroupsPhase_whenPreview_thenAssignsParentNoWarning() throws IOException {
+        // given — parent + 2 subs all sharing shortName "T-MRL"
+        // (mirrors live UAT data: parent MRL + sub MRL 1 + sub MRL 2 in different Groups)
+        Team parentMrl = new Team("Test-MRL Parent", "T-MRL");
+        parentMrl.setId(UUID.randomUUID());
+        Team subMrl1 = new Team("Test-MRL Sub 1", "T-MRL", parentMrl);
+        subMrl1.setId(UUID.randomUUID());
+        Team subMrl2 = new Team("Test-MRL Sub 2", "T-MRL", parentMrl);
+        subMrl2.setId(UUID.randomUUID());
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("t-mrl-driver", "Test MRL Driver", "T-MRL")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(teamRepository.findAllByShortName("T-MRL")).thenReturn(List.of(parentMrl, subMrl1, subMrl2));
+        when(driverMatchingService.findDriver("t-mrl-driver"))
+                .thenReturn(MatchResult.noMatch("t-mrl-driver"));
+
+        // when — preview categorises as NEW_DRIVER without consulting any phase data
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — parent picked unconditionally; no error, single newDriver row with shortName T-MRL
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.newDrivers()).hasSize(1);
+        assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("T-MRL");
+        assertThat(tab.errors()).isEmpty();
+
+        // also-then — execute writes SeasonDriver pointing at the parent (not a sub),
+        // proving the resolver picks the parent on multi-match regardless of sub-team data.
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("seasonId_2024", season2024.getId().toString());
+        when(seasonRepository.findById(season2024.getId())).thenReturn(Optional.of(season2024));
+        ArgumentCaptor<SeasonDriver> captor = ArgumentCaptor.forClass(SeasonDriver.class);
+        when(seasonDriverRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+        when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        driverSheetImportService.execute(SHEET_URL, params);
+
+        SeasonDriver written = captor.getValue();
+        assertThat(written.getTeam().getId()).isEqualTo(parentMrl.getId());
     }
 
 }
