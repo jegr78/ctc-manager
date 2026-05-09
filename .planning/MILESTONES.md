@@ -1,5 +1,38 @@
 # Milestones
 
+## v1.9 Season Phases & Groups (Shipped: 2026-05-09)
+
+**Phases completed:** 15 phases (56-70), ~70 plans, 38/38 requirements satisfied
+**Diff:** +88 447 / −2 502 across 567 files (442 commits in milestone range)
+**Tests:** 1227 unit + 31 Playwright E2E (Failsafe), JaCoCo line coverage 87.02% (gate 82%)
+**Timeline:** 14 days (2026-04-26 → 2026-05-09)
+**Branch:** `gsd/v1.9-season-phases-groups`
+**Live UAT D-22:** Saison 2023 driver import on local MariaDB — 287 new drivers / 357 new assignments / 0 errors
+
+**Key accomplishments:**
+
+- Phase/Group domain model: `SeasonPhase` (REGULAR/PLAYOFF/PLACEMENT) + `SeasonPhaseGroup` + `PhaseTeam` roster replace the flat-season container; group-seasons are expressible without the multi-season workaround (MODEL-01..08, MIGR-01..07)
+- Mechanical data migration: Flyway V3-V6 maps every existing season to 1 REGULAR (+ optional PLAYOFF) phase, drops the `season_id` bridge columns and the `playoff_seasons` join-table — legacy seasons stay reachable byte-identically (live UAT 287/357/0 errors confirms)
+- Phase-aware domain services: `StandingsService.calculateStandings(phaseId, groupId)` + `DriverRankingService` + `MatchdayGeneratorService` + `PlayoffService(Seeding)` operate exclusively on phase scope with combined-view aggregation; 5 graphics services migrated off the legacy `calculateStandings(seasonId)` bridge (SVC-01..05)
+- Admin UI mirrors the new model: slim season form, phase + group CRUD forms, season-detail two-row tabs (phase row + group sub-tab row), per-phase standings + combined view, playoff bracket bound to PLAYOFF phase, driver-import preview with unambiguous `year_S{number}` labels (UI-01..07)
+- Public site phase + group awareness: phase-tab row + group-sub-tab row + per-phase URL variants + PLAYOFF tab routing + Phase Breakdown sections on team/driver profiles + alltime aggregation across all phases (D-19 TRACKED BEHAVIOR CHANGE); LEAGUE-only seasons render byte-identically (SITE-01..03 + 9-test `SiteGeneratorPhaseAwarenessIT`)
+- Driver import: `findByYearAndNumber(int, int)` resolves `^\d{4}_S\d+$` tabs unambiguously (IMPORT-01..04); Phase 70 inverted the Phase-66 sub-team-wins default — `SeasonDriver.team_id` always points to parent, sub-team split happens per-match via `RaceLineup`; group-resolution UX + `TEAM_NOT_IN_REGULAR_PHASE` warning fully decommissioned; 2 IT regression tests close GAP-70-01 (cross-tab duplicate driver insert)
+- Quality gate held: JaCoCo 87.02% (gate 82%), 1227 unit + 31 Playwright E2E green, comment-policy re-sweep across `src/main` + `src/test` (Phase 67), Lombok 1.18.46 + JEP 498 silence the `sun.misc.Unsafe` warnings on Java 25 (Phase 68), Guava 33.4.8-jre override silences the transitive `AbstractFuture` Unsafe warning
+
+**Deferred to next milestone (acknowledged at close):**
+
+- Quality Gate Lock / CI comment-noise guard (Phase 67 D-06 forward commitment) — automated gate (Maven Enforcer / pre-commit hook / CI grep gate) blocking attribution-marker introduction
+- UAT-02 (Legacy season visual smoke with real pre-V4 production data) — user verifies opportunistically after next production deploy; local fixtures cover empty-state path only
+- WARN-1: per-group matchday generation UI affordance (`SeasonController.generateMatchdays:251` hardcodes `groupId=null`) — Rule-3 deviation documented in Phase 61 QUAL-02
+- OBS-3: `StandingsController.java:139` lazy collection (`resolvedPhase.getGroups()`) — OSIV-safe read-only context, style-only
+- Plan SUMMARY frontmatter sweep for phases 56/57/62/64 (15 plan SUMMARYs across 4 phases, analog to Phase 69's 17-SUMMARY sweep) — pure bookkeeping
+- Stub quick task `260404-jh8-fix-release-workflow-use-release-token-s` (predates v1.9, status `missing`)
+- 2 debug sessions (`group-warnings-for-non-groups-seasons`, `shortname-resolver-picks-parent-without-phaseteam`) — both `diagnosed` with hypothesis confirmed; resolutions captured in session docs and superseded by Phase 70
+
+Known deferred items at close: 8 (see STATE.md Deferred Items)
+
+---
+
 ## v1.8 Bulk Driver Import from Google Sheets (Shipped: 2026-04-25)
 
 **Phases completed:** 2 phases, 4 plans, ~12 tasks

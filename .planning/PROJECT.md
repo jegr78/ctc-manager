@@ -19,21 +19,17 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - **Data:** All UI text and code comments in English, dev profile with fictive test data including GROUPS multi-phase fixture (Season 2023) + Empty-Phase fixture for D-22 coverage
 - **Public Site:** Phase-tab row + group-sub-tab row, per-phase URL variants, Phase Breakdown sections on team/driver profiles, alltime aggregation across all phases (D-19 TRACKED BEHAVIOR CHANGE), desktop sticky table headers
 
-## Current Milestone: v1.9 Season Phases & Groups
+## Next Milestone
 
-**Goal:** Saison vom flachen Container zur Klammer mit mehreren Phasen (Regular / Playoff / Placement) und optionalen Sub-Gruppen pro Phase weiterentwickeln, sodass Gruppen-Saisons ohne Multi-Saison-Workaround abbildbar werden und der Driver-Import wieder eindeutig auflösbar ist.
+(None — awaiting next milestone definition via `/gsd-new-milestone`.)
 
-**Target features:**
-- `SeasonPhase`-Entity (REGULAR/PLAYOFF/PLACEMENT) mit Format/Scoring/Dates auf Phase-Ebene
-- `SeasonPhaseGroup` als Sub-Gruppen einer GROUPS-Phase (eigener Roster, eigene Standings)
-- `PhaseTeam`-Roster (Team↔Phase, optional Group); `SeasonDriver` strukturell unverändert
-- `Playoff` von Saison auf Phase umgehängt; M:N `playoff_seasons` entfällt
-- Mechanische Migration: jede Bestandssaison → 1 REGULAR-Phase + ggf. 1 PLAYOFF-Phase
-- Driver-Import: `findByYearAndNumber` statt `findByYear`; Group implizit über das Team
-- UI: Saison-Detail mit Phasen-Tabs, Gruppen als zweite Tab-Ebene; Standings pro Gruppe + Combined-View
-- `TestDataService` und `DevDataSeeder` direkt im neuen Modell (keine Backward-Compat-Helpers)
+**Candidates already captured as deferred from v1.9:**
 
-**Foundation:** `/Users/jegr/.claude/plans/ich-bin-mit-dem-pure-gem.md` — Architektur-Plan aus Brainstorming-Session, Basis dieses Meilensteins.
+- Quality Gate Lock / CI comment-noise guard (Phase 67 D-06 forward commitment)
+- Plan SUMMARY frontmatter sweep for phases 56/57/62/64 (bookkeeping, ~15 plan SUMMARYs)
+- Per-group matchday generation UI affordance (`SeasonController.generateMatchdays:251` Rule-3 deviation)
+- `StandingsController.java:139` lazy collection style cleanup
+- UAT-02 (legacy season visual smoke against real pre-V4 production data) on next deploy
 
 ## Requirements
 
@@ -138,12 +134,6 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 (None — awaiting next milestone definition via `/gsd-new-milestone`.)
 
-#### Shipped Milestone: v1.6 Static Site Quality
-
-**Goal:** Fix broken links, add missing content, improve navigation/cross-linking, and deliver a polished, accessible static site with professional UX.
-
-All 56 requirements complete (22 original + 26 extended + 3 YouTube hero + 5 alltime pages). See REQUIREMENTS.md for full traceability. Pending `/gsd-complete-milestone` archival.
-
 ### Out of Scope
 
 - OAuth2/OIDC — Basic Auth sufficient for single-admin app
@@ -182,11 +172,25 @@ All 56 requirements complete (22 original + 26 extended + 3 YouTube hero + 5 all
 | `@RequestParam` primitives + `Map<String, String>` instead of static Form DTO (D-15 override of QUAL-03 wording) | Per-row keys (`seasonId_<year>`, `skip_<psnId>_<year>`, `accept_<psnId>_<year>`) are dynamic — DTO would not fit | ✓ v1.8 |
 | Per-tab cache key for FUZZY-accept driver resolution (CR-01 fix) | Per-tab `accept_<psnId>_<year>` choices must stay isolated; cross-tab dedup keeps plain PSN key for the no-accept branch | ✓ v1.8 |
 | Test years 2021/2022 (not 2023/2024) | DevDataSeeder seeds 2023/2024/2026 on context startup → `findByYear()` ambiguity broke conflict-overwrite assertions | ✓ v1.8 |
-| Bridge-Spalten-Drop in V6 erweitert (Phase 61 D-01) | matchdays.season_id + playoffs.season_id sind denormalisiert + wartungsbelastend (vs. canonical Season → SeasonPhase → Matchday/Playoff); Phase 56 D-02 / Phase 57 SC5 superseded | Phase 61 (in progress) |
+| Bridge-Spalten-Drop in V6 erweitert (Phase 61 D-01) | matchdays.season_id + playoffs.season_id sind denormalisiert + wartungsbelastend (vs. canonical Season → SeasonPhase → Matchday/Playoff); Phase 56 D-02 / Phase 57 SC5 superseded | ✓ v1.9 |
+| Phase-additive entity scope (Phase 56) | Old Season fields + season_id FKs stay until Phase 61 — services migrate before schema cleanup, so Phase 57 data migration runs against a stable surface | ✓ v1.9 |
+| `findByType` (Optional) over `findRegularPhase` (throws) for legacy bridge (Phase 58 D-?) | Avoids transaction rollback-only poisoning; pre-V4 seasons fall through gracefully | ✓ v1.9 |
+| `PlayoffService.createPlayoff` atomically writes PLAYOFF SeasonPhase + Playoff (Plan 58-05 D-19) | Single `@Transactional` boundary mitigates Pitfall 2 (orphan phase rows on partial failure) | ✓ v1.9 |
+| `PlayoffSeedingService` dual-flow: manual seeds win, REGULAR Top-N is fallback (Plan 58-05 D-15) | Preserves legacy admin workflow while adding the new auto-seeding path; PhaseTeam roster on PLAYOFF phase populated as side-effect (D-20) | ✓ v1.9 |
+| Driver-import `findByYearAndNumber(int, int)` replaces `findByYear(int)` (Phase 59) | Multi-season-per-year ambiguity resolved at the API surface, not via heuristic; tab pattern extended to `^\d{4}_S\d+$` | ✓ v1.9 |
+| Group membership for imported drivers resolved via `PhaseTeam` of the REGULAR phase, not via per-driver sheet override (Phase 59) | Group is a phase-scope property of the team, not a driver attribute — keeps the import sheet shape stable | ✓ v1.9 |
+| `TestDataService` + `DevDataSeeder` rebuilt directly on the new model — no Backward-Compat helpers (DATA-01, DATA-02) | Helpers would mask schema regressions; T-prefix isolation keeps fixtures collision-free with manual data | ✓ v1.9 |
+| D-19 alltime aggregation spans REGULAR + PLAYOFF + PLACEMENT (Phase 62, TRACKED BEHAVIOR CHANGE) | Public alltime totals include playoff results — explicit user decision to make playoff outcomes count alltime; flagged as behavior change in 62-CONTEXT.md | ✓ v1.9 |
+| `templates/site/` mirrors `templates/admin/season-detail.html` two-row tabs structure (Phase 62) | Same UX shape across admin and public site reduces cognitive load for the league operator | ✓ v1.9 |
+| Parent-team always wins on shortName multi-match (Phase 70 D-05, inverts Phase 66 D-04) | Domain model: `SeasonDriver.team_id` references parent; sub-team split is per-match via `RaceLineup`, never per-phase. Phase 66 D-04 was a model-violating default discovered during live MariaDB UAT | ✓ v1.9 |
+| Group-resolution UX in driver-import preview decommissioned (Phase 70 D-09) | Per Phase-70 D-05 the parent team is the only correct answer; `usesGroups` / `resolvedGroupName` / `TEAM_NOT_IN_REGULAR_PHASE` warning all became dead branches | ✓ v1.9 |
+| `findByPsnId` guard in NEW_DRIVER branch of DriverSheetImportService (Phase 70 GAP-70-01 fix) | `computeIfAbsent` did not consult the DB → cross-tab duplicate PSN-ID inserts caused full-transaction rollback on live MariaDB import (Saison 2023). 2 IT regression tests fence the regression | ✓ v1.9 |
+| Lombok 1.18.46 + JEP 498 `--sun-misc-unsafe-memory-access=allow` (Phase 68) | Java 25 emits terminally-deprecated warnings for `lombok.permit.Permit`'s `sun.misc.Unsafe` calls; Lombok 1.18.46 + the JEP 498 flag silence the warnings without forcing a Java downgrade | ✓ v1.9 |
+| Guava pinned to 33.4.8-jre (`<guava.version>` override) | Transitive Guava 33.1.0-jre from `google-api-client` emitted `AbstractFuture$UnsafeAtomicHelper` Unsafe warning on Java 25; 33.4.x switches to `VarHandle` for Java 9+ | ✓ v1.9 |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-07 — v1.9 milestone shipped: Season Phases & Groups, last phase Phase 62 (Public Site Phase + Group Awareness) verified PASSED 11/11 must-haves, JaCoCo 87.24%, 1246 tests*
+*Last updated: 2026-05-09 — v1.9 milestone shipped: Season Phases & Groups, all 15 phases (56-70) verified PASSED, 38/38 requirements satisfied, 1227 unit + 31 Playwright E2E tests green, JaCoCo line coverage 87.02% (gate 82%), live UAT D-22 confirmed Saison 2023 driver import on MariaDB (287/357/0 errors)*

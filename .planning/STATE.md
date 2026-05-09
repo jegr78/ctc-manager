@@ -1,35 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.9
-milestone_name: Season Phases & Groups
-status: executing
-stopped_at: Completed Plan 70-03 + final `./mvnw verify -Pe2e` gate (BUILD SUCCESS, 1226 unit + 31 E2E tests, JaCoCo line 0.8718). Phase 70 is complete and ready for `/gsd-verify-work 70`.
-last_updated: "2026-05-09T15:20:29.973Z"
-last_activity: 2026-05-09 -- Phase 70 execution started
+milestone: null
+milestone_name: null
+status: between-milestones
+stopped_at: v1.9 milestone shipped 2026-05-09 — awaiting next milestone definition via `/gsd-new-milestone`.
+last_updated: "2026-05-09T18:09:00.000Z"
+last_activity: 2026-05-09
 progress:
-  total_phases: 2
-  completed_phases: 1
-  total_plans: 8
-  completed_plans: 7
-  percent: 88
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-26)
+See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 70 — driver-import-parent-only-team-resolution
+**Current focus:** Planning next milestone (v1.9 shipped — awaiting `/gsd-new-milestone`).
 
 ## Current Position
 
-Phase: 70 (driver-import-parent-only-team-resolution) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 70
-Last activity: 2026-05-09 -- Phase 70 execution started
+Phase: — (between milestones)
+Status: v1.9 shipped 2026-05-09; ready for `/gsd-new-milestone`
+Last activity: 2026-05-09 — milestone close (`/gsd-complete-milestone v1.9`)
 
 ## Completed Milestones
 
@@ -40,6 +39,22 @@ Last activity: 2026-05-09 -- Phase 70 execution started
 - v1.5 Code Review Fixes (9 phases, 14 plans) — shipped 2026-04-15
 - v1.6 Static Site Quality (17 phases, 56 requirements) — shipped 2026-04-18
 - v1.8 Bulk Driver Import from Google Sheets (2 phases, 4 plans, +52 tests) — shipped 2026-04-25
+- v1.9 Season Phases & Groups (15 phases, ~70 plans, 38/38 requirements, +88.4k LOC) — shipped 2026-05-09
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-05-09:
+
+| Category | Item | Status |
+| -------- | ---- | ------ |
+| debug | group-warnings-for-non-groups-seasons | diagnosed (hypothesis confirmed, see Resolution) |
+| debug | shortname-resolver-picks-parent-without-phaseteam | diagnosed (hypothesis confirmed, see Resolution; superseded by Phase 70) |
+| quick_task | 260404-jh8-fix-release-workflow-use-release-token-s | missing (predates v1.9) |
+| uat | Phase 57 (57-HUMAN-UAT.md) | partial — 3 pending scenarios; MariaDB UAT covered transitively by Phase 61 UAT-03 + CI smoke gate (deferred) |
+| uat | Phase 61 (61-HUMAN-UAT.md) | unknown (UAT-02 legacy season visual smoke deferred to next deploy) |
+| uat | Phase 62 (62-HUMAN-UAT.md) | resolved |
+| uat | Phase 66 (66-UAT.md) | diagnosed (superseded by Phase 70) |
+| uat | Phase 70 (70-HUMAN-UAT.md) | diagnosed (UAT D-22 PASS — 287/357/0 errors on MariaDB Saison 2023) |
 
 ## Accumulated Context
 
