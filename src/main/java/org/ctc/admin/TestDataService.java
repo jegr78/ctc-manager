@@ -102,6 +102,7 @@ public class TestDataService {
 	public void seed() {
 		if (seasonRepository.count() > 0) {
 			log.debug("Seed data already present, skipping");
+			ensureDemoLogosOnDisk();
 			return;
 		}
 		var scorings = seedScorings();
@@ -433,6 +434,37 @@ public class TestDataService {
 			}
 		}
 		log.info("Demo logos copied for {} teams", allTeams.size());
+	}
+
+	// Re-copy demo logo files for already-seeded teams whose on-disk file is missing.
+	// Justification: shared @SpringBootTest contexts persist DB rows across test classes,
+	// but the upload-dir on disk can drift (CI checkout starts empty; concurrent test
+	// classes that flip Spring context lifecycle can leave logoUrl pointing at a missing
+	// file). Idempotent: skips when the file is already present.
+	private void ensureDemoLogosOnDisk() {
+		var allTeams = teamRepository.findAll();
+		if (allTeams.isEmpty()) return;
+		Path uploadBase = Path.of(uploadDir).toAbsolutePath().normalize();
+		for (var team : allTeams) {
+			String logoUrl = team.getLogoUrl();
+			if (logoUrl == null || !logoUrl.startsWith("/uploads/")) continue;
+			Path logoFile = uploadBase.resolve(logoUrl.substring("/uploads/".length())).normalize();
+			if (!logoFile.startsWith(uploadBase)) continue;
+			if (Files.exists(logoFile)) continue;
+			String logoKey = team.isSubTeam() ? team.getParentTeam().getShortName() : team.getShortName();
+			try {
+				var resource = new ClassPathResource("demo/team-logos/" + logoKey + ".png");
+				if (resource.exists()) {
+					Files.createDirectories(logoFile.getParent());
+					try (var is = resource.getInputStream()) {
+						Files.copy(is, logoFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+					}
+					log.debug("Re-ensured demo logo on disk: {}", logoFile);
+				}
+			} catch (IOException e) {
+				log.warn("Failed to re-ensure demo logo for {}: {}", logoKey, e.getMessage());
+			}
+		}
 	}
 
 	private Season createSeason(String name, int year, int number, String description, ScoringDefaults scorings) {
