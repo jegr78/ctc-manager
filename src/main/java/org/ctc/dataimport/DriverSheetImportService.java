@@ -5,20 +5,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.DriverMatchingService.MatchResult;
 import org.ctc.dataimport.DriverMatchingService.MatchType;
 import org.ctc.domain.exception.BusinessRuleException;
-import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
-import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
-import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.DriverRepository;
-import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.service.SeasonManagementService;
-import org.ctc.domain.service.SeasonPhaseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,11 +42,7 @@ public class DriverSheetImportService {
     private final TeamRepository teamRepository;
     private final SeasonDriverRepository seasonDriverRepository;
     private final DriverRepository driverRepository;
-
-    // Group-resolution dependencies
     private final SeasonManagementService seasonManagementService;
-    private final SeasonPhaseService seasonPhaseService;
-    private final PhaseTeamRepository phaseTeamRepository;
 
     /**
      * Builds a preview of all year-numbered tabs in the given Google Sheet.
@@ -123,14 +114,6 @@ public class DriverSheetImportService {
             Season season = seasonRepository
                     .findById(UUID.fromString(seasonIdStr))
                     .orElseThrow(() -> new IllegalArgumentException("Season not found: " + seasonIdStr));
-
-            // Resolve REGULAR phase ONCE per tab, mirror buildTabPreview's pattern.
-            SeasonPhase regularPhase = null;
-            try {
-                regularPhase = seasonPhaseService.findRegularPhase(season.getId());
-            } catch (EntityNotFoundException ex) {
-                log.debug("No REGULAR phase for season {}; resolver will use parent-precedence fallback", season.getId());
-            }
 
             // NEW_DRIVER rows
             for (NewDriverRow row : tab.newDrivers()) {
@@ -254,20 +237,6 @@ public class DriverSheetImportService {
             ambiguousReason = ex.getMessage();
         }
 
-        // Resolve REGULAR phase ONCE per tab, cache locally.
-        SeasonPhase regularPhase = null;
-        if (suggestedSeasonId != null) {
-            try {
-                regularPhase = seasonPhaseService.findRegularPhase(suggestedSeasonId);
-            } catch (EntityNotFoundException ex) {
-                log.debug("No REGULAR phase for season {}; group resolution disabled", suggestedSeasonId);
-            }
-        }
-        // gap-66-03 — layout gate: only GROUPS-layout REGULAR phases drive group-resolution UX.
-        // For LEAGUE-layout phases (every team trivially has PhaseTeam.group == null), suppress
-        // both the warning emission below and the per-row "No group" badge in the template.
-        boolean usesGroups = regularPhase != null && regularPhase.getLayout() == PhaseLayout.GROUPS;
-
         List<List<Object>> rows = googleSheetsService.readRangeFromSheet(spreadsheetId, tabName, "A:C");
 
         List<NewDriverRow> newDrivers = new ArrayList<>();
@@ -276,8 +245,6 @@ public class DriverSheetImportService {
         List<FuzzySuggestionRow> fuzzySuggestions = new ArrayList<>();
         List<UnchangedRow> unchanged = new ArrayList<>();
         List<ErrorRow> errors = new ArrayList<>();
-        List<TabWarning> warnings = new ArrayList<>();
-        Set<String> warnedTeams = new LinkedHashSet<>();   // dedupe key per team short name
 
         // Track PSNs seen in this tab for DUPLICATE_IN_TAB detection.
         Set<String> seenPsnIds = new LinkedHashSet<>();
@@ -321,24 +288,6 @@ public class DriverSheetImportService {
             }
             seenPsnIds.add(rawPsnId);
 
-            // Resolve group via PhaseTeam(REGULAR) — null when team is not in the REGULAR roster.
-            // gap-66-03 — gate on GROUPS layout: LEAGUE-layout phases never have groups by design,
-            // so the warning emission here is pure noise and is suppressed entirely.
-            String resolvedGroupName = null;
-            if (regularPhase != null && regularPhase.getLayout() == PhaseLayout.GROUPS) {
-                Optional<org.ctc.domain.model.PhaseTeam> ptOpt =
-                        phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), team.getId());
-                if (ptOpt.isPresent() && ptOpt.get().getGroup() != null) {
-                    resolvedGroupName = ptOpt.get().getGroup().getName();
-                } else if (ptOpt.isEmpty() && warnedTeams.add(rawTeamCode)) {
-                    // Emit ONE warning per missing team, not per row.
-                    warnings.add(new TabWarning(
-                            WarningType.TEAM_NOT_IN_REGULAR_PHASE,
-                            rawTeamCode,
-                            "Team " + rawTeamCode + " has no PhaseTeam in REGULAR phase of target season"));
-                }
-            }
-
             // Steps 5-7: driver matching via DriverMatchingService.
             MatchResult matchResult = driverMatchingService.findDriver(rawPsnId);
 
@@ -350,8 +299,7 @@ public class DriverSheetImportService {
                         matchResult.driver().getPsnId(),
                         matchResult.driver().getNickname(),
                         matchResult.similarity(),
-                        rawTeamCode,
-                        resolvedGroupName));
+                        rawTeamCode));
             } else if (matchResult.type() == MatchType.EXACT) {
                 // Step 6: EXACT — look up SeasonDriver for UNCHANGED / CONFLICT / NEW_ASSIGNMENT.
                 var matchedDriver = matchResult.driver();
@@ -363,7 +311,7 @@ public class DriverSheetImportService {
                         if (sd.getTeam().getId().equals(team.getId())) {
                             // Same team → UNCHANGED
                             unchanged.add(new UnchangedRow(rawPsnId, matchedDriver.getId(), sd.getId(),
-                                    rawTeamCode, resolvedGroupName));
+                                    rawTeamCode));
                         } else {
                             // Different team → CONFLICT
                             conflicts.add(new ConflictRow(
@@ -371,31 +319,30 @@ public class DriverSheetImportService {
                                     matchedDriver.getId(),
                                     sd.getId(),
                                     sd.getTeam().getShortName(),
-                                    rawTeamCode,
-                                    resolvedGroupName));
+                                    rawTeamCode));
                         }
                     } else {
                         // No SeasonDriver found → NEW_ASSIGNMENT
                         newAssignments.add(new NewAssignmentRow(rawPsnId, matchedDriver.getId(),
-                                rawTeamCode, resolvedGroupName));
+                                rawTeamCode));
                     }
                 } else {
                     // No suggested season → treat as NEW_ASSIGNMENT (cannot check SeasonDriver)
                     newAssignments.add(new NewAssignmentRow(rawPsnId, matchedDriver.getId(),
-                            rawTeamCode, resolvedGroupName));
+                            rawTeamCode));
                 }
             } else {
                 // Step 7: MatchType.NONE → NEW_DRIVER
-                newDrivers.add(new NewDriverRow(rawPsnId, rawTeamCode, resolvedGroupName));
+                newDrivers.add(new NewDriverRow(rawPsnId, rawTeamCode));
             }
         }
 
-        log.debug("Tab {}: newDrivers={}, newAssignments={}, conflicts={}, fuzzy={}, unchanged={}, errors={}, warnings={}",
+        log.debug("Tab {}: newDrivers={}, newAssignments={}, conflicts={}, fuzzy={}, unchanged={}, errors={}",
                 tabName, newDrivers.size(), newAssignments.size(), conflicts.size(),
-                fuzzySuggestions.size(), unchanged.size(), errors.size(), warnings.size());
+                fuzzySuggestions.size(), unchanged.size(), errors.size());
 
-        return new TabPreview(tabName, year, number, suggestedSeasonId, ambiguousReason, warnings,
-                newDrivers, newAssignments, conflicts, fuzzySuggestions, unchanged, errors, usesGroups);
+        return new TabPreview(tabName, year, number, suggestedSeasonId, ambiguousReason,
+                newDrivers, newAssignments, conflicts, fuzzySuggestions, unchanged, errors);
     }
 
     /**
@@ -456,23 +403,20 @@ public class DriverSheetImportService {
             Integer number,                       // null for legacy ^\d{4}$ tabs
             UUID suggestedSeasonId,
             String ambiguousReason,
-            List<TabWarning> warnings,            // tab-level warnings, deduped per team
             List<NewDriverRow> newDrivers,
             List<NewAssignmentRow> newAssignments,
             List<ConflictRow> conflicts,
             List<FuzzySuggestionRow> fuzzySuggestions,
             List<UnchangedRow> unchanged,
-            List<ErrorRow> errors,
-            boolean usesGroups                    // true iff regularPhase has GROUPS layout (gap-66-03)
+            List<ErrorRow> errors
     ) {}
 
-    public record NewDriverRow(String psnId, String teamShortName, String resolvedGroupName) {}
+    public record NewDriverRow(String psnId, String teamShortName) {}
 
     public record NewAssignmentRow(
             String psnId,
             UUID existingDriverId,
-            String teamShortName,
-            String resolvedGroupName
+            String teamShortName
     ) {}
 
     public record ConflictRow(
@@ -480,8 +424,7 @@ public class DriverSheetImportService {
             UUID existingDriverId,
             UUID existingSeasonDriverId,
             String existingTeamShortName,
-            String sheetTeamShortName,
-            String resolvedGroupName
+            String sheetTeamShortName
     ) {}
 
     public record FuzzySuggestionRow(
@@ -490,16 +433,14 @@ public class DriverSheetImportService {
             String suggestedPsnId,
             String suggestedNickname,
             double similarity,
-            String teamShortName,
-            String resolvedGroupName
+            String teamShortName
     ) {}
 
     public record UnchangedRow(
             String psnId,
             UUID existingDriverId,
             UUID existingSeasonDriverId,
-            String teamShortName,
-            String resolvedGroupName
+            String teamShortName
     ) {}
 
     public record ErrorRow(
@@ -507,26 +448,6 @@ public class DriverSheetImportService {
             String teamCode,
             ErrorReason reason
     ) {}
-
-    public record TabWarning(
-            WarningType type,
-            String teamShortName,
-            String message
-    ) {}
-
-    public enum WarningType {
-        TEAM_NOT_IN_REGULAR_PHASE("Team has no PhaseTeam in REGULAR phase");
-
-        private final String message;
-
-        WarningType(String message) {
-            this.message = message;
-        }
-
-        public String message() {
-            return message;
-        }
-    }
 
     public enum ErrorReason {
         BLANK_PSN_ID("PSN ID is blank"),
