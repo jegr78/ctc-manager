@@ -129,6 +129,14 @@
 			<artifactId>google-auth-library-oauth2-http</artifactId>
 			<version>1.46.0</version>
 		</dependency>
+		<!-- Guava override: pin to 33.4.x so AbstractFuture uses VarHandle instead of
+		     sun.misc.Unsafe on Java 9+. Suppresses the terminally-deprecated Unsafe
+		     warning emitted under Java 25 by the transitive 33.1.0-jre via google-api-client. -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>33.4.8-jre</version>
+		</dependency>
 		<!-- HTML Parsing -->
 		<dependency>
 			<groupId>org.jsoup</groupId>
