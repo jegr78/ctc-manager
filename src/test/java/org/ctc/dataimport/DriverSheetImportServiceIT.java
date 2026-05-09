@@ -185,12 +185,12 @@ class DriverSheetImportServiceIT {
         String newPsn = "Phase59-IT-Execute-AdrNew";
         setupSheetsStub(Map.of("2023_S1", oneDataRow(newPsn, "New Adr Driver", "ADR")));
 
-        // when — preview, then execute with seasonId_2023 = consolidated season id
+        // when — preview, then execute with seasonId_<tabName> = consolidated season id
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
         assertThat(preview.tabPreviews().get(0).newDrivers()).hasSize(1);
 
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("seasonId_2023", season2023.getId().toString());
+        params.put("seasonId_2023_S1", season2023.getId().toString());
         ExecuteResult result = driverSheetImportService.execute(SHEET_URL, params);
 
         // then — SeasonDriver row IS written
@@ -232,7 +232,7 @@ class DriverSheetImportServiceIT {
                 .anyMatch(r -> r.teamShortName().equals("XYZ"));
 
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("seasonId_2023", season2023.getId().toString());
+        params.put("seasonId_2023_S1", season2023.getId().toString());
         ExecuteResult result = driverSheetImportService.execute(SHEET_URL, params);
 
         // then — SeasonDriver row IS written, even though team has no PhaseTeam
@@ -252,5 +252,27 @@ class DriverSheetImportServiceIT {
         assertThat(phaseTeamRepository
                 .findByPhaseIdAndTeamId(regular2023.getId(), orphanTeam.getId()))
                 .isEmpty();
+    }
+
+    // 6. Negative regression — wrong-shape form key for a seasoned tab is rejected (CR-01 lock)
+
+    @Test
+    void givenSeasonIdKeyUsesYearOnly_whenExecuteWithSeasonedTab_thenTabSkipped() throws IOException {
+        // given — a seasoned tab "2023_S1" but params still use the legacy buggy "seasonId_2023"
+        // shape (without the _S1 suffix). This locks the post-CR-01 contract: keys must use
+        // the raw tabName, not the year alone, otherwise the tab is silently skipped.
+        var season2023 = findSeason(2023, 1);
+        setupSheetsStub(Map.of("2023_S1", oneDataRow("Phase70-IT-NegKey", "Neg Key Driver", "ADR")));
+
+        // when — supply legacy-shape key
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("seasonId_2023", season2023.getId().toString());
+        ExecuteResult result = driverSheetImportService.execute(SHEET_URL, params);
+
+        // then — tab skipped (key did not match), no driver created
+        assertThat(result.hasSkippedTabs()).isTrue();
+        assertThat(result.getSkippedTabNames()).containsExactly("2023_S1");
+        assertThat(result.getNewDriversCount()).isZero();
+        assertThat(result.getNewAssignmentsCount()).isZero();
     }
 }

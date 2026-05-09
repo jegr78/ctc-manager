@@ -87,8 +87,9 @@ public class DriverSheetImportService {
      * rows, applying skip/accept decisions from {@code allParams}.
      *
      * @param sheetUrl  Google Sheets URL or bare spreadsheet ID
-     * @param allParams form parameters from the execute POST (seasonId_&lt;year&gt;,
-     *                  skip_&lt;psnId&gt;_&lt;year&gt;, accept_&lt;psnId&gt;_&lt;year&gt;=&lt;driverUUID&gt;)
+     * @param allParams form parameters from the execute POST: seasonId_&lt;tabName&gt;,
+     *                  skip_&lt;psnId&gt;_&lt;tabName&gt;, accept_&lt;psnId&gt;_&lt;tabName&gt;=&lt;driverUUID&gt;.
+     *                  tabName is the raw sheet-tab name (legacy "2024" or new "2025_S2").
      * @return accumulated result counters
      */
     @Transactional
@@ -106,9 +107,9 @@ public class DriverSheetImportService {
         Map<String, Driver> crossTabCreatedDrivers = new HashMap<>();
 
         for (TabPreview tab : fullPreview.tabPreviews()) {
-            String seasonIdStr = allParams.get("seasonId_" + tab.year());
+            String seasonIdStr = allParams.get("seasonId_" + tab.tabName());
             if (seasonIdStr == null || seasonIdStr.isBlank()) {
-                result.addSkippedTab(tab.year());
+                result.addSkippedTab(tab.tabName());
                 continue;
             }
             Season season = seasonRepository
@@ -148,7 +149,7 @@ public class DriverSheetImportService {
 
             // CONFLICT rows
             for (ConflictRow row : tab.conflicts()) {
-                String skipKey = "skip_" + row.psnId() + "_" + tab.year();
+                String skipKey = "skip_" + row.psnId() + "_" + tab.tabName();
                 if ("on".equals(allParams.get(skipKey))) {
                     result.incrementConflictsSkipped();
                 } else {
@@ -165,14 +166,14 @@ public class DriverSheetImportService {
 
             // FUZZY_SUGGESTION rows
             for (FuzzySuggestionRow row : tab.fuzzySuggestions()) {
-                String acceptKey = "accept_" + row.psnId() + "_" + tab.year();
+                String acceptKey = "accept_" + row.psnId() + "_" + tab.tabName();
                 String acceptValue = allParams.get(acceptKey);
                 Driver driver;
                 if (acceptValue != null && !acceptValue.isBlank()) {
                     UUID suggestedDriverId = UUID.fromString(acceptValue);
-                    // Use a tab-scoped cache key for the accept path so that different year-tabs
+                    // Use a tab-scoped cache key for the accept path so that different tabs
                     // can independently accept different drivers for the same sheet PSN.
-                    driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId() + "_accept_" + tab.year(),
+                    driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId() + "_accept_" + tab.tabName(),
                             ignored -> driverRepository.findById(suggestedDriverId)
                                     .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + suggestedDriverId)));
                 } else {
@@ -202,7 +203,7 @@ public class DriverSheetImportService {
             result.addErrors(tab.errors().size());
 
             log.debug("Tab {} processed: {} new drivers, {} new assignments",
-                    tab.year(), result.getNewDriversCount(), result.getNewAssignmentsCount());
+                    tab.tabName(), result.getNewDriversCount(), result.getNewAssignmentsCount());
         }
 
         return result;
@@ -474,7 +475,9 @@ public class DriverSheetImportService {
         private int conflictsSkippedCount;
         private int unchangedCount;
         private int errorCount;
-        private final java.util.List<Integer> skippedTabYears = new java.util.ArrayList<>();
+        // Holds raw tab names (e.g. "2024" or "2025_S2") so the user-facing flash
+        // message can disambiguate multiple seasoned tabs in the same year.
+        private final java.util.List<String> skippedTabNames = new java.util.ArrayList<>();
 
         void incrementNewDrivers()           { newDriversCount++; }
         void incrementNewAssignments()       { newAssignmentsCount++; }
@@ -482,8 +485,8 @@ public class DriverSheetImportService {
         void incrementConflictsSkipped()     { conflictsSkippedCount++; }
         void addUnchanged(int n)             { unchangedCount += n; }
         void addErrors(int n)                { errorCount += n; }
-        void addSkippedTab(int year)         { skippedTabYears.add(year); }
+        void addSkippedTab(String tabName)   { skippedTabNames.add(tabName); }
 
-        public boolean hasSkippedTabs() { return !skippedTabYears.isEmpty(); }
+        public boolean hasSkippedTabs() { return !skippedTabNames.isEmpty(); }
     }
 }

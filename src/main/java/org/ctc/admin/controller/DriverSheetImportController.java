@@ -81,7 +81,7 @@ public class DriverSheetImportController {
                     .append(result.getUnchangedCount()).append(" unchanged, ")
                     .append(result.getErrorCount()).append(" errors.");
             if (result.hasSkippedTabs()) {
-                msg.append(" Skipped tabs: ").append(result.getSkippedTabYears())
+                msg.append(" Skipped tabs: ").append(result.getSkippedTabNames())
                    .append(" (no season selected).");
             }
             redirectAttributes.addFlashAttribute("successMessage", msg.toString());
