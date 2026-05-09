@@ -275,4 +275,56 @@ class DriverSheetImportServiceIT {
         assertThat(result.getNewDriversCount()).isZero();
         assertThat(result.getNewAssignmentsCount()).isZero();
     }
+
+    // 7. GAP-70-01 hypothesis 1 — same NEW_DRIVER PSN in 2 tabs of one execute call.
+    // Pre-fix (lines 121-127 of DriverSheetImportService) the second tab's
+    // computeIfAbsent could miss the cache and trigger
+    // DataIntegrityViolationException at flush. Post-fix (driverRepository
+    // .findByPsnId(psnId).orElseGet(...)) exactly one Driver row is inserted
+    // and both tabs reuse it for their per-season SeasonDriver writes.
+    @Test
+    void givenSameNewDriverPsnInTwoTabs_whenExecute_thenExactlyOneDriverRowInserted() throws IOException {
+        // given — Tab A: existing LEAGUE season 2026_S4; Tab B: a fresh single-season year 2027.
+        var season2026 = findSeason(2026, 4);
+        var season2027 = new Season();
+        season2027.setName("Phase70-IT-DupTab-2027");
+        season2027.setYear(2027);
+        season2027.setNumber(1);
+        season2027.setActive(false);
+        seasonRepository.save(season2027);
+
+        String sharedPsn = "Phase70-IT-DupTab-Same";
+        Map<String, List<List<Object>>> tabsToRows = new LinkedHashMap<>();
+        tabsToRows.put("2026_S4", oneDataRow(sharedPsn, "Dup Tab Same A", "ADR"));
+        tabsToRows.put("2027",    oneDataRow(sharedPsn, "Dup Tab Same B", "ADR"));
+        setupSheetsStub(tabsToRows);
+
+        // sanity-check the preview: both tabs see the row as NEW_DRIVER
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+        assertThat(preview.tabPreviews()).hasSize(2);
+        assertThat(preview.tabPreviews().get(0).newDrivers()).hasSize(1);
+        assertThat(preview.tabPreviews().get(1).newDrivers()).hasSize(1);
+
+        // when — execute against BOTH seasons in a single call
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("seasonId_2026_S4", season2026.getId().toString());
+        params.put("seasonId_2027",    season2027.getId().toString());
+        ExecuteResult result = driverSheetImportService.execute(SHEET_URL, params);
+
+        // then — exactly ONE Driver row inserted (counter fires once, regardless of tab count)
+        assertThat(result.getNewDriversCount()).isEqualTo(1);
+        // SeasonDriver written for BOTH seasons → 2 new assignments
+        assertThat(result.getNewAssignmentsCount()).isEqualTo(2);
+        // physical Driver row count: exactly 1 with that PSN
+        assertThat(driverRepository.findAll().stream()
+                .filter(d -> sharedPsn.equals(d.getPsnId()))
+                .count())
+                .isEqualTo(1L);
+        // both SeasonDriver rows point to the SAME Driver UUID
+        var driver = driverRepository.findByPsnId(sharedPsn).orElseThrow();
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2026.getId(), driver.getId()))
+                .isPresent();
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2027.getId(), driver.getId()))
+                .isPresent();
+    }
 }
