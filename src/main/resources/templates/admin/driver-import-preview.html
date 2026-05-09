@@ -33,17 +33,7 @@
                     </select>
                 </div>
 
-                <!-- TabWarning badges: teams with no PhaseTeam in REGULAR phase -->
-                <div class="alert alert-warning mb-md"
-                     th:if="${!tab.warnings().isEmpty()}">
-                    <strong>Group assignment warnings</strong>
-                    <ul>
-                        <li th:each="warning : ${tab.warnings()}"
-                            th:text="${warning.teamShortName() + ' — ' + warning.message()}"></li>
-                    </ul>
-                </div>
-
-                <!-- Bucket: New Drivers (inline badge, conditional Group column) -->
+                <!-- Bucket: New Drivers -->
                 <th:block th:if="${!tab.newDrivers().isEmpty()}">
                     <h3 th:text="'New Drivers (' + ${#lists.size(tab.newDrivers())} + ')'"></h3>
                     <div class="table-scroll">
@@ -51,17 +41,11 @@
                             <thead><tr>
                                 <th>PSN ID</th>
                                 <th>Team</th>
-                                <th th:if="${showGroupColumn}">Group</th>
                             </tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.newDrivers()}">
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.teamShortName()}"></td>
-                                    <td th:if="${showGroupColumn}">
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
-                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
-                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -76,17 +60,11 @@
                             <thead><tr>
                                 <th>PSN ID</th>
                                 <th>Team</th>
-                                <th th:if="${showGroupColumn}">Group</th>
                             </tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.newAssignments()}">
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.teamShortName()}"></td>
-                                    <td th:if="${showGroupColumn}">
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
-                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
-                                    </td>
                                 </tr>
                             </tbody>
                         </table>
@@ -103,7 +81,6 @@
                                     <th>PSN ID</th>
                                     <th>Current Team</th>
                                     <th>Sheet Team</th>
-                                    <th th:if="${showGroupColumn}">Group</th>
                                     <th>Skip (keep existing)</th>
                                 </tr>
                             </thead>
@@ -112,11 +89,6 @@
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.existingTeamShortName()}"></td>
                                     <td th:text="${row.sheetTeamShortName()}"></td>
-                                    <td th:if="${showGroupColumn}">
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
-                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
-                                    </td>
                                     <td>
                                         <input type="checkbox"
                                                th:name="'skip_' + ${row.psnId()} + '_' + ${tab.tabName()}"
@@ -138,7 +110,6 @@
                                     <th>PSN ID</th>
                                     <th>Suggested Driver</th>
                                     <th>Team</th>
-                                    <th th:if="${showGroupColumn}">Group</th>
                                     <th>Accept (link to existing)</th>
                                 </tr>
                             </thead>
@@ -147,11 +118,6 @@
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.suggestedPsnId() + ' (' + #numbers.formatDecimal(row.similarity() * 100, 1, 0) + '%)'}"></td>
                                     <td th:text="${row.teamShortName()}"></td>
-                                    <td th:if="${showGroupColumn}">
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
-                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
-                                    </td>
                                     <td>
                                         <input type="checkbox"
                                                th:name="'accept_' + ${row.psnId()} + '_' + ${tab.tabName()}"
@@ -171,17 +137,11 @@
                             <thead><tr>
                                 <th>PSN ID</th>
                                 <th>Team</th>
-                                <th th:if="${showGroupColumn}">Group</th>
                             </tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.unchanged()}">
                                     <td th:text="${row.psnId()}"></td>
                                     <td th:text="${row.teamShortName()}"></td>
-                                    <td th:if="${showGroupColumn}">
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() != null}" th:text="${row.resolvedGroupName()}"></span>
-                                        <span th:if="${tab.usesGroups() and row.resolvedGroupName() == null}" class="badge badge-warning">&#x26A0; No group</span>
-                                        <span th:if="${!tab.usesGroups()}">&mdash;</span>
-                                    </td>
                                 </tr>
                             </tbody>
                         </table>
