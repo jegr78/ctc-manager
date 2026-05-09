@@ -6,10 +6,7 @@ import org.ctc.dataimport.DriverSheetImportService;
 import org.ctc.dataimport.GoogleSheetsService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.ValidationException;
-import org.ctc.domain.model.PhaseLayout;
-import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.service.SeasonManagementService;
-import org.ctc.domain.service.SeasonPhaseService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,7 +28,6 @@ public class DriverSheetImportController {
     private final DriverSheetImportService driverSheetImportService;
     private final GoogleSheetsService googleSheetsService;
     private final SeasonManagementService seasonManagementService;
-    private final SeasonPhaseService seasonPhaseService;
 
     @GetMapping
     public String showForm(Model model) {
@@ -52,16 +48,6 @@ public class DriverSheetImportController {
             model.addAttribute("sheetUrl", sheetUrl);
             model.addAttribute("hasAmbiguousTabs", preview.tabPreviews().stream()
                     .anyMatch(t -> t.suggestedSeasonId() == null));
-            // True if ANY resolved target season has a REGULAR phase with GROUPS layout;
-            // tabs without a resolved season contribute nothing.
-            boolean showGroupColumn = preview.tabPreviews().stream()
-                    .map(t -> t.suggestedSeasonId())
-                    .filter(java.util.Objects::nonNull)
-                    .map(seasonId -> seasonPhaseService.findByType(seasonId, PhaseType.REGULAR))
-                    .filter(java.util.Optional::isPresent)
-                    .map(java.util.Optional::get)
-                    .anyMatch(p -> p.getLayout() == PhaseLayout.GROUPS);
-            model.addAttribute("showGroupColumn", showGroupColumn);
             addCommonAttributes(model);
             return "admin/driver-import-preview";
         } catch (IOException e) {
