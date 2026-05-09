@@ -6,13 +6,19 @@ score: 9/9 must-haves verified
 overrides_applied: 0
 re_verification:
   previous_status: passed
+  previous_score: 9/9
+  superseded_truths: [2, 6, 7, 8, 9]
+  superseded_by: phase-70
+  note: "Phase 70 inverts the season-aware sub-team resolver and removes group resolution from the import preview path. Original Phase-66 hotfix scope (no crash on shortName collision) remains satisfied — only the post-resolution-tail behavior changed."
+previous_re_verification:
+  previous_status: passed
   previous_score: 7/7
   gaps_closed:
     - "GAP-66-01 (shortname-resolver-picks-parent-without-phaseteam): season-aware resolver — sub-team-with-PhaseTeam wins over parent in target REGULAR phase"
     - "GAP-66-02 (group-warnings-for-non-groups-seasons): TEAM_NOT_IN_REGULAR_PHASE warnings layout-gated to GROUPS phases; per-row Group cell gated by tab.usesGroups()"
   gaps_remaining: []
   regressions: []
-  note: "Post-gap-closure verification — supersedes the May 7 PASS report which only covered Plan 66-01 (parent-precedence resolver). Plans 66-02 + 66-03 introduced season-aware step + layout gate per UAT findings."
+  note: "Post-gap-closure verification (2026-05-08) — supersedes the May 7 PASS report which only covered Plan 66-01 (parent-precedence resolver). Plans 66-02 + 66-03 introduced season-aware step + layout gate per UAT findings. Itself superseded by Phase 70 (see re_verification above)."
 ---
 
 # Phase 66: Team ShortName Collision Fix — Post-Gap-Closure Verification Report
@@ -150,3 +156,46 @@ _Verified: 2026-05-08T11:30:00Z_
 _Verifier: Claude (gsd-verifier)_
 
 ## PHASE COMPLETE
+
+## Phase-70 Re-Open Addendum (2026-05-09)
+
+Phase 70 (Driver Import — Parent-Only Team Resolution) inverts the season-aware step that
+Phase 66's gap-closure plans 66-02 + 66-03 introduced into `DriverSheetImportService.resolveTeamByShortName`.
+Live UAT against local MariaDB (Saison 2023, parent MRL + sub-teams MRL 1 / MRL 2 in different
+Groups, 2026-05-09) revealed that Phase 66 D-04 (`sub-team-with-PhaseTeam wins over parent`)
+violated the user's domain model. The user clarified 2026-05-09 that `SeasonDriver.team` is
+always the parent; sub-team variation happens per-match via `RaceLineup.team`, not per-phase.
+
+### Truths superseded
+
+- **Truth #2** (Multi-match in a season WITH REGULAR phase prefers the candidate that has a
+  PhaseTeam in that REGULAR phase) — **SUPERSEDED**. Phase 70 D-05: parent always wins on
+  multi-match, regardless of REGULAR-phase membership.
+- **Truth #6** (TEAM_NOT_IN_REGULAR_PHASE warning is layout-gated to GROUPS) — **SUPERSEDED**.
+  Phase 70 D-09: the warning category is removed entirely.
+- **Truth #7** (`TabPreview.usesGroups` flag computed once per tab from canonical signal) —
+  **SUPERSEDED**. Phase 70 D-09: the field is removed from the `TabPreview` record.
+- **Truth #8** (Per-row Group cell in template gated by `tab.usesGroups()` across all 5 buckets)
+  — **SUPERSEDED**. Phase 70 D-09: the per-row Group cell is removed from all 5 buckets in
+  `driver-import-preview.html`.
+- **Truth #9** (Page-wide `showGroupColumn` preserved unchanged) — **SUPERSEDED**. Phase 70 D-09:
+  the `showGroupColumn` model attribute is removed from `DriverSheetImportController` and the
+  Group column header is removed from the template.
+
+### Truths preserved
+
+- **Truth #1** (no crash on shortName collision) — **STILL HOLDS** post-Phase-70. The list-returning
+  `findAllByShortName` + `Optional<Team>` resolver-return shape are unchanged. Tests #21 and #22 in
+  `DriverSheetImportServiceTest` continue to fence the no-exception contract.
+- **Truth #3** (Multi-match WITHOUT REGULAR phase falls back to parent precedence) — **STILL HOLDS**
+  and is now the universal rule (no longer a fallback). Test #21 unchanged.
+- **Truth #4** (Multi-parent edge case logs WARN and picks first deterministically) — **STILL HOLDS**.
+  Phase 70 D-05 keeps this behavior.
+- **Truth #5** (5 service call sites pass second arg) — **UPDATED**. Post-Phase-70 the 5 call sites
+  pass exactly 1 arg (Phase 70 D-06).
+
+### References
+
+- Phase 70 CONTEXT: `.planning/phases/70-driver-import-parent-only-team-resolution/70-CONTEXT.md`
+- Phase 70 plans: `70-01-PLAN.md` (resolver inversion), `70-02-PLAN.md` (UX decommission),
+  `70-03-PLAN.md` (test reconciliation + this addendum + final verify)

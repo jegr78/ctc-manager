@@ -65,9 +65,9 @@ Fix the runtime crash in `DriverSheetImportService` (preview + execute) when two
   6. if parent.isPresent()     → return parent  // legacy fallback (no regularPhase OR no candidate in REGULAR phase)
   7. else                      → log.warn(...); return Optional.of(matches.get(0))
   ```
-  Original Phase 66 algorithm (parent-unconditionally) rested on a false assumption: it assumed parents are canonical race entities, but the user's data has parents as organisational buckets without `PhaseTeam(REGULAR)` rows. The season-aware step (4) preserves Phase 66's parent-precedence as a fallback for legacy seasons.
-- **D-07:** **Multi-parent edge case** (data inconsistency: 2+ teams with `parentTeam == null` and the same shortName) → log a warning at WARN level and pick first deterministically. Do NOT fail the import — that's the original bug. The warning is enough for ops visibility; this case is a data-integrity issue out of scope here.
-- **D-08:** **No new TabWarning surfaced** for the multi-match case in this phase. The user wants the import to succeed silently when parent precedence resolves the collision (it's the intended data model). Adding a UI warning is a usability decision for a future phase.
+  Original Phase 66 algorithm (parent-unconditionally) rested on a false assumption: it assumed parents are canonical race entities, but the user's data has parents as organisational buckets without `PhaseTeam(REGULAR)` rows. The season-aware step (4) preserves Phase 66's parent-precedence as a fallback for legacy seasons. [superseded by Phase 70 D-05/D-09 — see 70-CONTEXT.md]
+- **D-07:** **Multi-parent edge case** (data inconsistency: 2+ teams with `parentTeam == null` and the same shortName) → log a warning at WARN level and pick first deterministically. Do NOT fail the import — that's the original bug. The warning is enough for ops visibility; this case is a data-integrity issue out of scope here. [partially preserved by Phase 70 D-05 — multi-parent edge case behavior unchanged; season-aware step removed]
+- **D-08:** **No new TabWarning surfaced** for the multi-match case in this phase. The user wants the import to succeed silently when parent precedence resolves the collision (it's the intended data model). Adding a UI warning is a usability decision for a future phase. [superseded by Phase 70 D-09 — TabWarning category entirely removed]
 
 ### Migration of the 5 call sites
 
@@ -77,6 +77,7 @@ Fix the runtime crash in `DriverSheetImportService` (preview + execute) when two
   - Line 166 (execute → CONFLICT rows)
   - Line 195 (execute → FUZZY_SUGGESTION rows)
   - Line 296 (preview → buildTabPreview, the crash site reported)
+  [updated by Phase 70 D-06 — second SeasonPhase argument dropped from all 5 call sites]
 - **D-10:** Single bundled fix — one commit covers all 5 sites. Splitting per-site would create transient half-migrated states and dilutes review.
 
 ### Test strategy
