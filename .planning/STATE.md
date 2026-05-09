@@ -1,10 +1,9 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: between-milestones
-stopped_at: v1.9 milestone shipped 2026-05-09 — awaiting next milestone definition via `/gsd-new-milestone`.
-last_updated: "2026-05-09T18:09:00.000Z"
+milestone: v1.10
+milestone_name: Spring Boot Upgrade & Data Export/Import
+status: planning
+last_updated: "2026-05-09T19:08:25.587Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 0
@@ -26,9 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 ## Current Position
 
-Phase: — (between milestones)
-Status: v1.9 shipped 2026-05-09; ready for `/gsd-new-milestone`
-Last activity: 2026-05-09 — milestone close (`/gsd-complete-milestone v1.9`)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-09 — Milestone v1.10 started
 
 ## Completed Milestones
 

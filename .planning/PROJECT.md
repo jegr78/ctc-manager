@@ -19,11 +19,38 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - **Data:** All UI text and code comments in English, dev profile with fictive test data including GROUPS multi-phase fixture (Season 2023) + Empty-Phase fixture for D-22 coverage
 - **Public Site:** Phase-tab row + group-sub-tab row, per-phase URL variants, Phase Breakdown sections on team/driver profiles, alltime aggregation across all phases (D-19 TRACKED BEHAVIOR CHANGE), desktop sticky table headers
 
-## Next Milestone
+## Current Milestone: v1.10 Spring Boot Upgrade & Data Export/Import
 
-(None — awaiting next milestone definition via `/gsd-new-milestone`.)
+**Goal:** Plattform-Hygiene (Spring Boot 4.0.6 + Thymeleaf-3.2-Template-Audit) und neue Admin-Funktion für strukturellen Daten-Export/Import als ZIP-Paket — für Backup/Recovery vor riskanten Operationen und Migration zwischen dev↔prod-Environments.
 
-**Candidates already captured as deferred from v1.9:**
+**Target features:**
+
+### A. Spring Boot Platform Upgrade
+
+- Spring Boot 4.0.5 → 4.0.6 (Maven `spring-boot-starter-parent` bump, plus transitiver Thymeleaf 3.2)
+- Vorsorglicher Audit aller ~80 Templates auf Thymeleaf-3.2-Inkompatibilitäten (Fragment-Parameter-Ternaries in `th:replace="...layout(${cond ? 'A' : 'B'}, ...)"`)
+- Fix der 3 bekannten Templates (`match-scoring-form`, `race-scoring-form`, `season-phase-form` — alle Zeile 3) plus weiterer im Audit gefundener: Title-Computation in Controller (`pageTitle` Model-Attribut)
+- `./mvnw verify -Pe2e` grün auf 4.0.6, JaCoCo ≥ 82 % gehalten
+
+### B. Strukturelle Daten-Export/Import (Admin)
+
+- **Export:** Admin-Button `Export Backup` → ZIP-Paket mit `data.json` (operative Daten) + `uploads/`-Verzeichnis (Logos, CTC-Grafiken, Race-Attachments)
+- Scope: Seasons → SeasonPhases → SeasonPhaseGroups → PhaseTeams → Teams → SeasonTeams → Drivers → SeasonDrivers → PsnAlias → Matchdays → Matches → Races → RaceLineups → RaceResults → Playoffs → PlayoffMatchups → PlayoffSeeds → RaceScoring → MatchScoring (operative Domain-Daten, ohne Audit-Rauschen)
+- Header mit `schema_version` + `app_version` + `export_date` (Forward-Compat / Inkompatibilitäts-Erkennung)
+- **Import:** Admin-Button `Import Backup` → Upload ZIP → Preview-Screen → Confirm-Dialog
+- **Replace-All Conflict-Policy:** operative Tabellen werden vor Import in einer Transaktion geleert, dann 1:1 wiederhergestellt; Confirm-Dialog mit "Diese Aktion löscht ALLE operativen Daten" Pflicht
+- Schema-Version-Check: ZIP mit nicht passender `schema_version` wird mit klarer Fehlermeldung abgelehnt (kein implizites Upgrade)
+- MVP: ganzes ZIP einlesen (kein Per-Saison-Selector — späteres Milestone-Feature)
+- Audit-Log-Eintrag beim Import (wer, wann, anzahl gewiped Rows pro Tabelle, anzahl restored Rows pro Tabelle)
+
+**Key context:**
+
+- v1.9 endete mit reverteiertem Spring-Boot-Bump wegen Thymeleaf-3.2-Template-Inkompatibilität — v1.10 fixt das Problem strukturell statt nur reaktiv
+- Use-Case Migration dev↔prod ist real: Aktuell nur über `mysqldump` machbar, Admin-UI-Button ist erheblich friction-reduzierend
+- ZIP statt JSON-only: Logos sind oft groß und schwer manuell nachzupflegen — komplette Round-Trip-Fähigkeit ist Gold wert
+- Replace-All ist sicherer als Merge (Schema-Drift kann inkonsistente Zustände erzeugen)
+
+**Carried over from v1.9 deferred (candidates für nachgelagerte v1.11+ Milestones, NICHT v1.10):**
 
 - Quality Gate Lock / CI comment-noise guard (Phase 67 D-06 forward commitment)
 - Plan SUMMARY frontmatter sweep for phases 56/57/62/64 (bookkeeping, ~15 plan SUMMARYs)
