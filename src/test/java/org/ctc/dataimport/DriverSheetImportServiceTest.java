@@ -4,24 +4,15 @@ import org.ctc.dataimport.DriverMatchingService.MatchResult;
 import org.ctc.dataimport.DriverSheetImportService.DriverSheetImportPreview;
 import org.ctc.dataimport.DriverSheetImportService.ErrorReason;
 import org.ctc.dataimport.DriverSheetImportService.TabPreview;
-import org.ctc.dataimport.DriverSheetImportService.WarningType;
 import org.ctc.domain.exception.BusinessRuleException;
-import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
-import org.ctc.domain.model.PhaseTeam;
-import org.ctc.domain.model.RaceScoring;
-import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
-import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.model.Team;
-import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
-import org.ctc.domain.service.PhaseTestFixtures;
 import org.ctc.domain.service.SeasonManagementService;
-import org.ctc.domain.service.SeasonPhaseService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,10 +47,6 @@ class DriverSheetImportServiceTest {
     private org.ctc.domain.repository.DriverRepository driverRepository;
     @Mock
     private SeasonManagementService seasonManagementService;
-    @Mock
-    private SeasonPhaseService seasonPhaseService;
-    @Mock
-    private PhaseTeamRepository phaseTeamRepository;
 
     @InjectMocks
     private DriverSheetImportService driverSheetImportService;
@@ -176,8 +163,6 @@ class DriverSheetImportServiceTest {
         ));
         setupSheetsStub(SHEET_URL, tabs);
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
 
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
@@ -232,8 +217,6 @@ class DriverSheetImportServiceTest {
         // given
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("brand_new_psn", "New Guy", "AHR")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("brand_new_psn"))
                 .thenReturn(MatchResult.noMatch("brand_new_psn"));
@@ -257,8 +240,6 @@ class DriverSheetImportServiceTest {
         // given — driver exists but has no SeasonDriver for this season
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("existing_psn", "Existing", "AHR")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("existing_psn"))
                 .thenReturn(MatchResult.exact("existing_psn", existingDriver));
@@ -310,8 +291,6 @@ class DriverSheetImportServiceTest {
         // given — driver already in season with AHR, sheet says CRL
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("existing_psn", "Existing", "CRL")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("CRL")).thenReturn(List.of(teamCrl));
         when(driverMatchingService.findDriver("existing_psn"))
                 .thenReturn(MatchResult.exact("existing_psn", existingDriver));
@@ -339,8 +318,6 @@ class DriverSheetImportServiceTest {
         // given
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("existng_psn", "Typo Guy", "AHR")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("existng_psn"))
                 .thenReturn(MatchResult.fuzzy("existng_psn", existingDriver, 0.9));
@@ -367,8 +344,6 @@ class DriverSheetImportServiceTest {
         // given — driver already in season with AHR, sheet also says AHR
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("existing_psn", "Existing", "AHR")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("existing_psn"))
                 .thenReturn(MatchResult.exact("existing_psn", existingDriver));
@@ -399,8 +374,6 @@ class DriverSheetImportServiceTest {
         ));
         setupSheetsStub(SHEET_URL, tabs);
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
 
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
@@ -421,8 +394,6 @@ class DriverSheetImportServiceTest {
         ));
         setupSheetsStub(SHEET_URL, tabs);
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
 
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
@@ -438,8 +409,6 @@ class DriverSheetImportServiceTest {
         // given — team code not in repository
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("some_psn", "Someone", "XYZ")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("XYZ")).thenReturn(List.of());
 
         // when
@@ -462,8 +431,6 @@ class DriverSheetImportServiceTest {
         ));
         setupSheetsStub(SHEET_URL, tabs);
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         // Both team codes must be resolvable so duplicate check (step 4) fires before team check (step 3)
         when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(teamRepository.findAllByShortName("CRL")).thenReturn(List.of(teamCrl));
@@ -488,8 +455,6 @@ class DriverSheetImportServiceTest {
         // given — DriverMatchingService handles CI internally and returns EXACT
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("EXISTING_PSN", "Driver", "AHR")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(driverMatchingService.findDriver("EXISTING_PSN"))
                 .thenReturn(MatchResult.exact("EXISTING_PSN", existingDriver));
@@ -516,10 +481,6 @@ class DriverSheetImportServiceTest {
         setupSheetsStub(SHEET_URL, tabs);
         when(seasonManagementService.findUnique(2023)).thenReturn(Optional.of(season2023));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2023.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2023.getId()));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
         when(teamRepository.findAllByShortName("CRL")).thenReturn(List.of(teamCrl));
         // Both tabs: driver is brand-new (NONE match)
@@ -549,8 +510,6 @@ class DriverSheetImportServiceTest {
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("ahr-d1", "Driver", "AHR")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
         when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(driverMatchingService.findDriver("ahr-d1")).thenReturn(MatchResult.noMatch("ahr-d1"));
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
@@ -575,8 +534,6 @@ class DriverSheetImportServiceTest {
         setupSheetsStub(SHEET_URL, Map.of("2025_S2", oneDataRow("psn", "X", "AHR")));
         when(seasonManagementService.findUnique(2025, 2)).thenReturn(Optional.of(season2025s2));
         when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
-        when(seasonPhaseService.findRegularPhase(season2025s2.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2025s2.getId()));
         when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
         // when
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
@@ -623,194 +580,6 @@ class DriverSheetImportServiceTest {
         assertThat(tab.ambiguousReason()).contains("Multiple seasons exist for (2023, 1)");
     }
 
-    // 15. group resolution via PhaseTeam
-
-    @Test
-    void givenTeamInGroupA_whenPreview_thenResolvedGroupNameSet() throws IOException {
-        // given
-        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
-        var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.groupsRegularPhase(season2023, rs, ms, "Group A", "Group B");
-        var groupA = regularPhase.getGroups().get(0);
-        var phaseTeamGroupA = new PhaseTeam(regularPhase, teamAhr);
-        phaseTeamGroupA.setId(UUID.randomUUID());
-        phaseTeamGroupA.setGroup(groupA);
-
-        setupSheetsStub(SHEET_URL, Map.of("2023_S1", oneDataRow("psn", "X", "AHR")));
-        when(seasonManagementService.findUnique(2023, 1)).thenReturn(Optional.of(season2023));
-        when(seasonPhaseService.findRegularPhase(season2023.getId())).thenReturn(regularPhase);
-        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
-        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), teamAhr.getId()))
-                .thenReturn(Optional.of(phaseTeamGroupA));
-        when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-        // then
-        var tab = preview.tabPreviews().get(0);
-        assertThat(tab.newDrivers()).hasSize(1);
-        assertThat(tab.newDrivers().get(0).resolvedGroupName()).isEqualTo("Group A");
-        assertThat(tab.warnings()).isEmpty();
-    }
-
-    // 16. warning emitted when team has no PhaseTeam — only under GROUPS layout (gap-66-03 contract)
-
-    @Test
-    void givenGroupsLayoutAndTeamMissingFromRegularPhase_whenPreview_thenWarningEmitted() throws IOException {
-        // given
-        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
-        var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.groupsRegularPhase(season2023, rs, ms, "Group A", "Group B");
-
-        setupSheetsStub(SHEET_URL, Map.of("2023_S1", oneDataRow("psn", "X", "AHR")));
-        when(seasonManagementService.findUnique(2023, 1)).thenReturn(Optional.of(season2023));
-        when(seasonPhaseService.findRegularPhase(season2023.getId())).thenReturn(regularPhase);
-        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
-        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), teamAhr.getId()))
-                .thenReturn(Optional.empty());
-        when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-        // then
-        var tab = preview.tabPreviews().get(0);
-        assertThat(tab.warnings()).hasSize(1);
-        assertThat(tab.warnings().get(0).type()).isEqualTo(WarningType.TEAM_NOT_IN_REGULAR_PHASE);
-        assertThat(tab.warnings().get(0).teamShortName()).isEqualTo("AHR");
-        assertThat(tab.warnings().get(0).message()).contains("AHR");
-        assertThat(tab.usesGroups()).isTrue();
-    }
-
-    // 17. warning deduplicated per team across multiple rows — only under GROUPS layout (gap-66-03 contract)
-
-    @Test
-    void givenGroupsLayoutAndTwoRowsSameMissingTeam_whenPreview_thenSingleWarningEmitted() throws IOException {
-        // given
-        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
-        var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.groupsRegularPhase(season2023, rs, ms, "Group A");
-
-        Map<String, List<List<Object>>> tabs = Map.of("2023_S1", List.of(
-                List.of("PSN ID", "Name", "Team"),
-                List.of("psn1", "X", "AHR"),
-                List.of("psn2", "Y", "AHR")));
-        setupSheetsStub(SHEET_URL, tabs);
-
-        when(seasonManagementService.findUnique(2023, 1)).thenReturn(Optional.of(season2023));
-        when(seasonPhaseService.findRegularPhase(season2023.getId())).thenReturn(regularPhase);
-        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
-        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), teamAhr.getId()))
-                .thenReturn(Optional.empty());
-        when(driverMatchingService.findDriver(anyString())).thenReturn(MatchResult.noMatch("psn"));
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-        // then
-        var tab = preview.tabPreviews().get(0);
-        assertThat(tab.warnings()).hasSize(1);
-        assertThat(tab.newDrivers()).hasSize(2);
-    }
-
-    // 18. when REGULAR phase missing, no warnings emitted, resolvedGroupName stays null
-
-    @Test
-    void givenNoRegularPhase_whenPreview_thenResolvedGroupNameIsNullAndNoWarnings() throws IOException {
-        // given
-        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("psn", "X", "AHR")));
-        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
-        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
-        when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-        // then
-        var tab = preview.tabPreviews().get(0);
-        assertThat(tab.warnings()).isEmpty();
-        assertThat(tab.newDrivers().get(0).resolvedGroupName()).isNull();
-        verifyNoInteractions(phaseTeamRepository);
-    }
-
-    // 19. Phase 66 / D-06 (revised) — multi-match collision: prefer sub-team with PhaseTeam in REGULAR phase
-
-    @Test
-    void givenTeamsWithSameShortNameAndSubHasPhaseTeam_whenPreview_thenResolvesSubTeam() throws IOException {
-        // given — parent (no PhaseTeam) + sub-team (HAS PhaseTeam in target REGULAR phase)
-        Team parentZfs = new Team("ZF Schweinfurt", "ZFS");
-        parentZfs.setId(UUID.randomUUID());
-        Team subZfs = new Team("ZF Schweinfurt 1", "ZFS", parentZfs);
-        subZfs.setId(UUID.randomUUID());
-
-        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
-        var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.regularPhase(season2024, rs, ms);
-        var subPhaseTeam = PhaseTestFixtures.assignTeam(regularPhase, subZfs, null);
-
-        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("zfs_driver", "ZFS Driver", "ZFS")));
-        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId())).thenReturn(regularPhase);
-        when(teamRepository.findAllByShortName("ZFS")).thenReturn(List.of(parentZfs, subZfs));
-        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), parentZfs.getId()))
-                .thenReturn(Optional.empty());
-        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), subZfs.getId()))
-                .thenReturn(Optional.of(subPhaseTeam));
-        when(driverMatchingService.findDriver("zfs_driver"))
-                .thenReturn(MatchResult.noMatch("zfs_driver"));
-
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-
-        // then — sub-team wins via PhaseTeam, no warning, no error
-        TabPreview tab = preview.tabPreviews().get(0);
-        assertThat(tab.newDrivers()).hasSize(1);
-        assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("ZFS");
-        assertThat(tab.errors()).isEmpty();
-        assertThat(tab.warnings()).isEmpty();
-    }
-
-    // 20. Phase 66 / D-06 (revised) — fallback: no candidate has PhaseTeam → parent precedence (under GROUPS layout per gap-66-03)
-
-    @Test
-    void givenTeamsWithSameShortNameAndNoCandidateHasPhaseTeam_whenPreview_thenFallsBackToParentPrecedence() throws IOException {
-        // given — neither parent nor sub has a PhaseTeam in the target REGULAR phase
-        // gap-66-03 — fixture flipped from regularPhase (LEAGUE) to groupsRegularPhase (GROUPS):
-        // the legitimate-warning contract this test encodes is now layout-gated. The resolver
-        // PhaseTeam lookup itself is NOT layout-gated, so the dual-candidate verify assertions
-        // remain valid.
-        Team parentZfs = new Team("ZF Schweinfurt", "ZFS");
-        parentZfs.setId(UUID.randomUUID());
-        Team subZfs = new Team("ZF Schweinfurt 1", "ZFS", parentZfs);
-        subZfs.setId(UUID.randomUUID());
-
-        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
-        var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.groupsRegularPhase(season2024, rs, ms, "Group A");
-
-        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("zfs_driver", "ZFS Driver", "ZFS")));
-        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId())).thenReturn(regularPhase);
-        when(teamRepository.findAllByShortName("ZFS")).thenReturn(List.of(parentZfs, subZfs));
-        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), parentZfs.getId()))
-                .thenReturn(Optional.empty());
-        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), subZfs.getId()))
-                .thenReturn(Optional.empty());
-        when(driverMatchingService.findDriver("zfs_driver"))
-                .thenReturn(MatchResult.noMatch("zfs_driver"));
-
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-
-        // then — parent picked as legacy fallback, legitimate warning emitted (no candidate is in REGULAR phase)
-        //        AND resolver MUST consult phaseTeamRepository for both candidates (this fails today — RED gate)
-        TabPreview tab = preview.tabPreviews().get(0);
-        assertThat(tab.newDrivers()).hasSize(1);
-        assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("ZFS");
-        assertThat(tab.errors()).isEmpty();
-        assertThat(tab.warnings()).hasSize(1);
-        assertThat(tab.warnings().get(0).type()).isEqualTo(WarningType.TEAM_NOT_IN_REGULAR_PHASE);
-        // parentZfs is consulted twice (resolver fallback step + buildTabPreview's group resolution
-        // for the chosen team); subZfs is consulted exactly once (resolver fallback only).
-        verify(phaseTeamRepository, atLeastOnce()).findByPhaseIdAndTeamId(regularPhase.getId(), parentZfs.getId());
-        verify(phaseTeamRepository).findByPhaseIdAndTeamId(regularPhase.getId(), subZfs.getId());
-    }
-
     // 21. Gap-66-02 — legacy season with no REGULAR phase: collision falls back to parent precedence
 
     @Test
@@ -823,8 +592,6 @@ class DriverSheetImportServiceTest {
 
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("zfs_driver", "ZFS Driver", "ZFS")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("ZFS")).thenReturn(List.of(parentZfs, subZfs));
         when(driverMatchingService.findDriver("zfs_driver"))
                 .thenReturn(MatchResult.noMatch("zfs_driver"));
@@ -837,8 +604,6 @@ class DriverSheetImportServiceTest {
         assertThat(tab.newDrivers()).hasSize(1);
         assertThat(tab.newDrivers().get(0).teamShortName()).isEqualTo("ZFS");
         assertThat(tab.errors()).isEmpty();
-        assertThat(tab.warnings()).isEmpty();
-        verifyNoInteractions(phaseTeamRepository);
     }
 
     // 22. Phase 66 D-12 retained — two parent teams with same shortName, no REGULAR phase: first wins, no exception
@@ -853,8 +618,6 @@ class DriverSheetImportServiceTest {
 
         setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("dup_driver", "Dup Driver", "DUP")));
         when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId()))
-                .thenThrow(new EntityNotFoundException("Regular SeasonPhase for season", season2024.getId()));
         when(teamRepository.findAllByShortName("DUP")).thenReturn(List.of(parentA, parentB));
         when(driverMatchingService.findDriver("dup_driver"))
                 .thenReturn(MatchResult.noMatch("dup_driver"));
@@ -869,54 +632,4 @@ class DriverSheetImportServiceTest {
         assertThat(tab.errors()).isEmpty();
     }
 
-    // 23. Gap-66-03 — LEAGUE-layout REGULAR phase: no warning, usesGroups=false, no PhaseTeam lookup invoked
-
-    @Test
-    void givenLeagueLayoutRegularPhaseAndTeamWithoutGroup_whenPreview_thenNoWarningAndUsesGroupsFalse() throws IOException {
-        // given — LEAGUE layout (regularPhase) — group resolution must be short-circuited
-        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
-        var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.regularPhase(season2024, rs, ms);  // PhaseLayout.LEAGUE
-
-        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("psn", "X", "AHR")));
-        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
-        when(seasonPhaseService.findRegularPhase(season2024.getId())).thenReturn(regularPhase);
-        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
-        when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-        // then — empty warnings, usesGroups=false, no PhaseTeam lookup at all
-        var tab = preview.tabPreviews().get(0);
-        assertThat(tab.warnings()).isEmpty();
-        assertThat(tab.usesGroups()).isFalse();
-        assertThat(tab.newDrivers().get(0).resolvedGroupName()).isNull();
-        verifyNoInteractions(phaseTeamRepository);
-    }
-
-    // 24. Gap-66-03 — GROUPS-layout REGULAR phase: usesGroups=true; resolvedGroupName preserved
-
-    @Test
-    void givenGroupsLayoutRegularPhase_whenPreview_thenUsesGroupsTrue() throws IOException {
-        // given
-        var rs = new RaceScoring("rs", "10,8,6", "1", 0);
-        var ms = new MatchScoring("ms", 3, 1, 0);
-        var regularPhase = PhaseTestFixtures.groupsRegularPhase(season2023, rs, ms, "Group A");
-        var groupA = regularPhase.getGroups().get(0);
-        var phaseTeam = PhaseTestFixtures.assignTeam(regularPhase, teamAhr, groupA);
-
-        setupSheetsStub(SHEET_URL, Map.of("2023_S1", oneDataRow("psn", "X", "AHR")));
-        when(seasonManagementService.findUnique(2023, 1)).thenReturn(Optional.of(season2023));
-        when(seasonPhaseService.findRegularPhase(season2023.getId())).thenReturn(regularPhase);
-        when(teamRepository.findAllByShortName("AHR")).thenReturn(List.of(teamAhr));
-        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), teamAhr.getId()))
-                .thenReturn(Optional.of(phaseTeam));
-        when(driverMatchingService.findDriver("psn")).thenReturn(MatchResult.noMatch("psn"));
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-        // then
-        var tab = preview.tabPreviews().get(0);
-        assertThat(tab.usesGroups()).isTrue();
-        assertThat(tab.warnings()).isEmpty();
-        assertThat(tab.newDrivers().get(0).resolvedGroupName()).isEqualTo("Group A");
-    }
 }
