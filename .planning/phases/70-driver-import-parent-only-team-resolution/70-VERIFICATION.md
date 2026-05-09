@@ -1,19 +1,34 @@
 ---
 phase: 70-driver-import-parent-only-team-resolution
 verified: 2026-05-09T17:05:00Z
-status: human_needed
-score: 7/7 must-haves verified
+status: gaps_found
+score: 6/7 must-haves verified (SC6 manual-UAT side failed live)
 overrides_applied: 0
 re_verification:
-  previous_status: null
-  previous_score: null
+  previous_status: human_needed
+  previous_score: 7/7 codebase-side verified
   gaps_closed: []
-  gaps_remaining: []
+  gaps_remaining: [GAP-70-01]
   regressions: []
+gaps:
+  - id: GAP-70-01
+    title: "Cross-tab duplicate Driver insert on Execute (production blocker)"
+    severity: blocker
+    source: 70-HUMAN-UAT.md
+    symptom: "DataIntegrityViolationException: Duplicate entry 'danfn22016' for key 'psn_id' caught at DriverSheetImportController.execute():75; rolls back the entire import transaction. Verified by user 2026-05-09 against local MariaDB on Saison 2023."
+    root_cause_hypotheses:
+      - "NEW_DRIVER branch (DriverSheetImportService.java:121-127) lacks the WR-01-style guard: it relies only on the in-memory crossTabCreatedDrivers cache and never calls driverRepository.findByPsnId() — same-PSN-across-tabs or pre-existing-Driver case bypasses the cache."
+      - "Possible PSN normalization mismatch (case / whitespace) between row.psnId() values in two tabs — cache miss but DB unique constraint fires."
+    acceptance:
+      - "NEW_DRIVER branch hardened with driverRepository.findByPsnId() lookup inside computeIfAbsent (mirror of WR-01 pattern at line 185-189)."
+      - "Integration regression test: same NEW_DRIVER PSN in two tabs → exactly one Driver row inserted, no constraint violation."
+      - "Integration regression test: pre-existing Driver in DB + NEW_DRIVER classification → reuses existing Driver, no insert."
+      - "Re-run live UAT on Saison 2023 — Execute succeeds and SQL check passes (parent_team_id IS NULL for MRL drivers)."
 human_verification:
   - test: "Live-MariaDB UAT — Driver Import on Saison 2023 (D-22)"
     expected: "Preview shows no Group column header, no per-row Group cells, no Group-assignment-warning alert. Execute (with consolidated 2023 season selected) writes SeasonDriver.team = MRL parent for every MRL driver — never to MRL 1 or MRL 2 sub-team. SQL spot-check: SELECT sd.team_id, t.name FROM season_drivers sd JOIN teams t ON t.id = sd.team_id JOIN drivers d ON d.id = sd.driver_id WHERE d.psn_id LIKE 'MRL%' must show parent_team_id IS NULL on every row."
     why_human: "ROADMAP SC6 explicitly requires manual Re-Run on local MariaDB with the live-UAT data shape (parent MRL + MRL 1 in Group 2 + MRL 2 in Group 1) that triggered Phase 70's creation. Automated verify-Pe2e green-passed but uses synthetic test fixtures; only the user can confirm the live data path that motivated the inversion still produces the intended SeasonDriver state."
+    result: "PARTIAL — preview rendering and parent-team resolution VERIFIED OK; Execute step FAILED with cross-tab duplicate Driver insert. Captured as GAP-70-01."
 ---
 
 # Phase 70: Driver Import — Parent-Only Team Resolution Verification Report
