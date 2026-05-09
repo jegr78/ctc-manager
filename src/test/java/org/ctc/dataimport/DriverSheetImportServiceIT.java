@@ -2,10 +2,7 @@ package org.ctc.dataimport;
 
 import org.ctc.dataimport.DriverSheetImportService.DriverSheetImportPreview;
 import org.ctc.dataimport.DriverSheetImportService.ExecuteResult;
-import org.ctc.dataimport.DriverSheetImportService.NewDriverRow;
 import org.ctc.dataimport.DriverSheetImportService.TabPreview;
-import org.ctc.dataimport.DriverSheetImportService.TabWarning;
-import org.ctc.dataimport.DriverSheetImportService.WarningType;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonPhase;
@@ -74,14 +71,6 @@ class DriverSheetImportServiceIT {
             lenient().when(googleSheetsService.readRangeFromSheet(SPREADSHEET_ID, entry.getKey(), "A:C"))
                     .thenReturn(entry.getValue());
         }
-    }
-
-    /** Header row + arbitrary number of data rows. */
-    private List<List<Object>> dataRows(List<List<Object>> dataRows) {
-        List<List<Object>> all = new ArrayList<>();
-        all.add(List.of("PSN ID", "Name", "Team"));
-        all.addAll(dataRows);
-        return all;
     }
 
     /** Header row + single data row. */
@@ -182,82 +171,7 @@ class DriverSheetImportServiceIT {
         assertThat(tab.ambiguousReason()).startsWith("Multiple seasons exist for year 2024");
     }
 
-    // 4. Group resolution — driver in roster of Group A
-
-    @Test
-    void givenDriverInGroupATeam_whenPreview_thenResolvedGroupNameIsGroupA() throws IOException {
-        // given — consolidated 2023 GROUPS season; ADR is in Group A
-        setupSheetsStub(Map.of("2023_S1", oneDataRow("Phase59-IT-AdrNew", "Adr New Driver", "ADR")));
-
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-
-        // then
-        TabPreview tab = preview.tabPreviews().get(0);
-        assertThat(tab.suggestedSeasonId()).isNotNull();
-        assertThat(tab.warnings()).isEmpty();
-        // The PSN "Phase59-IT-AdrNew" is brand-new → categorized as NEW_DRIVER
-        assertThat(tab.newDrivers()).hasSize(1);
-        NewDriverRow row = tab.newDrivers().get(0);
-        assertThat(row.psnId()).isEqualTo("Phase59-IT-AdrNew");
-        assertThat(row.teamShortName()).isEqualTo("ADR");
-        assertThat(row.resolvedGroupName()).isEqualTo("Group A");
-    }
-
-    // 5. Group resolution — driver in roster of Group B
-
-    @Test
-    void givenDriverInGroupBTeam_whenPreview_thenResolvedGroupNameIsGroupB() throws IOException {
-        // given — consolidated 2023 GROUPS season; EGP is in Group B
-        setupSheetsStub(Map.of("2023_S1", oneDataRow("Phase59-IT-EgpNew", "Egp New Driver", "EGP")));
-
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-
-        // then
-        TabPreview tab = preview.tabPreviews().get(0);
-        assertThat(tab.suggestedSeasonId()).isNotNull();
-        assertThat(tab.warnings()).isEmpty();
-        assertThat(tab.newDrivers()).hasSize(1);
-        NewDriverRow row = tab.newDrivers().get(0);
-        assertThat(row.psnId()).isEqualTo("Phase59-IT-EgpNew");
-        assertThat(row.teamShortName()).isEqualTo("EGP");
-        assertThat(row.resolvedGroupName()).isEqualTo("Group B");
-    }
-
-    // 6. TabWarning — team not in REGULAR PhaseTeam roster, deduplicated per team
-
-    @Test
-    void givenTeamNotInRegularPhase_whenPreview_thenSingleTabWarningEmittedAndDeduplicated() throws IOException {
-        // given — persist a Team with shortName "XYZ" that exists in `teams` but has
-        // NO PhaseTeam in the consolidated 2023 REGULAR phase. The seed never
-        // creates this team, so the team-existence check passes (no UNKNOWN_TEAM_CODE
-        // ErrorRow), but the PhaseTeam lookup returns Optional.empty() → warning fires.
-        var orphanTeam = new Team("Phase59-IT-Orphan", "XYZ");
-        teamRepository.save(orphanTeam);
-
-        // Two rows reference the SAME orphan team — warning must dedupe to ONE entry.
-        setupSheetsStub(Map.of("2023_S1", dataRows(List.of(
-                List.of("Phase59-IT-Orphan-D1", "Orphan Driver 1", "XYZ"),
-                List.of("Phase59-IT-Orphan-D2", "Orphan Driver 2", "XYZ")))));
-
-        // when
-        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-
-        // then
-        TabPreview tab = preview.tabPreviews().get(0);
-        assertThat(tab.suggestedSeasonId()).isNotNull();
-        assertThat(tab.warnings()).hasSize(1);  // D-06 dedup: one per team, not per row
-        TabWarning warning = tab.warnings().get(0);
-        assertThat(warning.type()).isEqualTo(WarningType.TEAM_NOT_IN_REGULAR_PHASE);
-        assertThat(warning.teamShortName()).isEqualTo("XYZ");
-        assertThat(warning.message()).contains("XYZ");
-        // Both rows still get categorized — group resolution null but row created
-        assertThat(tab.newDrivers()).hasSize(2);
-        assertThat(tab.newDrivers()).allMatch(r -> r.resolvedGroupName() == null);
-    }
-
-    // 7. Execute writes only SeasonDriver, NEVER PhaseTeam (D-07 + D-16)
+    // 4. Execute writes only SeasonDriver, NEVER PhaseTeam (D-07 + D-16)
 
     @Test
     void givenNewDriverRowOnConsolidated2023_whenExecute_thenOnlySeasonDriverIsWritten() throws IOException {
@@ -294,7 +208,7 @@ class DriverSheetImportServiceIT {
         assertThat(phaseTeamCountAfter).isEqualTo(phaseTeamCountBefore);
     }
 
-    // 8. Execute against team without PhaseTeam — SeasonDriver written, PhaseTeam still untouched
+    // 5. Execute against team without PhaseTeam — SeasonDriver written, PhaseTeam still untouched
 
     @Test
     void givenTeamWithoutPhaseTeam_whenExecute_thenSeasonDriverWrittenAndPhaseTeamUnchanged() throws IOException {
@@ -310,10 +224,12 @@ class DriverSheetImportServiceIT {
         String newPsn = "Phase59-IT-Execute-OrphanDriver";
         setupSheetsStub(Map.of("2023_S1", oneDataRow(newPsn, "Orphan Driver", "XYZ")));
 
-        // when — preview emits one warning; execute proceeds anyway (D-07 informational)
+        // when — Phase 70 D-09: warning category removed; preview categorizes the orphan-team
+        // row into NEW_DRIVER (team exists in teams table → resolveTeamByShortName returns it
+        // → no UNKNOWN_TEAM_CODE) and execute proceeds, writing the SeasonDriver.
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
-        assertThat(preview.tabPreviews().get(0).warnings()).hasSize(1);
-        assertThat(preview.tabPreviews().get(0).warnings().get(0).teamShortName()).isEqualTo("XYZ");
+        assertThat(preview.tabPreviews().get(0).newDrivers())
+                .anyMatch(r -> r.teamShortName().equals("XYZ"));
 
         Map<String, String> params = new LinkedHashMap<>();
         params.put("seasonId_2023", season2023.getId().toString());
