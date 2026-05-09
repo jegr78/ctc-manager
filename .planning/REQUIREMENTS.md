@@ -105,42 +105,55 @@ Which phases cover which requirements. Filled during roadmap creation by `gsd-ro
 
 | Requirement | Phase | Status |
 | ----------- | ----- | ------ |
-| PLAT-01 | TBD | Not started |
-| PLAT-02 | TBD | Not started |
-| PLAT-03 | TBD | Not started |
-| PLAT-04 | TBD | Not started |
-| PLAT-05 | TBD | Not started |
-| PLAT-06 | TBD | Not started |
-| PLAT-07 | TBD | Not started |
-| SCHEMA-01 | TBD | Not started |
-| SCHEMA-02 | TBD | Not started |
-| SCHEMA-03 | TBD | Not started |
-| SCHEMA-04 | TBD | Not started |
-| EXPORT-01 | TBD | Not started |
-| EXPORT-02 | TBD | Not started |
-| EXPORT-03 | TBD | Not started |
-| EXPORT-04 | TBD | Not started |
-| EXPORT-05 | TBD | Not started |
-| EXPORT-06 | TBD | Not started |
-| IMPORT-01 | TBD | Not started |
-| IMPORT-02 | TBD | Not started |
-| IMPORT-03 | TBD | Not started |
-| IMPORT-04 | TBD | Not started |
-| IMPORT-05 | TBD | Not started |
-| IMPORT-06 | TBD | Not started |
-| IMPORT-07 | TBD | Not started |
-| IMPORT-08 | TBD | Not started |
-| SECU-01 | TBD | Not started |
-| SECU-02 | TBD | Not started |
-| SECU-03 | TBD | Not started |
-| SECU-04 | TBD | Not started |
-| SECU-05 | TBD | Not started |
-| SECU-06 | TBD | Not started |
-| SECU-07 | TBD | Not started |
-| QUAL-01 | TBD | Not started |
-| QUAL-02 | TBD | Not started |
-| QUAL-03 | TBD | Not started |
-| QUAL-04 | TBD | Not started |
-| QUAL-05 | TBD | Not started |
+| PLAT-01 | Phase 71 | Not started |
+| PLAT-02 | Phase 71 | Not started |
+| PLAT-03 | Phase 71 | Not started |
+| PLAT-04 | Phase 71 | Not started |
+| PLAT-05 | Phase 71 | Not started |
+| PLAT-06 | Phase 71 | Not started |
+| PLAT-07 | Phase 71 | Not started |
+| SCHEMA-01 | Phase 72 | Not started |
+| SCHEMA-02 | Phase 72 | Not started |
+| SCHEMA-03 | Phase 72 | Not started |
+| SCHEMA-04 | Phase 72 | Not started |
+| EXPORT-01 | Phase 73 | Not started |
+| EXPORT-02 | Phase 73 | Not started |
+| EXPORT-03 | Phase 73 | Not started |
+| EXPORT-04 | Phase 73 | Not started |
+| EXPORT-05 | Phase 73 | Not started |
+| EXPORT-06 | Phase 73 | Not started |
+| IMPORT-01 | Phase 74 | Not started |
+| IMPORT-02 | Phase 74 | Not started |
+| IMPORT-03 | Phase 74 | Not started |
+| IMPORT-04 | Phase 74 | Not started |
+| IMPORT-05 | Phase 75 | Not started |
+| IMPORT-06 | Phase 75 | Not started |
+| IMPORT-07 | Phase 75 | Not started |
+| IMPORT-08 | Phase 72 | Not started |
+| SECU-01 | Phase 74 | Not started |
+| SECU-02 | Phase 74 | Not started |
+| SECU-03 | Phase 74 | Not started |
+| SECU-04 | Phase 74 | Not started |
+| SECU-05 | Phase 76 | Not started |
+| SECU-06 | Phase 76 | Not started |
+| SECU-07 | Phase 76 | Not started |
+| QUAL-01 | Phase 77 | Not started |
+| QUAL-02 | Phase 77 | Not started |
+| QUAL-03 | Phase 75 | Not started |
+| QUAL-04 | Phase 77 | Not started |
+| QUAL-05 | Phase 77 | Not started |
 
 **Total: 37 REQ-IDs** (PLAT × 7, SCHEMA × 4, EXPORT × 6, IMPORT × 8, SECU × 7, QUAL × 5)
+
+### Coverage by Phase
+
+| Phase | Requirements | Count |
+| ----- | ------------ | ----- |
+| Phase 71 | PLAT-01, PLAT-02, PLAT-03, PLAT-04, PLAT-05, PLAT-06, PLAT-07 | 7 |
+| Phase 72 | SCHEMA-01, SCHEMA-02, SCHEMA-03, SCHEMA-04, IMPORT-08 | 5 |
+| Phase 73 | EXPORT-01, EXPORT-02, EXPORT-03, EXPORT-04, EXPORT-05, EXPORT-06 | 6 |
+| Phase 74 | IMPORT-01, IMPORT-02, IMPORT-03, IMPORT-04, SECU-01, SECU-02, SECU-03, SECU-04 | 8 |
+| Phase 75 | IMPORT-05, IMPORT-06, IMPORT-07, QUAL-03 | 4 |
+| Phase 76 | SECU-05, SECU-06, SECU-07 | 3 |
+| Phase 77 | QUAL-01, QUAL-02, QUAL-04, QUAL-05 | 4 |
+| **Total** | | **37** |

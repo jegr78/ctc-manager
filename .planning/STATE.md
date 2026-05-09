@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-05-09T19:08:25.587Z"
 last_activity: 2026-05-09
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Planning next milestone (v1.9 shipped — awaiting `/gsd-new-milestone`).
+**Current focus:** v1.10 milestone roadmap drafted (7 phases, 71-77). Awaiting Phase 71 planning via `/gsd-plan-phase 71`.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 71 — Spring Boot 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-09 — Milestone v1.10 started
+Status: Roadmap approved, planning Phase 71
+Last activity: 2026-05-09 — v1.10 ROADMAP.md written, 37/37 requirements mapped to Phases 71-77
 
 ## Completed Milestones
 
@@ -43,7 +43,7 @@ Last activity: 2026-05-09 — Milestone v1.10 started
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-05-09:
+Items acknowledged and deferred at v1.9 milestone close on 2026-05-09:
 
 | Category | Item | Status |
 | -------- | ---- | ------ |
@@ -62,77 +62,58 @@ Items acknowledged and deferred at milestone close on 2026-05-09:
 
 All decisions logged in PROJECT.md Key Decisions table.
 
-- [v1.8 start]: Foundation document is `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md` — authored via `/gsd-explore` brainstorming; approved as canonical design before milestone kickoff.
-- [v1.8 start]: Reuse `GoogleSheetsService`, `DriverMatchingService` (4-stage fuzzy), and `CsvImportService` preview-state pattern — no parallel infrastructure.
-- [v1.8 start]: Missing Seasons/Teams are errors, never auto-created — consistent with "No Fallback Calculations" principle.
-- [v1.8 start]: E2E tests deferred (Playwright x Google Sheets mocking is fragile); Unit + Integration tests must meet 82% coverage gate.
-- [v1.8 roadmap]: Two-phase structure chosen over three-phase split. Rationale: Controller+templates+execute form a single cohesive deliverable — splitting preview-controller from execute-controller would ship a non-verifiable intermediate (preview form with no execute path). Phase 54 delivers a fully unit-tested service; Phase 55 delivers the end-to-end admin flow with integration coverage.
-- [v1.9 roadmap]: Six-phase structure chosen. Rationale: schema (56) must precede data migration (57) which must precede services (58); MIGR-06 (cleanup drop) is deferred to Phase 61 as a safety gate — old bridge columns remain intact until all services and UI are fully migrated off them. Phase 59 (import + test data) and Phase 60 (UI) both depend on services (58) but are independent of each other and can be planned/executed in parallel if desired.
-- [v1.9 roadmap]: Phase 60 (Admin UI) depends on Phase 58 (Service Layer), not Phase 59 (Import & Test Data) — UI does not depend on the seeder rebuild. Both 59 and 60 unblock Phase 61.
-- [phase 56 discuss]: Entity Java-side scope = **parallel additive**. New entities + new bidirectional fields (`Season.phases`, `Matchday.phase`, `Playoff.phase`) added alongside the old `Season` fields and `season_id` FKs. ROADMAP-Phase-56-SC3 wording reinterpreted: old Season fields stay until Phase 61. Service-layer rewrite stays in Phase 58.
-- [phase 56 discuss]: `matchdays.phase_id` and `playoffs.phase_id` columns are **NULLABLE** in Phase 56's V3 migration; Phase 57's data migration backfills values and flips both to NOT NULL in the same step.
-- [phase 56 discuss]: DB-level uniqueness via `UNIQUE (season_id, phase_type)` on `season_phases` (max 1× per type per season) + `UNIQUE (phase_id, team_id)` on `phase_teams`. No CHECK constraints — `@Enumerated(EnumType.STRING)` plus typed enums cover value validation.
-- [phase 56 discuss]: Existing `SeasonFormat` enum is **reused** for `SeasonPhase.format` (no rename to PhaseFormat). New top-level enums `PhaseType` (REGULAR/PLAYOFF/PLACEMENT) and `PhaseLayout` (LEAGUE/GROUPS/BRACKET) in `org.ctc.domain.model`.
-- [phase 56 discuss]: New repositories ship with default Spring Data CRUD only — no custom finders in Phase 56 (deferred to Phase 58 when services need them).
-- [Phase ?]: Bridge uses findByType (Optional) instead of findRegularPhase to avoid transaction rollback-only poisoning; legacy fallback for pre-V4 seasons
-- [Plan 58-05]: PlayoffService.createPlayoff atomically writes PLAYOFF SeasonPhase + Playoff in single @Transactional boundary (D-19, Pitfall 2 mitigation). Duplicate-playoff exception type swapped from IllegalArgumentException to BusinessRuleException for D-03 consistency.
-- [Plan 58-05]: PlayoffSeedingService.autoSeedBracket dual-flow — manual PlayoffSeed rows have priority (legacy admin workflow); D-15 REGULAR-phase Top-N is the fallback when no manual seeds exist. PhaseTeam roster on PLAYOFF phase populated as side-effect of D-15 seeding (D-20).
-- [Plan 58-05]: Pitfall 4 mitigated — PlayoffService.addRaceToMatchup writes matchday.phase=playoff.getPhase() so playoff race results attribute correctly to PLAYOFF phase in DriverRankingService.
-- [Phase ?]: [Plan 70-01]: Inverted Phase 66 D-04 sub-team resolver to parent-precedence; removed group-resolution branch in DriverSheetImportService. Production compile clean.
-- [Phase 70]: [Plan 70-02]: UX decommission — DriverSheetImportController no longer computes showGroupColumn (3 imports + seasonPhaseService field + 10-line GROUPS-detection block deleted); driver-import-preview.html renders no Group column / no warning box across 5 buckets; DriverSheetImportControllerTest @Test count 21 -> 19 (two GROUPS-/null-resolved-group tests deleted, dead PhaseLayout import + SeasonPhaseRepository field removed). Production compile clean (./mvnw clean compile -> BUILD SUCCESS, 182 source files). Service-side test compile remains intentionally RED until Plan 70-03 (Wave 2).
-- [Phase 70]: [Plan 70-03]: Test reconciliation + Phase-66 doc addendum + final verify gate. DriverSheetImportServiceTest reconciled (8 superseded tests deleted, 2 multi-match regression fences preserved, 16 stale findRegularPhase stubs removed, dead-accessor lines dropped from #21, +1 new D-13 parent-always test using T-MRL fixtures with execute-path ArgumentCaptor proving SeasonDriver.team == parent). DriverSheetImportServiceIT reconciled (3 group-resolution IT tests deleted, Test #8 warnings assertion replaced with positive newDrivers assertion, unused dataRows helper removed). 66-CONTEXT.md D-06..D-09 carry inline supersede annotations; 66-VERIFICATION.md gets `## Phase-70 Re-Open Addendum (2026-05-09)` section + frontmatter `re_verification` Phase-70 entry (single-object schema preserved, May-8 entry archived under `previous_re_verification:` sibling). Final `./mvnw verify -Pe2e` PASSED: 1226 unit tests, 31 E2E tests, JaCoCo line ratio 0.8718 (gate 0.82).
+- [v1.10 start]: v1.10 milestone scope is platform hygiene (Spring Boot 4.0.6) + new admin Backup Export/Import feature. 37 requirements across 6 categories (PLAT × 7, SCHEMA × 4, EXPORT × 6, IMPORT × 8, SECU × 7, QUAL × 5).
+- [v1.10 start]: All four research agents independently corrected the milestone wording — Spring Boot 4.0.6 ships **Thymeleaf 3.1.5.RELEASE** (CVE-2026-40478 SpEL canonicalization hardening), NOT Thymeleaf 3.2. Maintainer-recommended fix: controller-side `pageTitle` model attribute.
+- [v1.10 roadmap]: Seven-phase structure (71-77) chosen. Cluster A (PLAT) is Phase 71 alone; Cluster B (SCHEMA + EXPORT + IMPORT + SECU + QUAL) breaks into Phases 72-77 along the natural wire-contract → export → import-preview → replace-all → ops-hardening → final-uat fault line. Rationale: PLAT first eliminates v1.9 platform debt before any feature code; Phase 72 (wire contract) before any export/import code; Phase 73 (export) before Phase 74 (import) so round-trip is the natural integration test; Phase 75 (replace-all) last among implementation phases so a Phase-75 failure clearly points at the riskiest path.
+- [v1.10 roadmap]: GAP-1 (ZIP layout) resolved: per-entity files under `data/<entity>.json` + `manifest.json` first entry. Documented in Phase 72 success criteria.
+- [v1.10 roadmap]: GAP-2 (schema version) resolved: integer constant `BackupSchema.SCHEMA_VERSION = 1`. Documented in Phase 72 success criteria.
+- [v1.10 roadmap]: GAP-5 (canonical 22-entity FK ordering) resolved: generated from live entity classes in Phase 72, NOT hand-written.
+- [v1.10 roadmap]: Audit-log table `data_import_audit` is permanently OUT of export scope (IMPORT-08). Decision baked into Phase 72 PROJECT.md decisions row.
+- [v1.10 roadmap]: Replace-All implementation strategy locked to native SQL DELETE in FK-reverse order via `EntityManager.createNativeQuery()` + `JdbcTemplate.batchUpdate` for restore (bypasses `AuditingEntityListener`). TRUNCATE is forbidden because it auto-commits on MariaDB. Documented in Phase 75 goal.
+- [v1.10 roadmap]: File-system mutations are NOT inside the JPA transaction. Upload-tree restore is post-commit via stage-and-rename, with the previous tree retained at `data/.import-backups/<ts>/uploads-old/` for 24 h manual recovery. Documented in Phase 75 goal.
+- [v1.10 roadmap]: No new Maven dependencies. ZIP I/O via JDK `java.util.zip`, JSON via existing Jackson, multipart via existing Spring MVC. Only POM change is `spring-boot-starter-parent` 4.0.5 → 4.0.6 + `<dependencyManagement>` pin on Thymeleaf 3.1.5.
 
 ### Phase Numbering
 
-Continuing from v1.8 (last phase: 55). v1.9 phases start at **Phase 56**.
+Continuing from v1.9 (last phase: 70). v1.10 phases start at **Phase 71**.
 
-- Phase 56: Model & Schema Foundation (MODEL-01..08, MIGR-01, MIGR-07)
-- Phase 57: Data Migration (MIGR-02, MIGR-03, MIGR-04, MIGR-05)
-- Phase 58: Service Layer (SVC-01..05)
-- Phase 59: Import & Test Data (IMPORT-01..04, DATA-01, DATA-02)
-- Phase 60: Admin UI (UI-01..07)
-- Phase 61: Cleanup & Quality Gate (MIGR-06, QUAL-01..03)
-- Phase 62: Public Site Phase + Group Awareness (TBD — to be derived during /gsd-discuss-phase)
+- Phase 71: Spring Boot 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard (PLAT-01..07)
+- Phase 72: Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit-Log Scope (SCHEMA-01..04, IMPORT-08)
+- Phase 73: Backup Export — Jackson MixIns + Streaming ZIP Endpoint (EXPORT-01..06)
+- Phase 74: Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate (IMPORT-01..04, SECU-01..04)
+- Phase 75: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT (IMPORT-05..07, QUAL-03)
+- Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import (SECU-05..07)
+- Phase 77: Final UAT + JaCoCo Hold + Round-Trip Test + Documentation (QUAL-01, QUAL-02, QUAL-04, QUAL-05)
 
 ### Roadmap Evolution
 
-- 2026-05-02: Phase 62 (Public Site Phase + Group Awareness) added at end of v1.9 milestone. Discovered during Phase 61 UAT — admin-side phase/group model is fully wired but invisible on the public static site. Without Phase 62 the v1.9 feature ships externally invisible.
-- 2026-05-07: Phase 66 (Team ShortName Collision Fix — Driver Import) added at end of v1.9 milestone. Discovered during v1.9 UAT — `DriverSheetImportService` crashes with `IncorrectResultSizeDataAccessException` when parent + sub-team share the same `shortName` (e.g. ZFS parent + ZFS sub). 5 call sites in the import service share the same `findByShortName`-on-non-unique-column bug. Resolution policy: prefer parent (`parentTeam IS NULL`) on multi-match.
-- 2026-05-07: Phase 67 (Comment Cleanup Re-Sweep) added — UAT review found WHAT-style / narrative comments re-introduced across the v1.9 cluster (Phases 56–66). Same CLAUDE.md policy as Phases 20-21/53/61 but enforcement regressed. Scope extended on user request to include `src/test/java` (test files re-accumulated narrative comments too); BDD `// given` / `// when` / `// then` markers explicitly preserved. Sweep production + test code + ideally lock the rule with a CI / pre-commit guard.
-- 2026-05-07: Phase 68 (Lombok Unsafe Deprecation Warning Fix) added — JDK 24+/25 emits terminally-deprecated warnings from `lombok.permit.Permit` calling `sun.misc.Unsafe::objectFieldOffset`. Currently shipping Lombok 1.18.44; upstream fix is in newer point releases that switched `Permit` to `MethodHandles.privateLookupIn`. Plan: verify the resolved version under the Spring Boot starter parent, pin a property override in `pom.xml` if needed, and confirm warnings are gone in `./mvnw verify` + `./mvnw spring-boot:run`.
-- 2026-05-09: Phase 70 (Driver Import: Parent-Only Team Resolution) added — Live-UAT against local MariaDB (Saison 2023, parent MRL + Subs MRL 1/MRL 2 in different Groups) revealed that Phase 66 D-04 default ("sub-team-with-PhaseTeam wins over parent") violates the user's domain model. User clarification 2026-05-09: SeasonDriver.team is always the parent; sub-team assignment happens per-match via RaceLineup, never per-phase. Phase 70 inverts the Phase-66 resolver default (parent always wins), removes the entire Group-resolution UX from the import preview (`resolvedGroupName`, `usesGroups`, `showGroupColumn`, `TEAM_NOT_IN_REGULAR_PHASE` warning), and adds a Phase-66-VERIFICATION.md addendum marking superseded truths. No schema changes, no SeasonDriver data migration needed.
+- 2026-05-09: v1.10 ROADMAP.md drafted with 7 phases (71-77). All 37 requirements mapped, no orphans, no duplicates. Coverage validated.
 
 ### Key Technical Context
 
-- Foundation document: `/Users/jegr/.claude/plans/ich-bin-mit-dem-pure-gem.md` (architecture plan from brainstorming session).
-- New entities: `SeasonPhase` (season_phases), `SeasonPhaseGroup` (season_phase_groups), `PhaseTeam` (phase_teams).
-- FK migrations: `Matchday.season_id` -> `Matchday.phase_id`; `Playoff.season_id` -> `Playoff.phase_id`; M:N `playoff_seasons` table dropped in MIGR-06.
-- Fields migrating from `Season` to `SeasonPhase`: format, totalRounds, legs, eventDurationMinutes, startDate, endDate, raceScoring_id, matchScoring_id.
-- Fields staying in `Season`: id, year, number, name, description, active, audit fields, cars/tracks (season-wide assets).
-- Driver import fix: `findByYearAndNumber(int, int)` replaces `findByYear(int)`; tab pattern extended to `^\d{4}_S\d+$`.
-- Group membership for imported drivers: resolved implicitly via `PhaseTeam` of the REGULAR phase — no per-driver override in sheet.
-- MIGR-06 must be the last migration executed — only safe after all Java code references have been removed from old columns.
-- Constraint: UNIQUE on `(phase_id, team_id)` in `phase_teams`; max 1 REGULAR + max 1 PLAYOFF + max 1 PLACEMENT per season.
-- Critical files to modify (~25-30): Season, Matchday, Playoff entities; SeasonRepository, MatchdayRepository, PlayoffRepository; SeasonManagementService, StandingsService, DriverRankingService, MatchdayGeneratorService, PlayoffService, PlayoffSeedingService, DriverSheetImportService; SeasonController, StandingsController, DriverSheetImportController, MatchdayController, PlayoffController; SeasonForm; 6 Thymeleaf templates; TestDataService + DevDataSeeder.
-- Critical files to create (~12-15): SeasonPhase, SeasonPhaseGroup, PhaseTeam entities; SeasonPhaseRepository, SeasonPhaseGroupRepository, PhaseTeamRepository; SeasonPhaseService; SeasonPhaseController, SeasonPhaseGroupController; SeasonPhaseForm, SeasonPhaseGroupForm, PhaseTeamForm; 6 Flyway migration files; 3 Thymeleaf templates (season-phase-form, season-phase-detail, season-phase-group-form).
+- Foundation document: `.planning/research/SUMMARY.md` (synthesized from 4 parallel domain researchers — STACK / FEATURES / ARCHITECTURE / PITFALLS).
+- New package: `org.ctc.backup` mirroring proven `org.ctc.dataimport` shape (controller + 1-3 services + DTO records).
+- New files (~30): `BackupController`, `BackupExportService`, `BackupImportService`, `BackupArchiveService`, `BackupSchema`, `BackupManifest`, `BackupBundle`, `BackupPreview`, `BackupObjectMapperConfig`, ~22 per-entity Jackson MixIns under `org.ctc.backup.serialization`, 2 Thymeleaf templates (`backup.html`, `backup-preview.html`), Flyway `V7__data_import_audit.sql`, `ImportLockService`, read-only-mode `@ControllerAdvice` filter.
+- Modified files: `pom.xml` (1 line + dependencyManagement pin), `templates/admin/layout.html` (sidebar + read-only banner), `application.yml` (multipart limits + `app.backup.*`), `FileStorageService.java` (additive helpers), 3+ Thymeleaf templates (line-3 fragment-parameter ternary fix), `GlobalExceptionHandler` (MaxUploadSizeExceededException mapping).
+- Files NOT modified: All 22 operative entities (Jackson MixIns leave entities clean), all 22 repositories (stock `JpaRepository.findAll/saveAll/deleteAllInBatch`), V1-V6 Flyway migrations (only V7 added).
+- Critical risks (from PITFALLS.md): (1) Thymeleaf 3.1.5 fragment-parameter restricted-mode breakage beyond 3 known templates; (2) MariaDB-vs-H2 transaction divergence (TRUNCATE auto-commits, FK syntax diverges); (3) JPA Auditing overwriting imported timestamps (mitigated via `JdbcTemplate.batchUpdate` bypass); (4) ZIP-Slip + ZipBomb on import; (5) schema-version drift = catastrophic data loss (mitigated via manifest-first read + reject-before-wipe).
 
 ### Blockers/Concerns
 
-None.
+None. Roadmap approved, ready for Phase 71 planning.
 
 ## Session Continuity
 
-Last session: 2026-05-09T13:57:09Z
+Last session: 2026-05-09 — v1.10 milestone opened.
 
-**Plan 70-03 commits:**
+**v1.10 startup commits (anticipated, not yet made):**
 
-- `722e40c` test(70-03): reconcile DriverSheetImportServiceTest with parent-only resolver — delete tests #15-#20/#23/#24, preserve #21/#22, drop stale stubs (D-11, D-12)
-- `1855eb6` test(70-03): reconcile DriverSheetImportServiceIT — delete group-resolution IT tests, adjust Test #8 (D-09)
-- `5b86482` test(70-03): add parent-always regression test for sub-team-collision in GROUPS phase (D-13)
-- `b863c80` docs(70-03): Phase-66 re-open addendum + superseded inline notes (D-15, D-16, D-17)
+- ROADMAP.md update with 7-phase v1.10 structure (Phases 71-77)
+- STATE.md update pointing at Phase 71 as current
+- REQUIREMENTS.md traceability table populated for all 37 REQ-IDs
 
-**Stopped at:** Completed Plan 70-03 + final `./mvnw verify -Pe2e` gate (BUILD SUCCESS, 1226 unit + 31 E2E tests, JaCoCo line 0.8718). Phase 70 is complete and ready for `/gsd-verify-work 70`.
+**Stopped at:** v1.10 ROADMAP.md drafted by `gsd-roadmapper`. 37/37 requirements mapped to Phases 71-77. Ready for `/gsd-plan-phase 71` to begin Phase 71 planning.
 
-**Next action:** Run `/gsd-verify-work 70` to confirm phase verification, then proceed with milestone v1.9 closure.
+**Next action:** Run `/gsd-plan-phase 71` to break Phase 71 (Spring Boot 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard) into executable plans.
 
-**Branch:** `gsd/v1.9-season-phases-groups` (4 plan-70-03 commits + Plan 70-03 metadata commit on top of `17e2225`).
+**Branch:** `gsd/v1.10-spring-boot-upgrade-and-export-import` (TBD — to be created at Phase 71 planning kickoff per `gsd/{milestone}-{slug}` template).
