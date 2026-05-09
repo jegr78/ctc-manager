@@ -27,7 +27,7 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 ### A. Spring Boot Platform Upgrade
 
-- Spring Boot 4.0.5 → 4.0.6 (Maven `spring-boot-starter-parent` bump, plus transitiver Thymeleaf 3.2)
+- Spring Boot 4.0.5 → 4.0.6 (Maven `spring-boot-starter-parent` bump, plus transitiver Thymeleaf 3.1.5 (CVE-2026-40478 SpEL hardening))
 - Vorsorglicher Audit aller ~80 Templates auf Thymeleaf-3.2-Inkompatibilitäten (Fragment-Parameter-Ternaries in `th:replace="...layout(${cond ? 'A' : 'B'}, ...)"`)
 - Fix der 3 bekannten Templates (`match-scoring-form`, `race-scoring-form`, `season-phase-form` — alle Zeile 3) plus weiterer im Audit gefundener: Title-Computation in Controller (`pageTitle` Model-Attribut)
 - `./mvnw verify -Pe2e` grün auf 4.0.6, JaCoCo ≥ 82 % gehalten
