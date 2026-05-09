@@ -1,8 +1,8 @@
 ---
 phase: 70-driver-import-parent-only-team-resolution
-verified: 2026-05-09T18:30:00Z
-status: human_needed
-score: 7/7 must-haves verified (codebase side); UAT D-22 pending
+verified: 2026-05-09T19:00:00Z
+status: passed
+score: 7/7 must-haves verified (codebase + live UAT)
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
@@ -25,16 +25,16 @@ human_verification:
       SeasonDriver rows for every MRL driver have team_id pointing to the parent MRL row (where parent_team_id IS NULL) — never to MRL 1 or MRL 2 sub-team.
       SQL spot-check: SELECT sd.driver_id, sd.team_id, t.short_name, t.parent_team_id FROM season_drivers sd JOIN teams t ON sd.team_id = t.id JOIN drivers d ON sd.driver_id = d.id JOIN seasons s ON sd.season_id = s.id WHERE s.year = 2023 AND d.psn_id LIKE 'MRL%'; — every row parent_team_id IS NULL.
     why_human: "ROADMAP SC6 explicitly requires manual re-run on local MariaDB with the live-UAT data shape (parent MRL + MRL 1 in Group 2 + MRL 2 in Group 1) that triggered Phase 70's creation. Plan 70-04 closes the cross-tab duplicate-PSN crash (GAP-70-01) via findByPsnId guard; the Execute step is now expected to succeed. Only the user can confirm the live data round-trip on the actual Saison 2023 sheet. Auto-UAT deliberately not added (CONTEXT D-22)."
-    result: "pending — GAP-70-01 codebase fix landed (Plan 70-04 commits 3885288/5d73e81/20d5525). Previous result PARTIAL (Execute crashed) is superseded by the fix. Re-run required to confirm full SC6 pass."
+    result: "PASS — Live-MariaDB UAT executed by user 2026-05-09 against Saison 2023 sheet. Import successful: 287 new drivers, 357 new assignments, 0 conflicts overwritten, 0 conflicts skipped, 0 unchanged, 0 errors. No DataIntegrityViolationException. GAP-70-01 fix (commit 3885288) confirmed effective in production data path."
 ---
 
 # Phase 70: Driver Import — Parent-Only Team Resolution Verification Report
 
 **Phase Goal:** Driver-Sheet-Import respects domain model — drivers attach to parent team at season level; sub-team split happens per-match via RaceLineup; the per-phase Group-Resolution UX and TEAM_NOT_IN_REGULAR_PHASE warning are removed. Phase-66 D-04 / D-05 / D-06 defaults are inverted or decommissioned.
 
-**Verified:** 2026-05-09T18:30:00Z
-**Status:** human_needed (all 7 must-haves codebase-verified; UAT D-22 pending after GAP-70-01 closure)
-**Re-verification:** Yes — Cycle 2, after Plan 70-04 (GAP-70-01 closure)
+**Verified:** 2026-05-09T19:00:00Z
+**Status:** passed (all 7 must-haves verified codebase-side AND live UAT D-22 confirmed)
+**Re-verification:** Yes — Cycle 2, after Plan 70-04 (GAP-70-01 closure) + Live UAT confirmation
 
 ---
 
@@ -224,5 +224,20 @@ All 7 ROADMAP success criteria are codebase-verified:
 
 ---
 
-_Verified: 2026-05-09T18:30:00Z_
-_Verifier: Claude (gsd-verifier)_
+## Live UAT D-22 PASSED (2026-05-09)
+
+**Test:** Live-MariaDB Driver Import on Saison 2023 (parent MRL + MRL 1 in Group 2 + MRL 2 in Group 1)
+
+**Result:** Import successful — 287 new drivers, 357 new assignments, 0 conflicts overwritten, 0 conflicts skipped, 0 unchanged, **0 errors**.
+
+**Significance:**
+- GAP-70-01 fix (commit `3885288`) confirmed effective on the exact data shape that triggered Phase 70's creation
+- No `DataIntegrityViolationException` — the `findByPsnId` guard on the NEW_DRIVER branch prevents the cross-tab duplicate-PSN crash in production
+- ROADMAP SC6 fully satisfied (codebase + live MariaDB round-trip)
+
+**Status transition:** `human_needed` → `passed`. Phase 70 is ship-ready.
+
+---
+
+_Verified: 2026-05-09T19:00:00Z_
+_Verifier: Claude (orchestrator, post-UAT confirmation)_
