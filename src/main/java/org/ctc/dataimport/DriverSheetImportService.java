@@ -118,13 +118,21 @@ public class DriverSheetImportService {
 
             // NEW_DRIVER rows
             for (NewDriverRow row : tab.newDrivers()) {
-                Driver driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(), psnId -> {
-                    Driver d = new Driver(psnId, psnId);
-                    d.setActive(true);
-                    Driver saved = driverRepository.save(d);
-                    result.incrementNewDrivers();
-                    return saved;
-                });
+                // Guard against the unique constraint on Driver.psnId: the same sheet PSN
+                // may already exist in DB (legacy data, partial prior import) or have been
+                // created by an earlier tab in this same execute() call. Look up by PSN
+                // inside the lambda so cross-tab same-PSN NEW_DRIVER rows and pre-existing
+                // Driver rows classified as NEW_DRIVER never attempt a duplicate INSERT.
+                // Mirrors the WR-01 hardening at the FUZZY-no-accept branch (commit 8256a71).
+                // Closes GAP-70-01 (live-MariaDB UAT blocker, Saison 2023, 2026-05-09).
+                Driver driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(), psnId ->
+                        driverRepository.findByPsnId(psnId).orElseGet(() -> {
+                            Driver d = new Driver(psnId, psnId);
+                            d.setActive(true);
+                            Driver saved = driverRepository.save(d);
+                            result.incrementNewDrivers();
+                            return saved;
+                        }));
                 Team team = resolveTeamByShortName(row.teamShortName())
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 seasonDriverRepository.save(new SeasonDriver(season, driver, team));
