@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.9
 milestone_name: Season Phases & Groups
 status: executing
-last_updated: "2026-05-09T13:33:40Z"
+last_updated: "2026-05-09T13:57:09Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 7
-  completed_plans: 6
-  percent: 86
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-04-26)
 
 ## Current Position
 
-Phase: 70 (driver-import-parent-only-team-resolution) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
+Phase: 70 (driver-import-parent-only-team-resolution) — DONE
+Plan: 3 of 3 (complete)
+Status: Phase 70 complete — ready for /gsd-verify-work 70
 Last activity: 2026-05-09
 
 ## Completed Milestones
@@ -64,6 +64,7 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [Plan 58-05]: Pitfall 4 mitigated — PlayoffService.addRaceToMatchup writes matchday.phase=playoff.getPhase() so playoff race results attribute correctly to PLAYOFF phase in DriverRankingService.
 - [Phase ?]: [Plan 70-01]: Inverted Phase 66 D-04 sub-team resolver to parent-precedence; removed group-resolution branch in DriverSheetImportService. Production compile clean.
 - [Phase 70]: [Plan 70-02]: UX decommission — DriverSheetImportController no longer computes showGroupColumn (3 imports + seasonPhaseService field + 10-line GROUPS-detection block deleted); driver-import-preview.html renders no Group column / no warning box across 5 buckets; DriverSheetImportControllerTest @Test count 21 -> 19 (two GROUPS-/null-resolved-group tests deleted, dead PhaseLayout import + SeasonPhaseRepository field removed). Production compile clean (./mvnw clean compile -> BUILD SUCCESS, 182 source files). Service-side test compile remains intentionally RED until Plan 70-03 (Wave 2).
+- [Phase 70]: [Plan 70-03]: Test reconciliation + Phase-66 doc addendum + final verify gate. DriverSheetImportServiceTest reconciled (8 superseded tests deleted, 2 multi-match regression fences preserved, 16 stale findRegularPhase stubs removed, dead-accessor lines dropped from #21, +1 new D-13 parent-always test using T-MRL fixtures with execute-path ArgumentCaptor proving SeasonDriver.team == parent). DriverSheetImportServiceIT reconciled (3 group-resolution IT tests deleted, Test #8 warnings assertion replaced with positive newDrivers assertion, unused dataRows helper removed). 66-CONTEXT.md D-06..D-09 carry inline supersede annotations; 66-VERIFICATION.md gets `## Phase-70 Re-Open Addendum (2026-05-09)` section + frontmatter `re_verification` Phase-70 entry (single-object schema preserved, May-8 entry archived under `previous_re_verification:` sibling). Final `./mvnw verify -Pe2e` PASSED: 1226 unit tests, 31 E2E tests, JaCoCo line ratio 0.8718 (gate 0.82).
 
 ### Phase Numbering
 
@@ -105,16 +106,17 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-09T13:33:40Z
+Last session: 2026-05-09T13:57:09Z
 
-**Plan 70-02 commits:**
+**Plan 70-03 commits:**
 
-- `974d5cc` refactor(70-02): drop showGroupColumn + GROUPS-detection from DriverSheetImportController (D-09)
-- `beb9e91` refactor(70-02): remove Group column + warning box from driver-import-preview template (D-09)
-- `c1ae3f1` test(70-02): drop showGroupColumn / resolvedGroupName test cases from DriverSheetImportControllerTest (D-09, D-11)
+- `722e40c` test(70-03): reconcile DriverSheetImportServiceTest with parent-only resolver — delete tests #15-#20/#23/#24, preserve #21/#22, drop stale stubs (D-11, D-12)
+- `1855eb6` test(70-03): reconcile DriverSheetImportServiceIT — delete group-resolution IT tests, adjust Test #8 (D-09)
+- `5b86482` test(70-03): add parent-always regression test for sub-team-collision in GROUPS phase (D-13)
+- `b863c80` docs(70-03): Phase-66 re-open addendum + superseded inline notes (D-15, D-16, D-17)
 
-**Stopped at:** Completed Plan 70-02; SUMMARY.md committed in subsequent docs(70-02) commit. Wave-1 (Plans 70-01 + 70-02) is now complete.
+**Stopped at:** Completed Plan 70-03 + final `./mvnw verify -Pe2e` gate (BUILD SUCCESS, 1226 unit + 31 E2E tests, JaCoCo line 0.8718). Phase 70 is complete and ready for `/gsd-verify-work 70`.
 
-**Next action:** Execute Plan 70-03 (Wave 2, depends on 70-01 + 70-02): delete superseded service-test cases (#16, #19, #20, #23, #24); preserve #21/#22; add D-13 parent-always test; write Phase-66-VERIFICATION.md addendum (D-15..D-17); run final `./mvnw verify -Pe2e` gate (D-21).
+**Next action:** Run `/gsd-verify-work 70` to confirm phase verification, then proceed with milestone v1.9 closure.
 
-**Branch:** `gsd/v1.9-season-phases-groups` (3 plan-70-02 commits ahead of plan-70-01 metadata commit `cb5f3eb`).
+**Branch:** `gsd/v1.9-season-phases-groups` (4 plan-70-03 commits + Plan 70-03 metadata commit on top of `17e2225`).

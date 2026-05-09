@@ -539,9 +539,9 @@ Plans:
 6. `./mvnw verify -Pe2e` exits 0 mit JaCoCo line coverage ≥ 0.82; manuelles Re-Run des Driver-Imports auf der lokalen MariaDB (Saison 2023, parent MRL + MRL 1 in Group 2 + MRL 2 in Group 1) emittiert keine Warnung mehr; alle MRL-Fahrer landen mit `SeasonDriver.team = MRL parent`
 7. Phase-66 `66-VERIFICATION.md` erhält ein „Phase-70 Re-Open"-Addendum, das die invertierten/entfernten Truths (#2 sub-team-wins, #6 layout-gated warning, #7/#8/#9 usesGroups + per-row Group cells) markiert; `66-CONTEXT.md` D-04..D-09 werden als „superseded by Phase 70 — siehe `70-CONTEXT.md`" markiert; aktive Branch `gsd/v1.9-season-phases-groups` an jedem Commit
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 - [x] 70-01-PLAN.md — Resolver inversion: parent-precedence resolveTeamByShortName + remove group-resolution branch + reduce row records (D-05..D-10)
 - [x] 70-02-PLAN.md — UX decommission: drop showGroupColumn from controller, drop Group column + warning box from driver-import-preview template, drop GROUPS-related controller tests (D-09)
-- [ ] 70-03-PLAN.md — Test reconciliation (delete superseded tests #15-#20/#23/#24, preserve #21/#22, add D-13 parent-always test) + Phase-66 doc addendum + final ./mvnw verify -Pe2e (D-11..D-17, D-21)
+- [x] 70-03-PLAN.md — Test reconciliation (delete superseded tests #15-#20/#23/#24, preserve #21/#22, add D-13 parent-always test) + Phase-66 doc addendum + final ./mvnw verify -Pe2e (D-11..D-17, D-21)
