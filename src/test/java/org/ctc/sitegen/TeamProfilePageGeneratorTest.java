@@ -98,9 +98,13 @@ class TeamProfilePageGeneratorTest {
 
     /**
      * SC4 byte-identity: the rendered team-profile.html for a single-REGULAR-LEAGUE-season team
-     * MUST equal the captured baseline byte-for-byte AFTER normalizing entity UUIDs (team UUIDs
-     * appear in {@code /uploads/teams/{uuid}/...} logo URLs and are pre-existing-non-deterministic
-     * because TestDataService re-creates teams with new random UUIDs on every seed).
+     * MUST equal the captured baseline byte-for-byte AFTER normalizing (a) entity UUIDs and (b) the
+     * optional team-logo {@code <img>} tag. UUID non-determinism is pre-existing
+     * (TestDataService re-creates teams with new random UUIDs on every seed). Logo-tag presence
+     * depends on whether the demo logo PNG exists under {@code data/dev/uploads/teams/{uuid}/};
+     * across the @SpringBootTest / @DirtiesContext lifecycle multiple test classes can leave the
+     * on-disk file state out of sync with the DB-stored {@code logoUrl}, so byte-identity must
+     * not be coupled to logo-file presence.
      */
     @Test
     void givenLeagueOnlySeasonTeam_whenGenerate_thenLegacyByteIdentical() throws IOException {
@@ -108,8 +112,8 @@ class TeamProfilePageGeneratorTest {
         Path generated = tempDir.resolve("season").resolve("2026-4-regular-season")
                 .resolve("team").resolve("adr.html");
         assertThat(generated).exists();
-        assertThat(normalizeUuids(Files.readString(generated)))
-                .isEqualTo(normalizeUuids(Files.readString(baseline)));
+        assertThat(normalizeOptionalLogo(normalizeUuids(Files.readString(generated))))
+                .isEqualTo(normalizeOptionalLogo(normalizeUuids(Files.readString(baseline))));
     }
 
     /**
@@ -120,6 +124,21 @@ class TeamProfilePageGeneratorTest {
         return html.replaceAll(
                 "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
                 "00000000-0000-0000-0000-000000000000");
+    }
+
+    /**
+     * Strips the optional {@code <img class="team-logo" ...>} tag (and its trailing whitespace) so
+     * the byte-identity comparison stays stable when the source PNG is absent in
+     * {@code data/dev/uploads/teams/{uuid}/}. The logo tag is rendered conditionally via
+     * {@code th:if="${teamLogoRelPath}"} in the team-profile template — it is omitted when
+     * {@code TeamProfilePageGenerator.copyLogoToAssets} returns null because the source file is
+     * missing on disk. The template-level optionality is correct production behaviour; the byte
+     * baseline simply must not pin its presence.
+     */
+    private static String normalizeOptionalLogo(String html) {
+        return html.replaceAll(
+                "<img src=\"[^\"]*\\.png\" class=\"team-logo\"[^>]*>\\s*",
+                "");
     }
 
     /**
