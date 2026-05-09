@@ -325,6 +325,55 @@ class DriverSheetImportControllerTest {
     }
 
     @Test
+    void givenSameFuzzyPsnAcceptedInOneTabAndUnacceptedInAnother_whenExecute_thenNoDuplicatePsnCreated() throws Exception {
+        // given — WR-01 regression: same sheet PSN is FUZZY in two tabs.
+        // Tab 1 accepts the existing fuzzy match (cache key tab-scoped, bare-PSN key untouched).
+        // Tab 2 does NOT accept (would otherwise create a new Driver with the same PSN, which
+        // collides with Driver.psnId unique constraint and rolls back the entire transaction).
+        // Threshold-respecting pair: sheet PSN "fz_dx" (5) vs DB driver "fz_d1" (5),
+        // dist=1, sim=0.8 — FUZZY threshold met.
+        Driver fuzzyDriver = testHelper.createDriver("fz_d1", "Fuzzy Cross-Mode");
+
+        List<List<Object>> rows2021 = List.of(
+                List.of("PSN ID", "Nickname", "Team"),
+                List.of("fz_dx", "fz_dx", "I_AHR")
+        );
+        List<List<Object>> rows2022 = List.of(
+                List.of("PSN ID", "Nickname", "Team"),
+                List.of("fz_dx", "fz_dx", "I_CRL")
+        );
+        // stubSheetsForTwoTabs returns tabs sorted by year (2021, 2022)
+        stubSheetsForTwoTabs("https://sheets.test/d/xtab_mixed_fuzzy",
+                2021, rows2021, 2022, rows2022);
+
+        // when — tab 2021 accepts fuzzyDriver; tab 2022 leaves accept blank.
+        // Pre-fix this would throw DataIntegrityViolationException on the second tab's
+        // new-Driver insert and surface as "Import failed due to an internal error".
+        mockMvc.perform(post("/admin/drivers/import/execute")
+                        .param("sheetUrl", "https://sheets.test/d/xtab_mixed_fuzzy")
+                        .param("seasonId_2021", season2021.getId().toString())
+                        .param("seasonId_2022", season2022.getId().toString())
+                        .param("accept_fz_dx_2021", fuzzyDriver.getId().toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/admin/drivers/import"))
+                .andExpect(flash().attributeExists("successMessage"))
+                .andExpect(flash().attribute("successMessage", containsString("new drivers")));
+
+        // then — Tab 1 linked to fuzzyDriver via the accept path
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(
+                season2021.getId(), fuzzyDriver.getId())).isPresent();
+        // Tab 2 did NOT collide: a new Driver with PSN "fz_dx" was created exactly once.
+        assertThat(driverRepository.findByPsnId("fz_dx")).isPresent();
+        Driver newDriver = driverRepository.findByPsnId("fz_dx").get();
+        assertThat(newDriver.getId()).isNotEqualTo(fuzzyDriver.getId());
+        // Tab 2 SeasonDriver assigned to the freshly-created driver (not fuzzyDriver)
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(
+                season2022.getId(), newDriver.getId())).isPresent();
+        assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(
+                season2022.getId(), fuzzyDriver.getId())).isEmpty();
+    }
+
+    @Test
     void givenFuzzyRowWithoutAccept_whenExecute_thenCreatesNewDriver() throws Exception {
         // given — "fz_noacc" (8 chars) vs sheet PSN "fz_noac0" (8 chars):
         // Levenshtein dist=1 ('c'→'0'), max=8, similarity=0.875 — FUZZY threshold met

@@ -177,13 +177,19 @@ public class DriverSheetImportService {
                             ignored -> driverRepository.findById(suggestedDriverId)
                                     .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + suggestedDriverId)));
                 } else {
-                    driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(), psnId -> {
-                        Driver d = new Driver(psnId, psnId);
-                        d.setActive(true);
-                        Driver saved = driverRepository.save(d);
-                        result.incrementNewDrivers();
-                        return saved;
-                    });
+                    // Guard against the unique constraint on Driver.psnId: the same sheet PSN
+                    // may already have produced a Driver in an earlier tab (either via the
+                    // FUZZY-accept path, where the cache key was tab-scoped, or via a
+                    // NEW_DRIVER row). Look up by PSN inside the lambda so cross-tab
+                    // FUZZY-no-accept cases never attempt to insert a duplicate.
+                    driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(), psnId ->
+                            driverRepository.findByPsnId(psnId).orElseGet(() -> {
+                                Driver d = new Driver(psnId, psnId);
+                                d.setActive(true);
+                                Driver saved = driverRepository.save(d);
+                                result.incrementNewDrivers();
+                                return saved;
+                            }));
                 }
                 Team team = resolveTeamByShortName(row.teamShortName())
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
