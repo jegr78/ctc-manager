@@ -67,7 +67,7 @@ class MatchdayScheduleGraphicServiceTest {
 		season.addTeam(teamE);
 		season.addTeam(teamF);
 
-		var matchday = new Matchday(season, "MD 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD 1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		// Match 1: Friday
@@ -92,7 +92,7 @@ class MatchdayScheduleGraphicServiceTest {
 
 		matchday.getMatches().addAll(List.of(match1, match2, match3));
 
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of());
+		when(standingsService.calculateStandings(matchday.getPhase().getId(), null)).thenReturn(List.of());
 		when(seasonTeamRepository.findBySeasonId(season.getId()))
 				.thenReturn(List.copyOf(season.getSeasonTeams()));
 

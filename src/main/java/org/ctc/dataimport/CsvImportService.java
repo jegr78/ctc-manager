@@ -7,6 +7,7 @@ import org.ctc.domain.exception.ValidationException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.ctc.domain.service.ScoringService;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +34,7 @@ public class CsvImportService {
 	private final PlayoffRepository playoffRepository;
 	private final ScoringService scoringService;
 	private final RaceLineupRepository raceLineupRepository;
+	private final SeasonPhaseService seasonPhaseService;
 
 	/**
 	 * Returns all seasons for the import form.
@@ -130,6 +132,8 @@ public class CsvImportService {
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
 				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
 
+		var raceScoring = seasonPhaseService.findRegularPhase(season.getId()).getRaceScoring();
+
 		// Resolve or create matchday
 		var matchday = findOrCreateMatchday(season, metadata);
 
@@ -226,7 +230,7 @@ public class CsvImportService {
 					ensureSeasonDriver(season, driver, row.teamShortName());
 
 					var raceResult = new RaceResult(race, driver, row.position(), row.qualiPosition(), row.fastestLap());
-					scoringService.calculatePoints(raceResult, season.getRaceScoring());
+					scoringService.calculatePoints(raceResult, raceScoring);
 					race.getResults().add(raceResult);
 
 					// Create RaceLineup for all teams
@@ -260,6 +264,8 @@ public class CsvImportService {
 		// Resolve season
 		var season = seasonRepository.findById(metadata.seasonId()).orElseThrow(
 				() -> new ValidationException("Season not found in CSV import: " + metadata.seasonId()));
+
+		var raceScoring = seasonPhaseService.findRegularPhase(season.getId()).getRaceScoring();
 
 		// Resolve or create matchday
 		var matchday = findOrCreateMatchday(season, metadata);
@@ -332,7 +338,7 @@ public class CsvImportService {
 				ensureSeasonDriver(season, driver, row.teamShortName());
 
 				var raceResult = new RaceResult(race, driver, row.position(), row.qualiPosition(), row.fastestLap());
-				scoringService.calculatePoints(raceResult, season.getRaceScoring());
+				scoringService.calculatePoints(raceResult, raceScoring);
 				race.getResults().add(raceResult);
 
 				// Create RaceLineup for all teams
@@ -434,14 +440,19 @@ public class CsvImportService {
 					.orElseThrow(() -> new ValidationException(
 							"Matchday not found in CSV import: " + metadata.matchdayId()));
 		}
-		return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
+		// Scope lookup + sortIndex calculation to the REGULAR phase: a season-wide query
+		// would let PLAYOFF sortIndex (>= 100) poison the next REGULAR sortIndex and let
+		// the label-equality match accidentally pick up a PLAYOFF matchday with the same label.
+		var regular = seasonPhaseService.findRegularPhase(season.getId());
+		var regularMatchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId());
+		return regularMatchdays.stream()
 				.filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
 				.findFirst()
 				.orElseGet(() -> {
-					var maxIndex = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
+					var maxIndex = regularMatchdays.stream()
 							.mapToInt(Matchday::getSortIndex)
 							.max().orElse(0);
-					var md = new Matchday(season, metadata.matchdayLabel(), maxIndex + 1);
+					var md = new Matchday(regular, metadata.matchdayLabel(), maxIndex + 1);
 					return matchdayRepository.save(md);
 				});
 	}
@@ -498,7 +509,10 @@ public class CsvImportService {
 		if (metadata.hasMatchdayId()) {
 			matchday = matchdayRepository.findById(metadata.matchdayId()).orElse(null);
 		} else {
-			matchday = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId()).stream()
+			// Scope label lookup to the REGULAR phase to avoid cross-phase label collisions
+			// (a REGULAR "Round 1" must not match a PLAYOFF "Round 1").
+			var regular = seasonPhaseService.findRegularPhase(season.getId());
+			matchday = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId()).stream()
 					.filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
 					.findFirst().orElse(null);
 		}

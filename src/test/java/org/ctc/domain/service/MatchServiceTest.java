@@ -39,7 +39,6 @@ class MatchServiceTest {
 	@InjectMocks
 	private MatchService service;
 
-	// --- createMatch ---
 
 	@Test
 	void givenValidTeamsAndMatchday_whenCreateMatch_thenMatchAndFirstRaceCreated() {
@@ -49,8 +48,10 @@ class MatchServiceTest {
 		var awayTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
+		// legs lives on the phase; explicit single-leg setup for this test.
+		matchday.getPhase().setLegs(1);
 
 		var homeTeam = new Team();
 		homeTeam.setId(homeTeamId);
@@ -91,7 +92,7 @@ class MatchServiceTest {
 		var homeTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();
@@ -126,9 +127,10 @@ class MatchServiceTest {
 		var awayTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		season.setLegs(2);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
+		// legs lives on the phase. Configure two legs for this scenario.
+		matchday.getPhase().setLegs(2);
 
 		var homeTeam = new Team();
 		homeTeam.setId(homeTeamId);
@@ -178,9 +180,10 @@ class MatchServiceTest {
 		var homeTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		season.setLegs(2);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
+		// legs lives on the phase. Configure two legs for this scenario.
+		matchday.getPhase().setLegs(2);
 
 		var homeTeam = new Team();
 		homeTeam.setId(homeTeamId);
@@ -217,7 +220,7 @@ class MatchServiceTest {
 		var awayTeamId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();
@@ -240,7 +243,6 @@ class MatchServiceTest {
 				.hasMessageContaining("Match already exists");
 	}
 
-	// --- addLeg ---
 
 	@Test
 	void givenExistingMatch_whenAddLeg_thenAdditionalRaceCreated() {
@@ -249,9 +251,10 @@ class MatchServiceTest {
 		var matchdayId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		season.setLegs(3);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
+		// legs lives on the phase. Allow more than 1 leg for addLeg tests.
+		matchday.getPhase().setLegs(99);
 
 		var homeTeam = new Team();
 		homeTeam.setShortName("HOM");
@@ -283,9 +286,10 @@ class MatchServiceTest {
 		// given
 		var matchId = UUID.randomUUID();
 		var season = new Season("Test Season");
-		season.setLegs(2);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(UUID.randomUUID());
+		// legs lives on the phase. Allow more legs for addLeg tests.
+		matchday.getPhase().setLegs(99);
 
 		var homeTeam = new Team();
 		homeTeam.setId(UUID.randomUUID());
@@ -318,9 +322,10 @@ class MatchServiceTest {
 		// given
 		var matchId = UUID.randomUUID();
 		var season = new Season("Test Season");
-		season.setLegs(3);
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(UUID.randomUUID());
+		// legs lives on the phase. Allow more legs for addLeg tests.
+		matchday.getPhase().setLegs(99);
 
 		var homeTeam = new Team();
 		homeTeam.setId(UUID.randomUUID());
@@ -347,7 +352,6 @@ class MatchServiceTest {
 		assertThat(savedRace.getAwayTeam()).isEqualTo(awayTeam);
 	}
 
-	// --- deleteMatch ---
 
 	@Test
 	void givenExistingMatch_whenDeleteMatch_thenDeletesAndReturnsMatchdayId() {
@@ -356,7 +360,7 @@ class MatchServiceTest {
 		var matchdayId = UUID.randomUUID();
 
 		var season = new Season("Test Season");
-		var matchday = new Matchday(season, "MD1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD1", 1);
 		matchday.setId(matchdayId);
 
 		var homeTeam = new Team();

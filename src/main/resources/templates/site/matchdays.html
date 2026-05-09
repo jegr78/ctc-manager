@@ -2,7 +2,25 @@
 <html xmlns:th="http://www.thymeleaf.org"
       th:replace="~{site/layout :: layout('Matchdays — ' + ${season.displayLabel}, ~{::section})}">
 <body>
-<section>
+<section><nav th:if="${showPhaseTabs}" class="phase-tab-row" role="tablist" aria-label="Phase navigation">
+        <div class="phase-tab-row-inner">
+            <a th:each="t : ${phaseTabs}"
+               th:href="@{${t.href}}"
+               th:class="${t.active} ? 'phase-tab active' : 'phase-tab'"
+               role="tab"
+               th:attr="aria-selected=${t.active} ? 'true' : 'false', aria-controls=${t.ariaControlsId}"
+               th:text="${t.label}">Tab</a>
+        </div>
+    </nav><nav th:if="${showGroupTabs}" class="group-tab-row" role="tablist" aria-label="Group navigation">
+        <div class="group-tab-row-inner">
+            <a th:each="g : ${groupTabs}"
+               th:href="@{${g.href}}"
+               th:class="${g.active} ? 'group-tab active' : 'group-tab'"
+               role="tab"
+               th:attr="aria-selected=${g.active} ? 'true' : 'false', aria-controls=${g.ariaControlsId}"
+               th:text="${g.label}">Group</a>
+        </div>
+    </nav>
     <div class="section">
         <h2 class="section-title" th:text="'Matchdays — ' + ${season.displayLabel}"></h2>
         <div th:if="${matchdays != null and !matchdays.isEmpty()}" class="table-wrap">

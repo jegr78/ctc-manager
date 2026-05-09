@@ -2,6 +2,7 @@ package org.ctc.domain.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -32,29 +33,58 @@ public class PlayoffService {
 	private final PlayoffRepository playoffRepository;
 	private final PlayoffRoundRepository playoffRoundRepository;
 	private final PlayoffMatchupRepository playoffMatchupRepository;
-	private final PlayoffSeedRepository playoffSeedRepository;
 	private final RaceRepository raceRepository;
 	private final SeasonRepository seasonRepository;
 	private final TeamRepository teamRepository;
 	private final MatchdayRepository matchdayRepository;
 	private final ScoringService scoringService;
 	private final PlayoffBracketViewService playoffBracketViewService;
+	private final SeasonPhaseService seasonPhaseService;
 
+	/**
+	 * Creates a playoff for a season. Atomically auto-creates a PLAYOFF
+	 * {@link org.ctc.domain.model.SeasonPhase} (BRACKET layout, sortIndex 10) if one does
+	 * not exist, copies scoring from the REGULAR phase, and wires up rounds and matchups
+	 * for {@code numberOfTeams} ∈ {2, 4, 8}.
+	 *
+	 * @throws BusinessRuleException when the season already has a playoff
+	 *         (HTTP 409 via {@link org.ctc.admin.controller.GlobalExceptionHandler}).
+	 * @throws IllegalArgumentException when {@code numberOfTeams} is not 2, 4, or 8.
+	 */
 	@Transactional
 	public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams) {
 		if (!DEFAULT_ROUND_LABELS.containsKey(numberOfTeams)) {
 			throw new IllegalArgumentException("Number of teams must be 2, 4 or 8, got: " + numberOfTeams);
 		}
 
-		// Check for existing playoff
 		if (playoffRepository.findBySeasonId(seasonId).isPresent()) {
-			throw new IllegalArgumentException("Playoff already exists for this season");
+			throw new BusinessRuleException("Season already has a playoff phase");
 		}
 
 		Season season = seasonRepository.findById(seasonId)
 				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
 
-		Playoff playoff = new Playoff(season, name);
+		SeasonPhase regular = seasonPhaseService.findRegularPhase(seasonId);
+
+		// Find-or-create PLAYOFF SeasonPhase: BRACKET layout, LEAGUE format,
+		// sortIndex=10, scoring copied from REGULAR phase.
+		SeasonPhase phase = seasonPhaseService.findByType(seasonId, PhaseType.PLAYOFF)
+				.orElseGet(() -> seasonPhaseService.create(
+						seasonId,
+						PhaseType.PLAYOFF,
+						PhaseLayout.BRACKET,
+						/*sortIndex*/ 10,
+						name,
+						regular.getRaceScoring(),
+						regular.getMatchScoring(),
+						SeasonFormat.LEAGUE,
+						/*startDate*/ null,
+						/*endDate*/ null,
+						/*totalRounds*/ null,
+						/*legs*/ 1,
+						/*eventDurationMinutes*/ null));
+
+		Playoff playoff = new Playoff(phase, name);
 		playoff = playoffRepository.save(playoff);
 
 		List<String> labels = DEFAULT_ROUND_LABELS.get(numberOfTeams);
@@ -89,43 +119,20 @@ public class PlayoffService {
 			}
 		}
 
-		log.info("Created playoff '{}' for season '{}' with {} teams, {} rounds",
-				name, season.getName(), numberOfTeams, numRounds);
+		log.info("Created playoff '{}' for season '{}' with {} teams, {} rounds, linked to PLAYOFF phase {}",
+				name, season.getName(), numberOfTeams, numRounds, phase.getId());
 		return playoff;
 	}
 
-	@Transactional
-	public void addSeasonToPlayoff(UUID playoffId, UUID seasonId) {
-		Playoff playoff = playoffRepository.findById(playoffId)
-				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-		Season season = seasonRepository.findById(seasonId)
-				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
-		if (!playoff.getSeasons().contains(season)) {
-			playoff.getSeasons().add(season);
-			playoffRepository.save(playoff);
-		}
-	}
-
-	@Transactional
-	public void removeSeasonFromPlayoff(UUID playoffId, UUID seasonId) {
-		Playoff playoff = playoffRepository.findById(playoffId)
-				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-		playoff.getSeasons().removeIf(s -> s.getId().equals(seasonId));
-		playoffRepository.save(playoff);
-	}
-
+	/**
+	 * Returns the teams eligible for the playoff, derived from the playoff's canonical
+	 * season via {@code playoff.getSeason().getTeams()}.
+	 */
 	@Transactional(readOnly = true)
 	public List<Team> getPlayoffTeams(UUID playoffId) {
 		Playoff playoff = playoffRepository.findById(playoffId)
 				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
-		// Collect teams from all linked seasons, deduplicate by ID
 		Map<UUID, Team> teamMap = new LinkedHashMap<>();
-		for (Season season : playoff.getSeasons()) {
-			for (Team team : season.getTeams()) {
-				teamMap.putIfAbsent(team.getId(), team);
-			}
-		}
-		// Also include teams from the main season
 		for (Team team : playoff.getSeason().getTeams()) {
 			teamMap.putIfAbsent(team.getId(), team);
 		}
@@ -153,7 +160,6 @@ public class PlayoffService {
 
 		UUID team1Id = matchup.getTeam1().getId();
 
-		// Use shared ScoringService.calculateTeamTotals (per D-06 no duplication)
 		int team1Total = 0;
 		int team2Total = 0;
 		for (Race leg : legs) {
@@ -228,8 +234,6 @@ public class PlayoffService {
 				.orElseThrow(() -> new EntityNotFoundException("PlayoffRound", id));
 	}
 
-	// --- New service methods (extracted from PlayoffController) ---
-
 	@Transactional
 	public Playoff createPlayoff(UUID seasonId, String name, int numberOfTeams,
 	                             LocalDate startDate, LocalDate endDate,
@@ -266,6 +270,16 @@ public class PlayoffService {
 		return new PlayoffListData(playoff, bracketView, allSeasons, effectiveSeasonId);
 	}
 
+	@Transactional(readOnly = true)
+	public PlayoffListData getPlayoffDetailData(UUID playoffId) {
+		var playoff = playoffRepository.findById(playoffId)
+				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
+		var allSeasons = seasonRepository.findAll();
+		var bracketView = playoffBracketViewService.getBracketView(playoffId);
+		UUID effectiveSeasonId = playoff.getSeason() != null ? playoff.getSeason().getId() : null;
+		return new PlayoffListData(playoff, bracketView, allSeasons, effectiveSeasonId);
+	}
+
 	@Transactional
 	public PlayoffRound setRoundLegs(UUID roundId, int bestOfLegs) {
 		var round = playoffRoundRepository.findById(roundId)
@@ -299,10 +313,12 @@ public class PlayoffService {
 		}
 
 		// Auto-create matchday for this playoff leg
-		var season = matchup.getRound().getPlayoff().getSeason();
+		var playoff = matchup.getRound().getPlayoff();
 		int legNumber = existingLegs + 1;
 		String label = matchup.getRound().getLabel() + " - Leg " + legNumber;
-		var matchday = new Matchday(season, label,
+		// Link matchday to PLAYOFF phase, NOT REGULAR — otherwise playoff race results
+		// are misattributed to REGULAR by DriverRankingService.calculateRankingForPhase.
+		var matchday = new Matchday(playoff.getPhase(), label,
 				100 + matchup.getRound().getRoundIndex() * 10 + legNumber);
 		matchday = matchdayRepository.save(matchday);
 
@@ -335,7 +351,14 @@ public class PlayoffService {
 				.getPlayoff().getSeason().getId();
 	}
 
-	// --- Record types for service return data ---
+	/**
+	 * Returns the playoff linked to the given SeasonPhase, or empty if none.
+	 * Used by SeasonPhaseController to populate the Bracket card on the phase-detail tab.
+	 */
+	@Transactional(readOnly = true)
+	public java.util.Optional<Playoff> findByPhaseId(UUID phaseId) {
+		return playoffRepository.findByPhaseId(phaseId);
+	}
 
 	public record PlayoffListData(Playoff playoff, PlayoffBracketViewService.PlayoffBracketView bracketView,
 	                              List<Season> allSeasons, UUID selectedSeasonId) {

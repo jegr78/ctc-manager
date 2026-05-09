@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-06T21:02:21.173Z",
+  "phase": "62",
+  "phase_name": "public-site-phases-groups",
+  "phase_dir": ".planning/phases/62-public-site-phases-groups",
+  "branch": "gsd/v1.9-season-phases-groups",
+  "milestone": "v1.9 — Season Phases & Groups",
+  "wave_completed": 5,
+  "wave_total": 8,
+  "plans_completed": 5,
+  "plans_total": 8,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "62-00", "name": "SiteGenerator decomposition + golden snapshot", "status": "done", "wave": 1, "commits": ["795dfb5", "7b4fa99", "5269ee5", "00f313d"]},
+    {"id": "62-01", "name": "StandingsPageGenerator phase/group rewrite", "status": "done", "wave": 2, "commits": ["8b4cfbb", "0fb9511", "1ffd559", "9ae6846"]},
+    {"id": "62-02", "name": "MatchdaysPageGenerator phase/group rewrite", "status": "done", "wave": 3, "commits": ["60fb262", "38f7f4a", "805c66f"]},
+    {"id": "62-03", "name": "DriverRankingPageGenerator phase-aware", "status": "done", "wave": 4, "commits": ["bd7ff85", "527a781", "ce6f5d9"]},
+    {"id": "62-04", "name": "TeamProfile + DriverProfile phase breakdown", "status": "done", "wave": 5, "commits": ["68b44a0", "2f1a8c9", "4860eab", "b94d92f"]}
+  ],
+  "remaining_tasks": [
+    {"id": "62-05", "name": "Alltime aggregation D-19 (StandingsService + DriverRankingService behavior change)", "status": "not_started", "wave": 6, "autonomous": true, "task_count": 3, "files_modified": ["src/main/java/org/ctc/domain/service/StandingsService.java", "src/main/java/org/ctc/domain/service/DriverRankingService.java", "src/main/java/org/ctc/domain/repository/RaceResultRepository.java", "src/test/java/org/ctc/domain/service/StandingsServiceTest.java", "src/test/java/org/ctc/domain/service/DriverRankingServiceTest.java"]},
+    {"id": "62-06", "name": "SC5 regression IT (SiteGeneratorPhaseAwarenessIT)", "status": "not_started", "wave": 7, "autonomous": true, "task_count": 2},
+    {"id": "62-07", "name": "Manual playwright visual + a11y sweep", "status": "not_started", "wave": 8, "autonomous": false, "task_count": 6, "checkpoint_required": true}
+  ],
+  "blockers": [],
+  "human_actions_pending": [
+    {"action": "Wave 8 / 62-07 is autonomous=false — manual playwright-cli sweep across 5 page types in BOTH LEAGUE and GROUPS fixtures, Desktop (1280x800) + Mobile (390x844). Capture screenshots for v1.9 retrospective.", "context": "playwright-cli is part of the project's dev workflow per CLAUDE.md; final sweep before milestone closeout.", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "D-20: 5 page generator beans + SiteSlugger + TemplateWriter + 4 view records + GenerationContext", "rationale": "Reduces orchestrator from 868 → 568 LOC; matches admin-layer service decomposition pattern", "phase": "62", "plan": "62-00"},
+    {"decision": "Rule-1 fix in StandingsService — added .thenComparing(shortName) deterministic tiebreaker on 3 sort sites", "rationale": "Pre-existing HashMap-iteration non-determinism made SC4 byte-identity literally unprovable. Required to test the phase's core invariant.", "phase": "62", "plan": "62-01"},
+    {"decision": "Re-captured single-league-standings.html golden baseline. New MD5 5be57f01bba8f1e91f4db4fd95f2eada (file size unchanged 14054 bytes)", "rationale": "Original baseline was unreproducible due to non-deterministic sort. Only row order for tied teams changed (now alphabetic by shortName).", "phase": "62", "plan": "62-01"},
+    {"decision": "D-08 vs UI-SPEC line 333 reconciliation — D-08 governs only standings-playoff.html (NEVER generated). driver-ranking-playoff.html IS generated when PLAYOFF phase has driver data.", "rationale": "Two different page types; UI-SPEC explicitly authorizes PLAYOFF driver-ranking variant.", "phase": "62", "plan": "62-03"},
+    {"decision": "Open Question 2 lock — legacy matchdays.html lists REGULAR-phase matchdays only", "rationale": "Mirrors standings legacy = REGULAR-combined for consistency", "phase": "62", "plan": "62-02"},
+    {"decision": "Phase Breakdown gated by server-side showPhaseBreakdown flag (true ⇔ ≥2 phases)", "rationale": "Enables D-13/D-14/D-15 without per-phase URL forks (D-16). Single-LEAGUE seasons render byte-identical to today (SC4).", "phase": "62", "plan": "62-04"},
+    {"decision": "D-22 phase-aware empty-state banner + D-26 a11y attrs (role=tablist, role=tab, aria-selected)", "rationale": "UI-SPEC requirement; consistent across standings/matchdays/driver-ranking", "phase": "62", "plan": "62-01..03"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Run /gsd-execute-phase 62 to resume from Wave 6 (Plan 62-05). Plan 62-05 is a TRACKED BEHAVIOR CHANGE (D-19): StandingsService.calculateAlltimeStandings + DriverRankingService.calculateAlltimeRanking will aggregate across ALL phases (REGULAR + PLAYOFF + PLACEMENT), not REGULAR-only. Public method signatures stay unchanged. Add new RaceResultRepository.findByRaceMatchdaySeasonIdIn finder. Document behavior change in plan SUMMARY for v1.9 release notes.",
+  "context_notes": "Phase 62 is mid-execution under /gsd-execute-phase auto-mode. 5 of 8 waves done in this session, all green: ./mvnw verify 1211/1211 with JaCoCo 85.80% line coverage. The pattern across waves 2-5 is: phase-tab-row CSS (added in wave 2 only, reused since), Thymeleaf markup mirroring, helper unit tests asserting SC4 byte-identity, server-side aggregation in the per-page generator. Wave 6 is the FIRST behavior-change plan in this phase — needs explicit unit tests proving PLAYOFF points enter alltime totals. Wave 7 builds the cross-cutting regression IT (SC1-SC5, D-22, D-26). Wave 8 is the manual playwright sweep — autonomous=false, requires user checkpoint."
+}

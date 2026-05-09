@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Season: ' + ${season.name}, ~{::section})}">
+      th:replace="~{admin/layout :: layout('Season: ' + ${season.name} + (phase != null ? ' — ' + ${effectivePhaseLabel} : ''), ~{::section})}">
 <body>
 <section>
+    <!-- Saison-Header: saison-wide actions only -->
     <div class="toolbar">
         <div>
             <a th:href="@{/admin/seasons}" class="back-link">&larr; Back to Seasons</a>
             <h1 th:text="${season.name}"></h1>
         </div>
         <div class="actions">
-            <a th:if="${season.format.name() == 'SWISS'}" th:href="@{/admin/seasons/{id}/swiss(id=${season.id})}" class="btn btn-secondary">Swiss Rounds</a>
-            <a th:if="${canGenerate}" th:href="@{/admin/seasons/{id}/generate(id=${season.id})}" class="btn btn-secondary">Generate Matchdays</a>
-            <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="btn btn-primary">Edit</a>
+            <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="btn btn-primary">Edit Season</a>
             <form th:action="@{/admin/seasons/{id}/delete(id=${season.id})}" method="post"
-                  onsubmit="return confirm('Really delete this season?')">
-                <button type="submit" class="btn btn-danger">Delete</button>
+                  onsubmit="return confirm('Really delete this season? This will also delete all phases, matchdays and results.')">
+                <button type="submit" class="btn btn-danger">Delete Season</button>
             </form>
         </div>
     </div>
 
+    <!-- Saison-Stamm-Display -->
     <div class="card">
         <div class="detail-fields">
             <span class="label">Name</span>
@@ -29,10 +29,6 @@
             <span th:text="${season.number}"></span>
             <span class="label">Description</span>
             <span th:text="${season.description ?: '-'}"></span>
-            <span class="label">Start Date</span>
-            <span th:text="${season.startDate ?: '-'}"></span>
-            <span class="label">End Date</span>
-            <span th:text="${season.endDate ?: '-'}"></span>
             <span class="label">Status</span>
             <span>
                 <span th:if="${season.active}" class="badge badge-active">&#x25CF; Active</span>
@@ -57,9 +53,9 @@
                         <tr th:each="st : ${season.seasonTeams}" th:classappend="${st.replaced ? 'replaced-team' : ''}">
                             <td class="col-color">
                                 <div th:if="${st.effectivePrimaryColor != null}" class="color-swatch-row">
-                                    <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectivePrimaryColor}"></span>
-                                    <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectiveSecondaryColor}"></span>
-                                    <span th:style="'display:inline-block;width:14px;height:14px;border-radius:3px;background:' + ${st.effectiveAccentColor}"></span>
+                                    <span class="color-swatch-chip" th:style="'background:' + ${st.effectivePrimaryColor}"></span>
+                                    <span class="color-swatch-chip" th:style="'background:' + ${st.effectiveSecondaryColor}"></span>
+                                    <span class="color-swatch-chip" th:style="'background:' + ${st.effectiveAccentColor}"></span>
                                 </div>
                             </td>
                             <td>
@@ -258,35 +254,154 @@
             </div>
             <div th:if="${season.tracks.isEmpty()}" class="empty-state empty-state--compact"><p>No tracks assigned. <a th:href="@{/admin/seasons/{id}/edit(id=${season.id})}" class="detail-link">Edit season</a> to add tracks.</p></div>
         </div>
+    </div>
 
-        <div class="detail-section mt-lg">
-            <h2 th:text="'Matchdays (' + ${season.matchdays.size()} + ')'"></h2>
-            <div class="table-scroll">
-                <table th:if="${!season.matchdays.isEmpty()}">
-                    <thead>
-                        <tr><th>#</th><th>Label</th><th>Races</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="md : ${season.matchdays}">
-                            <td th:text="${md.sortIndex}"></td>
-                            <td><a th:href="@{/admin/matchdays/{id}(id=${md.id})}" class="detail-link" th:text="${md.label}"></a></td>
-                            <td th:text="${md.races.size()}"></td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- Empty-State: no REGULAR phase -->
+    <div th:if="${!hasRegularPhase}" class="card empty-state mt-md">
+        <h2>No Regular Phase yet</h2>
+        <p>This season needs a Regular Phase before matchdays, standings, or rosters can be configured.</p>
+        <a th:href="@{/admin/seasons/{id}/phases/new(id=${season.id}, phaseType='REGULAR')}" class="btn btn-primary">+ Add Regular Phase</a>
+    </div>
+
+    <!-- Phase-Tabs Row 1 (only when REGULAR phase exists) -->
+    <div th:if="${hasRegularPhase}" class="tab-nav mt-md" role="tablist" aria-label="Phase tabs">
+        <a th:each="p : ${allPhases}"
+           th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${p.id})}"
+           th:classappend="${phase != null and p.id == phase.id ? ' tab-active' : ''}"
+           class="tab-btn"
+           th:text="${p.label != null and !p.label.isBlank() ? p.label : p.phaseType}">Tab</a>
+        <a th:href="@{/admin/seasons/{id}/phases/new(id=${season.id})}"
+           class="tab-btn tab-add">+ Add Phase</a>
+    </div>
+
+    <!-- Group-Sub-Tabs Row 2 (only when GROUPS layout) -->
+    <div th:if="${phase != null and isGroupsLayout}"
+         class="tab-nav tabs-secondary" role="tablist" aria-label="Group sub-tabs">
+        <a th:href="@{/admin/seasons/{sid}/phases/{pid}(sid=${season.id}, pid=${phase.id})}"
+           th:classappend="${selectedGroupId == null ? ' tab-active' : ''}"
+           class="tab-btn">Combined</a>
+        <a th:each="g : ${groups}"
+           th:href="@{/admin/seasons/{sid}/phases/{pid}/groups/{gid}(sid=${season.id}, pid=${phase.id}, gid=${g.id})}"
+           th:classappend="${selectedGroupId != null and selectedGroupId == g.id ? ' tab-active' : ''}"
+           class="tab-btn"
+           th:text="${g.name}">Group A</a>
+        <a th:href="@{/admin/seasons/{sid}/phases/{pid}/groups/new(sid=${season.id}, pid=${phase.id})}"
+           class="tab-btn tab-add">+ Add Group</a>
+    </div>
+
+    <!-- Per-Phase content -->
+    <div th:if="${phase != null}">
+
+        <!-- Per-Phase Header with Edit/Delete actions -->
+        <div class="toolbar mt-md">
+            <h2 th:text="${effectivePhaseLabel}"></h2>
+            <div class="actions">
+                <a th:href="@{/admin/seasons/{sid}/phases/{pid}/edit(sid=${season.id}, pid=${phase.id})}" class="btn btn-secondary btn-sm">Edit Phase</a>
+                <form th:action="@{/admin/seasons/{sid}/phases/{pid}/delete(sid=${season.id}, pid=${phase.id})}" method="post"
+                      onsubmit="return confirm('Really delete this phase? This will fail if it has matchdays or roster entries.');">
+                    <button type="submit" class="btn btn-danger btn-sm">Delete Phase</button>
+                </form>
             </div>
-            <div th:if="${season.matchdays.isEmpty()}" class="empty-state empty-state--compact"><p>No matchdays yet.</p></div>
         </div>
 
-        <div th:if="${playoff != null}" class="detail-section mt-lg">
-            <h2>Playoff</h2>
-            <div class="detail-fields">
-                <span class="label">Name</span>
-                <a th:href="@{/admin/playoffs(seasonId=${season.id})}" class="detail-link" th:text="${playoff.name}"></a>
-                <span class="label">Rounds</span>
-                <span th:text="${playoff.rounds.size()}"></span>
+        <!-- Roster Section -->
+        <section id="roster" class="card mt-md">
+            <h3>Roster</h3>
+            <p th:if="${#lists.isEmpty(phaseTeams)}" class="text-dim">No teams in this phase yet.</p>
+            <table th:if="${!#lists.isEmpty(phaseTeams)}">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th th:if="${isGroupsLayout}">Group</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="pt : ${phaseTeams}">
+                        <td th:text="${pt.team.shortName}"></td>
+                        <td th:if="${isGroupsLayout}" th:text="${pt.group != null ? pt.group.name : '-'}"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Multi-select Roster Editor (inline; submits to SeasonPhaseGroupController.saveRoster) -->
+            <details class="mt-md">
+                <summary>Edit Roster</summary>
+                <form th:action="@{/admin/seasons/{sid}/phases/{pid}/groups/roster(sid=${season.id}, pid=${phase.id})}"
+                      method="post">
+                    <input type="hidden" name="phaseId" th:value="${phase.id}">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Include</th>
+                                <th>Team</th>
+                                <th th:if="${isGroupsLayout}">Group</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="st, iter : ${season.seasonTeams}">
+                                <td><input type="checkbox"
+                                           th:name="'assignments[' + ${iter.index} + '].included'"
+                                           th:checked="${assignedTeamIds != null and assignedTeamIds.contains(st.team.id)}"></td>
+                                <td>
+                                    <input type="hidden" th:name="'assignments[' + ${iter.index} + '].teamId'" th:value="${st.team.id}">
+                                    <span th:text="${st.team.shortName}"></span>
+                                </td>
+                                <td th:if="${isGroupsLayout}">
+                                    <select th:name="'assignments[' + ${iter.index} + '].groupId'">
+                                        <option value="">-- No Group --</option>
+                                        <option th:each="g : ${groups}" th:value="${g.id}" th:text="${g.name}"
+                                                th:selected="${currentGroupByTeamId != null and currentGroupByTeamId.get(st.team.id) != null and currentGroupByTeamId.get(st.team.id) == g.id}"></option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="actions mt-md">
+                        <button type="submit" class="btn btn-primary btn-sm">Save Roster</button>
+                    </div>
+                </form>
+            </details>
+        </section>
+
+        <!-- PLAYOFF Bracket Section (only when PLAYOFF layout) -->
+        <section th:if="${isPlayoffLayout and playoff != null}" id="bracket" class="card mt-md">
+            <h3>Bracket</h3>
+            <p class="text-dim">Full bracket UI lives at the Playoff page.</p>
+            <a th:href="@{/admin/playoffs/{id}(id=${playoff.id})}" class="btn btn-secondary btn-sm">View bracket &rarr;</a>
+
+            <div th:if="${!#lists.isEmpty(playoffSeeds)}" class="mt-md">
+                <h4>Seeds</h4>
+                <ul>
+                    <li th:each="seed : ${playoffSeeds}">
+                        <span th:text="${seed.seed}"></span>.
+                        <span th:text="${seed.team != null ? seed.team.shortName : '— vacant —'}"></span>
+                    </li>
+                </ul>
             </div>
-        </div>
+            <p th:if="${#lists.isEmpty(playoffSeeds)}" class="text-dim mt-md">No seeds assigned yet.</p>
+        </section>
+        <section th:if="${isPlayoffLayout and playoff == null}" id="bracket" class="card mt-md">
+            <h3>Bracket</h3>
+            <p class="text-dim">No bracket has been created for this PLAYOFF phase yet.</p>
+        </section>
+
+        <!-- Matchdays Section -->
+        <section id="matchdays" class="card mt-md">
+            <h3>Matchdays</h3>
+            <p th:if="${#lists.isEmpty(matchdays)}" class="text-dim">No matchdays in this phase yet.</p>
+            <ul th:if="${!#lists.isEmpty(matchdays)}">
+                <li th:each="md : ${matchdays}">
+                    <a th:href="@{/admin/matchdays/{id}(id=${md.id})}" th:text="${md.label}"></a>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Standings Section -->
+        <section id="standings" class="card mt-md">
+            <h3>Standings</h3>
+            <a th:href="@{/admin/standings(phase=${phase.id}, group=${selectedGroupId})}" class="btn btn-secondary btn-sm">View standings</a>
+        </section>
+
     </div>
 </section>
 </body>

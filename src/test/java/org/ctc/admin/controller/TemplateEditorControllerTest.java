@@ -328,7 +328,6 @@ class TemplateEditorControllerTest {
         assertThat(body).isEqualTo("Preview failed");
     }
 
-    // --- Exception handling tests for narrowed catches ---
 
     @Test
     void givenIoException_whenLoadTemplate_thenShowsErrorMessage() throws Exception {

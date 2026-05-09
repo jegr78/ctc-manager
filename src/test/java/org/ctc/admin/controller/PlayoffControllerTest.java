@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -184,7 +185,6 @@ class PlayoffControllerTest {
                 .andExpect(flash().attributeExists("successMessage"));
     }
 
-    // --- POST /admin/playoffs/matchup/{id}/add-race ---
 
     @Test
     void givenMatchupWithBothTeamsSeeded_whenAddRaceToMatchup_thenRedirectsWithSuccess() throws Exception {
@@ -219,7 +219,6 @@ class PlayoffControllerTest {
                 .andExpect(flash().attribute("errorMessage", "Both teams must be set"));
     }
 
-    // --- POST /admin/playoffs/matchup/{id}/determine-winner ---
 
     @Test
     void givenMatchupWithSeededTeams_whenDetermineWinner_thenRedirects() throws Exception {
@@ -241,7 +240,6 @@ class PlayoffControllerTest {
         // Either success or error flash attribute should be present
     }
 
-    // --- Round graphic download endpoints ---
 
     @Test
     void givenUnknownRoundId_whenDownloadRoundOverview_thenReturns500() throws Exception {
@@ -264,7 +262,6 @@ class PlayoffControllerTest {
                 .andExpect(status().isInternalServerError());
     }
 
-    // --- POST /admin/playoffs/save — validation failure ---
 
     @Test
     void givenBlankName_whenSavePlayoff_thenReturnsFormViewWithErrors() throws Exception {
@@ -295,23 +292,44 @@ class PlayoffControllerTest {
                 .andExpect(model().attributeExists("seasons"));
     }
 
-    // --- POST /admin/playoffs/{id}/add-season + remove-season ---
 
     @Test
-    void givenPlayoffAndOtherSeason_whenAddAndRemoveSeasonFromPlayoff_thenBothSucceed() throws Exception {
+    void givenPlayoff_whenGetBracket_thenAddSeasonButtonNotPresent() throws Exception {
         // given
-        var playoff = playoffService.createPlayoff(season.getId(), "Season Link Test", 4);
-        var otherSeason = testHelper.createSeason("Other Playoff Season");
+        var playoff = playoffService.createPlayoff(season.getId(), "T-Phase60-NoAddSeason-Playoff", 4);
 
-        // when / then
-        mockMvc.perform(post("/admin/playoffs/" + playoff.getId() + "/add-season")
-                        .param("seasonId", otherSeason.getId().toString()))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(flash().attribute("successMessage", "Season linked"));
+        // when
+        var html = mockMvc.perform(get("/admin/playoffs/" + playoff.getId()))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
 
-        mockMvc.perform(post("/admin/playoffs/" + playoff.getId() + "/remove-season")
-                        .param("seasonId", otherSeason.getId().toString()))
-                .andExpect(status().is3xxRedirection())
-                .andExpect(flash().attribute("successMessage", "Season removed"));
+        // then: D-43 removes Add/Remove Season UI from bracket page; backend endpoints stay functional
+        org.assertj.core.api.Assertions.assertThat(html)
+                .doesNotContain("/admin/playoffs/" + playoff.getId() + "/add-season");
+        org.assertj.core.api.Assertions.assertThat(html)
+                .doesNotContain("/admin/playoffs/" + playoff.getId() + "/remove-season");
+    }
+
+    // legacy endpoints removed (Tracked Behavior Change).
+    // These tests guard against accidental re-introduction of the routes.
+
+    @Test
+    void givenLegacyAddSeasonEndpoint_whenPostRequest_thenReturns410GoneWithRetirementCopy() throws Exception {
+        mockMvc.perform(post("/admin/playoffs/" + UUID.randomUUID() + "/add-season")
+                        .param("seasonId", UUID.randomUUID().toString()))
+                .andExpect(status().isGone())
+                .andExpect(view().name("admin/error"))
+                .andExpect(content().string(containsString("retired in v1.9")))
+                .andExpect(content().string(containsString("Phase tabs")));
+    }
+
+    @Test
+    void givenLegacyRemoveSeasonEndpoint_whenPostRequest_thenReturns410GoneWithRetirementCopy() throws Exception {
+        mockMvc.perform(post("/admin/playoffs/" + UUID.randomUUID() + "/remove-season")
+                        .param("seasonId", UUID.randomUUID().toString()))
+                .andExpect(status().isGone())
+                .andExpect(view().name("admin/error"))
+                .andExpect(content().string(containsString("retired in v1.9")))
+                .andExpect(content().string(containsString("Phase tabs")));
     }
 }

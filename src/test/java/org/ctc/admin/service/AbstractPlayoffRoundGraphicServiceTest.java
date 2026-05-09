@@ -52,7 +52,7 @@ class AbstractPlayoffRoundGraphicServiceTest {
 	}
 
 	private Playoff createPlayoff(Season season) {
-		var playoff = new Playoff(season, "CTC Playoffs 2026");
+		var playoff = org.ctc.domain.service.PhaseTestFixtures.playoffForSeason(season, "CTC Playoffs 2026");
 		playoff.setId(UUID.randomUUID());
 		return playoff;
 	}

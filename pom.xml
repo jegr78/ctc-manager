@@ -16,6 +16,7 @@
 	<properties>
 		<java.version>25</java.version>
 		<playwright.version>1.59.0</playwright.version>
+		<lombok.version>1.18.46</lombok.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -128,6 +129,14 @@
 			<artifactId>google-auth-library-oauth2-http</artifactId>
 			<version>1.46.0</version>
 		</dependency>
+		<!-- Guava override: pin to 33.4.x so AbstractFuture uses VarHandle instead of
+		     sun.misc.Unsafe on Java 9+. Suppresses the terminally-deprecated Unsafe
+		     warning emitted under Java 25 by the transitive 33.1.0-jre via google-api-client. -->
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>33.4.8-jre</version>
+		</dependency>
 		<!-- HTML Parsing -->
 		<dependency>
 			<groupId>org.jsoup</groupId>
@@ -178,13 +187,19 @@
 							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
+					<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
+					<fork>true</fork>
+					<compilerArgs>
+						<arg>-J--sun-misc-unsafe-memory-access=allow</arg>
+					</compilerArgs>
 				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+					<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
+					<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
 					<excludes>
 						<exclude>**/e2e/**</exclude>
 					</excludes>
@@ -262,7 +277,8 @@
 							<includes>
 								<include>**/e2e/**/*Test.java</include>
 							</includes>
-							<argLine>@{argLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+							<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
+							<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
 						</configuration>
 						<executions>
 							<execution>

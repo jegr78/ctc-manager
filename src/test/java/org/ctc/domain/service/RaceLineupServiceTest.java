@@ -35,7 +35,6 @@ class RaceLineupServiceTest {
 	@InjectMocks
 	private RaceLineupService service;
 
-	// --- saveLineup ---
 
 	@Test
 	void givenDriverTeamMapping_whenSaveLineup_thenCreatesEntries() {
@@ -95,7 +94,6 @@ class RaceLineupServiceTest {
 		verify(raceLineupRepository).save(any(RaceLineup.class));
 	}
 
-	// --- getLineupData ---
 
 	@Test
 	void givenRaceWithRegularTeams_whenGetLineupData_thenReturnsCorrectEntries() {
@@ -110,7 +108,7 @@ class RaceLineupServiceTest {
 		season.addTeam(homeTeam);
 		season.addTeam(awayTeam);
 
-		var matchday = new Matchday(season, "MD 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD 1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		var match = new Match(matchday, homeTeam, awayTeam);
@@ -159,7 +157,7 @@ class RaceLineupServiceTest {
 		season.addTeam(sub2);
 		season.addTeam(awayTeam);
 
-		var matchday = new Matchday(season, "MD 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "MD 1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		var match = new Match(matchday, sub1, awayTeam);
@@ -186,7 +184,6 @@ class RaceLineupServiceTest {
 		assertThat(data.awayEntry().hasSubTeams()).isFalse();
 	}
 
-	// --- getDriverAssignments ---
 
 	@Test
 	void givenLineupWithTwoDrivers_whenGetDriverAssignments_thenReturnsDriverTeamMap() {

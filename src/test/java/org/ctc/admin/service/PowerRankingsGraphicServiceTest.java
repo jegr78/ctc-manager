@@ -37,7 +37,6 @@ class PowerRankingsGraphicServiceTest {
 		service = new PowerRankingsGraphicService(null, seasonRepository, seasonTeamRepository, tempDir.toString());
 	}
 
-	// --- loadTeamsForSeasonGroup ---
 
 	@Test
 	void givenSingleSeasonWithStandaloneTeams_whenLoadTeams_thenReturnsAllTeams() {
@@ -198,7 +197,6 @@ class PowerRankingsGraphicServiceTest {
 		assertThat(result).isEmpty();
 	}
 
-	// --- Template management ---
 
 	@Test
 	void givenNoCustomTemplate_whenHasCustomTemplate_thenReturnsFalse() {
@@ -239,7 +237,6 @@ class PowerRankingsGraphicServiceTest {
 		assertThat(template).contains("data.title");
 	}
 
-	// --- Helper methods ---
 
 	private Season createSeason(int year, int number) {
 		var season = new Season();

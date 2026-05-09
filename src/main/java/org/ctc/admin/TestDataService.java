@@ -5,9 +5,42 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.domain.exception.EntityNotFoundException;
-import org.ctc.domain.model.*;
-import org.ctc.domain.repository.*;
+import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.Match;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.MatchScoring;
+import org.ctc.domain.model.PhaseLayout;
+import org.ctc.domain.model.PhaseTeam;
+import org.ctc.domain.model.PhaseType;
+import org.ctc.domain.model.PlayoffMatchup;
+import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceLineup;
+import org.ctc.domain.model.RaceResult;
+import org.ctc.domain.model.RaceScoring;
+import org.ctc.domain.model.RaceSettings;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.SeasonFormat;
+import org.ctc.domain.model.SeasonPhase;
+import org.ctc.domain.model.SeasonPhaseGroup;
+import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.DriverRepository;
+import org.ctc.domain.repository.MatchRepository;
+import org.ctc.domain.repository.MatchScoringRepository;
+import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.PhaseTeamRepository;
+import org.ctc.domain.repository.PlayoffMatchupRepository;
+import org.ctc.domain.repository.PlayoffRepository;
+import org.ctc.domain.repository.PlayoffRoundRepository;
+import org.ctc.domain.repository.RaceLineupRepository;
+import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.RaceResultRepository;
+import org.ctc.domain.repository.RaceScoringRepository;
+import org.ctc.domain.repository.SeasonDriverRepository;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.service.PlayoffService;
+import org.ctc.domain.service.PlayoffSeedingService;
 import org.ctc.domain.service.ScoringService;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.ClassPathResource;
@@ -20,6 +53,22 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+/**
+ * Seeds deterministic test fixtures into the H2 in-memory database for the {@code dev} profile.
+ *
+ * <p>Fixtures seeded:
+ * <ul>
+ *   <li><strong>Season 2023</strong> (REGULAR-GROUPS + PLAYOFF) — multi-phase + GROUPS-layout coverage
+ *       (SC1, SC2, SC3). Slug: {@code 2023-1-season-2023}.</li>
+ *   <li><strong>Season 2024 — Regular Season</strong> (single-REGULAR-LEAGUE, Swiss format) — baseline
+ *       LEAGUE season. Slug: {@code 2024-2-regular-season}.</li>
+ *   <li><strong>Season 2026 — Regular Season</strong> (single-REGULAR-LEAGUE, League format, active) —
+ *       SC4 byte-identity source for Plan 0 golden snapshot. Slug: {@code 2026-4-regular-season}.</li>
+ *   <li><strong>Season 2024 — Empty Phase</strong> (REGULAR-only, zero matchdays, zero results) —
+ *       D-22 empty-state coverage. Full 4-team roster at 0 points. Slug: {@code 2024-3-season-2024-empty-phase}.
+ *       Used by Plan 6 D-22 IT method and Plan 7 visual sweep.</li>
+ * </ul>
+ */
 @Slf4j
 @Service
 @Profile("dev")
@@ -44,6 +93,8 @@ public class TestDataService {
 	private final PlayoffMatchupRepository playoffMatchupRepository;
 	private final EntityManager entityManager;
 	private final TeamCardService teamCardService;
+	private final PhaseTeamRepository phaseTeamRepository;
+	private final PlayoffSeedingService playoffSeedingService;
 	@org.springframework.beans.factory.annotation.Value("${app.upload-dir:data/dev/uploads}")
 	private String uploadDir;
 
@@ -58,6 +109,7 @@ public class TestDataService {
 		seedSubTeams(teams);
 		copyDemoLogos(teams);
 		seedSeasons(teams, scorings);
+		seedPhaseTeams();
 		seedDrivers();
 		seedAliases();
 		seedSeasonDrivers();
@@ -150,45 +202,58 @@ public class TestDataService {
 						.filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
 						.findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
-		// S1 2023 Group A: Round Robin (6 teams, mix of parents and sub-teams) per D-06
-		var s1a = createSeason("Group A", 2023, 1, "Group A, Regular Season", scorings);
-		s1a.setFormat(SeasonFormat.ROUND_ROBIN);
-		List.of(findParent.apply("ADR"), findParent.apply("ICL"), findParent.apply("SVT"),
-						findParent.apply("NFR"), findParent.apply("HMS"), findSub.apply("VRX A"))
-				.forEach(s1a::addTeam);
-		seasonRepository.save(s1a);
+		// === Season 2023: ONE consolidated season with GROUPS-layout REGULAR phase ===
+		var s1 = createSeason("Season 2023", 2023, 1, "Round Robin — two groups", scorings);
+		// 12-team roster (Group A + Group B combined). All 12 must be on Season.seasonTeams so
+		// SeasonDriver / RaceLineup downstream code keeps working.
+		java.util.stream.Stream.of(
+						findParent.apply("ADR"), findParent.apply("ICL"), findParent.apply("SVT"),
+						findParent.apply("NFR"), findParent.apply("HMS"), findSub.apply("VRX A"),
+						findParent.apply("EGP"), findParent.apply("PWR"), findSub.apply("VRX B"),
+						findSub.apply("SGM B"), findSub.apply("SGM S"), findSub.apply("TBR R"))
+				.forEach(s1::addTeam);
 
-		// S1 2023 Group B: Round Robin (6 teams, mix of parents and sub-teams) per D-06
-		var s1b = createSeason("Group B", 2023, 1, "Group B, Regular Season", scorings);
-		s1b.setFormat(SeasonFormat.ROUND_ROBIN);
-		List.of(findParent.apply("EGP"), findParent.apply("PWR"),
-						findSub.apply("VRX B"), findSub.apply("SGM B"), findSub.apply("SGM S"), findSub.apply("TBR R"))
-				.forEach(s1b::addTeam);
-		seasonRepository.save(s1b);
+		var s1Regular = new SeasonPhase(s1, PhaseType.REGULAR, PhaseLayout.GROUPS, 0);
+		s1Regular.setRaceScoring(scorings.raceScoring());
+		s1Regular.setMatchScoring(scorings.matchScoring());
+		s1Regular.setFormat(SeasonFormat.ROUND_ROBIN);
+		s1Regular.setLegs(2);
+		s1.getPhases().add(s1Regular);
 
-		// S2 2024: Swiss format (10 parent teams only) per D-05
+		var s1GroupA = new SeasonPhaseGroup(s1Regular, "Group A", 0);
+		var s1GroupB = new SeasonPhaseGroup(s1Regular, "Group B", 1);
+		s1Regular.getGroups().add(s1GroupA);
+		s1Regular.getGroups().add(s1GroupB);
+
+		s1 = seasonRepository.save(s1);  // cascade-saves phase + groups
+
+		// Apply the rating overrides — same teams as before, single season now
+		s1.findSeasonTeam(findParent.apply("ADR")).ifPresent(st -> st.setRating(88));   // 93 - 5
+		s1.findSeasonTeam(findParent.apply("ICL")).ifPresent(st -> st.setRating(82));   // 87 - 5
+		s1.findSeasonTeam(findParent.apply("SVT")).ifPresent(st -> st.setRating(80));   // 85 - 5
+		s1.findSeasonTeam(findParent.apply("NFR")).ifPresent(st -> st.setRating(79));   // 84 - 5
+		s1.findSeasonTeam(findParent.apply("HMS")).ifPresent(st -> st.setRating(83));   // 88 - 5
+		s1.findSeasonTeam(findSub.apply("VRX A")).ifPresent(st -> st.setRating(87));    // 92 - 5
+		s1.findSeasonTeam(findParent.apply("EGP")).ifPresent(st -> st.setRating(87));   // 92 - 5
+		s1.findSeasonTeam(findParent.apply("PWR")).ifPresent(st -> st.setRating(81));   // 86 - 5
+		s1.findSeasonTeam(findSub.apply("VRX B")).ifPresent(st -> st.setRating(82));    // 87 - 5
+		s1.findSeasonTeam(findSub.apply("SGM B")).ifPresent(st -> st.setRating(88));    // 93 - 5
+		s1.findSeasonTeam(findSub.apply("SGM S")).ifPresent(st -> st.setRating(80));    // 85 - 5
+		s1.findSeasonTeam(findSub.apply("TBR R")).ifPresent(st -> st.setRating(80));    // 85 - 5
+		seasonRepository.save(s1);
+
+		// === Season 2024: Swiss format (10 parent teams only) ===
 		var s2 = createSeason("Regular Season", 2024, 2, "Round Robin", scorings);
-		s2.setFormat(SeasonFormat.SWISS);
 		parentTeams.forEach(s2::addTeam);
+
+		var s2Regular = new SeasonPhase(s2, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		s2Regular.setRaceScoring(scorings.raceScoring());
+		s2Regular.setMatchScoring(scorings.matchScoring());
+		s2Regular.setFormat(SeasonFormat.SWISS);
+		s2Regular.setLegs(1);
+		s2.getPhases().add(s2Regular);
+
 		seasonRepository.save(s2);
-
-		// Set ratings for S1 Group A (2023, ratings -5 from Season 4 baseline)
-		s1a.findSeasonTeam(findParent.apply("ADR")).ifPresent(st -> st.setRating(88));  // 93 - 5
-		s1a.findSeasonTeam(findParent.apply("ICL")).ifPresent(st -> st.setRating(82));  // 87 - 5
-		s1a.findSeasonTeam(findParent.apply("SVT")).ifPresent(st -> st.setRating(80));  // 85 - 5
-		s1a.findSeasonTeam(findParent.apply("NFR")).ifPresent(st -> st.setRating(79));  // 84 - 5
-		s1a.findSeasonTeam(findParent.apply("HMS")).ifPresent(st -> st.setRating(83));  // 88 - 5
-		s1a.findSeasonTeam(findSub.apply("VRX A")).ifPresent(st -> st.setRating(87));   // 92 - 5
-		seasonRepository.save(s1a);
-
-		// Set ratings for S1 Group B (2023, ratings -5 from Season 4 baseline)
-		s1b.findSeasonTeam(findParent.apply("EGP")).ifPresent(st -> st.setRating(87));  // 92 - 5
-		s1b.findSeasonTeam(findParent.apply("PWR")).ifPresent(st -> st.setRating(81));  // 86 - 5
-		s1b.findSeasonTeam(findSub.apply("VRX B")).ifPresent(st -> st.setRating(82));   // 87 - 5
-		s1b.findSeasonTeam(findSub.apply("SGM B")).ifPresent(st -> st.setRating(88));   // 93 - 5
-		s1b.findSeasonTeam(findSub.apply("SGM S")).ifPresent(st -> st.setRating(80));   // 85 - 5
-		s1b.findSeasonTeam(findSub.apply("TBR R")).ifPresent(st -> st.setRating(80));   // 85 - 5
-		seasonRepository.save(s1b);
 
 		// Set ratings for S2 (2024, ratings -3 from Season 4 baseline)
 		s2.findSeasonTeam(findParent.apply("ADR")).ifPresent(st -> st.setRating(90));   // 93 - 3
@@ -203,11 +268,10 @@ public class TestDataService {
 		s2.findSeasonTeam(findParent.apply("TBR")).ifPresent(st -> st.setRating(84));   // avg(85,84,83) - 3 = 81 rounded
 		seasonRepository.save(s2);
 
-		// Season 4 - 2026: 14 match teams (7 standalone parents + 7 sub-teams) per D-04
-		// VRX, SGM, TBR parents do NOT participate as match teams
+		// === Season 2026: 14 match teams (7 standalone parents + 7 sub-teams) ===
+		// VRX, SGM, TBR parents do NOT participate as match teams.
 		var s4 = createSeason("Regular Season", 2026, 4, null, scorings);
 		s4.setActive(true);
-		s4.setFormat(SeasonFormat.LEAGUE);
 		List.of(
 				findSub.apply("VRX A"),
 				findSub.apply("VRX B"),
@@ -224,6 +288,14 @@ public class TestDataService {
 				findParent.apply("HMS"),
 				findParent.apply("PWR")
 		).forEach(s4::addTeam);
+
+		var s4Regular = new SeasonPhase(s4, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		s4Regular.setRaceScoring(scorings.raceScoring());
+		s4Regular.setMatchScoring(scorings.matchScoring());
+		s4Regular.setFormat(SeasonFormat.LEAGUE);
+		s4Regular.setLegs(1);
+		s4.getPhases().add(s4Regular);
+
 		seasonRepository.save(s4);
 
 		// Set ratings for active season
@@ -246,6 +318,97 @@ public class TestDataService {
 		s4.findSeasonTeam(findParent.apply("HMS")).ifPresent(st -> st.setRating(88));
 		s4.findSeasonTeam(findParent.apply("PWR")).ifPresent(st -> st.setRating(86));
 		seasonRepository.save(s4);
+
+		// === Season 2024 — Empty Phase: D-22 empty-state coverage ===
+		// Single REGULAR phase, LEAGUE layout, zero matchdays, zero race results.
+		// Full 4-team PhaseTeam roster so D-22 renders teams at 0 points.
+		// Slug: 2024-3-season-2024-empty-phase
+		var sEmpty = createSeason("Season 2024 — Empty Phase", 2024, 3, null, scorings);
+		var sEmptyRegular = new SeasonPhase(sEmpty, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		sEmptyRegular.setRaceScoring(scorings.raceScoring());
+		sEmptyRegular.setMatchScoring(scorings.matchScoring());
+		sEmptyRegular.setFormat(SeasonFormat.LEAGUE);
+		sEmptyRegular.setLegs(1);
+		sEmpty.getPhases().add(sEmptyRegular);
+		List.of(findParent.apply("ADR"), findParent.apply("ICL"),
+				findParent.apply("SVT"), findParent.apply("NFR")).forEach(sEmpty::addTeam);
+		seasonRepository.save(sEmpty);
+	}
+
+	/**
+	 * Populates {@code phase_teams} for every seeded REGULAR phase.
+	 *
+	 * <p>Layout per season:
+	 * <ul>
+	 *   <li>2023 REGULAR (GROUPS) — 12 PhaseTeam rows split 6/6 across Group A / Group B.</li>
+	 *   <li>2024 / 2026 / Test-Season-2026 REGULAR (LEAGUE) — one PhaseTeam per SeasonTeam, group=null.</li>
+	 * </ul>
+	 */
+	private void seedPhaseTeams() {
+		var allSeasons = seasonRepository.findAll();
+		var allTeams = teamRepository.findAll();
+
+		java.util.function.Function<String, Team> findParent = shortName ->
+				allTeams.stream()
+						.filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
+						.findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
+		java.util.function.Function<String, Team> findSub = shortName ->
+				allTeams.stream()
+						.filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
+						.findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
+
+		// 2023 GROUPS — 12 PhaseTeam rows
+		var s1 = allSeasons.stream()
+				.filter(s -> s.getYear() == 2023 && s.getNumber() == 1)
+				.findFirst().orElseThrow(() -> new EntityNotFoundException("Season", "(2023, 1)"));
+		var s1Regular = s1.getPhases().stream()
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR)
+				.findFirst().orElseThrow(() -> new EntityNotFoundException("REGULAR phase for", "Season 2023"));
+		var groupA = s1Regular.getGroups().stream()
+				.filter(g -> g.getName().equals("Group A")).findFirst()
+				.orElseThrow(() -> new EntityNotFoundException("Group A in", s1Regular.getId().toString()));
+		var groupB = s1Regular.getGroups().stream()
+				.filter(g -> g.getName().equals("Group B")).findFirst()
+				.orElseThrow(() -> new EntityNotFoundException("Group B in", s1Regular.getId().toString()));
+
+		// Group A: ADR/ICL/SVT/NFR/HMS/VRX-A
+		for (var team : List.of(findParent.apply("ADR"), findParent.apply("ICL"),
+				findParent.apply("SVT"), findParent.apply("NFR"),
+				findParent.apply("HMS"), findSub.apply("VRX A"))) {
+			var pt = new PhaseTeam(s1Regular, team);
+			pt.setGroup(groupA);
+			phaseTeamRepository.save(pt);
+		}
+		// Group B: EGP/PWR/VRX-B/SGM-B/SGM-S/TBR-R
+		for (var team : List.of(findParent.apply("EGP"), findParent.apply("PWR"),
+				findSub.apply("VRX B"), findSub.apply("SGM B"),
+				findSub.apply("SGM S"), findSub.apply("TBR R"))) {
+			var pt = new PhaseTeam(s1Regular, team);
+			pt.setGroup(groupB);
+			phaseTeamRepository.save(pt);
+		}
+
+		// LEAGUE rosters — group=null for every SeasonTeam
+		seedLeaguePhaseTeams(allSeasons, 2024, 2);
+		seedLeaguePhaseTeams(allSeasons, 2026, 4);
+		// D-22 empty-phase fixture: 4 teams, LEAGUE layout, zero matchdays/results
+		seedLeaguePhaseTeams(allSeasons, 2024, 3);
+	}
+
+	private void seedLeaguePhaseTeams(java.util.List<Season> seasons, int year, int number) {
+		var s = seasons.stream()
+				.filter(x -> x.getYear() == year && x.getNumber() == number)
+				.findFirst().orElseThrow(() -> new EntityNotFoundException("Season", "year=" + year + " number=" + number));
+		var regular = s.getPhases().stream()
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR)
+				.findFirst().orElse(null);
+		if (regular == null) {
+			log.debug("Season {} has no REGULAR phase; skipping PhaseTeam seed", s.getName());
+			return;
+		}
+		for (var st : s.getSeasonTeams()) {
+			phaseTeamRepository.save(new PhaseTeam(regular, st.getTeam()));
+		}
 	}
 
 	private void copyDemoLogos(List<Team> parentTeams) {
@@ -273,10 +436,10 @@ public class TestDataService {
 	}
 
 	private Season createSeason(String name, int year, int number, String description, ScoringDefaults scorings) {
+		// The `scorings` argument is preserved (unused here) so callers attach
+		// RaceScoring/MatchScoring to the REGULAR phase explicitly.
 		var season = new Season(name, year, number);
 		season.setDescription(description);
-		season.setRaceScoring(scorings.raceScoring());
-		season.setMatchScoring(scorings.matchScoring());
 		return season;
 	}
 
@@ -332,56 +495,49 @@ public class TestDataService {
 						.filter(d -> d.getPsnId().equals(psnId))
 						.findFirst().orElseThrow(() -> new EntityNotFoundException("Driver", psnId));
 
-		java.util.function.Function<Integer, Season> findSeason = year ->
-				allSeasons.stream()
-						.filter(s -> s.getYear() == year)
-						.findFirst().orElseThrow(() -> new EntityNotFoundException("Season", year));
-
 		// Season 4 - 2026: All 10 parent teams with 10 drivers each
-		var s4 = findSeason.apply(2026);
+		var s4 = allSeasons.stream()
+				.filter(s -> s.getYear() == 2026 && s.getNumber() == 4)
+				.findFirst().orElseThrow(() -> new EntityNotFoundException("Season", "(2026, 4)"));
 		for (String team : List.of("VRX", "SGM", "ADR", "TBR", "ICL", "SVT", "NFR", "EGP", "HMS", "PWR")) {
 			for (int i = 1; i <= 10; i++) {
 				seasonDriverRepository.save(new SeasonDriver(s4, findDriver.apply(team + "_Driver" + String.format("%02d", i)), findParent.apply(team)));
 			}
 		}
 
-		// Helper to find season by year and name
-		java.util.function.BiFunction<Integer, String, Season> findSeasonByName = (year, name) ->
-				allSeasons.stream()
-						.filter(s -> s.getYear() == year && s.getName().equals(name))
-						.findFirst().orElseThrow(() -> new EntityNotFoundException("Season", name));
-
-		// S1 2023 Group A: 6 drivers per team (ADR, ICL, SVT, NFR, HMS + VRX A via parent VRX)
-		var s1a = findSeasonByName.apply(2023, "Group A");
-		assignSeasonDrivers(s1a, "ADR", driverIds("ADR", 1, 6), findParent, findDriver);
-		assignSeasonDrivers(s1a, "ICL", driverIds("ICL", 1, 6), findParent, findDriver);
-		assignSeasonDrivers(s1a, "SVT", driverIds("SVT", 1, 6), findParent, findDriver);
-		assignSeasonDrivers(s1a, "NFR", driverIds("NFR", 1, 6), findParent, findDriver);
-		assignSeasonDrivers(s1a, "HMS", driverIds("HMS", 1, 6), findParent, findDriver);
-		// VRX A sub-team: SeasonDriver uses parent team VRX
-		assignSeasonDrivers(s1a, "VRX", driverIds("VRX", 1, 6), findParent, findDriver);
-
-		// S1 2023 Group B: 6 drivers per team (EGP, PWR + VRX B, SGM B, SGM S, TBR R via parents)
-		var s1b = findSeasonByName.apply(2023, "Group B");
-		assignSeasonDrivers(s1b, "EGP", driverIds("EGP", 1, 6), findParent, findDriver);
-		assignSeasonDrivers(s1b, "PWR", driverIds("PWR", 1, 6), findParent, findDriver);
-		// VRX B: different drivers than Group A, parent team VRX
-		assignSeasonDrivers(s1b, "VRX", driverIds("VRX", 5, 10), findParent, findDriver);
+		// Consolidated 2023 season carries all 12 teams' drivers.
+		var s1 = allSeasons.stream()
+				.filter(s -> s.getYear() == 2023 && s.getNumber() == 1)
+				.findFirst().orElseThrow(() -> new EntityNotFoundException("Season", "(2023, 1)"));
+		// Group A drivers
+		assignSeasonDrivers(s1, "ADR", driverIds("ADR", 1, 6), findParent, findDriver);
+		assignSeasonDrivers(s1, "ICL", driverIds("ICL", 1, 6), findParent, findDriver);
+		assignSeasonDrivers(s1, "SVT", driverIds("SVT", 1, 6), findParent, findDriver);
+		assignSeasonDrivers(s1, "NFR", driverIds("NFR", 1, 6), findParent, findDriver);
+		assignSeasonDrivers(s1, "HMS", driverIds("HMS", 1, 6), findParent, findDriver);
+		// VRX: combined unique drivers 1-10 for parent team VRX (UK_SEASON_DRIVER = (season_id, driver_id))
+		// Both VRX A (Group A) and VRX B (Group B) share the VRX parent team in SeasonDriver,
+		// so we register all 10 unique VRX drivers once for the consolidated 2023 season.
+		assignSeasonDrivers(s1, "VRX", driverIds("VRX", 1, 10), findParent, findDriver);
+		// Group B drivers
+		assignSeasonDrivers(s1, "EGP", driverIds("EGP", 1, 6), findParent, findDriver);
+		assignSeasonDrivers(s1, "PWR", driverIds("PWR", 1, 6), findParent, findDriver);
 		// SGM B + SGM S: combined unique drivers 1-10 for parent team SGM (unique constraint)
-		assignSeasonDrivers(s1b, "SGM", driverIds("SGM", 1, 10), findParent, findDriver);
+		assignSeasonDrivers(s1, "SGM", driverIds("SGM", 1, 10), findParent, findDriver);
 		// TBR R: parent team TBR
-		assignSeasonDrivers(s1b, "TBR", driverIds("TBR", 1, 6), findParent, findDriver);
+		assignSeasonDrivers(s1, "TBR", driverIds("TBR", 1, 6), findParent, findDriver);
 
 		// S2 2024: 10 parent teams, 6 drivers each (01-06)
-		var s2 = findSeasonByName.apply(2024, "Regular Season");
+		var s2 = allSeasons.stream()
+				.filter(s -> s.getYear() == 2024 && s.getNumber() == 2)
+				.findFirst().orElseThrow(() -> new EntityNotFoundException("Season", "(2024, 2)"));
 		for (String team : List.of("VRX", "SGM", "ADR", "TBR", "ICL", "SVT", "NFR", "EGP", "HMS", "PWR")) {
 			assignSeasonDrivers(s2, team, driverIds(team, 1, 6), findParent, findDriver);
 		}
 
-		log.info("Created season-driver assignments: s4={}, s1a={}, s1b={}, s2={}",
+		log.info("Created season-driver assignments: s4={}, s1={}, s2={}",
 				seasonDriverRepository.findBySeasonId(s4.getId()).size(),
-				seasonDriverRepository.findBySeasonId(s1a.getId()).size(),
-				seasonDriverRepository.findBySeasonId(s1b.getId()).size(),
+				seasonDriverRepository.findBySeasonId(s1.getId()).size(),
 				seasonDriverRepository.findBySeasonId(s2.getId()).size());
 	}
 
@@ -428,8 +584,16 @@ public class TestDataService {
 		// Season lookups
 		var s4 = allSeasons.stream().filter(s -> s.getYear() == 2026 && s.getNumber() == 4).findFirst().orElseThrow();
 		var s2 = allSeasons.stream().filter(s -> s.getYear() == 2024 && s.getNumber() == 2).findFirst().orElseThrow();
-		var s1a = allSeasons.stream().filter(s -> s.getYear() == 2023 && s.getName().equals("Group A")).findFirst().orElseThrow();
-		var s1b = allSeasons.stream().filter(s -> s.getYear() == 2023 && s.getName().equals("Group B")).findFirst().orElseThrow();
+		var s1 = allSeasons.stream()
+				.filter(s -> s.getYear() == 2023 && s.getNumber() == 1).findFirst()
+				.orElseThrow(() -> new EntityNotFoundException("Season", "(2023, 1)"));
+		var s1Regular = s1.getPhases().stream()
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR).findFirst()
+				.orElseThrow(() -> new EntityNotFoundException("REGULAR phase for", "Season 2023"));
+		var s1GroupA = s1Regular.getGroups().stream()
+				.filter(g -> g.getName().equals("Group A")).findFirst().orElseThrow();
+		var s1GroupB = s1Regular.getGroups().stream()
+				.filter(g -> g.getName().equals("Group B")).findFirst().orElseThrow();
 
 		// Position rotation patterns (6 home + 6 away = positions 1-12)
 		int[][] homePositions = {
@@ -521,6 +685,7 @@ public class TestDataService {
 		seedSwissSeason(s2, s2Teams, s2TeamDrivers, homePositions, awayPositions, fastestLapPositions, raceScoring);
 
 		// Round Robin (S1 2023 Group A): 3 matchdays, 3 matches per MD, 2 races per match
+		// sortIndexOffset=0 → sortIndex 1,2,3 — labels "Group A — Matchday 1/2/3"
 		var s1aTeamDrivers = new java.util.LinkedHashMap<Team, Driver[]>();
 		s1aTeamDrivers.put(findParent.apply("ADR"), s4TeamDrivers.get(findParent.apply("ADR")));
 		s1aTeamDrivers.put(findParent.apply("ICL"), s4TeamDrivers.get(findParent.apply("ICL")));
@@ -529,9 +694,13 @@ public class TestDataService {
 		s1aTeamDrivers.put(findParent.apply("HMS"), s4TeamDrivers.get(findParent.apply("HMS")));
 		s1aTeamDrivers.put(findSub.apply("VRX A"), s4TeamDrivers.get(findSub.apply("VRX A")));
 		var s1aTeams = new java.util.ArrayList<>(s1aTeamDrivers.keySet());
-		seedRoundRobinSeason(s1a, s1aTeams, s1aTeamDrivers, homePositions, awayPositions, fastestLapPositions, raceScoring);
+		// Group A: sortIndex 1, 2, 3 — labels "Group A — Matchday 1/2/3"
+		seedRoundRobinSeason(s1, s1Regular, s1GroupA, /*sortIndexOffset=*/ 0,
+				/*groupLabel=*/ "Group A",
+				s1aTeams, s1aTeamDrivers, homePositions, awayPositions, fastestLapPositions, raceScoring);
 
 		// Round Robin (S1 2023 Group B): 3 matchdays, 3 matches per MD, 2 races per match
+		// sortIndexOffset=3 → sortIndex 4,5,6 — labels "Group B — Matchday 1/2/3"
 		var s1bTeamDrivers = new java.util.LinkedHashMap<Team, Driver[]>();
 		s1bTeamDrivers.put(findParent.apply("EGP"), s4TeamDrivers.get(findParent.apply("EGP")));
 		s1bTeamDrivers.put(findParent.apply("PWR"), s4TeamDrivers.get(findParent.apply("PWR")));
@@ -540,7 +709,10 @@ public class TestDataService {
 		s1bTeamDrivers.put(findSub.apply("SGM S"), s4TeamDrivers.get(findSub.apply("SGM S")));
 		s1bTeamDrivers.put(findSub.apply("TBR R"), s4TeamDrivers.get(findSub.apply("TBR R")));
 		var s1bTeams = new java.util.ArrayList<>(s1bTeamDrivers.keySet());
-		seedRoundRobinSeason(s1b, s1bTeams, s1bTeamDrivers, homePositions, awayPositions, fastestLapPositions, raceScoring);
+		// Group B: sortIndex 4, 5, 6 — labels "Group B — Matchday 1/2/3"
+		seedRoundRobinSeason(s1, s1Regular, s1GroupB, /*sortIndexOffset=*/ 3,
+				/*groupLabel=*/ "Group B",
+				s1bTeams, s1bTeamDrivers, homePositions, awayPositions, fastestLapPositions, raceScoring);
 
 		log.info("Seeded matchdays and results: {} matchdays, {} races, {} results",
 				matchdayRepository.count(), raceRepository.count(), raceResultRepository.count());
@@ -551,8 +723,12 @@ public class TestDataService {
 	                              int[][] homePositions, int[][] awayPositions, int[] fastestLapPositions,
 	                              RaceScoring raceScoring) {
 		// 5 matchdays, 7 matches per MD (14 teams), 1 race per match
+		var regular = season.getPhases().stream()
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR).findFirst()
+				.orElseThrow(() -> new IllegalStateException("REGULAR phase missing for season " + season.getId()));
 		for (int mdIndex = 0; mdIndex < 5; mdIndex++) {
-			var md = matchdayRepository.save(new Matchday(season, "Matchday " + (mdIndex + 1), mdIndex + 1));
+			var matchday = new Matchday(regular, "Matchday " + (mdIndex + 1), mdIndex + 1);
+			var md = matchdayRepository.save(matchday);
 			// Pair teams: rotate away teams each matchday
 			for (int matchIdx = 0; matchIdx < 7; matchIdx++) {
 				int homeIdx = matchIdx;
@@ -572,8 +748,12 @@ public class TestDataService {
 	                             int[][] homePositions, int[][] awayPositions, int[] fastestLapPositions,
 	                             RaceScoring raceScoring) {
 		// 5 matchdays, 5 matches per MD (10 teams), 2 races per match
+		var regular = season.getPhases().stream()
+				.filter(p -> p.getPhaseType() == PhaseType.REGULAR).findFirst()
+				.orElseThrow(() -> new IllegalStateException("REGULAR phase missing for season " + season.getId()));
 		for (int mdIndex = 0; mdIndex < 5; mdIndex++) {
-			var md = matchdayRepository.save(new Matchday(season, "Matchday " + (mdIndex + 1), mdIndex + 1));
+			var matchday = new Matchday(regular, "Matchday " + (mdIndex + 1), mdIndex + 1);
+			var md = matchdayRepository.save(matchday);
 			for (int matchIdx = 0; matchIdx < 5; matchIdx++) {
 				int homeIdx = matchIdx;
 				int awayIdx = 5 + ((matchIdx + mdIndex) % 5);
@@ -593,13 +773,23 @@ public class TestDataService {
 		}
 	}
 
-	private void seedRoundRobinSeason(Season season, java.util.List<Team> teams,
+	private void seedRoundRobinSeason(Season season, SeasonPhase phase, SeasonPhaseGroup group,
+	                                  int sortIndexOffset, String groupLabel,
+	                                  java.util.List<Team> teams,
 	                                  java.util.Map<Team, Driver[]> teamDrivers,
 	                                  int[][] homePositions, int[][] awayPositions, int[] fastestLapPositions,
 	                                  RaceScoring raceScoring) {
 		// 3 matchdays, 3 matches per MD (6 teams), 2 races per match
 		for (int mdIndex = 0; mdIndex < 3; mdIndex++) {
-			var md = matchdayRepository.save(new Matchday(season, "Matchday " + (mdIndex + 1), mdIndex + 1));
+			int sortIndex = sortIndexOffset + mdIndex + 1;        // Group A: 1,2,3 — Group B: 4,5,6
+			String label = (groupLabel != null)
+					? "%s — Matchday %d".formatted(groupLabel, mdIndex + 1)
+					: "Matchday %d".formatted(mdIndex + 1);
+			var matchday = new Matchday(phase, label, sortIndex);
+			if (group != null) {
+				matchday.setGroup(group);
+			}
+			var md = matchdayRepository.save(matchday);
 			// Round-robin pairing: pair team[i] with team[5-i], rotating each matchday
 			for (int matchIdx = 0; matchIdx < 3; matchIdx++) {
 				int homeIdx = matchIdx;
@@ -682,9 +872,21 @@ public class TestDataService {
 		// Test-Season 2026: T-ALF vs T-BRV 1, T-ALF vs T-BRV 2
 		var testSeason1 = createSeason("Test-Season 2026", 2026, 99, "Test", scorings);
 		List.of(testAlpha, testBravo, testBravo1, testBravo2).forEach(testSeason1::addTeam);
+
+		var testSeason1Regular = new SeasonPhase(testSeason1, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		testSeason1Regular.setRaceScoring(scorings.raceScoring());
+		testSeason1Regular.setMatchScoring(scorings.matchScoring());
+		testSeason1Regular.setFormat(SeasonFormat.LEAGUE);
+		testSeason1Regular.setLegs(1);
+		testSeason1.getPhases().add(testSeason1Regular);
+
 		seasonRepository.save(testSeason1);
 
-		var md1 = matchdayRepository.save(new Matchday(testSeason1, "Test MD 1", 1));
+		for (var st : testSeason1.getSeasonTeams()) {
+			phaseTeamRepository.save(new PhaseTeam(testSeason1Regular, st.getTeam()));
+		}
+
+		var md1 = matchdayRepository.save(new Matchday(testSeason1Regular, "Test MD 1", 1));
 
 		var match1 = new Match();
 		match1.setMatchday(md1);
@@ -718,9 +920,16 @@ public class TestDataService {
 		// Test-Season 2025: T-ALF vs T-BRV (multi-season test)
 		var testSeason2 = createSeason("Test-Season 2025", 2025, 98, "Test", scorings);
 		List.of(testAlpha, testBravo).forEach(testSeason2::addTeam);
+		// Matchdays bind via REGULAR phase, so attach one to test-season-2.
+		var testSeason2Regular = new SeasonPhase(testSeason2, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		testSeason2Regular.setRaceScoring(scorings.raceScoring());
+		testSeason2Regular.setMatchScoring(scorings.matchScoring());
+		testSeason2Regular.setFormat(SeasonFormat.LEAGUE);
+		testSeason2Regular.setLegs(1);
+		testSeason2.getPhases().add(testSeason2Regular);
 		seasonRepository.save(testSeason2);
 
-		var md2 = matchdayRepository.save(new Matchday(testSeason2, "Test MD 1", 1));
+		var md2 = matchdayRepository.save(new Matchday(testSeason2Regular, "Test MD 1", 1));
 		var match3 = new Match();
 		match3.setMatchday(md2);
 		match3.setHomeTeam(testAlpha);
@@ -739,181 +948,57 @@ public class TestDataService {
 
 	private void seedPlayoffs() {
 		var allSeasons = seasonRepository.findAll();
-		var allTeams = teamRepository.findAll();
 		var raceScoring = raceScoringRepository.findAll().getFirst();
 
-		// Helper lambdas
-		java.util.function.Function<String, Team> findParent = shortName ->
-				allTeams.stream()
-						.filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
-						.findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
-
-		java.util.function.Function<String, Team> findSub = shortName ->
-				allTeams.stream()
-						.filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
-						.findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
-
 		// Get seasons
-		var s1a = allSeasons.stream().filter(s -> s.getYear() == 2023 && s.getName().equals("Group A")).findFirst().orElseThrow();
-		var s1b = allSeasons.stream().filter(s -> s.getYear() == 2023 && s.getName().equals("Group B")).findFirst().orElseThrow();
 		var s2 = allSeasons.stream().filter(s -> s.getYear() == 2024 && s.getNumber() == 2).findFirst().orElseThrow();
 
 		// === 2023 PLAYOFFS: SEMIFINAL (4 teams) ===
-		var s1aResults = raceResultRepository.findByRaceMatchdaySeasonId(s1a.getId());
-		var s1bResults = raceResultRepository.findByRaceMatchdaySeasonId(s1b.getId());
+		// Auto-seed Top-4 from the consolidated REGULAR phase combined-view standings.
+		var s1 = allSeasons.stream()
+				.filter(s -> s.getYear() == 2023 && s.getNumber() == 1).findFirst()
+				.orElseThrow(() -> new EntityNotFoundException("Season", "(2023, 1)"));
 
-		// Calculate Group A standings
-		var s1aTeamScores = new java.util.LinkedHashMap<Team, Integer>();
-		for (var result : s1aResults) {
-			var team = result.getRace().getMatch().getHomeTeam();
-			if (team != null) {
-				var homeTeamId = team.getId();
-				var teamResults = s1aResults.stream()
-						.filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getHomeTeam() != null && r.getRace().getMatch().getHomeTeam().getId().equals(homeTeamId))
-						.toList();
-				s1aTeamScores.putIfAbsent(team, scoringService.calculateTeamTotal(teamResults));
+		var playoff2023 = playoffService.createPlayoff(s1.getId(), "2023 Playoffs", 4);
+		playoffSeedingService.autoSeedBracket(playoff2023.getId());
 
-				var awayTeam = result.getRace().getMatch().getAwayTeam();
-				if (awayTeam != null) {
-					var awayTeamId = awayTeam.getId();
-					var awayTeamResults = s1aResults.stream()
-							.filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getAwayTeam() != null && r.getRace().getMatch().getAwayTeam().getId().equals(awayTeamId))
-							.toList();
-					s1aTeamScores.putIfAbsent(awayTeam, scoringService.calculateTeamTotal(awayTeamResults));
-				}
-			}
+		// Matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
+		var playoffMatchday2023 = matchdayRepository.save(new Matchday(playoff2023.getPhase(), "2023 Playoffs", 4));
+
+		// Reload updated playoff to access matchup with teams set by autoSeedBracket
+		var reloadedPlayoff2023 = playoffRepository.findById(playoff2023.getId()).orElseThrow();
+		var semifinal = reloadedPlayoff2023.getRounds().getFirst();
+		semifinal.setBestOfLegs(2);
+		playoffRoundRepository.save(semifinal);
+
+		// Create races for Semifinal (2 per matchup, 4 total)
+		for (var matchup : semifinal.getMatchups()) {
+			createPlayoffRaces(playoffMatchday2023, matchup, s1, raceScoring, 2);
 		}
 
-		// Calculate Group B standings
-		var s1bTeamScores = new java.util.LinkedHashMap<Team, Integer>();
-		for (var result : s1bResults) {
-			var team = result.getRace().getMatch().getHomeTeam();
-			if (team != null) {
-				var homeTeamId = team.getId();
-				var teamResults = s1bResults.stream()
-						.filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getHomeTeam() != null && r.getRace().getMatch().getHomeTeam().getId().equals(homeTeamId))
-						.toList();
-				s1bTeamScores.putIfAbsent(team, scoringService.calculateTeamTotal(teamResults));
-
-				var awayTeam = result.getRace().getMatch().getAwayTeam();
-				if (awayTeam != null) {
-					var awayTeamId = awayTeam.getId();
-					var awayTeamResults = s1bResults.stream()
-							.filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getAwayTeam() != null && r.getRace().getMatch().getAwayTeam().getId().equals(awayTeamId))
-							.toList();
-					s1bTeamScores.putIfAbsent(awayTeam, scoringService.calculateTeamTotal(awayTeamResults));
-				}
-			}
-		}
-
-		// Get top 2 from each group
-		var s1aSorted = s1aTeamScores.entrySet().stream()
-				.sorted((a, b) -> b.getValue().compareTo(a.getValue()))
-				.map(java.util.Map.Entry::getKey)
-				.toList();
-		var s1bSorted = s1bTeamScores.entrySet().stream()
-				.sorted((a, b) -> b.getValue().compareTo(a.getValue()))
-				.map(java.util.Map.Entry::getKey)
-				.toList();
-
-		if (s1aSorted.size() < 2 || s1bSorted.size() < 2) {
-			log.warn("Not enough teams in playoff groups to create 2023 playoff");
-		} else {
-			var winnerA = s1aSorted.get(0);
-			var runnerUpA = s1aSorted.get(1);
-			var winnerB = s1bSorted.get(0);
-			var runnerUpB = s1bSorted.get(1);
-
-			// Create 2023 Playoff
-			var playoff2023 = playoffService.createPlayoff(s1a.getId(), "2023 Playoffs", 4);
-			// Link both groups as team sources (for UI transparency)
-			playoff2023.getSeasons().add(s1b);
-			playoffRepository.save(playoff2023);
-
-			var semifinal = playoff2023.getRounds().getFirst();
-			semifinal.setBestOfLegs(2);
-			playoffRoundRepository.save(semifinal);
-
-			// Wire matchups
-			var matchup0 = semifinal.getMatchups().get(0);
-			matchup0.setTeam1(winnerA);
-			matchup0.setTeam2(runnerUpB);
-			playoffMatchupRepository.save(matchup0);
-
-			var matchup1 = semifinal.getMatchups().get(1);
-			matchup1.setTeam1(winnerB);
-			matchup1.setTeam2(runnerUpA);
-			playoffMatchupRepository.save(matchup1);
-
-			// Create matchday for playoff races
-			var playoffMatchday = matchdayRepository.save(new Matchday(s1a, "2023 Playoffs", 4));
-
-			// Create races for Semifinal (2 per matchup, 4 total)
-			createPlayoffRaces(playoffMatchday, matchup0, s1a, raceScoring, 2);
-			createPlayoffRaces(playoffMatchday, matchup1, s1a, raceScoring, 2);
-
-			log.info("Created 2023 Playoffs: {} vs {}, {} vs {}",
-					winnerA.getShortName(), runnerUpB.getShortName(),
-					winnerB.getShortName(), runnerUpA.getShortName());
-		}
+		log.info("Created 2023 Playoffs via autoSeedBracket");
 
 		// === 2024 PLAYOFFS: FINAL (2 teams) ===
-		var s2Results = raceResultRepository.findByRaceMatchdaySeasonId(s2.getId());
+		// autoSeedBracket pulls Top-N from the canonical REGULAR-phase standings, which avoids
+		// the double-counting that hand-rolled team-score aggregation produces when drivers
+		// swap teams mid-season.
+		var playoff2024 = playoffService.createPlayoff(s2.getId(), "2024 Playoffs", 2);
+		playoffSeedingService.autoSeedBracket(playoff2024.getId());
 
-		// Calculate 2024 standings
-		var s2TeamScores = new java.util.LinkedHashMap<Team, Integer>();
-		for (var result : s2Results) {
-			var team = result.getRace().getMatch().getHomeTeam();
-			if (team != null) {
-				var homeTeamId = team.getId();
-				var teamResults = s2Results.stream()
-						.filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getHomeTeam() != null && r.getRace().getMatch().getHomeTeam().getId().equals(homeTeamId))
-						.toList();
-				s2TeamScores.putIfAbsent(team, scoringService.calculateTeamTotal(teamResults));
+		var finalRound = playoff2024.getRounds().getFirst();
+		finalRound.setBestOfLegs(2);
+		playoffRoundRepository.save(finalRound);
 
-				var awayTeam = result.getRace().getMatch().getAwayTeam();
-				if (awayTeam != null) {
-					var awayTeamId = awayTeam.getId();
-					var awayTeamResults = s2Results.stream()
-							.filter(r -> r.getRace().getMatch() != null && r.getRace().getMatch().getAwayTeam() != null && r.getRace().getMatch().getAwayTeam().getId().equals(awayTeamId))
-							.toList();
-					s2TeamScores.putIfAbsent(awayTeam, scoringService.calculateTeamTotal(awayTeamResults));
-				}
-			}
+		// Matchday bound to PLAYOFF phase (auto-created by createPlayoff above).
+		var playoffMatchday2024 = matchdayRepository.save(new Matchday(playoff2024.getPhase(), "2024 Playoffs", 5));
+
+		// Reload to read teams set by autoSeedBracket onto the matchup.
+		var reloaded2024 = playoffRepository.findById(playoff2024.getId()).orElseThrow();
+		for (var matchup : reloaded2024.getRounds().getFirst().getMatchups()) {
+			createPlayoffRaces(playoffMatchday2024, matchup, s2, raceScoring, 2);
 		}
 
-		var s2Sorted = s2TeamScores.entrySet().stream()
-				.sorted((a, b) -> b.getValue().compareTo(a.getValue()))
-				.map(java.util.Map.Entry::getKey)
-				.toList();
-
-		if (s2Sorted.size() < 2) {
-			log.warn("Not enough teams in 2024 season to create playoff");
-		} else {
-			var topTeam = s2Sorted.get(0);
-			var runnerUpTeam = s2Sorted.get(1);
-
-			// Create 2024 Playoff
-			var playoff2024 = playoffService.createPlayoff(s2.getId(), "2024 Playoffs", 2);
-			var finalRound = playoff2024.getRounds().getFirst();
-			finalRound.setBestOfLegs(2);
-			playoffRoundRepository.save(finalRound);
-
-			// Wire matchup
-			var matchup = finalRound.getMatchups().getFirst();
-			matchup.setTeam1(topTeam);
-			matchup.setTeam2(runnerUpTeam);
-			playoffMatchupRepository.save(matchup);
-
-			// Create matchday for playoff races
-			var playoffMatchday = matchdayRepository.save(new Matchday(s2, "2024 Playoffs", 5));
-
-			// Create races for Final (2 total)
-			createPlayoffRaces(playoffMatchday, matchup, s2, raceScoring, 2);
-
-			log.info("Created 2024 Playoffs: {} vs {}",
-					topTeam.getShortName(), runnerUpTeam.getShortName());
-		}
+		log.info("Created 2024 Playoffs via autoSeedBracket");
 
 		log.info("Seeded playoffs: {} playoff entities, {} playoff races",
 				playoffRepository.count(), raceRepository.count());

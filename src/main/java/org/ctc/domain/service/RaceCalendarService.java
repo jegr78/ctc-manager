@@ -12,7 +12,6 @@ import java.util.UUID;
 
 /**
  * Service for managing Google Calendar events for races.
- * Extracted from RaceService per D-09.
  */
 @Slf4j
 @Service
@@ -22,13 +21,9 @@ public class RaceCalendarService {
 	private final RaceRepository raceRepository;
 	private final GoogleCalendarService googleCalendarService;
 
-	// --- Availability check ---
-
 	public boolean isCalendarAvailable() {
 		return googleCalendarService.isAvailable();
 	}
-
-	// --- Calendar event ---
 
 	@Transactional
 	public void createOrUpdateCalendarEvent(UUID raceId) throws IOException {
@@ -71,6 +66,12 @@ public class RaceCalendarService {
 				return playoffDuration;
 			}
 		}
-		return race.getMatchday().getSeason().getEventDurationMinutes();
+		// eventDurationMinutes lives on the SeasonPhase. Guarding the matchday + phase chain
+		// surfaces missing config as the IllegalStateException at the caller, not an opaque NPE.
+		var matchday = race.getMatchday();
+		if (matchday == null || matchday.getPhase() == null) {
+			return null;
+		}
+		return matchday.getPhase().getEventDurationMinutes();
 	}
 }

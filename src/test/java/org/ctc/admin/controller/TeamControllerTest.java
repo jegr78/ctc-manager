@@ -43,6 +43,9 @@ class TeamControllerTest {
 	@Autowired
 	private RaceLineupRepository raceLineupRepository;
 
+	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+
 	@Test
 	void whenGetTeams_thenReturnsTeamsView() throws Exception {
 		// when
@@ -88,7 +91,9 @@ class TeamControllerTest {
 		var sub = teamRepository.save(new Team("Grouped Racing A", "GRP A", parent));
 
 		var season = seasonRepository.findByActiveTrue().orElseThrow();
-		var matchday = matchdayRepository.save(new Matchday(season, "GRP MD", 99));
+		// bind matchday to the season's persisted REGULAR phase to satisfy FK_MATCHDAY_PHASE.
+		var regularPhase = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+		var matchday = matchdayRepository.save(new Matchday(regularPhase, "GRP MD", 99));
 		var match = new Match();
 		match.setMatchday(matchday);
 		match.setHomeTeam(parent);
@@ -133,7 +138,9 @@ class TeamControllerTest {
 		var sub = teamRepository.save(new Team("Parent Inc A", "PIN A", parent));
 
 		var season = seasonRepository.findByActiveTrue().orElseThrow();
-		var matchday = matchdayRepository.save(new Matchday(season, "PIN MD", 98));
+		// bind matchday to the season's persisted REGULAR phase to satisfy FK_MATCHDAY_PHASE.
+		var regularPhase = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+		var matchday = matchdayRepository.save(new Matchday(regularPhase, "PIN MD", 98));
 		var match = new Match();
 		match.setMatchday(matchday);
 		match.setHomeTeam(parent);
@@ -164,7 +171,9 @@ class TeamControllerTest {
 		var sub = teamRepository.save(new Team("Own Inc A", "OWN A", parent));
 
 		var season = seasonRepository.findByActiveTrue().orElseThrow();
-		var matchday = matchdayRepository.save(new Matchday(season, "OWN MD", 97));
+		// bind matchday to the season's persisted REGULAR phase to satisfy FK_MATCHDAY_PHASE.
+		var regularPhase = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+		var matchday = matchdayRepository.save(new Matchday(regularPhase, "OWN MD", 97));
 		var match = new Match();
 		match.setMatchday(matchday);
 		match.setHomeTeam(parent);

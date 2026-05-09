@@ -3,6 +3,7 @@ package org.ctc;
 import lombok.RequiredArgsConstructor;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.domain.service.PlayoffService;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -14,17 +15,26 @@ public class TestHelper {
 	private final RaceScoringRepository raceScoringRepository;
 	private final MatchScoringRepository matchScoringRepository;
 	private final SeasonRepository seasonRepository;
+	private final SeasonPhaseRepository seasonPhaseRepository;
 	private final MatchdayRepository matchdayRepository;
 	private final TeamRepository teamRepository;
 	private final MatchRepository matchRepository;
 	private final RaceRepository raceRepository;
 	private final DriverRepository driverRepository;
 	private final SeasonDriverRepository seasonDriverRepository;
+	private final PlayoffService playoffService;
 
 	public Season createSeason(String name) {
 		return createSeason(name, 2026, 1);
 	}
 
+	/**
+	 * Creates a Season with a bootstrapped REGULAR phase (LEAGUE layout, sortIndex=0).
+	 * Mirrors the bootstrap performed by SeasonManagementService.save — ensures tests that
+	 * call seasonPhaseRepository.findBySeasonIdAndPhaseType(id, REGULAR) find a result.
+	 * Scoring lives on the REGULAR SeasonPhase, so the helper attaches a generated
+	 * RaceScoring + MatchScoring there.
+	 */
 	public Season createSeason(String name, int year, int number) {
 		var suffix = UUID.randomUUID().toString().substring(0, 4);
 		var rs = raceScoringRepository.save(
@@ -32,13 +42,64 @@ public class TestHelper {
 		var ms = matchScoringRepository.save(
 				new MatchScoring("MS " + suffix, 3, 1, 0));
 		var season = new Season(name, year, number);
-		season.setRaceScoring(rs);
-		season.setMatchScoring(ms);
-		return seasonRepository.save(season);
+		var saved = seasonRepository.save(season);
+		// Bootstrap REGULAR phase carrying scoring + format.
+		var regular = new SeasonPhase(saved, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		regular.setFormat(SeasonFormat.LEAGUE);
+		regular.setLegs(1);
+		regular.setRaceScoring(rs);
+		regular.setMatchScoring(ms);
+		regular = seasonPhaseRepository.save(regular);
+		// Keep the Java-side season.phases collection in sync so downstream callers can
+		// find the phase without relying on lazy-load (some unit-style ITs run outside OSIV).
+		saved.getPhases().add(regular);
+		return saved;
 	}
 
+	/**
+	 * Creates a Matchday wired to the season's REGULAR phase.
+	 */
+	public Matchday createMatchdayInRegularPhase(Season season, String label, int sortIndex) {
+		var regular = seasonPhaseRepository
+				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR)
+				.orElseThrow(() -> new IllegalStateException("No REGULAR phase for season " + season.getId()));
+		return matchdayRepository.save(new Matchday(regular, label, sortIndex));
+	}
+
+	/**
+	 * Creates a Playoff for a season. Delegates to PlayoffService.createPlayoff which
+	 * atomically writes a PLAYOFF SeasonPhase + Playoff.
+	 */
+	public Playoff createPlayoffInPhase(Season season, String name, int teamCount) {
+		return playoffService.createPlayoff(season.getId(), name, teamCount);
+	}
+
+	/**
+	 * @deprecated prefer {@link #createMatchdayInRegularPhase(Season, String, int)}.
+	 * Kept as a thin alias so existing callers keep compiling — internally now binds via the REGULAR phase.
+	 */
 	public Matchday createMatchday(Season season, String label, int sortIndex) {
-		return matchdayRepository.save(new Matchday(season, label, sortIndex));
+		return createMatchdayInRegularPhase(season, label, sortIndex);
+	}
+
+	/**
+	 * Returns the RaceScoring assigned to the season's REGULAR phase.
+	 */
+	public RaceScoring getRaceScoring(Season season) {
+		return seasonPhaseRepository
+				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR)
+				.orElseThrow(() -> new IllegalStateException("No REGULAR phase for season " + season.getId()))
+				.getRaceScoring();
+	}
+
+	/**
+	 * Returns the MatchScoring assigned to the season's REGULAR phase.
+	 */
+	public MatchScoring getMatchScoring(Season season) {
+		return seasonPhaseRepository
+				.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR)
+				.orElseThrow(() -> new IllegalStateException("No REGULAR phase for season " + season.getId()))
+				.getMatchScoring();
 	}
 
 	public Team createTeam(String name, String shortName) {

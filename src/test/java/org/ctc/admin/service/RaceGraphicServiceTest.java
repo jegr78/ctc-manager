@@ -36,7 +36,6 @@ class RaceGraphicServiceTest {
 	@InjectMocks
 	private RaceGraphicService service;
 
-	// --- generateResults ---
 
 	@Test
 	void givenRace_whenGenerateResults_thenCreatesAttachment() throws Exception {
@@ -46,7 +45,8 @@ class RaceGraphicServiceTest {
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		matchday.setSeason(new Season("S"));
+		// Matchday is bound via SeasonPhase (Convenience-Getter exposes the season).
+		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
 		race.setId(UUID.randomUUID());
@@ -81,7 +81,6 @@ class RaceGraphicServiceTest {
 				.hasMessageContaining("Playwright failed");
 	}
 
-	// --- generateSettings ---
 
 	@Test
 	void givenRace_whenGenerateSettings_thenCreatesAttachment() throws Exception {
@@ -91,7 +90,8 @@ class RaceGraphicServiceTest {
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		matchday.setSeason(new Season("S"));
+		// Matchday is bound via SeasonPhase (Convenience-Getter exposes the season).
+		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
 		race.setId(UUID.randomUUID());
@@ -126,7 +126,6 @@ class RaceGraphicServiceTest {
 				.hasMessageContaining("Playwright failed");
 	}
 
-	// --- generateLineup ---
 
 	@Test
 	void givenRace_whenGenerateLineup_thenCreatesAttachment() throws Exception {
@@ -136,7 +135,8 @@ class RaceGraphicServiceTest {
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
 		matchday.setLabel("MD 1");
-		matchday.setSeason(new Season("S"));
+		// Matchday is bound via SeasonPhase (Convenience-Getter exposes the season).
+		matchday.setPhase(new SeasonPhase(new Season("S"), PhaseType.REGULAR, PhaseLayout.LEAGUE, 0));
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
 		race.setId(UUID.randomUUID());
@@ -156,7 +156,6 @@ class RaceGraphicServiceTest {
 						&& att.getType() == AttachmentType.FILE));
 	}
 
-	// --- Helper methods ---
 
 	private Team createTeam(String shortName, String name) {
 		var team = new Team(name, shortName);

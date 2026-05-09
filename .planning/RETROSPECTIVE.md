@@ -171,14 +171,75 @@ Living retrospective across milestones. Updated at each milestone completion.
 - Sessions: 1 (alle Phasen + UAT + Audit + Ship + Complete in einer durchgehenden Session)
 - Notable: PR-Erstellung + CI + Squash-Merge + lokales Cleanup + Milestone-Close in derselben Session lief sauber durch — `gh` CLI + Memory-Regel `feedback_squash_merge_message.md` haben Friktion vermieden
 
+## Milestone: v1.9 — Season Phases & Groups
+
+**Shipped:** 2026-05-09
+**Phases:** 15 (56-70) | **Plans:** ~70 | **Timeline:** 2026-04-26 → 2026-05-09 (14 days)
+
+### What Was Built
+
+- Phase/Group domain model: `SeasonPhase` (REGULAR/PLAYOFF/PLACEMENT) + `SeasonPhaseGroup` + `PhaseTeam` roster — Saison-Container vom flachen Modell zur Phase-Klammer mit optionalen Sub-Gruppen
+- Mechanische Daten-Migration via Flyway V3-V6: Bestandsseasons → 1 REGULAR + ggf. 1 PLAYOFF; `season_id`-Bridge-Spalten + `playoff_seasons`-Join-Table dropped; Bestand bleibt byte-identisch erreichbar
+- Phase-aware Domain Services: `StandingsService.calculateStandings(phaseId, groupId)`, `DriverRankingService` cross-phase aggregation, `MatchdayGeneratorService`/`SwissPairingService` phase-/group-aware, `PlayoffService.createPlayoff` atomisch über PLAYOFF-Phase + Playoff
+- Admin UI mit Saison-Detail Two-Row-Tabs, Phase- + Group-CRUD, Standings-Phase/Group-Auswahl + Combined-View, Playoff-UI auf PLAYOFF-Phase
+- Public Site mit Phase-Tab-Reihe + Group-Sub-Tab-Reihe + per-phase URL-Varianten + PLAYOFF-Tab + Phase-Breakdown auf Team/Driver-Profilen; LEAGUE-only-Seasons rendern byte-identisch
+- Driver-Import: `findByYearAndNumber`, Tab-Pattern `^\d{4}_S\d+$`, Parent-Team-Resolver (Phase 70 D-05 inverts Phase 66 D-04), `findByPsnId`-Guard gegen GAP-70-01 Cross-Tab-Duplicate-Insert
+- 1227 Unit + 31 Playwright E2E Tests, JaCoCo Line 87.02% (Gate 82%), Lombok 1.18.46 + JEP 498 + Guava 33.4.8 zur Java-25-Warning-Bereinigung
+
+### What Worked
+
+- **Audit-getriebene Phasen-Insertion:** Audit nach Phase 62 deckte Gap "public site invisibly stuck on LEAGUE shape" auf — Phase 62 wurde als END-of-Milestone-Phase nachgezogen statt als Tech Debt verschoben. Gleicher Mechanismus bei Phasen 66/67/68/70 (UAT-discovered).
+- **Multi-Wave Plans innerhalb großer Phasen:** Phase 58 (6 plans / 5 waves) und Phase 60 (7 plans / 4 waves) waren wave-explizit geplant — abhängige Plans liefen sequenziell, unabhängige parallel; keine Worktree-Clobbers wie in v1.1.
+- **Live MariaDB UAT als Release-Gate:** UAT D-22 (Saison 2023 Driver-Import auf MariaDB) deckte sowohl GAP-70-01 (DB-State-Mismatch) als auch Phase-66-D-04-Domain-Violation auf — beide hätten unentdeckt produktions-deployt werden können. Lesson: Lokale H2-only-Verification ist nicht ausreichend für Schema-Migrations-Milestones.
+- **Phase-66/Phase-70 Re-Open Addendum-Pattern:** Statt Phase 66 zurückzusetzen hat Phase 70 ein "Re-Open Addendum" zu `66-VERIFICATION.md` + Inline-Supersede-Notes auf `66-CONTEXT.md` D-04..D-09 + Frontmatter-Eintrag `re_verification` geschrieben. Audit-Trail bleibt intakt, Domain-Modell-Inversion ist nachvollziehbar dokumentiert.
+- **Branch-Disziplin: 442 Commits, 1 Branch:** `gsd/v1.9-season-phases-groups` blieb über 14 Tage stabil; Subagent-Branch-Schutz (CLAUDE.md Subagent Rules) hat keine Branch-Switches zugelassen.
+- **gsd-debug für GAP-70-01:** Der Debug-Workflow hat Hypothese 1 (cross-tab `computeIfAbsent` ohne DB-Konsultation) confirmed und Hypothese 2 (FUZZY-no-accept-dup) via `findByPsnId` Stage-1 short-circuit als unmöglich nachgewiesen — saubere wissenschaftliche Methode statt Trial-and-Error.
+
+### What Was Inefficient
+
+- **Phase-66-D-04 als „Default war model-violating":** Das ursprüngliche Phase-66-Discuss hat „sub-team mit PhaseTeam wins" als naheliegendes Default gesetzt, ohne den Fahrer-am-Parent-Team-Domain-Constraint explizit zu validieren. Phase 70 (4 Plans, 4 Tage Re-Work) wäre vermeidbar gewesen, wenn das CONTEXT.md von Phase 66 das Domain-Modell strikt referenziert hätte. Lesson: Bei Domain-relevanten Defaults explizit "Welcher Pfad ist Domain-konform?" als Discuss-Frage stellen.
+- **Phase-69 als Bookkeeping-Catch-Up:** 4 Plans nur um zurückgebliebene VERIFICATION.md (Phase 64/65), VALIDATION.md-Flips (Phase 65/66/67/68) und SUMMARY-Frontmatter-Sweeps (58/59/60) nachzuziehen. Pures Audit-Erfüllen, kein Code. Lesson: Frontmatter-Sweep + VERIFICATION.md sollten am Phasen-Ende automatisiert sein, nicht via Catch-Up-Phase.
+- **Phase-61-„Cleanup & Quality Gate" wurde 14 Plans (5 + 9 gap-fixes):** ROADMAP versprach „Drop old columns + JaCoCo + 2 E2E tests" — am Ende kamen 9 weitere gap-Plans für Service-Cutover-Restwerk (mehrere Caller waren bei Phase-58-Service-Migration übersehen worden). Lesson: Phase 58 Plan-Checker hätte mit `grep` über alle Caller die Vollständigkeit der Service-Migration prüfen müssen.
+- **Bookkeeping-Tech-Debt für 4 Phasen verbleibt:** Plan SUMMARY `requirements-completed` Frontmatter ist für Phasen 56/57/62/64 (15 SUMMARYs) immer noch unvollständig — explizit als „nächste Milestone Hygiene-Phase" deferred, aber das ist die zweite Milestone-Iteration in Folge mit ähnlichem Tech-Debt-Pattern.
+- **Doppelter `sun.misc.Unsafe`-Warnings-Hunt (Phase 68 + Guava-Pin):** Phase 68 hat Lombok 1.18.46 + JEP 498 gepinnt, war aber nicht ausreichend — Guava 33.1.0 (transitiv via google-api-client) emittierte den gleichen Warning. Wäre via initialer Diagnose („welche Bibliothek triggered den Warning?") in einem Phasen-Schnitt machbar gewesen.
+
+### Patterns Established
+
+- **Re-Open Addendum auf VERIFICATION.md:** Statt eine bereits passte Phase zurückzusetzen, neue Phase legt `## Phase-XX Re-Open Addendum` + Frontmatter-`re_verification`-Eintrag + Inline-Supersede-Notes auf der Quell-Phase ab. Audit-Trail bleibt nachvollziehbar.
+- **Live-DB UAT als Release-Gate für Schema-Migrations-Milestones:** ROADMAP-SC explizit „Saison X auf MariaDB ohne Errors importierbar" + Evidence-Snippet im AUDIT-File mit Anzahl betroffener Rows.
+- **Phase-Insertion via Audit nach Mid-Milestone-Phasen:** Audit nach Phase N kann Phase N+1 ergänzen (Phase 62 nach Phase 61 UAT, Phase 70 nach Phase 69 Live-UAT). Strukturierter als „Tech Debt fürs nächste Milestone" wenn die Lücke milestone-blocking ist.
+- **Phase-aware Service-API mit Combined-View-Default:** `calculateStandings(phaseId, groupId=null)` aggregiert über alle Sub-Groups der Phase — Combined-View ist nicht ein zweiter Service-Aufruf, sondern derselbe mit `null`-Group.
+- **Domain-Model-Doc als Plan-Boundary:** Phase 70 D-05 inversion war notwendig, weil Phase 66 ohne explizit referenziertes Domain-Modell-Doc geplant wurde. Konsequenz: Domain-relevante Phasen brauchen ein Domain-Modell-Reference-Doc als Plan-Input.
+
+### Key Lessons
+
+- **Domain-Constraints müssen vor Defaults validiert werden:** „Naheliegender Default" reicht nicht — bei Domain-relevanten Defaults die Domain-Doku explizit konsultieren. Sonst kostet das wie Phase 70 eine zusätzliche 4-Plan-Phase.
+- **Live-DB-UAT ist nicht optional bei Schema-Migrations-Milestones:** H2-Tests + lokaler Dev-Profil decken nicht alle Pfade ab. ROADMAP-SC für „cross-DB UAT" sollte default-on sein für jede Phase, die Flyway-Migrationen einführt.
+- **Bookkeeping-Frontmatter ist durably wartungsbedürftig, nicht ein Once-Off:** Drei Milestones in Folge mit `requirements-completed` Drift. Tooling (Pre-Commit-Hook auf SUMMARY-Files) ist überfällig.
+- **Plan-Checker muss Caller-Vollständigkeit prüfen:** Bei Service-API-Migrationen sollte der Plan-Checker `grep` über alle Caller-Sites laufen lassen und die Vollständigkeits-Behauptung in der PLAN.md prüfen — verhindert das Phase-61-Catch-Up-Phänomen.
+- **`sun.misc.Unsafe`-Warnings: erst alle Quellen identifizieren, dann fixen:** `mvn dependency:tree` + Warning-Reproduktion auf jedem Modul-Level vor dem ersten Pin spart einen zweiten Cycle.
+
+### Cost Observations
+
+- Model mix: ~60% opus (Domain-Modell-Phase 56-58 + Audits), ~30% sonnet (Plans 60-62 UI/Templates), ~10% haiku (read-only Reviews + Research)
+- Sessions: ~14 (eine pro Tag), GSD-Workflow durchgehend mit `--auto`-Chain für Phasen 64+65+67+68+69 (kleinere Phasen)
+- Notable: Phase 70 wurde nach dem post-Phase-69-Audit eingefügt — der zweite Audit-Run (post-Phase-70) kostete weitere 30 Min, war aber nötig, um die 14-→-15-Phasen-Inversion sauber zu dokumentieren
+- Notable: Phase 61 war mit 14 Plans (5 + 9 gap) der größte Gap-Tail des Milestones — pure Service-Cutover-Restwerk-Plans hätten Phase 58 Plan-Checker abfangen können
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v1.1 | v1.2 | v1.8 |
-|--------|------|------|------|------|
-| Phases | 5 | 10 | 4 | 2 |
-| Plans | 12 | 20 | 5 |
-| Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 |
-| Coverage | 82%+ | 82%+ | 82%+ |
-| Timeline (days) | 8 | 4 | 11 |
-| Files changed | 68 | ~80 | ~15 |
-| LOC delta | +3850 / -962 | +5100 / -1300 | +600 / -30 |
+| Metric | v1.0 | v1.1 | v1.2 | v1.8 | v1.9 |
+| ------ | ---- | ---- | ---- | ---- | ---- |
+| Phases | 5 | 10 | 4 | 2 | 15 |
+| Plans | 12 | 20 | 5 | 4 | ~70 |
+| Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 | 1011 → 1064 | 1064 → 1258 |
+| Coverage | 82%+ | 82%+ | 82%+ | 82%+ | 87.02% |
+| Timeline (days) | 8 | 4 | 11 | 2 | 14 |
+| Files changed | 68 | ~80 | ~15 | 39 | 567 |
+| LOC delta | +3850 / -962 | +5100 / -1300 | +600 / -30 | +11.2k / -539 | +88.4k / -2.5k |
+
+### Recurring Themes
+
+- **Bookkeeping-Drift in `requirements-completed` Frontmatter:** Milestones v1.0 / v1.1 / v1.2 / v1.9 alle mit Drift — überfällig für Tooling-Lösung (Pre-Commit-Hook).
+- **Audit-getriebene Phase-Insertion:** v1.1 (Recovery 12-15), v1.2 (Phase 19), v1.9 (Phasen 62, 66, 67, 68, 70) — Pattern hat sich als wertvoller Mechanismus etabliert, um Mid-Milestone-Discoveries strukturiert zu integrieren.
+- **Live-DB / Real-World UAT entdeckt Domain-Gaps:** v1.8 (DevDataSeeder Year-Collision), v1.9 (Phase-66-D-04 Domain-Violation + GAP-70-01) — Lokale Dev-Profile decken nicht alle Pfade ab.

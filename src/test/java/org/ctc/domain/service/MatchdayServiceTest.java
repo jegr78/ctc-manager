@@ -33,11 +33,11 @@ class MatchdayServiceTest {
     @Mock private MatchdayRepository matchdayRepository;
     @Mock private SeasonRepository seasonRepository;
     @Mock private RaceLineupRepository raceLineupRepository;
+    @Mock private SeasonPhaseService seasonPhaseService;
 
     @InjectMocks
     private MatchdayService service;
 
-    // --- getMatchdayList ---
 
     @Test
     void givenSeasonId_whenGetMatchdayList_thenReturnsFilteredMatchdays() {
@@ -97,7 +97,6 @@ class MatchdayServiceTest {
         assertThat(result.selectedSeasonId()).isNull();
     }
 
-    // --- saveMatchday ---
 
     @Test
     void givenNewMatchday_whenSaveMatchday_thenCreatesMatchday() {
@@ -105,6 +104,9 @@ class MatchdayServiceTest {
         var seasonId = UUID.randomUUID();
         var season = new Season();
         season.setId(seasonId);
+        // saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
+        var regular = PhaseTestFixtures.regularPhase(season, null, null);
+        when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
 
         when(seasonRepository.findById(seasonId)).thenReturn(Optional.of(season));
         when(matchdayRepository.save(any(Matchday.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -126,6 +128,9 @@ class MatchdayServiceTest {
         var matchdayId = UUID.randomUUID();
         var season = new Season();
         season.setId(seasonId);
+        // saveMatchday delegates to seasonPhaseService.findRegularPhase to bind phase.
+        var regular = PhaseTestFixtures.regularPhase(season, null, null);
+        when(seasonPhaseService.findRegularPhase(seasonId)).thenReturn(regular);
         var existing = new Matchday();
         existing.setId(matchdayId);
         existing.setLabel("Old");
@@ -143,7 +148,6 @@ class MatchdayServiceTest {
         assertThat(result.getSeason()).isEqualTo(season);
     }
 
-    // --- deleteMatchday ---
 
     @Test
     void givenExistingMatchday_whenDeleteMatchday_thenReturnsSeasonId() {
@@ -154,7 +158,8 @@ class MatchdayServiceTest {
         season.setId(seasonId);
         var matchday = new Matchday();
         matchday.setId(matchdayId);
-        matchday.setSeason(season);
+        // matchday.getSeason() derives from phase; wire a phase so deleteMatchday can read seasonId.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
 
         when(matchdayRepository.findById(matchdayId)).thenReturn(Optional.of(matchday));
 
@@ -166,7 +171,6 @@ class MatchdayServiceTest {
         verify(matchdayRepository).delete(matchday);
     }
 
-    // --- getMatchdaysBySeason ---
 
     @Test
     void givenSeasonWithMatchdays_whenGetMatchdaysBySeason_thenReturnsMatchdayDataList() {
@@ -195,7 +199,6 @@ class MatchdayServiceTest {
         assertThat(result.get(1).label()).isEqualTo("Round 2");
     }
 
-    // --- createInline ---
 
     @Test
     void givenExistingMatchdays_whenCreateInline_thenCalculatesNextSortIndex() {
@@ -203,10 +206,12 @@ class MatchdayServiceTest {
         var season = new Season();
         season.setId(UUID.randomUUID());
         season.setName("Test Season");
-        var existing = new Matchday(season, "MD1", 3);
+        var regular = PhaseTestFixtures.regularPhase(season, null, null);
+        var existing = new Matchday(regular, "MD1", 3);
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-        when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(existing));
+        when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
+        when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId())).thenReturn(List.of(existing));
         when(matchdayRepository.save(any(Matchday.class))).thenAnswer(inv -> {
             Matchday md = inv.getArgument(0);
             md.setId(UUID.randomUUID());
@@ -239,10 +244,12 @@ class MatchdayServiceTest {
         var season = new Season();
         season.setId(UUID.randomUUID());
         season.setName("Test Season");
-        var existing = new Matchday(season, "Existing", 1);
+        var regular = PhaseTestFixtures.regularPhase(season, null, null);
+        var existing = new Matchday(regular, "Existing", 1);
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-        when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of(existing));
+        when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
+        when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId())).thenReturn(List.of(existing));
 
         // when / then
         assertThatThrownBy(() -> service.createInline(season.getId(), "Existing"))
@@ -250,7 +257,73 @@ class MatchdayServiceTest {
                 .hasMessageContaining("already exists");
     }
 
-    // --- getMatchdayDetail — graphic status fields ---
+    /**
+     * REGULAR matchday creation must not be poisoned by PLAYOFF
+     * matchdays. The pre-fix bug used {@code findBySeasonIdOrderBySortIndexAsc}, which
+     * returns matchdays from BOTH the REGULAR and PLAYOFF phases. Playoff matchdays carry
+     * sortIndex >= 100 (see {@code PlayoffService.addRaceToMatchup}), so the next REGULAR
+     * matchday inherited the playoff's high sortIndex (e.g., 101) instead of the expected
+     * {@code lastRegularSortIndex + 1}.
+     */
+    @Test
+    void givenSeasonWithPlayoffMatchdays_whenCreateInline_thenSortIndexScopedToRegularPhase() {
+        // given — REGULAR phase has matchdays with sortIndex 1..3; a PLAYOFF phase exists with
+        // matchdays at sortIndex 100+. The mock simulates the phase-scoped finder; the fix MUST
+        // call findByPhaseIdOrderBySortIndexAsc(regular) and ignore the playoff matchdays.
+        var season = new Season();
+        season.setId(UUID.randomUUID());
+        season.setName("Test Season");
+        var regular = PhaseTestFixtures.regularPhase(season, null, null);
+        var existingRegular = new Matchday(regular, "Round 3", 3);
+
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
+        when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId()))
+                .thenReturn(List.of(existingRegular));
+        when(matchdayRepository.save(any(Matchday.class))).thenAnswer(inv -> {
+            Matchday md = inv.getArgument(0);
+            md.setId(UUID.randomUUID());
+            return md;
+        });
+
+        // when
+        var result = service.createInline(season.getId(), "Round 4");
+
+        // then — sortIndex must be 4 (lastRegular + 1), NOT 101 (max across phases + 1)
+        assertThat(result.sortIndex()).isEqualTo(4);
+    }
+
+    /**
+     * a duplicate-label check must be scoped to the REGULAR phase.
+     * Pre-fix, label "Round 1" in REGULAR was rejected when "Round 1" already existed in
+     * PLAYOFF — a cross-phase false positive.
+     */
+    @Test
+    void givenPlayoffMatchdayWithSameLabel_whenCreateInlineForRegular_thenAllowsCreation() {
+        // given — REGULAR phase is empty; PLAYOFF "Round 1" exists but is NOT in scope of
+        // findByPhaseIdOrderBySortIndexAsc(regular). The fix must accept "Round 1".
+        var season = new Season();
+        season.setId(UUID.randomUUID());
+        season.setName("Test Season");
+        var regular = PhaseTestFixtures.regularPhase(season, null, null);
+
+        when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+        when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(regular);
+        when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId())).thenReturn(List.of());
+        when(matchdayRepository.save(any(Matchday.class))).thenAnswer(inv -> {
+            Matchday md = inv.getArgument(0);
+            md.setId(UUID.randomUUID());
+            return md;
+        });
+
+        // when
+        var result = service.createInline(season.getId(), "Round 1");
+
+        // then — duplicate check must NOT cross phase boundaries
+        assertThat(result.label()).isEqualTo("Round 1");
+        assertThat(result.sortIndex()).isEqualTo(1);
+    }
+
 
     @Nested
     class GetMatchdayDetailGraphicStatus {
@@ -403,4 +476,46 @@ class MatchdayServiceTest {
             assertThat(data.hasResults()).isTrue();
         }
     }
+
+
+    @Test
+    void givenRegularAndPlayoffMatchdays_whenFindByPhaseId_thenSegmentedCorrectly() {
+        // given
+        var phaseId = UUID.randomUUID();
+        var md1 = new Matchday();
+        md1.setId(UUID.randomUUID());
+        md1.setLabel("MD-1");
+        var md2 = new Matchday();
+        md2.setId(UUID.randomUUID());
+        md2.setLabel("MD-2");
+        when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phaseId))
+                .thenReturn(List.of(md1, md2));
+
+        // when
+        var result = service.findByPhaseId(phaseId);
+
+        // then
+        assertThat(result).containsExactly(md1, md2);
+        verify(matchdayRepository).findByPhaseIdOrderBySortIndexAsc(phaseId);
+    }
+
+    @Test
+    void givenPhaseAndGroupId_whenFindByPhaseIdAndGroupId_thenReturnsGroupMatchdaysOnly() {
+        // given
+        var phaseId = UUID.randomUUID();
+        var groupId = UUID.randomUUID();
+        var groupMd = new Matchday();
+        groupMd.setId(UUID.randomUUID());
+        groupMd.setLabel("Group A MD-1");
+        when(matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId))
+                .thenReturn(List.of(groupMd));
+
+        // when
+        var result = service.findByPhaseIdAndGroupId(phaseId, groupId);
+
+        // then
+        assertThat(result).containsExactly(groupMd);
+        verify(matchdayRepository).findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId);
+    }
+
 }

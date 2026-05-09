@@ -43,7 +43,6 @@ class RaceAttachmentServiceTest {
         ReflectionTestUtils.setField(service, "uploadDir", "uploads");
     }
 
-    // --- addLink ---
 
     @Test
     void givenValidUrl_whenAddLink_thenAttachmentSaved() {
@@ -70,7 +69,6 @@ class RaceAttachmentServiceTest {
                 .hasMessageContaining("http");
     }
 
-    // --- deleteAttachment ---
 
     @Test
     void givenFileAttachment_whenDeleteAttachment_thenDeletesFileAndRecord() {
@@ -115,7 +113,6 @@ class RaceAttachmentServiceTest {
         verify(raceAttachmentRepository).delete(attachment);
     }
 
-    // --- uploadAttachment ---
 
     @Test
     void givenFile_whenUploadAttachment_thenStoresFileAndCreatesAttachment() throws Exception {
@@ -166,7 +163,6 @@ class RaceAttachmentServiceTest {
                 .hasMessageContaining("Filename");
     }
 
-    // --- downloadAttachment ---
 
     @Test
     void givenLinkAttachment_whenDownloadAttachment_thenReturnsBadRequest() {
@@ -203,7 +199,6 @@ class RaceAttachmentServiceTest {
         assertThat(response.getStatusCode().value()).isEqualTo(400);
     }
 
-    // --- downloadAttachment security ---
 
     @Test
     void givenPathTraversalUrl_whenDownloadAttachment_thenReturnsBadRequest() {

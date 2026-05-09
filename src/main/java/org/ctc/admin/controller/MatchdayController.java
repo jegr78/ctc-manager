@@ -119,8 +119,6 @@ public class MatchdayController {
         return "redirect:/admin/matchdays?seasonId=" + seasonId;
     }
 
-    // --- Graphic download endpoints ---
-
     @PostMapping("/{id}/download-overview")
     public ResponseEntity<byte[]> downloadOverview(@PathVariable UUID id) {
         try {
@@ -177,8 +175,6 @@ public class MatchdayController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .body(png);
     }
-
-    // --- JSON API endpoints ---
 
     @GetMapping("/by-season")
     @ResponseBody

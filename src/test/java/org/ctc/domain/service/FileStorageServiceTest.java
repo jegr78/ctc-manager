@@ -247,7 +247,6 @@ class FileStorageServiceTest {
 				.hasMessageContaining("Only HTTPS URLs allowed");
 	}
 
-	// --- SECU-01: SSRF hostname validation tests ---
 
 	@Test
 	void givenLocalhostUrl_whenStoreFromUrl_thenThrowsIllegalArgument() {
@@ -320,7 +319,6 @@ class FileStorageServiceTest {
 				.isInstanceOf(IOException.class);
 	}
 
-	// --- SECU-02: Path traversal protection tests ---
 
 	@Test
 	void givenPathTraversalFilename_whenStore_thenThrowsIllegalArgument() {

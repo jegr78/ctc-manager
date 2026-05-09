@@ -63,7 +63,7 @@ class MatchResultsGraphicServiceTest {
 		var awayTeam = new Team("Away", "AWY");
 		awayTeam.setId(UUID.randomUUID());
 
-		var matchday = new Matchday(new Season("S"), "MD 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1);
 		var match = new Match(matchday, homeTeam, awayTeam);
 		match.setRaces(new ArrayList<>());
 
@@ -93,7 +93,7 @@ class MatchResultsGraphicServiceTest {
 		var awayTeam = new Team("Away", "AWY");
 		awayTeam.setId(UUID.randomUUID());
 
-		var matchday = new Matchday(new Season("S"), "MD 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1);
 		var match = new Match(matchday, homeTeam, awayTeam);
 		match.setRaces(new ArrayList<>());
 
@@ -118,7 +118,7 @@ class MatchResultsGraphicServiceTest {
 		var awayTeam = new Team("Away", "AWY");
 		awayTeam.setId(UUID.randomUUID());
 
-		var matchday = new Matchday(new Season("S"), "MD 1", 1);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(new Season("S"), "MD 1", 1);
 		var match = new Match(matchday, homeTeam, awayTeam);
 		match.setRaces(new ArrayList<>());
 

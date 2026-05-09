@@ -3,6 +3,7 @@ package org.ctc.domain.repository;
 import org.ctc.domain.model.RaceLineup;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,5 +28,14 @@ public interface RaceLineupRepository extends JpaRepository<RaceLineup, UUID> {
 	List<RaceLineup> findByTeamIdIn(List<UUID> teamIds);
 
 	@EntityGraph(attributePaths = {"driver", "team"})
+	@Query("SELECT rl FROM RaceLineup rl WHERE rl.race.matchday.phase.season.id = :seasonId")
 	List<RaceLineup> findByRaceMatchdaySeasonId(UUID seasonId);
+
+	/**
+	 * Returns RaceLineup entries for a specific driver in a specific season.
+	 * Used to attribute stand-in drivers who have no REGULAR-phase PhaseTeam row.
+	 */
+	@EntityGraph(attributePaths = {"driver", "team"})
+	@Query("SELECT rl FROM RaceLineup rl WHERE rl.driver.id = :driverId AND rl.race.matchday.phase.season.id = :seasonId")
+	List<RaceLineup> findByDriverIdAndRaceMatchdaySeasonId(UUID driverId, UUID seasonId);
 }

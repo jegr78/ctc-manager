@@ -8,15 +8,28 @@ Gran Turismo Racing League Management application (Spring Boot 4 / Thymeleaf / M
 
 Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## Current State (after v1.8)
+## Current State (after v1.9)
 
-- **Codebase:** ~15k LOC Java (Prod) + ~21k LOC Java (Tests), 1064 Tests, 82%+ Coverage
+- **Codebase:** ~17k LOC Java (Prod) + ~25k LOC Java (Tests), 1246 Tests (1215 Surefire + 31 Failsafe), 87.24% Line Coverage
 - **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
 - **Security:** HTTP Basic Auth (prod/docker), SSRF hostname blocklist, path traversal defense, CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation, Content-Disposition sanitization, MatchdayForm DTO (mass assignment protection)
-- **Architecture:** Clean 3-tier (Controller → Service → Repository), no God Services, centralized exception handling, domain services fully decoupled from admin layer, RaceLineup as source of truth for driver-team assignment
-- **Database:** 36 FK-Indexes, 28 @EntityGraph annotations, Flyway-managed
-- **Templates:** CSS utility classes instead of inline styles, TemplateManageable generic dispatch
-- **Data:** All UI text and code comments in English, dev profile with fictive test data
+- **Architecture:** Clean 3-tier (Controller → Service → Repository), no God Services, centralized exception handling, domain services fully decoupled from admin layer, RaceLineup as source of truth for driver-team assignment, sitegen decomposed into 5 page-generator beans + SiteSlugger + TemplateWriter (D-20)
+- **Database:** 36 FK-Indexes, 28 @EntityGraph annotations, Flyway-managed; Phase/Group model: `season_phases`, `season_phase_groups`, `phase_teams` tables driving Matchday and Playoff phase association
+- **Templates:** CSS utility classes instead of inline styles, TemplateManageable generic dispatch, phase-/group-aware public site templates (`standings.html`, `matchdays.html`, `driver-ranking.html`, `team-profile.html`, `driver-profile.html`)
+- **Data:** All UI text and code comments in English, dev profile with fictive test data including GROUPS multi-phase fixture (Season 2023) + Empty-Phase fixture for D-22 coverage
+- **Public Site:** Phase-tab row + group-sub-tab row, per-phase URL variants, Phase Breakdown sections on team/driver profiles, alltime aggregation across all phases (D-19 TRACKED BEHAVIOR CHANGE), desktop sticky table headers
+
+## Next Milestone
+
+(None — awaiting next milestone definition via `/gsd-new-milestone`.)
+
+**Candidates already captured as deferred from v1.9:**
+
+- Quality Gate Lock / CI comment-noise guard (Phase 67 D-06 forward commitment)
+- Plan SUMMARY frontmatter sweep for phases 56/57/62/64 (bookkeeping, ~15 plan SUMMARYs)
+- Per-group matchday generation UI affordance (`SeasonController.generateMatchdays:251` Rule-3 deviation)
+- `StandingsController.java:139` lazy collection style cleanup
+- UAT-02 (legacy season visual smoke against real pre-V4 production data) on next deploy
 
 ## Requirements
 
@@ -100,15 +113,26 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ `@RequestParam` + `Map<String, String>` form-binding (D-15 override of original DTO wording) — Phase 55
 - ✓ JaCoCo 82% line gate met with 1064 tests project-wide (+52 from baseline) — Phase 55
 
+### Validated (v1.9)
+
+- ✓ `SeasonPhase` entity (REGULAR/PLAYOFF/PLACEMENT) with format/scoring/dates at phase level — Phase 56
+- ✓ `SeasonPhaseGroup` as sub-groups of GROUPS-layout phases (independent roster + standings) — Phase 56
+- ✓ `PhaseTeam` roster (Team↔Phase, optional Group); `SeasonDriver` structurally unchanged — Phase 56
+- ✓ Mechanical migration of existing seasons → 1 REGULAR phase (+ 1 PLAYOFF if existed); old `season_id` columns dropped in V6 — Phases 57, 61
+- ✓ `Playoff` re-anchored from Season to Phase; M:N `playoff_seasons` table dropped — Phases 57, 61
+- ✓ Domain services (`StandingsService`, `DriverRankingService`, `MatchdayService`, `PlayoffService`, `PlayoffSeedingService`, `SeasonManagementService`) phase-aware with delete-guard, REGULAR auto-sync, dual-API surface (D-18, D-25, D-26 v1.9) — Phase 58
+- ✓ Driver import: `findByYearAndNumber(int, int)` replaces `findByYear(int)`; tab pattern `^\d{4}_S\d+$` — Phase 59
+- ✓ `TestDataService` and `DevDataSeeder` directly in new model with multi-phase + GROUPS fixture (Season 2023) + Empty-Phase fixture (Season 2024-3) — Phases 59, 62
+- ✓ Admin UI: Saison-Detail with phase tabs, group sub-tabs, per-phase standings + combined view — Phase 60
+- ✓ Cleanup quality gate: bridge columns dropped, no admin code referencing legacy `season_id` on Matchday/Playoff — Phase 61
+- ✓ Public static site phase- and group-aware (analogous to admin season-detail): per-phase URL variants, group sub-tab row, PLAYOFF tab routing to playoff.html (D-08), Phase Breakdown sections on team/driver profiles, byte-identity preserved for single-LEAGUE seasons (SC4) — Phase 62
+- ✓ D-19 TRACKED BEHAVIOR CHANGE: alltime aggregation spans all phases (REGULAR + PLAYOFF + PLACEMENT) — Phase 62
+- ✓ Cross-cutting regression IT (`SiteGeneratorPhaseAwarenessIT`, 9 @Test methods covering SC1-SC5 + D-22 + D-26) — Phase 62
+- ✓ JaCoCo 82% line gate held with 1246 tests project-wide (1215 Surefire + 31 Failsafe), 87.24% line coverage — Phase 62
+
 ### Active
 
 (None — awaiting next milestone definition via `/gsd-new-milestone`.)
-
-#### Shipped Milestone: v1.6 Static Site Quality
-
-**Goal:** Fix broken links, add missing content, improve navigation/cross-linking, and deliver a polished, accessible static site with professional UX.
-
-All 56 requirements complete (22 original + 26 extended + 3 YouTube hero + 5 alltime pages). See REQUIREMENTS.md for full traceability. Pending `/gsd-complete-milestone` archival.
 
 ### Out of Scope
 
@@ -148,10 +172,25 @@ All 56 requirements complete (22 original + 26 extended + 3 YouTube hero + 5 all
 | `@RequestParam` primitives + `Map<String, String>` instead of static Form DTO (D-15 override of QUAL-03 wording) | Per-row keys (`seasonId_<year>`, `skip_<psnId>_<year>`, `accept_<psnId>_<year>`) are dynamic — DTO would not fit | ✓ v1.8 |
 | Per-tab cache key for FUZZY-accept driver resolution (CR-01 fix) | Per-tab `accept_<psnId>_<year>` choices must stay isolated; cross-tab dedup keeps plain PSN key for the no-accept branch | ✓ v1.8 |
 | Test years 2021/2022 (not 2023/2024) | DevDataSeeder seeds 2023/2024/2026 on context startup → `findByYear()` ambiguity broke conflict-overwrite assertions | ✓ v1.8 |
+| Bridge-Spalten-Drop in V6 erweitert (Phase 61 D-01) | matchdays.season_id + playoffs.season_id sind denormalisiert + wartungsbelastend (vs. canonical Season → SeasonPhase → Matchday/Playoff); Phase 56 D-02 / Phase 57 SC5 superseded | ✓ v1.9 |
+| Phase-additive entity scope (Phase 56) | Old Season fields + season_id FKs stay until Phase 61 — services migrate before schema cleanup, so Phase 57 data migration runs against a stable surface | ✓ v1.9 |
+| `findByType` (Optional) over `findRegularPhase` (throws) for legacy bridge (Phase 58 D-?) | Avoids transaction rollback-only poisoning; pre-V4 seasons fall through gracefully | ✓ v1.9 |
+| `PlayoffService.createPlayoff` atomically writes PLAYOFF SeasonPhase + Playoff (Plan 58-05 D-19) | Single `@Transactional` boundary mitigates Pitfall 2 (orphan phase rows on partial failure) | ✓ v1.9 |
+| `PlayoffSeedingService` dual-flow: manual seeds win, REGULAR Top-N is fallback (Plan 58-05 D-15) | Preserves legacy admin workflow while adding the new auto-seeding path; PhaseTeam roster on PLAYOFF phase populated as side-effect (D-20) | ✓ v1.9 |
+| Driver-import `findByYearAndNumber(int, int)` replaces `findByYear(int)` (Phase 59) | Multi-season-per-year ambiguity resolved at the API surface, not via heuristic; tab pattern extended to `^\d{4}_S\d+$` | ✓ v1.9 |
+| Group membership for imported drivers resolved via `PhaseTeam` of the REGULAR phase, not via per-driver sheet override (Phase 59) | Group is a phase-scope property of the team, not a driver attribute — keeps the import sheet shape stable | ✓ v1.9 |
+| `TestDataService` + `DevDataSeeder` rebuilt directly on the new model — no Backward-Compat helpers (DATA-01, DATA-02) | Helpers would mask schema regressions; T-prefix isolation keeps fixtures collision-free with manual data | ✓ v1.9 |
+| D-19 alltime aggregation spans REGULAR + PLAYOFF + PLACEMENT (Phase 62, TRACKED BEHAVIOR CHANGE) | Public alltime totals include playoff results — explicit user decision to make playoff outcomes count alltime; flagged as behavior change in 62-CONTEXT.md | ✓ v1.9 |
+| `templates/site/` mirrors `templates/admin/season-detail.html` two-row tabs structure (Phase 62) | Same UX shape across admin and public site reduces cognitive load for the league operator | ✓ v1.9 |
+| Parent-team always wins on shortName multi-match (Phase 70 D-05, inverts Phase 66 D-04) | Domain model: `SeasonDriver.team_id` references parent; sub-team split is per-match via `RaceLineup`, never per-phase. Phase 66 D-04 was a model-violating default discovered during live MariaDB UAT | ✓ v1.9 |
+| Group-resolution UX in driver-import preview decommissioned (Phase 70 D-09) | Per Phase-70 D-05 the parent team is the only correct answer; `usesGroups` / `resolvedGroupName` / `TEAM_NOT_IN_REGULAR_PHASE` warning all became dead branches | ✓ v1.9 |
+| `findByPsnId` guard in NEW_DRIVER branch of DriverSheetImportService (Phase 70 GAP-70-01 fix) | `computeIfAbsent` did not consult the DB → cross-tab duplicate PSN-ID inserts caused full-transaction rollback on live MariaDB import (Saison 2023). 2 IT regression tests fence the regression | ✓ v1.9 |
+| Lombok 1.18.46 + JEP 498 `--sun-misc-unsafe-memory-access=allow` (Phase 68) | Java 25 emits terminally-deprecated warnings for `lombok.permit.Permit`'s `sun.misc.Unsafe` calls; Lombok 1.18.46 + the JEP 498 flag silence the warnings without forcing a Java downgrade | ✓ v1.9 |
+| Guava pinned to 33.4.8-jre (`<guava.version>` override) | Transitive Guava 33.1.0-jre from `google-api-client` emitted `AbstractFuture$UnsafeAtomicHelper` Unsafe warning on Java 25; 33.4.x switches to `VarHandle` for Java 9+ | ✓ v1.9 |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-04-25 — v1.8 milestone shipped and archived (PR #116 merged as 042cfbf)*
+*Last updated: 2026-05-09 — v1.9 milestone shipped: Season Phases & Groups, all 15 phases (56-70) verified PASSED, 38/38 requirements satisfied, 1227 unit + 31 Playwright E2E tests green, JaCoCo line coverage 87.02% (gate 82%), live UAT D-22 confirmed Saison 2023 driver import on MariaDB (287/357/0 errors)*

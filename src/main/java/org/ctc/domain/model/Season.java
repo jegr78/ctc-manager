@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -16,7 +15,7 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"matchdays", "seasonDrivers", "seasonTeams", "cars", "tracks", "raceScoring", "matchScoring"})
+@ToString(exclude = {"phases", "seasonDrivers", "seasonTeams", "cars", "tracks"})
 public class Season extends BaseEntity {
 
 	@Id
@@ -35,36 +34,12 @@ public class Season extends BaseEntity {
 
 	private String description;
 
-	private LocalDate startDate;
-
-	private LocalDate endDate;
-
 	@Column(nullable = false)
 	private boolean active = false;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private SeasonFormat format = SeasonFormat.LEAGUE;
-
-	private Integer totalRounds;
-
-	@Column(nullable = false)
-	private int legs = 1;
-
-	@Column(name = "event_duration_minutes")
-	private Integer eventDurationMinutes;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "race_scoring_id", nullable = false)
-	private RaceScoring raceScoring;
-
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "match_scoring_id", nullable = false)
-	private MatchScoring matchScoring;
-
 	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("sortIndex ASC")
-	private List<Matchday> matchdays = new ArrayList<>();
+	private List<SeasonPhase> phases = new ArrayList<>();
 
 	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
 	private List<SeasonDriver> seasonDrivers = new ArrayList<>();
@@ -109,6 +84,18 @@ public class Season extends BaseEntity {
 				.map(SeasonTeam::getTeam)
 				.sorted(Comparator.comparing(Team::getShortName))
 				.collect(Collectors.toCollection(ArrayList::new));
+	}
+
+	/**
+	 * Convenience method: returns all matchdays across all phases of this season,
+	 * sorted first by phase sortIndex, then by matchday sortIndex. Derived from the phases association.
+	 */
+	public List<Matchday> getMatchdays() {
+		return phases.stream()
+				.flatMap(p -> p.getMatchdays().stream())
+				.sorted(Comparator.comparingInt((Matchday m) -> m.getPhase().getSortIndex())
+						.thenComparingInt(Matchday::getSortIndex))
+				.toList();
 	}
 
 	/**

@@ -69,6 +69,9 @@ class RaceControllerTest {
 	private RaceAttachmentRepository raceAttachmentRepository;
 
 	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+
+	@Autowired
 	private TestHelper testHelper;
 
 	@Value("${app.upload-dir:uploads}")
@@ -85,10 +88,13 @@ class RaceControllerTest {
 		var rs = raceScoringRepository.save(new RaceScoring("RT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
 		var ms = matchScoringRepository.save(new MatchScoring("RT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Race Test Season", 2026, 1);
-		s.setRaceScoring(rs);
-		s.setMatchScoring(ms);
 		season = seasonRepository.save(s);
-		matchday = matchdayRepository.save(new Matchday(season, "RT Matchday", 1));
+		// persist a REGULAR phase carrying scoring; bind matchday to it.
+		var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		regularPhase.setRaceScoring(rs);
+		regularPhase.setMatchScoring(ms);
+		regularPhase = seasonPhaseRepository.save(regularPhase);
+		matchday = matchdayRepository.save(new Matchday(regularPhase, "RT Matchday", 1));
 		home = teamRepository.save(new Team("Home Racing", "HRC"));
 		away = teamRepository.save(new Team("Away Racing", "ARC"));
 		var match = matchRepository.save(new Match(matchday, home, away));
@@ -168,7 +174,6 @@ class RaceControllerTest {
 				.andExpect(model().attributeExists("raceForm", "race", "raceScoring"));
 	}
 
-	// --- POST /admin/races/save ---
 
 	@Test
 	void givenMatchdayAndTeams_whenSaveNewRace_thenRedirectsWithSuccess() throws Exception {
@@ -184,7 +189,6 @@ class RaceControllerTest {
 				.andExpect(flash().attributeExists("successMessage"));
 	}
 
-	// --- POST /admin/races/{id}/results ---
 
 	@Test
 	void givenTwoDrivers_whenSaveResults_thenRedirectsAndPersistsAndAllowsRepopulate() throws Exception {
@@ -222,7 +226,6 @@ class RaceControllerTest {
 		assertEquals(1, updated.getResults().size());
 	}
 
-	// --- POST /admin/races/{id}/quick-score ---
 
 	@Test
 	void givenValidReturnUrl_whenQuickScore_thenRedirectsToReturnUrlAndPersistsScore() throws Exception {
@@ -276,7 +279,6 @@ class RaceControllerTest {
 				.andExpect(redirectedUrl("/admin/races"));
 	}
 
-	// --- POST /admin/races/{id}/attachments/link ---
 
 	@Test
 	void givenValidHttpLink_whenAddLink_thenRedirectsWithSuccess() throws Exception {
@@ -314,7 +316,6 @@ class RaceControllerTest {
 				.andExpect(flash().attribute("errorMessage", "Link must start with http:// or https://"));
 	}
 
-	// --- POST /admin/races/{id}/delete ---
 
 	@Test
 	void givenExistingRace_whenDeleteRace_thenRedirectsAndRemoves() throws Exception {
@@ -328,7 +329,6 @@ class RaceControllerTest {
 		assertFalse(raceRepository.findById(race.getId()).isPresent());
 	}
 
-	// --- GET /admin/races/used-selections ---
 
 	@Test
 	void givenRaceWithCar_whenGetUsedSelections_thenReturnsUsedCarIds() throws Exception {
@@ -369,7 +369,6 @@ class RaceControllerTest {
 				.andExpect(jsonPath("$.usedCarIds").isEmpty());
 	}
 
-	// --- Uniqueness validation ---
 
 	@Test
 	void givenHomeTeamAlreadyUsedCar_whenSaveRaceWithSameCar_thenRedirectsWithError() throws Exception {
@@ -381,7 +380,9 @@ class RaceControllerTest {
 		raceRepository.save(race);
 
 		// Create a second matchday for the second race
-		var matchday2 = matchdayRepository.save(new Matchday(season, "RT Matchday 2", 2));
+		// bind matchday to the season's persisted REGULAR phase.
+		var regularPhase2 = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+		var matchday2 = matchdayRepository.save(new Matchday(regularPhase2, "RT Matchday 2", 2));
 
 		// when
 		mockMvc.perform(post("/admin/races/save")
@@ -395,7 +396,6 @@ class RaceControllerTest {
 						home.getShortName() + " has already used " + car.getDisplayName() + " this season"));
 	}
 
-	// --- Pool validation ---
 
 	@Test
 	void givenCarNotInSeasonPool_whenSaveRace_thenRedirectsWithError() throws Exception {
@@ -431,7 +431,6 @@ class RaceControllerTest {
 				.andExpect(flash().attribute("errorMessage", "Track is not in this season's pool"));
 	}
 
-	// --- POST /admin/races/{id}/attachments/upload ---
 
 	@Test
 	void givenImageFile_whenUploadAttachment_thenRedirectsWithSuccess() throws Exception {
@@ -448,7 +447,6 @@ class RaceControllerTest {
 				.andExpect(flash().attribute("successMessage", "File uploaded: test-image.png"));
 	}
 
-	// --- POST /admin/races/attachments/{id}/delete ---
 
 	@Test
 	void givenLinkAttachment_whenDeleteAttachment_thenRedirectsAndRemoves() throws Exception {
@@ -483,7 +481,6 @@ class RaceControllerTest {
 		assertFalse(raceAttachmentRepository.findById(attachment.getId()).isPresent());
 	}
 
-	// --- GET /admin/races/attachments/{id}/download ---
 
 	@Test
 	void givenExistingFileAttachment_whenDownloadAttachment_thenReturnsFileWithContentDisposition() throws Exception {
@@ -534,7 +531,6 @@ class RaceControllerTest {
 				.andExpect(status().isNotFound());
 	}
 
-	// --- Duplicate track validation ---
 
 	@Test
 	void givenHomeTeamAlreadyUsedTrack_whenSaveRaceWithSameTrack_thenRedirectsWithError() throws Exception {
@@ -545,7 +541,9 @@ class RaceControllerTest {
 		race.setTrack(track);
 		raceRepository.save(race);
 
-		var matchday2 = matchdayRepository.save(new Matchday(season, "RT Matchday DT", 3));
+		// bind matchday to the season's persisted REGULAR phase.
+		var regularPhaseDt = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+		var matchday2 = matchdayRepository.save(new Matchday(regularPhaseDt, "RT Matchday DT", 3));
 
 		// when
 		mockMvc.perform(post("/admin/races/save")
@@ -559,7 +557,6 @@ class RaceControllerTest {
 						home.getShortName() + " has already used " + track.getName() + " this season"));
 	}
 
-	// --- Race detail with results ---
 
 	@Test
 	void givenRaceWithResults_whenGetRaceDetail_thenReturnsDetailWithScores() throws Exception {
@@ -589,7 +586,6 @@ class RaceControllerTest {
 				.andExpect(model().attributeExists("race", "homeTotal", "awayTotal", "driverTeamMap"));
 	}
 
-	// --- Race detail with results-graphic flags ---
 
 	@Test
 	void givenRaceWithoutResults_whenGetRaceDetail_thenReturnsCorrectResultsGraphicFlags() throws Exception {
@@ -603,7 +599,6 @@ class RaceControllerTest {
 				.andExpect(model().attribute("canGenerateResults", false));
 	}
 
-	// --- POST /admin/races/{id}/generate-results ---
 
 	@Test
 	void givenRaceWithoutResults_whenGenerateResults_thenRedirectsWithError() throws Exception {
@@ -615,7 +610,6 @@ class RaceControllerTest {
 				.andExpect(flash().attributeExists("errorMessage"));
 	}
 
-	// --- POST /admin/races/{id}/generate-settings ---
 
 	@Test
 	void givenRaceWithoutSettings_whenGenerateSettings_thenRedirectsWithError() throws Exception {
@@ -627,7 +621,6 @@ class RaceControllerTest {
 				.andExpect(flash().attributeExists("errorMessage"));
 	}
 
-	// --- POST /admin/races/{id}/generate-overlay ---
 
 	@Test
 	void givenRaceWithNoMatch_whenGenerateOverlay_thenRedirectsWithError() throws Exception {
@@ -644,7 +637,6 @@ class RaceControllerTest {
 				.andExpect(flash().attributeExists("errorMessage"));
 	}
 
-	// --- GET detail with settings flags ---
 
 	@Test
 	void givenRaceWithoutSettings_whenGetRaceDetail_thenReturnsCorrectSettingsFlags() throws Exception {
@@ -661,7 +653,6 @@ class RaceControllerTest {
 				.andExpect(model().attribute("overlayExists", false));
 	}
 
-	// --- List races with scores ---
 
 	@Test
 	void givenMatchWithScores_whenGetRaces_thenReturnsRaceScoresInModel() throws Exception {

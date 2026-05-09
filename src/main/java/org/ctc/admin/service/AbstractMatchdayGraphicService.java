@@ -44,7 +44,11 @@ public abstract class AbstractMatchdayGraphicService extends AbstractGraphicServ
 
 	public MatchdayGraphicData prepareBaseContext(Matchday matchday) {
 		var season = matchday.getSeason();
-		var standings = standingsService.calculateStandings(season.getId());
+		var phase = matchday.getPhase();
+		var group = matchday.getGroup();
+		var standings = standingsService.calculateStandings(
+				phase.getId(),
+				group != null ? group.getId() : null);
 
 		Map<UUID, Integer> seedMap = new HashMap<>();
 		Map<UUID, TeamStanding> standingMap = new HashMap<>();

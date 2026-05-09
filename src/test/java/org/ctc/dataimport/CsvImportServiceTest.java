@@ -47,6 +47,8 @@ class CsvImportServiceTest {
 	private ScoringService scoringService;
 	@Mock
 	private RaceLineupRepository raceLineupRepository;
+	@Mock
+	private org.ctc.domain.service.SeasonPhaseService seasonPhaseService;
 
 	@InjectMocks
 	private CsvImportService csvImportService;
@@ -66,9 +68,8 @@ class CsvImportServiceTest {
 		season.setId(UUID.randomUUID());
 		season.setName("Season 1");
 		var raceScoring = new RaceScoring();
-		season.setRaceScoring(raceScoring);
 
-		matchday = new Matchday(season, "Matchday 1", 1);
+		matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Matchday 1", 1);
 		matchday.setId(UUID.randomUUID());
 
 		var parentTeam = new Team("Alpha Racing", "AHR");
@@ -97,6 +98,13 @@ class CsvImportServiceTest {
 
 		driver2 = new Driver("driver2_psn", "Driver Two");
 		driver2.setId(UUID.randomUUID());
+
+		// scoring lives on the REGULAR SeasonPhase. Provide a default
+		// stub for every test so any callsite reading findRegularPhase().getRaceScoring()
+		// finds a non-null RaceScoring without each test re-stubbing the lookup.
+		var stubPhase = matchday.getPhase();
+		stubPhase.setRaceScoring(new RaceScoring());
+		lenient().when(seasonPhaseService.findRegularPhase(season.getId())).thenReturn(stubPhase);
 	}
 
 	private void setupCommonMocks() {
@@ -396,7 +404,6 @@ class CsvImportServiceTest {
 		assertThat(preview.getRows()).isEmpty();
 	}
 
-	// --- checkDuplicate ---
 
 	@Test
 	void givenExistingMatch_whenCheckDuplicate_thenReturnsTrue() {
@@ -445,8 +452,11 @@ class CsvImportServiceTest {
 	@Test
 	void givenNonExistentMatchday_whenCheckDuplicate_thenReturnsFalse() {
 		// given
+		// checkDuplicate now resolves matchdays via the REGULAR phase finder
+		// (findByPhaseIdOrderBySortIndexAsc) instead of the legacy season-id finder.
 		when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
-		when(matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId())).thenReturn(List.of());
+		when(matchdayRepository.findByPhaseIdOrderBySortIndexAsc(matchday.getPhase().getId()))
+				.thenReturn(List.of());
 
 		var metadata = new CsvImportService.ImportMetadata(season.getId(), "NonExistent MD", null, null);
 		var preview = new CsvImportService.ImportPreview(metadata);
@@ -462,7 +472,6 @@ class CsvImportServiceTest {
 		assertThat(isDuplicate).isFalse();
 	}
 
-	// --- getPlayoffMatchups ---
 
 	@Test
 	void whenGetPlayoffMatchups_thenReturnsReadyMatchups() {
@@ -497,7 +506,6 @@ class CsvImportServiceTest {
 		assertThat(matchups.getFirst().roundLabel()).isEqualTo("Quarterfinal");
 	}
 
-	// --- parseAndPreview edge cases ---
 
 	@Test
 	void givenCsvWithInvalidPosition_whenParseAndPreview_thenAddsError() throws Exception {
@@ -533,7 +541,6 @@ class CsvImportServiceTest {
 		assertThat(preview.hasErrors()).isFalse();
 	}
 
-	// --- getMatchdayLabel ---
 
 	@Test
 	void givenExistingMatchday_whenGetMatchdayLabel_thenReturnsLabel() {
@@ -561,7 +568,6 @@ class CsvImportServiceTest {
 		assertThat(label).isEmpty();
 	}
 
-	// --- resolveDriver edge case: unconfirmed fuzzy match ---
 
 	@Test
 	void givenUnconfirmedFuzzyMatch_whenExecuteImport_thenAddsError() {
@@ -591,7 +597,6 @@ class CsvImportServiceTest {
 		assertThat(result.getErrors().getFirst()).contains("could not be assigned");
 	}
 
-	// --- Multi-race import tests ---
 
 	@Test
 	void givenMultipleRacePreviewsForSameTeamPair_whenExecuteMultiRaceImport_thenCreatesOneMatchWithMultipleRaces() {
@@ -835,7 +840,6 @@ class CsvImportServiceTest {
 		assertThat(result.hasErrors()).isFalse();
 	}
 
-	// --- Coverage Tests: Uncovered Code Paths ---
 
 	@Test
 	void givenPreviewWithEmptyRowsList_whenExecuteMultiRaceImport_thenAddsError() {

@@ -27,16 +27,13 @@ public class MatchdayService {
     private final MatchdayRepository matchdayRepository;
     private final SeasonRepository seasonRepository;
     private final RaceLineupRepository raceLineupRepository;
-
-    // --- Return types ---
+    private final SeasonPhaseService seasonPhaseService;
 
     public record MatchdayData(UUID id, String label, int sortIndex) {}
     public record MatchdayListData(List<Matchday> matchdays, UUID selectedSeasonId, List<Season> seasons) {}
     public record MatchdayDetailData(Matchday matchday, Map<String, List<RaceLineup>> lineupsByTeam,
                                       boolean hasMatches, boolean hasSchedule, long scheduleMissingCount,
                                       boolean hasResults) {}
-
-    // --- Season helpers (for controller form data) ---
 
     public List<Season> getAllSeasons() {
         return seasonRepository.findAll();
@@ -45,8 +42,6 @@ public class MatchdayService {
     public Season findSeasonById(UUID id) {
         return seasonRepository.findById(id).orElse(null);
     }
-
-    // --- List ---
 
     public MatchdayListData getMatchdayList(UUID seasonId) {
         List<Matchday> matchdays;
@@ -67,8 +62,6 @@ public class MatchdayService {
 
         return new MatchdayListData(matchdays, selectedSeasonId, seasonRepository.findAll());
     }
-
-    // --- Detail ---
 
     public MatchdayDetailData getMatchdayDetail(UUID id) {
         var matchday = matchdayRepository.findById(id)
@@ -91,12 +84,11 @@ public class MatchdayService {
         return new MatchdayDetailData(matchday, lineupsByTeam, hasMatches, hasSchedule, scheduleMissingCount, hasResults);
     }
 
-    // --- Save ---
-
     @Transactional
     public Matchday saveMatchday(String label, int sortIndex, UUID seasonId, UUID matchdayId) {
         var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var regular = seasonPhaseService.findRegularPhase(season.getId());
 
         Matchday matchday;
         if (matchdayId != null) {
@@ -104,17 +96,15 @@ public class MatchdayService {
                     .orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
             matchday.setLabel(label);
             matchday.setSortIndex(sortIndex);
-            matchday.setSeason(season);
+            matchday.setPhase(regular);
         } else {
-            matchday = new Matchday(season, label, sortIndex);
+            matchday = new Matchday(regular, label, sortIndex);
         }
 
         matchdayRepository.save(matchday);
         log.info("Saved matchday: {} (season {})", label, seasonId);
         return matchday;
     }
-
-    // --- Delete ---
 
     @Transactional
     public UUID deleteMatchday(UUID id) {
@@ -126,7 +116,20 @@ public class MatchdayService {
         return seasonId;
     }
 
-    // --- By season ID (JSON API) ---
+    /**
+     * Returns all matchdays of a phase, ordered by {@code sortIndex} ascending.
+     */
+    public List<Matchday> findByPhaseId(UUID phaseId) {
+        return matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phaseId);
+    }
+
+    /**
+     * Returns all matchdays of a (phase, group) tuple, ordered by {@code sortIndex} ascending.
+     * For LEAGUE-layout phases pass {@code groupId == null}; Spring Data derives {@code IS NULL}.
+     */
+    public List<Matchday> findByPhaseIdAndGroupId(UUID phaseId, UUID groupId) {
+        return matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId);
+    }
 
     public List<MatchdayData> getMatchdaysBySeason(UUID seasonId) {
         return matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId).stream()
@@ -134,14 +137,21 @@ public class MatchdayService {
                 .toList();
     }
 
-    // --- Create inline (JSON API) ---
-
     @Transactional
+    /**
+     * Creates a matchday inline (JSON API) bound to the season's REGULAR phase. The duplicate-label
+     * guard and {@code sortIndex} computation are scoped to the REGULAR phase to avoid cross-phase
+     * collisions with PLAYOFF matchdays (which use sortIndex &gt;= 100).
+     */
     public MatchdayData createInline(UUID seasonId, String label) {
         var season = seasonRepository.findById(seasonId)
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        var regular = seasonPhaseService.findRegularPhase(season.getId());
 
-        var existingMatchdays = matchdayRepository.findBySeasonIdOrderBySortIndexAsc(season.getId());
+        // Scope to the REGULAR phase: a season-wide lookup would (1) let playoff matchdays
+        // (sortIndex >= 100) poison the next REGULAR sortIndex and (2) make the duplicate-label
+        // check collide across phases.
+        var existingMatchdays = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(regular.getId());
 
         boolean duplicateLabel = existingMatchdays.stream()
                 .anyMatch(md -> md.getLabel().equals(label));
@@ -154,7 +164,7 @@ public class MatchdayService {
                 .max()
                 .orElse(0) + 1;
 
-        var matchday = matchdayRepository.save(new Matchday(season, label, nextSortIndex));
+        var matchday = matchdayRepository.save(new Matchday(regular, label, nextSortIndex));
         log.info("Created matchday inline: {} (season {})", matchday.getLabel(), season.getName());
 
         return new MatchdayData(matchday.getId(), matchday.getLabel(), matchday.getSortIndex());

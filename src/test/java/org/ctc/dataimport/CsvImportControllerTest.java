@@ -113,7 +113,6 @@ class CsvImportControllerTest {
 				.andExpect(model().attributeExists("errorMessage"));
 	}
 
-	// --- POST /admin/import/execute with valid CSV ---
 
 	@Test
 	void givenValidCsvWithMatchedDrivers_whenExecute_thenRedirectsWithSuccess() throws Exception {
@@ -144,7 +143,6 @@ class CsvImportControllerTest {
 				.andExpect(flash().attributeExists("successMessage"));
 	}
 
-	// --- POST /admin/import/preview with valid data ---
 
 	@Test
 	void givenValidCsvWithMatchedDrivers_whenPreview_thenShowsPreviewView() throws Exception {
@@ -171,7 +169,6 @@ class CsvImportControllerTest {
 				.andExpect(model().attributeExists("preview", "metadata"));
 	}
 
-	// --- POST /admin/import/execute with overwrite ---
 
 	@Test
 	void givenExistingImportAndOverwriteEnabled_whenExecute_thenRedirectsToImport() throws Exception {

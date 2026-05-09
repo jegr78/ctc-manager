@@ -48,6 +48,9 @@ class TrackControllerTest {
 	@Autowired
 	private MatchScoringRepository matchScoringRepository;
 
+	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
+
 	private Track track;
 
 	@BeforeEach
@@ -55,7 +58,6 @@ class TrackControllerTest {
 		track = trackRepository.save(new Track("Tsukuba Circuit", "Japan"));
 	}
 
-	// --- GET /admin/tracks ---
 
 	@Test
 	void whenGetTracks_thenReturnsTracksView() throws Exception {
@@ -67,7 +69,6 @@ class TrackControllerTest {
 				.andExpect(model().attributeExists("tracks"));
 	}
 
-	// --- GET /admin/tracks/new ---
 
 	@Test
 	void whenGetNewTrackForm_thenReturnsTrackForm() throws Exception {
@@ -79,7 +80,6 @@ class TrackControllerTest {
 				.andExpect(model().attributeExists("trackForm"));
 	}
 
-	// --- GET /admin/tracks/{id}/edit ---
 
 	@Test
 	void givenExistingTrack_whenGetEditForm_thenReturnsTrackForm() throws Exception {
@@ -91,7 +91,6 @@ class TrackControllerTest {
 				.andExpect(model().attributeExists("trackForm"));
 	}
 
-	// --- POST /admin/tracks/save ---
 
 	@Test
 	void givenValidTrackForm_whenSaveNewTrack_thenRedirectsAndPersists() throws Exception {
@@ -134,7 +133,6 @@ class TrackControllerTest {
 				.andExpect(view().name("admin/track-form"));
 	}
 
-	// --- POST /admin/tracks/{id}/delete ---
 
 	@Test
 	void givenUnreferencedTrack_whenDeleteTrack_thenRedirectsAndRemoves() throws Exception {
@@ -154,10 +152,13 @@ class TrackControllerTest {
 		var rs = raceScoringRepository.save(new RaceScoring("TT RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0));
 		var ms = matchScoringRepository.save(new MatchScoring("TT MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Track Test Season", 2026, 1);
-		s.setRaceScoring(rs);
-		s.setMatchScoring(ms);
 		var season = seasonRepository.save(s);
-		var matchday = matchdayRepository.save(new Matchday(season, "TT Matchday", 1));
+		// persist a REGULAR phase, then bind the matchday to it.
+		var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		regularPhase.setRaceScoring(rs);
+		regularPhase.setMatchScoring(ms);
+		regularPhase = seasonPhaseRepository.save(regularPhase);
+		var matchday = matchdayRepository.save(new Matchday(regularPhase, "TT Matchday", 1));
 		var home = teamRepository.save(new Team("Home Team", "HOM"));
 		var away = teamRepository.save(new Team("Away Team", "AWY"));
 		var match = matchRepository.save(new Match(matchday, home, away));
@@ -177,7 +178,6 @@ class TrackControllerTest {
 		assertTrue(trackRepository.findById(track.getId()).isPresent());
 	}
 
-	// --- POST /admin/tracks/{id}/image ---
 
 	@Test
 	void givenImageFile_whenUploadTrackImage_thenRedirectsAndSetsImageUrl() throws Exception {
@@ -203,8 +203,6 @@ class TrackControllerTest {
 		var rs = raceScoringRepository.save(new RaceScoring("TP RS " + java.util.UUID.randomUUID().toString().substring(0, 4), "20,17", null, 0));
 		var ms = matchScoringRepository.save(new MatchScoring("TP MS " + java.util.UUID.randomUUID().toString().substring(0, 4), 3, 1, 0));
 		var s = new Season("Pool Test Season", 2026, 1);
-		s.setRaceScoring(rs);
-		s.setMatchScoring(ms);
 		var season = seasonRepository.save(s);
 		season.getTracks().add(track);
 		seasonRepository.save(season);

@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import org.ctc.admin.dto.PlayoffForm;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.admin.dto.SeedForm;
 import org.ctc.admin.service.PlayoffRoundOverviewGraphicService;
@@ -13,12 +14,14 @@ import org.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
@@ -53,6 +56,18 @@ public class PlayoffController {
         return "admin/playoff-bracket";
     }
 
+    @GetMapping("/{id}")
+    public String detail(@PathVariable UUID id, Model model) {
+        var data = playoffService.getPlayoffDetailData(id);
+        model.addAttribute("seasons", data.allSeasons());
+        if (data.selectedSeasonId() != null) {
+            model.addAttribute("selectedSeasonId", data.selectedSeasonId());
+        }
+        model.addAttribute("playoff", data.playoff());
+        model.addAttribute("bracket", data.bracketView());
+        return "admin/playoff-bracket";
+    }
+
     @GetMapping("/new")
     public String create(@RequestParam(required = false) UUID seasonId, Model model) {
         var form = new PlayoffForm();
@@ -80,11 +95,30 @@ public class PlayoffController {
             redirectAttributes.addFlashAttribute("successMessage",
                     "Playoff created: " + playoff.getName());
             return "redirect:/admin/playoffs?seasonId=" + form.getSeasonId();
-        } catch (IllegalArgumentException | IllegalStateException e) {
+        } catch (IllegalArgumentException | IllegalStateException | BusinessRuleException e) {
             log.warn("Error creating playoff: {}", e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Error: " + e.getMessage());
             return "redirect:/admin/playoffs/new?seasonId=" + form.getSeasonId();
         }
+    }
+
+    /**
+     * Returns 410 Gone for the legacy add-season / remove-season URLs. These
+     * endpoints were removed in v1.9 when the Season → SeasonPhase → Playoff
+     * model replaced the M:N playoff_seasons join. Old bookmarks land here with
+     * a user-meaningful message instead of falling through to a generic 5xx.
+     */
+    @PostMapping({"/{id}/add-season", "/{id}/remove-season"})
+    public ModelAndView retiredPlayoffSeasonEndpoint(@PathVariable UUID id) {
+        log.info("Retired playoff-season endpoint hit for playoff {} — returning 410 Gone", id);
+        var mav = new ModelAndView("admin/error");
+        mav.setStatus(HttpStatus.GONE);
+        mav.addObject("status", HttpStatus.GONE.value());
+        mav.addObject("error", "Endpoint Retired");
+        mav.addObject("message",
+                "This endpoint was retired in v1.9. Playoff seasons are now managed via the Phase tabs on the Season detail page.");
+        mav.addObject("showDetails", false);
+        return mav;
     }
 
     @PostMapping("/round/{roundId}/set-legs")
@@ -94,22 +128,6 @@ public class PlayoffController {
         redirectAttributes.addFlashAttribute("successMessage",
                 round.getLabel() + ": " + bestOfLegs + " Leg(s)");
         return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForRound(roundId);
-    }
-
-    @PostMapping("/{id}/add-season")
-    public String addSeason(@PathVariable UUID id, @RequestParam UUID seasonId,
-                            RedirectAttributes redirectAttributes) {
-        playoffService.addSeasonToPlayoff(id, seasonId);
-        redirectAttributes.addFlashAttribute("successMessage", "Season linked");
-        return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForPlayoff(id);
-    }
-
-    @PostMapping("/{id}/remove-season")
-    public String removeSeason(@PathVariable UUID id, @RequestParam UUID seasonId,
-                               RedirectAttributes redirectAttributes) {
-        playoffService.removeSeasonFromPlayoff(id, seasonId);
-        redirectAttributes.addFlashAttribute("successMessage", "Season removed");
-        return "redirect:/admin/playoffs?seasonId=" + playoffService.getSeasonIdForPlayoff(id);
     }
 
     @GetMapping("/{id}/seed")
@@ -199,8 +217,6 @@ public class PlayoffController {
             return "redirect:/admin/playoffs/matchup/" + matchupId;
         }
     }
-
-    // --- Round graphic download endpoints ---
 
     @PostMapping("/round/{roundId}/download-overview")
     public ResponseEntity<byte[]> downloadRoundOverview(@PathVariable UUID roundId) {

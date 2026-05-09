@@ -1,6 +1,7 @@
 package org.ctc.domain.service;
 
 import jakarta.persistence.EntityManager;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -31,6 +33,8 @@ class PlayoffServiceTest {
 	private PlayoffBracketViewService playoffBracketViewService;
 	@Autowired
 	private PlayoffSeedingService playoffSeedingService;
+	@Autowired
+	private PlayoffRepository playoffRepository;
 	@Autowired
 	private PlayoffMatchupRepository playoffMatchupRepository;
 	@Autowired
@@ -57,9 +61,12 @@ class PlayoffServiceTest {
 	private ScoringService scoringService;
 	@Autowired
 	private EntityManager entityManager;
+	@Autowired
+	private SeasonPhaseRepository seasonPhaseRepository;
 
 	private Season season;
 	private RaceScoring raceScoring;
+	private MatchScoring matchScoring;
 	private List<Team> teams;
 
 	@BeforeEach
@@ -68,14 +75,17 @@ class PlayoffServiceTest {
 		var uniqueSuffix = UUID.randomUUID().toString().substring(0, 4);
 		raceScoring = raceScoringRepository.save(
 				new RaceScoring("Test RS " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
-		var matchScoring = matchScoringRepository.save(
+		matchScoring = matchScoringRepository.save(
 				new MatchScoring("Test MS " + uniqueSuffix, 3, 1, 0));
 
+		// scoring lives on the REGULAR SeasonPhase only.
 		season = new Season("Playoff Test " + UUID.randomUUID().toString().substring(0, 8), 2026, 1);
 		season.setActive(true);
-		season.setRaceScoring(raceScoring);
-		season.setMatchScoring(matchScoring);
 		season = seasonRepository.save(season);
+		var regular = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		regular.setRaceScoring(raceScoring);
+		regular.setMatchScoring(matchScoring);
+		seasonPhaseRepository.save(regular);
 
 		teams = new java.util.ArrayList<>();
 		String[] names = {"TA1", "TB2", "TC3", "TD4", "TE5", "TF6", "TG7", "TH8"};
@@ -198,7 +208,8 @@ class PlayoffServiceTest {
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
 
-			var matchday = matchdayRepository.save(new Matchday(season, "HF Hinspiel", 1));
+			// Matchday is bound to a SeasonPhase (PLAYOFF here).
+			var matchday = matchdayRepository.save(new Matchday(playoff.getPhase(), "HF Hinspiel", 1));
 			var matchup = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
 
 			var race = new Race();
@@ -259,7 +270,8 @@ class PlayoffServiceTest {
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(0).getId(), 1);
 			playoffSeedingService.seedTeam(sf.get(0).getId(), teams.get(1).getId(), 2);
 
-			var matchday = matchdayRepository.save(new Matchday(season, "HF", 1));
+			// Matchday is bound to a SeasonPhase (PLAYOFF here).
+			var matchday = matchdayRepository.save(new Matchday(playoff.getPhase(), "HF", 1));
 			var matchup = playoffMatchupRepository.findById(sf.get(0).getId()).orElseThrow();
 
 			var race = new Race();
@@ -783,4 +795,105 @@ class PlayoffServiceTest {
 			assertEquals(season.getId(), playoffService.getSeasonIdForRound(roundId));
 		}
 	}
+
+	// auto-create + @Deprecated M:N regression
+
+	@Nested
+	class PhaseAutoCreate {
+
+		@Test
+		void givenSeasonWithoutPlayoffPhase_whenCreatePlayoff_thenAutoCreatesPlayoffPhase() {
+			// given — season has no PLAYOFF phase yet (setUp creates the season without any phase)
+			assertThat(seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.PLAYOFF))
+					.isEmpty();
+
+			// when
+			var playoff = playoffService.createPlayoff(season.getId(), "Phase58-Test-Cup", 4);
+			entityManager.flush();
+			entityManager.clear();
+
+			// then — PLAYOFF phase was auto-created
+			var phase = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.PLAYOFF);
+			assertThat(phase).isPresent();
+			assertThat(phase.get().getLayout()).isEqualTo(PhaseLayout.BRACKET);
+			assertThat(phase.get().getFormat()).isEqualTo(SeasonFormat.LEAGUE); // D-08 DB-default workaround
+			// playoff.phase is set
+			var reloaded = playoffRepository.findById(playoff.getId()).orElseThrow();
+			assertThat(reloaded.getPhase()).isNotNull();
+			assertThat(reloaded.getPhase().getId()).isEqualTo(phase.get().getId());
+		}
+
+		@Test
+		void givenSeasonWithExistingPlayoffPhaseAndPlayoff_whenCreatePlayoff_thenThrowsBusinessRuleException() {
+			// given — create first playoff (which creates PLAYOFF phase + Playoff)
+			playoffService.createPlayoff(season.getId(), "Phase58-Test-First", 4);
+			entityManager.flush();
+
+			// when / then — second createPlayoff must throw BusinessRuleException (D-19 D-03)
+			assertThatThrownBy(() ->
+					playoffService.createPlayoff(season.getId(), "Phase58-Test-Second", 4))
+					.isInstanceOf(BusinessRuleException.class)
+					.hasMessageContaining("Season already has a playoff phase");
+		}
+
+		@Test
+		void givenSeasonWithPlayoffPhaseButNoPlayoff_whenCreatePlayoff_thenReusesExistingPlayoffPhase() {
+			// given — manually create a PLAYOFF phase but do NOT yet create a Playoff record.
+			// scoring lives on the SeasonPhase; reuse the test-class-level
+			// raceScoring + matchScoring fields here.
+			var existingPhase = new SeasonPhase(season, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 10);
+			existingPhase = seasonPhaseRepository.save(existingPhase);
+			entityManager.flush();
+			entityManager.clear();
+			var existingPhaseId = existingPhase.getId();
+
+			// when — createPlayoff should REUSE the existing PLAYOFF phase, not create a new one
+			var playoff = playoffService.createPlayoff(season.getId(), "Phase58-Test-Reuse", 4);
+			entityManager.flush();
+			entityManager.clear();
+
+			// then — the playoff is linked to the pre-existing phase
+			var reloaded = playoffRepository.findById(playoff.getId()).orElseThrow();
+			assertThat(reloaded.getPhase()).isNotNull();
+			assertThat(reloaded.getPhase().getId()).isEqualTo(existingPhaseId);
+			// no duplicate PLAYOFF phase was created
+			assertThat(seasonPhaseRepository.findBySeasonIdOrderBySortIndex(season.getId())
+					.stream().filter(p -> p.getPhaseType() == PhaseType.PLAYOFF).count())
+					.isEqualTo(1L);
+		}
+	}
+
+	@Nested
+	class Pitfall4PhaseLink {
+
+		@Test
+		void givenPlayoffMatchup_whenAddRaceToMatchup_thenNewMatchdayLinkedToPlayoffPhase() {
+			// given — playoff with at least one round + matchup (createPlayoff now auto-creates PLAYOFF phase)
+			var playoff = playoffService.createPlayoff(season.getId(), "Phase58-Test-Pitfall4", 4);
+			var matchup = playoff.getRounds().get(0).getMatchups().get(0);
+
+			playoffSeedingService.seedTeam(matchup.getId(), teams.get(0).getId(), 1);
+			playoffSeedingService.seedTeam(matchup.getId(), teams.get(1).getId(), 2);
+			entityManager.flush();
+			entityManager.clear();
+
+			var reloadedMatchup = playoffMatchupRepository.findById(matchup.getId()).orElseThrow();
+
+			// when
+			var race = playoffService.addRaceToMatchup(reloadedMatchup.getId(), null, null, null);
+			entityManager.flush();
+			entityManager.clear();
+
+			// then — the new matchday is linked to the PLAYOFF phase, not REGULAR
+			var newMatchday = matchdayRepository.findByPhaseIdOrderBySortIndexAsc(
+					playoff.getPhase().getId()).stream()
+					.filter(md -> md.getId().equals(race.getMatchday().getId()))
+					.findFirst();
+			assertThat(newMatchday).isPresent();
+			assertThat(newMatchday.get().getPhase().getId()).isEqualTo(playoff.getPhase().getId());
+			assertThat(newMatchday.get().getPhase().getPhaseType()).isEqualTo(PhaseType.PLAYOFF);
+		}
+	}
+
+	// @Nested DeprecatedM2NMethods removed; methods deleted in PlayoffService.
 }

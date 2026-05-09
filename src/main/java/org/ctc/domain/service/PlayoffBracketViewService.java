@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 
 /**
  * Service for assembling the playoff bracket view (read-only).
- * Responsible for building PlayoffBracketView from domain data.
- * Uses ScoringService.calculateTeamTotals for point aggregation (no duplication per D-06).
+ * Builds PlayoffBracketView from domain data, delegating to ScoringService for
+ * point aggregation.
  */
 @Slf4j
 @Service
@@ -110,8 +110,6 @@ public class PlayoffBracketViewService {
 				legViews
 		);
 	}
-
-	// --- View classes ---
 
 	public record PlayoffBracketView(UUID playoffId, String name, List<RoundView> rounds) {
 	}

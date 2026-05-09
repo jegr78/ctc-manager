@@ -76,18 +76,16 @@ public class DriverMergeService {
 
 	@Transactional
 	public MergeResult merge(UUID sourceId, UUID targetId) {
-		// D-03: Self-merge prevention
 		if (sourceId.equals(targetId)) {
 			throw new BusinessRuleException("Cannot merge driver with itself");
 		}
 
-		// D-04: Entity existence validation
 		var source = driverRepository.findById(sourceId)
 				.orElseThrow(() -> new EntityNotFoundException("Driver", sourceId));
 		var target = driverRepository.findById(targetId)
 				.orElseThrow(() -> new EntityNotFoundException("Driver", targetId));
 
-		// MERGE-05 + MERGE-11: Reassign SeasonDriver entries, dropping duplicates (per D-01, D-03)
+		// Reassign SeasonDriver entries, dropping duplicates.
 		var seasonDrivers = seasonDriverRepository.findByDriverId(sourceId);
 		int seasonDriversReassigned = 0;
 		int seasonDriversDropped = 0;
@@ -106,7 +104,7 @@ public class DriverMergeService {
 			}
 		}
 
-		// MERGE-06 + MERGE-12: Reassign RaceLineup entries, dropping duplicates (per D-01, D-03, D-07)
+		// Reassign RaceLineup entries, dropping duplicates.
 		var raceLineups = raceLineupRepository.findByDriverId(sourceId);
 		int raceLineupsReassigned = 0;
 		int raceLineupsDropped = 0;
@@ -125,7 +123,7 @@ public class DriverMergeService {
 			}
 		}
 
-		// MERGE-07 + MERGE-13: Reassign RaceResult entries, dropping duplicates (per D-01, D-02, D-03)
+		// Reassign RaceResult entries, dropping duplicates.
 		var raceResults = raceResultRepository.findByDriverId(sourceId);
 		int raceResultsReassigned = 0;
 		int raceResultsDropped = 0;
@@ -144,14 +142,14 @@ public class DriverMergeService {
 			}
 		}
 
-		// MERGE-08: Reassign PsnAlias entries via repository (D-08: NOT via Driver.aliases collection)
+		// Reassign PsnAlias entries via repository (not via Driver.aliases collection).
 		var aliases = psnAliasRepository.findByDriverId(sourceId);
 		for (var alias : aliases) {
 			alias.setDriver(target);
 			psnAliasRepository.save(alias);
 		}
 
-		// MERGE-09 + D-06 + D-07: Transfer source PSN-ID as alias on target (idempotent)
+		// Transfer source PSN-ID as alias on target (idempotent).
 		int psnIdCreated = 0;
 		String sourcePsnId = source.getPsnId();
 		if (psnAliasRepository.existsByAliasIgnoreCase(sourcePsnId)) {
@@ -162,7 +160,7 @@ public class DriverMergeService {
 			psnIdCreated = 1;
 		}
 
-		// MERGE-10: Delete source driver (safe — all FKs reassigned)
+		// Delete source driver — safe because all FKs are reassigned.
 		driverRepository.delete(source);
 
 		var result = new MergeResult(
@@ -175,7 +173,6 @@ public class DriverMergeService {
 				raceResultsDropped
 		);
 
-		// MERGE-14 + D-10: Audit logging with structured parameters
 		log.info("Driver merge complete: source=[{}] '{}', target=[{}] '{}', " +
 						"seasonDrivers={} (dropped={}), raceLineups={} (dropped={}), " +
 						"raceResults={} (dropped={}), aliases={}",

@@ -2,6 +2,7 @@ package org.ctc.admin.service;
 
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.SeasonTeamRepository;
+import org.ctc.domain.service.PhaseTestFixtures;
 import org.ctc.domain.service.StandingsService;
 import org.ctc.domain.service.StandingsService.TeamStanding;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +19,10 @@ import java.util.Locale;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AbstractMatchdayGraphicServiceTest {
@@ -53,7 +57,7 @@ class AbstractMatchdayGraphicServiceTest {
 	}
 
 	private Matchday createMatchdayWithMatches(Season season, Team homeTeam, Team awayTeam) {
-		var matchday = new Matchday(season, "Match Day 3", 3);
+		var matchday = org.ctc.domain.service.PhaseTestFixtures.matchdayInRegularPhase(season, "Match Day 3", 3);
 		matchday.setId(UUID.randomUUID());
 		var match = new Match(matchday, homeTeam, awayTeam);
 		match.setId(UUID.randomUUID());
@@ -77,7 +81,7 @@ class AbstractMatchdayGraphicServiceTest {
 		homeStanding.addWin();
 		var awayStanding = new TeamStanding(awayTeam);
 		awayStanding.addLoss();
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of(homeStanding, awayStanding));
+		when(standingsService.calculateStandings(eq(matchday.getPhase().getId()), isNull())).thenReturn(List.of(homeStanding, awayStanding));
 
 		// when
 		var data = service.prepareBaseContext(matchday);
@@ -114,7 +118,7 @@ class AbstractMatchdayGraphicServiceTest {
 		byeMatch.setBye(true);
 		matchday.getMatches().add(byeMatch);
 
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of(
+		when(standingsService.calculateStandings(eq(matchday.getPhase().getId()), isNull())).thenReturn(List.of(
 				new TeamStanding(homeTeam), new TeamStanding(awayTeam), new TeamStanding(byeTeam)));
 
 		// when
@@ -141,7 +145,7 @@ class AbstractMatchdayGraphicServiceTest {
 		homeStanding.addLoss();
 		var awayStanding = new TeamStanding(awayTeam);
 		awayStanding.addDraw();
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of(homeStanding, awayStanding));
+		when(standingsService.calculateStandings(eq(matchday.getPhase().getId()), isNull())).thenReturn(List.of(homeStanding, awayStanding));
 
 		// when
 		var data = service.prepareBaseContext(matchday);
@@ -164,7 +168,7 @@ class AbstractMatchdayGraphicServiceTest {
 		season.addTeam(awayTeam);
 		var matchday = createMatchdayWithMatches(season, homeTeam, awayTeam);
 
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of());
+		when(standingsService.calculateStandings(eq(matchday.getPhase().getId()), isNull())).thenReturn(List.of());
 
 		// when
 		var data = service.prepareBaseContext(matchday);
@@ -190,7 +194,7 @@ class AbstractMatchdayGraphicServiceTest {
 		match.setHomeScore(70);
 		match.setAwayScore(46);
 
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of());
+		when(standingsService.calculateStandings(eq(matchday.getPhase().getId()), isNull())).thenReturn(List.of());
 
 		// when
 		var data = service.prepareBaseContext(matchday);
@@ -221,7 +225,7 @@ class AbstractMatchdayGraphicServiceTest {
 		match.getRaces().add(race1);
 		match.getRaces().add(race2);
 
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of());
+		when(standingsService.calculateStandings(eq(matchday.getPhase().getId()), isNull())).thenReturn(List.of());
 
 		// when
 		var data = service.prepareBaseContext(matchday);
@@ -246,7 +250,7 @@ class AbstractMatchdayGraphicServiceTest {
 		season.addTeam(awayTeam);
 		var matchday = createMatchdayWithMatches(season, homeTeam, awayTeam);
 
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of());
+		when(standingsService.calculateStandings(eq(matchday.getPhase().getId()), isNull())).thenReturn(List.of());
 
 		// when
 		var data = service.prepareBaseContext(matchday);
@@ -272,7 +276,7 @@ class AbstractMatchdayGraphicServiceTest {
 		homeSeasonTeam.setSecondaryColor("#bb0000");
 
 		var matchday = createMatchdayWithMatches(season, homeTeam, awayTeam);
-		when(standingsService.calculateStandings(season.getId())).thenReturn(List.of());
+		when(standingsService.calculateStandings(eq(matchday.getPhase().getId()), isNull())).thenReturn(List.of());
 
 		// when
 		var data = service.prepareBaseContext(matchday);
@@ -314,6 +318,47 @@ class AbstractMatchdayGraphicServiceTest {
 
 		// then
 		assertThat(service.hasCustomTemplate()).isFalse();
+	}
+
+	@Test
+	void givenLeagueLayoutMatchday_whenPrepareBaseContext_thenStandingsCalledWithPhaseIdAndNullGroup() {
+		// given
+		var season = createSeason();
+		var homeTeam = createTeam("Home Racing", "HR", "#ffffff", "#000000", "#ff0000");
+		var awayTeam = createTeam("Away Racing", "AR", "#0000ff", "#333333", "#00ff00");
+		season.addTeam(homeTeam);
+		season.addTeam(awayTeam);
+		var matchday = createMatchdayWithMatches(season, homeTeam, awayTeam);
+		var phaseId = matchday.getPhase().getId();
+		when(standingsService.calculateStandings(eq(phaseId), isNull())).thenReturn(List.of());
+
+		// when
+		service.prepareBaseContext(matchday);
+
+		// then
+		verify(standingsService).calculateStandings(eq(phaseId), isNull());
+	}
+
+	@Test
+	void givenGroupsLayoutMatchday_whenPrepareBaseContext_thenStandingsCalledWithPhaseAndMatchdayGroup() {
+		// given
+		var season = createSeason();
+		var homeTeam = createTeam("Home Racing", "HR", "#ffffff", "#000000", "#ff0000");
+		var awayTeam = createTeam("Away Racing", "AR", "#0000ff", "#333333", "#00ff00");
+		season.addTeam(homeTeam);
+		season.addTeam(awayTeam);
+		var matchday = createMatchdayWithMatches(season, homeTeam, awayTeam);
+		var group = new SeasonPhaseGroup(matchday.getPhase(), "Group A", 0);
+		group.setId(UUID.randomUUID());
+		matchday.setGroup(group);
+		var phaseId = matchday.getPhase().getId();
+		when(standingsService.calculateStandings(eq(phaseId), eq(group.getId()))).thenReturn(List.of());
+
+		// when
+		service.prepareBaseContext(matchday);
+
+		// then
+		verify(standingsService).calculateStandings(eq(phaseId), eq(group.getId()));
 	}
 
 	// Concrete subclass for testing the abstract class

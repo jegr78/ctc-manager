@@ -2,7 +2,6 @@ package org.ctc.domain.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -18,35 +17,33 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"season", "seasons", "rounds", "seeds"})
+@ToString(exclude = {"phase", "rounds", "seeds"})
 public class Playoff extends BaseEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
 	private UUID id;
 
-	@NotNull
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "season_id", nullable = false, unique = true)
-	private Season season;
+	@JoinColumn(name = "phase_id", nullable = false, unique = true)
+	private SeasonPhase phase;
 
 	@NotBlank
 	@Column(nullable = false)
 	private String name;
 
+	/**
+	 * {@code startDate} / {@code endDate} / {@code eventDurationMinutes} also exist on the parent
+	 * {@link SeasonPhase} and can diverge: the Playoff form writes here, the Phase form writes
+	 * onto {@link SeasonPhase}. {@code RaceCalendarService.resolveEventDuration} reads from
+	 * {@link Playoff} first, so these fields are authoritative for Google Calendar event durations.
+	 */
 	private LocalDate startDate;
 
 	private LocalDate endDate;
 
 	@Column(name = "event_duration_minutes")
 	private Integer eventDurationMinutes;
-
-	@ManyToMany
-	@JoinTable(name = "playoff_seasons",
-			joinColumns = @JoinColumn(name = "playoff_id"),
-			inverseJoinColumns = @JoinColumn(name = "season_id"))
-	@OrderBy("name ASC")
-	private List<Season> seasons = new ArrayList<>();
 
 	@OneToMany(mappedBy = "playoff", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("roundIndex ASC")
@@ -56,8 +53,15 @@ public class Playoff extends BaseEntity {
 	@OrderBy("seed ASC")
 	private List<PlayoffSeed> seeds = new ArrayList<>();
 
-	public Playoff(Season season, String name) {
-		this.season = season;
+	public Playoff(SeasonPhase phase, String name) {
+		this.phase = phase;
 		this.name = name;
+	}
+
+	/**
+	 * Convenience getter — derives season via {@code getPhase().getSeason()}.
+	 */
+	public Season getSeason() {
+		return phase != null ? phase.getSeason() : null;
 	}
 }

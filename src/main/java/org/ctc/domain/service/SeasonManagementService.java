@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -29,11 +30,10 @@ public class SeasonManagementService {
     private final RaceScoringRepository raceScoringRepository;
     private final MatchScoringRepository matchScoringRepository;
     private final ScoringService scoringService;
-
-    // --- Records for structured return data ---
-
-    public record SeasonDetailData(Season season, Playoff playoff, boolean hasTeams,
-                                   boolean hasMatchdays, boolean canGenerate, boolean isSwiss) {}
+    private final SeasonPhaseService seasonPhaseService;
+    private final MatchdayRepository matchdayRepository;
+    private final PhaseTeamRepository phaseTeamRepository;
+    private final SeasonPhaseRepository seasonPhaseRepository;
 
     public record SeasonEditFormData(Season season, List<Team> allTeams, List<Car> allCars,
                                      List<Track> allTracks, List<RaceScoring> allRaceScorings,
@@ -42,8 +42,6 @@ public class SeasonManagementService {
     public record SwissRoundData(Season season, Map<UUID, int[]> raceScores) {}
 
     public record SeasonGroupOption(int year, int number, String label, int teamCount) {}
-
-    // --- Season CRUD ---
 
     @Transactional(readOnly = true)
     public List<Season> findAll() {
@@ -87,20 +85,45 @@ public class SeasonManagementService {
                 .findFirst();
     }
 
-    @Transactional(readOnly = true)
-    public Optional<Season> findByIdOptional(UUID id) {
-        return seasonRepository.findById(id);
+    /**
+     * Resolves a unique season for the given (year, number) tuple. Wraps
+     * {@link SeasonRepository#findByYearAndNumber} (which returns {@link List}
+     * because no DB UNIQUE constraint exists) and enforces the contract:
+     * <ul>
+     *   <li>0 hits → {@link Optional#empty()}</li>
+     *   <li>1 hit  → {@link Optional#of(Season)}</li>
+     *   <li>&gt;1 hits → {@link BusinessRuleException}</li>
+     * </ul>
+     */
+    public Optional<Season> findUnique(int year, int number) {
+        var hits = seasonRepository.findByYearAndNumber(year, number);
+        if (hits.size() > 1) {
+            throw new BusinessRuleException(
+                    "Multiple seasons exist for (" + year + ", " + number
+                    + ") — consolidate them first or rename sheet tab to disambiguate");
+        }
+        return hits.stream().findFirst();
+    }
+
+    /**
+     * Legacy single-arg overload: resolves a unique season by year alone.
+     * Used by the driver-sheet importer when a tab matches the legacy
+     * {@code ^\d{4}$} pattern. Same 0/1/many contract as
+     * {@link #findUnique(int, int)}.
+     */
+    public Optional<Season> findUnique(int year) {
+        var hits = seasonRepository.findByYear(year);
+        if (hits.size() > 1) {
+            throw new BusinessRuleException(
+                    "Multiple seasons exist for year " + year
+                    + " — consolidate them first or rename sheet tab to disambiguate");
+        }
+        return hits.stream().findFirst();
     }
 
     @Transactional(readOnly = true)
-    public SeasonDetailData getDetailData(UUID id) {
-        var season = findById(id);
-        var playoff = playoffRepository.findBySeasonId(id).orElse(null);
-        boolean hasTeams = !season.getSeasonTeams().isEmpty();
-        boolean hasMatchdays = !season.getMatchdays().isEmpty();
-        boolean isSwiss = season.getFormat() == SeasonFormat.SWISS;
-        boolean canGenerate = !isSwiss && !hasMatchdays && season.getEligibleTeams().size() >= 2;
-        return new SeasonDetailData(season, playoff, hasTeams, hasMatchdays, canGenerate, isSwiss);
+    public Optional<Season> findByIdOptional(UUID id) {
+        return seasonRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
@@ -114,54 +137,67 @@ public class SeasonManagementService {
         return new SeasonEditFormData(season, allTeams, allCars, allTracks, allRaceScorings, allMatchScorings);
     }
 
+    /**
+     * Persists a season and, for new seasons, atomically bootstraps a REGULAR
+     * {@link SeasonPhase} with LEAGUE layout, sortIndex 0, and null scoring/format/dates.
+     * The bootstrap ensures every freshly-created season has a REGULAR phase to attach
+     * matchdays to.
+     *
+     * <p>Phase-owned fields (format, scoring, dates) are NOT updated here — they are
+     * managed exclusively via the Phase form (SeasonPhaseController).
+     */
     @Transactional
-    public Season save(UUID id, String name, int year, int number, String description,
-                       LocalDate startDate, LocalDate endDate, boolean active,
-                       SeasonFormat format, Integer totalRounds, int legs,
-                       Integer eventDurationMinutes, UUID raceScoringId, UUID matchScoringId) {
-        var raceScoring = raceScoringRepository.findById(raceScoringId)
-                .orElseThrow(() -> new EntityNotFoundException("RaceScoring", raceScoringId));
-        var matchScoring = matchScoringRepository.findById(matchScoringId)
-                .orElseThrow(() -> new EntityNotFoundException("MatchScoring", matchScoringId));
-
+    public Season save(UUID id, String name, int year, int number, String description, boolean active) {
         Season season;
-        if (id != null) {
-            season = findById(id);
-        } else {
+        boolean isNew = (id == null);
+        if (isNew) {
             season = new Season();
+        } else {
+            season = seasonRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Season", id));
         }
         season.setName(name);
         season.setYear(year);
         season.setNumber(number);
         season.setDescription(description);
-        season.setStartDate(startDate);
-        season.setEndDate(endDate);
         season.setActive(active);
-        season.setFormat(format);
-        season.setTotalRounds(totalRounds);
-        season.setLegs(legs);
-        season.setEventDurationMinutes(eventDurationMinutes);
-        season.setRaceScoring(raceScoring);
-        season.setMatchScoring(matchScoring);
+        var saved = seasonRepository.save(season);
 
-        season = seasonRepository.save(season);
-        if (id != null) {
-            log.info("Updated season: {}", season.getName());
-        } else {
-            log.info("Created season: {}", season.getName());
+        if (isNew) {
+            seasonPhaseService.findByType(saved.getId(), PhaseType.REGULAR)
+                    .orElseGet(() -> seasonPhaseService.create(saved.getId(),
+                            PhaseType.REGULAR, PhaseLayout.LEAGUE, /*sortIndex*/ 0,
+                            /*label*/ null,
+                            /*raceScoring*/ null, /*matchScoring*/ null,
+                            /*format*/ null,
+                            /*startDate*/ null, /*endDate*/ null,
+                            /*totalRounds*/ null, /*legs*/ 1, /*eventDurationMinutes*/ null));
+            log.info("Auto-bootstrapped REGULAR phase for new season {}", saved.getId());
         }
-        return season;
+
+        log.info("Saved season {} (year={}, number={})", saved.getId(), year, number);
+        return saved;
     }
 
+    /**
+     * Deletes a season. Strict pre-check: if the season has any active phase content
+     * (matchdays, playoffs, or {@code phase_teams} rows), the delete is refused with
+     * {@link BusinessRuleException} (mapped to HTTP 409 by
+     * {@link org.ctc.admin.controller.GlobalExceptionHandler}).
+     */
     @Transactional
     public String delete(UUID id) {
         var season = findById(id);
+        if (matchdayRepository.existsByPhaseSeasonId(id)
+                || playoffRepository.existsByPhaseSeasonId(id)
+                || phaseTeamRepository.existsByPhaseSeasonId(id)) {
+            throw new BusinessRuleException(
+                    "Season has active phases — clear matches/teams before deleting");
+        }
         seasonRepository.delete(season);
         log.info("Deleted season: {}", season.getName());
         return season.getName();
     }
-
-    // --- Scoring lookups ---
 
     @Transactional(readOnly = true)
     public List<RaceScoring> getAllRaceScorings() {
@@ -172,8 +208,6 @@ public class SeasonManagementService {
     public List<MatchScoring> getAllMatchScorings() {
         return matchScoringRepository.findAll();
     }
-
-    // --- Swiss round data ---
 
     @Transactional(readOnly = true)
     public SwissRoundData getSwissRoundData(UUID seasonId) {
@@ -218,6 +252,7 @@ public class SeasonManagementService {
 
     /**
      * Adds a team to a season. Auto-adds the parent team when adding a sub-team.
+     * Atomically inserts a {@link PhaseTeam} into the REGULAR phase (group=NULL).
      * Returns the team's short name for flash messages.
      */
     @Transactional
@@ -235,6 +270,14 @@ public class SeasonManagementService {
             season.addTeam(team);
             seasonRepository.save(season);
             log.info("Added team {} to season {}", team.getShortName(), season.getName());
+
+            seasonPhaseService.findByType(seasonId, PhaseType.REGULAR).ifPresent(regular -> {
+                var existing = phaseTeamRepository.findByPhaseIdAndTeamId(regular.getId(), teamId);
+                if (existing.isEmpty()) {
+                    phaseTeamRepository.save(new PhaseTeam(regular, team));
+                    log.info("Auto-added team {} to REGULAR phase {} (group=NULL)", teamId, regular.getId());
+                }
+            });
         }
 
         return team.getShortName();
@@ -242,8 +285,8 @@ public class SeasonManagementService {
 
     /**
      * Removes a team from a season with sub-team constraint check.
+     * Strict guard: refuses removal if any PhaseTeam in the season references the team.
      * Auto-removes the parent team if no more sub-teams remain.
-     * Throws IllegalStateException if trying to remove a parent team with sub-teams still in the season.
      */
     @Transactional
     public String removeTeamFromSeason(UUID seasonId, UUID teamId) {
@@ -251,6 +294,12 @@ public class SeasonManagementService {
                 .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
         var team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new EntityNotFoundException("Team", teamId));
+
+        if (phaseTeamRepository.existsByPhaseSeasonId(seasonId)) {
+            throw new BusinessRuleException(
+                    "Cannot remove team from season: team is still assigned to one or more phase rosters. " +
+                    "Remove it from all phases first.");
+        }
 
         if (!team.isSubTeam()) {
             boolean hasSubs = season.getTeams().stream()

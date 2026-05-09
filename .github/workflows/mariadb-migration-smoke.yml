@@ -1,0 +1,125 @@
+name: MariaDB Migration Smoke
+
+# Verifies all Flyway migrations (V1..VN) apply cleanly against MariaDB.
+# The main CI workflow only exercises H2 (dev profile); this job catches
+# dialect-specific escapes — e.g. Phase 60's V5 used PostgreSQL/H2-only
+# 'ALTER COLUMN ... DROP NOT NULL' and Phase 61's V6 used standalone
+# 'DROP INDEX IF EXISTS', both of which crashed against MariaDB and were
+# only surfaced by the Phase 61 UAT (2026-05-02). This smoke is the
+# pre-merge gate that prevents the same class of escape from recurring.
+
+on:
+  push:
+    branches: [ master, main ]
+    paths:
+      - 'src/main/resources/db/migration/**'
+      - 'src/main/java/db/migration/**'
+      - 'src/main/resources/application*.yml'
+      - 'pom.xml'
+      - '.github/workflows/mariadb-migration-smoke.yml'
+  pull_request:
+    branches: [ master, main ]
+    paths:
+      - 'src/main/resources/db/migration/**'
+      - 'src/main/java/db/migration/**'
+      - 'src/main/resources/application*.yml'
+      - 'pom.xml'
+      - '.github/workflows/mariadb-migration-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mariadb-migration-smoke:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_DATABASE: ctcdb
+          MARIADB_USER: ctc
+          MARIADB_PASSWORD: ctc
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build JAR (skip tests — main CI runs them on H2)
+        run: ./mvnw package -DskipTests -B -q
+
+      - name: Start app against MariaDB (local profile)
+        run: |
+          set -e
+          nohup java -jar target/ctc-manager-*.jar \
+            --spring.profiles.active=local \
+            --spring.datasource.url=jdbc:mariadb://localhost:3306/ctcdb \
+            --spring.datasource.username=ctc \
+            --spring.datasource.password=ctc \
+            > app.log 2>&1 &
+          echo "APP_PID=$!" >> $GITHUB_ENV
+
+      - name: Wait for /actuator/health = UP
+        run: |
+          set -u
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:9091/actuator/health 2>/dev/null | grep -q '"status":"UP"'; then
+              echo "App healthy after ${i} polls"
+              exit 0
+            fi
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "::error::App process died before becoming healthy"
+              tail -200 app.log
+              exit 1
+            fi
+            sleep 5
+          done
+          echo "::error::App did not become healthy within 5 minutes"
+          tail -200 app.log
+          exit 1
+
+      - name: Assert Flyway applied all migrations cleanly
+        run: |
+          set -e
+          if grep -E 'Migration of schema .* failed|FlywaySqlScriptException|FlywayException' app.log; then
+            echo "::error::Flyway reported a migration failure"
+            tail -200 app.log
+            exit 1
+          fi
+          if ! grep -E 'Migrating schema .* to version' app.log >/dev/null; then
+            echo "::error::No Flyway migrations were executed — pipeline misconfiguration"
+            tail -200 app.log
+            exit 1
+          fi
+          echo "All Flyway migrations applied cleanly against MariaDB"
+          grep -E 'Migrating schema .* to version|migration starting on dialect|migration complete on dialect' app.log
+
+      - name: Stop app
+        if: always()
+        run: |
+          if [ -n "${APP_PID:-}" ]; then
+            kill "$APP_PID" 2>/dev/null || true
+          fi
+
+      - name: Upload app log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mariadb-smoke-app-log
+          path: app.log
+          retention-days: 7

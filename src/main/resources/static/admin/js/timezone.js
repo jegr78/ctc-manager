@@ -83,7 +83,7 @@
         return parts[2] + '-' + parts[1] + '-' + parts[0] + 'T' + parts[3] + ':' + parts[4];
     }
 
-    // --- Display conversion: London -> local ---
+    // Display conversion: London -> local
     document.querySelectorAll('[data-london-time]').forEach(function(el) {
         var iso = el.getAttribute('data-london-time');
         if (!iso) return;
@@ -91,7 +91,7 @@
         el.textContent = formatLocal(date);
     });
 
-    // --- Input conversion: show local time in datetime-local inputs ---
+    // Input conversion: show local time in datetime-local inputs
     document.querySelectorAll('.london-time-input').forEach(function(input) {
         var iso = input.getAttribute('data-london-time');
         if (iso) {
@@ -100,7 +100,7 @@
         }
     });
 
-    // --- Form submission: convert local input back to London time ---
+    // Form submission: convert local input back to London time
     document.querySelectorAll('form').forEach(function(form) {
         var inputs = form.querySelectorAll('.london-time-input');
         if (inputs.length === 0) return;

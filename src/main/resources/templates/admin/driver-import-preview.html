@@ -10,22 +10,27 @@
 
         <th:block th:each="tab : ${preview.tabPreviews()}">
             <div class="card mb-md">
-                <h2 th:text="${tab.year()}"></h2>
+                <!-- heading uses raw tabName (e.g. "2025_S2") not just the year -->
+                <h2 th:text="${tab.tabName()}"></h2>
+
+                <!-- ambiguous-tab plain banner — clear, never hidden behind a small caption -->
+                <div th:if="${tab.ambiguousReason() != null}" class="alert alert-warning mb-md">
+                    <strong>Ambiguous tab</strong> — rename to <code>{year}_S{N}</code> to disambiguate.
+                    <span> Reason: </span>
+                    <span th:text="${tab.ambiguousReason()}"></span>
+                </div>
 
                 <!-- Season dropdown -->
                 <div class="form-group">
-                    <label th:for="'seasonId_' + ${tab.year()}">Season</label>
-                    <select th:name="'seasonId_' + ${tab.year()}"
-                            th:id="'seasonId_' + ${tab.year()}">
+                    <label th:for="'seasonId_' + ${tab.tabName()}">Season</label>
+                    <select th:name="'seasonId_' + ${tab.tabName()}"
+                            th:id="'seasonId_' + ${tab.tabName()}">
                         <option value="">-- Select season --</option>
                         <option th:each="s : ${seasons}"
                                 th:value="${s.id}"
                                 th:text="${s.displayLabel}"
                                 th:selected="${s.id == tab.suggestedSeasonId()}"></option>
                     </select>
-                    <small th:if="${tab.ambiguousReason() != null}"
-                           class="text-dim"
-                           th:text="${tab.ambiguousReason()}"></small>
                 </div>
 
                 <!-- Bucket: New Drivers -->
@@ -33,7 +38,10 @@
                     <h3 th:text="'New Drivers (' + ${#lists.size(tab.newDrivers())} + ')'"></h3>
                     <div class="table-scroll">
                         <table>
-                            <thead><tr><th>PSN ID</th><th>Team</th></tr></thead>
+                            <thead><tr>
+                                <th>PSN ID</th>
+                                <th>Team</th>
+                            </tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.newDrivers()}">
                                     <td th:text="${row.psnId()}"></td>
@@ -49,7 +57,10 @@
                     <h3 th:text="'New Assignments (' + ${#lists.size(tab.newAssignments())} + ')'"></h3>
                     <div class="table-scroll">
                         <table>
-                            <thead><tr><th>PSN ID</th><th>Team</th></tr></thead>
+                            <thead><tr>
+                                <th>PSN ID</th>
+                                <th>Team</th>
+                            </tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.newAssignments()}">
                                     <td th:text="${row.psnId()}"></td>
@@ -60,7 +71,7 @@
                     </div>
                 </th:block>
 
-                <!-- Bucket: Conflicts (Skip checkbox) — UX-07 -->
+                <!-- Bucket: Conflicts (Skip checkbox) -->
                 <th:block th:if="${!tab.conflicts().isEmpty()}">
                     <h3 th:text="'Conflicts (' + ${#lists.size(tab.conflicts())} + ')'"></h3>
                     <div class="table-scroll">
@@ -80,7 +91,7 @@
                                     <td th:text="${row.sheetTeamShortName()}"></td>
                                     <td>
                                         <input type="checkbox"
-                                               th:name="'skip_' + ${row.psnId()} + '_' + ${tab.year()}"
+                                               th:name="'skip_' + ${row.psnId()} + '_' + ${tab.tabName()}"
                                                value="on">
                                     </td>
                                 </tr>
@@ -89,7 +100,7 @@
                     </div>
                 </th:block>
 
-                <!-- Bucket: Fuzzy Match Suggestions (Accept checkbox) — UX-08 -->
+                <!-- Bucket: Fuzzy Match Suggestions (Accept checkbox) -->
                 <th:block th:if="${!tab.fuzzySuggestions().isEmpty()}">
                     <h3 th:text="'Fuzzy Match Suggestions (' + ${#lists.size(tab.fuzzySuggestions())} + ')'"></h3>
                     <div class="table-scroll">
@@ -109,7 +120,7 @@
                                     <td th:text="${row.teamShortName()}"></td>
                                     <td>
                                         <input type="checkbox"
-                                               th:name="'accept_' + ${row.psnId()} + '_' + ${tab.year()}"
+                                               th:name="'accept_' + ${row.psnId()} + '_' + ${tab.tabName()}"
                                                th:value="${row.suggestedDriverId()}">
                                     </td>
                                 </tr>
@@ -123,7 +134,10 @@
                     <h3 th:text="'Unchanged (' + ${#lists.size(tab.unchanged())} + ')'"></h3>
                     <div class="table-scroll">
                         <table>
-                            <thead><tr><th>PSN ID</th><th>Team</th></tr></thead>
+                            <thead><tr>
+                                <th>PSN ID</th>
+                                <th>Team</th>
+                            </tr></thead>
                             <tbody>
                                 <tr th:each="row : ${tab.unchanged()}">
                                     <td th:text="${row.psnId()}"></td>
@@ -154,7 +168,7 @@
             </div>
         </th:block>
 
-        <!-- Ambiguous-season warning banner — D-16 -->
+        <!-- Ambiguous-season warning banner -->
         <div class="alert alert-error mb-md"
              th:if="${hasAmbiguousTabs}">
             <strong>Warning:</strong> Some tabs have no matching season.

@@ -158,6 +158,9 @@ h3 { font-size: 16px; margin-bottom: 8px; color: var(--white); }
 }
 .alert-success { background: var(--success-bg); color: #66bb6a; border: 1px solid #2e7d32; }
 .alert-error { background: var(--danger-bg); color: #ef5350; border: 1px solid #d32f2f; }
+.alert-warning { background: #3b2e0e; color: #ffb74d; border: 1px solid #b26a00; }
+.alert-warning ul { margin: 6px 0 0 18px; padding: 0; }
+.alert-warning li { margin: 2px 0; }
 
 .card {
     background: var(--bg-card);
@@ -351,6 +354,8 @@ select option {
 }
 .badge-active { background: var(--success-bg); color: #66bb6a; }
 .badge-inactive { background: #222; color: #999; }
+.badge-warning { background: #3b2e0e; color: #ffb74d; }
+.hidden { display: none !important; }
 
 .result-grid {
     display: grid;
@@ -1128,6 +1133,13 @@ a.season-header-title:hover {
 .color-swatch-row {
     display: flex;
     gap: 3px;
+}
+
+.color-swatch-chip {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
 }
 
 /* === Score Banner === */
@@ -1943,3 +1955,54 @@ a.season-header-title:hover {
 .results-total-value--home { color: var(--accent); }
 .results-total-value--away { color: var(--white); }
 .results-total-sep { color: var(--text-dim); }
+
+/* === Phase 60: Two-row tabs (Saison-Detail + Standings) === */
+
+/* Secondary tab row (Group sub-tabs) — D-29 */
+.tabs-secondary {
+    margin-top: 0;
+    padding: 6px 8px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+    gap: 4px;
+}
+.tabs-secondary .tab-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+}
+.tabs-secondary .tab-btn:hover {
+    background: var(--bg-hover);
+    color: var(--white);
+}
+.tabs-secondary .tab-btn.tab-active {
+    color: var(--accent);
+    background: var(--bg-hover);
+    border-bottom-color: var(--accent);
+}
+
+/* "+ Add Phase" / "+ Add Group" CTA tab styling */
+.tab-btn.tab-add {
+    color: var(--accent);
+    font-weight: 600;
+}
+.tab-btn.tab-add:hover {
+    color: var(--white);
+    border-bottom-color: var(--accent);
+}
+
+/* Mobile: horizontal scroll for both tab rows — D-11 */
+@media (max-width: 768px) {
+    .tab-nav {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tab-nav .tab-btn {
+        flex-shrink: 0;
+    }
+}

@@ -80,7 +80,7 @@ public class MatchService {
 		match.setBye(bye);
 		match = matchRepository.save(match);
 
-		int legs = matchday.getSeason().getLegs();
+		int legs = matchday.getPhase().getLegs();
 		for (int leg = 0; leg < legs; leg++) {
 			var race = new Race();
 			race.setMatchday(matchday);
@@ -103,7 +103,7 @@ public class MatchService {
 		var match = matchRepository.findById(matchId)
 				.orElseThrow(() -> new EntityNotFoundException("Match", matchId));
 		var matchday = match.getMatchday();
-		int maxLegs = matchday.getSeason().getLegs();
+		int maxLegs = matchday.getPhase().getLegs();
 
 		if (match.getRaces().size() >= maxLegs) {
 			throw new IllegalStateException("Maximum legs reached (" + maxLegs + ")");

@@ -10,8 +10,10 @@ import java.util.UUID;
 
 public interface PlayoffRepository extends JpaRepository<Playoff, UUID> {
 
+	@Query("SELECT p FROM Playoff p WHERE p.phase.season.id = :seasonId")
 	Optional<Playoff> findBySeasonId(UUID seasonId);
 
-	@Query("SELECT p FROM Playoff p JOIN p.seasons s WHERE s.id = :seasonId")
-	Optional<Playoff> findByLinkedSeasonId(UUID seasonId);
+	Optional<Playoff> findByPhaseId(UUID phaseId);
+
+	boolean existsByPhaseSeasonId(UUID seasonId);
 }

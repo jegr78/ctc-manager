@@ -76,6 +76,15 @@ class SiteGeneratorE2ETest {
     @Autowired
     private ScoringService scoringService;
 
+    @Autowired
+    private SeasonPhaseRepository seasonPhaseRepository;
+
+    @Autowired
+    private PhaseTeamRepository phaseTeamRepository;
+
+    @Autowired
+    private SiteSlugger siteSlugger;
+
     @MockitoBean
     private YouTubeScraperService youTubeScraperService;
 
@@ -105,8 +114,6 @@ class SiteGeneratorE2ETest {
 
         season = new Season("E2E Season " + uniqueSuffix, 2026, 1);
         season.setActive(true);
-        season.setRaceScoring(raceScoring);
-        season.setMatchScoring(matchScoring);
         seasonRepository.save(season);
 
         var teamAlpha = teamRepository.save(new Team("E2E Team Alpha " + uniqueSuffix, "EALP" + uniqueSuffix));
@@ -115,6 +122,16 @@ class SiteGeneratorE2ETest {
         season.addTeam(teamAlpha);
         season.addTeam(teamBeta);
         seasonRepository.save(season);
+
+        // SiteGenerator routes through SeasonPhaseService.findByType(REGULAR).
+        // E2E setup must include a REGULAR phase + PhaseTeam rows or the season is skipped.
+        // scoring lives on the SeasonPhase, attach the local scoring vars here.
+        var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regularPhase.setRaceScoring(raceScoring);
+        regularPhase.setMatchScoring(matchScoring);
+        regularPhase = seasonPhaseRepository.save(regularPhase);
+        phaseTeamRepository.save(new PhaseTeam(regularPhase, teamAlpha));
+        phaseTeamRepository.save(new PhaseTeam(regularPhase, teamBeta));
 
         var driver1 = driverRepository.save(new Driver("e2e_driver1_" + uniqueSuffix, "E2E_Racer1"));
         var driver2 = driverRepository.save(new Driver("e2e_driver2_" + uniqueSuffix, "E2E_Racer2"));
@@ -126,7 +143,8 @@ class SiteGeneratorE2ETest {
         seasonDriverRepository.save(new SeasonDriver(season, driver3, teamBeta));
         seasonDriverRepository.save(new SeasonDriver(season, driver4, teamBeta));
 
-        var matchday = matchdayRepository.save(new Matchday(season, "E2E Matchday 1", 1));
+        // bind matchday to the persisted REGULAR phase directly.
+        var matchday = matchdayRepository.save(new Matchday(regularPhase, "E2E Matchday 1", 1));
         var testTrack = trackRepository.save(new Track("E2E Circuit " + uniqueSuffix, "Japan"));
         var testCar = carRepository.save(new Car("E2E Car " + uniqueSuffix, "GT3 Concept"));
         var match = matchRepository.save(new Match(matchday, teamAlpha, teamBeta));
@@ -173,7 +191,6 @@ class SiteGeneratorE2ETest {
         assertTrue(result.getPagesGenerated() > 0, "Site must generate at least one page");
     }
 
-    // --- Helper methods ---
 
     private boolean isInternal(String href) {
         return !href.isEmpty()
@@ -186,10 +203,9 @@ class SiteGeneratorE2ETest {
     }
 
     private String slugify(String input) {
-        return siteGeneratorService.slugify(input);
+        return siteSlugger.slugify(input);
     }
 
-    // --- E2E-01: All internal links resolve ---
 
     @Test
     void whenSiteGenerated_thenAllInternalLinksResolve() throws IOException {
@@ -221,7 +237,6 @@ class SiteGeneratorE2ETest {
                 "Broken internal links found:\n" + String.join("\n", brokenLinks));
     }
 
-    // --- E2E-02: All pages have nav ---
 
     @Test
     void whenSiteGenerated_thenAllPagesHaveNav() throws IOException {
@@ -246,7 +261,6 @@ class SiteGeneratorE2ETest {
                 "Pages missing nav.nav:\n" + String.join("\n", violations));
     }
 
-    // --- E2E-02: All pages have footer ---
 
     @Test
     void whenSiteGenerated_thenAllPagesHaveFooter() throws IOException {
@@ -271,7 +285,6 @@ class SiteGeneratorE2ETest {
                 "Pages missing footer.footer:\n" + String.join("\n", violations));
     }
 
-    // --- E2E-03: No page has empty main content ---
 
     @Test
     void whenSiteGenerated_thenNoPageHasEmptyMainContent() throws IOException {
@@ -297,7 +310,6 @@ class SiteGeneratorE2ETest {
                 "Pages with empty #main-content:\n" + String.join("\n", violations));
     }
 
-    // --- E2E-04: Landing page tile links resolve ---
 
     @Test
     void whenSiteGenerated_thenLandingTilesResolve() throws IOException {
@@ -323,7 +335,6 @@ class SiteGeneratorE2ETest {
                 "Broken tile card links:\n" + String.join("\n", brokenTileLinks));
     }
 
-    // --- E2E-05: Links page has configured links ---
 
     @Test
     void whenSiteGenerated_thenLinksPageHasConfiguredLinks() throws IOException {
@@ -339,7 +350,6 @@ class SiteGeneratorE2ETest {
                 "Links page must contain Discord URL");
     }
 
-    // --- E2E-06: YouTube footer link on multiple page types ---
 
     @Test
     void whenSiteGenerated_thenFooterYouTubePresentOnAllPageTypes() throws IOException {
@@ -369,7 +379,6 @@ class SiteGeneratorE2ETest {
                 "Pages missing YouTube footer link:\n" + String.join("\n", missing));
     }
 
-    // --- D-17: Overview pages have season filter ---
 
     @Test
     void whenSiteGenerated_thenOverviewPagesHaveSeasonFilter() throws IOException {

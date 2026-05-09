@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
+import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.PlayoffMatchupRepository;
 import org.ctc.domain.repository.PlayoffRepository;
 import org.ctc.domain.repository.PlayoffSeedRepository;
@@ -29,6 +30,9 @@ public class PlayoffSeedingService {
 	private final TeamRepository teamRepository;
 	private final PlayoffBracketViewService playoffBracketViewService;
 	private final EntityManager entityManager;
+	private final SeasonPhaseService seasonPhaseService;
+	private final StandingsService standingsService;
+	private final PhaseTeamRepository phaseTeamRepository;
 
 	@Transactional
 	public void seedTeam(UUID matchupId, UUID teamId, int slot) {
@@ -55,13 +59,7 @@ public class PlayoffSeedingService {
 				.filter(r -> r.getRoundIndex() == 0)
 				.findFirst().orElseThrow(() -> new EntityNotFoundException("PlayoffRound", "index=0"));
 
-		// Collect all teams from linked seasons and the main season
 		Map<UUID, Team> teamMap = new LinkedHashMap<>();
-		for (Season season : playoff.getSeasons()) {
-			for (Team team : season.getTeams()) {
-				teamMap.putIfAbsent(team.getId(), team);
-			}
-		}
 		for (Team team : playoff.getSeason().getTeams()) {
 			teamMap.putIfAbsent(team.getId(), team);
 		}
@@ -118,38 +116,126 @@ public class PlayoffSeedingService {
 		log.info("Saved {} seed numbers for playoff {}", teamSeeds.size(), playoffId);
 	}
 
+	/**
+	 * Auto-seeds the bracket. Two flows are supported:
+	 *
+	 * <p><b>Manual flow (priority):</b> When manually-saved {@link PlayoffSeed} rows exist
+	 * (via {@link #saveSeedNumbers}), they are used directly.
+	 *
+	 * <p><b>Auto flow:</b> When NO manual seeds exist, Top-N teams are pulled from the
+	 * REGULAR phase standings (combined-view across groups for GROUPS-layout). Each seeded
+	 * team is persisted as a {@link PlayoffSeed} row and added to the PLAYOFF phase's
+	 * {@link PhaseTeam} roster.
+	 *
+	 * <p>If neither source yields seeds, throws {@link IllegalStateException}.
+	 */
 	@Transactional
 	public void autoSeedBracket(UUID playoffId) {
 		var seeds = playoffSeedRepository.findByPlayoffId(playoffId);
-		if (seeds.isEmpty()) {
-			throw new IllegalStateException("No seed numbers assigned yet");
+
+		List<Team> sortedTeams;
+
+		if (!seeds.isEmpty()) {
+			sortedTeams = seeds.stream()
+					.sorted(Comparator.comparingInt(PlayoffSeed::getSeed))
+					.map(PlayoffSeed::getTeam)
+					.toList();
+		} else {
+			// Derive Top-N from REGULAR-phase standings.
+			// If the playoff or round can't be resolved, treat as "no seeds available".
+			var playoffOpt = playoffRepository.findById(playoffId);
+			if (playoffOpt.isEmpty()) {
+				throw new IllegalStateException("No seed numbers assigned yet");
+			}
+			var playoff = playoffOpt.get();
+			var firstRoundOpt = playoff.getRounds().stream()
+					.filter(r -> r.getRoundIndex() == 0)
+					.findFirst();
+			if (firstRoundOpt.isEmpty()) {
+				throw new IllegalStateException("No seed numbers assigned yet");
+			}
+			int totalTeams = firstRoundOpt.get().getMatchups().size() * 2;
+
+			sortedTeams = tryLoadFromRegularStandings(playoff, totalTeams);
+			if (sortedTeams == null) {
+				throw new IllegalStateException("No seed numbers assigned yet");
+			}
 		}
 
+		// Resolve the playoff again for the bracket-pairing step (works in both flows)
 		var playoff = playoffRepository.findById(playoffId)
 				.orElseThrow(() -> new EntityNotFoundException("Playoff", playoffId));
 		var firstRound = playoff.getRounds().stream()
 				.filter(r -> r.getRoundIndex() == 0)
 				.findFirst().orElseThrow(() -> new EntityNotFoundException("PlayoffRound", "index=0"));
 
-		var sortedSeeds = seeds.stream()
-				.sorted(Comparator.comparingInt(PlayoffSeed::getSeed))
-				.toList();
-
-		int totalTeams = sortedSeeds.size();
 		var matchups = firstRound.getMatchups().stream()
 				.sorted(Comparator.comparingInt(PlayoffMatchup::getBracketPosition))
 				.toList();
 
-		int[] matchupOrder = buildBracketOrder(totalTeams / 2);
+		int[] matchupOrder = buildBracketOrder(matchups.size());
 
+		int seededTeamCount = sortedTeams.size();
 		for (int i = 0; i < matchups.size() && i < matchupOrder.length; i++) {
 			int seedIdx = matchupOrder[i];
 			var matchup = matchups.get(i);
-			matchup.setTeam1(sortedSeeds.get(seedIdx).getTeam());
-			matchup.setTeam2(sortedSeeds.get(totalTeams - 1 - seedIdx).getTeam());
+			matchup.setTeam1(sortedTeams.get(seedIdx));
+			matchup.setTeam2(sortedTeams.get(seededTeamCount - 1 - seedIdx));
 			playoffMatchupRepository.save(matchup);
 		}
-		log.info("Auto-seeded bracket for playoff {}", playoffId);
+		log.info("Auto-seeded bracket for playoff {} ({} teams)", playoffId, seededTeamCount);
+	}
+
+	/**
+	 * Pulls Top-N teams from the REGULAR phase standings when available.
+	 * Returns {@code null} when no REGULAR phase exists or standings are insufficient — caller
+	 * falls back to manual seeds. On a successful pull:
+	 * <ul>
+	 *   <li>Replaces any existing {@link PlayoffSeed} rows with the Top-N seeding (1..N).</li>
+	 *   <li>Adds each seeded team as a {@link PhaseTeam} on the PLAYOFF phase if not already present.</li>
+	 * </ul>
+	 */
+	private List<Team> tryLoadFromRegularStandings(Playoff playoff, int totalTeams) {
+		UUID seasonId = playoff.getSeason().getId();
+		var regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
+		if (regularPhaseOpt.isEmpty()) {
+			return null;
+		}
+		var regularPhase = regularPhaseOpt.get();
+		// Combined-view (groupId=null) for GROUPS-layout; flat list for LEAGUE.
+		var standings = standingsService.calculateStandings(regularPhase.getId(), null);
+		if (standings.size() < totalTeams) {
+			return null;
+		}
+
+		var topTeams = standings.stream()
+				.map(StandingsService.TeamStanding::getTeam)
+				.limit(totalTeams)
+				.toList();
+
+		// Persist Top-N as PlayoffSeed rows (replacing any prior seeds) so getSeedingData and
+		// the PlayoffController seed UI stay coherent.
+		playoffSeedRepository.deleteByPlayoffId(playoff.getId());
+		entityManager.flush();
+		int seedNumber = 1;
+		for (Team t : topTeams) {
+			playoffSeedRepository.save(new PlayoffSeed(playoff, t, seedNumber++));
+		}
+
+		// Side-effect: each seeded team becomes a PhaseTeam row on the PLAYOFF phase.
+		if (playoff.getPhase() != null) {
+			Set<UUID> existingTeamIds = phaseTeamRepository.findByPhaseId(playoff.getPhase().getId())
+					.stream().map(pt -> pt.getTeam().getId()).collect(Collectors.toSet());
+			for (Team t : topTeams) {
+				if (!existingTeamIds.contains(t.getId())) {
+					phaseTeamRepository.save(new PhaseTeam(playoff.getPhase(), t));
+				}
+			}
+		}
+
+		log.debug("Pulled Top-{} from REGULAR phase {} for playoff {}",
+				totalTeams, regularPhase.getId(), playoff.getId());
+		return topTeams;
 	}
 
 	private int[] buildBracketOrder(int matchCount) {
@@ -169,8 +255,6 @@ public class PlayoffSeedingService {
 		return teamRepository.findById(teamId)
 				.orElseThrow(() -> new EntityNotFoundException("Team", teamId));
 	}
-
-	// --- Record types ---
 
 	public record SeedEntry(UUID matchupId, int slot, UUID teamId, Integer seedNumber) {
 	}

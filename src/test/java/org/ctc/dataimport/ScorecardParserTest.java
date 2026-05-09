@@ -42,7 +42,6 @@ class ScorecardParserTest {
 				.thenAnswer(inv -> DriverMatchingService.MatchResult.noMatch(inv.getArgument(0)));
 	}
 
-	// --- Helper methods to build sheet data ---
 
 	/**
 	 * Creates a team header row: [teamName, "Position", "Quali", "FL"]

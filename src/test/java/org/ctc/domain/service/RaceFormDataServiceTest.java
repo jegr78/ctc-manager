@@ -28,7 +28,6 @@ class RaceFormDataServiceTest {
     @InjectMocks
     private RaceFormDataService service;
 
-    // --- getNewRaceFormData ---
 
     @Test
     void givenMatchdayId_whenGetNewRaceFormData_thenReturnsPopulatedFormDataWithSeasonPools() {
@@ -46,7 +45,8 @@ class RaceFormDataServiceTest {
 
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        // matchday's season is derived from phase.season; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
 
         when(matchdayRepository.findById(matchday.getId())).thenReturn(Optional.of(matchday));
         when(matchdayRepository.findAll()).thenReturn(List.of(matchday));
@@ -83,7 +83,6 @@ class RaceFormDataServiceTest {
         assertThat(result.usedTrackIds()).isEmpty();
     }
 
-    // --- getRaceFormData ---
 
     @Test
     void givenExistingRace_whenGetRaceFormData_thenReturnsPrePopulatedFormData() {
@@ -96,7 +95,8 @@ class RaceFormDataServiceTest {
         season.setTracks(new ArrayList<>());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        // matchday's season is derived from phase.season; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -119,7 +119,6 @@ class RaceFormDataServiceTest {
         assertThat(result.teams()).hasSize(2);
     }
 
-    // --- getResultsFormData ---
 
     @Test
     void givenRaceWithLineupAndNoResults_whenGetResultsFormData_thenReturnsResultsFormDataWithDriversFromLineup() {
@@ -129,10 +128,12 @@ class RaceFormDataServiceTest {
         var scoring = new RaceScoring("Test", "10,8,6", "3,2,1", 1);
         var season = new Season();
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(scoring);
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        // matchday's season is derived from phase; phase carries scoring.
+        var phaseLineup = PhaseTestFixtures.regularPhase(season, scoring, null);
+        phaseLineup.setRaceScoring(scoring);
+        matchday.setPhase(phaseLineup);
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -166,10 +167,13 @@ class RaceFormDataServiceTest {
         var scoring = new RaceScoring("Test", "10,8,6", "3,2,1", 1);
         var season = new Season();
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(scoring);
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        // matchday's season is derived from phase.season; wire a phase.
+        // getResultsFormData reads scoring via matchday.getPhase().getRaceScoring().
+        var phase = PhaseTestFixtures.regularPhase(season, scoring, null);
+        phase.setRaceScoring(scoring);
+        matchday.setPhase(phase);
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -194,7 +198,6 @@ class RaceFormDataServiceTest {
         verify(raceLineupRepository, never()).findByRaceId(any());
     }
 
-    // --- Bye race null safety ---
 
     @Test
     void givenByeRaceWithNullHomeTeam_whenGetRaceFormData_thenReturnsFormDataWithEmptyUsedSets() {
@@ -205,7 +208,8 @@ class RaceFormDataServiceTest {
         season.setTracks(new ArrayList<>());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        // matchday's season is derived from phase.season; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match();
         match.setMatchday(matchday);
         match.setBye(true);
@@ -237,10 +241,10 @@ class RaceFormDataServiceTest {
         var scoring = new RaceScoring("Test", "10,8,6", "3,2,1", 1);
         var season = new Season();
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(scoring);
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        // matchday's season is derived from phase.season; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match();
         match.setMatchday(matchday);
         match.setHomeTeam(homeTeam);
@@ -263,7 +267,6 @@ class RaceFormDataServiceTest {
         assertThat(result.data().results()).isEmpty();
     }
 
-    // --- Helper ---
 
     private Team createTeam(String shortName, String name) {
         var team = new Team(name, shortName);

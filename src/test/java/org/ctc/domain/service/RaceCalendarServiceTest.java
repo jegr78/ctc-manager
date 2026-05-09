@@ -30,20 +30,15 @@ class RaceCalendarServiceTest {
 	@InjectMocks
 	private RaceCalendarService service;
 
-	// --- createOrUpdateCalendarEvent ---
 
 	@Test
 	void givenRaceWithDateTimeAndTeams_whenCreateOrUpdateCalendarEvent_thenDelegatesToGoogleCalendarService() throws Exception {
 		// given
 		var homeTeam = createTeam("DTR", "Delta Racing");
 		var awayTeam = createTeam("MRL", "Maranello");
-		var season = new Season();
-		season.setId(UUID.randomUUID());
-		season.setEventDurationMinutes(90);
-		var matchday = new Matchday();
-		matchday.setId(UUID.randomUUID());
+		// eventDurationMinutes is owned by the REGULAR phase.
+		var matchday = matchdayWithEventDuration(90);
 		matchday.setLabel("MD 3");
-		matchday.setSeason(season);
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
 		race.setId(UUID.randomUUID());
@@ -72,13 +67,9 @@ class RaceCalendarServiceTest {
 		// given
 		var homeTeam = createTeam("HOM", "Home");
 		var awayTeam = createTeam("AWY", "Away");
-		var season = new Season();
-		season.setId(UUID.randomUUID());
-		season.setEventDurationMinutes(60);
-		var matchday = new Matchday();
-		matchday.setId(UUID.randomUUID());
+		// eventDurationMinutes is owned by the REGULAR phase.
+		var matchday = matchdayWithEventDuration(60);
 		matchday.setLabel("MD 1");
-		matchday.setSeason(season);
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
 		race.setId(UUID.randomUUID());
@@ -136,13 +127,9 @@ class RaceCalendarServiceTest {
 		// given
 		var homeTeam = createTeam("HOM", "Home");
 		var awayTeam = createTeam("AWY", "Away");
-		var season = new Season();
-		season.setId(UUID.randomUUID());
-		season.setEventDurationMinutes(60);
-		var matchday = new Matchday();
-		matchday.setId(UUID.randomUUID());
+		// eventDurationMinutes is owned by the REGULAR phase.
+		var matchday = matchdayWithEventDuration(60);
 		matchday.setLabel("MD 1");
-		matchday.setSeason(season);
 		var match = new Match(matchday, homeTeam, awayTeam);
 		var race = new Race();
 		race.setId(UUID.randomUUID());
@@ -161,7 +148,6 @@ class RaceCalendarServiceTest {
 				.hasMessageContaining("Calendar API error");
 	}
 
-	// --- Helper ---
 
 	private Team createTeam(String shortName, String name) {
 		var team = new Team(name, shortName);
@@ -174,7 +160,23 @@ class RaceCalendarServiceTest {
 		season.setId(UUID.randomUUID());
 		var matchday = new Matchday();
 		matchday.setId(UUID.randomUUID());
-		matchday.setSeason(season);
+		matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
+		return matchday;
+	}
+
+	/**
+	 * builds a Matchday wired to a REGULAR phase carrying
+	 * the given {@code eventDurationMinutes}. Replaces the legacy pattern of
+	 * {@code season.setEventDurationMinutes(...)} + {@code matchday.setSeason(...)}.
+	 */
+	private Matchday matchdayWithEventDuration(int eventDurationMinutes) {
+		var season = new Season();
+		season.setId(UUID.randomUUID());
+		var phase = PhaseTestFixtures.regularPhase(season, null, null);
+		phase.setEventDurationMinutes(eventDurationMinutes);
+		var matchday = new Matchday();
+		matchday.setId(UUID.randomUUID());
+		matchday.setPhase(phase);
 		return matchday;
 	}
 }

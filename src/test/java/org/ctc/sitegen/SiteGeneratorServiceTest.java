@@ -77,7 +77,16 @@ class SiteGeneratorServiceTest {
     private SeasonTeamRepository seasonTeamRepository;
 
     @Autowired
+    private SeasonPhaseRepository seasonPhaseRepository;
+
+    @Autowired
+    private PhaseTeamRepository phaseTeamRepository;
+
+    @Autowired
     private org.ctc.domain.service.ScoringService scoringService;
+
+    @Autowired
+    private SiteSlugger siteSlugger;
 
     @MockitoBean
     private YouTubeScraperService youTubeScraperService;
@@ -88,6 +97,8 @@ class SiteGeneratorServiceTest {
     private Season season;
     private Race testRace;
     private Driver driver1;
+    private org.ctc.domain.model.RaceScoring raceScoring;
+    private org.ctc.domain.model.MatchScoring matchScoring;
 
     @BeforeEach
     void setUp() {
@@ -104,15 +115,14 @@ class SiteGeneratorServiceTest {
             }
         });
 
-        var raceScoring = raceScoringRepository.save(
+        raceScoring = raceScoringRepository.save(
                 new RaceScoring("Gen RS " + uniqueSuffix, "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
-        var matchScoring = matchScoringRepository.save(
+        matchScoring = matchScoringRepository.save(
                 new MatchScoring("Gen MS " + uniqueSuffix, 3, 1, 0));
 
+        // scoring lives on SeasonPhase, attached below.
         season = new Season("Gen Season " + uniqueSuffix, 2026, 1);
         season.setActive(true);
-        season.setRaceScoring(raceScoring);
-        season.setMatchScoring(matchScoring);
         seasonRepository.save(season);
 
         var tnr = teamRepository.save(new Team("The Neutrals Racing " + uniqueSuffix, "GTNR" + uniqueSuffix));
@@ -132,7 +142,20 @@ class SiteGeneratorServiceTest {
         seasonDriverRepository.save(new SeasonDriver(season, driver3, p1r));
         seasonDriverRepository.save(new SeasonDriver(season, driver4, p1r));
 
-        var matchday = matchdayRepository.save(new Matchday(season, "Spieltag 1", 1));
+        // Phase setup required by DriverRankingService + StandingsService (D-09 bridge delegates to findAllPhases)
+        // scoring lives on the SeasonPhase, attach the test-class scoring fields here.
+        var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regularPhase.setRaceScoring(raceScoring);
+        regularPhase.setMatchScoring(matchScoring);
+        regularPhase = seasonPhaseRepository.save(regularPhase);
+        // ensure season.getPhases() exposes the persisted phase so that
+        // PhaseTestFixtures.matchdayInRegularPhase can find it (avoids a transient phase reference).
+        season.getPhases().add(regularPhase);
+        // PhaseTeam rows required by StandingsService.calculateStandings(phaseId)
+        phaseTeamRepository.save(new PhaseTeam(regularPhase, tnr));
+        phaseTeamRepository.save(new PhaseTeam(regularPhase, p1r));
+
+        var matchday = matchdayRepository.save(new Matchday(regularPhase, "Spieltag 1", 1));
         var testTrack = trackRepository.save(new Track("Tsukuba " + uniqueSuffix, "Japan"));
         var testCar = carRepository.save(new Car("Mazda " + uniqueSuffix, "RX-Vision GT3"));
         var match = matchRepository.save(new Match(matchday, tnr, p1r));
@@ -176,7 +199,26 @@ class SiteGeneratorServiceTest {
     }
 
     private String slugify(String input) {
-        return siteGeneratorService.slugify(input);
+        return siteSlugger.slugify(input);
+    }
+
+    /**
+     * creates a REGULAR phase + LEAGUE PhaseTeam rows for a production
+     * season so that the phase-aware SiteGenerator surface (findRegularPhase) does not throw
+     * EntityNotFoundException at runtime. Required for any production-style season created
+     * outside the @BeforeEach setUp block. Test seasons (name containing "Test") are filtered
+     * before they reach the phase-aware path, so this helper is NOT needed for them.
+     */
+    private void setupRegularPhase(Season s) {
+        // scoring lives on SeasonPhase only — reuse the test-class scoring fields.
+        var regular = new SeasonPhase(s, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regular.setRaceScoring(raceScoring);
+        regular.setMatchScoring(matchScoring);
+        regular = seasonPhaseRepository.save(regular);
+        s.getPhases().add(regular);
+        for (var st : s.getSeasonTeams()) {
+            phaseTeamRepository.save(new PhaseTeam(regular, st.getTeam()));
+        }
     }
 
     @Test
@@ -316,7 +358,9 @@ class SiteGeneratorServiceTest {
     @Test
     void givenByeRaceInSeason_whenGenerate_thenCompletesWithoutNPE() {
         // given — add a bye race on a separate matchday
-        var byeMatchday = matchdayRepository.save(new Matchday(season, "Bye Matchday", 2));
+        // re-fetch the persisted REGULAR phase so the matchday FK resolves.
+        var bByeRegular = seasonPhaseRepository.findBySeasonIdAndPhaseType(season.getId(), PhaseType.REGULAR).orElseThrow();
+        var byeMatchday = matchdayRepository.save(new Matchday(bByeRegular, "Bye Matchday", 2));
         var homeTeam = teamRepository.findAll().stream()
                 .filter(t -> t.getShortName().startsWith("GTNR"))
                 .findFirst().orElseThrow();
@@ -352,7 +396,6 @@ class SiteGeneratorServiceTest {
                 + doc.select("a[href*='season/']").stream().map(e -> e.attr("href")).toList());
     }
 
-    // --- ALLTIME-03, ALLTIME-04: Nav links point to alltime pages ---
 
     @Test
     void whenGenerate_thenNavLinksToAlltimePages() throws IOException {
@@ -428,14 +471,13 @@ class SiteGeneratorServiceTest {
                 "Logo src should contain img/logos/ path but was: " + imgSrc);
     }
 
-    // --- CONT-01: Season year/number display ---
 
     @Test
     void givenSeason_whenGenerate_thenHeroContainsCommunityTeamCupTitle() throws IOException {
         // when
         siteGeneratorService.generate();
 
-        // then — Phase 48: hero h1 must contain "COMMUNITY TEAM CUP" (D-09)
+        // then — Phase 48: hero h1 must contain "COMMUNITY TEAM CUP"
         var html = Files.readString(tempDir.resolve("index.html"));
         var doc = Jsoup.parse(html);
         var heroTitle = doc.selectFirst(".hero h1");
@@ -461,15 +503,13 @@ class SiteGeneratorServiceTest {
     @Test
     void givenMultipleSeasons_whenGenerate_thenArchiveIsSortedByYearDescending() throws IOException {
         // given — add a season from an earlier year and one from a later year
+        // scoring lives on the REGULAR phase, set inside setupRegularPhase.
         var earlier = new Season("Earlier Era " + uniqueSuffix, 2023, 1);
-        earlier.setRaceScoring(season.getRaceScoring());
-        earlier.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(earlier);
+        setupRegularPhase(earlier); // production seasons need a REGULAR phase
         var later = new Season("Future Era " + uniqueSuffix, 2028, 2);
-        later.setRaceScoring(season.getRaceScoring());
-        later.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(later);
-
+        setupRegularPhase(later); // 
         // when
         siteGeneratorService.generate();
 
@@ -578,7 +618,6 @@ class SiteGeneratorServiceTest {
                 "alias section should not render when driver has no aliases");
     }
 
-    // --- Season references must always include year + number + name (displayLabel) ---
 
     @Test
     void givenSeason_whenGenerate_thenDriverProfileRaceHistoryHeadingContainsSeasonLabel() throws IOException {
@@ -677,14 +716,11 @@ class SiteGeneratorServiceTest {
         }
     }
 
-    // --- CONT-06: Test season filtering ---
 
     @Test
     void givenTestSeason_whenGenerate_thenNoSeasonPagesCreated() {
         // given — create a second season whose name contains "Test"
         var testSeason = new Season("Test Throwaway " + uniqueSuffix, 2025, 99);
-        testSeason.setRaceScoring(season.getRaceScoring());
-        testSeason.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(testSeason);
         var testSeasonDir = tempDir.resolve("season").resolve(
                 slugify(testSeason.getDisplayLabel()));
@@ -701,8 +737,6 @@ class SiteGeneratorServiceTest {
     void givenTestSeason_whenGenerate_thenNotInArchive() throws IOException {
         // given — create a second season whose name contains "Test"
         var testSeason = new Season("Test Throwaway " + uniqueSuffix, 2025, 99);
-        testSeason.setRaceScoring(season.getRaceScoring());
-        testSeason.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(testSeason);
 
         // when
@@ -716,7 +750,6 @@ class SiteGeneratorServiceTest {
                 "Test season should not appear in archive");
     }
 
-    // --- CONT-07: Empty match-meta and period column ---
 
     @Test
     void givenRaceWithNoTrackOrCar_whenGenerate_thenMatchMetaAbsent() throws IOException {
@@ -773,7 +806,6 @@ class SiteGeneratorServiceTest {
         }
     }
 
-    // --- CONT-02, CONT-03, CONT-04, CONT-08: Entity cross-links ---
 
     @Test
     void givenTeamInStandings_whenGenerate_thenTeamNameLinksToTeamProfile() throws IOException {
@@ -835,7 +867,6 @@ class SiteGeneratorServiceTest {
     // Removed: givenActiveSeason_whenGenerate_thenIndexStandingsTeamNamesLinkToTeamProfiles (Phase 48: D-14 — standings table removed from index)
     // Removed: givenActiveSeason_whenGenerate_thenIndexDoesNotRenderMatchResults (Phase 48: D-15 — replaced by whenGenerate_thenIndexHasNoMatchGrid)
 
-    // --- CONT-05: Season subnav, matchday index page ---
 
     @Test
     void givenSeason_whenGenerate_thenStandingsHasSubnav() throws IOException {
@@ -875,7 +906,6 @@ class SiteGeneratorServiceTest {
                 "Subnav should contain a link to matchdays.html");
     }
 
-    // --- UX-02: Active nav state ---
 
     @Test
     void givenStandingsPage_whenGenerate_thenStandingsNavItemActive() throws IOException {
@@ -890,7 +920,6 @@ class SiteGeneratorServiceTest {
         assertEquals("Standings", activeLinks.first().text());
     }
 
-    // --- UX-03: Breadcrumbs ---
 
     @Test
     void givenSeason_whenGenerate_thenStandingsHasBreadcrumb() throws IOException {
@@ -933,7 +962,6 @@ class SiteGeneratorServiceTest {
                 "Archive page should have no breadcrumb");
     }
 
-    // --- UX-01: Skip-link ---
 
     @Test
     void givenLayout_whenGenerate_thenSkipLinkIsFirstBodyChild() throws IOException {
@@ -950,7 +978,6 @@ class SiteGeneratorServiceTest {
         assertTrue(firstBodyChild.hasClass("skip-link"), "Skip-link should have class 'skip-link'");
     }
 
-    // --- UX-04: Winner highlight ---
 
     @Test
     void givenRaceWithResults_whenGenerate_thenMatchdayShowsWinnerHighlight() throws IOException {
@@ -974,7 +1001,6 @@ class SiteGeneratorServiceTest {
         assertFalse(winners.isEmpty(), "Matchday should show at least one winner highlight when race has results");
     }
 
-    // --- UX-06: Footer links ---
 
     @Test
     void givenActiveSeason_whenGenerate_thenFooterContainsUsefulLinks() throws IOException {
@@ -992,7 +1018,6 @@ class SiteGeneratorServiceTest {
                 "Footer should have an Archive link");
     }
 
-    // --- LINK-05, LINK-06: Footer YouTube link ---
 
     @Test
     void givenLayout_whenGenerate_thenFooterContainsYouTubeLink() throws IOException {
@@ -1024,7 +1049,6 @@ class SiteGeneratorServiceTest {
         assertEquals("YouTube", youtubeLink.text(), "YouTube link text must be 'YouTube'");
     }
 
-    // --- UX-07: Nav toggle aria-label ---
 
     @Test
     void givenLayout_whenGenerate_thenNavToggleLabelHasAriaLabel() throws IOException {
@@ -1048,7 +1072,6 @@ class SiteGeneratorServiceTest {
                 "Nav toggle input should NOT have aria-label");
     }
 
-    // --- Phase 42: Navigation Gap Closure ---
 
     // UX-02: Top-nav active state for index and archive pages
 
@@ -1089,7 +1112,15 @@ class SiteGeneratorServiceTest {
     @Test
     void givenSeasonWithPlayoff_whenGenerate_thenSubnavHasPlayoffLink() throws IOException {
         // given
-        var playoff = new Playoff(season, "Playoff " + uniqueSuffix);
+        // Playoff is bound to a SeasonPhase. Need a persisted PLAYOFF phase.
+        var playoffPhase = new org.ctc.domain.model.SeasonPhase(season,
+                org.ctc.domain.model.PhaseType.PLAYOFF,
+                org.ctc.domain.model.PhaseLayout.BRACKET, 10);
+        playoffPhase.setRaceScoring(raceScoring);
+        playoffPhase.setMatchScoring(matchScoring);
+        playoffPhase.setFormat(org.ctc.domain.model.SeasonFormat.LEAGUE);
+        seasonPhaseRepository.save(playoffPhase);
+        var playoff = new Playoff(playoffPhase, "Playoff " + uniqueSuffix);
         playoffRepository.save(playoff);
 
         // when
@@ -1103,7 +1134,6 @@ class SiteGeneratorServiceTest {
                 "Season with playoff should show Playoff link in subnav");
     }
 
-    // --- Phase 44: Clean Output Directory ---
 
     // CLEAN-01: Stale file removal
 
@@ -1153,7 +1183,6 @@ class SiteGeneratorServiceTest {
         assertTrue(Files.exists(freshDir.resolve("index.html")));
     }
 
-    // --- Phase 46: Configurable Links Page ---
 
     // LINK-07: links.html page exists
 
@@ -1222,7 +1251,6 @@ class SiteGeneratorServiceTest {
         assertNotNull(doc.selectFirst(".breadcrumb"), "Links page must have breadcrumbs");
     }
 
-    // --- Phase 47: Teams & Drivers Overview Pages ---
 
     // OVER-01: teams.html exists
 
@@ -1254,12 +1282,11 @@ class SiteGeneratorServiceTest {
     void givenMultipleSeasons_whenGenerate_thenTeamsPageHasSeasonFilter() throws IOException {
         // given — create a second production season with a team
         var season2 = new Season("Second Season " + uniqueSuffix, 2025, 1);
-        season2.setRaceScoring(season.getRaceScoring());
-        season2.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(season2);
         var extraTeam = teamRepository.save(new Team("Filter Team " + uniqueSuffix, "FLT" + uniqueSuffix));
         season2.addTeam(extraTeam);
         seasonRepository.save(season2);
+        setupRegularPhase(season2); // production seasons need a REGULAR phase
 
         // when
         siteGeneratorService.generate();
@@ -1353,7 +1380,7 @@ class SiteGeneratorServiceTest {
         var doc = Jsoup.parse(Files.readString(tempDir.resolve("teams.html")));
         var html = doc.html();
         assertFalse(html.contains("SUBA" + uniqueSuffix),
-                "Sub-team must NOT appear in teams overview (D-01)");
+                "Sub-team must NOT appear in teams overview");
     }
 
     // D-04 guard: test season not in overview filter
@@ -1362,8 +1389,6 @@ class SiteGeneratorServiceTest {
     void givenTestSeason_whenGenerate_thenTestSeasonNotInOverviewFilter() throws IOException {
         // given — create a season with "Test" in name
         var testSeason = new Season("Test League " + uniqueSuffix, 2024, 1);
-        testSeason.setRaceScoring(season.getRaceScoring());
-        testSeason.setMatchScoring(season.getMatchScoring());
         seasonRepository.save(testSeason);
         var extraTeam = teamRepository.save(new Team("Test Only Team " + uniqueSuffix, "TOT" + uniqueSuffix));
         testSeason.addTeam(extraTeam);
@@ -1377,11 +1402,10 @@ class SiteGeneratorServiceTest {
         var options = doc.select("select#season-filter option");
         for (var option : options) {
             assertFalse(option.text().contains("Test League"),
-                    "Test season must NOT appear in season filter (D-04)");
+                    "Test season must NOT appear in season filter");
         }
     }
 
-    // --- Phase 48: Landing Page Redesign ---
 
     // LAND-01/YT-01: Index page has YouTube iFrame Player API setup
     @Test
@@ -1448,7 +1472,7 @@ class SiteGeneratorServiceTest {
         assertNotNull(link, "Standings tile must link to active season standings page");
     }
 
-    // D-19: Index page (home) does not highlight any top-nav item
+    // Index page (home) does not highlight any top-nav item
     @Test
     void givenIndexPage_whenGenerate_thenNoTopNavItemActive() throws IOException {
         // when
@@ -1461,7 +1485,6 @@ class SiteGeneratorServiceTest {
                 "Index (home) page should not highlight any top-nav item");
     }
 
-    // --- Phase 50: OVER-06 guard — 0-game team broken link prevention ---
 
     @Test
     void givenTeamWithZeroGames_whenGenerate_thenTeamsOverviewDoesNotLinkToMissingProfile() throws IOException {
@@ -1492,7 +1515,6 @@ class SiteGeneratorServiceTest {
                 + brokenLinks.stream().map(e -> e.attr("href")).toList());
     }
 
-    // --- ALLTIME-01, ALLTIME-05: Alltime standings page ---
 
     @Test
     void whenGenerate_thenAlltimeStandingsPageExists() throws IOException {
@@ -1511,7 +1533,6 @@ class SiteGeneratorServiceTest {
                 "Alltime standings should contain team names from test data");
     }
 
-    // --- ALLTIME-02, ALLTIME-05: Alltime driver ranking page ---
 
     @Test
     void whenGenerate_thenAlltimeDriverRankingPageExists() throws IOException {
@@ -1535,20 +1556,25 @@ class SiteGeneratorServiceTest {
         var testDriver = driverRepository.save(new Driver("test_phantom_" + uniqueSuffix, "PhantomRacer"));
 
         var testSeason = new Season("Test Throwaway Alltime " + uniqueSuffix, 2025, 99);
-        testSeason.setRaceScoring(season.getRaceScoring());
-        testSeason.setMatchScoring(season.getMatchScoring());
         testSeason.addTeam(testTeam);
         seasonRepository.save(testSeason);
 
         seasonDriverRepository.save(new SeasonDriver(testSeason, testDriver, testTeam));
 
-        var testMatchday = matchdayRepository.save(new Matchday(testSeason, "Test MD 1", 1));
+        // persist a REGULAR phase carrying scoring before binding the matchday.
+        var testRegularPhase = new SeasonPhase(testSeason, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        testRegularPhase.setRaceScoring(raceScoring);
+        testRegularPhase.setMatchScoring(matchScoring);
+        testRegularPhase = seasonPhaseRepository.save(testRegularPhase);
+
+        var testMatchday = matchdayRepository.save(new Matchday(testRegularPhase, "Test MD 1", 1));
         var testMatch = matchRepository.save(new Match(testMatchday, testTeam, testTeam));
         var testRaceEntity = new Race();
         testRaceEntity.setMatchday(testMatchday);
         testRaceEntity.setMatch(testMatch);
         var tr1 = new RaceResult(testRaceEntity, testDriver, 1, 1, false);
-        scoringService.calculatePoints(tr1, testSeason.getRaceScoring());
+        // scoring lives on the SeasonPhase; pull from the matchday's phase.
+        scoringService.calculatePoints(tr1, testMatchday.getPhase().getRaceScoring());
         testRaceEntity.getResults().add(tr1);
         raceRepository.save(testRaceEntity);
         testMatch.setHomeScore(tr1.getPointsTotal());
@@ -1571,7 +1597,6 @@ class SiteGeneratorServiceTest {
                 "Alltime driver ranking should not contain Test season driver");
     }
 
-    // --- Alltime entity cross-links (consistent with season pages) ---
 
     @Test
     void whenGenerate_thenAlltimeStandingsHasEntityLinks() throws IOException {
@@ -1618,8 +1643,6 @@ class SiteGeneratorServiceTest {
                 new MatchScoring("Gen MS2 " + uniqueSuffix, 3, 1, 0));
 
         var season2 = new Season("Gen Season2 " + uniqueSuffix, 2026, 2);
-        season2.setRaceScoring(raceScoring2);
-        season2.setMatchScoring(matchScoring2);
         seasonRepository.save(season2);
 
         // Reuse existing teams from setUp
@@ -1635,7 +1658,14 @@ class SiteGeneratorServiceTest {
         // driver1 now drives for P1R in season2 (was GTNR in season1)
         seasonDriverRepository.save(new SeasonDriver(season2, driver1, p1r));
 
-        var md2 = matchdayRepository.save(new Matchday(season2, "Spieltag S2", 1));
+        // persist a REGULAR phase for season2 so the matchday FK resolves.
+        var regularPhase2 = new SeasonPhase(season2, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
+        regularPhase2.setRaceScoring(raceScoring2);
+        regularPhase2.setMatchScoring(matchScoring2);
+        regularPhase2 = seasonPhaseRepository.save(regularPhase2);
+        season2.getPhases().add(regularPhase2);
+
+        var md2 = matchdayRepository.save(new Matchday(regularPhase2, "Spieltag S2", 1));
         var match2 = matchRepository.save(new Match(md2, p1r, tnr));
         var race2 = new Race();
         race2.setMatchday(md2);

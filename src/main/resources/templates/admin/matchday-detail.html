@@ -7,7 +7,7 @@
         <div>
             <a th:href="@{/admin/matchdays(seasonId=${matchday.season.id})}" class="back-link">&larr; Back to Matchdays</a>
             <h1 th:text="${matchday.label}"></h1>
-            <span class="text-dim" th:text="${matchday.season.displayLabel + ' · ' + matchday.season.legs + ' Leg(s)'}"></span>
+            <span class="text-dim" th:text="${matchday.season.displayLabel + ' · ' + matchday.phase.legs + ' Leg(s)'}"></span>
         </div>
         <div class="actions">
             <a th:href="@{/admin/matchdays/{id}/edit(id=${matchday.id})}" class="btn btn-primary">Edit</a>
@@ -59,15 +59,15 @@
                         <div th:unless="${match.bye}" class="match-team-name" th:text="${match.awayTeam?.shortName}"></div>
                         <div th:if="${match.bye}" class="flex-spacer"></div>
                         <div class="ml-md">
-                            <span th:if="${matchday.season.legs > 1}" class="badge"
-                                  th:classappend="${match.races.size() >= matchday.season.legs ? 'badge-active' : 'badge-inactive'}"
-                                  th:text="${match.races.size() + '/' + matchday.season.legs + ' Legs'}"></span>
-                            <span th:if="${matchday.season.legs <= 1 && match.homeScore == null && !match.bye}" class="badge badge-inactive">Open</span>
+                            <span th:if="${matchday.phase.legs > 1}" class="badge"
+                                  th:classappend="${match.races.size() >= matchday.phase.legs ? 'badge-active' : 'badge-inactive'}"
+                                  th:text="${match.races.size() + '/' + matchday.phase.legs + ' Legs'}"></span>
+                            <span th:if="${matchday.phase.legs <= 1 && match.homeScore == null && !match.bye}" class="badge badge-inactive">Open</span>
                         </div>
                     </div>
 
                     <!-- Legs (only show for multi-leg or when legs exist) -->
-                    <div th:if="${matchday.season.legs > 1 && !match.races.isEmpty()}" class="legs-container">
+                    <div th:if="${matchday.phase.legs > 1 && !match.races.isEmpty()}" class="legs-container">
                         <div th:each="race, iter : ${match.races}" class="leg-row"
                              th:styleappend="${!iter.last ? 'border-bottom:1px solid var(--border);' : ''}">
                             <div class="leg-label" th:text="'Leg ' + ${iter.count}"></div>
@@ -77,7 +77,7 @@
                                 <span th:unless="${race.results.isEmpty()}" class="badge badge-active" th:text="${race.results.size() + ' Results'}"></span>
                             </a>
                         </div>
-                        <div th:if="${match.races.size() < matchday.season.legs}" class="leg-add-row">
+                        <div th:if="${match.races.size() < matchday.phase.legs}" class="leg-add-row">
                             <form th:action="@{/admin/matches/{id}/add-leg(id=${match.id})}" method="post" class="form-inline">
                                 <button type="submit" class="btn btn-secondary btn-sm">+ Add Leg</button>
                             </form>
@@ -90,7 +90,7 @@
                     </div>
 
                     <!-- Single-Leg: direkt Link zum Race -->
-                    <div th:if="${matchday.season.legs <= 1 && !match.races.isEmpty()}" class="legs-container--single">
+                    <div th:if="${matchday.phase.legs <= 1 && !match.races.isEmpty()}" class="legs-container--single">
                         <div th:each="race : ${match.races}" class="single-leg-row">
                             <div class="leg-detail" th:text="${(race.track?.name ?: '') + (race.car != null ? ' · ' + race.car.displayName : '')}"></div>
                             <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link leg-link">

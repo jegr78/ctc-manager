@@ -31,7 +31,6 @@ a, label[for], [role="button"] { cursor: pointer; }
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: linear-gradient(180deg, var(--bg) 0%, #0d0a12 100%);
-    background-attachment: fixed;
     color: var(--text);
     line-height: 1.6;
     min-height: 100vh;
@@ -288,6 +287,23 @@ th {
     letter-spacing: 1px;
     color: var(--text-muted);
     border-bottom: 1px solid var(--border);
+}
+
+/* Desktop: sticky table headers for long tables (alltime-driver-ranking 70+ rows).
+   Skipped on mobile because .table-wrap uses overflow-x: auto for horizontal scroll
+   (v1.6 Phase 41), which establishes a scroll container that breaks sticky against
+   the body. On desktop, .table-wrap's overflow is reset to visible so sticky th
+   can stick to viewport top during body scroll. */
+@media (min-width: 768px) {
+    .table-wrap {
+        overflow-x: visible;
+    }
+    table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--bg-card);
+    }
 }
 
 th.sortable { cursor: pointer; user-select: none; }
@@ -960,4 +976,114 @@ a.season-tag:hover {
     .tile-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+}
+
+/* === Phase 62: Phase + Group Tab Rows === */
+
+/* Phase-tab row (Row 1) — mirrors .subnav at 44px height. */
+.phase-tab-row {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+}
+
+.phase-tab-row-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    gap: 4px;
+    height: 44px;
+    align-items: center;
+}
+
+.phase-tab {
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+}
+
+.phase-tab:hover {
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.phase-tab.active {
+    color: var(--accent);
+    background: rgba(79, 195, 247, 0.1);
+}
+
+/* Group sub-tab row (Row 2) — secondary row at 36px height. */
+.group-tab-row {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+}
+
+.group-tab-row-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    gap: 4px;
+    height: 36px;
+    align-items: center;
+}
+
+.group-tab {
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+}
+
+.group-tab:hover {
+    color: var(--white);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.group-tab.active {
+    color: var(--accent);
+    background: rgba(79, 195, 247, 0.1);
+}
+
+/* Empty-state banner (D-22) — render roster with 0 points + banner instead of skipping. */
+.empty-phase-banner {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-card);
+    padding: 24px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.empty-phase-banner h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text);
+    margin: 0 0 8px 0;
+}
+
+.empty-phase-banner p {
+    color: var(--text-dim);
+    margin: 0;
+}
+
+/* Mobile: horizontal scroll for both new tab rows (matches .subnav mobile pattern). */
+@media (max-width: 768px) {
+    .phase-tab-row { padding: 0 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .phase-tab-row-inner { height: auto; padding: 8px 0; flex-wrap: nowrap; }
+
+    .group-tab-row { padding: 0 16px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .group-tab-row-inner { height: auto; padding: 8px 0; flex-wrap: nowrap; }
+
+    .empty-phase-banner { padding: 16px; }
 }

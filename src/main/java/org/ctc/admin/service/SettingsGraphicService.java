@@ -64,7 +64,11 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 			homePosition = homeSeed.map(PlayoffSeed::getSeed).orElse(0);
 			awayPosition = awaySeed.map(PlayoffSeed::getSeed).orElse(0);
 		} else {
-			var standings = standingsService.calculateStandings(season.getId());
+			var phase = race.getMatchday().getPhase();
+			var group = race.getMatchday().getGroup();
+			var standings = standingsService.calculateStandings(
+					phase.getId(),
+					group != null ? group.getId() : null);
 			for (int i = 0; i < standings.size(); i++) {
 				if (standings.get(i).getTeam().getId().equals(homeTeam.getId())) homePosition = i + 1;
 				if (standings.get(i).getTeam().getId().equals(awayTeam.getId())) awayPosition = i + 1;

@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.PhaseTeamRepository;
+import org.ctc.domain.repository.SeasonPhaseGroupRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,50 +23,94 @@ public class MatchdayGeneratorService {
 	private final SeasonRepository seasonRepository;
 	private final MatchdayRepository matchdayRepository;
 	private final MatchService matchService;
+	private final SeasonPhaseService seasonPhaseService;
+	private final PhaseTeamRepository phaseTeamRepository;
+	private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
 
-	public GeneratorFormData getFormData(UUID seasonId) {
-		var season = seasonRepository.findById(seasonId)
-				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
-		var teams = season.getEligibleTeams();
-		int n = teams.size();
-		int optimalRounds = (n % 2 == 0) ? n - 1 : n;
-		return new GeneratorFormData(season, n, optimalRounds);
-	}
-
+	/**
+	 * Generates matchdays for the given phase and optional group.
+	 *
+	 * <p>Layout validation:
+	 * <ul>
+	 *   <li>For {@code layout=LEAGUE}: {@code groupId} MUST be null — throws {@link IllegalArgumentException} if not.</li>
+	 *   <li>For {@code layout=GROUPS}: {@code groupId} MUST be non-null — throws {@link IllegalArgumentException} if null.</li>
+	 * </ul>
+	 *
+	 * <p>Teams are sourced from {@link PhaseTeamRepository} (not {@code season.getEligibleTeams()}).
+	 * Generated matchdays are linked to both {@code phase} and, for GROUPS layout, to the {@code group}.
+	 */
 	@Transactional
-	public void generate(UUID seasonId, int numberOfRounds, boolean homeAndAway) {
-		var season = seasonRepository.findById(seasonId)
-				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+	public void generate(UUID phaseId, UUID groupId, int numberOfRounds, boolean homeAndAway) {
+		var phase = seasonPhaseService.findById(phaseId);
 
-		if (season.getFormat() == SeasonFormat.SWISS) {
-			throw new IllegalArgumentException("Generator does not support Swiss format — use Swiss Rounds instead");
+		if (phase.getLayout() == PhaseLayout.LEAGUE && groupId != null) {
+			throw new IllegalArgumentException(
+					"LEAGUE layout requires groupId=null, got: " + groupId);
 		}
-		if (!matchdayRepository.findBySeasonIdOrderBySortIndexAsc(seasonId).isEmpty()) {
-			throw new IllegalStateException("Season already has matchdays — delete them first");
+		if (phase.getLayout() == PhaseLayout.GROUPS && groupId == null) {
+			throw new IllegalArgumentException(
+					"GROUPS layout requires non-null groupId");
 		}
-		var teams = season.getEligibleTeams();
+
+		if (phase.getFormat() == SeasonFormat.SWISS) {
+			throw new IllegalArgumentException(
+					"Generator does not support Swiss format — use Swiss Rounds instead");
+		}
+
+		// Pre-existing matchdays check per phase/group
+		var existing = (groupId != null)
+				? matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId)
+				: matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phaseId);
+		if (!existing.isEmpty()) {
+			throw new IllegalStateException("Phase/group already has matchdays — delete them first");
+		}
+
+		var rosterRows = (groupId != null)
+				? phaseTeamRepository.findByPhaseIdAndGroupId(phaseId, groupId)
+				: phaseTeamRepository.findByPhaseId(phaseId);
+		var teams = rosterRows.stream().map(PhaseTeam::getTeam).toList();
 		if (teams.size() < 2) {
 			throw new IllegalStateException("Need at least 2 teams to generate matchdays");
 		}
+
+		SeasonPhaseGroup group = (groupId != null)
+				? seasonPhaseGroupRepository.findById(groupId)
+						.orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", groupId))
+				: null;
 
 		List<List<int[]>> rounds = circleMethod(teams.size(), numberOfRounds);
 
 		int sortIndex = 1;
 		for (var round : rounds) {
-			var matchday = matchdayRepository.save(new Matchday(season, "MD " + sortIndex, sortIndex));
+			var matchday = new Matchday(phase, "MD " + sortIndex, sortIndex);
+			if (group != null) matchday.setGroup(group);
+			matchday = matchdayRepository.save(matchday);
 			createMatchesForRound(matchday, round, teams, false);
 			sortIndex++;
 		}
 
 		if (homeAndAway) {
 			for (var round : rounds) {
-				var matchday = matchdayRepository.save(new Matchday(season, "MD " + sortIndex, sortIndex));
+				var matchday = new Matchday(phase, "MD " + sortIndex, sortIndex);
+				if (group != null) matchday.setGroup(group);
+				matchday = matchdayRepository.save(matchday);
 				createMatchesForRound(matchday, round, teams, true);
 				sortIndex++;
 			}
 		}
 
-		log.info("Generated {} matchdays for season {}", sortIndex - 1, season.getName());
+		log.info("Generated {} matchdays for phase {} group {}", sortIndex - 1, phaseId, groupId);
+	}
+
+	public GeneratorFormData getFormData(UUID seasonId) {
+		var season = seasonRepository.findById(seasonId)
+				.orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+		var regularPhaseOpt = seasonPhaseService.findByType(seasonId, PhaseType.REGULAR);
+		SeasonPhase phase = regularPhaseOpt.orElse(null);
+		var teams = season.getEligibleTeams();
+		int n = teams.size();
+		int optimalRounds = (n % 2 == 0) ? n - 1 : n;
+		return new GeneratorFormData(season, phase, n, optimalRounds);
 	}
 
 	/**
@@ -158,6 +204,10 @@ public class MatchdayGeneratorService {
 		}
 	}
 
-	public record GeneratorFormData(Season season, int teamCount, int optimalRounds) {
+	/**
+	 * Form data for the matchday generator UI. Carries both {@link Season} and
+	 * {@link SeasonPhase} for template compatibility.
+	 */
+	public record GeneratorFormData(Season season, SeasonPhase phase, int teamCount, int optimalRounds) {
 	}
 }

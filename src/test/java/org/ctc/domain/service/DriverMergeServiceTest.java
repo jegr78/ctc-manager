@@ -85,7 +85,6 @@ class DriverMergeServiceTest {
 		return race;
 	}
 
-	// --- Helper methods ---
 
 	private SeasonDriver createSeasonDriverWithSeason(Driver driver, Season season) {
 		var sd = new SeasonDriver();

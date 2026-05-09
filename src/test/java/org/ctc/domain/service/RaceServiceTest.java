@@ -11,7 +11,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
@@ -36,7 +35,6 @@ class RaceServiceTest {
     @InjectMocks
     private RaceService service;
 
-    // --- getRaceListData ---
 
     @Test
     void givenMatchdayId_whenGetRaceListData_thenReturnsFilteredRaces() {
@@ -89,7 +87,6 @@ class RaceServiceTest {
         verify(raceRepository).findAll();
     }
 
-    // --- saveRace ---
 
     @Test
     void givenNewRaceData_whenSaveRace_thenCreatesMatchAndSaves() {
@@ -146,7 +143,6 @@ class RaceServiceTest {
         assertThat(result.message()).contains("Car is not in this season's pool");
     }
 
-    // --- saveResults ---
 
     @Test
     void givenResultData_whenSaveResults_thenCalculatesPointsAndAggregates() {
@@ -170,7 +166,7 @@ class RaceServiceTest {
 
         // then
         assertThat(message).contains("Results saved");
-        verify(scoringService).calculatePoints(any(RaceResult.class), eq(race.getMatchday().getSeason().getRaceScoring()));
+        verify(scoringService).calculatePoints(any(RaceResult.class), eq(race.getMatchday().getPhase().getRaceScoring()));
         verify(scoringService).aggregateMatchScores(race);
     }
 
@@ -193,7 +189,6 @@ class RaceServiceTest {
         verify(driverRepository, never()).findById(any());
     }
 
-    // --- quickScore ---
 
     @Test
     void givenRace_whenQuickScore_thenMatchScoresUpdated() {
@@ -214,7 +209,6 @@ class RaceServiceTest {
         assertThat(race.getMatch().getAwayScore()).isEqualTo(38);
     }
 
-    // --- deleteRace ---
 
     @Test
     void givenExistingRace_whenDeleteRace_thenReturnsMatchdayId() {
@@ -244,7 +238,6 @@ class RaceServiceTest {
         verify(raceRepository).delete(race);
     }
 
-    // --- getRaceDetailData ---
 
     @Test
     void givenRaceWithResults_whenGetRaceDetailData_thenReturnsScoresAndFlags() {
@@ -255,7 +248,8 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        // matchday.getSeason() derives from phase; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -306,7 +300,8 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        // matchday.getSeason() derives from phase; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -325,7 +320,6 @@ class RaceServiceTest {
         assertThat(data.resultsExist()).isFalse();
     }
 
-    // --- getRaceDetailData settings flags ---
 
     @Test
     void givenRaceWithoutSettings_whenGetRaceDetailData_thenFlagsSettingsMissing() {
@@ -336,7 +330,8 @@ class RaceServiceTest {
         season.setId(UUID.randomUUID());
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        // matchday.getSeason() derives from phase; wire a phase.
+        matchday.setPhase(PhaseTestFixtures.regularPhase(season, null, null));
         var match = new Match(matchday, homeTeam, awayTeam);
         var race = new Race();
         race.setId(UUID.randomUUID());
@@ -355,7 +350,6 @@ class RaceServiceTest {
         assertThat(data.settingsExist()).isFalse();
     }
 
-    // --- saveRace with settings ---
 
     @Test
     void givenRaceDataWithSettings_whenSaveRace_thenRaceSettingsCreated() {
@@ -388,7 +382,6 @@ class RaceServiceTest {
         assertThat(result.success()).isTrue();
     }
 
-    // --- saveRace edit ---
 
     @Test
     void givenExistingRace_whenSaveRace_thenUpdatesRaceWithoutCreatingMatch() {
@@ -418,7 +411,6 @@ class RaceServiceTest {
         verify(matchRepository, never()).save(any());
     }
 
-    // --- saveRace track not in pool ---
 
     @Test
     void givenTrackNotInSeasonPool_whenSaveRace_thenReturnsError() {
@@ -448,7 +440,6 @@ class RaceServiceTest {
         assertThat(result.message()).contains("Track is not in this season's pool");
     }
 
-    // --- Helper methods ---
 
     private Race createRaceWithScore(int homeScore, int awayScore) {
         var homeTeam = createTeam("HOM", "Home");
@@ -466,14 +457,16 @@ class RaceServiceTest {
     }
 
     private Race createRaceWithScoring() {
+        // scoring lives on the SeasonPhase, not the Season.
         var scoring = new RaceScoring("Test", "10,8,6,4,2,1", "3,2,1", 1);
         var season = new Season();
         season.setId(UUID.randomUUID());
-        season.setRaceScoring(scoring);
+        var phase = PhaseTestFixtures.regularPhase(season, scoring, null);
+        phase.setRaceScoring(scoring);
 
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        matchday.setPhase(phase);
 
         var homeTeam = createTeam("HOM", "Home");
         var awayTeam = createTeam("AWY", "Away");
@@ -494,11 +487,13 @@ class RaceServiceTest {
         season.setCars(new ArrayList<>());
         season.setTracks(new ArrayList<>());
         var scoring = new RaceScoring("Default", "10,8,6", "3,2,1", 1);
-        season.setRaceScoring(scoring);
 
+        // matchday.getSeason() now derives from phase; wire a phase carrying scoring.
+        var phase = PhaseTestFixtures.regularPhase(season, scoring, null);
+        phase.setRaceScoring(scoring);
         var matchday = new Matchday();
         matchday.setId(UUID.randomUUID());
-        matchday.setSeason(season);
+        matchday.setPhase(phase);
         return matchday;
     }
 

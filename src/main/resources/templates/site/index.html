@@ -3,7 +3,7 @@
       th:replace="~{site/layout :: layout('Community Team Cup', ~{::section})}">
 <body>
 <section>
-    <!-- Hero with YouTube background video (Phase 51: YT-01, YT-02) -->
+    <!-- Hero with YouTube background video -->
     <div class="hero" th:classappend="${videoId != null and !#strings.isEmpty(videoId)} ? ' hero--video'">
         <div class="hero-video-bg" th:if="${videoId != null and !#strings.isEmpty(videoId)}">
             <div id="yt-hero-player"></div>
@@ -59,7 +59,7 @@
     })();
     </script>
 
-    <!-- Tile Navigation (D-10, D-11, D-12, D-13) -->
+    <!-- Tile Navigation -->
     <div class="tile-grid">
         <a class="tile-card" th:href="${rootPath + '/archive.html'}">
             <div class="tile-card-label">Seasons</div>

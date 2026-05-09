@@ -5,8 +5,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.SeasonForm;
+import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.service.MatchdayGeneratorService;
 import org.ctc.domain.service.SeasonManagementService;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.SwissPairingService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,18 +29,34 @@ import java.util.UUID;
 public class SeasonController {
 
 	private final SeasonManagementService seasonManagementService;
+	private final SeasonPhaseService seasonPhaseService;
 	private final SwissPairingService swissPairingService;
 	private final MatchdayGeneratorService matchdayGeneratorService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable UUID id, Model model) {
-		var data = seasonManagementService.getDetailData(id);
-		model.addAttribute("season", data.season());
-		model.addAttribute("playoff", data.playoff());
-		model.addAttribute("isSwiss", data.isSwiss());
-		model.addAttribute("canGenerate", data.canGenerate());
-		model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(id));
-		return "admin/season-detail";
+		var season = seasonManagementService.findById(id);
+		var regular = seasonPhaseService.findByType(id, PhaseType.REGULAR);
+
+		if (regular.isEmpty()) {
+			// Render Empty-State card instead of redirecting when no REGULAR phase exists.
+			var allPhases = seasonPhaseService.findAllPhases(id);
+			model.addAttribute("season", season);
+			model.addAttribute("phase", null);
+			model.addAttribute("allPhases", allPhases);
+			model.addAttribute("groups", List.of());
+			model.addAttribute("phaseTeams", List.of());
+			model.addAttribute("matchdays", List.of());
+			model.addAttribute("selectedGroupId", null);
+			model.addAttribute("hasRegularPhase", false);
+			model.addAttribute("effectivePhaseLabel", "");
+			model.addAttribute("combinedView", false);
+			model.addAttribute("showGroupColumn", false);
+			model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(id));
+			return "admin/season-detail";
+		}
+		// Auto-redirect to REGULAR phase tab
+		return "redirect:/admin/seasons/" + id + "/phases/" + regular.get().getId();
 	}
 
 	@GetMapping
@@ -50,7 +68,6 @@ public class SeasonController {
 	@GetMapping("/new")
 	public String create(Model model) {
 		model.addAttribute("seasonForm", new SeasonForm());
-		addScoringLists(model);
 		return "admin/season-form";
 	}
 
@@ -64,36 +81,24 @@ public class SeasonController {
 		form.setYear(season.getYear());
 		form.setNumber(season.getNumber());
 		form.setDescription(season.getDescription());
-		form.setStartDate(season.getStartDate());
-		form.setEndDate(season.getEndDate());
 		form.setActive(season.isActive());
-		form.setFormat(season.getFormat());
-		form.setTotalRounds(season.getTotalRounds());
-		form.setLegs(season.getLegs());
-		form.setEventDurationMinutes(season.getEventDurationMinutes());
 		model.addAttribute("seasonForm", form);
 		model.addAttribute("season", season);
 		model.addAttribute("allTeams", data.allTeams());
 		model.addAttribute("allCars", data.allCars());
 		model.addAttribute("allTracks", data.allTracks());
-		model.addAttribute("allRaceScorings", data.allRaceScorings());
-		model.addAttribute("allMatchScorings", data.allMatchScorings());
 		return "admin/season-form";
 	}
 
 	@PostMapping("/save")
-	public String save(@Valid @ModelAttribute("seasonForm") SeasonForm form, BindingResult result,
-	                   @RequestParam UUID raceScoring,
-	                   @RequestParam UUID matchScoring,
-	                   RedirectAttributes redirectAttributes, Model model) {
+	public String save(@Valid @ModelAttribute("seasonForm") SeasonForm form,
+	                   BindingResult result,
+	                   RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
-			addScoringLists(model);
 			return "admin/season-form";
 		}
-		var season = seasonManagementService.save(form.getId(), form.getName(), form.getYear(),
-				form.getNumber(), form.getDescription(), form.getStartDate(), form.getEndDate(),
-				form.isActive(), form.getFormat(), form.getTotalRounds(), form.getLegs(),
-				form.getEventDurationMinutes(), raceScoring, matchScoring);
+		var season = seasonManagementService.save(form.getId(), form.getName(),
+				form.getYear(), form.getNumber(), form.getDescription(), form.isActive());
 		redirectAttributes.addFlashAttribute("successMessage", "Season saved: " + season.getName());
 		return "redirect:/admin/seasons";
 	}
@@ -194,19 +199,23 @@ public class SeasonController {
 	@GetMapping("/{id}/swiss")
 	public String swissRounds(@PathVariable UUID id, Model model) {
 		var data = seasonManagementService.getSwissRoundData(id);
+		var regular = seasonPhaseService.findRegularPhase(id);
+		Integer totalRounds = regular.getTotalRounds();
 		model.addAttribute("season", data.season());
 		model.addAttribute("raceScores", data.raceScores());
-		model.addAttribute("currentRound", swissPairingService.getCurrentRound(id));
+		model.addAttribute("totalRounds", totalRounds);
+		model.addAttribute("currentRound", swissPairingService.getCurrentRound(regular.getId(), null));
 		model.addAttribute("canGenerateNext",
-				swissPairingService.isCurrentRoundComplete(id)
-						&& (data.season().getTotalRounds() == null || data.season().getMatchdays().size() < data.season().getTotalRounds()));
+				swissPairingService.isCurrentRoundComplete(regular.getId(), null)
+						&& (totalRounds == null || data.season().getMatchdays().size() < totalRounds));
 		return "admin/swiss-rounds";
 	}
 
 	@PostMapping("/{id}/swiss/generate")
 	public String generateSwissRound(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		var regular = seasonPhaseService.findRegularPhase(id);
 		try {
-			swissPairingService.generateNextRound(id);
+			swissPairingService.generateNextRound(regular.getId(), null);
 			redirectAttributes.addFlashAttribute("successMessage", "Next round generated successfully");
 		} catch (IllegalStateException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -219,7 +228,8 @@ public class SeasonController {
 		var formData = matchdayGeneratorService.getFormData(id);
 		var season = formData.season();
 		var form = new MatchdayGeneratorForm();
-		form.setNumberOfRounds(season.getTotalRounds() != null ? season.getTotalRounds() : formData.optimalRounds());
+		Integer rounds = seasonPhaseService.findRegularPhase(id).getTotalRounds();
+		form.setNumberOfRounds(rounds != null ? rounds : formData.optimalRounds());
 		model.addAttribute("season", season);
 		model.addAttribute("generatorForm", form);
 		model.addAttribute("teamCount", formData.teamCount());
@@ -236,18 +246,14 @@ public class SeasonController {
 			redirectAttributes.addFlashAttribute("errorMessage", "Invalid input: number of rounds must be at least 1");
 			return "redirect:/admin/seasons/" + id + "/generate";
 		}
+		var regular = seasonPhaseService.findRegularPhase(id);
 		try {
-			matchdayGeneratorService.generate(id, form.getNumberOfRounds(), form.isHomeAndAway());
+			matchdayGeneratorService.generate(regular.getId(), null, form.getNumberOfRounds(), form.isHomeAndAway());
 			redirectAttributes.addFlashAttribute("successMessage", "Matchdays generated successfully");
 		} catch (IllegalStateException | IllegalArgumentException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
 			return "redirect:/admin/seasons/" + id + "/generate";
 		}
 		return "redirect:/admin/seasons/" + id;
-	}
-
-	private void addScoringLists(Model model) {
-		model.addAttribute("allRaceScorings", seasonManagementService.getAllRaceScorings());
-		model.addAttribute("allMatchScorings", seasonManagementService.getAllMatchScorings());
 	}
 }

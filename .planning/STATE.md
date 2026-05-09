@@ -1,10 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: "(awaiting next milestone)"
-status: between_milestones
-last_updated: "2026-04-25T09:00:00.000Z"
-last_activity: 2026-04-25
+milestone: null
+milestone_name: null
+status: between-milestones
+stopped_at: v1.9 milestone shipped 2026-05-09 — awaiting next milestone definition via `/gsd-new-milestone`.
+last_updated: "2026-05-09T18:09:00.000Z"
+last_activity: 2026-05-09
 progress:
   total_phases: 0
   completed_phases: 0
@@ -17,16 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-24)
+See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
-**Current focus:** Between milestones — awaiting `/gsd-new-milestone` to define v1.9 (or next).
+
+**Current focus:** Planning next milestone (v1.9 shipped — awaiting `/gsd-new-milestone`).
 
 ## Current Position
 
-No active milestone. v1.8 shipped 2026-04-25 (PR #116 squash-merged as `042cfbf`, archived in `.planning/milestones/v1.8-*`).
-
-Last activity: 2026-04-25 — v1.8 closed via `/gsd-complete-milestone v1.8`. ROADMAP/REQUIREMENTS/PROJECT.md/MILESTONES.md/RETROSPECTIVE.md all updated. Phase directories moved to `.planning/milestones/v1.8-phases/`. Tag v1.8 ready to push.
+Phase: — (between milestones)
+Status: v1.9 shipped 2026-05-09; ready for `/gsd-new-milestone`
+Last activity: 2026-05-09 — milestone close (`/gsd-complete-milestone v1.9`)
 
 ## Completed Milestones
 
@@ -37,6 +39,22 @@ Last activity: 2026-04-25 — v1.8 closed via `/gsd-complete-milestone v1.8`. RO
 - v1.5 Code Review Fixes (9 phases, 14 plans) — shipped 2026-04-15
 - v1.6 Static Site Quality (17 phases, 56 requirements) — shipped 2026-04-18
 - v1.8 Bulk Driver Import from Google Sheets (2 phases, 4 plans, +52 tests) — shipped 2026-04-25
+- v1.9 Season Phases & Groups (15 phases, ~70 plans, 38/38 requirements, +88.4k LOC) — shipped 2026-05-09
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-05-09:
+
+| Category | Item | Status |
+| -------- | ---- | ------ |
+| debug | group-warnings-for-non-groups-seasons | diagnosed (hypothesis confirmed, see Resolution) |
+| debug | shortname-resolver-picks-parent-without-phaseteam | diagnosed (hypothesis confirmed, see Resolution; superseded by Phase 70) |
+| quick_task | 260404-jh8-fix-release-workflow-use-release-token-s | missing (predates v1.9) |
+| uat | Phase 57 (57-HUMAN-UAT.md) | partial — 3 pending scenarios; MariaDB UAT covered transitively by Phase 61 UAT-03 + CI smoke gate (deferred) |
+| uat | Phase 61 (61-HUMAN-UAT.md) | unknown (UAT-02 legacy season visual smoke deferred to next deploy) |
+| uat | Phase 62 (62-HUMAN-UAT.md) | resolved |
+| uat | Phase 66 (66-UAT.md) | diagnosed (superseded by Phase 70) |
+| uat | Phase 70 (70-HUMAN-UAT.md) | diagnosed (UAT D-22 PASS — 287/357/0 errors on MariaDB Saison 2023) |
 
 ## Accumulated Context
 
@@ -47,24 +65,56 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [v1.8 start]: Foundation document is `docs/superpowers/specs/2026-04-24-bulk-driver-import-design.md` — authored via `/gsd-explore` brainstorming; approved as canonical design before milestone kickoff.
 - [v1.8 start]: Reuse `GoogleSheetsService`, `DriverMatchingService` (4-stage fuzzy), and `CsvImportService` preview-state pattern — no parallel infrastructure.
 - [v1.8 start]: Missing Seasons/Teams are errors, never auto-created — consistent with "No Fallback Calculations" principle.
-- [v1.8 start]: E2E tests deferred (Playwright × Google Sheets mocking is fragile); Unit + Integration tests must meet 82% coverage gate.
+- [v1.8 start]: E2E tests deferred (Playwright x Google Sheets mocking is fragile); Unit + Integration tests must meet 82% coverage gate.
 - [v1.8 roadmap]: Two-phase structure chosen over three-phase split. Rationale: Controller+templates+execute form a single cohesive deliverable — splitting preview-controller from execute-controller would ship a non-verifiable intermediate (preview form with no execute path). Phase 54 delivers a fully unit-tested service; Phase 55 delivers the end-to-end admin flow with integration coverage.
+- [v1.9 roadmap]: Six-phase structure chosen. Rationale: schema (56) must precede data migration (57) which must precede services (58); MIGR-06 (cleanup drop) is deferred to Phase 61 as a safety gate — old bridge columns remain intact until all services and UI are fully migrated off them. Phase 59 (import + test data) and Phase 60 (UI) both depend on services (58) but are independent of each other and can be planned/executed in parallel if desired.
+- [v1.9 roadmap]: Phase 60 (Admin UI) depends on Phase 58 (Service Layer), not Phase 59 (Import & Test Data) — UI does not depend on the seeder rebuild. Both 59 and 60 unblock Phase 61.
+- [phase 56 discuss]: Entity Java-side scope = **parallel additive**. New entities + new bidirectional fields (`Season.phases`, `Matchday.phase`, `Playoff.phase`) added alongside the old `Season` fields and `season_id` FKs. ROADMAP-Phase-56-SC3 wording reinterpreted: old Season fields stay until Phase 61. Service-layer rewrite stays in Phase 58.
+- [phase 56 discuss]: `matchdays.phase_id` and `playoffs.phase_id` columns are **NULLABLE** in Phase 56's V3 migration; Phase 57's data migration backfills values and flips both to NOT NULL in the same step.
+- [phase 56 discuss]: DB-level uniqueness via `UNIQUE (season_id, phase_type)` on `season_phases` (max 1× per type per season) + `UNIQUE (phase_id, team_id)` on `phase_teams`. No CHECK constraints — `@Enumerated(EnumType.STRING)` plus typed enums cover value validation.
+- [phase 56 discuss]: Existing `SeasonFormat` enum is **reused** for `SeasonPhase.format` (no rename to PhaseFormat). New top-level enums `PhaseType` (REGULAR/PLAYOFF/PLACEMENT) and `PhaseLayout` (LEAGUE/GROUPS/BRACKET) in `org.ctc.domain.model`.
+- [phase 56 discuss]: New repositories ship with default Spring Data CRUD only — no custom finders in Phase 56 (deferred to Phase 58 when services need them).
+- [Phase ?]: Bridge uses findByType (Optional) instead of findRegularPhase to avoid transaction rollback-only poisoning; legacy fallback for pre-V4 seasons
+- [Plan 58-05]: PlayoffService.createPlayoff atomically writes PLAYOFF SeasonPhase + Playoff in single @Transactional boundary (D-19, Pitfall 2 mitigation). Duplicate-playoff exception type swapped from IllegalArgumentException to BusinessRuleException for D-03 consistency.
+- [Plan 58-05]: PlayoffSeedingService.autoSeedBracket dual-flow — manual PlayoffSeed rows have priority (legacy admin workflow); D-15 REGULAR-phase Top-N is the fallback when no manual seeds exist. PhaseTeam roster on PLAYOFF phase populated as side-effect of D-15 seeding (D-20).
+- [Plan 58-05]: Pitfall 4 mitigated — PlayoffService.addRaceToMatchup writes matchday.phase=playoff.getPhase() so playoff race results attribute correctly to PLAYOFF phase in DriverRankingService.
+- [Phase ?]: [Plan 70-01]: Inverted Phase 66 D-04 sub-team resolver to parent-precedence; removed group-resolution branch in DriverSheetImportService. Production compile clean.
+- [Phase 70]: [Plan 70-02]: UX decommission — DriverSheetImportController no longer computes showGroupColumn (3 imports + seasonPhaseService field + 10-line GROUPS-detection block deleted); driver-import-preview.html renders no Group column / no warning box across 5 buckets; DriverSheetImportControllerTest @Test count 21 -> 19 (two GROUPS-/null-resolved-group tests deleted, dead PhaseLayout import + SeasonPhaseRepository field removed). Production compile clean (./mvnw clean compile -> BUILD SUCCESS, 182 source files). Service-side test compile remains intentionally RED until Plan 70-03 (Wave 2).
+- [Phase 70]: [Plan 70-03]: Test reconciliation + Phase-66 doc addendum + final verify gate. DriverSheetImportServiceTest reconciled (8 superseded tests deleted, 2 multi-match regression fences preserved, 16 stale findRegularPhase stubs removed, dead-accessor lines dropped from #21, +1 new D-13 parent-always test using T-MRL fixtures with execute-path ArgumentCaptor proving SeasonDriver.team == parent). DriverSheetImportServiceIT reconciled (3 group-resolution IT tests deleted, Test #8 warnings assertion replaced with positive newDrivers assertion, unused dataRows helper removed). 66-CONTEXT.md D-06..D-09 carry inline supersede annotations; 66-VERIFICATION.md gets `## Phase-70 Re-Open Addendum (2026-05-09)` section + frontmatter `re_verification` Phase-70 entry (single-object schema preserved, May-8 entry archived under `previous_re_verification:` sibling). Final `./mvnw verify -Pe2e` PASSED: 1226 unit tests, 31 E2E tests, JaCoCo line ratio 0.8718 (gate 0.82).
 
 ### Phase Numbering
 
-Continuing from v1.6 (last phase: 53). v1.8 phases start at **Phase 54**.
+Continuing from v1.8 (last phase: 55). v1.9 phases start at **Phase 56**.
 
-- Phase 54: Preview Service & Row Categorization (17 requirements)
-- Phase 55: Admin Import UI & Transactional Execute (11 requirements)
+- Phase 56: Model & Schema Foundation (MODEL-01..08, MIGR-01, MIGR-07)
+- Phase 57: Data Migration (MIGR-02, MIGR-03, MIGR-04, MIGR-05)
+- Phase 58: Service Layer (SVC-01..05)
+- Phase 59: Import & Test Data (IMPORT-01..04, DATA-01, DATA-02)
+- Phase 60: Admin UI (UI-01..07)
+- Phase 61: Cleanup & Quality Gate (MIGR-06, QUAL-01..03)
+- Phase 62: Public Site Phase + Group Awareness (TBD — to be derived during /gsd-discuss-phase)
+
+### Roadmap Evolution
+
+- 2026-05-02: Phase 62 (Public Site Phase + Group Awareness) added at end of v1.9 milestone. Discovered during Phase 61 UAT — admin-side phase/group model is fully wired but invisible on the public static site. Without Phase 62 the v1.9 feature ships externally invisible.
+- 2026-05-07: Phase 66 (Team ShortName Collision Fix — Driver Import) added at end of v1.9 milestone. Discovered during v1.9 UAT — `DriverSheetImportService` crashes with `IncorrectResultSizeDataAccessException` when parent + sub-team share the same `shortName` (e.g. ZFS parent + ZFS sub). 5 call sites in the import service share the same `findByShortName`-on-non-unique-column bug. Resolution policy: prefer parent (`parentTeam IS NULL`) on multi-match.
+- 2026-05-07: Phase 67 (Comment Cleanup Re-Sweep) added — UAT review found WHAT-style / narrative comments re-introduced across the v1.9 cluster (Phases 56–66). Same CLAUDE.md policy as Phases 20-21/53/61 but enforcement regressed. Scope extended on user request to include `src/test/java` (test files re-accumulated narrative comments too); BDD `// given` / `// when` / `// then` markers explicitly preserved. Sweep production + test code + ideally lock the rule with a CI / pre-commit guard.
+- 2026-05-07: Phase 68 (Lombok Unsafe Deprecation Warning Fix) added — JDK 24+/25 emits terminally-deprecated warnings from `lombok.permit.Permit` calling `sun.misc.Unsafe::objectFieldOffset`. Currently shipping Lombok 1.18.44; upstream fix is in newer point releases that switched `Permit` to `MethodHandles.privateLookupIn`. Plan: verify the resolved version under the Spring Boot starter parent, pin a property override in `pom.xml` if needed, and confirm warnings are gone in `./mvnw verify` + `./mvnw spring-boot:run`.
+- 2026-05-09: Phase 70 (Driver Import: Parent-Only Team Resolution) added — Live-UAT against local MariaDB (Saison 2023, parent MRL + Subs MRL 1/MRL 2 in different Groups) revealed that Phase 66 D-04 default ("sub-team-with-PhaseTeam wins over parent") violates the user's domain model. User clarification 2026-05-09: SeasonDriver.team is always the parent; sub-team assignment happens per-match via RaceLineup, never per-phase. Phase 70 inverts the Phase-66 resolver default (parent always wins), removes the entire Group-resolution UX from the import preview (`resolvedGroupName`, `usesGroups`, `showGroupColumn`, `TEAM_NOT_IN_REGULAR_PHASE` warning), and adds a Phase-66-VERIFICATION.md addendum marking superseded truths. No schema changes, no SeasonDriver data migration needed.
 
 ### Key Technical Context
 
-- Target entities: `Driver` (psnId unique, nickname, active, aliases), `SeasonDriver(season, driver, team)`.
-- Sheet structure: tabs named `^\d{4}$`; column A = `PSN ID`, column C = `Team` short code. Hidden column B is ignored.
-- Admin entry point: new page at `/admin/drivers/import` (button on `/admin/drivers`).
-- Controller routes: `GET /admin/drivers/import`, `POST /admin/drivers/import/preview`, `POST /admin/drivers/import/execute`.
-- No Flyway migration required.
-- Reuse mandated: `GoogleSheetsService.extractSpreadsheetId()/getSheetNames()/readRangeFromSheet()`, `DriverMatchingService` 4-stage logic. Preview-state between preview and execute uses **re-fetch + form-params** (mirroring `CsvImportController.execute()`), **not** `@SessionAttributes` — confirmed during Phase 54 codebase scout (see `.planning/phases/54-preview-service-row-categorization/54-CONTEXT.md` D-06).
+- Foundation document: `/Users/jegr/.claude/plans/ich-bin-mit-dem-pure-gem.md` (architecture plan from brainstorming session).
+- New entities: `SeasonPhase` (season_phases), `SeasonPhaseGroup` (season_phase_groups), `PhaseTeam` (phase_teams).
+- FK migrations: `Matchday.season_id` -> `Matchday.phase_id`; `Playoff.season_id` -> `Playoff.phase_id`; M:N `playoff_seasons` table dropped in MIGR-06.
+- Fields migrating from `Season` to `SeasonPhase`: format, totalRounds, legs, eventDurationMinutes, startDate, endDate, raceScoring_id, matchScoring_id.
+- Fields staying in `Season`: id, year, number, name, description, active, audit fields, cars/tracks (season-wide assets).
+- Driver import fix: `findByYearAndNumber(int, int)` replaces `findByYear(int)`; tab pattern extended to `^\d{4}_S\d+$`.
+- Group membership for imported drivers: resolved implicitly via `PhaseTeam` of the REGULAR phase — no per-driver override in sheet.
+- MIGR-06 must be the last migration executed — only safe after all Java code references have been removed from old columns.
+- Constraint: UNIQUE on `(phase_id, team_id)` in `phase_teams`; max 1 REGULAR + max 1 PLAYOFF + max 1 PLACEMENT per season.
+- Critical files to modify (~25-30): Season, Matchday, Playoff entities; SeasonRepository, MatchdayRepository, PlayoffRepository; SeasonManagementService, StandingsService, DriverRankingService, MatchdayGeneratorService, PlayoffService, PlayoffSeedingService, DriverSheetImportService; SeasonController, StandingsController, DriverSheetImportController, MatchdayController, PlayoffController; SeasonForm; 6 Thymeleaf templates; TestDataService + DevDataSeeder.
+- Critical files to create (~12-15): SeasonPhase, SeasonPhaseGroup, PhaseTeam entities; SeasonPhaseRepository, SeasonPhaseGroupRepository, PhaseTeamRepository; SeasonPhaseService; SeasonPhaseController, SeasonPhaseGroupController; SeasonPhaseForm, SeasonPhaseGroupForm, PhaseTeamForm; 6 Flyway migration files; 3 Thymeleaf templates (season-phase-form, season-phase-detail, season-phase-group-form).
 
 ### Blockers/Concerns
 
@@ -72,10 +122,17 @@ None.
 
 ## Session Continuity
 
-**Next action:** v1.8 milestone closed and archived. Project is between milestones.
+Last session: 2026-05-09T13:57:09Z
 
-- v1.8 Tag pushen: `git push origin v1.8` (lokales Tag wartet)
-- `/gsd-new-milestone` — questioning → research → requirements → roadmap für v1.9 (oder nächste Version)
-- `/gsd-progress` — aktueller Snapshot (zeigt: keine aktive Milestone, alle Phasen archiviert)
+**Plan 70-03 commits:**
 
-**Branch:** `master` (after v1.8 merge — feature branch deleted locally and remotely).
+- `722e40c` test(70-03): reconcile DriverSheetImportServiceTest with parent-only resolver — delete tests #15-#20/#23/#24, preserve #21/#22, drop stale stubs (D-11, D-12)
+- `1855eb6` test(70-03): reconcile DriverSheetImportServiceIT — delete group-resolution IT tests, adjust Test #8 (D-09)
+- `5b86482` test(70-03): add parent-always regression test for sub-team-collision in GROUPS phase (D-13)
+- `b863c80` docs(70-03): Phase-66 re-open addendum + superseded inline notes (D-15, D-16, D-17)
+
+**Stopped at:** Completed Plan 70-03 + final `./mvnw verify -Pe2e` gate (BUILD SUCCESS, 1226 unit + 31 E2E tests, JaCoCo line 0.8718). Phase 70 is complete and ready for `/gsd-verify-work 70`.
+
+**Next action:** Run `/gsd-verify-work 70` to confirm phase verification, then proceed with milestone v1.9 closure.
+
+**Branch:** `gsd/v1.9-season-phases-groups` (4 plan-70-03 commits + Plan 70-03 metadata commit on top of `17e2225`).

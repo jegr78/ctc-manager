@@ -40,7 +40,6 @@ class PlayoffBracketViewServiceTest {
 		return season;
 	}
 
-	// --- Helper methods ---
 
 	private Team createTeam(String name) {
 		var team = new Team(name, name);
@@ -77,7 +76,8 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			var playoff = new Playoff(season, "Test Playoff");
+			// Playoff is bound to a SeasonPhase, not the Season directly.
+			var playoff = PhaseTestFixtures.playoffForSeason(season,"Test Playoff");
 			playoff.setId(playoffId);
 
 			var round = new PlayoffRound(playoff, "Final", 0);
@@ -108,7 +108,8 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			var playoff = new Playoff(season, "Points Test");
+			// Playoff is bound to a SeasonPhase, not the Season directly.
+			var playoff = PhaseTestFixtures.playoffForSeason(season,"Points Test");
 			playoff.setId(playoffId);
 
 			var team1 = createTeam("T1");
@@ -159,7 +160,8 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			var playoff = new Playoff(season, "Seed Test");
+			// Playoff is bound to a SeasonPhase, not the Season directly.
+			var playoff = PhaseTestFixtures.playoffForSeason(season,"Seed Test");
 			playoff.setId(playoffId);
 
 			var team1 = createTeam("T1");
@@ -196,7 +198,8 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			var playoff = new Playoff(season, "Winner Test");
+			// Playoff is bound to a SeasonPhase, not the Season directly.
+			var playoff = PhaseTestFixtures.playoffForSeason(season,"Winner Test");
 			playoff.setId(playoffId);
 
 			var team1 = createTeam("T1");
@@ -231,7 +234,8 @@ class PlayoffBracketViewServiceTest {
 			// given
 			var playoffId = UUID.randomUUID();
 			var season = createSeason("Test Season");
-			var playoff = new Playoff(season, "Empty Legs Test");
+			// Playoff is bound to a SeasonPhase, not the Season directly.
+			var playoff = PhaseTestFixtures.playoffForSeason(season,"Empty Legs Test");
 			playoff.setId(playoffId);
 
 			var round = new PlayoffRound(playoff, "Final", 0);
