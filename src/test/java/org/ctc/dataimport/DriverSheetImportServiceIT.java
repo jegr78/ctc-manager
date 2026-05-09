@@ -11,6 +11,7 @@ import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -325,6 +326,50 @@ class DriverSheetImportServiceIT {
         assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2026.getId(), driver.getId()))
                 .isPresent();
         assertThat(seasonDriverRepository.findBySeasonIdAndDriverId(season2027.getId(), driver.getId()))
+                .isPresent();
+    }
+
+    // 8. GAP-70-01 hypothesis 2 — pre-existing Driver classified as NEW_DRIVER.
+    // STRUCTURAL @Disabled: DriverMatchingService.findDriver short-circuits on
+    // exact PSN match BEFORE fuzzy similarity, so a pre-existing Driver with
+    // an exact-matching PSN can NEVER be classified as NEW_DRIVER in production
+    // (it would be EXACT/CONFLICT/UNCHANGED/NEW_ASSIGNMENT depending on the
+    // SeasonDriver state). The Task 1 fix's recovery branch
+    // (`findByPsnId(psnId).orElseGet`) therefore guards a code path that
+    // production matching cannot exercise from sheet input alone — but it
+    // remains the right defensive shape (mirrors WR-01) and is exercised
+    // by the cross-tab Test #7 above. This @Disabled test stays as a
+    // regression fence: a future change that bypasses
+    // DriverMatchingService.findDriver's exact-match step would unhide it.
+    @Disabled("Hypothesis 2 unreachable — see DriverMatchingService.findDriver exact-match short-circuit. "
+            + "Task 1 fix is exercised by Test #7 (cross-tab same-PSN). Plan 70-04 Task 3 decision rule.")
+    @Test
+    void givenPreExistingDriverNotMatchedByMatcher_whenExecuteNewDriverRow_thenReusesExistingDriver() throws IOException {
+        // (same body as Version A — kept verbatim so a future code change that
+        //  removes the matcher's exact-match short-circuit will surface the test by
+        //  removing @Disabled.)
+        String sharedPsn = "Phase70-IT-DupTab-Existing";
+        org.ctc.domain.model.Driver preExisting = new org.ctc.domain.model.Driver(sharedPsn, "xx-totally-different-nick-xx");
+        preExisting.setActive(true);
+        org.ctc.domain.model.Driver savedPreExisting = driverRepository.save(preExisting);
+
+        var season2023 = findSeason(2023, 1);
+        setupSheetsStub(Map.of("2023_S1", oneDataRow(sharedPsn, "Dup Tab Existing", "ADR")));
+
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+        assertThat(preview.tabPreviews().get(0).newDrivers())
+                .anyMatch(r -> sharedPsn.equals(r.psnId()));
+
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("seasonId_2023_S1", season2023.getId().toString());
+        ExecuteResult result = driverSheetImportService.execute(SHEET_URL, params);
+
+        assertThat(result.getNewDriversCount()).isZero();
+        assertThat(result.getNewAssignmentsCount()).isEqualTo(1);
+        assertThat(driverRepository.findByPsnId(sharedPsn).orElseThrow().getId())
+                .isEqualTo(savedPreExisting.getId());
+        assertThat(seasonDriverRepository
+                .findBySeasonIdAndDriverId(season2023.getId(), savedPreExisting.getId()))
                 .isPresent();
     }
 }
