@@ -231,6 +231,7 @@ All 7 ROADMAP success criteria are codebase-verified:
 **Result:** Import successful — 287 new drivers, 357 new assignments, 0 conflicts overwritten, 0 conflicts skipped, 0 unchanged, **0 errors**.
 
 **Significance:**
+
 - GAP-70-01 fix (commit `3885288`) confirmed effective on the exact data shape that triggered Phase 70's creation
 - No `DataIntegrityViolationException` — the `findByPsnId` guard on the NEW_DRIVER branch prevents the cross-tab duplicate-PSN crash in production
 - ROADMAP SC6 fully satisfied (codebase + live MariaDB round-trip)
