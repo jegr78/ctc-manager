@@ -520,3 +520,26 @@ Plans:
 - [x] 69-03-PLAN.md — SC5 SUMMARY-frontmatter requirements-completed sweep across 58/59/60 (Wave 1, autonomous)
 - [x] 69-04-PLAN.md — SC6 Nyquist sweep + flip 65/66/67/68 VALIDATION + final ./mvnw verify -Pe2e (Wave 2, depends_on 69-01/02/03)
 
+
+### Phase 70: Driver Import: Parent-Only Team Resolution
+
+**Goal:** Driver-Sheet-Import respektiert das Domänenmodell „Fahrer sind am Parent-Team hinterlegt, Sub-Team-Aufteilung erfolgt pro Match (RaceLineup), nicht pro Phase". Konkret: `SeasonDriver.team_id` zeigt für jeden importierten Fahrer auf das Parent-Team (auch wenn das Parent kein PhaseTeam in der Saison hat), die Group-Resolution-UX im Import-Preview wird komplett entfernt (Group-Zuordnung ist Match-Sache, nicht Saison-Sache), und die `TEAM_NOT_IN_REGULAR_PHASE`-Warnung wird ersatzlos gestrichen. Phase-66-Defaults D-04 (sub-with-PhaseTeam wins) und D-05/D-06 (layout-gated group warning) waren am Domänenmodell vorbei und werden invertiert/zurückgebaut.
+
+**Depends on:** Phase 69
+
+**Requirements:** Keine neuen REQ-IDs. IMPORT-04 ("warning for unmapped teams") wird semantisch invertiert: die einzige verbleibende Team-Resolution-Fehlerkategorie ist `UNKNOWN_TEAM_CODE` (Sheet-shortName matched kein einziges Team in der Saison) — der Group-bezogene `TEAM_NOT_IN_REGULAR_PHASE`-Pfad fällt weg.
+
+**Success Criteria** (was muss TRUE sein):
+
+1. `DriverSheetImportService.resolveTeamByShortName` gibt bei Multi-Match (parent + Subs gleichen shortName) **immer** das Parent-Team (`parentTeam == null`) zurück — der Phase-66-D-04-Sub-mit-PhaseTeam-Lookup ist entfernt; der `regularPhase`-Parameter wird nicht mehr benötigt
+2. Group-Resolution-Block (heute Lines 324–340 in `DriverSheetImportService`) ist komplett entfernt — keine `phaseTeamRepository.findByPhaseIdAndTeamId`-Aufrufe mehr im Import-Preview-Pfad; `WarningType.TEAM_NOT_IN_REGULAR_PHASE` Enum-Konstante ist entfernt
+3. Alle 5 Preview-Row-Records (`NewDriverRow`, `NewAssignmentRow`, `ConflictRow`, `FuzzySuggestionRow`, `UnchangedRow`) haben kein `resolvedGroupName`-Feld mehr; `TabPreview.usesGroups` ist entfernt
+4. Template `driver-import-preview.html` rendert keine Group-Spalte und keine `TEAM_NOT_IN_REGULAR_PHASE`-Warning-Box mehr; `DriverSheetImportController` setzt kein `showGroupColumn`-Model-Attribut mehr
+5. Phase-66-Tests #16, #19, #20 (in `DriverSheetImportServiceTest`) sind entweder gelöscht (Group-Pfad-Tests, jetzt obsolet) oder invertiert (Multi-Match → Parent gewinnt); Tests #21 (multi-parent edge case), #22 (no-REGULAR-phase fallback) bleiben semantisch unverändert; alle Test-Daten halten weiterhin das CTC-Test-Prefix-Schema ein
+6. `./mvnw verify -Pe2e` exits 0 mit JaCoCo line coverage ≥ 0.82; manuelles Re-Run des Driver-Imports auf der lokalen MariaDB (Saison 2023, parent MRL + MRL 1 in Group 2 + MRL 2 in Group 1) emittiert keine Warnung mehr; alle MRL-Fahrer landen mit `SeasonDriver.team = MRL parent`
+7. Phase-66 `66-VERIFICATION.md` erhält ein „Phase-70 Re-Open"-Addendum, das die invertierten/entfernten Truths (#2 sub-team-wins, #6 layout-gated warning, #7/#8/#9 usesGroups + per-row Group cells) markiert; `66-CONTEXT.md` D-04..D-09 werden als „superseded by Phase 70 — siehe `70-CONTEXT.md`" markiert; aktive Branch `gsd/v1.9-season-phases-groups` an jedem Commit
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 70 to break down)
