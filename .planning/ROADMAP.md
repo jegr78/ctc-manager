@@ -9,7 +9,7 @@
 - :white_check_mark: **v1.6 Static Site Quality** — Phases 37-53 (shipped 2026-04-18)
 - :white_check_mark: **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (shipped 2026-04-25)
 - :white_check_mark: **v1.9 Season Phases & Groups** — Phases 56-70 (shipped 2026-05-09)
-- :hourglass_flowing_sand: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-77 (active, opened 2026-05-09)
+- :hourglass_flowing_sand: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-78 (active, opened 2026-05-09)
 
 ## Phases
 
@@ -129,7 +129,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 
 </details>
 
-### v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (Phases 71-77) -- ACTIVE
+### v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (Phases 71-78) -- ACTIVE
 
 - [ ] **Phase 71: Spring Boot 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard** — Bump platform, fix all fragment-parameter ternaries via controller `pageTitle`, install regression smoke + grep gate
 - [ ] **Phase 72: Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit-Log Scope** — Define `BackupSchema.SCHEMA_VERSION` (integer), `BackupManifest`, `@Qualifier("backupObjectMapper")` bean, Flyway V7 audit table, lock per-entity ZIP layout + audit-out-of-scope decision
@@ -138,6 +138,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 - [ ] **Phase 75: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT** — Single `@Transactional` wipe + restore (FK-reverse DELETE, `JdbcTemplate.batchUpdate` bypassing audit listeners), post-commit upload-tree restore, audit row, mid-restore-rollback IT, live MariaDB UAT against Saison-2023 fixture
 - [ ] **Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import** — `ImportLockService` `ReentrantLock` singleton, `@ControllerAdvice` write-rejection during import, persistent yellow banner, synchronous auto-export to `data/.import-backups/<ts>/` before wipe
 - [ ] **Phase 77: Final UAT + JaCoCo Hold + Round-Trip Test + Documentation** — `./mvnw verify -Pe2e` green on H2 + MariaDB profiles, JaCoCo line coverage ≥ 82 %, `BackupRoundTripIT`, README + WIKI "Backup & Restore" section, milestone closure
+- [ ] **Phase 78: Docker Release Image Fix — Pin Base Image to Ubuntu Noble for Playwright Compatibility** — Pin both Dockerfile stages to `eclipse-temurin:25-{jdk,jre}-noble` so the release workflow's `playwright install chromium` step stops failing on the silently-rotated Ubuntu 26.04 base
 
 ## Phase Details
 
@@ -274,6 +275,24 @@ See: milestones/v1.9-ROADMAP.md for full details
 
 **Plans**: TBD
 
+### Phase 78: Docker Release Image Fix — Pin Base Image to Ubuntu Noble for Playwright Compatibility
+
+**Goal**: Restore the release workflow's "Build and push Docker image" step to green by pinning both Dockerfile stages to a Playwright-supported, Noble-based Eclipse Temurin tag. The release run on master (`runs/25609204039`) failed at the runtime stage's `playwright install chromium` step with `Playwright does not support chromium on ubuntu26.04-x64` — Eclipse Temurin's `25-jre` tag silently rotated from Ubuntu 24.04 (Noble) to Ubuntu 26.04 (Plucky), which Playwright 1.59.0 does not yet recognize. The original Dockerfile was authored for Noble (it explicitly installs `libasound2t64`, the Noble package name), so pinning is the surgical fix that re-establishes reproducibility without touching Java, Spring Boot, or Playwright versions. Both stages (`25-jdk` build + `25-jre` runtime) get pinned to `-noble` so future Temurin retags cannot silently break the release pipeline again.
+
+**Depends on**: Nothing (independent of the Spring Boot upgrade and backup feature work; can run any time within v1.10, ideally before Phase 77's final UAT so the release pipeline is verified end-to-end against a working image)
+
+**Requirements**: TBD (CI/release-infra concern; not yet in REQUIREMENTS.md — to be assigned during planning)
+
+**Success Criteria** (what must be TRUE):
+
+  1. `Dockerfile` stage 1 reads `FROM eclipse-temurin:25-jdk-noble AS build` and stage 2 reads `FROM eclipse-temurin:25-jre-noble` — no unpinned Temurin tags remain in the file
+  2. `docker build .` (or `docker compose build`) completes locally without the `Playwright does not support chromium on ubuntu26.04-x64` error; the `playwright install chromium` RUN step succeeds end-to-end
+  3. After merge to master, the next release workflow run reaches and passes the `Build and push Docker image` step (verified by `gh run list --workflow=Release` showing a green run)
+  4. The `libasound2t64` apt-get line and the rest of the runtime stage continue to install cleanly on Noble (no package-name regressions from the pin)
+  5. No application code, Spring Boot version, Java version, or Playwright version changes — pin-only diff scoped to `Dockerfile`
+
+**Plans**: TBD
+
 ## Next Milestone
 
 (None — v1.11+ candidates tracked in PROJECT.md "Carried over from v1.9 deferred" + REQUIREMENTS.md Future Requirements section.)
@@ -289,7 +308,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 | v1.6 Static Site Quality | 37-53 | 27 | Complete | 2026-04-18 |
 | v1.8 Bulk Driver Import | 54-55 | 4 | Complete | 2026-04-25 |
 | v1.9 Season Phases & Groups | 56-70 | ~70 | Complete | 2026-05-09 |
-| v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-77 | TBD | Active | — |
+| v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-78 | TBD | Active | — |
 
 ### v1.10 Phase Progress
 
@@ -302,3 +321,4 @@ See: milestones/v1.9-ROADMAP.md for full details
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 0/TBD | Not started | — |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/TBD | Not started | — |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/TBD | Not started | — |
+| 78. Docker Release Image Fix — Pin Base Image to Noble | 0/TBD | Not started | — |

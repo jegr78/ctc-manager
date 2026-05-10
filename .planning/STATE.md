@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** v1.10 milestone roadmap drafted (7 phases, 71-77). Awaiting Phase 71 planning via `/gsd-plan-phase 71`.
+**Current focus:** v1.10 milestone roadmap drafted (8 phases, 71-78). Awaiting Phase 71 planning via `/gsd-plan-phase 71`.
 
 ## Current Position
 
@@ -84,10 +84,12 @@ Continuing from v1.9 (last phase: 70). v1.10 phases start at **Phase 71**.
 - Phase 75: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT (IMPORT-05..07, QUAL-03)
 - Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import (SECU-05..07)
 - Phase 77: Final UAT + JaCoCo Hold + Round-Trip Test + Documentation (QUAL-01, QUAL-02, QUAL-04, QUAL-05)
+- Phase 78: Docker Release Image Fix — Pin Base Image to Ubuntu Noble for Playwright Compatibility (CI/release-infra; req TBD)
 
 ### Roadmap Evolution
 
 - 2026-05-09: v1.10 ROADMAP.md drafted with 7 phases (71-77). All 37 requirements mapped, no orphans, no duplicates. Coverage validated.
+- 2026-05-10: Phase 78 added (Docker Release Image Fix). Reactive add — release workflow run `25609204039` failed at `playwright install chromium` because Eclipse Temurin's `25-jre` tag silently rotated to Ubuntu 26.04 (Plucky), unsupported by Playwright 1.59.0. Surgical pin to `-noble`, independent of Spring Boot upgrade and backup work.
 
 ### Key Technical Context
 
