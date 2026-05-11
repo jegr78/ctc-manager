@@ -3,6 +3,7 @@ package org.ctc.backup.serialization;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import org.ctc.domain.model.Car;
 import org.ctc.domain.model.Match;
@@ -27,11 +28,13 @@ import org.ctc.domain.model.Track;
  *       {@code hasCalendarEvent} (property {@code calendarEvent}).</li>
  * </ul>
  *
- * <p>Note: {@code Race.homeTeamOverride} and {@code Race.awayTeamOverride} have
- * {@code @Getter(AccessLevel.NONE)} on the entity, so Jackson would discover them only via
- * field reflection. The MixIn declares abstract getter methods to attach
- * {@code @JsonIdentityReference} — Jackson honours the MixIn-declared getter shape and emits
- * each field as a UUID reference.
+ * <p>Note: {@code Race.homeTeamOverride} and {@code Race.awayTeamOverride} carry
+ * {@code @Getter(AccessLevel.NONE)} on the entity (no public getter; the convenience
+ * methods {@code getHomeTeam()} / {@code getAwayTeam()} are the in-code access path).
+ * To make these private fields visible to Jackson while keeping the original entity
+ * byte-identical, the MixIn declares matching field stubs annotated with
+ * {@code @JsonProperty} + {@code @JsonIdentityReference} — Jackson uses the MixIn field
+ * declarations to discover and read the underlying private fields by reflection.
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler",
@@ -55,9 +58,11 @@ public abstract class RaceMixIn {
     @JsonIdentityReference(alwaysAsId = true)
     abstract PlayoffMatchup getPlayoffMatchup();
 
+    @JsonProperty("homeTeamOverride")
     @JsonIdentityReference(alwaysAsId = true)
-    abstract Team getHomeTeamOverride();
+    Team homeTeamOverride;
 
+    @JsonProperty("awayTeamOverride")
     @JsonIdentityReference(alwaysAsId = true)
-    abstract Team getAwayTeamOverride();
+    Team awayTeamOverride;
 }
