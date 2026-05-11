@@ -183,7 +183,14 @@ See: milestones/v1.9-ROADMAP.md for full details
   4. `@Qualifier("backupObjectMapper")` bean is injectable and behaves as configured (`FAIL_ON_UNKNOWN_PROPERTIES=true`, ISO-8601 dates, JavaTimeModule, MixIns registered) without polluting the default Spring `ObjectMapper` (verified by an IT that injects both qualifiers and asserts they are distinct beans)
   5. PROJECT.md Decisions section contains a row stating "audit log table `data_import_audit` is permanently out of export scope" with rationale; per-entity ZIP layout (`data/<entity>.json`) and integer schema versioning are documented as canonical wire-contract choices
 
-**Plans**: TBD
+**Plans:** 5 plans
+
+Plans:
+- [ ] 72-01-PLAN.md — Wave 1: BackupSchema component + EntityRef record + EntityTopoSorter (Kahn) + 2 ITs (24-entity topology + IMPORT-08 exclusion)
+- [ ] 72-02-PLAN.md — Wave 2: BackupManifest record with per-field @JsonProperty snake_case keys + Surefire unit test (4 serialization assertions)
+- [ ] 72-03-PLAN.md — Wave 2: BackupObjectMapperConfig dual-bean (@Primary default + @Qualifier("backupObjectMapper") strict) + IT proving isolation (RESEARCH P-2 amendment)
+- [ ] 72-04-PLAN.md — Wave 3: Flyway V7__data_import_audit.sql + DataImportAudit Lombok entity + DataImportAuditRepository + V7DataImportAuditMigrationIT + BackupSchemaExclusionIT direct-import upgrade
+- [ ] 72-05-PLAN.md — Wave 3: PROJECT.md Key Decisions row + "### Backup Wire Contract (v1.10)" subsection + REQUIREMENTS.md EXPORT-04 override note (depends on 01-04)
 
 ### Phase 73: Backup Export — Jackson MixIns + Streaming ZIP Endpoint
 
@@ -325,7 +332,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 | ----- | -------------- | ------ | --------- |
 | 71. SB 4.0.6 Upgrade + Thymeleaf 3.1.5 Audit + Build Guard | 5/5 | Complete    | 2026-05-11 |
-| 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/TBD | Not started | — |
+| 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/5   | Planned     | — |
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 0/TBD | Not started | — |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 0/TBD | Not started | — |
