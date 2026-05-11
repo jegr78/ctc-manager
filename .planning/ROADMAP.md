@@ -158,7 +158,12 @@ See: milestones/v1.9-ROADMAP.md for full details
   4. `TemplateRenderingSmokeIT` GETs every `/admin/**` route with dev-data-seeded fixture and asserts HTTP 200 + absence of `TemplateProcessingException` in the response body
   5. The Maven build fails when a contributor reintroduces the pattern `th:(replace|insert|include)=".*\(.*\$\{.*\?.*:.*\}.*\)"` anywhere under `src/main/resources/templates/`
 
-**Plans**: TBD
+**Plans:** 5 plans
+- [ ] 71-01-PLAN.md — Wave 1: admin template fragment-call fixes + 9 controller pageTitle wirings + admin/layout.html null-safe title (Plans 01/02 land on still-4.0.5 baseline)
+- [ ] 71-02-PLAN.md — Wave 1: site template fragment-call fixes + 6 sitegen-bean pageTitle wirings + site/layout.html null-safe title + site/matchday.html line 10 matchCardBody(race) refactor
+- [ ] 71-03-PLAN.md — Wave 2: pom.xml spring-boot-starter-parent 4.0.5 → 4.0.6 + Thymeleaf 3.1.5 dependencyManagement pin + full mvnw verify -Pe2e
+- [ ] 71-04-PLAN.md — Wave 3: TemplateRenderingSmokeIT (dynamic-test factory over RequestMappingHandlerMapping) + template-rendering-smoke-fixture.sql (deterministic-UUID 0071-range fixture)
+- [ ] 71-05-PLAN.md — Wave 3: exec-maven-plugin grep-gate bound to validate phase + deliberate-injection smoke check
 
 **UI hint**: yes
 
