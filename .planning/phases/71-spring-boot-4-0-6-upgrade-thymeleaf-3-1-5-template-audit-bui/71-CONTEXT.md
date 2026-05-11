@@ -36,12 +36,18 @@ Out of scope: backup export/import feature work (Phase 72+), public-site phase c
   - `standings.html` — string-concat (`'Standings ' + ${season.displayLabel}`) — RESTRICTED, must fix
   - `playoff-bracket.html` — string-concat (`'Playoffs ' + ${season.displayLabel}`) — RESTRICTED, must fix
   - `matchdays.html` — string-concat (`'Matchdays — ' + ${season.displayLabel}`) — RESTRICTED, must fix
-- **D-03b (new, 2026-05-11):** `site/matchday.html:10` (`<th:block th:insert="~{site/fragments/match-card :: matchCardBody(${race})}">`) is an iteration-variable fragment-call ARG. Plain property access — allowed at runtime under 3.1.5 — but it WILL match the D-05 build-guard regex once installed. **Fix:** refactor the fragment call so no `${...}` appears in any fragment-parameter position anywhere under `src/main/resources/templates/`. Concrete approach: inline `matchCardBody` body into `site/matchday.html` (drop the fragment call) OR rewrite the fragment so it reads the iteration variable from a parent `th:with` binding instead of as a parameter. Planner picks the simpler approach. NO regex narrowing, NO grep -v exclusion — the broad invariant must hold.
+- **D-03b (new, 2026-05-11):** `site/matchday.html:10` (`<th:block th:insert="~{site/fragments/match-card :: matchCardBody(${race})}">`) is an iteration-variable fragment-call ARG. Plain property access — allowed at runtime under 3.1.5 — but it WILL match the D-05 build-guard regex once installed. **Fix (LOCKED 2026-05-11 per plan-checker BLOCKER #2):** inline the `matchCardBody` fragment body into `site/matchday.html` directly (option (a) from the original D-03b text). The alternative of "rewrite the fragment call as `matchCardBody(race)`" is REJECTED — it is unverified under Thymeleaf 3.1.5 and creates a runtime risk for the Plan 03 4.0.6 verify. After inlining, `matchCardBody` may become unused; do NOT delete the fragment in this phase — out of scope; leave for v1.11+ cleanup. NO regex narrowing, NO `grep -v` exclusion — the broad invariant must hold.
 - **D-04 (revised 2026-05-11):** Plain `${var}` (pure property access) in fragment params IS allowed under Thymeleaf 3.1.5; only operators, ternaries, Elvis, string-concat, and method calls are restricted. The 3 plain-${var} site templates (`driver-profile`, `team-profile`, `matchday` line 3) are still fixed preemptively per D-01 — the broad build-guard regex D-05 would otherwise fail on them.
 - **D-04a (new, 2026-05-11):** Total in-scope template count: **14 RESTRICTED templates** (10 admin + 4 site string-concat) + **3 plain-${var} preemptive fixes** (site/driver-profile, site/team-profile, site/matchday line 3) + **1 fragment-call-arg refactor** (site/matchday line 10) = **17 template-line changes across 16 files** + 2 layout-fallback edits. The dynamic SmokeIT picks up all affected admin routes automatically; the build-guard regex enforces the invariant post-phase.
 
 ### Build-Guard Regex
-- **D-05:** Broad regex pattern: `th:(replace|insert|include)=".*\(.*\$\{.*\}.*\)"` — fails the build on ANY `${...}` expression appearing as a fragment-call argument anywhere under `src/main/resources/templates/`. Post-Phase-71 the codebase contains zero such cases, so the regex stays clean by construction.
+- **D-05 (revised 2026-05-11 per plan-checker BLOCKER #1):** Broad regex pattern: `th:(replace|insert|include)="~\{[^"]*\(.*\$\{.*\}.*\)\}"` — fails the build on ANY `${...}` expression appearing as a fragment-call argument anywhere under `src/main/resources/templates/`.
+
+  **Why this corrected pattern (not the original `.*\(.*\$\{.*\}.*\)"`)**: Real Thymeleaf fragment-call lines end with `)}"` (the inner `)` closes the fragment call's argument list; the trailing `}` closes the outer `~{...}` fragment-expression wrap; the trailing `"` closes the HTML attribute). The original regex anchored on `)"` (no `}` between `)` and `"`), so it matched ZERO real offenders despite 17+ visible broken lines. Independent verification:
+  - `grep -rE 'th:(replace|insert|include)=".*\(.*\$\{.*\}.*\)"' src/main/resources/templates/` → 0 matches (broken)
+  - `grep -rE 'th:(replace|insert|include)="~\{[^"]*\(.*\$\{.*\}.*\)\}"' src/main/resources/templates/` → 18 matches (10 admin + 8 site, all 17 layout-title offenders + 1 in-body `matchCardBody(${race})` fragment-call ARG inside `site/matchday.html:10`)
+
+  Post-Phase-71 the codebase contains zero such cases (Plans 01 + 02 + D-03b refactor), so the regex stays clean by construction. The canonical `layout(${pageTitle}, ~{::section})` form IS matched by this regex; the build-guard pipeline uses `grep -v 'layout(${pageTitle}'` to strip those lines after the broad match.
 - **D-06:** Build-guard runs in Maven `validate` phase via `exec-maven-plugin` — fails first, before compile/test, with sub-10s feedback to the contributor.
 - **D-07:** Guard reuses the established v1.9 D-06 / Phase-67 forward-commitment pattern for grep gates (no Maven Enforcer custom-rule module, deliberately rejected in REQUIREMENTS Out-of-Scope).
 
@@ -50,6 +56,7 @@ Out of scope: backup export/import feature work (Phase 72+), public-site phase c
 - **D-09:** Dedicated test profile + `SmokeITSeeder` (minimal-complete fixture: 1 Season + 1 Phase + 1 Group + 1 Team + 1 Driver + 1 Matchday + 1 Match + 1 Race + 1 RaceResult + scoring rows). NOT `DevDataSeeder` (heavy fixture, slow startup) and NOT `TestDataService` (built for full Playwright flows).
 - **D-10:** Parameterized routes (`/admin/seasons/{id}/edit`, `/admin/races/{id}`, etc.) resolve their path variables via `@Sql`-seeded ID constants. The IT maintains a `Map<String, UUID>` keyed by path-variable name (`seasonId → SEASON_SMOKE_ID`, `raceId → RACE_SMOKE_ID`, ...) populated by the `SmokeITSeeder`.
 - **D-11:** Assertion contract: `andExpect(status().isOk())` + `andExpect(content().string(not(containsString("TemplateProcessingException"))))`. Word-boundary-anchored on the exception class name to avoid colliding with documentation pages that may contain the word "Exception" in narrative text.
+- **D-11a (revised 2026-05-11 per plan-checker WARNING W3):** TemplateRenderingSmokeIT assertion contract is relaxed from `status().isOk()` to `status < 500` because some `/admin/**` routes return 302 redirects (e.g., `/admin/seasons/{id}` may redirect to `/admin/seasons/{id}/phase/{phaseId}`). The contract is: "no `TemplateProcessingException` in any rendered page", not "every admin route returns 200". Word-boundary anchoring on the exception class name IS retained from D-11 — implement via AssertJ's `doesNotMatch(".*\\bTemplateProcessingException\\b.*")` instead of plain `doesNotContain` to honor the literal directive about narrative-prose collisions. (A documentation page or seeded fixture string containing the substring `MyTemplateProcessingExceptionHandler` would falsely fail `doesNotContain` but correctly pass `doesNotMatch` with the `\b` anchor.)
 
 ### pageTitle Pattern Implementation
 - **D-12:** Direct `model.addAttribute("pageTitle", ...)` inside each affected controller handler method — no shared `@ModelAttribute` pattern, no `PageTitleService` abstraction. Trivial, readable, ~12 line additions across 6 controllers.
@@ -135,7 +142,7 @@ Out of scope: backup export/import feature work (Phase 72+), public-site phase c
 - **3+6=9 templates**: each broken `th:replace="...layout(${expr}, ...)"` is rewritten to `th:replace="...layout(${pageTitle}, ...)"`. Surgical 1-line diff per template.
 - **`templates/admin/layout.html`** and **`templates/site/layout.html`**: title-rendering point gets the `${pageTitle ?: 'CTC Admin'}` (or `${pageTitle ?: 'CTC'}` for site) Elvis fallback.
 - **NEW: `src/test/java/org/ctc/admin/controller/TemplateRenderingSmokeIT.java`** + **NEW: `src/test/.../SmokeITSeeder.java`** (or `@Sql` script under `src/test/resources/sql/`).
-- **NEW: `pom.xml` `<build><plugins>` exec-maven-plugin execution** bound to `validate` phase, running `grep -r -E 'th:(replace|insert|include)=".*\(.*\$\{.*\}.*\)"' src/main/resources/templates/` (exits 0 on no match = pass, 1 on match = fail).
+- **NEW: `pom.xml` `<build><plugins>` exec-maven-plugin execution** bound to `validate` phase, running `grep -r -E 'th:(replace|insert|include)="~\{[^"]*\(.*\$\{.*\}.*\)\}"' src/main/resources/templates/` (exits 0 on no match = pass, 1 on match = fail). See D-05 for the corrected regex pattern.
 
 </code_context>
 
@@ -146,10 +153,13 @@ Out of scope: backup export/import feature work (Phase 72+), public-site phase c
 - **Maven Enforcer custom-rule module** for the fragment-param-expression check — `exec-maven-plugin` grep is the lower-effort path (REQUIREMENTS Out-of-Scope); a custom rule would be its own Maven module. Revisit only if grep proves brittle.
 - **Internationalization of `pageTitle`** (`messageSource.getMessage("admin.match-scoring.new.title", ...)`) — all UI text is English by project convention; no i18n need today.
 - **`TemplateRenderingSmokeIT` extension to `POST` routes** — current scope is `GET` only (the broken templates render on GET-edit/GET-new screens). POST routes would need form-payload synthesis and are out of scope.
+- **Deletion of the orphaned `matchCardBody` fragment** in `site/fragments/match-card.html` — after D-03b inlines the fragment body into `site/matchday.html`, the fragment definition may have zero remaining call sites. Leaving the fragment definition in place is intentional for Phase 71 (out-of-scope cleanup). v1.11+ candidate.
 
 </deferred>
 
 ---
 
 *Phase: 71-spring-boot-4-0-6-upgrade-thymeleaf-3-1-5-template-audit-bui*
-*Context gathered: 2026-05-10*
+*Context gathered: 2026-05-10; revised 2026-05-11 (D-03b inline-locked, D-05 regex corrected, D-11a relaxed contract)*
+</content>
+</invoke>
