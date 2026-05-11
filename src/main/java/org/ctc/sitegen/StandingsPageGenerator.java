@@ -173,6 +173,7 @@ public class StandingsPageGenerator {
         tplCtx.setVariable("hasPlayoff", ctx.hasPlayoff());
         tplCtx.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
         tplCtx.setVariable("breadcrumbCurrent", "Standings");
+        tplCtx.setVariable("pageTitle", "Standings " + season.getDisplayLabel());
         tplCtx.setVariable("showPhaseTabs", showPhaseTabs);
         tplCtx.setVariable("phaseTabs", phaseTabs);
         tplCtx.setVariable("showGroupTabs", showGroupTabs);

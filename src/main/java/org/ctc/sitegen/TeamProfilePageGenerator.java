@@ -200,6 +200,7 @@ public class TeamProfilePageGenerator {
             context.setVariable("hasPlayoff", ctx.hasPlayoff());
             context.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
             context.setVariable("breadcrumbCurrent", team.getShortName());
+            context.setVariable("pageTitle", team.getName());
 
             Files.createDirectories(teamDir);
             templateWriter.write("site/team-profile", context, teamDir.resolve(siteSlugger.slugify(team.getShortName()) + ".html"),

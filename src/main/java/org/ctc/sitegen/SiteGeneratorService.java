@@ -210,6 +210,7 @@ public class SiteGeneratorService {
         ctx.setVariable("seasonName", season.getName());
         ctx.setVariable("hasPlayoff", true);
         ctx.setVariable("breadcrumbCurrent", "Playoff");
+        ctx.setVariable("pageTitle", "Playoffs " + season.getDisplayLabel());
 
         var dir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel()));
         Files.createDirectories(dir);
