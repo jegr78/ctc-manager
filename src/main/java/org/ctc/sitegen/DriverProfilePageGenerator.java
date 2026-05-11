@@ -121,6 +121,7 @@ public class DriverProfilePageGenerator {
             context.setVariable("hasPlayoff", ctx.hasPlayoff());
             context.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
             context.setVariable("breadcrumbCurrent", driver.getPsnId());
+            context.setVariable("pageTitle", driver.getPsnId());
             context.setVariable("showPhaseBreakdown", showPhaseBreakdown);
             context.setVariable("resultsByPhase", resultsByPhase);
             context.setVariable("phaseHeadings", PHASE_HEADINGS);

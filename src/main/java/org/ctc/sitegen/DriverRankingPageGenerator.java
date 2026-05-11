@@ -128,6 +128,7 @@ public class DriverRankingPageGenerator {
         tplCtx.setVariable("hasPlayoff", ctx.hasPlayoff());
         tplCtx.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
         tplCtx.setVariable("breadcrumbCurrent", "Driver Ranking");
+        tplCtx.setVariable("pageTitle", "Driver Ranking " + season.getDisplayLabel());
         tplCtx.setVariable("showPhaseTabs", showPhaseTabs);
         tplCtx.setVariable("phaseTabs", phaseTabs);
 

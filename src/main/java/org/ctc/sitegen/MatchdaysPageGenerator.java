@@ -162,6 +162,7 @@ public class MatchdaysPageGenerator {
         tplCtx.setVariable("hasPlayoff", ctx.hasPlayoff());
         tplCtx.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
         tplCtx.setVariable("breadcrumbCurrent", "Matchdays");
+        tplCtx.setVariable("pageTitle", "Matchdays — " + season.getDisplayLabel());
         tplCtx.setVariable("showPhaseTabs", showPhaseTabs);
         tplCtx.setVariable("phaseTabs", phaseTabs);
         tplCtx.setVariable("showGroupTabs", showGroupTabs);
@@ -257,6 +258,7 @@ public class MatchdaysPageGenerator {
             context.setVariable("hasPlayoff", ctx.hasPlayoff());
             context.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
             context.setVariable("breadcrumbCurrent", matchday.getLabel());
+            context.setVariable("pageTitle", matchday.getLabel());
 
             var dir = ctx.outPath().resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel())).resolve("matchday");
             Files.createDirectories(dir);
