@@ -16,10 +16,29 @@ Out of scope: backup export/import feature work (Phase 72+), public-site phase c
 ## Implementation Decisions
 
 ### Template-Audit Scope
-- **D-01:** All 9 templates with `${...}` in fragment-parameter positions get the `pageTitle` controller-side fix preemptively, not reactively — maximum forward-compat safety against Thymeleaf 3.2 stricter restricted-mode evaluation.
-- **D-02:** 6 admin templates affected: `match-scoring-form.html`, `race-scoring-form.html`, `season-phase-form.html` (3 known ternaries), plus `season-phase-group-form.html` (ternary), `race-detail.html` (string-concat + Elvis), `season-detail.html` (string-concat with nested ternary).
-- **D-03:** 3 site templates affected: `driver-profile.html`, `team-profile.html`, `matchday.html` (plain `${var}` references — currently safe under 3.1.5, fixed preemptively for forward-compat).
-- **D-04:** Plain `${var}` (pure property access) in fragment params IS allowed under Thymeleaf 3.1.5; only operators, ternaries, Elvis, string-concat, and method calls are restricted. Decision to still fix the 3 site templates is risk-mitigation, not necessity.
+- **D-01:** All templates with `${...}` in fragment-parameter positions get the `pageTitle` controller-side fix preemptively, not reactively — maximum forward-compat safety against Thymeleaf 3.2 stricter restricted-mode evaluation.
+- **D-02 (revised 2026-05-11 after PATTERNS.md audit):** 10 admin templates affected (NOT 6 as originally enumerated). The mechanical grep audit (`th:(replace|insert|include)=".*\(.*\$\{.*\}.*\)"` over `src/main/resources/templates/`) returns:
+  - `match-scoring-form.html` — ternary
+  - `race-scoring-form.html` — ternary
+  - `season-phase-form.html` — ternary
+  - `season-phase-group-form.html` — ternary
+  - `race-detail.html` — string-concat + Elvis
+  - `season-detail.html` — string-concat with nested ternary
+  - `driver-detail.html` — string-concat (`'Driver: ' + ${driver.psnId}`)
+  - `team-detail.html` — string-concat (`'Team: ' + ${team.shortName}`)
+  - `driver-merge.html` — string-concat (`'Merge Driver: ' + ${source.psnId}`)
+  - `matchday-detail.html` — string-concat (`'Matchday: ' + ${matchday.label}`)
+- **D-03 (revised 2026-05-11):** 7 site templates affected (NOT 3 as originally enumerated). The audit reveals string-concat offenders that were missed in the initial enumeration:
+  - `driver-profile.html` — plain `${driver.psnId}` (allowed under 3.1.5; fixed preemptively per D-01)
+  - `team-profile.html` — plain `${team.name}` (allowed; fixed preemptively per D-01)
+  - `matchday.html` line 3 — plain `${matchday.label}` (allowed; fixed preemptively per D-01)
+  - `driver-ranking.html` — string-concat (`'Driver Ranking ' + ${season.displayLabel}`) — RESTRICTED, must fix
+  - `standings.html` — string-concat (`'Standings ' + ${season.displayLabel}`) — RESTRICTED, must fix
+  - `playoff-bracket.html` — string-concat (`'Playoffs ' + ${season.displayLabel}`) — RESTRICTED, must fix
+  - `matchdays.html` — string-concat (`'Matchdays — ' + ${season.displayLabel}`) — RESTRICTED, must fix
+- **D-03b (new, 2026-05-11):** `site/matchday.html:10` (`<th:block th:insert="~{site/fragments/match-card :: matchCardBody(${race})}">`) is an iteration-variable fragment-call ARG. Plain property access — allowed at runtime under 3.1.5 — but it WILL match the D-05 build-guard regex once installed. **Fix:** refactor the fragment call so no `${...}` appears in any fragment-parameter position anywhere under `src/main/resources/templates/`. Concrete approach: inline `matchCardBody` body into `site/matchday.html` (drop the fragment call) OR rewrite the fragment so it reads the iteration variable from a parent `th:with` binding instead of as a parameter. Planner picks the simpler approach. NO regex narrowing, NO grep -v exclusion — the broad invariant must hold.
+- **D-04 (revised 2026-05-11):** Plain `${var}` (pure property access) in fragment params IS allowed under Thymeleaf 3.1.5; only operators, ternaries, Elvis, string-concat, and method calls are restricted. The 3 plain-${var} site templates (`driver-profile`, `team-profile`, `matchday` line 3) are still fixed preemptively per D-01 — the broad build-guard regex D-05 would otherwise fail on them.
+- **D-04a (new, 2026-05-11):** Total in-scope template count: **14 RESTRICTED templates** (10 admin + 4 site string-concat) + **3 plain-${var} preemptive fixes** (site/driver-profile, site/team-profile, site/matchday line 3) + **1 fragment-call-arg refactor** (site/matchday line 10) = **17 template-line changes across 16 files** + 2 layout-fallback edits. The dynamic SmokeIT picks up all affected admin routes automatically; the build-guard regex enforces the invariant post-phase.
 
 ### Build-Guard Regex
 - **D-05:** Broad regex pattern: `th:(replace|insert|include)=".*\(.*\$\{.*\}.*\)"` — fails the build on ANY `${...}` expression appearing as a fragment-call argument anywhere under `src/main/resources/templates/`. Post-Phase-71 the codebase contains zero such cases, so the regex stays clean by construction.
