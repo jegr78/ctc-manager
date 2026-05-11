@@ -79,17 +79,19 @@ jobs:
       - name: Dockerfile -noble pin guard
         run: |
           set -euo pipefail
-          # Extract every FROM eclipse-temurin: line (anchored, ignoring trailing whitespace tolerated by Docker).
-          from_lines=$(grep -nE '^FROM eclipse-temurin:' Dockerfile || true)
+          # Extract every FROM eclipse-temurin: line (anchored regex via grep -E, cross-platform).
+          from_lines=$(grep -E '^FROM eclipse-temurin:' Dockerfile || true)
           if [ -z "$from_lines" ]; then
             echo "[Phase 78 build-guard] ERROR: No 'FROM eclipse-temurin:' lines found in Dockerfile."
             echo "Either the base image was changed away from eclipse-temurin (update this guard) or the Dockerfile is missing."
             exit 1
           fi
-          # Whitelist: every FROM eclipse-temurin: line MUST contain '-noble' before end-of-line or ' AS '.
-          # grep -vE removes whitelisted lines (lines that DO contain -noble in the tag).
-          # grep -vF is reserved for fixed-string filters per the Phase 71-05 portability pattern (commit f451ff4).
-          violations=$(printf '%s\n' "$from_lines" | grep -vE ':[^[:space:]]*-noble([[:space:]]|$)' || true)
+          # Whitelist: every FROM eclipse-temurin: line MUST contain the fixed substring '-noble'.
+          # Two-stage extract-then-filter mirrors pom.xml PLAT-07 (commit f451ff4):
+          # grep -E extracts the candidate set; grep -F is the cross-platform fixed-string filter.
+          # NOTE: pass the leading-dash pattern via -e to avoid BSD-grep parsing '-noble' as flags
+          # (the exact portability trap commit f451ff4 documented for the Phase 71-05 build-guard).
+          violations=$(printf '%s\n' "$from_lines" | grep -v -F -e '-noble' || true)
           if [ -n "$violations" ]; then
             echo "[Phase 78 build-guard] FAIL: Dockerfile uses an unpinned eclipse-temurin tag."
             echo "All 'FROM eclipse-temurin:' lines must end in '-noble' (e.g. '25-jdk-noble', '25-jre-noble')."
@@ -102,3 +104,35 @@ jobs:
           fi
           echo "[Phase 78 build-guard] OK - all 'FROM eclipse-temurin:' lines are pinned to -noble."
           echo "$from_lines"
+
+  docker-build:
+    # Phase 78: Exercises `docker build .` on every PR + push to master so future
+    # Dockerfile / base-image regressions fail fast on PR instead of on release.
+    # In particular, exercises stage 2's `playwright install chromium` RUN step —
+    # the exact step that failed in release run 25609204039 before the -noble pin.
+    # D-07: full build job, always on. D-08: no separate path-filtered job.
+    # Acceptable cost: +1-3 minutes CI per PR (explicitly accepted by user).
+    needs: dockerfile-noble-pin-guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build Docker image (full multi-stage, no push)
+        id: docker_build
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="ctc-manager:ci-${GITHUB_SHA}"
+          echo "Building $IMAGE_TAG from pinned -noble base..."
+          docker build -t "$IMAGE_TAG" . 2>&1 | tee /tmp/docker-build.log
+          echo "Built $IMAGE_TAG successfully."
+          docker image inspect "$IMAGE_TAG" --format 'Image ID: {{.Id}} Size: {{.Size}}'
+
+      - name: Upload docker build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: docker-build-log
+          path: /tmp/docker-build.log
+          retention-days: 7
