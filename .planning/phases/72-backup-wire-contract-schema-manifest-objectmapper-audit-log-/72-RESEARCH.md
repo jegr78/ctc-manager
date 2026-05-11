@@ -904,10 +904,11 @@ All code examples are co-located with their patterns above. Cross-reference:
 
 ## Open Questions
 
-1. **OQ-1: D-03 says 23, runtime produces 24 (PlayoffRound). Which is the wire contract?**
+1. **OQ-1: D-03 says 23, runtime produces 24 (PlayoffRound). Which is the wire contract?** (RESOLVED 2026-05-11)
    - What we know: PlayoffRound is operative entity (playoff bracket rounds), not metadata. It MUST round-trip or playoff data is lost.
    - What's unclear: Is D-03's omission a typo in the CONTEXT documentation (intended 24, written 23), or did the discuss-phase intentionally exclude PlayoffRound?
    - Recommendation: Planner should propose **CONTEXT amendment to D-03 listing 24 entities including PlayoffRound** in the Phase 72 plan or send back to `/gsd-discuss-phase`. Do NOT silently override D-03 in the implementation.
+   - Resolution: CONTEXT.md D-03 amended on 2026-05-11 to authorize 24 entities (PlayoffRound included). See 72-CONTEXT.md D-03 amendment.
 
 2. **OQ-2: Should `EntityRef` carry a `String entityGraphName` field (D-07's planner-discretion clause)?**
    - What we know: Phase 73's `BackupExportService` will need `@EntityGraph` hints to avoid `LazyInitializationException` during streaming (Pitfall 3 of PITFALLS.md).

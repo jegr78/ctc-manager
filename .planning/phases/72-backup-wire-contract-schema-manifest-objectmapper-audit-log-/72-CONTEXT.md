@@ -32,6 +32,8 @@ Lock the on-disk wire contract for the v1.10 backup ZIP *before* any export or i
 
   (Order above is illustrative; the authoritative order is the runtime topo-sort output — see D-04.)
 
+- **D-03 amendment (2026-05-11, post-research):** RESEARCH OQ-1 identified `PlayoffRound` (`@Entity @Table(name="playoff_rounds")` with `@ManyToOne Playoff`) as a 24th operative entity under `org.ctc.domain.model`. The runtime topo-sort over `Metamodel.getEntities()` will surface 24, not 23. Authorized final entity count: **24** (the 23 above PLUS `PlayoffRound`, which sits between `Playoff` and `PlayoffMatchup` in topo-order). `BackupSchemaTopologyIT` asserts `hasSize(24)`; PROJECT.md "Backup Wire Contract (v1.10)" subsection documents 24 entities.
+
 ### EXPORT_ORDER Generation (GAP-5 resolution)
 
 - **D-04:** **JPA `Metamodel` topological sort.** `BackupSchema.@PostConstruct` reads `entityManagerFactory.getMetamodel().getEntities()`, restricts the candidate set to classes whose package starts with `org.ctc.domain.model` (see D-06), then walks each `EntityType<?>`'s singular attributes — for each attribute whose persistent type is `MANY_TO_ONE` or `ONE_TO_ONE` (owning side only, i.e. `mappedBy` is null), it records a directed edge `dependency → owner`. Kahn's algorithm produces an FK-respecting topo-sort. The `Team.parentTeam` self-FK (cycle of length 1) is detected and excluded from the edge set so Kahn does not deadlock — `Team` appears once at its dependency depth, and Phase 75 handles the self-link via the IMPORT-05 `UPDATE teams SET parent_team_id = NULL` pre-step. JPA-portable; no Hibernate-internal API access; survives Hibernate version bumps.
