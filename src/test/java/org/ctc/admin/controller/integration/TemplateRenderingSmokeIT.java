@@ -3,6 +3,7 @@ package org.ctc.admin.controller.integration;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
@@ -10,13 +11,19 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ValueConstants;
+import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import java.lang.reflect.Parameter;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -73,13 +80,18 @@ class TemplateRenderingSmokeIT {
             Map.entry("matchScoringId", "00000000-0000-0071-0000-000000000002"),
             Map.entry("sourceId",       "00000000-0000-0071-0000-000000000070"), // driver-merge source
             Map.entry("targetId",       "00000000-0000-0071-0000-000000000071"), // driver-merge target
-            Map.entry("playoffId",      "00000000-0000-0071-0000-000000000099")  // playoff not in fixture; route may 404 cleanly
+            Map.entry("playoffId",      "00000000-0000-0071-0000-000000000099"), // playoff not in fixture; route may 404 cleanly
+            // Aliases for team-ID variants that surface as @RequestParam in admin GET routes:
+            Map.entry("homeTeamId",     "00000000-0000-0071-0000-000000000020"),
+            Map.entry("awayTeamId",     "00000000-0000-0071-0000-000000000020"),
+            Map.entry("seasonTeamId",   "00000000-0000-0071-0000-000000000020")
     );
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
+    @Qualifier("requestMappingHandlerMapping")
     private RequestMappingHandlerMapping handlerMapping;
 
     /**
@@ -95,7 +107,7 @@ class TemplateRenderingSmokeIT {
      */
     @TestFactory
     Stream<DynamicTest> givenSmokeFixtureSeeded_whenGetAllAdminRoutes_thenAllRenderWithoutTemplateProcessingException() {
-        Set<String> patterns = new LinkedHashSet<>();
+        Map<String, Map<String, String>> routes = new LinkedHashMap<>();
 
         handlerMapping.getHandlerMethods().forEach((info, method) -> {
             if (!supportsGet(info)) return;
@@ -107,15 +119,18 @@ class TemplateRenderingSmokeIT {
                 ps = Collections.emptySet();
             }
 
+            Map<String, String> queryParams = extractRequiredQueryParams(method);
+
             for (String p : ps) {
                 if (p != null && p.startsWith("/admin")) {
-                    patterns.add(p);
+                    routes.putIfAbsent(p, queryParams);
                 }
             }
         });
 
-        return patterns.stream()
-                .map(p -> DynamicTest.dynamicTest("GET " + p, () -> assertRouteRenders(p)));
+        return routes.entrySet().stream()
+                .map(e -> DynamicTest.dynamicTest("GET " + e.getKey(),
+                        () -> assertRouteRenders(e.getKey(), e.getValue())));
     }
 
     private static boolean supportsGet(RequestMappingInfo info) {
@@ -124,9 +139,39 @@ class TemplateRenderingSmokeIT {
         return methods.isEmpty() || methods.contains(RequestMethod.GET);
     }
 
-    private void assertRouteRenders(String pattern) throws Exception {
+    /**
+     * D-10 extension: also resolve required @RequestParam values dynamically so routes that take
+     * query-string IDs (e.g. /admin/matchdays/by-season?seasonId=...) can be smoke-tested without
+     * a hardcoded skip list. UUID-typed required params get their value from PATH_VARS keyed by
+     * the parameter name; other types fall back to a benign default (empty string).
+     */
+    private static Map<String, String> extractRequiredQueryParams(HandlerMethod method) {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (Parameter param : method.getMethod().getParameters()) {
+            RequestParam rp = param.getAnnotation(RequestParam.class);
+            if (rp == null || !rp.required() || !rp.defaultValue().equals(ValueConstants.DEFAULT_NONE)) {
+                continue;
+            }
+            String name = rp.name().isEmpty() ? rp.value() : rp.name();
+            if (name.isEmpty()) name = param.getName();
+            String value;
+            if (param.getType() == UUID.class && PATH_VARS.containsKey(name)) {
+                value = PATH_VARS.get(name);
+            } else {
+                value = "";
+            }
+            out.put(name, value);
+        }
+        return out;
+    }
+
+    private void assertRouteRenders(String pattern, Map<String, String> queryParams) throws Exception {
         String url = substitutePathVars(pattern);
-        var response = mockMvc.perform(get(url)).andReturn().getResponse();
+        var requestBuilder = get(url);
+        for (Map.Entry<String, String> qp : queryParams.entrySet()) {
+            requestBuilder = requestBuilder.param(qp.getKey(), qp.getValue());
+        }
+        var response = mockMvc.perform(requestBuilder).andReturn().getResponse();
 
         int status = response.getStatus();
         String body = response.getContentAsString();

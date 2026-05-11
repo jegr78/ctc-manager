@@ -211,8 +211,40 @@
 					<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
 					<excludes>
 						<exclude>**/e2e/**</exclude>
+						<exclude>**/*IT.java</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<!-- PLAT-06: bind Failsafe in the default lifecycle so *IT.java integration tests
+				     (e.g. TemplateRenderingSmokeIT, AdminDropdownRenderingIT) run on every
+				     `./mvnw verify`. Without this binding, *IT.java files are picked up
+				     only by explicit `-Dtest=...` invocations. The `e2e` profile adds a
+				     separate execution for Playwright **/e2e/** tests.
+				     Configuration is placed at execution level (not plugin level) so the
+				     `e2e` profile's execution can use its own independent filters without
+				     Maven profile <configuration> merging. -->
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>default-it</id>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+						<configuration>
+							<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
+							<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+							<includes>
+								<include>**/*IT.java</include>
+							</includes>
+							<excludes>
+								<exclude>**/e2e/**</exclude>
+							</excludes>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
@@ -311,19 +343,20 @@ exit 0;
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-failsafe-plugin</artifactId>
-						<configuration>
-							<includes>
-								<include>**/e2e/**/*Test.java</include>
-							</includes>
-							<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
-							<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
-						</configuration>
 						<executions>
 							<execution>
+								<id>e2e-it</id>
 								<goals>
 									<goal>integration-test</goal>
 									<goal>verify</goal>
 								</goals>
+								<configuration>
+									<includes>
+										<include>**/e2e/**/*Test.java</include>
+									</includes>
+									<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
+									<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+								</configuration>
 							</execution>
 						</executions>
 					</plugin>
