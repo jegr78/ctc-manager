@@ -39,4 +39,13 @@ public interface MatchdayRepository extends JpaRepository<Matchday, UUID> {
 	boolean existsByPhaseSeasonId(UUID seasonId);
 
 	List<Matchday> findByGroupId(UUID groupId);
+
+	/**
+	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 *
+	 * <p>Eager-fetches the two {@code @ManyToOne} associations: {@code phase} and {@code group}.
+	 */
+	@EntityGraph(attributePaths = {"phase", "group"})
+	@Query("SELECT e FROM Matchday e")
+	List<Matchday> findAllForBackup();
 }

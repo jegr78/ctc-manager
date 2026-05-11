@@ -1,7 +1,9 @@
 package org.ctc.domain.repository;
 
 import org.ctc.domain.model.Season;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -36,4 +38,15 @@ public interface SeasonRepository extends JpaRepository<Season, UUID> {
 	 * tab matches the legacy {@code ^\d{4}$} pattern.
 	 */
 	List<Season> findByYear(int year);
+
+	/**
+	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 *
+	 * <p>Eager-fetches the two {@code @ManyToMany} collections {@code cars} and {@code tracks}
+	 * so the Phase 73-01 MixIn can render them as ID-reference lists without triggering
+	 * {@code LazyInitializationException}.
+	 */
+	@EntityGraph(attributePaths = {"cars", "tracks"})
+	@Query("SELECT e FROM Season e")
+	List<Season> findAllForBackup();
 }

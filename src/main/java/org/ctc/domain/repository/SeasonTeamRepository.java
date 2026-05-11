@@ -3,6 +3,7 @@ package org.ctc.domain.repository;
 import org.ctc.domain.model.SeasonTeam;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -18,4 +19,14 @@ public interface SeasonTeamRepository extends JpaRepository<SeasonTeam, UUID> {
 
 	@Transactional
 	void deleteBySeasonIdAndTeamId(UUID seasonId, UUID teamId);
+
+	/**
+	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 *
+	 * <p>Eager-fetches the three {@code @ManyToOne} associations: {@code season},
+	 * {@code team}, {@code successor} (the self-FK to another SeasonTeam).
+	 */
+	@EntityGraph(attributePaths = {"season", "team", "successor"})
+	@Query("SELECT e FROM SeasonTeam e")
+	List<SeasonTeam> findAllForBackup();
 }
