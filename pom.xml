@@ -64,6 +64,19 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-mysql</artifactId>
 		</dependency>
+		<!--
+		    Jackson Java-Time module (Phase 72 plan 02 / plan 03).
+		    Required for the BackupManifest wire-contract serialization (Instant ISO-8601 strings,
+		    not millis timestamps) via the strict `backupObjectMapper`. Spring Boot 4 ships
+		    Jackson 3 (`tools.jackson.*`) for its primary auto-configured ObjectMapper, but the
+		    backup module deliberately uses the Jackson 2.x `com.fasterxml.jackson.databind`
+		    `ObjectMapper` (transitively present via flyway-core) — that mapper does NOT
+		    register JavaTimeModule by default, so we add it explicitly here.
+		-->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>com.h2database</groupId>
