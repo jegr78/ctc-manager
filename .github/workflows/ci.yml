@@ -64,3 +64,41 @@ jobs:
           name: coverage-report
           path: target/site/jacoco/
           retention-days: 7
+
+  dockerfile-noble-pin-guard:
+    # Phase 78: Structural guard for the eclipse-temurin -noble suffix pin in Dockerfile.
+    # Fails if any `FROM eclipse-temurin:` line does not end in `-noble`.
+    # Whitelist-on-suffix approach (D-05). Failure message references Phase 78 (D-04 style).
+    # Cross-platform grep idiom mirrors pom.xml PLAT-07 build-guard (commit f451ff4).
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Dockerfile -noble pin guard
+        run: |
+          set -euo pipefail
+          # Extract every FROM eclipse-temurin: line (anchored, ignoring trailing whitespace tolerated by Docker).
+          from_lines=$(grep -nE '^FROM eclipse-temurin:' Dockerfile || true)
+          if [ -z "$from_lines" ]; then
+            echo "[Phase 78 build-guard] ERROR: No 'FROM eclipse-temurin:' lines found in Dockerfile."
+            echo "Either the base image was changed away from eclipse-temurin (update this guard) or the Dockerfile is missing."
+            exit 1
+          fi
+          # Whitelist: every FROM eclipse-temurin: line MUST contain '-noble' before end-of-line or ' AS '.
+          # grep -vE removes whitelisted lines (lines that DO contain -noble in the tag).
+          # grep -vF is reserved for fixed-string filters per the Phase 71-05 portability pattern (commit f451ff4).
+          violations=$(printf '%s\n' "$from_lines" | grep -vE ':[^[:space:]]*-noble([[:space:]]|$)' || true)
+          if [ -n "$violations" ]; then
+            echo "[Phase 78 build-guard] FAIL: Dockerfile uses an unpinned eclipse-temurin tag."
+            echo "All 'FROM eclipse-temurin:' lines must end in '-noble' (e.g. '25-jdk-noble', '25-jre-noble')."
+            echo "Reason: Playwright 1.59.0 does not support Ubuntu 26.04 (Plucky), which the bare '25-jre' tag silently rotated to in release run 25609204039."
+            echo "See .planning/phases/78-docker-release-image-fix/78-CONTEXT.md (decisions D-01, D-05, D-06)."
+            echo ""
+            echo "Offending line(s):"
+            echo "$violations"
+            exit 1
+          fi
+          echo "[Phase 78 build-guard] OK - all 'FROM eclipse-temurin:' lines are pinned to -noble."
+          echo "$from_lines"
