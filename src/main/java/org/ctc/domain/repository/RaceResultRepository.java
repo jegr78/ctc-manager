@@ -47,4 +47,13 @@ public interface RaceResultRepository extends JpaRepository<RaceResult, UUID> {
 
 	@EntityGraph(attributePaths = {"driver", "race"})
 	List<RaceResult> findByRacePlayoffMatchupRoundPlayoffPhaseId(UUID phaseId);
+
+	/**
+	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 *
+	 * <p>Eager-fetches the two {@code @ManyToOne} associations: {@code race} and {@code driver}.
+	 */
+	@EntityGraph(attributePaths = {"race", "driver"})
+	@Query("SELECT e FROM RaceResult e")
+	List<RaceResult> findAllForBackup();
 }
