@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.10
 milestone_name: Spring Boot Upgrade & Data Export/Import
-status: executing
-stopped_at: Phase 72 context gathered
-last_updated: "2026-05-11T15:19:48.405Z"
-last_activity: 2026-05-11 -- Phase 72 planning complete
+status: ready_for_next_phase
+stopped_at: Phase 72 complete (5/5 plans, VERIFICATION PASSED)
+last_updated: "2026-05-11T18:50:00.000Z"
+last_activity: 2026-05-11 -- Phase 72 complete (5/5 success criteria verified)
 progress:
   total_phases: 8
-  completed_phases: 2
-  total_plans: 13
-  completed_plans: 8
-  percent: 62
+  completed_phases: 3
+  total_plans: 18
+  completed_plans: 13
+  percent: 72
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 78 — docker-release-image-fix
+**Current focus:** Phase 72 complete — ready to start Phase 73 (Backup Export — Jackson MixIns + Streaming ZIP Endpoint)
 
 ## Current Position
 
-Phase: 78 (docker-release-image-fix) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-05-11 -- Phase 72 planning complete
+Phase: 72 (Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit-Log Scope) — COMPLETE
+Plans: 5 of 5 complete (72-01 BackupSchema, 72-02 BackupManifest, 72-03 BackupObjectMapperConfig, 72-04 V7+DataImportAudit, 72-05 doc anchors)
+Status: Ready to start Phase 73
+Last activity: 2026-05-11 -- Phase 72 complete, VERIFICATION PASSED (5/5 SCs)
 
 ## Completed Milestones
 
