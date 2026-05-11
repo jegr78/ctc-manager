@@ -208,7 +208,13 @@ Plans:
   4. `BackupExportService` runs under `@Transactional(readOnly=true)` and produces a streamed export of the dev fixture (Saison 2023 + 2024-3) without a single `LazyInitializationException` in the logs
   5. Anonymous (unauthenticated) `POST /admin/backup/export` is rejected by Spring Security on `prod`/`docker` profiles; CSRF token is required and verified
 
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 73-01-PLAN.md — Wave 1: 24 Jackson MixIns + BackupSerializationModule + 5 representative MixIn unit tests + BackupSerializationModuleTest + BackupEntityAnnotationCleanlinessIT (EXPORT-04)
+- [ ] 73-02-PLAN.md — Wave 1: 24 repository findAllForBackup() methods with @EntityGraph(attributePaths) + BackupRepositoryEntityGraphIT (EXPORT-05)
+- [ ] 73-03-PLAN.md — Wave 2: BackupExportService (@Transactional readOnly) + BackupArchiveService (manifest-first ZIP) + UploadEntry + 2 unit tests + BackupExportServiceIT + BackupArchiveServiceIT + BackupExportNoLazyInitIT + BackupUploadsMirrorIT + BackupRoundTripIT (EXPORT-02/03/05)
+- [ ] 73-04-PLAN.md — Wave 3: BackupController + admin/backup.html + admin/layout.html sidebar Data group + BackupControllerTest + BackupControllerIT + BackupControllerSecurityIT (prod+dev @Nested) + AdminLayoutIT + BackupExportE2ETest (EXPORT-01/02/06)
 
 **UI hint**: yes
 
@@ -333,7 +339,7 @@ Plans:
 | ----- | -------------- | ------ | --------- |
 | 71. SB 4.0.6 Upgrade + Thymeleaf 3.1.5 Audit + Build Guard | 5/5 | Complete    | 2026-05-11 |
 | 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/5   | Planned     | — |
-| 73. Backup Export — Jackson MixIns + Streaming ZIP | 0/TBD | Not started | — |
+| 73. Backup Export — Jackson MixIns + Streaming ZIP | 0/4   | Planned     | — |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 0/TBD | Not started | — |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/TBD | Not started | — |
