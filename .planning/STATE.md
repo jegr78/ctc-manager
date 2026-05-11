@@ -4,14 +4,14 @@ milestone: v1.10
 milestone_name: Spring Boot Upgrade & Data Export/Import
 status: executing
 stopped_at: Phase 78 context gathered
-last_updated: "2026-05-11T13:43:17.919Z"
-last_activity: 2026-05-11 -- Phase 78 planning complete
+last_updated: "2026-05-11T13:56:46.776Z"
+last_activity: 2026-05-11
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 8
-  completed_plans: 5
-  percent: 63
+  completed_plans: 7
+  percent: 88
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 71 — spring-boot-4-0-6-upgrade-thymeleaf-3-1-5-template-audit-bui
+**Current focus:** Phase 78 — docker-release-image-fix
 
 ## Current Position
 
-Phase: 78
-Plan: Not started
+Phase: 78 (docker-release-image-fix) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-05-11 -- Phase 78 planning complete
+Last activity: 2026-05-11
 
 ## Completed Milestones
 
@@ -73,6 +73,8 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [v1.10 roadmap]: Replace-All implementation strategy locked to native SQL DELETE in FK-reverse order via `EntityManager.createNativeQuery()` + `JdbcTemplate.batchUpdate` for restore (bypasses `AuditingEntityListener`). TRUNCATE is forbidden because it auto-commits on MariaDB. Documented in Phase 75 goal.
 - [v1.10 roadmap]: File-system mutations are NOT inside the JPA transaction. Upload-tree restore is post-commit via stage-and-rename, with the previous tree retained at `data/.import-backups/<ts>/uploads-old/` for 24 h manual recovery. Documented in Phase 75 goal.
 - [v1.10 roadmap]: No new Maven dependencies. ZIP I/O via JDK `java.util.zip`, JSON via existing Jackson, multipart via existing Spring MVC. Only POM change is `spring-boot-starter-parent` 4.0.5 → 4.0.6 + `<dependencyManagement>` pin on Thymeleaf 3.1.5.
+- [Phase ?]: Phase 78-02: ci.yml structural Dockerfile -noble pin guard added (D-05/D-06; cross-platform grep -E + grep -F -e idiom mirroring pom.xml PLAT-07 / commit f451ff4)
+- [Phase ?]: Phase 78-02: ci.yml full docker-build job added on every PR + push (D-07/D-08; no buildx, no login, no path-filter — exercises stage-2 Playwright install chromium, the failing path from release run 25609204039)
 
 ### Phase Numbering
 
@@ -107,7 +109,7 @@ None. Roadmap approved, ready for Phase 71 planning.
 
 ## Session Continuity
 
-Last session: 2026-05-11T13:26:16.527Z
+Last session: 2026-05-11T13:56:26.233Z
 
 **v1.10 startup commits (anticipated, not yet made):**
 
