@@ -214,6 +214,35 @@ Architectural Consistency: All controllers delegate to services, exception handl
 | `findByPsnId` guard in NEW_DRIVER branch of DriverSheetImportService (Phase 70 GAP-70-01 fix) | `computeIfAbsent` did not consult the DB → cross-tab duplicate PSN-ID inserts caused full-transaction rollback on live MariaDB import (Saison 2023). 2 IT regression tests fence the regression | ✓ v1.9 |
 | Lombok 1.18.46 + JEP 498 `--sun-misc-unsafe-memory-access=allow` (Phase 68) | Java 25 emits terminally-deprecated warnings for `lombok.permit.Permit`'s `sun.misc.Unsafe` calls; Lombok 1.18.46 + the JEP 498 flag silence the warnings without forcing a Java downgrade | ✓ v1.9 |
 | Guava pinned to 33.4.8-jre (`<guava.version>` override) | Transitive Guava 33.1.0-jre from `google-api-client` emitted `AbstractFuture$UnsafeAtomicHelper` Unsafe warning on Java 25; 33.4.x switches to `VarHandle` for Java 9+ | ✓ v1.9 |
+| `data_import_audit` permanently out of export scope (Phase 72 D-15) | Audit log is operational metadata about migrations, not league data — survives every import for traceability; enforced structurally via `BackupSchema` package-name filter `org.ctc.domain.model.*` (D-06), so any entity under `org.ctc.backup.*` is excluded with no opt-in / marker / developer memory required | ✓ v1.10 |
+
+### Backup Wire Contract (v1.10)
+
+Phase 72 locked the on-disk wire contract for the backup ZIP before any export/import code was written. Four invariants follow every Phase 72+ backup; importers MUST refuse anything that doesn't match.
+
+**1. Schema versioning is a monotonic integer, not a semver.**
+`BackupSchema.SCHEMA_VERSION = 1` (public static final int). Every wire-incompatible schema change bumps the integer by 1. Phase 74's import service rejects ZIPs whose `manifest.json:schema_version` does not equal the current `BackupSchema.SCHEMA_VERSION` BEFORE any DB write (catastrophic-data-loss prevention). GAP-2 resolution.
+
+**2. ZIP layout is per-entity, manifest-first.**
+Every backup ZIP contains, in this order:
+
+- `manifest.json` as the FIRST entry (write-order discipline owned by Phase 73's `BackupExportService`).
+- Per-entity JSON under `data/`: `data/seasons.json`, `data/season-phases.json`, `data/race-results.json`, etc. Filenames are derived from `@Table(name=...)` via snake_case to kebab-case (`season_phases` becomes `season-phases.json`). `EntityRef.fileName` codifies this rule.
+- `uploads/` directory mirroring only entity-referenced files from `data/{profile}/uploads/`.
+
+GAP-1 resolution.
+
+**3. `EXPORT_ORDER` is a JPA-Metamodel-generated topological sort over `org.ctc.domain.model.*`.**
+`BackupSchema.@PostConstruct` reads `EntityManagerFactory.getMetamodel().getEntities()`, filters classes by `getPackage().getName().startsWith("org.ctc.domain.model")`, walks each `EntityType<?>`'s `@ManyToOne`/`@OneToOne` owning-side singular attributes, and runs Kahn's algorithm to produce a dependency-first ordered list. The `Team.parentTeam` self-FK is detected and skipped so Kahn does not deadlock. The result is wrapped in `List.copyOf(...)` and exposed via `getExportOrder()`. Hand-rolled FK orderings are forbidden — they drift. GAP-5 resolution.
+
+**4. The 24-entity scope (D-03 corrected post-research: 24 operative entities including `PlayoffRound`).**
+The runtime topo-sort returns 24 `EntityRef` instances (CONTEXT.md originally said 23; `PlayoffRound` was missed in D-03 and reconciled in RESEARCH §OQ-1). The 24 are: `Car`, `Track`, `Season`, `SeasonPhase`, `SeasonPhaseGroup`, `Team`, `PhaseTeam`, `SeasonTeam`, `Driver`, `SeasonDriver`, `PsnAlias`, `RaceScoring`, `MatchScoring`, `RaceSettings`, `Matchday`, `Match`, `Race`, `RaceLineup`, `RaceResult`, `RaceAttachment`, `Playoff`, `PlayoffRound`, `PlayoffMatchup`, `PlayoffSeed`. `Car` and `Track` ARE included (D-01: round-trip from environment A to B must not require gt7sync on B first). `FeatureSettings` is DROPPED (D-02: class does not exist in `src/main/java/org/ctc/domain/model/`; if ever introduced, it bumps `SCHEMA_VERSION` 1 to 2). Any new entity under `org.ctc.domain.model` is automatically picked up by the next boot's topo-sort — no marker, no opt-in.
+
+**ObjectMapper isolation (D-11 amended per RESEARCH §Pitfall P-2).**
+`BackupObjectMapperConfig` declares BOTH a `@Primary` default mapper (built from the auto-config `Jackson2ObjectMapperBuilder`, preserving admin REST/AJAX behaviour) AND a `@Qualifier("backupObjectMapper")` strict mapper (`FAIL_ON_UNKNOWN_PROPERTIES=true`, `WRITE_DATES_AS_TIMESTAMPS=false`, `JavaTimeModule` registered, Phase 73 MixIn `@Component` beans injected via `List<Module>`). Defining a single qualified bean would silently disable Spring's auto-configured default via `@ConditionalOnMissingBean(ObjectMapper.class)` — verified against spring-projects/spring-boot#47379.
+
+**Audit log persistence (`DataImportAudit` Lombok class, NOT record).**
+`org.ctc.backup.audit.DataImportAudit` is a Lombok `@Entity` (Hibernate 7 cannot proxy Java records — RESEARCH §Pitfall P-1 corrects D-08's preference). The entity deliberately does NOT extend `BaseEntity` so the Phase 75 writer fully controls `executedAt` without `AuditingEntityListener` interference. V7 columns use `LONGTEXT` (portable across H2 2.x and MariaDB 10.7+) for the JSON-shape text fields `table_counts_wiped` and `table_counts_restored` (D-09 — native `JSON` rejected for v1.10 dialect drift).
 
 ## Evolution
 

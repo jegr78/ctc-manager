@@ -179,7 +179,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 
   1. `BackupSchema.SCHEMA_VERSION = 1` is exported as a public static `final int` constant; `BackupSchema.EXPORT_ORDER` is a generated FK-respecting `List<EntityRef>` covering all 22 operative entity classes
   2. `BackupManifest` record serializes to a `manifest.json` that is provably the FIRST entry in any ZIP produced by the future export service (read-order determinism enforced in the writer)
-  3. Flyway V7 `data_import_audit` migration runs cleanly on H2 + MariaDB profiles; `data_import_audit` table is created with the documented columns (id UUID PK, executed_at, executed_by, schema_version, table_counts_wiped JSON, table_counts_restored JSON, source_filename, success)
+  3. Flyway V7 `data_import_audit` migration runs cleanly on H2 + MariaDB profiles; `data_import_audit` table is created with the documented columns (id UUID PK, executed_at, executed_by, schema_version, table_counts_wiped JSON [implemented as LONGTEXT — see 72-CONTEXT.md D-09 + 72-RESEARCH.md P-4 for portability rationale], table_counts_restored JSON [implemented as LONGTEXT — see 72-CONTEXT.md D-09 + 72-RESEARCH.md P-4], source_filename, success)
   4. `@Qualifier("backupObjectMapper")` bean is injectable and behaves as configured (`FAIL_ON_UNKNOWN_PROPERTIES=true`, ISO-8601 dates, JavaTimeModule, MixIns registered) without polluting the default Spring `ObjectMapper` (verified by an IT that injects both qualifiers and asserts they are distinct beans)
   5. PROJECT.md Decisions section contains a row stating "audit log table `data_import_audit` is permanently out of export scope" with rationale; per-entity ZIP layout (`data/<entity>.json`) and integer schema versioning are documented as canonical wire-contract choices
 
