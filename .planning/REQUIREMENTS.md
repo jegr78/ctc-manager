@@ -64,6 +64,13 @@ Requirements for milestone v1.10. Each maps to roadmap phases.
 - [ ] **QUAL-04**: Mid-Restore-Failure-Rollback-IT (`BackupImportRollbackIT`): inject Exception nach 50 % der Restore-Schleife → assert dass DB-State exakt der Pre-Import-Zustand ist (alle Original-Rows da, keine Import-Row, audit-log row mit success=false)
 - [ ] **QUAL-05**: README-Sektion + WIKI-Page „Backup & Restore" mit Step-by-Step-Anleitung (Export-Workflow, Import-Workflow, Schema-Version-Erklärung, Recovery aus `data/.import-backups/<ts>/`); Screenshots optional. Documented in `docs/site/` und `wiki/`
 
+### PLAT-CI — Release Infrastructure & Container Image Hygiene
+
+Phase 78 requirements. Distinct from PLAT-01..PLAT-07 because Phase 78 is independent of the Spring Boot 4.0.6 upgrade itself — it addresses the release-pipeline's Docker image build (`eclipse-temurin` base-tag drift) that surfaced when the release workflow's `playwright install chromium` step failed on the silently-rotated Ubuntu 26.04 base.
+
+- [ ] **PLAT-CI-01**: Pin both `Dockerfile` stages to `eclipse-temurin:25-{jdk,jre}-noble` (suffix-only, no SHA256 digest per Phase 78 decision D-01). Stage 1 = `FROM eclipse-temurin:25-jdk-noble AS build`; stage 2 = `FROM eclipse-temurin:25-jre-noble`. Each FROM line preceded by an inline comment naming the Phase 78 / Playwright 1.59.0 / Ubuntu 26.04 rationale (D-04). Pin restores the originally-intended Noble base (the runtime stage already installs `libasound2t64`, a Noble-only package name — direct evidence the Dockerfile was authored for Noble). Diff is pin-only — no Java, Spring Boot, or Playwright version changes (criterion 5).
+- [ ] **PLAT-CI-02**: Structural CI protection for the PLAT-CI-01 pin: (a) a `dockerfile-noble-pin-guard` job in `.github/workflows/ci.yml` that scans `Dockerfile` for `FROM eclipse-temurin:` lines and fails the workflow if any such line is not `-noble`-suffixed (whitelist-on-suffix per D-05, cross-platform `grep -E` / `grep -F` idiom mirroring the Phase 71-05 PLAT-07 build-guard pattern from commit `f451ff4`); (b) a `docker-build` job in the same workflow that performs `docker build .` end-to-end on every PR and every push to master (D-06, D-07), exercising both Dockerfile stages including the stage-2 `playwright install chromium` RUN step — i.e. would have caught release run `25609204039` on PR instead of on release. No `setup-buildx`, no `login-action`, no `paths:` filter; "+1-3 min CI per PR" cost explicitly accepted (D-08).
+
 ## Future Requirements
 
 Deferred to v1.11+ milestones. Tracked but explicit out-of-scope für v1.10.
@@ -142,8 +149,10 @@ Which phases cover which requirements. Filled during roadmap creation by `gsd-ro
 | QUAL-03 | Phase 75 | Not started |
 | QUAL-04 | Phase 77 | Not started |
 | QUAL-05 | Phase 77 | Not started |
+| PLAT-CI-01 | Phase 78 | Not started |
+| PLAT-CI-02 | Phase 78 | Not started |
 
-**Total: 37 REQ-IDs** (PLAT × 7, SCHEMA × 4, EXPORT × 6, IMPORT × 8, SECU × 7, QUAL × 5)
+**Total: 39 REQ-IDs** (PLAT × 7, PLAT-CI × 2, SCHEMA × 4, EXPORT × 6, IMPORT × 8, SECU × 7, QUAL × 5)
 
 ### Coverage by Phase
 
@@ -156,4 +165,5 @@ Which phases cover which requirements. Filled during roadmap creation by `gsd-ro
 | Phase 75 | IMPORT-05, IMPORT-06, IMPORT-07, QUAL-03 | 4 |
 | Phase 76 | SECU-05, SECU-06, SECU-07 | 3 |
 | Phase 77 | QUAL-01, QUAL-02, QUAL-04, QUAL-05 | 4 |
-| **Total** | | **37** |
+| Phase 78 | PLAT-CI-01, PLAT-CI-02 | 2 |
+| **Total** | | **39** |

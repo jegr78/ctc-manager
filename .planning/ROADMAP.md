@@ -286,7 +286,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 
 **Depends on**: Nothing (independent of the Spring Boot upgrade and backup feature work; can run any time within v1.10, ideally before Phase 77's final UAT so the release pipeline is verified end-to-end against a working image)
 
-**Requirements**: TBD (CI/release-infra concern; not yet in REQUIREMENTS.md — to be assigned during planning)
+**Requirements**: PLAT-CI-01, PLAT-CI-02
 
 **Success Criteria** (what must be TRUE):
 
