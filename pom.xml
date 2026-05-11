@@ -316,7 +316,7 @@
 							<arguments>
 								<argument>-c</argument>
 								<argument><![CDATA[
-violations=$(grep -rE 'th:(replace|insert|include)="~\{[^"]*\(.*\$\{.*\}.*\)\}"' src/main/resources/templates/ | grep -v 'layout(${pageTitle}' || true);
+violations=$(grep -rE 'th:(replace|insert|include)="~\{[^"]*\(.*\$\{.*\}.*\)\}"' src/main/resources/templates/ | grep -vF 'layout(${pageTitle}' || true);
 if [ -n "$violations" ]; then
   echo "[PLAT-07 build-guard] Forbidden Thymeleaf fragment-call expression detected (Plan 05):";
   echo "$violations";
