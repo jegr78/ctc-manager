@@ -95,6 +95,8 @@ public class SeasonPhaseController {
         model.addAttribute("combinedView", isGroupsLayout);
         model.addAttribute("showGroupColumn", isGroupsLayout);
 
+        model.addAttribute("pageTitle",
+                "Season: " + season.getName() + " — " + effectiveLabel(phase));
         return "admin/season-detail";
     }
 
@@ -137,6 +139,8 @@ public class SeasonPhaseController {
         model.addAttribute("combinedView", false);
         model.addAttribute("showGroupColumn", false);
 
+        model.addAttribute("pageTitle",
+                "Season: " + season.getName() + " — " + effectiveLabel(phase));
         return "admin/season-detail";
     }
 
@@ -338,5 +342,7 @@ public class SeasonPhaseController {
                 SeasonFormat.ROUND_ROBIN, "Round Robin"));
 
         model.addAttribute("phaseTypeReadonly", form.getId() != null);
+        model.addAttribute("pageTitle",
+                (form.getId() != null ? "Edit Phase" : "New Phase") + " — " + ((org.ctc.domain.model.Season) season).getName());
     }
 }
