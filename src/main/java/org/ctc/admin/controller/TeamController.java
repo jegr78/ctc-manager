@@ -36,6 +36,7 @@ public class TeamController {
 		model.addAttribute("seasons", data.seasons());
 		model.addAttribute("seasonDriverGroups", data.seasonDriverGroups());
 		model.addAttribute("seasonsWithoutDrivers", data.seasonsWithoutDrivers());
+		model.addAttribute("pageTitle", "Team: " + data.team().getShortName());
 		return "admin/team-detail";
 	}
 

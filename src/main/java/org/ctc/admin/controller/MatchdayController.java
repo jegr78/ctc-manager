@@ -61,6 +61,7 @@ public class MatchdayController {
         model.addAttribute("hasSchedule", data.hasSchedule());
         model.addAttribute("scheduleMissingCount", data.scheduleMissingCount());
         model.addAttribute("hasResults", data.hasResults());
+        model.addAttribute("pageTitle", "Matchday: " + matchday.getLabel());
         return "admin/matchday-detail";
     }
 

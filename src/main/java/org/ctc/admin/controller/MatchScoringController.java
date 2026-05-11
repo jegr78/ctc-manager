@@ -31,6 +31,7 @@ public class MatchScoringController {
 	@GetMapping("/new")
 	public String create(Model model) {
 		model.addAttribute("matchScoringForm", new MatchScoringForm());
+		model.addAttribute("pageTitle", "New Match-Scoring");
 		return "admin/match-scoring-form";
 	}
 
@@ -44,6 +45,7 @@ public class MatchScoringController {
 		form.setPointsDraw(scoring.getPointsDraw());
 		form.setPointsLoss(scoring.getPointsLoss());
 		model.addAttribute("matchScoringForm", form);
+		model.addAttribute("pageTitle", "Edit Match-Scoring");
 		return "admin/match-scoring-form";
 	}
 

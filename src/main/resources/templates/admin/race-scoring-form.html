@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout(${raceScoringForm.id != null ? 'Edit Race-Scoring' : 'New Race-Scoring'}, ~{::section})}">
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
 <section>
     <a th:href="@{/admin/race-scorings}" class="back-link">&larr; Back</a>

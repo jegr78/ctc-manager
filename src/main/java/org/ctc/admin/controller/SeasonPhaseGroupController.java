@@ -49,6 +49,7 @@ public class SeasonPhaseGroupController {
         model.addAttribute("season", seasonManagementService.findById(seasonId));
         model.addAttribute("phase", phase);
         model.addAttribute("form", form);
+        model.addAttribute("pageTitle", "New Group");
         return "admin/season-phase-group-form";
     }
 
@@ -75,6 +76,7 @@ public class SeasonPhaseGroupController {
         model.addAttribute("season", seasonManagementService.findById(seasonId));
         model.addAttribute("phase", phase);
         model.addAttribute("form", form);
+        model.addAttribute("pageTitle", "Edit Group");
         return "admin/season-phase-group-form";
     }
 
@@ -92,6 +94,7 @@ public class SeasonPhaseGroupController {
         if (result.hasErrors()) {
             model.addAttribute("season", seasonManagementService.findById(seasonId));
             model.addAttribute("phase", phase);
+            model.addAttribute("pageTitle", form.getId() != null ? "Edit Group" : "New Group");
             return "admin/season-phase-group-form";
         }
         try {

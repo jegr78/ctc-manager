@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout('Season: ' + ${season.name} + (phase != null ? ' — ' + ${effectivePhaseLabel} : ''), ~{::section})}">
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
 <section>
     <!-- Saison-Header: saison-wide actions only -->
