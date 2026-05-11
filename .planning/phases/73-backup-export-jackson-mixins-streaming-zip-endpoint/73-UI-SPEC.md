@@ -1,10 +1,11 @@
 ---
 phase: 73
 slug: backup-export-jackson-mixins-streaming-zip-endpoint
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-05-11
+reviewed_at: 2026-05-11
 ---
 
 # Phase 73 — UI Design Contract
