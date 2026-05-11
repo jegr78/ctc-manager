@@ -296,12 +296,12 @@ See: milestones/v1.9-ROADMAP.md for full details
   4. The `libasound2t64` apt-get line and the rest of the runtime stage continue to install cleanly on Noble (no package-name regressions from the pin)
   5. No application code, Spring Boot version, Java version, or Playwright version changes — pin-only diff scoped to `Dockerfile`
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans executed
 
 Plans:
 - [x] 78-01-PLAN.md — Wave 1: Pin Dockerfile FROM lines to eclipse-temurin:25-{jdk,jre}-noble + inline Phase-78 rationale comments
 - [x] 78-02-PLAN.md — Wave 2: Add ci.yml dockerfile-noble-pin-guard job (whitelist-on-suffix, grep -E/-F idiom from PLAT-07) + full docker-build job (no buildx, no push, runs on every PR + push to master)
-- [ ] 78-03-PLAN.md — Wave 2: Register PLAT-CI-01 + PLAT-CI-02 in REQUIREMENTS.md (new PLAT-CI section + traceability + coverage rows) + update ROADMAP Phase 78 Requirements line + human-verify checkpoint for D-02 local docker build + /actuator/health check
+- [x] 78-03-PLAN.md — Wave 2: Register PLAT-CI-01 + PLAT-CI-02 in REQUIREMENTS.md (new PLAT-CI section + traceability + coverage rows) + update ROADMAP Phase 78 Requirements line + human-verify checkpoint for D-02 local docker build + /actuator/health check
 
 ## Next Milestone
 
