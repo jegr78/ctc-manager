@@ -24,6 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,7 +62,8 @@ class TemplateRenderingSmokeIT {
      * narrative prose like {@code "MyTemplateProcessingExceptionHandler"} or documentation
      * strings containing the substring as a non-isolated token.
      */
-    private static final String TEMPLATE_EX_REGEX = ".*\\bTemplateProcessingException\\b.*";
+    private static final Pattern TEMPLATE_EX_PATTERN =
+            Pattern.compile("\\bTemplateProcessingException\\b");
 
     // Path-variable substitution map (per CONTEXT.md D-10).
     // Keys cover every path-variable name any /admin/** route declares.
@@ -183,15 +185,17 @@ class TemplateRenderingSmokeIT {
                         + "or other server error at runtime (PLAT-06)", url, status)
                 .isLessThan(500);
 
-        // D-11a word-boundary anchoring per D-11 literal directive: use doesNotMatch on the
-        // regex .*\bTemplateProcessingException\b.* — prevents false positives from narrative
-        // prose ("MyTemplateProcessingExceptionHandler") while still catching the bare exception
+        // D-11a word-boundary anchoring per D-11 literal directive: use doesNotContainPattern
+        // (find-semantics) — NOT doesNotMatch (whole-string-match semantics) — so the assertion
+        // works against multi-line HTML response bodies where `.` does not cross newlines by
+        // default. The word-boundary `\b` anchors still prevent false positives from narrative
+        // prose like "MyTemplateProcessingExceptionHandler" while catching the bare exception
         // name when Thymeleaf surfaces it in an error page.
         assertThat(body)
                 .as("GET %s response body must not contain \\bTemplateProcessingException\\b "
                         + "(word-boundary anchored per D-11a) — signals Thymeleaf restricted-mode "
                         + "rendering failure (PLAT-06)", url)
-                .doesNotMatch(TEMPLATE_EX_REGEX);
+                .doesNotContainPattern(TEMPLATE_EX_PATTERN);
     }
 
     private String substitutePathVars(String pattern) {
