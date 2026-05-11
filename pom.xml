@@ -64,6 +64,15 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-mysql</artifactId>
 		</dependency>
+		<!-- Phase 72: Jackson 2 JavaTime module for the backupObjectMapper (D-11).
+		     Spring Boot 4 brings Jackson 2 transitively via the (legacy) Jackson 2 starter,
+		     but the jsr310 datatype is not pulled in by default. Explicit declaration here
+		     keeps Instant/LocalDate ISO-8601 serialization deterministic for the backup
+		     wire format. Version is managed by spring-boot-starter-parent (Jackson 2.21.x). -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+		</dependency>
 
 		<dependency>
 			<groupId>com.h2database</groupId>
