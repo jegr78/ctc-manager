@@ -1,5 +1,6 @@
 package org.ctc.backup.schema;
 
+import org.ctc.backup.audit.DataImportAudit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -8,23 +9,19 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 72 / Plan 01 — Wave 0 stub. Proves D-06 (package-name filter) structurally excludes
- * the {@code org.ctc.backup.audit.DataImportAudit} entity from {@code getExportOrder()}
- * — the canonical IMPORT-08 enforcement.
+ * Phase 72 / Plan 04 (Wave 3) — proves D-06 (package-name filter) structurally excludes
+ * the {@link DataImportAudit} entity from {@code BackupSchema.getExportOrder()} — the
+ * canonical IMPORT-08 enforcement.
  *
- * <p>NOTE: This IT references the FQN string of {@code DataImportAudit} so that it compiles
- * in Wave 0 (before plan 04 creates the class). Plan 04 may convert the string lookup to a
- * direct {@code import} once {@code DataImportAudit.class} exists on the classpath. The
- * assertion semantics already hold today against any class placed under
- * {@code org.ctc.backup.audit.*} — the package-name gate in
- * {@link BackupSchema} filters them out structurally.
+ * <p>This IT was originally created in plan 01 with an FQN-string lookup so it could compile
+ * before {@link DataImportAudit} existed on the classpath. Plan 04 tightens the assertion to
+ * a direct {@code import org.ctc.backup.audit.DataImportAudit;} + by-class comparison now that
+ * the entity exists — the exclusion is provable concretely against the loaded class object.
+ * The complementary {@code tableName} assertion stays in place for defense in depth.
  */
 @SpringBootTest
 @ActiveProfiles("dev")
 class BackupSchemaExclusionIT {
-
-    private static final String DATA_IMPORT_AUDIT_FQN = "org.ctc.backup.audit.DataImportAudit";
-    private static final String DATA_IMPORT_AUDIT_TABLE = "data_import_audit";
 
     @Autowired
     private BackupSchema backupSchema;
@@ -34,13 +31,13 @@ class BackupSchemaExclusionIT {
         // when
         var exportOrder = backupSchema.getExportOrder();
 
-        // then — D-06 structural guarantee for IMPORT-08
+        // then — D-06 structural guarantee for IMPORT-08 (proved against DataImportAudit.class)
         assertThat(exportOrder)
                 .as("DataImportAudit lives in org.ctc.backup.audit and must be filtered out by the org.ctc.domain.model package gate")
-                .allSatisfy(ref ->
-                        assertThat(ref.entityClass().getName()).isNotEqualTo(DATA_IMPORT_AUDIT_FQN));
+                .extracting(EntityRef::entityClass)
+                .doesNotContain(DataImportAudit.class);
         assertThat(exportOrder)
                 .extracting(EntityRef::tableName)
-                .doesNotContain(DATA_IMPORT_AUDIT_TABLE);
+                .doesNotContain("data_import_audit");
     }
 }
