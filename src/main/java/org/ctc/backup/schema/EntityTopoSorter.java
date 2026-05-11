@@ -1,10 +1,13 @@
 package org.ctc.backup.schema;
 
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.SingularAttribute;
 import org.springframework.stereotype.Component;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Member;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -45,9 +48,12 @@ class EntityTopoSorter {
                         && type != PersistentAttributeType.ONE_TO_ONE) {
                     continue;
                 }
-                // SingularAttribute covers ManyToOne (always owning) + OneToOne owning side.
-                // mappedBy lives on the INVERSE side; by restricting to singular attributes we
-                // cover the owning-side without an explicit mappedBy() introspection call.
+                // @ManyToOne is always owning. @OneToOne can be either side: the inverse side
+                // also surfaces as a SingularAttribute. We must skip the inverse side, or both
+                // ends record an edge and Kahn deadlocks (e.g. Race <-> RaceSettings).
+                if (type == PersistentAttributeType.ONE_TO_ONE && isInverseOneToOne(attr)) {
+                    continue;
+                }
                 Class<?> depClass = attr.getJavaType();
                 if (!byClass.containsKey(depClass)) {
                     continue;                                       // FK to non-domain entity — skip
@@ -80,5 +86,25 @@ class EntityTopoSorter {
                             + " — likely an unexpected cycle outside the known Team.parentTeam self-FK");
         }
         return result;
+    }
+
+    /**
+     * Returns {@code true} if the given {@link SingularAttribute} backs a
+     * {@code @OneToOne(mappedBy=...)} field (the inverse side of a one-to-one
+     * association). The JPA Metamodel does not expose {@code mappedBy} directly on
+     * {@code SingularAttribute}, so we look it up via reflection on the underlying
+     * {@link Field} (or accessor {@link Member}).
+     *
+     * <p>If the attribute does not back a reflectable {@code @OneToOne} annotation, we
+     * treat it as the owning side ({@code false}) — safe default, matches the
+     * legacy {@code @ManyToOne} behaviour where every attribute is the owning side.
+     */
+    private static boolean isInverseOneToOne(SingularAttribute<?, ?> attr) {
+        Member member = attr.getJavaMember();
+        if (!(member instanceof Field field)) {
+            return false;
+        }
+        OneToOne anno = field.getAnnotation(OneToOne.class);
+        return anno != null && !anno.mappedBy().isEmpty();
     }
 }
