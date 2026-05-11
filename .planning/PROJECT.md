@@ -8,10 +8,10 @@ Gran Turismo Racing League Management application (Spring Boot 4 / Thymeleaf / M
 
 Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## Current State (after v1.9)
+## Current State (after v1.9, Phase 71 of v1.10 landed)
 
-- **Codebase:** ~17k LOC Java (Prod) + ~25k LOC Java (Tests), 1246 Tests (1215 Surefire + 31 Failsafe), 87.24% Line Coverage
-- **Tech Stack:** Spring Boot 4.0.5, Java 25, MariaDB 11 / H2, Thymeleaf, Playwright
+- **Codebase:** ~17k LOC Java (Prod) + ~25k LOC Java (Tests), 1370 Tests (1227 Surefire + 112 Failsafe-IT + 31 E2E), 89.44 % Line Coverage
+- **Tech Stack:** Spring Boot 4.0.6, Java 25, MariaDB 11 / H2, Thymeleaf 3.1.5 (pinned), Playwright
 - **Security:** HTTP Basic Auth (prod/docker), SSRF hostname blocklist, path traversal defense, CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation, Content-Disposition sanitization, MatchdayForm DTO (mass assignment protection)
 - **Architecture:** Clean 3-tier (Controller → Service → Repository), no God Services, centralized exception handling, domain services fully decoupled from admin layer, RaceLineup as source of truth for driver-team assignment, sitegen decomposed into 5 page-generator beans + SiteSlugger + TemplateWriter (D-20)
 - **Database:** 36 FK-Indexes, 28 @EntityGraph annotations, Flyway-managed; Phase/Group model: `season_phases`, `season_phase_groups`, `phase_teams` tables driving Matchday and Playoff phase association
