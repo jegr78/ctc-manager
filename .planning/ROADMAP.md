@@ -319,7 +319,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 
 | Phase | Plans Complete | Status | Completed |
 | ----- | -------------- | ------ | --------- |
-| 71. SB 4.0.6 Upgrade + Thymeleaf 3.1.5 Audit + Build Guard | 5/5 | Complete   | 2026-05-11 |
+| 71. SB 4.0.6 Upgrade + Thymeleaf 3.1.5 Audit + Build Guard | 5/5 | Complete    | 2026-05-11 |
 | 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/TBD | Not started | — |
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 0/TBD | Not started | — |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |

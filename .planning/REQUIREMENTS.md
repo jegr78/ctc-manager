@@ -11,13 +11,13 @@ Requirements for milestone v1.10. Each maps to roadmap phases.
 
 ### PLAT — Spring Boot Platform Upgrade
 
-- [ ] **PLAT-01**: Maven `spring-boot-starter-parent` von 4.0.5 auf 4.0.6 gehoben (1 Zeile in `pom.xml`)
-- [ ] **PLAT-02**: `<dependencyManagement>` pinnt `org.thymeleaf:thymeleaf` explicit auf 3.1.5 (Forward-Compat-Schutz gegen weitere transitive Bumps; verhindert dass eine künftige Spring-Boot-Patch-Version eine Thymeleaf-Version mit weiterer SpEL-Verschärfung ungewollt einzieht)
-- [ ] **PLAT-03**: Die 3 bekannten Templates (`templates/admin/match-scoring-form.html`, `race-scoring-form.html`, `season-phase-form.html` — alle Zeile 3) erhalten Title-Computation im Controller (`pageTitle` Model-Attribut); Templates referenzieren `${pageTitle}` in `th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}"`
-- [ ] **PLAT-04**: Preventiver Audit aller ~80 Thymeleaf-Templates (~62 admin + ~16 site) auf Pattern `th:(replace|insert|include)=".*\(.*\$\{.*\}.*\)"`; alle Findings (über die 3 bekannten hinaus) werden analog zu PLAT-03 gefixt; gefundene Template-Liste wird im Phase-Plan dokumentiert
-- [ ] **PLAT-05**: `./mvnw verify -Pe2e` BUILD SUCCESS auf 4.0.6 mit allen 1227 Unit + 31 Playwright E2E Tests; JaCoCo line coverage ≥ 82 % gehalten (entspricht der Phase 70 / v1.9 Baseline)
-- [ ] **PLAT-06**: `TemplateRenderingSmokeIT` als Regression-Test im Failsafe-Profile: jeder `/admin/**`-Route wird mit dev-data-seed GETet und auf HTTP 200 + Abwesenheit von `org.thymeleaf.exceptions.TemplateProcessingException` geprüft (verhindert lazy template breakage in zukünftigen Spring-Boot-Bumps)
-- [ ] **PLAT-07**: Lightweight Maven `exec-maven-plugin`-basierter Build-Guard, der bei neu eingeführten Fragment-Parameter-Ternaries fehlschlägt (Forward-Commitment aus Phase 67 D-06 / v1.9; Pattern-grep `th:(replace|insert|include)=".*\(.*\$\{.*\?.*:.*\}.*\)"` über `src/main/resources/templates/`)
+- [x] **PLAT-01**: Maven `spring-boot-starter-parent` von 4.0.5 auf 4.0.6 gehoben (1 Zeile in `pom.xml`)
+- [x] **PLAT-02**: `<dependencyManagement>` pinnt `org.thymeleaf:thymeleaf` explicit auf 3.1.5 (Forward-Compat-Schutz gegen weitere transitive Bumps; verhindert dass eine künftige Spring-Boot-Patch-Version eine Thymeleaf-Version mit weiterer SpEL-Verschärfung ungewollt einzieht)
+- [x] **PLAT-03**: Die 3 bekannten Templates (`templates/admin/match-scoring-form.html`, `race-scoring-form.html`, `season-phase-form.html` — alle Zeile 3) erhalten Title-Computation im Controller (`pageTitle` Model-Attribut); Templates referenzieren `${pageTitle}` in `th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}"`
+- [x] **PLAT-04**: Preventiver Audit aller ~80 Thymeleaf-Templates (~62 admin + ~16 site) auf Pattern `th:(replace|insert|include)=".*\(.*\$\{.*\}.*\)"`; alle Findings (über die 3 bekannten hinaus) werden analog zu PLAT-03 gefixt; gefundene Template-Liste wird im Phase-Plan dokumentiert
+- [x] **PLAT-05**: `./mvnw verify -Pe2e` BUILD SUCCESS auf 4.0.6 mit allen 1227 Unit + 31 Playwright E2E Tests; JaCoCo line coverage ≥ 82 % gehalten (entspricht der Phase 70 / v1.9 Baseline)
+- [x] **PLAT-06**: `TemplateRenderingSmokeIT` als Regression-Test im Failsafe-Profile: jeder `/admin/**`-Route wird mit dev-data-seed GETet und auf HTTP 200 + Abwesenheit von `org.thymeleaf.exceptions.TemplateProcessingException` geprüft (verhindert lazy template breakage in zukünftigen Spring-Boot-Bumps)
+- [x] **PLAT-07**: Lightweight Maven `exec-maven-plugin`-basierter Build-Guard, der bei neu eingeführten Fragment-Parameter-Ternaries fehlschlägt (Forward-Commitment aus Phase 67 D-06 / v1.9; Pattern-grep `th:(replace|insert|include)=".*\(.*\$\{.*\?.*:.*\}.*\)"` über `src/main/resources/templates/`)
 
 ### SCHEMA — Backup Wire Contract & Manifest
 
