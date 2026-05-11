@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{site/layout :: layout('Driver Ranking ' + ${season.displayLabel}, ~{::section})}">
+      th:replace="~{site/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
 <section><nav th:if="${showPhaseTabs}" class="phase-tab-row" role="tablist" aria-label="Phase navigation">
         <div class="phase-tab-row-inner">
