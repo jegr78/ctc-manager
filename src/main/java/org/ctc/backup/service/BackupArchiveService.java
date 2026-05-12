@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -316,7 +317,10 @@ public class BackupArchiveService {
 
 				if (name.startsWith("data/") && name.endsWith(".json") && !entry.isDirectory()) {
 					final String entryName = name;
-					LimitedInputStream limited = new LimitedInputStream(zis, MAX_ENTRY_BYTES,
+					// Wrap zis in a non-closing view so that limited.close() does not cascade
+					// to ZipInputStream.close() (which would prevent the next getNextEntry()).
+					LimitedInputStream limited = new LimitedInputStream(
+							nonClosingView(zis), MAX_ENTRY_BYTES,
 							finalBytes -> {
 								inflatedAcc[0] += finalBytes;
 								if (finalBytes >= MAX_ENTRY_BYTES) {
@@ -345,9 +349,8 @@ public class BackupArchiveService {
 								name.length() - ".json".length()).replace('-', '_');
 						result.put(tableName, rowCount);
 					} finally {
-						// parser.close() triggers limited.close() only if AUTO_CLOSE_SOURCE=true.
-						// Since we disabled AUTO_CLOSE_SOURCE, we must close limited manually
-						// BEFORE parser.close() to fire the LongConsumer callback.
+						// Closing limited fires the LongConsumer (updating inflatedAcc[0]).
+						// The non-closing view ensures the ZipInputStream is NOT closed here.
 						limited.close();
 						parser.close();
 					}
@@ -392,7 +395,10 @@ public class BackupArchiveService {
 
 				if (name.startsWith("uploads/") && !entry.isDirectory()) {
 					final String entryName = name;
-					try (LimitedInputStream limited = new LimitedInputStream(zis, MAX_ENTRY_BYTES,
+					// Wrap zis in a non-closing view so that limited.close() does not cascade
+					// to ZipInputStream.close() when the try-with-resources exits.
+					try (LimitedInputStream limited = new LimitedInputStream(
+							nonClosingView(zis), MAX_ENTRY_BYTES,
 							finalBytes -> {
 								inflatedAcc[0] += finalBytes;
 								if (finalBytes >= MAX_ENTRY_BYTES) {
@@ -440,6 +446,31 @@ public class BackupArchiveService {
 	private ZipInputStream openHardened(Path zipPath) throws IOException {
 		InputStream fis = Files.newInputStream(zipPath);
 		return new ZipInputStream(fis);
+	}
+
+	/**
+	 * Returns a view of {@code delegate} whose {@link InputStream#close()} is a no-op.
+	 *
+	 * <p>This prevents {@link LimitedInputStream#close()} from cascading to
+	 * {@link ZipInputStream#close()} when the {@code LimitedInputStream} wrapping a single
+	 * ZIP entry is closed after parsing. Without this guard, closing the
+	 * {@code LimitedInputStream} would close the underlying {@code ZipInputStream}, making
+	 * the next {@link ZipInputStream#getNextEntry()} call throw {@code "Stream closed"}.
+	 *
+	 * <p>The {@link LimitedInputStream}'s {@code LongConsumer onClose} fires correctly on
+	 * {@link #close()} regardless — the guard only suppresses the {@code super.close()} cascade.
+	 *
+	 * @param delegate the stream to shield from close propagation
+	 * @return a {@link FilterInputStream} wrapper that ignores {@code close()} calls
+	 */
+	private static InputStream nonClosingView(InputStream delegate) {
+		return new FilterInputStream(delegate) {
+			@Override
+			public void close() {
+				// intentionally no-op: the ZipInputStream lifecycle is managed by
+				// the enclosing try-with-resources in the calling method.
+			}
+		};
 	}
 
 	/**
