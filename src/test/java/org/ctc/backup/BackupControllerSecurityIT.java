@@ -1,0 +1,117 @@
+package org.ctc.backup;
+
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * Phase 73-04 — profile-conditional security IT for the Backup endpoints.
+ *
+ * <p>Two {@code @Nested} blocks, one per Spring security configuration:
+ * <ul>
+ *   <li>{@link ProdProfileSecurityTest} — boots {@code @ActiveProfiles("prod")},
+ *       which activates {@code SecurityConfig}: anyRequest authenticated +
+ *       CSRF enforced by default. Verifies anonymous POST → 401, authenticated
+ *       no-CSRF POST → 403, authenticated with-CSRF POST → 200, anonymous
+ *       GET → 401.</li>
+ *   <li>{@link DevProfileSecurityTest} — boots {@code @ActiveProfiles("dev")},
+ *       which activates {@code OpenSecurityConfig}: permitAll + CSRF disabled.
+ *       Verifies anonymous POST → 200, anonymous GET → 200.</li>
+ * </ul>
+ *
+ * <p>The prod-profile inner class points at its own in-memory H2 schema so it
+ * does not collide with the dev-profile fixture in the parallel inner class
+ * (same trick used by {@code org.ctc.admin.SecurityIntegrationTest}).
+ */
+class BackupControllerSecurityIT {
+
+	@Nested
+	@SpringBootTest(properties = {
+			"spring.datasource.url=jdbc:h2:mem:bksectest;DB_CLOSE_DELAY=-1",
+			"spring.datasource.driver-class-name=org.h2.Driver",
+			"spring.datasource.username=sa",
+			"spring.datasource.password=",
+			"spring.jpa.hibernate.ddl-auto=validate",
+			"spring.flyway.locations=classpath:db/migration",
+			"logging.config=classpath:logback-test.xml"
+	})
+	@AutoConfigureMockMvc
+	@ActiveProfiles("prod")
+	class ProdProfileSecurityTest {
+
+		@Autowired
+		private MockMvc mockMvc;
+
+		@Test
+		void givenAnonymous_whenPostExport_thenUnauthorized() throws Exception {
+			// Pass CSRF to isolate the auth path — CSRF filter fires before the auth filter on prod
+			// and would otherwise return 403 (covered separately by givenAuthenticatedNoCsrf_...).
+			mockMvc.perform(post("/admin/backup/export").with(anonymous()).with(csrf()))
+					.andExpect(status().isUnauthorized());
+		}
+
+		@Test
+		@WithMockUser
+		void givenAuthenticatedNoCsrf_whenPostExport_thenForbidden() throws Exception {
+			// Default CSRF on prod profile rejects POSTs missing the _csrf token.
+			mockMvc.perform(post("/admin/backup/export"))
+					.andExpect(status().isForbidden());
+		}
+
+		@Test
+		@WithMockUser
+		void givenAuthenticatedWithCsrf_whenPostExport_thenOkWithContentDisposition() throws Exception {
+			// StreamingResponseBody triggers Spring's async dispatch path; headers + status are
+			// available on the initial response, the body is only written after asyncDispatch().
+			mockMvc.perform(post("/admin/backup/export").with(csrf()))
+					.andExpect(status().isOk())
+					.andExpect(request().asyncStarted())
+					.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+							Matchers.matchesPattern("attachment; filename=\"?ctc-backup-\\d{8}T\\d{6}Z\\.zip\"?")));
+		}
+
+		@Test
+		void givenAnonymous_whenGetBackup_thenUnauthorized() throws Exception {
+			mockMvc.perform(get("/admin/backup").with(anonymous()))
+					.andExpect(status().isUnauthorized());
+		}
+	}
+
+	@Nested
+	@SpringBootTest
+	@AutoConfigureMockMvc
+	@ActiveProfiles("dev")
+	class DevProfileSecurityTest {
+
+		@Autowired
+		private MockMvc mockMvc;
+
+		@Test
+		void givenAnonymous_whenPostExport_thenOk() throws Exception {
+			// OpenSecurityConfig disables CSRF and permits all requests on dev/local.
+			mockMvc.perform(post("/admin/backup/export"))
+					.andExpect(status().isOk());
+		}
+
+		@Test
+		void givenAnonymous_whenGetBackup_thenOk() throws Exception {
+			mockMvc.perform(get("/admin/backup"))
+					.andExpect(status().isOk());
+		}
+	}
+}
