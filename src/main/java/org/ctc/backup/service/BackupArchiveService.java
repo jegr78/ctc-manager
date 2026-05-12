@@ -76,12 +76,14 @@ public class BackupArchiveService {
 	/**
 	 * Streams a complete backup ZIP into {@code out}.
 	 *
-	 * <p>The caller owns the {@code OutputStream} lifecycle (must close it). This method
-	 * closes only the {@link ZipOutputStream} that it opens on top of {@code out} via
-	 * try-with-resources — closing the ZIP flushes and writes the central directory but
-	 * does NOT close the underlying stream by default ({@code ZipOutputStream} does close
-	 * its delegate, so callers that need to write trailing bytes to the same stream must
-	 * use a filtered wrapper).
+	 * <p>The caller owns the {@code OutputStream} lifecycle. This method opens a
+	 * {@link ZipOutputStream} on top of {@code out} via try-with-resources;
+	 * {@code ZipOutputStream.close()} writes the central directory AND closes the
+	 * delegate stream per the JDK contract. In production this is the desired
+	 * behaviour — the servlet container response output is closed only after the
+	 * controller's {@code StreamingResponseBody} returns, so the order is correct.
+	 * Callers that need to write trailing bytes to the same stream after the ZIP
+	 * (none in this codebase) must wrap {@code out} in a close-shield filter.
 	 *
 	 * @param out the target stream (HTTP response body in production, byte buffer in tests)
 	 * @param exportDate the export timestamp recorded in the manifest
