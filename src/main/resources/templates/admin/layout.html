@@ -71,6 +71,10 @@
                     <a th:href="@{/admin/tools/template-editors}" th:classappend="${title.contains('Template') ? 'active' : ''}">Template Editors</a>
                     <a th:href="@{/admin/generate}" class="btn-generate">Generate Site</a>
                 </div>
+                <div class="sidebar-group">
+                    <span class="sidebar-group-label">Data</span>
+                    <a th:href="@{/admin/backup}" th:classappend="${title.contains('Backup') ? 'active' : ''}">Backup</a>
+                </div>
             </nav>
         </aside>
         <main class="main-content">

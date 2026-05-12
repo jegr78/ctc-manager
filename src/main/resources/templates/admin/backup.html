@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Backup', ~{::section})}">
+<body>
+<section>
+    <h1>Backup</h1>
+    <div class="card">
+        <p class="text-dim mb-md">
+            Exports the full league database (all 24 entities) plus every uploaded file
+            into a single ZIP archive. The download starts immediately and may take a few
+            seconds for large leagues.
+        </p>
+        <form th:action="@{/admin/backup/export}" method="post">
+            <button type="submit" class="btn btn-primary btn-lg">
+                Export Backup
+            </button>
+        </form>
+    </div>
+</section>
+</body>
+</html>
