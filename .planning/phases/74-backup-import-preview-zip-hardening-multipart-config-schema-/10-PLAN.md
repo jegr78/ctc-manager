@@ -18,7 +18,7 @@ must_haves:
     - "The schema-version pill renders the locked UI-SPEC string 'Schema version 1 matches.' for a Phase-73 export (current schema = 1) — proves IMPORT-02 (schema-version gate passes for valid ZIPs)."
     - "After clicking Proceed to Confirm, ticking the @AssertTrue acknowledgment checkbox, and clicking Execute Import, the browser lands on /admin/backup with the locked D-02#5 stub-success Flash 'Validation succeeded. Import execution will be enabled in Phase 75.' — proves IMPORT-04 (confirm-dialog + checkbox gate)."
     - "Submitting the confirm form without ticking the checkbox re-renders the confirm page with the inline .field-error message 'You must acknowledge the deletion warning to continue.' — proves IMPORT-04 server-side @AssertTrue enforcement (D-10)."
-    - "Clicking Cancel on the preview page deletes the staging file `upload-{uuid}.zip` from the configured app.backup.staging-dir and redirects to /admin/backup — proves D-06 + D-16 (Cancel cleanup)."
+    - "Clicking Cancel on the preview page submits a POST to /admin/backup/import-cancel (hidden stagingId), deletes the staging file `upload-{uuid}.zip` from the configured app.backup.staging-dir, and redirects to /admin/backup — proves D-06 + D-16 (Cancel cleanup via POST form per Plan 08)."
     - "After clearing the browser context's cookie jar between the preview-render and a programmatic re-POST to /admin/backup/import-confirm with the same stagingId, the confirm page renders identically — proves SC#5 / IMPORT-03 (stateless re-parse via staging UUID, no @SessionAttributes)."
     - "Test class lives at src/test/java/org/ctc/e2e/BackupImportE2ETest.java, extends PlaywrightConfig (inherits @SpringBootTest(WebEnvironment.RANDOM_PORT) + @ActiveProfiles(\"dev\")), uses *Test suffix so the -Pe2e Failsafe profile picks it up via **/e2e/**/*Test.java, and is skipped by Surefire (which excludes **/e2e/**)."
   artifacts:
@@ -117,7 +117,7 @@ Production endpoints under test (from Plan 08 — `org.ctc.backup.BackupControll
 - `POST /admin/backup/import-preview`      → multipart, view `admin/backup-preview` on success; redirect:/admin/backup with errorMessage on reject
 - `POST /admin/backup/import-confirm`      → view `admin/backup-confirm` on success
 - `POST /admin/backup/import-execute`      → @Valid form; redirect:/admin/backup with successMessage = "Validation succeeded. Import execution will be enabled in Phase 75." (D-02#5)
-- `GET  /admin/backup/import-cancel?stagingId={uuid}` → redirect:/admin/backup (silent — no Flash per D-06)
+- `POST /admin/backup/import-cancel`       → form-encoded body with hidden `stagingId` UUID field; deletes staging file via `BackupImportService.deleteStagingFile(UUID)` and redirects to /admin/backup with `successMessage = "Import canceled."` (Plan 08 + Plan 09 CSRF-discipline trade-off — see Plan 09 `## Notes`)
 
 Locked UI strings the test asserts on (from CONTEXT D-02 + UI-SPEC):
 - `"Import Backup"`                                      — landing-form heading + button label
@@ -126,18 +126,21 @@ Locked UI strings the test asserts on (from CONTEXT D-02 + UI-SPEC):
 - `"Schema version 1 matches."`                          — schema-match pill (preview)
 - `"Proceed to Confirm"`                                 — preview primary CTA
 - `"Execute Import"`                                     — confirm destructive CTA
-- `"Cancel"`                                             — secondary CTA on both pages
+- `"Cancel"`                                             — secondary CTA on both pages (button text inside a POST form per Plan 09)
 - `"I am an admin and I understand all operational data will be deleted."`  — checkbox label (D-02#4)
 - `"You must acknowledge the deletion warning to continue."`               — @AssertTrue field-error
 - `"Validation succeeded. Import execution will be enabled in Phase 75."`  — stub-success Flash (D-02#5)
+- `"Import canceled."`                                                     — Cancel-flow Flash (Plan 08)
 - `"Replace all operational data? This cannot be undone."`                  — JS confirm() dialog text (D-10)
 
-DOM selectors (from UI-SPEC §"Layout per page"):
+DOM selectors (from UI-SPEC §"Layout per page" + Plan 09 final shape):
 - `input[type='file'][name='file']`                       — file input on landing
 - `.card-grid > .card`                                    — preview cards (expect count = 24)
-- `input[name='stagingId']` (hidden)                      — UUID on preview form
+- `input[name='stagingId']` (hidden)                      — UUID on every staged form (preview, confirm, cancel forms all carry it)
+- `form[action$='/import-cancel']`                        — Cancel POST form on preview AND confirm pages (Plan 09 sibling-form pattern inside `<div class="actions">`)
+- `form[action$='/import-cancel'] button[type='submit']`  — Cancel submit button inside the cancel form
 - `input#acknowledged[type='checkbox']`                   — confirm checkbox (`th:field="*{acknowledged}"`)
-- `small.field-error`                                     — inline validation error
+- `.field-error`                                          — inline validation error (class-only selector — Plan 09 renders as `<span class="field-error" role="alert">`, tag-agnostic for resilience)
 - `.alert.alert-success` / `.alert.alert-error`           — Flash banners (rendered by `admin/layout.html`)
 
 Service used by the test for fixture generation (constructor-injected by Spring):
@@ -257,19 +260,20 @@ Surefire excludes `**/e2e/**` so the test does NOT run under `./mvnw verify`. Th
   <files>src/test/java/org/ctc/e2e/BackupImportE2ETest.java</files>
   <read_first>
     - src/test/java/org/ctc/e2e/BackupImportE2ETest.java (the file produced by Task 1 — extend it; do NOT rewrite Task 1's method)
-    - .planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-CONTEXT.md D-06 (Cancel CTA — `<a>` to `/admin/backup/import-cancel?stagingId=...`) and D-16 (reject-paths delete staging file synchronously)
-    - .planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-UI-SPEC.md §"`admin/backup-confirm.html`" (`<small class="field-error" th:errors="*{acknowledged}">` shape)
+    - .planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-CONTEXT.md D-06 (Cancel CTA — rendered as `<form method="post">` to `/admin/backup/import-cancel` with hidden `stagingId` per Plan 09 CSRF trade-off) and D-16 (reject-paths delete staging file synchronously)
+    - .planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/09-PLAN.md `## Notes` "Cancel as POST trade-off" + "HTML5 nested-form constraint" (sibling forms inside `<div class="actions">`)
+    - .planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-UI-SPEC.md §"`admin/backup-confirm.html`" + Plan 09 Task 3 acceptance — field-error rendered as `<span class="field-error" role="alert">` (class-only selector required)
   </read_first>
   <behavior>
     Test method `givenPreviewPage_whenAdminClicksCancel_thenStagingFileDeletedAndRedirects`:
     - Given: a preview page reached via the same upload sequence as Task 1.
-    - When: capture the staging UUID from the hidden input, click `Cancel` (which is an `<a>` link per UI-SPEC, not a form submit — clicking still triggers the controller's `GET /admin/backup/import-cancel`).
-    - Then: URL is `/admin/backup`; the staging file `upload-{uuid}.zip` no longer exists in `stagingDir`; no `.alert.alert-error` visible (silent cancel per D-06).
+    - When: capture the staging UUID from the hidden input, then click the Cancel submit button inside the cancel POST form. The form-level submit triggers a POST navigation to `/admin/backup/import-cancel` with the hidden `stagingId` body field, which Plan 08 routes to `BackupImportService.deleteStagingFile(UUID)` + Flash `successMessage = "Import canceled."`.
+    - Then: a POST request to `/import-cancel` was observed (via `page.waitForRequest`); URL is `/admin/backup`; the staging file `upload-{uuid}.zip` no longer exists in `stagingDir`; no `.alert.alert-error` visible. The `.alert.alert-success` Flash `Import canceled.` is asserted as the visible signal.
 
     Test method `givenConfirmPage_whenAdminSubmitsWithoutTickingCheckbox_thenSeesFieldError`:
     - Given: the confirm page reached via upload + Proceed-to-Confirm.
     - When: WITHOUT ticking `#acknowledged`, click `Execute Import`. (The pre-registered dialog handler auto-accepts the JS `confirm()` if it fires; but with native HTML5 form pre-submit the `@AssertTrue` server-side check is the authoritative gate per D-10.)
-    - Then: URL still ends with `/admin/backup/import-confirm`; `small.field-error` visible near the checkbox containing `"You must acknowledge the deletion warning to continue."`; `.alert.alert-success` NOT visible (no stub flash because server rejected with BindingResult error).
+    - Then: URL still ends with `/admin/backup/import-confirm`; the `.field-error` element (class-only selector — Plan 09 renders `<span class="field-error">`, tag-agnostic) is visible near the checkbox containing `"You must acknowledge the deletion warning to continue."`; `.alert.alert-success` NOT visible (no stub flash because server rejected with BindingResult error).
   </behavior>
   <action>
     Open the file from Task 1 and APPEND two new `@Test` methods after Task 1's method. Do not modify Task 1's method, imports list, fields, `@BeforeEach`/`@AfterEach`, or class header.
@@ -304,10 +308,12 @@ Surefire excludes `**/e2e/**` so the test does NOT run under `./mvnw verify`. Th
     3. `String stagingUuid = currentStagingUuid();`
     4. `Path stagingFile = stagingDir.resolve("upload-" + stagingUuid + ".zip");`
     5. Pre-assert: `Assertions.assertThat(Files.exists(stagingFile)).as("Staging file must exist on disk between preview and cancel").isTrue();`.
-    6. Click Cancel: `page.getByRole(AriaRole.LINK, new Page.GetByRoleOptions().setName("Cancel")).click();` — Cancel is an `<a class="btn btn-secondary">` per UI-SPEC (NOT a button role; if Playwright resolves the role ambiguously, fall back to `page.locator("a.btn-secondary:has-text(\"Cancel\")")` — but try `AriaRole.LINK` first since the UI-SPEC commits to `<a>`).
-    7. `assertThat(page).hasURL(Pattern.compile(".*/admin/backup$"));`
-    8. Post-assert: `Assertions.assertThat(Files.exists(stagingFile)).as("Staging file must be deleted synchronously by import-cancel per D-16").isFalse();`
-    9. Negative: `assertThat(page.locator(".alert.alert-error")).hasCount(0);` (silent cancel — no error banner per D-06).
+    6. Pre-assert: the cancel form is the POST form Plan 09 renders. `assertThat(page.locator("form[action$='/import-cancel']")).hasCount(1);` and `Assertions.assertThat(page.locator("form[action$='/import-cancel']").getAttribute("method")).as("Cancel must be a POST form per Plan 08 + Plan 09 CSRF trade-off").isEqualToIgnoringCase("post");` and `Assertions.assertThat(page.locator("form[action$='/import-cancel'] input[name='stagingId']").getAttribute("value")).as("Cancel form must carry the same staging UUID as the Proceed form").isEqualTo(stagingUuid);`.
+    7. Wrap the click in a `page.waitForRequest(...)` so the test pins the request method as POST (not GET): use the two-arg overload — `page.waitForRequest(req -> req.method().equals("POST") && req.url().endsWith("/import-cancel"), () -> page.locator("form[action$='/import-cancel'] button[type='submit']").click());`. The lambda click selector targets the Cancel submit button INSIDE the cancel form (precise, unambiguous — the form has exactly one button per Plan 09 Task 2 acceptance). The locator-by-button-name alternative `page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("Cancel"))` also works because Plan 09 renders `<button type="submit">Cancel</button>` inside the form — pick whichever is clearer; both resolve to the same DOM node. If the locator-by-name approach yields multiple matches across the preview-page DOM (it should not — only one Cancel button on preview), fall back to the form-scoped selector above.
+    8. `assertThat(page).hasURL(Pattern.compile(".*/admin/backup$"));`
+    9. Post-assert: `Assertions.assertThat(Files.exists(stagingFile)).as("Staging file must be deleted synchronously by import-cancel per D-16 + Plan 08 deleteStagingFile(UUID)").isFalse();`
+    10. Positive Flash: `assertThat(page.locator(".alert.alert-success")).containsText("Import canceled.");` (Plan 08 Flash — locked in `<interfaces>`).
+    11. Negative: `assertThat(page.locator(".alert.alert-error")).hasCount(0);`.
 
     **Missing-checkbox test (`givenConfirmPage_whenAdminSubmitsWithoutTickingCheckbox_thenSeesFieldError`):**
     1. `@TempDir Path tempDir;` parameter.
@@ -317,18 +323,16 @@ Surefire excludes `**/e2e/**` so the test does NOT run under `./mvnw verify`. Th
     5. Pre-assert: `assertThat(page.locator("#acknowledged")).not().isChecked();`.
     6. Click Execute WITHOUT ticking: `page.getByRole(AriaRole.BUTTON, setName("Execute Import")).click();`.
     7. Assert still on confirm page: `assertThat(page).hasURL(Pattern.compile(".*/admin/backup/import-confirm$"));` (server returned the view, no redirect, per Plan 08's `if (result.hasErrors()) return "admin/backup-confirm";`).
-    8. Assert field-error visible with locked copy: `assertThat(page.locator("small.field-error")).isVisible();` and `.containsText("You must acknowledge the deletion warning to continue.");`.
+    8. Assert field-error visible with locked copy using the CLASS-ONLY selector `.field-error` (tag-agnostic — Plan 09 renders the element as `<span class="field-error" role="alert">`, but the selector is class-only so the test survives a future tag swap to `<small>` or `<div>` without churn): `assertThat(page.locator(".field-error")).isVisible();` and `assertThat(page.locator(".field-error")).containsText("You must acknowledge the deletion warning to continue.");`.
     9. Negative: `assertThat(page.locator(".alert.alert-success")).hasCount(0);` — no stub flash because server rejected.
 
-    Cancel-test note on `LINK` vs `BUTTON` role resolution: the UI-SPEC pins Cancel as `<a class="btn btn-secondary">`. Some screen-readers expose `.btn`-styled anchors as buttons via implicit role; Playwright respects HTML semantics — `<a>` → `AriaRole.LINK`. If `getByRole(LINK, name="Cancel")` returns multiple matches (e.g. one on preview and one on confirm), use `.first()`.
-
-    Hard guards: same as Task 1 (branch, no stash/reset, only this task's methods). If the cancel route turns out to require POST (Plan 08's choice diverges from UI-SPEC), STOP and report `NEEDS_CONTEXT` — do not silently switch to `<form>` POST.
+    Hard guards: same as Task 1 (branch, no stash/reset, only this task's methods).
   </action>
   <verify>
     <automated>./mvnw verify -Pe2e -Dit.test=BackupImportE2ETest#givenPreviewPage_whenAdminClicksCancel_thenStagingFileDeletedAndRedirects+givenConfirmPage_whenAdminSubmitsWithoutTickingCheckbox_thenSeesFieldError -DfailIfNoTests=false</automated>
   </verify>
   <done>
-    Both new test methods pass under `-Pe2e`. Task 1's method still passes (regression-free refactor of the shared setup helper). Class still compiles. `git diff` shows only the test file modified.
+    Both new test methods pass under `-Pe2e`. Task 1's method still passes (regression-free refactor of the shared setup helper). The cancel test pins the HTTP method as POST (via `page.waitForRequest`) and confirms the cancel form selector resolves to exactly one element with `method="post"` and the matching `stagingId`. The missing-checkbox test asserts on the class-only `.field-error` selector (tag-agnostic). Class still compiles. `git diff` shows only the test file modified.
   </done>
 </task>
 
@@ -344,7 +348,7 @@ Surefire excludes `**/e2e/**` so the test does NOT run under `./mvnw verify`. Th
     Test method `givenStagingUuid_whenCookieJarIsClearedBetweenPreviewAndExecute_thenPagesStillFunction`:
     - Given: a preview page is rendered via the standard upload sequence; the staging UUID is captured from the hidden input; a fresh `BrowserContext` for the second half of the test (modelling a different session entirely — strongest possible proof of statelessness).
     - When: `context.clearCookies()` wipes the original context's cookies; then a SECOND fresh BrowserContext is opened (zero-cookie state). A new Page in the new context POSTs to `/admin/backup/import-confirm` with the same `stagingId` via `APIRequestContext.post(...)` (Playwright's HTTP client — bypasses the browser's cookie state for the request). Then the confirm page (returned as HTML body) is navigated to in the new page to assert it renders.
-    - Then: the confirm-page response (whether read via API call or navigated to) contains the warning callout, the `#acknowledged` checkbox, and the staging UUID hidden field with the SAME value — proving the server re-read the staged ZIP by UUID, not by HttpSession. Tick the checkbox in the new page, submit Execute, land on `/admin/backup` with the stub success Flash.
+    - Then: the confirm-page response (whether read via API call or navigated to) contains the warning callout, the `#acknowledged` checkbox, and the staging UUID hidden field with the SAME value — proving the server re-read the staged ZIP by UUID, not by HttpSession. The execute POST in the cookie-wiped fresh context returns 3xx with Location ending `/admin/backup`. The visible Flash banner is intentionally NOT asserted in this test (see "Pragmatic compromise" below) — Task 1's happy path already covers the Flash render.
   </behavior>
   <action>
     Open the file from Tasks 1+2 and APPEND the fourth `@Test` method. Do not modify earlier methods.
@@ -358,11 +362,11 @@ Surefire excludes `**/e2e/**` so the test does NOT run under `./mvnw verify`. Th
     Recommended implementation using approach (a):
 
     1. `@TempDir Path tempDir;` parameter.
-    2. `uploadFixtureAndOpenPreview(tempDir);` — original context + page.
-    3. `String stagingUuid = currentStagingUuid();` — capture the UUID.
-    4. Wipe cookies on the original context to prove the FIRST page doesn't need them either: `context.clearCookies();`. Then assert the preview page can still be re-fetched in the SAME page via reload — though there is no GET endpoint for preview, so skip this sub-check and proceed to the cross-context proof.
+    2. `uploadFixtureAndOpenPreview(tempDir);` — original context + page. **Pre-condition for the SC#5 proof:** the preview page must have rendered correctly BEFORE the cookie wipe — this establishes that the staging file exists on disk and is keyed by UUID. The `uploadFixtureAndOpenPreview` helper already asserts URL `/import-preview`; this is the "preview rendered with correct content before the cookie wipe" baseline.
+    3. `String stagingUuid = currentStagingUuid();` — capture the UUID; this is the SOLE handle the test will use to reconstruct the confirm page after the wipe.
+    4. Wipe cookies on the original context to prove the FIRST page doesn't need them either: `context.clearCookies();`. The preview page is already in the DOM at this point (rendered in step 2 before the wipe) — the test does NOT re-fetch it (no GET endpoint for preview); the staging UUID alone must suffice.
     5. Open a fresh, isolated context: `BrowserContext freshContext = browser.newContext();` and `Page freshPage = freshContext.newPage();`. Register the same dialog handler: `freshPage.onDialog(d -> d.accept());`. Use `try { ... } finally { freshContext.close(); }` to guarantee cleanup.
-    6. In `freshContext`, navigate first to `/admin/backup` to obtain a CSRF token if dev profile happens to require one (Phase 73's CSRF posture: disabled for dev/local, enabled for prod/docker — dev profile means CSRF is NOT enforced, so this is a safety net): `freshPage.navigate(url("/admin/backup"));`.
+    6. In `freshContext`, navigate first to `/admin/backup` to obtain a CSRF token if dev profile happens to require one (Phase 73's CSRF posture: disabled for dev/local, enabled for prod/docker — dev profile means CSRF is NOT enforced, so this is a safety net): `freshPage.navigate(url("/admin/backup"));`. Then `freshContext.clearCookies();` — wipe again so the API call below operates against a truly empty cookie jar. This is the "wipe between preview and execute" moment per SC#5.
     7. POST to `/admin/backup/import-confirm` with the same staging UUID via Playwright's `APIRequestContext` to bypass form-render and directly request the confirm view:
        ```java
        APIResponse confirmResp = freshContext.request().post(
@@ -381,7 +385,7 @@ Surefire excludes `**/e2e/**` so the test does NOT run under `./mvnw verify`. Th
            .contains("Confirm")
            .contains("I am an admin and I understand all operational data will be deleted.");
        ```
-    8. Now drive the confirm form in the fresh page: navigate to a synthetic data-URI of the confirm body (Playwright's `page.setContent(...)`) won't preserve form actions — instead, re-POST via API again with the checkbox flag included:
+    8. Drive the execute stub via API in the same fresh, cookie-wiped context:
        ```java
        APIResponse executeResp = freshContext.request().post(
            url("/admin/backup/import-execute"),
@@ -395,17 +399,15 @@ Surefire excludes `**/e2e/**` so the test does NOT run under `./mvnw verify`. Th
            .as("Execute stub must redirect to /admin/backup per D-08")
            .endsWith("/admin/backup");
        ```
-    9. Follow the redirect and confirm the Flash via the fresh page (Spring Flash survives the redirect because it's stored in the redirect's session cookie — interesting nuance: Flash uses HttpSession briefly across the redirect roundtrip. The follow-up GET must reuse the same context to see the flash. `APIRequestContext` shares cookies with its parent BrowserContext, so this works.):
-       ```java
-       freshPage.navigate(url("/admin/backup"));
-       assertThat(freshPage.locator(".alert.alert-success"))
-           .containsText("Validation succeeded. Import execution will be enabled in Phase 75.");
-       ```
-    10. The cookie-jar-clear-mid-flight proof: between steps 6 and 7, insert `freshContext.clearCookies();` ONCE — this is the actual "wipe between preview and execute" moment. After the wipe, the API call in step 7 still succeeds, proving statelessness. (The final flash-redirect in step 9 will then NOT show the success banner because Flash needs the session-cookie to survive — and that's FINE: it documents the architecture rather than failing the test. To resolve: assert the redirect Location header in step 8 ends in `/admin/backup` instead of asserting the rendered Flash banner in step 9. Choose this trade-off explicitly per the executor's discretion.)
+    9. **Intentionally omitted: rendered-Flash assertion.** Spring's Flash uses an HttpSession-backed handover across the redirect. After the cookie wipe in step 6 there is no session cookie to carry the Flash key, so a follow-up GET in `freshContext` would NOT render the success banner — this is correct architectural behaviour (Flash is by design session-coupled, while the IMPORT staging file is UUID-coupled). The test must NOT assert on the rendered Flash here; the strong-and-narrow assertion is steps 7+8 (confirm-render 200 with matching UUID body, execute redirect 3xx Location `/admin/backup`). Task 1's happy path already proves the Flash renders in a normal session — this test proves the orthogonal axis (re-parse works without any session at all).
 
-    **Pragmatic compromise for the test:** the strongest assertion is that step 7's confirm-render and step 8's execute-redirect both succeed (HTTP 200 / 3xx) AFTER the cookie wipe. The visible Flash on the final landing is a nice-to-have but couples the test to Flash's session-cookie carrier. Choose the strong-but-narrow assertion: PASS = "fresh-context re-POST to import-confirm returns 200 with the same staging UUID in the body, and import-execute returns 3xx Location /admin/backup". Drop the final Flash-banner assertion in this test (Task 1 already covers it for the happy path).
+    **Pragmatic compromise (committed):** this test commits to the narrow, robust assertion path:
+    - Preview page rendered correctly BEFORE the cookie wipe (step 2 — implicit in `uploadFixtureAndOpenPreview`).
+    - After wiping cookies, the API POST to `/import-confirm` with only the staging UUID returns HTTP 200 with the confirm page body containing the same UUID and the locked checkbox label.
+    - The API POST to `/import-execute` in the same wiped context returns 3xx with Location `/admin/backup`.
+    - The visible `.alert.alert-success` Flash banner is NOT asserted in this test (deliberate — Flash is session-coupled by Spring design; Task 1 covers the rendered-Flash path in a normal session).
 
-    11. Clean up the fresh context in `finally`. Original page/context tear down via the inherited `@AfterEach`.
+    10. Clean up the fresh context in `finally`. Original page/context tear down via the inherited `@AfterEach`.
 
     Add these imports to the file (extend the existing import block):
     - `com.microsoft.playwright.BrowserContext;` (already inherited but explicit local use)
@@ -457,6 +459,8 @@ Phase 74 Plan 10 is complete when:
 - [ ] Final `./mvnw verify` (no `-Pe2e`) still passes — the new test class is invisible to Surefire.
 - [ ] Final `./mvnw verify -Pe2e` passes — all E2E tests pass together (no flake introduced by the new class).
 - [ ] `git status` clean except for the one new test file.
+- [ ] The cancel test pins the request method as POST (via `page.waitForRequest`) and uses a form-scoped button selector — matches Plan 08's `POST /admin/backup/import-cancel` and Plan 09's `<form method="post"><button>Cancel</button></form>` shape.
+- [ ] The missing-checkbox test uses the class-only `.field-error` selector (tag-agnostic) — matches Plan 09's `<span class="field-error">` rendering and survives a future tag swap without churn.
 
 ## Notes
 
@@ -464,11 +468,27 @@ Phase 74 Plan 10 is complete when:
 
 `PlaywrightConfig` owns the `Playwright` and `Browser` lifecycle via `@BeforeAll` / `@AfterAll`. Each test subclass owns the `BrowserContext` + `Page` lifecycle via `setupPage()` / `teardownPage()` in `@BeforeEach` / `@AfterEach`. Tests in this plan additionally register a per-page `page.onDialog(d -> d.accept())` handler in `@BeforeEach` (after `setupPage()`) to auto-accept the JS `confirm()` dialog from the Execute Import button (D-10).
 
+### Cancel as POST (Plan 08 + Plan 09 reality)
+
+Plan 08 defines `POST /admin/backup/import-cancel` (CSRF discipline forbids mutating GET endpoints). Plan 09 renders Cancel as a `<form method="post">` with a hidden `stagingId` input and a `<button type="submit">Cancel</button>`, placed as a SIBLING form inside `<div class="actions">` next to the Proceed/Execute form (HTML5 forbids nested forms — Plan 09 `## Notes`). Task 2's cancel-cleanup test therefore:
+- selects the cancel button via the form-scoped selector `form[action$='/import-cancel'] button[type='submit']` (precise, unambiguous);
+- pins the request method as POST via `page.waitForRequest(req -> req.method().equals("POST") && req.url().endsWith("/import-cancel"), ...)`;
+- asserts the post-cancel Flash `Import canceled.` (Plan 08 `successMessage`).
+
+### Field-error selector (class-only)
+
+Plan 09 renders the inline validation error as `<span class="field-error" role="alert" th:errors="*{acknowledged}">` (the `<span>` tag was chosen over `<small>` to avoid the browser default 80%-font-size compounding — Plan 09 `## Notes`). Task 2's missing-checkbox test uses the class-only selector `.field-error` (NOT `small.field-error` or `span.field-error`) so the test:
+- matches Plan 09's actual `<span>` rendering;
+- remains resilient to a future tag swap (e.g. to `<small>` or `<div>`) without churn;
+- aligns with the CSS rule `.form-group .field-error` (admin.css:318 — class-based, tag-agnostic).
+
 ### Cookie-jar trick (SC#5 proof)
 
 The standard cookie-clear approach (`context.clearCookies()`) wipes only HTTP cookies, not other browser-storage layers like `localStorage`. Phase 74 server-side uses neither `@SessionAttributes` nor `HttpSession` for backup-import state per D-18, so HTTP cookies are the only persistence layer that could carry session state across the preview→execute transition. Clearing cookies is therefore the necessary AND sufficient proof.
 
 For maximum rigor, the cookie-jar test in Task 3 spawns a SECOND BrowserContext (not just `clearCookies()` on the first) — this is the strongest possible isolation: a brand-new context shares nothing with the original, including its `User-Agent`/`Accept-Language`/`localStorage`. If the server can still re-render the confirm page in the new context using only the staging UUID, statelessness is proven beyond doubt.
+
+**Trade-off committed in Task 3:** the rendered `.alert.alert-success` Flash banner is intentionally NOT asserted in Task 3 because Spring's Flash uses an HttpSession-backed handover across the redirect — after the cookie wipe there is no session cookie to carry the Flash key, which is correct architectural behaviour. Task 3's strong-and-narrow assertions are: (a) preview page rendered with correct content before the cookie wipe (proven via `uploadFixtureAndOpenPreview` URL/content check); (b) after the wipe, the API POST to `/import-confirm` returns HTTP 200 with the confirm page body containing the same staging UUID; (c) the API POST to `/import-execute` in the wiped context returns 3xx with Location `/admin/backup`. The Flash render is covered orthogonally by Task 1's happy path in a normal session.
 
 ### Failsafe binding
 
@@ -493,3 +513,5 @@ Test classes are excluded from JaCoCo's instrumented set (Surefire-only coverage
 <output>
 After completion, create `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-10-SUMMARY.md` summarizing: 4 tests written, all green under `-Pe2e`, SC#1 + SC#5 proven, IMPORT-01..04 covered end-to-end. Include the full `./mvnw verify -Pe2e -Dit.test=BackupImportE2ETest` console output as an appendix for downstream UAT reference.
 </output>
+</content>
+</invoke>

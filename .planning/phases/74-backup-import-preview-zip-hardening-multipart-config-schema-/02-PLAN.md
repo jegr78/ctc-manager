@@ -122,6 +122,10 @@ REQUIREMENTS.md acceptance criteria (verbatim from §SECU):
     2. `public BackupArchiveException(Reason reason, String message, Throwable cause) { super(message, cause); this.reason = reason; }`
     Expose the reason via `public Reason reason() { return reason; }` (Lombok-free accessor — keep this class POJO).
 
+    **`MANIFEST_INVALID` semantic scope (revision per checker Issue 6):** `Reason.MANIFEST_INVALID` covers ANY JSON structural rejection inside the backup archive — the `manifest.json` file itself (parse failure, missing required field, wrong shape) AND any `data/*.json` entry whose top-level token is not a `START_ARRAY`. Plan 04's `countDataEntries` reuses this `Reason` when it asserts the first JSON token of a `data/<entity>.json` entry is `START_ARRAY` and the assertion fails. There is intentionally no separate `DATA_NOT_ARRAY` enum value — the user-facing Flash routing (Plan 08 `mapReason`) folds `MANIFEST_INVALID` into the generic safety-checks message D-02#3, so the additional fan-out would not change the UX. Document this dual scope in the enum's Javadoc on the `MANIFEST_INVALID` constant so the next maintainer does not "narrow" the meaning when they see only manifest-targeted call sites.
+
+    **`NOT_A_ZIP` ownership (revision per checker side-edit):** the enum value `NOT_A_ZIP` is canonical here in Plan 02 — it is the eighth value listed in the action above (position 8 of 8). Plan 05's magic-byte sniff in `BackupImportService.stage(...)` throws `BackupArchiveException(Reason.NOT_A_ZIP, "...")` when the first four bytes are not `0x50 0x4B 0x03 0x04`. Plan 02 owns the enum constant; Plan 05 owns the call site. Plan 05's own notes acknowledged the value might need to be added as a side-edit if Plan 02 omitted it — Plan 02 does NOT omit it.
+
     Create `org.ctc.backup.service.BackupImportLimits` as a `public final class BackupImportLimits` with a `private BackupImportLimits() { /* utility */ }` constructor. Declare three `public static final` constants with the EXACT literal expressions below (so a code-review can read the multiplication and verify the math without consulting comments):
     - `public static final long MAX_ENTRY_BYTES = 50L * 1024 * 1024;` (resolves to 52 428 800)
     - `public static final long MAX_TOTAL_BYTES = 500L * 1024 * 1024;` (resolves to 524 288 000)
@@ -142,7 +146,8 @@ REQUIREMENTS.md acceptance criteria (verbatim from §SECU):
     <automated>./mvnw -q -Dtest='BackupArchiveExceptionTest,BackupImportLimitsTest' test</automated>
   </verify>
   <acceptance_criteria>
-    - File `src/main/java/org/ctc/backup/exception/BackupArchiveException.java` compiles and contains exactly the eight `Reason` values listed in the action (in the order listed).
+    - File `src/main/java/org/ctc/backup/exception/BackupArchiveException.java` compiles and contains exactly the eight `Reason` values listed in the action (in the order listed). Verify with `grep -c '^[[:space:]]*\(PATH_TRAVERSAL\|ENTRY_TOO_LARGE\|TOTAL_TOO_LARGE\|TOO_MANY_ENTRIES\|MANIFEST_MISSING\|MANIFEST_INVALID\|SCHEMA_MISMATCH\|NOT_A_ZIP\)' src/main/java/org/ctc/backup/exception/BackupArchiveException.java` returns `8`.
+    - `NOT_A_ZIP` is present in the enum body (`grep -v '^[[:space:]]*//' src/main/java/org/ctc/backup/exception/BackupArchiveException.java | grep -v '^[[:space:]]*\*' | grep -c 'NOT_A_ZIP'` returns at least `1`) so Plan 05's magic-byte sniff compiles against the canonical constant.
     - `BackupArchiveException.Reason.values().length == 8` (enforced by `BackupArchiveExceptionTest`).
     - `BackupImportLimits.MAX_ENTRY_BYTES == 52_428_800L`, `MAX_TOTAL_BYTES == 524_288_000L`, `MAX_ENTRIES == 50_000` (enforced by `BackupImportLimitsTest`).
     - No `@Component`, `@Service`, or `@Configuration` on either production class (`grep -nE '@(Component|Service|Configuration)' src/main/java/org/ctc/backup/exception/BackupArchiveException.java src/main/java/org/ctc/backup/service/BackupImportLimits.java` returns zero matches; run after stripping comment lines via `grep -v '^[[:space:]]*//' | grep -v '^[[:space:]]*\*'`).
@@ -164,38 +169,58 @@ REQUIREMENTS.md acceptance criteria (verbatim from §SECU):
     - src/main/java/org/ctc/backup/service/BackupImportLimits.java (just authored in task 1) — for the `MAX_ENTRY_BYTES` default reference (callers will inject this; the class itself stays parameter-driven).
     - .planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-CONTEXT.md §specifics — the `ZipEntry.getSize()` trust problem: "Malicious ZIPs can lie in the central directory — claim 1 KB but inflate to 5 GB. Defense is to count actual bytes read from `InflaterInputStream` against `MAX_ENTRY_BYTES`."
     - .planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-PATTERNS.md §"No Analog Found" — confirms no `FilterInputStream` exists in the repo; the ~25-LOC hand-rolled implementation pattern is the canonical reference.
+    - .planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/04-PLAN.md §"Task 1 / behavior" — Plan 04 builds the `MAX_TOTAL_BYTES` running tally by capturing the final inflated-byte count of EVERY entry (success and limit-exceeded) via the constructor callback. This dictates the callback signature: `LongConsumer onClose` that fires exactly once per stream with the final byte count.
   </read_first>
   <action>
-    Create package `org.ctc.backup.io` (new — no existing files in this package). Create `LimitedInputStream` as `public final class LimitedInputStream extends java.io.FilterInputStream`. Constructor signature (per planning_context):
-    `public LimitedInputStream(InputStream delegate, long limit, Runnable onLimitExceeded)`
+    Create package `org.ctc.backup.io` (new — no existing files in this package). Create `LimitedInputStream` as `public final class LimitedInputStream extends java.io.FilterInputStream`.
+
+    **Constructor signature (revision per checker Issue 3 — REPLACES the previous `Runnable onLimitExceeded` form):**
+
+    `public LimitedInputStream(InputStream delegate, long limit, java.util.function.LongConsumer onClose)`
+
     Field setup:
     - `private final long limit;` — the maximum number of bytes that may pass through `read()`/`read(byte[],int,int)` before the stream throws. Caller passes `BackupImportLimits.MAX_ENTRY_BYTES` (or any value for test isolation).
-    - `private final Runnable onLimitExceeded;` — callback invoked once, immediately before the exception is thrown. Used by `BackupArchiveService` (plan 04) to log the offending entry name. May be `null` — null is silently skipped (defensive, simplifies tests).
+    - `private final java.util.function.LongConsumer onClose;` — callback invoked EXACTLY ONCE with the final inflated byte count. Fires when either (a) `close()` is invoked normally after a successful drain, OR (b) `read()` / `read(byte[],int,int)` is about to throw `BackupArchiveException(Reason.ENTRY_TOO_LARGE, ...)` because `count > limit`. May be `null` — `null` is silently skipped (defensive, simplifies tests).
     - `private long count;` — running byte count, monotonically increasing.
+    - `private boolean onCloseFired;` — guard that ensures `onClose` is invoked at most once across the success path AND the limit-exceeded path, regardless of how many times `close()` is called afterwards.
 
-    Required behaviour (the contract `LimitedInputStreamTest` enforces):
+    **Semantics (the contract `LimitedInputStreamTest` enforces — Plan 04 depends on these guarantees verbatim):**
 
-    - `read()` (single-byte read): delegate to `super.read()`; if the result is `-1` (EOF), return `-1`. Otherwise increment `count` by `1`. If `count > limit`, invoke `onLimitExceeded` (if non-null) then throw `new BackupArchiveException(Reason.ENTRY_TOO_LARGE, "Entry exceeds limit: limit=" + limit + " bytes")`. Otherwise return the byte (as `int 0..255`).
+    - `onClose` ALWAYS fires once with the final `count` value. The value is the EXACT number of inflated bytes the stream produced, including the byte(s) that pushed `count` past `limit` on the throw path. Plan 04 uses this number to update the `MAX_TOTAL_BYTES` accumulator AFTER every entry — including entries that tripped the per-entry cap — so the total-archive defense remains accurate even after a per-entry failure (the controller can log the cumulative inflated bytes seen so far).
 
-    - `read(byte[] b, int off, int len)` (bulk read): delegate to `super.read(b, off, len)`; if the result is `-1`, return `-1`. Otherwise increment `count` by the result. If `count > limit`, invoke `onLimitExceeded` (if non-null) then throw `BackupArchiveException(Reason.ENTRY_TOO_LARGE, ...)`. Otherwise return the actual byte count. Note: the exception is thrown ON THE CHUNK THAT CROSSES THE LIMIT — bytes that were already read into `b[]` before the limit was crossed are NOT rolled back. The exception's message MUST cite `limit` (not `count`) so leaked information stays minimal.
+    - On the limit-exceeded path, the callback fires FIRST, the throw fires SECOND. This ordering is observable from the caller's perspective: a caller can install a callback that records `lastCount = bytes` and then catch the exception — `lastCount` will be populated. Plan 04 exploits this.
+
+    - `close()` invokes `onClose` (if non-null and not yet fired) with the current `count`, then delegates to `super.close()`. Multiple `close()` calls (e.g. via try-with-resources nesting) MUST NOT fire the callback more than once — guarded by `onCloseFired`.
+
+    Required behaviour:
+
+    - `read()` (single-byte read): delegate to `super.read()`; if the result is `-1` (EOF), return `-1`. Otherwise increment `count` by `1`. If `count > limit`: fire `onClose` with `count` (set `onCloseFired = true` first), then throw `new BackupArchiveException(Reason.ENTRY_TOO_LARGE, "Entry exceeds limit: limit=" + limit + " bytes")`. Otherwise return the byte (as `int 0..255`).
+
+    - `read(byte[] b, int off, int len)` (bulk read): delegate to `super.read(b, off, len)`; if the result is `-1`, return `-1`. Otherwise increment `count` by the result. If `count > limit`: fire `onClose` with `count` (set `onCloseFired = true` first), then throw `BackupArchiveException(Reason.ENTRY_TOO_LARGE, ...)`. Otherwise return the actual byte count. Note: the exception is thrown ON THE CHUNK THAT CROSSES THE LIMIT — bytes that were already read into `b[]` before the limit was crossed are NOT rolled back. The exception's message MUST cite `limit` (not `count`) so leaked information stays minimal.
 
     - `read(byte[] b)`: do NOT override (inherits `FilterInputStream`'s default which delegates to the three-arg variant on the same instance — meaning the override above catches it correctly).
 
-    - `skip(long n)`: do NOT override. `mark` / `reset` / `available()` / `close()`: do NOT override — `FilterInputStream` defaults are correct.
+    - `close()`: OVERRIDE. Body: `if (!onCloseFired && onClose != null) { onCloseFired = true; onClose.accept(count); } super.close();`. Even when `onClose == null`, set `onCloseFired = true` to keep semantics uniform for tests.
+
+    - `skip(long n)` / `mark` / `reset` / `available()`: do NOT override — `FilterInputStream` defaults are correct.
 
     - Mark the class `final` so subclasses cannot bypass the counter by overriding `read`.
 
-    - Add a class-level Javadoc citing CONTEXT §D-12 and §specifics ("The `ZipEntry.getSize()` trust problem") as the rationale; cite that the standard call site is `new LimitedInputStream(zipInputStream, BackupImportLimits.MAX_ENTRY_BYTES, () -> log.warn(...))` (plan 04).
+    - Add a class-level Javadoc citing CONTEXT §D-12 and §specifics ("The `ZipEntry.getSize()` trust problem") as the rationale; cite that the standard call site is `new LimitedInputStream(zipInputStream, BackupImportLimits.MAX_ENTRY_BYTES, finalBytes -> totalInflatedAcc[0] += finalBytes)` (plan 04). Explicitly document the "exactly once" guarantee for `onClose` and the "callback first, throw second" ordering on the limit-exceeded path.
 
-    Create `org.ctc.backup.io.LimitedInputStreamTest` (Surefire, no Spring context) with three tests:
+    Create `org.ctc.backup.io.LimitedInputStreamTest` (Surefire, no Spring context) with the following tests:
 
     1. `givenStreamUnderLimit_whenRead_thenAllBytesReturned()` — wrap a 1 024-byte `ByteArrayInputStream` with `new LimitedInputStream(in, 2_048L, null)`; read fully via a 256-byte buffer in a loop; assert exactly 1 024 bytes consumed AND `read()` returns `-1` at EOF AND no exception thrown.
 
-    2. `givenStreamExceedingLimit_whenRead_thenThrowsBackupArchiveException()` — wrap a 1 024-byte `ByteArrayInputStream` with `new LimitedInputStream(in, 512L, null)`; loop-read single bytes via `read()`. Use AssertJ's `assertThatThrownBy(() -> { while (limited.read() != -1) {} })`. Assert: type is `BackupArchiveException`, `ex.reason() == Reason.ENTRY_TOO_LARGE`, `ex.getMessage()` contains the literal string `"limit=512"`.
+    2. `givenStreamUnderLimit_whenClose_thenOnCloseFiresWithFinalByteCount()` — wrap a 1 024-byte `ByteArrayInputStream` with a `LongConsumer` that records into `long[] captured = new long[]{-1L}`; loop-read fully (count = 1024); then call `limited.close()`; assert `captured[0] == 1024L`. (Success-path contract: `onClose` delivers the final byte count.)
 
-    3. `givenBulkRead_whenRunningTotalExceedsLimit_thenThrowsOnTheChunkThatCrossesLimit()` — wrap a 2 048-byte `ByteArrayInputStream` with `new LimitedInputStream(in, 1_500L, null)`; read with a 1 024-byte buffer. First call returns 1 024 bytes (cumulative = 1 024, under limit). Second call: assert it throws `BackupArchiveException(Reason.ENTRY_TOO_LARGE, ...)`. Cite in a `// then` comment that bytes already in the buffer when the limit is crossed are intentionally not rolled back (defense-in-depth lives one level up — the caller discards the partial entry).
+    3. `givenStreamExceedingLimit_whenRead_thenOnCloseFiresWithLimitPlusOne_thenThrows()` — wrap a 1 024-byte `ByteArrayInputStream` with limit `512L` and a `LongConsumer` that records into `long[] captured = new long[]{-1L}`. Loop-read single bytes via `read()`. Use AssertJ's `assertThatThrownBy(() -> { while (limited.read() != -1) {} })`. Assert: type is `BackupArchiveException`, `ex.reason() == Reason.ENTRY_TOO_LARGE`, `ex.getMessage()` contains the literal string `"limit=512"`, AND `captured[0] == 513L` (limit + 1 — the single byte that crossed the limit). The callback MUST have fired BEFORE the exception was thrown — `captured[0]` being non-`-1L` at the catch site proves this ordering.
 
-    4. (Bonus, covers the `Runnable` parameter — the planning_context names it as required:) `givenOnLimitExceededCallback_whenLimitCrossed_thenCallbackFiredBeforeException()` — `AtomicBoolean fired = new AtomicBoolean();` pass `() -> fired.set(true)` as `onLimitExceeded`; trigger the limit; assert `fired.get() == true` AND the exception was thrown.
+    4. `givenBulkReadCrossesLimit_whenRead_thenThrowsOnTheChunkThatCrossesLimit_andOnCloseFires()` — wrap a 2 048-byte `ByteArrayInputStream` with `new LimitedInputStream(in, 1_500L, captured::accept)` where `captured` is the same `long[]` accumulator pattern. Read with a 1 024-byte buffer. First call returns 1 024 bytes (cumulative = 1 024, under limit). Second call: assert it throws `BackupArchiveException(Reason.ENTRY_TOO_LARGE, ...)`. Assert `captured[0] == 2048L` (1024 from chunk 1 + 1024 from chunk 2 — the bulk-read accounting credits the FULL second chunk because the byte count is tallied against the bytes that `super.read` actually placed into the buffer). Cite in a `// then` comment that bytes already in the buffer when the limit is crossed are intentionally not rolled back (defense-in-depth lives one level up — the caller discards the partial entry).
+
+    5. `givenOnCloseCallback_whenCloseCalledTwice_thenCallbackFiresOnlyOnce()` — install a `LongConsumer` that increments `AtomicInteger fireCount`; close the stream twice (idempotency guard); assert `fireCount.get() == 1`. Edge case for try-with-resources nesting where an outer block calls `close()` after the inner block already did.
+
+    6. `givenNullOnClose_whenLimitExceeded_thenThrowsWithoutNullPointerException()` — wrap a 1 024-byte stream with limit `512L` and `null` for `onClose`. Loop-read single bytes. Assert `BackupArchiveException(Reason.ENTRY_TOO_LARGE, ...)` is thrown (NOT `NullPointerException`). Defensive-null contract enforced.
 
     All tests use Given-When-Then naming and `// given` / `// when` / `// then` comments (CLAUDE.md "Test Naming" + PATTERNS §"Pattern E").
   </action>
@@ -204,13 +229,16 @@ REQUIREMENTS.md acceptance criteria (verbatim from §SECU):
   </verify>
   <acceptance_criteria>
     - `src/main/java/org/ctc/backup/io/LimitedInputStream.java` compiles, is `final`, and extends `java.io.FilterInputStream`.
-    - Constructor signature is exactly `public LimitedInputStream(InputStream delegate, long limit, Runnable onLimitExceeded)`.
-    - Both `read()` and `read(byte[], int, int)` increment the byte counter, fire the `Runnable` (when non-null), and throw `BackupArchiveException(Reason.ENTRY_TOO_LARGE, ...)` when the running total exceeds `limit`.
+    - Constructor signature is exactly `public LimitedInputStream(InputStream delegate, long limit, java.util.function.LongConsumer onClose)`. Verify with `grep -c 'LimitedInputStream(InputStream[^,]*,[[:space:]]*long[^,]*,[[:space:]]*\(java\.util\.function\.\)\{0,1\}LongConsumer' src/main/java/org/ctc/backup/io/LimitedInputStream.java` returns at least `1`.
+    - `java.util.function.LongConsumer` import (or fully qualified usage) is present. Verify with `grep -c 'LongConsumer' src/main/java/org/ctc/backup/io/LimitedInputStream.java` returns at least `2` (one for the import or FQN at the field, one at the constructor — comments stripped via `grep -v '^[[:space:]]*\(//\|\*\)'`).
+    - No `Runnable` reference appears in the production class. Verify with `grep -v '^[[:space:]]*\(//\|\*\)' src/main/java/org/ctc/backup/io/LimitedInputStream.java | grep -c 'Runnable'` returns `0`.
+    - Both `read()` and `read(byte[], int, int)` increment the byte counter, fire the `LongConsumer` (when non-null) with the post-increment `count`, and throw `BackupArchiveException(Reason.ENTRY_TOO_LARGE, ...)` when the running total exceeds `limit`. The callback fires BEFORE the throw on the limit-exceeded path.
+    - `close()` is overridden and guards the callback with a `onCloseFired` flag so multiple `close()` invocations fire `onClose` at most once.
     - No call to `super.read(byte[])` (the two-arg variant is not overridden — `grep -c 'public int read(byte\[\] b)' src/main/java/org/ctc/backup/io/LimitedInputStream.java` returns `0`).
-    - All four test methods in `LimitedInputStreamTest` green.
+    - All six test methods in `LimitedInputStreamTest` green.
   </acceptance_criteria>
   <done>
-    `./mvnw -Dtest='LimitedInputStreamTest' test` passes; all four behaviour tests green; class is `final` and has no Spring annotations.
+    `./mvnw -Dtest='LimitedInputStreamTest' test` passes; all six behaviour tests green; class is `final`, has no Spring annotations, and exposes the `LongConsumer onClose` contract Plan 04 depends on.
   </done>
 </task>
 
@@ -299,7 +327,7 @@ REQUIREMENTS.md acceptance criteria (verbatim from §SECU):
 | T-74-02-01 | Tampering | `LimitedInputStream` | mitigate | Inflated-byte counter enforces `BackupImportLimits.MAX_ENTRY_BYTES` (52 428 800) regardless of the `ZipEntry.getSize()` value the attacker placed in the central directory. CONTEXT §D-12 + §specifics. |
 | T-74-02-02 | Tampering | `PathTraversalGuard.assertWithin` | mitigate | `toAbsolutePath().normalize().startsWith(baseDir)` predicate; absolute-path branch rejects names that would normalize back inside `baseDir`. Idiom identical to `FileStorageService:153-158` (REQUIREMENTS SECU-01: "Wiederverwendung statt Duplikat"). |
 | T-74-02-03 | Information Disclosure | `BackupArchiveException` message | accept | Exception messages cite the `limit` (not the running `count`) and the offending entry name. Entry name is attacker-controlled — disclosing it back in the message is information they already possess. No internal paths leak via `getMessage()`; `getStackTrace()` is silenced by the controller's redirect-flash path (plan 06). |
-| T-74-02-04 | Denial of Service | `LimitedInputStream` bulk read | mitigate | Exception fires on the chunk that crosses the limit (NOT after a full read). Worst case: attacker forces the JVM to allocate one chunk (e.g. 8 KB read buffer) past the limit before the throw — bounded. Tested by `givenBulkRead_whenRunningTotalExceedsLimit_thenThrowsOnTheChunkThatCrossesLimit()`. |
+| T-74-02-04 | Denial of Service | `LimitedInputStream` bulk read | mitigate | Exception fires on the chunk that crosses the limit (NOT after a full read). Worst case: attacker forces the JVM to allocate one chunk (e.g. 8 KB read buffer) past the limit before the throw — bounded. Tested by `givenBulkReadCrossesLimit_whenRead_thenThrowsOnTheChunkThatCrossesLimit_andOnCloseFires()`. |
 | T-74-02-05 | Elevation of Privilege | `PathTraversalGuard` use of `toAbsolutePath()` vs `toRealPath()` | accept | `toAbsolutePath().normalize()` does NOT follow symlinks; an attacker who can plant a symlink in `baseDir` could circumvent the check by naming a target inside `baseDir` that symlinks elsewhere. Risk accepted because (a) `baseDir` is created and owned by the application user (no third-party write access), (b) `FileStorageService:30` uses the same idiom and has shipped since v1.1 without incident, (c) deviating from `FileStorageService` would break the REQUIREMENTS SECU-01 reuse mandate. If this changes, plan 04/05 can introduce `toRealPath` at the caller level. |
 </threat_model>
 
@@ -308,7 +336,7 @@ After all three tasks: run the focused unit-test set as a single Surefire call:
 
 `./mvnw -q -Dtest='BackupArchiveExceptionTest,BackupImportLimitsTest,LimitedInputStreamTest,PathTraversalGuardTest' test`
 
-Expected: all four test classes green, ≥ 16 test methods total (2 + 3 + 4 + 8). No Spring context loaded — runtime should be < 5 s.
+Expected: all four test classes green, ≥ 18 test methods total (2 + 3 + 6 + 8). No Spring context loaded — runtime should be < 5 s.
 
 Spot-check the package layout: `find src/main/java/org/ctc/backup -type f -newer .planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-CONTEXT.md` — exactly four new files (one per task target).
 
@@ -321,8 +349,8 @@ Cross-reference REQUIREMENTS.md SECU-01 + SECU-02 are partially delivered: the *
 - `./mvnw -q -Dtest='BackupArchiveExceptionTest,BackupImportLimitsTest,LimitedInputStreamTest,PathTraversalGuardTest' test` → BUILD SUCCESS, 0 failures, 0 errors.
 - Zero Spring annotations (`@Component`, `@Service`, `@Configuration`, `@Bean`, `@Autowired`) on any of the four production files.
 - `BackupImportLimits.MAX_ENTRY_BYTES == 52_428_800L`, `MAX_TOTAL_BYTES == 524_288_000L`, `MAX_ENTRIES == 50_000`.
-- `BackupArchiveException.Reason` enum has exactly 8 values in the order listed in task 1's action.
-- `LimitedInputStream` is `final`, extends `FilterInputStream`, and counts inflated bytes against a per-instance `limit`.
+- `BackupArchiveException.Reason` enum has exactly 8 values in the order listed in task 1's action (including `NOT_A_ZIP` at position 8 for Plan 05's magic-byte sniff).
+- `LimitedInputStream` is `final`, extends `FilterInputStream`, has constructor signature `(InputStream, long, java.util.function.LongConsumer)`, and fires the `LongConsumer` exactly once with the final inflated byte count on BOTH the success-close path AND the limit-exceeded throw path (callback before throw).
 - `PathTraversalGuard.assertWithin(Path, String)` rejects absolute paths AND rejects `..`-normalized paths that escape `baseDir`, throwing `BackupArchiveException(Reason.PATH_TRAVERSAL, ...)` in both cases.
 - Test coverage on the four new production files ≥ 90 % line coverage (JaCoCo) — verified by `./mvnw verify` after plan 03 or via spot-grep of `target/site/jacoco/org.ctc.backup.{io,security,exception,service}/index.html`. Phase-wide ≥ 82 % JaCoCo gate (`pom.xml`) is the binding constraint at the end of wave 1; this plan contributes high-coverage primitives.
 </success_criteria>
@@ -331,9 +359,9 @@ Cross-reference REQUIREMENTS.md SECU-01 + SECU-02 are partially delivered: the *
 After completion, create `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-02-SUMMARY.md` per `templates/summary.md`. Capture:
 
 - Files created (4 production + 4 test).
-- The eight `Reason` values (so plan 04/05 can grep this SUMMARY to know the routing keys).
+- The eight `Reason` values (so plan 04/05 can grep this SUMMARY to know the routing keys) — including `NOT_A_ZIP` at position 8 (consumed by Plan 05's magic-byte sniff) and the dual scope of `MANIFEST_INVALID` (covers manifest.json AND data/*.json structural failures, consumed by Plan 04's `countDataEntries`).
 - The three `BackupImportLimits` constants with literal values.
-- The `LimitedInputStream` constructor signature (`InputStream, long, Runnable`) — plan 04 needs it verbatim.
+- The `LimitedInputStream` constructor signature (`InputStream, long, java.util.function.LongConsumer`) — Plan 04 needs it verbatim. Note the "exactly once" `onClose` contract: fires on both success-close and limit-exceeded paths; callback fires BEFORE the throw on the limit-exceeded path so callers can read the final inflated byte count even after a per-entry rejection.
 - The `PathTraversalGuard.assertWithin(Path, String)` signature + the exact predicate (`toAbsolutePath().normalize().startsWith(absoluteBase)`).
 - Test runtime in seconds (sanity check for "no Spring context loaded").
 - Any deviation from PATTERNS or CONTEXT (none expected — the planning_context is explicit).
@@ -343,9 +371,9 @@ After completion, create `.planning/phases/74-backup-import-preview-zip-hardenin
 
 - **Rename `ZIP_SLIP` → `PATH_TRAVERSAL`:** PATTERNS.md drafted `Reason.ZIP_SLIP`; the planning_context for this plan specifies `PATH_TRAVERSAL`. The planning_context is authoritative for this plan and downstream consumers. The change is cosmetic (no semantic difference for SECU-01) and avoids confusion when the same predicate is reused outside ZIP contexts (e.g. plan 04 may call `assertWithin` on `uploads/<rel>` paths sourced from the filesystem, not from a ZIP).
 - **`SCHEMA_MISMATCH` vs PATTERNS' `SCHEMA_VERSION_MISMATCH`:** planning_context shortened the name. Same semantic; chose the shorter form so call-site code reads cleaner (`throw new BackupArchiveException(Reason.SCHEMA_MISMATCH, ...)`).
-- **`MANIFEST_INVALID` vs PATTERNS' `MANIFEST_PARSE_FAILED`:** broader name (covers parse failure AND structural-but-non-parse failures like an empty `tableCounts` map); same controller routing.
-- **`NOT_A_ZIP` is new (planning_context addition):** covers the header-byte-sniff case from CONTEXT §specifics ("the server-side check is on `Content-Type: application/zip` AND the first 4 bytes of the file body (`50 4B 03 04` ZIP magic)"). Plan 05 owns the sniff; this plan just provides the `Reason` so plan 05 doesn't need a separate exception type.
-- **`onLimitExceeded` `Runnable` parameter:** the planning_context explicitly requires this. Use case (plan 04): the callback logs `log.warn("Backup ZIP entry exceeds {} bytes: name={}", limit, entryName)` with the entry name known to the caller but NOT to `LimitedInputStream`. Without this hook, the warning would need to live in the catch site, by which point the entry stream is closed and the entry context is lost.
+- **`MANIFEST_INVALID` dual scope (revision):** broader name (covers parse failure AND structural-but-non-parse failures — including manifest.json's own shape AND `data/*.json` entries whose top-level token is not `START_ARRAY`). Plan 04's `countDataEntries` reuses this `Reason` for the data-array structural assertion. Plan 08's `mapReason` folds it into the D-02#3 generic safety-checks Flash message — no UX-visible difference between manifest-shape failure and data-shape failure. Option B from checker (cheapest path — no new enum value).
+- **`NOT_A_ZIP` is canonical here (revision):** Plan 02 owns this enum constant (position 8 of 8 in the `Reason` enum). Plan 05's earlier notes contemplated adding it as a side-edit if Plan 02 had omitted it — Plan 02 does NOT omit it, so Plan 05 needs zero side-edits to the exception class. The value covers the header-byte-sniff case from CONTEXT §specifics ("the server-side check is on `Content-Type: application/zip` AND the first 4 bytes of the file body (`50 4B 03 04` ZIP magic)").
+- **`onClose` `LongConsumer` parameter (revision per checker Issue 3):** REPLACES the earlier `Runnable onLimitExceeded` design. Use case (Plan 04): the callback fires `finalBytes -> totalInflatedAcc[0] += finalBytes` after EVERY entry (success path AND limit-exceeded path). Plan 04 then runs the `MAX_TOTAL_BYTES` total-archive check using this accurate per-entry tally. Without the `LongConsumer` form, Plan 04 could not distinguish a 50 MB entry that succeeded from a 50 MB entry that tripped the cap — both look identical to a parameterless `Runnable`. The exact byte count delivered by the callback is the truth Plan 04's accumulator needs.
 - **No `@Slf4j` on any of the four new classes** — they are pure primitives; logging belongs to their callers (plans 04 / 05 / 06).
 
 ## PLAN COMPLETE 02

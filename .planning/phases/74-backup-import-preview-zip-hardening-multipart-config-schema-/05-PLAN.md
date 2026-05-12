@@ -7,7 +7,7 @@ requirements: [IMPORT-01, IMPORT-02, SECU-01, SECU-02]
 files_modified:
   - src/main/java/org/ctc/backup/service/BackupImportService.java
   - src/test/java/org/ctc/backup/service/BackupImportServiceIT.java
-  - src/test/java/org/ctc/backup/service/BackupImportSchemaVersionMismatchIT.java
+  - src/test/java/org/ctc/backup/service/BackupImportSchemaMismatchIT.java
   - src/test/java/org/ctc/backup/service/BackupImportZipSlipIT.java
   - src/test/java/org/ctc/backup/service/BackupImportZipBombIT.java
 autonomous: true
@@ -15,7 +15,7 @@ autonomous: true
 
 ## Objective
 
-Author `BackupImportService` — the stateless, write-free orchestrator that accepts a `MultipartFile` ZIP upload, sniffs the ZIP magic bytes (`50 4B 03 04`) before touching disk, stages the file under `app.backup.staging-dir` with a UUID-prefixed name, runs the Plan 04 reader chain (`readManifest` → `countDataEntries` → `countUploadFiles`) through Plan 02's `LimitedInputStream` + `PathTraversalGuard` + `BackupImportLimits` hardening, applies the schema-version gate **before any DB read** (D-09 — only the cheap `Repository.count()` SELECTs run, AFTER the gate passes), and assembles a `BackupImportPreview` record (Plan 03) for the controller (Plan 08) to render. The service exposes the three D-19 methods `stage(MultipartFile)`, `reparse(UUID)`, `deleteStagingFile(UUID)` and obeys the D-16 reject-path discipline: any thrown `BackupArchiveException` triggers `Files.deleteIfExists(staged)` in `finally` and re-throws (a failed delete is logged at WARN — never thrown, the startup-sweep listener in Plan 07 is the safety net). The plan also delivers the four mandatory ITs (`BackupImportServiceIT`, `BackupImportSchemaVersionMismatchIT`, `BackupImportZipSlipIT`, `BackupImportZipBombIT`) — all with programmatically generated fixtures per D-25 (no committed binaries). The schema-mismatch IT proves the SC#2 invariant byte-for-byte: capture `Repository.count()` snapshot for each of the 24 entities BEFORE the rejected upload and AFTER, assert byte-identical (the gate executes *before* any read, so the 24 counts run only on green path; mismatch path never reaches the count loop — the IT verifies this *through* the snapshot, not by inspecting code).
+Author `BackupImportService` — the stateless, write-free orchestrator that accepts a `MultipartFile` ZIP upload, sniffs the ZIP magic bytes (`50 4B 03 04`) before touching disk, stages the file under `app.backup.staging-dir` with a UUID-prefixed name, runs the Plan 04 reader chain (`readManifest` → `countDataEntries` → `countUploadFiles`) through Plan 02's `LimitedInputStream` + `PathTraversalGuard` + `BackupImportLimits` hardening, applies the schema-version gate **before any DB read** (D-09 — only the cheap `Repository.count()` SELECTs run, AFTER the gate passes), and assembles a `BackupImportPreview` record (Plan 03) for the controller (Plan 08) to render. The service exposes the three D-19 methods `stage(MultipartFile)`, `reparse(UUID)`, `deleteStagingFile(UUID)` and obeys the D-16 reject-path discipline: any thrown `BackupArchiveException` triggers `Files.deleteIfExists(staged)` in `finally` and re-throws (a failed delete is logged at WARN — never thrown, the startup-sweep listener in Plan 07 is the safety net). The plan also delivers the four mandatory ITs (`BackupImportServiceIT`, `BackupImportSchemaMismatchIT`, `BackupImportZipSlipIT`, `BackupImportZipBombIT`) — all with programmatically generated fixtures per D-25 (no committed binaries). The schema-mismatch IT proves the SC#2 invariant byte-for-byte: capture `Repository.count()` snapshot for each of the 24 entities BEFORE the rejected upload and AFTER, assert byte-identical (the gate executes *before* any read, so the 24 counts run only on green path; mismatch path never reaches the count loop — the IT verifies this *through* the snapshot, not by inspecting code).
 
 ## Tasks
 
@@ -31,8 +31,8 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
 
   1. Log at INFO: `log.info("Backup import staging started: originalFilename={}, sizeBytes={}", file.getOriginalFilename(), file.getSize());` (parameterized; mirrors `BackupArchiveService:94-95`).
   2. `Files.createDirectories(stagingDir);` — idempotent; safe on every call. The Plan 07 startup-sweep handles stale entries from previous runs.
-  3. **Magic-byte sniff (FIRST — before any disk write):** call `byte[] header = readMagic(file);` and assert `header.length == 4 && Arrays.equals(header, ZIP_MAGIC)`. If false → `throw new BackupArchiveException(Reason.NOT_A_ZIP, "File does not look like a ZIP archive (bad magic bytes)");`. Note: `Reason.NOT_A_ZIP` must be present in the `Reason` enum delivered by Plan 02; if Plan 02 used a different name (e.g. `MANIFEST_MISSING` for "file has no recognizable ZIP header"), prefer the most specific enum value that exists. If `Reason.NOT_A_ZIP` is NOT in Plan 02's enum, this task adds it as a tiny atomic edit to `BackupArchiveException.Reason` and notes it in the file commit.
-  4. Allocate `UUID stagingId = UUID.randomUUID();` and `Path staged = stagingDir.resolve("upload-" + stagingId + ".zip");`. Re-validate via `PathTraversalGuard.guard(stagingDir, staged.toString());` (Plan 02 helper) — defensive: a malicious filename could not produce traversal here (UUID is generated, not user-supplied), but the call documents the invariant.
+  3. **Magic-byte sniff (FIRST — before any disk write):** call `byte[] header = readMagic(file);` and assert `header.length == 4 && Arrays.equals(header, ZIP_MAGIC)`. If false → `throw new BackupArchiveException(Reason.NOT_A_ZIP, "File does not look like a ZIP archive (bad magic bytes)");`. `Reason.NOT_A_ZIP` is part of Plan 02's canonical 8-value `Reason` enum — no side-edit to Plan 02 is required.
+  4. Allocate `UUID stagingId = UUID.randomUUID();` and `Path staged = stagingDir.resolve("upload-" + stagingId + ".zip");`. Defensive sanity check via `PathTraversalGuard.assertWithin(stagingDir, "upload-" + stagingId + ".zip");` (Plan 02 helper — `Path` base + `String` candidate entry name). A UUID cannot contain `..` or an absolute-path prefix, so this call cannot fail in production; it documents the invariant and keeps the predicate symmetric with the reader chain in Plan 04. If the executor judges this check is purely cosmetic and prefers minimal code, the call MAY be omitted — Plan 04's reader chain re-validates every ZIP-internal entry name, which is where the real path-traversal defense fires.
   5. `file.transferTo(staged);` — atomic, multipart-aware (RESEARCH §Pitfall 8 line 790-798 explains why this is preferred over `Files.copy`). Spring's `StandardMultipartFile.transferTo` operates on the buffered body, not the consumed `getInputStream()` from step 3 (RESEARCH §Pitfall 7).
   6. Enter the `try` block (the `finally` block at the end deletes `staged` on any throw). Within `try`, call the private `BackupImportPreview buildPreview(UUID stagingId, Path staged, String originalFilename, long fileSizeBytes)` helper (defined below). On success, return its result and let the `finally` block run without deleting (because no exception was thrown).
   7. **`catch (BackupArchiveException | IOException ex)`:** log at WARN `log.warn("Backup import rejected: stagingId={}, reason={}, msg={}", stagingId, ex instanceof BackupArchiveException bae ? bae.reason() : "IO", ex.getMessage());`, then **rethrow** (do NOT swallow). The `finally` block deletes the staged file.
@@ -57,7 +57,7 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
   **`private BackupImportPreview buildPreview(UUID stagingId, Path staged, String originalFilename, long fileSizeBytes) throws BackupArchiveException, IOException`:**
 
   1. `BackupManifest manifest = backupArchive.readManifest(staged);` (Plan 04 — performs path-traversal, magic-bytes inside the ZIP, per-entry-limit, total-limit, entry-count limit checks; throws `BackupArchiveException` for any violation with the correct `Reason`).
-  2. **Schema-version gate (D-09):** read `int backupVersion = manifest.schemaVersion();` and `int currentVersion = BackupSchema.SCHEMA_VERSION;`. If `backupVersion != currentVersion`, `throw new BackupArchiveException(Reason.SCHEMA_VERSION_MISMATCH, String.format("Schema version mismatch: backup=%d, expected=%d. Cannot import.", backupVersion, currentVersion));` — exact D-02#2 string (locked English copy, no `_` substitution). This throw happens BEFORE any of the 24 `repo.count()` calls — that is the SC#2 invariant.
+  2. **Schema-version gate (D-09):** read `int backupVersion = manifest.schemaVersion();` and `int currentVersion = BackupSchema.SCHEMA_VERSION;`. If `backupVersion != currentVersion`, `throw new BackupArchiveException(Reason.SCHEMA_MISMATCH, String.format("Schema version mismatch: backup=%d, expected=%d. Cannot import.", backupVersion, currentVersion));` — exact D-02#2 string (locked English copy, no `_` substitution). This throw happens BEFORE any of the 24 `repo.count()` calls — that is the SC#2 invariant. Plan 08's `mapReason` returns `ex.getMessage()` verbatim for `SCHEMA_MISMATCH`, so the formatted string here is what the user sees as Flash.
   3. `int uploadFileCount = backupArchive.countUploadFiles(staged);` (Plan 04 — also hardening-protected).
   4. **Build the 24 entity cards:** iterate `backupSchema.getExportOrder()`, for each `EntityRef ref`:
       - `JpaRepository<?, ?> repo = repositoryByTableName.get(ref.tableName());`
@@ -74,7 +74,7 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
   **`public BackupImportPreview reparse(UUID stagingId) throws BackupArchiveException, IOException` (D-08 defense-in-depth):**
 
   1. `Path staged = stagingDir.resolve("upload-" + stagingId + ".zip");`
-  2. If `!Files.exists(staged)` → `throw new BackupArchiveException(Reason.MANIFEST_MISSING, "Staging file not found for id=" + stagingId);` — `Reason.MANIFEST_MISSING` is the closest Plan 02 enum match (the staging file is the manifest's container; if it's gone the manifest is gone). If Plan 02's enum has a more specific `STAGING_FILE_MISSING` or `STAGING_NOT_FOUND`, use that; otherwise reuse `MANIFEST_MISSING` and document the semantic overlap in the JavaDoc comment.
+  2. If `!Files.exists(staged)` → `throw new BackupArchiveException(Reason.MANIFEST_MISSING, "Staging file not found for id=" + stagingId);` — `Reason.MANIFEST_MISSING` is the closest Plan 02 enum match (the staging file is the manifest's container; if it's gone the manifest is gone). Plan 02's canonical enum does not include a more specific `STAGING_FILE_MISSING`; reuse `MANIFEST_MISSING` and document the semantic overlap in the JavaDoc comment.
   3. The `originalFilename` is unavailable on reparse (no `MultipartFile`); pass the staged file's filename via `staged.getFileName().toString()` — Phase 75's `import-execute` handler will not display this string (the staged file is internal), but the DTO contract requires a non-null value.
   4. The `fileSizeBytes` is `Files.size(staged)`.
   5. Call `buildPreview(stagingId, staged, staged.getFileName().toString(), Files.size(staged))` and return its result. **No `try/finally` delete here** — `reparse` MUST NOT delete the staging file on success (Phase 75 inherits it and deletes after a successful execute, per D-08 line 43). On reject, the file is also NOT deleted by `reparse` — let Phase 75 handle stale-file policy, with the Plan 07 startup-sweep as the safety net.
@@ -115,7 +115,7 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
     - `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-CONTEXT.md` (D-08 execute-time re-validation, D-09 schema-version gate before any DB write, D-11 reuse `FileStorageService` SECU-02 path-traversal, D-12 `BackupImportLimits` constants, D-15 profile-aware staging dir, D-16 reject paths delete staging file synchronously in `try/finally`, D-18 no `@SessionAttributes`, D-19 service public surface, D-21 `BackupImportPreview`/`EntityRowCount` records, D-25 fixtures programmatically generated).
     - `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-RESEARCH.md` lines 505-535 (§Pattern 5 ZIP magic-number sniff without stream consumption), lines 770-798 (§Pitfall 6+7+8 — staging-file leaks, multipart fresh-stream contract, `transferTo` over `Files.copy`), lines 800-870 (§Common Operation 1 — staged + sniff; §Common Operation 2 — schema-version gate).
     - `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-PATTERNS.md` §"BackupImportService" (explicit constructor, `@Slf4j`+`@Service`+`@Transactional(readOnly = true)`, file-I/O staging pattern lines 89-129).
-    - `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-VALIDATION.md` §"Per-Task Verification Map" rows for `BackupImportServiceIT`, `BackupImportSchemaVersionMismatchIT`, `BackupImportZipSlipIT`, `BackupImportZipBombIT` + §"Wave 0 Requirements" (programmatic malicious fixtures).
+    - `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-VALIDATION.md` §"Per-Task Verification Map" rows for `BackupImportServiceIT`, `BackupImportSchemaMismatchIT`, `BackupImportZipSlipIT`, `BackupImportZipBombIT` + §"Wave 0 Requirements" (programmatic malicious fixtures).
     - `.planning/REQUIREMENTS.md` §IMPORT-01 (multipart upload + staging-dir + per-table preview), §IMPORT-02 (schema-version check BEFORE any DB write), §SECU-01 (ZIP-Slip defense), §SECU-02 (ZipBomb 50 MB / 500 MB / 50 000 entries).
     - `src/main/java/org/ctc/dataimport/CsvImportController.java` — v1.8 D-15 staging-path-pattern reference (`/admin/import/preview` → staging-file → `/admin/import/execute` re-parse). Phase 74 mirrors the stateless approach.
     - `src/main/java/org/ctc/backup/service/BackupArchiveService.java` — explicit-constructor + `@Qualifier` pattern (lines 64-74), `@Slf4j` parameterized logging (lines 94-95, 135-136), the `writeZip` method this plan's reader chain inverts.
@@ -124,8 +124,8 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
     - `src/main/java/org/ctc/backup/schema/BackupManifest.java` — record `(int schemaVersion, String appVersion, Instant exportDate, Map<String, Long> tableCounts)`; `tableCounts` keys are snake_case `tableName` matching `@Table(name=...)`.
     - `src/main/java/org/ctc/backup/dto/BackupImportPreview.java` (delivered by Plan 03 — exact record signature: `(UUID stagingId, String originalFilename, long fileSizeBytes, int schemaVersion, int currentSchemaVersion, boolean schemaMatches, List<EntityRowCount> entityCounts, int uploadFileCount, long totalImportedRows)`).
     - `src/main/java/org/ctc/backup/dto/EntityRowCount.java` (delivered by Plan 03 — exact record signature: `(String tableName, String humanLabel, long currentRows, long importedRows)`).
-    - `src/main/java/org/ctc/backup/exception/BackupArchiveException.java` (delivered by Plan 02 — `Reason` enum with `SCHEMA_VERSION_MISMATCH`, `ZIP_SLIP`, `ENTRY_TOO_LARGE`, `TOTAL_TOO_LARGE`, `TOO_MANY_ENTRIES`, `MANIFEST_PARSE_FAILED`, `MANIFEST_MISSING`; this plan adds `NOT_A_ZIP` if absent).
-    - `src/main/java/org/ctc/backup/security/PathTraversalGuard.java` (delivered by Plan 02 — `public static void guard(Path root, String entryName)` throws `BackupArchiveException(Reason.ZIP_SLIP, ...)`).
+    - `src/main/java/org/ctc/backup/exception/BackupArchiveException.java` (delivered by Plan 02 — canonical `Reason` enum: `PATH_TRAVERSAL, ENTRY_TOO_LARGE, TOTAL_TOO_LARGE, TOO_MANY_ENTRIES, MANIFEST_MISSING, MANIFEST_INVALID, SCHEMA_MISMATCH, NOT_A_ZIP`).
+    - `src/main/java/org/ctc/backup/security/PathTraversalGuard.java` (delivered by Plan 02 — `public static void assertWithin(Path baseDir, String candidateEntryName)` throws `BackupArchiveException(Reason.PATH_TRAVERSAL, ...)`).
     - `src/main/java/org/ctc/backup/service/BackupImportLimits.java` (delivered by Plan 02 — constants `MAX_ENTRY_BYTES`, `MAX_TOTAL_BYTES`, `MAX_ENTRIES`).
     - `src/main/java/org/ctc/domain/repository/SeasonRepository.java` — example `extends JpaRepository<Season, UUID>` shape; the 24 repositories live under `org/ctc/domain/repository/` (verify via `grep -l 'extends JpaRepository' src/main/java/org/ctc/domain/repository/`; expected: 24 repos + `DataImportAuditRepository` excluded by package filter).
     - `src/main/java/org/ctc/domain/service/FileStorageService.java` lines 30-46 + 153-158 — the `@Value("${app.upload-dir:uploads}")` constructor + `Paths.get(...).toAbsolutePath().normalize()` idiom this service mirrors for `stagingDir`.
@@ -136,15 +136,16 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
     2. Class has exactly **one** explicit public constructor with four parameters: `BackupArchiveService`, `BackupSchema`, `List<JpaRepository<?, ?>>`, and `@Value("${app.backup.staging-dir}") String stagingDirRaw`. No `@RequiredArgsConstructor`.
     3. Constructor stores `Path stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();` — verifiable via grep `Paths.get(stagingDirRaw)`.
     4. `@PostConstruct` method named `wireRepositoriesByTableName` (or similar) populates `Map<String, JpaRepository<?, ?>> repositoryByTableName` by matching `EntityRef.entityClass()` against each injected repository's `JpaRepository<DomainType, UUID>` first type argument via `GenericTypeResolver.resolveTypeArguments`. Throws `IllegalStateException` if the resulting map size differs from `backupSchema.getExportOrder().size()`.
-    5. `public BackupImportPreview stage(MultipartFile file) throws BackupArchiveException, IOException` exists with the documented body: (a) `Files.createDirectories(stagingDir)`, (b) ZIP magic-byte sniff via `readNBytes(4)` against `ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04}` throwing `Reason.NOT_A_ZIP` on mismatch, (c) UUID + staging-path allocation, (d) `PathTraversalGuard.guard(stagingDir, staged.toString())`, (e) `file.transferTo(staged)`, (f) `try/finally` reject-delete using the documented `boolean keep` flag, (g) inner call to `buildPreview` for the production preview build, (h) WARN log on rejection.
+    5. `public BackupImportPreview stage(MultipartFile file) throws BackupArchiveException, IOException` exists with the documented body: (a) `Files.createDirectories(stagingDir)`, (b) ZIP magic-byte sniff via `readNBytes(4)` against `ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04}` throwing `Reason.NOT_A_ZIP` on mismatch, (c) UUID + staging-path allocation, (d) optional defensive `PathTraversalGuard.assertWithin(stagingDir, "upload-" + stagingId + ".zip")` (executor MAY omit since UUIDs cannot escape; Plan 04 owns the real per-entry path-traversal defense for ZIP-internal names), (e) `file.transferTo(staged)`, (f) `try/finally` reject-delete using the documented `boolean keep` flag, (g) inner call to `buildPreview` for the production preview build, (h) WARN log on rejection.
     6. `public BackupImportPreview reparse(UUID stagingId) throws BackupArchiveException, IOException` exists, resolves the staged path, throws `BackupArchiveException(Reason.MANIFEST_MISSING, ...)` when the staging file is absent, delegates to `buildPreview`, and **does NOT delete the staging file** on success or reject (Phase 75 inherits, per D-08).
     7. `public void deleteStagingFile(UUID stagingId)` exists with `void` return, swallows `IOException` (logs WARN, never throws), and uses `Files.deleteIfExists`.
-    8. Private `BackupImportPreview buildPreview(...)` method exists with: (a) `backupArchive.readManifest(staged)`, (b) schema-version gate (`manifest.schemaVersion() != BackupSchema.SCHEMA_VERSION` → `Reason.SCHEMA_VERSION_MISMATCH` with **exact** D-02#2 string `"Schema version mismatch: backup=%d, expected=%d. Cannot import."`), (c) `backupArchive.countUploadFiles(staged)`, (d) iteration over `backupSchema.getExportOrder()` constructing `EntityRowCount` per entity via `repositoryByTableName.get(tableName).count()` for `currentRows` and `manifest.tableCounts().getOrDefault(tableName, 0L)` for `importedRows`, (e) `totalImportedRows` computed via `mapToLong(EntityRowCount::importedRows).sum()`, (f) returns a fully populated `BackupImportPreview`.
+    8. Private `BackupImportPreview buildPreview(...)` method exists with: (a) `backupArchive.readManifest(staged)`, (b) schema-version gate (`manifest.schemaVersion() != BackupSchema.SCHEMA_VERSION` → `Reason.SCHEMA_MISMATCH` with **exact** D-02#2 string `"Schema version mismatch: backup=%d, expected=%d. Cannot import."`), (c) `backupArchive.countUploadFiles(staged)`, (d) iteration over `backupSchema.getExportOrder()` constructing `EntityRowCount` per entity via `repositoryByTableName.get(tableName).count()` for `currentRows` and `manifest.tableCounts().getOrDefault(tableName, 0L)` for `importedRows`, (e) `totalImportedRows` computed via `mapToLong(EntityRowCount::importedRows).sum()`, (f) returns a fully populated `BackupImportPreview`.
     9. Private `static String toHumanLabel(String tableName)` exists, converts `season_phases` to `Season Phases` (verifiable by a Surefire unit test if one is added; this plan ships only ITs but the helper is `static` for future testability).
-    10. `Reason.NOT_A_ZIP` exists in `BackupArchiveException.Reason` (added by this plan if Plan 02 omitted it; the action notes this as a side-edit and the executor's first commit includes both files if needed).
+    10. The service throws using ONLY Plan 02's canonical `Reason` values (`PATH_TRAVERSAL`, `ENTRY_TOO_LARGE`, `TOTAL_TOO_LARGE`, `TOO_MANY_ENTRIES`, `MANIFEST_MISSING`, `MANIFEST_INVALID`, `SCHEMA_MISMATCH`, `NOT_A_ZIP`). Verifiable by grep: `grep -E 'Reason\.(ZIP_SLIP|SCHEMA_VERSION_MISMATCH|MANIFEST_PARSE_FAILED)' src/main/java/org/ctc/backup/service/BackupImportService.java` returns zero matches.
     11. The service does NOT compile-link against any class that mutates DB state — verifiable via `grep -E '@(Modifying|PreUpdate|PrePersist|PreRemove)|JdbcTemplate|EntityManager' src/main/java/org/ctc/backup/service/BackupImportService.java` returns zero matches.
     12. The service does NOT contain `@SessionAttributes` or any in-memory `Map<UUID, BackupImportPreview>` cache — verifiable via `grep -E '@SessionAttributes|ConcurrentHashMap|Map<UUID' src/main/java/org/ctc/backup/service/BackupImportService.java` returns zero matches for caching shapes.
-    13. The service compiles under `./mvnw -q compile` once Plans 02, 03, 04 are merged.
+    13. If a `PathTraversalGuard` call is present in `stage()`, it uses the canonical `assertWithin(Path, String)` signature — verifiable via `grep -c 'PathTraversalGuard\.guard(' src/main/java/org/ctc/backup/service/BackupImportService.java` returns `0` AND (if any call is present) `grep -c 'PathTraversalGuard\.assertWithin(' src/main/java/org/ctc/backup/service/BackupImportService.java` returns at least `1`.
+    14. The service compiles under `./mvnw -q compile` once Plans 02, 03, 04 are merged.
   </acceptance_criteria>
 
   <automated>./mvnw -q -pl . -Dtest='!*' -Dit.test='!*' compile</automated>
@@ -238,13 +239,13 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
 </task>
 
 <task id="74-05-03" tdd="true">
-  <title>Author `BackupImportSchemaVersionMismatchIT` — forged-manifest reject + 24-entity DB-unchanged proof (SC#2)</title>
+  <title>Author `BackupImportSchemaMismatchIT` — forged-manifest reject + 24-entity DB-unchanged proof (SC#2)</title>
 
   <behavior>
     - `givenForgedManifestSchemaVersion999_whenStage_thenThrowsSchemaMismatch_andDbUnchanged_andStagingFileDeleted()`:
       (a) Produce a "forged" ZIP via `ZipOutputStream` in the test (programmatic per D-25) — entry #0 is `manifest.json` with body `{"schema_version":999,"app_version":"forged","export_date":"2026-05-12T00:00:00Z","table_counts":{}}` (Jackson `backupObjectMapper`-compatible JSON); entries #1..#24 are valid empty JSON arrays `[]` at paths matching `EntityRef.fileName()` (so the ZIP is a structurally-complete-but-version-wrong archive — defense-in-depth proves the gate fires before any data-file read happens).
       (b) Snapshot `Map<String, Long> before = backupSchema.getExportOrder().stream().collect(Collectors.toMap(EntityRef::tableName, ref -> repositoryByTableName.get(ref.tableName()).count()));` (use the same `@PostConstruct`-built map the service uses, exposed via a test-only `@Component` helper OR re-built in the IT via the same `GenericTypeResolver` walk).
-      (c) Call `service.stage(forgedFile)`; assert `BackupArchiveException` thrown with `reason() == Reason.SCHEMA_VERSION_MISMATCH` AND message contains `"backup=999"` AND `"expected=1"` (or whatever `BackupSchema.SCHEMA_VERSION` reads at test time — use `String.format("backup=%d, expected=%d", 999, BackupSchema.SCHEMA_VERSION)` substring assertion).
+      (c) Call `service.stage(forgedFile)`; assert `BackupArchiveException` thrown with `reason() == Reason.SCHEMA_MISMATCH` AND message contains `"backup=999"` AND `"expected=1"` (or whatever `BackupSchema.SCHEMA_VERSION` reads at test time — use `String.format("backup=%d, expected=%d", 999, BackupSchema.SCHEMA_VERSION)` substring assertion).
       (d) Snapshot `Map<String, Long> after = ...same expression...;`.
       (e) Assert `assertThat(after).as("Schema mismatch must run BEFORE any DB read; row counts must be byte-identical").isEqualTo(before);` (Map equality — both keys AND values must match).
       (f) Assert the staging file was deleted: `assertThat(Files.list(stagingDir).filter(p -> p.getFileName().toString().endsWith(".zip")).count()).isZero();` (the `try/finally` in `stage` deleted it).
@@ -253,7 +254,7 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
   </behavior>
 
   <action>
-  Create `src/test/java/org/ctc/backup/service/BackupImportSchemaVersionMismatchIT.java` mirroring the `BackupImportServiceIT` class shape (`@SpringBootTest @ActiveProfiles("dev") @TestInstance(PER_CLASS)`).
+  Create `src/test/java/org/ctc/backup/service/BackupImportSchemaMismatchIT.java` mirroring the `BackupImportServiceIT` class shape (`@SpringBootTest @ActiveProfiles("dev") @TestInstance(PER_CLASS)`).
 
   Wire a static helper method `static byte[] forgedManifestZip(int forgedSchemaVersion, BackupSchema schema, ObjectMapper backupObjectMapper) throws IOException` (place it as a private static method in the test class — no helper class extraction needed; the planner does NOT introduce a shared `ZipFixtureFactory` until at least 2 IT classes share the exact same code shape, per CLAUDE.md "No fallback calculations" antipattern). Implementation:
 
@@ -284,7 +285,7 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
   ```
   assertThatThrownBy(() -> service.stage(new MockMultipartFile("file", "forged.zip", "application/zip", forgedBytes)))
       .isInstanceOf(BackupArchiveException.class)
-      .satisfies(t -> assertThat(((BackupArchiveException) t).reason()).isEqualTo(Reason.SCHEMA_VERSION_MISMATCH))
+      .satisfies(t -> assertThat(((BackupArchiveException) t).reason()).isEqualTo(Reason.SCHEMA_MISMATCH))
       .hasMessageContaining("backup=999")
       .hasMessageContaining("expected=" + BackupSchema.SCHEMA_VERSION);
   ```
@@ -296,35 +297,35 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
     - `src/main/java/org/ctc/backup/schema/BackupManifest.java` — JSON shape: `schema_version`, `app_version`, `export_date`, `table_counts`. The hand-built JSON in the fixture builder must match these snake_case keys (`backupObjectMapper` has `FAIL_ON_UNKNOWN_PROPERTIES=true`).
     - `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-VALIDATION.md` SC#2 row — observable assertion is `Repository.count()` snapshot byte-identical before/after.
     - All 24 `*Repository.java` in `src/main/java/org/ctc/domain/repository/` plus `DataImportAuditRepository.java` in `src/main/java/org/ctc/backup/audit/` (the latter is filtered out — do NOT inject).
-    - `src/main/java/org/ctc/backup/exception/BackupArchiveException.java` (Plan 02 — confirm `Reason.SCHEMA_VERSION_MISMATCH` enum value name; if Plan 02 named it `SCHEMA_MISMATCH`, use that exact constant).
+    - `src/main/java/org/ctc/backup/exception/BackupArchiveException.java` (Plan 02 — canonical enum value `Reason.SCHEMA_MISMATCH`).
     - `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-CONTEXT.md` D-02#2 (locked English message), D-09 (schema gate before any DB write — this test PROVES that invariant).
   </read_first>
 
   <acceptance_criteria>
-    1. File `src/test/java/org/ctc/backup/service/BackupImportSchemaVersionMismatchIT.java` exists, two test methods (`schema_version=999` and `schema_version=-1`).
+    1. File `src/test/java/org/ctc/backup/service/BackupImportSchemaMismatchIT.java` exists, two test methods (`schema_version=999` and `schema_version=-1`).
     2. The forged ZIP fixture is produced **inside the test class** via `ZipOutputStream` (no `src/test/resources/backup-fixtures/malicious/` binary files referenced).
-    3. Both test methods assert: `BackupArchiveException` thrown, `reason() == Reason.SCHEMA_VERSION_MISMATCH`, message contains the substring `"backup=<forged>"` and `"expected=" + BackupSchema.SCHEMA_VERSION`.
+    3. Both test methods assert: `BackupArchiveException` thrown, `reason() == Reason.SCHEMA_MISMATCH`, message contains the substring `"backup=<forged>"` and `"expected=" + BackupSchema.SCHEMA_VERSION`.
     4. The 999-variant test additionally asserts the BEFORE/AFTER row-count snapshot is `isEqualTo` (Map equality — same keys, same values).
     5. The 999-variant test additionally asserts the staging dir contains zero `*.zip` files after the rejection (the `try/finally` reject-delete fired).
     6. The 24 repositories are individually `@Autowired` (no reflective discovery in test code — black-box behavioral test).
-    7. `./mvnw -q -Dit.test=BackupImportSchemaVersionMismatchIT verify` passes once all Wave-2 plans are merged.
+    7. `./mvnw -q -Dit.test=BackupImportSchemaMismatchIT verify` passes once all Wave-2 plans are merged.
   </acceptance_criteria>
 
-  <automated>./mvnw -q -Dit.test=BackupImportSchemaVersionMismatchIT verify</automated>
+  <automated>./mvnw -q -Dit.test=BackupImportSchemaMismatchIT verify</automated>
 
   <verify_notes>
   This IT owns Validation SC#2 (per `74-VALIDATION.md`). The Map-equality assertion is the canonical "DB unchanged" proof — stronger than spot-checking 2 or 3 tables, and resistant to subtle bugs where the gate runs after some-but-not-all counts.
   </verify_notes>
 
-  <done>Two-test IT proves the schema gate fires BEFORE any of the 24 `repo.count()` calls (because the BEFORE/AFTER snapshots are equal even though the schema is mismatched and the gate-failure happens after the magic-sniff but before the count loop). Staging-file deletion on reject is also proven. Passes under `./mvnw -q -Dit.test=BackupImportSchemaVersionMismatchIT verify`.</done>
+  <done>Two-test IT proves the schema gate fires BEFORE any of the 24 `repo.count()` calls (because the BEFORE/AFTER snapshots are equal even though the schema is mismatched and the gate-failure happens after the magic-sniff but before the count loop). Staging-file deletion on reject is also proven. Passes under `./mvnw -q -Dit.test=BackupImportSchemaMismatchIT verify`.</done>
 </task>
 
 <task id="74-05-04" tdd="true">
   <title>Author `BackupImportZipSlipIT` — `../../etc/passwd` and absolute-path entry rejection + staging deletion</title>
 
   <behavior>
-    - `givenZipWithDotDotEntry_whenStage_thenThrowsPathTraversal_andStagingFileDeleted()`: programmatic ZIP whose entry #0 is `manifest.json` (valid) and entry #1 is `../../etc/passwd` (or `../../../etc/passwd` — any `..`-bearing path triggers the `PathTraversalGuard`). Call `service.stage(file)`; assert `BackupArchiveException` thrown with `reason() == Reason.ZIP_SLIP`. Assert the staging dir is empty (the try/finally deleted the staged file). Note: depending on Plan 04's reader implementation, the ZIP-Slip check may fire either inside `readManifest` (if manifest is the offending entry) or inside `countDataEntries`/`countUploadFiles`; this test puts the offending entry AFTER the manifest so the reject happens during the count phase — proving the hardening is end-to-end, not just on entry #0.
-    - `givenZipWithAbsolutePathEntry_whenStage_thenThrowsPathTraversal()`: programmatic ZIP whose entry has name `/etc/passwd` (leading slash — absolute path). Same assertion shape. `PathTraversalGuard.guard` rejects absolute paths because `Paths.get(stagingDir).resolve("/etc/passwd")` resolves to `/etc/passwd` (Path.resolve replaces with absolute argument), and `.normalize().startsWith(stagingDir)` is false.
+    - `givenZipWithDotDotEntry_whenStage_thenThrowsPathTraversal_andStagingFileDeleted()`: programmatic ZIP whose entry #0 is `manifest.json` (valid) and entry #1 is `../../etc/passwd` (or `../../../etc/passwd` — any `..`-bearing path triggers the `PathTraversalGuard`). Call `service.stage(file)`; assert `BackupArchiveException` thrown with `reason() == Reason.PATH_TRAVERSAL`. Assert the staging dir is empty (the try/finally deleted the staged file). Note: depending on Plan 04's reader implementation, the path-traversal check may fire either inside `readManifest` (if manifest is the offending entry) or inside `countDataEntries`/`countUploadFiles`; this test puts the offending entry AFTER the manifest so the reject happens during the count phase — proving the hardening is end-to-end, not just on entry #0.
+    - `givenZipWithAbsolutePathEntry_whenStage_thenThrowsPathTraversal()`: programmatic ZIP whose entry has name `/etc/passwd` (leading slash — absolute path). Same assertion shape. `PathTraversalGuard.assertWithin` rejects absolute paths because `Paths.get("/etc/passwd").isAbsolute()` returns `true` (Unix), and the guard rejects absolute entries via the explicit `isAbsolute` branch before the resolve/startsWith check (Plan 02 task 3 action step 3).
     - `givenZipWithDotDotEntryInUploadsPath_whenStage_thenThrowsPathTraversal()`: programmatic ZIP whose entry name is `uploads/../../etc/passwd` — proves the check works on `uploads/`-prefixed paths (the upload counter is the secondary attack surface).
   </behavior>
 
@@ -343,7 +344,7 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
   ```
   assertThatThrownBy(() -> service.stage(new MockMultipartFile("file", "slip.zip", "application/zip", maliciousBytes)))
       .isInstanceOf(BackupArchiveException.class)
-      .satisfies(t -> assertThat(((BackupArchiveException) t).reason()).isEqualTo(Reason.ZIP_SLIP));
+      .satisfies(t -> assertThat(((BackupArchiveException) t).reason()).isEqualTo(Reason.PATH_TRAVERSAL));
   ```
 
   After each rejection, assert the staging dir is empty: `assertThat(Files.list(stagingDir).filter(p -> p.getFileName().toString().endsWith(".zip")).count()).isZero();`.
@@ -354,7 +355,7 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
   <read_first>
     - `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-CONTEXT.md` D-11 (path-traversal pattern), D-24 (test minimum: `../../etc/passwd` and absolute path).
     - `src/main/java/org/ctc/domain/service/FileStorageService.java` lines 153-158 — the `startsWith(uploadDir.toRealPath())` predicate the `PathTraversalGuard` extracts.
-    - `src/main/java/org/ctc/backup/security/PathTraversalGuard.java` (Plan 02) — exact method signature.
+    - `src/main/java/org/ctc/backup/security/PathTraversalGuard.java` (Plan 02) — canonical method signature `assertWithin(Path, String)`; rejects absolute paths AND `..`-escapes.
     - `src/main/java/org/ctc/backup/service/BackupArchiveService.java` lines 119-126 (export-side ZIP-Slip skip — the read side mirror throws instead of skipping).
     - `.planning/phases/74-backup-import-preview-zip-hardening-multipart-config-schema-/74-VALIDATION.md` SC#3 row.
   </read_first>
@@ -362,9 +363,9 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
   <acceptance_criteria>
     1. File `src/test/java/org/ctc/backup/service/BackupImportZipSlipIT.java` exists with three test methods (dot-dot, absolute path, dot-dot-in-uploads).
     2. Fixtures are programmatically generated; no committed binaries.
-    3. All three tests assert `BackupArchiveException` with `reason() == Reason.ZIP_SLIP`.
+    3. All three tests assert `BackupArchiveException` with `reason() == Reason.PATH_TRAVERSAL`.
     4. All three tests assert the staging dir contains zero `*.zip` files after rejection.
-    5. The manifest entry #0 in each fixture is byte-valid for `backupObjectMapper` strict parsing — proven by the test passing (a malformed manifest would throw `Reason.MANIFEST_PARSE_FAILED` before the traversal check ever runs).
+    5. The manifest entry #0 in each fixture is byte-valid for `backupObjectMapper` strict parsing — proven by the test passing (a malformed manifest would throw `Reason.MANIFEST_INVALID` before the traversal check ever runs).
     6. `./mvnw -q -Dit.test=BackupImportZipSlipIT verify` passes.
   </acceptance_criteria>
 
@@ -374,7 +375,7 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
   Owns SC#3 (per VALIDATION.md). The "uploads/.. /etc/passwd" test is the strongest defense — proves the hardening is applied to EVERY entry name, not just manifest/data entries.
   </verify_notes>
 
-  <done>Three-test IT proves ZIP-Slip rejection across the three attack shapes (dot-dot, absolute, dot-dot-under-uploads); staging-file deletion on reject is also proven for each. Passes under `./mvnw -q -Dit.test=BackupImportZipSlipIT verify`.</done>
+  <done>Three-test IT proves path-traversal rejection across the three attack shapes (dot-dot, absolute, dot-dot-under-uploads); staging-file deletion on reject is also proven for each. Passes under `./mvnw -q -Dit.test=BackupImportZipSlipIT verify`.</done>
 </task>
 
 <task id="74-05-05" tdd="true">
@@ -450,8 +451,8 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
 **Truths:**
 - `BackupImportService.stage(MultipartFile)` returns a `BackupImportPreview` with 24 entity cards populated in `BackupSchema.getExportOrder()` order, with `currentRows` sourced from `Repository.count()` and `importedRows` sourced from `manifest.tableCounts()`. (SC#1 — preview page renders; without this, `BackupImportE2ETest` in Plan 10 has nothing to render.)
 - `BackupImportService.stage` rejects non-ZIP uploads via the magic-byte sniff BEFORE writing any file to the staging directory. (RESEARCH §Pattern 5; the magic-sniff is the cheapest pre-disk check and prevents staging-dir pollution by `.txt` renames.)
-- `BackupImportService.stage` rejects schema-version mismatches BEFORE invoking any `Repository.count()` — the 24 `Repository.count()` snapshot before the rejected call is byte-identical to the snapshot after. (SC#2 — the SECU-04 + IMPORT-02 promise; `BackupImportSchemaVersionMismatchIT` proves this via Map equality, the strongest possible "DB unchanged" assertion.)
-- `BackupImportService.stage` invokes Plan 04's `readManifest` / `countUploadFiles` which run through Plan 02's `LimitedInputStream` + `PathTraversalGuard` — so ZIP-Slip (`../`, absolute, `uploads/../`) and ZipBomb (per-entry 50 MB, total 500 MB, count 50 000) attacks throw `BackupArchiveException` with the correct `Reason` and trigger staging-file deletion. (SC#3.)
+- `BackupImportService.stage` rejects schema-version mismatches BEFORE invoking any `Repository.count()` — the 24 `Repository.count()` snapshot before the rejected call is byte-identical to the snapshot after. (SC#2 — the SECU-04 + IMPORT-02 promise; `BackupImportSchemaMismatchIT` proves this via Map equality, the strongest possible "DB unchanged" assertion.)
+- `BackupImportService.stage` invokes Plan 04's `readManifest` / `countUploadFiles` which run through Plan 02's `LimitedInputStream` + `PathTraversalGuard` — so path-traversal (`../`, absolute, `uploads/../`) and ZipBomb (per-entry 50 MB, total 500 MB, count 50 000) attacks throw `BackupArchiveException` with the correct `Reason` and trigger staging-file deletion. (SC#3.)
 - After ANY rejected `stage` call, the staging file at `data/{profile}/backup-staging/upload-{stagingId}.zip` does NOT exist on disk. (D-16; the `try/finally` `boolean keep` flag flipped only on success, with `Files.deleteIfExists` in `finally`.)
 - After a SUCCESSFUL `stage` call, the staging file DOES exist on disk and survives subsequent `reparse(UUID)` calls; only an explicit `deleteStagingFile(UUID)` or Phase 75's `import-execute` (future) removes it. (D-08 inheritance for Phase 75.)
 - `BackupImportService.reparse(UUID)` is **stateless** — it reads only from disk (no `@SessionAttributes`, no in-memory `Map<UUID, Preview>`) and re-runs the full validation chain so the schema gate fires at execute-time as well as preview-time. (D-09 defense-in-depth.)
@@ -461,13 +462,13 @@ Author `BackupImportService` — the stateless, write-free orchestrator that acc
 **Artifacts:**
 - `src/main/java/org/ctc/backup/service/BackupImportService.java` — exists with the three D-19 public methods (`stage`, `reparse`, `deleteStagingFile`), the private `buildPreview` and static `toHumanLabel` helpers, the `@PostConstruct` repository-by-tableName map builder, and explicit-constructor injection of `BackupArchiveService` + `BackupSchema` + `List<JpaRepository<?, ?>>` + `@Value("${app.backup.staging-dir}") String`.
 - `src/test/java/org/ctc/backup/service/BackupImportServiceIT.java` — happy-path stage + reparse + delete + not-a-zip; fixture produced via Phase-73 `BackupArchiveService.writeZip` (no binary blob).
-- `src/test/java/org/ctc/backup/service/BackupImportSchemaVersionMismatchIT.java` — `schema_version=999` and `schema_version=-1` rejection + BEFORE/AFTER Map-equality DB-unchanged snapshot + staging-file-deleted assertion.
+- `src/test/java/org/ctc/backup/service/BackupImportSchemaMismatchIT.java` — `schema_version=999` and `schema_version=-1` rejection + BEFORE/AFTER Map-equality DB-unchanged snapshot + staging-file-deleted assertion.
 - `src/test/java/org/ctc/backup/service/BackupImportZipSlipIT.java` — `../../etc/passwd`, `/etc/passwd`, and `uploads/../../etc/passwd` rejection + staging-file-deleted assertion.
 - `src/test/java/org/ctc/backup/service/BackupImportZipBombIT.java` — per-entry inflated, total inflated, entry-count bomb rejection + `ZipEntry.setSize(Long.MAX_VALUE)` size-spoof defense.
 
 **Test Classes:**
 - `BackupImportServiceIT` (Wave 2 — owns SC#1 partial; SC#5 partial via the stateless `reparse` chain).
-- `BackupImportSchemaVersionMismatchIT` (Wave 2 — owns SC#2 in full; the 24-table `Repository.count()` Map-equality snapshot is the canonical "schema gate runs before any DB read" proof).
+- `BackupImportSchemaMismatchIT` (Wave 2 — owns SC#2 in full; the 24-table `Repository.count()` Map-equality snapshot is the canonical "schema gate runs before any DB read" proof).
 - `BackupImportZipSlipIT` (Wave 2 — owns half of SC#3; the three attack shapes cover the entire `PathTraversalGuard` surface).
 - `BackupImportZipBombIT` (Wave 2 — owns the other half of SC#3; `Long.MAX_VALUE` size-spoof defense is the canonical CVE proof).
 
@@ -487,13 +488,13 @@ Option 1 is the planner's chosen approach. It's also the one the `BackupSchema` 
 
 D-08 (line 43 of CONTEXT.md): Phase 75 inherits the staging file. The `import-execute` stub re-reads, re-validates, and Phase 75 will delete only after a successful execute. If `reparse` deleted on reject, the operator's "retry the same upload" workflow (e.g. transient DB hiccup mid-execute) would lose the staged file. The startup-sweep listener (Plan 07) is the safety net for stale-file accumulation; daily growth under normal operations is bounded at ~2 files per week per CONTEXT.md.
 
-### Why `BackupImportException.Reason.NOT_A_ZIP` may need to be added by this plan
+### Reason enum values are sourced from Plan 02's canonical set
 
-Plan 02 defined the `Reason` enum during Wave 1, before this plan was written. The exact enum values delivered by Plan 02 are `SCHEMA_VERSION_MISMATCH`, `ZIP_SLIP`, `ENTRY_TOO_LARGE`, `TOTAL_TOO_LARGE`, `TOO_MANY_ENTRIES`, `MANIFEST_PARSE_FAILED`, `MANIFEST_MISSING` (per PATTERNS.md §`BackupArchiveException` lines 282-301). The magic-byte-sniff failure does not cleanly fit any of these (it's a pre-ZIP-parse rejection — none of the ZIP-internal reasons apply). The cleanest path is to add `NOT_A_ZIP` to the enum during this plan's first task. The executor checks Plan 02's enum before writing and conditionally edits `BackupArchiveException.java` to add the missing value. Acceptance Criterion 10 of Task 74-05-01 captures this contingency.
+Plan 02 delivers the canonical 8-value `Reason` enum: `PATH_TRAVERSAL, ENTRY_TOO_LARGE, TOTAL_TOO_LARGE, TOO_MANY_ENTRIES, MANIFEST_MISSING, MANIFEST_INVALID, SCHEMA_MISMATCH, NOT_A_ZIP`. This plan consumes those names verbatim — no side-edit to Plan 02 is required. The magic-byte-sniff failure routes to `NOT_A_ZIP` (already in the enum); the schema gate routes to `SCHEMA_MISMATCH`; path-traversal violations route to `PATH_TRAVERSAL`; manifest parse failures route to `MANIFEST_INVALID`. Plan 08's `mapReason` switch is exhaustive over these same eight values — coupling is verified at compile time by Plan 08's Java 25 exhaustive switch.
 
 ### Why the schema gate is BEFORE the count loop, not AFTER
 
-D-09 (line 44 of CONTEXT.md) is explicit: schema-version mismatch is rejected at preview-upload time AND re-checked at execute time. The "no DB read on mismatch" invariant is what `BackupImportSchemaVersionMismatchIT` verifies. If the gate ran after the count loop, the IT would still see byte-identical snapshots (because `count()` is read-only), but the wall-clock cost of the 24 SELECTs would be wasted on every rejected attempt. The chosen order is "fail fast" — gate first, count second. This also means a schema-version-bumped backup against an empty DB does not trigger any SELECTs at all, which matters for the `@Transactional(readOnly = true)` boundary.
+D-09 (line 44 of CONTEXT.md) is explicit: schema-version mismatch is rejected at preview-upload time AND re-checked at execute time. The "no DB read on mismatch" invariant is what `BackupImportSchemaMismatchIT` verifies. If the gate ran after the count loop, the IT would still see byte-identical snapshots (because `count()` is read-only), but the wall-clock cost of the 24 SELECTs would be wasted on every rejected attempt. The chosen order is "fail fast" — gate first, count second. This also means a schema-version-bumped backup against an empty DB does not trigger any SELECTs at all, which matters for the `@Transactional(readOnly = true)` boundary.
 
 ### Why `Map.getOrDefault(..., 0L)` for `importedRows`
 
