@@ -15,6 +15,7 @@ autonomous: true
 
 must_haves:
   truths:
+    - "D-22: `BackupController` is extended (NOT duplicated) — the four new endpoints `POST /admin/backup/import-preview`, `POST /admin/backup/import-confirm`, `POST /admin/backup/import-execute`, `POST /admin/backup/import-cancel` are appended to the existing class, all CSRF-protected, profile-conditional auth identical to the Phase-73 export endpoint."
     - "`POST /admin/backup/import-preview` accepts a multipart `file` upload, stages it via `BackupImportService.stage(MultipartFile)`, adds the resulting `BackupImportPreview` as `model.addAttribute(\"preview\", ...)`, and returns view name `\"admin/backup-preview\"`."
     - "`POST /admin/backup/import-confirm` accepts `stagingId` UUID, re-parses via `BackupImportService.reparse(UUID)`, adds `preview` + a fresh `BackupImportConfirmForm` (with `stagingId` pre-set) and returns view name `\"admin/backup-confirm\"`."
     - "`POST /admin/backup/import-execute` is a Phase-74 STUB: `@Valid`-binds `BackupImportConfirmForm`, re-renders `\"admin/backup-confirm\"` on `BindingResult.hasErrors()`, otherwise re-parses via `reparse(UUID)` (D-09 defense-in-depth) and redirects `/admin/backup` with locked Flash `successMessage = \"Validation succeeded. Import execution will be enabled in Phase 75.\"`."

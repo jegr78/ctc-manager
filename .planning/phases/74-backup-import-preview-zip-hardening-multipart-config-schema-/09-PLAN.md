@@ -14,6 +14,7 @@ files_modified:
 autonomous: true
 must_haves:
   truths:
+    - "D-01: All UI text rendered by the three templates is English — every D-02 locked string appears verbatim in English; no German strings (e.g. the SECU-04 / IMPORT-02 / IMPORT-04 REQUIREMENTS quotes) survive in rendered output. CLAUDE.md `feedback_ui_language.md` wins over REQUIREMENTS.md."
     - "Admin sees the existing Phase 73 Export Backup card AND a new Import Backup card stacked below on /admin/backup."
     - "Admin can pick a .zip file in the Import Backup card and submit it via multipart POST to /admin/backup/import-preview."
     - "After a successful preview stage, admin lands on /admin/backup-preview view rendering header block, schema-match banner, 24-card grid with delta pills, and Proceed/Cancel CTAs."
