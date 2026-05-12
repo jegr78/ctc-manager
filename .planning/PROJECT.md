@@ -8,7 +8,7 @@ Gran Turismo Racing League Management application (Spring Boot 4 / Thymeleaf / M
 
 Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## Current State (after v1.9, Phase 71 of v1.10 landed)
+## Current State (after v1.9, Phases 71–73 of v1.10 landed)
 
 - **Codebase:** ~17k LOC Java (Prod) + ~25k LOC Java (Tests), 1370 Tests (1227 Surefire + 112 Failsafe-IT + 31 E2E), 89.44 % Line Coverage
 - **Tech Stack:** Spring Boot 4.0.6, Java 25, MariaDB 11 / H2, Thymeleaf 3.1.5 (pinned), Playwright
