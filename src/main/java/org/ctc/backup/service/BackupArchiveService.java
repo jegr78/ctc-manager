@@ -151,11 +151,14 @@ public class BackupArchiveService {
 		if (pretty) {
 			generator.useDefaultPrettyPrinter();
 		}
-		backupObjectMapper.writeValue(generator, value);
-		generator.flush();
-		// Note: generator.close() must NOT be called here — even with AUTO_CLOSE_TARGET
-		// disabled, the close() call would still close the generator's internal buffer
-		// management. ZipOutputStream's closeEntry() handles flushing the entry payload;
-		// the next putNextEntry() call opens a fresh stream context.
+		try {
+			backupObjectMapper.writeValue(generator, value);
+		} finally {
+			// AUTO_CLOSE_TARGET=false means generator.close() flushes and releases the
+			// generator's internal state WITHOUT touching the underlying ZipOutputStream —
+			// exactly what streaming requires. Closing the generator (rather than just
+			// flushing it) prevents Jackson buffer references from lingering until GC.
+			generator.close();
+		}
 	}
 }
