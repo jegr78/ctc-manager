@@ -1,14 +1,16 @@
 app:
   upload-dir: data/dev/uploads
   version: @project.version@
+  backup:
+    staging-dir: data/${spring.profiles.active}/backup-staging
 
 spring:
   application:
     name: ctc-manager
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 100MB
+      max-request-size: 100MB
   jpa:
     # OSIV: Hibernate-Session bleibt bis zum Ende des HTTP-Requests offen,
     # damit Thymeleaf-Templates lazy-geladene Felder rendern koennen.
@@ -28,6 +30,9 @@ logging:
 
 server:
   port: 8080
+  tomcat:
+    max-http-form-post-size: 104857600
+    max-swallow-size: 104857600
 
 # Google Integration
 google:
