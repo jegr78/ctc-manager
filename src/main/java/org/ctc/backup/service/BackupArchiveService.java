@@ -9,6 +9,7 @@ import org.ctc.backup.schema.EntityRef;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -41,11 +42,18 @@ import java.util.zip.ZipOutputStream;
  * </ol>
  *
  * <p>No JPA injection — repos belong to {@link BackupExportService} and are reached through
- * its public methods. This keeps the service split clean and the archive service free of
- * Hibernate-session concerns.
+ * its public methods. However, the class is annotated {@code @Transactional(readOnly = true)}
+ * so that the whole {@link #writeZip(OutputStream, Instant)} call runs inside a single
+ * Hibernate session. This is non-negotiable: Plan 73-02 reduced
+ * {@code SeasonRepository.findAllForBackup()}'s {@code @EntityGraph} to {@code {"cars"}} to
+ * dodge {@code MultipleBagFetchException}, which means {@code season.getTracks()} must
+ * materialize lazily during Jackson serialization. Without an open session, the export
+ * throws {@code LazyInitializationException} the moment Jackson reaches the
+ * {@code seasons.json} array (Wave 1 73-02 deviation rationale).
  */
 @Slf4j
 @Service
+@Transactional(readOnly = true)
 public class BackupArchiveService {
 
 	private final BackupExportService backupExportService;
