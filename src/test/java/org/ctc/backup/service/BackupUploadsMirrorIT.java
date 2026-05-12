@@ -22,7 +22,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -193,9 +192,6 @@ class BackupUploadsMirrorIT {
 				zip.closeEntry();
 			}
 		}
-		// Silence unused-import warning on Paths (kept for documentation parity with
-		// the production service's path handling).
-		Paths.get(".");
 		return entries;
 	}
 
