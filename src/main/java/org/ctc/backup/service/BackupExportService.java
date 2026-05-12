@@ -256,12 +256,15 @@ public class BackupExportService {
 							+ "Plan 73-02 contract violation", ex);
 		} catch (ReflectiveOperationException ex) {
 			Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+			String context = "Reflective invocation of findAllForBackup() on "
+					+ entityClass.getSimpleName() + " failed";
 			if (cause instanceof RuntimeException re) {
-				throw re;
+				// Wrap to preserve the entity-class context — for backup-debug purposes
+				// (a production export failing on entity 17 of 24) knowing which entity
+				// triggered the failure is critical. The original RE is the cause.
+				throw new IllegalStateException(context, re);
 			}
-			throw new RuntimeException(
-					"Reflective invocation of findAllForBackup() on " + entityClass.getSimpleName()
-							+ " failed", cause);
+			throw new RuntimeException(context, cause);
 		}
 	}
 
