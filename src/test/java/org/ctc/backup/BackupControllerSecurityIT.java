@@ -66,6 +66,15 @@ class BackupControllerSecurityIT {
 		}
 
 		@Test
+		void givenAnonymousNoCsrf_whenPostExport_thenForbidden() throws Exception {
+			// Lock the layered defence: with no CSRF token, the CsrfFilter rejects with 403
+			// BEFORE the AuthorizationFilter ever runs — this is the most common attacker
+			// scenario (anonymous + missing token) and must remain 403 regardless of auth state.
+			mockMvc.perform(post("/admin/backup/export").with(anonymous()))
+					.andExpect(status().isForbidden());
+		}
+
+		@Test
 		@WithMockUser
 		void givenAuthenticatedNoCsrf_whenPostExport_thenForbidden() throws Exception {
 			// Default CSRF on prod profile rejects POSTs missing the _csrf token.
