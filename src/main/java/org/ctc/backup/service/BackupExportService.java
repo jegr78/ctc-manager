@@ -298,6 +298,15 @@ public class BackupExportService {
 		List<UploadEntry> entries = new ArrayList<>();
 		for (String relative : relativePaths) {
 			Path absolute = uploadRoot.resolve(relative).toAbsolutePath().normalize();
+			// Defense-in-depth: the resolved path MUST stay within uploadRoot.
+			// A malicious DB value such as "../../../../etc/passwd" would normalize
+			// to a path OUTSIDE uploadRoot — reject before any Files.exists() probe
+			// so we don't leak filesystem-state via timing.
+			if (!absolute.startsWith(uploadRoot)) {
+				log.warn("Skipping path-traversal upload reference: {} (resolved to {} outside {})",
+						relative, absolute, uploadRoot);
+				continue;
+			}
 			if (!Files.exists(absolute)) {
 				log.warn("Skipping orphan upload reference: {} (resolved to {})",
 						relative, absolute);

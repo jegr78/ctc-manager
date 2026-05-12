@@ -229,6 +229,26 @@ class BackupExportServiceTest {
 	}
 
 	@Test
+	void givenPathTraversalLogoUrl_whenEnumerateReferencedUploads_thenRejectedAtEnumeratorBoundary() throws Exception {
+		// given — a malicious DB row whose logoUrl escapes uploadRoot via ".."
+		Team malicious = new Team("Evil", "EVL");
+		malicious.setLogoUrl("/uploads/../../../../etc/passwd");
+
+		lenient().when(teamRepository.findAll()).thenReturn(List.of(malicious));
+		lenient().when(seasonTeamRepository.findAll()).thenReturn(List.of());
+		lenient().when(carRepository.findAll()).thenReturn(List.of());
+		lenient().when(trackRepository.findAll()).thenReturn(List.of());
+		lenient().when(raceAttachmentRepository.findAll()).thenReturn(List.of());
+
+		// when
+		List<UploadEntry> entries = service.enumerateReferencedUploads();
+
+		// then — the enumerator MUST reject path-traversal references before any
+		// Files.exists() probe so filesystem state outside uploadRoot is never leaked.
+		assertThat(entries).isEmpty();
+	}
+
+	@Test
 	void givenCarAndTrackWithImages_whenEnumerateReferencedUploads_thenBothPresentInDeclaredOrder() throws Exception {
 		// given
 		Path carFile = uploadRoot.resolve("cars/car-1.png");
