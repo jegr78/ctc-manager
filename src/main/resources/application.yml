@@ -2,7 +2,7 @@ app:
   upload-dir: data/dev/uploads
   version: @project.version@
   backup:
-    staging-dir: data/${spring.profiles.active}/backup-staging
+    staging-dir: data/${spring.profiles.active:dev}/backup-staging
 
 spring:
   application:
