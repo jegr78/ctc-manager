@@ -80,6 +80,15 @@ public class BackupController {
 				// container truncates the stream and the client sees a partial download.
 				log.error("Backup export I/O failure mid-stream (filename={})", filename, e);
 				throw new UncheckedIOException(e);
+			} catch (RuntimeException e) {
+				// Defense-in-depth: any non-IO RuntimeException from the service
+				// (LazyInitializationException, Jackson serialization errors,
+				// NoSuchElementException, ...) must be logged with the filename context
+				// BEFORE Spring's async dispatch unwinds the stack. Without this catch,
+				// mid-stream failures vanish into the AsyncRequestTimeoutException
+				// handler and are very hard to diagnose in production.
+				log.error("Backup export failure mid-stream (filename={})", filename, e);
+				throw e;
 			}
 		};
 
