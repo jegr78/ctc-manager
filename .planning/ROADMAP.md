@@ -133,7 +133,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 
 - [x] **Phase 71: Spring Boot 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard** — Bump platform, fix all fragment-parameter ternaries via controller `pageTitle`, install regression smoke + grep gate (completed 2026-05-11)
 - [ ] **Phase 72: Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit-Log Scope** — Define `BackupSchema.SCHEMA_VERSION` (integer), `BackupManifest`, `@Qualifier("backupObjectMapper")` bean, Flyway V7 audit table, lock per-entity ZIP layout + audit-out-of-scope decision
-- [ ] **Phase 73: Backup Export — Jackson MixIns + Streaming ZIP Endpoint** — Per-entity MixIns, `BackupExportService` with `@EntityGraph` eager-fetch, `BackupArchiveService.writeZip()`, `StreamingResponseBody`, admin form page
+- [x] **Phase 73: Backup Export — Jackson MixIns + Streaming ZIP Endpoint** — Per-entity MixIns, `BackupExportService` with `@EntityGraph` eager-fetch, `BackupArchiveService.writeZip()`, `StreamingResponseBody`, admin form page (completed 2026-05-12)
 - [ ] **Phase 74: Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate** — Multipart upload, manifest read-first + schema-version refusal before any DB write, ZIP-Slip + ZipBomb defenses, multipart limits + `MaxUploadSizeExceededException` mapping
 - [ ] **Phase 75: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT** — Single `@Transactional` wipe + restore (FK-reverse DELETE, `JdbcTemplate.batchUpdate` bypassing audit listeners), post-commit upload-tree restore, audit row, mid-restore-rollback IT, live MariaDB UAT against Saison-2023 fixture
 - [ ] **Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import** — `ImportLockService` `ReentrantLock` singleton, `@ControllerAdvice` write-rejection during import, persistent yellow banner, synchronous auto-export to `data/.import-backups/<ts>/` before wipe
@@ -208,13 +208,13 @@ Plans:
   4. `BackupExportService` runs under `@Transactional(readOnly=true)` and produces a streamed export of the dev fixture (Saison 2023 + 2024-3) without a single `LazyInitializationException` in the logs
   5. Anonymous (unauthenticated) `POST /admin/backup/export` is rejected by Spring Security on `prod`/`docker` profiles; CSRF token is required and verified
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 73-01-PLAN.md — Wave 1: 24 Jackson MixIns + BackupSerializationModule + 5 representative MixIn unit tests + BackupSerializationModuleTest + BackupEntityAnnotationCleanlinessIT (EXPORT-04)
 - [x] 73-02-PLAN.md — Wave 1: 24 repository findAllForBackup() methods with @EntityGraph(attributePaths) + BackupRepositoryEntityGraphIT (EXPORT-05)
 - [x] 73-03-PLAN.md — Wave 2: BackupExportService (@Transactional readOnly) + BackupArchiveService (manifest-first ZIP) + UploadEntry + 2 unit tests + BackupExportServiceIT + BackupArchiveServiceIT + BackupExportNoLazyInitIT + BackupUploadsMirrorIT + BackupRoundTripIT (EXPORT-02/03/05)
-- [ ] 73-04-PLAN.md — Wave 3: BackupController + admin/backup.html + admin/layout.html sidebar Data group + BackupControllerTest + BackupControllerIT + BackupControllerSecurityIT (prod+dev @Nested) + AdminLayoutIT + BackupExportE2ETest (EXPORT-01/02/06)
+- [x] 73-04-PLAN.md — Wave 3: BackupController + admin/backup.html + admin/layout.html sidebar Data group + BackupControllerTest + BackupControllerIT + BackupControllerSecurityIT (prod+dev @Nested) + AdminLayoutIT + BackupExportE2ETest (EXPORT-01/02/06)
 
 **UI hint**: yes
 
@@ -339,7 +339,7 @@ Plans:
 | ----- | -------------- | ------ | --------- |
 | 71. SB 4.0.6 Upgrade + Thymeleaf 3.1.5 Audit + Build Guard | 5/5 | Complete    | 2026-05-11 |
 | 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/5   | Planned     | — |
-| 73. Backup Export — Jackson MixIns + Streaming ZIP | 3/4 | In Progress|  |
+| 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete   | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 0/TBD | Not started | — |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/TBD | Not started | — |
