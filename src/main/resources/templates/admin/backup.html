@@ -16,6 +16,22 @@
             </button>
         </form>
     </div>
+    <div class="card">
+        <h2>Import Backup</h2>
+        <p class="text-dim mb-md" id="backupZipHelp">
+            Restores the league database from a previously exported ZIP archive.
+            The import is a two-step process: first you will see a preview of what will change,
+            then you confirm. The upload is limited to 100 MB.
+        </p>
+        <form th:action="@{/admin/backup/import-preview}" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="backupZip">Backup ZIP file</label>
+                <input type="file" id="backupZip" name="file" accept=".zip" required
+                       aria-describedby="backupZipHelp">
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg">Import Backup</button>
+        </form>
+    </div>
 </section>
 </body>
 </html>
