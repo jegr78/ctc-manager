@@ -216,8 +216,10 @@ class BackupImportE2ETest extends PlaywrightConfig {
         page.getByRole(AriaRole.BUTTON,
                 new Page.GetByRoleOptions().setName("Execute Import")).click();
 
-        // then — stay on confirm page (server returned view, no redirect)
-        assertThat(page).hasURL(Pattern.compile(".*/admin/backup/import-confirm$"));
+        // then — stay on the confirm/execute URL (server returned the backup-confirm VIEW via
+        // the /import-execute POST endpoint — no redirect on validation error, per Spring MVC
+        // convention; URL is /import-execute because that is the POST target, not a redirect).
+        assertThat(page).hasURL(Pattern.compile(".*/admin/backup/import-execute$"));
 
         // field-error visible with locked copy — class-only selector (tag-agnostic per Plan 09 Notes)
         assertThat(page.locator(".field-error")).isVisible();
@@ -276,10 +278,13 @@ class BackupImportE2ETest extends PlaywrightConfig {
                     .contains("Confirm")
                     .contains("I am an admin and I understand all operational data will be deleted.");
 
-            // POST to /admin/backup/import-execute in the same fresh, cookie-wiped context
+            // POST to /admin/backup/import-execute in the same fresh, cookie-wiped context.
+            // setMaxRedirects(0) prevents Playwright from following the redirect automatically —
+            // we need the raw 302/303 response to assert the Location header.
             APIResponse executeResp = freshContext.request().post(
                     url("/admin/backup/import-execute"),
                     RequestOptions.create()
+                            .setMaxRedirects(0)
                             .setForm(FormData.create()
                                     .set("stagingId", stagingUuid)
                                     .set("acknowledged", "true"))
