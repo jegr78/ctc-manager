@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!--
+  Phase 74 — Plan 08 stub template.
+  This stub exists solely to unblock BackupImportConfirmFormValidationIT
+  while the full template (Plan 09) is pending.
+  The full backup-confirm template will replace this file in Plan 09.
+-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Confirm Import', ~{::section})}">
+<body>
+<section>
+    <h1>Confirm Import (stub)</h1>
+    <form th:action="@{/admin/backup/import-execute}"
+          th:object="${backupImportConfirmForm}"
+          method="post">
+        <input type="hidden" th:field="*{stagingId}" />
+        <div>
+            <label>
+                <input type="checkbox" th:field="*{acknowledged}" value="true" />
+                I understand this will overwrite all data.
+            </label>
+            <span th:if="${#fields.hasErrors('acknowledged')}"
+                  th:errors="*{acknowledged}" class="field-error"></span>
+        </div>
+        <button type="submit" class="btn btn-primary">Import</button>
+    </form>
+    <form th:action="@{/admin/backup/import-cancel}" method="post">
+        <input type="hidden" name="stagingId"
+               th:value="${backupImportConfirmForm != null ? backupImportConfirmForm.stagingId : ''}" />
+        <button type="submit" class="btn">Cancel</button>
+    </form>
+</section>
+</body>
+</html>

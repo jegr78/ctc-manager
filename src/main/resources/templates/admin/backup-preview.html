@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!--
+  Phase 74 — Plan 08 stub template.
+  This stub exists solely to unblock BackupImportConfirmFormValidationIT
+  while the full template (Plan 09) is pending.
+  The full backup-preview template will replace this file in Plan 09.
+-->
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Backup Preview', ~{::section})}">
+<body>
+<section>
+    <h1>Backup Preview (stub)</h1>
+    <p th:if="${preview != null}">stagingId: <span th:text="${preview.stagingId}"></span></p>
+    <form th:action="@{/admin/backup/import-confirm}" method="post">
+        <input type="hidden" name="stagingId"
+               th:value="${preview != null ? preview.stagingId : ''}" />
+        <button type="submit" class="btn btn-primary">Continue</button>
+    </form>
+    <form th:action="@{/admin/backup/import-cancel}" method="post">
+        <input type="hidden" name="stagingId"
+               th:value="${preview != null ? preview.stagingId : ''}" />
+        <button type="submit" class="btn">Cancel</button>
+    </form>
+</section>
+</body>
+</html>
