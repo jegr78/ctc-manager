@@ -256,7 +256,19 @@ Plans:
   4. The previous `uploads/` directory tree is preserved at `data/.import-backups/<ts>/uploads-old/` after a successful import; the new tree is in place atomically (no half-written files visible to readers between the rename steps)
   5. Live MariaDB UAT (Saison-2023 driver fixture) confirms via the public site that standings, driver ranking, and phase breakdowns are visually identical after export → wipe → import
 
-**Plans**: TBD
+**Plans**: 10 plans
+
+Plans:
+- [ ] 75-01-PLAN.md — Wave 0: EntityRestorer SPI + RestoreFailureInjector + Noop@Primary + exceptions + BackupImportResult/Event records + app.backup.import-backups-dir
+- [ ] 75-02-PLAN.md — Wave 0: DataImportAuditService (REQUIRES_NEW writer) + DataImportAuditServiceTest + DataImportAuditSerializationTest
+- [ ] 75-03-PLAN.md — Wave 1: 9 Season-cluster restorers (Season, SeasonPhase, SeasonPhaseGroup, PhaseTeam, Driver, SeasonDriver, PsnAlias + 2-pass TeamRestorer + 2-pass SeasonTeamRestorer) + unit tests
+- [ ] 75-04-PLAN.md — Wave 1: 9 Match/Race-cluster restorers (Matchday, Match, MatchScoring, Race, RaceLineup, RaceResult, RaceScoring, RaceSettings, RaceAttachment) + unit tests
+- [ ] 75-05-PLAN.md — Wave 1: 6 Playoff/GT7 restorers (Playoff, PlayoffRound, PlayoffSeed, Car, Track + 2-pass PlayoffMatchupRestorer) + unit tests
+- [ ] 75-06-PLAN.md — Wave 2: BackupImportService.execute(UUID) + wipeAllTables + restoreAll + BackupArchiveService.extractUploadsTo + BackupImportException + rewriteBatchedStatements=true on 3 yml profiles + BackupImportExecuteIT + BackupArchiveExtractUploadsIT
+- [ ] 75-07-PLAN.md — Wave 2: BackupImportPostCommitListener (@TransactionalEventListener AFTER_COMMIT) + BackupImportPostCommitIT + TeamRestorerIT (H2 real-JdbcTemplate)
+- [ ] 75-08-PLAN.md — Wave 3: BackupController.importExecute upgrade (3 D-15 flash strings) + BackupControllerTest scenarios + BackupImportE2ETest extension (Playwright real-execute) + human-verify checkpoint
+- [ ] 75-09-PLAN.md — Wave 3: BackupImportRollbackIT (RestoreFailureInjector fails at race_results:500) + FailAtTableInjector @TestConfiguration
+- [ ] 75-10-PLAN.md — Wave 4: BackupImportMariaDbSmokeIT (Testcontainers MariaDB Saison-2023 round-trip) + mariadb-migration-smoke.yml integration + 75-HUMAN-UAT.md (6 screenshot pairs) + .screenshots/75/{before,after}/ dirs + HUMAN-UAT checkpoint
 
 ### Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import
 
@@ -343,7 +355,7 @@ Plans:
 | 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/5   | Planned     | — |
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete    | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
-| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 0/TBD | Not started | — |
+| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 0/10  | Planned     | — |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/TBD | Not started | — |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/TBD | Not started | — |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
