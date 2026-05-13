@@ -14,10 +14,10 @@
         <p>
             You are about to replace
             <strong th:text="${preview.totalImportedRows}">0</strong> rows across
-            <strong th:text="${entityCount}">0</strong> tables and restore
+            <strong th:text="${preview.entityCounts.size()}">0</strong> tables and restore
             <strong th:text="${preview.uploadFileCount}">0</strong> uploaded files from
             <strong th:text="${preview.originalFilename}">backup.zip</strong>
-            (<span th:text="${sizeInMb}">0.0</span> MB).
+            (<span th:text="${#numbers.formatDecimal(preview.fileSizeBytes / (1024.0 * 1024.0), 1, 2)}">0.00</span> MB).
         </p>
     </div>
 

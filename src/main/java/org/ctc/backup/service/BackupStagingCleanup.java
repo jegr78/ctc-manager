@@ -40,8 +40,11 @@ class BackupStagingCleanup {
         }
         try (Stream<Path> stream = Files.list(stagingDir)) {
             long deleted = stream
-                    .filter(p -> p.getFileName().toString().startsWith("upload-")
-                              && p.getFileName().toString().endsWith(".zip"))
+                    .filter(p -> {
+                        String name = p.getFileName().toString();
+                        return name.startsWith("upload-")
+                            && (name.endsWith(".zip") || name.endsWith(".zip.meta"));
+                    })
                     .mapToInt(this::deleteOrLog)
                     .sum();
             log.info("Cleared {} stale staging files", deleted);

@@ -7,7 +7,7 @@
 
     <div class="card mb-md">
         <p><strong>File:</strong> <span th:text="${preview.originalFilename}">backup.zip</span></p>
-        <p><strong>Size:</strong> <span th:text="${sizeInMb}">0.0</span> MB</p>
+        <p><strong>Size:</strong> <span th:text="${#numbers.formatDecimal(preview.fileSizeBytes / (1024.0 * 1024.0), 1, 2)}">0.00</span> MB</p>
         <p><strong>Uploads:</strong> <span th:text="${preview.uploadFileCount}">0</span> files</p>
         <p><strong>Total imported rows:</strong> <span th:text="${preview.totalImportedRows}">0</span></p>
     </div>

@@ -169,15 +169,20 @@ public class BackupImportService {
         // Step 3: allocate staging path
         UUID stagingId = UUID.randomUUID();
         Path staged = stagingDir.resolve("upload-" + stagingId + ".zip");
+        Path metaFile = stagingDir.resolve("upload-" + stagingId + ".zip.meta");
 
-        // Step 4: transfer multipart body to disk
+        // Step 4: transfer multipart body to disk + persist original filename for reparse()
         file.transferTo(staged);
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename != null) {
+            Files.writeString(metaFile, originalFilename, java.nio.charset.StandardCharsets.UTF_8);
+        }
 
         // Step 5: build preview — schema gate fires before any DB read (D-09)
         boolean keep = false;
         try {
             BackupImportPreview preview = buildPreview(stagingId, staged,
-                    file.getOriginalFilename(), file.getSize());
+                    originalFilename, file.getSize());
             keep = true;  // success — staging file survives for the confirm step
             return preview;
         } catch (BackupArchiveException | IOException ex) {
@@ -190,6 +195,7 @@ public class BackupImportService {
             if (!keep) {
                 try {
                     Files.deleteIfExists(staged);
+                    Files.deleteIfExists(metaFile);
                 } catch (IOException ioDel) {
                     log.warn("Failed to delete rejected staging file: {}", staged, ioDel);
                 }
@@ -212,14 +218,18 @@ public class BackupImportService {
      */
     public BackupImportPreview reparse(UUID stagingId) throws BackupArchiveException, IOException {
         Path staged = stagingDir.resolve("upload-" + stagingId + ".zip");
+        Path metaFile = stagingDir.resolve("upload-" + stagingId + ".zip.meta");
         if (!Files.exists(staged)) {
             // MANIFEST_MISSING is the closest canonical Reason — the staging file is the
             // manifest's container; if it's gone the manifest is gone (D-08 semantic overlap).
             throw new BackupArchiveException(Reason.MANIFEST_MISSING,
                     "Staging file not found for id=" + stagingId);
         }
-        // staged.getFileName() provides a non-null fallback for originalFilename on reparse
-        return buildPreview(stagingId, staged, staged.getFileName().toString(), Files.size(staged));
+        // Restore original filename from sidecar; fall back to staging filename if absent
+        String originalFilename = Files.exists(metaFile)
+                ? Files.readString(metaFile, java.nio.charset.StandardCharsets.UTF_8)
+                : staged.getFileName().toString();
+        return buildPreview(stagingId, staged, originalFilename, Files.size(staged));
     }
 
     /**
@@ -234,8 +244,10 @@ public class BackupImportService {
      */
     public void deleteStagingFile(UUID stagingId) {
         Path staged = stagingDir.resolve("upload-" + stagingId + ".zip");
+        Path metaFile = stagingDir.resolve("upload-" + stagingId + ".zip.meta");
         try {
             boolean deleted = Files.deleteIfExists(staged);
+            Files.deleteIfExists(metaFile);
             log.info("deleteStagingFile: stagingId={}, deleted={}", stagingId, deleted);
         } catch (IOException e) {
             log.warn("Failed to delete staging file: stagingId={}, path={}", stagingId, staged, e);
