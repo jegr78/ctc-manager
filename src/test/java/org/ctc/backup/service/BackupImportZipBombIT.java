@@ -172,9 +172,15 @@ class BackupImportZipBombIT {
     // =========================================================================
 
     /**
-     * Produces a ZIP with: valid manifest (entry #0) + one data entry with
+     * Produces a ZIP with: valid manifest (entry #0) + one {@code uploads/} entry with
      * {@code ZipEntry.setSize(Long.MAX_VALUE)} whose payload inflates to
      * {@code perEntryInflatedBytes} zeros (exceeds {@code MAX_ENTRY_BYTES}).
+     *
+     * <p>The bomb entry is placed under {@code uploads/} so that
+     * {@code BackupArchiveService.countUploadFiles()} drains it through a
+     * {@code LimitedInputStream}, triggering the per-entry cap. Entries under {@code data/}
+     * are only drained by {@code countDataEntries()}, which is not called in the
+     * {@code stage()} preview pipeline.
      */
     private static byte[] inflationBombZip(long perEntryInflatedBytes, BackupSchema schema)
             throws IOException {
@@ -182,8 +188,8 @@ class BackupImportZipBombIT {
         try (ZipOutputStream zip = new ZipOutputStream(out)) {
             writeValidManifest(zip);
 
-            // Lie about the size in the header — LimitedInputStream must ignore this
-            ZipEntry bombEntry = new ZipEntry("data/seasons.json");
+            // Lie about the size in the header — LimitedInputStream must ignore this value
+            ZipEntry bombEntry = new ZipEntry("uploads/bomb.bin");
             bombEntry.setSize(Long.MAX_VALUE);
             zip.putNextEntry(bombEntry);
             // Write zero bytes — Deflate compresses this very efficiently (~200 bytes on disk)
@@ -197,11 +203,12 @@ class BackupImportZipBombIT {
     }
 
     /**
-     * Produces a ZIP with: valid manifest (entry #0) + {@code entryCount} data entries
-     * each inflating to {@code perEntryInflatedBytes} zeros.
+     * Produces a ZIP with: valid manifest (entry #0) + {@code entryCount} {@code uploads/}
+     * entries each inflating to {@code perEntryInflatedBytes} zeros.
      *
      * <p>Each entry stays under {@code MAX_ENTRY_BYTES}; the cumulative total exceeds
-     * {@code MAX_TOTAL_BYTES}.
+     * {@code MAX_TOTAL_BYTES}. Placed under {@code uploads/} so
+     * {@code BackupArchiveService.countUploadFiles()} drains them.
      */
     private static byte[] totalSizeBombZip(int entryCount, long perEntryInflatedBytes,
             BackupSchema schema) throws IOException {
@@ -212,7 +219,7 @@ class BackupImportZipBombIT {
             byte[] zeros = new byte[(int) Math.min(perEntryInflatedBytes, Integer.MAX_VALUE)];
             Arrays.fill(zeros, (byte) 0);
             for (int i = 0; i < entryCount; i++) {
-                zip.putNextEntry(new ZipEntry("data/entity-" + i + ".json"));
+                zip.putNextEntry(new ZipEntry("uploads/file-" + i + ".bin"));
                 zip.write(zeros);
                 zip.closeEntry();
             }
