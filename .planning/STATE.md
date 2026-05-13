@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.10
-milestone_name: Spring Boot Upgrade & Data Export/Import
-status: executing
+milestone_name: Spring Boot 4.0.6 Upgrade & Data Export/Import
+status: completed
 stopped_at: Phase 74 UI-SPEC approved
-last_updated: "2026-05-12T15:06:58.973Z"
-last_activity: 2026-05-12 -- Phase 74 planning complete
+last_updated: "2026-05-13T19:13:17.396Z"
+last_activity: 2026-05-13 -- Phase 74 marked complete
 progress:
   total_phases: 8
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 27
-  completed_plans: 17
+  completed_plans: 27
   percent: 63
 ---
 
@@ -22,15 +22,15 @@ See: .planning/PROJECT.md (updated 2026-05-09)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 73 — Backup Export — Jackson MixIns + Streaming ZIP Endpoint
+**Current focus:** Phase 74 — backup-import-preview-zip-hardening-multipart-config-schema
 
 ## Current Position
 
-Phase: 78
-Plan: Not started
+Phase: 74 — COMPLETE
+Plan: 1 of 10
 Plans: 5 of 5 complete (72-01 BackupSchema, 72-02 BackupManifest, 72-03 BackupObjectMapperConfig, 72-04 V7+DataImportAudit, 72-05 doc anchors)
-Status: Ready to execute
-Last activity: 2026-05-12 -- Phase 74 planning complete
+Status: Phase 74 complete
+Last activity: 2026-05-13 -- Phase 74 marked complete
 
 ## Completed Milestones
 

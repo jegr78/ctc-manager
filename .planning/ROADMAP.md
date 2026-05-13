@@ -218,9 +218,11 @@ Plans:
 
 **UI hint**: yes
 
-### Phase 74: Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate
+### Phase 74: Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate ✓
 
-**Goal**: A no-write import path that reads the manifest, validates the schema version, and renders a per-table wipe + restore preview — without ever touching the database. ZIP-Slip and ZipBomb defenses harden the multipart upload (per-entry 50 MB / total 500 MB / 50.000 entries cap; `startsWith(uploadDir.toRealPath())` traversal check reusing the v1.1 SECU-02 defense). Multipart limits are raised to 100 MB on Spring AND Tomcat layers (Tomcat's `max-http-form-post-size` and `max-swallow-size` overlap-aware). `MaxUploadSizeExceededException` is mapped in `GlobalExceptionHandler` with a friendly Flash message. The schema-version mismatch is rejected as HTTP 400 + Flash before any DB-write transaction begins (catastrophic-data-loss prevention).
+**Status**: Completed 2026-05-13 — 10 plans across 6 dependency-derived waves; `./mvnw verify -Pe2e` BUILD SUCCESS; JaCoCo coverage gate met.
+
+**Goal**: A no-write import path that reads the manifest, validates the schema version, and renders a per-table wipe + restore preview — without ever touching the database. ZIP-Slip and ZipBomb defenses harden the multipart upload (per-entry 50 MB / total 500 MB / 50.000 entries cap; `startsWith(uploadDir.toRealPath())` traversal check reusing the v1.1 SECU-02 defense). Multipart limits are raised to 100 MB on Spring AND Tomcat layers (Tomcat's `max-http-form-post-size` and `max-swallow-size` overlap-aware). `MaxUploadSizeExceededException` is mapped via a separate `BackupUploadExceptionHandler` `@ControllerAdvice` (NOT `GlobalExceptionHandler` — RESEARCH risk #2 mixed-return-type) with a friendly Flash message. The schema-version mismatch is rejected as HTTP 400 + Flash before any DB-write transaction begins (catastrophic-data-loss prevention).
 
 **Depends on**: Phase 73 (round-trip needs an export to validate the import preview against; preview re-uses `BackupManifest` + `backupObjectMapper`)
 
@@ -231,10 +233,10 @@ Plans:
   1. Admin uploads a ZIP via `POST /admin/backup/import-preview`, lands on a preview screen with per-table current-rows vs imported-rows + uploads-file count + schema-version-match indicator
   2. A ZIP whose `manifest.schema_version` ≠ `BackupSchema.SCHEMA_VERSION` is rejected with HTTP 400 + an admin-readable Flash message; an IT proves the database is byte-identically unchanged after the rejection
   3. A ZIP containing a path-traversal entry (`../../etc/passwd`), an absolute path, or a per-entry size > 50 MB is rejected with a Flash message; a malicious test fixture is committed to verify
-  4. An upload exceeding 100 MB triggers `MaxUploadSizeExceededException` and renders the user-facing Flash message "Backup-Datei überschreitet die Maximalgröße von 100 MB. Bitte komprimieren oder kontaktieren Sie den Admin." instead of a Tomcat stack trace
-  5. Preview state is STATELESS — re-parse on execute via the staging-path pattern; no `@SessionAttributes`, mirroring v1.8 D-15
+  4. An upload exceeding 100 MB triggers `MaxUploadSizeExceededException` and renders the user-facing Flash message (locked English per CONTEXT D-01/D-02: `Upload too large — maximum is 100 MB.`) instead of a Tomcat stack trace ✓
+  5. Preview state is STATELESS — re-parse on execute via the staging-path pattern; no `@SessionAttributes`, mirroring v1.8 D-15 ✓ (proven by `BackupImportE2ETest` cookie-jar test)
 
-**Plans**: TBD
+**Plans**: 10 (01 multipart config · 02 ZIP hardening primitives · 03 DTO records · 04 BackupArchiveService reader · 05 BackupImportService · 06 BackupUploadExceptionHandler · 07 BackupStagingCleanup · 08 BackupController endpoints · 09 templates · 10 Playwright E2E)
 
 **UI hint**: yes
 
