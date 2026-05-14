@@ -285,7 +285,13 @@ Plans:
   3. The auto-backup ZIP is present at `data/.import-backups/<ts>/auto-backup-before-import.zip` after every (successful or failed) import attempt; if the auto-export step itself fails, the import is aborted with no DB mutation and a clear Flash message
   4. The 24 h retention of `data/.import-backups/<ts>/uploads-old/` and the auto-backup ZIP is documented in the operational runbook (text file, not a UI feature)
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 76-01-PLAN.md — Wave 1: ImportLockService singleton + BackupController.importExecute tryLock/finally wrapper + 409 View-mode redirect + BlockingRestoreFailureInjector test support + ImportConcurrentLockIT (SECU-05)
+- [ ] 76-02-PLAN.md — Wave 2: ImportLockBannerAdvice (@ControllerAdvice) + ImportLockedWriteRejector (HandlerInterceptor) + WebConfig.addInterceptors + admin/layout.html banner div + ImportLockedPostRejectorIT + ImportLockBannerAdviceIT (SECU-06)
+- [ ] 76-03-PLAN.md — Wave 3: AutoBackupBeforeImportException + BackupImportService.execute Step 0.5 auto-export block + <ts> move upward + BackupController catch-chain extension + AutoBackupBeforeImportPathIT + AutoBackupBeforeImportFailureIT (SECU-07)
+- [ ] 76-04-PLAN.md — Wave 4: docs/operations/import-runbook.md (5 sections per D-22) + final ./mvnw verify -Pe2e gate + human-verify checkpoint (5 sub-verifications + screenshots under .screenshots/76/)
 
 **UI hint**: yes
 
@@ -356,6 +362,6 @@ Plans:
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete    | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 10/10 | Complete    | 2026-05-14 |
-| 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/TBD | Not started | — |
+| 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/4 | Planned     | — |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/TBD | Not started | — |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
