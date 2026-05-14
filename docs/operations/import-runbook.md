@@ -78,8 +78,16 @@ Every import attempt — successful, mid-restore-failed, or pre-import-auto-back
 records exactly one row in the `data_import_audit` table via a `REQUIRES_NEW`
 propagation so the row survives the outer transaction rollback.
 
-The audit UUID appears in the user-facing flash message after a failed import. To
-investigate:
+The audit UUID appears in the user-facing flash message after a failed import. The
+exact wording the operator sees on the pre-import-auto-backup-failure path is:
+
+> `Import aborted — pre-import auto-backup failed. No database changes. Audit-id: <uuid>.`
+
+On the mid-restore-failure path, the flash reads:
+
+> `Import failed and was rolled back — see logs. Audit-id: <uuid>.`
+
+To investigate either flash:
 
 ```sql
 SELECT id, executed_at, executed_by, schema_version, success,
