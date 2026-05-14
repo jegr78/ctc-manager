@@ -7,9 +7,9 @@ import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.dto.BackupImportResult;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -82,7 +82,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("local")
 @Testcontainers
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@EnabledIfSystemProperty(named = "docker.available", matches = "true",
+        disabledReason = "Set -Ddocker.available=true (with a running Docker daemon) to run the MariaDB Testcontainers round-trip IT")
 class BackupImportMariaDbSmokeIT {
 
     /** Defensive table-name allow-list mirroring {@code BackupImportService.SAFE_TABLE_NAME}. */
@@ -132,7 +133,7 @@ class BackupImportMariaDbSmokeIT {
 
     Path stagingDir;
 
-    @BeforeAll
+    @BeforeEach
     void seedFixture() throws IOException {
         // REVISION-iteration-1 (B1): testDataService.seedSaison2023() does NOT exist. The
         // single entry point seed() loads the full dev fixture (Saison 2023 + 2024 +

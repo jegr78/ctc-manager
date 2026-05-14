@@ -13,7 +13,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -127,31 +126,32 @@ class BackupImportConfirmFormValidationIT {
 	}
 
 	// -------------------------------------------------------------------------
-	// Test 3: acknowledged=true → redirect to /admin/backup with D-02#5 stub flash
+	// Test 3: acknowledged=true → redirect to /admin/backup with Phase-75 real success flash
 	// -------------------------------------------------------------------------
 
 	@Test
-	void givenAcknowledgedTrue_whenPostImportExecute_thenRedirectsToBackupWithStubFlash()
+	void givenAcknowledgedTrue_whenPostImportExecute_thenRedirectsToBackupWithSuccessFlash()
 			throws Exception {
 		// given — a real staged ZIP
 		String stagingId = stageValidZip();
 
-		// when / then
+		// when / then — Phase 75 (D-15 #1) replaces the Phase-74 stub flash with the real
+		// "Import completed. {N} rows restored across {M} tables." message
 		mockMvc.perform(post("/admin/backup/import-execute")
 						.param("stagingId", stagingId)
 						.param("acknowledged", "true"))
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/admin/backup"))
 				.andExpect(flash().attribute("successMessage",
-						"Validation succeeded. Import execution will be enabled in Phase 75."));
+						org.hamcrest.Matchers.startsWith("Import completed.")));
 	}
 
 	// -------------------------------------------------------------------------
-	// Test 4: D-08 Seam — staging file NOT deleted by stub
+	// Test 4: Phase 75 — staging file is deleted by BackupImportPostCommitListener Step 4
 	// -------------------------------------------------------------------------
 
 	@Test
-	void givenSuccessfulExecuteStub_whenAcknowledgedTrue_thenStagingFileStillExists()
+	void givenSuccessfulExecute_whenAcknowledgedTrue_thenStagingFileIsDeleted()
 			throws Exception {
 		// given — stage a valid ZIP
 		String stagingIdStr = stageValidZip();
@@ -162,18 +162,16 @@ class BackupImportConfirmFormValidationIT {
 		// Verify file exists before execute call
 		assertThat(expectedFile).exists();
 
-		// when — execute stub with acknowledged=true
+		// when — execute with acknowledged=true (real Phase-75 import path)
 		mockMvc.perform(post("/admin/backup/import-execute")
 						.param("stagingId", stagingIdStr)
 						.param("acknowledged", "true"))
 				.andExpect(status().is3xxRedirection());
 
-		// then — D-08: staging file must still exist (Phase 75 inherits it)
+		// then — Phase 75: BackupImportPostCommitListener Step 4 deletes the staging file
+		// after the AFTER_COMMIT move-triple completes (the Phase-74 D-08 seam is gone)
 		assertThat(expectedFile)
-				.as("D-08: staging file must survive Phase-74 stub execute")
-				.exists();
-
-		// Cleanup — delete the staging file after assertion so the test environment stays clean
-		Files.deleteIfExists(expectedFile);
+				.as("Phase 75: staging file is deleted by BackupImportPostCommitListener Step 4")
+				.doesNotExist();
 	}
 }
