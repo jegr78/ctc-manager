@@ -504,8 +504,8 @@ public class BackupImportService {
 
             // Step 2: extract staged uploads (D-12) — BEFORE restore so a restore failure leaves
             // the FS staging area visible for forensic inspection but the catch-block still
-            // best-effort cleans uploads-new/.
-            Files.createDirectories(importBackupDir);
+            // best-effort cleans uploads-new/. importBackupDir was already created in Step 0.5
+            // (D-15 single-source-of-truth), so only the uploadsNewDir sibling needs creation.
             Files.createDirectories(uploadsNewDir);
             backupArchive.extractUploadsTo(staged, uploadsNewDir);
 

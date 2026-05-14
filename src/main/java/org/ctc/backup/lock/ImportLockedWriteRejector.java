@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.IOException;
+import java.util.Set;
 
 /**
  * Phase 76 / Plan 02 — Ring 2 write-rejector (SECU-06 / CONTEXT D-07 through D-10).
@@ -35,6 +36,14 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
 
     private final ImportLockService importLockService;
 
+    /**
+     * HTTP verbs that mutate server state. PUT/PATCH/DELETE are not used by any current
+     * admin controller, but the contract from 76-02-SUMMARY — and the SECU-06 goal of
+     * "no writes anywhere during an import" — requires that any future controller using
+     * those verbs is automatically gated by Ring 2 without per-endpoint changes.
+     */
+    private static final Set<String> MUTATING_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
+
     /** Minimal 503 HTML body — wording matches admin/layout.html banner verbatim (D-12). */
     private static final String LOCK_HTML = """
             <!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -44,11 +53,11 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
             """;
 
     /**
-     * Short-circuits non-whitelisted POST requests while the import lock is held.
+     * Short-circuits non-whitelisted mutating requests while the import lock is held.
      *
      * <p>Decision tree (CONTEXT D-08):
      * <ol>
-     *   <li>Non-POST methods → allow (GET is never rejected; only POST mutates state).</li>
+     *   <li>Non-mutating method (GET/HEAD/OPTIONS/…) → allow.</li>
      *   <li>Lock not held → allow (normal operation).</li>
      *   <li>Whitelisted URL {@code /admin/backup/import-execute} → allow (D-09 / D-10).</li>
      *   <li>Else → reject with HTTP 503 + HTML body; return {@code false}.</li>
@@ -59,9 +68,9 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler)
             throws IOException {
-        if (!"POST".equalsIgnoreCase(req.getMethod())) return true;         // step 1 — non-POST: allow
-        if (!importLockService.isLocked()) return true;                     // step 2 — no lock: allow
-        if ("/admin/backup/import-execute".equals(req.getRequestURI())) return true; // step 3 — whitelist (D-09 / D-10)
+        if (!MUTATING_METHODS.contains(req.getMethod().toUpperCase())) return true;   // step 1 — read-only verb: allow
+        if (!importLockService.isLocked()) return true;                                // step 2 — no lock: allow
+        if ("/admin/backup/import-execute".equals(req.getRequestURI())) return true;   // step 3 — whitelist (D-09 / D-10)
         log.info("Rejected admin POST during import lock: {} {}", req.getMethod(), req.getRequestURI());
         res.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
         res.setContentType("text/html;charset=UTF-8");
