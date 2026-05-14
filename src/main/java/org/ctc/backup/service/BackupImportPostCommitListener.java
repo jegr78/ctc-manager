@@ -112,6 +112,19 @@ public class BackupImportPostCommitListener {
             log.error("AFTER_COMMIT Step 2 failed: attempting Step-1 revert", e);
             try {
                 if (Files.exists(uploadsOld)) {
+                    // CR-02 defensive sweep: if Step 2 partially materialized uploadsTarget
+                    // (e.g. non-atomic-move fallback on some filesystems, or a third-party
+                    // process dropped a metadata inode under uploadsTarget between Step 1
+                    // and the revert attempt), ATOMIC_MOVE of uploads-old → uploadsTarget
+                    // would fail with FileAlreadyExistsException, stranding the operator
+                    // with NO uploads tree. Sweep any leftover aside first so the revert
+                    // can complete.
+                    if (Files.exists(uploadsTarget)) {
+                        Path orphan = importBackupDir.resolve("uploads-step2-orphan");
+                        Files.move(uploadsTarget, orphan, StandardCopyOption.ATOMIC_MOVE);
+                        log.warn("Step-2 left orphan at {} - moved to {} before Step-1 revert",
+                                uploadsTarget, orphan);
+                    }
                     Files.move(uploadsOld, uploadsTarget, StandardCopyOption.ATOMIC_MOVE);
                     log.warn("Step-1 revert succeeded; uploads tree restored to pre-import state");
                 } else {
