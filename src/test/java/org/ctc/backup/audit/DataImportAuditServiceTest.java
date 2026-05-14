@@ -2,39 +2,46 @@ package org.ctc.backup.audit;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 /**
  * Phase 75 / Plan 02 — Surefire unit tests for {@link DataImportAuditService}.
  *
  * <p>Boots a {@code @SpringBootTest @ActiveProfiles("dev")} context so the embedded H2
  * datasource, the Phase 72 V7 migration, and the {@code @Qualifier("backupObjectMapper")}
- * bean are all wired. The {@link DataImportAuditRepository} is replaced via
- * {@link MockitoBean} so the test stays behaviorally focused (no JPA assertions — those
- * live in Plan 06 IT). The {@link PlatformTransactionManager} is observed via
+ * bean are all wired. The {@link PlatformTransactionManager} is observed via
  * {@link MockitoSpyBean} so the REQUIRES_NEW propagation can be asserted mechanically
  * (per RESEARCH §Pitfall 3).
+ *
+ * <p><strong>Plan 07 update (Rule-1 fix):</strong> the service now writes the audit row via a
+ * direct {@code JdbcTemplate.update(...)} INSERT (see {@link DataImportAuditService} class
+ * Javadoc — both {@code repository.save(...)} and {@code em.persist(...)} fail on a
+ * pre-allocated UUID with {@code GenerationType.UUID}). Tests therefore read back via the real
+ * {@link DataImportAuditRepository#findById(Object)} against the embedded H2 row. Because the
+ * service runs under {@code REQUIRES_NEW}, every {@code recordResult} call commits in its own
+ * inner transaction — a class-level {@code @Transactional} on the test would NOT roll those
+ * rows back. Instead, every persisted row is tracked and deleted explicitly in
+ * {@link #cleanupPersistedRows()} so tests stay isolated.
  */
 @SpringBootTest
 @ActiveProfiles("dev")
@@ -47,22 +54,32 @@ class DataImportAuditServiceTest {
     @Qualifier("backupObjectMapper")
     private ObjectMapper backupObjectMapper;
 
-    @MockitoBean
+    @Autowired
     private DataImportAuditRepository repository;
 
     @MockitoSpyBean
     private PlatformTransactionManager transactionManager;
 
-    @BeforeEach
-    void setUp() {
-        when(repository.save(any(DataImportAudit.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
+    /** UUIDs persisted during a test; deleted in {@link #cleanupPersistedRows()}. */
+    private final List<UUID> persistedAuditIds = new ArrayList<>();
+
+    @AfterEach
+    void cleanupPersistedRows() {
+        for (UUID auditId : persistedAuditIds) {
+            try {
+                repository.deleteById(auditId);
+            } catch (RuntimeException ignored) {
+                // best-effort — the next test will still see a clean slate via fresh UUIDs
+            }
+        }
+        persistedAuditIds.clear();
     }
 
     @Test
-    void givenSuccessfulImport_whenRecordResultCalled_thenRepositorySaveInvokedWithBuiltEntity() throws Exception {
+    void givenSuccessfulImport_whenRecordResultCalled_thenEntityPersistedWithBuiltFields() throws Exception {
         // given
         UUID auditId = UUID.randomUUID();
+        persistedAuditIds.add(auditId);
         Map<String, Long> wiped = new LinkedHashMap<>();
         wiped.put("cars", 12L);
         wiped.put("drivers", 7L);
@@ -74,34 +91,34 @@ class DataImportAuditServiceTest {
         DataImportAudit returned = service.recordResult(
                 auditId, null, 1, wiped, restored, "backup-2026-05-14.zip", true);
 
-        // then — repository.save was invoked once with the captured entity
-        ArgumentCaptor<DataImportAudit> captor = ArgumentCaptor.forClass(DataImportAudit.class);
-        verify(repository).save(captor.capture());
-        DataImportAudit captured = captor.getValue();
+        // then — row exists with the expected fields (read-back via repository)
+        DataImportAudit reloaded = repository.findById(auditId).orElseThrow(
+                () -> new AssertionError("Audit row not persisted for id=" + auditId));
 
-        assertThat(captured.getId()).isEqualTo(auditId);
-        assertThat(captured.isSuccess()).isTrue();
-        assertThat(captured.getExecutedBy()).isEqualTo("dev"); // dev profile fork
-        assertThat(captured.getExecutedAt()).isNotNull();
-        assertThat(captured.getSchemaVersion()).isEqualTo(1);
-        assertThat(captured.getSourceFilename()).isEqualTo("backup-2026-05-14.zip");
+        assertThat(reloaded.getId()).isEqualTo(auditId);
+        assertThat(reloaded.isSuccess()).isTrue();
+        assertThat(reloaded.getExecutedBy()).isEqualTo("dev"); // dev profile fork
+        assertThat(reloaded.getExecutedAt()).isNotNull();
+        assertThat(reloaded.getSchemaVersion()).isEqualTo(1);
+        assertThat(reloaded.getSourceFilename()).isEqualTo("backup-2026-05-14.zip");
 
         // and — JSON-text round-trips back through the same backupObjectMapper
         Map<String, Long> roundTrippedWiped = backupObjectMapper.readValue(
-                captured.getTableCountsWiped(), new TypeReference<>() { });
+                reloaded.getTableCountsWiped(), new TypeReference<>() { });
         Map<String, Long> roundTrippedRestored = backupObjectMapper.readValue(
-                captured.getTableCountsRestored(), new TypeReference<>() { });
+                reloaded.getTableCountsRestored(), new TypeReference<>() { });
         assertThat(roundTrippedWiped).isEqualTo(wiped);
         assertThat(roundTrippedRestored).isEqualTo(restored);
 
-        // and — the returned entity is the same instance (mock returns input via thenAnswer)
-        assertThat(returned).isSameAs(captured);
+        // and — the returned entity carries the same ID
+        assertThat(returned.getId()).isEqualTo(auditId);
     }
 
     @Test
     void givenFailedImport_whenRecordResultCalled_thenSuccessFalseAndEmptyJsonMaps() {
         // given
         UUID auditId = UUID.randomUUID();
+        persistedAuditIds.add(auditId);
         Map<String, Long> emptyWiped = Collections.emptyMap();
         Map<String, Long> emptyRestored = Collections.emptyMap();
 
@@ -110,21 +127,21 @@ class DataImportAuditServiceTest {
                 "broken-backup.zip", false);
 
         // then
-        ArgumentCaptor<DataImportAudit> captor = ArgumentCaptor.forClass(DataImportAudit.class);
-        verify(repository).save(captor.capture());
-        DataImportAudit captured = captor.getValue();
+        DataImportAudit reloaded = repository.findById(auditId).orElseThrow(
+                () -> new AssertionError("Failure-path audit row not persisted for id=" + auditId));
 
-        assertThat(captured.isSuccess()).isFalse();
-        assertThat(captured.getTableCountsWiped()).isEqualTo("{}");
-        assertThat(captured.getTableCountsRestored()).isEqualTo("{}");
-        assertThat(captured.getSourceFilename()).isEqualTo("broken-backup.zip");
-        assertThat(captured.getExecutedBy()).isEqualTo("dev");
+        assertThat(reloaded.isSuccess()).isFalse();
+        assertThat(reloaded.getTableCountsWiped()).isEqualTo("{}");
+        assertThat(reloaded.getTableCountsRestored()).isEqualTo("{}");
+        assertThat(reloaded.getSourceFilename()).isEqualTo("broken-backup.zip");
+        assertThat(reloaded.getExecutedBy()).isEqualTo("dev");
     }
 
     @Test
     void givenRequiresNewPropagation_whenRecordResultInvoked_thenSpyTxManagerOpensNewTransaction() {
         // given
         UUID auditId = UUID.randomUUID();
+        persistedAuditIds.add(auditId);
 
         // when
         service.recordResult(auditId, null, 1, Map.of(), Map.of(),

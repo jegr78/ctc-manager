@@ -5,12 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.env.Environment;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -46,15 +48,36 @@ import java.util.UUID;
 @Service
 public class DataImportAuditService {
 
-    private final DataImportAuditRepository repository;
+    /**
+     * Plan 07 Rule-1 fix: write the audit row via {@link JdbcTemplate#update(String, Object...)}
+     * instead of {@code repository.save(...)} or {@code em.persist(...)}.
+     *
+     * <p>Rationale: {@link DataImportAudit} carries {@code @GeneratedValue(strategy = UUID)} but
+     * Phase 75 deliberately sets the UUID up-front (the controller flashes it BEFORE the outer
+     * tx commits — D-15). Spring Data {@code SimpleJpaRepository.save(...)} dispatches to
+     * {@code em.merge(...)} when the ID is non-null, producing an
+     * {@code ObjectOptimisticLockingFailureException} on a brand-new row. Switching to
+     * {@code em.persist(...)} instead throws {@code EntityExistsException} ("Detached entity
+     * passed to persist") because Hibernate's identity-strategy logic flags any non-null
+     * pre-allocated UUID as "already persisted elsewhere". A direct JDBC INSERT sidesteps both
+     * traps and stays consistent with the Plan 75 design driver (AuditingEntityListener bypass
+     * via {@link JdbcTemplate}).
+     */
+    private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper backupObjectMapper;
     private final Environment environment;
 
+    private static final String INSERT_SQL =
+            "INSERT INTO data_import_audit "
+                    + "(id, executed_at, executed_by, schema_version, table_counts_wiped, "
+                    + "table_counts_restored, source_filename, success) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
     public DataImportAuditService(
-            DataImportAuditRepository repository,
+            JdbcTemplate jdbcTemplate,
             @Qualifier("backupObjectMapper") ObjectMapper backupObjectMapper,
             Environment environment) {
-        this.repository = repository;
+        this.jdbcTemplate = jdbcTemplate;
         this.backupObjectMapper = backupObjectMapper;
         this.environment = environment;
     }
@@ -85,24 +108,37 @@ public class DataImportAuditService {
             String sourceFilename,
             boolean success) {
 
+        Instant executedAt = Instant.now();
         String resolvedExecutedBy = resolveExecutedBy(executedByCaller);
-        DataImportAudit audit = DataImportAudit.builder()
-                .id(auditId)
-                .executedAt(Instant.now())
-                .executedBy(resolvedExecutedBy)
-                .schemaVersion(schemaVersion)
-                .tableCountsWiped(writeJson(tableCountsWiped))
-                .tableCountsRestored(writeJson(tableCountsRestored))
-                .sourceFilename(sourceFilename)
-                .success(success)
-                .build();
-        DataImportAudit saved = repository.save(audit);
+        String wipedJson = writeJson(tableCountsWiped);
+        String restoredJson = writeJson(tableCountsRestored);
+
+        jdbcTemplate.update(INSERT_SQL,
+                auditId,
+                Timestamp.from(executedAt),
+                resolvedExecutedBy,
+                schemaVersion,
+                wipedJson,
+                restoredJson,
+                sourceFilename,
+                success);
+
         long totalRestored = tableCountsRestored == null
                 ? 0L
                 : tableCountsRestored.values().stream().mapToLong(Long::longValue).sum();
         log.info("Audit row written: id={}, success={}, totalRestored={}",
-                saved.getId(), success, totalRestored);
-        return saved;
+                auditId, success, totalRestored);
+
+        return DataImportAudit.builder()
+                .id(auditId)
+                .executedAt(executedAt)
+                .executedBy(resolvedExecutedBy)
+                .schemaVersion(schemaVersion)
+                .tableCountsWiped(wipedJson)
+                .tableCountsRestored(restoredJson)
+                .sourceFilename(sourceFilename)
+                .success(success)
+                .build();
     }
 
     /**
