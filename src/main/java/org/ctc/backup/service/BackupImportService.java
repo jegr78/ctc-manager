@@ -56,7 +56,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.util.zip.ZipFile;
 
 /**
  * Stateless orchestrator for the backup import pipeline.
@@ -584,14 +584,21 @@ public class BackupImportService {
      * @throws IOException on ZIP / JSON parse failure (caller catches and rolls back)
      */
     void restoreAll(Path staged, Map<String, Long> restoredCounts) throws IOException {
-        for (EntityRef ref : backupSchema.getExportOrder()) {
-            String table = ref.tableName();
-            EntityRestorer restorer = restorerByTableName.get(table);
-            if (restorer == null) {
-                throw new IllegalStateException("No EntityRestorer wired for tableName=" + table);
+        // WR-05: open the ZIP exactly once (random-access ZipFile) instead of re-opening a
+        // ZipInputStream per entity (24× rescans from the start). This eliminates the on-Windows
+        // race where the listener's Step-4 cleanup can hit the same staging file while a
+        // JVM-internal ZipInputStream lifecycle is still settling, and is a meaningful perf
+        // win on the Saison-2023 ~1000-row fixture.
+        try (ZipFile zf = new ZipFile(staged.toFile())) {
+            for (EntityRef ref : backupSchema.getExportOrder()) {
+                String table = ref.tableName();
+                EntityRestorer restorer = restorerByTableName.get(table);
+                if (restorer == null) {
+                    throw new IllegalStateException("No EntityRestorer wired for tableName=" + table);
+                }
+                long restored = restoreOneTable(zf, ref, restorer);
+                restoredCounts.put(table, restored);
             }
-            long restored = restoreOneTable(staged, ref, restorer);
-            restoredCounts.put(table, restored);
         }
         log.info("Restore completed: {} tables, total rows restored={}", restoredCounts.size(),
                 restoredCounts.values().stream().mapToLong(Long::longValue).sum());
@@ -602,58 +609,61 @@ public class BackupImportService {
      * array with a Jackson {@link JsonParser}, accumulating batches of
      * {@link #RESTORE_BATCH_SIZE} rows, and delegating to
      * {@link EntityRestorer#restore(List, JdbcTemplate)} per batch.
+     *
+     * <p>WR-05: takes an open {@link ZipFile} so the caller can resolve the entry by name
+     * via the random-access {@link ZipFile#getEntry(String)} lookup, then stream the JSON
+     * through {@link ZipFile#getInputStream(ZipEntry)} — no per-entity rescan.
      */
-    private long restoreOneTable(Path staged, EntityRef ref, EntityRestorer restorer) throws IOException {
+    private long restoreOneTable(ZipFile zf, EntityRef ref, EntityRestorer restorer) throws IOException {
         String entryPath = ref.fileName();
         long totalRows = 0;
         List<JsonNode> batch = new ArrayList<>(RESTORE_BATCH_SIZE);
 
-        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(staged))) {
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                if (entryPath.equals(entry.getName())) {
-                    // Found the data file for this entity — stream-parse the JSON array.
-                    JsonParser parser = backupObjectMapper.getFactory().createParser((InputStream) zis);
-                    parser.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
-                    try {
-                        JsonToken firstToken = parser.nextToken();
-                        if (firstToken != JsonToken.START_ARRAY) {
-                            throw new BackupArchiveException(Reason.MANIFEST_INVALID,
-                                    "data file is not a JSON array: " + entryPath);
-                        }
-                        int rowIndex = 0;
-                        JsonToken tok;
-                        while ((tok = parser.nextToken()) != null && tok != JsonToken.END_ARRAY) {
-                            if (tok == JsonToken.START_OBJECT) {
-                                JsonNode row = backupObjectMapper.readTree(parser);
-                                batch.add(row);
-                                rowIndex++;
-                                totalRows++;
+        ZipEntry entry = zf.getEntry(entryPath);
+        if (entry == null) {
+            // Absent data files for an entity are not a hard error — an exported empty array is
+            // semantically equivalent. The restorer is simply not invoked and the count is 0.
+            log.debug("No data entry for table={} (entryPath={}) — restore count is 0",
+                    ref.tableName(), entryPath);
+            return totalRows;
+        }
 
-                                if (rowIndex % FAIL_INJECT_INTERVAL == 0) {
-                                    failureInjector.maybeFailAt(ref.tableName(), rowIndex);
-                                }
+        try (InputStream entryStream = zf.getInputStream(entry)) {
+            JsonParser parser = backupObjectMapper.getFactory().createParser(entryStream);
+            parser.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
+            try {
+                JsonToken firstToken = parser.nextToken();
+                if (firstToken != JsonToken.START_ARRAY) {
+                    throw new BackupArchiveException(Reason.MANIFEST_INVALID,
+                            "data file is not a JSON array: " + entryPath);
+                }
+                int rowIndex = 0;
+                JsonToken tok;
+                while ((tok = parser.nextToken()) != null && tok != JsonToken.END_ARRAY) {
+                    if (tok == JsonToken.START_OBJECT) {
+                        JsonNode row = backupObjectMapper.readTree(parser);
+                        batch.add(row);
+                        rowIndex++;
+                        totalRows++;
 
-                                if (batch.size() >= RESTORE_BATCH_SIZE) {
-                                    restorer.restore(batch, jdbcTemplate);
-                                    batch.clear();
-                                }
-                            }
+                        if (rowIndex % FAIL_INJECT_INTERVAL == 0) {
+                            failureInjector.maybeFailAt(ref.tableName(), rowIndex);
                         }
-                        if (!batch.isEmpty()) {
+
+                        if (batch.size() >= RESTORE_BATCH_SIZE) {
                             restorer.restore(batch, jdbcTemplate);
                             batch.clear();
                         }
-                    } finally {
-                        parser.close();
                     }
-                    return totalRows;
                 }
+                if (!batch.isEmpty()) {
+                    restorer.restore(batch, jdbcTemplate);
+                    batch.clear();
+                }
+            } finally {
+                parser.close();
             }
         }
-        // Absent data files for an entity are not a hard error — an exported empty array is
-        // semantically equivalent. The restorer is simply not invoked and the count is 0.
-        log.debug("No data entry for table={} (entryPath={}) — restore count is 0", ref.tableName(), entryPath);
         return totalRows;
     }
 
