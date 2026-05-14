@@ -79,6 +79,9 @@
         </aside>
         <main class="main-content">
             <div class="container">
+                <div th:if="${importInProgress}" class="alert alert-warning" role="status">
+                    Backup import in progress — write access is temporarily locked.
+                </div>
                 <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
                 <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
                 <div th:replace="${content}"></div>
