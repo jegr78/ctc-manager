@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -74,6 +75,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(BlockingRestoreFailureInjector.Config.class)
 @TestPropertySource(properties = "spring.main.allow-bean-definition-overriding=true")
 @AutoConfigureMockMvc
+// The BlockingRestoreFailureInjector.Config exposes its two CountDownLatches as
+// singleton beans, and CountDownLatch is non-resettable. Both Plan 76-02 ITs
+// (ImportLockBannerAdviceIT, ImportLockedPostRejectorIT) share this context-cache key
+// and use @DirtiesContext(BEFORE_EACH_TEST_METHOD) to get fresh latches per method —
+// which can cause this IT's cached context to be evicted between runs and rebuilt
+// with bean instances that have already been counted-down inside earlier wave merges.
+// Marking this IT with the same annotation keeps its latch state independent regardless
+// of which Failsafe order picks the IT up.
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class ImportConcurrentLockIT {
 
     @Autowired
