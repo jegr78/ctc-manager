@@ -501,6 +501,16 @@ public class BackupArchiveService {
 				// Phase 74 D-11 reuse: validate the stripped path resolves inside destDir.
 				PathTraversalGuard.assertWithin(absoluteDest, relativePath);
 
+				// WR-07: pre-check the entry-count cap BEFORE materializing the file so a
+				// hostile ZIP with MAX_ENTRIES+1 entries does not bloat the disk with the
+				// first MAX_ENTRIES files before the post-check fires. The total-byte cap
+				// remains fundamentally post-write (we only learn inflated size by inflating);
+				// LimitedInputStream's per-entry cap (50 MB) bounds the per-write damage.
+				if (entryCount > MAX_ENTRIES) {
+					throw new BackupArchiveException(Reason.TOO_MANY_ENTRIES,
+							"exceeded " + MAX_ENTRIES);
+				}
+
 				Path target = absoluteDest.resolve(relativePath).normalize();
 				if (target.getParent() != null) {
 					Files.createDirectories(target.getParent());
