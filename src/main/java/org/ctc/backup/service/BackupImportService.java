@@ -483,7 +483,10 @@ public class BackupImportService {
             // the outer @Transactional method commits — Plan 07 consumes the event there.
             String executedBy = resolveExecutedBy();
             long totalRestored = restoredCounts.values().stream().mapToLong(Long::longValue).sum();
-            int entityCount = restoredCounts.size();
+            // WR-02: entityCount documents "entities that contributed rows" — filter to
+            // non-zero counts so the D-15 success flash ("across N tables") tells the truth
+            // on partial imports instead of always reporting the iteration count (24).
+            int entityCount = (int) restoredCounts.values().stream().filter(c -> c > 0).count();
 
             // CR-01: use unmodifiable LinkedHashMap copies so the audit-row JSON columns preserve
             // export-order (Map.copyOf returns a hash-table-backed ImmutableCollections.MapN that
