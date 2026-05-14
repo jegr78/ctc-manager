@@ -27,19 +27,27 @@ import java.util.regex.Pattern;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 /**
- * Phase 74-10 — Playwright E2E walkthrough for the Backup Import feature.
+ * Phase 74-10 / Phase 75-08 — Playwright E2E walkthrough for the Backup Import feature.
  *
- * <p>Drives the full click-through flow (upload → preview → confirm → stub-execute) under
+ * <p>Drives the full click-through flow (upload → preview → confirm → execute) under
  * the {@code dev} profile ({@link PlaywrightConfig} base class boots {@code @SpringBootTest}
  * with {@code WebEnvironment.RANDOM_PORT} + {@code @ActiveProfiles("dev")}):
  * <ol>
  *   <li>Upload a Phase-73 export ZIP (generated at runtime via {@link BackupArchiveService#writeZip}).</li>
  *   <li>Assert the 24-card grid and the schema-match pill are visible — SC#1.</li>
- *   <li>Proceed through the confirm page and execute the stub import — proves D-02#5 Flash.</li>
+ *   <li>Proceed through the confirm page and execute the REAL import — proves D-15 #1
+ *       success flash (Phase 75-08; the Phase 74 D-02#5 stub-flash scenario was removed
+ *       because the stub no longer exists in production code).</li>
  *   <li>Assert cancel flow deletes the staging file — D-06 + D-16.</li>
  *   <li>Assert missing-checkbox validation error — D-10 server-side @AssertTrue.</li>
  *   <li>Assert stateless re-parse via UUID after cookie-jar wipe — SC#5.</li>
  * </ol>
+ *
+ * <p>Phase 75-08 D-15 / D-17 carry-forward: the {@code admin/backup-confirm.html} template
+ * is unchanged; only the controller body was upgraded from a Phase 74 stub-flash to a real
+ * {@link org.ctc.backup.service.BackupImportService#execute(java.util.UUID)} delegation.
+ * The success-flash regex enforced here is the locked English D-15 #1 string:
+ * {@code "Import completed. {N} rows restored across {M} tables."}.
  */
 @Tag("e2e")
 class BackupImportE2ETest extends PlaywrightConfig {
@@ -64,14 +72,20 @@ class BackupImportE2ETest extends PlaywrightConfig {
     }
 
     // =========================================================================
-    // Happy-path: full upload → preview → confirm → execute walkthrough
+    // Phase 75-08 Happy-path: full upload → preview → confirm → REAL execute walkthrough.
+    // Replaces the Phase 74 D-02#5 stub-flash scenario. The success flash now binds the
+    // locked D-15 #1 string ("Import completed. {N} rows restored across {M} tables.")
+    // and the real BackupImportService.execute(...) round-trips the dev fixture through
+    // wipe + restore on H2.
     // =========================================================================
 
     @Test
-    void givenPhase73ExportZip_whenAdminUploadsAndConfirms_thenLandsOnBackupWithStubFlash(
+    void givenValidBackupZip_whenAdminClicksConfirm_thenSuccessFlashRenderedOnAdminBackup(
             @TempDir Path tempDir) throws Exception {
 
-        // given — generate a real Phase-73 export ZIP at runtime (no committed binary per D-25)
+        // given — generate a real Phase-73 export ZIP at runtime from the live dev fixture
+        // (REVISION-iteration-1 consistency fix: BackupArchiveService.writeZip is the canonical
+        // ZIP writer; BackupExportService.export does NOT exist — see 75-06 SUMMARY).
         Path fixtureZip = tempDir.resolve("ctc-backup-test.zip");
         try (OutputStream out = Files.newOutputStream(fixtureZip)) {
             backupArchiveService.writeZip(out, Instant.now());
@@ -134,13 +148,19 @@ class BackupImportE2ETest extends PlaywrightConfig {
         page.getByRole(AriaRole.BUTTON,
                 new Page.GetByRoleOptions().setName("Execute Import")).click();
 
-        // then — land on /admin/backup with D-02#5 stub-success Flash
+        // then — Phase 75-08 D-15 #1: land on /admin/backup with the real success flash
+        // "Import completed. {N} rows restored across {M} tables." (English, locked terse style).
+        // The wipe+restore round-trips the dev fixture through H2 — restoredTotal/entityCount
+        // are positive integers because the fixture seeds 24 entities with data.
         assertThat(page).hasURL(Pattern.compile(".*/admin/backup$"));
         assertThat(page.locator(".alert.alert-success"))
-                .containsText("Validation succeeded. Import execution will be enabled in Phase 75.");
+                .containsText(Pattern.compile("Import completed\\. \\d+ rows restored across \\d+ tables\\."));
 
         // negative assertions (defense-in-depth)
         assertThat(page.locator(".alert.alert-error")).hasCount(0);
+        Assertions.assertThat(page.content())
+                .as("No Phase 74 stub-flash on success — Phase 75 replaced D-02#5 with D-15 #1")
+                .doesNotContain("Validation succeeded. Import execution will be enabled in Phase 75.");
         Assertions.assertThat(page.content())
                 .as("No reject-path strings on success")
                 .doesNotContain("Schema version mismatch", "safety checks", "Upload too large");
@@ -290,10 +310,10 @@ class BackupImportE2ETest extends PlaywrightConfig {
                                     .set("acknowledged", "true"))
             );
             Assertions.assertThat(executeResp.status())
-                    .as("Execute stub must redirect (302/303) when called from a session-wiped fresh context")
+                    .as("Execute must redirect (302/303) when called from a session-wiped fresh context")
                     .isBetween(300, 399);
             Assertions.assertThat(executeResp.headers().get("location"))
-                    .as("Execute stub must redirect to /admin/backup per D-08")
+                    .as("Execute must redirect to /admin/backup per D-17 (endpoint URL unchanged Phase 74 → 75)")
                     .endsWith("/admin/backup");
 
             // NOTE: Rendered Flash banner is intentionally NOT asserted here.
