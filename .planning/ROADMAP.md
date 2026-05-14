@@ -266,8 +266,8 @@ Plans:
 - [x] 75-05-PLAN.md — Wave 1: 6 Playoff/GT7 restorers (Playoff, PlayoffRound, PlayoffSeed, Car, Track + 2-pass PlayoffMatchupRestorer) + unit tests
 - [x] 75-06-PLAN.md — Wave 2: BackupImportService.execute(UUID) + wipeAllTables + restoreAll + BackupArchiveService.extractUploadsTo + BackupImportException + rewriteBatchedStatements=true on 3 yml profiles + BackupImportExecuteIT + BackupArchiveExtractUploadsIT
 - [x] 75-07-PLAN.md — Wave 2: BackupImportPostCommitListener (@TransactionalEventListener AFTER_COMMIT) + BackupImportPostCommitIT + TeamRestorerIT (H2 real-JdbcTemplate)
-- [ ] 75-08-PLAN.md — Wave 3: BackupController.importExecute upgrade (3 D-15 flash strings) + BackupControllerTest scenarios + BackupImportE2ETest extension (Playwright real-execute) + human-verify checkpoint
-- [ ] 75-09-PLAN.md — Wave 3: BackupImportRollbackIT (RestoreFailureInjector fails at race_results:500) + FailAtTableInjector @TestConfiguration
+- [x] 75-08-PLAN.md — Wave 3: BackupController.importExecute upgrade (3 D-15 flash strings) + BackupControllerTest scenarios + BackupImportE2ETest extension (Playwright real-execute) + human-verify checkpoint
+- [x] 75-09-PLAN.md — Wave 3: BackupImportRollbackIT (RestoreFailureInjector fails at race_results:500) + FailAtTableInjector @TestConfiguration
 - [ ] 75-10-PLAN.md — Wave 4: BackupImportMariaDbSmokeIT (Testcontainers MariaDB Saison-2023 round-trip) + mariadb-migration-smoke.yml integration + 75-HUMAN-UAT.md (6 screenshot pairs) + .screenshots/75/{before,after}/ dirs + HUMAN-UAT checkpoint
 
 ### Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import
@@ -355,7 +355,7 @@ Plans:
 | 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/5   | Planned     | — |
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete    | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
-| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 7/10 | In Progress|  |
+| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 9/10 | In Progress|  |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/TBD | Not started | — |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/TBD | Not started | — |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
