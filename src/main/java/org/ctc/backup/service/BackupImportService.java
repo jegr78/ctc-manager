@@ -512,12 +512,19 @@ public class BackupImportService {
                     stagingId, auditUuid, totalRestored, entityCount);
 
             return new BackupImportResult(auditUuid, totalRestored, entityCount);
-        } catch (Exception e) {
-            log.error("Import failed for staging-id {}: ", stagingId, e);
+        } catch (Throwable t) {
+            // WR-08: catch Throwable (not Exception) so an OutOfMemoryError or similar JVM-fatal
+            // Error during the 1000-row restore still gets an audit row written via REQUIRES_NEW
+            // before propagating. Spring's @Transactional rollback fires on Error by default;
+            // we preserve the JVM-fatal contract by re-throwing Error unchanged.
+            log.error("Import failed for staging-id {}: ", stagingId, t);
             boolean auditWritten = tryRecordFailure(auditUuid, schemaVersion, sourceFilename,
                     wipedCounts, restoredCounts);
             tryCleanupUploadsNew(uploadsNewDir);
-            throw new BackupImportException(auditUuid, auditWritten, e);
+            if (t instanceof Error err) {
+                throw err;
+            }
+            throw new BackupImportException(auditUuid, auditWritten, t);
         }
     }
 
