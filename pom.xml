@@ -17,6 +17,9 @@
 		<java.version>25</java.version>
 		<playwright.version>1.59.0</playwright.version>
 		<lombok.version>1.18.46</lombok.version>
+		<!-- Phase 75 Plan 10: Testcontainers MariaDB for BackupImportMariaDbSmokeIT.
+		     Spring Boot 4.0.x does NOT manage Testcontainers; pin BOM here. -->
+		<testcontainers.version>1.21.3</testcontainers.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -24,6 +27,15 @@
 				<groupId>org.thymeleaf</groupId>
 				<artifactId>thymeleaf</artifactId>
 				<version>3.1.5.RELEASE</version>
+			</dependency>
+			<!-- Phase 75 Plan 10: Testcontainers BOM aligns testcontainers + junit-jupiter
+			     + mariadb modules on a single coherent version. -->
+			<dependency>
+				<groupId>org.testcontainers</groupId>
+				<artifactId>testcontainers-bom</artifactId>
+				<version>${testcontainers.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -183,6 +195,30 @@
 			<groupId>com.microsoft.playwright</groupId>
 			<artifactId>playwright</artifactId>
 			<version>${playwright.version}</version>
+		</dependency>
+		<!--
+		    Phase 75 Plan 10 — Testcontainers MariaDB for BackupImportMariaDbSmokeIT.
+		    Versions are managed by spring-boot-dependencies BOM (Spring Boot 4.0.6 ships
+		    Testcontainers 1.21.x). The IT bootstraps a real MariaDB:11 container via
+		    @DynamicPropertySource to override spring.datasource.url at @SpringBootTest
+		    startup so Flyway runs against the live engine — proving the 24-entity backup
+		    round-trip parity contract holds beyond H2 (Phase 75 QUAL-03 CI layer).
+		    Auto-detects host Docker daemon; works locally + on GitHub Actions runners.
+		-->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>mariadb</artifactId>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
