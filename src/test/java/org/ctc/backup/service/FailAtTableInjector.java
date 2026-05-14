@@ -67,26 +67,40 @@ public class FailAtTableInjector implements RestoreFailureInjector {
     }
 
     /**
-     * Test-scope configuration that wires {@link FailAtTableInjector} as the {@link Primary}
-     * {@link RestoreFailureInjector} bean.
+     * Test-scope configuration that replaces the production
+     * {@link org.ctc.backup.restore.NoopRestoreFailureInjector} bean with a
+     * {@link FailAtTableInjector} targeting row 500 of {@code race_results} (~50 % mid-point of
+     * the largest restore table per RESEARCH Assumption A1 — Saison 2023 has ~1000 race-result
+     * rows).
      *
-     * <p>Targets row 500 of {@code race_results} — Saison 2023 has ~1000 race-result rows
-     * per RESEARCH Assumption A1, so row 500 is roughly the 50 % mid-point of the largest
-     * restore table. The wipe is complete by then; the restore stream has partially-inserted
-     * rows that the outer {@code @Transactional} rollback then undoes.
+     * <p><b>Bean-name override discipline:</b> the bean is declared with the same Spring bean
+     * name as the production {@code NoopRestoreFailureInjector @Component}
+     * ({@code "noopRestoreFailureInjector"}, derived from the class name lowercase-first per
+     * the default {@code AnnotationBeanNameGenerator}). The test class enables
+     * {@code spring.main.allow-bean-definition-overriding=true} via
+     * {@code @TestPropertySource} so this {@code @TestConfiguration}-supplied definition
+     * overrides the production one. Marking it {@link Primary} keeps the
+     * {@code RestoreFailureInjector} autowire deterministic even if a future refactor adds
+     * a third bean — the test path stays explicit about which bean wins.
      *
      * <p>Tests opt-in via {@code @Import(FailAtTableInjector.Config.class)} on the
-     * {@code @SpringBootTest} class.
+     * {@code @SpringBootTest} class plus
+     * {@code @TestPropertySource(properties = "spring.main.allow-bean-definition-overriding=true")}.
      */
     @TestConfiguration
     public static class Config {
 
         /**
-         * Provides the {@link Primary} {@link RestoreFailureInjector} bean for tests.
+         * Provides the {@link Primary} {@link RestoreFailureInjector} bean for tests using the
+         * same bean name as the production {@code NoopRestoreFailureInjector @Component} so
+         * Spring's bean-definition-override (enabled by the test's
+         * {@code @TestPropertySource}) replaces the production bean rather than coexist with
+         * it (which would otherwise trigger
+         * {@code NoUniqueBeanDefinitionException: more than one 'primary' bean found}).
          *
          * @return a {@link FailAtTableInjector} targeting {@code race_results:500}
          */
-        @Bean
+        @Bean(name = "noopRestoreFailureInjector")
         @Primary
         public RestoreFailureInjector failAtTable() {
             return new FailAtTableInjector("race_results", 500);
