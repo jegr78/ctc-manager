@@ -261,9 +261,9 @@ Plans:
 Plans:
 - [x] 75-01-PLAN.md — Wave 0: EntityRestorer SPI + RestoreFailureInjector + Noop@Primary + exceptions + BackupImportResult/Event records + app.backup.import-backups-dir
 - [x] 75-02-PLAN.md — Wave 0: DataImportAuditService (REQUIRES_NEW writer) + DataImportAuditServiceTest + DataImportAuditSerializationTest
-- [ ] 75-03-PLAN.md — Wave 1: 9 Season-cluster restorers (Season, SeasonPhase, SeasonPhaseGroup, PhaseTeam, Driver, SeasonDriver, PsnAlias + 2-pass TeamRestorer + 2-pass SeasonTeamRestorer) + unit tests
-- [ ] 75-04-PLAN.md — Wave 1: 9 Match/Race-cluster restorers (Matchday, Match, MatchScoring, Race, RaceLineup, RaceResult, RaceScoring, RaceSettings, RaceAttachment) + unit tests
-- [ ] 75-05-PLAN.md — Wave 1: 6 Playoff/GT7 restorers (Playoff, PlayoffRound, PlayoffSeed, Car, Track + 2-pass PlayoffMatchupRestorer) + unit tests
+- [x] 75-03-PLAN.md — Wave 1: 9 Season-cluster restorers (Season, SeasonPhase, SeasonPhaseGroup, PhaseTeam, Driver, SeasonDriver, PsnAlias + 2-pass TeamRestorer + 2-pass SeasonTeamRestorer) + unit tests
+- [x] 75-04-PLAN.md — Wave 1: 9 Match/Race-cluster restorers (Matchday, Match, MatchScoring, Race, RaceLineup, RaceResult, RaceScoring, RaceSettings, RaceAttachment) + unit tests
+- [x] 75-05-PLAN.md — Wave 1: 6 Playoff/GT7 restorers (Playoff, PlayoffRound, PlayoffSeed, Car, Track + 2-pass PlayoffMatchupRestorer) + unit tests
 - [ ] 75-06-PLAN.md — Wave 2: BackupImportService.execute(UUID) + wipeAllTables + restoreAll + BackupArchiveService.extractUploadsTo + BackupImportException + rewriteBatchedStatements=true on 3 yml profiles + BackupImportExecuteIT + BackupArchiveExtractUploadsIT
 - [ ] 75-07-PLAN.md — Wave 2: BackupImportPostCommitListener (@TransactionalEventListener AFTER_COMMIT) + BackupImportPostCommitIT + TeamRestorerIT (H2 real-JdbcTemplate)
 - [ ] 75-08-PLAN.md — Wave 3: BackupController.importExecute upgrade (3 D-15 flash strings) + BackupControllerTest scenarios + BackupImportE2ETest extension (Playwright real-execute) + human-verify checkpoint
@@ -355,7 +355,7 @@ Plans:
 | 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/5   | Planned     | — |
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete    | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
-| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 2/10 | In Progress|  |
+| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 5/10 | In Progress|  |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/TBD | Not started | — |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/TBD | Not started | — |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
