@@ -355,7 +355,7 @@ Plans:
 | 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/5   | Planned     | — |
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete    | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
-| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 10/10 | Complete   | 2026-05-14 |
+| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 10/10 | Complete    | 2026-05-14 |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/TBD | Not started | — |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/TBD | Not started | — |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
