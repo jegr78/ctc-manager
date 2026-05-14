@@ -6,7 +6,8 @@ app:
 
 spring:
   datasource:
-    url: jdbc:mariadb://localhost:3306/ctcdb
+    # Phase 75 RESEARCH §10: rewriteBatchedStatements=true needed for JdbcTemplate.batchUpdate(...)=500 to compile into a single multi-row INSERT on MariaDB
+    url: jdbc:mariadb://localhost:3306/ctcdb?rewriteBatchedStatements=true
     driver-class-name: org.mariadb.jdbc.Driver
     username: ctc
     password: ctc

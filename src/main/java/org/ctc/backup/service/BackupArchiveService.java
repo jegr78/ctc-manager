@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -426,6 +427,110 @@ public class BackupArchiveService {
 
 		log.info("Backup upload entries counted: count={}", uploadCount);
 		return uploadCount;
+	}
+
+	// =========================================================================
+	// Phase 75 / Plan 06 — uploads extraction (D-12)
+	// =========================================================================
+
+	/**
+	 * Extracts every {@code uploads/<rel>} entry of the backup ZIP at {@code zipPath} to the
+	 * given destination directory {@code destDir}. The {@code uploads/} prefix is stripped from
+	 * the entry name so the on-disk layout under {@code destDir} mirrors the original
+	 * {@code app.upload-dir/} tree (Phase 73 D-14 export contract).
+	 *
+	 * <p>Phase 75 D-12: the orchestrator
+	 * ({@code BackupImportService.execute(UUID)} added in Plan 06) calls this helper from
+	 * INSIDE the {@code @Transactional} method body, BEFORE the post-commit move triple
+	 * (Plan 07). On wipe-or-restore rollback the partially-extracted {@code uploads-new/}
+	 * is cleaned by the orchestrator's catch-block.
+	 *
+	 * <p><strong>Hardening invariants (per entry):</strong>
+	 * <ul>
+	 *   <li>{@link PathTraversalGuard#assertWithin(Path, String)} on the {@code uploads/}-stripped
+	 *       relative path against {@code destDir} (Phase 74 D-11 / SECU-01 reuse).</li>
+	 *   <li>Per-entry inflate cap via {@link LimitedInputStream} with
+	 *       {@link BackupImportLimits#MAX_ENTRY_BYTES} (50 MB, SECU-02 / D-12).</li>
+	 *   <li>Aggregate inflate cap via the running {@code totalInflated} counter against
+	 *       {@link BackupImportLimits#MAX_TOTAL_BYTES} (500 MB).</li>
+	 *   <li>{@link BackupImportLimits#MAX_ENTRIES} entry-count cap on the overall ZIP.</li>
+	 * </ul>
+	 *
+	 * <p>Skips directory entries silently (parent directories are materialized on demand via
+	 * {@link Files#createDirectories(Path, java.nio.file.attribute.FileAttribute[])}). Entries
+	 * outside the {@code uploads/} prefix are also skipped — manifest and {@code data/*.json}
+	 * entries are out of scope here; those are read by {@link #readManifest(Path)} /
+	 * {@code countDataEntries(...)}.
+	 *
+	 * @param zipPath path to the staged backup ZIP file
+	 * @param destDir destination directory under which the {@code uploads/}-rooted tree is
+	 *                materialized; must already exist (the caller creates it)
+	 * @throws BackupArchiveException with traversal / bomb / count reasons per the invariants
+	 *                                above
+	 * @throws IOException            for plain I/O failures reading {@code zipPath} or writing
+	 *                                under {@code destDir}
+	 */
+	public void extractUploadsTo(Path zipPath, Path destDir) throws BackupArchiveException, IOException {
+		Path absoluteDest = destDir.toAbsolutePath().normalize();
+		Files.createDirectories(absoluteDest);
+
+		long[] inflatedAcc = new long[]{0L};
+		int entryCount = 0;
+		int extracted = 0;
+
+		try (ZipInputStream zis = openHardened(zipPath)) {
+			ZipEntry entry;
+			while ((entry = zis.getNextEntry()) != null) {
+				String name = entry.getName();
+				entryCount++;
+
+				if (!name.startsWith("uploads/") || entry.isDirectory()) {
+					// Still enforce aggregate caps so a hostile ZIP with 100k empty data
+					// entries does not slip past the entry-count guard.
+					assertEntrySafe(entry, absoluteDest, entryCount, inflatedAcc[0]);
+					continue;
+				}
+
+				// Strip the "uploads/" prefix; reject entries that strip to empty (e.g. bare
+				// "uploads/" directory entry that did not have isDirectory()==true).
+				String relativePath = name.substring("uploads/".length());
+				if (relativePath.isEmpty()) {
+					continue;
+				}
+
+				// Phase 74 D-11 reuse: validate the stripped path resolves inside destDir.
+				PathTraversalGuard.assertWithin(absoluteDest, relativePath);
+
+				Path target = absoluteDest.resolve(relativePath).normalize();
+				if (target.getParent() != null) {
+					Files.createDirectories(target.getParent());
+				}
+
+				final String entryName = name;
+				LimitedInputStream limited = new LimitedInputStream(
+						nonClosingView(zis), MAX_ENTRY_BYTES,
+						finalBytes -> {
+							inflatedAcc[0] += finalBytes;
+							if (finalBytes >= MAX_ENTRY_BYTES) {
+								log.warn("Backup ZIP upload entry exceeds limit: name={}, limit={} bytes",
+										entryName, MAX_ENTRY_BYTES);
+							}
+						});
+				try {
+					Files.copy(limited, target, StandardCopyOption.REPLACE_EXISTING);
+				} finally {
+					// Fires the LongConsumer (updating inflatedAcc[0]) and shields the
+					// ZipInputStream from being closed (nonClosingView wrapper).
+					limited.close();
+				}
+				extracted++;
+
+				assertEntrySafe(entry, absoluteDest, entryCount, inflatedAcc[0]);
+			}
+		}
+
+		log.info("Backup uploads extracted: zip={}, destDir={}, extractedFiles={}, totalInflated={} bytes",
+				zipPath.getFileName(), absoluteDest, extracted, inflatedAcc[0]);
 	}
 
 	// =========================================================================
