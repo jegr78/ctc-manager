@@ -443,8 +443,12 @@ public class BackupImportService {
                     ? Files.readString(metaFile, java.nio.charset.StandardCharsets.UTF_8)
                     : staged.getFileName().toString();
         } catch (IOException ioe) {
-            sourceFilename = staged.getFileName().toString();
-            log.warn("Failed to read staging .meta sidecar for id={} — falling back to staging filename",
+            // WR-04: make the meta-read failure explicit in the audit row so the operator can
+            // tell "no .meta file ever existed" (handled via the Files.exists branch above)
+            // apart from "the .meta file was corrupted / unreadable" (this branch). Falling back
+            // to the staging UUID-filename silently lost the user-friendly upload name.
+            sourceFilename = "<filename-unavailable: meta-read-failed-" + stagingId + ">";
+            log.error("Staging .meta sidecar corrupted for id={} — original filename lost",
                     stagingId, ioe);
         }
 
