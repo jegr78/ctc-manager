@@ -135,7 +135,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 - [ ] **Phase 72: Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit-Log Scope** — Define `BackupSchema.SCHEMA_VERSION` (integer), `BackupManifest`, `@Qualifier("backupObjectMapper")` bean, Flyway V7 audit table, lock per-entity ZIP layout + audit-out-of-scope decision
 - [x] **Phase 73: Backup Export — Jackson MixIns + Streaming ZIP Endpoint** — Per-entity MixIns, `BackupExportService` with `@EntityGraph` eager-fetch, `BackupArchiveService.writeZip()`, `StreamingResponseBody`, admin form page (completed 2026-05-12)
 - [ ] **Phase 74: Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate** — Multipart upload, manifest read-first + schema-version refusal before any DB write, ZIP-Slip + ZipBomb defenses, multipart limits + `MaxUploadSizeExceededException` mapping
-- [ ] **Phase 75: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT** — Single `@Transactional` wipe + restore (FK-reverse DELETE, `JdbcTemplate.batchUpdate` bypassing audit listeners), post-commit upload-tree restore, audit row, mid-restore-rollback IT, live MariaDB UAT against Saison-2023 fixture
+- [x] **Phase 75: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT** — Single `@Transactional` wipe + restore (FK-reverse DELETE, `JdbcTemplate.batchUpdate` bypassing audit listeners), post-commit upload-tree restore, audit row, mid-restore-rollback IT, live MariaDB UAT against Saison-2023 fixture (completed 2026-05-14)
 - [ ] **Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import** — `ImportLockService` `ReentrantLock` singleton, `@ControllerAdvice` write-rejection during import, persistent yellow banner, synchronous auto-export to `data/.import-backups/<ts>/` before wipe
 - [ ] **Phase 77: Final UAT + JaCoCo Hold + Round-Trip Test + Documentation** — `./mvnw verify -Pe2e` green on H2 + MariaDB profiles, JaCoCo line coverage ≥ 82 %, `BackupRoundTripIT`, README + WIKI "Backup & Restore" section, milestone closure
 - [ ] **Phase 78: Docker Release Image Fix — Pin Base Image to Ubuntu Noble for Playwright Compatibility** — Pin both Dockerfile stages to `eclipse-temurin:25-{jdk,jre}-noble` so the release workflow's `playwright install chromium` step stops failing on the silently-rotated Ubuntu 26.04 base
@@ -268,7 +268,7 @@ Plans:
 - [x] 75-07-PLAN.md — Wave 2: BackupImportPostCommitListener (@TransactionalEventListener AFTER_COMMIT) + BackupImportPostCommitIT + TeamRestorerIT (H2 real-JdbcTemplate)
 - [x] 75-08-PLAN.md — Wave 3: BackupController.importExecute upgrade (3 D-15 flash strings) + BackupControllerTest scenarios + BackupImportE2ETest extension (Playwright real-execute) + human-verify checkpoint
 - [x] 75-09-PLAN.md — Wave 3: BackupImportRollbackIT (RestoreFailureInjector fails at race_results:500) + FailAtTableInjector @TestConfiguration
-- [ ] 75-10-PLAN.md — Wave 4: BackupImportMariaDbSmokeIT (Testcontainers MariaDB Saison-2023 round-trip) + mariadb-migration-smoke.yml integration + 75-HUMAN-UAT.md (6 screenshot pairs) + .screenshots/75/{before,after}/ dirs + HUMAN-UAT checkpoint
+- [x] 75-10-PLAN.md — Wave 4: BackupImportMariaDbSmokeIT (Testcontainers MariaDB Saison-2023 round-trip) + mariadb-migration-smoke.yml integration + 75-HUMAN-UAT.md (6 screenshot pairs) + .screenshots/75/{before,after}/ dirs + HUMAN-UAT checkpoint
 
 ### Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import
 
@@ -355,7 +355,7 @@ Plans:
 | 72. Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit Scope | 0/5   | Planned     | — |
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete    | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
-| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 9/10 | In Progress|  |
+| 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 10/10 | Complete   | 2026-05-14 |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/TBD | Not started | — |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/TBD | Not started | — |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
