@@ -289,7 +289,7 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 76-01-PLAN.md — Wave 1: ImportLockService singleton + BackupController.importExecute tryLock/finally wrapper + 409 View-mode redirect + BlockingRestoreFailureInjector test support + ImportConcurrentLockIT (SECU-05)
+- [x] 76-01-PLAN.md — Wave 1: ImportLockService singleton + BackupController.importExecute tryLock/finally wrapper + 409 View-mode redirect + BlockingRestoreFailureInjector test support + ImportConcurrentLockIT (SECU-05)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 76-02-PLAN.md — Wave 2: ImportLockBannerAdvice (@ControllerAdvice) + ImportLockedWriteRejector (HandlerInterceptor) + WebConfig.addInterceptors + admin/layout.html banner div + ImportLockedPostRejectorIT + ImportLockBannerAdviceIT (SECU-06)
@@ -369,6 +369,6 @@ Plans:
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete    | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 10/10 | Complete    | 2026-05-14 |
-| 76. Operational Hardening — Lock + Banner + Auto-Backup | 0/4 | Planned     | — |
+| 76. Operational Hardening — Lock + Banner + Auto-Backup | 1/4 | In Progress|  |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/TBD | Not started | — |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
