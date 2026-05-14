@@ -131,6 +131,7 @@ class BackupImportRollbackIT {
 
     Map<String, Long> preImportCounts;
     Set<Path> preImportUploadsFiles;
+    Set<Path> preImportUploadsNewDirs;
 
     @BeforeAll
     void seedFixture() throws IOException {
@@ -166,6 +167,13 @@ class BackupImportRollbackIT {
         // equality, and so a Plan 07 successful AFTER_COMMIT move (in a different test
         // context) would be visible as set inequality.
         preImportUploadsFiles = snapshotUploads();
+
+        // Pre-existing uploads-new/ directories from earlier test runs in this JVM session
+        // (e.g. BackupImportExecuteIT happy-path which leaves uploads-new untouched until the
+        // AFTER_COMMIT listener moves it). The Plan 06 D-12 cleanup contract only guarantees
+        // that THIS run's uploads-new is removed; pre-existing directories outside our <ts>
+        // path remain as-is.
+        preImportUploadsNewDirs = snapshotUploadsNewDirs();
     }
 
     // -------------------------------------------------------------------------
@@ -246,19 +254,17 @@ class BackupImportRollbackIT {
                 .as("uploads/ tree must be byte-equal to pre-import snapshot — AFTER_COMMIT listener did NOT fire")
                 .containsExactlyInAnyOrderElementsOf(preImportUploadsFiles);
 
-        // (d) any data/.import-backups/<ts>/uploads-new/ staging dir was cleaned up by the
-        // catch-block finally in BackupImportService.execute() (Plan 75-06 D-12)
-        if (Files.exists(importBackupsDir)) {
-            try (Stream<Path> walk = Files.walk(importBackupsDir)) {
-                boolean uploadsNewExists = walk
-                        .filter(p -> p.getFileName() != null)
-                        .anyMatch(p -> "uploads-new".equals(p.getFileName().toString())
-                                && Files.isDirectory(p));
-                assertThat(uploadsNewExists)
-                        .as("uploads-new/ staging dir must have been cleaned up by tryCleanupUploadsNew")
-                        .isFalse();
-            }
-        }
+        // (d) any data/.import-backups/<ts>/uploads-new/ staging dir created BY THIS RUN was
+        // cleaned up by the catch-block finally in BackupImportService.execute() (Plan 75-06
+        // D-12). Pre-existing uploads-new/ directories (left behind by earlier tests in the
+        // same JVM session) are out of this assertion's scope — the cleanup contract is
+        // per-import, scoped to <ts>.
+        Set<Path> postImportUploadsNewDirs = snapshotUploadsNewDirs();
+        Set<Path> newlyCreated = new HashSet<>(postImportUploadsNewDirs);
+        newlyCreated.removeAll(preImportUploadsNewDirs);
+        assertThat(newlyCreated)
+                .as("this run's uploads-new/ staging dir must have been cleaned up by tryCleanupUploadsNew")
+                .isEmpty();
 
         // (e) REVISION-iteration-1 W3 — ROADMAP SC#3 sub-requirement: SLF4J ERROR log must
         // carry both the staging-id failure marker and the cause class name so the operator
@@ -330,6 +336,27 @@ class BackupImportRollbackIT {
             walk.filter(Files::isRegularFile)
                     .forEach(p -> rel.add(uploadsDir.relativize(p)));
             return rel;
+        }
+    }
+
+    /**
+     * Snapshots all {@code uploads-new/} directories under {@code importBackupsDir} as a
+     * {@link Set} of absolute paths. Returns an empty set when the parent directory does not
+     * exist. The set is used to diff pre- vs post-import so the Plan 06 D-12 cleanup
+     * assertion only fires on directories created BY THIS RUN, not on leftovers from earlier
+     * tests in the same JVM session.
+     */
+    private Set<Path> snapshotUploadsNewDirs() throws IOException {
+        if (!Files.exists(importBackupsDir)) {
+            return new HashSet<>();
+        }
+        try (Stream<Path> walk = Files.walk(importBackupsDir)) {
+            Set<Path> dirs = new HashSet<>();
+            walk.filter(p -> p.getFileName() != null
+                    && "uploads-new".equals(p.getFileName().toString())
+                    && Files.isDirectory(p))
+                    .forEach(dirs::add);
+            return dirs;
         }
     }
 }
