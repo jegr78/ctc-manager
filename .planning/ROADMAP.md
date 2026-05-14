@@ -292,10 +292,10 @@ Plans:
 - [x] 76-01-PLAN.md — Wave 1: ImportLockService singleton + BackupController.importExecute tryLock/finally wrapper + 409 View-mode redirect + BlockingRestoreFailureInjector test support + ImportConcurrentLockIT (SECU-05)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 76-02-PLAN.md — Wave 2: ImportLockBannerAdvice (@ControllerAdvice) + ImportLockedWriteRejector (HandlerInterceptor) + WebConfig.addInterceptors + admin/layout.html banner div + ImportLockedPostRejectorIT + ImportLockBannerAdviceIT (SECU-06)
+- [x] 76-02-PLAN.md — Wave 2: ImportLockBannerAdvice (@ControllerAdvice) + ImportLockedWriteRejector (HandlerInterceptor) + WebConfig.addInterceptors + admin/layout.html banner div + ImportLockedPostRejectorIT + ImportLockBannerAdviceIT (SECU-06)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 76-03-PLAN.md — Wave 3: AutoBackupBeforeImportException + BackupImportService.execute Step 0.5 auto-export block + <ts> move upward + BackupController catch-chain extension + AutoBackupBeforeImportPathIT + AutoBackupBeforeImportFailureIT (SECU-07)
+- [x] 76-03-PLAN.md — Wave 3: AutoBackupBeforeImportException + BackupImportService.execute Step 0.5 auto-export block + <ts> move upward + BackupController catch-chain extension + AutoBackupBeforeImportPathIT + AutoBackupBeforeImportFailureIT (SECU-07)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 - [ ] 76-04-PLAN.md — Wave 4: docs/operations/import-runbook.md (5 sections per D-22) + final ./mvnw verify -Pe2e gate + human-verify checkpoint (5 sub-verifications + screenshots under .screenshots/76/)
@@ -369,6 +369,6 @@ Plans:
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete    | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 10/10 | Complete    | 2026-05-14 |
-| 76. Operational Hardening — Lock + Banner + Auto-Backup | 1/4 | In Progress|  |
+| 76. Operational Hardening — Lock + Banner + Auto-Backup | 3/4 | In Progress|  |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/TBD | Not started | — |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
