@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.backup.dto.BackupImportConfirmForm;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.dto.BackupImportResult;
+import org.ctc.backup.exception.AutoBackupBeforeImportException;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupImportException;
 import org.ctc.backup.exception.UploadsRestoreException;
@@ -301,6 +302,19 @@ public class BackupController {
 				ra.addFlashAttribute("errorMessage",
 						"Import database succeeded but uploads restore failed and was reverted. "
 								+ "See logs. Audit-id: unknown.");
+			} catch (AutoBackupBeforeImportException ex) {
+				// D-17 — semantically NO rollback is needed because nothing was mutated
+				// (auto-backup step runs BEFORE wipe; Step 0.5). The catch MUST appear BEFORE
+				// BackupImportException (parent type) per Java first-match-wins (Pitfall #3).
+				log.error("Pre-import auto-backup failed for stagingId={}, auditUuid={}",
+						form.getStagingId(), ex.getAuditUuid(), ex);
+				String auditIdText = ex.isAuditWritten()
+						? ex.getAuditUuid().toString()
+						: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
+				ra.addFlashAttribute("errorMessage",
+						String.format("Import aborted — pre-import auto-backup failed. "
+								+ "No database changes. Audit-id: %s.", auditIdText));
+				return new ModelAndView("redirect:/admin/backup");
 			} catch (BackupImportException ex) {
 				// WR-03: when the REQUIRES_NEW audit-write itself failed (double-failure path),
 				// no data_import_audit row exists for the operator to query. Reflect that in the
