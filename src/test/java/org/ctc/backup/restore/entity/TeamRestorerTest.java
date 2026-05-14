@@ -120,17 +120,23 @@ class TeamRestorerTest {
         // when
         restorer.restore(rows, jdbcTemplate);
 
-        // then — InOrder: Pass-1 first, then Pass-2
+        // then — exactly 2 batchUpdate calls, captured via Mockito captors. InOrder
+        // separately verifies Pass-1 (INSERT) precedes Pass-2 (UPDATE).
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<JsonNode>> rowsCaptor = ArgumentCaptor.forClass(List.class);
         ArgumentCaptor<ParameterizedPreparedStatementSetter<JsonNode>> setterCaptor =
                 ArgumentCaptor.forClass(ParameterizedPreparedStatementSetter.class);
+        verify(jdbcTemplate, org.mockito.Mockito.times(2))
+                .batchUpdate(sqlCaptor.capture(), rowsCaptor.capture(),
+                        eq(500), setterCaptor.capture());
 
         InOrder ordering = inOrder(jdbcTemplate);
-        ordering.verify(jdbcTemplate).batchUpdate(sqlCaptor.capture(), rowsCaptor.capture(),
-                eq(500), setterCaptor.capture());
-        ordering.verify(jdbcTemplate).batchUpdate(sqlCaptor.capture(), rowsCaptor.capture(),
-                eq(500), setterCaptor.capture());
+        ordering.verify(jdbcTemplate).batchUpdate(
+                org.mockito.ArgumentMatchers.startsWith("INSERT INTO teams"),
+                anyList(), anyInt(), any(ParameterizedPreparedStatementSetter.class));
+        ordering.verify(jdbcTemplate).batchUpdate(
+                eq("UPDATE teams SET parent_team_id = ? WHERE id = ?"),
+                anyList(), anyInt(), any(ParameterizedPreparedStatementSetter.class));
 
         // Pass 1 SQL: INSERT with NULL self-FK hard-coded
         String pass1Sql = sqlCaptor.getAllValues().get(0);
@@ -152,25 +158,29 @@ class TeamRestorerTest {
                 .isEqualTo("33333333-aaaa-aaaa-aaaa-333333333333");
 
         // Drive Pass-1 setter against one root row — verify NULL is hard-coded in SQL,
-        // so parent_team_id is NOT a setter parameter (10 binds: id, name, short_name,
-        // logo_url, primary_color, secondary_color, accent_color, created_at, updated_at)
-        setterCaptor.getAllValues().get(0).setValues(preparedStatement, rootA);
-        verify(preparedStatement).setObject(1, UUID.fromString("11111111-aaaa-aaaa-aaaa-111111111111"));
-        verify(preparedStatement).setString(2, "Alpha Racing");
-        verify(preparedStatement).setString(3, "T-ALF");
-        verify(preparedStatement).setString(4, "/img/alpha.png");
-        verify(preparedStatement).setString(5, "#ff0000");
-        verify(preparedStatement).setString(6, "#00ff00");
-        verify(preparedStatement).setString(7, "#0000ff");
-        verify(preparedStatement).setTimestamp(8,
+        // so parent_team_id is NOT a setter parameter (9 binds: id, name, short_name,
+        // logo_url, primary_color, secondary_color, accent_color, created_at, updated_at).
+        // Use a separate PreparedStatement mock for each pass to keep the
+        // Mockito invocation tallies independent.
+        PreparedStatement psPass1 = org.mockito.Mockito.mock(PreparedStatement.class);
+        setterCaptor.getAllValues().get(0).setValues(psPass1, rootA);
+        verify(psPass1).setObject(1, UUID.fromString("11111111-aaaa-aaaa-aaaa-111111111111"));
+        verify(psPass1).setString(2, "Alpha Racing");
+        verify(psPass1).setString(3, "T-ALF");
+        verify(psPass1).setString(4, "/img/alpha.png");
+        verify(psPass1).setString(5, "#ff0000");
+        verify(psPass1).setString(6, "#00ff00");
+        verify(psPass1).setString(7, "#0000ff");
+        verify(psPass1).setTimestamp(8,
                 Timestamp.valueOf(LocalDateTime.parse("2024-01-01T00:00:00")));
-        verify(preparedStatement).setTimestamp(9,
+        verify(psPass1).setTimestamp(9,
                 Timestamp.valueOf(LocalDateTime.parse("2024-01-02T00:00:00")));
 
-        // Drive Pass-2 setter — 2 binds: parent_team_id, id
-        setterCaptor.getAllValues().get(1).setValues(preparedStatement, sub);
-        verify(preparedStatement).setObject(1, UUID.fromString("11111111-aaaa-aaaa-aaaa-111111111111"));
-        verify(preparedStatement).setObject(2, UUID.fromString("33333333-aaaa-aaaa-aaaa-333333333333"));
+        // Drive Pass-2 setter — 2 binds: parent_team_id, id (separate mock).
+        PreparedStatement psPass2 = org.mockito.Mockito.mock(PreparedStatement.class);
+        setterCaptor.getAllValues().get(1).setValues(psPass2, sub);
+        verify(psPass2).setObject(1, UUID.fromString("11111111-aaaa-aaaa-aaaa-111111111111"));
+        verify(psPass2).setObject(2, UUID.fromString("33333333-aaaa-aaaa-aaaa-333333333333"));
     }
 
     @Test

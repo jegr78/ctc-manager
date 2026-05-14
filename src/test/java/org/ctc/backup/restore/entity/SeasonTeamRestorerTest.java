@@ -128,17 +128,23 @@ class SeasonTeamRestorerTest {
         // when
         restorer.restore(rows, jdbcTemplate);
 
-        // then — Pass-1 then Pass-2 InOrder
+        // then — exactly 2 batchUpdate calls, captured via Mockito captors. InOrder
+        // separately verifies Pass-1 (INSERT) precedes Pass-2 (UPDATE).
         ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<List<JsonNode>> rowsCaptor = ArgumentCaptor.forClass(List.class);
         ArgumentCaptor<ParameterizedPreparedStatementSetter<JsonNode>> setterCaptor =
                 ArgumentCaptor.forClass(ParameterizedPreparedStatementSetter.class);
+        verify(jdbcTemplate, org.mockito.Mockito.times(2))
+                .batchUpdate(sqlCaptor.capture(), rowsCaptor.capture(),
+                        eq(500), setterCaptor.capture());
 
         InOrder ordering = inOrder(jdbcTemplate);
-        ordering.verify(jdbcTemplate).batchUpdate(sqlCaptor.capture(), rowsCaptor.capture(),
-                eq(500), setterCaptor.capture());
-        ordering.verify(jdbcTemplate).batchUpdate(sqlCaptor.capture(), rowsCaptor.capture(),
-                eq(500), setterCaptor.capture());
+        ordering.verify(jdbcTemplate).batchUpdate(
+                org.mockito.ArgumentMatchers.startsWith("INSERT INTO season_teams"),
+                anyList(), anyInt(), any(ParameterizedPreparedStatementSetter.class));
+        ordering.verify(jdbcTemplate).batchUpdate(
+                eq("UPDATE season_teams SET successor_season_team_id = ? WHERE id = ?"),
+                anyList(), anyInt(), any(ParameterizedPreparedStatementSetter.class));
 
         // Pass 1 SQL — INSERT with NULL self-FK
         String pass1Sql = sqlCaptor.getAllValues().get(0);
@@ -159,29 +165,32 @@ class SeasonTeamRestorerTest {
         assertThat(pass2Rows.get(0).get("id").asText())
                 .isEqualTo("22222222-bbbb-bbbb-bbbb-222222222222");
 
-        // Drive Pass-1 setter against "replaced" row — verify column bindings (10 binds:
+        // Drive Pass-1 setter against "replaced" row — verify column bindings (11 binds:
         // id, season_id, team_id, rating, primary_color, secondary_color, accent_color,
         // logo_url, replaced_at, created_at, updated_at). successor_season_team_id is
-        // hard-coded NULL in SQL, NOT a setter parameter.
-        setterCaptor.getAllValues().get(0).setValues(preparedStatement, replaced);
-        verify(preparedStatement).setObject(1, UUID.fromString("22222222-bbbb-bbbb-bbbb-222222222222"));
-        verify(preparedStatement).setObject(2, UUID.fromString("aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaaa"));
-        verify(preparedStatement).setObject(3, UUID.fromString("dddddddd-bbbb-bbbb-bbbb-dddddddddddd"));
-        verify(preparedStatement).setObject(4, 80, Types.INTEGER);
-        verify(preparedStatement).setString(5, null);
-        verify(preparedStatement).setString(6, null);
-        verify(preparedStatement).setString(7, null);
-        verify(preparedStatement).setString(8, null);
-        verify(preparedStatement).setDate(9, Date.valueOf(LocalDate.parse("2024-04-01")));
-        verify(preparedStatement).setTimestamp(10,
+        // hard-coded NULL in SQL, NOT a setter parameter. Separate mocks per pass keep
+        // the invocation tallies clean.
+        PreparedStatement psPass1 = org.mockito.Mockito.mock(PreparedStatement.class);
+        setterCaptor.getAllValues().get(0).setValues(psPass1, replaced);
+        verify(psPass1).setObject(1, UUID.fromString("22222222-bbbb-bbbb-bbbb-222222222222"));
+        verify(psPass1).setObject(2, UUID.fromString("aaaaaaaa-bbbb-bbbb-bbbb-aaaaaaaaaaaa"));
+        verify(psPass1).setObject(3, UUID.fromString("dddddddd-bbbb-bbbb-bbbb-dddddddddddd"));
+        verify(psPass1).setObject(4, 80, Types.INTEGER);
+        verify(psPass1).setString(5, null);
+        verify(psPass1).setString(6, null);
+        verify(psPass1).setString(7, null);
+        verify(psPass1).setString(8, null);
+        verify(psPass1).setDate(9, Date.valueOf(LocalDate.parse("2024-04-01")));
+        verify(psPass1).setTimestamp(10,
                 Timestamp.valueOf(LocalDateTime.parse("2024-01-01T00:00:00")));
-        verify(preparedStatement).setTimestamp(11,
+        verify(psPass1).setTimestamp(11,
                 Timestamp.valueOf(LocalDateTime.parse("2024-04-01T00:00:00")));
 
-        // Drive Pass-2 setter — 2 binds: successor UUID, self id
-        setterCaptor.getAllValues().get(1).setValues(preparedStatement, replaced);
-        verify(preparedStatement).setObject(1, UUID.fromString("33333333-bbbb-bbbb-bbbb-333333333333"));
-        verify(preparedStatement).setObject(2, UUID.fromString("22222222-bbbb-bbbb-bbbb-222222222222"));
+        // Drive Pass-2 setter — 2 binds: successor UUID, self id (separate mock).
+        PreparedStatement psPass2 = org.mockito.Mockito.mock(PreparedStatement.class);
+        setterCaptor.getAllValues().get(1).setValues(psPass2, replaced);
+        verify(psPass2).setObject(1, UUID.fromString("33333333-bbbb-bbbb-bbbb-333333333333"));
+        verify(psPass2).setObject(2, UUID.fromString("22222222-bbbb-bbbb-bbbb-222222222222"));
     }
 
     @Test
