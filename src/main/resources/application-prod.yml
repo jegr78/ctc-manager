@@ -1,5 +1,8 @@
 spring:
   datasource:
+    # Phase 75 RESEARCH §10: DATABASE_URL MUST include rewriteBatchedStatements=true
+    # (e.g. jdbc:mariadb://host:3306/db?rewriteBatchedStatements=true) so that
+    # JdbcTemplate.batchUpdate(...)=500 compiles into a single multi-row INSERT on MariaDB.
     url: ${DATABASE_URL}
     driver-class-name: org.mariadb.jdbc.Driver
     username: ${DATABASE_USERNAME}

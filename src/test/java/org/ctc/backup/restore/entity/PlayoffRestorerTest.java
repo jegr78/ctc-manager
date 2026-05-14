@@ -25,17 +25,16 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * Phase 75 / Plan 05 — Unit test for {@link PlayoffRestorer}.
+ * Phase 75 / Plan 05 + Plan 06 fix — Unit test for {@link PlayoffRestorer}.
  *
  * <p>Verifies the {@link org.ctc.backup.restore.EntityRestorer} contract for the {@code playoffs}
- * entity. Effective V1+V3 schema columns: id, phase_id (V3 FK to season_phases), name,
- * start_date, end_date, event_duration_minutes, created_at, updated_at.
+ * entity. Effective V6 schema columns (after {@code V6__CleanupLegacySeasonColumns.java} dropped
+ * the legacy {@code season_id} column): id, phase_id (V3 FK to season_phases — NOT NULL after V4),
+ * name, start_date, end_date, event_duration_minutes, created_at, updated_at.
  *
- * <p>{@code season_id} is NOT explicitly written by the restorer — V3 made {@code phase_id} the
- * authoritative FK (Playoff.phase is the only entity association); the legacy V1
- * {@code season_id NOT NULL} column is filled from the phase's season via the import orchestrator
- * having seeded the source JSON correctly (the export wire emits {@code seasonId} as a separate
- * field on each playoff row).
+ * <p>Plan 06 Rule 3 fix: the legacy {@code season_id} column is NO LONGER part of the INSERT
+ * since V6 dropped it. The original Plan 05 PlayoffRestorer included it and would fail on H2
+ * (no such column) and MariaDB (column does not exist). The test is updated accordingly.
  */
 class PlayoffRestorerTest {
 
@@ -87,29 +86,28 @@ class PlayoffRestorerTest {
 
         assertThat(sqlCaptor.getValue())
                 .contains("INSERT INTO playoffs")
-                .contains("season_id")
                 .contains("phase_id")
                 .contains("name")
                 .contains("start_date")
                 .contains("end_date")
                 .contains("event_duration_minutes")
                 .contains("created_at")
-                .contains("updated_at");
+                .contains("updated_at")
+                .doesNotContain("season_id");  // V6 dropped this column
 
         PreparedStatement ps = mock(PreparedStatement.class);
         setterCaptor.getValue().setValues(ps, row);
 
-        // id (1), season_id (2), phase_id (3), name (4), start_date (5), end_date (6),
-        // event_duration_minutes (7), created_at (8), updated_at (9)
+        // id (1), phase_id (2), name (3), start_date (4), end_date (5),
+        // event_duration_minutes (6), created_at (7), updated_at (8)
         verify(ps).setObject(1, UUID.fromString("11111111-1111-1111-1111-111111111111"));
-        verify(ps).setObject(2, UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"));
-        verify(ps).setObject(3, UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
-        verify(ps).setString(4, "Saison 2023 Playoffs");
-        verify(ps).setDate(5, Date.valueOf(LocalDate.parse("2024-05-01")));
-        verify(ps).setDate(6, Date.valueOf(LocalDate.parse("2024-05-31")));
-        verify(ps).setInt(7, 90);
-        verify(ps).setTimestamp(8, Timestamp.valueOf(LocalDateTime.parse("2024-01-15T10:30:00")));
-        verify(ps).setTimestamp(9, Timestamp.valueOf(LocalDateTime.parse("2024-02-20T11:45:00")));
+        verify(ps).setObject(2, UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"));
+        verify(ps).setString(3, "Saison 2023 Playoffs");
+        verify(ps).setDate(4, Date.valueOf(LocalDate.parse("2024-05-01")));
+        verify(ps).setDate(5, Date.valueOf(LocalDate.parse("2024-05-31")));
+        verify(ps).setInt(6, 90);
+        verify(ps).setTimestamp(7, Timestamp.valueOf(LocalDateTime.parse("2024-01-15T10:30:00")));
+        verify(ps).setTimestamp(8, Timestamp.valueOf(LocalDateTime.parse("2024-02-20T11:45:00")));
     }
 
     @Test
@@ -139,9 +137,11 @@ class PlayoffRestorerTest {
         PreparedStatement ps = mock(PreparedStatement.class);
         setterCaptor.getValue().setValues(ps, row);
 
+        // After V6 drop of season_id: positions shift by one — start_date=4, end_date=5,
+        // event_duration_minutes=6
+        verify(ps).setNull(4, java.sql.Types.DATE);
         verify(ps).setNull(5, java.sql.Types.DATE);
-        verify(ps).setNull(6, java.sql.Types.DATE);
-        verify(ps).setNull(7, java.sql.Types.INTEGER);
+        verify(ps).setNull(6, java.sql.Types.INTEGER);
     }
 
     @Test
