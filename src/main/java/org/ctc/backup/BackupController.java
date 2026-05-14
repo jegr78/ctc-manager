@@ -273,9 +273,15 @@ public class BackupController {
 			String auditIdText = ex.isAuditWritten()
 					? ex.getAuditUuid().toString()
 					: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
+			// WR-06: if the wrapped cause is a BackupArchiveException (e.g. SCHEMA_MISMATCH
+			// detected inside execute() after reparse), surface the reason inline so the
+			// operator sees the diagnostic detail instead of just the generic rollback flash.
+			String causeDetail = (ex.getCause() instanceof BackupArchiveException bae)
+					? " (" + bae.reason() + ")"
+					: "";
 			ra.addFlashAttribute("errorMessage",
-					String.format("Import failed and was rolled back — see logs. Audit-id: %s.",
-							auditIdText));  // D-15 #2
+					String.format("Import failed and was rolled back — see logs. Audit-id: %s%s.",
+							auditIdText, causeDetail));  // D-15 #2
 		}
 		// STAGING FILE — on success the AFTER_COMMIT listener (Plan 75-07) deletes it;
 		// on failure the file survives so the operator can retry without re-uploading.
