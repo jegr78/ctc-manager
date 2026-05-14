@@ -547,6 +547,12 @@ public class BackupImportService {
             // Error during the 1000-row restore still gets an audit row written via REQUIRES_NEW
             // before propagating. Spring's @Transactional rollback fires on Error by default;
             // we preserve the JVM-fatal contract by re-throwing Error unchanged.
+            // Phase 76 / SECU-07: AutoBackupBeforeImportException is rethrown unchanged — Step 0.5
+            // already recorded its own audit row + cleaned up its partial ZIP, and wrapping it
+            // here would shadow the subclass-specific controller catch (RESEARCH Pitfall #3).
+            if (t instanceof AutoBackupBeforeImportException ae) {
+                throw ae;
+            }
             log.error("Import failed for staging-id {}: ", stagingId, t);
             boolean auditWritten = tryRecordFailure(auditUuid, schemaVersion, sourceFilename,
                     wipedCounts, restoredCounts);
