@@ -8,6 +8,7 @@ import org.ctc.backup.service.BackupArchiveService;
 import org.ctc.backup.service.BackupImportService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,9 +78,23 @@ class AutoBackupBeforeImportPathIT {
         Files.createDirectories(importBackupsDir);
     }
 
+    @BeforeEach
+    void cleanupImportBackupsDirsBefore() throws IOException {
+        cleanupImportBackupsDirs();
+    }
+
     @AfterEach
-    void cleanupImportBackupsDirs() throws IOException {
-        // Remove all <ts> directories created during this test to keep cross-test state clean.
+    void cleanupImportBackupsDirsAfter() throws IOException {
+        cleanupImportBackupsDirs();
+    }
+
+    /**
+     * Remove every <ts> sub-tree under {@code data/.import-backups/} so the per-second
+     * timestamp in Step 0.5 never collides with leftovers from earlier ITs (e.g. empty
+     * {@code <ts>/} directories left behind by {@link AutoBackupBeforeImportFailureIT}
+     * after its {@code tryDeletePartialAutoBackup} cleanup).
+     */
+    private void cleanupImportBackupsDirs() throws IOException {
         if (!Files.exists(importBackupsDir)) {
             return;
         }
