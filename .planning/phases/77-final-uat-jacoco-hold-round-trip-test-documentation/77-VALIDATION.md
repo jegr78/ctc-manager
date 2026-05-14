@@ -1,10 +1,11 @@
 ---
 phase: 77
 slug: final-uat-jacoco-hold-round-trip-test-documentation
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-14
+approved: 2026-05-14
 ---
 
 # Phase 77 — Validation Strategy
@@ -89,11 +90,11 @@ created: 2026-05-14
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (N/A — none required)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 120s per commit, < 7min per wave
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (checkpoint tasks 77-03-02/77-03-03 use `checkpoint:human-verify` per CLAUDE.md `playwright-cli` policy — acceptable per plan-checker Dimension 8c)
+- [x] Sampling continuity: no 3 consecutive automated tasks without verify (sequence: 77-01-01 auto → 77-02-01 auto → 77-03-01 auto → [checkpoints 77-03-02/77-03-03] → 77-04-01 auto → 77-05-01 auto)
+- [x] Wave 0 covers all MISSING references (N/A — none required; existing infrastructure covers all phase requirements)
+- [x] No watch-mode flags (all commands use one-shot `./mvnw verify` / `playwright-cli` / `curl` invocations)
+- [x] Feedback latency < 120s per commit, < 7min per wave (single-IT runs ~90s; full `./mvnw verify -Pe2e` ~5–7min)
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-05-14

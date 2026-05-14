@@ -314,7 +314,7 @@ Plans:
 
   1. `./mvnw verify -Pe2e` is BUILD SUCCESS on H2; the `mariadb-migration-smoke.yml` CI workflow is BUILD SUCCESS on MariaDB; both runs include `BackupRoundTripIT`
   2. JaCoCo line coverage report shows ≥ 82 % (gate) and ideally ≥ 85 % (comfort buffer); coverage report is committed under `target/site/jacoco/`
-  3. `BackupRoundTripIT` exports the dev fixture, wipes the DB, re-imports, and asserts (a) all 22 table row counts equal pre-export counts, (b) ≥ 3 sample entities are SHA-256-byte-equal after re-serialization through `backupObjectMapper`
+  3. `BackupRoundTripIT` exports the dev fixture, wipes the DB, re-imports, and asserts (a) all table row counts per `BackupSchema.getExportOrder()` equal pre-export counts (24 entities as of Phase 72 — Car + Track added to the original 22), (b) ≥ 3 sample entities are SHA-256-byte-equal after re-serialization through `backupObjectMapper`
   4. `BackupImportRollbackIT` from Phase 75 is part of the final verify run and is BUILD SUCCESS
   5. README contains a "Backup & Restore" section with step-by-step Export workflow, Import workflow, Schema-Version explanation, and recovery from `data/.import-backups/<ts>/`; the corresponding WIKI page is published under `wiki/`
 

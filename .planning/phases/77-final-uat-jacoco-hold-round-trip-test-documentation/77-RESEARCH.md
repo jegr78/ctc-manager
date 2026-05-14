@@ -610,22 +610,19 @@ private byte[] hashEntity(Object entity) throws Exception {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should the `MariaDbRoundTripTests` class also pass `-Ddocker.available=true` in CI?**
-   - What we know: `BackupImportMariaDbSmokeIT` uses `@EnabledIfSystemProperty(named = "docker.available", matches = "true")` and is currently SKIPPED in CI (ci.yml does not pass this property). CONTEXT D-05 says "Testcontainers in main ci.yml" — but does not specify adding the system property.
-   - What's unclear: The ROADMAP success criterion #1 says "the `mariadb-migration-smoke.yml` CI workflow is BUILD SUCCESS on MariaDB; both runs include `BackupRoundTripIT`". If "both runs" means the main ci.yml run AND the smoke workflow, then the MariaDB IT needs the system property in ci.yml. If "both runs" means H2 run and MariaDB run (on the same phase-77 PR), then the MariaDB test must not be guarded.
-   - Recommendation: D-17 says "no ci.yml changes" is implied by "no new workflow edits". Mirror the existing `@EnabledIfSystemProperty` guard. The MariaDB round-trip is validated locally by the developer before PR. If the team wants CI-level MariaDB validation, that's a Phase 79 scope item (add `-Ddocker.available=true` to ci.yml).
+   - **RESOLVED:** Mirror the existing `@EnabledIfSystemProperty(named = "docker.available", matches = "true")` guard from `BackupImportMariaDbSmokeIT`. The new nested class stays SKIPPED in CI by default — matching the Phase 75 precedent. Developers run it locally via `./mvnw -Ddocker.available=true -Dit.test=BackupRoundTripIT\$MariaDbRoundTripTests verify` before PR (recorded in `77-AUTO-UAT.md` step 5). Adding `-Ddocker.available=true` to `.github/workflows/ci.yml` is a Phase 79 milestone-closer decision (D-15 boundary), not Phase 77 scope. CONTEXT D-05 / D-17 forbid CI workflow edits in Phase 77.
+   - Plan reference: `77-01-PLAN.md` action step for `MariaDbRoundTripTests` declaration explicitly includes `@EnabledIfSystemProperty(named = "docker.available", matches = "true")`.
 
 2. **How to capture `02-preview-screen.png` without an interactive browser session?**
-   - What we know: The preview screen requires a prior `POST /admin/backup/import-preview` upload; the URL alone does not work. `playwright-cli screenshot` is non-interactive.
-   - What's unclear: Does `playwright-cli` support form submission? Or is the only reliable path `playwright-cli open` + manual navigation?
-   - Recommendation: Use `playwright-cli open` in interactive mode. Upload a real ZIP, navigate to the preview, and screenshot manually. This is the same approach used for Phase 76 screenshots.
+   - **RESOLVED:** Use `playwright-cli open` in interactive mode. The plan's task 77-03-02 is a `checkpoint:human-verify` task that pauses execution for the developer to drive the upload flow manually (per CLAUDE.md "Visual Verification with `playwright-cli`"). `playwright-cli screenshot` (non-interactive) cannot drive the multipart upload required for the preview screen. The interactive approach is the same pattern used for Phase 76 banner screenshots.
+   - Plan reference: `77-03-PLAN.md` task 77-03-02 is explicitly checkpoint-typed for this reason.
 
 3. **`Team.parentTeam` lazy-loading during SHA-256 hashing:**
-   - What we know: `Team.parentTeam` is `@ManyToOne(fetch = FetchType.LAZY)`. The `TeamMixIn` may or may not include `parentTeam` in the wire shape.
-   - What's unclear: If the MixIn includes `parentTeam` (as an ID reference via `@JsonIdentityInfo`), then serializing a root team (where `parentTeam == null`) will serialize `null` for that field — no lazy-loading issue. If the MixIn includes it as a nested object, lazy loading may trigger.
-   - Recommendation: Inspect `TeamMixIn.java` during implementation. If `parentTeam` is included as an ID reference (expected), no issue. If it causes `LazyInitializationException`, wrap the hash computation in a `jdbcTemplate.execute(...)` or read the entity inside a proper session.
+   - **RESOLVED:** Inspect `TeamMixIn.java` during implementation (action step 6 of Plan 01). Expected outcome based on Jackson configuration patterns: the MixIn renders `parentTeam` as a nullable ID reference (not a nested object), so serializing a root team (where `parentTeam == null`) does not trigger lazy loading. If a `LazyInitializationException` surfaces during the first H2 run, the fallback per Plan 01 action is to read the entity inside a `@Transactional` helper. This is a CONTINGENT resolution: the executor verifies the MixIn shape at runtime and applies the fallback only if needed.
+   - Plan reference: `77-01-PLAN.md` action step 6 names `TeamMixIn.java` in `<read_first>` and includes the `@Transactional` fallback in the contingency notes.
 
 ---
 
