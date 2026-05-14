@@ -45,6 +45,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -484,6 +485,9 @@ public class BackupImportService {
             long totalRestored = restoredCounts.values().stream().mapToLong(Long::longValue).sum();
             int entityCount = restoredCounts.size();
 
+            // CR-01: use unmodifiable LinkedHashMap copies so the audit-row JSON columns preserve
+            // export-order (Map.copyOf returns a hash-table-backed ImmutableCollections.MapN that
+            // strips insertion order — defeating the explicit LinkedHashMap ordering above).
             eventPublisher.publishEvent(new BackupImportSucceededEvent(
                     stagingId,
                     auditUuid,
@@ -491,8 +495,8 @@ public class BackupImportService {
                     uploadsTargetDir,
                     uploadsNewDir,
                     schemaVersion,
-                    Map.copyOf(wipedCounts),
-                    Map.copyOf(restoredCounts),
+                    Collections.unmodifiableMap(new LinkedHashMap<>(wipedCounts)),
+                    Collections.unmodifiableMap(new LinkedHashMap<>(restoredCounts)),
                     sourceFilename,
                     executedBy));
 
