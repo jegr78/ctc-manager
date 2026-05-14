@@ -16,10 +16,12 @@ import org.ctc.backup.dto.BackupImportResult;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupImportException;
 import org.ctc.backup.exception.UploadsRestoreException;
+import org.ctc.backup.lock.ImportLockService;
 import org.ctc.backup.service.BackupArchiveService;
 import org.ctc.backup.service.BackupImportService;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -31,8 +33,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.servlet.view.RedirectView;
 
 /**
  * Phase 73-04 — visible Backup feature glue.
@@ -83,6 +87,7 @@ public class BackupController {
 
 	private final BackupArchiveService backupArchiveService;
 	private final BackupImportService backupImportService;
+	private final ImportLockService importLockService;
 
 	@GetMapping
 	public String showForm(Model model) {
@@ -194,6 +199,7 @@ public class BackupController {
 
 	/**
 	 * Phase 75 — confirm → execute (D-15, replaces Phase 74 D-08 stub).
+	 * Phase 76 — extended with tryLock/finally wrapper + HTTP 409 View-mode redirect (D-04/D-05/D-06).
 	 *
 	 * <p>Binds {@link BackupImportConfirmForm} with {@code @Valid}. On binding
 	 * errors, re-renders {@code admin/backup-confirm} with field errors (re-parses
@@ -203,6 +209,24 @@ public class BackupController {
 	 * {@link BackupImportService#execute(UUID)} for the real wipe-and-restore
 	 * transaction. The three D-15 flash strings (success / failure / uploads-restore
 	 * soft-fail) are bound here.
+	 *
+	 * <p><strong>Phase 76 / D-04:</strong> {@link ImportLockService#tryLock()} is
+	 * called BEFORE the binding-error check. If the lock is already held, a HTTP 409
+	 * redirect is returned immediately via a {@link RedirectView} with
+	 * {@code setStatusCode(HttpStatus.CONFLICT)} + {@code setHttp10Compatible(false)}.
+	 * The {@code setHttp10Compatible(false)} is REQUIRED — in the default
+	 * {@code http10Compatible=true} mode {@code sendRedirect} overwrites the status
+	 * to 302 (RESEARCH Pitfall #1).
+	 *
+	 * <p><strong>Phase 76 / D-06:</strong> the lock is released in {@code finally}
+	 * AFTER {@code execute()} returns. Spring's default
+	 * {@code @TransactionalEventListener(phase = AFTER_COMMIT)} runs synchronously on
+	 * the same thread, so the Plan 75-07 uploads-move listener has completed before
+	 * the {@code finally} releases. Do NOT add {@code @Async} to that listener.
+	 *
+	 * <p><strong>Return type change:</strong> {@code String} → {@link ModelAndView}
+	 * to support the View-mode 409 redirect (RESEARCH Pattern 3). Every existing
+	 * return path is wrapped as {@code new ModelAndView(...)}.
 	 *
 	 * <p><strong>REVISION-iteration-1 (W4) catch-chain order:</strong> the catch chain
 	 * order ({@link BackupArchiveException} → {@link UploadsRestoreException} →
@@ -226,66 +250,80 @@ public class BackupController {
 	 * directory NOT having been moved back to {@code data/{profile}/uploads/}.
 	 */
 	@PostMapping("/import-execute")
-	public String importExecute(
+	public ModelAndView importExecute(
 			@Valid @ModelAttribute("backupImportConfirmForm") BackupImportConfirmForm form,
 			BindingResult bindingResult, Model model, RedirectAttributes ra) {
-		if (bindingResult.hasErrors()) {
-			try {
-				BackupImportPreview preview = backupImportService.reparse(form.getStagingId());
-				model.addAttribute("preview", preview);
-				return "admin/backup-confirm";
-			} catch (BackupArchiveException ex) {
-				ra.addFlashAttribute("errorMessage", mapReason(ex));
-				return "redirect:/admin/backup";
-			} catch (IOException ex) {
-				log.error("IO error on import-execute (re-render path): stagingId={}", form.getStagingId(), ex);
-				ra.addFlashAttribute("errorMessage",
-						"Backup archive failed safety checks (size or path) and was rejected.");
-				return "redirect:/admin/backup";
-			}
+
+		// 409 GUARD — D-04 / D-05 / RESEARCH Pattern 3 (view-mode redirect, NOT response.setStatus)
+		if (!importLockService.tryLock()) {
+			ra.addFlashAttribute("errorMessage",
+					"Another import is already running — please wait.");
+			RedirectView rv = new RedirectView("/admin/backup");
+			rv.setStatusCode(HttpStatus.CONFLICT);
+			rv.setHttp10Compatible(false);  // REQUIRED: in http10Compatible=true mode sendRedirect overwrites status to 302
+			return new ModelAndView(rv);
 		}
 		try {
-			backupImportService.reparse(form.getStagingId());  // D-09 defense-in-depth re-validation
-			BackupImportResult result = backupImportService.execute(form.getStagingId());
-			ra.addFlashAttribute("successMessage",
-					String.format("Import completed. %d rows restored across %d tables.",
-							result.restoredTotal(), result.entityCount()));  // D-15 #1
-		} catch (BackupArchiveException ex) {
-			ra.addFlashAttribute("errorMessage", mapReason(ex));
-		} catch (IOException ex) {
-			log.error("IO error on import-execute (execute path): stagingId={}", form.getStagingId(), ex);
-			ra.addFlashAttribute("errorMessage",
-					"Backup archive failed safety checks (size or path) and was rejected.");
-		} catch (UploadsRestoreException ex) {
-			// D-15 #3 — defensive catch. The AFTER_COMMIT listener (Plan 75-07) is the
-			// real throw site and runs AFTER the controller's redirect response is built,
-			// so this clause is rarely-to-never hit in practice. See class Javadoc for
-			// the Q5 resolution + operator-recovery story.
-			log.error("UploadsRestoreException reached controller path — unexpected post-Plan 07; "
-					+ "stagingId={}", form.getStagingId(), ex);
-			ra.addFlashAttribute("errorMessage",
-					"Import database succeeded but uploads restore failed and was reverted. "
-							+ "See logs. Audit-id: unknown.");
-		} catch (BackupImportException ex) {
-			// WR-03: when the REQUIRES_NEW audit-write itself failed (double-failure path),
-			// no data_import_audit row exists for the operator to query. Reflect that in the
-			// flash so "Audit-id: <uuid>" is not a misleading dead-end.
-			String auditIdText = ex.isAuditWritten()
-					? ex.getAuditUuid().toString()
-					: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
-			// WR-06: if the wrapped cause is a BackupArchiveException (e.g. SCHEMA_MISMATCH
-			// detected inside execute() after reparse), surface the reason inline so the
-			// operator sees the diagnostic detail instead of just the generic rollback flash.
-			String causeDetail = (ex.getCause() instanceof BackupArchiveException bae)
-					? " (" + bae.reason() + ")"
-					: "";
-			ra.addFlashAttribute("errorMessage",
-					String.format("Import failed and was rolled back — see logs. Audit-id: %s%s.",
-							auditIdText, causeDetail));  // D-15 #2
+			if (bindingResult.hasErrors()) {
+				try {
+					BackupImportPreview preview = backupImportService.reparse(form.getStagingId());
+					model.addAttribute("preview", preview);
+					return new ModelAndView("admin/backup-confirm");
+				} catch (BackupArchiveException ex) {
+					ra.addFlashAttribute("errorMessage", mapReason(ex));
+					return new ModelAndView("redirect:/admin/backup");
+				} catch (IOException ex) {
+					log.error("IO error on import-execute (re-render path): stagingId={}", form.getStagingId(), ex);
+					ra.addFlashAttribute("errorMessage",
+							"Backup archive failed safety checks (size or path) and was rejected.");
+					return new ModelAndView("redirect:/admin/backup");
+				}
+			}
+			try {
+				backupImportService.reparse(form.getStagingId());  // D-09 defense-in-depth re-validation
+				BackupImportResult result = backupImportService.execute(form.getStagingId());
+				ra.addFlashAttribute("successMessage",
+						String.format("Import completed. %d rows restored across %d tables.",
+								result.restoredTotal(), result.entityCount()));  // D-15 #1
+			} catch (BackupArchiveException ex) {
+				ra.addFlashAttribute("errorMessage", mapReason(ex));
+			} catch (IOException ex) {
+				log.error("IO error on import-execute (execute path): stagingId={}", form.getStagingId(), ex);
+				ra.addFlashAttribute("errorMessage",
+						"Backup archive failed safety checks (size or path) and was rejected.");
+			} catch (UploadsRestoreException ex) {
+				// D-15 #3 — defensive catch. The AFTER_COMMIT listener (Plan 75-07) is the
+				// real throw site and runs AFTER the controller's redirect response is built,
+				// so this clause is rarely-to-never hit in practice. See class Javadoc for
+				// the Q5 resolution + operator-recovery story.
+				log.error("UploadsRestoreException reached controller path — unexpected post-Plan 07; "
+						+ "stagingId={}", form.getStagingId(), ex);
+				ra.addFlashAttribute("errorMessage",
+						"Import database succeeded but uploads restore failed and was reverted. "
+								+ "See logs. Audit-id: unknown.");
+			} catch (BackupImportException ex) {
+				// WR-03: when the REQUIRES_NEW audit-write itself failed (double-failure path),
+				// no data_import_audit row exists for the operator to query. Reflect that in the
+				// flash so "Audit-id: <uuid>" is not a misleading dead-end.
+				String auditIdText = ex.isAuditWritten()
+						? ex.getAuditUuid().toString()
+						: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
+				// WR-06: if the wrapped cause is a BackupArchiveException (e.g. SCHEMA_MISMATCH
+				// detected inside execute() after reparse), surface the reason inline so the
+				// operator sees the diagnostic detail instead of just the generic rollback flash.
+				String causeDetail = (ex.getCause() instanceof BackupArchiveException bae)
+						? " (" + bae.reason() + ")"
+						: "";
+				ra.addFlashAttribute("errorMessage",
+						String.format("Import failed and was rolled back — see logs. Audit-id: %s%s.",
+								auditIdText, causeDetail));  // D-15 #2
+			}
+			// STAGING FILE — on success the AFTER_COMMIT listener (Plan 75-07) deletes it;
+			// on failure the file survives so the operator can retry without re-uploading.
+			return new ModelAndView("redirect:/admin/backup");
+		} finally {
+			importLockService.unlock();  // D-06 — synchronous AFTER_COMMIT already completed
 		}
-		// STAGING FILE — on success the AFTER_COMMIT listener (Plan 75-07) deletes it;
-		// on failure the file survives so the operator can retry without re-uploading.
-		return "redirect:/admin/backup";
 	}
 
 	/**
