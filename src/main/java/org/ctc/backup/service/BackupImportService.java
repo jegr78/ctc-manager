@@ -432,10 +432,10 @@ public class BackupImportService {
             BackupArchiveException missing = new BackupArchiveException(Reason.MANIFEST_MISSING,
                     "Staging file not found for id=" + stagingId);
             log.error("Import failed for staging-id {}: {}", stagingId, missing.getMessage(), missing);
-            tryRecordFailure(auditUuid, /* schemaVersion */ 0,
+            boolean auditWritten = tryRecordFailure(auditUuid, /* schemaVersion */ 0,
                     /* sourceFilename */ stagingId.toString(),
                     Map.of(), Map.of());
-            throw new BackupImportException(auditUuid, missing);
+            throw new BackupImportException(auditUuid, auditWritten, missing);
         }
         String sourceFilename;
         try {
@@ -510,9 +510,10 @@ public class BackupImportService {
             return new BackupImportResult(auditUuid, totalRestored, entityCount);
         } catch (Exception e) {
             log.error("Import failed for staging-id {}: ", stagingId, e);
-            tryRecordFailure(auditUuid, schemaVersion, sourceFilename, wipedCounts, restoredCounts);
+            boolean auditWritten = tryRecordFailure(auditUuid, schemaVersion, sourceFilename,
+                    wipedCounts, restoredCounts);
             tryCleanupUploadsNew(uploadsNewDir);
-            throw new BackupImportException(auditUuid, e);
+            throw new BackupImportException(auditUuid, auditWritten, e);
         }
     }
 
@@ -685,8 +686,12 @@ public class BackupImportService {
      * Best-effort REQUIRES_NEW audit-row write on the failure path. Logs at ERROR if the
      * audit write itself fails (rare double-failure) but does not throw — the original
      * cause must propagate to the caller via {@link BackupImportException}.
+     *
+     * @return {@code true} when the audit row was persisted; {@code false} on the
+     *         double-failure path (WR-03 — controller flash adjusts wording so the operator
+     *         knows no row exists to query)
      */
-    private void tryRecordFailure(UUID auditUuid, int schemaVersion, String sourceFilename,
+    private boolean tryRecordFailure(UUID auditUuid, int schemaVersion, String sourceFilename,
             Map<String, Long> wipedCounts, Map<String, Long> restoredCounts) {
         try {
             dataImportAuditService.recordResult(
@@ -697,9 +702,11 @@ public class BackupImportService {
                     restoredCounts == null ? Map.of() : restoredCounts,
                     sourceFilename,
                     /* success */ false);
+            return true;
         } catch (Exception auditEx) {
             log.error("Audit-row write ALSO failed for auditUuid={} — manual reconciliation required",
                     auditUuid, auditEx);
+            return false;
         }
     }
 

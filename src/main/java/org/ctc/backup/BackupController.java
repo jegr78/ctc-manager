@@ -267,9 +267,15 @@ public class BackupController {
 					"Import database succeeded but uploads restore failed and was reverted. "
 							+ "See logs. Audit-id: unknown.");
 		} catch (BackupImportException ex) {
+			// WR-03: when the REQUIRES_NEW audit-write itself failed (double-failure path),
+			// no data_import_audit row exists for the operator to query. Reflect that in the
+			// flash so "Audit-id: <uuid>" is not a misleading dead-end.
+			String auditIdText = ex.isAuditWritten()
+					? ex.getAuditUuid().toString()
+					: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
 			ra.addFlashAttribute("errorMessage",
 					String.format("Import failed and was rolled back — see logs. Audit-id: %s.",
-							ex.getAuditUuid()));  // D-15 #2
+							auditIdText));  // D-15 #2
 		}
 		// STAGING FILE — on success the AFTER_COMMIT listener (Plan 75-07) deletes it;
 		// on failure the file survives so the operator can retry without re-uploading.

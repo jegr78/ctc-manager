@@ -26,18 +26,40 @@ import java.util.UUID;
 public class BackupImportException extends RuntimeException {
 
     private final UUID auditUuid;
+    private final boolean auditWritten;
 
     /**
      * Constructs a new {@code BackupImportException} with the given audit-row UUID and root
      * cause. The exception message is synthesized from the cause's message so the SLF4J log
      * line carries useful diagnostic context.
      *
+     * <p>This constructor assumes the audit row was written successfully. Use
+     * {@link #BackupImportException(UUID, boolean, Throwable)} on the double-failure path
+     * where the REQUIRES_NEW audit write itself failed and no row exists for the operator
+     * to query (WR-03).
+     *
      * @param auditUuid id of the {@code data_import_audit} row recorded via REQUIRES_NEW
      * @param cause     the underlying exception that triggered the rollback
      */
     public BackupImportException(UUID auditUuid, Throwable cause) {
+        this(auditUuid, /* auditWritten */ true, cause);
+    }
+
+    /**
+     * Constructs a new {@code BackupImportException} carrying both the pre-allocated audit
+     * UUID and an {@code auditWritten} flag (WR-03: distinguishes "row exists, query by UUID"
+     * from "audit-write itself failed, no row to query").
+     *
+     * @param auditUuid    pre-allocated UUID; may NOT correspond to a persisted row when
+     *                     {@code auditWritten == false}
+     * @param auditWritten {@code true} when the REQUIRES_NEW audit row write succeeded;
+     *                     {@code false} on the double-failure path
+     * @param cause        the underlying exception that triggered the rollback
+     */
+    public BackupImportException(UUID auditUuid, boolean auditWritten, Throwable cause) {
         super("Backup import failed and was rolled back: " + describe(cause), cause);
         this.auditUuid = auditUuid;
+        this.auditWritten = auditWritten;
     }
 
     /**
@@ -50,6 +72,7 @@ public class BackupImportException extends RuntimeException {
     public BackupImportException(UUID auditUuid, String message, Throwable cause) {
         super(message, cause);
         this.auditUuid = auditUuid;
+        this.auditWritten = true;
     }
 
     /**
@@ -60,6 +83,18 @@ public class BackupImportException extends RuntimeException {
      */
     public UUID getAuditUuid() {
         return auditUuid;
+    }
+
+    /**
+     * Returns whether the REQUIRES_NEW audit row was successfully persisted before this
+     * exception was thrown (WR-03). When {@code false}, the {@link #getAuditUuid()} value
+     * is the pre-allocated UUID but no matching row exists in {@code data_import_audit};
+     * the controller adjusts the failure-flash text accordingly.
+     *
+     * @return {@code true} when an audit row exists, {@code false} on the double-failure path
+     */
+    public boolean isAuditWritten() {
+        return auditWritten;
     }
 
     private static String describe(Throwable cause) {
