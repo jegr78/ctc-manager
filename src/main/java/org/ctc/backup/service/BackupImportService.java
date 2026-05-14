@@ -13,6 +13,7 @@ import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.dto.BackupImportResult;
 import org.ctc.backup.dto.EntityRowCount;
 import org.ctc.backup.event.BackupImportSucceededEvent;
+import org.ctc.backup.exception.AutoBackupBeforeImportException;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.exception.BackupImportException;
@@ -38,8 +39,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -437,6 +440,15 @@ public class BackupImportService {
                     Map.of(), Map.of());
             throw new BackupImportException(auditUuid, auditWritten, missing);
         }
+
+        // <ts> directory for atomic move-triple (D-11 / D-15 single-source-of-truth) — computed
+        // ONCE here and shared by the auto-backup ZIP path (Step 0.5) and the uploads-old/ sibling
+        // (AFTER_COMMIT listener in Plan 75-07). MOVED upward from its Phase 75 position per D-15.
+        String ts = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
+        Path importBackupDir = importBackupsDir.resolve(ts);
+        // Phase 76 / SECU-07: target ZIP for the pre-import auto-backup (D-14 / D-16).
+        Path autoBackupZip = importBackupDir.resolve("auto-backup-before-import.zip");
+
         String sourceFilename;
         try {
             sourceFilename = Files.exists(metaFile)
@@ -452,9 +464,6 @@ public class BackupImportService {
                     stagingId, ioe);
         }
 
-        // <ts> directory for atomic move-triple (D-11) — same format that Plan 07 listener consumes.
-        String ts = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
-        Path importBackupDir = importBackupsDir.resolve(ts);
         Path uploadsNewDir = importBackupDir.resolve("uploads-new");
 
         Map<String, Long> wipedCounts = new LinkedHashMap<>();
@@ -468,6 +477,27 @@ public class BackupImportService {
             // already gates via buildPreview).
             BackupManifest manifest = backupArchive.readManifest(staged);
             schemaVersion = manifest.schemaVersion();
+
+            // Step 0.5 — Phase 76 / SECU-07: pre-import auto-backup (D-14 / D-16).
+            // Runs INSIDE the outer @Transactional(REQUIRED, READ_COMMITTED) — the read-only
+            // BackupArchiveService.writeZip(...) joins this tx (no-op read-only join per D-16).
+            // If the write fails, NO DB mutation has occurred yet; the outer tx rolls back as
+            // a no-op. A distinct AutoBackupBeforeImportException is thrown (D-17) so the
+            // controller can flash a semantically correct "no DB changes" message.
+            try {
+                Files.createDirectories(importBackupDir);
+                try (OutputStream out = Files.newOutputStream(autoBackupZip,
+                        StandardOpenOption.CREATE_NEW)) {
+                    backupArchive.writeZip(out, Instant.now());
+                }
+            } catch (IOException | RuntimeException autoExportEx) {
+                tryDeletePartialAutoBackup(autoBackupZip);  // D-19 best-effort cleanup, never throws
+                log.error("Auto-backup-before-import failed for staging-id {} — aborting import",
+                        stagingId, autoExportEx);
+                boolean auditWritten = tryRecordFailure(auditUuid, schemaVersion,
+                        sourceFilename, Map.of(), Map.of());  // D-18 — empty count maps (no DB mutation)
+                throw new AutoBackupBeforeImportException(auditUuid, auditWritten, autoExportEx);
+            }
 
             // Step 1: wipe (3 self-FK NULLs + native DELETE in reverse export order + flush/clear)
             wipeAllTables(wipedCounts);
@@ -517,6 +547,12 @@ public class BackupImportService {
             // Error during the 1000-row restore still gets an audit row written via REQUIRES_NEW
             // before propagating. Spring's @Transactional rollback fires on Error by default;
             // we preserve the JVM-fatal contract by re-throwing Error unchanged.
+            // Phase 76 / SECU-07: AutoBackupBeforeImportException is rethrown unchanged — Step 0.5
+            // already recorded its own audit row + cleaned up its partial ZIP, and wrapping it
+            // here would shadow the subclass-specific controller catch (RESEARCH Pitfall #3).
+            if (t instanceof AutoBackupBeforeImportException ae) {
+                throw ae;
+            }
             log.error("Import failed for staging-id {}: ", stagingId, t);
             boolean auditWritten = tryRecordFailure(auditUuid, schemaVersion, sourceFilename,
                     wipedCounts, restoredCounts);
@@ -728,6 +764,27 @@ public class BackupImportService {
             log.error("Audit-row write ALSO failed for auditUuid={} — manual reconciliation required",
                     auditUuid, auditEx);
             return false;
+        }
+    }
+
+    /**
+     * Best-effort partial-ZIP cleanup on auto-backup failure (Phase 76 / D-19). Never throws.
+     *
+     * <p>Calls {@link Files#deleteIfExists(Path)} inside a try-catch that logs at WARN on failure
+     * but does not propagate. Windows file-locking semantics (Pitfall #7) may prevent deletion
+     * when the ZipOutputStream handle was not fully closed before this is called; the operator
+     * runbook covers manual cleanup via {@code rm -rf data/.import-backups/<ts>/}.
+     *
+     * @param target path to the partial auto-backup ZIP (may be {@code null})
+     */
+    private static void tryDeletePartialAutoBackup(Path target) {
+        if (target == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(target);
+        } catch (IOException io) {
+            log.warn("Failed to delete partial auto-backup ZIP {}", target, io);
         }
     }
 
