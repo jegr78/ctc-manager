@@ -1,18 +1,38 @@
 package org.ctc.backup.service;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.audit.DataImportAuditService;
 import org.ctc.backup.dto.BackupImportPreview;
+import org.ctc.backup.dto.BackupImportResult;
 import org.ctc.backup.dto.EntityRowCount;
+import org.ctc.backup.event.BackupImportSucceededEvent;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupArchiveException.Reason;
+import org.ctc.backup.exception.BackupImportException;
+import org.ctc.backup.restore.EntityRestorer;
+import org.ctc.backup.restore.RestoreFailureInjector;
 import org.ctc.backup.schema.BackupManifest;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.GenericTypeResolver;
+import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,34 +41,67 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
- * Stateless, write-free orchestrator for the backup import preview pipeline.
+ * Stateless orchestrator for the backup import pipeline.
  *
- * <p>Phase 74 Plan 05 — D-19 public surface: {@link #stage(MultipartFile)},
+ * <p>Phase 74 Plan 05 — D-19 preview surface: {@link #stage(MultipartFile)},
  * {@link #reparse(UUID)}, {@link #deleteStagingFile(UUID)}.
  *
- * <p>No DB writes anywhere in this class. The class annotation
- * {@code @Transactional(readOnly = true)} makes this constraint declarative;
- * the 24 {@code Repository.count()} calls in {@link #buildPreview} share one
- * Hibernate session (OSIV is enabled; CONTEXT D-09).
+ * <p>Phase 75 Plan 06 — D-14 execute surface: {@link #execute(UUID)} (single
+ * {@code @Transactional} method on top of the otherwise read-only class), backed by
+ * package-private helpers {@link #wipeAllTables(Map)} and
+ * {@link #restoreAll(Path, Map)}.
+ *
+ * <p>The execute method:
+ * <ol>
+ *   <li>Locates the staged ZIP + sidecar (Phase 74 staging-file contract).</li>
+ *   <li>Reads the manifest (re-validates schemaVersion).</li>
+ *   <li>Wipes all 24 tables in {@code BackupSchema.getExportOrder().reversed()} order via
+ *       native {@code DELETE FROM <table>} after three self-FK pre-step UPDATEs
+ *       ({@code teams.parent_team_id}, {@code season_teams.successor_season_team_id},
+ *       {@code playoff_matchups.next_matchup_id}). {@code em.flush() + em.clear()} drops the
+ *       L1 cache.</li>
+ *   <li>Restores each entity via {@code JdbcTemplate.batchUpdate} through the 24
+ *       {@link EntityRestorer @Component} beans — bypasses {@code AuditingEntityListener} so
+ *       imported {@code created_at} / {@code updated_at} survive verbatim.</li>
+ *   <li>Extracts the staged {@code uploads/} tree to
+ *       {@code data/.import-backups/<ts>/uploads-new/} (D-11 / D-12).</li>
+ *   <li>Publishes {@link BackupImportSucceededEvent} as the LAST statement inside the try
+ *       block — Spring's TX-aware buffering defers the listener (Plan 07) until AFTER_COMMIT.</li>
+ *   <li>On any exception: SLF4J ERROR + REQUIRES_NEW {@code success=false} audit row (Plan 02
+ *       contract, survives the outer rollback) + best-effort cleanup of {@code uploads-new/}
+ *       + throw {@link BackupImportException} carrying the audit-row UUID for the Plan 08
+ *       controller flash.</li>
+ * </ol>
  *
  * <p><strong>Staging-file lifecycle (D-16 / D-08):</strong>
  * <ul>
  *   <li>{@link #stage}: on any {@link BackupArchiveException} or {@link IOException},
  *       the staged file is deleted in a {@code finally} block. On success, the file
- *       survives for Phase 75's {@code import-execute} step.</li>
- *   <li>{@link #reparse}: never deletes the staging file — Phase 75 inherits it
+ *       survives for the execute step.</li>
+ *   <li>{@link #reparse}: never deletes the staging file — execute inherits it
  *       (D-08). The Plan 07 startup-sweep is the safety net for stale files.</li>
  *   <li>{@link #deleteStagingFile}: idempotent, swallows all {@code IOException}
  *       (never throws). Called from the cancel-button controller (Plan 08).</li>
+ *   <li>{@link #execute}: success path delegates staging-file cleanup to the AFTER_COMMIT
+ *       listener (Plan 07) via the published event. Failure path leaves the staging file
+ *       in place so the operator can retry without re-uploading.</li>
  * </ul>
  */
 @Slf4j
@@ -59,10 +112,31 @@ public class BackupImportService {
     /** ZIP magic bytes: PK\x03\x04 (local file header signature). */
     private static final byte[] ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04};
 
+    /** Batch size for the JSON-stream-to-batchUpdate accumulator (CONTEXT D-07). */
+    private static final int RESTORE_BATCH_SIZE = 500;
+
+    /** Frequency at which {@link RestoreFailureInjector#maybeFailAt(String, int)} fires (CONTEXT D-13). */
+    private static final int FAIL_INJECT_INTERVAL = 50;
+
+    /** Defensive allow-list for native-SQL table-name concatenation (no SQL injection on hard-coded BackupSchema slugs). */
+    private static final Pattern SAFE_TABLE_NAME = Pattern.compile("^[a-z_]+$");
+
     private final BackupArchiveService backupArchive;
     private final BackupSchema backupSchema;
     private final List<JpaRepository<?, ?>> allRepositories;
+    private final List<EntityRestorer> entityRestorers;
+    private final JdbcTemplate jdbcTemplate;
+    private final ObjectMapper backupObjectMapper;
+    private final RestoreFailureInjector failureInjector;
+    private final DataImportAuditService dataImportAuditService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final Environment environment;
     private final Path stagingDir;
+    private final Path importBackupsDir;
+    private final Path uploadsTargetDir;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     /**
      * {@code tableName -> JpaRepository} lookup map; populated by {@link #wireRepositoriesByTableName()}.
@@ -72,21 +146,45 @@ public class BackupImportService {
     private Map<String, JpaRepository<?, ?>> repositoryByTableName;
 
     /**
+     * {@code tableName -> EntityRestorer} lookup map; populated by {@link #wireRestorersByTableName()}.
+     */
+    private Map<String, EntityRestorer> restorerByTableName;
+
+    /**
      * Explicit constructor — {@code @RequiredArgsConstructor} is incompatible with
-     * the {@code @Value} annotation on {@code stagingDirRaw} (mirrors
-     * {@code BackupArchiveService} lines 102-112).
+     * the {@code @Value} annotations and the {@code @Qualifier} on
+     * {@code backupObjectMapper}.
      */
     public BackupImportService(
             BackupArchiveService backupArchive,
             BackupSchema backupSchema,
             List<JpaRepository<?, ?>> allRepositories,
-            @Value("${app.backup.staging-dir}") String stagingDirRaw
+            List<EntityRestorer> entityRestorers,
+            JdbcTemplate jdbcTemplate,
+            @Qualifier("backupObjectMapper") ObjectMapper backupObjectMapper,
+            RestoreFailureInjector failureInjector,
+            DataImportAuditService dataImportAuditService,
+            ApplicationEventPublisher eventPublisher,
+            Environment environment,
+            @Value("${app.backup.staging-dir}") String stagingDirRaw,
+            @Value("${app.backup.import-backups-dir}") String importBackupsDirRaw,
+            @Value("${app.upload-dir}") String uploadDirRaw
     ) {
         this.backupArchive = backupArchive;
         this.backupSchema = backupSchema;
         this.allRepositories = allRepositories;
+        this.entityRestorers = entityRestorers;
+        this.jdbcTemplate = jdbcTemplate;
+        this.backupObjectMapper = backupObjectMapper;
+        this.failureInjector = failureInjector;
+        this.dataImportAuditService = dataImportAuditService;
+        this.eventPublisher = eventPublisher;
+        this.environment = environment;
         this.stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
+        this.importBackupsDir = Paths.get(importBackupsDirRaw).toAbsolutePath().normalize();
+        this.uploadsTargetDir = Paths.get(uploadDirRaw).toAbsolutePath().normalize();
         this.repositoryByTableName = new HashMap<>();
+        this.restorerByTableName = new HashMap<>();
     }
 
     /**
@@ -131,8 +229,49 @@ public class BackupImportService {
         log.info("BackupImportService: wired {} table-to-repository mappings", map.size());
     }
 
+    /**
+     * Builds the {@code tableName -> EntityRestorer} lookup map at startup.
+     *
+     * <p>Iterates the Spring-injected {@code entityRestorers} list (auto-collected
+     * {@code @Component} beans) and keys each by {@link EntityRestorer#tableName()}.
+     *
+     * @throws IllegalStateException if the resulting map size differs from
+     *                               {@code backupSchema.getExportOrder().size()} or contains
+     *                               unknown table names — fail-fast at startup
+     */
+    @PostConstruct
+    void wireRestorersByTableName() {
+        Map<String, EntityRestorer> map = new HashMap<>();
+        for (EntityRestorer restorer : entityRestorers) {
+            String table = restorer.tableName();
+            EntityRestorer prev = map.put(table, restorer);
+            if (prev != null) {
+                throw new IllegalStateException(
+                        "Duplicate EntityRestorer for tableName=" + table
+                                + ": " + prev.getClass().getName()
+                                + " AND " + restorer.getClass().getName());
+            }
+        }
+
+        List<String> missing = new ArrayList<>();
+        for (EntityRef ref : backupSchema.getExportOrder()) {
+            if (!map.containsKey(ref.tableName())) {
+                missing.add(ref.tableName());
+            }
+        }
+
+        if (map.size() != backupSchema.getExportOrder().size() || !missing.isEmpty()) {
+            throw new IllegalStateException(
+                    "BackupImportService bootstrap: expected " + backupSchema.getExportOrder().size()
+                            + " EntityRestorer beans but wired " + map.size()
+                            + "; missing tables: " + missing);
+        }
+        this.restorerByTableName = map;
+        log.info("BackupImportService: wired {} table-to-restorer mappings", map.size());
+    }
+
     // =========================================================================
-    // D-19 public surface
+    // D-19 public surface (preview)
     // =========================================================================
 
     /**
@@ -255,7 +394,331 @@ public class BackupImportService {
     }
 
     // =========================================================================
-    // Private helpers
+    // D-14 public surface (execute)
+    // =========================================================================
+
+    /**
+     * Replaces the entire DB content with the contents of the staged backup ZIP, atomically.
+     *
+     * <p>Phase 75 D-14: single {@code @Transactional(REQUIRED, READ_COMMITTED)} method that
+     * owns wipe + restore + uploads extraction + event publish. The post-commit listener
+     * (Plan 07) consumes {@link BackupImportSucceededEvent} for the move-triple + audit
+     * success-row write.
+     *
+     * <p>On failure: the JPA transaction rolls back (wipe + restore are undone), a
+     * {@code success=false} audit row is written via REQUIRES_NEW (Plan 02 contract,
+     * survives the outer rollback), the partially-extracted {@code uploads-new/} is
+     * cleaned best-effort, and a {@link BackupImportException} carrying the audit-row UUID
+     * is thrown so the Plan 08 controller can bind the D-15 #2 failure-flash placeholder.
+     *
+     * @param stagingId UUID of the staged ZIP (from a previous {@link #stage} call)
+     * @return a {@link BackupImportResult} carrying the audit-row UUID + restored counts
+     * @throws BackupImportException on any failure (catch-all rollback path)
+     */
+    @Transactional(
+            propagation = Propagation.REQUIRED,
+            isolation = Isolation.READ_COMMITTED,
+            rollbackFor = Exception.class)
+    public BackupImportResult execute(UUID stagingId) {
+        log.info("Backup import execute started: stagingId={}", stagingId);
+
+        UUID auditUuid = UUID.randomUUID();
+
+        // Stage file lookup (Phase 74 contract — same shape as reparse())
+        Path staged = stagingDir.resolve("upload-" + stagingId + ".zip");
+        Path metaFile = stagingDir.resolve("upload-" + stagingId + ".zip.meta");
+        if (!Files.exists(staged)) {
+            BackupArchiveException missing = new BackupArchiveException(Reason.MANIFEST_MISSING,
+                    "Staging file not found for id=" + stagingId);
+            log.error("Import failed for staging-id {}: {}", stagingId, missing.getMessage(), missing);
+            tryRecordFailure(auditUuid, /* schemaVersion */ 0,
+                    /* sourceFilename */ stagingId.toString(),
+                    Map.of(), Map.of());
+            throw new BackupImportException(auditUuid, missing);
+        }
+        String sourceFilename;
+        try {
+            sourceFilename = Files.exists(metaFile)
+                    ? Files.readString(metaFile, java.nio.charset.StandardCharsets.UTF_8)
+                    : staged.getFileName().toString();
+        } catch (IOException ioe) {
+            sourceFilename = staged.getFileName().toString();
+            log.warn("Failed to read staging .meta sidecar for id={} — falling back to staging filename",
+                    stagingId, ioe);
+        }
+
+        // <ts> directory for atomic move-triple (D-11) — same format that Plan 07 listener consumes.
+        String ts = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
+        Path importBackupDir = importBackupsDir.resolve(ts);
+        Path uploadsNewDir = importBackupDir.resolve("uploads-new");
+
+        Map<String, Long> wipedCounts = new LinkedHashMap<>();
+        Map<String, Long> restoredCounts = new LinkedHashMap<>();
+        int schemaVersion = 0;
+
+        try {
+            // Step 0: manifest re-read (schemaVersion validation is implicit — readManifest
+            // does not gate, but Plan 04 contract guarantees the value is the integer from
+            // the staged ZIP; the controller path always invokes reparse() first which
+            // already gates via buildPreview).
+            BackupManifest manifest = backupArchive.readManifest(staged);
+            schemaVersion = manifest.schemaVersion();
+
+            // Step 1: wipe (3 self-FK NULLs + native DELETE in reverse export order + flush/clear)
+            wipeAllTables(wipedCounts);
+
+            // Step 2: extract staged uploads (D-12) — BEFORE restore so a restore failure leaves
+            // the FS staging area visible for forensic inspection but the catch-block still
+            // best-effort cleans uploads-new/.
+            Files.createDirectories(importBackupDir);
+            Files.createDirectories(uploadsNewDir);
+            backupArchive.extractUploadsTo(staged, uploadsNewDir);
+
+            // Step 3: restore (JdbcTemplate.batchUpdate via 24 EntityRestorers; auditing bypass)
+            restoreAll(staged, restoredCounts);
+
+            // Step 4: publish the success event as the LAST statement inside the try block.
+            // Spring's TransactionalEventListener(phase=AFTER_COMMIT) buffers delivery until
+            // the outer @Transactional method commits — Plan 07 consumes the event there.
+            String executedBy = resolveExecutedBy();
+            long totalRestored = restoredCounts.values().stream().mapToLong(Long::longValue).sum();
+            int entityCount = restoredCounts.size();
+
+            eventPublisher.publishEvent(new BackupImportSucceededEvent(
+                    stagingId,
+                    auditUuid,
+                    importBackupDir,
+                    uploadsTargetDir,
+                    uploadsNewDir,
+                    schemaVersion,
+                    Map.copyOf(wipedCounts),
+                    Map.copyOf(restoredCounts),
+                    sourceFilename,
+                    executedBy));
+
+            log.info("Backup import execute completed: stagingId={}, auditUuid={}, "
+                            + "restoredTotal={}, entityCount={}",
+                    stagingId, auditUuid, totalRestored, entityCount);
+
+            return new BackupImportResult(auditUuid, totalRestored, entityCount);
+        } catch (Exception e) {
+            log.error("Import failed for staging-id {}: ", stagingId, e);
+            tryRecordFailure(auditUuid, schemaVersion, sourceFilename, wipedCounts, restoredCounts);
+            tryCleanupUploadsNew(uploadsNewDir);
+            throw new BackupImportException(auditUuid, e);
+        }
+    }
+
+    // =========================================================================
+    // Private helpers — wipe / restore / housekeeping
+    // =========================================================================
+
+    /**
+     * Wipes all 24 tables in {@link BackupSchema#getExportOrder()} reverse order.
+     *
+     * <p>Step 0: NULL the 3 self-FK columns so the FK-reverse DELETE loop is safe
+     * regardless of FK direction:
+     * <ul>
+     *   <li>{@code teams.parent_team_id} — sub-team → parent self-FK (D-06).</li>
+     *   <li>{@code season_teams.successor_season_team_id} — Q1 resolution.</li>
+     *   <li>{@code playoff_matchups.next_matchup_id} — Q2 resolution.</li>
+     * </ul>
+     *
+     * <p>Step 1: forward iteration over {@code getExportOrder().reversed()}, issuing
+     * {@code DELETE FROM <table>} via {@link EntityManager#createNativeQuery(String)}. The
+     * table name comes from {@link EntityRef#tableName()} (which derives from the JPA
+     * {@code @Table(name=...)} annotation on the entity class) — defensively re-validated
+     * against {@link #SAFE_TABLE_NAME} before concatenation.
+     *
+     * <p>Step 2: {@link EntityManager#flush()} + {@link EntityManager#clear()} drops the L1
+     * cache so downstream native restore queries don't see stale managed entities.
+     *
+     * @param wipedCounts out-parameter map filled with {tableName → rows-deleted}
+     */
+    void wipeAllTables(Map<String, Long> wipedCounts) {
+        // 3 self-FK pre-step NULLs (Q1/Q2 + D-06)
+        entityManager.createNativeQuery("UPDATE teams SET parent_team_id = NULL").executeUpdate();
+        entityManager.createNativeQuery("UPDATE season_teams SET successor_season_team_id = NULL").executeUpdate();
+        entityManager.createNativeQuery("UPDATE playoff_matchups SET next_matchup_id = NULL").executeUpdate();
+
+        List<EntityRef> wipeOrder = backupSchema.getExportOrder().reversed();
+        for (EntityRef ref : wipeOrder) {
+            String table = ref.tableName();
+            validateTableName(table);
+            int rows = entityManager.createNativeQuery("DELETE FROM " + table).executeUpdate();
+            wipedCounts.put(table, (long) rows);
+        }
+
+        entityManager.flush();
+        entityManager.clear();
+        log.info("Wipe completed: {} tables, total rows deleted={}", wipedCounts.size(),
+                wipedCounts.values().stream().mapToLong(Long::longValue).sum());
+    }
+
+    /**
+     * Restores all 24 tables from the staged ZIP via {@code JdbcTemplate.batchUpdate} through
+     * the per-entity {@link EntityRestorer} beans.
+     *
+     * <p>For each {@link EntityRef} in {@link BackupSchema#getExportOrder()} (forward), opens
+     * the {@code data/<slug>.json} ZIP entry, parses it with a Jackson {@link JsonParser},
+     * accumulates {@link JsonNode} rows into a batch of {@link #RESTORE_BATCH_SIZE}, and
+     * delegates to {@link EntityRestorer#restore(List, JdbcTemplate)} per batch. Calls
+     * {@link RestoreFailureInjector#maybeFailAt(String, int)} every
+     * {@link #FAIL_INJECT_INTERVAL} rows (production no-op; tests inject failures via the
+     * {@code FailAtTableInjector} bean).
+     *
+     * @param staged          path to the staged ZIP
+     * @param restoredCounts  out-parameter map filled with {tableName → rows-restored}
+     * @throws IOException on ZIP / JSON parse failure (caller catches and rolls back)
+     */
+    void restoreAll(Path staged, Map<String, Long> restoredCounts) throws IOException {
+        for (EntityRef ref : backupSchema.getExportOrder()) {
+            String table = ref.tableName();
+            EntityRestorer restorer = restorerByTableName.get(table);
+            if (restorer == null) {
+                throw new IllegalStateException("No EntityRestorer wired for tableName=" + table);
+            }
+            long restored = restoreOneTable(staged, ref, restorer);
+            restoredCounts.put(table, restored);
+        }
+        log.info("Restore completed: {} tables, total rows restored={}", restoredCounts.size(),
+                restoredCounts.values().stream().mapToLong(Long::longValue).sum());
+    }
+
+    /**
+     * Restores a single entity's {@code data/<slug>.json} ZIP entry by streaming the JSON
+     * array with a Jackson {@link JsonParser}, accumulating batches of
+     * {@link #RESTORE_BATCH_SIZE} rows, and delegating to
+     * {@link EntityRestorer#restore(List, JdbcTemplate)} per batch.
+     */
+    private long restoreOneTable(Path staged, EntityRef ref, EntityRestorer restorer) throws IOException {
+        String entryPath = ref.fileName();
+        long totalRows = 0;
+        List<JsonNode> batch = new ArrayList<>(RESTORE_BATCH_SIZE);
+
+        try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(staged))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entryPath.equals(entry.getName())) {
+                    // Found the data file for this entity — stream-parse the JSON array.
+                    JsonParser parser = backupObjectMapper.getFactory().createParser((InputStream) zis);
+                    parser.disable(JsonParser.Feature.AUTO_CLOSE_SOURCE);
+                    try {
+                        JsonToken firstToken = parser.nextToken();
+                        if (firstToken != JsonToken.START_ARRAY) {
+                            throw new BackupArchiveException(Reason.MANIFEST_INVALID,
+                                    "data file is not a JSON array: " + entryPath);
+                        }
+                        int rowIndex = 0;
+                        JsonToken tok;
+                        while ((tok = parser.nextToken()) != null && tok != JsonToken.END_ARRAY) {
+                            if (tok == JsonToken.START_OBJECT) {
+                                JsonNode row = backupObjectMapper.readTree(parser);
+                                batch.add(row);
+                                rowIndex++;
+                                totalRows++;
+
+                                if (rowIndex % FAIL_INJECT_INTERVAL == 0) {
+                                    failureInjector.maybeFailAt(ref.tableName(), rowIndex);
+                                }
+
+                                if (batch.size() >= RESTORE_BATCH_SIZE) {
+                                    restorer.restore(batch, jdbcTemplate);
+                                    batch.clear();
+                                }
+                            }
+                        }
+                        if (!batch.isEmpty()) {
+                            restorer.restore(batch, jdbcTemplate);
+                            batch.clear();
+                        }
+                    } finally {
+                        parser.close();
+                    }
+                    return totalRows;
+                }
+            }
+        }
+        // Absent data files for an entity are not a hard error — an exported empty array is
+        // semantically equivalent. The restorer is simply not invoked and the count is 0.
+        log.debug("No data entry for table={} (entryPath={}) — restore count is 0", ref.tableName(), entryPath);
+        return totalRows;
+    }
+
+    /**
+     * Defensively asserts that a table name only contains lowercase letters and underscores
+     * before native-SQL concatenation. {@link BackupSchema#getExportOrder()} returns names
+     * read from JPA {@code @Table(name=...)} annotations on hard-coded entity classes — there
+     * is no realistic SQL-injection vector here, but a malformed annotation should fail loud
+     * rather than execute arbitrary native SQL.
+     */
+    private static void validateTableName(String tableName) {
+        if (tableName == null || !SAFE_TABLE_NAME.matcher(tableName).matches()) {
+            throw new IllegalStateException("Refusing native-SQL concat for unsafe table name: " + tableName);
+        }
+    }
+
+    /**
+     * Resolves the {@code executedBy} string for the success-path audit row (D-02):
+     * dev/local profile → literal {@code "dev"}; else SecurityContext authentication name;
+     * fall-back {@code "unknown"}.
+     */
+    private String resolveExecutedBy() {
+        if (environment.matchesProfiles("dev | local")) {
+            return "dev";
+        }
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getName() != null && !auth.getName().isBlank()) {
+            return auth.getName();
+        }
+        return "unknown";
+    }
+
+    /**
+     * Best-effort REQUIRES_NEW audit-row write on the failure path. Logs at ERROR if the
+     * audit write itself fails (rare double-failure) but does not throw — the original
+     * cause must propagate to the caller via {@link BackupImportException}.
+     */
+    private void tryRecordFailure(UUID auditUuid, int schemaVersion, String sourceFilename,
+            Map<String, Long> wipedCounts, Map<String, Long> restoredCounts) {
+        try {
+            dataImportAuditService.recordResult(
+                    auditUuid,
+                    /* executedByCaller */ null,
+                    schemaVersion,
+                    wipedCounts == null ? Map.of() : wipedCounts,
+                    restoredCounts == null ? Map.of() : restoredCounts,
+                    sourceFilename,
+                    /* success */ false);
+        } catch (Exception auditEx) {
+            log.error("Audit-row write ALSO failed for auditUuid={} — manual reconciliation required",
+                    auditUuid, auditEx);
+        }
+    }
+
+    /**
+     * Best-effort cleanup of the partially-extracted {@code uploads-new/} directory on the
+     * failure path (D-12 finally / CONTEXT discretion: delete on rollback).
+     */
+    private static void tryCleanupUploadsNew(Path uploadsNewDir) {
+        if (uploadsNewDir == null || !Files.exists(uploadsNewDir)) {
+            return;
+        }
+        try (Stream<Path> walk = Files.walk(uploadsNewDir)) {
+            walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (IOException io) {
+                    log.warn("Failed to delete {} during uploads-new cleanup", p, io);
+                }
+            });
+        } catch (IOException io) {
+            log.warn("Failed to walk uploads-new for cleanup: {}", uploadsNewDir, io);
+        }
+    }
+
+    // =========================================================================
+    // Private helpers — preview-side
     // =========================================================================
 
     /**
