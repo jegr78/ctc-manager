@@ -12,9 +12,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 05 — {@link EntityRestorer} for {@link org.ctc.domain.model.PlayoffRound}.
+ * {@link EntityRestorer} for {@link org.ctc.domain.model.PlayoffRound}.
  *
- * <p>V1 schema columns ({@code V1__initial_schema.sql} lines 176-185):
+ * <p>V1 schema columns ({@code V1__initial_schema.sql}):
  * <ul>
  *   <li>{@code id} (UUID PK)</li>
  *   <li>{@code playoff_id} (UUID NOT NULL, FK)</li>
@@ -26,7 +26,7 @@ import java.util.UUID;
  * </ul>
  *
  * <p>Single-pass insert — regular FK ({@code playoff_id}). Bypasses
- * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener} per Phase 75 goal.
+ * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}.
  */
 @Component
 @Slf4j

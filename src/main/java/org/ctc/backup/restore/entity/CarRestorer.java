@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 05 — {@link EntityRestorer} for {@link org.ctc.domain.model.Car}.
+ * {@link EntityRestorer} for {@link org.ctc.domain.model.Car}.
  *
  * <p>GT7 reference-data leaf entity: no foreign keys. V1 schema columns
- * ({@code V1__initial_schema.sql} lines 100-109):
+ * ({@code V1__initial_schema.sql}):
  * <ul>
  *   <li>{@code id} (UUID PK)</li>
  *   <li>{@code manufacturer} (VARCHAR NOT NULL)</li>

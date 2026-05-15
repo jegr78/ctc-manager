@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 04 — restores rows into the {@code race_results} table from the
+ * Restores rows into the {@code race_results} table from the
  * {@code data/race-results.json} array in a backup ZIP.
  *
  * <p>HOTTEST PATH of the entire restore on the Saison-2023 fixture (~1000 rows). The setter

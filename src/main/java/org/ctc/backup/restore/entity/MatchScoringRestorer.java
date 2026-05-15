@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 04 — restores rows into the {@code match_scorings} table from the
+ * Restores rows into the {@code match_scorings} table from the
  * {@code data/match-scorings.json} array in a backup ZIP.
  *
  * <p>Schema (V1): {@code id UUID PK, name VARCHAR UNIQUE, points_win INT NOT NULL,

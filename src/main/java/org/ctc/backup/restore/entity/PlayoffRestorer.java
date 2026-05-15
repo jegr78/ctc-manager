@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 05 — {@link EntityRestorer} for {@link org.ctc.domain.model.Playoff}.
+ * {@link EntityRestorer} for {@link org.ctc.domain.model.Playoff}.
  *
  * <p>V6 schema (after {@code V6__CleanupLegacySeasonColumns.java} drops {@code season_id}):
  * <ul>
@@ -34,11 +34,10 @@ import java.util.UUID;
  * <p>{@code Playoff.phase} is rendered by {@link org.ctc.backup.serialization.PlayoffMixIn} as a
  * raw UUID string via {@code @JsonIdentityReference(alwaysAsId=true)} — accessed via
  * {@code row.get("phase").asText()}. The V1 {@code season_id} column was dropped by V6 so
- * the INSERT no longer carries it (Plan 06 Rule 3 fix; Plan 05 PlayoffRestorer had the
- * legacy V1 column included).
+ * the INSERT omits it.
  *
  * <p>Single-pass insert — no FK self-cycle. Bypasses {@link org.ctc.domain.model.BaseEntity}'s
- * {@code AuditingEntityListener} per Phase 75 goal.
+ * {@code AuditingEntityListener}.
  */
 @Component
 @Slf4j

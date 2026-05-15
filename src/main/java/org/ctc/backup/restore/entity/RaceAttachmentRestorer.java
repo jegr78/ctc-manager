@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 04 — restores rows into the {@code race_attachments} table from the
+ * Restores rows into the {@code race_attachments} table from the
  * {@code data/race-attachments.json} array in a backup ZIP.
  *
  * <p>Schema (V1): {@code id UUID PK, race_id UUID NOT NULL, type VARCHAR(10) NOT NULL,

@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 04 — restores rows into the {@code race_settings} table from the
+ * Restores rows into the {@code race_settings} table from the
  * {@code data/race-settings.json} array in a backup ZIP.
  *
  * <p>Schema (V1): {@code id UUID PK, race_id UUID NOT NULL UNIQUE, number_of_laps INT NULL,

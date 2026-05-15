@@ -15,20 +15,19 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 05 — 2-pass {@link EntityRestorer} for
- * {@link org.ctc.domain.model.PlayoffMatchup}.
+ * 2-pass {@link EntityRestorer} for {@link org.ctc.domain.model.PlayoffMatchup}.
  *
- * <p>PATTERNS Q2 resolution: {@code next_matchup_id} is a self-FK
- * ({@code V1__initial_schema.sql} lines 187-204:
+ * <p>{@code next_matchup_id} is a self-FK
+ * ({@code V1__initial_schema.sql}:
  * {@code CONSTRAINT fk_pm_next FOREIGN KEY (next_matchup_id) REFERENCES playoff_matchups(id)})
  * — structurally identical to {@code Team.parent_team_id}. The 2-pass NULL-then-UPDATE
- * treatment locked by CONTEXT D-06 (Team) is applied here too.
+ * treatment applied to {@link TeamRestorer} is applied here too.
  *
  * <p>Pass-1 INSERT writes every matchup with {@code next_matchup_id = NULL} (hard-coded in the
  * VALUES clause). Pass-2 UPDATE fills {@code next_matchup_id} for matchups whose source JSON
  * had a non-null {@code nextMatchup} reference.
  *
- * <p>V1 schema columns ({@code V1__initial_schema.sql} lines 187-204):
+ * <p>V1 schema columns ({@code V1__initial_schema.sql}):
  * <ul>
  *   <li>{@code id} (UUID PK)</li>
  *   <li>{@code round_id} (UUID NOT NULL, FK)</li>
@@ -42,19 +41,16 @@ import java.util.UUID;
  *   <li>{@code created_at}, {@code updated_at} (TIMESTAMP)</li>
  * </ul>
  *
- * <p>Nullable team FKs use a local {@code setNullableUuid} helper (CONTEXT D-08 — no shared
- * utility class).
+ * <p>Nullable team FKs use a local {@code setNullableUuid} helper (no shared utility class).
  *
- * <p>Bypasses {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener} per
- * Phase 75 goal.
+ * <p>Bypasses {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}.
  */
 @Component
 @Slf4j
 public class PlayoffMatchupRestorer implements EntityRestorer {
 
     /**
-     * Pass-1 INSERT with {@code next_matchup_id} hard-coded {@code NULL}. Column order matches
-     * V1__initial_schema.sql lines 187-204.
+     * Pass-1 INSERT with {@code next_matchup_id} hard-coded {@code NULL}.
      */
     private static final String INSERT_SQL_PASS1 =
             "INSERT INTO playoff_matchups (id, round_id, team1_id, team2_id, winner_id, "
@@ -109,8 +105,8 @@ public class PlayoffMatchupRestorer implements EntityRestorer {
     }
 
     /**
-     * Binds a nullable UUID column from a JSON field that may be missing OR explicitly
-     * {@code null} (per CONTEXT D-08: no shared utility class — local helper).
+     * Binds a nullable UUID column from a JSON field that may be missing or explicitly
+     * {@code null}.
      */
     private static void setNullableUuid(PreparedStatement ps, int idx, JsonNode row, String field)
             throws SQLException {

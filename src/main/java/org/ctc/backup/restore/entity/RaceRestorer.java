@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 04 — restores rows into the {@code races} table from the
+ * Restores rows into the {@code races} table from the
  * {@code data/races.json} array in a backup ZIP.
  *
  * <p>Schema (V1): {@code id UUID PK, matchday_id UUID NOT NULL, match_id UUID NULL,
@@ -24,7 +24,7 @@ import java.util.UUID;
  * home_team_id UUID NULL, away_team_id UUID NULL, date_time TIMESTAMP NULL,
  * calendar_event_id VARCHAR NULL, created_at TIMESTAMP, updated_at TIMESTAMP}.
  *
- * <p>JSON FK property naming (per Phase 73 {@code RaceMixIn}): {@code matchday}, {@code match},
+ * <p>JSON FK property naming (from {@code RaceMixIn}): {@code matchday}, {@code match},
  * {@code playoffMatchup}, {@code track}, {@code car}, {@code homeTeamOverride},
  * {@code awayTeamOverride}. The entity-level overrides bind into the schema's
  * {@code home_team_id}/{@code away_team_id} columns (no DDL rename).

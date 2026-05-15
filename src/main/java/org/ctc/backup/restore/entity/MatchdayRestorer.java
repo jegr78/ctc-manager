@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 04 — restores rows into the {@code matchdays} table from the
+ * Restores rows into the {@code matchdays} table from the
  * {@code data/matchdays.json} array in a backup ZIP.
  *
  * <p>Schema (V1 + V3 additions): {@code id UUID PK, phase_id UUID NOT NULL,
