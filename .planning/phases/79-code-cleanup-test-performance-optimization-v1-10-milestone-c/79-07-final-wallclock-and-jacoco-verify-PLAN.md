@@ -3,7 +3,7 @@ phase: 79
 plan: 07
 type: execute
 wave: 7
-depends_on: [79-04, 79-05, 79-06]
+depends_on: [79-03, 79-04, 79-05, 79-06]
 files_modified:
   - .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-AUTO-UAT.md
   - .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-VERIFICATION.md

@@ -14,10 +14,12 @@ must_haves:
   truths:
     - "`pom.xml` Phase-N reference comments at lines 20-24, 34-36, 82-91, 203-211, 273-280 are condensed per RESEARCH §`pom.xml Comment Cleanup Inventory`"
     - "JEP 498 / Lombok #3959 / Mockito-agent rationale comments at pom.xml lines 253, 264, 291, 411 are PRESERVED verbatim (Schutzwortliste hits)"
-    - "`.github/workflows/ci.yml` adds workflow-level `concurrency: { group: ${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true }` block per RESEARCH §7"
+    - "`.github/workflows/ci.yml` adds workflow-level `concurrency: { group: ${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true }` block per RESEARCH §7 (CD-06 Discretion applied — see below)"
+    - "CD-06 Discretion applied: workflow-prefix `${{ github.workflow }}-${{ github.ref }}` added to group expression to prevent cross-workflow cancellations within the same branch (e.g., `ci.yml` cancelling `mariadb-migration-smoke.yml`). D-07's literal `${{ github.ref }}` is the minimum; CD-06 grants discretion on workflow-level vs job-level placement, which we extend to group-expression refinement."
     - "`./mvnw verify` Maven invocations in ci.yml gain the `--no-transfer-progress` flag (D-07)"
     - "`ci.yml` Phase-78 inline comments are condensed per RESEARCH §`ci.yml Comment Cleanup Inventory` (rationale preserved, Phase-N tags stripped)"
-    - "`.github/workflows/mariadb-migration-smoke.yml` is UNTOUCHED (SACRED per Phase 77 D-05 + RESEARCH §`mariadb-migration-smoke.yml LEAVE ENTIRELY`)"
+    - "`.github/workflows/mariadb-migration-smoke.yml` BODY is UNTOUCHED (SACRED per Phase 77 D-05 + RESEARCH §`mariadb-migration-smoke.yml LEAVE ENTIRELY`)"
+    - "D-07 trigger-paths review for `mariadb-migration-smoke.yml`: Task 2.5 executes `grep -n \"paths:\" .github/workflows/mariadb-migration-smoke.yml`. If a `paths:` filter is present (RESEARCH expectation) → verdict recorded as `D-07 trigger-paths review: PASS — path-filter present, no changes needed`. If NO path-filter is present → `NEEDS_CONTEXT` escalation (the `add if missing` path is factually excluded by Phase 77 D-05 SACRED rule, but MUST be explicitly checked and documented rather than assumed)."
     - "`./mvnw verify -Pe2e` BUILD SUCCESS after the build-config edits"
     - "`actionlint .github/workflows/ci.yml` passes (or YAML-syntax check via `yamllint` if actionlint unavailable)"
   artifacts:
@@ -28,7 +30,7 @@ must_haves:
       provides: "Workflow-level concurrency block + --no-transfer-progress flag + Phase-78 comment thinning"
       contains: "concurrency:"
     - path: "git log on branch gsd/v1.10-platform-and-backup"
-      provides: "Two atomic commits (pom.xml + ci.yml) per D-20"
+      provides: "Two atomic commits (pom.xml + ci.yml) per D-20; mariadb-migration-smoke.yml trigger-paths verdict recorded in 79-04-SUMMARY.md (no commit on the file itself — its body is SACRED)"
       pattern: "chore\\(79\\): cleanup (pom\\.xml|\\.github/workflows/ci\\.yml)"
   key_links:
     - from: "pom.xml comment edits"
@@ -37,16 +39,22 @@ must_haves:
       pattern: "JEP 498|transitiv"
     - from: "ci.yml concurrency block"
       to: "build-and-test + dockerfile-noble-pin-guard + docker-build jobs"
-      via: "workflow-level cancel-in-progress (CD-06 default)"
+      via: "workflow-level cancel-in-progress (CD-06 default; group-expression refined per CD-06 Discretion to workflow-prefix)"
       pattern: "cancel-in-progress: true"
+    - from: "Task 2.5 grep on mariadb-migration-smoke.yml"
+      to: "D-07 trigger-paths review verdict recorded in 79-04-SUMMARY.md"
+      via: "read-only grep; no file edit (SACRED body invariant per Phase 77 D-05)"
+      pattern: "paths:"
 ---
 
 <objective>
-Wave 4 of Phase 79: cleanup build-configuration files per D-20. Two atomic commits — one for `pom.xml`, one for `.github/workflows/ci.yml`. `mariadb-migration-smoke.yml` is SACRED per Phase 77 D-05 and stays UNTOUCHED.
+Wave 4 of Phase 79: cleanup build-configuration files per D-20. Two atomic commits — one for `pom.xml`, one for `.github/workflows/ci.yml`. `mariadb-migration-smoke.yml` is SACRED per Phase 77 D-05 and its body stays UNTOUCHED. A read-only D-07 trigger-paths review on `mariadb-migration-smoke.yml` produces a documented verdict but no file edit.
 
 Purpose: D-20 user addition — pom.xml + ci.yml carry significant Phase-N comment debt (3 explicit Phase-N refs in pom.xml at lines 20, 34, 273; dense Phase-78 inline comments in ci.yml at lines 68-72, 89-93, 99, 108-114). The cleanup classes that apply to YAML/XML are: comment-thinning (D-09) + dead-config-removal (D-04 analog) — extract-method and logic-simplification are Java-only concepts and NOT applicable.
 
-Output: 2 atomic commits, each followed by `./mvnw verify` (pom.xml) or `actionlint`/YAML-lint (ci.yml). PLUS the D-07 ci.yml additions: workflow-level `concurrency` block + `--no-transfer-progress` on Maven invocations.
+D-07 mandates two things: (a) workflow-level concurrency on `ci.yml` (Task 2) AND (b) a trigger-paths review for `mariadb-migration-smoke.yml` (Task 2.5) — the latter is read-only because Phase 77 D-05 declares the file body SACRED. Task 2.5 explicitly documents the review verdict instead of assuming the path-filter is present.
+
+Output: 2 atomic commits, each followed by `./mvnw verify` (pom.xml) or `actionlint`/YAML-lint (ci.yml). PLUS the D-07 ci.yml additions: workflow-level `concurrency` block + `--no-transfer-progress` on Maven invocations. PLUS a Task 2.5 trigger-paths verdict line in 79-04-SUMMARY.md (no commit on the smoke-workflow file — its body is SACRED).
 </objective>
 
 <execution_context>
@@ -60,6 +68,7 @@ Output: 2 atomic commits, each followed by `./mvnw verify` (pom.xml) or `actionl
 @CLAUDE.md
 @pom.xml
 @.github/workflows/ci.yml
+@.github/workflows/mariadb-migration-smoke.yml
 
 <interfaces>
 **pom.xml Comment Cleanup Inventory (RESEARCH §`pom.xml Comment Cleanup Inventory` — verified line-by-line):**
@@ -91,7 +100,7 @@ Output: 2 atomic commits, each followed by `./mvnw verify` (pom.xml) or `actionl
 
 **ci.yml D-07 ADDITIONS (separate from comment cleanup):**
 
-1. **Workflow-level concurrency block** — insert AFTER the `on:` block (around line 8) and BEFORE the `permissions:` block (around line 9):
+1. **Workflow-level concurrency block** — insert AFTER the `on:` block (around line 8) and BEFORE the `permissions:` block (around line 9). The group expression uses `${{ github.workflow }}-${{ github.ref }}` (CD-06 Discretion applied: D-07's literal `${{ github.ref }}` is the minimum; the workflow-prefix prevents cross-workflow cancellations within the same branch — e.g., `ci.yml` cancelling `mariadb-migration-smoke.yml`. CD-06 grants discretion on workflow-level vs job-level placement, which we extend to group-expression refinement):
 ```yaml
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -104,7 +113,7 @@ concurrency:
    - Line 37 current: `run: ./mvnw verify -Pe2e -Dspring.profiles.active=dev -Ddocker.available=true`
    - Line 37 target: `run: ./mvnw verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true`
 
-**mariadb-migration-smoke.yml: SACRED — DO NOT TOUCH.** Per Phase 77 D-05 + RESEARCH §"mariadb-migration-smoke.yml LEAVE ENTIRELY". The trigger paths review is "look at them, conclude they are fine, move on" — NOT an edit. Skip this file entirely.
+**mariadb-migration-smoke.yml: BODY SACRED — DO NOT EDIT.** Per Phase 77 D-05 + RESEARCH §"mariadb-migration-smoke.yml LEAVE ENTIRELY". The D-07 trigger-paths review is **read-only** and produces a documented verdict in 79-04-SUMMARY.md (Task 2.5). RESEARCH §`mariadb-migration-smoke.yml LEAVE ENTIRELY` states the file is already filtered, so the expected verdict is `PASS — path-filter present`. If the grep finds no `paths:` filter, the executor MUST escalate `NEEDS_CONTEXT` (NOT add a path filter — the file body is SACRED and the orchestrator must decide whether to amend Phase 77 D-05 or accept the gap).
 
 **Symbol-existence pre-flight audit:**
 ```
@@ -113,7 +122,7 @@ grep -nE "JEP 498" pom.xml | wc -l   # MUST be 4 (compiler line 253, Surefire 26
 grep -nE "Phase 78" .github/workflows/ci.yml | head -5
 grep -cE "concurrency:" .github/workflows/ci.yml   # MUST be 0 (greenfield)
 grep -cE "no-transfer-progress" .github/workflows/ci.yml   # MUST be 0 (greenfield)
-grep -nE "Phase|D-[0-9]+" .github/workflows/mariadb-migration-smoke.yml | head -3   # informational only — NOT edited
+grep -n "paths:" .github/workflows/mariadb-migration-smoke.yml   # Task 2.5 — read-only review; expected: 1+ hits (path-filter present)
 ```
 </interfaces>
 </context>
@@ -123,14 +132,15 @@ grep -nE "Phase|D-[0-9]+" .github/workflows/mariadb-migration-smoke.yml | head -
 - Implement ONLY the tasks listed below. If you find that other files need changes, report `NEEDS_CONTEXT` instead of expanding scope.
 - After EACH commit, run `./mvnw verify -Pe2e -Dspring.profiles.active=dev -Ddocker.available=true` (NOT just `./mvnw test`) — per D-20: "Each commit followed by `./mvnw verify` (NOT just `test`) — pom changes can break the whole build, workflow changes need at minimum YAML-syntax validation."
 - Schutzwortliste (D-13): JEP 498 / Lombok #3959 / Unsafe rationale comments at pom.xml lines 253, 264, 291, 411 + transitiv/Jackson 2 vs Jackson 3 block + MariaDB/H2/Testcontainers/Docker-API rationale + ci.yml Playwright-Ubuntu-26.04-Plucky pitfall (line 98) MUST be preserved.
-- `mariadb-migration-smoke.yml` is SACRED — do NOT touch its body. The trigger-path review is read-only per D-07.
-- Two ATOMIC commits per D-20: one for pom.xml, one for ci.yml. Do NOT batch both files in a single commit.
+- `mariadb-migration-smoke.yml` BODY is SACRED — do NOT touch any line in this file. Task 2.5 is read-only `grep -n "paths:"`. If the file lacks a `paths:` filter → `NEEDS_CONTEXT` (do NOT add one).
+- Two ATOMIC commits per D-20: one for pom.xml, one for ci.yml. Do NOT batch both files in a single commit. Task 2.5 produces NO commit — only a verdict line in 79-04-SUMMARY.md.
 </critical_constraints>
 
 <test_impact>
 N/A — config-only changes. No Java source code touched. No test added/removed/renamed.
 
-- Files touched: `pom.xml`, `.github/workflows/ci.yml`
+- Files touched (write): `pom.xml`, `.github/workflows/ci.yml`
+- Files read (read-only): `.github/workflows/mariadb-migration-smoke.yml` (Task 2.5)
 - Mockito stub updates: NONE
 - Bridge-only test deletions: NONE
 - Estimated test edit count: 0
@@ -203,7 +213,7 @@ chore(79): cleanup pom.xml comments (D-20)
     - `.github/workflows/ci.yml` (full 139 lines)
     - RESEARCH §"ci.yml Comment Cleanup Inventory" (line-by-line action table)
     - RESEARCH §"7. CI Concurrency Group Configuration" (concurrency block placement)
-    - This plan's `<interfaces>` ci.yml table + D-07 ADDITIONS block
+    - This plan's `<interfaces>` ci.yml table + D-07 ADDITIONS block + CD-06 Discretion note on group expression
   </read_first>
   <action>
 1. **Pre-flight symbol-existence audit:**
@@ -214,7 +224,7 @@ grep -cE "Phase 78" .github/workflows/ci.yml   # likely 3 hits
 ```
 If `concurrency:` != 0 OR `no-transfer-progress` != 0 → STOP / `NEEDS_CONTEXT`.
 
-2. **D-07 ADDITION 1 — workflow-level concurrency block:** Insert AFTER the `on:` block (current lines 3-7) and BEFORE the `permissions:` block (current line 9). Add the 3-line block exactly:
+2. **D-07 ADDITION 1 — workflow-level concurrency block (with CD-06 Discretion-refined group expression):** Insert AFTER the `on:` block (current lines 3-7) and BEFORE the `permissions:` block (current line 9). Add the 3-line block exactly:
 ```yaml
 
 concurrency:
@@ -222,6 +232,7 @@ concurrency:
   cancel-in-progress: true
 
 ```
+Rationale (must_haves.truths line 4): D-07 specifies the literal `${{ github.ref }}` as the minimum group. CD-06 Discretion is applied here to prefix the expression with `${{ github.workflow }}-` so a `ci.yml` run does NOT cancel an in-flight `mariadb-migration-smoke.yml` run on the same branch (cross-workflow cancellation hazard). The Discretion is justified by CD-06's grant of workflow-level vs job-level placement choice, which we extend to group-expression refinement. The verbatim D-07 alternative (`group: ${{ github.ref }}`) is also acceptable per the original decision text — but the workflow-prefixed form is what this plan implements and documents.
 
 3. **D-07 ADDITION 2 — `--no-transfer-progress`:** Edit line 29 from `./mvnw verify -Dspring.profiles.active=dev -Ddocker.available=true` to `./mvnw verify --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true`. Edit line 37 from `./mvnw verify -Pe2e -Dspring.profiles.active=dev -Ddocker.available=true` to `./mvnw verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true`.
 
@@ -246,7 +257,7 @@ grep -cE "no-transfer-progress" .github/workflows/ci.yml   # MUST be 2 (lines 29
 chore(79): cleanup ci.yml comments + add concurrency + --no-transfer-progress (D-07, D-20)
 
 D-07 additions:
-- Workflow-level concurrency: group=$\{\{ github.workflow }}-$\{\{ github.ref }}, cancel-in-progress: true (CD-06 default)
+- Workflow-level concurrency: group=${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true (CD-06 Discretion: workflow-prefix added to prevent cross-workflow cancellation; D-07 literal ${{ github.ref }} is the minimum)
 - --no-transfer-progress on both ./mvnw verify invocations (build-and-test + e2e-tests)
 
 D-20 comment thinning:
@@ -255,7 +266,7 @@ D-20 comment thinning:
 - Preserve cross-platform grep idiom rationale (technical why kept, commit f451ff4 ref kept)
 - Replace 78-CONTEXT.md cross-ref with a Dockerfile-pointer
 
-mariadb-migration-smoke.yml: UNTOUCHED (SACRED per Phase 77 D-05 + RESEARCH verdict LEAVE ENTIRELY).
+mariadb-migration-smoke.yml: UNTOUCHED (SACRED per Phase 77 D-05 + RESEARCH verdict LEAVE ENTIRELY). D-07 trigger-paths review is performed read-only in Task 2.5 and recorded in 79-04-SUMMARY.md.
 ```
 
 9. **Verify mariadb-migration-smoke.yml invariant:**
@@ -269,16 +280,85 @@ If non-zero → `NEEDS_CONTEXT` (the file was inadvertently staged).
   </verify>
   <acceptance_criteria>
     - `./mvnw verify -Pe2e` BUILD SUCCESS
-    - ci.yml has `concurrency:` block at workflow level (group = workflow + ref, cancel-in-progress: true)
+    - ci.yml has `concurrency:` block at workflow level (group = workflow + ref per CD-06 Discretion, cancel-in-progress: true)
     - ci.yml has `--no-transfer-progress` on both `./mvnw verify` invocations
     - 4 Phase-N comment thinnings applied per inventory
     - Playwright-Ubuntu-26.04-Plucky `echo` line preserved verbatim (Schutzwort `pitfall`)
     - `release run 25609204039` reference preserved (concrete failure ref)
     - `mariadb-migration-smoke.yml` UNTOUCHED (git diff size = 0)
     - YAML parses cleanly
-    - Commit `chore(79): cleanup ci.yml comments + add concurrency + --no-transfer-progress` lands
+    - Commit `chore(79): cleanup ci.yml comments + add concurrency + --no-transfer-progress` lands with CD-06 Discretion rationale in body
   </acceptance_criteria>
-  <done>ci.yml commit lands; `./mvnw verify -Pe2e` GREEN; mariadb-migration-smoke.yml untouched; load-bearing context preserved.</done>
+  <done>ci.yml commit lands; `./mvnw verify -Pe2e` GREEN; mariadb-migration-smoke.yml untouched; load-bearing context preserved; CD-06 Discretion documented in commit body.</done>
+</task>
+
+<task type="auto">
+  <name>Task 2.5: D-07 trigger-paths review on mariadb-migration-smoke.yml (read-only verdict, NO commit on the file)</name>
+  <files>.planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-04-SUMMARY.md (verdict line only; file written by SUMMARY-author at plan close, not by this task in isolation)</files>
+  <read_first>
+    - `.github/workflows/mariadb-migration-smoke.yml` (full file — READ ONLY, NO EDITS)
+    - RESEARCH §`mariadb-migration-smoke.yml LEAVE ENTIRELY` (expected: file is already path-filtered)
+    - CONTEXT.md §"D-07" (full text of the decision — note D-07 says "review trigger-paths AND add a filter if missing"; the "add if missing" path is factually excluded by Phase 77 D-05 SACRED rule)
+  </read_first>
+  <action>
+This task is **read-only**. It produces a verdict line, NOT a file edit on `mariadb-migration-smoke.yml`. The Phase 77 D-05 SACRED rule forbids any body change to this workflow.
+
+1. **Run the trigger-paths grep:**
+```
+grep -n "paths:" .github/workflows/mariadb-migration-smoke.yml
+```
+Capture stdout verbatim. Also capture the surrounding 5 lines of context for each hit:
+```
+grep -n -B1 -A5 "paths:" .github/workflows/mariadb-migration-smoke.yml
+```
+
+2. **Branch on the grep result:**
+
+   **Branch A — `paths:` filter PRESENT (RESEARCH expectation, expected verdict):**
+   Record verdict in the executor's working notes (for inclusion in 79-04-SUMMARY.md at plan close):
+   ```
+   D-07 trigger-paths review (Task 2.5): PASS — path-filter present at lines <N1>, <N2>, ... in .github/workflows/mariadb-migration-smoke.yml.
+   Captured filter scope (verbatim grep -A5 output):
+   <paste grep output>
+   Verdict: PASS — no changes needed. The "add if missing" branch of D-07 is not exercised because the file already has a path-filter. The file body remains SACRED per Phase 77 D-05.
+   ```
+   Proceed to Task 3 / plan close.
+
+   **Branch B — `paths:` filter ABSENT (grep returns empty):**
+   STOP. Do NOT add a `paths:` filter (Phase 77 D-05 SACRED rule). Report `NEEDS_CONTEXT` to the orchestrator with this exact message:
+   ```
+   NEEDS_CONTEXT: D-07 trigger-paths review found NO `paths:` filter in .github/workflows/mariadb-migration-smoke.yml.
+
+   D-07 instructs: "review trigger-paths AND add a filter if missing".
+   Phase 77 D-05 SACRED rule forbids any body change to this file.
+   These two rules conflict.
+
+   Cannot proceed unilaterally. Orchestrator decision required:
+   (a) amend Phase 77 D-05 to permit a trigger-paths-only edit, OR
+   (b) accept the gap and document it in 79-VERIFICATION.md as a deferred D-07 sub-item, OR
+   (c) schedule a Phase-77 hotfix to add the path-filter (out of Phase 79 scope).
+   ```
+
+3. **Record the verdict for the SUMMARY:** Regardless of branch, save the captured grep output + the chosen verdict ("PASS — path-filter present" or "NEEDS_CONTEXT — escalated") to a temp note (e.g., write to `/tmp/79-04-task25-verdict.txt`). The SUMMARY-author at plan close will copy this verdict verbatim into `79-04-SUMMARY.md` under a `## D-07 Trigger-Paths Review (Task 2.5)` section.
+
+4. **No `git add`, no commit in this task.** The `mariadb-migration-smoke.yml` file is NOT staged. Confirm with:
+```
+git status -- .github/workflows/mariadb-migration-smoke.yml   # MUST show nothing (file untouched)
+```
+  </action>
+  <verify>
+    <automated>test -f /tmp/79-04-task25-verdict.txt &amp;&amp; grep -qE "PASS — path-filter present|NEEDS_CONTEXT — escalated" /tmp/79-04-task25-verdict.txt &amp;&amp; [ "$(git status --porcelain -- .github/workflows/mariadb-migration-smoke.yml | wc -l)" = "0" ]</automated>
+  </verify>
+  <acceptance_criteria>
+    - `grep -n "paths:" .github/workflows/mariadb-migration-smoke.yml` was executed and the result captured
+    - Verdict is one of: "PASS — path-filter present" OR "NEEDS_CONTEXT — escalated"
+    - If PASS: captured grep output is recorded for SUMMARY inclusion
+    - If absent: `NEEDS_CONTEXT` was raised with the exact message above; NO `paths:` filter was added to the file
+    - `mariadb-migration-smoke.yml` body has ZERO modifications (git status clean for this path)
+    - Verdict line is queued for 79-04-SUMMARY.md (under `## D-07 Trigger-Paths Review (Task 2.5)`)
+    - This task produces NO git commit (the SACRED file is read-only)
+  </acceptance_criteria>
+  <done>Trigger-paths review verdict recorded; mariadb-migration-smoke.yml body untouched; SUMMARY-author has the verdict line to insert at plan close.</done>
 </task>
 
 </tasks>
@@ -288,17 +368,21 @@ If non-zero → `NEEDS_CONTEXT` (the file was inadvertently staged).
 - `./mvnw verify -Pe2e` BUILD SUCCESS at HEAD
 - pom.xml: 4 JEP 498 + 3 `@{argLine}` + 2 `<forkCount>` + 2 `<reuseForks>true</reuseForks>` + 2 `<excludedGroups>flaky</excludedGroups>` invariants
 - ci.yml: `concurrency:` workflow-level block (1) + 2 `--no-transfer-progress` + Playwright-Ubuntu-Plucky rationale + release-run-25609204039 ref preserved
+- ci.yml commit body documents CD-06 Discretion for the workflow-prefixed group expression
 - `mariadb-migration-smoke.yml`: zero edits
+- 79-04-SUMMARY.md (written at plan close) includes the `## D-07 Trigger-Paths Review (Task 2.5)` section with the captured grep output + verdict
 </verification>
 
 <success_criteria>
 - 2 atomic commits land
 - `./mvnw verify -Pe2e` BUILD SUCCESS
 - All Schutzwort / load-bearing-context invariants hold
-- mariadb-migration-smoke.yml untouched
+- mariadb-migration-smoke.yml body untouched
+- D-07 trigger-paths review verdict recorded in 79-04-SUMMARY.md
+- CD-06 Discretion for ci.yml group expression documented in commit body
 - Branch unchanged
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-04-SUMMARY.md` per `@$HOME/.claude/get-shit-done/templates/summary.md`. Include: both commit SHAs, per-file diff sizes, JEP/argLine/forkCount counts in pom.xml, concurrency + no-transfer-progress + Playwright-pitfall preservation proofs in ci.yml, mariadb-migration-smoke.yml zero-diff proof.
+After completion, create `.planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-04-SUMMARY.md` per `@$HOME/.claude/get-shit-done/templates/summary.md`. Include: both commit SHAs, per-file diff sizes, JEP/argLine/forkCount counts in pom.xml, concurrency + no-transfer-progress + Playwright-pitfall preservation proofs in ci.yml, mariadb-migration-smoke.yml zero-diff proof, AND a `## D-07 Trigger-Paths Review (Task 2.5)` section containing the captured `grep -n -B1 -A5 "paths:" .github/workflows/mariadb-migration-smoke.yml` output and the verdict line ("PASS — path-filter present, no changes needed" or "NEEDS_CONTEXT — escalated"), AND a `## CD-06 Discretion` section documenting the workflow-prefixed group-expression refinement (must_haves.truths line 4).
 </output>

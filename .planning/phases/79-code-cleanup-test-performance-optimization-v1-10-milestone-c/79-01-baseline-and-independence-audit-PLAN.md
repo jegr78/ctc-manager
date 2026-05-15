@@ -16,13 +16,13 @@ must_haves:
     - "All ~1200 unit tests pass when executed in reverse-alphabetical Surefire order"
     - "All unit tests pass with three distinct random seeds (1234, 5678, 9999)"
     - "All integration tests pass when Failsafe executes in reverse-alphabetical order"
-    - "The verdict for every one of the 10 `@DirtiesContext` annotations is documented as KEEP-mandatory (zero removals per RESEARCH §`@DirtiesContext Audit Decision Tree`)"
+    - "The ACTUAL `@DirtiesContext` count in `src/test/` is measured (Task 3 pre-flight grep), recorded in 79-INDEPENDENCE-AUDIT.md, and every annotation found is documented with a KEEP-mandatory verdict (per RESEARCH §`@DirtiesContext Audit Decision Tree`; RESEARCH expected 10, but CONTEXT.md §`Code Context` mentioned 13 — reality-check resolves the discrepancy)"
   artifacts:
     - path: ".planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-AUTO-UAT.md"
       provides: "Wallclock baseline row + placeholder for final-measurement row"
       contains: "## Wallclock Baseline"
     - path: ".planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md"
-      provides: "Per-annotation @DirtiesContext audit verdict + reverse-order + random-seed run records"
+      provides: "Per-annotation @DirtiesContext audit verdict + reverse-order + random-seed run records + measured-vs-expected count reconciliation"
       contains: "@DirtiesContext Audit"
   key_links:
     - from: "79-AUTO-UAT.md"
@@ -42,7 +42,7 @@ Purpose: Without a measured baseline, D-06's "≥ 30% wallclock reduction" canno
 
 Output:
 - `79-AUTO-UAT.md` with a populated `## Wallclock Baseline` table (git SHA, command, duration, date)
-- `79-INDEPENDENCE-AUDIT.md` with reverse-order run log + 3 random-seed run logs + per-annotation `@DirtiesContext` verdict table (10 rows, all KEEP-mandatory per RESEARCH)
+- `79-INDEPENDENCE-AUDIT.md` with reverse-order run log + 3 random-seed run logs + per-annotation `@DirtiesContext` verdict table (ALL annotations found by the Task 3 pre-flight grep — RESEARCH expects 10; CONTEXT.md mentioned 13. The pre-flight grep determines the actual number and the table covers ALL of them — no annotation may go unaudited.)
 </objective>
 
 <execution_context>
@@ -59,7 +59,9 @@ Output:
 <interfaces>
 <!-- Key facts the executor needs verbatim. No exploration required. -->
 
-The 10 mandatory `@DirtiesContext` annotations (zero removals — all KEEP per RESEARCH §"@DirtiesContext Audit Decision Tree"):
+**RESEARCH-expected 10 `@DirtiesContext` annotations (zero removals — all KEEP per RESEARCH §"@DirtiesContext Audit Decision Tree"):**
+
+> NOTE: CONTEXT.md §`Code Context` previously cited "13 @DirtiesContext annotations" as a starting count. RESEARCH narrowed the audit to the 10 below after deduplication. Task 3 starts with a `grep -rc "@DirtiesContext" src/test/` reality-check — the ACTUAL count in the codebase is the source of truth. If `> 10`, the additional annotations MUST be audited and added to the table; if `< 10` or `== 10`, the RESEARCH baseline holds. The expected count `10` is documented here as the prior, not as a ceiling.
 
 | # | Test class | Annotation form | Rationale (one-line) |
 |---|-----------|----------------|---------------------|
@@ -73,6 +75,19 @@ The 10 mandatory `@DirtiesContext` annotations (zero removals — all KEEP per R
 | 8 | `src/test/java/org/ctc/sitegen/SiteGeneratorPhaseAwarenessIT.java` | `@DirtiesContext` | Same `SiteProperties.outputDir` mutation. |
 | 9 | `src/test/java/org/ctc/sitegen/StandingsPageGeneratorTest.java` | `@DirtiesContext` | Same `SiteProperties.outputDir` mutation. |
 | 10 | `src/test/java/org/ctc/sitegen/TeamProfilePageGeneratorTest.java` | `@DirtiesContext` | Same `SiteProperties.outputDir` mutation. |
+
+**Pre-flight reality-check grep (Task 3, MANDATORY):**
+
+```
+grep -rc "@DirtiesContext" src/test/ | grep -v ':0$'
+TOTAL=$(grep -r "@DirtiesContext" src/test/ | grep -v '^\s*//\|^\s*\*' | wc -l)
+echo "TOTAL @DirtiesContext annotations (non-comment): $TOTAL"
+```
+
+The `TOTAL` value is the source of truth for the audit table size. Branching:
+- `TOTAL == 10` → audit the 10 rows above verbatim; verdict matches RESEARCH expectation.
+- `TOTAL > 10` → audit the 10 known rows PLUS the additional `TOTAL - 10` annotations. Locate each extra annotation via `grep -rn "@DirtiesContext" src/test/`, read its source-file context, and record a KEEP-or-REMOVE verdict in the same table. CONTEXT.md §`Code Context` cited 13 — if `TOTAL == 13`, expect 3 extras.
+- `TOTAL < 10` → some of the 10 RESEARCH rows have been removed since RESEARCH was authored. Record the missing rows in the table with `Verdict: ALREADY REMOVED — n/a` and explain how (likely Wave 1 of an earlier hotfix).
 
 Commands the executor must run verbatim:
 
@@ -100,6 +115,7 @@ Git SHA capture: `git rev-parse --short HEAD`
 - After each per-package commit, run `./mvnw test` and verify it passes BEFORE moving to the next package.
 - Schutzwortliste (D-13): Comments containing any of these words must NOT be deleted: MariaDB, H2, JEP, CVE, race, thread-safe, TODO, HACK, WORKAROUND, FIXME, deadlock, OSIV, Lombok, Unsafe, transitiv, transitive, pitfall, auto-commit, auditing, AuditingEntityListener.
 - Dead-code removal rule (D-04): Only delete when (a) IDE + grep find zero references AND (b) no Spring/JPA/Jackson lifecycle annotation AND (c) not a JPA no-arg constructor / Jackson public setter. Reflection-invoked methods survive automatically by this rule. On uncertainty → leave it.
+- Task 3 reality-check is MANDATORY. The `@DirtiesContext` audit table covers ALL annotations found in `src/test/` by the pre-flight grep — no annotation may go unaudited because RESEARCH "only expected 10".
 </critical_constraints>
 
 <test_impact>
@@ -155,27 +171,80 @@ Create `.planning/phases/79-.../79-INDEPENDENCE-AUDIT.md` with H1 `# Phase 79 �
 </task>
 
 <task type="auto">
-  <name>Task 3: Append @DirtiesContext audit verdict (10 mandatory) to 79-INDEPENDENCE-AUDIT.md</name>
+  <name>Task 3: Append @DirtiesContext audit verdict (reality-check + verdict per annotation) to 79-INDEPENDENCE-AUDIT.md</name>
   <files>.planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md</files>
   <read_first>
-    - 79-RESEARCH.md §"@DirtiesContext Audit Decision Tree" (10-row verdict table)
-    - The 10 source files listed in `<interfaces>` above (read for confirm-only; do NOT modify)
+    - 79-RESEARCH.md §"@DirtiesContext Audit Decision Tree" (10-row verdict table — RESEARCH expectation)
+    - 79-CONTEXT.md §"Code Context" (mentions "13 @DirtiesContext annotations")
+    - The source files listed in `<interfaces>` above (read for confirm-only; do NOT modify)
   </read_first>
   <action>
-Append a `## @DirtiesContext Audit (CD-04)` section to `79-INDEPENDENCE-AUDIT.md`. Open with: "Per RESEARCH §`@DirtiesContext Audit Decision Tree`, all 10 current annotations are mandatory. Zero removals." Add a Markdown table mirroring the `<interfaces>` table above with columns `# | Test class | Annotation form | Rationale | Verdict`. Confirm each row by reading the corresponding source file (with grep `grep -n "@DirtiesContext" &lt;path&gt;`) and recording the actual annotation form found. For ImportConcurrentLockIT/ImportLockBannerAdviceIT/ImportLockedPostRejectorIT verdict = "KEEP — non-resettable CountDownLatch". For the 7 sitegen tests verdict = "KEEP — SiteProperties.outputDir singleton mutation". Close with: "Per CD-04 discretion area: zero removals. The 10 mandatory `@DirtiesContext` annotations remain unchanged. This audit document is the verification that no defensive-cargo annotations were inflating the suite. Plan 03 parallelization is unaffected by these 10 annotations (they continue to function under `reuseForks=true`)."
+**Step 1 — Reality-check grep (MANDATORY, run BEFORE writing the audit table):**
+
+Run the pre-flight grep from `<interfaces>`:
+```
+grep -rn "@DirtiesContext" src/test/ > /tmp/79-dirtiescontext-raw.txt
+grep -v '^\s*//\|^\s*\*' /tmp/79-dirtiescontext-raw.txt > /tmp/79-dirtiescontext-effective.txt
+TOTAL=$(wc -l < /tmp/79-dirtiescontext-effective.txt)
+echo "TOTAL effective (non-comment) @DirtiesContext annotations: $TOTAL"
+echo "Per-file:"
+awk -F: '{print $1}' /tmp/79-dirtiescontext-effective.txt | sort -u | xargs -I{} sh -c 'echo "  {} : $(grep -c "@DirtiesContext" {})"'
+```
+
+Record the `TOTAL` value. This is the SOURCE-OF-TRUTH count for the audit table size.
+
+**Step 2 — Branch on reality-check result:**
+
+- **If `TOTAL == 10`:** RESEARCH baseline holds. The 10 rows in `<interfaces>` cover everything. Proceed to Step 3 (write the 10-row table verbatim).
+
+- **If `TOTAL > 10` (e.g., `TOTAL == 13` matching CONTEXT.md):** RESEARCH undercounted. For each annotation NOT in the `<interfaces>` 10-row table:
+  1. Locate it: `grep -n "@DirtiesContext" <file>` to get the line number.
+  2. Read the surrounding 20 lines of context: `sed -n '<line-10>,<line+10>p' <file>`.
+  3. Classify the rationale (e.g., singleton mutation / non-resettable resource / cargo-cult / unknown).
+  4. Add a new row to the audit table with: file path, annotation form, one-line rationale, verdict (KEEP-mandatory if a singleton/resource is mutated; REMOVE-CANDIDATE if no clear rationale — flag for explicit Wave-2 cleanup OR conservative KEEP under D-04 "on uncertainty → leave it").
+
+- **If `TOTAL < 10`:** Some of the 10 RESEARCH rows no longer exist in the codebase. For each missing row, add a verdict `ALREADY REMOVED — n/a` with a one-line explanation of likely cause (e.g., "deleted in hotfix XYZ").
+
+**Step 3 — Write the audit table:**
+
+Append a `## @DirtiesContext Audit (CD-04)` section to `79-INDEPENDENCE-AUDIT.md`. Open with:
+```
+**Reality-check (pre-flight grep):** TOTAL effective `@DirtiesContext` annotations in `src/test/` = <TOTAL>.
+- RESEARCH expectation: 10
+- CONTEXT.md §`Code Context` prior: 13
+- Measured: <TOTAL>
+- Discrepancy resolution: <verbatim explanation based on the Step-2 branch taken>
+```
+
+Then a Markdown table with columns `# | Test class | Annotation form | Rationale | Verdict | Source-of-truth grep line`. The table MUST have exactly `<TOTAL>` rows (or `max(TOTAL, 10)` if RESEARCH rows were removed and need a placeholder).
+
+For ImportConcurrentLockIT/ImportLockBannerAdviceIT/ImportLockedPostRejectorIT: verdict = "KEEP — non-resettable CountDownLatch".
+For the 7 sitegen tests: verdict = "KEEP — SiteProperties.outputDir singleton mutation".
+For any extra annotations (if `TOTAL > 10`): verdict per Step 2 classification.
+
+Close with:
+```
+Per CD-04 discretion area: <X> KEEP-mandatory annotations, <Y> REMOVE-CANDIDATE (deferred / handled in Wave 2), <Z> ALREADY REMOVED (n/a). The remaining `@DirtiesContext` annotations are unchanged by this plan. This audit document is the verification that no defensive-cargo annotations were inflating the suite. Plan 03 parallelization is unaffected by these annotations (they continue to function under `reuseForks=true`).
+```
+
+Fill in `<X>`, `<Y>`, `<Z>` from the table.
   </action>
   <verify>
-    <automated>grep -q "## @DirtiesContext Audit" .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md &amp;&amp; [ "$(grep -c "KEEP" .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md)" -ge 10 ] &amp;&amp; grep -q "ImportConcurrentLockIT" .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md &amp;&amp; grep -q "SiteGeneratorE2ETest" .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md</automated>
+    <automated>grep -q "## @DirtiesContext Audit" .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md &amp;&amp; grep -Eq "TOTAL effective .@DirtiesContext. annotations in .src/test/. = [0-9]+" .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md &amp;&amp; grep -q "ImportConcurrentLockIT" .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md &amp;&amp; grep -q "SiteGeneratorE2ETest" .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md &amp;&amp; grep -Eq "Measured: [0-9]+" .planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-INDEPENDENCE-AUDIT.md</automated>
   </verify>
   <acceptance_criteria>
+    - Pre-flight grep was executed and TOTAL was captured
     - `## @DirtiesContext Audit (CD-04)` section appended to 79-INDEPENDENCE-AUDIT.md
-    - All 10 test classes from `<interfaces>` are rows in the table
-    - Every row has Verdict = "KEEP" (zero removals)
-    - The CountDownLatch rationale (3 rows) and SiteProperties.outputDir rationale (7 rows) are present
-    - Closing paragraph states zero removals and confirms Plan 03 is cleared
+    - Header includes the measured TOTAL count (numeric, from the pre-flight grep)
+    - Header explicitly reconciles RESEARCH-expected (10), CONTEXT.md-cited (13), and Measured value
+    - Audit table has exactly `<TOTAL>` rows (or `max(TOTAL, 10)` with placeholders if rows were removed)
+    - Every row has a Verdict column populated (KEEP / REMOVE-CANDIDATE / ALREADY REMOVED)
+    - All 3 ImportLock*IT classes are present with CountDownLatch rationale (if still in src/test/)
+    - All 7 sitegen tests are present with SiteProperties.outputDir rationale (if still in src/test/)
+    - Closing paragraph counts <X> KEEP / <Y> REMOVE-CANDIDATE / <Z> ALREADY REMOVED summing to `<TOTAL>` (or rationalized count)
     - No source-code edits performed in this task
   </acceptance_criteria>
-  <done>10-row verdict table appended; all rows are KEEP-mandatory; closing paragraph clears Plan 03.</done>
+  <done>Reality-check executed; audit table covers ALL annotations found by the grep; verdict per annotation recorded; Plan 03 cleared.</done>
 </task>
 
 <task type="auto">
@@ -189,7 +258,8 @@ Stage only the two artifacts: `git add .planning/phases/79-code-cleanup-test-per
 - Baseline: <Xm Ys> at SHA <abc1234>
 - Reverse-order + 3 random-seed Surefire runs GREEN
 - Failsafe reverse-order GREEN
-- 10/10 @DirtiesContext verdicts = KEEP-mandatory (zero removals per CD-04)
+- @DirtiesContext audit: TOTAL=<N> measured, RESEARCH expected 10, CONTEXT.md cited 13, reconciliation in 79-INDEPENDENCE-AUDIT.md
+- <X>/<N> verdicts = KEEP-mandatory (zero removals per CD-04 default)
 
 Do NOT push. Do NOT switch branches. Do NOT run `git stash`/`reset`/`checkout`.
   </action>
@@ -198,7 +268,7 @@ Do NOT push. Do NOT switch branches. Do NOT run `git stash`/`reset`/`checkout`.
   </verify>
   <acceptance_criteria>
     - Latest commit message matches the prefix `docs(79): baseline wallclock + independence audit`
-    - Commit body contains the four bullet points (baseline duration + SHA, reverse-order GREEN, Failsafe-reverse GREEN, 10/10 KEEP verdicts)
+    - Commit body contains the five bullet points (baseline duration + SHA, reverse-order GREEN, Failsafe-reverse GREEN, @DirtiesContext TOTAL + reconciliation, KEEP-count summary)
     - `git log --name-only -1` shows exactly the two `.planning/phases/79-...` Markdown files
     - Branch is still `gsd/v1.10-platform-and-backup`
   </acceptance_criteria>
@@ -211,18 +281,18 @@ Do NOT push. Do NOT switch branches. Do NOT run `git stash`/`reset`/`checkout`.
 - `./mvnw clean verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true` was BUILD SUCCESS at the baseline SHA (recorded in 79-AUTO-UAT.md).
 - `./mvnw test -Dsurefire.runOrder=reversealphabetical` and three `surefire.runOrder=random` seeds (1234/5678/9999) were all BUILD SUCCESS.
 - `./mvnw verify -Dsurefire.runOrder=reversealphabetical -Dfailsafe.runOrder=reversealphabetical` was BUILD SUCCESS.
-- 79-INDEPENDENCE-AUDIT.md `## @DirtiesContext Audit` table has 10 rows; every Verdict column reads KEEP.
+- 79-INDEPENDENCE-AUDIT.md `## @DirtiesContext Audit` table has `<TOTAL>` rows (TOTAL measured by Task 3 pre-flight grep); the discrepancy between RESEARCH (10), CONTEXT.md (13), and the measured value is reconciled in-document.
 - `git log -1` shows the `docs(79): baseline wallclock + independence audit` commit on `gsd/v1.10-platform-and-backup`.
 </verification>
 
 <success_criteria>
 - `79-AUTO-UAT.md` baseline row populated with git SHA + command + duration
-- `79-INDEPENDENCE-AUDIT.md` contains: reverse-order Surefire run, 3 random-seed Surefire runs, Failsafe reverse-order run, 10-row `@DirtiesContext` verdict table, GREEN Verdict line
+- `79-INDEPENDENCE-AUDIT.md` contains: reverse-order Surefire run, 3 random-seed Surefire runs, Failsafe reverse-order run, `@DirtiesContext` reality-check + reconciliation + per-annotation verdict table, GREEN Verdict line
 - Both files committed via `docs(79): baseline wallclock + independence audit (D-05 Wave 1, D-06)` on `gsd/v1.10-platform-and-backup`
 - No production source files (Java, XML, YAML) were modified
 - Plan 03 (parallelization) is now unblocked
 </success_criteria>
 
 <output>
-After completion, create `.planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-01-SUMMARY.md` per `@$HOME/.claude/get-shit-done/templates/summary.md`. Include: measured baseline duration, all 5 independence-run verdicts, 10/10 KEEP verdict for `@DirtiesContext`, exact commit SHA.
+After completion, create `.planning/phases/79-code-cleanup-test-performance-optimization-v1-10-milestone-c/79-01-SUMMARY.md` per `@$HOME/.claude/get-shit-done/templates/summary.md`. Include: measured baseline duration, all 5 independence-run verdicts, `@DirtiesContext` reality-check result (TOTAL value + reconciliation with RESEARCH/CONTEXT.md), KEEP/REMOVE-CANDIDATE/ALREADY-REMOVED counts, exact commit SHA.
 </output>

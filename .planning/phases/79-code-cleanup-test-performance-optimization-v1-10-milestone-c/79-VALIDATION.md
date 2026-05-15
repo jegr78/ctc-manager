@@ -43,7 +43,7 @@ created: 2026-05-15
 | Decision | Behavior | Test Type | Automated Command | Status |
 |----------|----------|-----------|-------------------|--------|
 | D-05 Wave 1 | All tests pass in reverse order | Independence audit | `./mvnw test -Dsurefire.runOrder=reversealphabetical` | ⬜ pending |
-| D-05 Wave 1 | All tests pass with 3 random seeds | Independence audit | `./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed={1234,5678,9012}` | ⬜ pending |
+| D-05 Wave 1 | All tests pass with 3 random seeds | Independence audit | `./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed={1234,5678,9999}` | ⬜ pending |
 | D-05 Wave 2 | Surefire with `forkCount=2C` + `reuseForks=true` passes | Parallelism | `./mvnw verify` | ⬜ pending |
 | D-05 Wave 2 | Failsafe with `forkCount=1C` passes | Parallelism (IT) | `./mvnw verify` | ⬜ pending |
 | D-06 | Baseline wallclock recorded in `79-AUTO-UAT.md` | Manual / scripted | `time ./mvnw clean verify -Pe2e --offline` | ⬜ pending |

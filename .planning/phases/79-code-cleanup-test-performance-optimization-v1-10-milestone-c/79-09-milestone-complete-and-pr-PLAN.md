@@ -110,7 +110,7 @@ Reduction: <NN.N%> — <MEETS | DOES NOT MEET> ≥30% D-06 threshold
 
 ## CI Hygiene (Wave 4)
 
-- Workflow-level concurrency: group=$\{\{ github.workflow }}-$\{\{ github.ref }}, cancel-in-progress: true (CD-06)
+- Workflow-level concurrency: group=${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true (CD-06)
 - --no-transfer-progress on both ./mvnw verify invocations in ci.yml
 
 ## Coverage (D-18)
