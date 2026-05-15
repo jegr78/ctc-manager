@@ -1,11 +1,11 @@
 ---
 phase: 77-final-uat-jacoco-hold-round-trip-test-documentation
-executed: 2026-05-15T07:39:00Z
+executed: 2026-05-15T10:38:00Z
 server_profile: dev,demo
 total: 6
-passed: 1
+passed: 2
 failed: 0
-skipped: 5
+skipped: 4
 ---
 
 # Auto-UAT Report: Phase 77
@@ -50,10 +50,14 @@ Phase 77 closes v1.10's QUAL deliverables (QUAL-01 + QUAL-02 + QUAL-04 + QUAL-05
 
 ### 5. `BackupRoundTripIT$MariaDbRoundTripTests` GREEN (local run)
 
-- **Status:** pending
+- **Status:** passed
 - **Evidence:**
-  - [ ] Local-machine run: `./mvnw -Ddocker.available=true -Dit.test=BackupRoundTripIT\$MariaDbRoundTripTests verify` → BUILD SUCCESS (Docker daemon required).
+  - [x] Local-machine run: `./mvnw -Ddocker.available=true -Dit.test=BackupRoundTripIT\$MariaDbRoundTripTests verify` → BUILD SUCCESS.
+  - Result: `Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 40.53 s — in org.ctc.backup.service.BackupRoundTripIT$MariaDbRoundTripTests`
+  - MariaDB Testcontainers image: `mariadb:11` (pulled and started v11.8 in container)
+  - Captured at: 2026-05-15T10:38:00Z
   - Note: CI does NOT pass `-Ddocker.available=true`, so this nested class is SKIPPED in CI by default — mirrors Phase 75 BackupImportMariaDbSmokeIT precedent (D-05 + RESEARCH §"MariaDB Conditional Coverage"). CI gating decision deferred to Phase 79 per D-15.
+  - **Environment hotfix:** Required Testcontainers BOM upgrade `1.21.3 → 2.0.5` (Docker Engine 29+ minimum API ≥ 1.40; Testcontainers 1.x shaded docker-java sends API 1.32; gh:testcontainers/testcontainers-java#11235). Without the bump the run fails at `RyukResourceReaper.maybeStart` with `BadRequestException`. This is the only `pom.xml` diff in Phase 77 — exception to D-11/D-12/D-16 because (a) D-18 forbids NEW deps but allows upgrades on existing deps and (b) it is the only path to make QUAL-02's MariaDB half verifiable.
 
 ### 6. Three Screenshots Committed to `.screenshots/77/`
 
@@ -71,7 +75,7 @@ Phase 77 closes v1.10's QUAL deliverables (QUAL-01 + QUAL-02 + QUAL-04 + QUAL-05
 | 2 | JaCoCo 88.9% ≥ 82% | passed | jacoco.csv (7428/8355 lines) |
 | 3 | README "Backup & Restore" section renders | pending | playwright-cli post-merge |
 | 4 | Wiki page + 3 screenshots | pending | playwright-cli post-merge |
-| 5 | MariaDB round-trip green (local run) | pending | local mvn -Ddocker.available=true |
+| 5 | MariaDB round-trip green (local run) | passed | `mvn -Ddocker.available=true ...` → 1/1 PASS in 40.53 s |
 | 6 | Screenshots committed to .screenshots/77/ | pending | filesystem post-merge |
 
-1/6 passed (JaCoCo measured pre-merge); 5/6 pending post-merge AUTO-UAT execution. Final status updated by post-merge AUTO-UAT run.
+2/6 passed (JaCoCo measured pre-merge; MariaDB round-trip confirmed locally on Testcontainers 2.0.5 + MariaDB 11.8); 4/6 pending post-merge AUTO-UAT execution. Final status updated by post-merge AUTO-UAT run.

@@ -18,8 +18,11 @@
 		<playwright.version>1.59.0</playwright.version>
 		<lombok.version>1.18.46</lombok.version>
 		<!-- Phase 75 Plan 10: Testcontainers MariaDB for BackupImportMariaDbSmokeIT.
-		     Spring Boot 4.0.x does NOT manage Testcontainers; pin BOM here. -->
-		<testcontainers.version>1.21.3</testcontainers.version>
+		     Spring Boot 4.0.x does NOT manage Testcontainers; pin BOM here.
+		     Phase 77 hotfix: bumped 1.21.3 -> 2.0.5 because Docker Engine 29+ requires
+		     API >= 1.40 and Testcontainers 1.x default shaded docker-java sends API 1.32
+		     (gh:testcontainers/testcontainers-java#11235). 2.x ships default API 1.44. -->
+		<testcontainers.version>2.0.5</testcontainers.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -76,17 +79,6 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-mysql</artifactId>
 		</dependency>
-		<!--
-		    Jackson Java-Time module (Phase 72 plans 02 + 03).
-		    Required for the BackupManifest wire-contract serialization (Instant ISO-8601 strings,
-		    not millis timestamps) via the strict `backupObjectMapper`. Spring Boot 4 ships
-		    Jackson 3 (`tools.jackson.*`) for its primary auto-configured ObjectMapper, but the
-		    backup module deliberately uses the Jackson 2.x `com.fasterxml.jackson.databind`
-		    `ObjectMapper` (transitively present via flyway-core) — that mapper does NOT
-		    register JavaTimeModule by default, so we add it explicitly here.
-		    Version is managed by spring-boot-starter-parent (Jackson 2.21.x).
-		-->
-
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-jsr310</artifactId>
@@ -196,15 +188,6 @@
 			<artifactId>playwright</artifactId>
 			<version>${playwright.version}</version>
 		</dependency>
-		<!--
-		    Phase 75 Plan 10 — Testcontainers MariaDB for BackupImportMariaDbSmokeIT.
-		    Versions are managed by spring-boot-dependencies BOM (Spring Boot 4.0.6 ships
-		    Testcontainers 1.21.x). The IT bootstraps a real MariaDB:11 container via
-		    @DynamicPropertySource to override spring.datasource.url at @SpringBootTest
-		    startup so Flyway runs against the live engine — proving the 24-entity backup
-		    round-trip parity contract holds beyond H2 (Phase 75 QUAL-03 CI layer).
-		    Auto-detects host Docker daemon; works locally + on GitHub Actions runners.
-		-->
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers</artifactId>
@@ -212,12 +195,12 @@
 		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>junit-jupiter</artifactId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>mariadb</artifactId>
+			<artifactId>testcontainers-mariadb</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -357,6 +340,7 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.1.0</version>
 				<executions>
 					<execution>
 						<id>template-fragment-call-guard</id>
