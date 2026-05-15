@@ -425,3 +425,14 @@ Plans:
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
+
+### Phase 999.2: Clean Code Principles Enforcement (BACKLOG)
+
+**Goal:** [Captured for future planning] Establish a systematic, repeatable approach to enforcing Clean Code principles (Robert C. Martin: meaningful names, small functions/SRP, low cyclomatic complexity, expressive code over comments, no dead code, DRY/KISS/YAGNI, command-query separation, error handling at boundaries) across the CTC Manager codebase. Two complementary tracks to explore — analog zu Phase 999.1: (1) **Static-Analysis-Track** — integrate static-analysis tooling into `pom.xml` + `ci.yml` (candidates: Checkstyle + Google Java Style, SpotBugs + FindSecBugs, PMD with Clean-Code ruleset, SonarQube/SonarLint, Error Prone, ArchUnit for architectural rules — z.B. `controller → service → repository` Layer-Constraint aus CLAUDE.md); reports as PR comments analog zum existierenden JaCoCo-Comment-Workflow; sensible thresholds with allowlist for legacy code (no Big-Bang flag-day). (2) **Custom-Skill-Track** — a project-local GSD skill (Arbeitsname `gsd-clean-code-phase` or `gsd-clean-code-review`) that drives the workflow: scan → triage findings by severity → atomic-commit-per-rule-cluster → `./mvnw verify`-Gate; reuses Phase-60 lessons (Schutzwortliste, Branch-Protection, Post-Dispatch-Validation, scope-whitelist). Plays naturally with Phase 999.1 (OpenRewrite) — many Clean-Code findings are auto-fixable via OpenRewrite recipes (`CommonStaticAnalysis`, `RemoveUnusedImports`, `SimplifyBooleanExpression`), so the two phases share a tooling spine. Stack fit: Spring Boot 4.x, Java 25, Maven, Lombok, JUnit 5, ≥ 82 % coverage gate, OSIV + thin-controller + DTO + Schutzwortliste conventions from CLAUDE.md must be preserved.
+
+**Requirements:** TBD
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
