@@ -322,11 +322,11 @@ Plans:
 
 Plans:
 **Wave 1**
-- [ ] 77-01-PLAN.md — Wave 1: BackupRoundTripIT @Nested H2RoundTripTests + MariaDbRoundTripTests (full export → wipe → import round-trip + 24-entity row-count parity + SHA-256 byte-equality on Race + SeasonDriver + Team) (QUAL-02, QUAL-04)
+- [x] 77-01-PLAN.md — Wave 1: BackupRoundTripIT @Nested H2RoundTripTests + MariaDbRoundTripTests (full export → wipe → import round-trip + 24-entity row-count parity + SHA-256 byte-equality on Race + SeasonDriver + Team) (QUAL-02, QUAL-04)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 77-02-PLAN.md — Wave 2: JaCoCo line-coverage measurement + 77-AUTO-UAT.md seed with 6 D-13 items (QUAL-01, QUAL-04)
-- [ ] 77-03-PLAN.md — Wave 2: 3 playwright-cli screenshots under .screenshots/77/ (backup page + preview screen + read-only banner) (QUAL-05)
+- [x] 77-02-PLAN.md — Wave 2: JaCoCo line-coverage measurement + 77-AUTO-UAT.md seed with 6 D-13 items (QUAL-01, QUAL-04)
+- [x] 77-03-PLAN.md — Wave 2: 3 playwright-cli screenshots under .screenshots/77/ (backup page + preview screen + read-only banner) (QUAL-05)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [ ] 77-04-PLAN.md — Wave 3: README "## Backup & Restore" section between Features and Quick Start, ~30-50 lines, cross-links to runbook + wiki (QUAL-05)
@@ -382,5 +382,5 @@ Plans:
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 10/10 | Complete    | 2026-05-14 |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 4/4 | Complete    | 2026-05-14 |
-| 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 0/5 | Planned     | — |
+| 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 3/5 | In Progress|  |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
