@@ -1,9 +1,11 @@
 ---
 phase: 62-public-site-phases-groups
-plan: 01
-subsystem: sitegen
+plan: "01"
 type: execute
 wave: 2
+status: complete
+completed: 2026-05-07
+subsystem: sitegen
 tags:
   - sitegen
   - standings

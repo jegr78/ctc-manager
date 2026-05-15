@@ -1,9 +1,11 @@
 ---
 phase: 62-public-site-phases-groups
-plan: 07
-subsystem: sitegen + visual-verification
+plan: "07"
 type: execute
 wave: 8
+status: complete
+completed: 2026-05-07
+subsystem: sitegen + visual-verification
 tags:
   - visual-verification
   - playwright-cli

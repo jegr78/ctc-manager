@@ -1,9 +1,11 @@
 ---
 phase: 62-public-site-phases-groups
-plan: 03
-subsystem: sitegen
+plan: "03"
 type: execute
 wave: 4
+status: complete
+completed: 2026-05-07
+subsystem: sitegen
 tags:
   - sitegen
   - driver-ranking

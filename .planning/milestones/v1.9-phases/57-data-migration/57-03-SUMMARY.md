@@ -1,6 +1,9 @@
 ---
 phase: 57-data-migration
 plan: "03"
+type: execute
+status: complete
+completed: 2026-04-27
 subsystem: db-migration
 tags:
   - flyway

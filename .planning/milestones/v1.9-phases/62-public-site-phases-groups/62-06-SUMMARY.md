@@ -1,9 +1,11 @@
 ---
 phase: 62-public-site-phases-groups
 plan: "06"
-subsystem: sitegen
 type: execute
 wave: 7
+status: complete
+completed: 2026-05-07
+subsystem: sitegen
 tags:
   - sitegen
   - regression-test

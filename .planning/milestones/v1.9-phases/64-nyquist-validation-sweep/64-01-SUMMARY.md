@@ -1,8 +1,10 @@
 ---
 plan_id: 64-01
+plan: "01"
 phase: 64
 phase_name: nyquist-validation-sweep
 title: Nyquist Validation Sweep — 6 phases retroactive
+type: execute
 status: complete
 completed: 2026-05-07
 mode: retroactive
