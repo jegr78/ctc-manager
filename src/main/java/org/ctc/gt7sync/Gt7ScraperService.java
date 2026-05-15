@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -111,9 +113,9 @@ public class Gt7ScraperService {
 				.toList();
 
 		// Fetch all chunks in parallel
-		var imageUrlMap = new java.util.concurrent.ConcurrentHashMap<String, String>();
+		var imageUrlMap = new ConcurrentHashMap<String, String>();
 		var futures = baseIdsToResolve.stream().map(baseId ->
-				java.util.concurrent.CompletableFuture.runAsync(() -> {
+				CompletableFuture.runAsync(() -> {
 					try {
 						String chunkJs = fetchText(BASE_URL + "/common/dist/gt7/tracklist/assets/" + imageChunkMap.get(baseId));
 						Matcher m = Pattern.compile("\"(/common/dist/gt7/tracklist/assets/[^\"]+\\.png)\"").matcher(chunkJs);
@@ -124,9 +126,9 @@ public class Gt7ScraperService {
 						log.warn("Failed to resolve image for baseId {}: {}", baseId, e.getMessage());
 					}
 				})
-		).toArray(java.util.concurrent.CompletableFuture[]::new);
+		).toArray(CompletableFuture[]::new);
 
-		java.util.concurrent.CompletableFuture.allOf(futures).join();
+		CompletableFuture.allOf(futures).join();
 		log.info("Resolved {} track images in parallel", imageUrlMap.size());
 
 		return tracks.stream()
