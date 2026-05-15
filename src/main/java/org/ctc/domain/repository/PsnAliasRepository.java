@@ -18,9 +18,9 @@ public interface PsnAliasRepository extends JpaRepository<PsnAlias, UUID> {
 	List<PsnAlias> findByDriverId(UUID driverId);
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
-	 * <p>Eager-fetches the {@code driver} {@code @ManyToOne} association so the Phase 73-01
+	 * <p>Eager-fetches the {@code driver} {@code @ManyToOne} association so the backup
 	 * MixIn can render the driver-ID without triggering {@code LazyInitializationException}.
 	 */
 	@EntityGraph(attributePaths = {"driver"})

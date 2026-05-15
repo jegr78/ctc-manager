@@ -13,7 +13,7 @@ public interface SeasonPhaseGroupRepository extends JpaRepository<SeasonPhaseGro
     List<SeasonPhaseGroup> findByPhaseIdOrderBySortIndex(UUID phaseId);
 
     /**
-     * Phase 73-02: full-table finder used by {@code BackupExportService}.
+     * Full-table finder used by {@code BackupExportService}.
      *
      * <p>Eager-fetches the {@code phase} {@code @ManyToOne} association.
      */

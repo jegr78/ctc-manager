@@ -19,7 +19,7 @@ public interface PlayoffSeedRepository extends JpaRepository<PlayoffSeed, UUID> 
 	void deleteByPlayoffId(UUID playoffId);
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
 	 * <p>Eager-fetches the two {@code @ManyToOne} associations: {@code playoff} and {@code team}.
 	 */

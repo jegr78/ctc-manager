@@ -19,7 +19,7 @@ public interface CarRepository extends JpaRepository<Car, UUID> {
 	boolean existsByGt7Id(String gt7Id);
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
 	 * <p>{@code Car} has no {@code @ManyToOne} associations the export aggregate touches;
 	 * the empty {@code @EntityGraph} keeps the contract uniform across all 24 backup

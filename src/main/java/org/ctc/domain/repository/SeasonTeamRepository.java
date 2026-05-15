@@ -21,7 +21,7 @@ public interface SeasonTeamRepository extends JpaRepository<SeasonTeam, UUID> {
 	void deleteBySeasonIdAndTeamId(UUID seasonId, UUID teamId);
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
 	 * <p>Eager-fetches the three {@code @ManyToOne} associations: {@code season},
 	 * {@code team}, {@code successor} (the self-FK to another SeasonTeam).

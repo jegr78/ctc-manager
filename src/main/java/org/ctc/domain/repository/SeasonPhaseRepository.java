@@ -17,9 +17,9 @@ public interface SeasonPhaseRepository extends JpaRepository<SeasonPhase, UUID> 
     List<SeasonPhase> findBySeasonIdOrderBySortIndex(UUID seasonId);
 
     /**
-     * Phase 73-02: full-table finder used by {@code BackupExportService}.
+     * Full-table finder used by {@code BackupExportService}.
      *
-     * <p>Eager-fetches the three {@code @ManyToOne} associations the Phase 73-01 MixIn
+     * <p>Eager-fetches the three {@code @ManyToOne} associations the backup MixIn
      * renders as ID references: {@code season}, {@code raceScoring}, {@code matchScoring}.
      */
     @EntityGraph(attributePaths = {"season", "raceScoring", "matchScoring"})

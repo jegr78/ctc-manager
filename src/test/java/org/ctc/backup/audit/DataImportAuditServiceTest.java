@@ -25,22 +25,18 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 
 /**
- * Phase 75 / Plan 02 — Surefire unit tests for {@link DataImportAuditService}.
+ * Surefire tests for {@link DataImportAuditService}.
  *
  * <p>Boots a {@code @SpringBootTest @ActiveProfiles("dev")} context so the embedded H2
- * datasource, the Phase 72 V7 migration, and the {@code @Qualifier("backupObjectMapper")}
- * bean are all wired. The {@link PlatformTransactionManager} is observed via
- * {@link MockitoSpyBean} so the REQUIRES_NEW propagation can be asserted mechanically
- * (per RESEARCH §Pitfall 3).
+ * datasource, Flyway migrations, and the {@code @Qualifier("backupObjectMapper")} bean are
+ * all wired. The {@link PlatformTransactionManager} is observed via {@link MockitoSpyBean}
+ * to assert REQUIRES_NEW propagation.
  *
- * <p><strong>Plan 07 update (Rule-1 fix):</strong> the service now writes the audit row via a
- * direct {@code JdbcTemplate.update(...)} INSERT (see {@link DataImportAuditService} class
- * Javadoc — both {@code repository.save(...)} and {@code em.persist(...)} fail on a
- * pre-allocated UUID with {@code GenerationType.UUID}). Tests therefore read back via the real
- * {@link DataImportAuditRepository#findById(Object)} against the embedded H2 row. Because the
- * service runs under {@code REQUIRES_NEW}, every {@code recordResult} call commits in its own
- * inner transaction — a class-level {@code @Transactional} on the test would NOT roll those
- * rows back. Instead, every persisted row is tracked and deleted explicitly in
+ * <p>The service writes via {@code JdbcTemplate.update(...)} INSERT — both
+ * {@code repository.save(...)} and {@code em.persist(...)} fail on a pre-allocated UUID with
+ * {@code GenerationType.UUID}. Tests read back via {@link DataImportAuditRepository#findById(Object)}.
+ * Because the service runs under {@code REQUIRES_NEW}, every {@code recordResult} call commits
+ * in its own inner transaction — rows are tracked and deleted explicitly in
  * {@link #cleanupPersistedRows()} so tests stay isolated.
  */
 @SpringBootTest

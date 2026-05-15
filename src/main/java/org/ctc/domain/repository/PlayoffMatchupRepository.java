@@ -17,7 +17,7 @@ public interface PlayoffMatchupRepository extends JpaRepository<PlayoffMatchup, 
 	List<PlayoffMatchup> findByRoundPlayoffId(UUID playoffId);
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
 	 * <p>Eager-fetches the five {@code @ManyToOne} associations: {@code round},
 	 * {@code team1}, {@code team2}, {@code winner}, {@code nextMatchup} (self-FK).

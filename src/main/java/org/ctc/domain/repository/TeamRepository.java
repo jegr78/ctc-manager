@@ -28,9 +28,9 @@ public interface TeamRepository extends JpaRepository<Team, UUID> {
 	List<Team> findAllByShortName(String shortName);
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
-	 * <p>Eager-fetches the {@code parentTeam} self-FK so the Phase 73-01 MixIn can render
+	 * <p>Eager-fetches the {@code parentTeam} self-FK so the backup MixIn can render
 	 * the parent-ID for sub-teams without triggering {@code LazyInitializationException}.
 	 */
 	@EntityGraph(attributePaths = {"parentTeam"})

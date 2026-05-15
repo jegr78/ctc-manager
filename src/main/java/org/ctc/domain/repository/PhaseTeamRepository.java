@@ -20,7 +20,7 @@ public interface PhaseTeamRepository extends JpaRepository<PhaseTeam, UUID> {
     boolean existsByPhaseSeasonId(UUID seasonId);
 
     /**
-     * Phase 73-02: full-table finder used by {@code BackupExportService}.
+     * Full-table finder used by {@code BackupExportService}.
      *
      * <p>Eager-fetches the three {@code @ManyToOne} associations: {@code phase},
      * {@code team}, {@code group}.

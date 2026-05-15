@@ -25,7 +25,7 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 	java.util.Optional<Match> findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
 	 * <p>Eager-fetches the three {@code @ManyToOne} associations: {@code matchday},
 	 * {@code homeTeam}, {@code awayTeam}.

@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface RaceScoringRepository extends JpaRepository<RaceScoring, UUID> {
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
 	 * <p>{@code RaceScoring} has no {@code @ManyToOne} associations; the empty
 	 * {@code @EntityGraph} keeps the contract uniform across all 24 backup finders.

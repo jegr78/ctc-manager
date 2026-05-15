@@ -16,18 +16,13 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 75 / Plan 02 — Surefire round-trip test for the JSON-text fields on
- * {@link DataImportAudit}.
+ * Round-trip test for the JSON-text fields on {@link DataImportAudit}.
  *
- * <p>Builds a {@link DataImportAudit} with realistic 24-entity {@code tableCounts} content
- * via the {@code @Qualifier("backupObjectMapper")} {@link ObjectMapper}, serializes to JSON,
- * then deserializes back to a {@code Map<String, Long>} via the SAME mapper. Round-trip
- * fidelity is asserted via map equality with a {@link TypeReference} so the {@code Long}
- * value type survives the JSON-number coercion.
- *
- * <p>This locks the Phase 72 §"Audit log persistence" contract: {@code tableCountsWiped}
- * and {@code tableCountsRestored} are LONGTEXT JSON-text columns; Phase 75's writer is
- * responsible for the serialization shape that Plan 06's failure-handler will read back.
+ * <p>Serializes a {@link DataImportAudit} with realistic 24-entity {@code tableCounts}
+ * via the {@code @Qualifier("backupObjectMapper")} {@link ObjectMapper}, then deserializes
+ * back to a {@code Map<String, Long>} via the SAME mapper. Round-trip fidelity is asserted
+ * via map equality with a {@link TypeReference} so {@code Long} values survive JSON-number
+ * coercion.
  */
 @SpringBootTest
 @ActiveProfiles("dev")

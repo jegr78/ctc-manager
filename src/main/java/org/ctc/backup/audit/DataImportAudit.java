@@ -19,24 +19,16 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Operational audit log of backup imports.
+ * Operational audit log of backup imports — one row per import attempt (success or failure).
  *
- * <p>Phase 72 ships this entity inert (no writes, no service surface). Phase 75 wires
- * {@code DataImportAuditRepository.save(...)} into the {@code BackupImportService}
- * transaction with one row per import attempt (success or failure).
+ * <p><strong>Does NOT extend {@code BaseEntity}.</strong> {@code executedAt} is set explicitly;
+ * bypassing {@code AuditingEntityListener} ensures imported timestamps survive rather than
+ * being overwritten by {@code @CreatedDate}/{@code @LastModifiedDate}.
  *
- * <p><strong>Intentionally does NOT extend {@code BaseEntity}.</strong> The {@code executedAt}
- * field is set explicitly by the Phase 75 writer; the {@code AuditingEntityListener} bypass is
- * exactly what Phase 75's IMPORT-05 transaction is designed to enable. Inheriting
- * {@code BaseEntity} would re-introduce {@code @CreatedDate}/{@code @LastModifiedDate}
- * overrides on import-row writes, defeating the design.
- *
- * <p><strong>NOT a Java record.</strong> Hibernate 7 / Jakarta Persistence does not support
- * record-based entities (records are final, immutable, and not proxyable). See
- * Phase 72 RESEARCH §Pitfall P-1.
+ * <p><strong>NOT a Java record.</strong> Hibernate / Jakarta Persistence does not support
+ * record-based entities (records are final, immutable, and not proxyable).
  *
  * <p><strong>Lives in {@code org.ctc.backup.audit}, NOT {@code org.ctc.domain.model}.</strong>
- * This package placement is the canonical IMPORT-08 enforcement mechanism: Phase 72's
  * {@code BackupSchema.@PostConstruct} filters JPA Metamodel entities by
  * {@code startsWith("org.ctc.domain.model")}, so this class is structurally excluded from
  * {@code BackupSchema.exportOrder} — no marker annotation, no opt-in, no developer memory.

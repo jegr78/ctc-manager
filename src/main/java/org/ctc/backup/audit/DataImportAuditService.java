@@ -18,50 +18,41 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 02 — REQUIRES_NEW audit-row writer for {@link DataImportAudit}.
+ * REQUIRES_NEW audit-row writer for {@link DataImportAudit}.
  *
- * <p>The single public method {@link #recordResult(UUID, String, int, Map, Map, String, boolean)}
- * runs in its own JPA transaction (propagation = {@link Propagation#REQUIRES_NEW}) so that an
- * audit row written during a mid-restore failure survives the outer wipe-and-restore rollback
- * (CONTEXT §D-01 / IMPORT-07 success criterion 3). A same-transaction audit write would be
- * rolled back together with the wipe — REQUIRES_NEW is the only correct propagation.
+ * <p>{@link #recordResult(UUID, String, int, Map, Map, String, boolean)} runs in its own
+ * transaction (propagation = {@link Propagation#REQUIRES_NEW}) so that an audit row written
+ * during a mid-restore failure survives the outer wipe-and-restore rollback. A same-transaction
+ * audit write would be rolled back together with the wipe — REQUIRES_NEW is the only correct
+ * propagation.
  *
- * <p>The {@code executedBy} resolution is profile-aware per CONTEXT §D-02:
- * <ul>
- *   <li>{@code dev} or {@code local} profile → literal string {@code "dev"};</li>
- *   <li>otherwise → {@link SecurityContextHolder} authentication name, falling back to the
- *       caller-supplied value if no security context is bound (defensive fallback).</li>
- * </ul>
+ * <p>The {@code executedBy} value is profile-aware:
+ * {@code dev}/{@code local} → literal {@code "dev"};
+ * otherwise → {@link SecurityContextHolder} authentication name.
  *
- * <p>JSON-text serialization of the {@code tableCountsWiped} / {@code tableCountsRestored}
- * maps uses the {@code @Qualifier("backupObjectMapper")} {@link ObjectMapper} so the strict
- * Phase 72 contract ({@code FAIL_ON_UNKNOWN_PROPERTIES=true}, {@code WRITE_DATES_AS_TIMESTAMPS=false})
- * applies. A {@link JsonProcessingException} is re-thrown as {@link IllegalStateException} —
- * the outer caller (Plan 06's failure-handler) is responsible for logging and continuing.
+ * <p>JSON serialization uses {@code @Qualifier("backupObjectMapper")} so the strict backup
+ * contract applies. A {@link JsonProcessingException} is re-thrown as {@link IllegalStateException}.
  *
- * <p><strong>The audit entity deliberately bypasses {@code AuditingEntityListener}</strong>:
+ * <p><strong>Deliberately bypasses {@code AuditingEntityListener}</strong>:
  * {@link DataImportAudit} does NOT extend {@code BaseEntity}, so {@code executedAt} is set
- * EXPLICITLY here ({@link Instant#now()}) — this is exactly what Phase 75's IMPORT-05
- * transaction strategy enables.
+ * explicitly via {@link Instant#now()} — imported timestamps must not be overwritten.
  */
 @Slf4j
 @Service
 public class DataImportAuditService {
 
     /**
-     * Plan 07 Rule-1 fix: write the audit row via {@link JdbcTemplate#update(String, Object...)}
-     * instead of {@code repository.save(...)} or {@code em.persist(...)}.
+     * Writes the audit row via {@link JdbcTemplate#update(String, Object...)} instead of
+     * {@code repository.save(...)} or {@code em.persist(...)}.
      *
      * <p>Rationale: {@link DataImportAudit} carries {@code @GeneratedValue(strategy = UUID)} but
-     * Phase 75 deliberately sets the UUID up-front (the controller flashes it BEFORE the outer
-     * tx commits — D-15). Spring Data {@code SimpleJpaRepository.save(...)} dispatches to
-     * {@code em.merge(...)} when the ID is non-null, producing an
+     * the UUID is pre-allocated by the controller. Spring Data {@code SimpleJpaRepository.save(...)}
+     * dispatches to {@code em.merge(...)} when the ID is non-null, producing an
      * {@code ObjectOptimisticLockingFailureException} on a brand-new row. Switching to
      * {@code em.persist(...)} instead throws {@code EntityExistsException} ("Detached entity
      * passed to persist") because Hibernate's identity-strategy logic flags any non-null
      * pre-allocated UUID as "already persisted elsewhere". A direct JDBC INSERT sidesteps both
-     * traps and stays consistent with the Plan 75 design driver (AuditingEntityListener bypass
-     * via {@link JdbcTemplate}).
+     * traps (AuditingEntityListener bypass via {@link JdbcTemplate}).
      */
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper backupObjectMapper;
@@ -142,12 +133,8 @@ public class DataImportAuditService {
     }
 
     /**
-     * Resolves {@code executedBy} per CONTEXT §D-02.
-     * <ul>
-     *   <li>{@code dev} or {@code local} profile → literal {@code "dev"};</li>
-     *   <li>otherwise → SecurityContext authentication name;</li>
-     *   <li>fallback when neither yields a value → caller-supplied value or {@code "unknown"}.</li>
-     * </ul>
+     * Resolves {@code executedBy}: {@code dev}/{@code local} profile → {@code "dev"};
+     * otherwise → SecurityContext authentication name; fallback → {@code "unknown"}.
      */
     private String resolveExecutedBy(String executedByCaller) {
         if (environment.matchesProfiles("dev | local")) {

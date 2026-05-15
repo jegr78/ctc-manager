@@ -14,7 +14,7 @@ public interface PlayoffRoundRepository extends JpaRepository<PlayoffRound, UUID
 	List<PlayoffRound> findByPlayoffIdOrderByRoundIndexAsc(UUID playoffId);
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
 	 * <p>Eager-fetches the {@code playoff} {@code @ManyToOne} association.
 	 */

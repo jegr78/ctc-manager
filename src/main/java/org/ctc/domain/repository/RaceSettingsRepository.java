@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface RaceSettingsRepository extends JpaRepository<RaceSettings, UUID> {
 
 	/**
-	 * Phase 73-02: full-table finder used by {@code BackupExportService}.
+	 * Full-table finder used by {@code BackupExportService}.
 	 *
 	 * <p>Eager-fetches the {@code race} {@code @OneToOne} association (owning side).
 	 */
