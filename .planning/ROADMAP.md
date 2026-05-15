@@ -383,7 +383,7 @@ Plans:
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 4/4 | Complete   | 2026-05-14 |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 5/5 | Complete   | 2026-05-15 |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
-| 79. Code Cleanup + Test Performance Optimization — v1.10 Milestone Closer | 10/16 | In Progress|  |
+| 79. Code Cleanup + Test Performance Optimization — v1.10 Milestone Closer | 13/16 | In Progress|  |
 
 ### Phase 79: Code Cleanup + Test Performance Optimization (v1.10 Milestone Closer)
 
@@ -393,7 +393,7 @@ Plans:
 
 **Depends on:** Phase 78 (Dockerfile noble-pin must be merged so the release workflow is green and milestone-audit can verify the full v1.10 stack)
 
-**Plans:** 10/16 plans executed
+**Plans:** 13/16 plans executed
 
 Plans:
 - [x] 79-01-PLAN.md — Wave 1: Baseline wallclock + reverse-order/random-seed independence audit + 10/10 @DirtiesContext verdict (D-05, D-06)
@@ -406,9 +406,9 @@ Plans:
 - [x] 79-02g-PLAN.md — Wave 2: Cleanup admin.dto + backup root + admin root (Form-DTO validation + SecurityConfig profile-gating invariants)
 - [x] 79-02h-PLAN.md — Wave 2: Cleanup domain.service + domain.exception + domain.repository + domain.model (JPA entity invariants; mvnw verify per commit for JaCoCo gate)
 - [x] 79-03-PLAN.md — Wave 3: Enable Surefire forkCount=2C + Failsafe default-it forkCount=1C + excludedGroups=flaky (D-05, D-07)
-- [ ] 79-04-PLAN.md — Wave 4: pom.xml + ci.yml comment cleanup + ci.yml concurrency block + --no-transfer-progress (D-07, D-20)
-- [ ] 79-05-PLAN.md — Wave 5: Append Test Invocation Discipline section to TESTING.md (D-08)
-- [ ] 79-06-PLAN.md — Wave 5: Normalize plan-SUMMARY frontmatter for phases 56/57/62/64 (17 files, D-16)
+- [x] 79-04-PLAN.md — Wave 4: pom.xml + ci.yml comment cleanup + ci.yml concurrency block + --no-transfer-progress (D-07, D-20)
+- [x] 79-05-PLAN.md — Wave 5: Append Test Invocation Discipline section to TESTING.md (D-08)
+- [x] 79-06-PLAN.md — Wave 5: Normalize plan-SUMMARY frontmatter for phases 56/57/62/64 (17 files, D-16)
 - [ ] 79-07-PLAN.md — Wave 7: Final wallclock measurement + JaCoCo gate + Schutzwortliste/Flyway/mariadb-smoke invariants (D-06, D-18, D-19)
 - [ ] 79-08-PLAN.md — Wave 8: /gsd-audit-milestone v1.10 dispatch + findings disposition (D-14, D-15)
 - [ ] 79-09-PLAN.md — Wave 9: /gsd-complete-milestone v1.10 + Squash-PR + post-CI-green merge (D-14, D-17)
