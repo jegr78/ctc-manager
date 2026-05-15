@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 03 — restores rows into the {@code seasons} table from the
+ * Restores rows into the {@code seasons} table from the
  * {@code data/seasons.json} array in a backup ZIP.
  *
  * <p>Schema reference (V1__initial_schema.sql:24-43 — DB-level columns
@@ -40,8 +40,9 @@ import java.util.UUID;
  * "createdAt":"<iso>","updatedAt":"<iso>"}}. {@code cars}/{@code tracks} are owned by the
  * {@code season_cars} / {@code season_tracks} join tables (out of scope for this plan).
  *
- * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} so the imported
- * {@code createdAt}/{@code updatedAt} values survive verbatim.
+ * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} to bypass
+ * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener} so that the
+ * imported {@code createdAt}/{@code updatedAt} values survive verbatim.
  */
 @Slf4j
 @Component

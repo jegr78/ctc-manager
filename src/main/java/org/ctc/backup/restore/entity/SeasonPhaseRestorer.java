@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 03 — restores rows into the {@code season_phases} table from the
+ * Restores rows into the {@code season_phases} table from the
  * {@code data/season-phases.json} array in a backup ZIP.
  *
  * <p>Schema reference (V3__add_season_phase_tables.sql:5-26):

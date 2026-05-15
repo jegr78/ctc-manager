@@ -13,26 +13,22 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 03 — restores rows into the {@code season_drivers} table from the
+ * Restores rows into the {@code season_drivers} table from the
  * {@code data/season-drivers.json} array in a backup ZIP.
  *
- * <p>Schema reference (V1__initial_schema.sql:68-79):
+ * <p>Schema reference (V1__initial_schema.sql):
  * <pre>
  * CREATE TABLE season_drivers (
  *   id UUID PRIMARY KEY,
  *   season_id UUID NOT NULL,
  *   driver_id UUID NOT NULL,
- *   team_id UUID NOT NULL,              (FK to teams, NOT season_teams — verified V1:77)
+ *   team_id UUID NOT NULL,              (FK to teams, NOT season_teams)
  *   created_at TIMESTAMP, updated_at TIMESTAMP,
  *   CONSTRAINT uk_season_driver UNIQUE (season_id, driver_id));
  * </pre>
  *
  * <p>JSON shape (from {@code SeasonDriverMixIn}): all three FK fields render as bare UUID
  * strings via {@code @JsonIdentityReference(alwaysAsId=true)}.
- *
- * <p>Naming note: the plan's interfaces block originally listed {@code season_team_id} — that
- * column does not exist on this table. {@code team_id} is the correct V1 schema column name
- * and matches the {@code SeasonDriver.team @JoinColumn(name = "team_id")} annotation.
  */
 @Slf4j
 @Component

@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 03 — restores rows into the {@code teams} table from the
+ * Restores rows into the {@code teams} table from the
  * {@code data/teams.json} array in a backup ZIP.
  *
- * <p><strong>2-pass restore (CONTEXT D-06)</strong>: {@code teams.parent_team_id} is a self-FK
+ * <p><strong>2-pass restore</strong>: {@code teams.parent_team_id} is a self-FK
  * — sub-team A references parent P, and both rows arrive in a flat JSON array that is NOT
  * topologically sorted. Forward-iterating with the parent set would fail when P has not been
  * inserted yet.

@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 03 — restores rows into the {@code drivers} table from the
+ * Restores rows into the {@code drivers} table from the
  * {@code data/drivers.json} array in a backup ZIP.
  *
- * <p>Schema reference (V1__initial_schema.sql:59-66):
+ * <p>Schema reference (V1__initial_schema.sql):
  * <pre>
  * CREATE TABLE drivers (
  *   id UUID PRIMARY KEY,
@@ -33,8 +33,7 @@ import java.util.UUID;
  *
  * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} so
  * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener} does NOT overwrite
- * the imported {@code createdAt}/{@code updatedAt} values (Phase 75 goal — round-trip
- * fidelity).
+ * the imported {@code createdAt}/{@code updatedAt} values (round-trip fidelity).
  */
 @Slf4j
 @Component

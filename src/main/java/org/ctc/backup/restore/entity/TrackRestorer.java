@@ -15,10 +15,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 05 — {@link EntityRestorer} for {@link org.ctc.domain.model.Track}.
+ * {@link EntityRestorer} for {@link org.ctc.domain.model.Track}.
  *
  * <p>GT7 reference-data leaf entity: no foreign keys. V1 schema columns
- * ({@code V1__initial_schema.sql} lines 113-120):
+ * ({@code V1__initial_schema.sql}):
  * <ul>
  *   <li>{@code id} (UUID PK)</li>
  *   <li>{@code name} (VARCHAR NOT NULL UNIQUE)</li>
@@ -29,7 +29,7 @@ import java.util.UUID;
  * </ul>
  *
  * <p>Single-pass insert — mirrors {@link CarRestorer}. Bypasses
- * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener} per Phase 75 goal.
+ * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}.
  */
 @Component
 @Slf4j

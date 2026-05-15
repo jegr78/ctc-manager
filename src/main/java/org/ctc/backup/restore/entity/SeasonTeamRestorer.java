@@ -16,20 +16,16 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 03 — restores rows into the {@code season_teams} table from the
+ * Restores rows into the {@code season_teams} table from the
  * {@code data/season-teams.json} array in a backup ZIP.
  *
- * <p><strong>2-pass restore (PLAN-Q1 resolution)</strong>:
+ * <p><strong>2-pass restore</strong>:
  * {@code season_teams.successor_season_team_id} is a self-FK
  * (V1__initial_schema.sql:90 — {@code CONSTRAINT fk_st_successor FOREIGN KEY
  * (successor_season_team_id) REFERENCES season_teams(id)}). It is structurally identical to
- * {@code teams.parent_team_id} (D-06) and therefore receives the same 2-pass treatment.
- *
- * <p>CONTEXT D-06 only enumerated {@code TeamRestorer} as 2-pass; PATTERNS.md flagged the
- * {@code SeasonTeam} successor self-FK as an open question (Q1). This plan resolves Q1 by
- * adopting the identical pattern — the alternative (sorting the JSON array topologically
- * within the file) would couple the restorer to source-array order, which Phase 73's
- * exporter does not guarantee.
+ * {@code teams.parent_team_id} and therefore receives the same 2-pass treatment as
+ * {@link TeamRestorer}. The alternative (sorting the JSON array topologically) would couple
+ * the restorer to source-array order, which the exporter does not guarantee.
  *
  * <ol>
  *   <li><strong>Pass 1</strong>: {@code INSERT} every row with {@code successor_season_team_id}

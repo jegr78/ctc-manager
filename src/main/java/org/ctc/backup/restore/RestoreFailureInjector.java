@@ -1,15 +1,15 @@
 package org.ctc.backup.restore;
 
 /**
- * Phase 75 test seam (D-13) — pluggable fail-injection hook called from the restore batch loop.
+ * Pluggable fail-injection hook called from the restore batch loop.
  *
- * <p>The orchestrator ({@code BackupImportService.restore(...)}, added in Plan 06) invokes
+ * <p>The orchestrator ({@code BackupImportService.restore(...)}) invokes
  * {@link #maybeFailAt(String, int)} after every 50 rows inside each entity batch. The production
  * default ({@link NoopRestoreFailureInjector}, {@link org.springframework.context.annotation.Primary})
- * is a no-op; a test-scoped {@code @TestConfiguration} in {@code BackupImportRollbackIT} (Plan 08)
+ * is a no-op; a test-scoped {@code @TestConfiguration} in {@code BackupImportRollbackIT}
  * provides a {@code FailAtTableInjector(targetTable, targetRowIndex)} bean that throws
  * {@link org.ctc.backup.exception.RestoreFailureSimulatedException} when its targets match,
- * covering the ROADMAP-locked "fail at 50% of the largest table" scenario without
+ * covering the "fail at 50% of the largest table" scenario without
  * {@link org.mockito.Mockito#spy(Object) Mockito.spy(jdbcTemplate)} brittleness.
  *
  * <p>The single-method shape keeps the production code path observable (a plain method call,
