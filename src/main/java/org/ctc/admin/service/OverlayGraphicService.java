@@ -122,8 +122,6 @@ public class OverlayGraphicService extends AbstractGraphicService implements Tem
 		return words[0] + "<br>" + words[1] + "<br>" + String.join(" ", java.util.Arrays.copyOfRange(words, 2, words.length));
 	}
 
-	// Template management
-
 	private String renderTemplate(Context ctx) throws IOException {
 		Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
 		if (Files.exists(customTemplate)) {

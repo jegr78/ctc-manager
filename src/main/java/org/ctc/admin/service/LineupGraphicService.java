@@ -147,8 +147,6 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 		return templateEngine.process("admin/lineup-render", ctx);
 	}
 
-	// Template management
-
 	public String loadTemplate() throws IOException {
 		Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
 		if (Files.exists(customTemplate)) {

@@ -123,8 +123,6 @@ public abstract class AbstractPlayoffRoundGraphicService extends AbstractGraphic
 		return londonTime.format(SCHEDULE_FORMAT);
 	}
 
-	// Template management
-
 	protected String renderTemplate(Context ctx) throws IOException {
 		Path customTemplate = uploadDir.resolve(getTemplateFileName());
 		if (Files.exists(customTemplate)) {

@@ -124,7 +124,6 @@ public class TeamCardService implements TemplateManageable {
 		var paths = new ArrayList<String>();
 		for (var seasonTeam : season.getSeasonTeams()) {
 			var team = seasonTeam.getTeam();
-			// Skip parent teams that have sub-teams in THIS season
 			boolean hasSubTeamsInSeason = team.getSubTeams().stream()
 					.anyMatch(sub -> seasonTeamIds.contains(sub.getId()));
 			if (!hasSubTeamsInSeason) {

@@ -46,7 +46,6 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 			return List.of();
 		}
 
-		// Collect all active (non-replaced) SeasonTeams across all seasons with this (year, number)
 		Map<UUID, SeasonTeam> seasonTeamMap = new LinkedHashMap<>();
 		for (Season season : seasons) {
 			for (SeasonTeam st : seasonTeamRepository.findBySeasonId(season.getId())) {
@@ -56,23 +55,17 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 			}
 		}
 
-		// Collect all team IDs in the group
 		Set<UUID> allTeamIds = seasonTeamMap.keySet();
 
-		// Filter: exclude parent teams whose sub-teams are also in the season group
 		List<SeasonTeam> filtered = seasonTeamMap.values().stream()
 				.filter(st -> {
 					Team team = st.getTeam();
-					if (!team.hasSubTeams()) {
-						return true; // standalone or sub-team without own sub-teams
-					}
-					// Parent with sub-teams: include only if none of its sub-teams are in the group
+					if (!team.hasSubTeams()) return true;
 					return team.getSubTeams().stream()
 							.noneMatch(sub -> allTeamIds.contains(sub.getId()));
 				})
 				.toList();
 
-		// Sort by rating DESC (nulls last), then shortName ASC
 		return filtered.stream()
 				.sorted(Comparator
 						.<SeasonTeam, Integer>comparing(
@@ -95,7 +88,6 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 			throw new IllegalStateException("No seasons found for year=" + year + " number=" + number);
 		}
 
-		// Build SeasonTeam lookup across all seasons (exclude replaced teams)
 		Map<UUID, SeasonTeam> seasonTeamMap = new HashMap<>();
 		for (Season season : seasons) {
 			for (SeasonTeam st : seasonTeamRepository.findBySeasonId(season.getId())) {
@@ -105,7 +97,6 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 			}
 		}
 
-		// Build ranking entries in the order of teamIds
 		List<PowerRankingEntry> entries = new ArrayList<>();
 		for (int i = 0; i < teamIds.size(); i++) {
 			UUID teamId = teamIds.get(i);
@@ -124,7 +115,6 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 			));
 		}
 
-		// Split into two columns
 		int mid = (entries.size() + 1) / 2;
 		List<PowerRankingEntry> leftColumn = entries.subList(0, Math.min(mid, entries.size()));
 		List<PowerRankingEntry> rightColumn = mid < entries.size() ? entries.subList(mid, entries.size()) : List.of();
@@ -168,8 +158,6 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 			Files.deleteIfExists(tempFile);
 		}
 	}
-
-	// Template management
 
 	public String loadTemplate() throws IOException {
 		Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);

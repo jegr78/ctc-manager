@@ -116,8 +116,6 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		return "/uploads/races/" + race.getId() + "/settings.png";
 	}
 
-	// Template management
-
 	private String renderTemplate(Context ctx) throws IOException {
 		Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
 		if (Files.exists(customTemplate)) {

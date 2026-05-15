@@ -94,8 +94,6 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 		return templateEngine.process("admin/results-render", ctx);
 	}
 
-	// Template management
-
 	public String loadTemplate() throws IOException {
 		Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
 		if (Files.exists(customTemplate)) {
