@@ -39,11 +39,11 @@ import static org.ctc.backup.service.BackupImportLimits.MAX_ENTRY_BYTES;
 import static org.ctc.backup.service.BackupImportLimits.MAX_TOTAL_BYTES;
 
 /**
- * Phase 73-03 — stateless ZIP plumbing for the backup export pipeline.
+ * Stateless ZIP plumbing for the backup export and import pipeline.
  *
  * <p>Single public method {@link #writeZip(OutputStream, Instant)} streams a self-contained
  * backup archive into the caller's {@link OutputStream}. No intermediate
- * {@code ByteArrayOutputStream}, so the entire pipeline is true streaming (RESEARCH §Pattern 6).
+ * {@code ByteArrayOutputStream}, so the entire pipeline is true streaming.
  *
  * <p>ZIP entry order — manifest first, data next, uploads last:
  * <ol>
@@ -68,12 +68,12 @@ import static org.ctc.backup.service.BackupImportLimits.MAX_TOTAL_BYTES;
  * throws {@code LazyInitializationException} the moment Jackson reaches the
  * {@code seasons.json} array (Wave 1 73-02 deviation rationale).
  *
- * <h2>Phase 74 reader extension (Plan 04 — D-20 single-class invariant)</h2>
+ * <h2>Reader methods — manifest, counting, uploads extraction</h2>
  *
- * <p>Three streaming reader methods are added in Phase 74:
+ * <p>Three streaming reader methods complement the write path:
  * <ul>
- *   <li>{@link #readManifest(Path)} — opens a Phase-73 export ZIP, asserts the first entry
- *       is literally {@code manifest.json}, and deserializes it via the qualified
+ *   <li>{@link #readManifest(Path)} — opens an export ZIP, asserts the first entry is
+ *       literally {@code manifest.json}, and deserializes it via the qualified
  *       {@code backupObjectMapper}.</li>
  *   <li>{@link #countDataEntries(Path)} — walks every {@code data/<slug>.json} entry via a
  *       Jackson {@code JsonParser} token-loop (no full-document buffering) and returns a
@@ -83,12 +83,10 @@ import static org.ctc.backup.service.BackupImportLimits.MAX_TOTAL_BYTES;
  * </ul>
  *
  * <p>All three methods route every ZIP entry through a single hardened helper
- * {@link #assertEntrySafe(ZipEntry, Path, int, long)} that enforces:
- * ZIP-Slip defense (D-11, SECU-01), per-entry inflate-size cap (D-12, SECU-02),
- * total inflate-size cap, and maximum entry count. The reader does not extract anything
- * to disk — it is a pure counting and parsing pass over the inflated byte stream.
- * Phase 75 will add extraction; at that point the traversal root must be tightened to
- * a per-import extraction subdirectory (see Plan 04 Notes §"Path-traversal scope").
+ * {@link #assertEntrySafe(ZipEntry, Path, int, long)} that enforces ZIP-Slip defense,
+ * per-entry inflate-size cap (50 MB), total inflate-size cap (500 MB), and maximum entry
+ * count (50 000). The reader does not extract anything to disk — it is a pure counting and
+ * parsing pass over the inflated byte stream.
  */
 @Slf4j
 @Service
@@ -204,7 +202,7 @@ public class BackupArchiveService {
 	}
 
 	// =========================================================================
-	// Phase 74 reader extension — D-20 single-class invariant
+	// Reader methods — manifest, data counts, upload extraction
 	// =========================================================================
 
 	/**
@@ -430,27 +428,25 @@ public class BackupArchiveService {
 	}
 
 	// =========================================================================
-	// Phase 75 / Plan 06 — uploads extraction (D-12)
+	// Uploads extraction
 	// =========================================================================
 
 	/**
 	 * Extracts every {@code uploads/<rel>} entry of the backup ZIP at {@code zipPath} to the
 	 * given destination directory {@code destDir}. The {@code uploads/} prefix is stripped from
 	 * the entry name so the on-disk layout under {@code destDir} mirrors the original
-	 * {@code app.upload-dir/} tree (Phase 73 D-14 export contract).
+	 * {@code app.upload-dir/} tree.
 	 *
-	 * <p>Phase 75 D-12: the orchestrator
-	 * ({@code BackupImportService.execute(UUID)} added in Plan 06) calls this helper from
-	 * INSIDE the {@code @Transactional} method body, BEFORE the post-commit move triple
-	 * (Plan 07). On wipe-or-restore rollback the partially-extracted {@code uploads-new/}
-	 * is cleaned by the orchestrator's catch-block.
+	 * <p>Called from {@code BackupImportService.execute(UUID)} INSIDE the {@code @Transactional}
+	 * boundary, BEFORE the post-commit move triple. On wipe-or-restore rollback the
+	 * partially-extracted {@code uploads-new/} is cleaned by the orchestrator's catch-block.
 	 *
 	 * <p><strong>Hardening invariants (per entry):</strong>
 	 * <ul>
 	 *   <li>{@link PathTraversalGuard#assertWithin(Path, String)} on the {@code uploads/}-stripped
-	 *       relative path against {@code destDir} (Phase 74 D-11 / SECU-01 reuse).</li>
+	 *       relative path against {@code destDir} (ZIP-Slip defense).</li>
 	 *   <li>Per-entry inflate cap via {@link LimitedInputStream} with
-	 *       {@link BackupImportLimits#MAX_ENTRY_BYTES} (50 MB, SECU-02 / D-12).</li>
+	 *       {@link BackupImportLimits#MAX_ENTRY_BYTES} (50 MB).</li>
 	 *   <li>Aggregate inflate cap via the running {@code totalInflated} counter against
 	 *       {@link BackupImportLimits#MAX_TOTAL_BYTES} (500 MB).</li>
 	 *   <li>{@link BackupImportLimits#MAX_ENTRIES} entry-count cap on the overall ZIP.</li>
@@ -498,7 +494,7 @@ public class BackupArchiveService {
 					continue;
 				}
 
-				// Phase 74 D-11 reuse: validate the stripped path resolves inside destDir.
+				// Validate the stripped path resolves inside destDir (ZIP-Slip defense).
 				PathTraversalGuard.assertWithin(absoluteDest, relativePath);
 
 				// WR-07: pre-check the entry-count cap BEFORE materializing the file so a

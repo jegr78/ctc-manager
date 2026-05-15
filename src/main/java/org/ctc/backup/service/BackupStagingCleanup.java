@@ -13,12 +13,11 @@ import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Startup safety net for the stateless backup-import staging-file pattern (D-15 / D-18).
+ * Startup safety net that reaps orphaned staging files left by a previous JVM that died
+ * between upload and import confirmation.
  *
  * <p>On {@link ApplicationReadyEvent}, walks {@code app.backup.staging-dir} and deletes
- * every {@code upload-*.zip} file. Reaps orphans left by a previous JVM that died
- * between {@code BackupImportService.stage()} and the per-request cleanup in
- * {@code BackupController} — see CONTEXT D-17 (Phase 74).
+ * every {@code upload-*.zip} and {@code upload-*.zip.meta} file.
  *
  * <p>A scheduled periodic sweep is deferred to v1.11 — startup-sweep plus the
  * per-request reject-delete is enough for the 1–2-uploads-per-week cadence.

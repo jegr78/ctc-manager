@@ -14,13 +14,12 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 
 /**
- * Phase 75 / Plan 07 — AFTER_COMMIT listener that owns the post-commit file-system mutations
- * (D-09 atomic-move-triple) and the success-path audit-row write.
+ * AFTER_COMMIT listener that owns the post-commit file-system mutations (atomic-move-triple)
+ * and the success-path audit-row write.
  *
  * <p>File-system mutations cannot be enrolled in the JPA transaction; AFTER_COMMIT is Spring's
- * canonical post-commit hook (RESEARCH §2 / PATTERNS Pattern 2). The listener consumes
- * {@link BackupImportSucceededEvent} published by
- * {@link BackupImportService#execute(java.util.UUID)} (Plan 06) and performs Steps 1-4 of D-09:
+ * canonical post-commit hook. The listener consumes {@link BackupImportSucceededEvent} published
+ * by {@link BackupImportService#execute(java.util.UUID)} and performs Steps 1-4:
  *
  * <ol>
  *   <li><strong>Step 1:</strong> {@code Files.move(uploadsTarget, importBackupDir/uploads-old,
@@ -35,24 +34,20 @@ import java.nio.file.StandardCopyOption;
  *       Failure here logs ERROR but does NOT revert Steps 1+2 — the files are already in their
  *       target state; the operator's signal is the missing audit row.</li>
  *   <li><strong>Step 4:</strong> {@link BackupImportService#deleteStagingFile(java.util.UUID)} —
- *       best-effort cleanup of the staged ZIP plus its {@code .meta} sidecar (Phase 74 D-19).</li>
+ *       best-effort cleanup of the staged ZIP plus its {@code .meta} sidecar.</li>
  * </ol>
  *
  * <p><strong>No transaction annotation on the listener method itself.</strong>
  * REQUIRES_NEW propagation is auto-enforced by {@code DataImportAuditService.recordResult(...)}
- * (Plan 02) via its own {@code Propagation.REQUIRES_NEW} setting — RESEARCH §9 documents the
- * Spring 6.1+ rule that {@code @TransactionalEventListener} methods may not run in the outer
- * (already-committed) transaction. The audit-service-side propagation is the exact contract
- * this listener relies on.
+ * via its own {@code Propagation.REQUIRES_NEW} setting — Spring 6.1+ rule: {@code
+ * @TransactionalEventListener} methods may not run in the outer (already-committed) transaction.
  *
- * <p><strong>PATTERNS Pitfall §2 — AFTER_COMMIT swallows exceptions silently.</strong> The
- * recovery path is best-effort revert + loud ERROR log + {@code success=false} audit row, NOT
- * exception propagation: a thrown exception inside AFTER_COMMIT will not unwind the
- * already-committed JPA transaction. The {@link UploadsRestoreException} re-throws from Steps 1
- * and 2 surface the failure to any caller that observes the listener's invocation context (none
- * in production, but the Plan 07 IT pins this behaviour via Spring's
- * {@code ApplicationEventMulticaster} which DOES propagate listener exceptions to the
- * synchronous publisher in test contexts).
+ * <p><strong>AFTER_COMMIT swallows exceptions silently.</strong> The recovery path is best-effort
+ * revert + loud ERROR log + {@code success=false} audit row, NOT exception propagation: a thrown
+ * exception inside AFTER_COMMIT will not unwind the already-committed JPA transaction. The
+ * {@link UploadsRestoreException} re-throws from Steps 1 and 2 surface the failure to any caller
+ * that observes the listener's invocation context (none in production, but integration tests pin
+ * this behaviour via Spring's {@code ApplicationEventMulticaster}).
  */
 @Slf4j
 @Component
@@ -154,8 +149,8 @@ public class BackupImportPostCommitListener {
             log.error("AFTER_COMMIT Step 3 (audit success row) failed; DB + FS already in target state", e);
         }
 
-        // Step 4: best-effort cleanup of the staged ZIP + .meta sidecar (Phase 74 D-19).
-        // BackupImportService.deleteStagingFile is documented as idempotent + swallows IOException,
+        // Step 4: best-effort cleanup of the staged ZIP + .meta sidecar.
+        // BackupImportService.deleteStagingFile is idempotent + swallows IOException,
         // but we still wrap in try/catch defensively in case a future refactor changes that.
         try {
             backupImportService.deleteStagingFile(event.stagingId());

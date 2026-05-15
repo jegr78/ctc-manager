@@ -71,7 +71,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Phase 73-03 — DB-read orchestrator for the backup export pipeline.
+ * DB-read orchestrator for the backup export pipeline.
  *
  * <p>Owns three responsibilities:
  * <ol>

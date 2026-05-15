@@ -3,7 +3,7 @@ package org.ctc.backup.service;
 import java.nio.file.Path;
 
 /**
- * Phase 73-03 — value object describing a single referenced upload file.
+ * Value object describing a single referenced upload file.
  *
  * <p>Used by {@link BackupExportService#enumerateReferencedUploads()} and consumed by
  * {@code BackupArchiveService} to write the {@code uploads/<relativePath>} entries into

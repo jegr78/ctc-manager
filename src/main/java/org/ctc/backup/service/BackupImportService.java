@@ -64,12 +64,11 @@ import java.util.zip.ZipFile;
 /**
  * Stateless orchestrator for the backup import pipeline.
  *
- * <p>Phase 74 Plan 05 — D-19 preview surface: {@link #stage(MultipartFile)},
- * {@link #reparse(UUID)}, {@link #deleteStagingFile(UUID)}.
+ * <p>Preview surface: {@link #stage(MultipartFile)}, {@link #reparse(UUID)},
+ * {@link #deleteStagingFile(UUID)}.
  *
- * <p>Phase 75 Plan 06 — D-14 execute surface: {@link #execute(UUID)} (single
- * {@code @Transactional} method on top of the otherwise read-only class), backed by
- * package-private helpers {@link #wipeAllTables(Map)} and
+ * <p>Execute surface: {@link #execute(UUID)} — single {@code @Transactional} method
+ * backed by package-private helpers {@link #wipeAllTables(Map)} and
  * {@link #restoreAll(Path, Map)}.
  *
  * <p>The execute method:
@@ -116,10 +115,10 @@ public class BackupImportService {
     /** ZIP magic bytes: PK\x03\x04 (local file header signature). */
     private static final byte[] ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04};
 
-    /** Batch size for the JSON-stream-to-batchUpdate accumulator (CONTEXT D-07). */
+    /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;
 
-    /** Frequency at which {@link RestoreFailureInjector#maybeFailAt(String, int)} fires (CONTEXT D-13). */
+    /** Frequency at which {@link RestoreFailureInjector#maybeFailAt(String, int)} fires (production no-op). */
     private static final int FAIL_INJECT_INTERVAL = 50;
 
     /** Defensive allow-list for native-SQL table-name concatenation (no SQL injection on hard-coded BackupSchema slugs). */
@@ -275,18 +274,18 @@ public class BackupImportService {
     }
 
     // =========================================================================
-    // D-19 public surface (preview)
+    // Preview surface (public API)
     // =========================================================================
 
     /**
      * Stages a {@link MultipartFile} ZIP upload and returns a preview of its content.
      *
-     * <p>Flow (CONTEXT D-16 reject-path discipline):
+     * <p>Flow:
      * <ol>
      *   <li>Ensure staging directory exists.</li>
-     *   <li>ZIP magic-byte sniff — BEFORE any disk write ({@code RESEARCH §Pattern 5}).</li>
+     *   <li>ZIP magic-byte sniff — BEFORE any disk write.</li>
      *   <li>Allocate UUID + staging path; transfer the multipart body to disk.</li>
-     *   <li>Delegate to {@link #buildPreview} — schema gate fires before any DB read (D-09).</li>
+     *   <li>Delegate to {@link #buildPreview} — schema gate fires before any DB read.</li>
      *   <li>On any exception: log WARN, delete staged file in {@code finally}, rethrow.</li>
      * </ol>
      *
@@ -349,9 +348,9 @@ public class BackupImportService {
     /**
      * Re-reads an already-staged file and returns a fresh {@link BackupImportPreview}.
      *
-     * <p>D-08 defense-in-depth: re-runs the full validation chain including the schema gate
-     * so that a schema-version bump between preview and execute time is detected at execute
-     * time as well. The staging file is NOT deleted on reject — Phase 75 inherits it.
+     * <p>Defense-in-depth: re-runs the full validation chain including the schema gate so that
+     * a schema-version bump between preview and execute time is detected at execute time as well.
+     * The staging file is NOT deleted on reject.
      *
      * @param stagingId UUID of the staging file (from a previous {@link #stage} call)
      * @return a fresh {@link BackupImportPreview}
@@ -398,16 +397,15 @@ public class BackupImportService {
     }
 
     // =========================================================================
-    // D-14 public surface (execute)
+    // Execute surface (public API)
     // =========================================================================
 
     /**
      * Replaces the entire DB content with the contents of the staged backup ZIP, atomically.
      *
-     * <p>Phase 75 D-14: single {@code @Transactional(REQUIRED, READ_COMMITTED)} method that
-     * owns wipe + restore + uploads extraction + event publish. The post-commit listener
-     * (Plan 07) consumes {@link BackupImportSucceededEvent} for the move-triple + audit
-     * success-row write.
+     * <p>Single {@code @Transactional(REQUIRED, READ_COMMITTED)} method that owns wipe +
+     * restore + uploads extraction + event publish. The post-commit listener consumes
+     * {@link BackupImportSucceededEvent} for the move-triple + audit success-row write.
      *
      * <p>On failure: the JPA transaction rolls back (wipe + restore are undone), a
      * {@code success=false} audit row is written via REQUIRES_NEW (Plan 02 contract,
@@ -428,7 +426,7 @@ public class BackupImportService {
 
         UUID auditUuid = UUID.randomUUID();
 
-        // Stage file lookup (Phase 74 contract — same shape as reparse())
+        // Stage file lookup (same shape as reparse())
         Path staged = stagingDir.resolve("upload-" + stagingId + ".zip");
         Path metaFile = stagingDir.resolve("upload-" + stagingId + ".zip.meta");
         if (!Files.exists(staged)) {
@@ -441,12 +439,11 @@ public class BackupImportService {
             throw new BackupImportException(auditUuid, auditWritten, missing);
         }
 
-        // <ts> directory for atomic move-triple (D-11 / D-15 single-source-of-truth) — computed
-        // ONCE here and shared by the auto-backup ZIP path (Step 0.5) and the uploads-old/ sibling
-        // (AFTER_COMMIT listener in Plan 75-07). MOVED upward from its Phase 75 position per D-15.
+        // <ts> directory for atomic move-triple — computed ONCE here and shared by the
+        // auto-backup ZIP path (Step 0.5) and the uploads-old/ sibling (AFTER_COMMIT listener).
         String ts = Instant.now().truncatedTo(ChronoUnit.SECONDS).toString().replace(":", "-");
         Path importBackupDir = importBackupsDir.resolve(ts);
-        // Phase 76 / SECU-07: target ZIP for the pre-import auto-backup (D-14 / D-16).
+        // Target ZIP for the pre-import auto-backup (runs BEFORE any DB mutation).
         Path autoBackupZip = importBackupDir.resolve("auto-backup-before-import.zip");
 
         String sourceFilename;
@@ -478,12 +475,12 @@ public class BackupImportService {
             BackupManifest manifest = backupArchive.readManifest(staged);
             schemaVersion = manifest.schemaVersion();
 
-            // Step 0.5 — Phase 76 / SECU-07: pre-import auto-backup (D-14 / D-16).
+            // Step 0.5: pre-import auto-backup.
             // Runs INSIDE the outer @Transactional(REQUIRED, READ_COMMITTED) — the read-only
-            // BackupArchiveService.writeZip(...) joins this tx (no-op read-only join per D-16).
+            // BackupArchiveService.writeZip(...) joins this tx (no-op read-only join).
             // If the write fails, NO DB mutation has occurred yet; the outer tx rolls back as
-            // a no-op. A distinct AutoBackupBeforeImportException is thrown (D-17) so the
-            // controller can flash a semantically correct "no DB changes" message.
+            // a no-op. A distinct AutoBackupBeforeImportException is thrown so the controller
+            // can flash a semantically correct "no DB changes" message.
             try {
                 Files.createDirectories(importBackupDir);
                 try (OutputStream out = Files.newOutputStream(autoBackupZip,
@@ -491,11 +488,11 @@ public class BackupImportService {
                     backupArchive.writeZip(out, Instant.now());
                 }
             } catch (IOException | RuntimeException autoExportEx) {
-                tryDeletePartialAutoBackup(autoBackupZip);  // D-19 best-effort cleanup, never throws
+                tryDeletePartialAutoBackup(autoBackupZip);  // best-effort cleanup, never throws
                 log.error("Auto-backup-before-import failed for staging-id {} — aborting import",
                         stagingId, autoExportEx);
                 boolean auditWritten = tryRecordFailure(auditUuid, schemaVersion,
-                        sourceFilename, Map.of(), Map.of());  // D-18 — empty count maps (no DB mutation)
+                        sourceFilename, Map.of(), Map.of());  // empty count maps (no DB mutation)
                 throw new AutoBackupBeforeImportException(auditUuid, auditWritten, autoExportEx);
             }
 
@@ -547,9 +544,9 @@ public class BackupImportService {
             // Error during the 1000-row restore still gets an audit row written via REQUIRES_NEW
             // before propagating. Spring's @Transactional rollback fires on Error by default;
             // we preserve the JVM-fatal contract by re-throwing Error unchanged.
-            // Phase 76 / SECU-07: AutoBackupBeforeImportException is rethrown unchanged — Step 0.5
-            // already recorded its own audit row + cleaned up its partial ZIP, and wrapping it
-            // here would shadow the subclass-specific controller catch (RESEARCH Pitfall #3).
+            // AutoBackupBeforeImportException is rethrown unchanged — Step 0.5 already recorded
+            // its own audit row + cleaned up its partial ZIP, and wrapping it here would shadow
+            // the subclass-specific controller catch (superclass-first exception matching).
             if (t instanceof AutoBackupBeforeImportException ae) {
                 throw ae;
             }
@@ -574,9 +571,9 @@ public class BackupImportService {
      * <p>Step 0: NULL the 3 self-FK columns so the FK-reverse DELETE loop is safe
      * regardless of FK direction:
      * <ul>
-     *   <li>{@code teams.parent_team_id} — sub-team → parent self-FK (D-06).</li>
-     *   <li>{@code season_teams.successor_season_team_id} — Q1 resolution.</li>
-     *   <li>{@code playoff_matchups.next_matchup_id} — Q2 resolution.</li>
+     *   <li>{@code teams.parent_team_id} — sub-team → parent self-FK.</li>
+     *   <li>{@code season_teams.successor_season_team_id} — successor self-FK.</li>
+     *   <li>{@code playoff_matchups.next_matchup_id} — bracket-progression self-FK.</li>
      * </ul>
      *
      * <p>Step 1: forward iteration over {@code getExportOrder().reversed()}, issuing
@@ -591,7 +588,7 @@ public class BackupImportService {
      * @param wipedCounts out-parameter map filled with {tableName → rows-deleted}
      */
     void wipeAllTables(Map<String, Long> wipedCounts) {
-        // 3 self-FK pre-step NULLs (Q1/Q2 + D-06)
+        // 3 self-FK pre-step NULLs (teams.parent_team_id, season_teams.successor, playoff_matchups.next)
         entityManager.createNativeQuery("UPDATE teams SET parent_team_id = NULL").executeUpdate();
         entityManager.createNativeQuery("UPDATE season_teams SET successor_season_team_id = NULL").executeUpdate();
         entityManager.createNativeQuery("UPDATE playoff_matchups SET next_matchup_id = NULL").executeUpdate();
@@ -768,12 +765,12 @@ public class BackupImportService {
     }
 
     /**
-     * Best-effort partial-ZIP cleanup on auto-backup failure (Phase 76 / D-19). Never throws.
+     * Best-effort partial-ZIP cleanup on auto-backup failure. Never throws.
      *
      * <p>Calls {@link Files#deleteIfExists(Path)} inside a try-catch that logs at WARN on failure
-     * but does not propagate. Windows file-locking semantics (Pitfall #7) may prevent deletion
-     * when the ZipOutputStream handle was not fully closed before this is called; the operator
-     * runbook covers manual cleanup via {@code rm -rf data/.import-backups/<ts>/}.
+     * but does not propagate. Windows file-locking semantics may prevent deletion when the
+     * ZipOutputStream handle was not fully closed; the operator can clean up manually via
+     * {@code rm -rf data/.import-backups/<ts>/}.
      *
      * @param target path to the partial auto-backup ZIP (may be {@code null})
      */
@@ -816,7 +813,7 @@ public class BackupImportService {
     /**
      * Core preview builder — shared by {@link #stage} and {@link #reparse}.
      *
-     * <p>Step order (D-09: schema gate BEFORE any DB read):
+     * <p>Step order (schema gate BEFORE any DB read):
      * <ol>
      *   <li>Read and deserialize the manifest (includes ZIP hardening).</li>
      *   <li>Schema-version gate — throws {@link Reason#SCHEMA_MISMATCH} if versions differ,
@@ -833,7 +830,7 @@ public class BackupImportService {
         // Step 1: read and deserialize manifest (includes all hardening checks)
         BackupManifest manifest = backupArchive.readManifest(staged);
 
-        // Step 2: schema-version gate — BEFORE any DB read (D-09 / SC#2 invariant)
+        // Step 2: schema-version gate — BEFORE any DB read
         int backupVersion = manifest.schemaVersion();
         int currentVersion = BackupSchema.SCHEMA_VERSION;
         if (backupVersion != currentVersion) {
