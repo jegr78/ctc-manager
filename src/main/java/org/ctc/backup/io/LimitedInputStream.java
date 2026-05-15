@@ -13,7 +13,7 @@ import java.util.function.LongConsumer;
  * {@link #read(byte[], int, int)}, and throws {@link BackupArchiveException} with reason
  * {@link Reason#ENTRY_TOO_LARGE} once the running count exceeds the configured {@code limit}.
  *
- * <h3>Rationale — the {@code ZipEntry.getSize()} trust problem (CONTEXT §D-12, §specifics)</h3>
+ * <h3>Rationale — the {@code ZipEntry.getSize()} trust problem</h3>
  * Malicious ZIP archives can lie in the central directory: they may claim an entry is 1 KB in
  * the header while the inflated content expands to 5 GB. {@code ZipEntry.getSize()} reflects
  * the central-directory value, not the truth. The only reliable defence is to count the actual
@@ -32,7 +32,7 @@ import java.util.function.LongConsumer;
  * Multiple {@link #close()} calls fire the callback at most once (idempotency guard via
  * {@code onCloseFired}). A {@code null} {@code onClose} is silently skipped.
  *
- * <h3>Canonical call site (Plan 04 — {@code BackupArchiveService.read*})</h3>
+ * <h3>Canonical call site ({@code BackupArchiveService.read*})</h3>
  * {@code new LimitedInputStream(zipInputStream, BackupImportLimits.MAX_ENTRY_BYTES,
  * finalBytes -> totalInflatedAcc[0] += finalBytes)}
  */
