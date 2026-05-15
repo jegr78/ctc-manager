@@ -12,22 +12,15 @@ import java.io.IOException;
 import java.util.Set;
 
 /**
- * Phase 76 / Plan 02 — Ring 2 write-rejector (SECU-06 / CONTEXT D-07 through D-10).
+ * Intercepts every mutating request under {@code /admin/**} while the import lock is held
+ * and rejects non-whitelisted requests with HTTP 503 before any controller body runs.
  *
- * <p>Registered in {@link org.ctc.admin.WebConfig} with
- * {@code .addPathPatterns("/admin/**")}. Intercepts every POST under
- * {@code /admin/**} while the {@link ImportLockService} lock is held and rejects
- * non-whitelisted requests with HTTP 503 + a minimal HTML body before any controller
- * body runs.
+ * <p>Whitelist: exactly one URL is exempt — {@code /admin/backup/import-execute}.
+ * The match uses {@code String.equals(requestURI)}, NOT {@code startsWith}: a path like
+ * {@code /admin/backup/import-execute-anything} must not slip through.
  *
- * <p><strong>Whitelist (D-09 / D-10):</strong> exactly one URL is exempt —
- * {@code /admin/backup/import-execute}. The match is {@code String.equals(requestURI)},
- * NOT {@code startsWith} (D-10 forbids prefix matching: a path like
- * {@code /admin/backup/import-execute-anything} must not slip through).
- *
- * <p><strong>503 HTML body (CD-03):</strong> a static literal HTML constant with an
- * auto-refresh meta tag. Body wording matches the {@code admin/layout.html} banner
- * verbatim (feedback_template_details: no string-drift between banner and 503 response).
+ * <p>The 503 HTML body carries an auto-refresh meta tag; wording matches
+ * {@code admin/layout.html} banner verbatim (no string-drift between banner and 503 response).
  */
 @Slf4j
 @Component
@@ -37,14 +30,13 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
     private final ImportLockService importLockService;
 
     /**
-     * HTTP verbs that mutate server state. PUT/PATCH/DELETE are not used by any current
-     * admin controller, but the contract from 76-02-SUMMARY — and the SECU-06 goal of
-     * "no writes anywhere during an import" — requires that any future controller using
-     * those verbs is automatically gated by Ring 2 without per-endpoint changes.
+     * HTTP verbs that mutate server state. PUT/PATCH/DELETE are not used by current admin
+     * controllers, but including them ensures future controllers using those verbs are
+     * automatically gated without per-endpoint changes.
      */
     private static final Set<String> MUTATING_METHODS = Set.of("POST", "PUT", "PATCH", "DELETE");
 
-    /** Minimal 503 HTML body — wording matches admin/layout.html banner verbatim (D-12). */
+    /** Minimal 503 HTML body — wording matches admin/layout.html banner verbatim. */
     private static final String LOCK_HTML = """
             <!DOCTYPE html><html><head><meta charset="UTF-8">
             <meta http-equiv="refresh" content="10"></head>
@@ -55,11 +47,11 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
     /**
      * Short-circuits non-whitelisted mutating requests while the import lock is held.
      *
-     * <p>Decision tree (CONTEXT D-08):
+     * <p>Decision tree:
      * <ol>
      *   <li>Non-mutating method (GET/HEAD/OPTIONS/…) → allow.</li>
      *   <li>Lock not held → allow (normal operation).</li>
-     *   <li>Whitelisted URL {@code /admin/backup/import-execute} → allow (D-09 / D-10).</li>
+     *   <li>Whitelisted URL {@code /admin/backup/import-execute} → allow.</li>
      *   <li>Else → reject with HTTP 503 + HTML body; return {@code false}.</li>
      * </ol>
      *
@@ -70,7 +62,7 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
             throws IOException {
         if (!MUTATING_METHODS.contains(req.getMethod().toUpperCase())) return true;   // step 1 — read-only verb: allow
         if (!importLockService.isLocked()) return true;                                // step 2 — no lock: allow
-        if ("/admin/backup/import-execute".equals(req.getRequestURI())) return true;   // step 3 — whitelist (D-09 / D-10)
+        if ("/admin/backup/import-execute".equals(req.getRequestURI())) return true;   // step 3 — whitelist
         log.info("Rejected admin POST during import lock: {} {}", req.getMethod(), req.getRequestURI());
         res.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
         res.setContentType("text/html;charset=UTF-8");

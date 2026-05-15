@@ -11,10 +11,9 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 76 / Plan 01 — Surefire unit tests for {@link ImportLockService}.
+ * Surefire unit tests for {@link ImportLockService}.
  *
- * <p>No Spring context — direct instantiation of the service. Tests cover all six
- * semantic behaviors defined in CONTEXT D-01 / D-02 / D-03.
+ * <p>No Spring context — direct instantiation of the service.
  */
 class ImportLockServiceTest {
 
@@ -45,7 +44,7 @@ class ImportLockServiceTest {
 
     @Test
     void givenLockHeld_whenSecondTryLockOnSameThread_thenReturnsTrue() {
-        // given — ReentrantLock allows re-entrance on the same thread (D-01)
+        // given — ReentrantLock allows re-entrance on the same thread
         ImportLockService service = new ImportLockService();
         assertThat(service.tryLock()).isTrue();
 
@@ -80,7 +79,7 @@ class ImportLockServiceTest {
         ImportLockService service = new ImportLockService();
         assertThat(service.isLocked()).isFalse();
 
-        // when / then — must NOT throw IllegalMonitorStateException (D-01 idempotent guard)
+        // when / then — must NOT throw IllegalMonitorStateException (idempotent guard)
         service.unlock();
 
         // state unchanged
@@ -111,7 +110,7 @@ class ImportLockServiceTest {
 
         // when — test thread reads isLocked() without holding the lock itself
         assertThat(acquired.await(5, TimeUnit.SECONDS)).isTrue();
-        boolean lockedByOther = service.isLocked();  // D-01: isLocked() does NOT require current-thread holding
+        boolean lockedByOther = service.isLocked();  // isLocked() does NOT require current-thread holding
 
         // then
         assertThat(lockedByOther).isTrue();
