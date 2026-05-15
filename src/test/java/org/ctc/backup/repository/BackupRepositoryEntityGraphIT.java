@@ -4,6 +4,7 @@ import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -46,6 +47,7 @@ import static org.assertj.core.api.Assertions.fail;
  */
 @SpringBootTest
 @ActiveProfiles("dev")
+@Tag("integration")
 class BackupRepositoryEntityGraphIT {
 
 	/**

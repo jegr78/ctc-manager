@@ -6,6 +6,7 @@ import org.ctc.backup.audit.DataImportAuditService;
 import org.ctc.backup.event.BackupImportSucceededEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +64,7 @@ import static org.mockito.Mockito.doThrow;
 @SpringBootTest
 @ActiveProfiles("dev")
 @ExtendWith(OutputCaptureExtension.class)
+@Tag("integration")
 class BackupImportPostCommitIT {
 
     @TempDir

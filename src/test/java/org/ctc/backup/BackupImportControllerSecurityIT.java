@@ -2,6 +2,7 @@ package org.ctc.backup;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -22,6 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Uses isolated H2 {@code bkimpsectest} database to avoid schema conflicts
  * with the export security IT's {@code bksectest} database.
  */
+@Tag("integration")
 class BackupImportControllerSecurityIT {
 
 	/** Minimal valid ZIP magic bytes — enough to pass the CSRF/auth layer (not ZIP validation). */

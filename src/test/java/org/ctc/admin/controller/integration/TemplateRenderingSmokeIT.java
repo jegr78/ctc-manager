@@ -2,6 +2,7 @@ package org.ctc.admin.controller.integration;
 
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -54,6 +55,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @Transactional
 @Sql(scripts = "/sql/template-rendering-smoke-fixture.sql",
         executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+@Tag("integration")
 class TemplateRenderingSmokeIT {
 
     /**

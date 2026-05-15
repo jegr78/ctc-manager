@@ -3,6 +3,7 @@ package org.ctc.e2e;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.test.context.jdbc.Sql;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
@@ -24,6 +25,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
  * verified by asserting the page rendered for the seeded season + the REGULAR phase tab is
  * highlighted (/ D-31: server-side phase resolution, not HTTP redirect).
  */
+@Tag("e2e")
 class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 
 	// UUIDs match the deterministic ones in src/test/resources/sql/legacy-season-{with,without}-playoff.sql

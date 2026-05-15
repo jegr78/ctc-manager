@@ -3,6 +3,7 @@ package org.ctc.backup;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -25,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * and dev profile (OpenSecurityConfig — permit-all + CSRF disabled).
  * The prod-profile class uses its own isolated H2 schema to avoid collisions.
  */
+@Tag("integration")
 class BackupControllerSecurityIT {
 
 	@Nested

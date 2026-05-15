@@ -4,6 +4,7 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Tag;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
@@ -35,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Test data uses the "Phase57-" prefix per CLAUDE.md "Isolate Test Data Completely".
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Tag("integration")
 class V4MigrateSeasonsToPhasesIT {
 
     // Deterministic UUID constants — easier to debug specific row failures.

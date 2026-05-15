@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -84,6 +85,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // Marking this IT with the same annotation keeps its latch state independent regardless
 // of which Failsafe order picks the IT up.
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@Tag("integration")
 class ImportConcurrentLockIT {
 
     @Autowired

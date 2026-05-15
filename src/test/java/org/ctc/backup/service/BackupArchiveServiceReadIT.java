@@ -7,6 +7,7 @@ import org.ctc.backup.schema.BackupManifest;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -51,6 +52,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest
 @ActiveProfiles("dev")
+@Tag("integration")
 class BackupArchiveServiceReadIT {
 
     @Autowired

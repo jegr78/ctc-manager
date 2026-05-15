@@ -263,18 +263,22 @@
 				<configuration>
 					<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
 					<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
-					<excludes>
-						<exclude>**/e2e/**</exclude>
-						<exclude>**/*IT.java</exclude>
-					</excludes>
+					<!-- Conservative process-level parallelism: 2 forked JVMs total (not 2C). -->
+					<forkCount>2</forkCount>
+					<reuseForks>true</reuseForks>
+					<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
+					     Surefire runs only tests WITHOUT @Tag("integration") / @Tag("e2e") / @Tag("flaky").
+					     Filename-based excludes were brittle: @Nested inner classes compile to *IT$*.class
+					     and JUnit Platform discovered them via class-graph scan, dragging their parent ITs
+					     into Surefire. Tags are inherited by @Nested classes — no leak possible. -->
+					<excludedGroups>integration,e2e,flaky</excludedGroups>
 				</configuration>
 			</plugin>
 			<plugin>
-				<!-- PLAT-06: bind Failsafe in the default lifecycle so *IT.java integration tests
-				     (e.g. TemplateRenderingSmokeIT, AdminDropdownRenderingIT) run on every
-				     `./mvnw verify`. Without this binding, *IT.java files are picked up
-				     only by explicit `-Dtest=...` invocations. The `e2e` profile adds a
-				     separate execution for Playwright **/e2e/** tests.
+				<!-- PLAT-06: bind Failsafe in the default lifecycle so integration tests
+				     (@Tag("integration"), e.g. TemplateRenderingSmokeIT, AdminDropdownRenderingIT)
+				     run on every `./mvnw verify`. The `e2e` profile adds a separate execution
+				     for Playwright @Tag("e2e") tests.
 				     Configuration is placed at execution level (not plugin level) so the
 				     `e2e` profile's execution can use its own independent filters without
 				     Maven profile <configuration> merging. -->
@@ -290,12 +294,11 @@
 						<configuration>
 							<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
 							<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
-							<includes>
-								<include>**/*IT.java</include>
-							</includes>
-							<excludes>
-								<exclude>**/e2e/**</exclude>
-							</excludes>
+							<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
+							     run @Tag("integration") tests, exclude @Tag("e2e") and @Tag("flaky").
+							     Filename-based includes/excludes have been removed in favor of tags. -->
+							<groups>integration</groups>
+							<excludedGroups>e2e,flaky</excludedGroups>
 						</configuration>
 					</execution>
 				</executions>
@@ -405,11 +408,17 @@ exit 0;
 									<goal>verify</goal>
 								</goals>
 								<configuration>
+									<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
+									<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+									<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
+									     <groups>e2e</groups> selects only @Tag("e2e") tests; the broad <includes>
+									     pattern is required because Failsafe's default discovery (**/*IT.java)
+									     does not match the org.ctc.e2e.*E2ETest.java naming convention.
+									     Single fork (default) — Playwright requires a single Spring context per port. -->
 									<includes>
 										<include>**/e2e/**/*Test.java</include>
 									</includes>
-									<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
-									<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+									<groups>e2e</groups>
 								</configuration>
 							</execution>
 						</executions>

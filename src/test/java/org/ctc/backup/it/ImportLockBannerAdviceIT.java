@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -67,6 +68,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 // cannot be reset. Dirtying the context before each method forces a fresh latch pair
 // for every test that relies on the slow-import handshake (givenLockHeld_*).
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@Tag("integration")
 class ImportLockBannerAdviceIT {
 
     private static final String BANNER_TEXT =

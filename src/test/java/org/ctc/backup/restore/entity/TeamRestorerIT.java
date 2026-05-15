@@ -8,6 +8,7 @@ import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -44,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("dev")
 @Transactional
 @Rollback
+@Tag("integration")
 class TeamRestorerIT {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();

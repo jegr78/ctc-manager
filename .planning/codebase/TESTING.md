@@ -584,6 +584,64 @@ class SeasonControllerTest {
 - Lazy-loaded associations can be accessed in tests without explicit fetch
 - No need for `@EntityGraph` workarounds in tests (unlike controllers)
 
+## Test Categorization (`@Tag`)
+
+Tests are routed into Surefire/Failsafe phases by **JUnit 5 `@Tag` annotation**, not by filename suffix. This makes routing explicit, avoids `@Nested`-inner-class leakage into the wrong phase, and lets the `flaky` quarantine mechanism (D-07) compose with category tags.
+
+**Convention — every new test class MUST be tagged:**
+
+| Tag | Meaning | Phase | Required on |
+|-----|---------|-------|-------------|
+| `@Tag("integration")` | Spring-context integration test | Failsafe `default-it` | Every `*IT.java` class |
+| `@Tag("e2e")` | Playwright UI walkthrough | Failsafe `e2e-it` (only in `-Pe2e` profile) | Every test in `org.ctc.e2e.*` |
+| `@Tag("flaky")` | Quarantined as observed-flaky | Excluded from all phases | Add temporarily; max-5 cap (D-07); CD-05 monthly review |
+| _no tag_ | Plain unit test | Surefire `default-test` | All `*Test.java` (unless behavior is integration/e2e) |
+
+**Inheritance:** `@Nested` inner classes inherit their parent class's tags. So `BackupRoundTripIT` (`@Tag("integration")`) covers its `@Nested H2DevRoundTripTests` and `@Nested MariaDbRoundTripTests` automatically — no per-nested re-tagging needed.
+
+**Imports:** add `import org.junit.jupiter.api.Tag;` alongside other JUnit Jupiter imports.
+
+**Placement:** put `@Tag(...)` immediately above the `class` declaration, after any `@SpringBootTest`/`@DirtiesContext`/etc. Example:
+
+```java
+@SpringBootTest
+@ActiveProfiles("dev")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@DirtiesContext
+@Tag("integration")
+class BackupRoundTripIT {
+    // ...
+}
+```
+
+**Maven plugin routing (pom.xml):**
+
+| Plugin/execution | Filter | Effect |
+|------------------|--------|--------|
+| `maven-surefire-plugin` (default-test) | `<excludedGroups>integration,e2e,flaky</excludedGroups>` | Runs untagged unit tests only |
+| `maven-failsafe-plugin` (default-it, base lifecycle) | `<groups>integration</groups>`, `<excludedGroups>e2e,flaky</excludedGroups>` | Runs `@Tag("integration")` only |
+| `maven-failsafe-plugin` (e2e-it, in `<profile id="e2e">`) | `<groups>e2e</groups>` | Runs `@Tag("e2e")` only |
+
+There are NO filename-based `<includes>` / `<excludes>` for test discovery anymore — tags are the single source of truth.
+
+**Why we moved away from filename routing (Phase 79 D-05):** Surefire's `<exclude>**/*IT.java</exclude>` filtered top-level class files but not `@Nested`-compiled inner classes (`*IT$*.class`). JUnit Platform discovered the inner classes via class-graph scan and dragged the parent IT into Surefire — making `BackupRoundTripIT`, `BackupControllerSecurityIT`, and `BackupImportControllerSecurityIT` run twice (once in Surefire, once in Failsafe) and racing on shared file paths under parallel forks. `@Tag` is inherited by `@Nested` classes so the leak is structurally impossible.
+
+## Test Invocation Discipline
+
+(Phase 79 D-08 — codifies the existing `feedback_test_call_optimization` user-memory rule.)
+
+When iterating on a fix, **never run `./mvnw verify` repeatedly** — each invocation costs ~13–22 minutes on full E2E. Use targeted invocations:
+
+| Goal | Command | When |
+|------|---------|------|
+| Compile only | `./mvnw test-compile -q` | After every Java source edit, to catch syntax/import errors before running tests |
+| One unit test class | `./mvnw test -Dtest=ClassName` | Iterating on one specific test |
+| One integration test | `./mvnw verify -Dit.test=ClassNameIT -DfailIfNoTests=false` | Iterating on one IT |
+| Full unit + IT (no E2E) | `./mvnw verify` | Sanity check before commit |
+| Full E2E + JaCoCo | `./mvnw verify -Pe2e` | **One final** verification before opening PR — never as iteration loop |
+
+Per phase, run `./mvnw verify -Pe2e` **at most once** (the final phase-verification step). All earlier validation should use targeted commands.
+
 ## Common Patterns Summary
 
 | Scenario | Approach | Example |

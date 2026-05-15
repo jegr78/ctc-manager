@@ -14,6 +14,7 @@ import org.ctc.domain.repository.TrackRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -61,6 +62,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("dev")
 @Import(BackupExportNoLazyInitIT.LazyInitSeedConfig.class)
+@Tag("integration")
 class BackupExportNoLazyInitIT {
 
 	@Autowired

@@ -13,6 +13,7 @@ import org.ctc.domain.service.PlayoffBracketViewService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.StandingsService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -42,6 +43,7 @@ import static org.mockito.Mockito.when;
  * the caller-side wiring (D-23 contract), not the runtime bean-graph.
  */
 @ExtendWith(MockitoExtension.class)
+@Tag("integration")
 class SiteGeneratorServiceIT {
 
     @Mock private SeasonRepository seasonRepository;

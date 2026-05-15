@@ -13,6 +13,7 @@ import com.microsoft.playwright.options.AriaRole;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
@@ -41,6 +42,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
  * (see {@code pom.xml} profile {@code id=e2e}). Surefire excludes
  * {@code **\/e2e/**} so the test never runs in the unit-test phase.
  */
+@Tag("e2e")
 class BackupExportE2ETest extends PlaywrightConfig {
 
 	private static final Pattern ISO_FILENAME_REGEX =

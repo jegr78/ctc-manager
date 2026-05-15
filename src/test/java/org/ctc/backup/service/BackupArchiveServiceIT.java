@@ -5,6 +5,7 @@ import org.ctc.backup.schema.BackupManifest;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,6 +49,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @SpringBootTest
 @ActiveProfiles("dev")
+@Tag("integration")
 class BackupArchiveServiceIT {
 
 	@Autowired

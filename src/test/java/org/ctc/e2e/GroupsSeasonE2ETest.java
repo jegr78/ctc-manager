@@ -31,6 +31,7 @@ import org.ctc.domain.service.SeasonPhaseService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -71,6 +72,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
  * driver PSN IDs T_groups_drv01..T_groups_drv12.
  */
 @Import(GroupsSeasonE2ETest.TestGoogleSheetsConfig.class)
+@Tag("e2e")
 class GroupsSeasonE2ETest extends PlaywrightConfig {
 
 	@Autowired private SeasonRepository seasonRepository;

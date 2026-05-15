@@ -5,6 +5,7 @@ import org.ctc.backup.service.BackupArchiveService;
 import org.ctc.backup.service.BackupImportService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -43,6 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
+@Tag("integration")
 class BackupImportConfirmFormValidationIT {
 
 	private static final Path IMPORT_BACKUPS_ROOT;

@@ -9,6 +9,7 @@ import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -88,6 +89,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers
 @EnabledIfSystemProperty(named = "docker.available", matches = "true",
         disabledReason = "Set -Ddocker.available=true (with a running Docker daemon) to run the MariaDB Testcontainers round-trip IT")
+@Tag("integration")
 class BackupImportMariaDbSmokeIT {
 
     /** Defensive table-name allow-list mirroring {@code BackupImportService.SAFE_TABLE_NAME}. */
