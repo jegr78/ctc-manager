@@ -17,11 +17,9 @@
 		<java.version>25</java.version>
 		<playwright.version>1.59.0</playwright.version>
 		<lombok.version>1.18.46</lombok.version>
-		<!-- Phase 75 Plan 10: Testcontainers MariaDB for BackupImportMariaDbSmokeIT.
-		     Spring Boot 4.0.x does NOT manage Testcontainers; pin BOM here.
-		     Phase 77 hotfix: bumped 1.21.3 -> 2.0.5 because Docker Engine 29+ requires
-		     API >= 1.40 and Testcontainers 1.x default shaded docker-java sends API 1.32
-		     (gh:testcontainers/testcontainers-java#11235). 2.x ships default API 1.44. -->
+		<!-- Spring Boot 4.0.x does NOT manage Testcontainers BOM. Pinned to 2.0.5: Testcontainers
+		     1.x sends Docker API 1.32 which is rejected by Docker Engine 29+ (requires API >= 1.40).
+		     Testcontainers 2.x ships API 1.44. See gh:testcontainers/testcontainers-java#11235. -->
 		<testcontainers.version>2.0.5</testcontainers.version>
 	</properties>
 	<dependencyManagement>
@@ -31,8 +29,8 @@
 				<artifactId>thymeleaf</artifactId>
 				<version>3.1.5.RELEASE</version>
 			</dependency>
-			<!-- Phase 75 Plan 10: Testcontainers BOM aligns testcontainers + junit-jupiter
-			     + mariadb modules on a single coherent version. -->
+			<!-- Testcontainers BOM aligns testcontainers, junit-jupiter, and mariadb modules
+			     on a single coherent version. -->
 			<dependency>
 				<groupId>org.testcontainers</groupId>
 				<artifactId>testcontainers-bom</artifactId>
@@ -80,14 +78,11 @@
 			<artifactId>flyway-mysql</artifactId>
 		</dependency>
 		<!--
-		    Jackson Java-Time module (Phase 72 plans 02 + 03).
-		    Required for the BackupManifest wire-contract serialization (Instant ISO-8601 strings,
-		    not millis timestamps) via the strict `backupObjectMapper`. Spring Boot 4 ships
-		    Jackson 3 (`tools.jackson.*`) for its primary auto-configured ObjectMapper, but the
-		    backup module deliberately uses the Jackson 2.x `com.fasterxml.jackson.databind`
-		    `ObjectMapper` (transitively present via flyway-core) — that mapper does NOT
-		    register JavaTimeModule by default, so we add it explicitly here.
-		    Version is managed by spring-boot-starter-parent (Jackson 2.21.x).
+		    Jackson Java-Time module — required for BackupManifest wire-contract serialization
+		    (Instant ISO-8601 strings via backupObjectMapper). Spring Boot 4 auto-configures
+		    Jackson 3 (`tools.jackson.*`); the backup module uses Jackson 2.x ObjectMapper
+		    (transitively via flyway-core) which does NOT register JavaTimeModule by default.
+		    Version managed by spring-boot-starter-parent (Jackson 2.21.x).
 		-->
 
 		<dependency>
@@ -200,12 +195,10 @@
 			<version>${playwright.version}</version>
 		</dependency>
 		<!--
-		    Phase 75 Plan 10 — Testcontainers MariaDB for BackupImportMariaDbSmokeIT.
-		    Versions are managed by the testcontainers-bom imported above. The IT
-		    bootstraps a real MariaDB:11 container via @DynamicPropertySource to override
-		    spring.datasource.url at @SpringBootTest startup so Flyway runs against the
-		    live engine — proving the 24-entity backup round-trip parity contract holds
-		    beyond H2 (Phase 75 QUAL-03 / Phase 77 QUAL-02 CI layer).
+		    Testcontainers MariaDB for BackupImportMariaDbSmokeIT. Versions managed by the
+		    testcontainers-bom above. The IT uses @DynamicPropertySource to override
+		    spring.datasource.url at @SpringBootTest startup so Flyway runs against the live
+		    MariaDB:11 engine — proving the 24-entity backup round-trip parity holds beyond H2.
 		    Auto-detects host Docker daemon; works locally + on GitHub Actions runners.
 		-->
 		<dependency>
@@ -275,13 +268,13 @@
 				</configuration>
 			</plugin>
 			<plugin>
-				<!-- PLAT-06: bind Failsafe in the default lifecycle so integration tests
-				     (@Tag("integration"), e.g. TemplateRenderingSmokeIT, AdminDropdownRenderingIT)
-				     run on every `./mvnw verify`. The `e2e` profile adds a separate execution
-				     for Playwright @Tag("e2e") tests.
+				<!-- Bind Failsafe in the default lifecycle so @Tag("integration") tests
+				     (e.g. TemplateRenderingSmokeIT, AdminDropdownRenderingIT) run on every
+				     `./mvnw verify`. The `e2e` profile adds a separate execution for
+				     @Tag("e2e") Playwright tests.
 				     Configuration is placed at execution level (not plugin level) so the
-				     `e2e` profile's execution can use its own independent filters without
-				     Maven profile <configuration> merging. -->
+				     `e2e` profile's execution can use independent filters without Maven
+				     profile <configuration> merging. -->
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<executions>
