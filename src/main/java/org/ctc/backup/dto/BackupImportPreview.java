@@ -6,15 +6,15 @@ import java.util.UUID;
 /**
  * Read-only view-model for {@code admin/backup-preview.html}.
  *
- * <p>Phase 74 — CONTEXT D-21. Produced by {@code BackupImportService.stage(MultipartFile)}
- * (Plan 05) and passed to Thymeleaf as the primary model attribute. Carries all data
- * required for the preview page without any entity lookups in the template.
+ * <p>Produced by {@code BackupImportService.stage(MultipartFile)} and passed to Thymeleaf
+ * as the primary model attribute. Carries all data required for the preview page without any
+ * entity lookups in the template.
  *
  * <p>Field semantics:
  * <ul>
  *   <li>{@code stagingId} — UUID of the on-disk staging file
  *       ({@code data/${profile}/backup-staging/upload-{uuid}.zip}). Rendered into a hidden
- *       input so the confirm page can pass it to the execute stub (D-08).</li>
+ *       input so the confirm page can reference it.</li>
  *   <li>{@code originalFilename} — client-supplied filename from the multipart upload.</li>
  *   <li>{@code fileSizeBytes} — size in bytes of the staged ZIP on disk.</li>
  *   <li>{@code schemaVersion} — {@code schema_version} extracted from {@code manifest.json}
@@ -28,7 +28,7 @@ import java.util.UUID;
  *       {@code BackupSchema.getExportOrder()}, in order. Drives the 24-card grid.</li>
  *   <li>{@code uploadFileCount} — number of entries under {@code uploads/} in the ZIP.</li>
  *   <li>{@code totalImportedRows} — sum of {@code importedRows} across all
- *       {@code entityCounts}. Rendered in the header block (D-05).</li>
+ *       {@code entityCounts}. Rendered in the header block.</li>
  * </ul>
  */
 public record BackupImportPreview(
