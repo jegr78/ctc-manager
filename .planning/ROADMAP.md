@@ -412,3 +412,16 @@ Plans:
 - [ ] 79-07-PLAN.md — Wave 7: Final wallclock measurement + JaCoCo gate + Schutzwortliste/Flyway/mariadb-smoke invariants (D-06, D-18, D-19)
 - [ ] 79-08-PLAN.md — Wave 8: /gsd-audit-milestone v1.10 dispatch + findings disposition (D-14, D-15)
 - [ ] 79-09-PLAN.md — Wave 9: /gsd-complete-milestone v1.10 + Squash-PR + post-CI-green merge (D-14, D-17)
+
+## Backlog
+
+### Phase 999.1: OpenRewrite Refactoring and Migration Tool Integration (BACKLOG)
+
+**Goal:** [Captured for future planning] Evaluate and integrate OpenRewrite as an automated, AST-based refactoring and migration tool for the CTC Manager codebase. Two complementary tracks the user wants to pursue **together**: (1) **pom.xml-Track** — `rewrite-maven-plugin` in `pom.xml` + checked-in `rewrite.yml` with a curated recipe set (`CommonStaticAnalysis`, `JUnit5BestPractices`, Spring Boot upgrade recipes, Lombok recipes, `UpgradeDependencyVersion`); atomic commit per recipe; respects coverage gate (≥ 82 %) and branch-protection rules; reproducible across CI + local. (2) **Custom-Skill-Track** — a project-local GSD skill (e.g. `gsd-openrewrite-phase` or similar) that wraps the recipe-run-and-commit workflow, parallels existing skills like `gsd-plan-phase`/`gsd-execute-phase`, integrates Trockenlauf → diff-review → atomic-commit-per-recipe → `./mvnw verify` gate. First step before either track: Trockenlauf against a feature branch with `CommonStaticAnalysis` + `JUnit5BestPractices`, review diff, then decide recipe ordering. Stack fit: Spring Boot 4.x, Java 25, Maven, Lombok, JUnit 5, ~1000 tests.
+
+**Requirements:** TBD
+
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
