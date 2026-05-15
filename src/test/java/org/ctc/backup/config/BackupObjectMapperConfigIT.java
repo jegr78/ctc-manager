@@ -14,12 +14,9 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 72 / Plan 03 — Wave 0 stub. Proves the dual-bean shape from BackupObjectMapperConfig
- * (RESEARCH §Pitfall P-2 amendment to CONTEXT D-11): the @Primary default bean preserves
- * JacksonAutoConfiguration behaviour for admin REST/AJAX paths, while the
- * @Qualifier("backupObjectMapper") strict bean serves the future BackupExportService.
- *
- * <p>RED until task 2 lands BackupObjectMapperConfig.
+ * Proves the dual-bean shape from BackupObjectMapperConfig: the {@code @Primary} default bean
+ * preserves JacksonAutoConfiguration behaviour for admin REST/AJAX paths, while the
+ * {@code @Qualifier("backupObjectMapper")} strict bean serves BackupExportService.
  */
 @SpringBootTest
 @ActiveProfiles("dev")
@@ -43,7 +40,7 @@ class BackupObjectMapperConfigIT {
         // when / then
         assertThat(backupMapper.getDeserializationConfig()
                 .isEnabled(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES))
-                .as("backupObjectMapper must enable FAIL_ON_UNKNOWN_PROPERTIES (D-11)")
+                .as("backupObjectMapper must enable FAIL_ON_UNKNOWN_PROPERTIES")
                 .isTrue();
     }
 
@@ -62,7 +59,7 @@ class BackupObjectMapperConfigIT {
         // when / then
         assertThat(backupMapper.getSerializationConfig()
                 .isEnabled(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS))
-                .as("backupObjectMapper must disable WRITE_DATES_AS_TIMESTAMPS (D-11)")
+                .as("backupObjectMapper must disable WRITE_DATES_AS_TIMESTAMPS")
                 .isFalse();
     }
 

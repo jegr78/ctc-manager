@@ -14,7 +14,7 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import java.util.List;
 
 /**
- * Phase 72 — isolates the backup ObjectMapper from the admin REST/AJAX serializer.
+ * Isolates the backup ObjectMapper from the admin REST/AJAX serializer.
  *
  * <p>Spring Boot's {@code JacksonAutoConfiguration} uses
  * {@code @ConditionalOnMissingBean(ObjectMapper.class)}, so defining ANY {@code ObjectMapper}
@@ -35,12 +35,6 @@ import java.util.List;
  *
  * <p>See Phase 72 RESEARCH §Pitfall P-2 for the verified GitHub-issue trail
  * ({@code spring-projects/spring-boot#47379, #22403, #42598}).
- *
- * <p>Phase 72 ships zero Jackson MixIns. Phase 73 adds the ~24 per-entity MixIn
- * {@code @Component} beans implementing {@code com.fasterxml.jackson.databind.Module};
- * they get picked up via the {@code List<Module> backupMixInModules} DI injection in
- * {@link #backupObjectMapper(List)} without further changes to this class. This keeps
- * the Phase 72 / Phase 73 seam clean — zero touches here after Phase 73 ships.
  */
 @Configuration
 public class BackupObjectMapperConfig {
@@ -63,12 +57,8 @@ public class BackupObjectMapperConfig {
     }
 
     /**
-     * Strict backup-only mapper. Inputs:
-     * <ul>
-     *   <li>{@code backupMixInModules}: Phase 73 adds per-entity MixIn {@code @Component}
-     *       beans here. Empty in Phase 72 (Spring DI injects an empty list when no matching
-     *       beans exist).</li>
-     * </ul>
+     * Strict backup-only mapper. Per-entity MixIn {@code @Component} beans are collected via
+     * {@code backupMixInModules} (Spring DI injects an empty list when no matching beans exist).
      */
     @Bean
     @Qualifier("backupObjectMapper")

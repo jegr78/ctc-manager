@@ -8,10 +8,6 @@ import jakarta.persistence.metamodel.EntityType;
  *
  * <p>fileName derivation: {@code season_phases} table -&gt; {@code data/season-phases.json}
  * (snake_case -&gt; kebab-case, prefix {@code data/}, suffix {@code .json}).
- *
- * <p>Phase 72 — D-07 locks the three components (entityClass, tableName, fileName).
- * Phase 73 may extend the record if a per-entity {@code @EntityGraph} hint is required
- * by {@code BackupExportService}.
  */
 public record EntityRef(
         Class<?> entityClass,

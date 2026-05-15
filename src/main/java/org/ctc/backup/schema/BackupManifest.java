@@ -8,23 +8,19 @@ import java.util.Map;
 /**
  * Wire-format spec for the {@code manifest.json} entry in every backup ZIP.
  *
- * <p>Phase 72 ships only the record definition. Phase 73's BackupExportService is
- * responsible for serializing this through the {@code backupObjectMapper} qualifier
- * (FAIL_ON_UNKNOWN_PROPERTIES=true / WRITE_DATES_AS_TIMESTAMPS=false / JavaTimeModule)
- * and writing it as the FIRST entry in the ZipOutputStream (D-14, owned by Phase 73).
+ * <p>{@code BackupExportService} serializes this through the {@code backupObjectMapper}
+ * qualifier (FAIL_ON_UNKNOWN_PROPERTIES=true / WRITE_DATES_AS_TIMESTAMPS=false /
+ * JavaTimeModule) and writes it as the FIRST entry in the ZipOutputStream.
  *
  * <p>Field semantics:
  * <ul>
  *   <li>{@code schemaVersion} — monotonic integer; equals {@link BackupSchema#SCHEMA_VERSION}
- *       at export time. Phase 74's import service refuses ZIPs whose value does not match.</li>
- *   <li>{@code appVersion} — CTC application version sourced from {@code @Value("${app.version}")}
- *       (Maven resource-filtered {@code @project.version@}; see {@code GlobalModelAdvice}).
- *       Phase 72 does NOT inject this — Phase 73's BackupExportService caller supplies the value
- *       when constructing the record. This avoids the unnecessary {@code BuildProperties} pom.xml
- *       wiring documented in RESEARCH §Pitfall P-3.</li>
+ *       at export time. The import service refuses ZIPs whose value does not match.</li>
+ *   <li>{@code appVersion} — CTC application version sourced from {@code @Value("${app.version}")}.
+ *       {@code BackupExportService} supplies this value when constructing the record.</li>
  *   <li>{@code exportDate} — {@link Instant} at export start. ISO-8601 string in JSON.</li>
- *   <li>{@code tableCounts} — snake_case table name (matching {@code @Table(name=...)}) to row count.
- *       Keys mirror Phase 73's per-entity {@code data/&lt;entity&gt;.json} filename derivation.</li>
+ *   <li>{@code tableCounts} — snake_case table name (matching {@code @Table(name=...)}) to row
+ *       count. Keys mirror per-entity {@code data/&lt;entity&gt;.json} filename derivation.</li>
  * </ul>
  *
  * <p>JSON shape: per-field {@code @JsonProperty} annotations lock the snake_case keys

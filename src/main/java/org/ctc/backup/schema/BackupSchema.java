@@ -9,21 +9,21 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * Phase 72 — Backup Wire Contract.
+ * Backup wire contract.
  *
  * <p>Exposes:
  * <ul>
  *   <li>{@link #SCHEMA_VERSION} — integer constant; bumped on every wire-incompatible
- *       schema change (GAP-2 resolution).</li>
+ *       schema change.</li>
  *   <li>{@link #getExportOrder()} — FK-respecting topological order over all
  *       {@code org.ctc.domain.model.*} entities, generated at startup from the JPA
- *       Metamodel (D-04). Used by Phase 73's {@code BackupExportService}.</li>
+ *       Metamodel. Used by {@code BackupExportService}.</li>
  * </ul>
  *
- * <p>D-06 structural exclusion: any entity placed under {@code org.ctc.backup.*} (notably
+ * <p>Structural exclusion: any entity placed under {@code org.ctc.backup.*} (notably
  * {@code DataImportAudit}) is filtered out by the package-name gate below. This is the
- * canonical IMPORT-08 enforcement mechanism — no marker annotation, no opt-in list,
- * no developer memory required.
+ * canonical enforcement mechanism for keeping audit data out of backups — no marker
+ * annotation, no opt-in list, no developer memory required.
  */
 @Component
 @RequiredArgsConstructor

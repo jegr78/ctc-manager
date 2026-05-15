@@ -24,9 +24,8 @@ import java.util.stream.Collectors;
  * {@code dependency -> owner}. Self-FK edges (e.g. {@code Team.parentTeam}) are
  * detected and excluded so Kahn's queue does not deadlock at depth 0.
  *
- * <p>Extracted from {@link BackupSchema} (D-05 / Claude's discretion) to enable pure
- * unit testing without a Spring context. Package-private — only {@code BackupSchema}
- * (same package) may inject it.
+ * <p>Extracted from {@link BackupSchema} to enable pure unit testing without a Spring
+ * context. Package-private — only {@code BackupSchema} (same package) may inject it.
  */
 @Component
 class EntityTopoSorter {
