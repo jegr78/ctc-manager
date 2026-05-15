@@ -26,7 +26,7 @@ jobs:
           cache: 'maven'
 
       - name: Build and Unit/Integration Tests
-        run: ./mvnw verify -Dspring.profiles.active=dev
+        run: ./mvnw verify -Dspring.profiles.active=dev -Ddocker.available=true
 
       - name: Install Playwright Browsers
         run: |
@@ -34,7 +34,7 @@ jobs:
           java -cp "$(cat /tmp/cp.txt):target/test-classes:target/classes" com.microsoft.playwright.CLI install --with-deps chromium
 
       - name: E2E Tests
-        run: ./mvnw verify -Pe2e -Dspring.profiles.active=dev
+        run: ./mvnw verify -Pe2e -Dspring.profiles.active=dev -Ddocker.available=true
 
       - name: JaCoCo Coverage Report
         if: github.event_name == 'pull_request'

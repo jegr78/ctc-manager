@@ -80,7 +80,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * — Failsafe's default {@code *IT.java} pattern in the main CI workflow picks it up.
  */
 @SpringBootTest
-@ActiveProfiles("local")
+// dev activates TestDataService (@Profile("dev")); local activates the local-profile
+// MariaDB datasource shape (then overridden to point at the Testcontainers MariaDB
+// via @DynamicPropertySource below). Phase 77 D-05: when -Ddocker.available=true is
+// set in CI, this IT must boot — without 'dev' Spring cannot satisfy TestDataService.
+@ActiveProfiles({"local", "dev"})
 @Testcontainers
 @EnabledIfSystemProperty(named = "docker.available", matches = "true",
         disabledReason = "Set -Ddocker.available=true (with a running Docker daemon) to run the MariaDB Testcontainers round-trip IT")
@@ -89,8 +93,11 @@ class BackupImportMariaDbSmokeIT {
     /** Defensive table-name allow-list mirroring {@code BackupImportService.SAFE_TABLE_NAME}. */
     private static final Pattern SAFE_TABLE_NAME = Pattern.compile("^[a-z_]+$");
 
-    /** Locked 24-entity export scope (Phase 72 BackupSchema; Phase 75 ROADMAP success-criterion-1). */
-    private static final int EXPECTED_ENTITY_COUNT = 24;
+    // Phase 77 (CI-gating activation): the hardcoded entity count became stale as Phase
+    // 76+ entity removals changed BackupSchema.getExportOrder() from 24 → 21. Source of
+    // truth is now BackupSchema itself (mirrors ROADMAP §"Phase 77" correction
+    // "22 tables → BackupSchema.getExportOrder()"). Captured at @BeforeEach time.
+    private int expectedEntityCount;
 
     @Container
     static MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11")
@@ -156,6 +163,7 @@ class BackupImportMariaDbSmokeIT {
         testDataService.seed();
         stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
         Files.createDirectories(stagingDir);
+        expectedEntityCount = backupSchema.getExportOrder().size();
     }
 
     // -------------------------------------------------------------------------
@@ -167,8 +175,8 @@ class BackupImportMariaDbSmokeIT {
         // given — seed pre-state and capture per-entity row counts
         Map<String, Long> preExportCounts = captureRowCounts();
         assertThat(preExportCounts)
-                .as("BackupSchema must expose exactly %d entities", EXPECTED_ENTITY_COUNT)
-                .hasSize(EXPECTED_ENTITY_COUNT);
+                .as("BackupSchema must expose exactly %d entities", expectedEntityCount)
+                .hasSize(expectedEntityCount);
         long preExportTotal = preExportCounts.values().stream().mapToLong(Long::longValue).sum();
         assertThat(preExportTotal)
                 .as("dev fixture must seed at least one row total")
@@ -189,9 +197,12 @@ class BackupImportMariaDbSmokeIT {
         // then — counters
         assertThat(result).as("execute() must return a non-null result").isNotNull();
         assertThat(result.auditUuid()).as("auditUuid must be present").isNotNull();
+        // BackupImportService.java:520-523 defines entityCount as "entities that contributed
+        // rows" (filter c > 0). Compare against the count of non-empty entities pre-export.
+        long expectedNonEmptyEntities = preExportCounts.values().stream().filter(c -> c > 0).count();
         assertThat(result.entityCount())
-                .as("entityCount must equal the locked 24-entity scope")
-                .isEqualTo(EXPECTED_ENTITY_COUNT);
+                .as("entityCount must equal the number of pre-export entities with rows")
+                .isEqualTo((int) expectedNonEmptyEntities);
         assertThat(result.restoredTotal())
                 .as("restoredTotal must equal the sum of pre-export row counts")
                 .isEqualTo(preExportTotal);
