@@ -9,7 +9,7 @@
 - :white_check_mark: **v1.6 Static Site Quality** — Phases 37-53 (shipped 2026-04-18)
 - :white_check_mark: **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (shipped 2026-04-25)
 - :white_check_mark: **v1.9 Season Phases & Groups** — Phases 56-70 (shipped 2026-05-09)
-- :hourglass_flowing_sand: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-78 (active, opened 2026-05-09)
+- :hourglass_flowing_sand: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-79 (active, opened 2026-05-09)
 
 ## Phases
 
@@ -129,7 +129,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 
 </details>
 
-### v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (Phases 71-78) -- ACTIVE
+### v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (Phases 71-79) -- ACTIVE
 
 - [x] **Phase 71: Spring Boot 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard** — Bump platform, fix all fragment-parameter ternaries via controller `pageTitle`, install regression smoke + grep gate (completed 2026-05-11)
 - [ ] **Phase 72: Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit-Log Scope** — Define `BackupSchema.SCHEMA_VERSION` (integer), `BackupManifest`, `@Qualifier("backupObjectMapper")` bean, Flyway V7 audit table, lock per-entity ZIP layout + audit-out-of-scope decision
@@ -139,6 +139,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 - [x] **Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import** — `ImportLockService` `ReentrantLock` singleton, `@ControllerAdvice` write-rejection during import, persistent yellow banner, synchronous auto-export to `data/.import-backups/<ts>/` before wipe (completed 2026-05-14)
 - [x] **Phase 77: Final UAT + JaCoCo Hold + Round-Trip Test + Documentation** — `./mvnw verify -Pe2e` green on H2 + MariaDB profiles, JaCoCo line coverage ≥ 82 %, `BackupRoundTripIT`, README + WIKI "Backup & Restore" section, milestone closure (completed 2026-05-15)
 - [ ] **Phase 78: Docker Release Image Fix — Pin Base Image to Ubuntu Noble for Playwright Compatibility** — Pin both Dockerfile stages to `eclipse-temurin:25-{jdk,jre}-noble` so the release workflow's `playwright install chromium` step stops failing on the silently-rotated Ubuntu 26.04 base
+- [ ] **Phase 79: Code Cleanup + Test Performance Optimization (v1.10 Milestone Closer)** — Clean-Code refactoring + comment thinning across Phase 72-76 backup code, Surefire/Failsafe runtime profiling + parallel execution review, then `/gsd-audit-milestone` + `/gsd-complete-milestone` to close v1.10
 
 ## Phase Details
 
@@ -209,8 +210,6 @@ Plans:
   5. Anonymous (unauthenticated) `POST /admin/backup/export` is rejected by Spring Security on `prod`/`docker` profiles; CSRF token is required and verified
 
 **Plans:** 4/4 plans complete
-
-Plans:
 - [x] 73-01-PLAN.md — Wave 1: 24 Jackson MixIns + BackupSerializationModule + 5 representative MixIn unit tests + BackupSerializationModuleTest + BackupEntityAnnotationCleanlinessIT (EXPORT-04)
 - [x] 73-02-PLAN.md — Wave 1: 24 repository findAllForBackup() methods with @EntityGraph(attributePaths) + BackupRepositoryEntityGraphIT (EXPORT-05)
 - [x] 73-03-PLAN.md — Wave 2: BackupExportService (@Transactional readOnly) + BackupArchiveService (manifest-first ZIP) + UploadEntry + 2 unit tests + BackupExportServiceIT + BackupArchiveServiceIT + BackupExportNoLazyInitIT + BackupUploadsMirrorIT + BackupRoundTripIT (EXPORT-02/03/05)
@@ -370,7 +369,7 @@ Plans:
 | v1.6 Static Site Quality | 37-53 | 27 | Complete | 2026-04-18 |
 | v1.8 Bulk Driver Import | 54-55 | 4 | Complete | 2026-04-25 |
 | v1.9 Season Phases & Groups | 56-70 | ~70 | Complete | 2026-05-09 |
-| v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-78 | TBD | Active | — |
+| v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | TBD | Active | — |
 
 ### v1.10 Phase Progress
 
@@ -381,6 +380,35 @@ Plans:
 | 73. Backup Export — Jackson MixIns + Streaming ZIP | 4/4 | Complete    | 2026-05-12 |
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 10/10 | Complete    | 2026-05-14 |
-| 76. Operational Hardening — Lock + Banner + Auto-Backup | 4/4 | Complete    | 2026-05-14 |
+| 76. Operational Hardening — Lock + Banner + Auto-Backup | 4/4 | Complete   | 2026-05-14 |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 5/5 | Complete   | 2026-05-15 |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
+| 79. Code Cleanup + Test Performance Optimization — v1.10 Milestone Closer | 0/16 | Planned | — |
+
+### Phase 79: Code Cleanup + Test Performance Optimization (v1.10 Milestone Closer)
+
+**Goal:** Close v1.10 with three streams of work: (1) a full-codebase code cleanup sweep across `src/main/java` + `src/test/java` + `pom.xml` + `.github/workflows/ci.yml` (per-package atomic commits, behavior-preserving, Schutzwortliste-protected); (2) test-performance optimization via Surefire/Failsafe process-level parallelism (`forkCount=2C` Surefire / `forkCount=1C` Failsafe-default-it / `excludedGroups=flaky` quarantine) targeting ≥ 30 % wallclock reduction; (3) milestone audit + complete via `/gsd-audit-milestone v1.10` + `/gsd-complete-milestone v1.10` then single Squash-PR. Test-independence audit FIRST (reverse-order + 3 random seeds), parallelization SECOND.
+
+**Requirements**: D-01..D-20 (CONTEXT.md decisions — no formal REQ-IDs; scope locked by user decisions)
+
+**Depends on:** Phase 78 (Dockerfile noble-pin must be merged so the release workflow is green and milestone-audit can verify the full v1.10 stack)
+
+**Plans:** 16 plans across 9 waves
+
+Plans:
+- [ ] 79-01-PLAN.md — Wave 1: Baseline wallclock + reverse-order/random-seed independence audit + 10/10 @DirtiesContext verdict (D-05, D-06)
+- [ ] 79-02a-PLAN.md — Wave 2: Cleanup leaf packages — admin.controller + backup.config + backup.io + backup.security (D-01..D-04, D-09..D-13)
+- [ ] 79-02b-PLAN.md — Wave 2: Cleanup backup.serialization (25 MixIns, D-04 inverted for reflection-driven Jackson)
+- [ ] 79-02c-PLAN.md — Wave 2: Cleanup backup.lock + backup.event + backup.audit (Schutzwort-heavy: race/thread-safe/auditing)
+- [ ] 79-02d-PLAN.md — Wave 2: Cleanup admin.service (15 graphic services) + sitegen (7 @DirtiesContext invariants)
+- [ ] 79-02e-PLAN.md — Wave 2: Cleanup gt7sync + dataimport + backup.dto + backup.schema (wire-contract frozen)
+- [ ] 79-02f-PLAN.md — Wave 2: Cleanup backup.service (906 LOC extract-method primary) + backup.restore (24 restorers) + backup.exception
+- [ ] 79-02g-PLAN.md — Wave 2: Cleanup admin.dto + backup root + admin root (Form-DTO validation + SecurityConfig profile-gating invariants)
+- [ ] 79-02h-PLAN.md — Wave 2: Cleanup domain.service + domain.exception + domain.repository + domain.model (JPA entity invariants; mvnw verify per commit for JaCoCo gate)
+- [ ] 79-03-PLAN.md — Wave 3: Enable Surefire forkCount=2C + Failsafe default-it forkCount=1C + excludedGroups=flaky (D-05, D-07)
+- [ ] 79-04-PLAN.md — Wave 4: pom.xml + ci.yml comment cleanup + ci.yml concurrency block + --no-transfer-progress (D-07, D-20)
+- [ ] 79-05-PLAN.md — Wave 5: Append Test Invocation Discipline section to TESTING.md (D-08)
+- [ ] 79-06-PLAN.md — Wave 5: Normalize plan-SUMMARY frontmatter for phases 56/57/62/64 (17 files, D-16)
+- [ ] 79-07-PLAN.md — Wave 7: Final wallclock measurement + JaCoCo gate + Schutzwortliste/Flyway/mariadb-smoke invariants (D-06, D-18, D-19)
+- [ ] 79-08-PLAN.md — Wave 8: /gsd-audit-milestone v1.10 dispatch + findings disposition (D-14, D-15)
+- [ ] 79-09-PLAN.md — Wave 9: /gsd-complete-milestone v1.10 + Squash-PR + post-CI-green merge (D-14, D-17)
