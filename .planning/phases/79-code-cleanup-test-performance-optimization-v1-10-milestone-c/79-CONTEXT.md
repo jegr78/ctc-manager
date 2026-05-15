@@ -8,7 +8,7 @@
 
 The v1.10 milestone-closer phase. Delivers FOUR streams of work, then audits and archives the milestone:
 
-1. **Full-codebase Code Cleanup (D-1.1):** Sweep across `src/main/java/` AND `src/test/java/` — NOT scoped to `org.ctc.backup` only. Per the user override: "Über den gesamten Meilenstein hinweg haben sich viele unnötige Codepassagen eingeschlichen." All 4 cleanup classes are allowed: comment-thinning (D-3.1), dead-code removal (D-1.4), extract-method + rename (D-1.2), and logic simplification (D-1.2). Per-package atomic commits (D-1.3) with `./mvnw test` after each commit.
+1. **Full-codebase Code Cleanup (D-1.1):** Sweep across `src/main/java/` AND `src/test/java/` — NOT scoped to `org.ctc.backup` only. Per the user override: "Über den gesamten Meilenstein hinweg haben sich viele unnötige Codepassagen eingeschlichen." All 4 cleanup classes are allowed: comment-thinning (D-3.1), dead-code removal (D-1.4), extract-method + rename (D-1.2), and logic simplification (D-1.2). Per-package atomic commits (D-1.3) with `./mvnw test` after each commit. **Build-config files (`pom.xml` + `.github/workflows/*.yml`) are also in scope — see D-20.**
 
 2. **Test Performance Optimization (D-2.1..D-2.4):** Test-Independence-Audit FIRST (deterministic, no dirty state, no test-order dependencies — verify via reverse-order run + isolation), THEN parallelization (Surefire `forkCount=2C` + `reuseForks=true`, Failsafe `forkCount=1C` parallel for IT, `@DirtiesContext` audit across the 119 `@SpringBootTest` annotations). Success = baseline measurement + ≥30% wallclock reduction documented in `79-AUTO-UAT.md`. JUnit 5 `@Execution(CONCURRENT)` is OUT (race-risk too high — D-2.1 deferred).
 
@@ -41,6 +41,16 @@ The v1.10 milestone-closer phase. Delivers FOUR streams of work, then audits and
   - Logik-Vereinfachung (collapse nested if/else, replace loops with streams where clearer, shorten Optional chains) — verhaltens-erhaltend, requires test-suite trust
 - **D-03 — Per-package atomic commits.** One commit per Java package (e.g., `org.ctc.backup.service`, `org.ctc.domain.service`, `org.ctc.admin.controller`, `org.ctc.backup.serialization`). After each commit: `./mvnw test`. Granular reviewable, easy `git bisect` if a regression slips through, no Big-Bang.
 - **D-04 — Dead-code removal: only with safe indicators.** Conservative rule: only delete a class/method/field when (a) IDE + grep find zero references in source AND (b) the symbol carries no `@Component`/`@Service`/`@Repository`/`@Bean`/`@Configuration`/`@Entity`/`@MappedSuperclass`/`@JpaListener`/`@EventListener`/`@TransactionalEventListener`/`@PostConstruct`/`@PreDestroy`/`@JsonProperty`/`@JsonCreator` annotation AND (c) it is not a JPA-required no-arg constructor or a Jackson-required public setter. On uncertainty → leave it, mark in plan as "TBD-verify". Reflection-invoked methods (rare in this codebase) survive automatically by this rule.
+
+- **D-20 — Build-config files in scope: `pom.xml` + `.github/workflows/*.yml`.** User addition after initial discussion: "Ich würde gerne noch die pom.xml und .github/workflows/ci.yml mit in den Cleanup Prozess mitaufnehmen, da hier auch einiges an Boilerplate und Kommentaren vorhanden ist." Inventory at context-time: `pom.xml` has 17 comment lines including 3 explicit Phase-N references (lines 20, 34, 273); `ci.yml` has dense Phase-78 inline comments at lines 68-72, 89-93, 99, 108-114. Cleanup classes that apply to these config files:
+  - **Comment-Thinning (D-09 rules apply):** Phase-N references go (`<!-- Phase 75 Plan 10: ... -->`, `<!-- PLAT-06: ... -->`, `# Phase 78: ...`, `# D-05`, `# D-07`, `# D-08`). Was-comments that paraphrase the next line go.
+  - **Keep (D-10 + D-13 Schutzwortliste apply):** Technical pitfall context survives even when the Phase-tag is stripped. Examples that MUST stay (rewritten without phase refs if needed):
+    - `ci.yml` line 98: "Playwright 1.59.0 does not support Ubuntu 26.04 (Plucky), which the bare '25-jre' tag silently rotated to in release run 25609204039." — load-bearing why-comment for the `-noble` pin guard.
+    - `pom.xml` JEP 498 / Lombok #3959 / Mockito-agent argline rationale — load-bearing for the `<argLine>` block (Schutzwort: `JEP`, `Lombok`, `Unsafe`).
+    - Mit-`-noble`-Pin-Begründung im `dockerfile-noble-pin-guard` Job.
+  - **Dead-config removal:** Unused `<dependency>` declarations, deprecated Maven plugins, dead workflow steps. Same safety rule as D-04 — only delete with grep-confirmed zero references AND no transitive usage.
+  - **Extract-Method + Logik-Vereinfachung NOT applicable:** these are Java concepts. For YAML/XML, only comment-thinning + dead-config-removal are relevant.
+  Per-file commits (one for `pom.xml`, one for `ci.yml`, one for `mariadb-migration-smoke.yml` if it has cleanup-eligible comments — but its body is SACRED per Phase 77 D-05, so cleanup is opportunity-based and may be empty). Each commit followed by `./mvnw verify` (NOT just `test`) — pom changes can break the whole build, workflow changes need at minimum YAML-syntax validation via `gh workflow view` or `actionlint`.
 
 ### Test Performance (D-2.x)
 
@@ -174,9 +184,9 @@ The v1.10 milestone-closer phase. Delivers FOUR streams of work, then audits and
 - **Touched (modified):**
   - `src/main/java/**/*.java` — cleanup sweep, per D-01..D-04, D-09..D-13.
   - `src/test/java/**/*.java` — cleanup sweep + Independence-Audit + `@DirtiesContext` audit, per D-05, D-09..D-13.
-  - `pom.xml` — Surefire/Failsafe `forkCount`/`reuseForks` config, per D-05. JaCoCo gate stays at 0.82 (D-18). `<version>` stays `1.8.0-SNAPSHOT` (out of scope per Phase 77 D-16).
-  - `.github/workflows/ci.yml` — concurrency-group + path-filter additions per D-07.
-  - `.github/workflows/mariadb-migration-smoke.yml` — trigger-path review only (D-07); body unchanged (Phase 77 D-05 SACRED).
+  - `pom.xml` — Surefire/Failsafe `forkCount`/`reuseForks` config, per D-05. PLUS comment-thinning + dead-config-removal per D-20 (3 Phase-N comment refs at lines 20/34/273 confirmed; JEP/Lombok rationale stays per D-13 Schutzwortliste). JaCoCo gate stays at 0.82 (D-18). `<version>` stays `1.8.0-SNAPSHOT` (out of scope per Phase 77 D-16).
+  - `.github/workflows/ci.yml` — concurrency-group + path-filter additions per D-07. PLUS Phase-78 inline-comment thinning per D-20 (lines 68-72, 89-93, 99, 108-114; Playwright-Ubuntu-26.04-Plucky pitfall context preserved per D-10 + Schutzwortliste).
+  - `.github/workflows/mariadb-migration-smoke.yml` — trigger-path review only (D-07). Workflow body is SACRED (Phase 77 D-05) — cleanup is opportunity-based on inline comments only IF they are pure Phase-N refs without load-bearing context; otherwise hands off.
   - `.planning/codebase/TESTING.md` — new "Test Invocation Discipline" section per D-08.
   - `.planning/phases/{56,57,62,64}-.../{...}-SUMMARY.md` — frontmatter sweep per D-16.
   - `.planning/phases/79-.../79-AUTO-UAT.md` — baseline + post-perf wallclock measurements per D-06.

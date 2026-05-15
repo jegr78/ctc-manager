@@ -5,7 +5,7 @@
 
 **Date:** 2026-05-15
 **Phase:** 79-code-cleanup-test-performance-optimization-v1-10-milestone-c
-**Areas discussed:** Cleanup-Scope-Grenze, Test-Perf-Mechanismus, Comment-Thinning-Regel, Milestone-Closure-Flow
+**Areas discussed:** Cleanup-Scope-Grenze, Test-Perf-Mechanismus, Comment-Thinning-Regel, Milestone-Closure-Flow, Build-Config-Files (follow-up after initial discussion)
 
 ---
 
@@ -203,6 +203,23 @@
 
 **User's choice:** Eine grosse Squash-PR (Recommended).
 **Notes:** Codified as D-17 in CONTEXT.md.
+
+---
+
+## Build-Config-Files (follow-up nach Initial-Diskussion)
+
+### Q5.1 — Sollen pom.xml und .github/workflows/ci.yml zusaetzlich in den Cleanup-Scope?
+
+**Triggered by user free-text:** "Ich würde gerne noch die pom.xml und .github/workflows/ci.yml mit in den Cleanup Prozess mitaufnehmen, da hier auch einiges an Boilerplate und Kommentaren vorhanden ist."
+
+**Inventory at context-time:**
+
+- `pom.xml`: 17 comment lines total, 3 explicit Phase-N references at lines 20, 34, 273 (`<!-- Phase 75 Plan 10: ... -->`, `<!-- PLAT-06: ... -->`).
+- `.github/workflows/ci.yml`: Phase-78 inline-comment cluster at lines 68-72 (`dockerfile-noble-pin-guard`), 89-93 (D-05 cross-platform grep idiom), line 99 (Reference to `.planning/phases/78-...`), lines 108-114 (`docker-build` job).
+- `.github/workflows/mariadb-migration-smoke.yml`: Body is SACRED per Phase 77 D-05; opportunity-based cleanup only on pure Phase-N tag refs.
+
+**User's choice:** Beide Files aufnehmen.
+**Notes:** Codified as D-20 in CONTEXT.md. Apply Comment-Thinning-Regel (D-09 delete + D-10 keep + D-13 Schutzwortliste) — Phase-tags raus, technische Pitfall-Gruende (Playwright-Ubuntu-26.04-Plucky, JEP 498, Lombok, Unsafe, Mockito-agent argline) bleiben. Dead-config-removal mit gleicher Sicherheits-Regel wie D-04. Extract-Method + Logik-Vereinfachung NICHT anwendbar auf YAML/XML. Per-File-Commits, jeder gefolgt von `./mvnw verify` (nicht nur `test`) bzw. YAML-Syntax-Check fuer Workflows. `mariadb-migration-smoke.yml`-Body bleibt unangetastet.
 
 ---
 
