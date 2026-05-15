@@ -40,38 +40,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 /**
- * Phase 73-04 — MockMvc unit tests for {@link BackupController}.
- *
- * <p>Boots the {@code dev} profile (no security filters by virtue of
- * {@code OpenSecurityConfig}) with the archive service mocked out via
- * {@link MockitoBean}. Three Phase-73 behaviours are pinned:
- * <ol>
- *   <li>GET {@code /admin/backup} renders the {@code admin/backup} view with
- *       the {@code title} model attribute equal to {@code "Backup"}.</li>
- *   <li>POST {@code /admin/backup/export} returns {@code 200} with
- *       {@code application/octet-stream} and a {@code Content-Disposition}
- *       header matching the locked ISO-compact filename regex.</li>
- *   <li>POST delegates to
- *       {@link BackupArchiveService#writeZip(OutputStream, Instant)}.</li>
- * </ol>
- *
- * <p>Phase 75 — additional scenarios pin the upgraded
- * {@link BackupController#importExecute import-execute} handler (D-15 flash
- * strings + D-17 endpoint stability):
- * <ol start="4">
- *   <li>Valid confirm form → {@link BackupImportService#execute(UUID)} invoked,
- *       redirect to {@code /admin/backup} with D-15 #1 success flash.</li>
- *   <li>{@link BackupImportException} thrown → redirect with D-15 #2 failure
- *       flash carrying the audit UUID.</li>
- *   <li>Invalid form (acknowledged != true) → service NEVER invoked, no flash
- *       message rendered, validation error path exercised.</li>
- * </ol>
- *
- * <p>Profile-conditional auth/CSRF semantics are exercised by
- * {@code BackupControllerSecurityIT} — kept out of this unit test so that the
- * controller signature is the only thing under test. The Phase 74 stub-flash
- * scenario was REMOVED in Plan 75-08 because the stub string no longer exists
- * in production code (D-15 supersedes D-08).
+ * MockMvc unit tests for {@link BackupController}.
+ * Boots the {@code dev} profile (no security filters via {@code OpenSecurityConfig})
+ * with the archive and import services mocked out via {@link MockitoBean}.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -122,10 +93,6 @@ class BackupControllerTest {
 		verify(backupArchiveService).writeZip(any(OutputStream.class), any(Instant.class));
 	}
 
-	// =========================================================================
-	// Phase 75 Plan 08 — D-15 flash strings on /admin/backup/import-execute
-	// =========================================================================
-
 	@Test
 	void givenValidConfirmForm_whenExecutePost_thenServiceExecuteCalledAndSuccessFlashRendered() throws Exception {
 		// given — service returns a stubbed result (17042 rows across 24 tables)
@@ -155,7 +122,7 @@ class BackupControllerTest {
 		when(backupImportService.execute(stagingId))
 				.thenThrow(new BackupImportException(specificAuditUuid, new RuntimeException("simulated")));
 
-		// when / then — D-15 #2 string is rendered verbatim with the audit UUID
+		// when / then — failure flash is rendered verbatim with the audit UUID
 		String expected = String.format(
 				"Import failed and was rolled back — see logs. Audit-id: %s.", specificAuditUuid);
 		mockMvc.perform(post("/admin/backup/import-execute")

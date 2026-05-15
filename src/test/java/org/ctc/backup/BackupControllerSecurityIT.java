@@ -20,23 +20,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Phase 73-04 — profile-conditional security IT for the Backup endpoints.
- *
- * <p>Two {@code @Nested} blocks, one per Spring security configuration:
- * <ul>
- *   <li>{@link ProdProfileSecurityTest} — boots {@code @ActiveProfiles("prod")},
- *       which activates {@code SecurityConfig}: anyRequest authenticated +
- *       CSRF enforced by default. Verifies anonymous POST → 401, authenticated
- *       no-CSRF POST → 403, authenticated with-CSRF POST → 200, anonymous
- *       GET → 401.</li>
- *   <li>{@link DevProfileSecurityTest} — boots {@code @ActiveProfiles("dev")},
- *       which activates {@code OpenSecurityConfig}: permitAll + CSRF disabled.
- *       Verifies anonymous POST → 200, anonymous GET → 200.</li>
- * </ul>
- *
- * <p>The prod-profile inner class points at its own in-memory H2 schema so it
- * does not collide with the dev-profile fixture in the parallel inner class
- * (same trick used by {@code org.ctc.admin.SecurityIntegrationTest}).
+ * Profile-conditional security IT for the Backup export endpoint.
+ * Two nested classes: prod profile (SecurityConfig — auth + CSRF enforced)
+ * and dev profile (OpenSecurityConfig — permit-all + CSRF disabled).
+ * The prod-profile class uses its own isolated H2 schema to avoid collisions.
  */
 class BackupControllerSecurityIT {
 

@@ -34,20 +34,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 /**
- * Phase 74-08 — Spring binding chain IT for {@code BackupImportConfirmForm}.
- *
- * <p>Verifies:
- * <ol>
- *   <li>Re-render with field error when {@code acknowledged=false} (explicit reject).</li>
- *   <li>Re-render with field error when {@code acknowledged} param is absent (null wrapper).</li>
- *   <li>Redirect to {@code /admin/backup} with D-02#5 stub Flash when {@code acknowledged=true}.</li>
- *   <li>D-08 Seam: staging file is NOT deleted by the stub (Phase 75 inherits it).</li>
- * </ol>
- *
- * <p>Each test that exercises the execute endpoint requires a real staging UUID because
- * {@code importExecute} calls {@link BackupImportService#reparse(UUID)} when there are no
- * binding errors. A valid ZIP is produced via {@link BackupArchiveService#writeZip} and
- * staged via the HTTP multipart endpoint — this ensures the test uses the full real pipeline.
+ * Spring binding chain IT for {@code BackupImportConfirmForm}.
+ * Verifies field-error re-render on {@code acknowledged=false} or absent,
+ * redirect with success flash on {@code acknowledged=true}, and staging-file
+ * cleanup by the AFTER_COMMIT listener on successful execute.
+ * Each test produces a real staged ZIP via the full pipeline.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -171,7 +162,7 @@ class BackupImportConfirmFormValidationIT {
 	}
 
 	// -------------------------------------------------------------------------
-	// Test 3: acknowledged=true → redirect to /admin/backup with Phase-75 real success flash
+	// Test 3: acknowledged=true → redirect to /admin/backup with success flash
 	// -------------------------------------------------------------------------
 
 	@Test
@@ -180,8 +171,7 @@ class BackupImportConfirmFormValidationIT {
 		// given — a real staged ZIP
 		String stagingId = stageValidZip();
 
-		// when / then — Phase 75 (D-15 #1) replaces the Phase-74 stub flash with the real
-		// "Import completed. {N} rows restored across {M} tables." message
+		// when / then
 		mockMvc.perform(post("/admin/backup/import-execute")
 						.param("stagingId", stagingId)
 						.param("acknowledged", "true"))
@@ -192,7 +182,7 @@ class BackupImportConfirmFormValidationIT {
 	}
 
 	// -------------------------------------------------------------------------
-	// Test 4: Phase 75 — staging file is deleted by BackupImportPostCommitListener Step 4
+	// Test 4: staging file is deleted by BackupImportPostCommitListener after execute
 	// -------------------------------------------------------------------------
 
 	@Test
@@ -207,16 +197,15 @@ class BackupImportConfirmFormValidationIT {
 		// Verify file exists before execute call
 		assertThat(expectedFile).exists();
 
-		// when — execute with acknowledged=true (real Phase-75 import path)
+		// when
 		mockMvc.perform(post("/admin/backup/import-execute")
 						.param("stagingId", stagingIdStr)
 						.param("acknowledged", "true"))
 				.andExpect(status().is3xxRedirection());
 
-		// then — Phase 75: BackupImportPostCommitListener Step 4 deletes the staging file
-		// after the AFTER_COMMIT move-triple completes (the Phase-74 D-08 seam is gone)
+		// then — staging file is deleted by BackupImportPostCommitListener after AFTER_COMMIT
 		assertThat(expectedFile)
-				.as("Phase 75: staging file is deleted by BackupImportPostCommitListener Step 4")
+				.as("staging file must be deleted by BackupImportPostCommitListener after AFTER_COMMIT")
 				.doesNotExist();
 	}
 }

@@ -17,21 +17,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Phase 74-08 — profile-conditional security IT for the four backup import endpoints.
- *
- * <p>Mirrors {@link BackupControllerSecurityIT}'s two-{@code @Nested}-class shape:
- * <ul>
- *   <li>{@link ProdProfileSecurityTest} — {@code @ActiveProfiles("prod")}: {@code SecurityConfig}
- *       enforces authenticated + CSRF on {@code /admin/**}. Anonymous → 401 (with CSRF) or 403
- *       (without CSRF); authenticated no-CSRF → 403; authenticated with-CSRF → 3xx redirect
- *       (endpoint processes but redirects on rejection).</li>
- *   <li>{@link DevProfileSecurityTest} — {@code @ActiveProfiles("dev")}: {@code OpenSecurityConfig}
- *       permits-all + disables CSRF. Anonymous requests accepted (any 2xx or 3xx).</li>
- * </ul>
- *
- * <p>Uses isolated H2 {@code bkimpsectest} database (NOT shared with
- * {@link BackupControllerSecurityIT}'s {@code bksectest}) to avoid schema conflicts between
- * parallel inner-class Spring contexts.
+ * Profile-conditional security IT for the four backup import endpoints.
+ * Mirrors {@link BackupControllerSecurityIT}'s two-nested-class shape.
+ * Uses isolated H2 {@code bkimpsectest} database to avoid schema conflicts
+ * with the export security IT's {@code bksectest} database.
  */
 class BackupImportControllerSecurityIT {
 

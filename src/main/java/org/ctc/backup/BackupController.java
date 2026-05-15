@@ -40,42 +40,9 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.view.RedirectView;
 
 /**
- * Phase 73-04 — visible Backup feature glue.
- *
- * <p>Two responsibilities, both pure HTTP plumbing:
- * <ul>
- *   <li>{@code GET /admin/backup} renders the {@code admin/backup} Thymeleaf template
- *       with {@code title=Backup} so the sidebar entry highlights via the
- *       {@code title.contains('Backup')} predicate in {@code admin/layout.html}.</li>
- *   <li>{@code POST /admin/backup/export} returns a {@link StreamingResponseBody} that
- *       delegates the actual ZIP composition to
- *       {@link BackupArchiveService#writeZip(java.io.OutputStream, java.time.Instant)}.
- *       The {@code Content-Disposition} filename uses a basic-form ISO instant
- *       ({@code yyyyMMdd'T'HHmmss'Z'}) — Windows-safe because it omits the colon
- *       separators that the canonical ISO-8601 form carries.</li>
- * </ul>
- *
- * <p>Auth + CSRF are inherited from the Spring Security wiring:
- * {@code SecurityConfig} (prod/docker) requires authentication on {@code /admin/**}
- * and enforces CSRF by default; {@code OpenSecurityConfig} (dev/local) permits
- * everything and disables CSRF. No endpoint-specific {@code requestMatchers} rules
- * are needed because the existing catch-all suffices.
- *
- * <p>Controller stays thin per CLAUDE.md: zero business logic, zero repository
- * access, single-method delegation per handler. The {@link BackupArchiveService}
- * carries its own {@code @Transactional(readOnly = true)} boundary so the
- * Hibernate session stays open for the entire streamed export (mandatory because
- * {@code Season.tracks} is lazy and Jackson reaches it only mid-serialization).
- *
- * <p>Phase 75 — D-17: the {@code admin/backup-confirm.html} Thymeleaf template
- * survives unchanged; only the {@link #importExecute} controller body is upgraded
- * from Phase 74's stub-flash to the real
- * {@link BackupImportService#execute(java.util.UUID)} delegation. The locked D-15
- * flash strings (success / failure / uploads-restore-soft-fail) are bound here.
- * PATTERNS Open-Question §5 (UploadsRestoreException GlobalExceptionHandler
- * mapping) is hereby RESOLVED: no global handler is added — the controller's
- * local {@code catch (UploadsRestoreException)} clause below is sufficient
- * defense-in-depth (RESEARCH §7 defensive-default deferred).
+ * Backup feature controller: export ZIP download, import upload/preview/confirm/execute/cancel.
+ * Stays thin per CLAUDE.md — all business logic in {@link BackupArchiveService} and
+ * {@link BackupImportService}. Auth + CSRF are inherited from the Spring Security wiring.
  */
 @Slf4j
 @Controller
@@ -138,18 +105,9 @@ public class BackupController {
 		return ISO_COMPACT_INSTANT.format(when);
 	}
 
-	// =========================================================================
-	// Phase 74 — import endpoints (D-22)
-	// =========================================================================
-
 	/**
-	 * Phase 74 — multipart upload entry point.
-	 *
-	 * <p>Delegates to {@link BackupImportService#stage(MultipartFile)}, adds the
-	 * resulting {@link BackupImportPreview} as {@code "preview"} and renders
-	 * {@code admin/backup-preview}. On any {@link BackupArchiveException} or
-	 * staging {@link IOException}, redirects to {@code /admin/backup} with an
-	 * {@code errorMessage} Flash attribute (D-02 routing via {@link #mapReason}).
+	 * Multipart upload entry point. Delegates to {@link BackupImportService#stage(MultipartFile)},
+	 * renders {@code admin/backup-preview}, or redirects with an error flash on failure.
 	 */
 	@PostMapping("/import-preview")
 	public String importPreview(@RequestParam("file") MultipartFile file,
@@ -170,12 +128,8 @@ public class BackupController {
 	}
 
 	/**
-	 * Phase 74 — preview → confirm page transition.
-	 *
-	 * <p>Re-parses the staged ZIP via {@link BackupImportService#reparse(UUID)}
-	 * (stateless, D-18), adds {@code "preview"} and a fresh
-	 * {@link BackupImportConfirmForm} with {@code stagingId} pre-filled, and
-	 * renders {@code admin/backup-confirm}.
+	 * Preview → confirm page transition. Re-parses the staged ZIP, adds {@code "preview"} and a
+	 * fresh {@link BackupImportConfirmForm}, and renders {@code admin/backup-confirm}.
 	 */
 	@PostMapping("/import-confirm")
 	public String importConfirm(@RequestParam("stagingId") UUID stagingId,
@@ -199,69 +153,26 @@ public class BackupController {
 	}
 
 	/**
-	 * Phase 75 — confirm → execute (D-15, replaces Phase 74 D-08 stub).
-	 * Phase 76 — extended with tryLock/finally wrapper + HTTP 409 View-mode redirect (D-04/D-05/D-06).
-	 *
-	 * <p>Binds {@link BackupImportConfirmForm} with {@code @Valid}. On binding
-	 * errors, re-renders {@code admin/backup-confirm} with field errors (re-parses
-	 * staging file so the preview data is still available). Otherwise re-runs the
-	 * full validation chain via {@link BackupImportService#reparse(UUID)} (D-09
-	 * defense-in-depth) and then delegates to
-	 * {@link BackupImportService#execute(UUID)} for the real wipe-and-restore
-	 * transaction. The three D-15 flash strings (success / failure / uploads-restore
-	 * soft-fail) are bound here.
-	 *
-	 * <p><strong>Phase 76 / D-04:</strong> {@link ImportLockService#tryLock()} is
-	 * called BEFORE the binding-error check. If the lock is already held, a HTTP 409
-	 * redirect is returned immediately via a {@link RedirectView} with
-	 * {@code setStatusCode(HttpStatus.CONFLICT)} + {@code setHttp10Compatible(false)}.
-	 * The {@code setHttp10Compatible(false)} is REQUIRED — in the default
-	 * {@code http10Compatible=true} mode {@code sendRedirect} overwrites the status
-	 * to 302 (RESEARCH Pitfall #1).
-	 *
-	 * <p><strong>Phase 76 / D-06:</strong> the lock is released in {@code finally}
-	 * AFTER {@code execute()} returns. Spring's default
-	 * {@code @TransactionalEventListener(phase = AFTER_COMMIT)} runs synchronously on
-	 * the same thread, so the Plan 75-07 uploads-move listener has completed before
-	 * the {@code finally} releases. Do NOT add {@code @Async} to that listener.
-	 *
-	 * <p><strong>Return type change:</strong> {@code String} → {@link ModelAndView}
-	 * to support the View-mode 409 redirect (RESEARCH Pattern 3). Every existing
-	 * return path is wrapped as {@code new ModelAndView(...)}.
-	 *
-	 * <p><strong>REVISION-iteration-1 (W4) catch-chain order:</strong> the catch chain
-	 * order ({@link BackupArchiveException} → {@link UploadsRestoreException} →
-	 * {@link BackupImportException}) is INDEPENDENT because all three exception types
-	 * are siblings extending {@code RuntimeException} — there is NO inheritance
-	 * between them. Reorder is safe; the chosen order matches the order in which the
-	 * exceptions can be thrown in the request lifecycle: ZIP-parse →
-	 * AFTER_COMMIT-listener → @Transactional-body.
-	 *
-	 * <p><strong>D-15 #3 planner-note:</strong> the {@code catch (UploadsRestoreException)}
-	 * clause is DEFENSIVE. The AFTER_COMMIT listener (Plan 75-07) fires after the
-	 * controller's redirect response is built, so its
-	 * {@code UploadsRestoreException} typically does NOT propagate back to this
-	 * thread. The defensive catch here covers a future refactor that invokes the
-	 * move-triple from a non-AFTER_COMMIT path. The
-	 * {@code auditUuid} is reported as {@code "unknown"} because the listener owns
-	 * the audit row and the exception carrier does not transport the UUID. The
-	 * operator detects the soft-fail in practice via (a) the ERROR log line from
-	 * the listener, (b) the {@code data_import_audit.success=false} row written by
-	 * the listener's failure paths, and (c) the {@code data/.import-backups/<ts>/uploads-old/}
-	 * directory NOT having been moved back to {@code data/{profile}/uploads/}.
+	 * Confirm → execute handler. Tries the import lock first (HTTP 409 if already locked).
+	 * Binds {@link BackupImportConfirmForm} with {@code @Valid}; on binding errors re-renders
+	 * {@code admin/backup-confirm}. Otherwise re-validates via {@link BackupImportService#reparse}
+	 * and delegates to {@link BackupImportService#execute} for the wipe-and-restore transaction.
+	 * Lock is released in {@code finally} after the synchronous AFTER_COMMIT listener completes.
+	 * {@code setHttp10Compatible(false)} on the 409 redirect view is required — the default
+	 * {@code http10Compatible=true} mode overwrites the status to 302 via {@code sendRedirect}.
 	 */
 	@PostMapping("/import-execute")
 	public ModelAndView importExecute(
 			@Valid @ModelAttribute("backupImportConfirmForm") BackupImportConfirmForm form,
 			BindingResult bindingResult, Model model, RedirectAttributes ra) {
 
-		// 409 GUARD — D-04 / D-05 / RESEARCH Pattern 3 (view-mode redirect, NOT response.setStatus)
+		// 409 GUARD — view-mode redirect while import lock is held
 		if (!importLockService.tryLock()) {
 			ra.addFlashAttribute("errorMessage",
 					"Another import is already running — please wait.");
 			RedirectView rv = new RedirectView("/admin/backup");
 			rv.setStatusCode(HttpStatus.CONFLICT);
-			rv.setHttp10Compatible(false);  // REQUIRED: in http10Compatible=true mode sendRedirect overwrites status to 302
+			rv.setHttp10Compatible(false);  // REQUIRED: http10Compatible=true overwrites status to 302 via sendRedirect
 			return new ModelAndView(rv);
 		}
 		try {
@@ -281,11 +192,11 @@ public class BackupController {
 				}
 			}
 			try {
-				backupImportService.reparse(form.getStagingId());  // D-09 defense-in-depth re-validation
+				backupImportService.reparse(form.getStagingId());  // defense-in-depth re-validation
 				BackupImportResult result = backupImportService.execute(form.getStagingId());
 				ra.addFlashAttribute("successMessage",
 						String.format("Import completed. %d rows restored across %d tables.",
-								result.restoredTotal(), result.entityCount()));  // D-15 #1
+								result.restoredTotal(), result.entityCount()));
 			} catch (BackupArchiveException ex) {
 				ra.addFlashAttribute("errorMessage", mapReason(ex));
 			} catch (IOException ex) {
@@ -293,19 +204,16 @@ public class BackupController {
 				ra.addFlashAttribute("errorMessage",
 						"Backup archive failed safety checks (size or path) and was rejected.");
 			} catch (UploadsRestoreException ex) {
-				// D-15 #3 — defensive catch. The AFTER_COMMIT listener (Plan 75-07) is the
-				// real throw site and runs AFTER the controller's redirect response is built,
-				// so this clause is rarely-to-never hit in practice. See class Javadoc for
-				// the Q5 resolution + operator-recovery story.
-				log.error("UploadsRestoreException reached controller path — unexpected post-Plan 07; "
+				// Defensive catch: the AFTER_COMMIT listener is the real throw site and runs AFTER
+				// the controller's redirect response is built, so this clause is rarely hit in practice.
+				log.error("UploadsRestoreException reached controller path — unexpected; "
 						+ "stagingId={}", form.getStagingId(), ex);
 				ra.addFlashAttribute("errorMessage",
 						"Import database succeeded but uploads restore failed and was reverted. "
 								+ "See logs. Audit-id: unknown.");
 			} catch (AutoBackupBeforeImportException ex) {
-				// D-17 — semantically NO rollback is needed because nothing was mutated
-				// (auto-backup step runs BEFORE wipe; Step 0.5). The catch MUST appear BEFORE
-				// BackupImportException (parent type) per Java first-match-wins (Pitfall #3).
+				// Auto-backup step runs BEFORE wipe — no rollback needed.
+				// This catch MUST appear BEFORE BackupImportException (parent type) per Java first-match-wins.
 				log.error("Pre-import auto-backup failed for stagingId={}, auditUuid={}",
 						form.getStagingId(), ex.getAuditUuid(), ex);
 				String auditIdText = ex.isAuditWritten()
@@ -316,35 +224,28 @@ public class BackupController {
 								+ "No database changes. Audit-id: %s.", auditIdText));
 				return new ModelAndView("redirect:/admin/backup");
 			} catch (BackupImportException ex) {
-				// WR-03: when the REQUIRES_NEW audit-write itself failed (double-failure path),
-				// no data_import_audit row exists for the operator to query. Reflect that in the
-				// flash so "Audit-id: <uuid>" is not a misleading dead-end.
+				// When audit-write itself failed (double-failure path), no data_import_audit row exists.
 				String auditIdText = ex.isAuditWritten()
 						? ex.getAuditUuid().toString()
 						: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
-				// WR-06: if the wrapped cause is a BackupArchiveException (e.g. SCHEMA_MISMATCH
-				// detected inside execute() after reparse), surface the reason inline so the
-				// operator sees the diagnostic detail instead of just the generic rollback flash.
+				// Surface BackupArchiveException cause detail when present (e.g. SCHEMA_MISMATCH).
 				String causeDetail = (ex.getCause() instanceof BackupArchiveException bae)
 						? " (" + bae.reason() + ")"
 						: "";
 				ra.addFlashAttribute("errorMessage",
 						String.format("Import failed and was rolled back — see logs. Audit-id: %s%s.",
-								auditIdText, causeDetail));  // D-15 #2
+								auditIdText, causeDetail));
 			}
-			// STAGING FILE — on success the AFTER_COMMIT listener (Plan 75-07) deletes it;
-			// on failure the file survives so the operator can retry without re-uploading.
+			// On success the AFTER_COMMIT listener deletes the staging file;
+			// on failure it survives so the operator can retry without re-uploading.
 			return new ModelAndView("redirect:/admin/backup");
 		} finally {
-			importLockService.unlock();  // D-06 — synchronous AFTER_COMMIT already completed
+			importLockService.unlock();  // synchronous AFTER_COMMIT already completed
 		}
 	}
 
 	/**
-	 * Phase 74 — cancel the import flow and delete the staging file synchronously.
-	 *
-	 * <p>Calls {@link BackupImportService#deleteStagingFile(UUID)} (idempotent,
-	 * never throws) and redirects to {@code /admin/backup} with a success Flash.
+	 * Cancels the import flow and deletes the staging file synchronously (idempotent).
 	 */
 	@PostMapping("/import-cancel")
 	public String importCancel(@RequestParam("stagingId") UUID stagingId,
@@ -355,20 +256,15 @@ public class BackupController {
 	}
 
 	/**
-	 * Routes a {@link BackupArchiveException} to the appropriate locked D-02 Flash string.
-	 *
-	 * <p>Java 25 exhaustive switch: compiler enforces coverage of all {@link BackupArchiveException.Reason}
-	 * values, so future additions to the enum produce a compile error here (fail-fast by design).
-	 *
-	 * @param ex the exception thrown by the import service
-	 * @return the D-02 user-facing Flash string
+	 * Routes a {@link BackupArchiveException} to the appropriate user-facing Flash string.
+	 * Exhaustive switch enforces coverage of all {@link BackupArchiveException.Reason} values.
 	 */
 	private String mapReason(BackupArchiveException ex) {
 		return switch (ex.reason()) {
-			case SCHEMA_MISMATCH -> ex.getMessage();  // Plan 05 already formatted with D-02#2
+			case SCHEMA_MISMATCH -> ex.getMessage();
 			case PATH_TRAVERSAL, ENTRY_TOO_LARGE, TOTAL_TOO_LARGE, TOO_MANY_ENTRIES,
 					MANIFEST_MISSING, MANIFEST_INVALID, NOT_A_ZIP
-					-> "Backup archive failed safety checks (size or path) and was rejected.";  // D-02#3
+					-> "Backup archive failed safety checks (size or path) and was rejected.";
 		};
 	}
 }

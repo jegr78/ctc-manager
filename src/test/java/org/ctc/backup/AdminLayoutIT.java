@@ -18,19 +18,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Phase 73-04 — sidebar-rendering IT for the new "Data → Backup" entry.
- *
- * <p>Drives the layout fragment through real Thymeleaf rendering and asserts:
- * <ol>
- *   <li>The new {@code <span class="sidebar-group-label">Data</span>} group is
- *       present in the sidebar on every admin page (sample: {@code /admin/backup}).</li>
- *   <li>On {@code /admin/backup} the Backup anchor carries the {@code active}
- *       CSS class (driven by {@code th:classappend="${title.contains('Backup')
- *       ? 'active' : ''}"}).</li>
- *   <li>On {@code /admin/seasons} the Backup anchor does NOT carry the
- *       {@code active} class (since {@code title="Seasons"} does not contain
- *       {@code "Backup"}).</li>
- * </ol>
+ * Sidebar-rendering IT for the "Data → Backup" sidebar entry.
+ * Verifies the Data group label, active CSS class on the Backup page,
+ * and absence of active class on other admin pages.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

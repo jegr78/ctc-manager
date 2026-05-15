@@ -26,18 +26,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 /**
- * Phase 73-04 — full Spring-context integration test for {@link BackupController}.
- *
- * <p>Boots the {@code dev} profile (H2 in-memory + {@code DevDataSeeder} fixture)
- * with the real {@link org.ctc.backup.service.BackupArchiveService} wired through
- * Jackson MixIns + entity repositories. Two behaviours are pinned end-to-end:
- * <ol>
- *   <li>GET {@code /admin/backup} renders the locked UI-SPEC strings
- *       ({@code Export Backup} CTA and the {@code "all 24 entities"} OQ-1 copy).</li>
- *   <li>POST {@code /admin/backup/export} returns a streamed ZIP whose
- *       first entry is {@code manifest.json} — the wire-contract manifest-first
- *       invariant survives the controller layer.</li>
- * </ol>
+ * Full Spring-context integration test for {@link BackupController}.
+ * Boots the {@code dev} profile with the real {@link org.ctc.backup.service.BackupArchiveService}
+ * wired through Jackson MixIns + entity repositories. Pins the UI-SPEC strings and
+ * the manifest-first ZIP wire-contract end-to-end.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
