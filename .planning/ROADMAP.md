@@ -383,7 +383,7 @@ Plans:
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 4/4 | Complete   | 2026-05-14 |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 5/5 | Complete   | 2026-05-15 |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
-| 79. Code Cleanup + Test Performance Optimization — v1.10 Milestone Closer | 1/16 | In Progress|  |
+| 79. Code Cleanup + Test Performance Optimization — v1.10 Milestone Closer | 9/16 | In Progress|  |
 
 ### Phase 79: Code Cleanup + Test Performance Optimization (v1.10 Milestone Closer)
 
@@ -393,18 +393,18 @@ Plans:
 
 **Depends on:** Phase 78 (Dockerfile noble-pin must be merged so the release workflow is green and milestone-audit can verify the full v1.10 stack)
 
-**Plans:** 1/16 plans executed
+**Plans:** 9/16 plans executed
 
 Plans:
 - [x] 79-01-PLAN.md — Wave 1: Baseline wallclock + reverse-order/random-seed independence audit + 10/10 @DirtiesContext verdict (D-05, D-06)
-- [ ] 79-02a-PLAN.md — Wave 2: Cleanup leaf packages — admin.controller + backup.config + backup.io + backup.security (D-01..D-04, D-09..D-13)
-- [ ] 79-02b-PLAN.md — Wave 2: Cleanup backup.serialization (25 MixIns, D-04 inverted for reflection-driven Jackson)
-- [ ] 79-02c-PLAN.md — Wave 2: Cleanup backup.lock + backup.event + backup.audit (Schutzwort-heavy: race/thread-safe/auditing)
-- [ ] 79-02d-PLAN.md — Wave 2: Cleanup admin.service (15 graphic services) + sitegen (7 @DirtiesContext invariants)
-- [ ] 79-02e-PLAN.md — Wave 2: Cleanup gt7sync + dataimport + backup.dto + backup.schema (wire-contract frozen)
-- [ ] 79-02f-PLAN.md — Wave 2: Cleanup backup.service (906 LOC extract-method primary) + backup.restore (24 restorers) + backup.exception
-- [ ] 79-02g-PLAN.md — Wave 2: Cleanup admin.dto + backup root + admin root (Form-DTO validation + SecurityConfig profile-gating invariants)
-- [ ] 79-02h-PLAN.md — Wave 2: Cleanup domain.service + domain.exception + domain.repository + domain.model (JPA entity invariants; mvnw verify per commit for JaCoCo gate)
+- [x] 79-02a-PLAN.md — Wave 2: Cleanup leaf packages — admin.controller + backup.config + backup.io + backup.security (D-01..D-04, D-09..D-13)
+- [x] 79-02b-PLAN.md — Wave 2: Cleanup backup.serialization (25 MixIns, D-04 inverted for reflection-driven Jackson)
+- [x] 79-02c-PLAN.md — Wave 2: Cleanup backup.lock + backup.event + backup.audit (Schutzwort-heavy: race/thread-safe/auditing)
+- [x] 79-02d-PLAN.md — Wave 2: Cleanup admin.service (15 graphic services) + sitegen (7 @DirtiesContext invariants)
+- [x] 79-02e-PLAN.md — Wave 2: Cleanup gt7sync + dataimport + backup.dto + backup.schema (wire-contract frozen)
+- [x] 79-02f-PLAN.md — Wave 2: Cleanup backup.service (906 LOC extract-method primary) + backup.restore (24 restorers) + backup.exception
+- [x] 79-02g-PLAN.md — Wave 2: Cleanup admin.dto + backup root + admin root (Form-DTO validation + SecurityConfig profile-gating invariants)
+- [x] 79-02h-PLAN.md — Wave 2: Cleanup domain.service + domain.exception + domain.repository + domain.model (JPA entity invariants; mvnw verify per commit for JaCoCo gate)
 - [ ] 79-03-PLAN.md — Wave 3: Enable Surefire forkCount=2C + Failsafe default-it forkCount=1C + excludedGroups=flaky (D-05, D-07)
 - [ ] 79-04-PLAN.md — Wave 4: pom.xml + ci.yml comment cleanup + ci.yml concurrency block + --no-transfer-progress (D-07, D-20)
 - [ ] 79-05-PLAN.md — Wave 5: Append Test Invocation Discipline section to TESTING.md (D-08)
