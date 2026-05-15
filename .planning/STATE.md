@@ -1,36 +1,35 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.10
-milestone_name: Spring Boot 4.0.6 Upgrade & Data Export/Import
-status: executing
-stopped_at: Phase 79 context gathered
-last_updated: "2026-05-15T15:30:12.178Z"
-last_activity: 2026-05-15 -- Phase 79 execution started
+milestone: null
+milestone_name: null
+status: idle
+stopped_at: v1.10 shipped 2026-05-16
+last_updated: "2026-05-16T00:30:00.000Z"
+last_activity: 2026-05-16 -- v1.10 milestone closed and archived
 progress:
-  total_phases: 9
-  completed_phases: 8
-  total_plans: 62
-  completed_plans: 46
-  percent: 74
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-09)
+See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 79 — Code Cleanup, Test Performance & v1.10 Milestone Closer
+**Current focus:** Awaiting next milestone definition via `/gsd-new-milestone`.
 
 ## Current Position
 
-Phase: 79 (Code Cleanup, Test Performance & v1.10 Milestone Closer) — EXECUTING
-Plan: 1 of 16
-Plans: 5 of 5 complete (72-01 BackupSchema, 72-02 BackupManifest, 72-03 BackupObjectMapperConfig, 72-04 V7+DataImportAudit, 72-05 doc anchors)
-Status: Executing Phase 79
-Last activity: 2026-05-15 -- Phase 79 execution started
+Phase: — (no active milestone)
+Plan: —
+Status: Idle — v1.10 shipped 2026-05-16
+Last activity: 2026-05-16 — v1.10 milestone closed and archived
 
 ## Completed Milestones
 
@@ -42,85 +41,68 @@ Last activity: 2026-05-15 -- Phase 79 execution started
 - v1.6 Static Site Quality (17 phases, 56 requirements) — shipped 2026-04-18
 - v1.8 Bulk Driver Import from Google Sheets (2 phases, 4 plans, +52 tests) — shipped 2026-04-25
 - v1.9 Season Phases & Groups (15 phases, ~70 plans, 38/38 requirements, +88.4k LOC) — shipped 2026-05-09
+- v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (9 phases, 50 plans, 39/39 requirements, +77.4k LOC, 87.80 % JaCoCo) — shipped 2026-05-16
 
 ## Deferred Items
 
-Items acknowledged and deferred at v1.9 milestone close on 2026-05-09:
+Items acknowledged and deferred at v1.10 milestone close on 2026-05-16:
 
 | Category | Item | Status |
 | -------- | ---- | ------ |
-| debug | group-warnings-for-non-groups-seasons | diagnosed (hypothesis confirmed, see Resolution) |
-| debug | shortname-resolver-picks-parent-without-phaseteam | diagnosed (hypothesis confirmed, see Resolution; superseded by Phase 70) |
+| tech_debt | REVIEW.md WR-01..WR-08 + IN-01..IN-04 (12 Info/Warning items: Map.copyOf order strip, Step-1-revert FileAlreadyExistsException, executedBy duplication, restoreOneTable opens ZIP 24×, etc.) | deferred — v1.11 backup-cleanup mini-phase |
+| tech_debt | Phase 79 D-06 wallclock-reduction (16.85 % vs ≥ 30 % target; Spring-context-per-fork is structural cost) | deferred — v1.11 backlog (architectural test-restructuring) |
+| tech_debt | Driver-detail Season-Assignment chip ordering (cosmetic, 75-HUMAN-UAT test 6) | deferred — explicit ORDER BY year on Driver.seasonAssignments query |
+| tech_debt | DevDataSeeder @Profile("dev")-only widening for live-MariaDB-UAT on local,demo | deferred |
+| tech_debt | Nyquist *-VALIDATION.md drafts → approved for 6 phases (72-76, 79); creation for 71 + 78 | optional /gsd:validate-phase {N} per phase |
+| post_merge | QUAL-05 wiki image embed render (raw.githubusercontent.com/master URLs) | self-resolves on PR merge to master |
+| post_merge | PLAT-CI-02 release-workflow run on master observation | by-design post-merge |
+
+Carried over from v1.9 (still relevant):
+
+| Category | Item | Status |
+| -------- | ---- | ------ |
+| tech_debt | Per-group matchday generation UI affordance (`SeasonController.generateMatchdays:251` Rule-3 deviation) | deferred |
+| tech_debt | `StandingsController.java:139` lazy collection style cleanup | deferred |
+| uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | deferred — verify after next prod deploy |
 | quick_task | 260404-jh8-fix-release-workflow-use-release-token-s | missing (predates v1.9) |
-| uat | Phase 57 (57-HUMAN-UAT.md) | partial — 3 pending scenarios; MariaDB UAT covered transitively by Phase 61 UAT-03 + CI smoke gate (deferred) |
-| uat | Phase 61 (61-HUMAN-UAT.md) | unknown (UAT-02 legacy season visual smoke deferred to next deploy) |
-| uat | Phase 62 (62-HUMAN-UAT.md) | resolved |
-| uat | Phase 66 (66-UAT.md) | diagnosed (superseded by Phase 70) |
-| uat | Phase 70 (70-HUMAN-UAT.md) | diagnosed (UAT D-22 PASS — 287/357/0 errors on MariaDB Saison 2023) |
+
+## Backlog (Phase 999.x — captured for future milestones)
+
+- 999.1 OpenRewrite Refactoring and Migration Tool Integration
+- 999.2 Clean Code Principles Enforcement
+- 999.3 Renovate Automated Dependency Updates Integration
+- 999.4 Security SAST Static Analysis Integration
 
 ## Accumulated Context
 
 ### Decisions
 
-All decisions logged in PROJECT.md Key Decisions table.
-
-- [v1.10 start]: v1.10 milestone scope is platform hygiene (Spring Boot 4.0.6) + new admin Backup Export/Import feature. 37 requirements across 6 categories (PLAT × 7, SCHEMA × 4, EXPORT × 6, IMPORT × 8, SECU × 7, QUAL × 5).
-- [v1.10 start]: All four research agents independently corrected the milestone wording — Spring Boot 4.0.6 ships **Thymeleaf 3.1.5.RELEASE** (CVE-2026-40478 SpEL canonicalization hardening), NOT Thymeleaf 3.2. Maintainer-recommended fix: controller-side `pageTitle` model attribute.
-- [v1.10 roadmap]: Seven-phase structure (71-77) chosen. Cluster A (PLAT) is Phase 71 alone; Cluster B (SCHEMA + EXPORT + IMPORT + SECU + QUAL) breaks into Phases 72-77 along the natural wire-contract → export → import-preview → replace-all → ops-hardening → final-uat fault line. Rationale: PLAT first eliminates v1.9 platform debt before any feature code; Phase 72 (wire contract) before any export/import code; Phase 73 (export) before Phase 74 (import) so round-trip is the natural integration test; Phase 75 (replace-all) last among implementation phases so a Phase-75 failure clearly points at the riskiest path.
-- [v1.10 roadmap]: GAP-1 (ZIP layout) resolved: per-entity files under `data/<entity>.json` + `manifest.json` first entry. Documented in Phase 72 success criteria.
-- [v1.10 roadmap]: GAP-2 (schema version) resolved: integer constant `BackupSchema.SCHEMA_VERSION = 1`. Documented in Phase 72 success criteria.
-- [v1.10 roadmap]: GAP-5 (canonical 22-entity FK ordering) resolved: generated from live entity classes in Phase 72, NOT hand-written.
-- [v1.10 roadmap]: Audit-log table `data_import_audit` is permanently OUT of export scope (IMPORT-08). Decision baked into Phase 72 PROJECT.md decisions row.
-- [v1.10 roadmap]: Replace-All implementation strategy locked to native SQL DELETE in FK-reverse order via `EntityManager.createNativeQuery()` + `JdbcTemplate.batchUpdate` for restore (bypasses `AuditingEntityListener`). TRUNCATE is forbidden because it auto-commits on MariaDB. Documented in Phase 75 goal.
-- [v1.10 roadmap]: File-system mutations are NOT inside the JPA transaction. Upload-tree restore is post-commit via stage-and-rename, with the previous tree retained at `data/.import-backups/<ts>/uploads-old/` for 24 h manual recovery. Documented in Phase 75 goal.
-- [v1.10 roadmap]: No new Maven dependencies. ZIP I/O via JDK `java.util.zip`, JSON via existing Jackson, multipart via existing Spring MVC. Only POM change is `spring-boot-starter-parent` 4.0.5 → 4.0.6 + `<dependencyManagement>` pin on Thymeleaf 3.1.5.
-- [Phase ?]: Phase 78-02: ci.yml structural Dockerfile -noble pin guard added (D-05/D-06; cross-platform grep -E + grep -F -e idiom mirroring pom.xml PLAT-07 / commit f451ff4)
-- [Phase ?]: Phase 78-02: ci.yml full docker-build job added on every PR + push (D-07/D-08; no buildx, no login, no path-filter — exercises stage-2 Playwright install chromium, the failing path from release run 25609204039)
+All decisions logged in PROJECT.md "Key Decisions" table and per-milestone in `milestones/v*.x-ROADMAP.md`.
 
 ### Phase Numbering
 
-Continuing from v1.9 (last phase: 70). v1.10 phases start at **Phase 71**.
-
-- Phase 71: Spring Boot 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard (PLAT-01..07)
-- Phase 72: Backup Wire Contract — Schema, Manifest, ObjectMapper, Audit-Log Scope (SCHEMA-01..04, IMPORT-08)
-- Phase 73: Backup Export — Jackson MixIns + Streaming ZIP Endpoint (EXPORT-01..06)
-- Phase 74: Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate (IMPORT-01..04, SECU-01..04)
-- Phase 75: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT (IMPORT-05..07, QUAL-03)
-- Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import (SECU-05..07)
-- Phase 77: Final UAT + JaCoCo Hold + Round-Trip Test + Documentation (QUAL-01, QUAL-02, QUAL-04, QUAL-05)
-- Phase 78: Docker Release Image Fix — Pin Base Image to Ubuntu Noble for Playwright Compatibility (CI/release-infra; req TBD)
+Last phase shipped: **79** (v1.10 closer). Next milestone continues at **Phase 80+**.
 
 ### Roadmap Evolution
 
-- 2026-05-09: v1.10 ROADMAP.md drafted with 7 phases (71-77). All 37 requirements mapped, no orphans, no duplicates. Coverage validated.
-- 2026-05-10: Phase 78 added (Docker Release Image Fix). Reactive add — release workflow run `25609204039` failed at `playwright install chromium` because Eclipse Temurin's `25-jre` tag silently rotated to Ubuntu 26.04 (Plucky), unsupported by Playwright 1.59.0. Surgical pin to `-noble`, independent of Spring Boot upgrade and backup work.
-- 2026-05-15: Phase 79 added (Code Cleanup + Test Performance Optimization, v1.10 Milestone Closer). Decided in Phase 77 D-15: (a) Clean-Code refactoring + comment thinning across Phase 72-76 backup code, (b) Surefire/Failsafe runtime profiling + parallel execution review. Becomes the actual v1.10 milestone-closer that runs `/gsd-audit-milestone` + `/gsd-complete-milestone`.
-
-### Key Technical Context
-
-- Foundation document: `.planning/research/SUMMARY.md` (synthesized from 4 parallel domain researchers — STACK / FEATURES / ARCHITECTURE / PITFALLS).
-- New package: `org.ctc.backup` mirroring proven `org.ctc.dataimport` shape (controller + 1-3 services + DTO records).
-- New files (~30): `BackupController`, `BackupExportService`, `BackupImportService`, `BackupArchiveService`, `BackupSchema`, `BackupManifest`, `BackupBundle`, `BackupPreview`, `BackupObjectMapperConfig`, ~22 per-entity Jackson MixIns under `org.ctc.backup.serialization`, 2 Thymeleaf templates (`backup.html`, `backup-preview.html`), Flyway `V7__data_import_audit.sql`, `ImportLockService`, read-only-mode `@ControllerAdvice` filter.
-- Modified files: `pom.xml` (1 line + dependencyManagement pin), `templates/admin/layout.html` (sidebar + read-only banner), `application.yml` (multipart limits + `app.backup.*`), `FileStorageService.java` (additive helpers), 3+ Thymeleaf templates (line-3 fragment-parameter ternary fix), `GlobalExceptionHandler` (MaxUploadSizeExceededException mapping).
-- Files NOT modified: All 22 operative entities (Jackson MixIns leave entities clean), all 22 repositories (stock `JpaRepository.findAll/saveAll/deleteAllInBatch`), V1-V6 Flyway migrations (only V7 added).
-- Critical risks (from PITFALLS.md): (1) Thymeleaf 3.1.5 fragment-parameter restricted-mode breakage beyond 3 known templates; (2) MariaDB-vs-H2 transaction divergence (TRUNCATE auto-commits, FK syntax diverges); (3) JPA Auditing overwriting imported timestamps (mitigated via `JdbcTemplate.batchUpdate` bypass); (4) ZIP-Slip + ZipBomb on import; (5) schema-version drift = catastrophic data loss (mitigated via manifest-first read + reject-before-wipe).
+- 2026-05-16: v1.10 milestone closed. Archives created at `milestones/v1.10-ROADMAP.md`, `milestones/v1.10-REQUIREMENTS.md`, `milestones/v1.10-MILESTONE-AUDIT.md`. ROADMAP.md collapsed to `<details>` block. REQUIREMENTS.md removed (fresh one will be created by `/gsd-new-milestone`).
 
 ### Blockers/Concerns
 
-None. Roadmap approved, ready for Phase 71 planning.
+None. Awaiting next milestone definition.
 
 ## Session Continuity
 
-Last session: 2026-05-15T12:34:15.265Z
+Last session: 2026-05-16T00:30:00.000Z
 
-**v1.10 startup commits (anticipated, not yet made):**
+**v1.10 close commits:**
 
-- ROADMAP.md update with 7-phase v1.10 structure (Phases 71-77)
-- STATE.md update pointing at Phase 71 as current
-- REQUIREMENTS.md traceability table populated for all 37 REQ-IDs
+- Archive files (`v1.10-ROADMAP.md`, `v1.10-REQUIREMENTS.md`, `v1.10-MILESTONE-AUDIT.md`) created + ROADMAP.md collapsed + PROJECT.md / MILESTONES.md / STATE.md updated
+- `git rm .planning/REQUIREMENTS.md` (fresh requirements created by next milestone)
+- Git tag `v1.10` annotated (pending operator confirmation to push)
 
-**Stopped at:** Phase 79 context gathered
+**Stopped at:** v1.10 milestone closed and archived
 
-**Next action:** Run `/gsd-plan-phase 71` to break Phase 71 (Spring Boot 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard) into executable plans.
+**Next action:** Run `/gsd-new-milestone` to define v1.11 — typically questioning → research → requirements → roadmap. Candidate scopes: v1.11 backup-cleanup mini-phase + backlog promotion (OpenRewrite / Clean-Code / Renovate / SAST).
 
-**Branch:** `gsd/v1.10-spring-boot-upgrade-and-export-import` (TBD — to be created at Phase 71 planning kickoff per `gsd/{milestone}-{slug}` template).
+**Branch:** `gsd/v1.10-platform-and-backup` (pending merge to master via squash-PR).

@@ -8,52 +8,35 @@ Gran Turismo Racing League Management application (Spring Boot 4 / Thymeleaf / M
 
 Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## Current State (after v1.9, Phases 71–73 of v1.10 landed)
+## Current State (after v1.10 shipped 2026-05-16)
 
-- **Codebase:** ~17k LOC Java (Prod) + ~25k LOC Java (Tests), 1370 Tests (1227 Surefire + 112 Failsafe-IT + 31 E2E), 89.44 % Line Coverage
-- **Tech Stack:** Spring Boot 4.0.6, Java 25, MariaDB 11 / H2, Thymeleaf 3.1.5 (pinned), Playwright
-- **Security:** HTTP Basic Auth (prod/docker), SSRF hostname blocklist, path traversal defense, CSRF tokens on AJAX POSTs, SpEL/OGNL injection validation, Content-Disposition sanitization, MatchdayForm DTO (mass assignment protection)
-- **Architecture:** Clean 3-tier (Controller → Service → Repository), no God Services, centralized exception handling, domain services fully decoupled from admin layer, RaceLineup as source of truth for driver-team assignment, sitegen decomposed into 5 page-generator beans + SiteSlugger + TemplateWriter (D-20)
-- **Database:** 36 FK-Indexes, 28 @EntityGraph annotations, Flyway-managed; Phase/Group model: `season_phases`, `season_phase_groups`, `phase_teams` tables driving Matchday and Playoff phase association
-- **Templates:** CSS utility classes instead of inline styles, TemplateManageable generic dispatch, phase-/group-aware public site templates (`standings.html`, `matchdays.html`, `driver-ranking.html`, `team-profile.html`, `driver-profile.html`)
-- **Data:** All UI text and code comments in English, dev profile with fictive test data including GROUPS multi-phase fixture (Season 2023) + Empty-Phase fixture for D-22 coverage
+- **Codebase:** ~17k LOC Java (Prod) + ~25k LOC Java (Tests); 1652 Surefire unit + 231 Failsafe IT + 36 Playwright E2E; JaCoCo line coverage **87.80 %** (gate 82 %, comfort buffer 5.80 pp)
+- **Tech Stack:** Spring Boot 4.0.6, Java 25, MariaDB 11 / H2, Thymeleaf 3.1.5 (pinned), Playwright 1.59.0, Lombok 1.18.46 (JEP 498 `--sun-misc-unsafe-memory-access=allow`), Guava 33.4.8-jre (override for `AbstractFuture` Unsafe warning)
+- **Security:** HTTP Basic Auth (prod/docker), SSRF hostname blocklist, path traversal defense, CSRF tokens on AJAX POSTs + every backup POST endpoint, SpEL/OGNL injection validation, Content-Disposition sanitization, MatchdayForm DTO (mass assignment protection), ZIP-Slip + ZipBomb defenses on backup import (50 MB/entry, 500 MB total, 50.000 entries cap, `startsWith(uploadDir.toRealPath())` check)
+- **Architecture:** Clean 3-tier (Controller → Service → Repository), no God Services, centralized exception handling, domain services fully decoupled from admin layer, RaceLineup as source of truth for driver-team assignment, sitegen decomposed into 5 page-generator beans + SiteSlugger + TemplateWriter, dedicated `org.ctc.backup.*` package (controller + service + io + dto + audit + lock + event + restore + schema + serialization 24 MixIns + 24 EntityRestorers)
+- **Database:** 36 FK-Indexes, 28 @EntityGraph annotations, Flyway V1-V7 (V7 = `data_import_audit` for import provenance); Phase/Group model: `season_phases`, `season_phase_groups`, `phase_teams` tables driving Matchday and Playoff phase association
+- **Templates:** CSS utility classes instead of inline styles, TemplateManageable generic dispatch, controller-side `pageTitle` model attributes replace fragment-parameter ternaries across ~80 admin + site templates (Thymeleaf 3.1.5 SpEL canonicalization compliance); `TemplateRenderingSmokeIT` + `exec-maven-plugin` grep-gate fence regression; phase-/group-aware public site templates
+- **Data:** All UI text and code comments in English, dev profile with fictive test data including GROUPS multi-phase fixture (Season 2023) + Empty-Phase fixture for D-22 coverage; **backup wire contract** locks 24-entity scope via JPA-Metamodel topo-sort (Kahn), `BackupSchema.SCHEMA_VERSION = 1`, `manifest.json` first-entry ZIP layout
 - **Public Site:** Phase-tab row + group-sub-tab row, per-phase URL variants, Phase Breakdown sections on team/driver profiles, alltime aggregation across all phases (D-19 TRACKED BEHAVIOR CHANGE), desktop sticky table headers
+- **Admin Features:** `/admin/backup` page with streamed ZIP export (CSRF-protected `POST /admin/backup/export`, `StreamingResponseBody`, ISO-instant filename) + manifest-first preview + replace-all import (`@Transactional` wipe + `JdbcTemplate.batchUpdate` restore bypassing `AuditingEntityListener` + post-commit upload-tree stage-and-rename); concurrent-import `ReentrantLock` + persistent yellow read-only banner + `ImportLockedWriteRejector` HandlerInterceptor + synchronous auto-backup-before-import safety net; 24h recovery retention at `data/.import-backups/<ts>/`
+- **Docker / CI:** Both Dockerfile stages pinned to `eclipse-temurin:25-{jdk,jre}-noble` (Playwright 1.59.0 compatibility); `dockerfile-noble-pin-guard` CI job (whitelist-on-suffix); full `docker build .` on every PR + push to master; ci.yml concurrency block + `--no-transfer-progress`; Surefire `forkCount=2C` + Failsafe default-it `forkCount=1C` + `excludedGroups=flaky` quarantine
 
-## Current Milestone: v1.10 Spring Boot Upgrade & Data Export/Import
+## Current Milestone
 
-**Goal:** Plattform-Hygiene (Spring Boot 4.0.6 + Thymeleaf-3.2-Template-Audit) und neue Admin-Funktion für strukturellen Daten-Export/Import als ZIP-Paket — für Backup/Recovery vor riskanten Operationen und Migration zwischen dev↔prod-Environments.
+(None — v1.10 shipped 2026-05-16. Next milestone definition via `/gsd-new-milestone`. Carried over candidates tracked in REQUIREMENTS.md "Future Requirements" and ROADMAP.md Phase 999.1–999.4 backlog: OpenRewrite, Clean-Code enforcement, Renovate, SAST.)
 
-**Target features:**
+**Carried over from v1.10 deferred (candidates für nachgelagerte v1.11+ Milestones):**
 
-### A. Spring Boot Platform Upgrade
+- 12 REVIEW.md Info/Warning items from Phase 75 (backup-cleanup mini-phase)
+- D-06 wallclock-reduction debt (achieved 16.85 %, target ≥ 30 %; requires architectural test-restructuring — Spring-context-per-fork is structural cost)
+- Driver-detail Season-Assignment chip ordering (cosmetic; explicit `ORDER BY year` on `Driver.seasonAssignments`)
+- `DevDataSeeder` `@Profile` widening for live-MariaDB-UAT bootstrap on `local,demo`
+- Nyquist `*-VALIDATION.md` draft → approved for 6 phases + creation for phases 71 + 78
+- Wiki QUAL-05 image render verification post-merge (self-resolves on PR merge to master)
+- PLAT-CI-02 release-workflow run on master observation (by-design post-merge)
 
-- Spring Boot 4.0.5 → 4.0.6 (Maven `spring-boot-starter-parent` bump, plus transitiver Thymeleaf 3.1.5 (CVE-2026-40478 SpEL hardening))
-- Vorsorglicher Audit aller ~80 Templates auf Thymeleaf-3.2-Inkompatibilitäten (Fragment-Parameter-Ternaries in `th:replace="...layout(${cond ? 'A' : 'B'}, ...)"`)
-- Fix der 3 bekannten Templates (`match-scoring-form`, `race-scoring-form`, `season-phase-form` — alle Zeile 3) plus weiterer im Audit gefundener: Title-Computation in Controller (`pageTitle` Model-Attribut)
-- `./mvnw verify -Pe2e` grün auf 4.0.6, JaCoCo ≥ 82 % gehalten
+**Carried over from v1.9 deferred (still candidates for v1.11+):**
 
-### B. Strukturelle Daten-Export/Import (Admin)
-
-- **Export:** Admin-Button `Export Backup` → ZIP-Paket mit `data.json` (operative Daten) + `uploads/`-Verzeichnis (Logos, CTC-Grafiken, Race-Attachments)
-- Scope: Seasons → SeasonPhases → SeasonPhaseGroups → PhaseTeams → Teams → SeasonTeams → Drivers → SeasonDrivers → PsnAlias → Matchdays → Matches → Races → RaceLineups → RaceResults → Playoffs → PlayoffMatchups → PlayoffSeeds → RaceScoring → MatchScoring (operative Domain-Daten, ohne Audit-Rauschen)
-- Header mit `schema_version` + `app_version` + `export_date` (Forward-Compat / Inkompatibilitäts-Erkennung)
-- **Import:** Admin-Button `Import Backup` → Upload ZIP → Preview-Screen → Confirm-Dialog
-- **Replace-All Conflict-Policy:** operative Tabellen werden vor Import in einer Transaktion geleert, dann 1:1 wiederhergestellt; Confirm-Dialog mit "Diese Aktion löscht ALLE operativen Daten" Pflicht
-- Schema-Version-Check: ZIP mit nicht passender `schema_version` wird mit klarer Fehlermeldung abgelehnt (kein implizites Upgrade)
-- MVP: ganzes ZIP einlesen (kein Per-Saison-Selector — späteres Milestone-Feature)
-- Audit-Log-Eintrag beim Import (wer, wann, anzahl gewiped Rows pro Tabelle, anzahl restored Rows pro Tabelle)
-
-**Key context:**
-
-- v1.9 endete mit reverteiertem Spring-Boot-Bump wegen Thymeleaf-3.2-Template-Inkompatibilität — v1.10 fixt das Problem strukturell statt nur reaktiv
-- Use-Case Migration dev↔prod ist real: Aktuell nur über `mysqldump` machbar, Admin-UI-Button ist erheblich friction-reduzierend
-- ZIP statt JSON-only: Logos sind oft groß und schwer manuell nachzupflegen — komplette Round-Trip-Fähigkeit ist Gold wert
-- Replace-All ist sicherer als Merge (Schema-Drift kann inkonsistente Zustände erzeugen)
-
-**Carried over from v1.9 deferred (candidates für nachgelagerte v1.11+ Milestones, NICHT v1.10):**
-
-- Quality Gate Lock / CI comment-noise guard (Phase 67 D-06 forward commitment)
-- Plan SUMMARY frontmatter sweep for phases 56/57/62/64 (bookkeeping, ~15 plan SUMMARYs)
 - Per-group matchday generation UI affordance (`SeasonController.generateMatchdays:251` Rule-3 deviation)
 - `StandingsController.java:139` lazy collection style cleanup
 - UAT-02 (legacy season visual smoke against real pre-V4 production data) on next deploy
@@ -157,6 +140,25 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ Cross-cutting regression IT (`SiteGeneratorPhaseAwarenessIT`, 9 @Test methods covering SC1-SC5 + D-22 + D-26) — Phase 62
 - ✓ JaCoCo 82% line gate held with 1246 tests project-wide (1215 Surefire + 31 Failsafe), 87.24% line coverage — Phase 62
 
+### Validated (v1.10)
+
+- ✓ Spring Boot 4.0.5 → 4.0.6 + Thymeleaf 3.1.5.RELEASE pinned (CVE-2026-40478 SpEL canonicalization hardening) — Phase 71
+- ✓ Controller-side `pageTitle` model attributes replace fragment-parameter ternaries across ~80 admin + site templates — Phase 71
+- ✓ `TemplateRenderingSmokeIT` (HTTP 200 + no `TemplateProcessingException` for every `/admin/**` GET) + `exec-maven-plugin` grep-gate fence — Phase 71
+- ✓ Backup wire contract locked: `BackupSchema.SCHEMA_VERSION = 1` (monotonic int), `BackupManifest` record, 24-entity FK-respecting `EXPORT_ORDER` via JPA-Metamodel + Kahn — Phase 72
+- ✓ `@Qualifier("backupObjectMapper")` strict bean co-exists with `@Primary` default (preserves admin REST/AJAX behaviour) — Phase 72
+- ✓ Flyway `V7__data_import_audit.sql` (H2 + MariaDB compatible, LONGTEXT for JSON-shape fields) — Phase 72
+- ✓ Streaming ZIP export — 24 per-entity Jackson MixIns (domain entities annotation-clean), `BackupExportService` `@Transactional(readOnly=true)` with `@EntityGraph` eager-fetch, `StreamingResponseBody`, CSRF-protected POST — Phase 73
+- ✓ Manifest-first import preview, schema-version refusal BEFORE any DB write, ZIP-Slip + ZipBomb defenses, multipart limits raised to 100 MB on Spring + Tomcat — Phase 74
+- ✓ Replace-all import: single `@Transactional` wipe + restore, FK-reverse native-SQL DELETE, `em.flush() + em.clear()`, `JdbcTemplate.batchUpdate` bypasses `AuditingEntityListener`, post-commit upload-tree stage-and-rename with 24h recovery — Phase 75
+- ✓ `BackupImportMariaDbSmokeIT` (Testcontainers Saison-2023 round-trip) + `BackupImportRollbackIT` (50 %-injected exception, asserts pre-import state) — Phase 75
+- ✓ Operational hardening: `ImportLockService` `ReentrantLock` singleton + 409 redirect, persistent yellow read-only banner, `ImportLockedWriteRejector` HandlerInterceptor (HTTP 503 on non-import POSTs, whitelist-on-equals), synchronous auto-backup-before-import safety net — Phase 76
+- ✓ `BackupRoundTripIT` on H2 + MariaDB (24-entity row-count parity + SHA-256 byte-equality on Race + SeasonDriver + Team); README "Backup & Restore" section + GitHub Wiki page — Phase 77
+- ✓ Dockerfile pinned `eclipse-temurin:25-{jdk,jre}-noble`; CI `dockerfile-noble-pin-guard` + full `docker build .` on every PR + push to master — Phase 78
+- ✓ Surefire `forkCount=2C` + Failsafe default-it `forkCount=1C` + `excludedGroups=flaky`; per-package code cleanup sweep across `org.ctc.backup.*` + `domain.*` + `admin.*` + `sitegen` — Phase 79
+- ✓ JaCoCo line coverage 87.80 % (gate 82 %, v1.9 baseline 87.02 %, +0.78 pp despite +24 MixIns / +24 EntityRestorers / +15 backup-service classes) — Phase 79
+- ✓ TESTING.md "Test Invocation Discipline" section, plan-SUMMARY frontmatter normalized for phases 56/57/62/64 — Phase 79
+
 ### Active
 
 (None — awaiting next milestone definition via `/gsd-new-milestone`.)
@@ -249,4 +251,4 @@ The runtime topo-sort returns 24 `EntityRef` instances (CONTEXT.md originally sa
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-09 — v1.9 milestone shipped: Season Phases & Groups, all 15 phases (56-70) verified PASSED, 38/38 requirements satisfied, 1227 unit + 31 Playwright E2E tests green, JaCoCo line coverage 87.02% (gate 82%), live UAT D-22 confirmed Saison 2023 driver import on MariaDB (287/357/0 errors)*
+*Last updated: 2026-05-16 — v1.10 milestone shipped: Spring Boot 4.0.6 Upgrade & Data Export/Import, all 9 phases (71-79) verified, **39/39 requirements satisfied**, 1652 Surefire + 231 Failsafe + 36 Playwright E2E tests green, JaCoCo line coverage 87.80 % (gate 82 %, +0.78 pp vs v1.9 baseline), full export → wipe → import round-trip on H2 + MariaDB (`BackupRoundTripIT`), live 75-HUMAN-UAT 10/10 PASS (Saison 2023 fixture, profile-deviation documented). Audit verdict: passed. Final-gate `./mvnw verify -Pe2e` BUILD SUCCESS, Maven total 11m 11s.*
