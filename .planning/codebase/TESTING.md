@@ -628,19 +628,55 @@ There are NO filename-based `<includes>` / `<excludes>` for test discovery anymo
 
 ## Test Invocation Discipline
 
-(Phase 79 D-08 — codifies the existing `feedback_test_call_optimization` user-memory rule.)
+**Codified from `feedback_test_call_optimization` (Phase 79 D-08).**
 
-When iterating on a fix, **never run `./mvnw verify` repeatedly** — each invocation costs ~13–22 minutes on full E2E. Use targeted invocations:
+### Rule: One Final Full Run Per Phase
 
-| Goal | Command | When |
-|------|---------|------|
-| Compile only | `./mvnw test-compile -q` | After every Java source edit, to catch syntax/import errors before running tests |
-| One unit test class | `./mvnw test -Dtest=ClassName` | Iterating on one specific test |
-| One integration test | `./mvnw verify -Dit.test=ClassNameIT -DfailIfNoTests=false` | Iterating on one IT |
-| Full unit + IT (no E2E) | `./mvnw verify` | Sanity check before commit |
-| Full E2E + JaCoCo | `./mvnw verify -Pe2e` | **One final** verification before opening PR — never as iteration loop |
+Each GSD phase uses **one and only one** `./mvnw verify -Pe2e` invocation as its final gate (D-19 / Phase 77 D-13). This is the only invocation that counts for coverage, E2E smoke, and CI GREEN status.
 
-Per phase, run `./mvnw verify -Pe2e` **at most once** (the final phase-verification step). All earlier validation should use targeted commands.
+Between waves within a phase, use **targeted invocations** for fast feedback:
+
+```bash
+# Run only a single test class
+./mvnw test -Dtest=BackupImportServiceTest
+
+# Run only a single IT class
+./mvnw verify -Dit.test=BackupRoundTripIT
+
+# Run all tests in a package
+./mvnw test -Dtest="org.ctc.backup.service.*"
+
+# Run tests matching a method name pattern
+./mvnw test -Dtest="BackupImportServiceTest#givenValid*"
+```
+
+### Rule: Do Not Re-Run Full Suite Between Waves
+
+Running `./mvnw verify` (or `./mvnw verify -Pe2e`) after every plan task wastes CI minutes and developer time. The full suite is a GATE, not a development loop.
+
+| Context | Invocation |
+|---------|-----------|
+| After implementing a single task | `./mvnw test -Dtest=<AffectedTestClass>` |
+| After per-package cleanup commit (D-03) | `./mvnw test` (unit + IT, no E2E) |
+| After pom.xml / ci.yml change | `./mvnw verify` (full, no E2E) |
+| Phase final gate (D-19) | `./mvnw verify -Pe2e` |
+| Triage a test failure | `./mvnw verify -fae` (fail-at-end, sees all failures) |
+
+### Rule: Run Order for Independence Verification
+
+Before enabling Surefire/Failsafe parallelism, verify test independence:
+
+```bash
+# Reverse alphabetical order — detects setup-dependent ordering
+./mvnw test -Dsurefire.runOrder=reversealphabetical
+
+# Random order — three seeds for statistical confidence
+./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=1234
+./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=5678
+./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=9999
+```
+
+All three random-seed runs must be GREEN before `forkCount` is increased.
 
 ## Common Patterns Summary
 
@@ -658,4 +694,4 @@ Per phase, run `./mvnw verify -Pe2e` **at most once** (the final phase-verificat
 
 ---
 
-*Testing analysis: 2026-04-07*
+*Testing analysis: 2026-04-07 (last updated: 2026-05-15 — Phase 79 D-08 added Test Invocation Discipline section + Test Categorization (`@Tag`) section)*
