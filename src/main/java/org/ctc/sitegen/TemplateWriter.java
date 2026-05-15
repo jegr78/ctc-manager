@@ -9,12 +9,7 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-/**
- * Shared Thymeleaf write collaborator extracted from {@code SiteGeneratorService.writeTemplate}.
- *
- * <p>Behavior is byte-identical to the legacy private method (Plan 0 SC4 invariant — generated
- * HTML must not change after extraction).
- */
+/** Shared Thymeleaf collaborator that renders a template and writes the resulting HTML to disk. */
 @Slf4j
 @Service
 @RequiredArgsConstructor

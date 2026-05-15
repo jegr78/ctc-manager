@@ -23,24 +23,9 @@ import org.thymeleaf.context.Context;
 /**
  * Helper bean for {@code site/driver-ranking.html} page generation.
  *
- * <p>Phase 62 Plan 3 — phase-aware. Generates the legacy
- * {@code /season/{slug}/driver-ranking.html} (cross-phase aggregated, D-11 SC4-clean — data
- * source unchanged: {@link DriverRankingService#aggregateAcrossPhases}) plus per-phase variants
- * {@code driver-ranking-{phaseSlug}.html} using
- * {@link DriverRankingService#calculateRankingForPhase}.
- *
- * <p>UI-SPEC line 333 explicitly authorizes {@code driver-ranking-playoff.html} when the
- * PLAYOFF phase has driver data — this is intentionally distinct from D-08 which governs
- * {@code standings-playoff.html} (NEVER generated for the bracket). Per-phase driver rankings
- * ARE meaningful for PLAYOFF (per-driver points in semifinals/finals); per-phase team standings
- * are not (the bracket already covers what users want for PLAYOFF teams).
- *
- * <p>The phase-tab row's first tab is always labeled "All Phases" (UI-SPEC line 263) and points
- * at the legacy URL. driver-ranking has NO per-group variants — driver-team relationships
- * span groups, the ranking is per-phase only.
- *
- * <p>Single-REGULAR-LEAGUE seasons render driver-ranking.html with no phase-tab row
- * (showPhaseTabs=false) — SC4 backward-compat invariant.
+ * <p>Phase-aware: generates {@code driver-ranking.html} (cross-phase aggregated) plus per-phase
+ * variants {@code driver-ranking-{phaseSlug}.html} including PLAYOFF phases. Driver rankings have
+ * no per-group variants. Single-phase seasons render with no phase-tab row.
  */
 @Slf4j
 @Service

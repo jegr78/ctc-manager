@@ -23,16 +23,9 @@ import org.thymeleaf.context.Context;
 /**
  * Helper bean for {@code site/driver-profile.html} page generation.
  *
- * <p>Phase-62 Plan-0 extraction: body lifted verbatim from
- * {@code SiteGeneratorService.generateDriverProfiles} (lines 348-385 pre-extraction).
- *
- * <p>Phase-62 Plan-4: adds D-15 per-phase results sectioning. When the season has &ge;2 phases
- * AND the driver has results in &ge;2 of them, the {@code resultsByPhase} LinkedHashMap drives a
- * per-phase {@code <h3 class="section-title">} heading per UI-SPEC copy ("Regular Season Results"
- * / "Playoff Results" / "Placement Phase Results"). When the season has only one phase, the
- * page renders byte-identical to today (SC4 invariant).
- *
- * <p>Single profile URL preserved per (season, driver) — no per-phase URL forks (D-16).
+ * <p>When the season has &ge;2 phases and the driver has results in &ge;2 of them, results are
+ * grouped by phase with a heading per section. Single-phase seasons render a flat result list.
+ * One profile URL per (season, driver) — no per-phase URL forks.
  */
 @Slf4j
 @Service

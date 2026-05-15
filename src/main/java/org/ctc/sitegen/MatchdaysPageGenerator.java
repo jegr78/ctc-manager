@@ -34,18 +34,9 @@ import org.thymeleaf.context.Context;
  * Helper bean for {@code site/matchday.html} (per-matchday detail) and
  * {@code site/matchdays.html} (index list) generation.
  *
- * <p>Plan 0 (Open Question 4): one class with two public entry methods —
- * {@link #generateIndex(GenerationContext, SiteGeneratorService.GenerationResult)} writes the
- * list page; {@link #generateDetails(GenerationContext, SiteGeneratorService.GenerationResult)}
- * writes per-matchday detail pages. Detail pages stay phase-agnostic in Plan 2 — their slugs
- * are unique per season already.
- *
- * <p>Phase 62 Plan 2 — phase- and group-aware index. Generates the legacy
- * {@code /season/{slug}/matchdays.html} (REGULAR-only matchdays — Open Question 2 lock) plus
- * per-phase variants {@code matchdays-{phaseSlug}.html} (skip PLAYOFF — D-08) plus per-group
- * variants {@code matchdays-{phaseSlug}-group-{groupSlug}.html} for GROUPS-layout phases.
- *
- * <p>Single-REGULAR-LEAGUE seasons render no tab rows on matchdays.html (SC4 backward-compat).
+ * <p>Phase- and group-aware index: generates {@code matchdays.html} (REGULAR-only) plus per-phase
+ * variants {@code matchdays-{phaseSlug}.html} (PLAYOFF skipped) plus per-group variants for
+ * GROUPS-layout phases. Detail pages are phase-agnostic. Single-phase seasons render with no tabs.
  */
 @Slf4j
 @Service

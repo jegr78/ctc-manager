@@ -27,17 +27,9 @@ import org.thymeleaf.context.Context;
 /**
  * Helper bean for {@code site/team-profile.html} page generation.
  *
- * <p>Phase-62 Plan-0 extraction: body lifted verbatim from
- * {@code SiteGeneratorService.generateTeamProfiles} (lines 269-346 pre-extraction). Behavior
- * is byte-identical to the legacy private method (SC4 invariant).
- *
- * <p>Critical preservation: the RaceLineup-as-Source-of-Truth pattern (lines 296-313 of the
- * legacy code) is lifted verbatim per {@code feedback_racelineup_source_of_truth}.
- *
- * <p>{@code copyLogoToAssets} is duplicated from {@code SiteGeneratorService} per the
- * RESEARCH.md interfaces note (choice b): the orchestrator's
- * {@code generateTeamsOverview} still uses its own copy, so the helper has its own copy too.
- * The two copies are 27 LOC each and decouple the helpers cleanly without circular deps.
+ * <p>Uses {@code RaceLineup} as the source of truth for driver-team assignments.
+ * {@code copyLogoToAssets} is kept local to avoid circular dependencies with
+ * {@code SiteGeneratorService}.
  */
 @Slf4j
 @Service
