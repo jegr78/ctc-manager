@@ -25,6 +25,8 @@
 
 ### Seed 1234
 
+#### Initial run (pre-fix) — BUILD FAILURE
+
 | Column | Value |
 |--------|-------|
 | Command | `./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=1234 -Dspring.profiles.active=dev --no-transfer-progress` |
@@ -41,9 +43,30 @@ Failing tests: `TestDataServiceIntegrationTest.givenDevSeed_whenStarted_thenSwis
 
 Error: `java.lang.AssertionError: Season not found: year=2024 name=Regular Season`
 
-Root cause: With seed=1234, a sitegen test class (one of the 7 classes that calls `Flyway.clean()` + `Flyway.migrate()` + `testDataService.seed()` in `@BeforeAll`) runs BEFORE `TestDataServiceIntegrationTest`. That sitegen test's `@DirtiesContext` closes the Spring context after completion. The next Spring context created for `TestDataServiceIntegrationTest` boots `DevDataSeeder`, which calls `testDataService.seed()`. However, `TestDataServiceIntegrationTest` is `@Transactional` — each test method is wrapped in a rolled-back transaction. If the `DevDataSeeder` seed runs WITHIN the `@Transactional` boundary that gets rolled back, or if the H2 in-memory DB `DB_CLOSE_DELAY=-1` state interacts with the Flyway.clean() that occurred in the sitegen test's context, the seasons data can be absent. This failure is **reproducible** (confirmed on two consecutive seed=1234 runs).
+Root cause: With seed=1234, a sitegen test class (one of the 7 classes that calls `Flyway.clean()` + `Flyway.migrate()` + `testDataService.seed()` in `@BeforeAll`) runs BEFORE `TestDataServiceIntegrationTest`. That sitegen test's `@DirtiesContext` closes the Spring context after completion. The next Spring context for `TestDataServiceIntegrationTest` boots `DevDataSeeder`, which calls `testDataService.seed()` — but `seasonRepository.count() > 0` is true from the prior sitegen seed (H2 `DB_CLOSE_DELAY=-1` keeps the schema alive across Spring context reloads), so `DevDataSeeder` short-circuits without re-creating the canonical seed fixtures `TestDataServiceIntegrationTest` queries. This failure was **reproducible** (confirmed on two consecutive seed=1234 runs).
 
-This is a confirmed test-ordering dependency bug. Plan 03 (parallelization) is **BLOCKED** until this is resolved.
+#### Inline fix applied (Wave 1 inline-fix)
+
+`TestDataServiceIntegrationTest` was made independent of preceding context state by adopting the canonical project pattern used by sitegen tests:
+
+- Added `@TestInstance(TestInstance.Lifecycle.PER_CLASS)` to enable non-static `@BeforeAll`.
+- Added `@DirtiesContext` to evict the Spring context after the class.
+- Added `@BeforeAll setUp()` that runs `Flyway.configure().cleanDisabled(false)…clean()` + `Flyway.configure()…migrate()` + `testDataService.seed()` — guaranteeing fresh DB state regardless of preceding test classes.
+- Kept `@Transactional` on the class to preserve lazy-loading support (`Season.getPhases()`, `Season.getSeasonTeams()`, `Race.getMatchday()` etc.) inside test methods. `@BeforeAll` runs outside any test transaction, so its commits are visible to all subsequent `@Test` methods.
+
+#### Re-run (post-fix) — BUILD SUCCESS
+
+| Column | Value |
+|--------|-------|
+| Command | `./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=1234 -Dspring.profiles.active=dev --no-transfer-progress` |
+| Duration | 6m 34s real |
+| Build result | **BUILD SUCCESS** |
+| Tests run | 1410 |
+| Failures | 0 |
+| Errors | 0 |
+| Skipped | 5 |
+
+**Result: GREEN — Ordering dependency RESOLVED. Plan 03 (parallelization) UNBLOCKED.**
 
 ### Seed 5678
 
@@ -96,15 +119,16 @@ This is a confirmed test-ordering dependency bug. Plan 03 (parallelization) is *
 
 ## Verdict
 
-**Independence audit PARTIAL: RED on seed=1234.**
+**Independence audit GREEN after Wave 1 inline-fix.**
 
 - Surefire reverse-order: GREEN
-- Surefire seed=1234: **RED** — reproducible ordering dependency in `TestDataServiceIntegrationTest` (2 failures)
+- Surefire seed=1234 pre-fix: **RED** — reproducible ordering dependency in `TestDataServiceIntegrationTest` (2 failures)
+- Surefire seed=1234 post-fix: **GREEN** — Wave 1 inline-fix on `TestDataServiceIntegrationTest` (Flyway clean+migrate+seed in `@BeforeAll`, matches sitegen pattern) resolves the ordering dependency
 - Surefire seed=5678: GREEN
 - Surefire seed=9999: GREEN
 - Failsafe reverse-order: GREEN
 
-**Plan 03 (parallelization) is BLOCKED** until the seed=1234 ordering dependency is resolved. The failing class is `TestDataServiceIntegrationTest` — its dependency on `DevDataSeeder.seed()` not being corrupted by a prior `Flyway.clean()` call from a sitegen test is order-dependent.
+**Plan 03 (parallelization) is UNBLOCKED.** The seed=1234 ordering dependency was a real test-isolation bug in `TestDataServiceIntegrationTest` — it depended on shared H2 `DB_CLOSE_DELAY=-1` state surviving across Spring context reloads, which made `DevDataSeeder.run()` short-circuit (`count > 0` from a preceding sitegen test's seed) without re-creating the canonical seed fixtures. The fix makes the class self-sufficient (its own clean+migrate+seed in `@BeforeAll`).
 
 ---
 
