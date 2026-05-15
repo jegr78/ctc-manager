@@ -137,7 +137,7 @@ See: milestones/v1.9-ROADMAP.md for full details
 - [ ] **Phase 74: Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate** — Multipart upload, manifest read-first + schema-version refusal before any DB write, ZIP-Slip + ZipBomb defenses, multipart limits + `MaxUploadSizeExceededException` mapping
 - [x] **Phase 75: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT** — Single `@Transactional` wipe + restore (FK-reverse DELETE, `JdbcTemplate.batchUpdate` bypassing audit listeners), post-commit upload-tree restore, audit row, mid-restore-rollback IT, live MariaDB UAT against Saison-2023 fixture (completed 2026-05-14)
 - [x] **Phase 76: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import** — `ImportLockService` `ReentrantLock` singleton, `@ControllerAdvice` write-rejection during import, persistent yellow banner, synchronous auto-export to `data/.import-backups/<ts>/` before wipe (completed 2026-05-14)
-- [ ] **Phase 77: Final UAT + JaCoCo Hold + Round-Trip Test + Documentation** — `./mvnw verify -Pe2e` green on H2 + MariaDB profiles, JaCoCo line coverage ≥ 82 %, `BackupRoundTripIT`, README + WIKI "Backup & Restore" section, milestone closure
+- [x] **Phase 77: Final UAT + JaCoCo Hold + Round-Trip Test + Documentation** — `./mvnw verify -Pe2e` green on H2 + MariaDB profiles, JaCoCo line coverage ≥ 82 %, `BackupRoundTripIT`, README + WIKI "Backup & Restore" section, milestone closure (completed 2026-05-15)
 - [ ] **Phase 78: Docker Release Image Fix — Pin Base Image to Ubuntu Noble for Playwright Compatibility** — Pin both Dockerfile stages to `eclipse-temurin:25-{jdk,jre}-noble` so the release workflow's `playwright install chromium` step stops failing on the silently-rotated Ubuntu 26.04 base
 
 ## Phase Details
@@ -329,8 +329,8 @@ Plans:
 - [x] 77-03-PLAN.md — Wave 2: 3 playwright-cli screenshots under .screenshots/77/ (backup page + preview screen + read-only banner) (QUAL-05)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 77-04-PLAN.md — Wave 3: README "## Backup & Restore" section between Features and Quick Start, ~30-50 lines, cross-links to runbook + wiki (QUAL-05)
-- [ ] 77-05-PLAN.md — Wave 3: GitHub Wiki page Backup-and-Restore.md pushed to external ctc-manager.wiki.git with 3 raw-URL screenshot embeds (QUAL-05)
+- [x] 77-04-PLAN.md — Wave 3: README "## Backup & Restore" section between Features and Quick Start, ~30-50 lines, cross-links to runbook + wiki (QUAL-05)
+- [x] 77-05-PLAN.md — Wave 3: GitHub Wiki page Backup-and-Restore.md pushed to external ctc-manager.wiki.git with 3 raw-URL screenshot embeds (QUAL-05)
 
 ### Phase 78: Docker Release Image Fix — Pin Base Image to Ubuntu Noble for Playwright Compatibility
 
@@ -382,5 +382,5 @@ Plans:
 | 74. Backup Import Preview + ZIP Hardening + Multipart + Schema Gate | 0/TBD | Not started | — |
 | 75. Replace-All Transaction + JPA Auditing Bypass + MariaDB UAT | 10/10 | Complete    | 2026-05-14 |
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 4/4 | Complete    | 2026-05-14 |
-| 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 3/5 | In Progress|  |
+| 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 5/5 | Complete   | 2026-05-15 |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
