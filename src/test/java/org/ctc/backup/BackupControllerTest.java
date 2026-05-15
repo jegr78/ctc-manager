@@ -21,6 +21,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -106,8 +108,14 @@ class BackupControllerTest {
 
 	@Test
 	void givenArchiveServiceWired_whenPostExport_thenWriteZipIsInvoked() throws Exception {
-		// when
-		mockMvc.perform(post("/admin/backup/export"))
+		// when — POST /admin/backup/export returns ResponseEntity<StreamingResponseBody>;
+		// the streaming body lambda (which calls writeZip) is only invoked AFTER MockMvc
+		// asyncDispatches the response. Without asyncDispatch the body is never executed
+		// and the Mockito verify below sees zero interactions.
+		MvcResult result = mockMvc.perform(post("/admin/backup/export"))
+				.andExpect(status().isOk())
+				.andReturn();
+		mockMvc.perform(MockMvcRequestBuilders.asyncDispatch(result))
 				.andExpect(status().isOk());
 
 		// then

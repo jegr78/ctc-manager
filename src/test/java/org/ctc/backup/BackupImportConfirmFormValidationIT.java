@@ -3,6 +3,7 @@ package org.ctc.backup;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.service.BackupArchiveService;
 import org.ctc.backup.service.BackupImportService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,13 +11,19 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -46,6 +53,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
 class BackupImportConfirmFormValidationIT {
+
+	private static final Path IMPORT_BACKUPS_ROOT;
+	static {
+		try {
+			IMPORT_BACKUPS_ROOT = Files.createTempDirectory("ctc-import-backups-confirm-validation-it-");
+			IMPORT_BACKUPS_ROOT.toFile().deleteOnExit();
+		} catch (IOException e) {
+			throw new IllegalStateException("Failed to allocate import-backups tempdir", e);
+		}
+	}
+
+	@DynamicPropertySource
+	static void overrideImportBackupsDir(DynamicPropertyRegistry registry) {
+		registry.add("app.backup.import-backups-dir", IMPORT_BACKUPS_ROOT::toString);
+	}
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -84,6 +106,29 @@ class BackupImportConfirmFormValidationIT {
 		BackupImportPreview preview = backupImportService.stage(file);
 		assertThat(preview).isNotNull();
 		return preview.stagingId().toString();
+	}
+
+	/**
+	 * Wipe IMPORT_BACKUPS_ROOT contents between tests so two @Test methods that exercise
+	 * import-execute within the same second do not collide on
+	 * {@code &lt;tmp&gt;/&lt;ts&gt;/auto-backup-before-import.zip}.
+	 */
+	@AfterEach
+	void cleanImportBackupsRoot() throws IOException {
+		if (!Files.exists(IMPORT_BACKUPS_ROOT)) {
+			return;
+		}
+		try (Stream<Path> walk = Files.walk(IMPORT_BACKUPS_ROOT)) {
+			walk.sorted(Comparator.reverseOrder())
+					.filter(p -> !p.equals(IMPORT_BACKUPS_ROOT))
+					.forEach(p -> {
+						try {
+							Files.deleteIfExists(p);
+						} catch (IOException ignored) {
+							// best-effort cleanup
+						}
+					});
+		}
 	}
 
 	// -------------------------------------------------------------------------

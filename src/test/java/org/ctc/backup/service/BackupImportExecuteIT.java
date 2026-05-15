@@ -9,6 +9,7 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -17,6 +18,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,6 +32,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Comparator;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,6 +64,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BackupImportExecuteIT {
+
+    private static final Path IMPORT_BACKUPS_ROOT;
+    static {
+        try {
+            IMPORT_BACKUPS_ROOT = Files.createTempDirectory("ctc-import-backups-execute-it-");
+            IMPORT_BACKUPS_ROOT.toFile().deleteOnExit();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to allocate import-backups tempdir", e);
+        }
+    }
+
+    @DynamicPropertySource
+    static void overrideImportBackupsDir(DynamicPropertyRegistry registry) {
+        registry.add("app.backup.import-backups-dir", IMPORT_BACKUPS_ROOT::toString);
+    }
 
     @Autowired
     private BackupImportService backupImportService;
@@ -92,6 +112,29 @@ class BackupImportExecuteIT {
         testDataService.seed();
         stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
         Files.createDirectories(stagingDir);
+    }
+
+    /**
+     * Wipe IMPORT_BACKUPS_ROOT contents between tests so two @Test methods that fall in the
+     * same second cannot collide on data/.import-backups/&lt;ts&gt;/auto-backup-before-import.zip
+     * (BackupImportService generates the ts via Instant.now().truncatedTo(SECONDS)).
+     */
+    @AfterEach
+    void cleanImportBackupsRoot() throws IOException {
+        if (!Files.exists(IMPORT_BACKUPS_ROOT)) {
+            return;
+        }
+        try (Stream<Path> walk = Files.walk(IMPORT_BACKUPS_ROOT)) {
+            walk.sorted(Comparator.reverseOrder())
+                    .filter(p -> !p.equals(IMPORT_BACKUPS_ROOT))
+                    .forEach(p -> {
+                        try {
+                            Files.deleteIfExists(p);
+                        } catch (IOException ignored) {
+                            // best-effort cleanup
+                        }
+                    });
+        }
     }
 
     // -------------------------------------------------------------------------

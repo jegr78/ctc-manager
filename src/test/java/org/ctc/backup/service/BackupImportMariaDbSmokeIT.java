@@ -98,6 +98,16 @@ class BackupImportMariaDbSmokeIT {
             .withUsername("ctc")
             .withPassword("test");
 
+    private static final Path IMPORT_BACKUPS_ROOT;
+    static {
+        try {
+            IMPORT_BACKUPS_ROOT = Files.createTempDirectory("ctc-import-backups-mariadb-smoke-it-");
+            IMPORT_BACKUPS_ROOT.toFile().deleteOnExit();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to allocate import-backups tempdir", e);
+        }
+    }
+
     @DynamicPropertySource
     static void overrideJdbcUrl(DynamicPropertyRegistry registry) {
         // Append the Phase 75 RESEARCH §10 batch-rewrite flag so the production
@@ -108,6 +118,9 @@ class BackupImportMariaDbSmokeIT {
         registry.add("spring.datasource.username", mariadb::getUsername);
         registry.add("spring.datasource.password", mariadb::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.mariadb.jdbc.Driver");
+        // Isolate auto-backup-before-import ZIP path from the real data/.import-backups/
+        // to prevent same-second collisions with other import-execute ITs.
+        registry.add("app.backup.import-backups-dir", IMPORT_BACKUPS_ROOT::toString);
     }
 
     @Autowired

@@ -15,6 +15,7 @@ import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -42,12 +43,14 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -91,6 +94,51 @@ class BackupRoundTripIT {
 
 	/** Defensive table-name allow-list matching the production SAFE_TABLE_NAME guard. */
 	private static final Pattern SAFE_TABLE_NAME = Pattern.compile("^[a-z_]+$");
+
+	/** Per-test-class temp root for {@code app.backup.import-backups-dir} — prevents
+	 *  same-second collisions on {@code data/.import-backups/&lt;ts&gt;/auto-backup-before-import.zip}
+	 *  when this IT runs back-to-back with other import-execute ITs. Inherited by
+	 *  {@link H2RoundTripTests} and {@link MariaDbRoundTripTests} via the shared
+	 *  {@link DynamicPropertySource}. */
+	private static final Path IMPORT_BACKUPS_ROOT;
+	static {
+		try {
+			IMPORT_BACKUPS_ROOT = Files.createTempDirectory("ctc-import-backups-roundtrip-it-");
+			IMPORT_BACKUPS_ROOT.toFile().deleteOnExit();
+		} catch (IOException e) {
+			throw new IllegalStateException("Failed to allocate import-backups tempdir", e);
+		}
+	}
+
+	@DynamicPropertySource
+	static void overrideImportBackupsDir(DynamicPropertyRegistry registry) {
+		registry.add("app.backup.import-backups-dir", IMPORT_BACKUPS_ROOT::toString);
+	}
+
+	/**
+	 * Best-effort recursive content wipe — keeps the directory itself, deletes everything
+	 * inside it. Used by {@link H2RoundTripTests#cleanImportBackupsRoot()} and
+	 * {@link MariaDbRoundTripTests#cleanImportBackupsRoot()} to prevent two consecutive
+	 * @Test methods from colliding on
+	 * {@code IMPORT_BACKUPS_ROOT/<ts>/auto-backup-before-import.zip} when their
+	 * {@code Instant.now().truncatedTo(SECONDS)} timestamps land in the same second.
+	 */
+	static void cleanDirContents(Path dir) throws IOException {
+		if (!Files.exists(dir)) {
+			return;
+		}
+		try (Stream<Path> walk = Files.walk(dir)) {
+			walk.sorted(Comparator.reverseOrder())
+					.filter(p -> !p.equals(dir))
+					.forEach(p -> {
+						try {
+							Files.deleteIfExists(p);
+						} catch (IOException ignored) {
+							// best-effort cleanup
+						}
+					});
+		}
+	}
 
 	@Autowired
 	private BackupArchiveService archiveService;
@@ -265,11 +313,21 @@ class BackupRoundTripIT {
 
 		Path stagingDir;
 
+		@DynamicPropertySource
+		static void overrideImportBackupsDirH2(DynamicPropertyRegistry registry) {
+			registry.add("app.backup.import-backups-dir", IMPORT_BACKUPS_ROOT::toString);
+		}
+
 		@BeforeEach
 		void seedFixture() throws IOException {
 			testDataService.seed();
 			stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
 			Files.createDirectories(stagingDir);
+		}
+
+		@AfterEach
+		void cleanImportBackupsRoot() throws IOException {
+			cleanDirContents(IMPORT_BACKUPS_ROOT);
 		}
 
 		@Test
@@ -446,6 +504,9 @@ class BackupRoundTripIT {
 			registry.add("spring.datasource.username", mariadb::getUsername);
 			registry.add("spring.datasource.password", mariadb::getPassword);
 			registry.add("spring.datasource.driver-class-name", () -> "org.mariadb.jdbc.Driver");
+			// Isolate auto-backup-before-import ZIP path from the real data/.import-backups/
+			// to prevent same-second collisions with other import-execute ITs.
+			registry.add("app.backup.import-backups-dir", IMPORT_BACKUPS_ROOT::toString);
 		}
 
 		@Autowired
@@ -489,6 +550,11 @@ class BackupRoundTripIT {
 			testDataService.seed();
 			stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
 			Files.createDirectories(stagingDir);
+		}
+
+		@AfterEach
+		void cleanImportBackupsRoot() throws IOException {
+			cleanDirContents(IMPORT_BACKUPS_ROOT);
 		}
 
 		@Test
