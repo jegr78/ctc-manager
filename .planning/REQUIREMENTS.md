@@ -21,10 +21,10 @@ Requirements for milestone v1.10. Each maps to roadmap phases.
 
 ### SCHEMA — Backup Wire Contract & Manifest
 
-- [ ] **SCHEMA-01**: Statisches `BackupSchema.SCHEMA_VERSION`-Constant (Integer, Wert `1` für v1.10); bei späterer Schema-Drift manuell zu bumpen
-- [ ] **SCHEMA-02**: `BackupManifest`-Record mit Feldern `schema_version` (int), `app_version` (String, aus `pom.xml` resolved), `export_date` (ISO-8601 Instant), `table_counts` (Map<String, Long>); seriaisiert als `manifest.json` und ist FIRST entry im ZIP (Read-Order-Determinismus)
-- [ ] **SCHEMA-03**: Flyway-Migration `V7__data_import_audit.sql` erstellt Tabelle `data_import_audit` (id UUID PK, executed_at TIMESTAMP, executed_by VARCHAR, schema_version INT, table_counts_wiped JSON, table_counts_restored JSON, source_filename VARCHAR, success BOOLEAN); H2 + MariaDB kompatibel
-- [ ] **SCHEMA-04**: `@Qualifier("backupObjectMapper")` `ObjectMapper`-Bean konfiguriert explizit mit `FAIL_ON_UNKNOWN_PROPERTIES=true`, `WRITE_DATES_AS_TIMESTAMPS=false`, `JavaTimeModule`, allen Per-Entity-MixIns; pollutet NICHT den Default-Spring-`ObjectMapper` (Isolation gegen unbeabsichtigte Wirkung auf admin REST/AJAX-Pfade)
+- [x] **SCHEMA-01**: Statisches `BackupSchema.SCHEMA_VERSION`-Constant (Integer, Wert `1` für v1.10); bei späterer Schema-Drift manuell zu bumpen
+- [x] **SCHEMA-02**: `BackupManifest`-Record mit Feldern `schema_version` (int), `app_version` (String, aus `pom.xml` resolved), `export_date` (ISO-8601 Instant), `table_counts` (Map<String, Long>); seriaisiert als `manifest.json` und ist FIRST entry im ZIP (Read-Order-Determinismus)
+- [x] **SCHEMA-03**: Flyway-Migration `V7__data_import_audit.sql` erstellt Tabelle `data_import_audit` (id UUID PK, executed_at TIMESTAMP, executed_by VARCHAR, schema_version INT, table_counts_wiped JSON, table_counts_restored JSON, source_filename VARCHAR, success BOOLEAN); H2 + MariaDB kompatibel
+- [x] **SCHEMA-04**: `@Qualifier("backupObjectMapper")` `ObjectMapper`-Bean konfiguriert explizit mit `FAIL_ON_UNKNOWN_PROPERTIES=true`, `WRITE_DATES_AS_TIMESTAMPS=false`, `JavaTimeModule`, allen Per-Entity-MixIns; pollutet NICHT den Default-Spring-`ObjectMapper` (Isolation gegen unbeabsichtigte Wirkung auf admin REST/AJAX-Pfade)
 
 ### EXPORT — Data Export
 
@@ -38,39 +38,39 @@ Requirements for milestone v1.10. Each maps to roadmap phases.
 
 ### IMPORT — Data Import
 
-- [ ] **IMPORT-01**: `POST /admin/backup/import-preview` (multipart) speichert ZIP unter `data/{profile}/backup-staging/upload-{uuid}.zip` (konfigurierbar via `app.backup.staging-dir`), liest Manifest und ZIP-Inhalt, rendert `BackupPreview`-Page mit Per-Tabelle-Wipe+Restore-Counts
-- [ ] **IMPORT-02**: Schema-Version-Check VOR jeglichem DB-Schreibzugriff: bei `manifest.schema_version != BackupSchema.SCHEMA_VERSION` HTTP 400 mit klar admin-lesbarer Fehlermeldung („Backup wurde mit Schema-Version X erstellt, aktuelle Version Y, kein Import möglich") über Flash-Message; DB unverändert
-- [ ] **IMPORT-03**: Preview-Screen zeigt: Per-Tabelle Anzahl current rows vs imported rows, Anzahl Files in `uploads/`, schema_version match indicator. Preview-State ist STATELESS — Re-Parse beim Execute aus dem staging-Path; kein `@SessionAttributes` (D-15-Pattern aus v1.8)
-- [ ] **IMPORT-04**: `POST /admin/backup/import-execute` rendert Confirm-Dialog (vor tatsächlicher Ausführung) mit explizitem Wording „⚠ Diese Aktion löscht ALLE operativen Daten und ersetzt sie durch den Backup-Inhalt. Diese Aktion kann nicht rückgängig gemacht werden."; Pflicht-Bestätigungs-Checkbox („Ich verstehe und bin Admin dieser Liga") + Submit-Button — JS-Confirm-Dialog ZUSÄTZLICH zur Server-Seite
+- [x] **IMPORT-01**: `POST /admin/backup/import-preview` (multipart) speichert ZIP unter `data/{profile}/backup-staging/upload-{uuid}.zip` (konfigurierbar via `app.backup.staging-dir`), liest Manifest und ZIP-Inhalt, rendert `BackupPreview`-Page mit Per-Tabelle-Wipe+Restore-Counts
+- [x] **IMPORT-02**: Schema-Version-Check VOR jeglichem DB-Schreibzugriff: bei `manifest.schema_version != BackupSchema.SCHEMA_VERSION` HTTP 400 mit klar admin-lesbarer Fehlermeldung („Backup wurde mit Schema-Version X erstellt, aktuelle Version Y, kein Import möglich") über Flash-Message; DB unverändert
+- [x] **IMPORT-03**: Preview-Screen zeigt: Per-Tabelle Anzahl current rows vs imported rows, Anzahl Files in `uploads/`, schema_version match indicator. Preview-State ist STATELESS — Re-Parse beim Execute aus dem staging-Path; kein `@SessionAttributes` (D-15-Pattern aus v1.8)
+- [x] **IMPORT-04**: `POST /admin/backup/import-execute` rendert Confirm-Dialog (vor tatsächlicher Ausführung) mit explizitem Wording „⚠ Diese Aktion löscht ALLE operativen Daten und ersetzt sie durch den Backup-Inhalt. Diese Aktion kann nicht rückgängig gemacht werden."; Pflicht-Bestätigungs-Checkbox („Ich verstehe und bin Admin dieser Liga") + Submit-Button — JS-Confirm-Dialog ZUSÄTZLICH zur Server-Seite
 - [x] **IMPORT-05**: Replace-All-Wipe + Restore in einer einzigen `@Transactional`-Transaktion: (a) `Team.parentTeam = NULL`-Pre-Step (UPDATE statement) entkoppelt Self-FK; (b) FK-Reverse-Order DELETE via native SQL `EntityManager.createNativeQuery("DELETE FROM ...").executeUpdate()` über alle ~22 operativen Tabellen; (c) `em.flush() + em.clear()`; (d) Restore via `JdbcTemplate.batchUpdate` (bypassed `AuditingEntityListener` → `created_at`/`updated_at` aus Export bleiben erhalten); (e) `data_import_audit`-Row geschrieben
 - [x] **IMPORT-06**: Post-Commit (also AUSSERHALB der DB-Transaktion, NACH `tx.commit()`): `uploads/`-Ordner-Restore via stage-and-rename — der bestehende `data/{profile}/uploads/`-Tree wird umbenannt nach `data/.import-backups/<ts>/uploads-old/`, der Import-Tree wird hineinkopiert, dann atomic-rename. Alter Tree verbleibt 24 h als manuelles Recovery-Net
 - [x] **IMPORT-07**: Audit-Log-Eintrag in `data_import_audit` bei Import-Erfolg (timestamp, user via Spring Security `Authentication.getName()`, schema_version, per-table wipe + restore counts als JSON, source_filename aus Multipart, success=true). Bei Fehler success=false + Stack-Trace im SLF4J-Log
-- [ ] **IMPORT-08**: Tabelle `data_import_audit` ist EXPLIZIT AUSSERHALB des Export-Scope — ihre Rows überleben jeden Import (operative Metadata über die Liga-Migration, nicht Liga-Daten selbst). Documented in PROJECT.md Decisions
+- [x] **IMPORT-08**: Tabelle `data_import_audit` ist EXPLIZIT AUSSERHALB des Export-Scope — ihre Rows überleben jeden Import (operative Metadata über die Liga-Migration, nicht Liga-Daten selbst). Documented in PROJECT.md Decisions
 
 ### SECU — Security & Operations
 
-- [ ] **SECU-01**: ZIP-Slip-Defense: jeder ZipEntry-Path wird gegen `uploadDir.toRealPath()` validiert (`startsWith`-Check); absolute Paths und `..` werden abgelehnt; Nutzung der bestehenden `FileStorageService.store()` SECU-02-Defense aus v1.1 (Wiederverwendung statt Duplikat)
-- [ ] **SECU-02**: ZipBomb-Defense: per-Entry max 50 MB (uncompressed), total max 500 MB, max 50.000 Entries; bei Überschreitung HTTP 400 + Flash-Message „ZIP exceeds size limits"
-- [ ] **SECU-03**: Multipart-Limits in `application.yml` angehoben: `spring.servlet.multipart.max-file-size=100MB`, `spring.servlet.multipart.max-request-size=100MB`, `server.tomcat.max-http-form-post-size=104857600`, `server.tomcat.max-swallow-size=104857600` (Tomcat-Limits überschreiben sonst Spring-Limits stillschweigend)
-- [ ] **SECU-04**: `MaxUploadSizeExceededException` in `GlobalExceptionHandler` mit lesbarer Flash-Message gemappt („Backup-Datei überschreitet die Maximalgröße von 100 MB. Bitte komprimieren oder kontaktieren Sie den Admin.")
+- [x] **SECU-01**: ZIP-Slip-Defense: jeder ZipEntry-Path wird gegen `uploadDir.toRealPath()` validiert (`startsWith`-Check); absolute Paths und `..` werden abgelehnt; Nutzung der bestehenden `FileStorageService.store()` SECU-02-Defense aus v1.1 (Wiederverwendung statt Duplikat)
+- [x] **SECU-02**: ZipBomb-Defense: per-Entry max 50 MB (uncompressed), total max 500 MB, max 50.000 Entries; bei Überschreitung HTTP 400 + Flash-Message „ZIP exceeds size limits"
+- [x] **SECU-03**: Multipart-Limits in `application.yml` angehoben: `spring.servlet.multipart.max-file-size=100MB`, `spring.servlet.multipart.max-request-size=100MB`, `server.tomcat.max-http-form-post-size=104857600`, `server.tomcat.max-swallow-size=104857600` (Tomcat-Limits überschreiben sonst Spring-Limits stillschweigend)
+- [x] **SECU-04**: `MaxUploadSizeExceededException` in `GlobalExceptionHandler` mit lesbarer Flash-Message gemappt („Backup-Datei überschreitet die Maximalgröße von 100 MB. Bitte komprimieren oder kontaktieren Sie den Admin.")
 - [x] **SECU-05**: Concurrent-Import-Lock: `ImportLockService` mit `ReentrantLock`-Singleton (`@Service` `@Scope("singleton")`); zweiter parallel ausgeführter Import wird mit HTTP 409 + Flash-Message „Ein anderer Import läuft bereits — bitte warten" abgelehnt
 - [x] **SECU-06**: Read-Only-Banner während Import: persistent yellow Banner auf allen Admin-Pages „Import läuft — Schreibzugriff temporär gesperrt"; `@ControllerAdvice`-Filter rejected POSTs auf andere `/admin/**`-Routes mit HTTP 503 während aktivem Import-Lock; Import-Execute-Route selbst ist whitelisted
 - [x] **SECU-07**: Auto-Backup-Before-Import: vor `IMPORT-05`-Wipe wird automatisch ein Export nach `data/.import-backups/<ts>/auto-backup-before-import.zip` geschrieben (synchron, blockend — wenn Export fehlschlägt, wird Import abgebrochen). Recovery-Net falls Import schiefgeht trotz Transaktion
 
 ### QUAL — Quality, Testing & Documentation
 
-- [ ] **QUAL-01**: JaCoCo line coverage ≥ 82 % gehalten (entspricht v1.9-Baseline 87.02 %; Komfort-Buffer für neue Code-Pfade vorhanden)
-- [ ] **QUAL-02**: Round-Trip-IT (`BackupRoundTripIT`) auf H2 UND MariaDB Profilen: export → wipe → import → assert per-table row counts equal + SHA-256 hash ≥ 3 Sample-Entities byte-equal nach Re-Serialisierung. MariaDB-Profile via `mariadb-migration-smoke.yml`-CI-Workflow analog zu v1.9
-- [x] **QUAL-03**: Live UAT auf lokaler MariaDB mit Saison-2023-Fixture (siehe v1.9 D-22 Pattern): export → DB-Wipe → import → manuelle Verifikation dass Standings, Driver-Ranking, Phase-Breakdowns identisch sind. Documented in `<phase>-HUMAN-UAT.md`
-- [ ] **QUAL-04**: Mid-Restore-Failure-Rollback-IT (`BackupImportRollbackIT`): inject Exception nach 50 % der Restore-Schleife → assert dass DB-State exakt der Pre-Import-Zustand ist (alle Original-Rows da, keine Import-Row, audit-log row mit success=false)
-- [ ] **QUAL-05**: README-Sektion + WIKI-Page „Backup & Restore" mit Step-by-Step-Anleitung (Export-Workflow, Import-Workflow, Schema-Version-Erklärung, Recovery aus `data/.import-backups/<ts>/`); Screenshots optional. Documented in `docs/site/` und `wiki/`
+- [x] **QUAL-01**: JaCoCo line coverage ≥ 82 % gehalten (entspricht v1.9-Baseline 87.02 %; Komfort-Buffer für neue Code-Pfade vorhanden)
+- [ ] **QUAL-02**: Round-Trip-IT (`BackupRoundTripIT`) auf H2 UND MariaDB Profilen: export → wipe → import → assert per-table row counts equal + SHA-256 hash ≥ 3 Sample-Entities byte-equal nach Re-Serialisierung. MariaDB-Profile via `mariadb-migration-smoke.yml`-CI-Workflow analog zu v1.9 _(H2 satisfied; MariaDB local run pending operator confirmation — see Audit)_
+- [x] **QUAL-03**: Live UAT auf lokaler MariaDB mit Saison-2023-Fixture (siehe v1.9 D-22 Pattern): export → DB-Wipe → import → manuelle Verifikation dass Standings, Driver-Ranking, Phase-Breakdowns identisch sind. Documented in `<phase>-HUMAN-UAT.md` _(technical layer satisfied via `BackupImportMariaDbSmokeIT`; operator visual sign-off pending — see `75-HUMAN-UAT.md`)_
+- [x] **QUAL-04**: Mid-Restore-Failure-Rollback-IT (`BackupImportRollbackIT`): inject Exception nach 50 % der Restore-Schleife → assert dass DB-State exakt der Pre-Import-Zustand ist (alle Original-Rows da, keine Import-Row, audit-log row mit success=false)
+- [x] **QUAL-05**: README-Sektion + WIKI-Page „Backup & Restore" mit Step-by-Step-Anleitung (Export-Workflow, Import-Workflow, Schema-Version-Erklärung, Recovery aus `data/.import-backups/<ts>/`); Screenshots optional. Documented in `docs/site/` und `wiki/`
 
 ### PLAT-CI — Release Infrastructure & Container Image Hygiene
 
 Phase 78 requirements. Distinct from PLAT-01..PLAT-07 because Phase 78 is independent of the Spring Boot 4.0.6 upgrade itself — it addresses the release-pipeline's Docker image build (`eclipse-temurin` base-tag drift) that surfaced when the release workflow's `playwright install chromium` step failed on the silently-rotated Ubuntu 26.04 base.
 
-- [ ] **PLAT-CI-01**: Pin both `Dockerfile` stages to `eclipse-temurin:25-{jdk,jre}-noble` (suffix-only, no SHA256 digest per Phase 78 decision D-01). Stage 1 = `FROM eclipse-temurin:25-jdk-noble AS build`; stage 2 = `FROM eclipse-temurin:25-jre-noble`. Each FROM line preceded by an inline comment naming the Phase 78 / Playwright 1.59.0 / Ubuntu 26.04 rationale (D-04). Pin restores the originally-intended Noble base (the runtime stage already installs `libasound2t64`, a Noble-only package name — direct evidence the Dockerfile was authored for Noble). Diff is pin-only — no Java, Spring Boot, or Playwright version changes (criterion 5).
-- [ ] **PLAT-CI-02**: Structural CI protection for the PLAT-CI-01 pin: (a) a `dockerfile-noble-pin-guard` job in `.github/workflows/ci.yml` that scans `Dockerfile` for `FROM eclipse-temurin:` lines and fails the workflow if any such line is not `-noble`-suffixed (whitelist-on-suffix per D-05, cross-platform `grep -E` / `grep -F` idiom mirroring the Phase 71-05 PLAT-07 build-guard pattern from commit `f451ff4`); (b) a `docker-build` job in the same workflow that performs `docker build .` end-to-end on every PR and every push to master (D-06, D-07), exercising both Dockerfile stages including the stage-2 `playwright install chromium` RUN step — i.e. would have caught release run `25609204039` on PR instead of on release. No `setup-buildx`, no `login-action`, no `paths:` filter; "+1-3 min CI per PR" cost explicitly accepted (D-08).
+- [x] **PLAT-CI-01**: Pin both `Dockerfile` stages to `eclipse-temurin:25-{jdk,jre}-noble` (suffix-only, no SHA256 digest per Phase 78 decision D-01). Stage 1 = `FROM eclipse-temurin:25-jdk-noble AS build`; stage 2 = `FROM eclipse-temurin:25-jre-noble`. Each FROM line preceded by an inline comment naming the Phase 78 / Playwright 1.59.0 / Ubuntu 26.04 rationale (D-04). Pin restores the originally-intended Noble base (the runtime stage already installs `libasound2t64`, a Noble-only package name — direct evidence the Dockerfile was authored for Noble). Diff is pin-only — no Java, Spring Boot, or Playwright version changes (criterion 5).
+- [x] **PLAT-CI-02**: Structural CI protection for the PLAT-CI-01 pin: (a) a `dockerfile-noble-pin-guard` job in `.github/workflows/ci.yml` that scans `Dockerfile` for `FROM eclipse-temurin:` lines and fails the workflow if any such line is not `-noble`-suffixed (whitelist-on-suffix per D-05, cross-platform `grep -E` / `grep -F` idiom mirroring the Phase 71-05 PLAT-07 build-guard pattern from commit `f451ff4`); (b) a `docker-build` job in the same workflow that performs `docker build .` end-to-end on every PR and every push to master (D-06, D-07), exercising both Dockerfile stages including the stage-2 `playwright install chromium` RUN step — i.e. would have caught release run `25609204039` on PR instead of on release. No `setup-buildx`, no `login-action`, no `paths:` filter; "+1-3 min CI per PR" cost explicitly accepted (D-08).
 
 ## Future Requirements
 
@@ -113,45 +113,45 @@ Which phases cover which requirements. Filled during roadmap creation by `gsd-ro
 
 | Requirement | Phase | Status |
 | ----------- | ----- | ------ |
-| PLAT-01 | Phase 71 | Not started |
-| PLAT-02 | Phase 71 | Not started |
-| PLAT-03 | Phase 71 | Not started |
-| PLAT-04 | Phase 71 | Not started |
-| PLAT-05 | Phase 71 | Not started |
-| PLAT-06 | Phase 71 | Not started |
-| PLAT-07 | Phase 71 | Not started |
-| SCHEMA-01 | Phase 72 | Not started |
-| SCHEMA-02 | Phase 72 | Not started |
-| SCHEMA-03 | Phase 72 | Not started |
-| SCHEMA-04 | Phase 72 | Not started |
-| EXPORT-01 | Phase 73 | Not started |
-| EXPORT-02 | Phase 73 | Not started |
-| EXPORT-03 | Phase 73 | Not started |
-| EXPORT-04 | Phase 73 | Not started |
-| EXPORT-05 | Phase 73 | Not started |
-| EXPORT-06 | Phase 73 | Not started |
-| IMPORT-01 | Phase 74 | Not started |
-| IMPORT-02 | Phase 74 | Not started |
-| IMPORT-03 | Phase 74 | Not started |
-| IMPORT-04 | Phase 74 | Not started |
-| IMPORT-05 | Phase 75 | Not started |
-| IMPORT-06 | Phase 75 | Not started |
-| IMPORT-07 | Phase 75 | Not started |
-| IMPORT-08 | Phase 72 | Not started |
-| SECU-01 | Phase 74 | Not started |
-| SECU-02 | Phase 74 | Not started |
-| SECU-03 | Phase 74 | Not started |
-| SECU-04 | Phase 74 | Not started |
-| SECU-05 | Phase 76 | Not started |
-| SECU-06 | Phase 76 | Not started |
-| SECU-07 | Phase 76 | Not started |
-| QUAL-01 | Phase 77 | Not started |
-| QUAL-02 | Phase 77 | Not started |
-| QUAL-03 | Phase 75 | Not started |
-| QUAL-04 | Phase 77 | Not started |
-| QUAL-05 | Phase 77 | Not started |
-| PLAT-CI-01 | Phase 78 | Not started |
-| PLAT-CI-02 | Phase 78 | Not started |
+| PLAT-01 | Phase 71 | Satisfied |
+| PLAT-02 | Phase 71 | Satisfied |
+| PLAT-03 | Phase 71 | Satisfied |
+| PLAT-04 | Phase 71 | Satisfied |
+| PLAT-05 | Phase 71 | Satisfied |
+| PLAT-06 | Phase 71 | Satisfied |
+| PLAT-07 | Phase 71 | Satisfied |
+| SCHEMA-01 | Phase 72 | Satisfied |
+| SCHEMA-02 | Phase 72 | Satisfied |
+| SCHEMA-03 | Phase 72 | Satisfied |
+| SCHEMA-04 | Phase 72 | Satisfied |
+| EXPORT-01 | Phase 73 | Satisfied |
+| EXPORT-02 | Phase 73 | Satisfied |
+| EXPORT-03 | Phase 73 | Satisfied |
+| EXPORT-04 | Phase 73 | Satisfied |
+| EXPORT-05 | Phase 73 | Satisfied |
+| EXPORT-06 | Phase 73 | Satisfied |
+| IMPORT-01 | Phase 74 | Satisfied |
+| IMPORT-02 | Phase 74 | Satisfied |
+| IMPORT-03 | Phase 74 | Satisfied |
+| IMPORT-04 | Phase 74 | Satisfied |
+| IMPORT-05 | Phase 75 | Satisfied |
+| IMPORT-06 | Phase 75 | Satisfied |
+| IMPORT-07 | Phase 75 | Satisfied |
+| IMPORT-08 | Phase 72 | Satisfied |
+| SECU-01 | Phase 74 | Satisfied |
+| SECU-02 | Phase 74 | Satisfied |
+| SECU-03 | Phase 74 | Satisfied |
+| SECU-04 | Phase 74 | Satisfied |
+| SECU-05 | Phase 76 | Satisfied |
+| SECU-06 | Phase 76 | Satisfied |
+| SECU-07 | Phase 76 | Satisfied |
+| QUAL-01 | Phase 77 | Satisfied |
+| QUAL-02 | Phase 77 | Satisfied (H2); MariaDB local run pending |
+| QUAL-03 | Phase 75 | Satisfied (technical); operator UAT pending |
+| QUAL-04 | Phase 77 | Satisfied |
+| QUAL-05 | Phase 77 | Satisfied |
+| PLAT-CI-01 | Phase 78 | Satisfied |
+| PLAT-CI-02 | Phase 78 | Satisfied (release-workflow observation pending post-merge) |
 
 **Total: 39 REQ-IDs** (PLAT × 7, PLAT-CI × 2, SCHEMA × 4, EXPORT × 6, IMPORT × 8, SECU × 7, QUAL × 5)
 
