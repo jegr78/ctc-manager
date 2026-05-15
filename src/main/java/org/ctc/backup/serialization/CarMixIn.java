@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import org.ctc.domain.model.Car;
 
 /**
- * Externalised Jackson annotations for {@link Car}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link Car}.
  *
  * <p>Trivial leaf entity — no foreign keys, no bidirectional collections. The MixIn provides
  * {@code @JsonIdentityInfo} so that any other entity referencing this {@code Car} via

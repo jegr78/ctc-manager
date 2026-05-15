@@ -31,12 +31,8 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 73 / Plan 01 — Reflective Module wiring test.
- *
- * <p>Asserts {@link BackupSerializationModule} registers all 24 entity-to-MixIn mappings
- * on a freshly constructed {@link ObjectMapper}. Pure unit test (Surefire) — does NOT boot
- * a Spring context. Verifies via {@code ObjectMapper#findMixInClassFor(Class)} that each
- * domain entity class points to its dedicated MixIn class.
+ * Verifies {@link BackupSerializationModule} registers all 24 entity-to-MixIn mappings on a
+ * freshly constructed {@link ObjectMapper}. Pure unit test — does NOT boot a Spring context.
  */
 class BackupSerializationModuleTest {
 

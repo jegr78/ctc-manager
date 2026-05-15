@@ -13,12 +13,10 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 73 / Plan 01 — Representative MixIn JSON-shape test for {@link Driver}.
- *
- * <p>Verifies the {@link DriverMixIn} contract:
+ * Verifies the {@link DriverMixIn} contract:
  * <ul>
  *   <li>{@code aliases} back-reference is absent — PsnAlias rows are emitted only in
- *       {@code data/psn-aliases.json} (OQ-4 single-source emission).</li>
+ *       {@code data/psn-aliases.json}.</li>
  *   <li>{@code seasonDrivers} back-reference is absent.</li>
  *   <li>{@code raceResults} back-reference is absent.</li>
  *   <li>The {@code id} and persistent fields ({@code psnId}, {@code nickname}, {@code active})

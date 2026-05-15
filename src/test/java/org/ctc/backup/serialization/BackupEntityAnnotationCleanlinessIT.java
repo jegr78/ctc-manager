@@ -15,23 +15,18 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 73 / Plan 01 — Reflective entity-cleanliness gate.
+ * Reflective entity-cleanliness gate: every entity under {@code org.ctc.domain.model} must
+ * remain free of Jackson annotations — all serialization concerns live in the MixIn classes
+ * under {@code org.ctc.backup.serialization}.
  *
- * <p>EXPORT-04 success criterion 3: every entity under {@code org.ctc.domain.model} MUST
- * remain byte-identically free of Jackson annotations. All serialization concerns
- * (cycle-breaking via {@code @JsonIdentityInfo}, FK-as-ID via
- * {@code @JsonIdentityReference}, collection back-ref suppression via
- * {@code @JsonIgnoreProperties}, convenience-getter suppression) live in the
- * Phase 73 MixIn classes under {@code org.ctc.backup.serialization}.
+ * <p>Walks every entity reachable from the JPA Metamodel whose class is in
+ * {@code org.ctc.domain.model}, then inspects every declared field and method for
+ * annotations whose type's package starts with {@code com.fasterxml.jackson}.
+ * The collected violation set must be empty.
  *
- * <p>This Failsafe IT walks every entity reachable from the JPA Metamodel whose Java
- * class lives in {@code org.ctc.domain.model}, then inspects every declared field and
- * method for annotations whose annotation type's package starts with
- * {@code com.fasterxml.jackson}. The collected violation set must be empty.
- *
- * <p>{@code BaseEntity} is a {@code @MappedSuperclass} and is NOT reported by
- * {@code Metamodel.getEntities()} — so its fields are not directly walked here.
- * {@code DataImportAudit} lives in {@code org.ctc.backup.audit} and is filtered out by
+ * <p>{@code BaseEntity} is a {@code @MappedSuperclass} not reported by
+ * {@code Metamodel.getEntities()} — its fields are not walked here.
+ * {@code DataImportAudit} lives in {@code org.ctc.backup.audit} and is filtered by
  * the package predicate.
  */
 @SpringBootTest

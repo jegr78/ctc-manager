@@ -28,15 +28,9 @@ import org.ctc.domain.model.Track;
 import org.springframework.stereotype.Component;
 
 /**
- * Phase 73 EXPORT-04 — the single Jackson {@code Module} that wires every per-entity MixIn
- * onto the {@code backupObjectMapper} bean. Picked up automatically by Phase 72's
- * {@code BackupObjectMapperConfig.backupObjectMapper(List<Module> backupMixInModules)}
- * via Spring DI — zero config-class changes.
- *
- * <p>The module is implemented as a single Spring component (instead of 24 separate
- * {@code Module} beans) because every MixIn is a sibling annotation-carrier with no
- * cross-MixIn state — keeping them in one file makes the entity-to-MixIn mapping
- * reviewable at a glance.
+ * Jackson {@link com.fasterxml.jackson.databind.Module} that registers all 24 per-entity MixIns
+ * on the {@code backupObjectMapper} bean via Spring DI. Keeping all mappings in one file makes
+ * the entity-to-MixIn mapping reviewable at a glance.
  */
 @Component
 public class BackupSerializationModule extends SimpleModule {

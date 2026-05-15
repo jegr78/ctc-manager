@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import org.ctc.domain.model.RaceScoring;
 
 /**
- * Externalised Jackson annotations for {@link RaceScoring}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link RaceScoring}.
  *
  * <p>Trivial leaf entity — {@code racePoints} and {@code qualiPoints} are CSV strings stored
  * directly. Suppresses the four computed getters

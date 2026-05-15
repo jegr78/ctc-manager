@@ -10,7 +10,7 @@ import org.ctc.domain.model.SeasonPhaseGroup;
 import org.ctc.domain.model.Team;
 
 /**
- * Externalised Jackson annotations for {@link PhaseTeam}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link PhaseTeam}.
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

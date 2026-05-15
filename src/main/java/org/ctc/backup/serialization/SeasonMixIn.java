@@ -11,7 +11,7 @@ import org.ctc.domain.model.Track;
 import java.util.List;
 
 /**
- * Externalised Jackson annotations for {@link Season}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link Season}.
  *
  * <p>Ignores the three child collections ({@code phases}, {@code seasonDrivers},
  * {@code seasonTeams}) — children own the FK back to {@code Season} and are emitted in

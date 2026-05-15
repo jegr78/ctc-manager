@@ -14,7 +14,7 @@ import org.ctc.domain.model.Team;
 import org.ctc.domain.model.Track;
 
 /**
- * Externalised Jackson annotations for {@link Race}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link Race}.
  *
  * <p>Renders all seven {@code @ManyToOne} foreign keys as UUID references. Suppresses:
  * <ul>

@@ -15,15 +15,12 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 73 / Plan 01 — Representative MixIn JSON-shape test for {@link RaceAttachment}.
- *
- * <p>Verifies the {@link RaceAttachmentMixIn} contract:
+ * Verifies the {@link RaceAttachmentMixIn} contract:
  * <ul>
  *   <li>{@code race} foreign key renders as a UUID string.</li>
  *   <li>{@code type} enum renders as the string {@code "FILE"} (Jackson default
  *       {@code Enum.name()} strategy).</li>
- *   <li>{@code url} stays as the original path string — it drives the {@code uploads/}
- *       mirror in Wave 2.</li>
+ *   <li>{@code url} stays as the original path string — drives the {@code uploads/} mirror.</li>
  *   <li>{@code image} computed property (from {@code isImage()}) is absent.</li>
  * </ul>
  */

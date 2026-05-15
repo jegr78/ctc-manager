@@ -9,7 +9,7 @@ import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Team;
 
 /**
- * Externalised Jackson annotations for {@link Match}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link Match}.
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "races"})

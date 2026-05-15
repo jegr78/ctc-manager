@@ -20,9 +20,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 73 / Plan 01 — Representative MixIn JSON-shape test for {@link Race}.
- *
- * <p>Verifies the {@link RaceMixIn} contract:
+ * Verifies the {@link RaceMixIn} contract:
  * <ul>
  *   <li>All seven {@code @ManyToOne} foreign keys ({@code matchday}, {@code match},
  *       {@code track}, {@code car}, {@code playoffMatchup}, {@code homeTeamOverride},

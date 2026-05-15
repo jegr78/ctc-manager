@@ -7,7 +7,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import org.ctc.domain.model.Team;
 
 /**
- * Externalised Jackson annotations for {@link Team}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link Team}.
  *
  * <p>Required because:
  * <ul>

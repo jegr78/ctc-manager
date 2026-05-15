@@ -10,7 +10,7 @@ import org.ctc.domain.model.RaceLineup;
 import org.ctc.domain.model.Team;
 
 /**
- * Externalised Jackson annotations for {@link RaceLineup}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link RaceLineup}.
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})

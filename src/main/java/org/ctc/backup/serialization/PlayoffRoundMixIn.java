@@ -8,7 +8,7 @@ import org.ctc.domain.model.Playoff;
 import org.ctc.domain.model.PlayoffRound;
 
 /**
- * Externalised Jackson annotations for {@link PlayoffRound}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link PlayoffRound}.
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "matchups"})

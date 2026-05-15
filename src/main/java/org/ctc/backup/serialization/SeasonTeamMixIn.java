@@ -9,7 +9,7 @@ import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.model.Team;
 
 /**
- * Externalised Jackson annotations for {@link SeasonTeam}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link SeasonTeam}.
  *
  * <p>The self-typed {@code successor} foreign key is rendered as a UUID reference. Intra-file
  * forward reference resolved by Jackson via the same {@code @JsonIdentityInfo} declaration.

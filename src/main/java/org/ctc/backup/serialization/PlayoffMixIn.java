@@ -8,7 +8,7 @@ import org.ctc.domain.model.Playoff;
 import org.ctc.domain.model.SeasonPhase;
 
 /**
- * Externalised Jackson annotations for {@link Playoff}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link Playoff}.
  *
  * <p>Suppresses both child collections ({@code rounds}, {@code seeds}) and the computed
  * {@code getSeason()} convenience getter ({@code Playoff.getSeason()} derives via

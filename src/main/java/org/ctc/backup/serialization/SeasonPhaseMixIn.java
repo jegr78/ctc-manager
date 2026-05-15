@@ -10,7 +10,7 @@ import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonPhase;
 
 /**
- * Externalised Jackson annotations for {@link SeasonPhase}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link SeasonPhase}.
  *
  * <p>All three {@code @ManyToOne} foreign keys ({@code season}, {@code raceScoring},
  * {@code matchScoring}) are rendered as UUID references. The two child collections

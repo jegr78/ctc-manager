@@ -9,7 +9,7 @@ import org.ctc.domain.model.PlayoffRound;
 import org.ctc.domain.model.Team;
 
 /**
- * Externalised Jackson annotations for {@link PlayoffMatchup}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link PlayoffMatchup}.
  *
  * <p>The self-typed {@code nextMatchup} foreign key is rendered as a UUID reference. Intra-file
  * forward reference resolved by Jackson via the same {@code @JsonIdentityInfo} declaration.

@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import org.ctc.domain.model.Driver;
 
 /**
- * Externalised Jackson annotations for {@link Driver}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link Driver}.
  *
  * <p>Suppresses three bidirectional back-reference collections:
  * <ul>

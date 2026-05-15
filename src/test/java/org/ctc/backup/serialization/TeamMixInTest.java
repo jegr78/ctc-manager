@@ -13,9 +13,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 73 / Plan 01 — Representative MixIn JSON-shape test for {@link Team}.
- *
- * <p>Verifies the {@link TeamMixIn} contract end-to-end on a manually constructed
+ * Verifies the {@link TeamMixIn} contract end-to-end on a manually constructed
  * {@link ObjectMapper} (no Spring context):
  * <ul>
  *   <li>{@code parentTeam} self-FK renders as a UUID string (not a nested object).</li>

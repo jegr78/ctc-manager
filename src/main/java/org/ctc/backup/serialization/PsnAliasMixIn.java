@@ -8,7 +8,7 @@ import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PsnAlias;
 
 /**
- * Externalised Jackson annotations for {@link PsnAlias}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link PsnAlias}.
  *
  * <p>The {@code driver} foreign key is rendered as a UUID string only — the full
  * {@code Driver} row lives in {@code data/drivers.json}.

@@ -9,7 +9,7 @@ import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.model.SeasonPhaseGroup;
 
 /**
- * Externalised Jackson annotations for {@link Matchday}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link Matchday}.
  *
  * <p>Suppresses the two child collections ({@code matches}, {@code races}) and the computed
  * {@code getSeason()} convenience getter (derived via {@code phase.getSeason()}).

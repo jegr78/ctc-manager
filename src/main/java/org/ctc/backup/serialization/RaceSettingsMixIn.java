@@ -8,7 +8,7 @@ import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceSettings;
 
 /**
- * Externalised Jackson annotations for {@link RaceSettings}. Phase 73 EXPORT-04.
+ * Externalised Jackson annotations for {@link RaceSettings}.
  *
  * <p>Suppresses the {@code isComplete()} convenience getter (property {@code complete}).
  */

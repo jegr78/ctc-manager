@@ -15,9 +15,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Phase 73 / Plan 01 — Representative MixIn JSON-shape test for {@link Season}.
- *
- * <p>Verifies the {@link SeasonMixIn} contract:
+ * Verifies the {@link SeasonMixIn} contract:
  * <ul>
  *   <li>{@code phases}, {@code seasonDrivers}, {@code seasonTeams} child collections are
  *       absent.</li>
