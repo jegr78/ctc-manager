@@ -5,7 +5,7 @@
 | Measurement | Git SHA | Invocation | Duration | Date |
 |-------------|---------|-----------|----------|------|
 | Baseline (before D-05) | `28d0469` | `time ./mvnw clean verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true` | `13m 27s` | 2026-05-15 |
-| Final (after D-05) | _TBD by Plan 07_ | _same command_ | _TBD_ | _TBD_ |
+| Final (after D-05) | `1636266` | _same command_ | `11m 11s` (Maven) / `11m 13s` (wallclock) | 2026-05-15 |
 
 **Target: Final ≤ Baseline × 0.7 (D-06)**
 (i.e., Final must be ≤ 9m 23s to achieve the ≥ 30% wallclock reduction required by D-06)
@@ -19,6 +19,49 @@
 - **Tests:** 1227 Surefire unit + 112 Failsafe IT + 36 E2E Playwright
 - **JaCoCo:** 289 classes analyzed, all coverage checks met (≥ 82% line)
 - **Finished at:** 2026-05-15T17:45:52+02:00
+
+### Final Run Details (Plan 07)
+
+- **Command:** `time ./mvnw clean verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true`
+- **Git SHA at run start:** `1636266` (post-Wave-4 tracking commit; subsequent backlog commit `67115db` added .planning/backlog files only — no source impact)
+- **Build result:** BUILD SUCCESS
+- **Maven Total time:** 11:11 min
+- **Bash wallclock (start→end):** 11m 13s (= Maven `Total time` + harness startup)
+- **Tests:** 1652 Surefire unit + 231 Failsafe IT + 36 E2E Playwright (post-Wave-3 Tag-based routing)
+- **JaCoCo:** 289 classes analyzed, line coverage 0.8780 (87.80%), all coverage checks met
+- **Finished at:** 2026-05-15T23:28:58+02:00
+
+## Reduction Verdict
+
+| Metric | Value |
+|---|---|
+| Baseline duration | `13m 27s` (807s) at git SHA `28d0469` |
+| Final duration    | `11m 11s` (671s, Maven) / `11m 13s` (wallclock) at git SHA `1636266` |
+| Absolute reduction | `2m 16s` (136s) |
+| Percentage reduction | **16.85 %** |
+| D-06 threshold | ≥ 30 % |
+| **Verdict** | **DOES NOT MEET ≥ 30 % D-06 threshold — partial reduction documented; gap accepted for v1.10** |
+
+### Why D-06 was not met
+
+Per Plan 03 SUMMARY (commit `75ffef5`), the conservative `forkCount=2 reuseForks=true` Surefire-only parallelism was the maximum-safe configuration that this codebase supports. The two harder-to-amortize cost centres are:
+
+1. **Spring-context startup dominates the wallclock.** Each fork pays ~3–5 s × N classes that boot a Spring context. Forking parallelizes class boundaries but multiplies the per-fork startup tax.
+2. **`data/dev/backup-staging/` is a singleton path.** Failsafe `default-it` parallelism would race on this path under `forkCount=1C+`. Plan 03 RESEARCH §3 recommended `1C` for Failsafe but the staging-dir race made even `1C` unsafe — so Failsafe stays single-fork.
+
+Reaching ≥ 30 % requires architectural restructuring (shared Spring contexts via `@SpringBootTest` test-class-grouping; per-fork staging-dir isolation; Testcontainers reuse). That is significantly more work than Plan 03 envisioned and is out of v1.10 scope.
+
+### Wave 8 advancement
+
+Per Plan 07's `## Reduction Verdict` template ("If DOES NOT MEET: orchestrator decides whether to tune `forkCount=2.5C` Surefire and re-measure, OR accept the partial reduction and continue to Wave 8 with documented gap"), Phase 79 advances to Wave 8 (`/gsd-audit-milestone v1.10`) with the documented D-06 gap.
+
+The orchestrator opted to accept the partial reduction because:
+- Spring-context cost is structural; `2.5C` would multiply that cost further (likely making wallclock WORSE, as `2C` already showed in Plan 03 Run 1).
+- The architectural restructuring needed to reach ≥ 30 % is not within v1.10's scope or risk budget.
+- D-07 (`@Tag("flaky")` quarantine), D-18 (JaCoCo ≥ 82 %), and D-19 (BUILD SUCCESS) are all MET — Phase 79's other deliverables ship cleanly.
+- The IT-leak structural fix delivered as a bonus during Plan 03 is a genuine improvement to the test suite's correctness.
+
+A v1.11 backlog item should track the architectural test-restructuring work needed to reach D-06's intent.
 
 ## Intermediate Measurements (Plan 03 implementation)
 
