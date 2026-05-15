@@ -123,7 +123,6 @@ public class DriverSheetImportService {
                 // created by an earlier tab in this same execute() call. Look up by PSN
                 // inside the lambda so cross-tab same-PSN NEW_DRIVER rows and pre-existing
                 // Driver rows classified as NEW_DRIVER never attempt a duplicate INSERT.
-                // Mirrors the WR-01 hardening at the FUZZY-no-accept branch (commit 8256a71).
                 // Closes GAP-70-01 (live-MariaDB UAT blocker, Saison 2023, 2026-05-09).
                 Driver driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(), psnId ->
                         driverRepository.findByPsnId(psnId).orElseGet(() -> {
@@ -213,7 +212,7 @@ public class DriverSheetImportService {
             // UNCHANGED (no DB write)
             result.addUnchanged(tab.unchanged().size());
 
-            // ERRORS (never imported, UX-06)
+            // ERRORS (never imported)
             result.addErrors(tab.errors().size());
 
             log.debug("Tab {} processed: {} new drivers, {} new assignments",
@@ -377,15 +376,14 @@ public class DriverSheetImportService {
      * <p>
      * The {@code teams.short_name} column is intentionally non-unique — a parent team and
      * one of its sub-teams may share the same shortName (e.g. parent {@code ZFS} + sub
-     * {@code ZFS}). Per Phase 70 (D-01..D-05) the import always assigns the parent at the
-     * season level; sub-team variation is per-match (RaceLineup), not per-season.
+     * {@code ZFS}). The import always assigns the parent at the season level; sub-team
+     * variation is per-match (RaceLineup), not per-season.
      * <ol>
      *   <li><b>0 matches:</b> empty — caller emits {@code UNKNOWN_TEAM_CODE}.</li>
      *   <li><b>1 match:</b> return it (parent or solo-sub with its own unique shortName, both legitimate).</li>
      *   <li><b>N matches:</b> return the first {@code parentTeam == null} candidate.
      *       If no candidate is a parent (data-integrity edge), log WARN and return the first deterministically.</li>
      * </ol>
-     * Inverts Phase 66 D-04 — see {@code 70-CONTEXT.md} D-05.
      *
      * @param shortName trimmed team short code from the sheet
      * @return the resolved team (parent precedence on multi-match), or empty if no team matches
