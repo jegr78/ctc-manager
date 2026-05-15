@@ -17,8 +17,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * MockMvc tests for SeasonPhaseController GET/POST flows (UI-02, UI-03).
- * All tests are RED in Wave 0 — SeasonPhaseController does not yet exist.
+ * MockMvc tests for SeasonPhaseController GET/POST flows.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
