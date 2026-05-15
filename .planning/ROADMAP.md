@@ -383,7 +383,7 @@ Plans:
 | 76. Operational Hardening — Lock + Banner + Auto-Backup | 4/4 | Complete   | 2026-05-14 |
 | 77. Final UAT + JaCoCo Hold + Round-Trip + Docs | 5/5 | Complete   | 2026-05-15 |
 | 78. Docker Release Image Fix — Pin Base Image to Noble | 2/3 | In Progress|  |
-| 79. Code Cleanup + Test Performance Optimization — v1.10 Milestone Closer | 0/16 | Planned | — |
+| 79. Code Cleanup + Test Performance Optimization — v1.10 Milestone Closer | 1/16 | In Progress|  |
 
 ### Phase 79: Code Cleanup + Test Performance Optimization (v1.10 Milestone Closer)
 
@@ -393,10 +393,10 @@ Plans:
 
 **Depends on:** Phase 78 (Dockerfile noble-pin must be merged so the release workflow is green and milestone-audit can verify the full v1.10 stack)
 
-**Plans:** 16 plans across 9 waves
+**Plans:** 1/16 plans executed
 
 Plans:
-- [ ] 79-01-PLAN.md — Wave 1: Baseline wallclock + reverse-order/random-seed independence audit + 10/10 @DirtiesContext verdict (D-05, D-06)
+- [x] 79-01-PLAN.md — Wave 1: Baseline wallclock + reverse-order/random-seed independence audit + 10/10 @DirtiesContext verdict (D-05, D-06)
 - [ ] 79-02a-PLAN.md — Wave 2: Cleanup leaf packages — admin.controller + backup.config + backup.io + backup.security (D-01..D-04, D-09..D-13)
 - [ ] 79-02b-PLAN.md — Wave 2: Cleanup backup.serialization (25 MixIns, D-04 inverted for reflection-driven Jackson)
 - [ ] 79-02c-PLAN.md — Wave 2: Cleanup backup.lock + backup.event + backup.audit (Schutzwort-heavy: race/thread-safe/auditing)
