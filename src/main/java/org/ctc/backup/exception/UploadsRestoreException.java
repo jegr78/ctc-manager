@@ -1,20 +1,17 @@
 package org.ctc.backup.exception;
 
 /**
- * Phase 75 D-09 — signals failure of the post-commit {@code uploads/}-tree atomic-move triple.
+ * Signals failure of the post-commit {@code uploads/}-tree atomic-move triple.
  *
- * <p>Thrown by the post-commit listener (Plan 07) when either Step-1
+ * <p>Thrown by the post-commit listener when either Step-1
  * ({@code Files.move(uploads, importBackupDir.resolve("uploads-old"), ATOMIC_MOVE)}) or Step-2
  * ({@code Files.move(stagedUploadsDir, uploads, ATOMIC_MOVE)}) fails after the DB transaction
  * has already committed. The listener attempts a best-effort revert of Step-1 on Step-2
  * failure, logs the outcome, and re-throws this exception so the controller can flash the
- * locked D-15 soft-fail message:
+ * soft-fail message:
  *
  * <pre>"Import database succeeded but uploads restore failed and was reverted. See logs.
  * Audit-id: {auditUuid}."</pre>
- *
- * <p>Plan reference: scaffolding lives in Plan 75-01; the throw sites and the
- * {@code GlobalExceptionHandler} mapping (if added — D-15 planner judgment) ship in Plan 75-07.
  *
  * <p>Unchecked because the call sites live inside Spring's transactional /
  * {@code @TransactionalEventListener} machinery, neither of which tolerates checked-exception

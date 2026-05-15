@@ -3,18 +3,18 @@ package org.ctc.backup.exception;
 import java.util.UUID;
 
 /**
- * Phase 76 / SECU-07 — failure carrier thrown by {@code BackupImportService.execute(UUID)}
- * when the pre-import auto-backup ZIP write fails (D-14 / D-16). Subclass of
+ * Failure carrier thrown by {@code BackupImportService.execute(UUID)}
+ * when the pre-import auto-backup ZIP write fails. Subclass of
  * {@link BackupImportException} so the existing controller catch-chain captures it via
- * inheritance; the controller's NEW catch clause MUST appear BEFORE the parent
- * {@code BackupImportException} catch in the chain (Java exception-matching order —
- * RESEARCH Pitfall #3; superclass-first would shadow this new branch).
+ * inheritance; the controller's catch clause MUST appear BEFORE the parent
+ * {@code BackupImportException} catch in the chain (Java exception-matching order;
+ * superclass-first would shadow this branch).
  *
  * <p>Semantic difference vs {@link BackupImportException}: NO database mutation occurred —
- * the auto-backup step runs BEFORE the wipe (Step 0.5 per D-14). The audit-row counts
- * ({@code wipedCounts}, {@code restoredCounts}) are therefore empty {@code {}} JSON objects
- * per CONTEXT D-18, and the controller flash communicates "no rollback was needed" rather
- * than the generic "rolled back" wording (D-17).
+ * the auto-backup step runs BEFORE the wipe. The audit-row counts
+ * ({@code wipedCounts}, {@code restoredCounts}) are therefore empty {@code {}} JSON objects,
+ * and the controller flash communicates "no rollback was needed" rather than the generic
+ * "rolled back" wording.
  *
  * <p>Constructor delegation mirrors the sibling-shape pattern of {@link BackupImportException}:
  * the constructor calls {@code super(...)} directly with no new fields and no overridden
@@ -26,7 +26,7 @@ public class AutoBackupBeforeImportException extends BackupImportException {
     /**
      * Full-delegation constructor used by the catch block in {@code BackupImportService}.
      * The caller always knows the {@code tryRecordFailure} return value at throw time,
-     * so {@code auditWritten} is always explicit (WR-03 double-failure path).
+     * so {@code auditWritten} is always explicit.
      *
      * @param auditUuid    pre-allocated UUID; may NOT correspond to a persisted row when
      *                     {@code auditWritten == false}

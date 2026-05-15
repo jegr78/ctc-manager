@@ -3,13 +3,12 @@ package org.ctc.backup.exception;
 import java.util.UUID;
 
 /**
- * Phase 75 / Plan 06 — failure carrier thrown by {@code BackupImportService.execute(UUID)}
- * (D-14) when the wipe-and-restore @Transactional method rolls back.
+ * Failure carrier thrown by {@code BackupImportService.execute(UUID)}
+ * when the wipe-and-restore {@code @Transactional} method rolls back.
  *
  * <p>Carries the {@code auditUuid} of the {@code data_import_audit} row written via
  * {@code DataImportAuditService.recordResult(success=false, ...)} on the catch-path (REQUIRES_NEW;
- * survives the outer rollback per D-01). The controller (Plan 08) binds this UUID into the
- * locked D-15 #2 failure-flash placeholder:
+ * survives the outer rollback). The controller binds this UUID into the failure-flash message:
  *
  * <pre>"Import failed and was rolled back — see logs. Audit-id: {auditUuid}."</pre>
  *
@@ -20,8 +19,7 @@ import java.util.UUID;
  * restore failure, JSON parse failure, etc.) is carried in {@link #getCause()} and the SLF4J
  * ERROR log line at the service catch-block.
  *
- * <p>Plan 06 is the throw site; Plan 08 is the catch site (controller). The
- * {@link #getAuditUuid()} accessor is the only public contract the controller depends on.
+ * <p>{@link #getAuditUuid()} is the only public contract the controller depends on.
  */
 public class BackupImportException extends RuntimeException {
 
@@ -77,7 +75,7 @@ public class BackupImportException extends RuntimeException {
 
     /**
      * Returns the {@code data_import_audit} row UUID. The controller surfaces this in the
-     * D-15 #2 failure-flash message so the operator can query the row directly.
+     * failure-flash message so the operator can query the row directly.
      *
      * @return the audit-row UUID, never {@code null}
      */

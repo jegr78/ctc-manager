@@ -5,8 +5,8 @@ package org.ctc.backup.exception;
  * violates a security or structural constraint.
  *
  * <p>Every reject path in the backup import pipeline routes through this exception; the
- * {@link Reason} enum allows the controller (Plan 06/08) to branch on the {@link #reason()}
- * value and select the appropriate locked D-02 Flash string without inspecting the message text.
+ * {@link Reason} enum allows the controller to branch on the {@link #reason()}
+ * value and select the appropriate Flash string without inspecting the message text.
  *
  * <p>Structural template mirrors {@code org.ctc.domain.exception.BusinessRuleException}
  * (single-field, no Lombok, no Spring annotations).
@@ -16,8 +16,7 @@ public class BackupArchiveException extends RuntimeException {
     /**
      * Identifies the kind of constraint violation.
      *
-     * <p>Values are listed in the order they were defined for Plan 02 and MUST remain stable
-     * because downstream plans (04, 05, 06, 08) reference them by name at their call sites.
+     * <p>Values MUST remain stable — downstream code references them by name at call sites.
      */
     public enum Reason {
         /**
@@ -35,13 +34,13 @@ public class BackupArchiveException extends RuntimeException {
 
         /**
          * The sum of all inflated entry bytes exceeded {@code BackupImportLimits.MAX_TOTAL_BYTES}
-         * (524 288 000 bytes). Enforced by callers in Plan 04.
+         * (524 288 000 bytes).
          */
         TOTAL_TOO_LARGE,
 
         /**
          * The archive contained more entries than {@code BackupImportLimits.MAX_ENTRIES}
-         * (50 000). Enforced by callers in Plan 04.
+         * (50 000).
          */
         TOO_MANY_ENTRIES,
 
@@ -55,28 +54,25 @@ public class BackupArchiveException extends RuntimeException {
          *
          * <p><strong>Dual scope:</strong> this value covers BOTH the {@code manifest.json} file
          * itself (parse failure, missing required field, wrong shape) AND any {@code data/*.json}
-         * entry whose top-level JSON token is not {@code START_ARRAY}. Plan 04's
-         * {@code countDataEntries} reuses this {@code Reason} when the first token assertion on
-         * a {@code data/<entity>.json} entry fails. Plan 08's {@code mapReason} folds
-         * {@code MANIFEST_INVALID} into the generic D-02#3 safety-checks Flash message — there is
-         * intentionally no separate {@code DATA_NOT_ARRAY} enum value because it would not change
-         * the UX. Maintainers should NOT narrow the meaning of this constant to manifest-only
-         * because Plan 04's call sites rely on the broader scope.
+         * entry whose top-level JSON token is not {@code START_ARRAY}. The
+         * {@code countDataEntries} method reuses this {@code Reason} when the first token
+         * assertion on a {@code data/<entity>.json} entry fails. There is intentionally no
+         * separate {@code DATA_NOT_ARRAY} enum value — it would not change the UX. Maintainers
+         * MUST NOT narrow the meaning of this constant to manifest-only; the broader scope
+         * is load-bearing at the countDataEntries call sites.
          */
         MANIFEST_INVALID,
 
         /**
          * The manifest's {@code schemaVersion} field does not match the supported version.
-         * Corresponds to PATTERNS' {@code SCHEMA_VERSION_MISMATCH} (shortened for cleaner
-         * call-site code).
+         * Shortened from {@code SCHEMA_VERSION_MISMATCH} for cleaner call-site code.
          */
         SCHEMA_MISMATCH,
 
         /**
          * The uploaded file is not a valid ZIP archive (magic bytes check failed).
-         * Thrown by Plan 05's {@code BackupImportService.stage()} when the first four bytes are
-         * not {@code 0x50 0x4B 0x03 0x04}. This constant is canonical here (Plan 02); Plan 05
-         * owns the call site.
+         * Thrown by {@code BackupImportService.stage()} when the first four bytes are
+         * not {@code 0x50 0x4B 0x03 0x04}.
          */
         NOT_A_ZIP
     }

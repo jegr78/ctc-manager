@@ -18,7 +18,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * <p>Kept in a separate advice class (not merged into {@code GlobalExceptionHandler})
  * because every handler in that class returns {@link org.springframework.web.servlet.ModelAndView},
  * and mixing {@code String "redirect:..."} return types in one advice class creates Spring
- * binding ambiguity (D-14).
+ * binding ambiguity.
  *
  * <p>The global scope (no {@code basePackageClasses} restriction) is intentional:
  * {@link MaxUploadSizeExceededException} is thrown by the Multipart resolver BEFORE
