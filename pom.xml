@@ -383,8 +383,8 @@
 						<id>spotbugs-check</id>
 						<phase>verify</phase>
 						<goals>
-							<!-- STAT-05/1: report-only — flip to <goal>check</goal> after baseline triage -->
-							<goal>spotbugs</goal>
+							<!-- STAT-05/2: blocking gate — fails build on Medium+HIGH violations -->
+							<goal>check</goal>
 						</goals>
 					</execution>
 				</executions>
