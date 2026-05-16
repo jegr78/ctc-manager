@@ -3,7 +3,7 @@ app:
   version: @project.version@
   backup:
     staging-dir: data/${spring.profiles.active:dev}/backup-staging
-    import-backups-dir: data/.import-backups
+    import-backups-dir: data/${spring.profiles.active:dev}/import-backups
 
 spring:
   application:

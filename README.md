@@ -51,7 +51,9 @@ v1.10 introduces a full database backup/restore feature accessible via `/admin/b
 ### Recovery
 
 If an import fails or you need to revert, see [`docs/operations/import-runbook.md`](docs/operations/import-runbook.md)
-for step-by-step recovery from `data/.import-backups/<ts>/`.
+for step-by-step recovery from `data/<profile>/import-backups/<ts>/`.
+
+> **Note (v1.11):** Recovery storage is now profile-isolated to `data/<profile>/import-backups/` (e.g., `data/dev/import-backups/` or `data/prod/import-backups/`). Pre-v1.11 artifacts under `data/.import-backups/` remain in place and are not migrated automatically.
 
 ### Full Guide
 
