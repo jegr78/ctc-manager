@@ -395,6 +395,10 @@ class DriverRankingServiceTest {
 		var lineup = new RaceLineup(race1, panicpotato, tnr);
 		lineup.setId(UUID.randomUUID());
 
+		// PhaseTeam stub ensures regularPhaseTeamIds contains tnr — exercises the priority filter
+		var phaseTeamEntry = new PhaseTeam(regular, tnr);
+		when(phaseTeamRepository.findByPhaseId(regular.getId())).thenReturn(List.of(phaseTeamEntry));
+
 		when(seasonPhaseService.findById(regular.getId())).thenReturn(regular);
 		when(seasonPhaseService.findById(playoff.getId())).thenReturn(playoff);
 		when(seasonPhaseService.findByType(season.getId(), PhaseType.REGULAR)).thenReturn(java.util.Optional.of(regular));
