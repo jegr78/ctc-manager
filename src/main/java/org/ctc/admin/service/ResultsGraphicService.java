@@ -1,5 +1,11 @@
 package org.ctc.admin.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Race;
@@ -9,13 +15,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -37,7 +36,9 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 		if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
 			throw new IllegalStateException("Race has no teams assigned");
 		}
-		if (race.getResults().isEmpty()) throw new IllegalStateException("No results for this race");
+		if (race.getResults().isEmpty()) {
+			throw new IllegalStateException("No results for this race");
+		}
 
 		var homeTeam = race.getHomeTeam();
 		var awayTeam = race.getAwayTeam();
@@ -47,10 +48,12 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 
 		String homeCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), homeTeam.getShortName()));
 		String awayCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), awayTeam.getShortName()));
-		if (homeCardBase64 == null)
+		if (homeCardBase64 == null) {
 			throw new IllegalStateException("Team card not found for " + homeTeam.getShortName());
-		if (awayCardBase64 == null)
+		}
+		if (awayCardBase64 == null) {
 			throw new IllegalStateException("Team card not found for " + awayTeam.getShortName());
+		}
 
 		int homeTotal = resultRows.stream().mapToInt(DriverResultRow::homePoints).sum();
 		int awayTotal = resultRows.stream().mapToInt(DriverResultRow::awayPoints).sum();

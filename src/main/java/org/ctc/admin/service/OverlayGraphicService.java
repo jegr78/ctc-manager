@@ -1,5 +1,11 @@
 package org.ctc.admin.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.SeasonTeam;
@@ -12,13 +18,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -104,17 +103,23 @@ public class OverlayGraphicService extends AbstractGraphicService implements Tem
 
 	private String encodeLogoBase64(Team team, SeasonTeam seasonTeam) {
 		String logoUrl = seasonTeam != null ? seasonTeam.getEffectiveLogoUrl() : team.getLogoUrl();
-		if (logoUrl == null) return null;
+		if (logoUrl == null) {
+			return null;
+		}
 		return encodeCardBase64(logoUrl);
 	}
 
 	private String formatRecord(TeamStanding standing) {
-		if (standing == null) return "0-0-0";
+		if (standing == null) {
+			return "0-0-0";
+		}
 		return standing.getWins() + "-" + standing.getLosses() + "-" + standing.getDraws();
 	}
 
 	String formatTeamNameHtml(String name) {
-		if (name == null) return "";
+		if (name == null) {
+			return "";
+		}
 		String[] words = name.split("\\s+");
 		if (words.length <= 3) {
 			return String.join("<br>", words);

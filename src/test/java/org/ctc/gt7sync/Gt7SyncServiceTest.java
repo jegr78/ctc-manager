@@ -1,5 +1,8 @@
 package org.ctc.gt7sync;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
 import org.ctc.domain.model.Car;
 import org.ctc.domain.model.Track;
 import org.ctc.domain.repository.CarRepository;
@@ -13,10 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -70,11 +69,11 @@ class Gt7SyncServiceTest {
 		assertThat(preview.getExistingTrackCount()).isEqualTo(1);
 
 		var alfaEntry = preview.cars().stream()
-				.filter(c -> c.gt7Id().equals("car310")).findFirst().orElseThrow();
+				.filter(c -> "car310".equals(c.gt7Id())).findFirst().orElseThrow();
 		assertThat(alfaEntry.status()).isEqualTo(SyncStatus.NEW);
 
 		var nissanEntry = preview.cars().stream()
-				.filter(c -> c.gt7Id().equals("car102")).findFirst().orElseThrow();
+				.filter(c -> "car102".equals(c.gt7Id())).findFirst().orElseThrow();
 		assertThat(nissanEntry.status()).isEqualTo(SyncStatus.EXISTS);
 	}
 
@@ -96,7 +95,7 @@ class Gt7SyncServiceTest {
 
 		// then
 		var nissanEntry = preview.cars().stream()
-				.filter(c -> c.gt7Id().equals("car102")).findFirst().orElseThrow();
+				.filter(c -> "car102".equals(c.gt7Id())).findFirst().orElseThrow();
 		assertThat(nissanEntry.status()).isEqualTo(SyncStatus.EXISTS);
 
 		// Toyota and Alfa are new

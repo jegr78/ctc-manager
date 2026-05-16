@@ -9,13 +9,8 @@ import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.SeasonPhase;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.RaceLineupRepository;
-import org.ctc.domain.repository.RaceResultRepository;
-import org.ctc.domain.repository.SeasonDriverRepository;
-import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.*;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.StandingsService;
 import org.ctc.sitegen.model.GenerationContext;
@@ -81,7 +76,9 @@ public class TeamProfilePageGenerator {
                     .filter(s -> s.getTeam().getId().equals(team.getId()))
                     .findFirst().orElse(null);
 
-            if (teamStanding == null) continue;
+			if (teamStanding == null) {
+				continue;
+			}
 
             var context = new Context(Locale.ENGLISH);
             context.setVariable("season", season);
@@ -95,7 +92,7 @@ public class TeamProfilePageGenerator {
             List<PhaseBreakdownEntry> phaseBreakdown = new ArrayList<>();
             if (showPhaseBreakdown) {
                 for (SeasonPhase p : allPhases) {
-                    String label = (p.getLabel() != null && !p.getLabel().isBlank())
+                    String label = p.getLabel() != null && !p.getLabel().isBlank()
                             ? p.getLabel()
                             : capitalize(p.getPhaseType().name());
                     var phaseStandings = phaseStandingsMap.get(p.getId());
@@ -154,14 +151,14 @@ public class TeamProfilePageGenerator {
                                 || (rlTeam.getParentTeam() != null
                                     && rlTeam.getParentTeam().getId().equals(team.getId()));
                     })
-                    .map(rl -> rl.getDriver())
+                    .map(RaceLineup::getDriver)
                     .distinct()
                     .toList();
 
             var driversToShow = lineupDrivers.isEmpty()
                     ? allSeasonDrivers.stream()
                             .filter(sd -> sd.getTeam().getId().equals(team.getId()))
-                            .map(sd -> sd.getDriver())
+                            .map(SeasonDriver::getDriver)
                             .distinct()
                             .toList()
                     : lineupDrivers;
@@ -171,7 +168,7 @@ public class TeamProfilePageGenerator {
                         var driverResults = raceResultRepository.findByDriverId(driver.getId()).stream()
                                 .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
                                 .toList();
-                        int totalPoints = driverResults.stream().mapToInt(r -> r.getPointsTotal()).sum();
+                        int totalPoints = driverResults.stream().mapToInt(RaceResult::getPointsTotal).sum();
                         String driverProfileUrl = "../driver/" + siteSlugger.slugify(driver.getPsnId()) + ".html";
                         return new SiteGeneratorService.DriverEntry(driver.getPsnId(), driverProfileUrl, totalPoints);
                     })
@@ -202,7 +199,9 @@ public class TeamProfilePageGenerator {
     }
 
     private static String ordinalSuffix(int n) {
-        if (n >= 11 && n <= 13) return "th";
+		if (n >= 11 && n <= 13) {
+			return "th";
+		}
         return switch (n % 10) {
             case 1 -> "st";
             case 2 -> "nd";
@@ -212,7 +211,9 @@ public class TeamProfilePageGenerator {
     }
 
     private static String capitalize(String input) {
-        if (input == null || input.isEmpty()) return input;
+		if (input == null || input.isEmpty()) {
+			return input;
+		}
         return input.charAt(0) + input.substring(1).toLowerCase(Locale.ENGLISH);
     }
 

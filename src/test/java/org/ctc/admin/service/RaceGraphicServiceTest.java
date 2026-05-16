@@ -1,5 +1,7 @@
 package org.ctc.admin.service;
 
+import java.util.Optional;
+import java.util.UUID;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.RaceAttachmentRepository;
 import org.ctc.domain.repository.RaceRepository;
@@ -8,9 +10,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -61,7 +60,7 @@ class RaceGraphicServiceTest {
 
 		// then
 		verify(raceAttachmentRepository).save(argThat(att ->
-				att.getName().equals("MD 1-HOM-AWY-Results")
+				"MD 1-HOM-AWY-Results".equals(att.getName())
 						&& att.getUrl().endsWith("/results.png")
 						&& att.getType() == AttachmentType.FILE));
 	}
@@ -106,7 +105,7 @@ class RaceGraphicServiceTest {
 
 		// then
 		verify(raceAttachmentRepository).save(argThat(att ->
-				att.getName().equals("MD 1-HOM-AWY-Settings")
+				"MD 1-HOM-AWY-Settings".equals(att.getName())
 						&& att.getUrl().endsWith("/settings.png")
 						&& att.getType() == AttachmentType.FILE));
 	}
@@ -151,7 +150,7 @@ class RaceGraphicServiceTest {
 
 		// then
 		verify(raceAttachmentRepository).save(argThat(att ->
-				att.getName().equals("MD 1-HOM-AWY-Lineups")
+				"MD 1-HOM-AWY-Lineups".equals(att.getName())
 						&& att.getUrl().endsWith("/lineup.png")
 						&& att.getType() == AttachmentType.FILE));
 	}

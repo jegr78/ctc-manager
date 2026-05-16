@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
@@ -7,9 +9,6 @@ import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -23,9 +22,9 @@ public class ScoringService {
 		int[] racePoints = scoring.getRacePointsArray();
 		int[] qualiPoints = scoring.getQualiPointsArray();
 
-		int rp = (result.getPosition() >= 1 && result.getPosition() <= racePoints.length)
+		int rp = result.getPosition() >= 1 && result.getPosition() <= racePoints.length
 				? racePoints[result.getPosition() - 1] : 0;
-		int qp = (result.getQualiPosition() >= 1 && result.getQualiPosition() <= qualiPoints.length)
+		int qp = result.getQualiPosition() >= 1 && result.getQualiPosition() <= qualiPoints.length
 				? qualiPoints[result.getQualiPosition() - 1] : 0;
 		int fp = result.isFastestLap() ? scoring.getFastestLapPoints() : 0;
 
@@ -56,8 +55,12 @@ public class ScoringService {
 	 */
 	@Transactional
 	public void aggregateMatchScores(Race race) {
-		if (race.getResults().isEmpty()) return;
-		if (race.isBye()) return;
+		if (race.getResults().isEmpty()) {
+			return;
+		}
+		if (race.isBye()) {
+			return;
+		}
 
 		if (race.getMatch() != null && race.getMatch().getHomeTeam() != null) {
 			Match match = race.getMatch();
@@ -67,9 +70,12 @@ public class ScoringService {
 			// (important for CSV import where races are added sequentially)
 			var legs = raceRepository.findByMatchId(match.getId());
 
-			int matchHome = 0, matchAway = 0;
+			int matchHome = 0;
+			int matchAway = 0;
 			for (Race leg : legs) {
-				if (leg.getResults().isEmpty()) continue;
+				if (leg.getResults().isEmpty()) {
+					continue;
+				}
 				matchHome += leg.getResults().stream()
 						.filter(r -> isDriverInTeam(r, leg.getId(), hId))
 						.mapToInt(RaceResult::getPointsTotal).sum();
@@ -91,9 +97,12 @@ public class ScoringService {
 			// Load all races for this matchup from database for consistency
 			var legs = raceRepository.findByPlayoffMatchupId(matchup.getId());
 
-			int mHome = 0, mAway = 0;
+			int mHome = 0;
+			int mAway = 0;
 			for (Race leg : legs) {
-				if (leg.getResults().isEmpty()) continue;
+				if (leg.getResults().isEmpty()) {
+					continue;
+				}
 				mHome += leg.getResults().stream()
 						.filter(r -> isDriverInTeam(r, leg.getId(), t1Id))
 						.mapToInt(RaceResult::getPointsTotal).sum();
@@ -137,7 +146,9 @@ public class ScoringService {
 		}
 		// Fallback for legacy data without RaceLineup — filter by current season.
 		var race = raceRepository.findById(raceId).orElse(null);
-		if (race == null || race.getMatchday() == null) return false;
+		if (race == null || race.getMatchday() == null) {
+			return false;
+		}
 		var seasonId = race.getMatchday().getSeason().getId();
 		return result.getDriver().getSeasonDrivers().stream()
 				.filter(sd -> sd.getSeason().getId().equals(seasonId))

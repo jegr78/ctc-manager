@@ -1,19 +1,18 @@
 package db.migration;
 
-import org.ctc.CtcManagerApplication;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
+import javax.sql.DataSource;
+import org.ctc.CtcManagerApplication;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -86,8 +85,10 @@ class V7DataImportAuditMigrationIT {
                 while (rs.next()) {
                     String indexName = rs.getString("INDEX_NAME");
                     String columnName = rs.getString("COLUMN_NAME");
-                    if (indexName == null) continue;
-                    if (indexName.equalsIgnoreCase("idx_data_import_audit_executed_at")
+					if (indexName == null) {
+						continue;
+					}
+                    if ("idx_data_import_audit_executed_at".equalsIgnoreCase(indexName)
                             && "EXECUTED_AT".equalsIgnoreCase(columnName)) {
                         foundIndex = true;
                     }

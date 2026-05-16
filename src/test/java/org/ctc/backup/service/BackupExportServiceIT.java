@@ -1,18 +1,18 @@
 package org.ctc.backup.service;
 
-import org.ctc.backup.schema.BackupSchema;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.ctc.backup.schema.BackupSchema;
+import org.ctc.backup.schema.EntityRef;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.TeamRepository;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -81,7 +81,7 @@ class BackupExportServiceIT {
 
 		// then — iteration order of the returned LinkedHashMap must match the export order.
 		List<String> expectedOrder = backupSchema.getExportOrder().stream()
-				.map(ref -> ref.tableName())
+				.map(EntityRef::tableName)
 				.toList();
 		assertThat(counts.keySet()).containsExactlyElementsOf(expectedOrder);
 	}
@@ -95,6 +95,6 @@ class BackupExportServiceIT {
 		assertThat(rows).as("fetchAllForBackup(Season.class) must return the seeded seasons")
 				.isNotEmpty()
 				.hasSize((int) seasonRepository.count())
-				.allMatch(row -> row instanceof Season);
+				.allMatch(Season.class::isInstance);
 	}
 }

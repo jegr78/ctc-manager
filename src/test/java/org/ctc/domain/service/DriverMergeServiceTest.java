@@ -1,5 +1,8 @@
 package org.ctc.domain.service;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
@@ -10,10 +13,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -280,7 +279,7 @@ class DriverMergeServiceTest {
 
 			// then
 			verify(psnAliasRepository).save(argThat(alias ->
-					alias.getAlias().equals("SourcePSN") && alias.getDriver().equals(target)));
+					"SourcePSN".equals(alias.getAlias()) && alias.getDriver().equals(target)));
 		}
 
 		@Test
@@ -299,7 +298,7 @@ class DriverMergeServiceTest {
 
 			// then
 			verify(psnAliasRepository, never()).save(argThat(alias ->
-					alias.getAlias().equals("SourcePSN")));
+					"SourcePSN".equals(alias.getAlias())));
 		}
 	}
 

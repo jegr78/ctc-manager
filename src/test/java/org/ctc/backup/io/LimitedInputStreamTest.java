@@ -1,11 +1,10 @@
 package org.ctc.backup.io;
 
+import java.io.ByteArrayInputStream;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.junit.jupiter.api.Test;
-
-import java.io.ByteArrayInputStream;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

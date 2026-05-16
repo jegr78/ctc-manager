@@ -1,10 +1,5 @@
 package org.ctc.sitegen;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,15 +9,20 @@ import org.flywaydb.core.Flyway;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 /**
  * SC5 regression integration test — covers SC1..SC5 from ROADMAP Phase 62 plus
@@ -154,7 +154,7 @@ class SiteGeneratorPhaseAwarenessIT {
 
         // then
         var playoffTab = doc.select("nav.phase-tab-row a.phase-tab").stream()
-                .filter(a -> a.text().equalsIgnoreCase("Playoff") || a.attr("href").endsWith("playoff.html"))
+                .filter(a -> "Playoff".equalsIgnoreCase(a.text()) || a.attr("href").endsWith("playoff.html"))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Phase-tab row must contain a PLAYOFF tab"));
         assertThat(playoffTab.attr("href")).endsWith("playoff.html");

@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import java.util.*;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
@@ -10,9 +12,6 @@ import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Stream;
 
 @Slf4j
 @Service
@@ -40,7 +39,9 @@ public class RaceLineupService {
 		for (var team : raceTeams) {
 			if (team.isSubTeam()) {
 				var parent = team.getParentOrSelf();
-				if (teamEntries.stream().anyMatch(e -> e.team().getId().equals(parent.getId()))) continue;
+				if (teamEntries.stream().anyMatch(e -> e.team().getId().equals(parent.getId()))) {
+					continue;
+				}
 
 				var subTeams = seasonTeams.stream()
 						.filter(t -> t.isSubTeam() && t.getParentOrSelf().getId().equals(parent.getId()))
@@ -56,7 +57,7 @@ public class RaceLineupService {
 			}
 		}
 
-		LineupTeamEntry homeEntry = teamEntries.size() > 0 ? teamEntries.get(0) : null;
+		LineupTeamEntry homeEntry = teamEntries.isEmpty() ? null : teamEntries.get(0);
 		LineupTeamEntry awayEntry = teamEntries.size() > 1 ? teamEntries.get(1) : null;
 
 		return new LineupData(race, homeEntry, awayEntry);

@@ -1,11 +1,16 @@
 package org.ctc.domain.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.AttachmentType;
 import org.ctc.domain.model.RaceAttachment;
 import org.ctc.domain.repository.RaceAttachmentRepository;
 import org.ctc.domain.repository.RaceRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -15,12 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -104,7 +103,7 @@ public class RaceAttachmentService {
         } catch (IOException e) {
             log.debug("Could not probe content type for {}", file, e);
         }
-        String contentType = (probed != null) ? probed : "application/octet-stream";
+        String contentType = probed != null ? probed : "application/octet-stream";
 
         // SECU-05: sanitize filename to prevent header injection
         String safeName = attachment.getName().replaceAll("[\\r\\n\";]", "_");

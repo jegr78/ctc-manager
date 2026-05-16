@@ -77,7 +77,7 @@ class SeasonControllerTest {
 				.andExpect(redirectedUrl("/admin/seasons"));
 
 		var saved = seasonRepository.findAll().stream()
-				.filter(s -> s.getName().equals("T-Phase60-Slim Save")).findFirst().orElseThrow();
+				.filter(s -> "T-Phase60-Slim Save".equals(s.getName())).findFirst().orElseThrow();
 		assertThat(saved.getYear()).isEqualTo(2027);
 	}
 

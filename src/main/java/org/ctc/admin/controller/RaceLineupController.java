@@ -1,5 +1,9 @@
 package org.ctc.admin.controller;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.service.RaceLineupService;
@@ -7,11 +11,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
 
 @Slf4j
 @Controller
@@ -25,8 +24,12 @@ public class RaceLineupController {
 	public String lineup(@PathVariable UUID raceId, Model model) {
 		var data = raceLineupService.getLineupData(raceId);
 		var teamEntries = new ArrayList<RaceLineupService.LineupTeamEntry>();
-		if (data.homeEntry() != null) teamEntries.add(data.homeEntry());
-		if (data.awayEntry() != null) teamEntries.add(data.awayEntry());
+		if (data.homeEntry() != null) {
+			teamEntries.add(data.homeEntry());
+		}
+		if (data.awayEntry() != null) {
+			teamEntries.add(data.awayEntry());
+		}
 
 		model.addAttribute("race", data.race());
 		model.addAttribute("teamEntries", teamEntries);
@@ -40,7 +43,9 @@ public class RaceLineupController {
 	                         RedirectAttributes redirectAttributes) {
 		var driverTeamAssignments = new HashMap<UUID, UUID>();
 		for (var entry : params.entrySet()) {
-			if (!entry.getKey().startsWith("driver_") || entry.getValue().isBlank()) continue;
+			if (!entry.getKey().startsWith("driver_") || entry.getValue().isBlank()) {
+				continue;
+			}
 			UUID driverId = UUID.fromString(entry.getKey().substring("driver_".length()));
 			UUID teamId = UUID.fromString(entry.getValue());
 			driverTeamAssignments.put(driverId, teamId);

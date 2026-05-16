@@ -2,6 +2,10 @@ package org.ctc.backup.audit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Map;
+import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.env.Environment;
@@ -11,11 +15,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.sql.Timestamp;
-import java.time.Instant;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * REQUIRES_NEW audit-row writer for {@link DataImportAudit}.
@@ -152,7 +151,7 @@ public class DataImportAuditService {
 
     /** Serializes a (possibly null) Map to a JSON-text string using {@code backupObjectMapper}. */
     private String writeJson(Map<String, Long> map) {
-        Map<String, Long> safeMap = (map == null) ? Map.of() : map;
+        Map<String, Long> safeMap = map == null ? Map.of() : map;
         try {
             return backupObjectMapper.writeValueAsString(safeMap);
         } catch (JsonProcessingException e) {

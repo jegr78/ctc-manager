@@ -1,5 +1,8 @@
 package org.ctc.admin.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.PlayoffSeed;
 import org.ctc.domain.model.Race;
@@ -10,10 +13,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 @Slf4j
 @Service
@@ -38,9 +37,15 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 		if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
 			throw new IllegalStateException("Race has no teams assigned");
 		}
-		if (race.getCar() == null) throw new IllegalStateException("Race has no car");
-		if (race.getTrack() == null) throw new IllegalStateException("Race has no track");
-		if (!race.hasAllSettings()) throw new IllegalStateException("Race settings are incomplete");
+		if (race.getCar() == null) {
+			throw new IllegalStateException("Race has no car");
+		}
+		if (race.getTrack() == null) {
+			throw new IllegalStateException("Race has no track");
+		}
+		if (!race.hasAllSettings()) {
+			throw new IllegalStateException("Race settings are incomplete");
+		}
 
 		var homeTeam = race.getHomeTeam();
 		var awayTeam = race.getAwayTeam();
@@ -49,10 +54,12 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 
 		String homeCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), homeTeam.getShortName()));
 		String awayCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), awayTeam.getShortName()));
-		if (homeCardBase64 == null)
+		if (homeCardBase64 == null) {
 			throw new IllegalStateException("Team card not found for " + homeTeam.getShortName());
-		if (awayCardBase64 == null)
+		}
+		if (awayCardBase64 == null) {
 			throw new IllegalStateException("Team card not found for " + awayTeam.getShortName());
+		}
 
 		int homePosition = 0;
 		int awayPosition = 0;
@@ -70,8 +77,12 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 					phase.getId(),
 					group != null ? group.getId() : null);
 			for (int i = 0; i < standings.size(); i++) {
-				if (standings.get(i).getTeam().getId().equals(homeTeam.getId())) homePosition = i + 1;
-				if (standings.get(i).getTeam().getId().equals(awayTeam.getId())) awayPosition = i + 1;
+				if (standings.get(i).getTeam().getId().equals(homeTeam.getId())) {
+					homePosition = i + 1;
+				}
+				if (standings.get(i).getTeam().getId().equals(awayTeam.getId())) {
+					awayPosition = i + 1;
+				}
 			}
 		}
 

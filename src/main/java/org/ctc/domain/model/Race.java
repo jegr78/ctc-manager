@@ -2,12 +2,11 @@ package org.ctc.domain.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import lombok.*;
 
 @Entity
 @Table(name = "races")
@@ -70,16 +69,28 @@ public class Race extends BaseEntity {
 
 	// Convenience delegation methods — resolve teams from override, Match, or PlayoffMatchup
 	public Team getHomeTeam() {
-		if (homeTeamOverride != null) return homeTeamOverride;
-		if (match != null) return match.getHomeTeam();
-		if (playoffMatchup != null) return playoffMatchup.getTeam1();
+		if (homeTeamOverride != null) {
+			return homeTeamOverride;
+		}
+		if (match != null) {
+			return match.getHomeTeam();
+		}
+		if (playoffMatchup != null) {
+			return playoffMatchup.getTeam1();
+		}
 		return null;
 	}
 
 	public Team getAwayTeam() {
-		if (awayTeamOverride != null) return awayTeamOverride;
-		if (match != null) return match.getAwayTeam();
-		if (playoffMatchup != null) return playoffMatchup.getTeam2();
+		if (awayTeamOverride != null) {
+			return awayTeamOverride;
+		}
+		if (match != null) {
+			return match.getAwayTeam();
+		}
+		if (playoffMatchup != null) {
+			return playoffMatchup.getTeam2();
+		}
 		return null;
 	}
 
@@ -88,14 +99,22 @@ public class Race extends BaseEntity {
 	}
 
 	public Integer getHomeScore() {
-		if (match != null) return match.getHomeScore();
-		if (playoffMatchup != null) return playoffMatchup.getHomeScore();
+		if (match != null) {
+			return match.getHomeScore();
+		}
+		if (playoffMatchup != null) {
+			return playoffMatchup.getHomeScore();
+		}
 		return null;
 	}
 
 	public Integer getAwayScore() {
-		if (match != null) return match.getAwayScore();
-		if (playoffMatchup != null) return playoffMatchup.getAwayScore();
+		if (match != null) {
+			return match.getAwayScore();
+		}
+		if (playoffMatchup != null) {
+			return playoffMatchup.getAwayScore();
+		}
 		return null;
 	}
 

@@ -1,12 +1,6 @@
 package org.ctc.backup.restore.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.ctc.backup.restore.EntityRestorer;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
-
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.sql.Types;
@@ -14,6 +8,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.restore.EntityRestorer;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
 
 /**
  * Restores rows into the {@code season_phases} table from the
@@ -89,16 +88,16 @@ public class SeasonPhaseRestorer implements EntityRestorer {
 
     private static String nullableString(JsonNode row, String field) {
         JsonNode n = row.get(field);
-        return (n == null || n.isNull()) ? null : n.asText();
+        return n == null || n.isNull() ? null : n.asText();
     }
 
     private static Date nullableDate(JsonNode row, String field) {
         JsonNode n = row.get(field);
-        return (n == null || n.isNull()) ? null : Date.valueOf(LocalDate.parse(n.asText()));
+        return n == null || n.isNull() ? null : Date.valueOf(LocalDate.parse(n.asText()));
     }
 
     private static Integer nullableInt(JsonNode row, String field) {
         JsonNode n = row.get(field);
-        return (n == null || n.isNull()) ? null : n.asInt();
+        return n == null || n.isNull() ? null : n.asInt();
     }
 }

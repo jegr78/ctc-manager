@@ -1,12 +1,11 @@
 package org.ctc;
 
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.ctc.domain.service.PlayoffService;
 import org.springframework.stereotype.Component;
-
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor

@@ -1,5 +1,13 @@
 package org.ctc.gt7sync;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Car;
@@ -12,15 +20,6 @@ import org.ctc.gt7sync.Gt7SyncPreview.SyncStatus;
 import org.ctc.gt7sync.Gt7SyncPreview.TrackEntry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 @Slf4j
 @Service
@@ -55,8 +54,12 @@ public class Gt7SyncService {
 			scrapedCars = carsFuture.join();
 			scrapedTracks = tracksFuture.join();
 		} catch (CompletionException e) {
-			if (e.getCause() instanceof IOException ioe) throw ioe;
-			if (e.getCause() instanceof UncheckedIOException uioe) throw uioe.getCause();
+			if (e.getCause() instanceof IOException ioe) {
+				throw ioe;
+			}
+			if (e.getCause() instanceof UncheckedIOException uioe) {
+				throw uioe.getCause();
+			}
 			throw new IOException("Failed to fetch GT7 data", e.getCause());
 		}
 

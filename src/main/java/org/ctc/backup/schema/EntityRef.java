@@ -26,7 +26,7 @@ public record EntityRef(
      */
     public static EntityRef fromEntityType(EntityType<?> et) {
         Table tableAnno = et.getJavaType().getAnnotation(Table.class);
-        String table = (tableAnno != null && !tableAnno.name().isBlank())
+        String table = tableAnno != null && !tableAnno.name().isBlank()
                 ? tableAnno.name()
                 : et.getName().toLowerCase();
         String file = "data/" + table.replace('_', '-') + ".json";

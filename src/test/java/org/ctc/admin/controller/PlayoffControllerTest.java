@@ -1,5 +1,6 @@
 package org.ctc.admin.controller;
 
+import java.util.UUID;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -13,8 +14,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;

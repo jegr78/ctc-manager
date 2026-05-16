@@ -1,6 +1,10 @@
 package org.ctc.admin.controller;
 
 import jakarta.validation.Valid;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGeneratorForm;
@@ -16,11 +20,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.io.IOException;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Controller

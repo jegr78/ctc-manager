@@ -4,12 +4,11 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-
-import java.util.UUID;
 
 @Entity
 @Table(name = "race_results",
@@ -45,7 +44,7 @@ public class RaceResult extends BaseEntity {
 	private int qualiPosition;
 
 	@Column(nullable = false)
-	private boolean fastestLap = false;
+	private boolean fastestLap;
 
 	@Column(nullable = false)
 	private int pointsRace;

@@ -1,5 +1,8 @@
 package org.ctc.domain.service;
 
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.TeamCardService;
@@ -7,10 +10,6 @@ import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -108,9 +107,9 @@ public class RaceService {
 		if (race.getMatch() != null && race.getHomeTeam() != null && race.getAwayTeam() != null) {
 			var season = race.getMatchday().getSeason();
 			hasHomeCard = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), race.getHomeTeam().getId())
-					.map(st -> teamCardService.cardExists(st)).orElse(false);
+					.map(teamCardService::cardExists).orElse(false);
 			hasAwayCard = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), race.getAwayTeam().getId())
-					.map(st -> teamCardService.cardExists(st)).orElse(false);
+					.map(teamCardService::cardExists).orElse(false);
 		}
 		boolean lineupExists = race.getAttachments().stream()
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/lineup.png"));
@@ -246,7 +245,9 @@ public class RaceService {
 		race.getResults().clear();
 
 		for (var rd : results) {
-			if (rd.driverId() == null) continue;
+			if (rd.driverId() == null) {
+				continue;
+			}
 
 			var driver = driverRepository.findById(rd.driverId()).orElseThrow();
 			var result = new RaceResult(race, driver, rd.position(), rd.qualiPosition(), rd.fastestLap());

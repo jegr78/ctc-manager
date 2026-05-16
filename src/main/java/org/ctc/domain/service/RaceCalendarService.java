@@ -1,14 +1,13 @@
 package org.ctc.domain.service;
 
+import java.io.IOException;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.GoogleCalendarService;
 import org.ctc.domain.repository.RaceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.io.IOException;
-import java.util.UUID;
 
 /**
  * Service for managing Google Calendar events for races.

@@ -1,15 +1,14 @@
 package org.ctc.dataimport;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.CsvImportService.ImportMetadata;
 import org.ctc.dataimport.CsvImportService.ImportPreview;
 import org.ctc.dataimport.CsvImportService.ImportRow;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Service
@@ -115,7 +114,9 @@ public class ScorecardParser {
 	}
 
 	private String cleanTeamName(String teamName) {
-		if (teamName == null) return "";
+		if (teamName == null) {
+			return "";
+		}
 		return teamName.trim();
 	}
 
@@ -176,7 +177,9 @@ public class ScorecardParser {
 	}
 
 	private String cellToString(Object cell) {
-		if (cell == null) return "";
+		if (cell == null) {
+			return "";
+		}
 		return cell.toString();
 	}
 }

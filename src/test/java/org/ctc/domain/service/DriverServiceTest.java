@@ -1,17 +1,13 @@
 package org.ctc.domain.service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
-import org.ctc.domain.model.Driver;
-import org.ctc.domain.model.PsnAlias;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonDriver;
-import org.ctc.domain.model.Team;
-import org.ctc.domain.repository.DriverRepository;
-import org.ctc.domain.repository.PsnAliasRepository;
-import org.ctc.domain.repository.SeasonDriverRepository;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,11 +15,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

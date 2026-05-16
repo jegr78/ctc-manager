@@ -1,10 +1,5 @@
 package org.ctc.sitegen;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,6 +17,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 /**
  * Phase 62 Plan 4 — phase-aware team-profile page tests.
@@ -170,7 +170,7 @@ class TeamProfilePageGeneratorTest {
         assertThat(teamProfile).exists();
         Document doc = Jsoup.parse(Files.readString(teamProfile));
         var heading = doc.select("h2.section-title").stream()
-                .filter(h -> h.text().equals("Phase Breakdown"))
+                .filter(h -> "Phase Breakdown".equals(h.text()))
                 .findFirst()
                 .orElse(null);
         assertNotNull(heading,

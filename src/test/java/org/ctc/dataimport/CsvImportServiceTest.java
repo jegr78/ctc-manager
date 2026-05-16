@@ -1,5 +1,8 @@
 package org.ctc.dataimport;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.*;
 import org.ctc.domain.exception.ValidationException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
@@ -11,10 +14,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -113,12 +112,16 @@ class CsvImportServiceTest {
 		lenient().when(matchRepository.findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(any(), any(), any())).thenReturn(Optional.empty());
 		lenient().when(matchRepository.save(any(Match.class))).thenAnswer(inv -> {
 			var m = inv.getArgument(0, Match.class);
-			if (m.getId() == null) m.setId(UUID.randomUUID());
+			if (m.getId() == null) {
+				m.setId(UUID.randomUUID());
+			}
 			return m;
 		});
 		lenient().when(raceRepository.save(any(Race.class))).thenAnswer(inv -> {
 			var r = inv.getArgument(0, Race.class);
-			if (r.getId() == null) r.setId(UUID.randomUUID());
+			if (r.getId() == null) {
+				r.setId(UUID.randomUUID());
+			}
 			return r;
 		});
 		when(seasonDriverRepository.findBySeasonIdAndDriverId(any(), any())).thenReturn(Optional.empty());
@@ -284,7 +287,9 @@ class CsvImportServiceTest {
 		when(raceLineupRepository.findByRaceIdAndDriverId(any(), any())).thenReturn(Optional.empty());
 		when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> {
 			var d = inv.getArgument(0, Driver.class);
-			if (d.getId() == null) d.setId(UUID.randomUUID());
+			if (d.getId() == null) {
+				d.setId(UUID.randomUUID());
+			}
 			return d;
 		});
 

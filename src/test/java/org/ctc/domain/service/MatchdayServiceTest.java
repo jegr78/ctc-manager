@@ -1,12 +1,12 @@
 package org.ctc.domain.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
-import org.ctc.domain.model.Match;
-import org.ctc.domain.model.Matchday;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.model.Team;
+import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonRepository;
@@ -16,11 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

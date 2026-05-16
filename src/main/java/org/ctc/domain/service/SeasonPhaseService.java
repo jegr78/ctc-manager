@@ -1,5 +1,8 @@
 package org.ctc.domain.service;
 
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -8,10 +11,6 @@ import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Central phase resolver and CRUD service for {@link SeasonPhase}, {@link SeasonPhaseGroup},
@@ -227,7 +226,9 @@ public class SeasonPhaseService {
         phase.setLegs(legs);
         phase.setEventDurationMinutes(eventDurationMinutes);
         phase.setLabel(label);
-        if (sortIndex != null) phase.setSortIndex(sortIndex);
+		if (sortIndex != null) {
+			phase.setSortIndex(sortIndex);
+		}
         log.info("Updated phase {} (type={}, layout={})", phaseId, phase.getPhaseType(), layout);
         return seasonPhaseRepository.save(phase);
     }
@@ -283,7 +284,9 @@ public class SeasonPhaseService {
         var group = seasonPhaseGroupRepository.findById(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", groupId));
         group.setName(name);
-        if (sortIndex != null) group.setSortIndex(sortIndex);
+		if (sortIndex != null) {
+			group.setSortIndex(sortIndex);
+		}
         log.info("Updated group {} ({})", groupId, name);
         return seasonPhaseGroupRepository.save(group);
     }
@@ -347,7 +350,9 @@ public class SeasonPhaseService {
 
         Set<UUID> includedTeamIds = new HashSet<>();
         for (var a : assignments) {
-            if (!a.included()) continue;
+			if (!a.included()) {
+				continue;
+			}
             includedTeamIds.add(a.teamId());
 
             var pt = existingByTeamId.get(a.teamId());

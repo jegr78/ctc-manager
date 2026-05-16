@@ -1,12 +1,11 @@
 package db.migration;
 
+import java.sql.Connection;
+import java.sql.Statement;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.sql.Connection;
-import java.sql.Statement;
 
 /**
  * V5 Flyway Java migration: legacy scoring FK columns become nullable.

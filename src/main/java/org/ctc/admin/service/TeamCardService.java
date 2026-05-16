@@ -4,6 +4,13 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonTeam;
@@ -17,14 +24,6 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.StringTemplateResolver;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -71,7 +70,9 @@ public class TeamCardService implements TemplateManageable {
 			String parentShort = team.getParentTeam().getShortName();
 			String teamShort = team.getShortName();
 			subTeamLabel = teamShort.replace(parentShort, "").trim();
-			if (subTeamLabel.isEmpty()) subTeamLabel = null;
+			if (subTeamLabel.isEmpty()) {
+				subTeamLabel = null;
+			}
 		}
 
 		var ctx = new Context();
@@ -167,7 +168,9 @@ public class TeamCardService implements TemplateManageable {
 	}
 
 	private double relativeLuminance(String hex) {
-		if (hex == null || hex.length() < 7) return 1.0;
+		if (hex == null || hex.length() < 7) {
+			return 1.0;
+		}
 		int r = Integer.parseInt(hex.substring(1, 3), 16);
 		int g = Integer.parseInt(hex.substring(3, 5), 16);
 		int b = Integer.parseInt(hex.substring(5, 7), 16);
@@ -175,7 +178,9 @@ public class TeamCardService implements TemplateManageable {
 	}
 
 	private String encodeLogoBase64(String logoUrl) {
-		if (logoUrl == null || !logoUrl.startsWith("/uploads/")) return null;
+		if (logoUrl == null || !logoUrl.startsWith("/uploads/")) {
+			return null;
+		}
 		try {
 			Path logoFile = uploadDir.resolve(logoUrl.substring("/uploads/".length())).normalize();
 			if (!logoFile.startsWith(uploadDir)) {
@@ -185,7 +190,9 @@ public class TeamCardService implements TemplateManageable {
 			if (Files.exists(logoFile)) {
 				byte[] bytes = Files.readAllBytes(logoFile);
 				String mimeType = Files.probeContentType(logoFile);
-				if (mimeType == null) mimeType = "image/png";
+				if (mimeType == null) {
+					mimeType = "image/png";
+				}
 				return "data:" + mimeType + ";base64," + Base64.getEncoder().encodeToString(bytes);
 			}
 		} catch (IOException e) {

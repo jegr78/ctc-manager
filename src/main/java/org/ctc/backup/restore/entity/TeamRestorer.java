@@ -1,16 +1,15 @@
 package org.ctc.backup.restore.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.backup.restore.EntityRestorer;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 /**
  * Restores rows into the {@code teams} table from the
@@ -84,6 +83,6 @@ public class TeamRestorer implements EntityRestorer {
 
     private static String nullableString(JsonNode row, String field) {
         JsonNode n = row.get(field);
-        return (n == null || n.isNull()) ? null : n.asText();
+        return n == null || n.isNull() ? null : n.asText();
     }
 }

@@ -1,5 +1,10 @@
 package org.ctc.dataimport;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import org.ctc.dataimport.DriverSheetImportService.DriverSheetImportPreview;
 import org.ctc.dataimport.DriverSheetImportService.ExecuteResult;
 import org.ctc.dataimport.DriverSheetImportService.TabPreview;
@@ -12,19 +17,13 @@ import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.lenient;
@@ -232,7 +231,7 @@ class DriverSheetImportServiceIT {
         // → no UNKNOWN_TEAM_CODE) and execute proceeds, writing the SeasonDriver.
         DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
         assertThat(preview.tabPreviews().get(0).newDrivers())
-                .anyMatch(r -> r.teamShortName().equals("XYZ"));
+                .anyMatch(r -> "XYZ".equals(r.teamShortName()));
 
         Map<String, String> params = new LinkedHashMap<>();
         params.put("seasonId_2023_S1", season2023.getId().toString());

@@ -1,5 +1,6 @@
 package org.ctc.dataimport;
 
+import java.util.UUID;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.repository.DriverRepository;
@@ -12,8 +13,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;

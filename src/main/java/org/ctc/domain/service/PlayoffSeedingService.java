@@ -1,20 +1,15 @@
 package org.ctc.domain.service;
 
 import jakarta.persistence.EntityManager;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.PlayoffMatchupRepository;
-import org.ctc.domain.repository.PlayoffRepository;
-import org.ctc.domain.repository.PlayoffSeedRepository;
-import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Service for playoff seeding logic: auto-seeding, manual seed assignment, and seed number persistence.
@@ -68,8 +63,12 @@ public class PlayoffSeedingService {
 		Set<UUID> seededTeamIds = firstRound.getMatchups().stream()
 				.flatMap(m -> {
 					var ids = new ArrayList<UUID>();
-					if (m.getTeam1() != null) ids.add(m.getTeam1().getId());
-					if (m.getTeam2() != null) ids.add(m.getTeam2().getId());
+					if (m.getTeam1() != null) {
+						ids.add(m.getTeam1().getId());
+					}
+					if (m.getTeam2() != null) {
+						ids.add(m.getTeam2().getId());
+					}
 					return ids.stream();
 				})
 				.collect(Collectors.toSet());
@@ -245,7 +244,9 @@ public class PlayoffSeedingService {
 			case 4 -> new int[]{0, 3, 2, 1};
 			default -> {
 				int[] order = new int[matchCount];
-				for (int i = 0; i < matchCount; i++) order[i] = i;
+				for (int i = 0; i < matchCount; i++) {
+					order[i] = i;
+				}
 				yield order;
 			}
 		};

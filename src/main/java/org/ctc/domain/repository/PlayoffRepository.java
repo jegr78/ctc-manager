@@ -1,14 +1,12 @@
 package org.ctc.domain.repository;
 
-import org.ctc.domain.model.Playoff;
-import org.springframework.data.jpa.repository.EntityGraph;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import org.springframework.data.jpa.repository.Query;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.ctc.domain.model.Playoff;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 public interface PlayoffRepository extends JpaRepository<Playoff, UUID> {
 

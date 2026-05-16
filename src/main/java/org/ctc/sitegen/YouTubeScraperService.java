@@ -1,11 +1,10 @@
 package org.ctc.sitegen;
 
+import java.io.IOException;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Service;
-
-import java.io.IOException;
-import java.util.regex.Pattern;
 
 @Slf4j
 @Service

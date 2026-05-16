@@ -1,16 +1,15 @@
 package org.ctc.domain.service;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Set;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Service
@@ -47,7 +46,9 @@ public class FileStorageService {
 	}
 
 	public void delete(String url) {
-		if (url == null || !url.startsWith("/uploads/")) return;
+		if (url == null || !url.startsWith("/uploads/")) {
+			return;
+		}
 
 		Path file = uploadDir.resolve(url.substring("/uploads/".length())).normalize();
 		if (!file.startsWith(uploadDir)) {
@@ -115,7 +116,9 @@ public class FileStorageService {
 	}
 
 	private String sanitize(String filename) {
-		if (filename == null) return "file";
+		if (filename == null) {
+			return "file";
+		}
 		return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
 	}
 
@@ -125,7 +128,7 @@ public class FileStorageService {
 			throw new IllegalArgumentException("URL hostname blocked: <null>");
 		}
 		hostname = hostname.toLowerCase();
-		if (hostname.equals("localhost") || hostname.equals("[::1]")) {
+		if ("localhost".equals(hostname) || "[::1]".equals(hostname)) {
 			log.warn("Blocked SSRF attempt to internal host: {}", hostname);
 			throw new IllegalArgumentException("URL hostname blocked: " + hostname);
 		}

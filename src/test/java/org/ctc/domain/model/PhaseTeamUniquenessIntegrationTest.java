@@ -1,12 +1,6 @@
 package org.ctc.domain.model;
 
-import org.ctc.domain.repository.MatchScoringRepository;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.RaceScoringRepository;
-import org.ctc.domain.repository.SeasonPhaseGroupRepository;
-import org.ctc.domain.repository.SeasonPhaseRepository;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

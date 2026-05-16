@@ -2,11 +2,10 @@ package org.ctc.backup.schema;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManagerFactory;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 /**
  * Backup wire contract.

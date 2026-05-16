@@ -1,10 +1,5 @@
 package org.ctc.sitegen;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,6 +18,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 /**
  * Phase 62 Plan 1 — phase- and group-aware standings page tests.
@@ -142,7 +142,7 @@ class StandingsPageGeneratorTest {
         Document doc = Jsoup.parse(
                 Files.readString(tempDir.resolve("season").resolve("2023-1-season-2023").resolve("standings.html")));
         var playoffTab = doc.select("nav.phase-tab-row a.phase-tab").stream()
-                .filter(a -> a.text().equalsIgnoreCase("Playoff") || a.attr("href").endsWith("playoff.html"))
+                .filter(a -> "Playoff".equalsIgnoreCase(a.text()) || a.attr("href").endsWith("playoff.html"))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Phase-tab row must contain a PLAYOFF tab"));
         assertThat(playoffTab.attr("href")).endsWith("playoff.html");

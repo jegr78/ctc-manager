@@ -1,14 +1,13 @@
 package org.ctc.domain.service;
 
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Read-only service for assembling race form data.
@@ -66,8 +65,12 @@ public class RaceFormDataService {
         if (data.results().isEmpty()) {
             var seasonId = race.getMatchday().getSeason().getId();
             var results = new ArrayList<RaceService.RaceResultData>();
-            if (race.getHomeTeam() != null) populateDrivers(results, raceId, seasonId, race.getHomeTeam());
-            if (race.getAwayTeam() != null) populateDrivers(results, raceId, seasonId, race.getAwayTeam());
+			if (race.getHomeTeam() != null) {
+				populateDrivers(results, raceId, seasonId, race.getHomeTeam());
+			}
+			if (race.getAwayTeam() != null) {
+				populateDrivers(results, raceId, seasonId, race.getAwayTeam());
+			}
             data = new RaceService.RaceData(data.id(), data.matchdayId(), data.homeTeamId(), data.awayTeamId(),
                     data.trackId(), data.carId(), data.dateTime(), results,
                     data.numberOfLaps(), data.tyreWearMultiplier(), data.fuelConsumptionMultiplier(),

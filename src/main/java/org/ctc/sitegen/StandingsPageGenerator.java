@@ -3,18 +3,10 @@ package org.ctc.sitegen;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ctc.domain.model.PhaseLayout;
-import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.SeasonFormat;
-import org.ctc.domain.model.SeasonPhase;
-import org.ctc.domain.model.SeasonPhaseGroup;
+import org.ctc.domain.model.*;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.SeasonPhaseGroupRepository;
 import org.ctc.domain.service.SeasonPhaseService;
@@ -109,7 +101,7 @@ public class StandingsPageGenerator {
         var season = ctx.season();
         var seasonSlug = siteSlugger.slugify(season.getDisplayLabel());
         boolean isGroupsLayout = phase.getLayout() == PhaseLayout.GROUPS;
-        boolean isCombinedView = (groupId == null);
+        boolean isCombinedView = groupId == null;
         boolean isSwissPerGroup = !isCombinedView && phase.getFormat() == SeasonFormat.SWISS;
 
         // Calculate standings; choose Buchholz variant for per-group + Swiss
@@ -120,7 +112,7 @@ public class StandingsPageGenerator {
         // empty-state: build 0-point roster from PhaseTeam rows when standings list is empty
         boolean emptyState = standings.isEmpty();
         if (emptyState) {
-            var roster = (groupId != null)
+            var roster = groupId != null
                     ? phaseTeamRepository.findByPhaseIdAndGroupId(phase.getId(), groupId)
                     : phaseTeamRepository.findByPhaseId(phase.getId());
             standings = roster.stream()
@@ -196,7 +188,7 @@ public class StandingsPageGenerator {
                                               boolean isLegacyView) {
         var tabs = new ArrayList<PhaseTabView>();
         for (SeasonPhase p : phases) {
-            String label = (p.getLabel() != null && !p.getLabel().isBlank())
+            String label = p.getLabel() != null && !p.getLabel().isBlank()
                     ? p.getLabel()
                     : capitalize(p.getPhaseType().name());
             String href;
@@ -207,7 +199,7 @@ public class StandingsPageGenerator {
             } else {
                 href = "standings-" + phaseSlug(p) + ".html";
             }
-            boolean active = (p.getPhaseType() == currentPhaseType);
+            boolean active = p.getPhaseType() == currentPhaseType;
             tabs.add(new PhaseTabView(label, href, active, ARIA_CONTROLS_ID));
         }
         return tabs;
@@ -227,12 +219,12 @@ public class StandingsPageGenerator {
     private List<GroupSubTabView> buildGroupTabs(SeasonPhase phase, String phaseFileBase,
                                                  String combinedHref, UUID activeGroupId) {
         var tabs = new ArrayList<GroupSubTabView>();
-        boolean combinedActive = (activeGroupId == null);
+        boolean combinedActive = activeGroupId == null;
         tabs.add(new GroupSubTabView("Combined", combinedHref, combinedActive, ARIA_CONTROLS_ID));
         for (SeasonPhaseGroup g : seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phase.getId())) {
             String groupSlug = siteSlugger.slugify(g.getName());
             String href = phaseFileBase + "-group-" + groupSlug + ".html";
-            boolean active = (activeGroupId != null && activeGroupId.equals(g.getId()));
+            boolean active = activeGroupId != null && activeGroupId.equals(g.getId());
             tabs.add(new GroupSubTabView(g.getName(), href, active, ARIA_CONTROLS_ID));
         }
         return tabs;
@@ -246,7 +238,9 @@ public class StandingsPageGenerator {
     }
 
     private String capitalize(String input) {
-        if (input == null || input.isEmpty()) return input;
+		if (input == null || input.isEmpty()) {
+			return input;
+		}
         return input.charAt(0) + input.substring(1).toLowerCase(Locale.ENGLISH);
     }
 }

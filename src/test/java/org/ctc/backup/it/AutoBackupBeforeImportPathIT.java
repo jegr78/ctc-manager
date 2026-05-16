@@ -1,23 +1,5 @@
 package org.ctc.backup.it;
 
-import org.ctc.admin.TestDataService;
-import org.ctc.backup.dto.BackupImportResult;
-import org.ctc.backup.schema.BackupManifest;
-import org.ctc.backup.schema.BackupSchema;
-import org.ctc.backup.service.BackupArchiveService;
-import org.ctc.backup.service.BackupImportService;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.ActiveProfiles;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -28,6 +10,23 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+import org.ctc.admin.TestDataService;
+import org.ctc.backup.dto.BackupImportResult;
+import org.ctc.backup.schema.BackupManifest;
+import org.ctc.backup.schema.BackupSchema;
+import org.ctc.backup.service.BackupArchiveService;
+import org.ctc.backup.service.BackupImportService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

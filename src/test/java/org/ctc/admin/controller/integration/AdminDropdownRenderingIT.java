@@ -1,5 +1,8 @@
 package org.ctc.admin.controller.integration;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
@@ -18,10 +21,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.params.provider.Arguments.arguments;

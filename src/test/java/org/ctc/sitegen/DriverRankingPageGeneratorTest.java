@@ -1,10 +1,5 @@
 package org.ctc.sitegen;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +23,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 /**
  * Phase 62 Plan 3 — phase-aware driver-ranking page tests.
@@ -206,7 +206,7 @@ class DriverRankingPageGeneratorTest {
         Document doc = Jsoup.parse(Files.readString(
                 tempDir.resolve("season").resolve("2023-1-season-2023").resolve("driver-ranking-regular.html")));
         var allPhasesTab = doc.select("nav.phase-tab-row a.phase-tab").stream()
-                .filter(a -> a.text().equals("All Phases"))
+                .filter(a -> "All Phases".equals(a.text()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("All Phases tab must be present in the row"));
         assertThat(allPhasesTab.attr("aria-selected")).isEqualTo("false");

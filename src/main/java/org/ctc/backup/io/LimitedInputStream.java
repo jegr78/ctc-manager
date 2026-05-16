@@ -1,12 +1,11 @@
 package org.ctc.backup.io;
 
-import org.ctc.backup.exception.BackupArchiveException;
-import org.ctc.backup.exception.BackupArchiveException.Reason;
-
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.LongConsumer;
+import org.ctc.backup.exception.BackupArchiveException;
+import org.ctc.backup.exception.BackupArchiveException.Reason;
 
 /**
  * A {@link FilterInputStream} that counts inflated bytes passing through {@link #read()} and

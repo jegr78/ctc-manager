@@ -2,13 +2,12 @@ package org.ctc.domain.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import java.util.Arrays;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-
-import java.util.Arrays;
-import java.util.UUID;
 
 @Entity
 @Table(name = "race_scorings")
@@ -33,7 +32,7 @@ public class RaceScoring extends BaseEntity {
 	private String qualiPoints;
 
 	@Column(name = "fastest_lap_points", nullable = false)
-	private int fastestLapPoints = 0;
+	private int fastestLapPoints;
 
 	public RaceScoring(String name, String racePoints, String qualiPoints, int fastestLapPoints) {
 		this.name = name;
@@ -81,7 +80,9 @@ public class RaceScoring extends BaseEntity {
 	}
 
 	public boolean isValid() {
-		if (!canParse()) return false;
+		if (!canParse()) {
+			return false;
+		}
 		return isMonotonicallyDecreasing(getRacePointsArray())
 				&& isMonotonicallyDecreasing(getQualiPointsArray());
 	}

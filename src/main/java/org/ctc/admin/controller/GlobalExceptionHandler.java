@@ -1,5 +1,6 @@
 package org.ctc.admin.controller;
 
+import java.util.NoSuchElementException;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.exception.ValidationException;
@@ -11,8 +12,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
-
-import java.util.NoSuchElementException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {

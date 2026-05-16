@@ -1,17 +1,7 @@
 package org.ctc.backup.serialization;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIdentityReference;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
-import org.ctc.domain.model.Car;
-import org.ctc.domain.model.Match;
-import org.ctc.domain.model.Matchday;
-import org.ctc.domain.model.PlayoffMatchup;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.Team;
-import org.ctc.domain.model.Track;
+import com.fasterxml.jackson.annotation.*;
+import org.ctc.domain.model.*;
 
 /**
  * Externalised Jackson annotations for {@link Race}.
@@ -38,9 +28,9 @@ import org.ctc.domain.model.Track;
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler",
-        "settings", "results", "attachments",
-        "homeTeam", "awayTeam", "homeScore", "awayScore",
-        "bye", "allSettings", "calendarEvent"})
+		"settings", "results", "attachments",
+		"homeTeam", "awayTeam", "homeScore", "awayScore",
+		"bye", "allSettings", "calendarEvent"})
 public abstract class RaceMixIn {
 
     @JsonIdentityReference(alwaysAsId = true)

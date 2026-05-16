@@ -1,5 +1,12 @@
 package org.ctc.domain.service;
 
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Matchday;
@@ -8,16 +15,8 @@ import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,7 +29,9 @@ public class MatchdayService {
     private final SeasonPhaseService seasonPhaseService;
 
     public record MatchdayData(UUID id, String label, int sortIndex) {}
+
     public record MatchdayListData(List<Matchday> matchdays, UUID selectedSeasonId, List<Season> seasons) {}
+
     public record MatchdayDetailData(Matchday matchday, Map<String, List<RaceLineup>> lineupsByTeam,
                                       boolean hasMatches, boolean hasSchedule, long scheduleMissingCount,
                                       boolean hasResults) {}

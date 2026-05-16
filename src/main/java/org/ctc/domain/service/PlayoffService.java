@@ -1,5 +1,8 @@
 package org.ctc.domain.service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -8,10 +11,6 @@ import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.*;
 
 /**
  * Service for playoff matchup lifecycle management: bracket creation, winner determination,
@@ -163,7 +162,9 @@ public class PlayoffService {
 		int team1Total = 0;
 		int team2Total = 0;
 		for (Race leg : legs) {
-			if (leg.getResults().isEmpty()) continue;
+			if (leg.getResults().isEmpty()) {
+				continue;
+			}
 			int[] totals = scoringService.calculateTeamTotals(leg.getResults(), leg.getId(), team1Id);
 			team1Total += totals[0];
 			team2Total += totals[1];

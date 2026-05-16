@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import java.util.*;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,8 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -419,7 +418,9 @@ class SwissPairingServiceTest {
 	private void addDummyResults(UUID matchdayId) {
 		var races = raceRepository.findByMatchdayId(matchdayId);
 		for (var race : races) {
-			if (race.isBye()) continue;
+			if (race.isBye()) {
+				continue;
+			}
 
 			var homeDriver = driverRepository.save(new Driver(
 					"sh_" + UUID.randomUUID().toString().substring(0, 8), "Home Driver"));

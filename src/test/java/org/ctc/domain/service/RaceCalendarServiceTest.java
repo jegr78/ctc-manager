@@ -1,5 +1,9 @@
 package org.ctc.domain.service;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.Optional;
+import java.util.UUID;
 import org.ctc.dataimport.GoogleCalendarService;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.RaceRepository;
@@ -8,11 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

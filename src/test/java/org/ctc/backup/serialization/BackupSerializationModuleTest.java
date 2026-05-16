@@ -1,30 +1,7 @@
 package org.ctc.backup.serialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.ctc.domain.model.Car;
-import org.ctc.domain.model.Driver;
-import org.ctc.domain.model.Match;
-import org.ctc.domain.model.MatchScoring;
-import org.ctc.domain.model.Matchday;
-import org.ctc.domain.model.PhaseTeam;
-import org.ctc.domain.model.Playoff;
-import org.ctc.domain.model.PlayoffMatchup;
-import org.ctc.domain.model.PlayoffRound;
-import org.ctc.domain.model.PlayoffSeed;
-import org.ctc.domain.model.PsnAlias;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceAttachment;
-import org.ctc.domain.model.RaceLineup;
-import org.ctc.domain.model.RaceResult;
-import org.ctc.domain.model.RaceScoring;
-import org.ctc.domain.model.RaceSettings;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonDriver;
-import org.ctc.domain.model.SeasonPhase;
-import org.ctc.domain.model.SeasonPhaseGroup;
-import org.ctc.domain.model.SeasonTeam;
-import org.ctc.domain.model.Team;
-import org.ctc.domain.model.Track;
+import org.ctc.domain.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

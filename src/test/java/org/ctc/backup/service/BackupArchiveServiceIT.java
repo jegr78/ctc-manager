@@ -1,16 +1,6 @@
 package org.ctc.backup.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.ctc.backup.schema.BackupManifest;
-import org.ctc.backup.schema.BackupSchema;
-import org.ctc.backup.schema.EntityRef;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.time.Instant;
@@ -20,6 +10,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import org.ctc.backup.schema.BackupManifest;
+import org.ctc.backup.schema.BackupSchema;
+import org.ctc.backup.schema.EntityRef;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

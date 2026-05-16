@@ -1,9 +1,8 @@
 package org.ctc.domain.model;
 
+import java.util.UUID;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -99,7 +98,7 @@ class SeasonTest {
 			// then
 			assertThat(eligible).extracting(Team::getShortName)
 					.containsExactlyInAnyOrder("P1R-1", "P1R-2", "CLR");
-			assertThat(eligible).noneMatch(t -> t.getShortName().equals("P1R"));
+			assertThat(eligible).noneMatch(t -> "P1R".equals(t.getShortName()));
 		}
 
 		@Test

@@ -4,18 +4,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import org.ctc.domain.model.Car;
-import org.ctc.domain.model.Match;
-import org.ctc.domain.model.Matchday;
-import org.ctc.domain.model.PlayoffMatchup;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceSettings;
-import org.ctc.domain.model.Team;
-import org.ctc.domain.model.Track;
+import java.util.UUID;
+import org.ctc.domain.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

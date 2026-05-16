@@ -1,17 +1,20 @@
 package org.ctc.admin.controller;
 
+import jakarta.validation.Valid;
+import java.io.IOException;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.PlayoffForm;
-import org.ctc.domain.exception.BusinessRuleException;
-import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.admin.dto.SeedForm;
 import org.ctc.admin.service.PlayoffRoundOverviewGraphicService;
 import org.ctc.admin.service.PlayoffRoundResultsGraphicService;
 import org.ctc.admin.service.PlayoffRoundScheduleGraphicService;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.PlayoffRound;
 import org.ctc.domain.service.PlayoffSeedingService;
 import org.ctc.domain.service.PlayoffService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -22,11 +25,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import jakarta.validation.Valid;
-
-import java.io.IOException;
-import java.util.UUID;
 
 @Slf4j
 @Controller

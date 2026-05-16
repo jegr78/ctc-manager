@@ -1,9 +1,8 @@
 package org.ctc.domain.model;
 
+import java.time.LocalDate;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -19,8 +18,7 @@ class SeasonTeamTest {
 	}
 
 	private Team subTeamOf(Team parent) {
-		Team sub = new Team("Alpha Sub 1", "ALF 1", parent);
-		return sub;
+		return new Team("Alpha Sub 1", "ALF 1", parent);
 	}
 
 	@Nested

@@ -3,11 +3,7 @@ package org.ctc.sitegen;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.PhaseType;
@@ -143,7 +139,7 @@ public class DriverRankingPageGenerator {
                                               UUID activePhaseId, boolean isLegacyView) {
         var tabs = new ArrayList<PhaseTabView>();
         // First entry: "All Phases" → driver-ranking.html, active when no specific phase is active
-        boolean allPhasesActive = (activePhaseId == null);
+        boolean allPhasesActive = activePhaseId == null;
         tabs.add(new PhaseTabView("All Phases", "driver-ranking.html", allPhasesActive, ARIA_CONTROLS_ID));
 
         // Per-phase entries
@@ -154,7 +150,7 @@ public class DriverRankingPageGenerator {
             if (entry.ranking().isEmpty() && p.getPhaseType() == PhaseType.PLAYOFF) {
                 continue;
             }
-            String label = (p.getLabel() != null && !p.getLabel().isBlank())
+            String label = p.getLabel() != null && !p.getLabel().isBlank()
                     ? p.getLabel()
                     : capitalize(p.getPhaseType().name());
             String href = "driver-ranking-" + phaseSlug(p) + ".html";
@@ -172,7 +168,9 @@ public class DriverRankingPageGenerator {
     }
 
     private String capitalize(String input) {
-        if (input == null || input.isEmpty()) return input;
+		if (input == null || input.isEmpty()) {
+			return input;
+		}
         return input.charAt(0) + input.substring(1).toLowerCase(Locale.ENGLISH);
     }
 

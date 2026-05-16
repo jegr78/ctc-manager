@@ -1,5 +1,9 @@
 package org.ctc.domain.service;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Optional;
+import java.util.UUID;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.RaceAttachmentRepository;
 import org.ctc.domain.repository.RaceRepository;
@@ -15,18 +19,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Optional;
-import java.util.UUID;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
 
 @ExtendWith(MockitoExtension.class)
 class RaceAttachmentServiceTest {
@@ -134,7 +131,7 @@ class RaceAttachmentServiceTest {
         assertThat(name).isEqualTo("screenshot.png");
         verify(fileStorageService).store(eq(raceId), any());
         verify(raceAttachmentRepository).save(argThat(att ->
-                att.getName().equals("screenshot.png") && att.getType() == AttachmentType.FILE));
+                "screenshot.png".equals(att.getName()) && att.getType() == AttachmentType.FILE));
     }
 
     @Test

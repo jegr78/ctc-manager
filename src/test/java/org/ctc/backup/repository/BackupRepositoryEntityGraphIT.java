@@ -1,21 +1,20 @@
 package org.ctc.backup.repository;
 
+import java.lang.reflect.Method;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.repository.support.Repositories;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.lang.reflect.Method;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
@@ -241,7 +240,7 @@ class BackupRepositoryEntityGraphIT {
 			// Fall through to reflective field access.
 		} catch (ReflectiveOperationException ex) {
 			Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-			throw (cause instanceof RuntimeException re) ? re : new RuntimeException(cause);
+			throw cause instanceof RuntimeException re ? re : new RuntimeException(cause);
 		}
 		// 2) Fallback — locate the declared field on the entity class (or its superclasses).
 		Class<?> clazz = instance.getClass();
@@ -254,7 +253,7 @@ class BackupRepositoryEntityGraphIT {
 				clazz = clazz.getSuperclass();
 			} catch (ReflectiveOperationException ex) {
 				Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-				throw (cause instanceof RuntimeException re) ? re : new RuntimeException(cause);
+				throw cause instanceof RuntimeException re ? re : new RuntimeException(cause);
 			}
 		}
 		fail("Entity %s exposes neither getter %s() nor field %s for attributePath '%s'",

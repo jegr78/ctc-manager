@@ -28,8 +28,12 @@ public abstract class PlaywrightConfig {
 
 	@AfterAll
 	static void teardownBrowser() {
-		if (browser != null) browser.close();
-		if (playwright != null) playwright.close();
+		if (browser != null) {
+			browser.close();
+		}
+		if (playwright != null) {
+			playwright.close();
+		}
 	}
 
 	protected void setupPage() {
@@ -38,7 +42,9 @@ public abstract class PlaywrightConfig {
 	}
 
 	protected void teardownPage() {
-		if (context != null) context.close();
+		if (context != null) {
+			context.close();
+		}
 	}
 
 	protected String url(String path) {

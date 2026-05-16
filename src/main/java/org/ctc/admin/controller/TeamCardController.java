@@ -1,8 +1,17 @@
 package org.ctc.admin.controller;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.TeamCardService;
+import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.TeamManagementService;
@@ -16,15 +25,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 @Slf4j
 @Controller
@@ -44,7 +44,7 @@ public class TeamCardController {
 		var seasons = seasonManagementService.findAll();
 		var activeSeason = seasonId != null
 				? seasonManagementService.findByIdOptional(seasonId).orElse(null)
-				: seasons.stream().filter(s -> s.isActive()).findFirst().orElse(null);
+				: seasons.stream().filter(Season::isActive).findFirst().orElse(null);
 
 		if (activeSeason != null) {
 			var seasonTeams = teamManagementService.findSeasonTeamsBySeasonId(activeSeason.getId());

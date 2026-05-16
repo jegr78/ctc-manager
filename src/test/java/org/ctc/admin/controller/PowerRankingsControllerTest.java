@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import java.util.List;
+import java.util.UUID;
 import org.ctc.TestHelper;
 import org.ctc.admin.dto.RankedTeamData;
 import org.ctc.admin.service.PowerRankingsGraphicService;
@@ -17,9 +19,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.hasSize;

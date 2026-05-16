@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
@@ -9,9 +11,6 @@ import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service

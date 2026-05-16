@@ -1,57 +1,24 @@
 package org.ctc.admin;
 
 import jakarta.persistence.EntityManager;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.ctc.admin.service.TeamCardService;
-import org.ctc.domain.exception.EntityNotFoundException;
-import org.ctc.domain.model.Driver;
-import org.ctc.domain.model.Match;
-import org.ctc.domain.model.Matchday;
-import org.ctc.domain.model.MatchScoring;
-import org.ctc.domain.model.PhaseLayout;
-import org.ctc.domain.model.PhaseTeam;
-import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.PlayoffMatchup;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceLineup;
-import org.ctc.domain.model.RaceResult;
-import org.ctc.domain.model.RaceScoring;
-import org.ctc.domain.model.RaceSettings;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonDriver;
-import org.ctc.domain.model.SeasonFormat;
-import org.ctc.domain.model.SeasonPhase;
-import org.ctc.domain.model.SeasonPhaseGroup;
-import org.ctc.domain.model.Team;
-import org.ctc.domain.repository.DriverRepository;
-import org.ctc.domain.repository.MatchRepository;
-import org.ctc.domain.repository.MatchScoringRepository;
-import org.ctc.domain.repository.MatchdayRepository;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.PlayoffMatchupRepository;
-import org.ctc.domain.repository.PlayoffRepository;
-import org.ctc.domain.repository.PlayoffRoundRepository;
-import org.ctc.domain.repository.RaceLineupRepository;
-import org.ctc.domain.repository.RaceRepository;
-import org.ctc.domain.repository.RaceResultRepository;
-import org.ctc.domain.repository.RaceScoringRepository;
-import org.ctc.domain.repository.SeasonDriverRepository;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
-import org.ctc.domain.service.PlayoffService;
-import org.ctc.domain.service.PlayoffSeedingService;
-import org.ctc.domain.service.ScoringService;
-import org.springframework.context.annotation.Profile;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.ctc.admin.service.TeamCardService;
+import org.ctc.domain.exception.EntityNotFoundException;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.*;
+import org.ctc.domain.service.PlayoffSeedingService;
+import org.ctc.domain.service.PlayoffService;
+import org.ctc.domain.service.ScoringService;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Seeds deterministic test fixtures into the H2 in-memory database for the {@code dev} profile.
@@ -131,7 +98,7 @@ public class TestDataService {
 	}
 
 	private List<Team> seedTeams() {
-		var teams = teamRepository.saveAll(List.of(
+		return teamRepository.saveAll(List.of(
 				team("Vortex Racing", "VRX", "#FF4500", "#1A1A2E", "#FFFFFF"),
 				team("Sigma Motorsport", "SGM", "#00CED1", "#2D2D44", "#FFFFFF"),
 				team("Adrenaline Racing", "ADR", "#FFD700", "#1B1B2F", "#000000"),
@@ -143,7 +110,6 @@ public class TestDataService {
 				team("Horizon Motorsport", "HMS", "#FF6347", "#1E1E3E", "#FFFFFF"),
 				team("Powershift Racing", "PWR", "#00FF7F", "#161638", "#000000")
 		));
-		return teams;
 	}
 
 	private Team subTeam(String name, String shortName, Team parent) {
@@ -167,17 +133,17 @@ public class TestDataService {
 	}
 
 	private void seedSubTeams(List<Team> teams) {
-		var vrx = teams.stream().filter(t -> t.getShortName().equals("VRX")).findFirst()
+		var vrx = teams.stream().filter(t -> "VRX".equals(t.getShortName())).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("Team", "VRX"));
 		teamRepository.save(subTeam("Vortex Racing A", "VRX A", vrx));
 		teamRepository.save(subTeam("Vortex Racing B", "VRX B", vrx));
 
-		var sgm = teams.stream().filter(t -> t.getShortName().equals("SGM")).findFirst()
+		var sgm = teams.stream().filter(t -> "SGM".equals(t.getShortName())).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("Team", "SGM"));
 		teamRepository.save(subTeam("Sigma Motorsport Blue", "SGM B", sgm));
 		teamRepository.save(subTeam("Sigma Motorsport Silver", "SGM S", sgm));
 
-		var tbr = teams.stream().filter(t -> t.getShortName().equals("TBR")).findFirst()
+		var tbr = teams.stream().filter(t -> "TBR".equals(t.getShortName())).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("Team", "TBR"));
 		teamRepository.save(subTeam("Turbo Racing Red", "TBR R", tbr));
 		teamRepository.save(subTeam("Turbo Racing Blue", "TBR B", tbr));
@@ -190,13 +156,13 @@ public class TestDataService {
 		var allTeams = teamRepository.findAll();
 
 		// Helper to find parent team (no parent) by shortName
-		java.util.function.Function<String, Team> findParent = (shortName) ->
+		java.util.function.Function<String, Team> findParent = shortName ->
 				allTeams.stream()
 						.filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() == null)
 						.findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
 
 		// Helper to find sub-team by shortName (has parent)
-		java.util.function.Function<String, Team> findSub = (shortName) ->
+		java.util.function.Function<String, Team> findSub = shortName ->
 				allTeams.stream()
 						.filter(t -> t.getShortName().equals(shortName) && t.getParentTeam() != null)
 						.findFirst().orElseThrow(() -> new EntityNotFoundException("Team", shortName));
@@ -364,10 +330,10 @@ public class TestDataService {
 				.filter(p -> p.getPhaseType() == PhaseType.REGULAR)
 				.findFirst().orElseThrow(() -> new EntityNotFoundException("REGULAR phase for", "Season 2023"));
 		var groupA = s1Regular.getGroups().stream()
-				.filter(g -> g.getName().equals("Group A")).findFirst()
+				.filter(g -> "Group A".equals(g.getName())).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("Group A in", s1Regular.getId().toString()));
 		var groupB = s1Regular.getGroups().stream()
-				.filter(g -> g.getName().equals("Group B")).findFirst()
+				.filter(g -> "Group B".equals(g.getName())).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("Group B in", s1Regular.getId().toString()));
 
 		// Group A: ADR/ICL/SVT/NFR/HMS/VRX-A
@@ -590,9 +556,9 @@ public class TestDataService {
 				.filter(p -> p.getPhaseType() == PhaseType.REGULAR).findFirst()
 				.orElseThrow(() -> new EntityNotFoundException("REGULAR phase for", "Season 2023"));
 		var s1GroupA = s1Regular.getGroups().stream()
-				.filter(g -> g.getName().equals("Group A")).findFirst().orElseThrow();
+				.filter(g -> "Group A".equals(g.getName())).findFirst().orElseThrow();
 		var s1GroupB = s1Regular.getGroups().stream()
-				.filter(g -> g.getName().equals("Group B")).findFirst().orElseThrow();
+				.filter(g -> "Group B".equals(g.getName())).findFirst().orElseThrow();
 
 		// Position rotation patterns (6 home + 6 away = positions 1-12)
 		int[][] homePositions = {
@@ -781,7 +747,7 @@ public class TestDataService {
 		// 3 matchdays, 3 matches per MD (6 teams), 2 races per match
 		for (int mdIndex = 0; mdIndex < 3; mdIndex++) {
 			int sortIndex = sortIndexOffset + mdIndex + 1;        // Group A: 1,2,3 — Group B: 4,5,6
-			String label = (groupLabel != null)
+			String label = groupLabel != null
 					? "%s — Matchday %d".formatted(groupLabel, mdIndex + 1)
 					: "Matchday %d".formatted(mdIndex + 1);
 			var matchday = new Matchday(phase, label, sortIndex);
@@ -822,17 +788,21 @@ public class TestDataService {
 		raceRepository.save(race);
 
 		// Save lineups first (Source of Truth per CLAUDE.md)
-		for (var d : homeDrivers) raceLineupRepository.save(new RaceLineup(race, d, match.getHomeTeam()));
-		for (var d : awayDrivers) raceLineupRepository.save(new RaceLineup(race, d, match.getAwayTeam()));
+		for (var d : homeDrivers) {
+			raceLineupRepository.save(new RaceLineup(race, d, match.getHomeTeam()));
+		}
+		for (var d : awayDrivers) {
+			raceLineupRepository.save(new RaceLineup(race, d, match.getAwayTeam()));
+		}
 
 		// Save results and calculate points
 		var results = new java.util.ArrayList<RaceResult>();
 		for (int i = 0; i < homeDrivers.length; i++) {
-			boolean fl = (homeRacePositions[i] == fastestLapPosition);
+			boolean fl = homeRacePositions[i] == fastestLapPosition;
 			results.add(new RaceResult(race, homeDrivers[i], homeRacePositions[i], homeQualiPositions[i], fl));
 		}
 		for (int i = 0; i < awayDrivers.length; i++) {
-			boolean fl = (awayRacePositions[i] == fastestLapPosition);
+			boolean fl = awayRacePositions[i] == fastestLapPosition;
 			results.add(new RaceResult(race, awayDrivers[i], awayRacePositions[i], awayQualiPositions[i], fl));
 		}
 		raceResultRepository.saveAll(results);

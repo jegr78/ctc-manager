@@ -1,12 +1,11 @@
 package org.ctc.backup.it.support;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.ctc.backup.restore.RestoreFailureInjector;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Phase 76 / Plan 01 — test-only {@link RestoreFailureInjector} that blocks the restore

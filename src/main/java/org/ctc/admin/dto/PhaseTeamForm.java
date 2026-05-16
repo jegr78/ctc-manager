@@ -1,12 +1,11 @@
 package org.ctc.admin.dto;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.util.AutoPopulatingList;
-
-import java.util.List;
-import java.util.UUID;
 
 @Getter
 @Setter

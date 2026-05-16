@@ -1,20 +1,20 @@
 package org.ctc.admin.service;
 
-import lombok.extern.slf4j.Slf4j;
-import org.ctc.domain.model.Match;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.service.ScoringService;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.thymeleaf.TemplateEngine;
-import org.thymeleaf.context.Context;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.model.Match;
+import org.ctc.domain.model.Race;
+import org.ctc.domain.model.RaceResult;
+import org.ctc.domain.service.ScoringService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 @Slf4j
 @Service
@@ -33,9 +33,15 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 	}
 
 	public byte[] generateMatchResults(Match match) throws IOException {
-		if (match.getHomeTeam() == null) throw new IllegalStateException("Match has no home team");
-		if (match.getAwayTeam() == null) throw new IllegalStateException("Match has no away team");
-		if (match.getRaces().isEmpty()) throw new IllegalStateException("Match has no races");
+		if (match.getHomeTeam() == null) {
+			throw new IllegalStateException("Match has no home team");
+		}
+		if (match.getAwayTeam() == null) {
+			throw new IllegalStateException("Match has no away team");
+		}
+		if (match.getRaces().isEmpty()) {
+			throw new IllegalStateException("Match has no races");
+		}
 
 		var homeTeam = match.getHomeTeam();
 		var awayTeam = match.getAwayTeam();
@@ -45,10 +51,12 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 
 		String homeCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), homeTeam.getShortName()));
 		String awayCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), awayTeam.getShortName()));
-		if (homeCardBase64 == null)
+		if (homeCardBase64 == null) {
 			throw new IllegalStateException("Team card not found for " + homeTeam.getShortName());
-		if (awayCardBase64 == null)
+		}
+		if (awayCardBase64 == null) {
 			throw new IllegalStateException("Team card not found for " + awayTeam.getShortName());
+		}
 
 		int homeTotal = raceRows.stream().mapToInt(RaceResultRow::homePoints).sum();
 		int awayTotal = raceRows.stream().mapToInt(RaceResultRow::awayPoints).sum();
@@ -85,16 +93,18 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 		int raceNumber = 0;
 
 		for (Race race : match.getRaces()) {
-			if (race.getResults().isEmpty()) continue;
+			if (race.getResults().isEmpty()) {
+				continue;
+			}
 			raceNumber++;
 
 			int homePoints = race.getResults().stream()
 					.filter(r -> scoringService.isDriverInTeam(r, race.getId(), homeTeamId))
-					.mapToInt(r -> r.getPointsTotal())
+					.mapToInt(RaceResult::getPointsTotal)
 					.sum();
 			int awayPoints = race.getResults().stream()
 					.filter(r -> !scoringService.isDriverInTeam(r, race.getId(), homeTeamId))
-					.mapToInt(r -> r.getPointsTotal())
+					.mapToInt(RaceResult::getPointsTotal)
 					.sum();
 
 			rows.add(new RaceResultRow("Race " + raceNumber, homePoints, awayPoints));

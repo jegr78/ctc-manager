@@ -1,7 +1,6 @@
 package org.ctc.backup.schema;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.time.Instant;
 import java.util.Map;
 

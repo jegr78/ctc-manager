@@ -1,5 +1,9 @@
 package org.ctc.admin.controller;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
@@ -12,11 +16,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 @Controller
 @RequestMapping("/admin/races")
@@ -146,7 +145,7 @@ public class RaceController {
 	                         RedirectAttributes redirectAttributes) {
 		String message = raceService.quickScore(id, homeScore, awayScore);
 		redirectAttributes.addFlashAttribute("successMessage", message);
-		String safeUrl = (returnUrl != null && returnUrl.startsWith("/") && !returnUrl.startsWith("//"))
+		String safeUrl = returnUrl != null && returnUrl.startsWith("/") && !returnUrl.startsWith("//")
 				? returnUrl : "/admin/races";
 		return "redirect:" + safeUrl;
 	}

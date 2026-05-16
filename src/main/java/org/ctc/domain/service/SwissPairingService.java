@@ -1,19 +1,14 @@
 package org.ctc.domain.service;
 
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
-import org.ctc.domain.repository.MatchRepository;
-import org.ctc.domain.repository.MatchdayRepository;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.RaceRepository;
-import org.ctc.domain.repository.SeasonPhaseGroupRepository;
+import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -66,10 +61,12 @@ public class SwissPairingService {
 		int roundNumber = currentRound + 1;
 		var matchday = new Matchday(phase, "Round " + roundNumber, roundNumber);
 		SeasonPhaseGroup group = resolveGroup(groupId);
-		if (group != null) matchday.setGroup(group);
+		if (group != null) {
+			matchday.setGroup(group);
+		}
 		matchday = matchdayRepository.save(matchday);
 
-		var rosterRows = (groupId != null)
+		var rosterRows = groupId != null
 				? phaseTeamRepository.findByPhaseIdAndGroupId(phaseId, groupId)
 				: phaseTeamRepository.findByPhaseId(phaseId);
 		List<Team> teams = rosterRows.stream().map(PhaseTeam::getTeam).toList();
@@ -134,7 +131,9 @@ public class SwissPairingService {
 		var phase = seasonPhaseService.findById(phaseId);
 		validateLayoutAndGroupId(phase, groupId);
 		var matchdays = getMatchdaysForPhaseGroup(phaseId, groupId);
-		if (matchdays.isEmpty()) return true;
+		if (matchdays.isEmpty()) {
+			return true;
+		}
 
 		var lastMatchday = matchdays.get(matchdays.size() - 1);
 		var lastRaces = raceRepository.findByMatchdayId(lastMatchday.getId());
@@ -145,13 +144,15 @@ public class SwissPairingService {
 	}
 
 	private List<Matchday> getMatchdaysForPhaseGroup(UUID phaseId, UUID groupId) {
-		return (groupId != null)
+		return groupId != null
 				? matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId)
 				: matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phaseId);
 	}
 
 	private SeasonPhaseGroup resolveGroup(UUID groupId) {
-		if (groupId == null) return null;
+		if (groupId == null) {
+			return null;
+		}
 		return seasonPhaseGroupRepository.findById(groupId)
 				.orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", groupId));
 	}
@@ -283,7 +284,9 @@ public class SwissPairingService {
 		for (var md : matchdays) {
 			List<Race> races = raceRepository.findByMatchdayId(md.getId());
 			for (Race race : races) {
-				if (race.isBye() || race.getAwayTeam() == null) continue;
+				if (race.isBye() || race.getAwayTeam() == null) {
+					continue;
+				}
 				UUID home = successionMap.getOrDefault(race.getHomeTeam().getId(), race.getHomeTeam().getId());
 				UUID away = successionMap.getOrDefault(race.getAwayTeam().getId(), race.getAwayTeam().getId());
 				opponents.computeIfAbsent(home, k -> new HashSet<>()).add(away);

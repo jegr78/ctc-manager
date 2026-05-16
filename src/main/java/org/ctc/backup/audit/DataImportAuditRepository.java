@@ -1,8 +1,7 @@
 package org.ctc.backup.audit;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.UUID;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
  * Spring Data repository for {@link DataImportAudit}. No custom finders.
