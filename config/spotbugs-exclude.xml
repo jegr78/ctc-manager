@@ -38,6 +38,85 @@
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
 
+    <!-- ========== D-08 layer 2 extension: EI_EXPOSE_REP* on service/DTO inner records (STAT-05/triage) ========== -->
+
+    <!-- Service-returned inner record/DTO classes follow the same Lombok-generated-accessor pattern
+         as domain.model entities. EI_EXPOSE_REP* on these is structurally meaningless — they are
+         immutable data carriers used as service→controller transport DTOs (e.g., Service$XxxData,
+         Service$XxxFormData, Service$XxxStanding). A defensive copy would serve no purpose here:
+         the records are created and consumed within a single request scope under OSIV. Belt-and-braces
+         with lombok.extern.findbugs.addSuppressFBWarnings=true; this filter covers inner classes that
+         Lombok cannot annotate. 128 findings across org.ctc.domain.service, 11 across
+         org.ctc.backup.service, 6 across org.ctc.admin.service. -->
+    <Match>
+        <Class name="~org\.ctc\.(domain|admin|backup)\.service\..+\$.+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- dataimport and gt7sync service-DTOs: same pattern as above — inner record classes used as
+         data-carrier DTOs within import/sync pipelines. 18 findings in org.ctc.dataimport,
+         6 findings in org.ctc.gt7sync. -->
+    <Match>
+        <Class name="~org\.ctc\.(dataimport|gt7sync)\..+\$.+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- Top-level record/DTO classes in admin.dto: form/display DTOs bound from HTTP requests.
+         Mutable-state exposure is intentional — Spring MVC populates these via setters.
+         12 findings across org.ctc.admin.dto.*. -->
+    <Match>
+        <Package name="org.ctc.admin.dto"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- backup.dto / backup.schema / backup.audit / backup.event records: serialization-layer data
+         carriers for JSON backup/restore. Exposing mutable state is intentional — Jackson reads
+         and writes these fields. 2+2+2+4 = 10 findings across these packages. -->
+    <Match>
+        <Class name="~org\.ctc\.backup\.(dto|schema|audit|event)\..+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- sitegen.model records: site-generation model DTOs used as read-only view data.
+         4 findings across org.ctc.sitegen.model.*. -->
+    <Match>
+        <Package name="org.ctc.sitegen.model"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- admin.controller inner record classes: lightweight response DTOs defined as inner records
+         inside controllers (e.g., for JSON endpoints). 2 findings. -->
+    <Match>
+        <Class name="~org\.ctc\.admin\.controller\..+\$.+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- admin.service graphic-service top-level classes (LineupGraphicService, OverlayGraphicService,
+         etc.) inject Spring-managed List<> dependencies via @RequiredArgsConstructor — the constructor
+         stores injected collaborator lists. Exposing these via Lombok @Getter is intentional (they are
+         Spring beans with Spring-controlled lifecycle). SpotBugs cannot distinguish Spring-injected
+         collaborator lists from user-supplied mutable data. -->
+    <Match>
+        <Class name="~org\.ctc\.admin\.service\.[A-Z].+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- backup.service top-level classes (BackupArchiveService, BackupExportService,
+         BackupImportService, BackupImportPostCommitListener) inject Spring-managed List<>
+         collaborators via @RequiredArgsConstructor. Same pattern as admin.service above. -->
+    <Match>
+        <Class name="~org\.ctc\.backup\.service\.[A-Z].+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- gt7sync top-level record Gt7SyncPreview: a pure data-carrier record with List<CarEntry>
+         and List<TrackEntry> fields. These are created once and consumed read-only — a defensive
+         copy would be misleading and wasteful in this internal service-to-controller transfer. -->
+    <Match>
+        <Class name="~org\.ctc\.gt7sync\.[A-Z].+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
     <!-- ========== Intentional-pattern suppressions (D-11) ========== -->
 
     <!-- FileStorageService.storeFromUrl(): SSRF hostname blocklist (validateHostname method,
