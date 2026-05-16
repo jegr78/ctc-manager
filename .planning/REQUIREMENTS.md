@@ -115,21 +115,59 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REWR-01..REWR-06 | Phase 80 | Pending |
-| STAT-01..STAT-07 | Phase 81 | Pending |
-| BACK-01..BACK-05 | Phase 82 | Pending |
-| QUAL-01..QUAL-05 | Phase 83 | Pending |
-| DEPS-01..DEPS-08 | Phase 84 | Pending |
-| SAST-01..SAST-06 | Phase 85 | Pending |
-| PERF-01..PERF-05 | Phase 86 | Pending |
-| VAL-01..VAL-04 | Phase 87 | Pending |
+| REWR-01 | Phase 80 | Pending |
+| REWR-02 | Phase 80 | Pending |
+| REWR-03 | Phase 80 | Pending |
+| REWR-04 | Phase 80 | Pending |
+| REWR-05 | Phase 80 | Pending |
+| REWR-06 | Phase 80 | Pending |
+| STAT-01 | Phase 81 | Pending |
+| STAT-02 | Phase 81 | Pending |
+| STAT-03 | Phase 81 | Pending |
+| STAT-04 | Phase 81 | Pending |
+| STAT-05 | Phase 81 | Pending |
+| STAT-06 | Phase 81 | Pending |
+| STAT-07 | Phase 81 | Pending |
+| BACK-01 | Phase 82 | Pending |
+| BACK-02 | Phase 82 | Pending |
+| BACK-03 | Phase 82 | Pending |
+| BACK-04 | Phase 82 | Pending |
+| BACK-05 | Phase 82 | Pending |
+| QUAL-01 | Phase 83 | Pending |
+| QUAL-02 | Phase 83 | Pending |
+| QUAL-03 | Phase 83 | Pending |
+| QUAL-04 | Phase 83 | Pending |
+| QUAL-05 | Phase 83 | Pending |
+| DEPS-01 | Phase 84 | Pending |
+| DEPS-02 | Phase 84 | Pending |
+| DEPS-03 | Phase 84 | Pending |
+| DEPS-04 | Phase 84 | Pending |
+| DEPS-05 | Phase 84 | Pending |
+| DEPS-06 | Phase 84 | Pending |
+| DEPS-07 | Phase 84 | Pending |
+| DEPS-08 | Phase 84 | Pending |
+| SAST-01 | Phase 85 | Pending |
+| SAST-02 | Phase 85 | Pending |
+| SAST-03 | Phase 85 | Pending |
+| SAST-04 | Phase 85 | Pending |
+| SAST-05 | Phase 85 | Pending |
+| SAST-06 | Phase 85 | Pending |
+| PERF-01 | Phase 86 | Pending |
+| PERF-02 | Phase 86 | Pending |
+| PERF-03 | Phase 86 | Pending |
+| PERF-04 | Phase 86 | Pending |
+| PERF-05 | Phase 86 | Pending |
+| VAL-01 | Phase 87 | Pending |
+| VAL-02 | Phase 87 | Pending |
+| VAL-03 | Phase 87 | Pending |
+| VAL-04 | Phase 87 | Pending |
 
 **Coverage:**
-- v1.11 requirements: 45 total
+- v1.11 requirements: 46 total (6+7+5+5+8+6+5+4)
 - Categories: 8 (REWR, STAT, BACK, QUAL, DEPS, SAST, PERF, VAL)
-- Mapped to phases: 45 (final mapping locked by roadmapper)
+- Mapped to phases: 46
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-16 after research synthesis*
+*Last updated: 2026-05-16 — traceability table populated by roadmapper*

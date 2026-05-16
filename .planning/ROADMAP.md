@@ -10,6 +10,7 @@
 - :white_check_mark: **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (shipped 2026-04-25)
 - :white_check_mark: **v1.9 Season Phases & Groups** — Phases 56-70 (shipped 2026-05-09)
 - :white_check_mark: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-79 (shipped 2026-05-16)
+- **v1.11 Tooling Infrastructure & Tech-Debt Sweep** — Phases 80-87 (active)
 
 ## Phases
 
@@ -146,11 +147,129 @@ See: milestones/v1.10-ROADMAP.md for full details
 
 </details>
 
-## Next Milestone
+### v1.11 Tooling Infrastructure & Tech-Debt Sweep (Phases 80-87) — ACTIVE
 
-(None — v1.11+ candidates tracked in Backlog below and in `.planning/milestones/v1.10-REQUIREMENTS.md` "Future Requirements" + `.planning/milestones/v1.10-ROADMAP.md` "Issues Deferred" / "Technical Debt Incurred".)
+- [ ] **Phase 80: OpenRewrite Integration** — Developer can invoke recipe-driven refactoring via `-Prewrite` Maven profile
+- [ ] **Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs)** — `./mvnw verify` fails on new HIGH-priority bytecode violations
+- [ ] **Phase 82: Backup Cleanup** — All 12 Phase-75 REVIEW.md items resolved; SCHEMA_VERSION remains 1; BackupRoundTripIT covers all 24 entities
+- [ ] **Phase 83: Quality and Polish Sweep** — Four v1.9/v1.10 carryover items cleared; UAT-02 post-deploy result recorded
+- [ ] **Phase 84: Renovate Integration** — Automated dependency update PRs active with Guava/Thymeleaf/Java-version safety rules in place
+- [ ] **Phase 85: CodeQL SAST** — Security findings visible in GitHub Security tab; SSRF/ZIP-Slip/BCrypt patterns triaged
+- [ ] **Phase 86: Test Wallclock Reduction** — `@DirtiesContext` audit complete; ≥30% wallclock reduction OR architectural blocker documented
+- [ ] **Phase 87: Nyquist VALIDATION Closure** — All 8 v1.10 phases (71-76, 78-79) have approved VALIDATION.md files
+
+## Phase Details
+
+### Phase 80: OpenRewrite Integration
+**Goal**: Developer can invoke recipe-driven source refactoring on demand without any impact on the default `./mvnw verify` cycle
+**Depends on**: Nothing (first phase of v1.11)
+**Requirements**: REWR-01, REWR-02, REWR-03, REWR-04, REWR-05, REWR-06
+**Success Criteria** (what must be TRUE):
+  1. `./mvnw -Prewrite rewrite:dryRun` produces a patch preview at `target/site/rewrite/rewrite.patch` without modifying any source file
+  2. `./mvnw -Prewrite rewrite:run` applies approved recipes and produces a reviewable `git diff` that can be inspected before committing
+  3. `./mvnw verify` (without `-Prewrite`) produces no "Running OpenRewrite" output and adds zero seconds versus the v1.10 baseline
+  4. `rewrite.yml` activates `CommonStaticAnalysis` and explicitly excludes `UpgradeSpringBoot_4_0` (the project is already on Boot 4.0.6); the one-shot cleanup diff is reviewed for Lombok entity false positives and committed
+  5. README "Development" section documents the `dryRun` → `run` workflow and the deliberate decision to keep OpenRewrite developer-invoked only
+**Plans**: TBD
+
+### Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs)
+**Goal**: Every `./mvnw verify` run enforces a bytecode-level clean-code gate that catches null dereferences, resource leaks, and 144 Spring Security-aware patterns — with Lombok false positives fully suppressed before the gate goes live
+**Depends on**: Phase 80 (OpenRewrite cleanup reduces initial violation count)
+**Requirements**: STAT-01, STAT-02, STAT-03, STAT-04, STAT-05, STAT-06, STAT-07
+**Success Criteria** (what must be TRUE):
+  1. `lombok.config` exists at project root with both `lombok.addLombokGeneratedAnnotation = true` and `lombok.extern.findbugs.addSuppressFBWarnings = true`; `mvn spotbugs:check` shows zero violations in `org.ctc.domain.model.*`
+  2. A report-only baseline commit (`spotbugs:spotbugs` goal) is created before the blocking gate commit (`spotbugs:check` goal), so the initial violation inventory is recorded in git history
+  3. `config/spotbugs-exclude.xml` documents every suppressed violation with a rationale comment; no blanket `@SuppressWarnings("all")` on any class
+  4. `./mvnw verify` fails the build when a new HIGH-priority SpotBugs violation is introduced (verified by a deliberate test-case violation on a throwaway branch and then reverted)
+  5. JaCoCo line coverage remains ≥ 82% (preferably ≥ 87%) after all plugin additions — `target/site/jacoco/index.html` shows non-zero numbers confirming the `argLine` late-evaluation property was not overwritten
+  6. CLAUDE.md "Conventions" section documents the SpotBugs gate, the suppression-file workflow, and the `lombok.config` invariant
+**Plans**: TBD
+
+### Phase 82: Backup Cleanup
+**Goal**: All 12 Phase-75 REVIEW.md Info/Warning items are resolved without breaking the backup wire contract or the existing round-trip test suite
+**Depends on**: Phase 81 (SpotBugs gate active so cleanup commits are gate-clean from the start)
+**Requirements**: BACK-01, BACK-02, BACK-03, BACK-04, BACK-05
+**Success Criteria** (what must be TRUE):
+  1. `BackupSchema.SCHEMA_VERSION` is still `1` after all 12 REVIEW.md item commits — verified by a guard test asserting the constant value and the 24-entity `EXPORT_ORDER` size
+  2. All 12 items (WR-01..WR-08, IN-01..IN-04) are resolved with one atomic commit per item, each commit message referencing the REVIEW.md ID
+  3. `restoreOneTable` opens the ZIP archive exactly once per restore operation (single streaming pass) — verified by an IT measuring ZipEntry-open count
+  4. `BackupRoundTripIT` and `BackupImportRollbackIT` pass on H2 and MariaDB after every commit in the cleanup sequence
+  5. `BackupRoundTripIT` asserts per-entity row counts for all 24 entities (not just the 3 previously spot-checked: Race, SeasonDriver, Team)
+**Plans**: TBD
+
+### Phase 83: Quality and Polish Sweep
+**Goal**: All four v1.9/v1.10 carryover tech-debt items are resolved and UAT-02 legacy season smoke is executed on the next production deployment
+**Depends on**: Phase 82 (backup cleanup confirms stable test baseline before touching other code areas)
+**Requirements**: QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-05
+**Success Criteria** (what must be TRUE):
+  1. Driver-detail Season-Assignment chips render in ascending year order on the admin driver page, enforced by an explicit `ORDER BY year ASC` on `Driver.seasonAssignments` and verified by a domain repository IT and a Playwright smoke test
+  2. `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` seeds test data without requiring a separate Saison-2023 fixture path, because `DevDataSeeder` is now `@Profile({"dev", "local"})`
+  3. The Season-detail admin page for Season 2023 (GROUPS-layout) shows a per-group matchday-generation UI control — no more hardcoded `groupId=null` at `SeasonController.java:251` — verified by a Playwright E2E test
+  4. `StandingsController.java:139` lazy collection access is replaced by an explicit service-layer call returning a fully-resolved view object; no OSIV-only lazy traversal remains in controller code
+  5. UAT-02 (legacy season visual smoke against real pre-V4 production data) is executed against the next production deploy and the pass/fail result is recorded in the milestone-audit artifact
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 84: Renovate Integration
+**Goal**: Automated dependency update PRs are active against the repository with all CTC-specific safety rules in place before automerge is enabled for any dependency class
+**Depends on**: Phase 81 (SpotBugs gate active so incoming Renovate PRs hit a meaningful CI gate), Phase 83 (codebase in clean state before external PRs start arriving)
+**Requirements**: DEPS-01, DEPS-02, DEPS-03, DEPS-04, DEPS-05, DEPS-06, DEPS-07, DEPS-08
+**Success Criteria** (what must be TRUE):
+  1. A root-level `renovate.json` exists covering `pom.xml`, GitHub Actions `uses:` clauses, and Dockerfile base images via `enabledManagers: ["maven", "github-actions", "dockerfile"]`
+  2. The Mend Renovate GitHub App is installed against `jegr78/ctc-manager` and has produced at least one onboarding PR
+  3. Renovate never proposes a Guava `-android` variant — `renovate.json` includes an `allowedVersions` regex restricting Guava to `-jre` classifier variants only
+  4. Renovate never proposes bumping `org.thymeleaf:thymeleaf` without explicit manual review — the 3.1.5.RELEASE CVE-2026-40478 mitigation pin is protected by a `packageRule` with `enabled: false` or equivalent
+  5. Renovate never proposes Java 26 (non-LTS) — `renovate.json` constrains `java.version` proposals to LTS-only patterns (`^(?:11|17|21|25|29)`)
+  6. The existing `dockerfile-noble-pin-guard` CI job passes after Renovate's first Dockerfile-bump PR is opened, confirming Renovate respects the suffix-only pin
+**Plans**: TBD
+
+### Phase 85: CodeQL SAST
+**Goal**: Security findings from CodeQL's cross-function taint analysis are visible in the GitHub Security tab and gate PR merges on new HIGH/CRITICAL findings, with all intentional security patterns triaged and documented before the gate goes live
+**Depends on**: Phase 80 (OpenRewrite cleanup reduces noise), Phase 81 (SpotBugs cleanup reduces overlapping bytecode findings)
+**Requirements**: SAST-01, SAST-02, SAST-03, SAST-04, SAST-05, SAST-06
+**Success Criteria** (what must be TRUE):
+  1. `.github/workflows/codeql.yml` exists as a standalone workflow running CodeQL v4 against `language: java-kotlin` on push to master, pull request, and weekly cron — completely separate from `ci.yml`
+  2. The CodeQL workflow uses a manual `./mvnw compile -DskipTests --no-transfer-progress` build step (not autobuild), so Lombok annotation processing and Playwright compile-scope dependencies do not break the CodeQL build
+  3. The GitHub Security tab shows zero unreviewed alerts — every finding is classified as true positive (fixed), known false positive (suppressed with explanatory `// codeql[...]` directive), or accepted risk (documented in `docs/security/sast-acceptance.md`)
+  4. The SSRF blocklist (`FileStorageService.storeFromUrl`), ZIP-Slip defense (`BackupImportService`), and BCrypt usage are each explicitly classified per the triage policy with linked CodeQL alert IDs
+  5. Injecting a deliberate SQL-injection or path-traversal pattern on a throwaway branch causes CodeQL to fail the PR gate, confirming the blocking behavior works end-to-end
+**Plans**: TBD
+
+### Phase 86: Test Wallclock Reduction
+**Goal**: The `./mvnw verify -Pe2e` wallclock is reduced by ≥30% versus the v1.10 baseline of 11m 11s (target ≤7m 50s on the same hardware), or the specific architectural blocker preventing further reduction is identified, documented, and a concrete forward path for v1.12 is proposed
+**Depends on**: Phase 82, Phase 83 (all code changes complete so wallclock measurement is stable), Phase 85 (CodeQL workflow added — wallclock audit must include any new CI overhead)
+**Requirements**: PERF-01, PERF-02, PERF-03, PERF-04, PERF-05
+**Success Criteria** (what must be TRUE):
+  1. Every `@DirtiesContext` usage in `src/test/java/` has been audited — each is either removed (with three random-order Surefire runs confirming ordering independence) or retained with an explanatory comment naming the specific shared state requiring a fresh context
+  2. A `docs/test-performance.md` document records the baseline Spring `ApplicationContext` initialisation count during `./mvnw verify -Pe2e` and the post-optimization count, with the delta explained
+  3. At least one repository-only IT is converted from full `@SpringBootTest` to `@DataJpaTest` slice without losing assertion coverage, demonstrating the pattern is viable for future conversions
+  4. `./mvnw verify -Pe2e` wallclock is either ≤7m 50s on the same hardware OR `docs/test-performance.md` documents the specific architectural constraint (e.g., MariaDB Testcontainers cold-start cost) that blocks ≥30% reduction and proposes a concrete v1.12 path
+  5. The improved (or blocked) wallclock is verified on CI (GitHub Actions runner) over 3 consecutive runs; the median is recorded as the new v1.11 baseline in `docs/test-performance.md`
+**Plans**: TBD
+
+### Phase 87: Nyquist VALIDATION Closure
+**Goal**: All 8 v1.10 phases have approved `*-VALIDATION.md` files, closing the Nyquist validation debt accumulated during the v1.10 delivery sprint
+**Depends on**: Phase 86 (all code work complete; validation docs can reference final state)
+**Requirements**: VAL-01, VAL-02, VAL-03, VAL-04
+**Success Criteria** (what must be TRUE):
+  1. Approved `*-VALIDATION.md` files exist for phases 72, 73, 74, 75, 76, and 79 with `status: approved` in the frontmatter — the 6 phases that had VALIDATION.md drafts pending approval
+  2. New `*-VALIDATION.md` files are created and reach `status: approved` for phase 71 (Spring Boot 4.0.6 upgrade) and phase 78 (Docker noble pin), the 2 phases without any VALIDATION.md
+  3. `/gsd:validate-phase` is executed against each of the 8 phases (71-76, 78, 79) and any gap-coverage tests produced are committed atomically per phase
+  4. STATE.md "Deferred Items" no longer lists any Nyquist VALIDATION items at v1.11 close
+**Plans**: TBD
 
 ## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 80. OpenRewrite Integration | 0/TBD | Not started | - |
+| 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 0/TBD | Not started | - |
+| 82. Backup Cleanup | 0/TBD | Not started | - |
+| 83. Quality and Polish Sweep | 0/TBD | Not started | - |
+| 84. Renovate Integration | 0/TBD | Not started | - |
+| 85. CodeQL SAST | 0/TBD | Not started | - |
+| 86. Test Wallclock Reduction | 0/TBD | Not started | - |
+| 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |
 
 | Milestone | Phases | Plans | Status | Shipped |
 | --------- | ------ | ----- | ------ | ------- |
@@ -162,49 +281,4 @@ See: milestones/v1.10-ROADMAP.md for full details
 | v1.8 Bulk Driver Import | 54-55 | 4 | Complete | 2026-04-25 |
 | v1.9 Season Phases & Groups | 56-70 | ~70 | Complete | 2026-05-09 |
 | v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | 50 | Complete | 2026-05-16 |
-
-## Backlog
-
-### Phase 999.1: OpenRewrite Refactoring and Migration Tool Integration (BACKLOG)
-
-**Goal:** [Captured for future planning] Evaluate and integrate OpenRewrite as an automated, AST-based refactoring and migration tool for the CTC Manager codebase. Two complementary tracks the user wants to pursue **together**: (1) **pom.xml-Track** — `rewrite-maven-plugin` in `pom.xml` + checked-in `rewrite.yml` with a curated recipe set (`CommonStaticAnalysis`, `JUnit5BestPractices`, Spring Boot upgrade recipes, Lombok recipes, `UpgradeDependencyVersion`); atomic commit per recipe; respects coverage gate (≥ 82 %) and branch-protection rules; reproducible across CI + local. (2) **Custom-Skill-Track** — a project-local GSD skill (e.g. `gsd-openrewrite-phase` or similar) that wraps the recipe-run-and-commit workflow, parallels existing skills like `gsd-plan-phase`/`gsd-execute-phase`, integrates Trockenlauf → diff-review → atomic-commit-per-recipe → `./mvnw verify` gate. First step before either track: Trockenlauf against a feature branch with `CommonStaticAnalysis` + `JUnit5BestPractices`, review diff, then decide recipe ordering. Stack fit: Spring Boot 4.x, Java 25, Maven, Lombok, JUnit 5, ~1000 tests.
-
-**Requirements:** TBD
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.2: Clean Code Principles Enforcement (BACKLOG)
-
-**Goal:** [Captured for future planning] Establish a systematic, repeatable approach to enforcing Clean Code principles (Robert C. Martin: meaningful names, small functions/SRP, low cyclomatic complexity, expressive code over comments, no dead code, DRY/KISS/YAGNI, command-query separation, error handling at boundaries) across the CTC Manager codebase. Two complementary tracks to explore — analog zu Phase 999.1: (1) **Static-Analysis-Track** — integrate static-analysis tooling into `pom.xml` + `ci.yml` (candidates: Checkstyle + Google Java Style, SpotBugs + FindSecBugs, PMD with Clean-Code ruleset, SonarQube/SonarLint, Error Prone, ArchUnit for architectural rules — z.B. `controller → service → repository` Layer-Constraint aus CLAUDE.md); reports as PR comments analog zum existierenden JaCoCo-Comment-Workflow; sensible thresholds with allowlist for legacy code (no Big-Bang flag-day). (2) **Custom-Skill-Track** — a project-local GSD skill (Arbeitsname `gsd-clean-code-phase` or `gsd-clean-code-review`) that drives the workflow: scan → triage findings by severity → atomic-commit-per-rule-cluster → `./mvnw verify`-Gate; reuses Phase-60 lessons (Schutzwortliste, Branch-Protection, Post-Dispatch-Validation, scope-whitelist). Plays naturally with Phase 999.1 (OpenRewrite) — many Clean-Code findings are auto-fixable via OpenRewrite recipes (`CommonStaticAnalysis`, `RemoveUnusedImports`, `SimplifyBooleanExpression`), so the two phases share a tooling spine. Stack fit: Spring Boot 4.x, Java 25, Maven, Lombok, JUnit 5, ≥ 82 % coverage gate, OSIV + thin-controller + DTO + Schutzwortliste conventions from CLAUDE.md must be preserved.
-
-**Requirements:** TBD
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.3: Renovate Automated Dependency Updates Integration (BACKLOG)
-
-**Goal:** [Captured for future planning] Evaluate Renovate (or alternatives like Dependabot / Scala Steward-style bots) as an automated dependency-update bot for the CTC Manager codebase, and integrate it via two complementary tracks — analog zu Phase 999.1 / 999.2: (1) **Config-Track** — checked-in `renovate.json` / `.github/renovate.json5` in the repo root + GitHub App enablement; sensible defaults for the stack (Java 25 / Maven via `pom.xml`, Spring Boot BOM, Lombok, JUnit 5 + Mockito, Playwright (compile-scope!), Jsoup, Google Sheets/Calendar SDK, Flyway, MariaDB/H2 drivers, Thymeleaf, Docker base images `eclipse-temurin:25-{jdk,jre}-noble` — Phase-78-Pin protection!); groupName/grouping rules (one PR per ecosystem cluster instead of one-per-dependency), schedule (off-hours / weekly batch), `assignees: [jegr78]`, automerge rules for patch-level only when CI green + JaCoCo ≥ 82 % gate holds, `vulnerabilityAlerts` immediate, dashboard issue for visibility. (2) **Custom-Skill-Track** — a project-local GSD skill (Arbeitsname `gsd-renovate-review` or `gsd-deps-review`) that wraps the human-loop: pull current Renovate PRs via `gh pr list --label renovate`, classify by risk (patch/minor/major/security), batch-merge low-risk after `./mvnw verify -Pe2e`, escalate majors into a discuss-phase (e.g. Spring Boot 4.x → 4.y would re-route into a dedicated upgrade phase analog to Phase 71). Querverbindung: synergy with Phase 999.1 (OpenRewrite handles the migration recipes when Renovate proposes a major bump — Renovate raises the PR, OpenRewrite recipe fixes the API breaks, Skill orchestrates the commit cluster) and Phase 999.4 (SAST findings often correlate with vulnerable transitive deps that Renovate would surface). Constraints to preserve: Flyway V1 immutability, Playwright as compile-scope, no breaking URL/endpoint changes, JaCoCo ≥ 82 % gate, Schutzwortliste guardrails — Renovate must not bypass these.
-
-**Requirements:** TBD
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.4: Security SAST Static Analysis Integration (BACKLOG)
-
-**Goal:** [Captured for future planning] Introduce a systematic Security Static Application Security Testing (SAST) pipeline for the CTC Manager codebase, complementing the existing Spring-Security profile-gating + Mass-Assignment-via-DTO + CSRF posture documented in CLAUDE.md. Two complementary tracks — analog zu Phase 999.1 / 999.2 / 999.3: (1) **Tooling-Track** — integrate SAST tooling into `pom.xml` + `.github/workflows/ci.yml`; candidates: **GitHub CodeQL** (free for public repos, deep dataflow analysis, OWASP Top-10 coverage), **Semgrep** (rule-based, fast, custom rules e.g. "no `style=` on `.btn`" or "no `@ModelAttribute` on JPA entities" — auto-enforce CLAUDE.md architectural principles!), **SpotBugs + FindSecBugs** (Spring-aware security rules), **OWASP Dependency-Check** / **Trivy** for SCA on Maven deps + Docker image scan (catches CVEs in `eclipse-temurin:25-{jdk,jre}-noble`), **Snyk Code** (Spring Boot 4.x rules); SARIF upload to GitHub Code Scanning → findings appear in Security tab + PR annotations analog zum existierenden JaCoCo-Comment-Workflow; baseline-allowlist for existing findings (no Big-Bang flag-day). (2) **Custom-Skill-Track** — a project-local GSD skill (Arbeitsname `gsd-security-review` or `gsd-sast-phase` — to compose with the existing `gsd-secure-phase` which only verifies threat-model mitigations from a phase's PLAN.md threat-model rather than scanning the codebase) that drives the workflow: scan → triage by severity (Critical → fix-now, High → next-phase, Medium → backlog) → atomic-commit-per-CWE-cluster → `./mvnw verify -Pe2e`-Gate; reuses Phase-60 lessons (Schutzwortliste, Branch-Protection, Post-Dispatch-Validation). **Specific high-priority targets** für die Code-Basis: (a) Race-Attachment-Upload-Pfad (Phase 28 hat das schon einmal hard-fixed — SAST würde Regression sofort fangen); (b) Mass-Assignment-Surface (Form-DTO-Pflicht aus CLAUDE.md — Semgrep-Rule erzwingbar); (c) Google-Sheets-Credentials-Handling (`google.sheets.credentials-path` — kein Leak in Logs, kein Commit der `google-credentials.json`); (d) SQL-Injection-Surface in Custom-`@Query`-Repositories; (e) Path-Traversal in `app.upload-dir` + `ctc.site.output-dir`; (f) CSRF-Token-Coverage (Phase 30 hat das fixed — Regression-Guard); (g) Docker-Image-CVEs auf Noble-Base (Trivy als Phase-78-Pin-Companion). Querverbindung: Phase 999.3 (Renovate) liefert die SCA-Lieferseite (transitive Updates); Phase 999.4 liefert die Code-Seite (eigene CVEs/Anti-Patterns); zusammen geschlossener Security-Loop. Constraints: keine breaking URL/endpoint changes, Profile-Gating (`prod`/`docker` only auth) muss erhalten bleiben, OSIV-Side-Effects nicht versehentlich verschärfen.
-
-**Requirements:** TBD
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
+| v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | TBD | Active | - |
