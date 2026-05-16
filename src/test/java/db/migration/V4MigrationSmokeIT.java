@@ -5,6 +5,7 @@ import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.SeasonRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -38,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(classes = CtcManagerApplication.class)
 @ActiveProfiles("dev")
 @Transactional
+@Tag("integration")
 class V4MigrationSmokeIT {
 
     // Deterministic UUIDs with Phase57-Smoke prefix for test isolation (CLAUDE.md)

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{admin/layout :: layout(${seasonPhaseForm.id != null ? 'Edit Phase' : 'New Phase'}, ~{::section})}">
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
 <body>
 <section>
     <a th:href="@{/admin/seasons/{id}(id=${season.id})}" class="back-link">&larr; Back to Season</a>

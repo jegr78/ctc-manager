@@ -5,6 +5,7 @@ import org.ctc.dataimport.GoogleSheetsService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -13,6 +14,7 @@ import org.springframework.context.annotation.Primary;
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
 @Import(ImportE2eTest.TestGoogleSheetsConfig.class)
+@Tag("e2e")
 class ImportE2eTest extends PlaywrightConfig {
 
 	@BeforeEach

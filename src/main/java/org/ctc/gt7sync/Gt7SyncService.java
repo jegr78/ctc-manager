@@ -14,9 +14,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 @Slf4j
 @Service
@@ -30,18 +34,18 @@ public class Gt7SyncService {
 
 	public Gt7SyncPreview fetchAndPreview() throws IOException {
 		// Fetch cars and tracks in parallel
-		var carsFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+		var carsFuture = CompletableFuture.supplyAsync(() -> {
 			try {
 				return scraperService.scrapeCars();
 			} catch (IOException e) {
-				throw new java.io.UncheckedIOException(e);
+				throw new UncheckedIOException(e);
 			}
 		});
-		var tracksFuture = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+		var tracksFuture = CompletableFuture.supplyAsync(() -> {
 			try {
 				return scraperService.scrapeTracks();
 			} catch (IOException e) {
-				throw new java.io.UncheckedIOException(e);
+				throw new UncheckedIOException(e);
 			}
 		});
 
@@ -50,9 +54,9 @@ public class Gt7SyncService {
 		try {
 			scrapedCars = carsFuture.join();
 			scrapedTracks = tracksFuture.join();
-		} catch (java.util.concurrent.CompletionException e) {
+		} catch (CompletionException e) {
 			if (e.getCause() instanceof IOException ioe) throw ioe;
-			if (e.getCause() instanceof java.io.UncheckedIOException uioe) throw uioe.getCause();
+			if (e.getCause() instanceof UncheckedIOException uioe) throw uioe.getCause();
 			throw new IOException("Failed to fetch GT7 data", e.getCause());
 		}
 
@@ -75,7 +79,7 @@ public class Gt7SyncService {
 	@Transactional
 	public SyncResult executeSync(List<String> selectedCarGt7Ids, List<String> selectedTrackNames) throws IOException {
 		long startTime = System.currentTimeMillis();
-		var errors = java.util.Collections.synchronizedList(new ArrayList<String>());
+		var errors = Collections.synchronizedList(new ArrayList<String>());
 		int carsImported = 0;
 		int tracksImported = 0;
 
@@ -122,13 +126,13 @@ public class Gt7SyncService {
 		}
 
 		// Phase 3: Download images in parallel (IO only), then update DB on main thread
-		var carImageResults = java.util.Collections.synchronizedList(new ArrayList<ImageResult<CarImageTask>>());
-		var trackImageResults = java.util.Collections.synchronizedList(new ArrayList<ImageResult<TrackImageTask>>());
+		var carImageResults = Collections.synchronizedList(new ArrayList<ImageResult<CarImageTask>>());
+		var trackImageResults = Collections.synchronizedList(new ArrayList<ImageResult<TrackImageTask>>());
 
-		var allFutures = new ArrayList<java.util.concurrent.CompletableFuture<Void>>();
+		var allFutures = new ArrayList<CompletableFuture<Void>>();
 
 		for (var task : carsToDownload) {
-			allFutures.add(java.util.concurrent.CompletableFuture.runAsync(() -> {
+			allFutures.add(CompletableFuture.runAsync(() -> {
 				try {
 					String localPath = fileStorageService.storeFromUrl("cars", task.car.getId(), task.imageUrl, task.gt7Id + ".png");
 					carImageResults.add(new ImageResult<>(task, localPath, null));
@@ -139,7 +143,7 @@ public class Gt7SyncService {
 		}
 
 		for (var task : tracksToDownload) {
-			allFutures.add(java.util.concurrent.CompletableFuture.runAsync(() -> {
+			allFutures.add(CompletableFuture.runAsync(() -> {
 				try {
 					String localPath = fileStorageService.storeFromUrl("tracks", task.track.getId(), task.imageUrl, task.trackId + ".png");
 					trackImageResults.add(new ImageResult<>(task, localPath, null));
@@ -149,7 +153,7 @@ public class Gt7SyncService {
 			}));
 		}
 
-		java.util.concurrent.CompletableFuture.allOf(allFutures.toArray(new java.util.concurrent.CompletableFuture[0])).join();
+		CompletableFuture.allOf(allFutures.toArray(new CompletableFuture[0])).join();
 
 		// Update entities on main thread (within transaction)
 		for (var result : carImageResults) {

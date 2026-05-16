@@ -5,6 +5,7 @@ import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.repository.SeasonPhaseRepository;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -25,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
 @Transactional
+@Tag("integration")
 class SeasonPhaseControllerIT {
 
     @Autowired

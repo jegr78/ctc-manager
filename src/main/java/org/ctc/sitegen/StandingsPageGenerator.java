@@ -28,14 +28,10 @@ import org.thymeleaf.context.Context;
 /**
  * Helper bean for {@code site/standings.html} page generation.
  *
- * <p>Phase 62 Plan 1 — phase- and group-aware. Generates the legacy
- * {@code /season/{slug}/standings.html} (REGULAR-combined) plus per-phase variants
- * {@code standings-{phaseSlug}.html} (skip PLAYOFF — D-08) plus per-group variants
+ * <p>Phase- and group-aware: generates {@code standings.html} (REGULAR-combined) plus per-phase
+ * variants {@code standings-{phaseSlug}.html} (PLAYOFF skipped) plus per-group variants
  * {@code standings-{phaseSlug}-group-{groupSlug}.html} for GROUPS-layout phases.
- *
- * <p>Single-REGULAR-LEAGUE seasons render byte-identical to today (SC4 invariant) — tab rows
- * are not emitted (showPhaseTabs=false, showGroupTabs=false), Group column is hidden,
- * Buchholz column is hidden, and the empty-state banner is suppressed.
+ * Single-phase seasons render with no tab rows.
  */
 @Slf4j
 @Service
@@ -173,6 +169,7 @@ public class StandingsPageGenerator {
         tplCtx.setVariable("hasPlayoff", ctx.hasPlayoff());
         tplCtx.setVariable("playoffSeasonSlug", ctx.playoffSeasonSlug());
         tplCtx.setVariable("breadcrumbCurrent", "Standings");
+        tplCtx.setVariable("pageTitle", "Standings " + season.getDisplayLabel());
         tplCtx.setVariable("showPhaseTabs", showPhaseTabs);
         tplCtx.setVariable("phaseTabs", phaseTabs);
         tplCtx.setVariable("showGroupTabs", showGroupTabs);

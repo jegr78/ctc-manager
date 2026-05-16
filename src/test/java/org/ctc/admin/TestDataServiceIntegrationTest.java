@@ -1,5 +1,6 @@
 package org.ctc.admin;
 
+import javax.sql.DataSource;
 import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
@@ -12,10 +13,14 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonPhaseRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,10 +29,24 @@ import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+// Phase 79 Wave 1 fix: matches sitegen-test pattern (Flyway clean+migrate+seed in @BeforeAll
+// + @DirtiesContext) to defend against shared H2 (DB_CLOSE_DELAY=-1) state left by preceding
+// @DirtiesContext sitegen tests under random Surefire orderings (e.g. seed=1234).
+// @Transactional remains for lazy-loading support inside test methods (Season.getPhases(),
+// Season.getSeasonTeams(), Race.getMatchday() etc.) — @BeforeAll runs outside any test
+// transaction, so its commit is visible to all subsequent @Test methods.
 @SpringBootTest
 @ActiveProfiles("dev")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@DirtiesContext
 @Transactional
 class TestDataServiceIntegrationTest {
+
+	@Autowired
+	private DataSource dataSource;
+
+	@Autowired
+	private TestDataService testDataService;
 
 	@Autowired
 	private SeasonRepository seasonRepository;
@@ -50,6 +69,26 @@ class TestDataServiceIntegrationTest {
 	@Autowired
 	private SeasonPhaseRepository seasonPhaseRepository;
 
+
+	@BeforeAll
+	void setUp() {
+		// Reset shared H2 (DB_CLOSE_DELAY=-1 keeps state across Spring context reloads).
+		// Without this, a preceding sitegen test's Flyway.clean()+seed leaves data that lets
+		// DevDataSeeder.run() short-circuit (count > 0) without re-creating the seed fixtures
+		// this class queries — reproducible under Surefire random seed=1234.
+		Flyway.configure()
+				.dataSource(dataSource)
+				.cleanDisabled(false)
+				.locations("classpath:db/migration")
+				.load()
+				.clean();
+		Flyway.configure()
+				.dataSource(dataSource)
+				.locations("classpath:db/migration")
+				.load()
+				.migrate();
+		testDataService.seed();
+	}
 
 	private Season findSeason(int year, String name) {
 		return seasonRepository.findAll().stream()

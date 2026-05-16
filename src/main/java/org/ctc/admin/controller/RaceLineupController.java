@@ -38,7 +38,6 @@ public class RaceLineupController {
 	public String saveLineup(@PathVariable UUID raceId,
 	                         @RequestParam Map<String, String> params,
 	                         RedirectAttributes redirectAttributes) {
-		// Parse driver_{driverId} = teamId params
 		var driverTeamAssignments = new HashMap<UUID, UUID>();
 		for (var entry : params.entrySet()) {
 			if (!entry.getKey().startsWith("driver_") || entry.getValue().isBlank()) continue;

@@ -8,7 +8,6 @@ import org.ctc.admin.service.PlayoffRoundOverviewGraphicService;
 import org.ctc.admin.service.PlayoffRoundResultsGraphicService;
 import org.ctc.admin.service.PlayoffRoundScheduleGraphicService;
 import org.ctc.domain.model.PlayoffRound;
-import org.ctc.domain.service.PlayoffBracketViewService;
 import org.ctc.domain.service.PlayoffSeedingService;
 import org.ctc.domain.service.PlayoffService;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +35,6 @@ import java.util.UUID;
 public class PlayoffController {
 
     private final PlayoffService playoffService;
-    private final PlayoffBracketViewService playoffBracketViewService;
     private final PlayoffSeedingService playoffSeedingService;
     private final PlayoffRoundOverviewGraphicService roundOverviewGraphicService;
     private final PlayoffRoundScheduleGraphicService roundScheduleGraphicService;

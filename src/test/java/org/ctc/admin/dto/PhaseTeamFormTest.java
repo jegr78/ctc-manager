@@ -9,8 +9,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Spring indexed-property binding test for PhaseTeamForm assignments list (D-20, Pitfall 2).
- * Tests are RED in Wave 0 — PhaseTeamForm does not yet exist.
+ * Spring indexed-property binding test for PhaseTeamForm assignments list.
  */
 class PhaseTeamFormTest {
 

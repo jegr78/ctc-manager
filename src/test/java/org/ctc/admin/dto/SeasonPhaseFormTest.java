@@ -11,7 +11,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Bean-Validation unit tests for SeasonPhaseForm @NotNull constraints.
- * Tests are RED in Wave 0 — SeasonPhaseForm does not yet exist.
  */
 class SeasonPhaseFormTest {
 

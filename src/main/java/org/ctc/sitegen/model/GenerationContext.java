@@ -6,10 +6,8 @@ import org.ctc.domain.model.Season;
 /**
  * Immutable per-season context passed to every page-generator helper.
  *
- * <p>Carries the values that every {@code generateXxx} method on the legacy
- * {@code SiteGeneratorService} took as positional parameters: the output root path, the
- * current Season, the active season's slug + name (for cross-page nav highlighting), and
- * playoff metadata (whether the season has a playoff and its slug for cross-links).
+ * <p>Carries the output root path, the current Season, active season slug and name for nav
+ * highlighting, and playoff metadata for cross-links.
  */
 public record GenerationContext(
         Path outPath,

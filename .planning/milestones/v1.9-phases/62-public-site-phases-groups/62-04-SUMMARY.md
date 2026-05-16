@@ -1,9 +1,11 @@
 ---
 phase: 62-public-site-phases-groups
-plan: 04
-subsystem: sitegen
+plan: "04"
 type: execute
 wave: 5
+status: complete
+completed: 2026-05-07
+subsystem: sitegen
 tags:
   - sitegen
   - team-profile

@@ -31,6 +31,7 @@ public class RaceScoringController {
 	@GetMapping("/new")
 	public String create(Model model) {
 		model.addAttribute("raceScoringForm", new RaceScoringForm());
+		model.addAttribute("pageTitle", "New Race-Scoring");
 		return "admin/race-scoring-form";
 	}
 
@@ -44,6 +45,7 @@ public class RaceScoringController {
 		form.setQualiPoints(scoring.getQualiPoints());
 		form.setFastestLapPoints(scoring.getFastestLapPoints());
 		model.addAttribute("raceScoringForm", form);
+		model.addAttribute("pageTitle", "Edit Race-Scoring");
 		return "admin/race-scoring-form";
 	}
 

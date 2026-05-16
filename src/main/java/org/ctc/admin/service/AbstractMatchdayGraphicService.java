@@ -137,8 +137,6 @@ public abstract class AbstractMatchdayGraphicService extends AbstractGraphicServ
 		return londonTime.format(SCHEDULE_FORMAT);
 	}
 
-	// Template management
-
 	protected String renderTemplate(Context ctx) throws IOException {
 		Path customTemplate = uploadDir.resolve(getTemplateFileName());
 		if (Files.exists(customTemplate)) {

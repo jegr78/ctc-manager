@@ -13,6 +13,7 @@ import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -43,6 +44,7 @@ import static org.mockito.Mockito.when;
 @SpringBootTest
 @ActiveProfiles("dev")
 @Transactional
+@Tag("integration")
 class DriverSheetImportServiceIT {
 
     private static final String SHEET_URL = "https://docs.google.com/spreadsheets/d/it-sheet-id";

@@ -55,12 +55,11 @@ public class MatchdayController {
         var matchday = data.matchday();
         model.addAttribute("matchday", matchday);
         model.addAttribute("lineupsByTeam", data.lineupsByTeam());
-
-        // Graphics button status — computed by service
         model.addAttribute("hasMatches", data.hasMatches());
         model.addAttribute("hasSchedule", data.hasSchedule());
         model.addAttribute("scheduleMissingCount", data.scheduleMissingCount());
         model.addAttribute("hasResults", data.hasResults());
+        model.addAttribute("pageTitle", "Matchday: " + matchday.getLabel());
         return "admin/matchday-detail";
     }
 

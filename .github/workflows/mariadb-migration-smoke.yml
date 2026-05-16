@@ -8,6 +8,13 @@ name: MariaDB Migration Smoke
 # only surfaced by the Phase 61 UAT (2026-05-02). This smoke is the
 # pre-merge gate that prevents the same class of escape from recurring.
 
+# Phase 75 (v1.10): BackupImportMariaDbSmokeIT (Testcontainers MariaDB) runs in the
+# main CI workflow (./mvnw verify) via Failsafe's default *IT pattern + Testcontainers
+# auto-detect of the host Docker daemon. This smoke workflow stays Flyway-only — no
+# -Dit.test edit needed because the IT does not depend on this workflow's service
+# container. Memory `mariadb-migration-smoke.yml is sacred`: do NOT modify the
+# services.mariadb block or the JAR-boot/Flyway-grep verification steps.
+
 on:
   push:
     branches: [ master, main ]

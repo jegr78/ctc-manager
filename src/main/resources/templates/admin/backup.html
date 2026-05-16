@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Backup', ~{::section})}">
+<body>
+<section>
+    <h1>Backup</h1>
+    <div class="card">
+        <p class="text-dim mb-md">
+            Exports the full league database (all 24 entities) plus every uploaded file
+            into a single ZIP archive. The download starts immediately and may take a few
+            seconds for large leagues.
+        </p>
+        <form th:action="@{/admin/backup/export}" method="post">
+            <button type="submit" class="btn btn-primary btn-lg">
+                Export Backup
+            </button>
+        </form>
+    </div>
+    <div class="card">
+        <h2>Import Backup</h2>
+        <p class="text-dim mb-md" id="backupZipHelp">
+            Restores the league database from a previously exported ZIP archive.
+            The import is a two-step process: first you will see a preview of what will change,
+            then you confirm. The upload is limited to 100 MB.
+        </p>
+        <form th:action="@{/admin/backup/import-preview}" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="backupZip">Backup ZIP file</label>
+                <input type="file" id="backupZip" name="file" accept=".zip" required
+                       aria-describedby="backupZipHelp">
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg">Import Backup</button>
+        </form>
+    </div>
+</section>
+</body>
+</html>

@@ -1,7 +1,9 @@
 package org.ctc.domain.repository;
 
 import org.ctc.domain.model.Team;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,4 +26,14 @@ public interface TeamRepository extends JpaRepository<Team, UUID> {
 	 * resolution at the service layer (see {@code DriverSheetImportService}).
 	 */
 	List<Team> findAllByShortName(String shortName);
+
+	/**
+	 * Full-table finder used by {@code BackupExportService}.
+	 *
+	 * <p>Eager-fetches the {@code parentTeam} self-FK so the backup MixIn can render
+	 * the parent-ID for sub-teams without triggering {@code LazyInitializationException}.
+	 */
+	@EntityGraph(attributePaths = {"parentTeam"})
+	@Query("SELECT e FROM Team e")
+	List<Team> findAllForBackup();
 }

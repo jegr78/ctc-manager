@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)" th:with="title=${title ?: 'CTC Admin'}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -71,10 +71,17 @@
                     <a th:href="@{/admin/tools/template-editors}" th:classappend="${title.contains('Template') ? 'active' : ''}">Template Editors</a>
                     <a th:href="@{/admin/generate}" class="btn-generate">Generate Site</a>
                 </div>
+                <div class="sidebar-group">
+                    <span class="sidebar-group-label">Data</span>
+                    <a th:href="@{/admin/backup}" th:classappend="${title.contains('Backup') ? 'active' : ''}">Backup</a>
+                </div>
             </nav>
         </aside>
         <main class="main-content">
             <div class="container">
+                <div th:if="${importInProgress}" class="alert alert-warning" role="status">
+                    Backup import in progress — write access is temporarily locked.
+                </div>
                 <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
                 <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
                 <div th:replace="${content}"></div>

@@ -23,4 +23,14 @@ public interface MatchRepository extends JpaRepository<Match, UUID> {
 	boolean existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
 
 	java.util.Optional<Match> findFirstByMatchdayIdAndHomeTeamIdAndAwayTeamId(UUID matchdayId, UUID homeTeamId, UUID awayTeamId);
+
+	/**
+	 * Full-table finder used by {@code BackupExportService}.
+	 *
+	 * <p>Eager-fetches the three {@code @ManyToOne} associations: {@code matchday},
+	 * {@code homeTeam}, {@code awayTeam}.
+	 */
+	@EntityGraph(attributePaths = {"matchday", "homeTeam", "awayTeam"})
+	@Query("SELECT e FROM Match e")
+	List<Match> findAllForBackup();
 }

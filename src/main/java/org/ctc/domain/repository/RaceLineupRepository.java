@@ -38,4 +38,14 @@ public interface RaceLineupRepository extends JpaRepository<RaceLineup, UUID> {
 	@EntityGraph(attributePaths = {"driver", "team"})
 	@Query("SELECT rl FROM RaceLineup rl WHERE rl.driver.id = :driverId AND rl.race.matchday.phase.season.id = :seasonId")
 	List<RaceLineup> findByDriverIdAndRaceMatchdaySeasonId(UUID driverId, UUID seasonId);
+
+	/**
+	 * Full-table finder used by {@code BackupExportService}.
+	 *
+	 * <p>Eager-fetches the three {@code @ManyToOne} associations: {@code race},
+	 * {@code driver}, {@code team}.
+	 */
+	@EntityGraph(attributePaths = {"race", "driver", "team"})
+	@Query("SELECT e FROM RaceLineup e")
+	List<RaceLineup> findAllForBackup();
 }

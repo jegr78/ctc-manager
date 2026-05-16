@@ -1,6 +1,10 @@
 ---
 phase: 62-public-site-phases-groups
 plan: "05"
+type: execute
+wave: 6
+status: complete
+completed: 2026-05-07
 subsystem: domain-service
 tags:
   - alltime

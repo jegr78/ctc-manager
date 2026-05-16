@@ -130,7 +130,7 @@ public class TemplatePreviewService {
         ctx.setVariable("raceRows", rows);
         ctx.setVariable("homeTotal", 173);
         ctx.setVariable("awayTotal", 173);
-        ctx.setVariable("homeIsWinner", false);  // draw scenario — change to test winner styling
+        ctx.setVariable("homeIsWinner", false);
         ctx.setVariable("awayIsWinner", false);
         return ctx;
     }
@@ -390,7 +390,6 @@ public class TemplatePreviewService {
         }
     }
 
-    // Records for template preview data
     public record LineupPairing(String homeDriver, String homeNickname, String awayDriver, String awayNickname) {}
     public record ResultRow(String homeDriver, String homeNickname, int homePoints, int awayPoints, String awayDriver, String awayNickname) {}
     public record RaceRow(String label, int homePoints, int awayPoints) {}

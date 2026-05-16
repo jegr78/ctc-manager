@@ -17,7 +17,6 @@ import org.ctc.domain.service.MatchdayService;
 import org.ctc.domain.service.PlayoffService;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.SeasonPhaseService;
-import org.ctc.domain.service.StandingsService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -47,7 +46,6 @@ public class SeasonPhaseController {
     private final SeasonPhaseService seasonPhaseService;
     private final SeasonManagementService seasonManagementService;
     private final MatchdayService matchdayService;
-    private final StandingsService standingsService;
     private final PhaseTeamRepository phaseTeamRepository;
     private final SeasonPhaseGroupRepository seasonPhaseGroupRepository;
     private final RaceScoringRepository raceScoringRepository;
@@ -95,6 +93,8 @@ public class SeasonPhaseController {
         model.addAttribute("combinedView", isGroupsLayout);
         model.addAttribute("showGroupColumn", isGroupsLayout);
 
+        model.addAttribute("pageTitle",
+                "Season: " + season.getName() + " — " + effectiveLabel(phase));
         return "admin/season-detail";
     }
 
@@ -137,6 +137,8 @@ public class SeasonPhaseController {
         model.addAttribute("combinedView", false);
         model.addAttribute("showGroupColumn", false);
 
+        model.addAttribute("pageTitle",
+                "Season: " + season.getName() + " — " + effectiveLabel(phase));
         return "admin/season-detail";
     }
 
@@ -338,5 +340,7 @@ public class SeasonPhaseController {
                 SeasonFormat.ROUND_ROBIN, "Round Robin"));
 
         model.addAttribute("phaseTypeReadonly", form.getId() != null);
+        model.addAttribute("pageTitle",
+                (form.getId() != null ? "Edit Phase" : "New Phase") + " — " + ((org.ctc.domain.model.Season) season).getName());
     }
 }

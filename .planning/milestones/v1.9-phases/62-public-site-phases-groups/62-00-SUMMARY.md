@@ -1,9 +1,11 @@
 ---
 phase: 62-public-site-phases-groups
-plan: 00
-subsystem: sitegen
+plan: "00"
 type: execute
 wave: 1
+status: complete
+completed: 2026-05-07
+subsystem: sitegen
 tags:
   - sitegen
   - refactor

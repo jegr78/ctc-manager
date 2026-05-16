@@ -35,4 +35,17 @@ public interface RaceRepository extends JpaRepository<Race, UUID> {
 	boolean existsByCarId(UUID carId);
 
 	boolean existsByTrackId(UUID trackId);
+
+	/**
+	 * Full-table finder used by {@code BackupExportService}.
+	 *
+	 * <p>Eager-fetches all seven {@code @ManyToOne} associations: {@code matchday},
+	 * {@code match}, {@code track}, {@code car}, {@code playoffMatchup},
+	 * {@code homeTeamOverride}, {@code awayTeamOverride}. {@code Race} is the deepest
+	 * aggregate root in the export graph.
+	 */
+	@EntityGraph(attributePaths = {"matchday", "match", "track", "car", "playoffMatchup",
+			"homeTeamOverride", "awayTeamOverride"})
+	@Query("SELECT e FROM Race e")
+	List<Race> findAllForBackup();
 }

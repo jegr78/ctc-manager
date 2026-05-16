@@ -64,6 +64,9 @@ public class RaceController {
 		model.addAttribute("calendarAvailable", data.calendarAvailable());
 		model.addAttribute("hasCalendarEvent", data.hasCalendarEvent());
 		model.addAttribute("canCreateCalendarEvent", data.canCreateCalendarEvent());
+		model.addAttribute("pageTitle",
+				"Race: " + data.race().getHomeTeam().getShortName() + " vs "
+						+ (data.race().getAwayTeam() != null ? data.race().getAwayTeam().getShortName() : "Bye"));
 		return "admin/race-detail";
 	}
 

@@ -53,6 +53,7 @@ public class SeasonController {
 			model.addAttribute("combinedView", false);
 			model.addAttribute("showGroupColumn", false);
 			model.addAttribute("availableTeams", seasonManagementService.getAvailableTeamsForReplacement(id));
+			model.addAttribute("pageTitle", "Season: " + season.getName());
 			return "admin/season-detail";
 		}
 		// Auto-redirect to REGULAR phase tab

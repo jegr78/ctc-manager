@@ -27,6 +27,36 @@
 - **Team Cards** — Generate 1080x1920 team card PNGs with colors, logo, rating and standings
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
+- **Backup & Restore** — Export a full ZIP backup of all 24 entity tables; restore via a preview-and-confirm import flow with schema-version locking
+
+## Backup & Restore
+
+v1.10 introduces a full database backup/restore feature accessible via `/admin/backup`.
+
+### Export
+
+1. Navigate to `/admin/backup` in the admin sidebar.
+2. Click **Export Backup** — a ZIP file (`ctc-backup-<ISO-instant>.zip`) downloads immediately.
+3. Store the ZIP in a safe location. Each export captures all 24 entity tables.
+
+### Import
+
+1. Navigate to `/admin/backup` and upload a ZIP via **Import Backup**.
+2. Review the preview: per-table row counts (current vs. backup) and schema-version match indicator.
+3. Check the **I understand** confirmation and click **Execute Import**. The database is replaced atomically.
+
+> **Schema-Version lock:** The import is rejected if the backup's schema version does not match the
+> current application version. Do not import backups from a different major schema version.
+
+### Recovery
+
+If an import fails or you need to revert, see [`docs/operations/import-runbook.md`](docs/operations/import-runbook.md)
+for step-by-step recovery from `data/.import-backups/<ts>/`.
+
+### Full Guide
+
+See the [Backup & Restore wiki page](../../wiki/Backup-and-Restore) for the step-by-step export
+workflow, import workflow, schema-version explanation, and recovery procedures.
 
 ## Quick Start
 

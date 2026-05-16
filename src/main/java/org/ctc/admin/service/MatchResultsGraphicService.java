@@ -111,8 +111,6 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 		return templateEngine.process("admin/match-results-render", ctx);
 	}
 
-	// Template management
-
 	public String loadTemplate() throws IOException {
 		Path customTemplate = uploadDir.resolve(CUSTOM_TEMPLATE_FILE);
 		if (Files.exists(customTemplate)) {

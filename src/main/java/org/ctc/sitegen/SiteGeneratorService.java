@@ -55,14 +55,7 @@ public class SiteGeneratorService {
         siteProperties.setOutputDir(outputDir);
     }
 
-    /**
-     * Sets {@code uploadDir} on the orchestrator AND forwards to the
-     * {@link TeamProfilePageGenerator} helper which keeps its own copy of the value for
-     * the per-team-profile {@code copyLogoToAssets} flow (Phase-62 Plan-0 Task-2 split —
-     * the orchestrator and the helper each carry an independent {@code uploadDir} field
-     * because they each implement {@code copyLogoToAssets} independently per the plan's
-     * choice-(b) duplication strategy).
-     */
+    /** Sets {@code uploadDir} on the orchestrator and forwards to {@link TeamProfilePageGenerator}. */
     public void setUploadDir(String uploadDir) {
         this.uploadDir = uploadDir;
         teamProfilePageGenerator.setUploadDir(uploadDir);
@@ -210,6 +203,7 @@ public class SiteGeneratorService {
         ctx.setVariable("seasonName", season.getName());
         ctx.setVariable("hasPlayoff", true);
         ctx.setVariable("breadcrumbCurrent", "Playoff");
+        ctx.setVariable("pageTitle", "Playoffs " + season.getDisplayLabel());
 
         var dir = outPath.resolve("season").resolve(siteSlugger.slugify(season.getDisplayLabel()));
         Files.createDirectories(dir);

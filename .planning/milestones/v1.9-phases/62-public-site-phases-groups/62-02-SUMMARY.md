@@ -1,9 +1,11 @@
 ---
 phase: 62-public-site-phases-groups
-plan: 02
-subsystem: sitegen
+plan: "02"
 type: execute
 wave: 3
+status: complete
+completed: 2026-05-07
+subsystem: sitegen
 tags:
   - sitegen
   - matchdays

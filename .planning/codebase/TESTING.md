@@ -584,6 +584,100 @@ class SeasonControllerTest {
 - Lazy-loaded associations can be accessed in tests without explicit fetch
 - No need for `@EntityGraph` workarounds in tests (unlike controllers)
 
+## Test Categorization (`@Tag`)
+
+Tests are routed into Surefire/Failsafe phases by **JUnit 5 `@Tag` annotation**, not by filename suffix. This makes routing explicit, avoids `@Nested`-inner-class leakage into the wrong phase, and lets the `flaky` quarantine mechanism (D-07) compose with category tags.
+
+**Convention — every new test class MUST be tagged:**
+
+| Tag | Meaning | Phase | Required on |
+|-----|---------|-------|-------------|
+| `@Tag("integration")` | Spring-context integration test | Failsafe `default-it` | Every `*IT.java` class |
+| `@Tag("e2e")` | Playwright UI walkthrough | Failsafe `e2e-it` (only in `-Pe2e` profile) | Every test in `org.ctc.e2e.*` |
+| `@Tag("flaky")` | Quarantined as observed-flaky | Excluded from all phases | Add temporarily; max-5 cap (D-07); CD-05 monthly review |
+| _no tag_ | Plain unit test | Surefire `default-test` | All `*Test.java` (unless behavior is integration/e2e) |
+
+**Inheritance:** `@Nested` inner classes inherit their parent class's tags. So `BackupRoundTripIT` (`@Tag("integration")`) covers its `@Nested H2DevRoundTripTests` and `@Nested MariaDbRoundTripTests` automatically — no per-nested re-tagging needed.
+
+**Imports:** add `import org.junit.jupiter.api.Tag;` alongside other JUnit Jupiter imports.
+
+**Placement:** put `@Tag(...)` immediately above the `class` declaration, after any `@SpringBootTest`/`@DirtiesContext`/etc. Example:
+
+```java
+@SpringBootTest
+@ActiveProfiles("dev")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@DirtiesContext
+@Tag("integration")
+class BackupRoundTripIT {
+    // ...
+}
+```
+
+**Maven plugin routing (pom.xml):**
+
+| Plugin/execution | Filter | Effect |
+|------------------|--------|--------|
+| `maven-surefire-plugin` (default-test) | `<excludedGroups>integration,e2e,flaky</excludedGroups>` | Runs untagged unit tests only |
+| `maven-failsafe-plugin` (default-it, base lifecycle) | `<groups>integration</groups>`, `<excludedGroups>e2e,flaky</excludedGroups>` | Runs `@Tag("integration")` only |
+| `maven-failsafe-plugin` (e2e-it, in `<profile id="e2e">`) | `<groups>e2e</groups>` | Runs `@Tag("e2e")` only |
+
+There are NO filename-based `<includes>` / `<excludes>` for test discovery anymore — tags are the single source of truth.
+
+**Why we moved away from filename routing (Phase 79 D-05):** Surefire's `<exclude>**/*IT.java</exclude>` filtered top-level class files but not `@Nested`-compiled inner classes (`*IT$*.class`). JUnit Platform discovered the inner classes via class-graph scan and dragged the parent IT into Surefire — making `BackupRoundTripIT`, `BackupControllerSecurityIT`, and `BackupImportControllerSecurityIT` run twice (once in Surefire, once in Failsafe) and racing on shared file paths under parallel forks. `@Tag` is inherited by `@Nested` classes so the leak is structurally impossible.
+
+## Test Invocation Discipline
+
+**Codified from `feedback_test_call_optimization` (Phase 79 D-08).**
+
+### Rule: One Final Full Run Per Phase
+
+Each GSD phase uses **one and only one** `./mvnw verify -Pe2e` invocation as its final gate (D-19 / Phase 77 D-13). This is the only invocation that counts for coverage, E2E smoke, and CI GREEN status.
+
+Between waves within a phase, use **targeted invocations** for fast feedback:
+
+```bash
+# Run only a single test class
+./mvnw test -Dtest=BackupImportServiceTest
+
+# Run only a single IT class
+./mvnw verify -Dit.test=BackupRoundTripIT
+
+# Run all tests in a package
+./mvnw test -Dtest="org.ctc.backup.service.*"
+
+# Run tests matching a method name pattern
+./mvnw test -Dtest="BackupImportServiceTest#givenValid*"
+```
+
+### Rule: Do Not Re-Run Full Suite Between Waves
+
+Running `./mvnw verify` (or `./mvnw verify -Pe2e`) after every plan task wastes CI minutes and developer time. The full suite is a GATE, not a development loop.
+
+| Context | Invocation |
+|---------|-----------|
+| After implementing a single task | `./mvnw test -Dtest=<AffectedTestClass>` |
+| After per-package cleanup commit (D-03) | `./mvnw test` (unit + IT, no E2E) |
+| After pom.xml / ci.yml change | `./mvnw verify` (full, no E2E) |
+| Phase final gate (D-19) | `./mvnw verify -Pe2e` |
+| Triage a test failure | `./mvnw verify -fae` (fail-at-end, sees all failures) |
+
+### Rule: Run Order for Independence Verification
+
+Before enabling Surefire/Failsafe parallelism, verify test independence:
+
+```bash
+# Reverse alphabetical order — detects setup-dependent ordering
+./mvnw test -Dsurefire.runOrder=reversealphabetical
+
+# Random order — three seeds for statistical confidence
+./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=1234
+./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=5678
+./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=9999
+```
+
+All three random-seed runs must be GREEN before `forkCount` is increased.
+
 ## Common Patterns Summary
 
 | Scenario | Approach | Example |
@@ -600,4 +694,4 @@ class SeasonControllerTest {
 
 ---
 
-*Testing analysis: 2026-04-07*
+*Testing analysis: 2026-04-07 (last updated: 2026-05-15 — Phase 79 D-08 added Test Invocation Discipline section + Test Categorization (`@Tag`) section)*

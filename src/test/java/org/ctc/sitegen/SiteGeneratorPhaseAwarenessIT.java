@@ -16,6 +16,7 @@ import org.jsoup.nodes.Document;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,6 +49,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @DirtiesContext
+@Tag("integration")
 class SiteGeneratorPhaseAwarenessIT {
 
     private Path tempDir;

@@ -36,6 +36,7 @@ public class DriverController {
     public String detail(@PathVariable UUID id, Model model) {
         var driver = driverService.findById(id);
         model.addAttribute("driver", driver);
+        model.addAttribute("pageTitle", "Driver: " + driver.getPsnId());
         return "admin/driver-detail";
     }
 
@@ -109,6 +110,7 @@ public class DriverController {
         var allDrivers = driverService.getMergeFormDrivers(id);
         model.addAttribute("source", source);
         model.addAttribute("allDrivers", allDrivers);
+        model.addAttribute("pageTitle", "Merge Driver: " + source.getPsnId());
         return "admin/driver-merge";
     }
 
@@ -122,6 +124,7 @@ public class DriverController {
             model.addAttribute("source", source);
             model.addAttribute("target", target);
             model.addAttribute("preview", preview);
+            model.addAttribute("pageTitle", "Merge Driver: " + source.getPsnId());
             return "admin/driver-merge";
         } catch (EntityNotFoundException | BusinessRuleException e) {
             redirectAttributes.addFlashAttribute("errorMessage",

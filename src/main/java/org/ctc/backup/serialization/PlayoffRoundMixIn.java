@@ -1,0 +1,19 @@
+package org.ctc.backup.serialization;
+
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonIdentityReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import org.ctc.domain.model.Playoff;
+import org.ctc.domain.model.PlayoffRound;
+
+/**
+ * Externalised Jackson annotations for {@link PlayoffRound}.
+ */
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "matchups"})
+public abstract class PlayoffRoundMixIn {
+
+    @JsonIdentityReference(alwaysAsId = true)
+    abstract Playoff getPlayoff();
+}

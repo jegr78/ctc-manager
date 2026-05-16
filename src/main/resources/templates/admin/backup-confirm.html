@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Backup', ~{::section})}">
+<body>
+<section>
+    <h1>Backup Import — Confirm</h1>
+
+    <div class="alert alert-warning mb-md" role="alert">
+        This will delete ALL operational data and replace it with the contents of the uploaded backup.
+        This action cannot be undone.
+    </div>
+
+    <div class="card mb-md" id="confirmRecap">
+        <p>
+            You are about to replace
+            <strong th:text="${preview.totalImportedRows}">0</strong> rows across
+            <strong th:text="${preview.entityCounts.size()}">0</strong> tables and restore
+            <strong th:text="${preview.uploadFileCount}">0</strong> uploaded files from
+            <strong th:text="${preview.originalFilename}">backup.zip</strong>
+            (<span th:text="${#numbers.formatDecimal(preview.fileSizeBytes / (1024.0 * 1024.0), 1, 2)}">0.00</span> MB).
+        </p>
+    </div>
+
+    <form id="executeForm"
+          th:action="@{/admin/backup/import-execute}" method="post"
+          th:object="${backupImportConfirmForm}"
+          onsubmit="return confirm('Replace all operational data? This cannot be undone.');">
+        <input type="hidden" th:field="*{stagingId}">
+        <div class="form-group">
+            <div class="form-check">
+                <input type="checkbox" id="acknowledged" th:field="*{acknowledged}" value="true">
+                <label for="acknowledged">I am an admin and I understand all operational data will be deleted.</label>
+            </div>
+            <span class="field-error" role="alert"
+                  th:if="${#fields.hasErrors('acknowledged')}"
+                  th:errors="*{acknowledged}">You must acknowledge the deletion warning to continue.</span>
+        </div>
+    </form>
+
+    <div class="actions mt-md">
+        <form th:action="@{/admin/backup/import-cancel}" method="post">
+            <input type="hidden" name="stagingId" th:value="${backupImportConfirmForm.stagingId}">
+            <button type="submit" class="btn btn-secondary">Cancel</button>
+        </form>
+        <button type="submit" form="executeForm" class="btn btn-danger" aria-describedby="confirmRecap">Execute Import</button>
+    </div>
+</section>
+</body>
+</html>

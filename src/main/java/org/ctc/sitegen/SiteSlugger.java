@@ -2,12 +2,7 @@ package org.ctc.sitegen;
 
 import org.springframework.stereotype.Component;
 
-/**
- * Spring-injected slug utility extracted from {@code SiteGeneratorService.slugify}.
- *
- * <p>The slug body is byte-identical to the legacy private method to preserve URL stability
- * (D-02 / D-03 stability + Risk 7 GitHub-Pages case-sensitivity).
- */
+/** Spring-injected slug utility that normalises team/season names into stable URL slugs. */
 @Component
 public class SiteSlugger {
 

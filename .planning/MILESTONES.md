@@ -1,5 +1,44 @@
 # Milestones
 
+## v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (Shipped: 2026-05-16)
+
+**Phases completed:** 9 phases (71-79), 50 plans, 39/39 requirements satisfied
+**Diff:** +77 362 / −1 224 across 521 files (378 commits in milestone range)
+**Tests:** 1652 Surefire unit + 231 Failsafe IT + 36 Playwright E2E; JaCoCo line coverage 87.80 % (gate 82 %, v1.9 baseline 87.02 %)
+**Timeline:** 7 days (2026-05-09 → 2026-05-16)
+**Branch:** `gsd/v1.10-platform-and-backup`
+**Final-gate verify:** `./mvnw verify -Pe2e` BUILD SUCCESS, Maven total 11m 11s, bash wallclock 11m 13s
+**Audit verdict:** passed (`v1.10-MILESTONE-AUDIT.md`)
+
+**Key accomplishments:**
+
+- Spring Boot 4.0.5 → 4.0.6 + Thymeleaf 3.1.5.RELEASE absorbed structurally — controller-side `pageTitle` model attributes replace fragment-parameter ternaries across ~80 admin + site templates; `TemplateRenderingSmokeIT` covers every `/admin/**` GET route; `exec-maven-plugin` grep-gate fences regression (PLAT-01..07)
+- Backup wire contract locked before any export/import code: `BackupSchema.SCHEMA_VERSION = 1` (monotonic integer), `BackupManifest` record, 24-entity FK-respecting `EXPORT_ORDER` generated from JPA Metamodel via Kahn's algorithm, `@Qualifier("backupObjectMapper")` strict bean co-exists with `@Primary` default, Flyway `V7__data_import_audit.sql` migration runs on H2 + MariaDB, `data_import_audit` structurally excluded from export via package filter (SCHEMA-01..04, IMPORT-08)
+- Streaming ZIP export — 24 per-entity Jackson MixIns keep `org.ctc.domain.model` annotation-clean, `BackupExportService` `@Transactional(readOnly=true)` with explicit `@EntityGraph` eager-fetch, `StreamingResponseBody` (no full-dataset buffering), CSRF-protected POST endpoint with ISO-instant `Content-Disposition` filename, admin/backup page wired to sidebar (EXPORT-01..06)
+- Replace-all import path — manifest-first read + schema-version refusal BEFORE any DB write, ZIP-Slip + ZipBomb defenses (50 MB/entry, 500 MB total, 50.000 entries cap, `startsWith(uploadDir.toRealPath())` check), multipart limits raised to 100 MB on Spring + Tomcat layers, dedicated `BackupUploadExceptionHandler` `@ControllerAdvice` for `MaxUploadSizeExceededException`, stateless preview state via staging-path re-parse (D-15 v1.8 pattern); single `@Transactional` wipe + restore (FK-reverse native-SQL DELETE → `em.flush() + em.clear()` → `JdbcTemplate.batchUpdate` bypassing `AuditingEntityListener`), `Team.parentTeam = NULL` pre-step, post-commit upload-tree stage-and-rename with 24h `data/.import-backups/<ts>/uploads-old/` recovery (IMPORT-01..07, SECU-01..04)
+- Operational hardening — `ImportLockService` `ReentrantLock` singleton + 409 redirect, persistent yellow read-only banner via `@ControllerAdvice`, `ImportLockedWriteRejector` HandlerInterceptor (HTTP 503 on non-import POSTs, whitelist-on-equals), synchronous auto-backup-before-import Step 0.5 with first-match-wins `AutoBackupBeforeImportException` catch-chain (SECU-05..07); 5-section operator runbook `docs/operations/import-runbook.md`
+- Quality gates held — `BackupRoundTripIT` runs on H2 AND MariaDB profiles with 24-entity row-count parity + SHA-256 byte-equality on Race + SeasonDriver + Team; `BackupImportRollbackIT` injects mid-restore failure at 50 % → asserts pre-import DB state + `success=false` audit row; `BackupImportMariaDbSmokeIT` (Testcontainers) covers Saison-2023 round-trip; 75-HUMAN-UAT 10/10 PASS (6 visual + 4 operational); README "Backup & Restore" section + GitHub Wiki page pushed to ctc-manager.wiki.git (QUAL-01..05)
+- Side-quest Phase 78: Dockerfile pinned `eclipse-temurin:25-{jdk,jre}-noble` (suffix-only) repairs the silently broken release workflow's `playwright install chromium` step on Ubuntu 26.04; CI `dockerfile-noble-pin-guard` job mirrors PLAT-07's `exec-maven-plugin` grep-gate pattern; full `docker build .` runs on every PR + push (PLAT-CI-01..02)
+- Phase 79 milestone closer: per-package cleanup across `src/main/java` + `src/test/java` + 24 Jackson MixIns + 24 EntityRestorers + 15 graphic services (Schutzwortliste-protected, atomic commits), Surefire `forkCount=2C` + Failsafe default-it `forkCount=1C` + `excludedGroups=flaky` quarantine, ci.yml concurrency block + `--no-transfer-progress`, plan-SUMMARY frontmatter normalized for phases 56/57/62/64, TESTING.md "Test Invocation Discipline" appended
+
+**Deferred to next milestone (acknowledged at close):**
+
+- 12 REVIEW.md Info/Warning items from Phase 75 (`Map.copyOf` order strip, Step-1-revert `FileAlreadyExistsException`, `executedBy` duplication, `restoreOneTable` opens ZIP 24×, etc.) — v1.11 backup-cleanup mini-phase
+- Phase 79 D-06 wallclock-reduction debt: achieved 16.85 % vs ≥ 30 % target; Spring-context startup is structural — architectural test-restructuring needed (Spring-context-per-fork is unavoidable cost without splitting test modules)
+- Driver-detail Season-Assignment chip ordering (cosmetic; 75-HUMAN-UAT test 6) — explicit `ORDER BY year` on `Driver.seasonAssignments` query
+- `DevDataSeeder` is `@Profile("dev")`-only; live-MariaDB-UAT on `local,demo` requires either profile widening or a separate Saison-2023 fixture-bootstrap
+- Nyquist `*-VALIDATION.md` drafts → approved for 6 phases (72-76, 79) + creation for 71 + 78 — optional `/gsd:validate-phase {N}`
+- Backlog: OpenRewrite (Phase 999.1), Clean-Code enforcement (999.2), Renovate (999.3), SAST (999.4)
+
+**Post-merge self-resolving (not tech debt):**
+
+- QUAL-05 wiki image embed render — `raw.githubusercontent.com/master/...` URLs resolve on PR merge to master
+- PLAT-CI-02 release-workflow run on master observation — by-design post-merge
+
+Known deferred items at close: see `STATE.md` Deferred Items + `v1.10-ROADMAP.md` "Issues Deferred"
+
+---
+
 ## v1.9 Season Phases & Groups (Shipped: 2026-05-09)
 
 **Phases completed:** 15 phases (56-70), ~70 plans, 38/38 requirements satisfied

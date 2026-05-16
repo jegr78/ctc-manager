@@ -1,179 +1,261 @@
 # Project Research Summary
 
-**Project:** CTC Manager — Technical Debt Cleanup
-**Domain:** Spring Boot 4 / Thymeleaf SSR admin application — architectural cleanup milestone
-**Researched:** 2026-04-03
-**Confidence:** HIGH
+**Project:** CTC Manager v1.10 — Spring Boot 4.0.6 Upgrade + Admin Data Export/Import
+**Domain:** Brownfield Spring Boot 4 / Thymeleaf / MariaDB admin tool — platform hygiene + new ZIP-based backup/restore feature
+**Researched:** 2026-05-09
+**Confidence:** HIGH (overall)
+
+---
 
 ## Executive Summary
 
-The CTC Manager is a mature single-admin Spring Boot 4.0.5 application with well-understood technical debt: six controllers bypass the service layer by injecting repositories directly, 65 catch-all exception blocks mask errors and break consistent UX, a 673-line God Service (RaceManagementService) violates SRP, and the application has zero authentication on any profile. The good news is that the existing architecture is already correct in its principles — documented in CLAUDE.md — and this milestone is about enforcing those principles consistently rather than introducing new patterns. No new architectural ideas are needed; the work is disciplined enforcement of what is already specified.
+v1.10 is a brownfield SUBSEQUENT milestone immediately after the v1.9 close. It groups two architecturally orthogonal work streams that share **zero code paths** and can be implemented in parallel:
 
-The recommended approach follows a strict bottom-up dependency order: build exception infrastructure first (GlobalExceptionHandler, custom exception types, meaningful orElseThrow calls), then complete the service layer (move repository access from controllers, split RaceManagementService), then clean up controllers (remove try-catch blocks, thin out TemplateEditorController), and finally add Spring Security as the last phase. This order is non-negotiable because adding security before the codebase is stable means debugging two layers of change simultaneously, and extracting services before the exception handler exists forces adding catch blocks into the new services.
+**Cluster A — Platform hygiene.** Bump `spring-boot-starter-parent` 4.0.5 → 4.0.6 (one POM line, 25–65 bug fixes, 8 CVE patches transitively, none in CTC's stack), then perform a preventive audit of all ~80 Thymeleaf templates against the **Thymeleaf 3.1.5** restricted-expression hardening (CVE-2026-40478 SpEL canonicalization fix). Critically: all four researchers independently corrected the milestone wording — Spring Boot 4.0.6 ships **Thymeleaf 3.1.5.RELEASE, NOT 3.2** (3.2 has no GA release as of 2026-05-09). The v1.9 template breakage was caused by `ExpressionUtils.normalize()` + the new `containsExternalAccess()` filter being far stricter on fragment-parameter expressions in restricted context. Maintainer-recommended fix (Daniel Fernandez, thymeleaf/thymeleaf#1082): compute conditional values in the controller as a `pageTitle` model attribute and reference plain `${pageTitle}` in `th:replace`. This aligns with CTC's existing "Keep Templates Lean" convention (CLAUDE.md L70).
 
-The single highest-severity risk is Pitfall 1: adding `spring-boot-starter-security` to the classpath immediately breaks all 221 MockMvc calls with 401/302 responses. This will shatter the test suite if done before proper preparation. The mitigation is firm: security must be the final phase, introduced with test updates in the same commit. A secondary risk is breaking transactional boundaries when splitting RaceManagementService — the 12 `@Transactional` methods must be mapped before the split, and the orchestrating method must remain the transaction owner.
+**Cluster B — Admin Data Export/Import.** New `org.ctc.backup` module mirroring the `org.ctc.dataimport` package shape (validated v1.5/v1.8 pattern). Single-admin downloads a ZIP containing `data.json` + `uploads/` (or per-entity JSON files — see ARCHITECTURE for refinement) with SemVer schema header; upload runs through preview screen (reuse `CsvImportController`/`DriverSheetImportController` D-15 stateless re-parse pattern) → confirm → atomic Replace-All wipe + restore in one `@Transactional` boundary. Scope: ~20 operative entities (Seasons → SeasonPhases → SeasonPhaseGroups → PhaseTeams → Teams → SeasonTeams → Drivers → SeasonDrivers → PsnAlias → Matchdays → Matches → Races → RaceLineups → RaceResults → Playoffs → PlayoffRounds → PlayoffMatchups → PlayoffSeeds → RaceScoring → MatchScoring + RaceSettings/RaceAttachments). **Audit log table is OUT of scope** (operational metadata, never wiped).
+
+**Net dependency cost: ZERO new Maven artifacts.** Everything (ZIP I/O, Jackson, multipart, JPA bulk delete) is already on the classpath via existing Spring Boot starters. The risk surface is concentrated in three places: (1) the Thymeleaf audit catching latent template breakage that only renders under specific data conditions, (2) the Replace-All transaction's MariaDB-vs-H2 quirks (TRUNCATE auto-commits on MariaDB → must use DELETE; `SET FOREIGN_KEY_CHECKS` syntax diverges → use FK-ordered DELETE instead), and (3) the entity↔JSON serialization strategy (Jackson MixIns with `@JsonIdentityInfo` is preferred — DTOs were considered but deemed over-engineered for an internal backup format; consensus is MEDIUM confidence and demands a round-trip integration test).
+
+---
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing stack (Spring Boot 4.0.5, Java 25, Thymeleaf, MariaDB/H2, Flyway) requires only two new dependencies: `spring-boot-starter-security` and `spring-boot-starter-security-test`. Everything else — exception handling, service refactoring, DB indexes — uses zero new libraries. Spring Security 7.0 (BOM-managed via Spring Boot 4.0.5) ships breaking API changes from older tutorials: `authorizeRequests()` is gone (use `authorizeHttpRequests()`), `AntPathRequestMatcher` is removed (use `PathPatternRequestMatcher`), and all config must use lambda DSL — the `and()` chaining method does not exist.
+**Net new dependencies in `pom.xml`: zero.** The upgrade is a single-line `<version>` bump; the new feature reuses what is already on the classpath.
 
-**Core technologies:**
-- `spring-boot-starter-security` 7.0.x: HTTP Basic Auth for prod/docker profiles — simplest auth for a single-admin app, BOM-managed, no version override needed
-- `spring-boot-starter-security-test`: `@WithMockUser` and CSRF support in MockMvc tests — required to fix all controller tests after security is added
-- `@ControllerAdvice` (built-in): GlobalExceptionHandler — no new dependency, pure Spring MVC
-- Flyway (existing): `V2__add_indexes.sql` for FK column indexes — additive-only, no V1 modification
+**Core technologies (all already present):**
+
+- **Spring Boot 4.0.6** (target) — patch release, 25–65 bug fixes, no breaking changes, 8 CVE patches (none affecting CTC's stack since we don't use Elasticsearch/RabbitMQ/Cassandra/DevTools/PID files)
+- **Thymeleaf 3.1.5** (transitive) — the actual version SB 4.0.6 ships; CVE-2026-40478 SpEL hardening tightened restricted-context evaluation; **3.2 is NOT released**
+- **`java.util.zip.{ZipOutputStream,ZipInputStream}` (JDK)** — ZIP packaging; archives ≪4 GB, no Zip64 needed → `commons-compress` rejected (~700 KB jar bloat for zero benefit at our scale)
+- **Jackson 3.1.2 (transitive)** + `ObjectMapper` + Jackson MixIns + `@JsonIdentityInfo` for cycle handling — already auto-configured by Spring Boot, no dependency change
+- **Spring MVC `MultipartFile`** + `StreamingResponseBody` — standard Spring patterns
+- **`jakarta.persistence.EntityManager`** for bulk DELETE in FK-reverse order + L1 cache discipline (`flush()` + `clear()`); native SQL preferred over JPA cascades for explicit per-table control
+- **Flyway migration V7** — new `data_import_audit` table (audit log scope is OPERATIONAL, lives outside Export/Import scope per Pitfall 9)
+
+**Configuration changes (yaml only):**
+
+- `spring.servlet.multipart.max-file-size`: 1 MB → **100 MB** (some researchers suggested 200–500 MB; pick 100 MB MVP, document as bumpable)
+- `spring.servlet.multipart.max-request-size`: 10 MB → **100 MB**
+- `server.tomcat.max-http-form-post-size` + `max-swallow-size`: 100 MB
+- `app.backup.staging-dir` (configurable; default `data/{profile}/backup-staging/`)
+- `app.backup.max-upload-size` (read separately from generic multipart cap)
+
+**Critical version correction (all four researchers flagged independently):** PROJECT.md L30 has been corrected to read **"Thymeleaf 3.1.5 (CVE-2026-40478 SpEL hardening)"**. Roadmapper, requirements writer, and all phase planners must use the same wording — never "Thymeleaf 3.2".
+
+See `.planning/research/STACK.md` for full version matrix and per-decision rationale.
 
 ### Expected Features
 
-All items in this milestone are debt cleanup, not feature additions. The research categorized them as Table Stakes (must fix) and Differentiators (improves architecture for future velocity).
+See `.planning/research/FEATURES.md` for full table-stakes / differentiator / anti-feature analysis.
 
-**Must have (table stakes):**
-- T1: Extract controller repository access into services — 6+ controllers violate the documented architecture principle
-- T2: Global exception handler via `@ControllerAdvice` — 65 catch-all blocks mask errors, users see raw stacktraces
-- T3: Meaningful `.orElseThrow()` exceptions — 103 bare calls produce context-free NoSuchElementException
-- T4: Specific exception types replacing catch-all blocks — programming errors (NPE, ClassCast) hidden behind generic messages
-- T5: DB indexes on FK columns — dev/prod performance parity broken (H2 vs MariaDB auto-indexing difference)
-- T6: TemplateEditorController duplication cleanup — 380 lines, 30+ identical try-catch blocks
-- T7: Spring Security Basic Auth for prod/docker — zero authentication is the highest-severity concern
-- T8: SSRF protection in FileStorageService.storeFromUrl() — arbitrary URL downloads with no validation
-- T9: H2 console explicitly dev-only — fragile implicit safety
-- T10: Stacktrace exposure disabled in prod — explicit over implicit configuration
+**Must have (table stakes for v1.10):**
 
-**Should have (architectural quality):**
-- D1: Split RaceManagementService God Service (673 lines, 13 deps) into RaceService, RaceGraphicService, RaceAttachmentService
-- D2: Move StandingsController Swiss sorting logic into StandingsService
-- D4: CompletableFuture error propagation in GT7 sync (surface failures, not silence them)
-- D6: `@EntityGraph` preparation on hot-path repository queries (future N+1 prevention)
-- D7: Pagination-ready repository methods (Pageable parameter, no UI changes)
+Cluster A (Platform):
 
-**Defer (v2+):**
-- D3: Alltime Standings — disable UI option now, implement cross-season aggregation in a feature milestone (feature work masquerading as debt)
-- D5: Playwright health check — documentation/monitoring concern, not critical path
-- Full pagination UI — repository preparation only; UI rework is out of scope
-- OAuth2/OIDC — massive scope creep; Basic Auth is correct for single-admin app
-- Bean validation on all DTOs — blanket constraints are a feature, not debt
+- `pom.xml` parent bump 4.0.5 → 4.0.6
+- Fix the 3 known fragment-parameter ternaries (`match-scoring-form.html`, `race-scoring-form.html`, `season-phase-form.html`, all line 3) via controller-side `pageTitle` model attribute
+- Preventive audit of all ~80 templates (62 admin + 16 site) for the same pattern, fix any new findings
+- `./mvnw verify -Pe2e` green on 4.0.6
+- JaCoCo ≥ 82 % held (currently 87.02 % — comfortable buffer)
+
+Cluster B (Backup feature):
+
+- `GET/POST /admin/backup/export` → streaming ZIP (`Content-Disposition: attachment; filename=ctc-backup-{ISO-instant}.zip`)
+- ZIP packs `data.json` (or per-entity files — see ARCHITECTURE) + `uploads/` mirror
+- JSON header: `schema_version` (SemVer or integer — see GAP-2), `app_version`, `export_date`, `table_counts`
+- `POST /admin/backup/import-preview` (multipart) → preview screen with per-table wipe+restore counts
+- `POST /admin/backup/import-execute` → atomic Replace-All in single `@Transactional` boundary
+- Schema-version refusal **before** wipe (manifest read first; rejection leaves DB untouched)
+- Confirm dialog with explicit "ALL operative data will be deleted" wording (mirror `DriverMergeController`)
+- Audit log entry per import (who/when/wiped+restored row counts) → new `data_import_audit` table (Flyway V7), AUDIT TABLE ITSELF IS OUT OF SCOPE OF EXPORT
+- Multipart limits raised + documented
+- Round-trip integration test (export → import → assert no diff) on **both** H2 and MariaDB
+- Build-time regex guard (lightweight Maven exec/grep gate) against re-introduction of fragment-parameter ternaries
+
+**Should have (defer to v1.11 unless trivially in-scope):**
+
+- Verify-only "validate this ZIP" mode
+- SHA-256 checksum file inside ZIP
+- Diff preview row-count comparison
+
+**Defer to v1.11+:**
+
+- **Per-season selective export** (explicitly user-deferred)
+- `?includeUploads=false` query parameter
+- Filesystem atomicity hardening via stage+rename pattern
+
+**Anti-features (rejected — would harm v1.10 scope):**
+
+- Cloud destinations (S3/GCS), scheduled/cron'd backups, multi-format support, merge-import, encryption at rest, async with progress polling, Maven Enforcer custom rule
 
 ### Architecture Approach
 
-The cleanup enforces the existing layered MVC architecture documented in CLAUDE.md without introducing new patterns. The target state adds a Spring Security filter chain in front of controllers (prod/docker only), a GlobalExceptionHandler alongside the existing GlobalModelAdvice, and a completed service layer where all repository access is owned by services. RaceManagementService splits into three focused services using standard SRP decomposition. TemplateEditorController reduces from 380 lines to a Map-based dispatch pattern that preserves per-template error isolation.
+See `.planning/research/ARCHITECTURE.md` for full diagrams, file lists, and integration points.
 
-**Major components:**
-1. `SecurityConfig` / `DevSecurityConfig` — profile-conditional Basic Auth (prod/docker) vs permit-all (dev/local); only one active per environment
-2. `GlobalExceptionHandler` — two exception types: `EntityNotFoundException` (show error page) and `BusinessRuleException` (redirect with flash message); catch-all `Exception` handler as last resort only
-3. `org.ctc.domain.exception` package — custom `EntityNotFoundException(entityType, id)` and `BusinessRuleException(message)` replacing all bare `NoSuchElementException`/`IllegalStateException` throws
-4. Expanded service layer — new `SeasonService`, `CarService`, `TrackService`, `RaceScoringService`, `MatchScoringService`; extended `DriverService`; split `RaceManagementService` into `RaceService`, `RaceGraphicService`, `RaceAttachmentService`
-5. `V2__add_indexes.sql` — 10+ FK column indexes using `CREATE INDEX IF NOT EXISTS` for H2+MariaDB compatibility
+The new `org.ctc.backup` package mirrors the proven `org.ctc.dataimport` shape (controller + 1–3 services + DTO records). Reuses every existing repository (`findAll`, `saveAll`, `deleteAllInBatch`), the existing exception handling, flash messaging, OSIV, and `FileStorageService` (additively extended).
+
+**Major components (new):**
+
+1. **`BackupController`** — thin: 4 handlers (GET form, POST export streams, POST import-preview, POST import-execute), multipart upload, redirect-flash, no business logic
+2. **`BackupExportService`** — `@Transactional(readOnly = true)`, walks DB in FK-respecting order via `BackupSchema.EXPORT_ORDER`, builds bundle, streams to `OutputStream`
+3. **`BackupImportService`** — `@Transactional` (write); preview re-parses ZIP (D-15 stateless pattern, NO `@SessionAttributes`); execute does FK-reverse-order DELETE + `em.flush()` + `em.clear()` + insert in EXPORT order
+4. **`BackupArchiveService`** — pure ZIP I/O mechanics (read/write); no domain knowledge; supports `StreamingResponseBody`
+5. **`BackupSchema`** — static utility class holding `SCHEMA_VERSION` constant, `EXPORT_ORDER` and `DELETE_ORDER` lists (single ordered list, NO Strategy pattern across 22 entity types)
+6. **`BackupManifest` / `BackupBundle` / `BackupPreview`** — DTO records
+7. **`BackupObjectMapperConfig`** — `@Qualifier("backupObjectMapper")` — explicit `FAIL_ON_UNKNOWN_PROPERTIES = true`, `WRITE_DATES_AS_TIMESTAMPS = false`, `JavaTimeModule`, MixIns registered → does NOT pollute the default Spring `ObjectMapper`
+8. **Per-entity Jackson MixIn classes** in `org.ctc.backup.serialization` — applies `@JsonIdentityInfo`, `@JsonIgnore createdAt/updatedAt/version` externally → entities stay clean
+
+**Templates (new):** `templates/admin/backup.html` (form), `templates/admin/backup-preview.html` (per-bucket-table pattern from `driver-import-preview.html`)
+
+**Modified:** `pom.xml` (1 line), `templates/admin/layout.html` (sidebar), `application.yml` (multipart + `app.backup.*`), `FileStorageService.java` (additive helper methods), 3+ Thymeleaf templates (line-3 ternary fix).
+
+**Architecturally NOT modified:** any operative entity (MixIns), any repository, any Flyway migration except the new V7, any existing controller, any auto-config bean. **No SPI/auto-config changes from SB 4.0.6** affect CTC's MVC/JPA/Thymeleaf consumers.
+
+**One ARCHITECTURE-vs-STACK divergence to resolve in roadmap:** STACK proposed a single `data.json` document; ARCHITECTURE proposed per-entity files for streaming-friendly read + diagnosability + future selective import. Both are valid; ARCHITECTURE's per-entity choice is slightly more future-proof.
 
 ### Critical Pitfalls
 
-1. **Spring Security breaks all 221 MockMvc calls** — adding the security starter immediately fails all controller tests with 401/302. Prevention: add security as the final phase; update all test classes in the same commit with `@WithMockUser` and `.with(csrf()`); use profile-conditional security so dev/test remain open.
+See `.planning/research/PITFALLS.md` for all 13 pitfalls with full warning signs, recovery costs, and phase mappings. The five highest-stakes:
 
-2. **Broken transactional boundaries when splitting RaceManagementService** — 12 `@Transactional` methods; moving them across service boundaries can cause partial data writes (results saved, scores not aggregated). Prevention: map all `@Transactional` methods before splitting; orchestrating method owns the tx boundary; extracted methods use default `REQUIRED` propagation; write rollback integration tests.
+1. **Thymeleaf 3.1.5 fragment-parameter restricted-mode breakage beyond the 3 known templates** — coverage is partial because templates compile lazily. **Prevention:** mechanical grep audit of all `th:(replace|insert|include)=".*\(.*\$\{.*\}.*\)"` (not just ternaries); CI `TemplateRenderingSmokeIT` GETs every `/admin/**` URL with `DEV_DATA_SEEDED=true`; pin `org.thymeleaf:thymeleaf` in `<dependencyManagement>`.
 
-3. **GlobalExceptionHandler swallows controller flash messages** — a catch-all `@ExceptionHandler(Exception.class)` intercepts exceptions that previously drove redirect-with-flash UX. Prevention: only handle entity-not-found and unrecoverable errors globally; keep controller-level try-catch for form submission UX; refactor catch blocks in two stages (specific types first, then migrate to global).
+2. **Replace-All transaction divergence on MariaDB vs H2** — TRUNCATE auto-commits on MariaDB; `SET FOREIGN_KEY_CHECKS=0` is MariaDB-only. **Prevention:** `DELETE FROM <table>` in FK-reverse order via `EntityManager.createNativeQuery().executeUpdate()`; single `@Transactional`; `em.flush() + em.clear()` between phases (mandatory); two-pass `UPDATE … SET parent_team_id = NULL` for `Team.parentTeam` self-FK; `innodb_lock_wait_timeout = 600`. Test on **both** profiles.
 
-4. **Flyway V2 index migration breaks H2** — MariaDB-specific syntax fails H2 test runs. Prevention: use `CREATE INDEX IF NOT EXISTS` (valid in both H2 2.x and MariaDB 10.5+); test on both databases; name indexes explicitly to avoid collisions with auto-generated FK index names.
+3. **JPA Auditing overwriting imported timestamps** — `AuditingEntityListener` silently overwrites `created_at` with `LocalDateTime.now()`. **Prevention:** restore via native SQL `JdbcTemplate.batchUpdate` (bypasses JPA listeners); IT `givenExportWithCreatedAt2024_whenImport_thenCreatedAtIsStill2024()`.
 
-5. **Coverage drops below 82% during service extraction** — moving logic from tested controllers to new untested services temporarily drops line coverage, failing the JaCoCo check. Prevention: write service tests before or simultaneously with extraction (TDD); batch related extractions (move + test + commit).
+4. **ZIP Slip + ZipBomb on import** — **Prevention:** reuse `FileStorageService.store()` SECU-02 defense; validate `startsWith(uploadDir.toRealPath())`; reject absolute paths and `..`; per-entry size cap (50 MB), total cap (500 MB), entry-count cap (50,000); reject duplicate names.
+
+5. **Schema-version drift = catastrophic data loss** — naive flow wipes before discovering mismatch. **Prevention:** read `manifest.json` (must be first ZIP entry — enforce in writer) and validate `schema_version == SCHEMA_VERSION` BEFORE entering wipe transaction; HTTP 400 + admin-readable message; counter-test asserts row count unchanged after rejection.
+
+**Honorable mentions:** concurrent-import lock (Pitfall 8); `StreamingResponseBody` LazyInit (Pitfall 3); audit-log scope decision baked into Phase 2 (Pitfall 9); explicit `ObjectMapper` bean (Pitfall 13).
+
+---
 
 ## Implications for Roadmap
 
-Based on research, the dependency graph is firm and the phase order is prescribed by architecture constraints, not preference.
+### Phase 1: SB 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard
 
-### Phase 1: Exception Infrastructure
+**Rationale:** Eliminates v1.9 platform debt; produces green test baseline before any feature code.
+**Delivers:** `pom.xml` 4.0.5 → 4.0.6; 3 known + N audit-discovered template fixes via controller-side `pageTitle`; CI `TemplateRenderingSmokeIT`; lightweight regex grep gate via `exec-maven-plugin`; `<dependencyManagement>` pin on Thymeleaf.
+**Avoids:** Pitfalls 1, 11, 12.
 
-**Rationale:** Must come first because all subsequent refactorings produce cleaner code when exceptions are handled centrally. Without this, extracting controller logic requires adding try-catch blocks to new services — making things worse before better.
-**Delivers:** GlobalExceptionHandler, custom exception hierarchy (`EntityNotFoundException`, `BusinessRuleException`), meaningful `.orElseThrow()` messages across all 103 call sites, T9/T10 config hardening (trivial, high value).
-**Addresses:** T2, T3, T9, T10
-**Avoids:** Pitfall 3 (flash message loss — design the handler correctly from the start)
+### Phase 2: Audit-Log Scope Decision + Schema Versioning + ObjectMapper Bean + Flyway V7
 
-### Phase 2: Service Layer Completion
+**Rationale:** Defines wire contract before any export/import code; bakes audit-log-out-of-scope decision into PROJECT.md Decisions row.
+**Delivers:** `BackupSchema.SCHEMA_VERSION`; `BackupManifest`; `BackupObjectMapperConfig` (`@Qualifier("backupObjectMapper")`); Flyway V7 `data_import_audit` table; PROJECT.md Decisions row.
+**Avoids:** Pitfalls 7, 9, 13.
 
-**Rationale:** Controllers cannot be thinned until services exist to delegate to. The God Service split is placed here because it requires clean exception types (from Phase 1) and because controller cleanup (Phase 3) needs the split to be complete.
-**Delivers:** New service classes for Season, Car, Track, RaceScoring, MatchScoring; extended DriverService; RaceManagementService split into RaceService + RaceGraphicService + RaceAttachmentService; Swiss sorting moved to StandingsService.
-**Addresses:** D1, D2, T1 (partial — establishes services before controller cleanup)
-**Avoids:** Pitfall 2 (transactional boundaries — map @Transactional methods before splitting), Pitfall 8 (coverage — TDD every extraction)
+### Phase 3: Export Service + Jackson MixIns + Streaming Endpoint
 
-### Phase 3: Controller Cleanup
+**Rationale:** Read-only path is safer half; produces artifact for round-trip.
+**Delivers:** Per-entity MixIn classes (~22 files); `BackupExportService` with `@EntityGraph` eager-fetch; `BackupArchiveService.writeZip()`; `BackupController.export()` with `StreamingResponseBody`; `templates/admin/backup.html`; `FileStorageService` additive helpers; serialization unit tests.
+**Avoids:** Pitfalls 3, 10.
 
-**Rationale:** With exception infrastructure and services in place, controllers can be cleaned mechanically. This is the core architectural improvement — removing the 6 direct repository injections, eliminating 65 catch-all blocks, and refactoring TemplateEditorController.
-**Delivers:** All 17 controllers comply with thin-controller principle; TemplateEditorController reduced to map-based dispatch; T4 (specific exception types); T6 (TemplateEditor cleanup).
-**Addresses:** T1 (complete), T4, T6
-**Avoids:** Pitfall 4 (update tests in same commit as each extraction), Pitfall 6 (per-template error isolation in loop)
+### Phase 4: Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate
 
-### Phase 4: Security and Hardening
+**Rationale:** No-write path; schema-version refusal BEFORE wipe.
+**Delivers:** `BackupImportService.preview()`; `BackupArchiveService.readManifest()/readBundle()`; ZIP-Slip + ZipBomb defenses; multipart YAML config; staging-dir lifecycle; `templates/admin/backup-preview.html`; `MaxUploadSizeExceededException` mapped; `X-CSRF-TOKEN` header from JS.
+**Avoids:** Pitfalls 2, 6, 7, 13.
 
-**Rationale:** Security is the highest-severity concern but must be last to avoid debugging security issues mixed with architectural issues. All 221 MockMvc calls must be updated in one coordinated commit.
-**Delivers:** HTTP Basic Auth on prod/docker profiles; SSRF protection in FileStorageService; explicit H2 console config; stacktrace suppression in prod.
-**Addresses:** T7, T8 (confirmed by T9/T10 already done in Phase 1)
-**Avoids:** Pitfall 1 (the entire phase strategy exists to contain this risk), Pitfall 7 (log actual GT7 URLs before adding allowlist), Pitfall 11 (profile isolation prevents H2 console issue)
+### Phase 5: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT
 
-### Phase 5: Optimization Preparation and Loose Ends
+**Rationale:** Riskiest phase. MariaDB-vs-H2 quirks make this a "passes on H2, breaks on MariaDB" trap.
+**Delivers:** `BackupImportService.execute()` with self-FK two-pass pre-step → FK-reverse DELETE via native SQL → `em.flush() + em.clear()` → restore via `JdbcTemplate.batchUpdate`; `data_import_audit` row written on success; post-commit upload-tree restore; `innodb_lock_wait_timeout` bump; H2 + MariaDB ITs; mid-restore-failure rollback test; live UAT against Saison-2023.
+**Avoids:** Pitfalls 4, 5, 10.
 
-**Rationale:** Independent changes with no sequencing dependencies relative to Phases 1-4. Low risk, additive only. Can begin after Phase 2 (services own the queries that need @EntityGraph).
-**Delivers:** V2 Flyway migration with FK indexes; `@EntityGraph` on hot-path queries; pagination-ready repository methods; CompletableFuture error surfacing in GT7 sync; Alltime Standings UI option disabled.
-**Addresses:** T5, D3, D4, D6, D7
-**Avoids:** Pitfall 5 (H2/MariaDB index compatibility), Pitfall 9 (disable Alltime Standings, do not implement), Pitfall 10 (surface as warnings, not failures)
+### Phase 6: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup + Runbook
+
+**Rationale:** Safety net for single-admin-but-not-enforced model.
+**Delivers:** `ImportLockService` `ReentrantLock` singleton; `@ControllerAdvice` filter rejecting `/admin/.*POST.*` with 503; persistent yellow banner; auto-export-before-import to `data/.import-backups/<timestamp>/`; operational runbook.
+**Avoids:** Pitfall 8.
+
+### Phase 7: Final UAT + JaCoCo Gate Hold + Docs Update
+
+**Delivers:** `./mvnw verify -Pe2e` green; round-trip IT on H2 AND MariaDB; JaCoCo ≥ 82%; README backup section; WIKI page; final UAT checklist.
 
 ### Phase Ordering Rationale
 
-- Exception infrastructure must precede service extraction because services need typed exceptions from day one; retrofitting exceptions after-the-fact doubles the work.
-- Service layer must precede controller cleanup because controllers cannot delegate to services that do not exist.
-- Security must be last because it is the only change that simultaneously affects all 221 MockMvc calls — isolating it prevents contaminating the red/green signal of other phases.
-- Optimization preparation is independent and low-risk; it runs after Phase 2 when services own the queries.
-- The FEATURES.md and ARCHITECTURE.md research agree on phase order independently — high confidence in the sequencing.
+- Cluster A (Phase 1) first is lower-risk default — green baseline before feature code.
+- Phase 2 before any export/import code because manifest format + audit-log-scope + Jackson defaults are the wire contract.
+- Phase 3 (export) before Phase 4 (import) because round-trip is the natural integration test.
+- Phase 5 last among implementation phases — failing Phase 5 is then *clearly* a Replace-All issue.
+- Phase 6 drop-in-late-friendly except for `@ControllerAdvice` design hook — flag early.
+- Audit-log-scope decision baked into Phase 2 (PROJECT.md Decisions row).
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
-- **Phase 2 (Service Layer Completion):** RaceManagementService split boundary needs hands-on code analysis. The 13 dependencies must be mapped against actual method call graphs to confirm the RaceService / RaceGraphicService / RaceAttachmentService grouping. Plan should include a spike to confirm no circular dependencies.
-- **Phase 4 (Security):** Spring Security 7 API surface (PathPatternRequestMatcher, lambda DSL) should be verified against actual Spring Boot 4.0.5 dependency tree at implementation time. CSRF decision (disabled initially vs enabled with Thymeleaf integration) needs a documented rationale in SecurityConfig.
+**Phases needing deeper research during planning:**
 
-Phases with standard patterns (skip research-phase):
-- **Phase 1 (Exception Infrastructure):** `@ControllerAdvice` / `@ExceptionHandler` is core Spring MVC unchanged across versions. Two exception types, one handler class — straightforward implementation.
-- **Phase 3 (Controller Cleanup):** Mechanical refactoring of known patterns. No architectural decisions; just enforcement of documented CLAUDE.md principles.
-- **Phase 5 (Optimization Prep):** `CREATE INDEX IF NOT EXISTS`, `@EntityGraph`, `Pageable.unpaged()` — all well-documented, low-risk, additive changes.
+- **Phase 1:** Smoke-IT seeded-data preconditions for ALL admin routes including phase-specific ones.
+- **Phase 5:** `repository.save()` `isNew()` on pre-set UUIDs (H2 + MariaDB); `AuditingHandler.setDateTimeProvider()` thread-safety; self-ref entity completeness audit.
+- **Phase 6:** `@ControllerAdvice` read-only-mode filter bypass for import-execute without CSRF hole.
+
+**Phases with standard patterns (skip research-phase):** Phase 2, 3, 4, 7.
+
+---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
-|------|------------|-------|
-| Stack | HIGH | Two new dependencies (security + security-test), both BOM-managed. Spring Security 7 API changes verified against official migration guide. |
-| Features | HIGH | Derived from direct codebase analysis (CONCERNS.md with 17 identified issues, line/method counts). Not inferred — measured. |
-| Architecture | HIGH | Enforces documented CLAUDE.md principles. Thin controller, service-owns-repositories, and GlobalExceptionHandler are standard Spring MVC patterns with extensive documentation. |
-| Pitfalls | HIGH | Spring Security test breakage and @Transactional proxy behavior are well-documented, not speculative. Concrete numbers (221 MockMvc calls, 12 @Transactional methods) confirm severity. |
+| ---- | ---------- | ----- |
+| Stack | **HIGH** | SB 4.0.6 + Thymeleaf 3.1.5 verified via official sources; one MEDIUM call-out on Hibernate proxy via eager-fetch (flag for monitoring during Phase 3) |
+| Features | **HIGH** | Cross-validated against GitLab/Discourse/GitHub Migrations; UI patterns have 1:1 in-codebase precedents |
+| Architecture | **HIGH** | Mirrors proven `org.ctc.dataimport` pattern; SB 4.0.6 has zero SPI impact; MEDIUM call-out on `@JsonIdentityInfo` collection edge case (round-trip IT mandatory) |
+| Pitfalls | **HIGH** | All 13 cross-checked against official sources; MEDIUM on Hibernate 7.2 specifics (verify in Phase 1 smoke) |
 
-**Overall confidence:** HIGH
+**Overall confidence: HIGH.**
 
 ### Gaps to Address
 
-- **RaceManagementService exact split boundary:** The three-way split (RaceService / RaceGraphicService / RaceAttachmentService) is the right shape but the exact method allocation needs implementation-time validation. Some methods may not fit cleanly — plan for one iteration of adjustment.
-- **SSRF allowlist for GT7 CDN:** The exact CDN hosts used by gran-turismo.com are not documented in the research. Must grep actual sync URLs in a dev run before coding the allowlist. If CDN uses dynamic hosts, scheme-only validation (`https://`) may be the only safe option.
-- **CSRF decision for Thymeleaf forms:** Disabling CSRF is recommended for the initial implementation but the interaction with multipart form uploads (CSV import) and Thymeleaf `th:action` CSRF token injection needs testing. Document the decision explicitly in SecurityConfig.
-- **`@WebMvcTest` migration path:** Current tests use `@SpringBootTest`. If the team later migrates to `@WebMvcTest` for speed, the security mock pattern (`@WithMockUser`) will be required. Flag this in test comments but do not change test infrastructure during the cleanup milestone.
+- **GAP-1** ZIP layout (single `data.json` vs per-entity files) — Phase 2; per-entity slightly preferred
+- **GAP-2** Schema version representation (integer vs SemVer) — Phase 2; integer simpler
+- **GAP-3** Multipart cap size (100 vs 200 vs 500 MB) — MVP 100 MB profile-overridable
+- **GAP-4** JPA auditing bypass strategy (native SQL vs `AuditingHandler` scope-disable) — Phase 5 research
+- **GAP-5** Canonical 22-entity FK ordering — generate from live entity classes, do NOT trust hand-written research lists
+- **GAP-6** Hibernate 7.2 entity equality / OSIV deprecation chatter — verify in Phase 1 upgrade smoke
+
+---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Spring Security 7.0 What's New — verified API removals (authorizeRequests, AntPathRequestMatcher, and() method)
-- Spring Security Basic Auth Reference — official httpBasic() configuration
-- Spring Boot 4.0 Release Notes — confirmed Security 7.0 as BOM-managed dependency
-- Spring Security 7 Web Migration Guide — PathPatternRequestMatcher builder pattern
-- Project CLAUDE.md — architecture principles (authoritative for this project)
-- `.planning/codebase/CONCERNS.md` — 17 identified concerns with severity ratings and concrete metrics
+
+- Spring Boot v4.0.6 Release Notes (GitHub) — patch-only, no breaking changes
+- Spring Boot 4.0.6 announcement (spring.io blog) — confirms Thymeleaf 3.1.5
+- Spring Boot Dependency Versions Documentation
+- thymeleaf/thymeleaf#1082 — maintainer recommends controller `pageTitle`
+- Endor Labs — CVE-2026-40478 root-cause analysis
+- GitLab Advisory — CVE-2026-40478
+- SEI CERT IDS04-J — ZIP Slip defense
+- Snyk Zip Slip vulnerability database
+- MariaDB Foreign Key Constraints documentation — TRUNCATE-auto-commit semantics
+- Spring Security CSRF reference — Multipart section
 
 ### Secondary (MEDIUM confidence)
-- Baeldung: Disable Security for Profile — profile-based security pattern
-- Baeldung: Spring Security Integration Tests — `@WithMockUser` and MockMvc patterns
-- Vlad Mihalcea: Spring @Transactional best practices — proxy-based @Transactional behavior and cross-service boundary risks
-- reflectoring.io: Spring Boot Exception Handling — @ControllerAdvice design patterns
 
-### Tertiary (LOW confidence)
-- GT7 CDN URL patterns — not verified; requires dev run to confirm actual hosts before SSRF allowlist implementation
-- `thymeleaf-extras-springsecurity7` version compatibility with Spring Boot 4.0.5 — exists but version alignment needs verification at implementation time (skipped as not needed for initial scope)
+- Baeldung — Jackson Bidirectional Relationships, JPA Auditing, TRUNCATE TABLE in Spring Data JPA, MaxUploadSizeExceededException
+- FasterXML/jackson-datatype-hibernate
+- Mastering Hibernate 7: Proxies and LazyInitializationException
+- Java Code Geeks — Spring Boot 4 Migration: Breaking Changes
+- Wim Deblauwe — Migrating away from Thymeleaf Layout Dialect (anti-feature reference)
+- Hibernate Forum — disable first-level cache
+- GitLab Backup/Restore documentation, Discourse backup admin UI thread
+
+### Tertiary (LOW confidence — needs validation in implementation)
+
+- Spring Boot 4.0.6 GitHub milestone #422
+- Hibernate 7.2 entity-equality / OSIV-deprecation specifics
+- Jackson 3.1.2 `use-jackson2-defaults` flip
+
+### Project-internal
+
+- `.planning/PROJECT.md`, `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS}.md`, `.planning/codebase/{ARCHITECTURE,CONVENTIONS,STACK,STRUCTURE,TESTING}.md`, `CLAUDE.md`
+- In-codebase precedents: `DriverSheetImportController/Service`, `CsvImportController`, `driver-import-preview.html`, `gt7-sync-preview.html`, `driver-merge.html`, `FileStorageService` (SECU-02), `match-scoring-form.html`/`race-scoring-form.html`/`season-phase-form.html` (line 3 — known broken)
 
 ---
-*Research completed: 2026-04-03*
+
+*Research completed: 2026-05-09*
 *Ready for roadmap: yes*
