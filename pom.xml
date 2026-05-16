@@ -136,6 +136,17 @@
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
+		<!-- SpotBugs annotations — required at compile time for lombok.config
+		     lombok.extern.findbugs.addSuppressFBWarnings=true: Lombok emits
+		     @edu.umd.cs.findbugs.annotations.SuppressFBWarnings on generated
+		     methods; the annotation class must be on the javac classpath.
+		     Scope provided: compile-only, not packaged in the final JAR. -->
+		<dependency>
+			<groupId>com.github.spotbugs</groupId>
+			<artifactId>spotbugs-annotations</artifactId>
+			<version>4.9.8</version>
+			<scope>provided</scope>
+		</dependency>
 		<!-- Fuzzy String Matching -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
@@ -352,6 +363,39 @@
 						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<!-- STAT-02: SpotBugs bytecode static analysis gate — verify-bound, always-on.
+			     find-sec-bugs 1.14.0 adds 144 Spring Security-aware patterns (SSRF, path traversal, etc.).
+			     Insertion point: after jacoco:check, before exec template-fragment-call-guard.
+			     NO <argLine> ever — SpotBugs is a bytecode scanner, not a JVM agent (Pitfall #7). -->
+			<plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+				<version>4.9.8.3</version>
+				<configuration>
+					<effort>Max</effort>
+					<threshold>Default</threshold>
+					<failOnError>true</failOnError>
+					<excludeFilterFile>${project.basedir}/config/spotbugs-exclude.xml</excludeFilterFile>
+				</configuration>
+				<executions>
+					<execution>
+						<id>spotbugs-check</id>
+						<phase>verify</phase>
+						<goals>
+							<!-- STAT-05/1: report-only — flip to <goal>check</goal> after baseline triage -->
+							<goal>spotbugs</goal>
+						</goals>
+					</execution>
+				</executions>
+				<dependencies>
+					<!-- STAT-03: find-sec-bugs detector pack — 144 Spring Security-aware patterns -->
+					<dependency>
+						<groupId>com.h3xstream.findsecbugs</groupId>
+						<artifactId>findsecbugs-plugin</artifactId>
+						<version>1.14.0</version>
+					</dependency>
+				</dependencies>
 			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
