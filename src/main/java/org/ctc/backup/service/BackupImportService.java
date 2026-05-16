@@ -31,6 +31,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.audit.BackupExecutedByResolver;
 import org.ctc.backup.audit.DataImportAuditService;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.dto.BackupImportResult;
@@ -49,11 +50,8 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.GenericTypeResolver;
-import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -132,7 +130,7 @@ public class BackupImportService {
     private final RestoreFailureInjector failureInjector;
     private final DataImportAuditService dataImportAuditService;
     private final ApplicationEventPublisher eventPublisher;
-    private final Environment environment;
+    private final BackupExecutedByResolver executedByResolver;
     private final Path stagingDir;
     private final Path importBackupsDir;
     private final Path uploadsTargetDir;
@@ -167,7 +165,7 @@ public class BackupImportService {
             RestoreFailureInjector failureInjector,
             DataImportAuditService dataImportAuditService,
             ApplicationEventPublisher eventPublisher,
-            Environment environment,
+            BackupExecutedByResolver executedByResolver,
             @Value("${app.backup.staging-dir}") String stagingDirRaw,
             @Value("${app.backup.import-backups-dir}") String importBackupsDirRaw,
             @Value("${app.upload-dir}") String uploadDirRaw
@@ -181,7 +179,7 @@ public class BackupImportService {
         this.failureInjector = failureInjector;
         this.dataImportAuditService = dataImportAuditService;
         this.eventPublisher = eventPublisher;
-        this.environment = environment;
+        this.executedByResolver = executedByResolver;
         this.stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
         this.importBackupsDir = Paths.get(importBackupsDirRaw).toAbsolutePath().normalize();
         this.uploadsTargetDir = Paths.get(uploadDirRaw).toAbsolutePath().normalize();
@@ -515,7 +513,7 @@ public class BackupImportService {
             // Step 4: publish the success event as the LAST statement inside the try block.
             // Spring's TransactionalEventListener(phase=AFTER_COMMIT) buffers delivery until
             // the outer @Transactional method commits — Plan 07 consumes the event there.
-            String executedBy = resolveExecutedBy();
+            String executedBy = executedByResolver.resolve(null);
             long totalRestored = restoredCounts.values().stream().mapToLong(Long::longValue).sum();
             // WR-02: entityCount documents "entities that contributed rows" — filter to
             // non-zero counts so the D-15 success flash ("across N tables") tells the truth
@@ -721,22 +719,6 @@ public class BackupImportService {
         if (tableName == null || !SAFE_TABLE_NAME.matcher(tableName).matches()) {
             throw new IllegalStateException("Refusing native-SQL concat for unsafe table name: " + tableName);
         }
-    }
-
-    /**
-     * Resolves the {@code executedBy} string for the success-path audit row (D-02):
-     * dev/local profile → literal {@code "dev"}; else SecurityContext authentication name;
-     * fall-back {@code "unknown"}.
-     */
-    private String resolveExecutedBy() {
-        if (environment.matchesProfiles("dev | local")) {
-            return "dev";
-        }
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getName() != null && !auth.getName().isBlank()) {
-            return auth.getName();
-        }
-        return "unknown";
     }
 
     /**

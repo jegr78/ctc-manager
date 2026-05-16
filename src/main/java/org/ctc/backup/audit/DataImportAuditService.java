@@ -8,10 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,7 +52,7 @@ public class DataImportAuditService {
      */
     private final JdbcTemplate jdbcTemplate;
     private final ObjectMapper backupObjectMapper;
-    private final Environment environment;
+    private final BackupExecutedByResolver executedByResolver;
 
     private static final String INSERT_SQL =
             "INSERT INTO data_import_audit "
@@ -66,10 +63,10 @@ public class DataImportAuditService {
     public DataImportAuditService(
             JdbcTemplate jdbcTemplate,
             @Qualifier("backupObjectMapper") ObjectMapper backupObjectMapper,
-            Environment environment) {
+            BackupExecutedByResolver executedByResolver) {
         this.jdbcTemplate = jdbcTemplate;
         this.backupObjectMapper = backupObjectMapper;
-        this.environment = environment;
+        this.executedByResolver = executedByResolver;
     }
 
     /**
@@ -99,7 +96,7 @@ public class DataImportAuditService {
             boolean success) {
 
         Instant executedAt = Instant.now();
-        String resolvedExecutedBy = resolveExecutedBy(executedByCaller);
+        String resolvedExecutedBy = executedByResolver.resolve(executedByCaller);
         String wipedJson = writeJson(tableCountsWiped);
         String restoredJson = writeJson(tableCountsRestored);
 
@@ -129,24 +126,6 @@ public class DataImportAuditService {
                 .sourceFilename(sourceFilename)
                 .success(success)
                 .build();
-    }
-
-    /**
-     * Resolves {@code executedBy}: {@code dev}/{@code local} profile → {@code "dev"};
-     * otherwise → SecurityContext authentication name; fallback → {@code "unknown"}.
-     */
-    private String resolveExecutedBy(String executedByCaller) {
-        if (environment.matchesProfiles("dev | local")) {
-            return "dev";
-        }
-        if (executedByCaller != null && !executedByCaller.isBlank()) {
-            return executedByCaller;
-        }
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getName() != null && !auth.getName().isBlank()) {
-            return auth.getName();
-        }
-        return "unknown";
     }
 
     /** Serializes a (possibly null) Map to a JSON-text string using {@code backupObjectMapper}. */
