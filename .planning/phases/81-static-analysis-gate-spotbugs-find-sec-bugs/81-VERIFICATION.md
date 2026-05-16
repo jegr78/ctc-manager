@@ -44,12 +44,13 @@ created: 2026-05-16
 | Metric | Value |
 |--------|-------|
 | `target/spotbugsXml.xml` size | 664,906 bytes |
-| `<BugInstance>` count (post-filter) | 1 |
-| Pre-staged suppressions active | EI_EXPOSE_REP*, SSRF, PATH_TRAVERSAL_IN (FileStorageService), PATH_TRAVERSAL_IN (BackupArchiveService) |
+| `<BugInstance>` count (post-filter) | 220 |
+| Pre-staged suppressions active | EI_EXPOSE_REP* on `org.ctc.domain.model.*`, SSRF, PATH_TRAVERSAL_IN (FileStorageService), PATH_TRAVERSAL_IN (BackupArchiveService) |
 
-**Note:** 1 remaining finding requires triage in PLAN 02. The pre-staged suppressions successfully
-suppressed the anticipated high-volume false positives (EI_EXPOSE_REP* on 24 JPA entities, SSRF,
-PATH_TRAVERSAL_IN). See PLAN 02 triage table (below) for the outstanding finding.
+**Note:** 220 findings remain for triage in PLAN 02. The pre-staged D-08 layer 2 exclusion covers
+`org.ctc.domain.model.*` entities only. Additional EI_EXPOSE_REP* findings are present in
+`org.ctc.admin.dto.*` (record/DTO classes) and `org.ctc.admin.controller.*` (inner record classes)
+— these also need suppression or code fixes. See PLAN 02 triage table (below).
 
 ### Rule 3 Auto-fix Applied
 
