@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-16T09:08:27.265Z"
+last_updated: "2026-05-16T10:11:47.723Z"
 last_activity: 2026-05-16
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 5
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 80 (openrewrite-integration) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-05-16
 
 ```
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 ```
 
 ## Completed Milestones
@@ -89,6 +89,8 @@ All decisions logged in PROJECT.md "Key Decisions" table and per-milestone in `m
 | Phase ordering: 80→81→82→83→84→85→86→87 | OpenRewrite cleanup reduces initial SpotBugs count; gate active before Renovate PRs; CodeQL additive after gate is clean; wallclock last to avoid gate ambiguity |
 | Renovate via Mend GitHub App (not self-hosted) | Zero runner-minute cost; auto-updating; no workflow file required |
 
+- [Phase ?]: Phase 80-03: REWR-01 + REWR-03 structurally verified; dryrun_outcome patch-non-empty (sha256 63072f65…, 25 domain/model entity-file hunks). Plan 04 will execute Branch B cleanup.
+
 ### Phase Numbering
 
 Last phase shipped: **79** (v1.10 closer). v1.11 runs **phases 80-87**.
@@ -100,11 +102,12 @@ Last phase shipped: **79** (v1.10 closer). v1.11 runs **phases 80-87**.
 
 ### Blockers/Concerns
 
-None at roadmap creation. Research flags:
+at roadmap creation. Research flags:
 
 - **MEDIUM confidence** on OpenRewrite recipe diff outcome — `rewrite:dryRun` must be inspected before `rewrite:run` at Phase 80 execution
 - **MEDIUM confidence** on wallclock reduction achievability — `@DirtiesContext` count and context key variation must be measured at Phase 86 start
 - Renovate onboarding requires manual GitHub App installation by repo owner (jegr78) — schedule as Phase 84 first step
+- Pre-existing Phase 72 IT compile error in BackupSchemaExclusionIT.java:40 (Java 25 / AssertJ generic inference) blocks ./mvnw verify exit 0 + JaCoCo CSV generation. Out-of-scope per Plan 80-03 plan_scope; logged in deferred-items.md. Must be resolved before Plan 80-04.
 
 ### Baselines to Preserve
 
@@ -116,7 +119,7 @@ None at roadmap creation. Research flags:
 
 ## Session Continuity
 
-Last session: 2026-05-16T09:08:10.354Z
+Last session: 2026-05-16T10:11:22.348Z
 
 **Next action:** Run `/gsd:plan-phase 80` to create the plan for Phase 80 (OpenRewrite Integration).
 

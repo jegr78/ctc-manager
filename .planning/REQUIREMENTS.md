@@ -9,9 +9,9 @@ Requirements for the v1.11 release. Each maps to a roadmap phase.
 
 ### OpenRewrite (REWR)
 
-- [ ] **REWR-01**: Developer can invoke `./mvnw -Prewrite rewrite:dryRun` to preview recipe-driven changes against `src/main/java/` without modifying source files
+- [x] **REWR-01**: Developer can invoke `./mvnw -Prewrite rewrite:dryRun` to preview recipe-driven changes against `src/main/java/` without modifying source files
 - [ ] **REWR-02**: Developer can invoke `./mvnw -Prewrite rewrite:run` to apply approved recipes to source files, producing a reviewable diff
-- [ ] **REWR-03**: The `rewrite-maven-plugin` is wired in `pom.xml` under `<build><plugins>` with no `<executions>` binding, so it never runs during the default `verify` lifecycle
+- [x] **REWR-03**: The `rewrite-maven-plugin` is wired in `pom.xml` under `<build><plugins>` with no `<executions>` binding, so it never runs during the default `verify` lifecycle
 - [x] **REWR-04**: A project-level `rewrite.yml` activates the `CommonStaticAnalysis` recipe pack and explicitly excludes `org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0` (the project is already on Boot 4.0.6)
 - [ ] **REWR-05**: The `CommonStaticAnalysis` recipe pack is applied once as a one-shot cleanup commit on the v1.11 branch with the resulting diff reviewed against Lombok-generated false positives in `org.ctc.domain.model.*`
 - [x] **REWR-06**: README "Development" section documents the OpenRewrite invocation pattern (dryRun then run) and the deliberate decision to keep it developer-invoked
@@ -115,9 +115,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REWR-01 | Phase 80 | Pending |
+| REWR-01 | Phase 80 | Complete |
 | REWR-02 | Phase 80 | Pending |
-| REWR-03 | Phase 80 | Pending |
+| REWR-03 | Phase 80 | Complete |
 | REWR-04 | Phase 80 | Complete |
 | REWR-05 | Phase 80 | Pending |
 | REWR-06 | Phase 80 | Complete |
