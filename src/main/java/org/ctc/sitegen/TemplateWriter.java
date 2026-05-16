@@ -27,6 +27,8 @@ public class TemplateWriter {
     public void write(String templateName, Context context, Path outputFile, Path outRoot,
                       String activeSeasonSlug, String activeSeasonName) throws IOException {
         // Calculate relative paths from the output file location
+        // NP: all callers pass paths of the form dir.resolve("file.html") — always multi-component,
+        // getParent() is guaranteed non-null. See config/spotbugs-exclude.xml TemplateWriter.write entry.
         Path relativeAssets = outputFile.getParent().relativize(outRoot.resolve("assets"));
         Path relativeRoot = outputFile.getParent().relativize(outRoot);
         context.setVariable("assetsPath", relativeAssets.toString().replace('\\', '/'));

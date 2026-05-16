@@ -100,6 +100,9 @@ public class TeamCardService implements TemplateManageable {
 
 		String storagePath = getCardStoragePath(seasonTeam);
 		Path outputFile = uploadDir.resolve(storagePath);
+		// NP: uploadDir is an absolute configured path; storagePath is always non-empty —
+		// outputFile is never a root path, so getParent() is guaranteed non-null.
+		// See config/spotbugs-exclude.xml TeamCardService NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE entry.
 		Files.createDirectories(outputFile.getParent());
 
 		try (Playwright pw = Playwright.create();

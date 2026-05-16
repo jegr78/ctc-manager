@@ -497,6 +497,9 @@ public class BackupArchiveService {
 				}
 
 				Path target = absoluteDest.resolve(relativePath).normalize();
+				// NP: target.getParent() is called only inside the null-guard at the preceding line —
+				// SpotBugs reports a false positive because it evaluates each getParent() call independently.
+				// See config/spotbugs-exclude.xml BackupArchiveService NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE.
 				if (target.getParent() != null) {
 					Files.createDirectories(target.getParent());
 				}

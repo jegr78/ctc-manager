@@ -367,6 +367,8 @@ public class BackupImportService {
                     "Staging file not found for id=" + stagingId);
         }
         // Restore original filename from sidecar; fall back to staging filename if absent
+        // NP: staged.getFileName() cannot return null — staged is a staging file path, never a root.
+        // See config/spotbugs-exclude.xml BackupImportService.reparse NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE.
         String originalFilename = Files.exists(metaFile)
                 ? Files.readString(metaFile, java.nio.charset.StandardCharsets.UTF_8)
                 : staged.getFileName().toString();
@@ -445,6 +447,8 @@ public class BackupImportService {
         // Target ZIP for the pre-import auto-backup (runs BEFORE any DB mutation).
         Path autoBackupZip = importBackupDir.resolve("auto-backup-before-import.zip");
 
+        // NP: staged.getFileName() cannot return null — staged is a path to a staging file,
+        // never a root path. See config/spotbugs-exclude.xml BackupImportService.execute entry.
         String sourceFilename;
         try {
             sourceFilename = Files.exists(metaFile)

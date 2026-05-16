@@ -117,6 +117,87 @@
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
 
+    <!-- ========== NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE suppressions (STAT-05/triage) ========== -->
+
+    <!-- TeamCardService.generateCard: outputFile.getParent() at line 102.
+         outputFile = uploadDir.resolve(storagePath) where uploadDir is an absolute configured
+         path and storagePath is a non-empty relative string — the result is never a root-path,
+         so getParent() cannot return null. SpotBugs cannot prove this via inter-procedural analysis.
+         See TeamCardService.java:101-102. -->
+    <Match>
+        <Class name="org.ctc.admin.service.TeamCardService"/>
+        <Method name="generateCard"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- BackupArchiveService.extractUploadsTo: target.getParent() at line 501 is called inside
+         an if (target.getParent() != null) guard at line 500 — the null path is already excluded.
+         SpotBugs reports a false positive because it evaluates the getParent() call at line 501
+         independently from the null-check on the preceding line.
+         See BackupArchiveService.java:500-502. -->
+    <Match>
+        <Class name="org.ctc.backup.service.BackupArchiveService"/>
+        <Method name="extractUploadsTo"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- BackupImportService.execute: staged.getFileName() at line 452.
+         staged is a Path to a real staging file (always has a filename component, never a root path).
+         getFileName() returns null only for root paths; the staging directory structure guarantees
+         a non-root path. See BackupImportService.java:448-452. -->
+    <Match>
+        <Class name="org.ctc.backup.service.BackupImportService"/>
+        <Method name="execute"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- BackupImportService.reparse: staged.getFileName() at line 372. Same rationale as execute()
+         above — staged is a non-root path from the staging directory.
+         See BackupImportService.java:370-372. -->
+    <Match>
+        <Class name="org.ctc.backup.service.BackupImportService"/>
+        <Method name="reparse"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- SiteGeneratorService.copyAssets: target.getParent() at line 527.
+         target = assetsDir.resolve(relativePath) where assetsDir is a resolved absolute directory
+         and relativePath is a non-empty classpath-resource path — the result is never a root-path.
+         See SiteGeneratorService.java:526-527. -->
+    <Match>
+        <Class name="org.ctc.sitegen.SiteGeneratorService"/>
+        <Method name="copyAssets"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- SiteGeneratorService.copyLogoToAssets: target.getParent() at line 486.
+         target = outPath.resolve("assets/img/logos/...") — always a multi-component path with
+         a non-null parent. See SiteGeneratorService.java:485-486. -->
+    <Match>
+        <Class name="org.ctc.sitegen.SiteGeneratorService"/>
+        <Method name="copyLogoToAssets"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- TeamProfilePageGenerator.copyLogoToAssets: target.getParent() at line 238.
+         Same pattern as SiteGeneratorService.copyLogoToAssets — target is a multi-component
+         resolved path. See TeamProfilePageGenerator.java:237-238. -->
+    <Match>
+        <Class name="org.ctc.sitegen.TeamProfilePageGenerator"/>
+        <Method name="copyLogoToAssets"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- TemplateWriter.write: outputFile.getParent() at lines 30-31.
+         All callers pass paths of the form dir.resolve("filename.html") or
+         outPath.resolve("subdir/file.html") — always multi-component, parent is always non-null.
+         SpotBugs cannot verify this across the call sites. See TemplateWriter.java:30-31. -->
+    <Match>
+        <Class name="org.ctc.sitegen.TemplateWriter"/>
+        <Method name="write"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
     <!-- ========== Intentional-pattern suppressions (D-11) ========== -->
 
     <!-- FileStorageService.storeFromUrl(): SSRF hostname blocklist (validateHostname method,

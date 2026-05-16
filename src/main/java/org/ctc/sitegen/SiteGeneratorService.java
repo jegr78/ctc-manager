@@ -483,6 +483,8 @@ public class SiteGeneratorService {
             // Preserve UUID-prefixed subdirectory to avoid filename collisions
             String relativePart = logoUrl.substring("/uploads/".length());
             Path target = outPath.resolve("assets").resolve("img").resolve("logos").resolve(relativePart);
+            // NP: target has at least 4 path components — parent is guaranteed non-null.
+            // See config/spotbugs-exclude.xml SiteGeneratorService.copyLogoToAssets NP_NULL entry.
             Files.createDirectories(target.getParent());
             Files.copy(logoFile, target, StandardCopyOption.REPLACE_EXISTING);
             log.debug("Copied logo: {} -> {}", logoFile, target);
@@ -524,6 +526,8 @@ public class SiteGeneratorService {
 			}
 
             Path target = assetsDir.resolve(relativePath);
+            // NP: target = assetsDir.resolve(non-empty-path) — always multi-component, parent non-null.
+            // See config/spotbugs-exclude.xml SiteGeneratorService.copyAssets NP_NULL entry.
             Files.createDirectories(target.getParent());
             try (InputStream is = resource.getInputStream()) {
                 Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING);
