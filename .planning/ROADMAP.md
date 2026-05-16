@@ -301,7 +301,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 80. OpenRewrite Integration | 5/5 | Complete    | 2026-05-16 |
-| 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 1/3 | In Progress|  |
+| 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 2/3 | In Progress|  |
 | 82. Backup Cleanup | 0/TBD | Not started | - |
 | 83. Quality and Polish Sweep | 0/TBD | Not started | - |
 | 84. Renovate Integration | 0/TBD | Not started | - |
