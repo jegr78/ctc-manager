@@ -44,8 +44,8 @@ import org.springframework.stereotype.Component;
  *
  * <p>Bypasses {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}.
  */
-@Component
 @Slf4j
+@Component
 public class PlayoffMatchupRestorer implements EntityRestorer {
 
     /**

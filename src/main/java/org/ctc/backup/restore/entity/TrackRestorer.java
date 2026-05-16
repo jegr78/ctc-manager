@@ -30,8 +30,8 @@ import org.springframework.stereotype.Component;
  * <p>Single-pass insert — mirrors {@link CarRestorer}. Bypasses
  * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}.
  */
-@Component
 @Slf4j
+@Component
 public class TrackRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =

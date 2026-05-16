@@ -38,8 +38,8 @@ import org.springframework.stereotype.Component;
  * <p>Single-pass insert — no FK self-cycle. Bypasses {@link org.ctc.domain.model.BaseEntity}'s
  * {@code AuditingEntityListener}.
  */
-@Component
 @Slf4j
+@Component
 public class PlayoffRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =

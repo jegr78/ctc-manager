@@ -33,8 +33,8 @@ import org.springframework.stereotype.Component;
  * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener} so the imported
  * {@code created_at} / {@code updated_at} values survive verbatim.
  */
-@Component
 @Slf4j
+@Component
 public class CarRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =

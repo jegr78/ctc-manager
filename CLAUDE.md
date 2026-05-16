@@ -201,6 +201,7 @@ Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session rem
 
 * **Entities:** `@Getter @Setter @NoArgsConstructor`, `@ToString(exclude = ...)`, extend `BaseEntity`.
 * **Services/Controllers:** `@RequiredArgsConstructor` (constructor injection via `final`), `@Slf4j`.
+* **Annotation Order:** On Spring components use `@Slf4j @Component @RequiredArgsConstructor` (alphabetical — `@Slf4j` first).
 
 ### Controller & DTO Patterns
 

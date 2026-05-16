@@ -27,8 +27,8 @@ import org.springframework.stereotype.Component;
  * <p>Single-pass insert — regular FK ({@code playoff_id}). Bypasses
  * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}.
  */
-@Component
 @Slf4j
+@Component
 public class PlayoffRoundRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =
