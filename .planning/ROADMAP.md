@@ -218,7 +218,7 @@ Plans:
   4. `BackupRoundTripIT` and `BackupImportRollbackIT` pass on H2 and MariaDB after every commit in the cleanup sequence
   5. `BackupRoundTripIT` asserts per-entity row counts for all 24 entities (not just the 3 previously spot-checked: Race, SeasonDriver, Team)
 
-**Plans:** 5/10 plans executed
+**Plans:** 6/10 plans executed
 Plans:
 **Wave 1**: 82-01 (WR-01), 82-02 (IN-04), 82-04 (IN-01), 82-05 (IN-02) parallel + 82-03 (IN-03) serial-after-82-01 — BackupImportService.java write-chain serialization
 
@@ -230,7 +230,7 @@ Plans:
 
 **Wave 2**: 82-06 (BACK-01), 82-07 (BACK-03 + IN-03 WARN) serial-after-82-03, 82-08 (BACK-05)
 
-- [ ] 82-06-PLAN.md — BackupSchemaGuardTest: SCHEMA_VERSION + EXPORT_ORDER size guard (BACK-01)
+- [x] 82-06-PLAN.md — BackupSchemaGuardTest: SCHEMA_VERSION + EXPORT_ORDER size guard (BACK-01)
 - [ ] 82-07-PLAN.md — BackupRestoreZipOpenCountIT: single-ZIP-open + IN-03 WARN-log assertion (BACK-03) *(serial-after-82-03 — third write to BackupImportService.java)*
 - [ ] 82-08-PLAN.md — Extend BackupRoundTripIT with 24-entity row-count parity test (BACK-05)
 
@@ -319,7 +319,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 80. OpenRewrite Integration | 5/5 | Complete    | 2026-05-16 |
 | 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 3/3 | Complete   | 2026-05-16 |
-| 82. Backup Cleanup | 5/10 | In Progress|  |
+| 82. Backup Cleanup | 6/10 | In Progress|  |
 | 83. Quality and Polish Sweep | 0/TBD | Not started | - |
 | 84. Renovate Integration | 0/TBD | Not started | - |
 | 85. CodeQL SAST | 0/TBD | Not started | - |
