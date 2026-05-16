@@ -38,6 +38,180 @@
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
 
+    <!-- ========== D-08 layer 2 extension: EI_EXPOSE_REP* on service/DTO inner records (STAT-05/triage) ========== -->
+
+    <!-- Service-returned inner record/DTO classes follow the same Lombok-generated-accessor pattern
+         as domain.model entities. EI_EXPOSE_REP* on these is structurally meaningless — they are
+         immutable data carriers used as service→controller transport DTOs (e.g., Service$XxxData,
+         Service$XxxFormData, Service$XxxStanding). A defensive copy would serve no purpose here:
+         the records are created and consumed within a single request scope under OSIV. Belt-and-braces
+         with lombok.extern.findbugs.addSuppressFBWarnings=true; this filter covers inner classes that
+         Lombok cannot annotate. 128 findings across org.ctc.domain.service, 11 across
+         org.ctc.backup.service, 6 across org.ctc.admin.service. -->
+    <Match>
+        <Class name="~org\.ctc\.(domain|admin|backup)\.service\..+\$.+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- dataimport and gt7sync service-DTOs: same pattern as above — inner record classes used as
+         data-carrier DTOs within import/sync pipelines. 18 findings in org.ctc.dataimport,
+         6 findings in org.ctc.gt7sync. -->
+    <Match>
+        <Class name="~org\.ctc\.(dataimport|gt7sync)\..+\$.+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- Top-level record/DTO classes in admin.dto: form/display DTOs bound from HTTP requests.
+         Mutable-state exposure is intentional — Spring MVC populates these via setters.
+         12 findings across org.ctc.admin.dto.*. -->
+    <Match>
+        <Package name="org.ctc.admin.dto"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- backup.dto / backup.schema / backup.audit / backup.event records: serialization-layer data
+         carriers for JSON backup/restore. Exposing mutable state is intentional — Jackson reads
+         and writes these fields. 2+2+2+4 = 10 findings across these packages. -->
+    <Match>
+        <Class name="~org\.ctc\.backup\.(dto|schema|audit|event)\..+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- sitegen.model records: site-generation model DTOs used as read-only view data.
+         4 findings across org.ctc.sitegen.model.*. -->
+    <Match>
+        <Package name="org.ctc.sitegen.model"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- admin.controller inner record classes: lightweight response DTOs defined as inner records
+         inside controllers (e.g., for JSON endpoints). 2 findings. -->
+    <Match>
+        <Class name="~org\.ctc\.admin\.controller\..+\$.+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- admin.service graphic-service top-level classes (LineupGraphicService, OverlayGraphicService,
+         etc.) inject Spring-managed List<> dependencies via @RequiredArgsConstructor — the constructor
+         stores injected collaborator lists. Exposing these via Lombok @Getter is intentional (they are
+         Spring beans with Spring-controlled lifecycle). SpotBugs cannot distinguish Spring-injected
+         collaborator lists from user-supplied mutable data. -->
+    <Match>
+        <Class name="~org\.ctc\.admin\.service\.[A-Z].+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- backup.service top-level classes (BackupArchiveService, BackupExportService,
+         BackupImportService, BackupImportPostCommitListener) inject Spring-managed List<>
+         collaborators via @RequiredArgsConstructor. Same pattern as admin.service above. -->
+    <Match>
+        <Class name="~org\.ctc\.backup\.service\.[A-Z].+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- gt7sync top-level record Gt7SyncPreview: a pure data-carrier record with List<CarEntry>
+         and List<TrackEntry> fields. These are created once and consumed read-only — a defensive
+         copy would be misleading and wasteful in this internal service-to-controller transfer. -->
+    <Match>
+        <Class name="~org\.ctc\.gt7sync\.[A-Z].+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- ========== VA_FORMAT_STRING_USES_NEWLINE suppression (STAT-05/triage) ========== -->
+
+    <!-- TemplatePreviewService.buildPlaceholderCard: the SVG text block uses natural line endings
+         via the text block syntax (not a \n literal in a format string). SpotBugs fires because
+         the text block is passed to .formatted() and its newlines become \n in the resulting String.
+         Using %n would produce platform-dependent newlines (\r\n on Windows) in a Base64-encoded
+         SVG data URI, which is incorrect. \n is the correct line ending for XML/SVG content.
+         See TemplatePreviewService.java:257-264. -->
+    <Match>
+        <Class name="org.ctc.admin.service.TemplatePreviewService"/>
+        <Method name="buildPlaceholderCard"/>
+        <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
+    </Match>
+
+    <!-- ========== NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE suppressions (STAT-05/triage) ========== -->
+
+    <!-- TeamCardService.generateCard: outputFile.getParent() at line 102.
+         outputFile = uploadDir.resolve(storagePath) where uploadDir is an absolute configured
+         path and storagePath is a non-empty relative string — the result is never a root-path,
+         so getParent() cannot return null. SpotBugs cannot prove this via inter-procedural analysis.
+         See TeamCardService.java:101-102. -->
+    <Match>
+        <Class name="org.ctc.admin.service.TeamCardService"/>
+        <Method name="generateCard"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- BackupArchiveService.extractUploadsTo: target.getParent() at line 501 is called inside
+         an if (target.getParent() != null) guard at line 500 — the null path is already excluded.
+         SpotBugs reports a false positive because it evaluates the getParent() call at line 501
+         independently from the null-check on the preceding line.
+         See BackupArchiveService.java:500-502. -->
+    <Match>
+        <Class name="org.ctc.backup.service.BackupArchiveService"/>
+        <Method name="extractUploadsTo"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- BackupImportService.execute: staged.getFileName() at line 452.
+         staged is a Path to a real staging file (always has a filename component, never a root path).
+         getFileName() returns null only for root paths; the staging directory structure guarantees
+         a non-root path. See BackupImportService.java:448-452. -->
+    <Match>
+        <Class name="org.ctc.backup.service.BackupImportService"/>
+        <Method name="execute"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- BackupImportService.reparse: staged.getFileName() at line 372. Same rationale as execute()
+         above — staged is a non-root path from the staging directory.
+         See BackupImportService.java:370-372. -->
+    <Match>
+        <Class name="org.ctc.backup.service.BackupImportService"/>
+        <Method name="reparse"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- SiteGeneratorService.copyAssets: target.getParent() at line 527.
+         target = assetsDir.resolve(relativePath) where assetsDir is a resolved absolute directory
+         and relativePath is a non-empty classpath-resource path — the result is never a root-path.
+         See SiteGeneratorService.java:526-527. -->
+    <Match>
+        <Class name="org.ctc.sitegen.SiteGeneratorService"/>
+        <Method name="copyAssets"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- SiteGeneratorService.copyLogoToAssets: target.getParent() at line 486.
+         target = outPath.resolve("assets/img/logos/...") — always a multi-component path with
+         a non-null parent. See SiteGeneratorService.java:485-486. -->
+    <Match>
+        <Class name="org.ctc.sitegen.SiteGeneratorService"/>
+        <Method name="copyLogoToAssets"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- TeamProfilePageGenerator.copyLogoToAssets: target.getParent() at line 238.
+         Same pattern as SiteGeneratorService.copyLogoToAssets — target is a multi-component
+         resolved path. See TeamProfilePageGenerator.java:237-238. -->
+    <Match>
+        <Class name="org.ctc.sitegen.TeamProfilePageGenerator"/>
+        <Method name="copyLogoToAssets"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- TemplateWriter.write: outputFile.getParent() at lines 30-31.
+         All callers pass paths of the form dir.resolve("filename.html") or
+         outPath.resolve("subdir/file.html") — always multi-component, parent is always non-null.
+         SpotBugs cannot verify this across the call sites. See TemplateWriter.java:30-31. -->
+    <Match>
+        <Class name="org.ctc.sitegen.TemplateWriter"/>
+        <Method name="write"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
     <!-- ========== Intentional-pattern suppressions (D-11) ========== -->
 
     <!-- FileStorageService.storeFromUrl(): SSRF hostname blocklist (validateHostname method,

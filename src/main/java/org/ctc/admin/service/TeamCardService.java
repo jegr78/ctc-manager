@@ -5,6 +5,7 @@ import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -99,6 +100,9 @@ public class TeamCardService implements TemplateManageable {
 
 		String storagePath = getCardStoragePath(seasonTeam);
 		Path outputFile = uploadDir.resolve(storagePath);
+		// NP: uploadDir is an absolute configured path; storagePath is always non-empty —
+		// outputFile is never a root path, so getParent() is guaranteed non-null.
+		// See config/spotbugs-exclude.xml TeamCardService NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE entry.
 		Files.createDirectories(outputFile.getParent());
 
 		try (Playwright pw = Playwright.create();
@@ -244,7 +248,7 @@ public class TeamCardService implements TemplateManageable {
 	public String loadDefaultTemplate() throws IOException {
 		var resource = new ClassPathResource(DEFAULT_TEMPLATE);
 		try (var is = resource.getInputStream()) {
-			return new String(is.readAllBytes());
+			return new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
 	}
 

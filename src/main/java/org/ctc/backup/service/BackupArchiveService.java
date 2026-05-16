@@ -497,6 +497,9 @@ public class BackupArchiveService {
 				}
 
 				Path target = absoluteDest.resolve(relativePath).normalize();
+				// NP: target.getParent() is called only inside the null-guard at the preceding line —
+				// SpotBugs reports a false positive because it evaluates each getParent() call independently.
+				// See config/spotbugs-exclude.xml BackupArchiveService NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE.
 				if (target.getParent() != null) {
 					Files.createDirectories(target.getParent());
 				}
@@ -605,6 +608,9 @@ public class BackupArchiveService {
 	 *                                {@code Reason.PATH_TRAVERSAL} when the entry name escapes
 	 *                                {@code stagingRoot}
 	 */
+	// PATH_TRAVERSAL defense: PathTraversalGuard.assertWithin() is the sanitizer; find-sec-bugs
+	// cannot trace the defense through the delegated utility call. See config/spotbugs-exclude.xml
+	// BackupArchiveService PATH_TRAVERSAL_IN entry for the corresponding suppression rationale.
 	private static void assertEntrySafe(ZipEntry entry, Path stagingRoot,
 			int currentEntryCount, long currentInflatedBytes) {
 		if (currentEntryCount > MAX_ENTRIES) {

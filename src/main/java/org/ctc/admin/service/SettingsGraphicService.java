@@ -1,6 +1,7 @@
 package org.ctc.admin.service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
@@ -147,7 +148,7 @@ public class SettingsGraphicService extends AbstractGraphicService implements Te
 	public String loadDefaultTemplate() throws IOException {
 		var resource = new ClassPathResource(DEFAULT_TEMPLATE);
 		try (var is = resource.getInputStream()) {
-			return new String(is.readAllBytes());
+			return new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
 	}
 

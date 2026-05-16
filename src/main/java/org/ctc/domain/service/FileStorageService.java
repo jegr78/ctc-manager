@@ -122,6 +122,9 @@ public class FileStorageService {
 		return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
 	}
 
+	// SSRF defense: find-sec-bugs cannot recognize startsWith-chain hostname blocklists as
+	// sanitizers. This method is the suppressed sanitizer. See config/spotbugs-exclude.xml
+	// FileStorageService SSRF_SPRING,SSRF entry for the corresponding suppression rationale.
 	private void validateHostname(String sourceUrl) {
 		String hostname = java.net.URI.create(sourceUrl).getHost();
 		if (hostname == null) {
@@ -153,6 +156,10 @@ public class FileStorageService {
 		}
 	}
 
+	// PATH_TRAVERSAL defense: toAbsolutePath().normalize().startsWith() check.
+	// find-sec-bugs detects unresolved path usage at call sites before this validation is
+	// invoked. See config/spotbugs-exclude.xml FileStorageService PATH_TRAVERSAL_IN entry
+	// for the corresponding suppression rationale.
 	private void validatePathWithinUploadDir(Path target) {
 		Path normalized = target.toAbsolutePath().normalize();
 		if (!normalized.startsWith(uploadDir)) {

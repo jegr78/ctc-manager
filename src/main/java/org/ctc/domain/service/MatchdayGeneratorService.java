@@ -186,12 +186,8 @@ public class MatchdayGeneratorService {
 					pair[1] = a;
 					homeCounts[b]++;
 					awayCounts[a]++;
-				} else if (bDiff > aDiff) {
-					// Keep as is
-					homeCounts[a]++;
-					awayCounts[b]++;
 				} else {
-					// Tie: alternate
+					// b has more home games than a, or tied: keep a as home
 					homeCounts[a]++;
 					awayCounts[b]++;
 				}

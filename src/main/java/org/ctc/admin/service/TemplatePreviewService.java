@@ -1,6 +1,7 @@
 package org.ctc.admin.service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -261,7 +262,7 @@ public class TemplatePreviewService {
                           font-family="Arial,sans-serif" font-size="120" font-weight="bold" fill="white">%s</text>
                 </svg>
                 """.formatted(color, label);
-        return "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString(svg.getBytes());
+        return "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString(svg.getBytes(StandardCharsets.UTF_8));
     }
 
     private String getFontBase64() {
