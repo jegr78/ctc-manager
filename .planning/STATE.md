@@ -1,11 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: idle
-stopped_at: v1.10 shipped 2026-05-16
-last_updated: "2026-05-16T00:30:00.000Z"
-last_activity: 2026-05-16 -- v1.10 milestone closed and archived
+milestone: v1.11
+milestone_name: Tooling Infrastructure & Tech-Debt Sweep
+status: planning
+last_updated: "2026-05-16T06:41:30.527Z"
+last_activity: 2026-05-16
 progress:
   total_phases: 0
   completed_phases: 0
@@ -26,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 ## Current Position
 
-Phase: — (no active milestone)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Idle — v1.10 shipped 2026-05-16
-Last activity: 2026-05-16 — v1.10 milestone closed and archived
+Status: Defining requirements
+Last activity: 2026-05-16 — Milestone v1.11 started
 
 ## Completed Milestones
 

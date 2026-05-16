@@ -21,25 +21,44 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - **Admin Features:** `/admin/backup` page with streamed ZIP export (CSRF-protected `POST /admin/backup/export`, `StreamingResponseBody`, ISO-instant filename) + manifest-first preview + replace-all import (`@Transactional` wipe + `JdbcTemplate.batchUpdate` restore bypassing `AuditingEntityListener` + post-commit upload-tree stage-and-rename); concurrent-import `ReentrantLock` + persistent yellow read-only banner + `ImportLockedWriteRejector` HandlerInterceptor + synchronous auto-backup-before-import safety net; 24h recovery retention at `data/.import-backups/<ts>/`
 - **Docker / CI:** Both Dockerfile stages pinned to `eclipse-temurin:25-{jdk,jre}-noble` (Playwright 1.59.0 compatibility); `dockerfile-noble-pin-guard` CI job (whitelist-on-suffix); full `docker build .` on every PR + push to master; ci.yml concurrency block + `--no-transfer-progress`; Surefire `forkCount=2C` + Failsafe default-it `forkCount=1C` + `excludedGroups=flaky` quarantine
 
-## Current Milestone
+## Current Milestone: v1.11 Tooling Infrastructure & Tech-Debt Sweep
 
-(None — v1.10 shipped 2026-05-16. Next milestone definition via `/gsd-new-milestone`. Carried over candidates tracked in REQUIREMENTS.md "Future Requirements" and ROADMAP.md Phase 999.1–999.4 backlog: OpenRewrite, Clean-Code enforcement, Renovate, SAST.)
+**Goal:** Promote the entire Phase 999.x tooling backlog into the active pipeline (OpenRewrite, Clean-Code enforcement, Renovate, SAST) and clear the v1.10 + v1.9 carried-over tech-debt to enter v1.12 with a fully clean slate.
 
-**Carried over from v1.10 deferred (candidates für nachgelagerte v1.11+ Milestones):**
+**Target features:**
 
-- 12 REVIEW.md Info/Warning items from Phase 75 (backup-cleanup mini-phase)
-- D-06 wallclock-reduction debt (achieved 16.85 %, target ≥ 30 %; requires architectural test-restructuring — Spring-context-per-fork is structural cost)
-- Driver-detail Season-Assignment chip ordering (cosmetic; explicit `ORDER BY year` on `Driver.seasonAssignments`)
+*Tooling backlog (4 streams, previously parked as Phase 999.1–999.4):*
+
+- OpenRewrite refactoring/migration tool integration — automated recipe-based refactoring + future Spring Boot / Java version upgrades (Phase 999.1)
+- Clean Code Principles enforcement — Checkstyle / PMD / SpotBugs gates wired into Maven verify (Phase 999.2)
+- Renovate automated dependency updates — recurring PRs against pom.xml + workflow files (Phase 999.3)
+- Security SAST static analysis — CodeQL / Semgrep integration into CI (Phase 999.4)
+
+*Backup cleanup (v1.10 carryover from Phase 75 REVIEW.md):*
+
+- 12 Info/Warning items: `Map.copyOf` order strip, Step-1-revert `FileAlreadyExistsException` handling, `executedBy` duplication, `restoreOneTable` opens ZIP 24× → single-pass, etc.
+
+*Quality / polish sweep:*
+
+- Driver-detail Season-Assignment chip ordering (explicit `ORDER BY year` on `Driver.seasonAssignments`)
 - `DevDataSeeder` `@Profile` widening for live-MariaDB-UAT bootstrap on `local,demo`
-- Nyquist `*-VALIDATION.md` draft → approved for 6 phases + creation for phases 71 + 78
-- Wiki QUAL-05 image render verification post-merge (self-resolves on PR merge to master)
-- PLAT-CI-02 release-workflow run on master observation (by-design post-merge)
+- Per-group matchday generation UI affordance (`SeasonController.generateMatchdays:251` Rule-3 deviation, carried over from v1.9)
+- `StandingsController.java:139` lazy collection style cleanup (carried over from v1.9)
+- UAT-02 legacy season visual smoke against real pre-V4 production data (carried over from v1.9, verify on next prod deploy)
 
-**Carried over from v1.9 deferred (still candidates for v1.11+):**
+*Test infrastructure (architectural):*
 
-- Per-group matchday generation UI affordance (`SeasonController.generateMatchdays:251` Rule-3 deviation)
-- `StandingsController.java:139` lazy collection style cleanup
-- UAT-02 (legacy season visual smoke against real pre-V4 production data) on next deploy
+- Phase 79 D-06 wallclock-reduction debt — achieved 16.85 %, target ≥ 30 %; requires test-module split / Spring-context-per-fork restructuring
+
+*Validation closure:*
+
+- Nyquist `*-VALIDATION.md` drafts → approved for 6 phases (72-76, 79)
+- Nyquist `*-VALIDATION.md` creation for phases 71 + 78
+
+**Explicitly out of milestone scope:**
+
+- Wiki QUAL-05 image render (self-resolves on PR merge to master, not tech debt)
+- PLAT-CI-02 release-workflow observation (by-design post-merge, not tech debt)
 
 ## Requirements
 
@@ -161,7 +180,7 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 ### Active
 
-(None — awaiting next milestone definition via `/gsd-new-milestone`.)
+v1.11 Tooling Infrastructure & Tech-Debt Sweep — see REQUIREMENTS.md for REQ-IDs once defined.
 
 ### Out of Scope
 
@@ -251,4 +270,4 @@ The runtime topo-sort returns 24 `EntityRef` instances (CONTEXT.md originally sa
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-16 — v1.10 milestone shipped: Spring Boot 4.0.6 Upgrade & Data Export/Import, all 9 phases (71-79) verified, **39/39 requirements satisfied**, 1652 Surefire + 231 Failsafe + 36 Playwright E2E tests green, JaCoCo line coverage 87.80 % (gate 82 %, +0.78 pp vs v1.9 baseline), full export → wipe → import round-trip on H2 + MariaDB (`BackupRoundTripIT`), live 75-HUMAN-UAT 10/10 PASS (Saison 2023 fixture, profile-deviation documented). Audit verdict: passed. Final-gate `./mvnw verify -Pe2e` BUILD SUCCESS, Maven total 11m 11s.*
+*Last updated: 2026-05-16 — v1.11 milestone started: Tooling Infrastructure & Tech-Debt Sweep. Promotes Phase 999.1–999.4 backlog (OpenRewrite, Clean-Code enforcement, Renovate, SAST) into the active pipeline and clears v1.10 + v1.9 carried-over tech-debt (Phase 75 REVIEW.md items, polish sweep, test-wallclock reduction, Nyquist VALIDATION closure). Phase numbering continues at 80+. Branch: `gsd/v1.11-tooling-and-cleanup`.*
