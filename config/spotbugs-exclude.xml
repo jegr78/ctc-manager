@@ -133,22 +133,22 @@
 
     <!-- ========== NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE suppressions (STAT-05/triage) ========== -->
 
-    <!-- TeamCardService.generateCard: outputFile.getParent() at line 102.
+    <!-- TeamCardService.generateCard: outputFile.getParent() at line 106.
          outputFile = uploadDir.resolve(storagePath) where uploadDir is an absolute configured
          path and storagePath is a non-empty relative string — the result is never a root-path,
          so getParent() cannot return null. SpotBugs cannot prove this via inter-procedural analysis.
-         See TeamCardService.java:101-102. -->
+         See TeamCardService.java:104-106. -->
     <Match>
         <Class name="org.ctc.admin.service.TeamCardService"/>
         <Method name="generateCard"/>
         <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
     </Match>
 
-    <!-- BackupArchiveService.extractUploadsTo: target.getParent() at line 501 is called inside
-         an if (target.getParent() != null) guard at line 500 — the null path is already excluded.
-         SpotBugs reports a false positive because it evaluates the getParent() call at line 501
+    <!-- BackupArchiveService.extractUploadsTo: target.getParent() at line 504 is called inside
+         an if (target.getParent() != null) guard at line 503 — the null path is already excluded.
+         SpotBugs reports a false positive because it evaluates the getParent() call at line 504
          independently from the null-check on the preceding line.
-         See BackupArchiveService.java:500-502. -->
+         See BackupArchiveService.java:500-505. -->
     <Match>
         <Class name="org.ctc.backup.service.BackupArchiveService"/>
         <Method name="extractUploadsTo"/>
