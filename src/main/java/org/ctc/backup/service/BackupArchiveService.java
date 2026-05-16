@@ -605,6 +605,9 @@ public class BackupArchiveService {
 	 *                                {@code Reason.PATH_TRAVERSAL} when the entry name escapes
 	 *                                {@code stagingRoot}
 	 */
+	// PATH_TRAVERSAL defense: PathTraversalGuard.assertWithin() is the sanitizer; find-sec-bugs
+	// cannot trace the defense through the delegated utility call. See config/spotbugs-exclude.xml
+	// BackupArchiveService PATH_TRAVERSAL_IN entry for the corresponding suppression rationale.
 	private static void assertEntrySafe(ZipEntry entry, Path stagingRoot,
 			int currentEntryCount, long currentInflatedBytes) {
 		if (currentEntryCount > MAX_ENTRIES) {
