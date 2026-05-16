@@ -173,7 +173,7 @@ See: milestones/v1.10-ROADMAP.md for full details
   4. `rewrite.yml` activates `CommonStaticAnalysis` and explicitly excludes `UpgradeSpringBoot_4_0` (the project is already on Boot 4.0.6); the one-shot cleanup diff is reviewed for Lombok entity false positives and committed
   5. README "Development" section documents the `dryRun` → `run` workflow and the deliberate decision to keep OpenRewrite developer-invoked only
 
-**Plans:** 1/5 plans executed
+**Plans:** 2/5 plans executed
 Plans:
 **Wave 1**
 
@@ -181,7 +181,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 80-02-PLAN.md — Create `rewrite.yml` declaring composite recipe `org.ctc.RewriteCleanup` with documentary `UpgradeSpringBoot_4_0` tripwire (REWR-04)
+- [x] 80-02-PLAN.md — Create `rewrite.yml` declaring composite recipe `org.ctc.RewriteCleanup` with documentary `UpgradeSpringBoot_4_0` tripwire (REWR-04)
 - [ ] 80-03-PLAN.md — Run `rewrite:dryRun` + `rewrite:discover` + structural-isolation verification; record outcome in `80-VERIFICATION.md` (REWR-01, REWR-03)
 - [ ] 80-05-PLAN.md — Add `## Development` section to README.md and append two `-Prewrite` commands to CLAUDE.md `## Commands` block (REWR-06)
 
@@ -300,7 +300,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 80. OpenRewrite Integration | 1/5 | In Progress|  |
+| 80. OpenRewrite Integration | 2/5 | In Progress|  |
 | 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 0/TBD | Not started | - |
 | 82. Backup Cleanup | 0/TBD | Not started | - |
 | 83. Quality and Polish Sweep | 0/TBD | Not started | - |
