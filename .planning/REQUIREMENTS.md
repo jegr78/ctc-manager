@@ -14,7 +14,7 @@ Requirements for the v1.11 release. Each maps to a roadmap phase.
 - [ ] **REWR-03**: The `rewrite-maven-plugin` is wired in `pom.xml` under `<build><plugins>` with no `<executions>` binding, so it never runs during the default `verify` lifecycle
 - [x] **REWR-04**: A project-level `rewrite.yml` activates the `CommonStaticAnalysis` recipe pack and explicitly excludes `org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0` (the project is already on Boot 4.0.6)
 - [ ] **REWR-05**: The `CommonStaticAnalysis` recipe pack is applied once as a one-shot cleanup commit on the v1.11 branch with the resulting diff reviewed against Lombok-generated false positives in `org.ctc.domain.model.*`
-- [ ] **REWR-06**: README "Development" section documents the OpenRewrite invocation pattern (dryRun then run) and the deliberate decision to keep it developer-invoked
+- [x] **REWR-06**: README "Development" section documents the OpenRewrite invocation pattern (dryRun then run) and the deliberate decision to keep it developer-invoked
 
 ### Static Analysis Gate (STAT)
 
@@ -120,7 +120,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REWR-03 | Phase 80 | Pending |
 | REWR-04 | Phase 80 | Complete |
 | REWR-05 | Phase 80 | Pending |
-| REWR-06 | Phase 80 | Pending |
+| REWR-06 | Phase 80 | Complete |
 | STAT-01 | Phase 81 | Pending |
 | STAT-02 | Phase 81 | Pending |
 | STAT-03 | Phase 81 | Pending |
