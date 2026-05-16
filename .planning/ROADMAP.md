@@ -150,7 +150,7 @@ See: milestones/v1.10-ROADMAP.md for full details
 ### v1.11 Tooling Infrastructure & Tech-Debt Sweep (Phases 80-87) — ACTIVE
 
 - [x] **Phase 80: OpenRewrite Integration** — Developer can invoke recipe-driven refactoring via `-Prewrite` Maven profile (completed 2026-05-16)
-- [ ] **Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs)** — `./mvnw verify` fails on new HIGH-priority bytecode violations
+- [x] **Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs)** — `./mvnw verify` fails on new HIGH-priority bytecode violations (completed 2026-05-16)
 - [ ] **Phase 82: Backup Cleanup** — All 12 Phase-75 REVIEW.md items resolved; SCHEMA_VERSION remains 1; BackupRoundTripIT covers all 24 entities
 - [ ] **Phase 83: Quality and Polish Sweep** — Four v1.9/v1.10 carryover items cleared; UAT-02 post-deploy result recorded
 - [ ] **Phase 84: Renovate Integration** — Automated dependency update PRs active with Guava/Thymeleaf/Java-version safety rules in place
@@ -301,7 +301,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 80. OpenRewrite Integration | 5/5 | Complete    | 2026-05-16 |
-| 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 2/3 | In Progress|  |
+| 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 3/3 | Complete   | 2026-05-16 |
 | 82. Backup Cleanup | 0/TBD | Not started | - |
 | 83. Quality and Polish Sweep | 0/TBD | Not started | - |
 | 84. Renovate Integration | 0/TBD | Not started | - |
