@@ -127,11 +127,11 @@ activates only `org.openrewrite.staticanalysis.CommonStaticAnalysis`.
 Workflow:
 
 ```bash
-# 1. Preview changes (writes target/site/rewrite/rewrite.patch if non-empty)
+# 1. Preview changes (writes target/rewrite/rewrite.patch if non-empty)
 ./mvnw -Prewrite rewrite:dryRun
 
 # 2. Inspect the patch file — confirm no Lombok-entity false positives
-cat target/site/rewrite/rewrite.patch
+cat target/rewrite/rewrite.patch
 
 # 3. Apply the recipes to source files in place
 ./mvnw -Prewrite rewrite:run
