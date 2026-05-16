@@ -112,6 +112,37 @@ macOS and Windows include these dependencies natively — no extra setup needed.
 
 The Dockerfile handles Chromium installation automatically during the build.
 
+## Development
+
+### OpenRewrite (developer-invoked refactoring)
+
+CTC Manager wires the [OpenRewrite](https://docs.openrewrite.org/) Maven plugin
+into a dedicated `rewrite` profile, NOT the default `verify` lifecycle. Recipes
+are run on demand by the developer and never as part of CI — this avoids any
+risk of silent in-place source mutation during a build.
+
+The active recipe set is defined in [`rewrite.yml`](./rewrite.yml). Today it
+activates only `org.openrewrite.staticanalysis.CommonStaticAnalysis`.
+
+Workflow:
+
+```bash
+# 1. Preview changes (writes target/site/rewrite/rewrite.patch if non-empty)
+./mvnw -Prewrite rewrite:dryRun
+
+# 2. Inspect the patch file — confirm no Lombok-entity false positives
+cat target/site/rewrite/rewrite.patch
+
+# 3. Apply the recipes to source files in place
+./mvnw -Prewrite rewrite:run
+
+# 4. Review with git diff, then commit normally
+git diff
+```
+
+Without `-Prewrite` the plugin is not on the build, so a plain `./mvnw verify`
+adds zero overhead.
+
 ## Documentation
 
 See the [Wiki](../../wiki) for detailed documentation on architecture, features, setup, and configuration.

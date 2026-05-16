@@ -42,6 +42,12 @@ Community Team Cup — Gran Turismo Racing League Manager
 # Run tests including Playwright E2E
 ./mvnw verify -Pe2e
 
+# OpenRewrite: preview recipe-driven refactoring (no file changes)
+./mvnw -Prewrite rewrite:dryRun
+
+# OpenRewrite: apply recipes to source files in place
+./mvnw -Prewrite rewrite:run
+
 # Open Coverage Report
 open target/site/jacoco/index.html
 
