@@ -1,313 +1,310 @@
 # Feature Research
 
-**Domain:** Spring Boot Admin Backup/Restore + Platform Upgrade (CTC Manager v1.10)
-**Researched:** 2026-05-09
-**Confidence:** HIGH (product features, table-stakes patterns, anti-features) / MEDIUM (Spring Boot 4.0.6 release contents, since the official announcement enumerates only CVEs and totals, not individual changes) / HIGH (Thymeleaf 3.2 fragment-parameter incompatibility — the project itself reproduced and documented the failure mode in v1.9)
+**Domain:** Tooling Infrastructure — OpenRewrite, Clean-Code Enforcement, Renovate, SAST (CTC Manager v1.11)
+**Researched:** 2026-05-16
+**Confidence:** HIGH (OpenRewrite, CodeQL/Semgrep licensing, Renovate Maven support via official docs) / MEDIUM (SpotBugs+Lombok interaction — open GitHub issues, no authoritative definitive fix documented) / HIGH (Checkstyle/PMD Maven plugin configuration)
 
 ---
 
-## Scope Note
+## Scope
 
-Two distinct feature clusters in this milestone, treated separately because they share no code paths:
+Four independent tooling streams introduced in v1.11. Each stream is analyzed with its own table-stakes / differentiator / anti-feature breakdown and developer-workflow description. The streams are:
 
-1. **Cluster A — Spring Boot 4.0.6 Platform Upgrade** (incl. preventive Thymeleaf-3.2 template audit)
-2. **Cluster B — Admin Data Export/Import** (ZIP backup, replace-all restore)
+1. **OpenRewrite** — recipe-based automated refactoring (Java version upgrades, Spring Boot migration, code style)
+2. **Clean-Code Enforcement** — Checkstyle + PMD + SpotBugs as Maven verify gates
+3. **Renovate** — recurring automated PRs for pom.xml + workflow file dependency bumps
+4. **Security SAST** — CodeQL or Semgrep static security analysis in CI
 
-Cluster A is technical hygiene — its "features" are dependency bumps and a build-time guard. Cluster B is a real new admin function with UX surface area. The table-stakes / differentiator analysis applies primarily to Cluster B; Cluster A is presented in a leaner format at the bottom.
-
----
-
-## Cluster B — Admin Data Export/Import
-
-### Table Stakes (Users Expect These)
-
-Features the league operator (single admin, technically savvy enough to use Spring profiles and `mysqldump`) will assume exist on day one. Missing any of these makes the feature feel half-built and unsafe to use against production data.
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Single-button export to ZIP | "Backup" means one click in every admin tool the user has touched (GitLab, Discourse, Immich, phpMyAdmin "Export") | LOW | `GET /admin/backup/export` streams `application/zip` via `ZipOutputStream` directly into the response — no temp file on disk |
-| ZIP packs `data.json` + `uploads/` directory | League logos, CTC graphic templates, race attachments are referenced by filename in DB rows. JSON without uploads = orphan FK paths after restore | LOW-MEDIUM | Walk `app.upload-dir`, add each file to the ZIP under a stable prefix (`uploads/...`); JSON references stay relative |
-| `schema_version` + `app_version` + `export_date` header in `data.json` | Every backup tool the user has met (Discourse, GitLab, Postgres `pg_dump`) writes a header. Without it, the ZIP is opaque and unsafe to ingest | LOW | Top-level object before the entity arrays: `{"schemaVersion": 7, "appVersion": "1.10.0", "exportDate": "2026-05-15T12:34:56Z", "entities": {...}}` |
-| Schema-version refusal on import | The whole point of the header. Importing a v1.8-era ZIP into a post-V6 schema would either silently lose data or crash mid-restore | LOW | Compare ZIP `schemaVersion` against current Flyway version (`MAX(installed_rank)` or hardcoded constant matching the latest `V*__*.sql`). Mismatch → 400 with explicit error page, never a silent upgrade |
-| Preview screen before destructive import | This is the project's own playbook (`CsvImportController`, `DriverSheetImportController`, `gt7-sync-preview.html` all use POST → preview → confirm). Skipping it would be inconsistent with the rest of the admin UI | MEDIUM | After upload, parse the ZIP into memory, render a table of "rows that will be wiped per table" + "rows that will be restored per table". Confirm button POSTs the parsed bundle (or a server-side staged path) to the executor |
-| Explicit destructive-action confirmation | Replace-all wipes operative data. JS `confirm()` is the project's existing pattern (`driver-merge.html`, scoring delete buttons). A type-to-confirm input ("type DELETE to proceed") is overkill for a single-admin tool, but a labelled checkbox + confirm dialog is non-negotiable | LOW | Mirror the `DriverMergeController` pattern: form action with hidden token + JS `confirm("This will delete ALL operative data. Continue?")` |
-| Atomic transaction on import | If restore fails halfway, half-wiped DB is worse than no restore. Spring `@Transactional` on the executor with explicit rollback for any `IOException`/`DataAccessException`/`ConstraintViolationException` — same pattern as `DriverSheetImportService.execute()` (Phase 70 GAP-70-01 lesson, see PROJECT.md decision row) | MEDIUM | Single `@Transactional` boundary on the import service method; uploads dir written in a staging folder and atomically renamed/replaced only after JSON commit succeeds. Failure = staging folder discarded, DB rolled back |
-| Audit log entry per import (who / when / row counts) | "What did the last restore do?" is the first question after any restore. The user explicitly asked for this. Mirrors `BackupRestoreLog` patterns common in admin tools | LOW-MEDIUM | New `import_audit_log` table or simpler: append to `data/{profile}/import-audit.log` (text, one line per import). Captures `user`, `timestamp`, `bundle filename`, `wiped {table → count}`, `restored {table → count}` |
-| Filename convention with timestamp | Operator will accumulate ZIP files. `ctc-backup-2026-05-09-143022.zip` is universally readable; `backup.zip` is not | LOW | `Content-Disposition: attachment; filename="ctc-backup-{ISO-instant}.zip"` |
-| File size limit on upload | Spring Boot's default 1 MB/10 MB caps will reject typical backups (logos alone may be 5-50 MB). Without explicit configuration, users will hit cryptic Tomcat errors | LOW | `spring.servlet.multipart.max-file-size=200MB` + `max-request-size=200MB` in `application.yml`. Document the cap |
-| Clear error messages on malformed ZIP | The user is sysadmin-savvy, but if the parser explodes on a ZIP that was edited by hand, "Internal Server Error" wastes time. Specific errors: missing `data.json`, malformed JSON, missing entity, FK reference in JSON to row that's not in JSON | LOW-MEDIUM | Specific exceptions → flash messages, never a stack trace. Reuse `GlobalExceptionHandler` pattern |
-| MIME / extension validation on upload | Same hardening posture as `RaceAttachmentService` (Phase 28). `.zip` extension + content-type sniff before parsing | LOW | Reject non-ZIP uploads with a friendly message, not a parser exception |
-
-### Differentiators (Competitive Advantage)
-
-Features that go beyond table stakes. Each is a real candidate but needs to be weighed against the v1.10 scope.
-
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| SHA-256 checksum file inside the ZIP | Detects tampering / corrupted download mid-transfer. Operator can `sha256sum` the file before upload | LOW | `data.json.sha256` next to `data.json`; verified before parse begins. Cheap, and the user is technically savvy enough to appreciate it |
-| Diff preview ("3 seasons would be wiped, 4 would be restored, net change: +1") | More informative than raw row counts. Helps spot accidents like restoring a stale ZIP onto live data | MEDIUM | Compare current DB row counts vs. ZIP row counts per entity in the preview screen. The data is already loaded for the preview, so the cost is mostly UX |
-| Selective import (per-season picker) | The user explicitly mentioned this as a future-milestone feature. Big win for "merge production data into dev" scenarios where dev has scratch data you want to keep | HIGH | Requires per-entity scoping logic and a deletion strategy that respects the Season → Phase → Group → Matchday cascade. Out of v1.10 scope per user (deferred), but worth flagging as the obvious next step |
-| Background async processing with progress polling | Discourse-style: `/admin/backups` shows a progress log as the dump runs. Useful for large datasets | HIGH | For the current data volume (≤100 races, ≤2 seasons active, uploads <200 MB) the export/import is sub-second to a few seconds — sync is fine. Becomes a differentiator only at 10× scale. **Recommend defer** |
-| Integrity-only "verify" mode (parse + validate, no write) | Lets the operator sanity-check a ZIP against the current schema before committing. Removes one source of restore-time anxiety | LOW-MEDIUM | Same pipeline as preview, but stops before the confirm step. Could be a checkbox on the upload form ("Validate only") |
-| Compressed JSON (`data.json.gz` inside the ZIP) | Reduces ZIP size further. JSON compresses 5-10× | LOW | Marginal win — ZIP already compresses JSON. Low priority |
-| Export-only mode without uploads | "I just want the data, not the 50 MB of logos" | LOW | Query parameter `?includeUploads=false`. Easy add if asked |
-| Two-step delete confirmation (type-to-confirm) | Stops muscle-memory clicks on `Confirm`. GitLab uses this pattern for project deletion | LOW | Overkill for a single-admin tool. Phase out unless the user requests it |
-
-### Anti-Features (Commonly Requested, Often Problematic)
-
-Features that sound reasonable but fail the cost/benefit test for v1.10. Documented here so they don't drift in later.
-
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Cloud destinations (S3, GCS, Azure Blob) | "Backups should be off-host" | Adds AWS SDK / GCS SDK dependency, IAM credential management, retry/timeout config, network egress — all for a use case the user can solve with `scp` + `cron` outside the app | Local download from admin UI; user mirrors to cloud out-of-band if desired |
-| Scheduled / cron'd backups | "What if I forget to back up before a risky migration?" | Adds Quartz / `@Scheduled`, error-handling for headless failure, retention policy UI, disk-fill protection. The user explicitly wants manual button only | Document the manual flow + add a banner before risky operations later (out-of-scope reminder) |
-| Multi-format support (CSV, XML, SQL dump) | "Maybe I want the data in Excel" | Triples the serialization surface. CSV can't represent the entity graph, XML duplicates JSON, SQL dump is `mysqldump`'s job. The user explicitly wants JSON-only | JSON-only; if Excel needed, write a one-off report later |
-| Date-range filtered export ("only races since 2024") | Sounds like "smaller backup files" | Cuts FK paths — references to teams/seasons outside the range break referential integrity on restore. The full-or-full-per-season distinction is the right boundary | Full export only in v1.10; per-season selector deferred to a later milestone |
-| Merge import (preserve existing rows, add new ones) | "Restore is too destructive" | Schema drift between source and target = inconsistent state, silent data loss on conflicts, requires per-entity merge rules. The user explicitly chose replace-all in PROJECT.md, citing this exact rationale | Replace-all only; document why merge isn't supported |
-| Encryption at rest for the ZIP | "What if someone steals the file?" | Single-admin app with HTTP Basic Auth and HTTPS in front — adding ZIP encryption duplicates transport security. Key management without a UI is worse than no encryption | Trust the host filesystem + transport TLS. If the user is worried, recommend storing the ZIP inside an encrypted disk image |
-| User-account / multi-tenant scoped exports | "What if we add multi-user later?" | The PROJECT.md `Out of Scope` row "Form Login / User Management — over-engineered for admin tool" already settled this. No multi-tenancy means no per-user backup scope | Single global backup. Revisit only if user model changes |
-| In-app backup-history viewer with download links | "Show me my last 10 backups" | Requires backup-storage policy, retention sweeper, file-tracking table, deletion UI — significant scope for marginal value over `ls /var/ctc/backups/` | Out of v1.10. Reconsider if cron'd backups are ever added (they aren't) |
-| Import progress bar with WebSocket / SSE | "Long ops need feedback" | At current data volume the import is sub-second. WebSocket plumbing would dwarf the feature itself | Block the request; if the dataset ever grows enough to need this, we'll hear about it from the user first |
+The existing tech-debt items in v1.11 (Phase 75 REVIEW.md cleanup, polish sweep, test wallclock reduction, Nyquist VALIDATION docs) require no feature research — they are already-understood implementation tasks.
 
 ---
 
-## Cluster A — Spring Boot 4.0.6 Upgrade & Template Audit
+## Stream 1: OpenRewrite
+
+**Complexity: MEDIUM**
+
+OpenRewrite is an AST-aware automated refactoring platform. It transforms source code and build files using composable recipes, without requiring any code changes by hand. The Maven plugin (`rewrite-maven-plugin`) integrates directly into the existing Maven lifecycle.
+
+The project is **already on Java 25 and Spring Boot 4**, so the primary use of OpenRewrite here is:
+- Applying `CommonStaticAnalysis` and best-practices recipes to clean up existing code patterns
+- Establishing the `dryRun` gate so future Sprint Boot 5 or Java 26/27 upgrades are automated
+- Enabling custom project-specific recipes for things like enforcing naming conventions
 
 ### Table Stakes
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| `pom.xml` parent bump 4.0.5 → 4.0.6 | The reason the milestone exists. Picks up 65 bug fixes + 8 CVE patches per [Spring Boot 4.0.6 announcement](https://spring.io/blog/2026/04/23/spring-boot-4-0-6-available-now/) (TLS hostname verification fixes for Elasticsearch/RabbitMQ/Cassandra, DevTools timing-attack fix, temp-dir ownership verification, PRNG strength improvement, security-filter-chain rule adjustments, PID file symlink-following prevention) | LOW | One-line `pom.xml` change + `./mvnw verify -Pe2e` to confirm |
-| Fix the 3 known fragment-parameter ternaries | The v1.9 milestone reverted a Spring Boot bump for exactly this reason — `match-scoring-form`, `race-scoring-form`, `season-phase-form` all line 3, all `th:replace="...layout(${cond ? 'A' : 'B'}, ...)"` shape. The v1.10 milestone exists to do this properly | LOW (per template) | Move ternary into a controller-side `pageTitle` model attribute; `th:replace="...layout(${pageTitle}, ...)"`. Pattern documented in PROJECT.md milestone goal |
-| Audit all ~78 templates (62 admin + 16 site) for the same incompatibility shape | "Vorsorglich" = preventive. The user got bitten once and wants to find the rest before the next reproducer | LOW-MEDIUM | One-time grep + manual review. ~80 templates is ~30 min review. Targets: `th:replace`, `th:insert`, fragment-parameter expressions with `?:` ternary or method calls on JDK classes |
-| `./mvnw verify -Pe2e` green on 4.0.6 | Standard regression bar — Surefire + Failsafe + Playwright E2E all green | LOW | Same gate as every prior milestone |
-| JaCoCo ≥ 82 % held | Standard coverage gate from `pom.xml` | LOW | Already at 87.02 % per v1.9 close — buffer is comfortable |
+| `rewrite:dryRun` as CI gate | Without dryRun, OpenRewrite has no enforcement role; it's just a one-shot local tool | LOW | `failOnDryRunResults=true` in pom.xml plugin config; outputs `target/site/rewrite/rewrite.patch` |
+| `rewrite:run` local apply | Developers need a way to actually apply recipe fixes locally before pushing | LOW | `./mvnw rewrite:run` — modifies files in-place, commit the result |
+| Active recipe selection | The plugin is useless without at least one recipe selected; must choose the right set | LOW | Configured in `<activeRecipes>` in pom.xml; recipe artifact added as plugin `<dependency>` |
+| `CommonStaticAnalysis` recipe | Covers 60+ common Java code quality issues — the most valuable day-one recipe | MEDIUM | Requires `org.openrewrite.recipe:rewrite-static-analysis` as plugin dependency |
+| Spring Boot best-practices recipe | `SpringBoot3BestPracticesOnly` (not the upgrade recipe) applies Spring-specific code patterns | LOW | Part of `rewrite-spring` artifact; does NOT trigger version upgrades — safe to run on existing SB4 code |
 
-### Differentiators (Optional Hardening)
+### Differentiators
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Build-time guard preventing fragment-parameter ternaries | Stops the regression class from coming back. Without a guard, the next contributor re-introduces the pattern in months | MEDIUM | **Recommended approach: simple regex grep gate via Maven `exec-maven-plugin`** running a shell/Groovy script that fails the build if `templates/**/*.html` contains a `th:(replace|insert)\s*=.*\?.*:.*` pattern at the fragment-call site. Lighter than a full Maven Enforcer custom rule (which requires a separate Maven module, see [Maven Enforcer custom rule docs](https://maven.apache.org/enforcer/enforcer-api/writing-a-custom-rule.html)) |
-| Maven Enforcer custom rule | More structured / discoverable than a shell script | HIGH | Requires its own module, packaging, and rule registration. Overkill for a single-pattern check. **Recommend the lighter shell-based grep gate** |
-| Pre-commit hook (e.g. `lefthook`, `pre-commit`) running the same regex | Catches the issue before CI | LOW (incremental) | Optional, complements the build-time guard. The project already has the .pre-commit pattern from other linting (CSS / inline styles per CLAUDE.md) — extending is cheap |
-| New Actuator endpoints exposed to admin UI | The 4.0.6 release notes mention security-filter-chain rule adjustments — worth checking if `/actuator/health` behavior changes for the prod profile | LOW | Per [the 4.0.6 announcement](https://spring.io/blog/2026/04/23/spring-boot-4-0-6-available-now/), no new user-facing Actuator endpoints; only internal CVE fixes. **No work expected here.** |
+| `UpgradeToJava25` recipe pre-staged | Project is on Java 25 already; having the recipe configured means Java 26/27 upgrade is a one-command operation | LOW | Recipe from `rewrite-migrate-java`; no harm running dryRun now — confirms zero changes needed, proving readiness |
+| Spring Boot 4 → future community recipe | `UpgradeSpringBoot_4_0` recipe is composite and covers ~30 sub-recipes including Hibernate 7.1+, Spring Security 7+; pre-staging means next upgrade is automated | MEDIUM | Uses `rewrite-spring:6.30.4`+; community edition = free, Moderne Source Available License |
+| PR annotation workflow | Second GitHub Actions job downloads the patch file from dryRun and posts line-level code suggestions to PR as review comments — operator sees clickable one-click-accept fixes | HIGH | Requires split workflow (untrusted/trusted) for security; significant YAML complexity; nice-to-have, not required for the gate to work |
+| Custom project recipe (YAML) | Team can write a `rewrite.yml` at the project root to encode CTC-specific patterns (e.g., require `@Slf4j` on all service classes, ban `System.out`) | LOW | No Java required; purely declarative YAML; zero build overhead |
 
 ### Anti-Features
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Wholesale Thymeleaf API rewrite | "While we're upgrading, let's modernize" | Thymeleaf 3.x → 4.x is a separate, much larger migration. 3.2 fragment-parameter restriction is a tiny subset | Fix only the specific incompatibility class; defer broader Thymeleaf modernization |
-| Migrating away from Thymeleaf Layout Dialect | [Wim Deblauwe's blog](https://www.wimdeblauwe.com/blog/2026/02/25/migrating-away-from-thymeleaf-layout-dialect/) is a tempting rabbit hole | Out of milestone scope — the layout dialect is not what's broken | Address only if it surfaces as a 3.2 incompatibility (it doesn't, per project context) |
-| Preventive bump to Spring Boot 4.1.x or beyond | "Why stop at 4.0.6?" | 4.1.x has its own breaking-change profile; this milestone is hygiene-bound to 4.0.5 → 4.0.6 | Stay on the patch line; 4.1 is a future-milestone topic |
-| Auto-rewriting templates by AST transformation | "Use a Thymeleaf-aware tool to rewrite the ternaries" | The project has 3 known + at-most-a-handful-discoverable templates. Manual fix is faster and safer than tooling for ~5-10 sites | Hand-edit + tests |
+| Import-order recipe (`OrderImports`) | Looks like low-hanging fruit | Rewrites every existing import block in the codebase at once, producing a giant noisy diff that makes code review of actual logic changes impossible | Only enable if the project adopts Checkstyle import-order rules at the same time, and then enable both on the same phase so the cleanup is one batch commit |
+| `dryRun` bound to `verify` phase (always-on gate) | Seems like the logical enforcement point | Makes `./mvnw verify` significantly slower for every developer — OpenRewrite parses and analyzes all source files on every build | Run dryRun as a separate CI job only, not bound to the local verify lifecycle; keep local builds fast |
+| Spring Boot 4 → 5 upgrade recipe run immediately | OpenRewrite can do it | Spring Boot 5 is not released yet (as of 2026-05-16); running the community recipe now would apply speculative migrations against a moving target | Pre-stage the recipe config but gate it behind a comment-flag; activate only after SB5 GA |
+| Using `rewrite:run` in CI (auto-apply on PR) | Zero-effort code improvement | CI auto-committing into open PRs creates merge conflicts, breaks branch protection, and makes it impossible to reason about what changed in a PR | Use dryRun + PR comment suggestions; human applies the fix before merging |
+
+### Developer Workflow
+
+**Day-to-day (zero friction):** `./mvnw rewrite:dryRun` run as a separate CI job on every PR. If it produces a non-empty patch, the job fails and the PR is blocked. The developer runs `./mvnw rewrite:run` locally, reviews the diff (`git diff`), commits the changes, pushes again.
+
+**What the operator sees on a blocked PR:** CI check `openrewrite-dryrun` fails. In the job log: list of files that would be changed with descriptions of each violation (e.g., "Use try-with-resources instead of finally block in BackupExportService.java:142"). The `target/site/rewrite/rewrite.patch` file is uploaded as a CI artifact.
+
+**Dependencies on existing CTC infrastructure:**
+- No conflict with JaCoCo — OpenRewrite runs as a separate Maven execution, not in the test lifecycle
+- No conflict with the `exec-maven-plugin` grep-gate (PLAT-07) — that grep runs at `verify`, OpenRewrite runs in its own job
+- Maven cache in `ci.yml` (actions/setup-java cache: maven) already caches the OpenRewrite recipe JARs
 
 ---
 
-## Feature Dependencies
+## Stream 2: Clean-Code Enforcement (Checkstyle + PMD + SpotBugs)
+
+**Complexity: MEDIUM**
+
+Three complementary static analysis tools with distinct roles:
+
+- **Checkstyle:** Formatting and naming conventions (whitespace, braces, Javadoc, import order, line length)
+- **PMD:** Code-smell patterns (dead code, empty catch blocks, too-complex methods, missing braces, unnecessary object creation)
+- **SpotBugs:** Bug pattern detection (null dereferences, resource leaks, incorrect synchronization, serialization issues, security vulnerabilities)
+
+All three have Maven plugins that bind to the `verify` phase via a `check` goal and fail the build on violations.
+
+### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Build-breaking gate (`check` goal) | Without fail-on-violation, the tools are reports that developers ignore | LOW | Checkstyle: `checkstyle:check` goal; PMD: `pmd:check` goal; SpotBugs: `spotbugs:check` goal |
+| Console output of violations | Developers need to see what failed without reading XML reports | LOW | `<consoleOutput>true</consoleOutput>` in Checkstyle; PMD outputs to console by default; SpotBugs needs `<effort>Max</effort>` + `<threshold>Low</threshold>` |
+| Phase binding at `verify` | Tests must pass first; compilation must succeed before style checks run | LOW | Bind all three plugins to the `verify` phase, not `validate` — avoids spurious parse errors on code javac would have rejected anyway |
+| Rule-file committed to repo | Rules must be versioned; ad-hoc per-developer configs diverge immediately | LOW | `src/main/resources/checkstyle.xml` (or project root); PMD: `pmd-ruleset.xml`; SpotBugs: `spotbugs-exclude.xml` |
+| SpotBugs `excludeFilterFile` | SpotBugs has known false positives on Lombok-generated code (`EI_EXPOSE_REP`, `EI_EXPOSE_REP2` from `@Value` + `@Singular`) | LOW | Add `spotbugs-exclude.xml` with suppression for `EI_EXPOSE_REP` on classes annotated with Lombok annotations; also suppress `SBSC_USE_STRINGBUFFER_CONCATENATION` which fires on Lombok-generated `toString()` patterns |
+| `lombok.addLombokGeneratedAnnotation = true` in `lombok.config` | SpotBugs 4.7+ added `@javax.annotation.processing.Generated` detection — if Lombok stamps generated code with this annotation, SpotBugs can skip it | LOW | Add single line to `lombok.config` at project root; HIGH confidence this reduces false-positive noise |
+
+### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Google Java Style as Checkstyle base | Well-maintained, widely known ruleset; covers indentation, braces, naming, import order without requiring custom XML from scratch | LOW | `com.puppycrawl.tools:checkstyle` bundles `google_checks.xml`; reference via `<configLocation>google_checks.xml</configLocation>`; customize line length to 140 (Spring Boot open-source standard) |
+| PMD `pmd.xml` pointing at `category/java/bestpractices.xml` + `category/java/errorprone.xml` only | Narrower than `rulesets/java/quickstart.xml`; avoids the design and code-style categories that generate noise on a mature codebase | MEDIUM | Start narrow — it's much easier to add rules than to remove them after developers are used to passing CI |
+| SpotBugs `find-sec-bugs` plugin | Adds security-focused bug patterns (SSRF, XSS, SQL injection, insecure deserialization, XXE) on top of base SpotBugs | MEDIUM | Add `com.h3xstream.findsecbugs:findsecbugs-plugin` as a SpotBugs plugin; ~150 Java security rules; MEDIUM confidence on false-positive rate for Spring Boot apps |
+| Checkstyle `suppressions.xml` for generated/migration packages | Exclude `org.ctc.backup.io` (24 MixIns auto-generated patterns) and `org.ctc.backup.restore` (24 EntityRestorers) from Checkstyle line-length checks | LOW | `<suppressionsLocation>checkstyle-suppressions.xml</suppressionsLocation>` in Checkstyle config |
+
+### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Checkstyle import-order enforcement on existing code | Looks like a quick win for consistency | The current codebase has ~42 Java files in `org.ctc.*`; enforcing import order retroactively creates a massive noise PR that touches every file and breaks `git blame` for all history | Either skip import-order entirely (use OpenRewrite `OrderImports` as a one-time cleanup first), or suppress ImportOrder in Checkstyle and treat it as an OpenRewrite concern |
+| SpotBugs nullness analysis (NP_* rules at `Low` threshold) | Sounds valuable for catching null bugs | With Lombok `@NonNull` and Spring's `@Nullable`/`@NonNull` mix, the NP_* rules at Low threshold fire hundreds of false positives on service layer constructor parameters | Keep SpotBugs threshold at `Medium` or `High` for the initial rollout; lower only after baseline is clean |
+| PMD `AvoidDuplicateLiterals` rule | Catches repeated string literals | The test codebase has many repeated string constants like `"Test-Season 2026"` and `"T-ALF"` which are intentional isolation prefixes — the rule would fire on every test class | Suppress `AvoidDuplicateLiterals` in the PMD ruleset or scope it to `src/main/java` only via a separate execution |
+| Running all three tools on every local `./mvnw verify` | Seems like complete local parity with CI | Adds 30-60 seconds to every local verify run; developers will start skipping verify or being frustrated by the feedback loop | In `pom.xml`, bind the three `check` goals to the `verify` phase but make them CI-only via a `-Pstatic-analysis` profile; developers run `./mvnw verify` for tests, CI adds `-Pstatic-analysis` |
+| SpotBugs on test classes | Comprehensive coverage | SpotBugs fires `DM_DEFAULT_ENCODING`, `RV_RETURN_VALUE_IGNORED`, and `OBL_UNSATISFIED_OBLIGATION` on MockMvc test patterns that are intentionally ignoring return values | Exclude `src/test/**` from SpotBugs via `<sourceDirectory>` configuration or `<excludeFilterFile>` pattern |
+
+### Developer Workflow
+
+**On a clean PR:** All three `check` goals run as part of `./mvnw verify` (or the CI job). Green — no output except the normal build log.
+
+**On a failing PR:** CI `build-and-test` job fails at the verify phase. The console log shows:
+- Checkstyle: file path + line number + rule name + violation description (e.g., `BackupExportService.java:42: 'method def modifier' has incorrect indentation level 2, expected level should be 4`)
+- PMD: file + line + rule category + message (e.g., `BackupImportService.java:139 EmptyCatchBlock: Avoid empty catch blocks`)
+- SpotBugs: Bug pattern code + class + method + description (e.g., `EI_EXPOSE_REP2 in BackupManifest.getTableCounts()`)
+
+The developer fixes the violation locally, runs `./mvnw verify` (or the specific tool: `./mvnw checkstyle:check`), confirms green, commits.
+
+**Dependencies on existing CTC infrastructure:**
+- The `exec-maven-plugin` grep-gate at verify already runs before compile — static analysis plugins must be sequenced after compile (verify phase is correct)
+- JaCoCo coverage gate and static analysis gates are both in `verify`; they are independent and can both fail in the same build run (`-fae` flag shows all failures)
+- Lombok 1.18.46 with `--sun-misc-unsafe-memory-access=allow` JVM arg already in Surefire/Failsafe; SpotBugs runs in its own fork and needs the same arg added to `<jvmArgs>` in spotbugs-maven-plugin config
+- The `lombokGeneratedAnnotation` in `lombok.config` is a project-root file — if it doesn't exist, create it; if it does exist, add the line
+
+---
+
+## Stream 3: Renovate
+
+**Complexity: LOW**
+
+Renovate is a bot that opens automated PRs whenever a new version of a dependency is released. It processes `pom.xml` and GitHub Actions workflow files, groups related updates, and respects a configurable schedule. Setup requires: (1) installing the Renovate GitHub App on the repository, (2) committing a `renovate.json` configuration file.
+
+Renovate is distinct from Dependabot (GitHub's built-in dependency updater). They can coexist but create duplicate PRs for the same dependency — if the project uses Dependabot already, it should be disabled before enabling Renovate.
+
+### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Automatic PR creation on new versions | The core function; without it, Renovate is not running | LOW | Triggered by GitHub App install + `renovate.json` presence in repo root |
+| `pom.xml` dependency version extraction | The project's dependencies are in `pom.xml`; Renovate must read them | LOW | Renovate's Maven manager detects `pom.xml` automatically; handles `<version>`, `<parent>` versions, plugin versions, and BOM `import` scope |
+| GitHub Actions workflow file updates | `ci.yml`, `release.yml`, `deploy-site.yml`, `mariadb-migration-smoke.yml` use pinned action versions (e.g., `actions/checkout@v6`) — these must also be bumped | LOW | Renovate's `github-actions` manager handles `.github/workflows/*.yml` automatically |
+| Semver-aware PR separation | Major version bumps (e.g., Spring Boot 4 → 5) must not be merged automatically; they need explicit review | LOW | Default Renovate behavior: separate PRs per major/minor; `separateMajorMinor: true` is default |
+| Onboarding PR | First PR Renovate opens is the onboarding PR proposing a `renovate.json` — must be merged for Renovate to start working | LOW | If `renovate.json` is committed manually before app install, the onboarding PR is skipped |
+
+### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Spring Boot BOM grouping | Spring Boot manages dozens of transitive versions via BOM; Renovate should create one PR for the BOM bump, not 30 PRs for each transitive | LOW | `groupName: "Spring Boot"` + `matchPackagePrefixes: ["org.springframework.boot:"]` in `packageRules` |
+| Monday-only schedule | Keeps CI clear during active development; batch updates arrive at the start of the week as a predictable ritual | LOW | `"schedule": ["before 9am on Monday"]` in `renovate.json` |
+| Patch automerge after CI passes | Patch-level bumps (e.g., Guava 33.4.8 → 33.4.9) are low-risk; auto-merging them eliminates toil | LOW | `matchUpdateTypes: ["patch"]`, `automerge: true` — CI tests gate the merge |
+| Security update bypass | CVE-triggered Renovate PRs ignore the Monday schedule and open immediately | LOW | Default Renovate behavior when `vulnerabilityAlerts` is enabled — no config required |
+| Group all Playwright updates | Playwright version is coupled to the Dockerfile `eclipse-temurin` noble pin; grouping Playwright + Dockerfile base image updates ensures they arrive together | MEDIUM | Custom `packageRules` entry grouping `com.microsoft.playwright:playwright` + the Dockerfile base image |
+
+### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Major version automerge | Eliminates even more toil | Major bumps (Java 25 → 26, Spring Boot 4 → 5) require intentional migration work, not just version bumping — automerging them silently would break the build or introduce behavioral changes | Keep major PRs open for manual review; they are the trigger to run OpenRewrite migration recipes |
+| `automergeType: "branch"` (silent merges) | Reduces PR noise | Merges without a PR means CI runs, but no human sees the change; if a patch bump introduces a subtle behavioral regression, there's no PR to review or revert | Use `automergeType: "pr"` — the PR is auto-merged only after CI is green, but there is still a PR object in GitHub history for auditability |
+| Enabling Renovate alongside existing Dependabot | Using both tools | Creates duplicate PRs for the same dependency; confusing which one to merge; they can conflict on the same branch | Check `.github/dependabot.yml` — if it exists, remove or disable it before enabling Renovate |
+| `rebaseWhen: "always"` | Keeps Renovate PRs rebased on master | Causes Renovate to force-push its branches constantly, generating excessive CI runs and notifications; on an active repo this creates noise | Use `rebaseWhen: "behind-base-branch"` (the default) — only rebase when the base branch has new commits that conflict |
+| Updating `pom.xml` property versions (`<spring-boot.version>3.x`) | Renovate can do it with regex manager | Requires a custom regex manager config with datasource comments above each property — significant maintenance overhead for each pinned property | Keep version properties managed by the Spring Boot parent BOM; properties that are already resolved via BOM import don't need regex manager treatment |
+
+### Developer Workflow
+
+**Typical week:** On Monday morning (per schedule), Renovate opens 1-3 PRs:
+- One grouped PR: "Update Spring Boot" (minor or patch bump for `spring-boot-starter-parent`)
+- One PR per non-grouped library with a new version (e.g., "Update Guava to 33.4.9")
+- GitHub Actions workflow action bumps (e.g., "Update actions/checkout to v7")
+
+**PR structure:** Each Renovate PR includes a description with release notes, links to the changelog, and the specific diff in `pom.xml`. CI runs automatically. If all tests are green and it's a patch bump with automerge enabled, it merges automatically. The operator gets a GitHub notification of the auto-merge.
+
+**On a major bump PR (e.g., Java 26):** PR stays open until the operator reviews it, runs OpenRewrite migration recipes locally, and squash-merges it manually.
+
+**Dependencies on existing CTC infrastructure:**
+- Renovate reads `pom.xml` — no changes to pom.xml needed for discovery
+- The `ci.yml` concurrency block prevents multiple Renovate PRs from running CI simultaneously — this is already correct behavior
+- The Dockerfile `noble-pin-guard` CI job ensures that if Renovate bumps the `eclipse-temurin` base image version in the Dockerfile, the guard will catch any unpinned `-noble` suffix issue
+- If Dependabot is not configured (no `.github/dependabot.yml`), there is no conflict
+- Renovate GitHub App requires installation at `github.com/apps/renovate` — this is a one-time manual step by the repo owner
+
+---
+
+## Stream 4: Security SAST (CodeQL vs Semgrep)
+
+**Complexity: LOW (Semgrep OSS) / HIGH (CodeQL with GHAS)**
+
+**Critical licensing finding:** CodeQL code scanning in **private repositories requires GitHub Advanced Security (GHAS)**, which is a paid license (~$30/committer/month). The CTC Manager repo is a private single-admin repo — CodeQL is not free here.
+
+**Recommendation: Use Semgrep OSS.** Semgrep Community Edition is free for unlimited private repositories, zero cost, no token required for the OSS CLI scan mode. Trade-off: Semgrep CE performs single-file analysis only (no cross-file dataflow); CodeQL performs full semantic dataflow analysis. For a single-team admin app, Semgrep's 3,000+ community rules covering Java security patterns (SSRF, SQL injection, path traversal, XSS, insecure deserialization) are sufficient for the SAST goal.
+
+### Table Stakes
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| PR-triggered scan | SAST that only runs on push to master provides no early warning; must run on every PR | LOW | Semgrep: trigger on `pull_request` event in workflow; CodeQL: same |
+| Java security rules | The codebase is Java — language-specific rules for SSRF, SQL injection, path traversal, deserialization are required | LOW | Semgrep: `--config p/java` or `--config p/java.lang.security`; community ruleset includes Spring-specific patterns |
+| GitHub Actions workflow security scan | The CI workflows themselves (`ci.yml`, `release.yml`) should be scanned for command injection (untrusted `${{ github.event.head_commit.message }}` interpolation) | LOW | Semgrep: `--config p/github-actions`; free ruleset includes common Actions injection patterns |
+| Build-blocking on HIGH severity | LOW/MEDIUM findings should not block PRs (too much noise initially); only HIGH severity stops the merge | LOW | Semgrep: `--severity ERROR` flag in CI command; SARIF upload to GitHub Security tab for all severities |
+| SARIF report upload | Findings must be visible in GitHub Security tab, not just in CI logs | LOW | `upload-sarif` action from `github/codeql-action/upload-sarif@v3`; requires `security-events: write` permission on the workflow |
+
+### Differentiators
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| `find-sec-bugs` rules via Semgrep community | Spring Boot-specific patterns: exposed actuators, weak crypto, HTTP response splitting, open redirect — covers the exact attack surface the CTC Manager admin interface has | LOW | Already included in `p/java` ruleset; no extra configuration |
+| Scheduled full scan in addition to PR scan | PR scan covers changed files; weekly full scan covers the entire codebase including files not recently touched | LOW | Add `schedule: cron` trigger to the SAST workflow; weekly Saturday scan; upload all findings to Security tab |
+| SARIF to GitHub Security tab | Findings accumulate in the Security > Code scanning alerts tab, not just transient CI logs; operator can triage, dismiss with justification, and track which findings are addressed | LOW | Requires `security-events: write` + `github/codeql-action/upload-sarif@v3` action |
+| Suppress known false positives via `.semgrepignore` | Similar to `.gitignore`; suppress specific findings that are verified-safe so they don't re-appear on every PR | LOW | Add `.semgrepignore` at project root; suppress by file path pattern or rule ID |
+
+### Anti-Features
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| CodeQL for private repo | Deeper semantic analysis, native GitHub integration | Requires GHAS license (~$30/committer/month); private repo with 1 committer is ~$30/month minimum; overkill for a single-admin app | Semgrep OSS covers the same rule surface at zero cost; if the repo ever becomes public, switch to CodeQL for free |
+| Semgrep `--config auto` (auto-detect) | Scans everything automatically | `auto` mode sends metadata to Semgrep servers to select rules — this is a data-sharing decision; also slower than explicit rule selection | Use explicit `--config p/java --config p/github-actions` to control exactly which rules run and avoid server calls |
+| Blocking PRs on MEDIUM and LOW findings | Thorough coverage | With 3,000+ community rules, a new Java project scan will typically produce 10-50 LOW/MEDIUM findings on first run — blocking PRs on these would halt all development immediately | Start with `--severity ERROR` (HIGH only) as the blocking threshold; upload all severities to Security tab for visibility without blocking; tighten after the baseline is clean |
+| Semgrep Cloud platform token (SEMGREP_APP_TOKEN) | Enables cross-file analysis and Pro rules | Requires creating a Semgrep account and storing a secret; cross-file analysis and 20,000 Pro rules are overkill for a single-admin internal app | Semgrep OSS CLI (`semgrep scan --config p/java`) runs fully locally in CI with no external calls; sufficient for this project size |
+| Running SAST in the same CI job as `build-and-test` | Simpler workflow | SAST scan adds 30-60 seconds; if it fails it's unclear whether the failure is tests or SAST; harder to understand in the PR checks list | Run SAST as a separate GitHub Actions job (`sast` job) so failures are clearly attributed |
+
+### Developer Workflow (Semgrep OSS)
+
+**On a clean PR:** `sast` CI job runs `semgrep scan -q --sarif --config p/java --config p/github-actions --severity ERROR`, outputs clean SARIF, uploads to Security tab. Job is green. Developer sees a separate green check "SAST / semgrep" in the PR checks.
+
+**On a failing PR (HIGH severity finding):** `sast` job fails. In the CI log:
+```
+[HIGH] path/to/File.java:123 (java.lang.security.audit.ssrf.UrlOpenStream) 
+  Possible SSRF via user-controlled URL
+  Found: new URL(userInput).openStream()
+```
+
+The developer inspects the finding, fixes the code pattern, pushes. Or, if it's a false positive (e.g., the URL is validated by the SSRF hostname blocklist before use), adds a `# nosemgrep: java.lang.security.audit.ssrf.UrlOpenStream` inline suppression comment.
+
+**SARIF findings in Security tab:** All findings (including MEDIUM and LOW) accumulate in GitHub Security > Code scanning alerts. The operator can triage them independently of whether they blocked a PR. Findings are linked to the specific line of code and include the rule description.
+
+**Dependencies on existing CTC infrastructure:**
+- The `sast` job needs `permissions: security-events: write, contents: read` — these are currently not in `ci.yml`; the CI workflow must add a `sast` job with these permissions, or the top-level `permissions` block must be extended (it currently has `contents: read, pull-requests: write`)
+- The existing CI concurrency block cancels in-progress runs on the same ref — the SAST job will benefit from this automatically
+- Semgrep scan does not require a running application, Maven, or JDK — it analyzes source files directly; the `sast` job can run in parallel with `build-and-test`, not after it
+- No conflict with JaCoCo, OpenRewrite, or static analysis Maven plugins — Semgrep is a separate tool that does not touch the Maven lifecycle
+
+---
+
+## Cross-Stream Feature Dependencies
 
 ```
-Cluster B (Export/Import):
+Renovate
+    └──produces──> Dependency bump PRs
+                       └──requires──> Clean-Code gates to pass (Checkstyle/PMD/SpotBugs)
+                       └──requires──> SAST to pass (Semgrep)
+                       └──requires──> OpenRewrite dryRun to pass
 
-[Export Service: write data.json + uploads to ZipOutputStream]
-    └──depends on──> [Schema Version Constant / Flyway version probe]
-    └──depends on──> [Entity ordering policy (FK-respecting topological order for serialization)]
+OpenRewrite dryRun gate
+    └──depends on──> Selected active recipes (must be chosen first)
+    └──enhances──> Clean-Code (CommonStaticAnalysis fixes what Checkstyle/PMD/SpotBugs would flag)
 
-[Import Service: parse ZIP → preview → execute]
-    └──depends on──> [Export Service]   (round-trip symmetry; tests use export → import → diff)
-    └──depends on──> [Schema Version Constant] (refuse mismatched bundles)
-    └──depends on──> [Replace-All Wipe Logic (FK-respecting reverse topological order)]
+SpotBugs (find-sec-bugs plugin)
+    └──overlaps with──> Semgrep SAST (both find security patterns)
+    └──note──> SpotBugs finds patterns in compiled bytecode; Semgrep finds patterns in source text; complementary
 
-[Preview Screen]
-    └──depends on──> [Import Service: parse-only mode]
-    └──depends on──> [Existing preview-page convention from DriverSheetImportController / CsvImportController]
-
-[Confirm + Execute]
-    └──depends on──> [Preview Screen] (no execute without preview)
-    └──depends on──> [Atomic @Transactional boundary]
-    └──depends on──> [Audit Log writer]
-
-[Audit Log writer]
-    └──independent of──> everything else (can be added at any phase, but must exist before the first real import)
-
-Cluster A (Upgrade):
-
-[pom.xml bump 4.0.5 → 4.0.6]
-    └──blocks──> [./mvnw verify -Pe2e green run]    (can't verify without bumping)
-
-[Template Audit]
-    └──independent of──> [pom.xml bump]   (audit can run before or after; suggest before, so the bump just-works)
-
-[Build-time guard (regex grep gate)]
-    └──depends on──> [Template Audit]   (can't enforce a pattern that's still violated; fix violations first)
-
-[Cluster A] ──independent of──> [Cluster B]
+Checkstyle/PMD/SpotBugs
+    └──requires──> lombok.config with addLombokGeneratedAnnotation=true
+    └──requires──> spotbugs-exclude.xml for Lombok false positives
 ```
 
-### Dependency Notes
-
-- **Export Service must come before Import Service.** Round-trip is the natural integration test (export → import → assert idempotent). Roadmapper: order exports first.
-- **Schema Version Constant is shared infrastructure.** Both Export (writes header) and Import (reads + validates header) depend on it. It's a small data-access concern (single integer constant tied to Flyway version). Build it as Phase-1 sub-task before either service.
-- **Preview Screen depends on Import Service in parse-only mode.** Reuse `DriverSheetImportService.preview()` pattern: stateless parse, return DTOs to controller, render Thymeleaf. The "preview must come after data-extraction service" dependency the consumer flagged is exactly this.
-- **Audit Log writer is independent of UI.** Can be added in any phase. Recommend slotting it into the Import-Execute phase so the first real import is logged.
-- **Template Audit + pom.xml bump are technically independent**, but auditing first means the bump itself produces a green test run with no detective work needed. Order: audit → fix → bump → verify.
-- **Build-time guard depends on a clean tree.** Adding a regex gate while violations still exist is a permanent red build. Fix all violations first, then add the guard.
-- **Cluster A and Cluster B share no code paths.** They can be implemented in parallel (different worktrees) or interleaved. No ordering constraint between clusters.
-
 ---
 
-## MVP Definition
+## Phase Sizing Estimates
 
-The user's intent is clear from PROJECT.md: ship the platform hygiene + a usable backup/restore button for v1.10, and defer everything that's "next-milestone-grade" to v1.11+.
-
-### Launch With (v1.10)
-
-Minimum viable product — what's required to call the milestone shipped.
-
-**Cluster A:**
-- [ ] Spring Boot 4.0.5 → 4.0.6 in `pom.xml` — picks up CVE fixes
-- [ ] All known + audit-discovered fragment-parameter ternaries fixed (move to controller `pageTitle`)
-- [ ] All ~78 templates audited, audit results documented
-- [ ] `./mvnw verify -Pe2e` green on 4.0.6
-- [ ] Build-time regex guard added after fixes (lightweight, prevents regression — high ROI)
-
-**Cluster B:**
-- [ ] Export endpoint: `GET /admin/backup/export` → streaming ZIP (`data.json` + `uploads/`)
-- [ ] JSON header: `schemaVersion`, `appVersion`, `exportDate`
-- [ ] Entity scope per PROJECT.md (Seasons → SeasonPhases → SeasonPhaseGroups → PhaseTeams → Teams → SeasonTeams → Drivers → SeasonDrivers → PsnAlias → Matchdays → Matches → Races → RaceLineups → RaceResults → Playoffs → PlayoffMatchups → PlayoffSeeds → RaceScoring → MatchScoring)
-- [ ] Import endpoint: `POST /admin/backup/import` → preview screen → confirm screen
-- [ ] Schema-version refusal on mismatch (clear error message, no silent upgrade)
-- [ ] Replace-all transactional wipe + restore (single `@Transactional` boundary)
-- [ ] Confirm dialog with explicit "ALL operative data will be deleted" wording
-- [ ] Audit log entry per import (who, when, wiped+restored row counts per table)
-- [ ] Multipart size limit raised to 200 MB and documented
-- [ ] Round-trip integration test (export → import → assert no diff)
-
-### Add After Validation (v1.11)
-
-Features to add once the v1.10 backup feature is in production use and the operator has identified actual gaps.
-
-- [ ] **Per-season selective export/import** — explicitly deferred by user; will become urgent the first time the operator wants to merge real production season data into dev without losing dev fixtures
-- [ ] **Verify-only mode** (parse + validate, no write) — natural follow-on once preview is stable; small effort, big trust gain
-- [ ] **Diff preview in numbers** ("3 seasons would be wiped, 4 restored") — incremental UX win once preview screen exists
-- [ ] **SHA-256 checksum file in the ZIP** — defensive depth; cheap to add later
-- [ ] **`?includeUploads=false` query parameter** — only if asked; users may want a faster JSON-only export
-
-### Future Consideration (v2+)
-
-Features to defer until a different operating model emerges (multi-admin, scaled data, hosted SaaS).
-
-- [ ] **Cloud destinations (S3/GCS)** — only relevant if the app moves off self-host
-- [ ] **Scheduled backups** — only relevant if there's a second operator who'd benefit from "set and forget"
-- [ ] **Multi-format export (CSV/SQL)** — only relevant if a non-CTC consumer of the data emerges
-- [ ] **Background async with progress polling** — only relevant at 10× current data volume
-- [ ] **In-app backup history viewer** — only relevant if scheduled backups land first
-- [ ] **Encryption at rest** — only relevant if multi-tenant or hosted
-
----
-
-## Feature Prioritization Matrix
-
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Spring Boot 4.0.5 → 4.0.6 bump | HIGH (8 CVE fixes) | LOW | P1 |
-| Fragment-parameter ternary fix in 3 known templates | HIGH (unblocks the bump) | LOW | P1 |
-| Full template audit | MEDIUM (catches future surprises) | LOW | P1 |
-| Export endpoint + ZIP packaging | HIGH (the headline feature) | MEDIUM | P1 |
-| `data.json` schema header | HIGH (gate for safe import) | LOW | P1 |
-| Import endpoint + preview screen | HIGH (the other half of the headline feature) | MEDIUM-HIGH | P1 |
-| Schema-version refusal | HIGH (blast-radius reduction) | LOW | P1 |
-| Replace-all transactional restore | HIGH (data integrity) | MEDIUM | P1 |
-| Confirm dialog + destructive-action warning | HIGH (saves the user from themselves) | LOW | P1 |
-| Audit log per import | MEDIUM (post-incident forensics) | LOW-MEDIUM | P1 |
-| Build-time regex guard for fragment-parameter ternaries | MEDIUM (regression prevention) | LOW | P1 |
-| Multipart size limit 200 MB | HIGH (without it, real imports fail) | LOW | P1 |
-| Round-trip integration test | HIGH (proves the feature works end-to-end) | LOW-MEDIUM | P1 |
-| Verify-only "validate this ZIP" mode | MEDIUM | LOW | P2 |
-| SHA-256 checksum file | LOW-MEDIUM | LOW | P2 |
-| Diff preview row-count comparison | MEDIUM | MEDIUM | P2 |
-| Per-season selective export | HIGH (long-term) | HIGH | P3 (deferred to v1.11) |
-| Cloud destinations / scheduled / multi-format | LOW | HIGH | P3 (anti-feature for v1.10) |
-| Maven Enforcer custom rule (vs. regex grep) | LOW (over-engineered) | HIGH | P3 (anti-feature; pick regex grep) |
-
-**Priority key:**
-- **P1:** Must have for v1.10 launch
-- **P2:** Should have, candidate for v1.11
-- **P3:** Defer or never
-
----
-
-## Competitor Feature Analysis
-
-The user explicitly cited GitLab Project Export, GitHub Migrations API, and Discourse backup as reference points. Here's what each does and what translates to a Thymeleaf-server-rendered admin UI.
-
-| Feature | GitLab Project Export | Discourse `/admin/backups` | GitHub Migrations API | Our v1.10 Approach |
-|---------|----------------------|---------------------------|----------------------|--------------------|
-| Trigger | Async background job; user gets email when done | Async background job; live progress log streams in admin UI | API-only; pure async with polling endpoint | **Sync streaming ZIP response.** Data volume is small enough that sub-second download is feasible. No async machinery. |
-| File format | Tarball (`.tar.gz`) of NDJSON + repo bundle + uploads | `.tar.gz` of SQL dump + uploads | `.tar.gz` of Git bundles + JSON metadata | **ZIP** (Java-native, no extra deps) of `data.json` + `uploads/` |
-| Header / version | `VERSION` file in tarball | `metadata.json` with version + plugin list | `schema.json` per archive | **JSON top-level header** (`schemaVersion`/`appVersion`/`exportDate`) |
-| Restore preview | None — restore is "trust the file" | None — but restore writes to a staging DB first, then atomic-swaps | None — destination repo is created fresh, no overwrite risk | **Full preview screen with per-table wipe + restore counts** (mirrors `CsvImportController` / `DriverSheetImportController` pattern) |
-| Confirmation | None for export; restore is admin-only via API | "Are you sure?" modal with site name as type-to-confirm | None | **JS confirm() with explicit "delete ALL operative data" wording** (mirrors `DriverMergeController`) |
-| Atomicity | Restore creates a new project, then renames | Restore is atomic via DB swap | New repo per migration | **`@Transactional` replace-all** (one boundary, all-or-nothing) |
-| Schema check | Refuses if export-version > current | Refuses if version mismatch | Version-tagged archives | **Refuse mismatched `schemaVersion` with explicit error message** |
-| Audit / log | Audit events in admin log | Backup log file + UI viewer | Migration log via API | **`import_audit_log` table or append-only log file** with per-table counts |
-| Cloud destinations | S3/GCS configurable | S3/local | GitHub-managed only | **Local download only** (anti-feature) |
-| Selective | Per-project | Whole-instance only | Per-repo or per-org | **Whole-DB only in v1.10**, per-season deferred |
-
-**Key observations:**
-- Our scale (single admin, ≤100 races, ≤200 MB uploads) makes us **simpler than all three** competitors. They all have async/progress machinery we don't need.
-- The **preview screen** is our project's own convention (CsvImportController, DriverSheetImportController, gt7-sync-preview), and it's actually a *better* UX than GitLab/Discourse, which trust the file blindly. Don't drop it for "consistency with the big tools" — keep the preview.
-- The **type-to-confirm** Discourse pattern is overkill for a single-admin tool. JS `confirm()` is the right level.
-- The **schema-version header** is universally adopted across all three references — strongly validates including it as table stakes.
-
----
-
-## UI Patterns That Translate to Thymeleaf
-
-Constraint from CLAUDE.md: server-rendered Bootstrap-style admin templates, no SPA framework, CSS classes only (no inline styles), reuse existing patterns from `admin.css`. Mapping each backup/restore UI element to an existing precedent in the codebase:
-
-| UI Element | Existing Precedent | Reuse As-Is |
-|------------|-------------------|-------------|
-| Single export button on admin nav | "Drivers Import" button on `/admin/drivers` toolbar (Phase 54) | Same toolbar pattern with a `Backup` button group |
-| Upload form with multipart file input | `gt7-sync.html` Google-Sheet-URL form, `import.html` for CSV upload | Direct copy of the form structure with `enctype="multipart/form-data"` |
-| Preview table with per-bucket counts | `driver-import-preview.html` (6 bucket tables, Phase 55) | Reuse the table-per-entity pattern; one table per domain entity with row counts |
-| Confirm-execute screen | `gt7-sync-preview.html` confirm step, `driver-merge.html` confirm | Same hidden-form-with-token + JS `confirm()` pattern |
-| Destructive-action warning banner | `driver-merge.html` warns about FK reassignment | Reuse the `.alert-danger` styling for "this will wipe all operative data" |
-| Flash-message feedback | `successMessage` / `errorMessage` flash attributes (project convention) | Standard pattern — no new infra |
-| Audit log viewer (if shown in UI) | None today | New page (low priority); for v1.10 a simple text log file is sufficient |
-| Progress indicator | None today (no async ops in admin UI) | Not needed at our scale; sync request is fine |
-
-**Recommendation:** Don't invent new UI patterns. Every screen of the backup/restore feature has a 1:1 precedent in the existing admin templates. This is also a derisking signal — the v1.8 driver-import flow is the closest analogue and was implemented in 2 days.
+| Stream | Estimated Phase Effort | Key Tasks |
+|--------|----------------------|-----------|
+| OpenRewrite | 1 phase, LOW-MEDIUM | Add plugin to pom.xml, select active recipes, add CI job, run cleanup batch, commit results |
+| Clean-Code (Checkstyle + PMD + SpotBugs) | 1-2 phases, MEDIUM | Configure all 3 plugins with correct rules, fix initial violations (may be a separate cleanup wave), add suppression files for Lombok |
+| Renovate | 1 phase, LOW | Install GitHub App, commit renovate.json with grouping+schedule, verify onboarding PR, disable Dependabot if present |
+| Security SAST (Semgrep) | 1 phase, LOW | Add `sast` job to ci.yml with Semgrep scan + SARIF upload, fix initial HIGH findings (likely 0-2 given existing security hardening) |
 
 ---
 
 ## Sources
 
-- [GitLab Project Import/Export documentation](https://docs.gitlab.com/user/project/settings/import_export/) — observe their explicit warning that project exports are not for backup; informs our schema-version-strict approach
-- [GitLab Backup/Restore docs](https://docs.gitlab.com/administration/backup_restore/) — full-instance reference for replace-all semantics
-- [Discourse backup admin UI thread](https://meta.discourse.org/t/manually-create-and-restore-discourse-backups/18273) — `/admin/backups` is the type-to-confirm UX reference
-- [Discourse "create, download, restore" thread](https://meta.discourse.org/t/create-download-and-restore-a-backup-of-your-discourse-database/122710) — closest UX peer, confirms the single-button pattern
-- [Spring Boot 4.0.6 release announcement](https://spring.io/blog/2026/04/23/spring-boot-4-0-6-available-now/) — 65 bug fixes, 8 CVEs (TLS hostname verification for Elasticsearch/RabbitMQ/Cassandra, DevTools timing-attack fix, temp-dir ownership verification, PRNG strength improvement, security-filter-chain rule adjustments, PID file symlink-following prevention)
-- [Spring Boot 4.0.6 GitHub milestone #422](https://github.com/spring-projects/spring-boot/milestone/422) — full per-issue list (referenced; not enumerated in the announcement)
-- [Spring Boot 4.0 Migration Guide](https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide) — broader context for 4.x line
-- [Thymeleaf 3.1: What's new and how to migrate](https://www.thymeleaf.org/doc/articles/thymeleaf31whatsnew.html) — origin of the SpEL-restriction change-class that now bites fragment-parameter ternaries
-- [Thymeleaf releases page](https://www.thymeleaf.org/releasenotes.html) — current 3.1.5.RELEASE; 3.2 series ships through Spring Boot 4.x dependency management
-- [Wim Deblauwe — Migrating away from Thymeleaf Layout Dialect (2026)](https://www.wimdeblauwe.com/blog/2026/02/25/migrating-away-from-thymeleaf-layout-dialect/) — anti-feature reference (out-of-scope rabbit hole)
-- [Maven Enforcer — Writing a custom rule](https://maven.apache.org/enforcer/enforcer-api/writing-a-custom-rule.html) — confirms why the heavyweight option is overkill for our single-pattern check
-- [Baeldung — Serve a ZIP File With Spring Boot](https://www.baeldung.com/spring-boot-requestmapping-serve-zip) — `ZipOutputStream` streaming reference for the export endpoint
-- [Spring Guides — Uploading Files](https://spring.io/guides/gs/uploading-files/) — multipart upload pattern for the import endpoint
-- Project's own PROJECT.md (`v1.10 Spring Boot Upgrade & Data Export/Import` section) — definitive scope and decisions
-
-In-codebase references (existing patterns that the new feature should mirror):
-
-- `/Users/jegr/Documents/github/ctc-manager/src/main/java/org/ctc/admin/controller/DriverSheetImportController.java` — the closest UX analogue (preview → confirm → execute)
-- `/Users/jegr/Documents/github/ctc-manager/src/main/java/org/ctc/admin/service/DriverSheetImportService.java` — `@Transactional execute()` with mutable `ExecuteResult` accumulator; same shape works for our import service
-- `/Users/jegr/Documents/github/ctc-manager/src/main/resources/templates/admin/driver-import-preview.html` — the per-bucket table-rendering pattern
-- `/Users/jegr/Documents/github/ctc-manager/src/main/resources/templates/admin/gt7-sync-preview.html` — confirm-step pattern with hidden form
-- `/Users/jegr/Documents/github/ctc-manager/src/main/resources/templates/admin/driver-merge.html` — destructive-action JS confirm pattern
-- `/Users/jegr/Documents/github/ctc-manager/src/main/resources/templates/admin/match-scoring-form.html` (line 3) — known broken fragment-parameter ternary
-- `/Users/jegr/Documents/github/ctc-manager/src/main/resources/templates/admin/race-scoring-form.html` (line 3) — known broken fragment-parameter ternary
-- `/Users/jegr/Documents/github/ctc-manager/src/main/resources/templates/admin/season-phase-form.html` (line 3) — known broken fragment-parameter ternary
+- [OpenRewrite Maven Plugin docs](https://docs.openrewrite.org/reference/rewrite-maven-plugin) — HIGH confidence, official
+- [Migrate to Java 25 recipe](https://docs.openrewrite.org/recipes/java/migrate/upgradetojava25) — HIGH confidence, official
+- [CommonStaticAnalysis recipe](https://docs.openrewrite.org/recipes/staticanalysis/commonstaticanalysis) — HIGH confidence, official
+- [Spring Boot 4.0 upgrade recipe](https://docs.openrewrite.org/recipes/java/spring/boot4/upgradespringboot_4_0-community-edition) — HIGH confidence, official
+- [OpenRewrite dryRun as CI gate](https://www.moderne.ai/blog/stop-breaking-ci-annotate-prs-with-openrewrite-recipe-fixes-as-quality-gate) — MEDIUM confidence, Moderne blog
+- [Renovate Maven manager docs](https://docs.renovatebot.com/modules/manager/maven/) — HIGH confidence, official
+- [Renovate Java docs](https://docs.renovatebot.com/java/) — HIGH confidence, official
+- [Renovate configuration options](https://docs.renovatebot.com/configuration-options/) — HIGH confidence, official
+- [Apache Maven Checkstyle Plugin usage](https://maven.apache.org/plugins/maven-checkstyle-plugin/usage.html) — HIGH confidence, official
+- [SpotBugs Maven plugin](https://spotbugs.readthedocs.io/en/stable/maven.html) — HIGH confidence, official
+- [SpotBugs false positive with Lombok @Singular](https://github.com/spotbugs/spotbugs/issues/2140) — MEDIUM confidence, GitHub issue
+- [PMD Java support and version compatibility](https://pmd.github.io/pmd/pmd_languages_java.html) — HIGH confidence, official (PMD 7.x supports Java 25+)
+- [CodeQL private repo requires GHAS](https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning-with-codeql) — HIGH confidence, official GitHub docs
+- [Semgrep CE free for private repos](https://appsecsanta.com/semgrep) — MEDIUM confidence, third-party review (corroborated by Semgrep OSS LGPL-2.1 license)
+- [Semgrep vs CodeQL comparison](https://konvu.com/compare/semgrep-vs-codeql) — MEDIUM confidence, third-party analysis
+- [CodeQL GitHub Actions permissions](https://github.com/github/codeql-action) — HIGH confidence, official
 
 ---
-*Feature research for: CTC Manager v1.10 — Spring Boot 4.0.6 upgrade + Admin Data Export/Import*
-*Researched: 2026-05-09*
+
+*Feature research for: v1.11 Tooling Infrastructure (OpenRewrite, Clean-Code, Renovate, SAST)*
+*Researched: 2026-05-16*

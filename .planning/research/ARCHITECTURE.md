@@ -1,705 +1,779 @@
-# Architecture Research — v1.10 Spring Boot 4.0.6 Upgrade & Backup Export/Import
+# Architecture Research — v1.11 Tooling Infrastructure & Tech-Debt Sweep
 
-**Domain:** Internal admin tool for sports league management (Spring Boot 4 / Thymeleaf MVC / MariaDB)
-**Researched:** 2026-05-09
-**Confidence:** HIGH (existing 3-tier architecture is well-documented; new components plug in via established patterns. Spring Boot 4.0.6 verified as patch-level release with no SPI/auto-config changes affecting MVC/JPA/Thymeleaf consumers.)
+**Domain:** Internal admin tool for sports league management (Spring Boot 4 / Maven / GitHub Actions CI)
+**Researched:** 2026-05-16
+**Confidence:** HIGH (all four tooling integrations verified against official docs and starter workflows; test-wallclock patterns verified against Zalando engineering blog and Spring documentation)
 
 ---
 
 ## Scope of This Research
 
-Two related but architecturally orthogonal pieces of work:
+Four tooling streams wire into the existing single-module Maven project and its GitHub Actions CI:
 
-1. **Spring Boot 4.0.5 → 4.0.6 upgrade** — POM-only change plus a Thymeleaf-3.2 template audit driven by the v1.9 abort lesson. Architecture impact: essentially zero (see §10).
-2. **Backup Export/Import feature** — new feature module under `org.ctc.backup` mirroring `org.ctc.dataimport` package shape. Adds ~6 new files and modifies ~3 (admin layout nav entry, `WebConfig` if a download endpoint needs streaming tweaks, `application.yml` for backup settings).
+1. **OpenRewrite** — Maven plugin invocation, recipe activation, dry-run + apply modes
+2. **Clean Code (Checkstyle / PMD / SpotBugs)** — Maven verify-phase enforcement, suppression files, rule-set sourcing
+3. **Renovate** — dependency update bot, config file location, grouping strategy, scheduling
+4. **SAST (CodeQL / Semgrep)** — GitHub Actions workflow structure, scan triggers, Java-specific configuration
 
-The bulk of the document focuses on the new Backup feature because that is where architectural decisions live.
-
----
-
-## 1. System Overview — Where Backup Plugs In
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│  Admin UI (Thymeleaf)                                               │
-│                                                                     │
-│  ┌─────────────────────┐                                            │
-│  │ admin/backup.html   │  GET /admin/backup            (form)       │
-│  │ admin/backup-       │  POST /admin/backup/export    (download)   │
-│  │   preview.html      │  POST /admin/backup/import-preview         │
-│  │                     │  POST /admin/backup/import-execute         │
-│  └──────────┬──────────┘                                            │
-└─────────────┼───────────────────────────────────────────────────────┘
-              │
-┌─────────────┼───────────────────────────────────────────────────────┐
-│  Controller │ org.ctc.backup                                         │
-│             ▼                                                        │
-│  ┌─────────────────────────┐                                         │
-│  │ BackupController         │  thin handlers, multipart upload,      │
-│  │ (3 POST + 1 GET)         │  StreamingResponseBody for export      │
-│  └──────┬─────────────┬─────┘                                        │
-│         │             │                                              │
-└─────────┼─────────────┼──────────────────────────────────────────────┘
-          ▼             ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  Service Layer (business logic)                                      │
-│                                                                      │
-│  ┌─────────────────────────┐   ┌─────────────────────────┐           │
-│  │ BackupExportService      │   │ BackupImportService     │           │
-│  │ - collect entities       │   │ - parse ZIP             │           │
-│  │ - build manifest         │   │ - validate manifest     │           │
-│  │ - serialize JSON         │   │ - build preview         │           │
-│  │ - copy referenced files  │   │ - wipe + restore (TX)   │           │
-│  │ - stream ZIP             │   │ - restore upload tree   │           │
-│  └────┬─────────┬──────┬────┘   └──┬─────────┬─────────┬──┘           │
-│       │         │      │           │         │         │              │
-│       │         │      ▼           │         │         ▼              │
-│       │         │  ┌──────────────────────────┐    ┌──────────────┐  │
-│       │         │  │ BackupArchiveService     │    │ BackupSchema │  │
-│       │         │  │ (ZIP read/write,         │    │ (constants:  │  │
-│       │         │  │  StreamingResponseBody)  │    │ schema_ver,  │  │
-│       │         │  └──────────────────────────┘    │ entity ord.) │  │
-│       │         │                                  └──────────────┘  │
-│       │         ▼                                                    │
-│       │   ┌──────────────────────────┐                               │
-│       │   │ FileStorageService       │  (existing — read upload tree)│
-│       │   │ + new: walkUploads(),    │                               │
-│       │   │   restoreUploads()       │                               │
-│       │   └──────────────────────────┘                               │
-│       ▼                                                              │
-│  ┌──────────────────────────────────────────────────────┐            │
-│  │ Existing repositories (findAll + bulk deleteAll)     │            │
-│  │ Season / SeasonPhase / SeasonPhaseGroup / PhaseTeam  │            │
-│  │ Team / SeasonTeam / Driver / SeasonDriver / PsnAlias │            │
-│  │ Matchday / Match / Race / RaceLineup / RaceResult    │            │
-│  │ Playoff / PlayoffRound / PlayoffMatchup / PlayoffSeed│            │
-│  │ RaceScoring / MatchScoring / RaceSettings / RaceAtt. │            │
-│  └──────────────────────────────────────────────────────┘            │
-└──────────────────────────────────────────────────────────────────────┘
-                       │
-                       ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│  Persistence + Filesystem                                             │
-│  MariaDB / H2 (Flyway-managed)        data/{profile}/uploads/        │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-### Layer-by-layer integration
-
-| Layer | New | Modified | Reused as-is |
-|-------|-----|----------|--------------|
-| Templates | `templates/admin/backup.html`, `templates/admin/backup-preview.html` | `templates/admin/layout.html` (sidebar entry) | layout fragment |
-| Controller | `org.ctc.backup.BackupController` | none | `GlobalExceptionHandler` catches typed exceptions |
-| Service (orchestration) | `BackupExportService`, `BackupImportService`, `BackupArchiveService` | none | `FileStorageService` extended (additive methods) |
-| DTO | `BackupManifest`, `BackupBundle`, `BackupPreview`, `BackupSchema` | none | n/a |
-| Repository | none | none | all 22 existing repositories — `findAll()` + `deleteAllInBatch()` |
-| Entity | none | none | every operative entity used as-is via Jackson MixIns (§3) |
-| Config | `application.yml`: `app.backup.*` block | none | profile YAMLs unchanged |
-
-This is the same shape as `org.ctc.dataimport` (controller + 1-3 services + DTO records), which is the project's blessed feature-module pattern (validated in v1.5/v1.8).
+Plus an architectural section on test-wallclock reduction (Phase 79 carried-over debt).
 
 ---
 
-## 2. Service Layer Decomposition
+## 1. OpenRewrite Integration
 
-**Decision:** **Two orchestrators (Export + Import) + one shared archive helper + one schema constant — NO Strategy pattern.**
+### Plugin Coordinates
 
-### Why no per-entity Exporter/Importer
+```xml
+<plugin>
+  <groupId>org.openrewrite.maven</groupId>
+  <artifactId>rewrite-maven-plugin</artifactId>
+  <version>6.40.0</version>
+  ...
+</plugin>
+```
 
-A Strategy pattern (one `EntityExporter<T>` per entity) would buy nothing for this scope:
+Current stable version: **6.40.0** (published 2026-05-07). [Confidence: HIGH — verified against Maven Central and official plugin info page.]
 
-- 22 operative entity types — small enough that a single ordered list is readable.
-- All entities share the same serialization path (Jackson + MixIns); per-entity logic does not exist.
-- Order matters for deletes/inserts — putting that order in a strategy registry hides what is fundamentally a sequential process.
-- Test surface explodes (22 strategy beans × 2 directions = 44 test classes vs. 2 services).
+### Available Goals
 
-The entity ordering lives in `BackupSchema` as a single ordered list (see §5). The two services iterate that list.
+| Goal | What It Does | Forks Lifecycle? |
+|------|-------------|-----------------|
+| `rewrite:dryRun` | Prints diff to console; generates patch report in `target/`; no file changes | yes |
+| `rewrite:dryRunNoFork` | Same as dryRun but does NOT fork the Maven lifecycle | no |
+| `rewrite:run` | Applies changes to source files in place | yes |
+| `rewrite:runNoFork` | Same as run but does NOT fork the Maven lifecycle | no |
+| `rewrite:discover` | Lists available recipes on the classpath | no |
 
-### Why two services not one
+### Configuration Options
 
-`BackupExportService` and `BackupImportService` have different transactional shapes:
+| Option | Purpose |
+|--------|---------|
+| `activeRecipes` | Recipe names to execute (e.g., `org.openrewrite.java.cleanup.CommonStaticAnalysis`) |
+| `activeStyles` | Named code-style configurations to apply |
+| `configLocation` | Path to `rewrite.yml` / `rewrite.yaml` config file (default: `rewrite.yml` in project root) |
+| `failOnDryRunResults` | When `true`, fails the build if dryRun detects any changes — useful as a CI gate |
+| `exclusions` | Glob patterns to skip (e.g., `src/main/resources/**` to skip non-Java files) |
 
-- Export: `@Transactional(readOnly = true)`, streams output, never mutates DB.
-- Import: `@Transactional` (write), wipes + restores, file-system mutation, must roll back atomically.
+### Integration Pattern for CTC
 
-Mixing read-only orchestration with write-orchestration in one bean creates exactly the kind of God-Service that Phase 3 of v1.0 split apart (`RaceManagementService`).
+**Recommended approach:** Manual invocation only, NOT bound to the standard lifecycle. Binding `rewrite:dryRun` to `verify` with `failOnDryRunResults=true` would fail every `./mvnw verify` until all violations are fixed — that's hostile during active development. Instead:
 
-### Repository reuse vs. EntityManager streaming
+- Keep the plugin in `<pluginManagement>` (not `<build><plugins>`) so it's available without auto-executing.
+- Activate via a dedicated Maven profile (`-Prewrite`) or explicit goal invocation.
+- CI calls `mvn rewrite:dryRun -DfailOnDryRunResults=true` in its own job (not bundled into the existing `build-and-test` job).
 
-**Decision: reuse existing `Repository.findAll()` for v1.10 MVP.**
+```xml
+<!-- pom.xml: place in <pluginManagement> NOT in <build><plugins> -->
+<plugin>
+  <groupId>org.openrewrite.maven</groupId>
+  <artifactId>rewrite-maven-plugin</artifactId>
+  <version>6.40.0</version>
+  <configuration>
+    <activeRecipes>
+      <recipe>org.openrewrite.java.cleanup.CommonStaticAnalysis</recipe>
+      <recipe>org.openrewrite.java.format.AutoFormat</recipe>
+    </activeRecipes>
+    <configLocation>${project.basedir}/rewrite.yml</configLocation>
+    <exclusions>
+      <exclusion>src/main/resources/**</exclusion>
+    </exclusions>
+  </configuration>
+  <dependencies>
+    <!-- Recipe libraries go here when non-core recipes are used -->
+    <dependency>
+      <groupId>org.openrewrite.recipe</groupId>
+      <artifactId>rewrite-static-analysis</artifactId>
+      <version>RELEASE</version>
+    </dependency>
+  </dependencies>
+</plugin>
+```
 
-Rationale and trade-off:
+**Profile-gated dry-run CI gate** (optional, for drift detection):
 
-- Largest realistic table is `RaceResult` — at ~10 drivers × 40 races/season × 5 seasons = ~2 000 rows. Trivial.
-- `findAll()` returns entities with managed lazy associations — Jackson + `@JsonIdentityInfo` (or MixIn equivalent) follows them and uses OSIV to materialize.
-- EntityManager streaming (`Stream<T>` + `setHint("org.hibernate.fetchSize", 50)`) is the correct answer at 10⁵+ rows; CTC operative data is at most low thousands. YAGNI.
-- If FUTURE scale demands streaming, the change is local to `BackupExportService` — it's an internal refactor, not an architecture change.
+```xml
+<profile>
+  <id>rewrite-check</id>
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.openrewrite.maven</groupId>
+        <artifactId>rewrite-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>rewrite-dry-run-gate</id>
+            <phase>verify</phase>
+            <goals><goal>dryRunNoFork</goal></goals>
+            <configuration>
+              <failOnDryRunResults>true</failOnDryRunResults>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</profile>
+```
 
-### Where ZIP packaging lives
+Invoked as `mvn verify -Prewrite-check` in CI.
 
-**Decision: separate `BackupArchiveService` bean.**
+### New Files Added
 
-- Export and Import both need ZIP read + write — without a shared bean we duplicate `ZipOutputStream` / `ZipInputStream` management in two services.
-- Streaming concerns (Spring `StreamingResponseBody` for download, temp file or memory bound for upload) are I/O concerns that don't belong next to JSON serialization or transaction management.
-- `BackupArchiveService` exposes: `writeZip(BackupBundle, OutputStream)`, `readZip(InputStream) → BackupBundle`. Pure mechanics, no domain knowledge.
+| File | Purpose |
+|------|---------|
+| `rewrite.yml` | Recipe list, style configuration, project-specific overrides |
 
-### Component responsibilities
+The `rewrite.yml` lives at the project root (alongside `pom.xml`). No `.openrewrite/` sub-directory is needed for a single-module project.
 
-| Component | Responsibility | Implementation |
-|-----------|---------------|----------------|
-| `BackupController` | HTTP I/O, multipart, redirect-flash | thin: 4 handlers, no business logic |
-| `BackupExportService` | Walk DB in FK order → build `BackupBundle` (manifest + JSON + file refs) | `@Transactional(readOnly = true)`; iterates `BackupSchema.EXPORT_ORDER` |
-| `BackupImportService` | Validate manifest → preview → wipe → restore | `@Transactional` wrapping wipe+restore; preview uses re-parse on execute (D-15 from v1.8) |
-| `BackupArchiveService` | ZIP read/write, file tree mirror | uses `ZipOutputStream` / `ZipInputStream`, supports `StreamingResponseBody` |
-| `BackupSchema` | Constants: `SCHEMA_VERSION`, `EXPORT_ORDER`, `DELETE_ORDER` | static-only utility class with a record `EntityRef(Class<?>, String name)` list |
-| `BackupManifest` | DTO record: schema_version, app_version, export_date, table_counts | Jackson-serializable record |
-| `BackupBundle` | DTO: manifest + entity-data Map + file-path list | in-memory representation passed between services |
-| `BackupPreview` | DTO: parsed manifest + per-table delta (rowsToWipe vs rowsToRestore) for preview screen | record |
+### Data/Config Flow
+
+```
+developer / CI
+    ↓ mvn rewrite:dryRun (manual) OR mvn verify -Prewrite-check (CI gate)
+rewrite-maven-plugin
+    ↓ reads rewrite.yml (activeRecipes, activeStyles)
+    ↓ forks Maven lifecycle to process-test-classes (source loaded)
+    ↓ applies recipe visitors to AST
+    ↓ dryRun: writes diffs to target/rewrite/rewrite.patch
+    ↓ run: overwrites source files
+```
+
+### Build Lifecycle Attachment
+
+`rewrite:dryRun` and `rewrite:run` fork the lifecycle to `process-test-classes` before executing — they do NOT attach to the standard `verify` phase unless explicitly bound via `<executions>`. The `NoFork` variants avoid the secondary fork and are safer for profile-gated executions.
 
 ---
 
-## 3. JSON Serialization Strategy
+## 2. Clean Code (Checkstyle / PMD / SpotBugs) Integration
 
-**Decision: Jackson MixIn classes + `@JsonIdentityInfo` on the operative-entity MixIn — NOT a parallel DTO layer, NOT entity-direct annotations.**
+### Plugin Coordinates
 
-### Why MixIns over option A (entity annotations)
+| Tool | GroupId | ArtifactId | Current Version |
+|------|---------|-----------|----------------|
+| Checkstyle | `org.apache.maven.plugins` | `maven-checkstyle-plugin` | **3.6.0** |
+| PMD | `org.apache.maven.plugins` | `maven-pmd-plugin` | **3.28.0** (2025-10-07) |
+| SpotBugs | `com.github.spotbugs` | `spotbugs-maven-plugin` | **4.9.8.3** |
 
-Adding `@JsonIdentityInfo`, `@JsonIgnore`, `@JsonManagedReference` directly to entities pollutes the domain model with serialization concerns that exist for one feature (backup). The v1.5 cleanup (Phase 32 — RaceGraphicService relocated) explicitly fought this kind of layering violation.
+[Confidence: HIGH — all three verified against official Maven plugin sites.]
 
-### Why MixIns over option B (parallel DTO layer)
+### Lifecycle Binding Recommendation
 
-A `BackupSeasonDto` + `BackupTeamDto` + … layer for ~22 entities means:
+| Tool | Recommended Phase | Why |
+|------|------------------|-----|
+| Checkstyle | `verify` | Runs after compile — javac catches syntax errors first; avoids duplicate failure messages |
+| PMD | `verify` | Same rationale — bytecode not needed, but `verify` gives compiler priority |
+| SpotBugs | `verify` | **Requires compiled bytecode** — cannot run earlier than `compile`; `verify` is canonical |
 
-- ~22 DTO records + ~22 mapper methods (`toBackupDto` / `fromBackupDto`).
-- Every entity field add forces a parallel DTO change — schema drift is a maintenance tax that the schema-version field is supposed to obviate.
-- DTOs lose JPA's `@Version` and `@CreatedDate` semantics on round-trip unless explicitly carried.
+All three bound to `verify` gives a consistent experience: `./mvnw verify` runs them all after tests pass. The existing JaCoCo `check` goal is also bound to `verify`, so the full quality gate runs together.
 
-### Why MixIns are the right middle ground
+### pom.xml Integration Pattern
 
-Mixin annotations are applied externally — domain entities stay clean, all serialization config sits in one package (`org.ctc.backup.serialization`). This is the textbook Jackson recommendation for entity serialization without modifying entities.
+```xml
+<!-- In <build><plugins> (not pluginManagement) — executes on ./mvnw verify -->
 
-```java
-// org.ctc.backup.serialization.SeasonMixIn
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-abstract class SeasonMixIn {
-    @JsonIgnore abstract LocalDateTime getCreatedAt(); // skip audit noise
-    @JsonIgnore abstract LocalDateTime getUpdatedAt();
-    @JsonIgnore abstract Integer getVersion();
-}
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-checkstyle-plugin</artifactId>
+  <version>3.6.0</version>
+  <executions>
+    <execution>
+      <id>checkstyle-gate</id>
+      <phase>verify</phase>
+      <goals><goal>check</goal></goals>
+      <configuration>
+        <configLocation>config/checkstyle.xml</configLocation>
+        <suppressionsLocation>config/checkstyle-suppressions.xml</suppressionsLocation>
+        <failsOnError>true</failsOnError>
+        <includeTestSourceDirectory>false</includeTestSourceDirectory>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-pmd-plugin</artifactId>
+  <version>3.28.0</version>
+  <executions>
+    <execution>
+      <id>pmd-gate</id>
+      <phase>verify</phase>
+      <goals><goal>check</goal></goals>
+      <configuration>
+        <rulesets>
+          <ruleset>config/pmd.xml</ruleset>
+        </rulesets>
+        <failOnViolation>true</failOnViolation>
+        <failurePriority>3</failurePriority>
+        <!-- Only fail on HIGH + MEDIUM priority violations; LOW = warning only -->
+        <includeTests>false</includeTests>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
+
+<plugin>
+  <groupId>com.github.spotbugs</groupId>
+  <artifactId>spotbugs-maven-plugin</artifactId>
+  <version>4.9.8.3</version>
+  <executions>
+    <execution>
+      <id>spotbugs-gate</id>
+      <phase>verify</phase>
+      <goals><goal>check</goal></goals>
+      <configuration>
+        <effort>Max</effort>
+        <threshold>Medium</threshold>
+        <excludeFilterFile>config/spotbugs-exclude.xml</excludeFilterFile>
+      </configuration>
+    </execution>
+  </executions>
+</plugin>
 ```
 
-`@JsonIdentityInfo` breaks bidirectional cycles (Season ↔ Matchday, Team ↔ subTeams self-ref) by emitting a full object on first encounter and an ID-reference thereafter. Reading back, Jackson rebuilds the object graph from the IDs. **This is essential** for the CTC entity graph because Season → Matchday → Match → Race → RaceResult has back-pointers throughout.
+### New Files Added
 
-### Mixin registration
+| File | Purpose |
+|------|---------|
+| `config/checkstyle.xml` | Checkstyle rule set (Google or custom, with CTC-appropriate relaxations) |
+| `config/checkstyle-suppressions.xml` | File/line-level suppressions for generated code or irreducible exceptions |
+| `config/pmd.xml` | PMD rule set referencing categories (`rulesets/java/bestpractices.xml`, etc.) |
+| `config/spotbugs-exclude.xml` | SpotBugs exclusion filter — e.g., suppress `EI_EXPOSE_REP2` for `@Getter` Lombok collections |
 
-Single `BackupObjectMapperConfig` `@Configuration` bean produces an `ObjectMapper` qualified `@Qualifier("backupObjectMapper")`. The default Spring `ObjectMapper` is untouched — backup serialization rules don't bleed into anything else.
+A `config/` directory at project root keeps all rule files separate from `src/`. This mirrors the convention used by Apache, Spring Framework, and Google's own open-source Java projects.
 
-### Concrete confidence call-out
+### Interaction with Existing Surefire/Failsafe/JaCoCo
 
-Jackson `@JsonIdentityInfo` with collections has a documented edge case: an item fully serialized in a previous iteration is emitted as ID-reference for the rest of that array. For backup this is a feature, not a bug — we want the second occurrence to be a reference, otherwise we duplicate. **MEDIUM confidence — needs an integration test that round-trips a Season with shared SeasonTeam references** (Plan-level acceptance criterion).
+The three analysis tools bind to `verify` **after** Failsafe's `default-it` execution (also at `verify`) because Maven executes `<executions>` within the same phase in declaration order, and Failsafe is declared before the new plugins. Verify the declaration order in `pom.xml` when wiring:
+
+```
+verify phase execution order (declaration order within pom.xml):
+1. jacoco:report           (existing)
+2. jacoco:check            (existing — 82% gate)
+3. failsafe:verify         (existing — IT verification)
+4. checkstyle:check        (new)
+5. pmd:check               (new)
+6. spotbugs:check          (new)
+```
+
+If declaration order causes all three analysis goals to run before JaCoCo check, the build fails for a coverage reason but shows analysis output too — acceptable. The recommended order above runs analysis after coverage gating.
+
+### Handling Existing Violations (Bootstrap Strategy)
+
+The project has ~17k LOC with zero existing Checkstyle/PMD/SpotBugs configuration. A naïve `failOnViolation=true` on first activation will produce hundreds of violations and block `./mvnw verify`. Use this staged approach:
+
+1. Run each tool in report-only mode first (`checkstyle:checkstyle`, `pmd:pmd`, `spotbugs:spotbugs`) to inventory violations.
+2. Configure `failurePriority=1` (SpotBugs HIGH only) or `maxAllowedViolations=N` as a ratchet.
+3. Suppress known-clean-but-flagged patterns via the suppression files.
+4. Tighten the gate over subsequent milestones.
+
+For v1.11, start with PMD `failurePriority=2` (HIGH violations only) and SpotBugs `threshold=High`. Checkstyle is stylistic — start with a liberal Google style config and suppress the most disruptive rules (import ordering, Javadoc requirements).
 
 ---
 
-## 4. ZIP Layout
+## 3. Renovate Integration
 
-**Decision: the proposed layout is sensible; one minor refinement.**
+### Configuration File Location
 
-```
-backup-2026-05-09T143012Z.zip
-├── manifest.json                     # schema_version, app_version, export_date, table_counts
-├── data/
-│   ├── seasons.json                  # one file per entity type
-│   ├── season_phases.json
-│   ├── season_phase_groups.json
-│   ├── phase_teams.json
-│   ├── teams.json
-│   ├── season_teams.json
-│   ├── drivers.json
-│   ├── season_drivers.json
-│   ├── psn_aliases.json
-│   ├── matchdays.json
-│   ├── matches.json
-│   ├── races.json
-│   ├── race_lineups.json
-│   ├── race_results.json
-│   ├── playoffs.json
-│   ├── playoff_rounds.json
-│   ├── playoff_matchups.json
-│   ├── playoff_seeds.json
-│   ├── race_scorings.json
-│   ├── match_scorings.json
-│   ├── race_settings.json
-│   └── race_attachments.json
-└── uploads/                          # mirror of data/{profile}/uploads/
-    ├── teams/{logo files}
-    ├── tracks/{image files}
-    ├── cars/{image files}
-    ├── race-attachments/{files}
-    └── team-cards/{generated PNGs}
-```
+Renovate searches for config files in this order (stops at first match):
 
-### Why per-entity files instead of one `data.json`
+1. `renovate.json` (project root) ← **recommended for this project**
+2. `renovate.json5`
+3. `.github/renovate.json`
+4. `.github/renovate.json5`
+5. `.renovaterc`, `.renovaterc.json`, `.renovaterc.json5`
 
-The PROJECT.md Goal section proposed `data.json` (single document). Recommendation: **split per-entity** for three reasons:
+**Recommendation: use `renovate.json` at the project root.** It is the most discoverable location, matches what GitHub's Dependency Graph UI expects, and is the canonical default that Renovate's Getting Started docs demonstrate.
 
-1. **Streaming-friendly read** — `BackupArchiveService.readZip()` can stream entry-by-entity, parse, dispatch. With one giant `data.json` we either load it all into memory or use a streaming Jackson parser, which is harder to reason about and harder to test.
-2. **Diagnosability** — when a backup is malformed or partially incompatible, "race_results.json failed at row 1432" is actionable; "data.json failed somewhere" is not.
-3. **Selective import (future)** — opens the door to per-entity-class restoration without forcing v1.10 to ship that feature now.
+[Confidence: HIGH — verified against official Renovate configuration-options docs.]
 
-The schema-version + manifest still gates the whole archive — there is no per-file versioning.
+### How Renovate Runs
 
-### Manifest content
+Renovate is not a Maven plugin. It runs as a GitHub App or self-hosted bot:
+
+1. **GitHub App (recommended):** Install the Renovate GitHub App on the repository. Renovate's cloud infrastructure runs the bot on schedule and on PR events. No GitHub Actions runner cost, no CI time consumed.
+2. **Self-hosted via GitHub Actions:** A dedicated `renovate.yml` workflow uses the `renovatebot/github-action` action. Runs on a cron schedule.
+
+For CTC (single-person project), the GitHub App approach is simpler — no workflow file needed.
+
+### Recommended `renovate.json` for CTC
 
 ```json
 {
-  "schema_version": 1,
-  "app_version": "1.10.0",
-  "export_date": "2026-05-09T14:30:12Z",
-  "table_counts": {
-    "seasons": 12, "season_phases": 14, "matches": 543, "race_results": 4216, ...
-  },
-  "uploads_count": 87,
-  "uploads_total_bytes": 12546321
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "enabledManagers": ["maven", "github-actions"],
+  "schedule": ["before 6am on Monday"],
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "Group Spring Boot starters together",
+      "matchPackagePatterns": ["^org\\.springframework\\.boot:"],
+      "groupName": "Spring Boot",
+      "automerge": false
+    },
+    {
+      "description": "Group Google API client libraries",
+      "matchPackagePatterns": ["^com\\.google\\."],
+      "groupName": "Google API clients"
+    },
+    {
+      "description": "Group Testcontainers",
+      "matchPackagePatterns": ["^org\\.testcontainers:"],
+      "groupName": "Testcontainers"
+    },
+    {
+      "description": "Automerge patch-only dependency updates after CI passes",
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeSchedule": ["after 9am and before 5pm on weekdays"]
+    },
+    {
+      "description": "Pin GitHub Actions to SHA",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    }
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"]
+  }
 }
 ```
 
-### Anti-feature: no SQL dump
+### New Files Added
 
-Tempting to ship a `mysqldump`-style SQL file as belt-and-suspenders. Don't — H2 vs MariaDB SQL diverges, the whole point of going through JPA is database-portability. A SQL dump would tie the backup to MariaDB and break the dev-prod migration use case.
+| File | Purpose |
+|------|---------|
+| `renovate.json` | Renovate bot configuration at project root |
+
+No workflow file is needed if using the GitHub App approach. If self-hosted:
+
+| File | Purpose |
+|------|---------|
+| `.github/workflows/renovate.yml` | Cron-scheduled workflow running `renovatebot/github-action` |
+
+### Grouping Strategy Rationale
+
+CTC has three natural dependency groups:
+
+1. **Spring Boot** — all `org.springframework.boot:*` should be upgraded together (auto-imported BOM coordinates).
+2. **Google API clients** — `google-api-client`, `google-api-services-*`, `google-auth-library-*` share a release cadence.
+3. **Testcontainers** — already managed via BOM; Renovate should update the BOM version as a group.
+
+Everything else (Lombok, Jsoup, commons-text, Playwright, Guava) gets individual PRs.
+
+### Data/Config Flow
+
+```
+Renovate bot (GitHub App or cron workflow)
+    ↓ reads renovate.json from master branch
+    ↓ scans pom.xml for dependency versions
+    ↓ checks Maven Central / registry for newer versions
+    ↓ creates PRs against master (one per group or one per dependency)
+CI (existing build-and-test job)
+    ↓ triggered by Renovate PR
+    ↓ ./mvnw verify (unit + integration tests)
+    ↓ if green: automerge (for patch updates) or manual review (for minor/major)
+```
+
+Renovate PRs go through the same CI gate as developer PRs — no special treatment needed.
 
 ---
 
-## 5. Import Flow Integration with Existing Patterns
+## 4. SAST (CodeQL / Semgrep) Integration
 
-### Reuse the v1.8/CsvImportController preview-state pattern (D-15 lesson)
+### CodeQL
 
-The CTC project has a hard-won lesson from v1.8 (`CsvImportController` + `DriverSheetImportController`): **stateless preview controllers re-parse on execute.** Session-scoped state was rejected as an anti-pattern because:
+**Recommended approach: CodeQL GitHub Advanced Setup** — a standalone `codeql.yml` workflow file, NOT integrated into the existing `ci.yml`. This keeps the two workflows independently cancellable and the SAST analysis does not block the main build.
 
-- Predictable transactional boundary (each POST is a transaction; no half-committed session state).
-- No `@SessionAttributes` cleanup logic.
-- Survives admin-tab refresh / re-upload.
+#### New File
 
-For backup import, this means:
+| File | Purpose |
+|------|---------|
+| `.github/workflows/codeql.yml` | Dedicated CodeQL analysis workflow |
 
-- `POST /admin/backup/import-preview` — multipart upload, parses ZIP into a temp file (or memory if small), validates manifest, builds `BackupPreview`, returns preview template. **Temp file path is stashed in a hidden form field** in the preview template.
-- `POST /admin/backup/import-execute` — re-reads the temp file from the path in the form (path validated against a whitelisted backup-staging dir to prevent traversal), executes wipe + restore in one transaction, deletes temp file in `finally`.
-- If the temp file is gone (admin took 30 minutes, server restarted, dev-mode reloaded) — execute fails fast with a clear "preview expired, please re-upload" error.
+#### CodeQL Workflow Structure
 
-### Why temp file, not full re-upload on execute
+```yaml
+name: CodeQL Analysis
 
-The ZIP can be 100 MB+ when uploads are included — forcing a second upload on Confirm is poor UX. The temp-file path is the minimum state we can carry forward; it's the same trade-off `CsvImportController` makes by carrying parsed metadata via hidden form fields.
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    - cron: '0 3 * * 1'   # Weekly Monday 03:00 UTC (scheduled full scan)
 
-### Temp-file handling
+permissions:
+  actions: read
+  contents: read
+  security-events: write  # required: writes results to Security tab
 
-```
-data/{profile}/backup-staging/
-└── upload-2026-05-09T143012Z-{uuid}.zip   # one per upload, UUID-suffixed to prevent collision
-```
+jobs:
+  analyze:
+    name: CodeQL Java Analysis
+    runs-on: ubuntu-latest
 
-Configurable via `app.backup.staging-dir`. On startup, `BackupImportService` deletes files older than 1 hour (admin abandoned a preview). Path-traversal hardening: the path-from-form must `startsWith()` the canonical staging-dir path, otherwise `ValidationException`.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
 
-### Controller endpoints
+      - name: Setup JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
 
-```
-GET  /admin/backup                       → admin/backup.html (form: Export button + Import upload)
-POST /admin/backup/export                → StreamingResponseBody download (Content-Disposition: attachment)
-POST /admin/backup/import-preview        → admin/backup-preview.html (table_counts + diff + Confirm form)
-POST /admin/backup/import-execute        → redirect:/admin/backup with flash success/error
-```
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          # Use default queries + security-extended for broader coverage
+          queries: security-extended
 
-All under `/admin/*` — same auth profile as everything else (Basic Auth in prod/docker, open in dev/local).
+      - name: Build with Maven (manual build — autobuild cannot handle Playwright CLI setup)
+        run: ./mvnw compile -DskipTests --no-transfer-progress
 
----
-
-## 6. Replace-All Transaction — FK Ordering
-
-**Decision: order-based delete + insert. Do NOT use `SET FOREIGN_KEY_CHECKS=0`.**
-
-### Delete order (leaf-to-root)
-
-```
-RaceResult
-RaceLineup
-RaceAttachment
-RaceSettings
-Race
-PlayoffSeed
-PlayoffMatchup
-PlayoffRound
-Playoff
-Match
-Matchday
-PsnAlias
-SeasonDriver
-PhaseTeam
-SeasonPhaseGroup
-SeasonPhase
-SeasonTeam
-Season
-Driver
-Team           # parent/sub-team self-ref: see Team-specific note below
-RaceScoring
-MatchScoring
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:java-kotlin"
 ```
 
-### Insert order (root-to-leaf, exact reverse)
+**Why manual build instead of autobuild:** The existing CI runs `./mvnw verify` with Playwright browser installation as a separate step. CodeQL's autobuild would attempt `mvn compile` without the Playwright CLI setup, which fails when Lombok annotation processing triggers classpath issues. Using `./mvnw compile -DskipTests` is safe and explicit.
 
-Same list reversed. `BackupSchema.EXPORT_ORDER` is the canonical list; `DELETE_ORDER = reverse(EXPORT_ORDER)`.
+**Why `security-extended` queries:** The default query set catches obvious CVEs; `security-extended` adds injection, path traversal, and SSRF patterns — all directly relevant to CTC's existing security hardening work (SSRF defense, path traversal defense in `FileStorageService`, ZIP-Slip defense in backup import).
 
-### Why not `SET FOREIGN_KEY_CHECKS=0`
+**Permissions:** `security-events: write` is mandatory for CodeQL to post results to the Security tab. The existing `ci.yml` has `pull-requests: write` (for JaCoCo comment) — those permissions are separate and must be declared per-workflow.
 
-1. **MariaDB-only** — fails on H2 (test profile). Dev parity matters; test profile must exercise the same code path.
-2. **Hides bugs** — if FK-ordering has a defect, `FOREIGN_KEY_CHECKS=0` lets the import succeed with corrupt referential integrity that surfaces only when a downstream service tries to resolve a dangling FK.
-3. **Database-coupled** — moves us from "Spring Data JPA" toward raw native SQL. The existing codebase has zero `SET` statements; staying ORM-pure preserves the H2/MariaDB portability promise.
-4. **Audit-log friendly** — JPA `deleteAll()` calls go through the entity lifecycle (audit listeners fire if needed). Native truncate bypasses those.
+### Semgrep (Alternative / Complement to CodeQL)
 
-### Self-reference: Team parent/sub-team
+Semgrep can run alongside CodeQL or as a lighter alternative. It requires no repository setup — the OSS variant (`semgrep scan --config auto`) needs no token.
 
-`Team.parentTeam` is a self-FK. Simple delete-order doesn't help — a parent can't be deleted before its children. Two approaches:
+#### New File (if adding Semgrep)
 
-- **A — Two-pass delete:** first `UPDATE teams SET parent_team_id = NULL`, then `DELETE FROM teams`. JPA equivalent: `teamRepository.findAll().forEach(t -> t.setParentTeam(null))` + `flush()` + `deleteAllInBatch()`. Adds one SQL statement.
-- **B — Bulk JPQL:** `@Modifying @Query("UPDATE Team t SET t.parentTeam = NULL")` then `deleteAllInBatch()`.
+| File | Purpose |
+|------|---------|
+| `.github/workflows/semgrep.yml` | Dedicated Semgrep scan workflow |
+| `.semgrepignore` | Files/patterns to exclude from Semgrep scans |
 
-Recommendation: **B** — single JPQL update is cheaper than 30 entity loads + setter loop. No `@PreRemove` cascade concerns because `Team` has no cascade=REMOVE on `parentTeam`.
+#### Semgrep Workflow Structure
 
-### L1 cache after wipeAll
+```yaml
+name: Semgrep SAST
 
-After `deleteAllInBatch()` the persistence-context still holds detached entity references to deleted rows. **`entityManager.clear()` is mandatory** before the insert phase, otherwise a re-saved entity with the same ID can throw `EntityExistsException` or trigger a stale-update.
+on:
+  pull_request: {}
+  push:
+    branches: [ master ]
+  schedule:
+    - cron: '20 17 * * *'   # daily at 17:20 UTC
 
-```java
-@Transactional
-public void executeImport(BackupBundle bundle) {
-    deleteAllInOrder();           // bulk deletes in BackupSchema.DELETE_ORDER
-    entityManager.flush();        // force SQL emission
-    entityManager.clear();        // detach all from L1
-    insertAllInOrder(bundle);     // saveAll in BackupSchema.EXPORT_ORDER
-}
+permissions:
+  contents: read
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    if: github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v6
+      - name: Semgrep scan (OSS, no token required)
+        run: semgrep scan --config auto --config p/java --config p/owasp-top-ten --error
 ```
 
-### Hibernate ID-generation gotcha
+**CodeQL vs Semgrep decision:** Use CodeQL as the primary SAST tool — it is free for public repositories, deeply integrated into GitHub Security tab, and the Java query set is battle-tested. Add Semgrep if CodeQL misses a specific rule category the team wants (e.g., OWASP Top 10 custom rules). For v1.11, start with CodeQL only.
 
-Backup carries existing UUIDs. JPA's `GenerationType.UUID` only generates IDs for entities **with null IDs** at persist time. Restoring an entity with its original UUID via `repository.save()` works because Hibernate sees the ID is already set and treats it as a `merge()` candidate — but a `merge()` on a non-existent row issues an UPDATE that affects 0 rows and silently fails.
-
-**Fix:** after `entityManager.clear()`, the persistence context is empty; calling `repository.saveAll()` with pre-set UUIDs goes through `EntityManager.persist()` because `repository.save()` checks `isNew()` (Spring Data's strategy), and `BaseEntity` IDs that are non-null but with null `@Version` are considered new. **MEDIUM confidence — verify in an IT** with H2 + MariaDB; if it misbehaves, fall back to explicit `entityManager.persist(entity)` instead of `repository.save()`.
-
----
-
-## 7. Schema Versioning
-
-**Decision: simple integer constant in `BackupSchema`. NOT derived from Flyway, NOT a per-class annotation.**
-
-```java
-public final class BackupSchema {
-    public static final int SCHEMA_VERSION = 1;   // bump when the JSON shape changes
-    public static final List<EntityRef> EXPORT_ORDER = List.of(...);
-    private BackupSchema() {}
-}
-```
-
-### Why not derived from Flyway
-
-- Flyway version reflects DB-schema migrations. Backup format depends on **JSON structure** which can change without a new migration (e.g., we add a new field on `Season` — schema unchanged, but old backups have a missing field).
-- Tying the two creates false signal: every Flyway migration would force a new backup version, even those that are pure indexes or constraint-only.
-
-### Why not per-class annotation
-
-- 22 entities × 1 annotation each = 22 lines of bookkeeping nobody will keep accurate.
-- Single integer in `BackupSchema` is one line. Code review immediately catches a forgotten bump because the constant change is visually obvious in a PR diff.
-
-### Compatibility check on import
-
-```java
-if (manifest.schemaVersion() != BackupSchema.SCHEMA_VERSION) {
-    throw new ValidationException(
-        "Backup schema_version=%d incompatible with current=%d. No implicit upgrade."
-        .formatted(manifest.schemaVersion(), BackupSchema.SCHEMA_VERSION));
-}
-```
-
-`app_version` from manifest is informational (logged + shown in preview), NOT enforced. Different app versions with same `schema_version` are import-compatible.
-
----
-
-## 8. File Handling — Uploads Mirror
-
-### Export side
-
-- Walk `data/{profile}/uploads/` recursively.
-- For each file, check whether any entity field references it (Team.logoUrl, Track.imageUrl, Car.imageUrl, RaceAttachment.path, etc.). Use a simple `Set<String> referencedPaths` built once before walking.
-- Include only referenced files. Orphans (files in the upload tree with no entity reference) are **skipped** — they're either failed-upload garbage or deleted-entity remnants; neither belongs in a clean backup.
-- Path traversal: every path is validated to be inside the canonical `app.upload-dir` before inclusion in the ZIP.
-
-### Import side
-
-- After successful DB restore, write each `uploads/...` ZIP entry to `data/{profile}/uploads/...` (same relative path).
-- **Replace existing**: if the file is already there, overwrite. The DB just got wiped — old files cannot belong to extant entities.
-- Existing files in `data/uploads/` not present in the ZIP are **left alone** (not deleted). Rationale: avoid catastrophic deletion if the backup is incomplete or the admin has unrelated files in the dir; orphan cleanup is a separate concern.
-- Path traversal hardening: every ZIP entry's resolved target path must start with the canonical upload dir. Reject any `..` traversal — same defense as `FileStorageService.store()` from v1.5 Phase 28.
-
-### Why not delete-then-restore the uploads dir
-
-Considered and rejected:
-- Atomicity is hard (mid-delete crash leaves no files at all).
-- The DB wipe + restore is already atomic via `@Transactional`; aligning the file-system to that atomicity would require a transactional file-system (out of scope).
-- If a backup is missing one logo file by accident, leaving the existing one is graceful degradation.
-
-### Filesystem operations are NOT inside the JPA transaction
-
-Important: `Files.copy()` calls cannot participate in a JPA `@Transactional` boundary. The order is:
-1. Begin TX → wipe DB → restore DB rows → commit TX.
-2. After commit succeeds: write uploaded files.
-3. If file-write fails AFTER DB commit, the system has a "DB-restored, files-stale" inconsistency that admin must repair manually. Log error + flash an explicit warning.
-
-This is the same trade-off `FileStorageService` makes today (DB write happens before file write in some flows). Document the trade-off in the plan; do not invent a 2PC.
-
----
-
-## 9. Data Flow — Step by Step
-
-### Export flow
+### Data/Config Flow
 
 ```
-[Admin clicks Export Backup]
+push / PR / weekly schedule
     ↓
-POST /admin/backup/export
-    ↓
-BackupController.export(HttpServletResponse)
-    ↓ sets Content-Disposition: attachment; filename=backup-{ts}.zip
-    ↓ returns StreamingResponseBody
-    ↓
-BackupExportService.streamBackup(OutputStream)
-    ├── readOnly TX begin
-    ├── for each EntityRef in BackupSchema.EXPORT_ORDER:
-    │     repo.findAll() → List<entity>
-    │     write JSON file entry to ZIP via BackupArchiveService
-    ├── build manifest (counts, version, date)
-    ├── write manifest.json entry
-    ├── walk data/{profile}/uploads/, filter to referenced paths
-    ├── stream each file as ZIP entry
-    └── readOnly TX end
-    ↓
-[Browser receives ZIP stream]
-```
-
-### Import preview flow
-
-```
-[Admin uploads ZIP via form]
-    ↓
-POST /admin/backup/import-preview (multipart)
-    ↓
-BackupController.importPreview(MultipartFile)
-    ↓ writes file to data/{profile}/backup-staging/upload-{uuid}.zip
-    ↓
-BackupImportService.preview(stagingPath)
-    ├── BackupArchiveService.readManifest(stagingPath) → BackupManifest
-    ├── validate schema_version == SCHEMA_VERSION (else throw ValidationException)
-    ├── BackupArchiveService.readBundle(stagingPath) → BackupBundle (in-memory)
-    ├── for each EntityRef: count current rows (repo.count()) vs bundle rows
-    └── return BackupPreview(manifest, perTableDelta, stagingPath)
-    ↓
-admin/backup-preview.html (table of "wipe N rows / restore M rows" + Confirm form with hidden stagingPath)
-```
-
-### Import execute flow
-
-```
-[Admin confirms preview]
-    ↓
-POST /admin/backup/import-execute (hidden field: stagingPath)
-    ↓
-BackupController.importExecute(stagingPath)
-    ↓ validate stagingPath ∈ canonical staging dir
-    ↓
-BackupImportService.execute(stagingPath)
-    ├── @Transactional begin
-    ├── BackupArchiveService.readBundle(stagingPath)  // re-parse, do not trust preview state
-    ├── re-validate manifest
-    ├── deleteAllInOrder():
-    │     UPDATE teams SET parent_team_id = NULL  (self-ref pre-step)
-    │     for each EntityRef in DELETE_ORDER: repo.deleteAllInBatch()
-    │     entityManager.flush() + clear()
-    ├── insertAllInOrder():
-    │     for each EntityRef in EXPORT_ORDER: repo.saveAll(bundle.entities(ref))
-    ├── @Transactional commit
-    ├── (post-commit) restore upload files from ZIP
-    ├── (post-commit) audit-log: rows wiped, rows restored, files restored
-    └── delete stagingPath
-    ↓
-redirect:/admin/backup with flash success or specific error
+.github/workflows/codeql.yml
+    ↓ github/codeql-action/init — sets up CodeQL database
+    ↓ ./mvnw compile -DskipTests — builds bytecode for analysis
+    ↓ github/codeql-action/analyze — runs queries against database
+    ↓ results uploaded to GitHub Security tab (SARIF format)
+    ↓ if PR: Code Scanning alerts appear inline on PR diff
+    ↓ if push to master: alerts appear in Security → Code scanning
 ```
 
 ---
 
-## 10. Spring Boot 4.0.6 Architecture Impact
+## 5. Build Order and CI Architecture
 
-**Verdict: zero architectural impact for CTC. POM-only change.**
+### Existing CI Job Structure
 
-### What 4.0.5 → 4.0.6 actually contains (verified via Spring blog)
+```
+ci.yml
+├── build-and-test        (./mvnw verify -Dspring.profiles.active=dev)
+│   ├── Surefire unit tests   (forkCount=2)
+│   ├── Failsafe ITs          (forkCount=1)
+│   ├── JaCoCo report + check (82% gate)
+│   └── Playwright E2E        (-Pe2e)
+├── dockerfile-noble-pin-guard
+└── docker-build              (needs: dockerfile-noble-pin-guard)
+```
 
-- 65 bug fixes, doc improvements, dependency upgrades.
-- 8 CVEs, **none affecting CTC's stack**:
-  - Elasticsearch / RabbitMQ / Cassandra TLS hostname-verification — CTC uses none of these.
-  - DevTools timing-attack — CTC has no DevTools dependency.
-  - Random PRNG used as secret — CTC's only secret is the BCrypt-hashed admin password in env vars.
-  - Authorization gap with Actuator — CTC exposes only `/actuator/health` and SecurityConfig already authenticates everything outside that path.
-  - Symlink in PID file — CTC doesn't write PID files.
-  - Temp directory ownership — applies; mitigated because CTC's container runs non-root user `ctc` with isolated `/tmp` (verified in Dockerfile).
-- Transitive Thymeleaf bumps to 3.2.x — **this is the actual risk**, addressed by the v1.10 template-audit goal (not by this research; that's a Phase plan concern).
+### Proposed CI Job Structure After v1.11
 
-### Things that are NOT changing
+```
+ci.yml (modified)
+├── build-and-test           (unchanged — existing job)
+│   ├── Surefire unit tests
+│   ├── Failsafe ITs
+│   ├── JaCoCo check (82% gate)
+│   ├── checkstyle:check      (NEW — added to verify phase)
+│   ├── pmd:check             (NEW — added to verify phase)
+│   ├── spotbugs:check        (NEW — added to verify phase)
+│   └── Playwright E2E
+├── dockerfile-noble-pin-guard  (unchanged)
+└── docker-build                (unchanged)
 
-- Spring MVC dispatcher / `@Controller` / `@RequestMapping` — unchanged
-- Spring Data JPA repository SPI — unchanged
-- `JpaRepository.findAll() / saveAll() / deleteAllInBatch()` semantics — unchanged
-- OSIV interceptor — unchanged
-- Flyway integration — unchanged
-- Auto-configuration order — unchanged for the modules CTC uses
-- Jackson `ObjectMapper` defaults — unchanged
+codeql.yml (NEW — separate workflow file)
+└── analyze
+    ├── Initialize CodeQL
+    ├── ./mvnw compile -DskipTests
+    └── Perform analysis → Security tab
 
-### Action items the upgrade DOES require
+renovate.json (NEW — bot config, no workflow needed for GitHub App approach)
+```
 
-- POM bump `spring-boot-starter-parent` 4.0.5 → 4.0.6 (one line).
-- Re-verify with `./mvnw verify -Pe2e`.
-- Audit ~80 Thymeleaf templates for the 3.2 ternary-in-fragment pattern (the v1.9-abort root cause). This is template work, NOT architectural.
-- Optional: re-confirm `/actuator/health` is the only exposed actuator endpoint, given the Actuator-related CVE (already true in `application.yml`).
+### Suggested Phase Build Order (Across 4 Tooling Streams)
 
-**No new beans, no new auto-configuration to opt into, no removed APIs to migrate from.**
+**Recommended sequence:** Clean Code → OpenRewrite → Renovate → SAST
 
----
+| Order | Stream | Rationale |
+|-------|--------|-----------|
+| 1st | **Clean Code (Checkstyle/PMD/SpotBugs)** | Establishes the baseline quality gate. If OpenRewrite is run first, it may generate code that Checkstyle/PMD then flags — ordering enforcement BEFORE automated refactoring means OpenRewrite recipes can be configured to produce compliant output. |
+| 2nd | **OpenRewrite** | With the enforcement gate in place, OpenRewrite recipes can be selected and tuned to not introduce new violations. The `rewrite:dryRun` output can be inspected against the Checkstyle/PMD rules already active. |
+| 3rd | **Renovate** | Dependency updates come after the build is clean so incoming Renovate PRs hit a stable, passing CI. Renovate touching `pom.xml` will trigger all existing gates — clean code must be in place first so that gate is meaningful, not just noisy. |
+| 4th | **SAST (CodeQL)** | CodeQL analysis is additive — it doesn't block `./mvnw verify` and runs in a separate workflow. It can be activated at any point, but placing it last means the codebase has already been improved by Clean Code + OpenRewrite, reducing false-positive noise in the initial SAST report. |
 
-## 11. Build Order (FK-Dependency-Aware)
+**Why NOT enforce-after-rewrite:** If OpenRewrite runs first without Checkstyle/PMD gates, developers cannot distinguish "violations from OpenRewrite output" from "pre-existing violations." Clean Code first establishes a zero-baseline.
 
-The roadmapper should sequence implementation in phases that respect entity dependencies and let each phase be independently testable. Suggested order:
+### Where Each Tool Hooks Into the Build/Verify Lifecycle
 
-1. **Phase A — Foundations (no DB I/O):**
-   - `BackupSchema` (constants, ordering lists)
-   - `BackupManifest`, `BackupBundle`, `BackupPreview` records
-   - `BackupArchiveService` (pure ZIP I/O — testable with in-memory streams)
-   - Jackson MixIn classes + `BackupObjectMapperConfig`
-   - Unit tests for serialization round-trip on each entity-type-by-type (start with leaf entities: `Team`, `Driver` — fewest associations).
+```
+Maven lifecycle phases:
+validate  → exec-maven-plugin:template-fragment-call-guard  (existing)
+compile   →
+test      → Surefire (unit tests, forkCount=2, excludedGroups=integration,e2e,flaky)
+package   →
+verify    → Failsafe default-it (ITs, forkCount=1, groups=integration)
+           → JaCoCo report
+           → JaCoCo check (82% gate)
+           → Failsafe verify (IT result verification)
+           → [NEW] checkstyle:check
+           → [NEW] pmd:check
+           → [NEW] spotbugs:check
 
-2. **Phase B — Export:**
-   - `BackupExportService` (read-only)
-   - File-walk + reference-filter logic on `FileStorageService`
-   - `BackupController.export()` endpoint + StreamingResponseBody
-   - `templates/admin/backup.html` minimal form
-   - IT: full export of dev fixture (Season 2023 multi-phase + Season 2024-3 empty-phase) → assert ZIP entry count matches `BackupSchema.EXPORT_ORDER` × `BackupSchema` table_counts + uploads.
+Separate invocations (not bound to verify):
+mvn rewrite:dryRun         (manual or -Prewrite-check profile)
+mvn rewrite:run            (manual: developer applies changes)
 
-3. **Phase C — Import preview:**
-   - `BackupImportService.preview()` (no writes)
-   - `BackupController.importPreview()` endpoint + multipart staging
-   - `templates/admin/backup-preview.html`
-   - Schema-version mismatch handling
-   - IT: round-trip — export ZIP, parse it back, assert manifest + per-table counts match.
-
-4. **Phase D — Import execute (the risky one):**
-   - `BackupImportService.execute()` with full wipe + restore
-   - Self-ref pre-step (Team.parentTeam = null)
-   - `entityManager.clear()` between wipe and restore
-   - Post-commit upload-tree restore
-   - Audit log
-   - IT: H2 + MariaDB profile — export, wipe DB manually, import, assert all entities + relationships restored byte-identically (compare via `repository.findAll()` lists with deep equals).
-
-5. **Phase E — Spring Boot 4.0.6 upgrade + Thymeleaf 3.2 audit:**
-   - POM bump.
-   - Template audit & fix (3 known: match-scoring-form, race-scoring-form, season-phase-form Line 3) plus any new findings.
-   - Full `./mvnw verify -Pe2e`.
-   - This phase is **independent** of A-D and can interleave or run in parallel — gating it on a dedicated branch prevents the v1.9-abort scenario from blocking backup work.
-
-Phase E can be sequenced first if the team prefers to clear the platform debt before adding the feature; both orderings are safe because there are no shared files between the two work-streams.
+GitHub Actions separate workflow:
+codeql.yml → mvn compile -DskipTests + codeql analyze
+```
 
 ---
 
-## 12. Anti-Patterns to Avoid
+## 6. Test Wallclock Reduction — Architectural Options
 
-### Anti-Pattern 1: Storing the BackupBundle in `@SessionAttributes`
+### Current State
 
-**What:** "Just put the parsed bundle in the session, simpler than re-parsing."
-**Why wrong:** A 100 MB bundle in HTTP session bloats memory, breaks horizontal scaling, and re-introduces the exact session-state-management debt that v1.8 D-15 explicitly removed. Session expiry + admin-tab restart = silent data loss.
-**Instead:** Stage the ZIP file on disk; carry only the staging path through hidden form fields.
+Phase 79 achieved 16.85% wallclock reduction (target was ≥ 30%). The current setup:
 
-### Anti-Pattern 2: Single mega-method `BackupService.exportAndStream()`
+- Surefire: `forkCount=2` (two parallel JVM forks), `reuseForks=true`, plain unit tests
+- Failsafe default-it: `forkCount=1C` (1 per CPU core), `@Tag("integration")` Spring-context tests
+- 1652 Surefire unit tests + 231 Failsafe ITs + 36 Playwright E2E
 
-**What:** One service with a 200-line `exportAndStream()` that does DB walk + JSON serialization + ZIP write + file-tree mirror inline.
-**Why wrong:** Tests need to mock `OutputStream` AND `ZipOutputStream` AND every repository AND `FileStorageService`. The `RaceManagementService` 673-line nightmare from v1.0 Phase 3 was exactly this anti-pattern.
-**Instead:** Composition — `BackupExportService` orchestrates, delegates ZIP mechanics to `BackupArchiveService`, file-tree walking to `FileStorageService`.
+The remaining 13+ percentage points require reducing Spring Application Context startup cost, which dominates wallclock time in the IT layer.
 
-### Anti-Pattern 3: `SET FOREIGN_KEY_CHECKS=0` "for safety"
+### Option A: Audit and Eliminate `@DirtiesContext` Usages
 
-**What:** Disable FK checks during import to avoid ordering bugs.
-**Why wrong:** Database-coupled (breaks H2 tests), masks ordering bugs that would otherwise surface as test failures, hides corrupted-FK states from observability.
-**Instead:** Trust the ordered-delete + ordered-insert pattern; if a constraint fires, it's a bug to fix, not noise to silence.
+**What:** Find every `@DirtiesContext` in the test suite and replace with `@Transactional` rollback or test-data prefix isolation.
 
-### Anti-Pattern 4: Per-entity Strategy beans
+**How it helps:** Each `@DirtiesContext` forces a full Spring context restart. A single such annotation can add 5-15 seconds of context startup overhead per affected test class.
 
-**What:** `interface EntityExporter<T>` + 22 implementations + a registry.
-**Why wrong:** Premature abstraction — entities don't have per-type logic. The "obvious" Strategy explodes the test surface and scatters ordering across 22 files.
-**Instead:** Single ordered list in `BackupSchema`, two services iterating it.
+**How to find them:**
+```bash
+grep -rn "@DirtiesContext" src/test/java/
+```
 
-### Anti-Pattern 5: Mixing file-system operations into the JPA transaction
+**Cost:** Low — pure test refactoring, no production code change. Each instance is independent.
 
-**What:** `@Transactional` method that does `repository.save()` AND `Files.copy()` interleaved.
-**Why wrong:** Transactions roll back DB, not files. Mid-method failure leaves orphan files. JPA cannot guarantee filesystem semantics.
-**Instead:** Two-phase — DB wipe + restore inside `@Transactional`; file restore strictly after commit, in a `try/catch` that logs failures explicitly.
+**Expected gain:** Depends on count. If there are 5+ `@DirtiesContext` usages, eliminating them could save 30-75 seconds of context restart overhead in CI.
+
+**Recommended action for v1.11:** Do this audit first — it is zero-risk and has immediate ROI.
+
+### Option B: Replace Full `@SpringBootTest` with Test Slices
+
+**What:** Replace `@SpringBootTest(webEnvironment=NONE)` tests that only test the JPA layer with `@DataJpaTest`. Replace tests that only test the web layer with `@WebMvcTest`. Full `@SpringBootTest` loads every bean — test slices load only what is needed.
+
+**Key slices available:**
+
+| Slice Annotation | Loads | Good For |
+|-----------------|-------|----------|
+| `@DataJpaTest` | JPA layer only (H2 auto-configured) | Repository tests, entity queries |
+| `@WebMvcTest` | MVC layer only (no DB) | Controller unit tests with mocked services |
+| `@JsonTest` | Jackson only | Serialization / deserialization tests |
+
+**Cost:** Medium. Each test class converted requires adding `@MockBean` for everything outside the slice. With OSIV enabled and the current architecture (controllers delegate entirely to services), `@WebMvcTest` slices require mocking all service dependencies — which is significant for controllers with 5-10 service injections.
+
+**Constraint specific to CTC:** The existing ITs in `TemplateRenderingSmokeIT` use `@SpringBootTest` to verify that ALL template renderings return HTTP 200 — this cannot be converted to a slice because it tests full integration. Keep full `@SpringBootTest` for these cross-cutting smoke tests.
+
+**Expected gain:** Significant for repository-focused tests. If 30+ ITs become `@DataJpaTest`, each saves the startup cost of the full web context (~2-4 seconds per class that gets its own context key).
+
+**Recommended action for v1.11:** Identify candidates (ITs that only assert JPA behavior, no web layer assertions) and convert selectively. Do NOT attempt a bulk conversion.
+
+### Option C: Consolidate `@MockBean` Declarations to Reduce Context Variations
+
+**What:** Spring's context cache key includes the set of `@MockBean` declarations. If two test classes use the same `@SpringBootTest` but different `@MockBean` sets, Spring starts two separate contexts. Extracting shared mock configurations into a base class or `@TestConfiguration` reduces unique cache keys.
+
+**How to detect:** After running `./mvnw verify`, examine the JVM startup log (set `logging.level.org.springframework.test.context=DEBUG`) to count distinct context loads.
+
+**Cost:** Low-to-medium. Creating a base class for IT tests is straightforward. The risk is that shared mock state causes test interference if mocks are not reset between tests.
+
+**Recommended action for v1.11:** Add `logging.level.org.springframework.test.context=DEBUG` to `application-test.yml` (or CI argLine), run the IT suite, count unique context starts. If more than 5 unique contexts are started, consolidation is worthwhile.
+
+### Option D: Test Module Split (Heavy — Architectural Change)
+
+**What:** Split `src/test/java` into two Maven modules: one for unit tests (no Spring context) and one for integration tests (Spring context, Testcontainers). Run them in parallel as separate Maven executions.
+
+**How it helps:** Pure unit tests (no Spring) have zero context startup cost. If separated into a module that Surefire runs without any Spring infrastructure, they complete much faster. The IT module runs in parallel.
+
+**Cost:** HIGH. Converting a single-module project to multi-module requires:
+- New top-level `pom.xml` as an aggregator.
+- Two child modules (`ctc-manager-core` + `ctc-manager-tests` or similar).
+- Moving all test source files to the new module.
+- Re-configuring Surefire, Failsafe, JaCoCo across both modules.
+- Updating CI to handle the multi-module build artifact.
+- Renovate and other tools need to be re-configured for multi-module POM structure.
+
+**Constraint specific to CTC:** The existing `pom.xml` is deeply single-module (one Failsafe execution for ITs, one for E2E, one JaCoCo config, one Playwright dependency). The phase 79 `forkCount` work was optimized for single-module. A module split is a multi-milestone effort, not a v1.11 task.
+
+**Recommended action for v1.11:** Do NOT attempt a module split. Pursue Options A, B, and C first; revisit module split only if they yield less than 20% additional improvement.
+
+### Option E: Failsafe `forkCount` Increase for ITs
+
+**What:** The current Failsafe `default-it` uses `forkCount=1C` (1 fork per CPU core). GitHub Actions `ubuntu-latest` runners have 2 cores (4 vCPUs). Increasing to `forkCount=2C` doubles the IT parallelism.
+
+**Constraint:** The current Spring context architecture means each fork gets its own context. If tests share H2 in-memory state (the dev profile uses `jdbc:h2:mem:ctcdb`), two forks on the same named H2 database collide. The solution is to use `jdbc:h2:mem:${random}` per-fork or to migrate ITs to use Testcontainers with dynamic ports (already done for `BackupImportMariaDbSmokeIT`).
+
+**Risk:** HIGH if any ITs rely on a named H2 URL. Check `application-dev.yml` for the H2 URL config before increasing forkCount.
+
+**Expected gain:** Up to 2× IT wallclock if all ITs are independent. Real gain is lower due to startup overlap.
+
+**Recommended action for v1.11:** Audit H2 URL configuration. If the dev profile uses `jdbc:h2:mem:` with a named database, switch to `jdbc:h2:mem:;DB_CLOSE_DELAY=-1` (anonymous, unique per connection) before increasing forkCount.
+
+### Wallclock Reduction Priority Order for v1.11
+
+1. **Option A (DirtiesContext audit)** — zero risk, immediate return, do first.
+2. **Option C (context key consolidation)** — audit first (free), implement if count > 5 unique contexts.
+3. **Option B (selective slice conversion)** — selectively apply to obvious candidates (repository-only ITs).
+4. **Option E (forkCount audit)** — check H2 URL, increase if safe.
+5. **Option D (module split)** — defer to v1.12+.
 
 ---
 
-## 13. Integration Points Summary
+## 7. System Overview — Post-v1.11 Component Map
 
-| Integration Point | Existing Component | Modification |
-|-------------------|-------------------|--------------|
-| Admin sidebar nav | `templates/admin/layout.html` | add "Backup" entry |
-| Auth filter chain | `SecurityConfig` (prod/docker) | none — all `/admin/*` already authenticated |
-| Exception handling | `GlobalExceptionHandler` | none — `ValidationException` and `BusinessRuleException` already mapped |
-| Flash messaging | RedirectAttributes pattern | reuse |
-| Static asset serving | `WebConfig` | none — backup downloads are dynamic, not static |
-| Multipart upload | already configured `max-file-size: 10MB` in `application.yml` | **MODIFY**: bump `app.backup.max-upload-size` to 200 MB or read from a profile-specific override; keep general 10 MB as default for non-backup endpoints |
-| Audit logging | none today (no audit table) | **DECIDE per Phase plan**: log to SLF4J at INFO + a future audit table (out of scope unless explicit) |
-| File storage | `FileStorageService` | **MODIFY**: add `walkUploads()`, `restoreUpload(path, bytes)`, `referencedPaths(entities)` methods (additive only) |
+```
+ctc-manager/ (project root)
+├── pom.xml                          # MODIFIED: +Checkstyle/PMD/SpotBugs plugins in <build>
+│                                    #           +OpenRewrite plugin in <pluginManagement>
+│                                    #           +rewrite-check profile
+├── rewrite.yml                      # NEW: OpenRewrite recipe + style config
+├── renovate.json                    # NEW: Renovate bot config
+├── config/
+│   ├── checkstyle.xml               # NEW: Checkstyle rule set
+│   ├── checkstyle-suppressions.xml  # NEW: Checkstyle suppressions
+│   ├── pmd.xml                      # NEW: PMD rule set
+│   └── spotbugs-exclude.xml         # NEW: SpotBugs exclusion filter
+├── .github/
+│   └── workflows/
+│       ├── ci.yml                   # MODIFIED: Checkstyle/PMD/SpotBugs run inside verify
+│       ├── codeql.yml               # NEW: CodeQL analysis workflow
+│       ├── deploy-site.yml          # unchanged
+│       ├── mariadb-migration-smoke.yml  # unchanged
+│       └── release.yml             # unchanged
+└── src/...                          # Java sources — no new packages for tooling streams
+```
 
-### Files added (new)
+No new Java source packages are added. All four tooling streams operate on config files and CI workflow files — they are infrastructure, not application code.
 
-- `src/main/java/org/ctc/backup/BackupController.java`
-- `src/main/java/org/ctc/backup/BackupExportService.java`
-- `src/main/java/org/ctc/backup/BackupImportService.java`
-- `src/main/java/org/ctc/backup/BackupArchiveService.java`
-- `src/main/java/org/ctc/backup/BackupSchema.java`
-- `src/main/java/org/ctc/backup/BackupManifest.java` (record)
-- `src/main/java/org/ctc/backup/BackupBundle.java` (record)
-- `src/main/java/org/ctc/backup/BackupPreview.java` (record)
-- `src/main/java/org/ctc/backup/serialization/BackupObjectMapperConfig.java`
-- `src/main/java/org/ctc/backup/serialization/{Entity}MixIn.java` (~22 files — one per operative entity)
-- `src/main/resources/templates/admin/backup.html`
-- `src/main/resources/templates/admin/backup-preview.html`
+---
 
-### Files modified
+## 8. Anti-Patterns to Avoid
 
-- `pom.xml` — `<version>4.0.5</version>` → `<version>4.0.6</version>` for parent (single line).
-- `src/main/resources/templates/admin/layout.html` — sidebar nav entry for Backup.
-- `src/main/resources/application.yml` — `app.backup.staging-dir` + `app.backup.max-upload-size` block.
-- `src/main/java/org/ctc/domain/service/FileStorageService.java` — additive helper methods.
-- 3 (or more, per audit) Thymeleaf templates — fix Line-3 fragment-parameter ternaries.
+### Anti-Pattern 1: Binding `rewrite:run` to the Verify Phase
 
-### Files NOT modified
+**What:** `<execution><phase>verify</phase><goals><goal>run</goal></goals></execution>` in `<build><plugins>`.
+**Why wrong:** Every `./mvnw verify` silently modifies source files. CI checks out code, runs verify, modifies files, but the working tree is never committed — changes are lost. Locally, developers discover uncommitted changes after every build run.
+**Instead:** Keep `rewrite:run` exclusively as a manual invocation or a dedicated `mvn rewrite:run` step. Bind only `rewrite:dryRunNoFork` with `failOnDryRunResults=true` to a gating profile.
 
-- All 22 operative entity classes — Jackson MixIns leave entities clean.
-- All 22 repositories — `findAll`, `saveAll`, `deleteAllInBatch` are stock `JpaRepository` methods.
-- `Flyway` migrations — no schema changes.
-- All existing controllers — no shared endpoints.
+### Anti-Pattern 2: Wildcard `*.xml` Rule Sources for All Checkstyle Rules
+
+**What:** Starting with `sun_checks.xml` or `google_checks.xml` unmodified and applying to all source files.
+**Why wrong:** Spring Boot projects with Lombok generate source code during compilation that Checkstyle also sees. Lombok-generated getters/setters violate Javadoc and magic-number rules. The project will produce hundreds of violations before the first real one is investigated.
+**Instead:** Start with a permissive subset and use `<suppressionsLocation>` to exclude generated sources (`target/generated-sources/**`) and test sources (`src/test/java/**`).
+
+### Anti-Pattern 3: SpotBugs Without an Exclude Filter for Lombok-Generated Code
+
+**What:** Running SpotBugs at `threshold=Low` on Lombok-annotated entities.
+**Why wrong:** SpotBugs flags `@Getter` on `Collection` fields as `EI_EXPOSE_REP2` (exposing internal representation). CTC has 20 entities all using `@Getter` — this produces ~60 suppressed-but-visible false positives that drown out real findings.
+**Instead:** Start `spotbugs-exclude.xml` with `<Bug pattern="EI_EXPOSE_REP2"/>` in the filter and expand exclusions only based on investigated findings.
+
+### Anti-Pattern 4: Grouping ALL Dependencies Together in Renovate
+
+**What:** `"groupName": "all dependencies"` with `"matchPackagePatterns": ["*"]`.
+**Why wrong:** A single PR touching Spring Boot + Lombok + Playwright + all Google APIs at once is unreviable. If one upgrade breaks something, the entire group PR fails and must be individually bisected.
+**Instead:** Group by release-cadence alignment (Spring Boot starters together, Google APIs together, Testcontainers together) and leave single-dependency libraries as individual PRs.
+
+### Anti-Pattern 5: Adding CodeQL to the Existing `build-and-test` Job
+
+**What:** Adding CodeQL `init` + `analyze` steps inside the existing `ci.yml` `build-and-test` job.
+**Why wrong:** CodeQL initialization + analysis adds 5-15 minutes to the CI job. It blocks the Playwright E2E tests, the Docker build, and the JaCoCo coverage comment from landing while SAST analysis runs. SAST findings are advisory, not blocking on PRs.
+**Instead:** Separate `codeql.yml` workflow. It runs independently, does not block the PR merge gate (unless explicitly required via branch protection rules), and can be scheduled weekly for full scans without impacting every push.
+
+---
+
+## 9. Integration Points Summary
+
+| Tool | pom.xml Change | New Files | CI Change | Lifecycle Phase |
+|------|---------------|-----------|-----------|----------------|
+| Checkstyle | `<build><plugins>` — `maven-checkstyle-plugin` | `config/checkstyle.xml`, `config/checkstyle-suppressions.xml` | Runs inside existing `build-and-test` job (via `./mvnw verify`) | `verify` |
+| PMD | `<build><plugins>` — `maven-pmd-plugin` | `config/pmd.xml` | Runs inside existing `build-and-test` job | `verify` |
+| SpotBugs | `<build><plugins>` — `spotbugs-maven-plugin` | `config/spotbugs-exclude.xml` | Runs inside existing `build-and-test` job | `verify` |
+| OpenRewrite | `<pluginManagement>` — `rewrite-maven-plugin` + `<profile id="rewrite-check">` | `rewrite.yml` | Optional standalone job (`mvn verify -Prewrite-check`) | Manual / `verify` via profile |
+| Renovate | none | `renovate.json` | Renovate PRs trigger existing `build-and-test` | External bot — no Maven phase |
+| CodeQL | `mvn compile -DskipTests` called inside workflow | `.github/workflows/codeql.yml` | New standalone workflow | Not Maven (GitHub Actions) |
 
 ---
 
 ## Sources
 
-- [Spring Boot 4.0.6 release announcement](https://spring.io/blog/2026/04/23/spring-boot-4-0-6-available-now/) — verified patch-only, no SPI changes
-- [Jackson @JsonIdentityInfo for circular references](https://www.logicbig.com/tutorials/misc/jackson/json-identity-info-annotation.html) — handles bidirectional JPA cycles
-- [Baeldung — Jackson Bidirectional Relationships](https://www.baeldung.com/jackson-bidirectional-relationships-and-infinite-recursion) — MixIn pattern for keeping entity classes clean
-- [Vlad Mihalcea — Cascade DELETE patterns](https://vladmihalcea.com/cascade-delete-unidirectional-associations-spring/) — entity ordering for bulk delete
-- [Medium — FK constraint errors in Spring Data JPA](https://medium.com/tuanhdotnet/why-foreign-key-constraint-errors-occur-in-spring-data-jpa-and-how-to-resolve-them-e9d59ee836c0) — order-based delete vs. SET FOREIGN_KEY_CHECKS
-- Project files: `.planning/codebase/ARCHITECTURE.md`, `.planning/codebase/STRUCTURE.md`, `.planning/PROJECT.md`, `pom.xml`, `BaseEntity.java`, `application.yml`, `CsvImportController.java` (preview pattern reference)
+- [OpenRewrite Maven plugin docs](https://docs.openrewrite.org/reference/rewrite-maven-plugin) — goals, `failOnDryRunResults`, configuration options (HIGH confidence)
+- [OpenRewrite plugin-info.html](https://openrewrite.github.io/rewrite-maven-plugin/plugin-info.html) — current version 6.40.0, lifecycle fork behavior (HIGH confidence)
+- [Apache Maven Checkstyle Plugin](https://maven.apache.org/plugins/maven-checkstyle-plugin/usage.html) — version 3.6.0, `configLocation`, `suppressionsLocation`, `failsOnError` (HIGH confidence)
+- [Apache Maven PMD Plugin FAQ](https://maven.apache.org/plugins/maven-pmd-plugin/faq.html) — version 3.28.0, `failOnViolation`, `failurePriority` (HIGH confidence)
+- [SpotBugs Maven Plugin — Violation Checking](https://spotbugs.github.io/spotbugs-maven-plugin/examples/violationChecking.html) — version 4.9.8.3, verify-phase integration (HIGH confidence)
+- [Renovate Configuration Options](https://docs.renovatebot.com/configuration-options/) — file search order, `schedule`, `packageRules`, `automerge` (HIGH confidence)
+- [Renovate Java/Maven docs](https://docs.renovatebot.com/java/) — Maven pom.xml scanning, settings.xml registry support (HIGH confidence)
+- [GitHub CodeQL starter workflow](https://github.com/actions/starter-workflows/blob/main/code-scanning/codeql.yml) — canonical workflow structure, permissions, triggers (HIGH confidence)
+- [GitHub CodeQL for compiled languages](https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages) — manual build vs autobuild, Java-Kotlin language key (HIGH confidence)
+- [Semgrep CI sample configs](https://semgrep.dev/docs/semgrep-ci/sample-ci-configs) — OSS vs cloud-managed, container image, diff-aware PR scanning (HIGH confidence)
+- [Zalando Engineering Blog — Spring Boot Test Optimization](https://engineering.zalando.com/posts/2023/11/mastering-testing-efficiency-in-spring-boot-optimization-strategies-and-best-practices.html) — 60% improvement case study, `@DirtiesContext` impact, `@MockBean` context key impact (MEDIUM confidence — 2023, still applicable to Spring Boot 4)
+- [Optimizing Spring Integration Tests at Scale — JAVAPRO](https://javapro.io/2025/12/17/optimizing-spring-integration-tests-at-scale/) — test slicing, context caching patterns (MEDIUM confidence)
 
 ---
 
-*Architecture research for: CTC Manager v1.10 — Spring Boot 4.0.6 platform upgrade + ZIP-based admin Backup Export/Import*
-*Researched: 2026-05-09*
+*Architecture research for: CTC Manager v1.11 — Tooling Infrastructure (OpenRewrite, Checkstyle/PMD/SpotBugs, Renovate, CodeQL) + Test Wallclock Reduction*
+*Researched: 2026-05-16*
