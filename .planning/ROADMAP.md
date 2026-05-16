@@ -149,7 +149,7 @@ See: milestones/v1.10-ROADMAP.md for full details
 
 ### v1.11 Tooling Infrastructure & Tech-Debt Sweep (Phases 80-87) — ACTIVE
 
-- [ ] **Phase 80: OpenRewrite Integration** — Developer can invoke recipe-driven refactoring via `-Prewrite` Maven profile
+- [x] **Phase 80: OpenRewrite Integration** — Developer can invoke recipe-driven refactoring via `-Prewrite` Maven profile (completed 2026-05-16)
 - [ ] **Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs)** — `./mvnw verify` fails on new HIGH-priority bytecode violations
 - [ ] **Phase 82: Backup Cleanup** — All 12 Phase-75 REVIEW.md items resolved; SCHEMA_VERSION remains 1; BackupRoundTripIT covers all 24 entities
 - [ ] **Phase 83: Quality and Polish Sweep** — Four v1.9/v1.10 carryover items cleared; UAT-02 post-deploy result recorded
@@ -173,7 +173,7 @@ See: milestones/v1.10-ROADMAP.md for full details
   4. `rewrite.yml` activates `CommonStaticAnalysis` and explicitly excludes `UpgradeSpringBoot_4_0` (the project is already on Boot 4.0.6); the one-shot cleanup diff is reviewed for Lombok entity false positives and committed
   5. README "Development" section documents the `dryRun` → `run` workflow and the deliberate decision to keep OpenRewrite developer-invoked only
 
-**Plans:** 4/5 plans executed
+**Plans:** 5/5 plans complete
 Plans:
 **Wave 1**
 
@@ -187,7 +187,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 80-04-PLAN.md — Conditional cleanup commit: if dryRun non-empty apply `rewrite:run` per D-07/D-08, else document no-op per Claude's Discretion (REWR-02, REWR-05)
+- [x] 80-04-PLAN.md — Conditional cleanup commit: if dryRun non-empty apply `rewrite:run` per D-07/D-08, else document no-op per Claude's Discretion (REWR-02, REWR-05)
 
 ### Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs)
 
@@ -300,7 +300,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 80. OpenRewrite Integration | 4/5 | In Progress|  |
+| 80. OpenRewrite Integration | 5/5 | Complete   | 2026-05-16 |
 | 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 0/TBD | Not started | - |
 | 82. Backup Cleanup | 0/TBD | Not started | - |
 | 83. Quality and Polish Sweep | 0/TBD | Not started | - |
