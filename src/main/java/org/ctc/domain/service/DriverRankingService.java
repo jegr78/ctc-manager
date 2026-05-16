@@ -45,10 +45,6 @@ public class DriverRankingService {
 		all.addAll(regularResults);
 		all.addAll(playoffResults);
 
-		// Build phase-specific team lookup from PhaseTeam roster (keyed by teamId)
-		Map<UUID, Team> phaseTeamByTeamId = phaseTeamRepository.findByPhaseId(phaseId).stream()
-				.collect(Collectors.toMap(pt -> pt.getTeam().getId(), PhaseTeam::getTeam, (a, b) -> a));
-
 		// Accumulate per driver
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();
 		for (RaceResult result : all) {

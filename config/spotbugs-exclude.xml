@@ -117,6 +117,20 @@
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
 
+    <!-- ========== VA_FORMAT_STRING_USES_NEWLINE suppression (STAT-05/triage) ========== -->
+
+    <!-- TemplatePreviewService.buildPlaceholderCard: the SVG text block uses natural line endings
+         via the text block syntax (not a \n literal in a format string). SpotBugs fires because
+         the text block is passed to .formatted() and its newlines become \n in the resulting String.
+         Using %n would produce platform-dependent newlines (\r\n on Windows) in a Base64-encoded
+         SVG data URI, which is incorrect. \n is the correct line ending for XML/SVG content.
+         See TemplatePreviewService.java:257-264. -->
+    <Match>
+        <Class name="org.ctc.admin.service.TemplatePreviewService"/>
+        <Method name="buildPlaceholderCard"/>
+        <Bug pattern="VA_FORMAT_STRING_USES_NEWLINE"/>
+    </Match>
+
     <!-- ========== NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE suppressions (STAT-05/triage) ========== -->
 
     <!-- TeamCardService.generateCard: outputFile.getParent() at line 102.

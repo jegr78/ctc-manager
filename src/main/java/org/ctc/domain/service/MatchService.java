@@ -84,7 +84,7 @@ public class MatchService {
 			var race = new Race();
 			race.setMatchday(matchday);
 			race.setMatch(match);
-			if (leg % 2 == 1 && !bye) {
+			if (leg % 2 != 0 && !bye) {
 				race.setHomeTeamOverride(awayTeam);
 				race.setAwayTeamOverride(homeTeam);
 			}
