@@ -1,0 +1,22 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.ctc.RewriteCleanup
+displayName: CTC Manager — common static analysis cleanup
+description: >
+  Developer-invoked one-shot cleanup pack for CTC Manager.
+  Activates only org.openrewrite.staticanalysis.CommonStaticAnalysis (≈70 sub-recipes).
+  See README "## Development" for the dryRun → run workflow.
+
+# OpenRewrite is whitelist-only: any recipe not listed here is inert by construction
+# (https://docs.openrewrite.org/reference/rewrite-maven-plugin —
+#  "No recipe is run unless explicitly turned on with this setting").
+recipeList:
+  - org.openrewrite.staticanalysis.CommonStaticAnalysis
+
+# Documentary exclusion list — recipes that are deliberately NOT activated for this project.
+# OpenRewrite does not support recipe-level exclusion inside a composite
+# (https://github.com/openrewrite/rewrite/issues/1714 wontfix). These entries exist as a
+# tripwire for future maintainers: do NOT add them to recipeList above.
+#
+# org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0  — codebase already on Boot 4.0.6;
+#   this recipe migrates FROM Boot 3 and would produce confusing diffs (see PITFALLS Pitfall 1).
