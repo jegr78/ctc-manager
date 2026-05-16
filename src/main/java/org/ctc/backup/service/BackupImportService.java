@@ -664,7 +664,7 @@ public class BackupImportService {
         if (entry == null) {
             // Absent data files for an entity are not a hard error — an exported empty array is
             // semantically equivalent. The restorer is simply not invoked and the count is 0.
-            log.debug("No data entry for table={} (entryPath={}) — restore count is 0",
+            log.warn("Backup ZIP has no data entry for table={} (entryPath={}) — possible corruption or schema regression",
                     ref.tableName(), entryPath);
             return totalRows;
         }
