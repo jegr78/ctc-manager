@@ -25,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -120,6 +121,12 @@ public class BackupImportService {
 
     /** Defensive allow-list for native-SQL table-name concatenation (no SQL injection on hard-coded BackupSchema slugs). */
     private static final Pattern SAFE_TABLE_NAME = Pattern.compile("^[a-z_]+$");
+
+    private final AtomicInteger zipOpenCounter = new AtomicInteger(0);
+
+    public int getZipOpenCount() {
+        return zipOpenCounter.get();
+    }
 
     private final BackupArchiveService backupArchive;
     private final BackupSchema backupSchema;
@@ -421,6 +428,7 @@ public class BackupImportService {
             isolation = Isolation.READ_COMMITTED,
             rollbackFor = Exception.class)
     public BackupImportResult execute(UUID stagingId) {
+        zipOpenCounter.set(0);
         log.info("Backup import execute started: stagingId={}", stagingId);
 
         UUID auditUuid = UUID.randomUUID();
@@ -630,6 +638,7 @@ public class BackupImportService {
         // race where the listener's Step-4 cleanup can hit the same staging file while a
         // JVM-internal ZipInputStream lifecycle is still settling, and is a meaningful perf
         // win on the Saison-2023 ~1000-row fixture.
+        zipOpenCounter.incrementAndGet();
         try (ZipFile zf = new ZipFile(staged.toFile())) {
             for (EntityRef ref : backupSchema.getExportOrder()) {
                 String table = ref.tableName();
