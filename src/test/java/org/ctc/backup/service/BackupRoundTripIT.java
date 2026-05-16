@@ -403,6 +403,30 @@ class BackupRoundTripIT {
 					.containsExactly(preTeamHash);
 		}
 
+		@Test
+		void givenSeasonOneFixture_whenRoundTrip_thenAll24EntityRowCountsMatch() throws Exception {
+			// given
+			Map<String, Long> preCounts = captureRowCounts();
+			assertThat(preCounts.values().stream().filter(c -> c > 0).count())
+					.as("fixture must have data in at least 12 entities for a meaningful parity test")
+					.isGreaterThan(12);
+
+			// when
+			byte[] zipBytes = exportToBytes();
+			MockMultipartFile file = new MockMultipartFile(
+					"file", "h2-parity-export.zip", "application/zip", zipBytes);
+			BackupImportPreview preview = backupImportService.stage(file);
+			backupImportService.execute(preview.stagingId());
+
+			// then
+			Map<String, Long> postCounts = captureRowCounts();
+			for (EntityRef ref : backupSchema.getExportOrder()) {
+				assertThat(postCounts.get(ref.tableName()))
+						.as("row-count parity for table=" + ref.tableName())
+						.isEqualTo(preCounts.get(ref.tableName()));
+			}
+		}
+
 		// -------------------------------------------------------------------------
 		// Helpers — duplicated per @Nested class (each class has its own ApplicationContext)
 		// -------------------------------------------------------------------------
@@ -628,6 +652,30 @@ class BackupRoundTripIT {
 							HexFormat.of().formatHex(preTeamHash),
 							HexFormat.of().formatHex(postTeamHash))
 					.containsExactly(preTeamHash);
+		}
+
+		@Test
+		void givenSeasonOneFixture_whenRoundTrip_thenAll24EntityRowCountsMatch() throws Exception {
+			// given
+			Map<String, Long> preCounts = captureRowCounts();
+			assertThat(preCounts.values().stream().filter(c -> c > 0).count())
+					.as("fixture must have data in at least 12 entities for a meaningful parity test")
+					.isGreaterThan(12);
+
+			// when
+			byte[] zipBytes = exportToBytes();
+			MockMultipartFile file = new MockMultipartFile(
+					"file", "mariadb-parity-export.zip", "application/zip", zipBytes);
+			BackupImportPreview preview = backupImportService.stage(file);
+			backupImportService.execute(preview.stagingId());
+
+			// then
+			Map<String, Long> postCounts = captureRowCounts();
+			for (EntityRef ref : backupSchema.getExportOrder()) {
+				assertThat(postCounts.get(ref.tableName()))
+						.as("row-count parity for table=" + ref.tableName())
+						.isEqualTo(preCounts.get(ref.tableName()));
+			}
 		}
 
 		// -------------------------------------------------------------------------
