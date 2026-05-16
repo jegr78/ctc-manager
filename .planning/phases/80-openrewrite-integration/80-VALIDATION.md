@@ -1,10 +1,11 @@
 ---
 phase: 80
 slug: openrewrite-integration
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: validated
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-16
+validated: 2026-05-16
 ---
 
 # Phase 80 — Validation Strategy
@@ -39,18 +40,18 @@ created: 2026-05-16
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 80-01-01 | 01 | 1 | REWR-03 | — | Default-build isolation: `rewrite-maven-plugin` absent from effective POM without `-Prewrite` | structural smoke | `./mvnw -q help:effective-pom \| grep -c 'rewrite-maven-plugin'` → expected `0` | ✅ existing infra (Maven help plugin) | ⬜ pending |
-| 80-01-02 | 01 | 1 | REWR-03 | — | Default-build isolation: `rewrite` profile inactive by default | structural smoke | `./mvnw -q help:active-profiles \| grep -c rewrite` → expected `0` | ✅ existing infra | ⬜ pending |
-| 80-01-03 | 01 | 1 | REWR-03 | — | Default verify produces no "Running OpenRewrite" output | structural smoke | `./mvnw -q verify 2>&1 \| grep -ci 'Running OpenRewrite'` → expected `0` | ✅ existing JUnit/Surefire/Failsafe infrastructure | ⬜ pending |
-| 80-02-01 | 01/02 | 1 | REWR-01, REWR-04 | — | `mvn -Prewrite rewrite:dryRun` exits 0 and writes either `target/site/rewrite/rewrite.patch` or no patch (clean codebase) | smoke (shell) | `./mvnw -Prewrite rewrite:dryRun && (test -f target/site/rewrite/rewrite.patch \|\| echo clean) && git diff --quiet` | n/a (one-shot shell verification) | ⬜ pending |
-| 80-02-02 | 01/02 | 1 | REWR-04 | — | `org.ctc.RewriteCleanup` composite recipe is discoverable on the plugin classpath | smoke (shell) | `./mvnw -Prewrite rewrite:discover -q \| grep -F 'org.ctc.RewriteCleanup'` → expected one line | n/a (rewrite.yml is net-new) | ⬜ pending |
-| 80-02-03 | 01/02 | 1 | REWR-04 | — | `rewrite.yml` parses as valid YAML and declares CommonStaticAnalysis active | shell + grep | `grep -F 'org.openrewrite.staticanalysis.CommonStaticAnalysis' rewrite.yml` AND `python3 -c "import yaml,sys; yaml.safe_load(open('rewrite.yml'))"` returns 0 | rewrite.yml is net-new | ⬜ pending |
-| 80-03-01 | 03 (conditional) | 2 | REWR-02, REWR-05 | — | `mvn -Prewrite rewrite:run` applied (only if dryRun non-empty); resulting cleanup commit passes full test+coverage gate | full suite | `./mvnw -q verify` exit 0 + JaCoCo `target/site/jacoco/index.html` LINE ratio ≥ 0.82 AND ≥ pre-cleanup baseline (87.80 %) | existing JaCoCo `<rule>` (pom.xml:347) | ⬜ pending |
-| 80-03-02 | 03 (conditional) | 2 | REWR-05 | — | If dryRun produces no patch, "no-op dryRun" outcome recorded in 80-VERIFICATION.md instead of a refactor commit | doc grep | `grep -F 'no-op dryRun' .planning/phases/80-openrewrite-integration/80-VERIFICATION.md` (or equivalent) | written at execute time | ⬜ pending |
-| 80-04-01 | 04 | 2 | REWR-06 | — | README `## Development` section exists + OpenRewrite subsection present + dryRun/run commands documented | docs grep | `grep -F '## Development' README.md` AND `grep -F 'OpenRewrite (developer-invoked refactoring)' README.md` AND `grep -F './mvnw -Prewrite rewrite:dryRun' README.md` AND `grep -F './mvnw -Prewrite rewrite:run' README.md` | README.md exists; section is new | ⬜ pending |
-| 80-04-02 | 04 | 2 | D-12 | — | Two new commands appended to CLAUDE.md `## Commands` block | docs grep | `grep -F './mvnw -Prewrite rewrite:dryRun' CLAUDE.md` AND `grep -F './mvnw -Prewrite rewrite:run' CLAUDE.md` | CLAUDE.md exists; commands are new | ⬜ pending |
+| 80-01-01 | 01 | 1 | REWR-03 | — | Default-build isolation: `rewrite-maven-plugin` absent from effective POM without `-Prewrite` | structural smoke | `./mvnw -q help:effective-pom \| grep -c 'rewrite-maven-plugin'` → expected `0` | ✅ existing infra (Maven help plugin) | ✅ green |
+| 80-01-02 | 01 | 1 | REWR-03 | — | Default-build isolation: `rewrite` profile inactive by default | structural smoke | `./mvnw -q help:active-profiles \| grep -c rewrite` → expected `0` | ✅ existing infra | ✅ green |
+| 80-01-03 | 01 | 1 | REWR-03 | — | Default verify produces no "Running OpenRewrite" output | structural smoke | `grep -ci 'Running OpenRewrite' /tmp/80-verify-post-wiring.log` → expected `0` (derived from single `./mvnw -q verify` invocation per WARNING-B) | ✅ existing JUnit/Surefire/Failsafe infrastructure | ✅ green |
+| 80-02-01 | 02/03 | 1 | REWR-01, REWR-04 | T-80-05 (Tampering) | `mvn -Prewrite rewrite:dryRun` exits 0 and writes either `target/rewrite/rewrite.patch` or no patch (clean codebase); working tree unchanged | smoke (shell) | `./mvnw -Prewrite rewrite:dryRun && (test -f target/rewrite/rewrite.patch \|\| echo clean) && git diff --quiet` (actual path is `target/rewrite/`, not `target/site/rewrite/`) | n/a (one-shot shell verification) | ✅ green |
+| 80-02-02 | 02/03 | 1 | REWR-04 | — | `org.ctc.RewriteCleanup` composite recipe is discoverable on the plugin classpath | smoke (shell) | `./mvnw -Prewrite rewrite:discover \| grep -F 'org.ctc.RewriteCleanup'` → expected one line | n/a (rewrite.yml is net-new) | ✅ green |
+| 80-02-03 | 02 | 1 | REWR-04 | — | `rewrite.yml` parses as valid YAML and declares CommonStaticAnalysis active | shell + grep | `grep -F 'org.openrewrite.staticanalysis.CommonStaticAnalysis' rewrite.yml` AND `python3 -c "import yaml,sys; yaml.safe_load(open('rewrite.yml'))"` returns 0 | rewrite.yml is net-new | ✅ green |
+| 80-03-01 | 04 (conditional) | 2 | REWR-02, REWR-05 | — | `mvn -Prewrite rewrite:run` applied (only if dryRun non-empty); resulting cleanup commit passes full test+coverage gate | full suite | `./mvnw clean verify` exit 0 + JaCoCo `target/site/jacoco/jacoco.csv` BUNDLE LINE ratio ≥ 0.82 AND ≥ pre-cleanup baseline (87.80 %) | existing JaCoCo `<rule>` (pom.xml) | ✅ green (88.13 % post-cleanup; +0.33 pp vs baseline) |
+| 80-03-02 | 04 (conditional) | 2 | REWR-05 | — | If dryRun produces no patch, "no-op dryRun" outcome recorded in 80-VERIFICATION.md instead of a refactor commit | doc grep | `grep -F 'no-op dryRun' .planning/phases/80-openrewrite-integration/80-VERIFICATION.md` (or equivalent) | written at execute time | ➖ n/a (Branch B `patch-non-empty` taken — conditional row inactive; alternate branch documented as `dryrun_outcome: patch-non-empty` in 80-VERIFICATION.md frontmatter) |
+| 80-04-01 | 05 | 2 | REWR-06 | — | README `## Development` section exists + OpenRewrite subsection present + dryRun/run commands documented | docs grep | `grep -F '## Development' README.md` AND `grep -F 'OpenRewrite (developer-invoked refactoring)' README.md` AND `grep -F './mvnw -Prewrite rewrite:dryRun' README.md` AND `grep -F './mvnw -Prewrite rewrite:run' README.md` | README.md exists; section is new | ✅ green |
+| 80-04-02 | 05 | 2 | D-12 | — | Two new commands appended to CLAUDE.md `## Commands` block | docs grep | `grep -F './mvnw -Prewrite rewrite:dryRun' CLAUDE.md` AND `grep -F './mvnw -Prewrite rewrite:run' CLAUDE.md` | CLAUDE.md exists; commands are new | ✅ green |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky · ➖ n/a*
 
 > Task IDs are illustrative — the planner sets the canonical IDs in PLAN.md frontmatter. The mapping above is intentionally coarse-grained because Phase 80 is build-config + docs only; the planner may collapse multiple verification rows into a single task's `<acceptance_criteria>` block.
 
@@ -92,11 +93,27 @@ created: 2026-05-16
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies (Wave 0 says "none required — existing infrastructure covers all"; the planner must confirm every task's `<acceptance_criteria>` references the commands above)
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify (Phase 80 has ≤ ~6 tasks; sampling continuity is structurally satisfied — every task either has a shell-grep or a `./mvnw verify` step)
-- [ ] Wave 0 covers all MISSING references (none — see above)
-- [ ] No watch-mode flags (n/a — Maven is one-shot)
-- [ ] Feedback latency < 300 s for the quick gate (`./mvnw -q verify` ~180 s on dev hardware; ✓)
-- [ ] `nyquist_compliant: true` set in frontmatter after VERIFICATION.md confirms all Dimensions 1–8
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (Wave 0 says "none required — existing infrastructure covers all"; every row's `Automated Command` ran and the results are recorded in `80-VERIFICATION.md`)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (Phase 80 has ≤ ~6 tasks; sampling continuity is structurally satisfied — every task either has a shell-grep or a `./mvnw verify` step)
+- [x] Wave 0 covers all MISSING references (none — Phase 80 is build-config + docs only, no new JUnit test files required per Wave 0 Requirements above)
+- [x] No watch-mode flags (n/a — Maven is one-shot)
+- [x] Feedback latency < 300 s for the quick gate (`./mvnw -q verify` ~180 s on dev hardware; ✓)
+- [x] `nyquist_compliant: true` set in frontmatter — `80-VERIFICATION.md` confirms all Dimensions 1–8 and the three structural verification commands all returned the expected `0`.
 
-**Approval:** pending — flip `nyquist_compliant: true` after `80-VERIFICATION.md` records actual outcomes for all 8 dimensions and the three structural verification commands all return expected values.
+**Approval:** ✅ approved 2026-05-16. All 9 active task rows are ✅ green (1 row ➖ n/a — Branch A no-op conditional, properly inactive because Branch B `patch-non-empty` was taken). Dimensions D1–D8 verified per `80-VERIFICATION.md`. Post-cleanup JaCoCo BUNDLE LINE 88.13 % (+6.13 pp vs gate, +0.33 pp vs v1.10 87.80 % baseline). 1381 Surefire + 231 Failsafe tests green.
+
+## Validation Audit 2026-05-16
+
+| Metric | Count |
+|--------|-------|
+| Active task rows | 9 |
+| COVERED (✅ green) | 9 |
+| PARTIAL | 0 |
+| MISSING | 0 |
+| Conditional / n/a (➖) | 1 (80-03-02 — alternate branch documented) |
+| Tests generated this audit | 0 (phase is build-config + docs; no JUnit gaps to fill) |
+| Manual-only escalations this audit | 0 |
+
+**Evidence basis:** `80-VERIFICATION.md` (REWR-05 Cleanup Commit Closure section, commits `4f42ee0` + `0178d71` + `5d160ff`) + spot-check re-runs of `./mvnw -q help:effective-pom`, `./mvnw -q help:active-profiles`, README/CLAUDE.md/rewrite.yml grep checks during this audit.
+
+**State transition:** `nyquist_compliant: false → true`, `status: draft → validated`, `wave_0_complete: false → true`.
