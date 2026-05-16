@@ -30,8 +30,8 @@ Requirements for the v1.11 release. Each maps to a roadmap phase.
 
 - [x] **BACK-01**: `BackupSchema.SCHEMA_VERSION` remains at `1` throughout all 12 REVIEW.md fixes — verified by a guard test that asserts the constant value and the 24-entity `EXPORT_ORDER` size
 - [x] **BACK-02**: All 12 Phase-75 REVIEW.md Info/Warning items (WR-01..WR-08, IN-01..IN-04) are resolved with one atomic commit per item, each commit referencing the REVIEW.md ID in the message
-- [ ] **BACK-03**: `restoreOneTable` reads each entity-data ZIP entry once (single streaming pass) instead of opening the ZIP 24× — verified by an IT measuring the ZipEntry-open count
-- [ ] **BACK-04**: `BackupRoundTripIT` and `BackupImportRollbackIT` both still pass on H2 and MariaDB after every commit in the cleanup sequence
+- [x] **BACK-03**: `restoreOneTable` reads each entity-data ZIP entry once (single streaming pass) instead of opening the ZIP 24× — verified by an IT measuring the ZipEntry-open count
+- [x] **BACK-04**: `BackupRoundTripIT` and `BackupImportRollbackIT` both still pass on H2 and MariaDB after every commit in the cleanup sequence
 - [x] **BACK-05**: `BackupRoundTripIT` is extended to assert per-entity row counts for ALL 24 entities (not just Race + SeasonDriver + Team) so future cleanup work cannot silently drop rows
 
 ### Quality and Polish Sweep (QUAL)
@@ -130,8 +130,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STAT-07 | Phase 81 | Pending |
 | BACK-01 | Phase 82 | Complete |
 | BACK-02 | Phase 82 | Complete |
-| BACK-03 | Phase 82 | Pending |
-| BACK-04 | Phase 82 | Pending |
+| BACK-03 | Phase 82 | Complete |
+| BACK-04 | Phase 82 | Complete |
 | BACK-05 | Phase 82 | Complete |
 | QUAL-01 | Phase 83 | Pending |
 | QUAL-02 | Phase 83 | Pending |
