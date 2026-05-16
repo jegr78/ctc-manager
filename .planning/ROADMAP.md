@@ -173,11 +173,11 @@ See: milestones/v1.10-ROADMAP.md for full details
   4. `rewrite.yml` activates `CommonStaticAnalysis` and explicitly excludes `UpgradeSpringBoot_4_0` (the project is already on Boot 4.0.6); the one-shot cleanup diff is reviewed for Lombok entity false positives and committed
   5. README "Development" section documents the `dryRun` → `run` workflow and the deliberate decision to keep OpenRewrite developer-invoked only
 
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 Plans:
 **Wave 1**
 
-- [ ] 80-01-PLAN.md — Wire `rewrite-maven-plugin` 6.39.0 into a new `<profile id="rewrite">` block in `pom.xml` (REWR-03)
+- [x] 80-01-PLAN.md — Wire `rewrite-maven-plugin` 6.39.0 into a new `<profile id="rewrite">` block in `pom.xml` (REWR-03)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -300,7 +300,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 80. OpenRewrite Integration | 0/5 | Not started | - |
+| 80. OpenRewrite Integration | 1/5 | In Progress|  |
 | 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 0/TBD | Not started | - |
 | 82. Backup Cleanup | 0/TBD | Not started | - |
 | 83. Quality and Polish Sweep | 0/TBD | Not started | - |
