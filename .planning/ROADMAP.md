@@ -170,7 +170,13 @@ See: milestones/v1.10-ROADMAP.md for full details
   3. `./mvnw verify` (without `-Prewrite`) produces no "Running OpenRewrite" output and adds zero seconds versus the v1.10 baseline
   4. `rewrite.yml` activates `CommonStaticAnalysis` and explicitly excludes `UpgradeSpringBoot_4_0` (the project is already on Boot 4.0.6); the one-shot cleanup diff is reviewed for Lombok entity false positives and committed
   5. README "Development" section documents the `dryRun` → `run` workflow and the deliberate decision to keep OpenRewrite developer-invoked only
-**Plans**: TBD
+**Plans:** 5 plans
+Plans:
+- [ ] 80-01-PLAN.md — Wire `rewrite-maven-plugin` 6.39.0 into a new `<profile id="rewrite">` block in `pom.xml` (REWR-03)
+- [ ] 80-02-PLAN.md — Create `rewrite.yml` declaring composite recipe `org.ctc.RewriteCleanup` with documentary `UpgradeSpringBoot_4_0` tripwire (REWR-04)
+- [ ] 80-03-PLAN.md — Run `rewrite:dryRun` + `rewrite:discover` + structural-isolation verification; record outcome in `80-VERIFICATION.md` (REWR-01, REWR-03)
+- [ ] 80-04-PLAN.md — Conditional cleanup commit: if dryRun non-empty apply `rewrite:run` per D-07/D-08, else document no-op per Claude's Discretion (REWR-02, REWR-05)
+- [ ] 80-05-PLAN.md — Add `## Development` section to README.md and append two `-Prewrite` commands to CLAUDE.md `## Commands` block (REWR-06)
 
 ### Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs)
 **Goal**: Every `./mvnw verify` run enforces a bytecode-level clean-code gate that catches null dereferences, resource leaks, and 144 Spring Security-aware patterns — with Lombok false positives fully suppressed before the gate goes live
@@ -262,7 +268,7 @@ See: milestones/v1.10-ROADMAP.md for full details
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 80. OpenRewrite Integration | 0/TBD | Not started | - |
+| 80. OpenRewrite Integration | 0/5 | Not started | - |
 | 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 0/TBD | Not started | - |
 | 82. Backup Cleanup | 0/TBD | Not started | - |
 | 83. Quality and Polish Sweep | 0/TBD | Not started | - |
