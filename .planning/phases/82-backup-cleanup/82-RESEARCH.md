@@ -802,7 +802,7 @@ Phase 82 is purely code/config/test changes with no new external tool dependenci
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **IN-03 test placement: sibling IT or within BACK-03 IT?**
    - What we know: D-11 says "extend the existing BACK-03 IT or add a sibling". `OutputCaptureExtension` can be added to `BackupRestoreZipOpenCountIT`.
