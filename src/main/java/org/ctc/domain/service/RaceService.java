@@ -107,9 +107,9 @@ public class RaceService {
 		if (race.getMatch() != null && race.getHomeTeam() != null && race.getAwayTeam() != null) {
 			var season = race.getMatchday().getSeason();
 			hasHomeCard = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), race.getHomeTeam().getId())
-					.map(teamCardService::cardExists).orElse(false);
+					.map(st -> teamCardService.cardExists(st)).orElse(false);
 			hasAwayCard = seasonTeamRepository.findBySeasonIdAndTeamId(season.getId(), race.getAwayTeam().getId())
-					.map(teamCardService::cardExists).orElse(false);
+					.map(st -> teamCardService.cardExists(st)).orElse(false);
 		}
 		boolean lineupExists = race.getAttachments().stream()
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/lineup.png"));
