@@ -1,6 +1,7 @@
 package org.ctc.admin.service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -156,7 +157,7 @@ public abstract class AbstractPlayoffRoundGraphicService extends AbstractGraphic
 	public String loadDefaultTemplate() throws IOException {
 		var resource = new ClassPathResource("templates/" + getDefaultTemplatePath() + ".html");
 		try (var is = resource.getInputStream()) {
-			return new String(is.readAllBytes());
+			return new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
 	}
 
