@@ -419,6 +419,41 @@ exit 0;
 				</plugins>
 			</build>
 		</profile>
+		<profile>
+			<id>rewrite</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.openrewrite.maven</groupId>
+						<artifactId>rewrite-maven-plugin</artifactId>
+						<version>6.39.0</version>
+						<configuration>
+							<activeRecipes>
+								<recipe>org.ctc.RewriteCleanup</recipe>
+							</activeRecipes>
+							<configLocation>${project.basedir}/rewrite.yml</configLocation>
+							<exportDatatables>false</exportDatatables>
+						</configuration>
+						<dependencies>
+							<dependency>
+								<groupId>org.openrewrite.recipe</groupId>
+								<artifactId>rewrite-spring</artifactId>
+								<version>6.30.4</version>
+							</dependency>
+							<dependency>
+								<groupId>org.openrewrite.recipe</groupId>
+								<artifactId>rewrite-migrate-java</artifactId>
+								<version>3.34.1</version>
+							</dependency>
+							<!-- rewrite-static-analysis:2.34.1 (home of CommonStaticAnalysis) is
+							     pulled in transitively via rewrite-spring:6.30.4 — no explicit
+							     declaration required. Verified against rewrite-spring-6.30.4.pom
+							     on Maven Central. -->
+						</dependencies>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
 	</profiles>
 
 </project>
