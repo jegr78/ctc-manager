@@ -33,10 +33,10 @@ public class TemplatePreviewService {
             "javax.script", "java.lang.reflect"
     );
 
-    private String cachedFontBase64;
-    private String cachedLogoBase64;
-    private String cachedCommentatorBase64;
-    private String cachedVsBadgeBase64;
+    private volatile String cachedFontBase64;
+    private volatile String cachedLogoBase64;
+    private volatile String cachedCommentatorBase64;
+    private volatile String cachedVsBadgeBase64;
 
     public String renderPreview(String templateType, String templateContent) {
         var ctx = switch (templateType) {
