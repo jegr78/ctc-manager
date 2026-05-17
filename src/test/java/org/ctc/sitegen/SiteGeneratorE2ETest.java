@@ -10,14 +10,15 @@ import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.ctc.domain.service.ScoringService;
 import org.jsoup.Jsoup;
+import org.ctc.testsupport.SitegenTestDir;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,10 +28,14 @@ import static org.mockito.BDDMockito.given;
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext
 class SiteGeneratorE2ETest {
 
-    private Path tempDir;
+    static final Path tempDir = SitegenTestDir.create("e2e");
+
+    @DynamicPropertySource
+    static void siteOutputDir(DynamicPropertyRegistry registry) {
+        registry.add("ctc.site.output-dir", () -> tempDir.toString());
+    }
 
     @Autowired
     private SiteGeneratorService siteGeneratorService;
@@ -90,10 +95,9 @@ class SiteGeneratorE2ETest {
     private Season season;
 
     @BeforeAll
-    void setUp(@TempDir Path injectedTempDir) {
+    void setUp() {
         given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
                 .willReturn("dQw4w9WgXcQ");
-        this.tempDir = injectedTempDir;
         uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
 
         // Deactivate and hide all existing seasons (mark as "Test" so productionSeasons filter excludes them)

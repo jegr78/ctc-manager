@@ -8,15 +8,16 @@ import org.ctc.admin.TestDataService;
 import org.flywaydb.core.Flyway;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.ctc.testsupport.SitegenTestDir;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,24 +41,25 @@ import static org.mockito.BDDMockito.given;
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext
 class StandingsPageGeneratorTest {
 
-    private Path tempDir;
+    static final Path tempDir = SitegenTestDir.create("standings");
+
+    @DynamicPropertySource
+    static void siteOutputDir(DynamicPropertyRegistry registry) {
+        registry.add("ctc.site.output-dir", () -> tempDir.toString());
+    }
 
     @Autowired private SiteGeneratorService siteGeneratorService;
-    @Autowired private SiteProperties siteProperties;
     @Autowired private TestDataService testDataService;
     @Autowired private DataSource dataSource;
 
     @MockitoBean private YouTubeScraperService youTubeScraperService;
 
     @BeforeAll
-    void setUp(@TempDir Path injectedTempDir) {
+    void setUp() {
         given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
                 .willReturn("dQw4w9WgXcQ");
-        this.tempDir = injectedTempDir;
-        siteProperties.setOutputDir(tempDir.toString());
 
         // Flyway clean+migrate guarantees a fresh DB state regardless of preceding test classes
         // having seeded data into the shared H2 in-memory DB (DB_CLOSE_DELAY=-1 keeps the DB

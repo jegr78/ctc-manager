@@ -12,22 +12,14 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// Phase 79 Wave 1 fix: matches sitegen-test pattern (Flyway clean+migrate+seed in @BeforeAll
-// + @DirtiesContext) to defend against shared H2 (DB_CLOSE_DELAY=-1) state left by preceding
-// @DirtiesContext sitegen tests under random Surefire orderings (e.g. seed=1234).
-// @Transactional remains for lazy-loading support inside test methods (Season.getPhases(),
-// Season.getSeasonTeams(), Race.getMatchday() etc.) — @BeforeAll runs outside any test
-// transaction, so its commit is visible to all subsequent @Test methods.
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext
 @Transactional
 class TestDataServiceIntegrationTest {
 
