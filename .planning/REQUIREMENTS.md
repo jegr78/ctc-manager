@@ -44,14 +44,14 @@ Requirements for the v1.11 release. Each maps to a roadmap phase.
 
 ### Renovate (DEPS)
 
-- [ ] **DEPS-01**: A root-level `renovate.json` exists with `enabledManagers: ["maven", "github-actions", "dockerfile"]` covering `pom.xml`, workflow `uses:` clauses, and Dockerfile base images
-- [ ] **DEPS-02**: The Mend Renovate GitHub App is installed against `jegr78/ctc-manager` and produces at least one onboarding PR
-- [ ] **DEPS-03**: `renovate.json` includes a packageRule that pins `com.google.guava:guava` to `-jre` classifier variants only (regex `allowedVersions`) so the Java 25 VarHandle path is preserved
-- [ ] **DEPS-04**: `renovate.json` includes a packageRule that explicitly DISABLES auto-updates for `org.thymeleaf:thymeleaf` (3.1.5.RELEASE pin is a CVE-2026-40478 mitigation that must not silently roll forward)
-- [ ] **DEPS-05**: `renovate.json` constrains `java.version` proposals to LTS-only patterns (`^(?:11|17|21|25|29)`) so Renovate never proposes Java 26/27/28 that would misalign with `eclipse-temurin:25-noble` Dockerfile pins
-- [ ] **DEPS-06**: `renovate.json` groups Spring Boot starters (`spring-boot-*`), Spring Security (`spring-security-*`), Google API clients (`google-api-*`), and Testcontainers (`testcontainers-*`) into single grouped PRs to reduce PR noise
-- [ ] **DEPS-07**: `renovate.json` enables automerge for `patch` updates that pass CI but requires manual review for `minor` and `major` (especially OpenRewrite recipe-pack bumps, which trigger manual migration runs)
-- [ ] **DEPS-08**: `dockerfile-noble-pin-guard` CI job continues to pass after Renovate's first Dockerfile-bump PR is opened (proves Renovate respects the suffix-only pin)
+- [x] **DEPS-01**: A root-level `renovate.json` exists with `enabledManagers: ["maven", "github-actions", "dockerfile"]` covering `pom.xml`, workflow `uses:` clauses, and Dockerfile base images
+- [x] **DEPS-02**: The Mend Renovate GitHub App is installed against `jegr78/ctc-manager` and produces at least one onboarding PR
+- [x] **DEPS-03**: `renovate.json` includes a packageRule that pins `com.google.guava:guava` to `-jre` classifier variants only (regex `allowedVersions`) so the Java 25 VarHandle path is preserved
+- [x] **DEPS-04**: `renovate.json` includes a packageRule that explicitly DISABLES auto-updates for `org.thymeleaf:thymeleaf` (3.1.5.RELEASE pin is a CVE-2026-40478 mitigation that must not silently roll forward)
+- [x] **DEPS-05**: `renovate.json` constrains `java.version` proposals to LTS-only patterns (`^(?:11|17|21|25|29)`) so Renovate never proposes Java 26/27/28 that would misalign with `eclipse-temurin:25-noble` Dockerfile pins
+- [x] **DEPS-06**: `renovate.json` groups Spring Boot starters (`spring-boot-*`), Spring Security (`spring-security-*`), Google API clients (`google-api-*`), and Testcontainers (`testcontainers-*`) into single grouped PRs to reduce PR noise
+- [x] **DEPS-07**: `renovate.json` enables automerge for `patch` updates that pass CI but requires manual review for `minor` and `major` (especially OpenRewrite recipe-pack bumps, which trigger manual migration runs)
+- [x] **DEPS-08**: `dockerfile-noble-pin-guard` CI job continues to pass after Renovate's first Dockerfile-bump PR is opened (proves Renovate respects the suffix-only pin)
 
 ### CodeQL SAST (SAST)
 
@@ -138,14 +138,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | QUAL-03 | Phase 83 | Complete |
 | QUAL-04 | Phase 83 | Complete |
 | QUAL-05 | Phase 83 | Complete |
-| DEPS-01 | Phase 84 | Pending |
-| DEPS-02 | Phase 84 | Pending |
-| DEPS-03 | Phase 84 | Pending |
-| DEPS-04 | Phase 84 | Pending |
-| DEPS-05 | Phase 84 | Pending |
-| DEPS-06 | Phase 84 | Pending |
-| DEPS-07 | Phase 84 | Pending |
-| DEPS-08 | Phase 84 | Pending |
+| DEPS-01 | Phase 84 | Done    |
+| DEPS-02 | Phase 84 | Done    |
+| DEPS-03 | Phase 84 | Done    |
+| DEPS-04 | Phase 84 | Done    |
+| DEPS-05 | Phase 84 | Done    |
+| DEPS-06 | Phase 84 | Done    |
+| DEPS-07 | Phase 84 | Done    |
+| DEPS-08 | Phase 84 | Done    |
 | SAST-01 | Phase 85 | Pending |
 | SAST-02 | Phase 85 | Pending |
 | SAST-03 | Phase 85 | Pending |

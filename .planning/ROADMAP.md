@@ -153,7 +153,7 @@ See: milestones/v1.10-ROADMAP.md for full details
 - [x] **Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs)** — `./mvnw verify` fails on new HIGH-priority bytecode violations (completed 2026-05-16)
 - [x] **Phase 82: Backup Cleanup** — All 12 Phase-75 REVIEW.md items resolved; SCHEMA_VERSION remains 1; BackupRoundTripIT covers all 24 entities (completed 2026-05-16)
 - [x] **Phase 83: Quality and Polish Sweep** — Four v1.9/v1.10 carryover items cleared; UAT-02 procedure + result-slot ready (completed 2026-05-17)
-- [ ] **Phase 84: Renovate Integration** — Automated dependency update PRs active with Guava/Thymeleaf/Java-version safety rules in place
+- [x] **Phase 84: Renovate Integration** — Automated dependency update PRs active with Guava/Thymeleaf/Java-version safety rules in place (completed 2026-05-17)
 - [ ] **Phase 85: CodeQL SAST** — Security findings visible in GitHub Security tab; SSRF/ZIP-Slip/BCrypt patterns triaged
 - [ ] **Phase 86: Test Wallclock Reduction** — `@DirtiesContext` audit complete; ≥30% wallclock reduction OR architectural blocker documented
 - [ ] **Phase 87: Nyquist VALIDATION Closure** — All 8 v1.10 phases (71-76, 78-79) have approved VALIDATION.md files
@@ -294,11 +294,11 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 84-03-PLAN.md — Synthetic Dockerfile-bump throwaway PR exercising dockerfile-noble-pin-guard (DEPS-08 / SC#6, CONTEXT.md D-24 path 3)
+- [x] 84-03-PLAN.md — Synthetic Dockerfile-bump throwaway PR exercising dockerfile-noble-pin-guard (DEPS-08 / SC#6, CONTEXT.md D-24 path 3)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 84-04-PLAN.md — Final ./mvnw verify -Pe2e gate + 84-VERIFICATION.md approval + STATE/ROADMAP/REQUIREMENTS updates
+- [x] 84-04-PLAN.md — Final ./mvnw verify -Pe2e gate + 84-VERIFICATION.md approval + STATE/ROADMAP/REQUIREMENTS updates
 
 ### Phase 85: CodeQL SAST
 
@@ -350,7 +350,7 @@ Plans:
 | 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 3/3 | Complete   | 2026-05-16 |
 | 82. Backup Cleanup | 10/10 | Complete   | 2026-05-16 |
 | 83. Quality and Polish Sweep | 6/6 | Complete   | 2026-05-17 |
-| 84. Renovate Integration | 2/4 | In Progress|  |
+| 84. Renovate Integration | 4/4 | Complete   | 2026-05-17 |
 | 85. CodeQL SAST | 0/TBD | Not started | - |
 | 86. Test Wallclock Reduction | 0/TBD | Not started | - |
 | 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |

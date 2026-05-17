@@ -1,10 +1,13 @@
 ---
 phase: 84-renovate-integration
-status: in-progress
+status: approved
 started: 2026-05-17
 last_updated: 2026-05-17
-waves_completed: [1, 2, 3]
-waves_pending: [4]
+approved_at: 2026-05-17
+approved_by: Claude (gsd-executor session) — verified by operator review of waves 1-3 PRs (#123/#125/#127) and direct Wave-4 commits
+nyquist_compliant: true
+waves_completed: [1, 2, 3, 4]
+waves_pending: []
 requirements_satisfied: [DEPS-01, DEPS-02, DEPS-03, DEPS-04, DEPS-05, DEPS-06, DEPS-07, DEPS-08]
 requirements_pending: []
 ---
@@ -235,13 +238,71 @@ T-3 ("Dockerfile `-noble` bypass") now fully closed:
 
 ---
 
-## Wave 4 — Phase-End Closeout ⏭ pending
+## Wave 4 — Final phase gate (84-04-PLAN) ✅
 
-Final `./mvnw verify -Pe2e` gate; VERIFICATION.md `status: approved`; STATE.md + ROADMAP.md + REQUIREMENTS.md finalised; phase milestone bookkeeping.
+**Plan:** [84-04-PLAN.md](84-04-PLAN.md)
+**Executed:** 2026-05-17 inline (autonomous tasks 1-5 run directly on the local milestone branch `gsd/v1.11-tooling-and-cleanup` — Project-Convention deviation noted: previous waves 1-3 used per-wave feature-branch+PR pattern via gsd-planner agent literal CLAUDE.md reading; Wave 4 returns to direct-commit pattern matching how Phases 80-83 were executed).
 
-See [84-04-PLAN.md](84-04-PLAN.md) for execution detail.
+### Final E2E build evidence
 
-**Wave-4 prerequisite follow-up:** Address the T-2 branch-protection gap on master (see Wave 2 Task 4 above) before the v1.11 release PR merges, to maintain the documented T-2 mitigation.
+| Metric | Value | Compared to v1.10 baseline |
+|---|---|---|
+| Command | `./mvnw verify -Pe2e --no-transfer-progress` | — |
+| Exit code | **0** (BUILD SUCCESS) | ✓ |
+| Total time | **9 min 9 s** | v1.10 baseline 11m 11s; Phase 84 has zero Java surface so this is incidental, not a Phase-84-attributable improvement |
+| **JaCoCo line coverage** | **88.07 %** (37 887 / 43 021) | v1.10 baseline 87.80 %; +0.27 pp (delta is Phase 83 QUAL-04 StandingsViewService extraction adding covered lines, not Phase 84) |
+| JaCoCo floor (CLAUDE.md) | 82 % | ✓ comfort buffer 6.07 pp |
+| Surefire (unit) | 1394 tests, 0 failures, 0 errors, 4 skipped | v1.10 baseline 1386 (+8 from Phase 83 QUAL-04 StandingsViewServiceTest) |
+| Failsafe (integration) | 236 tests, 0 failures, 0 errors, 3 skipped | v1.10 baseline 231 (+5 from Phase 82 BackupRoundTripIT extension + Phase 83 IT additions) |
+| Playwright E2E | 38 tests, 0 failures, 0 errors, 0 skipped | v1.10 baseline 36 (+2 from new Phase 82/83 E2E coverage) |
+
+**Pre-flight cleanup:** `./mvnw clean` was run before the Wave-4 verify because an earlier dispatch on `feature/renovate-integration-wave4` (branched off `origin/gsd/v1.11-tooling-and-cleanup` which is missing the local Phase 83 commits) produced `NoClassDefFound StandingsViewService` from a stale `target/test-classes/` carrying compiled Phase-83 test classes without their `src/main/` counterparts. Switching to the local milestone branch (which has both halves) + `mvn clean` resolved the staleness. Per CLAUDE.md `feedback_clean_maven_build_authority`: clean Maven build is the truth source.
+
+### Final DEPS-XX scoreboard
+
+- [x] **DEPS-01** — `renovate.json` exists at repo root with `enabledManagers: ["maven", "github-actions", "dockerfile"]` (Wave 1, PR #123 merged 79416a10)
+- [x] **DEPS-02** — Mend Renovate GitHub App installed against `jegr78/ctc-manager` (single-repo scope) + onboarding PR #124 produced (closed unmerged with rationale) (Wave 2, PR #125 merged cd4e042a)
+- [x] **DEPS-03** — Guava `-jre` allowedVersions regex packageRule (Wave 1)
+- [x] **DEPS-04** — Thymeleaf `enabled: false` primary rule + secondary vulnerability-override rule (Wave 1; RESEARCH.md correction #4)
+- [x] **DEPS-05** — Java LTS via inherited `config:recommended` preset, no hand-rolled `java` packageRule (Wave 1; RESEARCH.md correction #1)
+- [x] **DEPS-06** — Four group names: `Spring Boot`, `Spring Security`, `Google API clients`, `Testcontainers` — all using modern `matchPackageNames` regex syntax, not deprecated `matchPackagePatterns` (Wave 1; RESEARCH.md correction #2)
+- [x] **DEPS-07** — Patch automerge with `automergeType: "pr"` (Wave 1; ambient because Mend Free caps repo mode at "Interactive" — Dependency Dashboard checkbox approval gates patch promotion to PR, then `renovate.json` automerge config applies per-PR after CI green)
+- [x] **DEPS-08** — `dockerfile-noble-pin-guard` exercised by synthetic Renovate-shape Dockerfile-bump throwaway PR #126 (closed unmerged); guard verbatim output `[noble-pin-guard] OK - all 'FROM eclipse-temurin:' lines are pinned to -noble.` captured (Wave 3, PR #127 merged 8b6f6f69)
+
+### Threat-model closeout
+
+- **T-1** (third-party SaaS trust) — ✅ closed (Wave 2): single-repo install scope, Renovate Only product tier (no commercial features granted), Mend GitHub-verified app reputation
+- **T-2** (silent code entry via automerge) — ⚠ partially closed: `automergeType: "pr"` ✅ locked in `renovate.json`; **master branch-protection `required_status_checks` follow-up still required** — see [Open follow-ups](#open-follow-ups-out-of-phase) below
+- **T-3** (Dockerfile `-noble` bypass) — ✅ closed (Waves 1+3): prevention via corrected `eclipse-temurin` regex + structurally validated via synthetic PR exercising the CI guard
+- **T-4** (Thymeleaf CVE bypass) — ✅ closed (Wave 1): primary `enabled: false` + secondary vulnerability-override rule + cross-surface GitHub native Dependabot security alerts (unaffected by `.github/dependabot.yml` removal — they live in repo settings, not the file)
+- **T-5** (dual-bot duplicate PRs) — ✅ closed (Wave 1): D-03 same-commit invariant (`renovate.json` add + `.github/dependabot.yml` delete in one atomic commit)
+
+### Open follow-ups (out-of-phase)
+
+1. **T-2 master branch-protection gap (operator action recommended before v1.11→master release PR merges):**
+   - Current state: `gh api repos/jegr78/ctc-manager/branches/master/protection` returns `required_status_checks: null`
+   - Required: master branch protection must require `build-and-test` AND `dockerfile-noble-pin-guard` status checks before patch-automerge from Renovate can safely land on master
+   - Set via:
+
+     ```bash
+     gh api -X PUT repos/jegr78/ctc-manager/branches/master/protection \
+       -F required_status_checks.strict=true \
+       -F required_status_checks.contexts[]=build-and-test \
+       -F required_status_checks.contexts[]=dockerfile-noble-pin-guard \
+       -f enforce_admins=false \
+       -F required_pull_request_reviews.required_approving_review_count=0 \
+       -F restrictions=null
+     ```
+
+   - Why out-of-phase: the gap doesn't exploit immediately because `renovate.json` is on the milestone branch, not master. Risk only materialises post-v1.11-merge. Address before that merge.
+
+2. **DEPS-FUTURE-01 (curated Dependency Dashboard review queue):** Deferred per REQUIREMENTS.md until team grows beyond a single maintainer. Mend's default dashboard issue is auto-created once Renovate first scans; no action required for v1.11.
+
+3. **Project-Convention deviation acknowledged:** Phase 84 Waves 1-3 used per-wave feature-branch+PR pattern (PRs #123, #125, #127), inconsistent with Phases 80-83 which committed directly to the milestone branch. Documented in operator dialogue 2026-05-17 — Wave 4 returns to direct-commit. CLAUDE.md `## Git Workflow` could be clarified to distinguish "PR for master-merging changes" vs "direct-commit within active milestone branch" so future planner agents don't repeat the literal interpretation.
+
+### Phase 84 — APPROVED ✅
+
+All 8 DEPS-XX requirements satisfied with evidence; all 5 threats either closed or have explicit follow-up tracked; `./mvnw verify -Pe2e` green; JaCoCo coverage above floor and above v1.10 baseline. Phase 84 closes.
 
 ---
 

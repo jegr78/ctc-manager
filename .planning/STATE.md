@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-17T11:07:29.347Z"
-last_activity: 2026-05-17 -- Phase 84 execution started
+last_updated: "2026-05-17T12:30:00.000Z"
+last_activity: 2026-05-17 -- Phase 84 marked complete
 progress:
   total_phases: 8
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 28
-  completed_plans: 24
-  percent: 50
+  completed_plans: 28
+  percent: 62
 ---
 
 # Project State
@@ -21,17 +21,17 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 84 — Renovate Integration
+**Current focus:** Phase 84 — COMPLETE; Phase 85 (CodeQL SAST) next
 
 ## Current Position
 
-Phase: 84 (Renovate Integration) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 84
-Last activity: 2026-05-17 -- Phase 84 execution started
+Phase: 84 — COMPLETE
+Plan: 4 of 4
+Status: Phase 84 complete — Renovate active, DEPS-01..DEPS-08 all satisfied; Mend Renovate GitHub App installed on jegr78/ctc-manager (Community Free / Renovate Only / Interactive mode); local Phase 83 commits remain on milestone branch and ship with v1.11→master release PR per project convention
+Last activity: 2026-05-17 -- Phase 84 marked complete
 
 ```
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 62%
 ```
 
 ## Completed Milestones
