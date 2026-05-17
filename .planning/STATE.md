@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-17T17:53:26.055Z"
-last_activity: 2026-05-17 -- Phase 86 planning complete
+last_updated: "2026-05-17T18:05:37.968Z"
+last_activity: 2026-05-17 -- Phase 86 execution started
 progress:
   total_phases: 8
   completed_phases: 6
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 85 — COMPLETE; Phase 86 (Test Wallclock Reduction) next
+**Current focus:** Phase 86 — test-wallclock-reduction
 
 ## Current Position
 
-Phase: 85 — COMPLETE
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-05-17 -- Phase 86 planning complete
+Phase: 86 (test-wallclock-reduction) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 86
+Last activity: 2026-05-17 -- Phase 86 execution started
 
 ```
 Progress: [███████░░░] 75%
@@ -77,7 +77,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (Phase 83 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Ready to execute
+- **Status:** Executing Phase 86
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
