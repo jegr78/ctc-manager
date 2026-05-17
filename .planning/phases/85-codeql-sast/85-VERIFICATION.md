@@ -102,7 +102,7 @@ A confirmatory scan will run automatically on the Wave-2 source-marker push (aut
 ## SAST-01 / D-10 Final-Enable Commit Evidence (Plan 85-03)
 
 **Date:** 2026-05-17
-**Commit SHA:** _(pending — backfilled after commit lands)_
+**Commit SHA:** `2ef451f5`
 **Commit message:** `feat(85): activate CodeQL gate on push + pull_request (SAST-01, SAST-06/1)`
 
 ### Structural-YAML Checks (Post-Final-Enable)
