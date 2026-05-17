@@ -72,6 +72,16 @@ Post-merge self-resolving items (not tracked further):
 | post_merge | QUAL-05 wiki image embed render | resolved on v1.10 PR merge to master |
 | post_merge | PLAT-CI-02 release-workflow run on master | resolved by-design post-merge |
 
+## Pending UATs
+
+### UAT-02: Legacy Season Visual Smoke (Phase 83 QUAL-05)
+
+- **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
+- **Status:** [ ] pending — to be executed after v1.11 production deploy
+- **Result:** _(operator fills after execution)_
+- **Date:** _(operator fills)_
+- **Screenshots:** _(operator links)_
+
 ## Accumulated Context
 
 ### Decisions
