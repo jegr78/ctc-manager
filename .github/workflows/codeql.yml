@@ -1,17 +1,17 @@
 name: CodeQL SAST
 
-# Phase 85 D-12/4 final-enable: triggers extended from scaffold-state
-# (workflow_dispatch + milestone-branch push per D-13 REVISED) to production
-# state. push: [master] + pull_request: [master + milestone-branch] fires the
-# workflow and the SARIF-diff gate-step on every PR and merge. schedule: Sunday
-# 02:00 UTC cron (D-20) avoids the Monday-morning Renovate run cluster -- weekly
-# drift detection only; gate-step is SKIPPED on cron events (D-10). workflow_dispatch
-# retained for manual re-runs post-merge.
+# Phase 85 D-12/4 final-enable: canonical production triggers.
+#   - push: [master]              -> scan master after every merge, establishes baseline
+#   - pull_request: [master]      -> scan every PR targeting master before merge
+#                                    (Filter ist Basis-Branch, nicht Head -- jeder Head-Branch erlaubt)
+#   - schedule: '0 2 * * 0'       -> Sunday 02:00 UTC cron (D-20), weekly drift detection only
+#                                    (Gate-Step SKIPPED on cron events per D-10)
+#   - workflow_dispatch:          -> manual trigger; requires file on master (post-merge)
 on:
   push:
     branches: [master]
   pull_request:
-    branches: [master, "gsd/v1.11-tooling-and-cleanup"]
+    branches: [master]
   schedule:
     - cron: '0 2 * * 0'
   workflow_dispatch:

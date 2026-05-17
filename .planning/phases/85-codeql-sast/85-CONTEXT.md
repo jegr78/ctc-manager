@@ -83,7 +83,7 @@ Stand up a standalone `.github/workflows/codeql.yml` workflow (GitHub `codeql-ac
   1. `git switch -c throwaway/sast-06-validation`
   2. Create `src/main/java/org/ctc/_sast_validation/SastMarker.java` with a deliberate SQLi or path-traversal pattern (e.g., `String sql = "SELECT * FROM x WHERE id = " + req.getParameter("id");` + `Statement.execute(sql)`)
   3. `git push -u origin throwaway/sast-06-validation`
-  4. `gh pr create --draft --base gsd/v1.11-tooling-and-cleanup --title "throwaway: SAST-06 verification (DO NOT MERGE)"`
+  4. `gh pr create --draft --base master --title "throwaway: SAST-06 verification (DO NOT MERGE)"` (PR base = master — the canonical `pull_request: [master]` trigger; PR closed immediately after gate-step exits 1)
   5. Wait for CodeQL workflow to run on the draft PR → expect the gate-step to exit 1 with `java/sql-injection` or `java/path-injection` HIGH alert
   6. Capture: `gh run view` output (first 30 lines) + Security tab alert screenshot pointer into `85-VERIFICATION.md`
   7. `gh pr close <num>` + `git push origin --delete throwaway/sast-06-validation`
