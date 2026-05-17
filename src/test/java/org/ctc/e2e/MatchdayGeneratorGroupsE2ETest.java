@@ -99,6 +99,32 @@ class MatchdayGeneratorGroupsE2ETest extends PlaywrightConfig {
 	@AfterEach
 	void tearDown() {
 		teardownPage();
+		// Idempotent cleanup per CLAUDE.md "Isolate Test Data Completely" — drop everything we created
+		// so subsequent tests (especially BackupImportE2ETest which round-trips ALL entities) see a
+		// clean fixture.
+		txTemplate.executeWithoutResult(tx -> {
+			seasonRepository.findByYearAndNumber(2098, 1).forEach(s -> {
+				matchdayRepository.findAll().stream()
+						.filter(m -> m.getPhase().getSeason().getId().equals(s.getId()))
+						.forEach(matchdayRepository::delete);
+				phaseTeamRepository.findAll().stream()
+						.filter(pt -> pt.getPhase().getSeason().getId().equals(s.getId()))
+						.forEach(phaseTeamRepository::delete);
+				seasonTeamRepository.findAll().stream()
+						.filter(st -> st.getSeason().getId().equals(s.getId()))
+						.forEach(seasonTeamRepository::delete);
+				seasonPhaseGroupRepository.findAll().stream()
+						.filter(g -> g.getPhase().getSeason().getId().equals(s.getId()))
+						.forEach(seasonPhaseGroupRepository::delete);
+				seasonPhaseRepository.findAll().stream()
+						.filter(p -> p.getSeason().getId().equals(s.getId()))
+						.forEach(seasonPhaseRepository::delete);
+				seasonRepository.delete(s);
+			});
+			for (String shortName : java.util.List.of("P83Q3-A1", "P83Q3-A2", "P83Q3-B1", "P83Q3-B2")) {
+				teamRepository.findByShortName(shortName).ifPresent(teamRepository::delete);
+			}
+		});
 	}
 
 	@Test
