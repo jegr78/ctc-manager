@@ -12,6 +12,38 @@ append into the appropriate sections without rewriting the skeleton.
 
 ---
 
+## Result Verdict (PERF-04)
+
+Phase 86 closes via the **OR-branch** of PERF-04. The Wave-2 audit did not deliver
+wallclock reduction on the local 3-run measurement: median local wallclock moved
+**from 09:45 (baseline) to 10:24 (post-audit)** — a 39-second regression (-6.7%)
+rather than the ≥30% reduction target or the 20-25% realistic expectation per D-15.
+Context loads decreased marginally from 81 to 79.
+
+The structural fixes from Plans 02-04 are correct on their own terms (no shared
+`SiteProperties` singleton mutation; per-method `@DirtiesContext` audit honoring
+latch-bean non-resettability; `@DataJpaTest` slice pilot for repository ITs), but
+they did not translate into a wallclock win locally. The most likely cause —
+flagged in advance by RESEARCH Open Question 2 — is that the per-class
+`@DynamicPropertySource` binding in the 7 sitegen tests fragmented one shared
+context-cache key into seven distinct keys, while the Spring TCF context-cache
+LRU eviction behavior changed which contexts get rebuilt across the suite. The
+absolute context count stayed roughly flat (81 → 79), but the cache-hit pattern
+shifted in a way that the local wallclock surfaces but does not yet explain
+end-to-end.
+
+**Phase 86 closes here per D-16 (soft cap).** PERF-04 is satisfied via the
+documented architectural blocker and the v1.12 forward path below. CI median
+remains the source of truth (D-11) — Plan 06 will harvest 5 master-branch CI
+runs after merge and record the median in this document as the new v1.11
+baseline; that number, not this local 10:24, is what the v1.12 plan should
+optimize against.
+
+**Final gate:** `./mvnw verify -Pe2e` BUILD SUCCESS on 2026-05-17 across all
+three post-audit runs — JaCoCo line coverage **88.97%** (≥82% gate).
+
+---
+
 ## Baseline (D-09)
 
 Local 3-run baseline established on `worktree-agent-aaf5570d6f34ab708` (branch
@@ -74,15 +106,29 @@ Plan 05 will report the post-optimization delta.
 
 ## Post-Optimization Wallclock (Wave 3)
 
-_(populated by Plan 05)_
+Local 3-run post-audit measured on the same hardware as the Plan-01 baseline,
+identical command and same idle-system protocol. Branch
+`gsd/v1.11-tooling-and-cleanup` after Wave-2 commits `2914ad62`, `2464f23e`,
+`6099aae7`, `36656eff`.
 
-| Run | Maven Total time | bash `real` | Context loads | Notes |
-| --- | ---------------- | ----------- | ------------- | ----- |
-| 1   | —                | —           | —             | —     |
-| 2   | —                | —           | —             | —     |
-| 3   | —                | —           | —             | —     |
+| Run | Maven Total time | bash `real`     | Context loads | Notes                    |
+| --- | ---------------- | --------------- | ------------- | ------------------------ |
+| 1   | 09:24            | 565s (9m 26s)   | 79            | BUILD SUCCESS, no flakes |
+| 2   | 10:24            | 625s (10m 25s)  | 79            | BUILD SUCCESS, no flakes |
+| 3   | 10:30            | 631s (10m 31s)  | 78            | BUILD SUCCESS, no flakes |
 
-**Median:** _(populated by Plan 05)_
+**Median (Maven): 10:24 (run 2).** **Median (bash real): 625s = 10m 25s.**
+**Post-audit context-load count:** 79 (run 1 + run 2), 78 (run 3) — median 79.
+
+**Verdict:** Achieved **-6.7% reduction** (10:24 post vs 09:45 baseline) — the
+≥30% target is not reached and the 20-25% D-15 realistic expectation is missed
+by a wide margin. See **v1.12 Forward Path** below for the path forward.
+
+A possible run-noise contribution: baseline runs spread 09:01–09:53 (52s),
+post-audit runs spread 09:24–10:30 (66s). Run-1 of each is the closest pair
+(09:01 vs 09:24, +23s). The median delta on n=3 is therefore not statistically
+robust on its own — Plan 06's CI 5-run harvest (D-10/D-11) is the authoritative
+re-measurement.
 
 ---
 
@@ -91,7 +137,33 @@ _(populated by Plan 05)_
 | Measurement Point        | Context Loads | Run Command                              |
 | ------------------------ | ------------- | ---------------------------------------- |
 | Pre-audit baseline (D-09) | 81            | `./mvnw clean verify -Pe2e --no-transfer-progress` (median across 3 runs) |
-| Post-optimization        | —             | _(populated by Plan 05)_                 |
+| Post-optimization        | 79            | Same command, after Wave-2 (median across 3 runs)                          |
+
+**Delta interpretation (RESEARCH Open Question 2 — partial answer):** The total
+context-load count moved only marginally (81 → 79, -2). This is the *count*
+signal. The *fingerprint* of which contexts get built changed materially:
+
+- The 7 sitegen tests previously shared a single context-cache key with each
+  other and with several other `@SpringBootTest + dev` tests; `@DirtiesContext`
+  at class level forced rebuilds at class boundaries but the cached context
+  could be reused within a class.
+- After Plan 02, the same 7 tests each declare a distinct
+  `@DynamicPropertySource` (binding `ctc.site.output-dir` to a per-class temp
+  directory), splitting the single shared cache key into seven unique keys.
+  Per-class context reuse is preserved (no within-class evictions), but cross-class
+  reuse is gone for this cluster.
+- Plan 04's `@DataJpaTest` pilot collapsed 3 `@SpringBootTest` ITs into a single
+  shared `@DataJpaTest` cache key — those 3 contexts compress to 1, but with a
+  different (smaller) initialization cost than `@SpringBootTest`.
+- The 2-context net reduction is the algebraic sum of these and other smaller
+  effects (Plan 03 latch-free methods no longer evict; Cluster C
+  TestDataServiceIntegrationTest no longer evicts at class end).
+
+The wallclock regression is most likely driven by the cache-fingerprint change
+rather than the count: when Spring's TCF cache evicts entries under LRU, the
+choice of *which* context to evict and rebuild now matters as much as the total
+count. Verifying this hypothesis requires per-fork ContextLoadCountListener
+breakdown and is queued for v1.12 (lever 2 below).
 
 PID-keyed marker files are emitted by `org.ctc.testsupport.ContextLoadCountListener`
 (registered via `src/test/resources/META-INF/spring.factories`) at JVM shutdown to
@@ -114,27 +186,105 @@ the loop form above (or equivalent) is the correct aggregation.
 
 ## Per-Decision Evidence (D-03 / D-04 / D-06)
 
-_(populated by Plans 02-04 summaries)_
+### D-04 Sitegen Cluster (Plan 02)
 
-| Decision | Cluster | Evidence | Outcome | Source plan |
-| -------- | ------- | -------- | ------- | ----------- |
-| D-04     | Sitegen `@DirtiesContext` (7 files)     | —     | — | Plan 02     |
-| D-03     | Backup IT `@DirtiesContext` (3 files)   | —     | — | Plan 02     |
-| D-05/D-06 | Phase repository `@DataJpaTest` (3 files) | — | — | Plan 03     |
-| D-04 (TestDataServiceIntegrationTest)   | Defensive `@DirtiesContext` (1 file) | — | — | Plan 02     |
+Per `.planning/phases/86-test-wallclock-reduction/86-02-SUMMARY.md`. All 7 sitegen
+test classes (6 Surefire + 1 Failsafe) had their shared `SiteProperties.setOutputDir(...)`
+mutation in `@BeforeAll` replaced with per-class `@DynamicPropertySource` binding;
+all 7 class-level `@DirtiesContext` annotations removed. The plan's literal
+`@TempDir static` pattern was incompatible with `@TestInstance(PER_CLASS)` (Pitfall 3
+manifest — JUnit initialization order under PER_CLASS leaves the static field
+null when Spring's `@DynamicPropertySource` resolver runs), so a small helper
+`org.ctc.testsupport.SitegenTestDir.create(label)` was introduced to create the
+temp directory at static-field-initializer time. Plan revision documented in
+the SUMMARY.
+
+| Class | @DirtiesContext removed? | 3-seed result | Notes |
+|---|---|---|---|
+| DriverProfilePageGeneratorTest | yes | 1234 ✓ 5678 ✓ 9999 ✓ | 6 tests |
+| MatchdaysPageGeneratorTest | yes | 1234 ✓ 5678 ✓ 9999 ✓ | 9 tests |
+| StandingsPageGeneratorTest | yes | 1234 ✓ 5678 ✓ 9999 ✓ | 10 tests (1 @Disabled) |
+| DriverRankingPageGeneratorTest | yes | 1234 ✓ 5678 ✓ 9999 ✓ | 8 tests |
+| TeamProfilePageGeneratorTest | yes | 1234 ✓ 5678 ✓ 9999 ✓ | 5 tests |
+| SiteGeneratorE2ETest | yes | 1234 ✓ 5678 ✓ 9999 ✓ | 8 tests |
+| SiteGeneratorPhaseAwarenessIT | yes | 1234 ✓ 5678 ✓ 9999 ✓ | 9 tests (Failsafe-routed) |
+
+Cluster C (`TestDataServiceIntegrationTest`) also dropped its defensive
+class-level `@DirtiesContext` after the combined-cluster 3-seed verification
+(156 tests, all green per seed). The Phase-79 explanatory comment block (5
+lines) was removed (D-07).
+
+**Net @DirtiesContext removals in Plan 02:** 8 (7 sitegen + 1 Cluster C).
+
+### D-03 Backup ITs (Plan 03)
+
+Per `.planning/phases/86-test-wallclock-reduction/86-03-SUMMARY.md`. New
+`org.ctc.backup.it.ImportLockServiceResetHelper` `@TestComponent` exposes a
+public `reset()` that calls the idempotent `ImportLockService.unlock()`. The
+helper is `@Import`-ed into all 3 backup ITs and called from each IT's
+`@AfterEach`. Per-method `@DirtiesContext` audit applied based on each method's
+dependency on the non-resettable `CountDownLatch` beans from
+`BlockingRestoreFailureInjector.Config` (RESEARCH Cluster B / Assumption A1).
+
+| Class | Method | Latch-dependent? | Final annotation state |
+|---|---|---|---|
+| ImportConcurrentLockIT | givenSlowImportRunningOnThreadA_... | yes | class-level `@DirtiesContext(BEFORE_EACH_TEST_METHOD)` retained (sole method) |
+| ImportLockBannerAdviceIT | givenLockHeld_whenGetAdminSeasons_... | yes | method-level `@DirtiesContext(AFTER_METHOD)` |
+| ImportLockBannerAdviceIT | givenLockHeld_whenGetSiteIndex_... | yes | method-level `@DirtiesContext(AFTER_METHOD)` |
+| ImportLockBannerAdviceIT | givenLockNotHeld_whenGetAdminSeasons_... | no | bare (no `@DirtiesContext`) |
+| ImportLockedPostRejectorIT | givenLockHeld_whenPostToAdminTeamsSave_... | yes | method-level `@DirtiesContext(AFTER_METHOD)` |
+| ImportLockedPostRejectorIT | givenLockHeld_whenPostToWhitelistedImportExecute_... | yes | method-level `@DirtiesContext(AFTER_METHOD)` |
+| ImportLockedPostRejectorIT | givenLockHeld_whenGetAdminSeasons_... | yes | method-level `@DirtiesContext(AFTER_METHOD)` |
+| ImportLockedPostRejectorIT | givenLockNotHeld_whenPostToAdminTeamsSave_... | no | bare (no `@DirtiesContext`) |
+
+**Eviction count delta (this cluster only):** 8 → 6 per Failsafe pass (-2,
+latch-free methods no longer evict context). 3-seed Failsafe verification on
+all 3 ITs combined: 8/8 tests green per seed (1234/5678/9999).
+
+### D-06 @DataJpaTest Pilot (Plan 04)
+
+Per `.planning/phases/86-test-wallclock-reduction/86-04-SUMMARY.md`. 3
+Phase-related repository ITs converted from `@SpringBootTest + @ActiveProfiles("dev") +
+@Transactional` to `@DataJpaTest`. Two plan revisions documented in the SUMMARY:
+(1) no `JpaAuditingConfig` test-side bean was created (Spring Boot 4 `@DataJpaTest`
+loads `CtcManagerApplication` as the slice base config, inheriting
+`@EnableJpaAuditing`; re-importing produced `BeanDefinitionOverrideException`);
+(2) the `DataJpaTest` import path moved in Boot 4 from
+`org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest` to
+`org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest`.
+
+| IT | Converted? | Tests pre/post | Notes |
+|---|---|---|---|
+| PhaseTeamRepositoryIT | yes | 4 / 4 | Pilot. Context-boot ~2.4 s standalone; warm-cache ~30 ms |
+| SeasonPhaseRepositoryIT | yes | 3 / 3 | Shares cache key with pilot |
+| SeasonPhaseGroupRepositoryIT | yes | 2 / 2 | Shares cache key with pilot |
+
+3-seed Failsafe verification: 9/9 tests green per seed (1234/5678/9999). The 3
+ITs share an identical `@DataJpaTest` context-cache key; combined they cost ~1
+shared context build per Failsafe pass instead of 3 full-`@SpringBootTest`
+context builds.
 
 ---
 
 ## v1.12 Forward Path
 
 If the ≤7m 50s gate is not reached in Phase 86, the following three structural levers
-become candidates for v1.12. Estimated-delta, effort, risks, and required touchpoints
-will be populated by Plan 05 once post-audit wallclock data is in. The lever order
+become candidates for v1.12. Estimated-delta and effort columns are educated
+guesses anchored on the Plan-01 baseline plus the Task-1 post-audit data; risks
+and touchpoints reflect what the post-audit numbers expose. The lever order
 is set by D-14 (`data/dev/backup-staging/` per-fork refactor is Top-1) and
 `86-CONTEXT.md` §Deferred Ideas.
 
 | Lever | Estimated Wallclock Delta | Effort (S/M/L) | Risks/Dependencies | Required Touchpoints |
 | ----- | ------------------------- | -------------- | ------------------ | -------------------- |
-| 1. Per-fork `data/dev/backup-staging/` refactor (the Top-1 v1.12 lever per D-14) — unlocks Failsafe `forkCount>1C` for backup ITs without staging-dir races | _(Plan 05)_ | _(Plan 05)_ | _(Plan 05)_ | `BackupImportService`, `BackupStagingCleanup`, Failsafe surefire-fork-numbering system-property propagation |
-| 2. Shared `@SpringBootTest` `@ContextConfiguration` strategy — explicit shared configuration classes across IT clusters to maximize Spring TCF cache reuse | _(Plan 05)_ | _(Plan 05)_ | _(Plan 05)_ | All IT clusters (sitegen, backup, admin) |
-| 3. Testcontainers MariaDB `withReuse(true)` — `~/.testcontainers.properties` for warm-container startups; only relevant once MariaDB ITs exist (none in v1.11) | _(Plan 05)_ | _(Plan 05)_ | _(Plan 05)_ | Testcontainers setup, `~/.testcontainers.properties`, MariaDB IT introduction |
+| **1. Per-fork `data/dev/backup-staging/` refactor** (Top-1 per D-14) — replace the global singleton staging-dir path with a per-fork variant resolved from the Surefire fork-numbering system property, enabling Failsafe `forkCount>1C` for backup ITs without staging-dir races. Backup ITs are currently 27+27 = 54 of the 79 context loads (~68% of the suite's total context-bootstrap weight); even a 2x parallelism gain on this fork would compress this band by 30-60s. | ~60-90s | M | (a) Surefire/Failsafe fork-numbering API may not survive across Maven 3 → 4 (not yet validated); (b) backup tests use `@PostConstruct` directory creation — needs `@DynamicPropertySource` per-fork wiring that mirrors the sitegen pattern from Plan 02 but with the fork-number suffix; (c) `BackupStagingCleanup` startup listener must respect the per-fork path. | `src/main/java/org/ctc/backup/service/BackupImportService.java`, `src/main/java/org/ctc/backup/service/BackupStagingCleanup.java`, `src/main/resources/application*.yml` (app.backup.staging-dir), Failsafe configuration in `pom.xml` (forkCount + system-property propagation) |
+| **2. Shared `@SpringBootTest` `@ContextConfiguration` strategy** — introduce a small number of explicit shared configuration classes referenced across IT clusters to maximize Spring TCF cache reuse and avoid the Plan-02-style cache-key fragmentation that this phase's post-audit data suggests is the dominant remaining cost. Profile the post-audit context fingerprint via per-fork ContextLoadCountListener output (already PID-keyed, easy extension) to identify the highest-fragmentation clusters before refactoring. | ~30-60s | M-L | (a) Risk of accidentally widening the cache surface and re-introducing the shared-singleton mutation issues that Plan 02 fixed; (b) requires per-fork context fingerprinting tool that doesn't exist yet — extend `ContextLoadCountListener` to dump cache-key hashes (1-2h work) before the refactor; (c) test isolation needs revisiting if shared contexts touch DB state. | All IT clusters (sitegen, backup, admin, phase-repo), `org.ctc.testsupport.ContextLoadCountListener` extension, possibly a new `BaseFailsafeIT` super-class or a shared `@TestConfiguration` per cluster |
+| **3. Testcontainers MariaDB `withReuse(true)`** — once any MariaDB IT exists (none in v1.11), enable `~/.testcontainers.properties` reuse for warm-container startups. The `local`/`docker` profile already uses MariaDB, but no IT runs against it today; this lever pre-empts the cold-start cost (~5-7s per fork) at the point MariaDB ITs are introduced. Note: a forced regression test for the Hibernate dialect (D-23) is the most likely scenario that introduces MariaDB ITs. | ~0s in v1.12 (pre-emptive); ~5-7s per fork once MariaDB ITs land | S (config only) | (a) Requires developer-side `~/.testcontainers.properties` file; (b) Testcontainers reuse skipped on CI by default — CI gets cold container start regardless; (c) only relevant once at least one MariaDB IT exists (none planned in v1.11). | Testcontainers setup, `~/.testcontainers.properties`, future MariaDB IT introduction |
+
+Lever 1 is the largest single delta and lowest blocking-risk; it is the recommended
+first move in v1.12. Lever 2 requires a small instrumentation extension before the
+refactor proper; without per-fork context-fingerprint data, a blind refactor risks
+re-introducing the same fragmentation pattern from a different angle. Lever 3 is
+pre-emptive and only pays off when MariaDB ITs land.
+
+---
