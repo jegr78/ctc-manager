@@ -282,15 +282,15 @@ Plans:
   5. Renovate never proposes Java 26 (non-LTS) — `renovate.json` constrains `java.version` proposals to LTS-only patterns (`^(?:11|17|21|25|29)`)
   6. The existing `dockerfile-noble-pin-guard` CI job passes after Renovate's first Dockerfile-bump PR is opened, confirming Renovate respects the suffix-only pin
 
-**Plans:** 0/4 plans executed
+**Plans:** 2/4 plans executed
 Plans:
 **Wave 1**
 
-- [ ] 84-01-PLAN.md — Author renovate.json + remove .github/dependabot.yml in atomic commit; 13 packageRules with RESEARCH.md corrections #1-#4 (DEPS-01, DEPS-03..DEPS-07)
+- [x] 84-01-PLAN.md — Author renovate.json + remove .github/dependabot.yml in atomic commit; 13 packageRules with RESEARCH.md corrections #1-#4 (DEPS-01, DEPS-03..DEPS-07)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 84-02-PLAN.md — Install Mend Renovate GitHub App against jegr78/ctc-manager; record onboarding PR + branch-protection audit (DEPS-02)
+- [x] 84-02-PLAN.md — Install Mend Renovate GitHub App against jegr78/ctc-manager; record onboarding PR + branch-protection audit (DEPS-02)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -350,7 +350,7 @@ Plans:
 | 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 3/3 | Complete   | 2026-05-16 |
 | 82. Backup Cleanup | 10/10 | Complete   | 2026-05-16 |
 | 83. Quality and Polish Sweep | 6/6 | Complete   | 2026-05-17 |
-| 84. Renovate Integration | 0/4 | Planned    |  |
+| 84. Renovate Integration | 2/4 | In Progress|  |
 | 85. CodeQL SAST | 0/TBD | Not started | - |
 | 86. Test Wallclock Reduction | 0/TBD | Not started | - |
 | 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |
