@@ -56,13 +56,15 @@ jobs:
         if: github.event_name != 'schedule'
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_REF: ${{ github.head_ref || github.ref_name }}
           BASE_REF: ${{ github.base_ref || 'master' }}
           OWNER_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
 
-          fetch_alerts() {
+          fetch_alerts_by_ref() {
             local ref="$1"
             gh api -X GET "repos/${OWNER_REPO}/code-scanning/alerts" \
               -f state=open \
@@ -76,8 +78,26 @@ jobs:
               ' 2>/dev/null | sort -u || true
           }
 
-          HEAD_ALERTS=$(fetch_alerts "${HEAD_REF}" || true)
-          BASE_ALERTS=$(fetch_alerts "${BASE_REF}" || true)
+          fetch_alerts_by_pr() {
+            local pr="$1"
+            gh api -X GET "repos/${OWNER_REPO}/code-scanning/alerts" \
+              -f state=open \
+              -f "pr=${pr}" \
+              --paginate \
+              --jq '
+                .[] | select(
+                  .dismissed_at == null and
+                  (.rule.security_severity_level // "" | IN("high","critical"))
+                ) | "\(.rule.id)|\(.most_recent_instance.location.path)"
+              ' 2>/dev/null | sort -u || true
+          }
+
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            HEAD_ALERTS=$(fetch_alerts_by_pr "${PR_NUMBER}" || true)
+          else
+            HEAD_ALERTS=$(fetch_alerts_by_ref "${HEAD_REF}" || true)
+          fi
+          BASE_ALERTS=$(fetch_alerts_by_ref "${BASE_REF}" || true)
 
           if [ -z "${BASE_ALERTS}" ] && [ -z "${HEAD_ALERTS}" ]; then
             echo "No HIGH/CRITICAL alerts on either ref."
@@ -90,7 +110,7 @@ jobs:
           NEW_ALERTS=$(comm -23 <(echo "${HEAD_ALERTS}") <(echo "${BASE_ALERTS}") || true)
 
           if [ -n "${NEW_ALERTS}" ]; then
-            echo "::error::New HIGH/CRITICAL CodeQL alerts introduced on ${HEAD_REF}:"
+            echo "::error::New HIGH/CRITICAL CodeQL alerts introduced:"
             echo "${NEW_ALERTS}"
             exit 1
           fi
