@@ -344,7 +344,7 @@ Plans:
   4. `./mvnw verify -Pe2e` wallclock is either ≤7m 50s on the same hardware OR `docs/test-performance.md` documents the specific architectural constraint (e.g., MariaDB Testcontainers cold-start cost) that blocks ≥30% reduction and proposes a concrete v1.12 path
   5. The improved (or blocked) wallclock is verified on CI (GitHub Actions runner) over 3 consecutive runs; the median is recorded as the new v1.11 baseline in `docs/test-performance.md`
 
-**Plans:** 1/6 plans executed
+**Plans:** 4/6 plans executed
 
 Plans:
 
@@ -354,9 +354,9 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion — 3 plans parallel; disjoint file sets)*
 
-- [ ] 86-02-PLAN.md — Sitegen cluster fix: @TempDir + @DynamicPropertySource on 7 sitegen tests + conditional Cluster C removal (D-04, PERF-01)
-- [ ] 86-03-PLAN.md — Backup IT @DirtiesContext per-method audit + ImportLockServiceResetHelper reset bean (D-03, PERF-01)
-- [ ] 86-04-PLAN.md — @DataJpaTest pilot conversion of 3 Phase repository ITs + JpaAuditingConfig (D-05, D-06, PERF-03)
+- [x] 86-02-PLAN.md — Sitegen cluster fix: @TempDir + @DynamicPropertySource on 7 sitegen tests + conditional Cluster C removal (D-04, PERF-01)
+- [x] 86-03-PLAN.md — Backup IT @DirtiesContext per-method audit + ImportLockServiceResetHelper reset bean (D-03, PERF-01)
+- [x] 86-04-PLAN.md — @DataJpaTest pilot conversion of 3 Phase repository ITs + JpaAuditingConfig (D-05, D-06, PERF-03)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -388,7 +388,7 @@ Plans:
 | 83. Quality and Polish Sweep | 6/6 | Complete   | 2026-05-17 |
 | 84. Renovate Integration | 4/4 | Complete   | 2026-05-17 |
 | 85. CodeQL SAST | 4/4 | Complete   | 2026-05-17 |
-| 86. Test Wallclock Reduction | 1/6 | In Progress|  |
+| 86. Test Wallclock Reduction | 4/6 | In Progress|  |
 | 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |
 
 | Milestone | Phases | Plans | Status | Shipped |

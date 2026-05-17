@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-17T18:05:37.968Z"
-last_activity: 2026-05-17 -- Phase 86 execution started
+last_updated: "2026-05-17T21:13:30.651Z"
+last_activity: 2026-05-17 -- Phase 86 Wave 2 complete (86-02, 86-03, 86-04)
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 38
-  completed_plans: 32
-  percent: 75
+  completed_plans: 35
+  percent: 89
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 86 (test-wallclock-reduction) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 86
-Last activity: 2026-05-17 -- Phase 86 execution started
+Plan: 4 of 6 (Wave 2 complete)
+Status: Executing Phase 86 — Wave 2 done; Waves 3/4 pending
+Last activity: 2026-05-17 -- Phase 86 Wave 2 complete (86-02, 86-03, 86-04)
 
 ```
-Progress: [███████░░░] 75%
+Progress: [████████░░] 89%
 ```
 
 ## Completed Milestones
