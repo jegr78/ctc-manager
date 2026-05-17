@@ -14,6 +14,7 @@ import org.ctc.backup.it.support.BlockingRestoreFailureInjector;
 import org.ctc.backup.lock.ImportLockService;
 import org.ctc.backup.service.BackupArchiveService;
 import org.ctc.backup.service.BackupImportService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -53,16 +54,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Import(BlockingRestoreFailureInjector.Config.class)
+@Import({BlockingRestoreFailureInjector.Config.class, ImportLockServiceResetHelper.class})
 @TestPropertySource(properties = "spring.main.allow-bean-definition-overriding=true")
 @AutoConfigureMockMvc
-// The BlockingRestoreFailureInjector.Config exposes two singleton CountDownLatches per
-// Spring context. Because the ApplicationContext cache key is identical to
-// ImportConcurrentLockIT (same @Import, @TestPropertySource, @AutoConfigureMockMvc),
-// both ITs share the same cached context — and once a CountDownLatch reaches 0 it
-// cannot be reset. Dirtying the context before each method forces a fresh latch pair
-// for every test that relies on the slow-import handshake (givenLockHeld_*).
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 @Tag("integration")
 class ImportLockBannerAdviceIT {
 
@@ -83,6 +77,9 @@ class ImportLockBannerAdviceIT {
 
     @Autowired
     ImportLockService importLockService;
+
+    @Autowired
+    ImportLockServiceResetHelper importLockServiceResetHelper;
 
     @Autowired
     CountDownLatch hasAcquired;
@@ -117,6 +114,13 @@ class ImportLockBannerAdviceIT {
         stagingIdA = preview.stagingId();
     }
 
+    @AfterEach
+    void tearDownLock() {
+        importLockServiceResetHelper.reset();
+    }
+
+    // @DirtiesContext retained on this method — uses CountDownLatch handshake (non-resettable, RESEARCH Assumption A1)
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
     @Test
     void givenLockHeld_whenGetAdminSeasons_thenResponseBodyContainsBannerWording() throws Exception {
         // given — thread A holds the import lock mid-restore
@@ -156,6 +160,8 @@ class ImportLockBannerAdviceIT {
         executor.shutdown();
     }
 
+    // @DirtiesContext retained on this method — uses CountDownLatch handshake (non-resettable, RESEARCH Assumption A1)
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
     @Test
     void givenLockHeld_whenGetSiteIndex_thenBannerWordingAbsent() throws Exception {
         // given — thread A holds the import lock mid-restore

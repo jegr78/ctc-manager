@@ -17,6 +17,7 @@ import org.ctc.backup.it.support.BlockingRestoreFailureInjector;
 import org.ctc.backup.lock.ImportLockService;
 import org.ctc.backup.service.BackupArchiveService;
 import org.ctc.backup.service.BackupImportService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -66,17 +67,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Import(BlockingRestoreFailureInjector.Config.class)
+@Import({BlockingRestoreFailureInjector.Config.class, ImportLockServiceResetHelper.class})
 @TestPropertySource(properties = "spring.main.allow-bean-definition-overriding=true")
 @AutoConfigureMockMvc
-// The BlockingRestoreFailureInjector.Config exposes its two CountDownLatches as
-// singleton beans, and CountDownLatch is non-resettable. Both Plan 76-02 ITs
-// (ImportLockBannerAdviceIT, ImportLockedPostRejectorIT) share this context-cache key
-// and use @DirtiesContext(BEFORE_EACH_TEST_METHOD) to get fresh latches per method —
-// which can cause this IT's cached context to be evicted between runs and rebuilt
-// with bean instances that have already been counted-down inside earlier wave merges.
-// Marking this IT with the same annotation keeps its latch state independent regardless
-// of which Failsafe order picks the IT up.
+// @DirtiesContext retained — CountDownLatch in BlockingRestoreFailureInjector.Config is non-resettable (D-01 / RESEARCH Cluster B / Assumption A1)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 @Tag("integration")
 class ImportConcurrentLockIT {
@@ -98,6 +92,9 @@ class ImportConcurrentLockIT {
 
     @Autowired
     ImportLockService importLockService;
+
+    @Autowired
+    ImportLockServiceResetHelper importLockServiceResetHelper;
 
     @Autowired
     CountDownLatch hasAcquired;
@@ -143,6 +140,11 @@ class ImportConcurrentLockIT {
         preTestSuccessCount = dataImportAuditRepository.findAll().stream()
                 .filter(DataImportAudit::isSuccess)
                 .count();
+    }
+
+    @AfterEach
+    void tearDownLock() {
+        importLockServiceResetHelper.reset();
     }
 
     @Test
