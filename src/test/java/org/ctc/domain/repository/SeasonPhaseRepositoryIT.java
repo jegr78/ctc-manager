@@ -1,31 +1,26 @@
 package org.ctc.domain.repository;
 
-// @SpringBootTest precedent honored over D-13 @DataJpaTest — see RESEARCH Open Question 1
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.Optional;
 import org.ctc.domain.model.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests verifying D-22 magic-naming finders on {@link SeasonPhaseRepository}
- * against H2 (dev profile).
+ * against an embedded H2 (Spring Boot @DataJpaTest slice).
  *
- * Test data uses the "Phase58-Test-" prefix per CLAUDE.md "Isolate Test Data Completely".
- * {@code @Transactional} rolls back each test — no rows leak between tests.
+ * <p>Test data uses the "Phase58-Test-" prefix per CLAUDE.md "Isolate Test Data Completely".
+ * {@code @DataJpaTest} rolls back each test transactionally — no rows leak between tests.
  */
-@SpringBootTest
-@ActiveProfiles("dev")
-@Transactional
+@DataJpaTest
 @Tag("integration")
 class SeasonPhaseRepositoryIT {
 
@@ -43,6 +38,15 @@ class SeasonPhaseRepositoryIT {
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    private RaceScoring rs;
+    private MatchScoring ms;
+
+    @BeforeEach
+    void seedScoring() {
+        rs = raceScoringRepository.save(new RaceScoring("Phase86-Test-RS", "25,18,15,12,10,8,6,4,2,1", null, 1));
+        ms = matchScoringRepository.save(new MatchScoring("Phase86-Test-MS", 3, 1, 0));
+    }
 
     @Test
     void givenFixture_whenFindBySeasonIdAndPhaseType_thenReturnsExpected() {
@@ -97,14 +101,13 @@ class SeasonPhaseRepositoryIT {
 
 
     private Season newSeason(String name, int year, int number) {
-        // scoring lives on the SeasonPhase, not the Season.
         return new Season(name, year, number);
     }
 
     private SeasonPhase newPhase(Season season, PhaseType phaseType, PhaseLayout layout, int sortIndex) {
         var phase = new SeasonPhase(season, phaseType, layout, sortIndex);
-        phase.setRaceScoring(raceScoringRepository.findAll().get(0));
-        phase.setMatchScoring(matchScoringRepository.findAll().get(0));
+        phase.setRaceScoring(rs);
+        phase.setMatchScoring(ms);
         return phase;
     }
 }
