@@ -55,12 +55,12 @@ Requirements for the v1.11 release. Each maps to a roadmap phase.
 
 ### CodeQL SAST (SAST)
 
-- [ ] **SAST-01**: A standalone `.github/workflows/codeql.yml` workflow runs CodeQL v4 against `language: java-kotlin` on push to master, pull request, and weekly cron
-- [ ] **SAST-02**: The CodeQL workflow uses a manual `./mvnw compile -DskipTests` build step (not autobuild) so Lombok annotation processing + Playwright dependencies do not break the build
-- [ ] **SAST-03**: The CodeQL workflow declares `permissions: { security-events: write, contents: read, actions: read }` at the JOB level only (not the workflow level)
-- [ ] **SAST-04**: First-run findings are triaged into one of three buckets — true positive (fixed), known false positive (suppressed with explanatory comment + `// codeql[...]` directive), or accepted risk (documented in `docs/security/sast-acceptance.md`)
-- [ ] **SAST-05**: The SSRF blocklist (`FileStorageService.storeFromUrl`), ZIP-Slip defense (`BackupImportService`), and BCrypt usage are explicitly classified per SAST-04 with linked CodeQL alert IDs
-- [ ] **SAST-06**: CodeQL findings appear in the GitHub Security tab and the workflow gates PR merges when a new HIGH or CRITICAL finding is introduced (verified by injecting a deliberate vulnerable pattern in a throwaway branch)
+- [x] **SAST-01**: A standalone `.github/workflows/codeql.yml` workflow runs CodeQL v4 against `language: java-kotlin` on push to master, pull request, and weekly cron
+- [x] **SAST-02**: The CodeQL workflow uses a manual `./mvnw compile -DskipTests` build step (not autobuild) so Lombok annotation processing + Playwright dependencies do not break the build
+- [x] **SAST-03**: The CodeQL workflow declares `permissions: { security-events: write, contents: read, actions: read }` at the JOB level only (not the workflow level)
+- [x] **SAST-04**: First-run findings are triaged into one of three buckets — true positive (fixed), known false positive (suppressed via `.github/codeql/codeql-config.yml` `query-filters` + `// CodeQL FP: <rule-id>` source marker — the originally anticipated `// codeql[...]` directive does not exist in CodeQL Code Scanning per RESEARCH C-02), or accepted risk (documented in `docs/security/sast-acceptance.md`)
+- [x] **SAST-05**: The SSRF blocklist (`FileStorageService.storeFromUrl`), ZIP-Slip defenses (`BackupArchiveService.assertEntrySafe`, `BackupImportService.restoreOneTable`), and BCrypt-N/A (no `PasswordEncoder` bean exists — TRACKED DEVIATION per CONTEXT D-05) are explicitly classified per SAST-04 with linked CodeQL alert IDs (or "N/A (filtered)" when `query-filters` excludes the rule before alert upload)
+- [x] **SAST-06**: CodeQL findings appear in the GitHub Security tab and the workflow gates PR merges when a new HIGH or CRITICAL finding is introduced (verified by injecting a `java/sql-injection` pattern on throwaway branch `throwaway/sast-06-validation` in draft PR #128 — workflow run #25996558384 exited 1 with `::error::` annotation; PR + branch + alert cleaned up post-verification)
 
 ### Test Performance / Wallclock (PERF)
 
@@ -146,12 +146,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DEPS-06 | Phase 84 | Done    |
 | DEPS-07 | Phase 84 | Done    |
 | DEPS-08 | Phase 84 | Done    |
-| SAST-01 | Phase 85 | Pending |
-| SAST-02 | Phase 85 | Pending |
-| SAST-03 | Phase 85 | Pending |
-| SAST-04 | Phase 85 | Pending |
-| SAST-05 | Phase 85 | Pending |
-| SAST-06 | Phase 85 | Pending |
+| SAST-01 | Phase 85 | Complete |
+| SAST-02 | Phase 85 | Complete |
+| SAST-03 | Phase 85 | Complete |
+| SAST-04 | Phase 85 | Complete |
+| SAST-05 | Phase 85 | Complete |
+| SAST-06 | Phase 85 | Complete |
 | PERF-01 | Phase 86 | Pending |
 | PERF-02 | Phase 86 | Pending |
 | PERF-03 | Phase 86 | Pending |

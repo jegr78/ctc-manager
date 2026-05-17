@@ -154,7 +154,7 @@ See: milestones/v1.10-ROADMAP.md for full details
 - [x] **Phase 82: Backup Cleanup** — All 12 Phase-75 REVIEW.md items resolved; SCHEMA_VERSION remains 1; BackupRoundTripIT covers all 24 entities (completed 2026-05-16)
 - [x] **Phase 83: Quality and Polish Sweep** — Four v1.9/v1.10 carryover items cleared; UAT-02 procedure + result-slot ready (completed 2026-05-17)
 - [x] **Phase 84: Renovate Integration** — Automated dependency update PRs active with Guava/Thymeleaf/Java-version safety rules in place (completed 2026-05-17)
-- [ ] **Phase 85: CodeQL SAST** — Security findings visible in GitHub Security tab; SSRF/ZIP-Slip/BCrypt patterns triaged
+- [x] **Phase 85: CodeQL SAST** — Security findings visible in GitHub Security tab; SSRF/ZIP-Slip/BCrypt patterns triaged (completed 2026-05-17)
 - [ ] **Phase 86: Test Wallclock Reduction** — `@DirtiesContext` audit complete; ≥30% wallclock reduction OR architectural blocker documented
 - [ ] **Phase 87: Nyquist VALIDATION Closure** — All 8 v1.10 phases (71-76, 78-79) have approved VALIDATION.md files
 
@@ -313,7 +313,7 @@ Plans:
   4. The SSRF blocklist (`FileStorageService.storeFromUrl`), ZIP-Slip defense (`BackupImportService`), and BCrypt usage are each explicitly classified per the triage policy with linked CodeQL alert IDs
   5. Injecting a deliberate SQL-injection or path-traversal pattern on a throwaway branch causes CodeQL to fail the PR gate, confirming the blocking behavior works end-to-end
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 Plans:
 **Wave 1**
 
@@ -329,7 +329,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 85-04-PLAN.md — SAST-06 throwaway-branch deliberate-violation verification + phase-close (SAST-06, D-14)
+- [x] 85-04-PLAN.md — SAST-06 throwaway-branch deliberate-violation verification + phase-close (SAST-06, D-14)
 
 ### Phase 86: Test Wallclock Reduction
 
@@ -367,7 +367,7 @@ Plans:
 | 82. Backup Cleanup | 10/10 | Complete   | 2026-05-16 |
 | 83. Quality and Polish Sweep | 6/6 | Complete   | 2026-05-17 |
 | 84. Renovate Integration | 4/4 | Complete   | 2026-05-17 |
-| 85. CodeQL SAST | 3/4 | In Progress|  |
+| 85. CodeQL SAST | 4/4 | Complete   | 2026-05-17 |
 | 86. Test Wallclock Reduction | 0/TBD | Not started | - |
 | 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |
 

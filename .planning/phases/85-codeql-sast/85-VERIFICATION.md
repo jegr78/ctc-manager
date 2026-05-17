@@ -124,31 +124,54 @@ A confirmatory scan will run automatically on the Wave-2 source-marker push (aut
 
 ## SAST-06 Throwaway-Branch Deliberate-Violation Evidence (Plan 85-04)
 
-Per CONTEXT.md D-14 procedure. Throwaway branch `throwaway/sast-06-validation` MUST NOT land on `gsd/v1.11-tooling-and-cleanup` or `master`.
+**Throwaway branch:** `throwaway/sast-06-validation` (created from `gsd/v1.11-tooling-and-cleanup`, never merged anywhere, deleted post-verification)
+**Draft PR:** https://github.com/jegr78/ctc-manager/pull/128 (base=`master`, closed without merge)
+**PR number:** 128
+**Deliberate violation:** `java/sql-injection` in `src/main/java/org/ctc/_sast_validation/SastMarker.java` — taint flows from `HttpServletRequest.getParameter("id")` through unsanitized String concatenation to `Statement.executeQuery(sql)`. CodeQL alert #35 raised with `security_severity_level: "high"`.
 
-**Throwaway branch:** `throwaway/sast-06-validation`
-**Draft PR:** _(executor — URL)_
-**PR number:** _(executor)_
-**Deliberate violation:** _(executor — e.g. `java/sql-injection` in `src/main/java/org/ctc/_sast_validation/SastMarker.java`)_
-**Workflow run ID:** _(executor)_
-**Gate-step exit code:** `1` (expected — exit 0 would be a SAST-06 failure)
+### Execute-time Discovery: Gate-Step Bug
 
-### `gh run view` Output (first 30 lines after gate-step exit)
+First workflow run #25996453992 (HEAD `03e5f756`) PASSED unexpectedly — gate-step exited 0 instead of 1. Root-cause investigation revealed: GitHub stores PR-context alerts separately from branch-context alerts. `gh api -f "ref=refs/heads/throwaway/sast-06-validation"` returned 0 alerts; `gh api -f "pr=128"` correctly returned the SQLi alert.
+
+**Resolution (commit `61ccee5f`):** Gate-step `fetch_alerts()` split into `fetch_alerts_by_ref()` (push events, schedule) and `fetch_alerts_by_pr()` (pull_request events). When `EVENT_NAME == "pull_request"`, HEAD alerts are fetched via `pr=${PR_NUMBER}` (using `${{ github.event.pull_request.number }}`). BASE alerts continue via `ref=refs/heads/${BASE_REF}`.
+
+**This bug would not have been caught by structural testing** — `actionlint`/`yq` checks all passed. Only the live SAST-06 throwaway run with a real PR-context alert surfaced it. Exactly the failure mode SAST-06 was designed to catch: gate semantics, not gate structure.
+
+### Workflow Runs (PR #128)
+
+| # | Run ID | Event | HEAD | Status | Gate-step | Notes |
+|---|--------|-------|------|--------|-----------|-------|
+| 1 | 25996453992 | pull_request | `03e5f756` | completed (green) | PASS — false negative | `ref=` query returned 0 alerts; SQLi missed |
+| 2 | 25996558384 | pull_request | `f763593e` | **failed (exit 1)** | **FAIL — exit 1** | `pr=` query correctly returned alert #35; gate fired |
+
+### Gate-Step Output (run 25996558384, fixed gate-step)
 
 ```
-_(executor pastes first 30 lines of `gh run view <run-id> --log` for the gate-step)_
+##[warning]No prior scan data for base ref=master; treating all HEAD alerts as net-new.
+##[error]New HIGH/CRITICAL CodeQL alerts introduced:
+java/sql-injection|src/main/java/org/ctc/_sast_validation/SastMarker.java
+##[error]Process completed with exit code 1.
 ```
+
+PR #128 check status: `Analyze (java-kotlin)	fail	2m9s` — CodeQL check blocks merge.
 
 ### Security-Tab Verification
 
-**URL:** https://github.com/jegr78/ctc-manager/security/code-scanning?query=pr%3A<pr-number>
-**Alert observed:** _(executor — confirm `java/sql-injection` or `java/path-injection` HIGH alert appears on the head ref of the draft PR)_
+CodeQL Alert #35: https://github.com/jegr78/ctc-manager/security/code-scanning/35
+- Rule: `java/sql-injection`
+- Security-severity: `high` (CVSS 9.8, CWE-89 + CWE-564)
+- Location: `src/main/java/org/ctc/_sast_validation/SastMarker.java:11`
+- Status: dismissed `won't fix` (post-verification — alert is no longer reachable from any live ref after the throwaway branch was deleted)
 
 ### Cleanup Verification
 
-- [ ] `gh pr close <num>` executed
-- [ ] `git push origin --delete throwaway/sast-06-validation` executed
-- [ ] `git log --all --oneline | grep _sast_validation` on `gsd/v1.11-tooling-and-cleanup` returns nothing
+- [x] `gh pr close 128 --comment "..."` executed (PR #128 closed without merge)
+- [x] `git push origin --delete throwaway/sast-06-validation` executed (remote branch deleted)
+- [x] `git branch -D throwaway/sast-06-validation` (local branch deleted)
+- [x] `gh api -X PATCH .../code-scanning/alerts/35 -f state=dismissed -f dismissed_reason="won't fix"` executed (Security-tab alert dismissed)
+- [x] `git log --all --oneline | grep _sast_validation` returns nothing on `gsd/v1.11-tooling-and-cleanup` (verified after `git fetch --prune`)
+- [x] `find src -name "SastMarker.java"` returns nothing in working tree
+- [x] `ls src/main/java/org/ctc/_sast_validation` returns "No such file or directory"
 
 ---
 
