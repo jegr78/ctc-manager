@@ -1,12 +1,5 @@
 name: CodeQL SAST
 
-# Phase 85 D-12/4 final-enable: canonical production triggers.
-#   - push: [master]              -> scan master after every merge, establishes baseline
-#   - pull_request: [master]      -> scan every PR targeting master before merge
-#                                    (Filter ist Basis-Branch, nicht Head -- jeder Head-Branch erlaubt)
-#   - schedule: '0 2 * * 0'       -> Sunday 02:00 UTC cron (D-20), weekly drift detection only
-#                                    (Gate-Step SKIPPED on cron events per D-10)
-#   - workflow_dispatch:          -> manual trigger; requires file on master (post-merge)
 on:
   push:
     branches: [master]
@@ -20,9 +13,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Phase 85 SAST-03: workflow-level permissions are least-privilege
-# (contents:read only). The security-events: write privilege required for
-# SARIF upload is granted at the JOB level only (see jobs.analyze.permissions).
 permissions:
   contents: read
 
@@ -31,9 +21,6 @@ jobs:
     name: Analyze (java-kotlin)
     runs-on: ubuntu-latest
 
-    # Phase 85 SAST-03: job-level permissions only -- security-events:write
-    # is the SARIF-upload privilege; actions:read is required by
-    # codeql-action/init@v4 to enumerate workflow runs for baseline diffing.
     permissions:
       security-events: write
       contents: read
@@ -58,11 +45,6 @@ jobs:
           config-file: ./.github/codeql/codeql-config.yml
 
       - name: Build for CodeQL
-        # Phase 85 SAST-02: manual build step (./mvnw compile) to preserve Lombok
-        # annotation processing and Playwright compile-scope dependency.
-        # -DskipTests keeps wallclock minimal; CodeQL operates on the
-        # compiled bytecode of src/main/java only (D-21 -- src/test/java is
-        # implicitly out-of-scope via the -DskipTests build step).
         run: ./mvnw compile --no-transfer-progress -DskipTests -Dspring.profiles.active=dev
 
       - name: Perform CodeQL Analysis
@@ -70,11 +52,6 @@ jobs:
         with:
           category: "/language:java-kotlin"
 
-      # Phase 85 D-06 + D-07 + D-08 + D-10 + D-28: inline-bash SARIF-diff gate.
-      # Fails the workflow when a new alert with security_severity_level
-      # IN("high","critical") appears on the head branch but NOT on the base
-      # branch. Skipped on schedule events (D-10) -- weekly cron is drift
-      # detection only, alerts surface in the Security tab.
       - name: Gate on new HIGH/CRITICAL security alerts
         if: github.event_name != 'schedule'
         env:
@@ -85,12 +62,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Fetch open HIGH/CRITICAL alerts for a given ref. Filters:
-          #   - state=open (excludes closed_by_fix, dismissed)
-          #   - dismissed_at == null (excludes UI-dismissed)
-          #   - security_severity_level IN("high","critical") (D-08 CVSS-aligned)
-          # Key on (rule.id, location.path) per D-28 -- commit-sha-agnostic
-          # so rebases don't poison the diff.
           fetch_alerts() {
             local ref="$1"
             gh api -X GET "repos/${OWNER_REPO}/code-scanning/alerts" \
@@ -105,22 +76,15 @@ jobs:
               ' 2>/dev/null | sort -u || true
           }
 
-          echo "Fetching HEAD alerts on ref=${HEAD_REF}..."
           HEAD_ALERTS=$(fetch_alerts "${HEAD_REF}" || true)
-          echo "Fetching BASE alerts on ref=${BASE_REF}..."
           BASE_ALERTS=$(fetch_alerts "${BASE_REF}" || true)
 
-          # No-base-scan edge case (D-09 chicken-and-egg first-PR mitigation):
-          # if BASE has no scan yet, warn and pass -- the choreography landed
-          # the final-enable commit AFTER triage, so the next push to master
-          # will populate the base baseline.
           if [ -z "${BASE_ALERTS}" ] && [ -z "${HEAD_ALERTS}" ]; then
-            echo "No HIGH/CRITICAL alerts on either ref. Gate PASS."
+            echo "No HIGH/CRITICAL alerts on either ref."
             exit 0
           fi
           if [ -z "${BASE_ALERTS}" ] && [ -n "${HEAD_ALERTS}" ]; then
-            echo "::warning::No prior scan data for base ref=${BASE_REF}; cannot diff. Falling through to absolute-check."
-            # When base has no scan, fall through and treat all HEAD alerts as net-new.
+            echo "::warning::No prior scan data for base ref=${BASE_REF}; treating all HEAD alerts as net-new."
           fi
 
           NEW_ALERTS=$(comm -23 <(echo "${HEAD_ALERTS}") <(echo "${BASE_ALERTS}") || true)
@@ -128,9 +92,5 @@ jobs:
           if [ -n "${NEW_ALERTS}" ]; then
             echo "::error::New HIGH/CRITICAL CodeQL alerts introduced on ${HEAD_REF}:"
             echo "${NEW_ALERTS}"
-            echo ""
-            echo "Each line is (rule.id|location.path). Triage per docs/security/sast-acceptance.md + CLAUDE.md '## Conventions > CodeQL SAST (Code Scanning)'."
             exit 1
           fi
-
-          echo "No new HIGH/CRITICAL alerts vs ${BASE_REF}. Gate PASS."

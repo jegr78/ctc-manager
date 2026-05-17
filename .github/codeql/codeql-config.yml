@@ -3,36 +3,11 @@ name: ctc-manager-codeql-config
 queries:
   - uses: security-extended
 
-# Phase 85 D-02-REVISED: query-filters use rule-id-only schema. The
-# codeql-config.yml `where:` field does NOT exist (verified via
-# docs.github.com + github/codeql discussion #11220; see 85-RESEARCH.md C-01).
-# Per-file filtering for compiled Java is officially only achievable via
-# advanced-security/filter-sarif, rejected per D-06 (3rd-party-action
-# minimization). Defense-in-depth via Phase 81 SpotBugs gate on the same
-# sites mitigates the whole-codebase scope of these rule-id excludes.
+# Suppression rationale + Alert-ID mapping: docs/security/sast-acceptance.md
 query-filters:
-  # SSRF: FileStorageService.storeFromUrl uses a startsWith-chain hostname
-  # blocklist (validateHostname, FileStorageService.java:128-159) covering
-  # localhost, 127.x, 10.x, 192.168.x, 169.254.x, and 172.16-31.x ranges.
-  # CodeQL cannot recognize startsWith-chain blocklists as SSRF sanitizers
-  # (only allowlist-style sanitizers are recognized). Defense-in-depth via
-  # Phase 81 SpotBugs SSRF_SPRING,SSRF suppression in
-  # config/spotbugs-exclude.xml. See docs/security/sast-acceptance.md.
   - exclude:
       id: java/ssrf
-  # ZIP-Slip: BackupArchiveService.assertEntrySafe (BackupArchiveService.java:608-628)
-  # + BackupImportService ZIP-extraction chain delegate to
-  # PathTraversalGuard.assertWithin (toAbsolutePath().normalize().startsWith()),
-  # which CodeQL cannot trace through the delegated utility. Defense-in-depth
-  # via Phase 81 SpotBugs PATH_TRAVERSAL_IN suppressions. See
-  # docs/security/sast-acceptance.md.
   - exclude:
       id: java/zipslip
   - exclude:
       id: java/path-injection
-
-# Note: actual rule IDs (java/ssrf vs java/server-side-request-forgery,
-# java/zipslip vs java/path-injection) confirmed against the first
-# workflow_dispatch baseline run before plan 85-03 final-enable. If the
-# baseline shows different rule IDs, plan 85-02 adjusts the entries above
-# in-place per D-19 Update-on-Triage discipline.
