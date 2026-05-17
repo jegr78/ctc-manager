@@ -3,10 +3,10 @@ phase: 84-renovate-integration
 status: in-progress
 started: 2026-05-17
 last_updated: 2026-05-17
-waves_completed: [1, 2]
-waves_pending: [3, 4]
-requirements_satisfied: [DEPS-01, DEPS-02, DEPS-03, DEPS-04, DEPS-05, DEPS-06, DEPS-07]
-requirements_pending: [DEPS-08]
+waves_completed: [1, 2, 3]
+waves_pending: [4]
+requirements_satisfied: [DEPS-01, DEPS-02, DEPS-03, DEPS-04, DEPS-05, DEPS-06, DEPS-07, DEPS-08]
+requirements_pending: []
 ---
 
 # Phase 84 — Renovate Integration Verification
@@ -184,11 +184,54 @@ This file. Committed to `feature/renovate-integration-verification` via Conventi
 
 ---
 
-## Wave 3 — Synthetic Dockerfile-bump PR (DEPS-08 / SC#6) ⏭ pending
+## Wave 3 — Synthetic Dockerfile-bump PR exercising dockerfile-noble-pin-guard (84-03-PLAN) ✅
 
-Synthetic throwaway PR against `master` bumping `eclipse-temurin:25-jdk-noble` to a real published Adoptium tag like `25.0.1_8-jdk-noble` (preserving `-noble` suffix per the corrected D-19 regex). Goal: prove `dockerfile-noble-pin-guard` CI job accepts a real Renovate-style Dockerfile bump.
+Path chosen: **Path 3 — synthetic throwaway PR** (CONTEXT.md D-24; RESEARCH.md Open Question #4 recommendation; Phase 81 D-13 precedent).
 
-See [84-03-PLAN.md](84-03-PLAN.md) for execution detail.
+### Throwaway PR (DEPS-08 / SC#6)
+
+| Field | Value |
+|---|---|
+| PR URL | <https://github.com/jegr78/ctc-manager/pull/126> |
+| PR number | 126 |
+| Base branch | `master` |
+| Branch (deleted) | `chore/verify-noble-pin-guard` |
+| Dockerfile bump | `FROM eclipse-temurin:25-jdk-noble` → `FROM eclipse-temurin:25.0.1_8-jdk-noble` (line 3 only; line 21 untouched at `25-jre-noble`) |
+| Atomic commit SHA (deleted-with-branch) | `8847bb86` |
+| Tag choice rationale | Real published Adoptium tag verified at <https://hub.docker.com/_/eclipse-temurin> per RESEARCH.md §Sources; exercises both the underscore-build-id form AND the `-noble` suffix invariant |
+| Final state | **CLOSED (NOT MERGED)** — `mergedAt: null` confirmed via `gh pr view 126 --json state,mergedAt` |
+| Close timestamp | 2026-05-17 |
+
+### CI evidence (DEPS-08)
+
+| Job | Status | Notes |
+|---|---|---|
+| `dockerfile-noble-pin-guard` | **SUCCESS** ✅ | Conclusion captured pre-close; mirrors Renovate-shape diff behavior |
+| Workflow run | <https://github.com/jegr78/ctc-manager/actions/runs/25990173046/job/76394742913> | Job ID `76394742913` |
+| Guard step output (verbatim) | `[noble-pin-guard] OK - all 'FROM eclipse-temurin:' lines are pinned to -noble.` followed by both FROM lines | Captured via `gh api repos/jegr78/ctc-manager/actions/jobs/76394742913/logs` while the rest of the run was still in progress |
+| `build-and-test` | IN_PROGRESS at close time | Long-running E2E suite; not blocking DEPS-08 |
+| `docker-build` | IN_PROGRESS at close time | Pulls actual `25.0.1_8-jdk-noble` from Docker Hub; not blocking DEPS-08 |
+| CodeQL Analyze (3 langs) | IN_PROGRESS at close time | Unrelated to Phase 84 (CodeQL setup is Phase 85 scope; the runs here are pre-existing GitHub-default scans on the PR target `master`); not blocking DEPS-08 |
+
+### Observations
+
+- **Synthetic PR confirms RESEARCH.md correction #3 in the wild:** the corrected `eclipse-temurin` `allowedVersions` regex `/^25(?:\.[0-9._]+)?-(?:jdk|jre)-noble$/` (with `[0-9._]+` accepting underscores) matches the real published Adoptium tag `25.0.1_8-jdk-noble`.
+- **The original CONTEXT.md D-19 regex would have BLOCKED this real tag** (it used `[0-9.]+` without underscore support). The planner's correction is structurally validated by this exercise — a CONTEXT-only formulation of D-19 would have made Renovate reject every real Adoptium patch tag.
+- **The `dockerfile-noble-pin-guard` CI side does NOT inspect the build-number suffix** — it only enforces the `-noble` substring whitelist. Belt-and-braces: Renovate (Phase 84) prevents the regex-mismatch shape at the proposal layer, CI (Phase 78) catches anything that slips past at the merge layer.
+- **Run completion timing:** the `dockerfile-noble-pin-guard` job is bandwidth-cheap (no Docker pull, no JVM startup, just `grep -E`/`grep -F`) — it finishes in under 30 s while heavier sibling jobs run in parallel. We captured its evidence and closed the PR without waiting for the slower jobs.
+- **Run completion follow-up (informational, not DEPS-08-blocking):** because the PR was closed before `build-and-test` and `docker-build` finished, those jobs' outcomes are not recorded here. They are not in scope of DEPS-08 / SC#6 — the success criterion is specifically `dockerfile-noble-pin-guard: pass`.
+
+### Negative-path coverage (deliberately not tested in this wave)
+
+- This wave deliberately **does NOT** test the guard's FAIL path (a non-`-noble` tag triggering `[noble-pin-guard] FAIL`). That path is covered by Phase 78's structural setup of the guard itself and by the operational fact that the guard exists in `.github/workflows/ci.yml:72-110`. Re-testing the fail-path would have created a deliberate CI failure on a PR-against-master that someone could mistakenly merge.
+
+### Threat-Model Closeout — T-3 (closed)
+
+T-3 ("Dockerfile `-noble` bypass") now fully closed:
+
+- **Prevention layer** (Wave 1): renovate.json `eclipse-temurin` packageRule with corrected regex prevents Renovate from proposing non-`-noble` tags
+- **Detection layer** (Phase 78 / Wave 3 exercise): `dockerfile-noble-pin-guard` CI job blocks any PR that smuggles a non-`-noble` tag past prevention
+- **Structural validation** (Wave 3): the guard accepts real Adoptium underscore-build tags on Renovate-shape diffs
 
 ---
 
