@@ -1,19 +1,20 @@
 name: CodeQL SAST
 
-# Phase 85 D-12/1 + D-13 (REVISED at execute-time): scaffold-state triggers.
-# Original D-13 specified workflow_dispatch: ONLY, but GitHub Actions requires the
-# workflow file to exist on the default branch (master) for workflow_dispatch to
-# function -- the scaffold lives only on the milestone branch, so dispatch fails
-# with HTTP 404. Resolution: keep workflow_dispatch (no-op until v1.11 merges to
-# master) AND add push trigger scoped to the milestone branch so each scaffold/
-# triage commit on gsd/v1.11-* auto-runs the workflow. Plan 85-03 (D-12/4
-# final-enable) replaces the milestone-branch push with push:[master] and adds
-# pull_request + schedule + the inline-bash SARIF-diff gate-step.
+# Phase 85 D-12/4 final-enable: triggers extended from scaffold-state
+# (workflow_dispatch + milestone-branch push per D-13 REVISED) to production
+# state. push: [master] + pull_request: [master + milestone-branch] fires the
+# workflow and the SARIF-diff gate-step on every PR and merge. schedule: Sunday
+# 02:00 UTC cron (D-20) avoids the Monday-morning Renovate run cluster -- weekly
+# drift detection only; gate-step is SKIPPED on cron events (D-10). workflow_dispatch
+# retained for manual re-runs post-merge.
 on:
-  workflow_dispatch:
   push:
-    branches:
-      - 'gsd/v1.11-tooling-and-cleanup'
+    branches: [master]
+  pull_request:
+    branches: [master, "gsd/v1.11-tooling-and-cleanup"]
+  schedule:
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -69,12 +70,67 @@ jobs:
         with:
           category: "/language:java-kotlin"
 
-      # Phase 85 D-12/4 (deferred to plan 85-03 final-enable): inline-bash
-      # SARIF-diff gate step. Disabled in scaffold-state -- uncommented and
-      # extended with the SARIF-diff implementation in plan 85-03.
-      # - name: Gate on new HIGH/CRITICAL security alerts
-      #   if: github.event_name != 'schedule'
-      #   env:
-      #     GH_TOKEN: ${{ github.token }}
-      #   run: |
-      #     # SARIF-diff implementation per D-06/D-07/D-08/D-28 lands in plan 85-03.
+      # Phase 85 D-06 + D-07 + D-08 + D-10 + D-28: inline-bash SARIF-diff gate.
+      # Fails the workflow when a new alert with security_severity_level
+      # IN("high","critical") appears on the head branch but NOT on the base
+      # branch. Skipped on schedule events (D-10) -- weekly cron is drift
+      # detection only, alerts surface in the Security tab.
+      - name: Gate on new HIGH/CRITICAL security alerts
+        if: github.event_name != 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+          BASE_REF: ${{ github.base_ref || 'master' }}
+          OWNER_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Fetch open HIGH/CRITICAL alerts for a given ref. Filters:
+          #   - state=open (excludes closed_by_fix, dismissed)
+          #   - dismissed_at == null (excludes UI-dismissed)
+          #   - security_severity_level IN("high","critical") (D-08 CVSS-aligned)
+          # Key on (rule.id, location.path) per D-28 -- commit-sha-agnostic
+          # so rebases don't poison the diff.
+          fetch_alerts() {
+            local ref="$1"
+            gh api -X GET "repos/${OWNER_REPO}/code-scanning/alerts" \
+              -f state=open \
+              -f "ref=refs/heads/${ref}" \
+              --paginate \
+              --jq '
+                .[] | select(
+                  .dismissed_at == null and
+                  (.rule.security_severity_level // "" | IN("high","critical"))
+                ) | "\(.rule.id)|\(.most_recent_instance.location.path)"
+              ' 2>/dev/null | sort -u || true
+          }
+
+          echo "Fetching HEAD alerts on ref=${HEAD_REF}..."
+          HEAD_ALERTS=$(fetch_alerts "${HEAD_REF}" || true)
+          echo "Fetching BASE alerts on ref=${BASE_REF}..."
+          BASE_ALERTS=$(fetch_alerts "${BASE_REF}" || true)
+
+          # No-base-scan edge case (D-09 chicken-and-egg first-PR mitigation):
+          # if BASE has no scan yet, warn and pass -- the choreography landed
+          # the final-enable commit AFTER triage, so the next push to master
+          # will populate the base baseline.
+          if [ -z "${BASE_ALERTS}" ] && [ -z "${HEAD_ALERTS}" ]; then
+            echo "No HIGH/CRITICAL alerts on either ref. Gate PASS."
+            exit 0
+          fi
+          if [ -z "${BASE_ALERTS}" ] && [ -n "${HEAD_ALERTS}" ]; then
+            echo "::warning::No prior scan data for base ref=${BASE_REF}; cannot diff. Falling through to absolute-check."
+            # When base has no scan, fall through and treat all HEAD alerts as net-new.
+          fi
+
+          NEW_ALERTS=$(comm -23 <(echo "${HEAD_ALERTS}") <(echo "${BASE_ALERTS}") || true)
+
+          if [ -n "${NEW_ALERTS}" ]; then
+            echo "::error::New HIGH/CRITICAL CodeQL alerts introduced on ${HEAD_REF}:"
+            echo "${NEW_ALERTS}"
+            echo ""
+            echo "Each line is (rule.id|location.path). Triage per docs/security/sast-acceptance.md + CLAUDE.md '## Conventions > CodeQL SAST (Code Scanning)'."
+            exit 1
+          fi
+
+          echo "No new HIGH/CRITICAL alerts vs ${BASE_REF}. Gate PASS."
