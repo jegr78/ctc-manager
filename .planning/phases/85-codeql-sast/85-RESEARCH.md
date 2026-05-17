@@ -909,38 +909,30 @@ Insert AFTER the existing `### Static Analysis (SpotBugs + find-sec-bugs)` block
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All 5 questions resolved during planning (2026-05-17). See per-question `RESOLVED:` line.
 
 1. **Should the renovate.json packageRule placement be at the start or end of `packageRules[]`?**
-   - What we know: Renovate evaluates rules top-to-bottom; later rules override earlier ones. The existing generic patch-automerge catch-all (`renovate.json:101-105`) currently applies to `github/codeql-action`.
-   - What's unclear: Whether placing the new rules at end (most-specific-last, overrides catch-all) or start (most-specific-first, conventional readability) is the project preference.
-   - Recommendation: Place at END so the more-specific rule wins. Document the placement rationale in the rule's `"description"` field. (Common Operation 4 above takes this position.)
+   - **RESOLVED:** END (most-specific-last). Implemented in 85-01-PLAN Task 2 Step D — new rules inserted before the catch-all, catch-all preserved as last element. Placement rationale documented in the rule's `"description"` field.
 
 2. **Should the scaffold-commit `codeql-config.yml` include the rule-id suppressions, or wait until after baseline?**
-   - What we know: D-04 says "pre-stage SSRF + ZIP-Slip triade". D-12.1 says "scaffold commit includes codeql-config.yml with SSRF + ZIP-Slip pre-stage".
-   - What's unclear: Whether the pre-staged rule IDs (`java/ssrf`, `java/zipslip`, `java/path-injection`) are the right ones — A4 above flags uncertainty about variant rule IDs.
-   - Recommendation: Pre-stage with the canonical IDs from this research. If baseline emits a variant rule ID (e.g., `java/server-side-request-forgery-from-uri`), adjust in a triage commit. The cost of a wrong pre-stage is one extra triage commit; the benefit of pre-staging is keeping the first baseline noise-free.
+   - **RESOLVED:** Pre-stage with canonical IDs (`java/ssrf`, `java/zipslip`, `java/path-injection`). Implemented in 85-01-PLAN Task 1 Step A. Variant rule IDs handled by 85-02-PLAN Task 2 fallback (triage-commit adjusts entries if baseline emits e.g. `java/server-side-request-forgery-from-uri`).
 
 3. **Should the gate-step inline-bash be extracted to `.github/codeql/sarif-diff-gate.sh` even though D-06 prefers inline?**
-   - What we know: D-06 explicitly rejects "separate `.github/scripts/` file" for the parser. The argument: inline keeps the workflow self-contained.
-   - What's unclear: If the parser grows beyond ~30 lines during planning (edge-case handling for first-run, rate-limiting, etc.), the inline form becomes unreadable in code review.
-   - Recommendation: Stick with inline per D-06 unless the script exceeds 50 lines. If it does, escalate to discuss-phase before plan-execution. (The Pattern 3 template above is ~35 lines and within budget.)
+   - **RESOLVED:** Inline per D-06. Implemented in 85-03-PLAN Task 1 Step B — ~35 lines of bash, within the 50-line budget. Escalation trigger preserved: if a future expansion exceeds 50 lines, re-run discuss-phase.
 
 4. **Should the throwaway-branch deliberate-violation test (SAST-06) use SQLi or path-traversal?**
-   - What we know: D-14 leaves the choice to the planner. Both `java/sql-injection` (sev 9.8) and `java/path-injection` (sev 7.5) are HIGH-severity.
-   - What's unclear: Which one fires fastest and most reliably on a single-line test class.
-   - Recommendation: `java/sql-injection`. Single-line pattern:
+   - **RESOLVED:** `java/sql-injection`. Implemented in 85-04-PLAN Task 1 Step 3 — `src/main/java/org/ctc/_sast_validation/SastMarker.java` with the recommended single-line pattern:
      ```java
      public static String unsafe(HttpServletRequest req, Statement stmt) throws Exception {
        return stmt.executeQuery("SELECT * FROM users WHERE id = " + req.getParameter("id")).toString();
      }
      ```
-     SQLi fires deterministically; path-injection has more sanitizer recognition that can sometimes false-negative.
+     File created on `throwaway/sast-06-validation` branch, never on milestone branch.
 
 5. **Does the Phase-85 PR need to include the throwaway-branch test (D-14) as part of `85-VERIFICATION.md`, or is it sufficient to capture the gh-run output URL?**
-   - What we know: D-14.6 says "Capture: `gh run view` output (first 30 lines) + Security tab alert screenshot pointer into `85-VERIFICATION.md`".
-   - What's unclear: Whether the captured artifact must be the full SARIF or just the run-log excerpt.
-   - Recommendation: Run-log excerpt is sufficient. The captured evidence is "gate-step exit code 1 + error annotation with rule.id + path". Full SARIF adds bulk without informational value.
+   - **RESOLVED:** Run-log excerpt (first 30 lines) is sufficient. Implemented in 85-04-PLAN Task 2 Step 4 — capture exit code 1 + `::error::` annotation with rule.id + location.path. Full SARIF not stored. 85-VERIFICATION.md SAST-06 section is the canonical evidence sink.
 
 ---
 
