@@ -44,6 +44,10 @@ Reduce `./mvnw verify -Pe2e` wallclock from the v1.10 baseline of 11m 11s to **�
 
 - **D-16:** **Soft cap: ~6 plans, 2 waves.** If after plan 3-4 the trajectory makes ≥7m 50s clearly unreachable, plans 5-6 finalize the blocker documentation and v1.12-path lever set — phase closes cleanly. Avoids Phase-79-déjà-vu (forkCount tuning iterations that produced 22m 18s on Run 1).
 
+### PR-Branch CI Harvest (Plan 86-06 scope refinement)
+
+- **D-17:** **PR-branch CI harvest is acceptable for PERF-05 / D-11.** `ci.yml` executes identical steps (`./mvnw verify -Pe2e`) on both `pull_request` and `push to master` events; the harvested Maven `Total time` is semantically equivalent regardless of trigger. To close Phase 86 within the same milestone PR (#122) and avoid an orphan post-merge `docs(86):` commit on master, the 5-run harvest is performed on the active milestone branch (`gsd/v1.11-tooling-and-cleanup`) via `workflow_dispatch` (added to ci.yml in this phase). Sequential triggering with `gh run watch` between runs sidesteps the `concurrency.cancel-in-progress: true` killer that would otherwise prevent collecting 5 successful runs on a PR branch. The recorded median is the v1.11 baseline whether sourced from PR-branch or post-merge master CI runs — what matters per D-11 is that timing comes from the GitHub Actions runner, not local hardware.
+
 ### Claude's Discretion
 
 - Exact wording of `docs/test-performance.md` sections; specific seed values within the (1234/5678/9999) family or substitutions thereof; whether the `JpaAuditingConfig` lives in `src/test/java/org/ctc/testsupport/` or `src/test/java/org/ctc/domain/repository/` (researcher/planner picks the location matching existing test-support conventions).
