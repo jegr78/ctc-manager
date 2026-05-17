@@ -863,22 +863,23 @@ public class StandingsViewService {
 
 **If this table is empty:** N/A — Phase 83 carries 7 entries; A1, A3, A4, A5 are `[ASSUMED]`, the rest are `[VERIFIED]`.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Where does the v1.11 UAT-02 result-slot live?**
    - What we know: `.planning/milestones/v1.x-MILESTONE-AUDIT.md` is the established pattern (8 such files exist for v1.0..v1.10). `.planning/milestone-audits/` directory does NOT exist. `docs/uat/` directory does NOT exist.
    - What's unclear: whether v1.11's audit will exist as a single `.planning/milestones/v1.11-MILESTONE-AUDIT.md` file (created at milestone close after Phase 87), or whether a per-phase `.planning/milestone-audits/v1.11-UAT-02.md` is acceptable.
-   - Recommendation: **Option A (preferred):** Add a `Pending UATs` subsection to `.planning/STATE.md` at Phase-83 close, with the empty UAT-02 row. The v1.11 MILESTONE-AUDIT.md (created at milestone close per existing pattern) will absorb the row at audit time. Lightest weight, no new directory, no new file. **Option B:** Create `.planning/milestones/v1.11-UAT-02.md` as a standalone file. More discoverable but adds a 1-purpose file. Planner picks per discretion.
+   - Recommendation: **Option A (preferred):** Add a `Pending UATs` subsection to `.planning/STATE.md` at Phase-83 close, with the empty UAT-02 row.
+   - **RESOLVED:** Option A — STATE.md `## Pending UATs` subsection (per CONTEXT.md D-27).
 
 2. **Does `MatchdayGeneratorGroupsE2E` need pre-seeded GROUPS-Saison fixtures, or can it create them inline?**
    - What we know: `GroupsSeasonE2ETest.java` (existing) creates its own GROUPS-Saison fixture in `@BeforeEach` (Test-prefix names, idempotent cleanup). Total wall-clock ~25-30s including Playwright browser start.
-   - What's unclear: whether the planner wants `MatchdayGeneratorGroupsE2E` to clone the full setup or to be a thinner test that operates only on the FORM (not the full matchday-generation lifecycle).
-   - Recommendation: Thin test — create a Test-prefix GROUPS-Saison with 4 teams + 2 groups + 1 REGULAR phase (no matchdays), navigate to the generate-form, assert the group `<select>` appears, submit with `groupId=group_A.id`, assert redirect with success flash. Don't assert downstream matchday creation (that's `MatchdayGeneratorServiceTest`'s job). Target wall-clock < 15s.
+   - Recommendation: Thin test — create a Test-prefix GROUPS-Saison with 4 teams + 2 groups + 1 REGULAR phase, navigate to form, assert group `<select>` appears, submit with `groupId=group_A.id`, assert redirect with success flash. Target wall-clock < 15s.
+   - **RESOLVED:** Thin test on Test-prefix Season 2098 fixture (per CONTEXT.md D-20 + planner 83-03-PLAN.md Task 2).
 
 3. **Should DevDataSeederLocalProfileIT (D-15) be added?**
-   - What we know: Minimal IT shape `applicationContext.getBean(DevDataSeeder.class) != null` under `@ActiveProfiles("local")` — but `local` profile requires MariaDB JDBC URL pointing at `localhost:3306` (per `application-local.yml`). H2 testcontainers won't satisfy this URL.
-   - What's unclear: whether a `@TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:local-it")` shim is acceptable to override the MariaDB URL during the IT, or whether to skip the test.
-   - Recommendation: **Skip.** The annotation change is one-line and human-eye-reviewable. The `DevDataSeederLocalProfileIT` would either (a) require a MariaDB testcontainer (expensive — adds ~10s wall-clock), or (b) override the JDBC URL to H2 (defeats the test purpose — it's no longer testing the `local` profile authentically). The QUAL-02 verification commit's manual `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` smoke (D-30) provides authentic proof.
+   - What we know: Minimal IT shape under `@ActiveProfiles("local")` would either need a MariaDB testcontainer (expensive) or an H2 JDBC URL override (defeats the test purpose).
+   - Recommendation: **Skip.** Annotation change is one-line and human-eye-reviewable; manual `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` smoke is the authentic proof.
+   - **RESOLVED:** Skip the IT (per CONTEXT.md D-15 + planner 83-02-PLAN.md manual-smoke checkpoint).
 
 ## Environment Availability
 
