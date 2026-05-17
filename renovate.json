@@ -99,6 +99,19 @@
       "allowedVersions": "/^25(?:\\.[0-9._]+)?-(?:jdk|jre)-noble$/"
     },
     {
+      "description": "GitHub CodeQL Action patch updates automerge after 3-day cooldown (Phase 85 D-29). GitHub manages safe rollouts under @v4.",
+      "matchPackageNames": ["github/codeql-action"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "GitHub CodeQL Action minor/major updates via Dependency Dashboard approval (Phase 85 D-29) — minor bumps may add new security-extended queries that introduce new findings.",
+      "matchPackageNames": ["github/codeql-action"],
+      "matchUpdateTypes": ["minor", "major"],
+      "dependencyDashboardApproval": true
+    },
+    {
       "description": "Patch updates automerge after CI passes — auditable via PR object (NOT branch automerge per D-20). Branch protection on master is the gating layer.",
       "matchUpdateTypes": ["patch"],
       "automerge": true,

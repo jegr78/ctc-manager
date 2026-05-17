@@ -12,9 +12,9 @@ created: 2026-05-17
 
 ## SAST-01 / SAST-02 / SAST-03 Workflow Structure (Scaffold — plan 85-01)
 
-**Date:** _(executor fills after commit)_
+**Date:** 2026-05-17
 **Branch:** `gsd/v1.11-tooling-and-cleanup`
-**Commit SHA:** _(executor fills)_
+**Commit SHA:** f61fcbc0
 **Commit message:** `feat(85): scaffold CodeQL workflow (workflow_dispatch only, gate disabled) (SAST-01..SAST-05, D-22..D-29)`
 
 ### Structural-YAML Checks (yq)
@@ -38,8 +38,14 @@ created: 2026-05-17
 ### Maven Sanity-Build
 
 **Command:** `./mvnw test-compile --no-transfer-progress`
-**Exit code:** _(executor)_
-**Result:** _(executor)_
+**Exit code:** 0
+**Result:** PASS — `[PLAT-07 build-guard] OK`
+
+### Wave 1 Scaffold Completion
+
+**Completed:** 2026-05-17
+**All 6 files committed atomically:** yes (codeql.yml, codeql-config.yml, sast-acceptance.md, CLAUDE.md, renovate.json, 85-VERIFICATION.md)
+**Commit hash:** f61fcbc0
 
 ---
 

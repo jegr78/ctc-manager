@@ -166,6 +166,8 @@ Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session rem
 * Stack: `.planning/codebase/STACK.md`
 * Structure: `.planning/codebase/STRUCTURE.md`
 * Testing: `.planning/codebase/TESTING.md`
+* SAST Acceptance: `docs/security/sast-acceptance.md`
+* SAST Workflow: `.github/workflows/codeql.yml`
 
 ---
 
@@ -222,3 +224,9 @@ Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session rem
 * **Gate:** `spotbugs-maven-plugin` 4.9.8.3 + `findsecbugs-plugin` 1.14.0 run on every `./mvnw verify` (Medium+HIGH findings block the build). No separate CI job — SpotBugs runs inside the existing `verify` step.
 * **Suppressions:** Live in `config/spotbugs-exclude.xml`. Every `<Match>` entry MUST have an XML rationale comment with a code-cross-reference to where the intentional pattern lives. No `@SuppressWarnings("all")` ever — use targeted `@SuppressFBWarnings({"SPECIFIC_CODE"}, justification="...")` in source or a `<Match>` entry in the filter file.
 * **`lombok.config` invariant:** `lombok.config` at project root sets `lombok.extern.findbugs.addSuppressFBWarnings=true`. Do NOT remove or modify the two SpotBugs-related lines without a new phase that re-baselines suppressions — removing them re-introduces ~40–80 `EI_EXPOSE_REP*` false positives from Lombok-generated entity getters.
+
+### CodeQL SAST (Code Scanning)
+
+* **Gate:** `github/codeql-action@v4` runs on push to `master`, on pull_request against `master`, and on Sunday 02:00 UTC cron via `.github/workflows/codeql.yml` (language `java-kotlin`, query suite `security-extended`). The inline-bash SARIF-diff gate-step fails the workflow on the PR job when a new alert with `security-severity >= 7.0` (HIGH or CRITICAL, CVSS-aligned) appears on the head branch but not on the base branch. The weekly cron run skips the gate-step (drift detection only — alerts surface in the Security tab, no red runs).
+* **Suppressions** live in `.github/codeql/codeql-config.yml` `query-filters`. Every suppressed finding requires a `// CodeQL FP: <rule-id> — <reason>; see docs/security/sast-acceptance.md` source marker on the line directly above the protected method or block, AND a matching table row in `docs/security/sast-acceptance.md`. UI dismissals are equally valid but MUST also be reflected in `sast-acceptance.md` (Update-on-Triage discipline — partial-writes are forbidden).
+* **Acceptance doc** at `docs/security/sast-acceptance.md` is the single source of truth for SAST triage decisions: per-pattern sections (SSRF | ZIP-Slip | BCrypt-N/A | Others), per-finding rows with Alert-ID + Rule + Location + Bucket + Rationale + Source-Marker. Every suppression PR MUST include a parallel `sast-acceptance.md` edit. The acceptance doc is the human-readable counterpart to the machine-readable `codeql-config.yml`.

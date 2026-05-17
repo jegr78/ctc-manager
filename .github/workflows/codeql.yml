@@ -1,0 +1,71 @@
+name: CodeQL SAST
+
+# Phase 85 D-12/1 + D-13: scaffold-state triggers -- workflow_dispatch: ONLY.
+# Plan 85-03 (D-12/4 final-enable) extends this block to add push, pull_request,
+# and schedule triggers and activates the inline-bash SARIF-diff gate-step.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Phase 85 SAST-03: workflow-level permissions are least-privilege
+# (contents:read only). The security-events: write privilege required for
+# SARIF upload is granted at the JOB level only (see jobs.analyze.permissions).
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (java-kotlin)
+    runs-on: ubuntu-latest
+
+    # Phase 85 SAST-03: job-level permissions only -- security-events:write
+    # is the SARIF-upload privilege; actions:read is required by
+    # codeql-action/init@v4 to enumerate workflow runs for baseline diffing.
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Build for CodeQL
+        # Phase 85 SAST-02: manual build step (./mvnw compile) to preserve Lombok
+        # annotation processing and Playwright compile-scope dependency.
+        # -DskipTests keeps wallclock minimal; CodeQL operates on the
+        # compiled bytecode of src/main/java only (D-21 -- src/test/java is
+        # implicitly out-of-scope via the -DskipTests build step).
+        run: ./mvnw compile --no-transfer-progress -DskipTests -Dspring.profiles.active=dev
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:java-kotlin"
+
+      # Phase 85 D-12/4 (deferred to plan 85-03 final-enable): inline-bash
+      # SARIF-diff gate step. Disabled in scaffold-state -- uncommented and
+      # extended with the SARIF-diff implementation in plan 85-03.
+      # - name: Gate on new HIGH/CRITICAL security alerts
+      #   if: github.event_name != 'schedule'
+      #   env:
+      #     GH_TOKEN: ${{ github.token }}
+      #   run: |
+      #     # SARIF-diff implementation per D-06/D-07/D-08/D-28 lands in plan 85-03.
