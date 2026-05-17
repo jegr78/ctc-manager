@@ -313,7 +313,7 @@ Plans:
   4. The SSRF blocklist (`FileStorageService.storeFromUrl`), ZIP-Slip defense (`BackupImportService`), and BCrypt usage are each explicitly classified per the triage policy with linked CodeQL alert IDs
   5. Injecting a deliberate SQL-injection or path-traversal pattern on a throwaway branch causes CodeQL to fail the PR gate, confirming the blocking behavior works end-to-end
 
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 Plans:
 **Wave 1**
 
@@ -325,7 +325,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 85-03-PLAN.md — Final-enable commit: extend codeql.yml on: triggers + activate inline-bash SARIF-diff gate-step + final ./mvnw verify -Pe2e (SAST-01, SAST-06/1, D-06..D-12/4)
+- [x] 85-03-PLAN.md — Final-enable commit: extend codeql.yml on: triggers + activate inline-bash SARIF-diff gate-step + final ./mvnw verify -Pe2e (SAST-01, SAST-06/1, D-06..D-12/4)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -367,7 +367,7 @@ Plans:
 | 82. Backup Cleanup | 10/10 | Complete   | 2026-05-16 |
 | 83. Quality and Polish Sweep | 6/6 | Complete   | 2026-05-17 |
 | 84. Renovate Integration | 4/4 | Complete   | 2026-05-17 |
-| 85. CodeQL SAST | 2/4 | In Progress|  |
+| 85. CodeQL SAST | 3/4 | In Progress|  |
 | 86. Test Wallclock Reduction | 0/TBD | Not started | - |
 | 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |
 
