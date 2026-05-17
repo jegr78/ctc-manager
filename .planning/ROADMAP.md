@@ -344,7 +344,7 @@ Plans:
   4. `./mvnw verify -Pe2e` wallclock is either ≤7m 50s on the same hardware OR `docs/test-performance.md` documents the specific architectural constraint (e.g., MariaDB Testcontainers cold-start cost) that blocks ≥30% reduction and proposes a concrete v1.12 path
   5. The improved (or blocked) wallclock is verified on CI (GitHub Actions runner) over 3 consecutive runs; the median is recorded as the new v1.11 baseline in `docs/test-performance.md`
 
-**Plans:** 4/6 plans executed
+**Plans:** 5/6 plans executed
 
 Plans:
 
@@ -360,7 +360,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 86-05-PLAN.md — Post-audit local wallclock + docs/test-performance.md finalization (Per-Decision + v1.12 levers) + phase-close ./mvnw verify -Pe2e (PERF-02, PERF-04)
+- [x] 86-05-PLAN.md — Post-audit local wallclock + docs/test-performance.md finalization (Per-Decision + v1.12 levers) + phase-close ./mvnw verify -Pe2e (PERF-02, PERF-04)
 
 **Wave 4** *(blocked on Wave 3 merge — operator-driven post-merge harvest)*
 
@@ -388,7 +388,7 @@ Plans:
 | 83. Quality and Polish Sweep | 6/6 | Complete   | 2026-05-17 |
 | 84. Renovate Integration | 4/4 | Complete   | 2026-05-17 |
 | 85. CodeQL SAST | 4/4 | Complete   | 2026-05-17 |
-| 86. Test Wallclock Reduction | 4/6 | In Progress|  |
+| 86. Test Wallclock Reduction | 5/6 | In Progress|  |
 | 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |
 
 | Milestone | Phases | Plans | Status | Shipped |

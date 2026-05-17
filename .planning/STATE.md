@@ -4,13 +4,13 @@ milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
 last_updated: "2026-05-17T21:13:30.651Z"
-last_activity: 2026-05-17 -- Phase 86 Wave 2 complete (86-02, 86-03, 86-04)
+last_activity: 2026-05-17 -- Phase 86 Wave 3 complete (86-05 close, PERF-04 OR-branch verdict)
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 38
-  completed_plans: 35
-  percent: 89
+  completed_plans: 36
+  percent: 92
 ---
 
 # Project State
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 86 (test-wallclock-reduction) — EXECUTING
-Plan: 4 of 6 (Wave 2 complete)
-Status: Executing Phase 86 — Wave 2 done; Waves 3/4 pending
-Last activity: 2026-05-17 -- Phase 86 Wave 2 complete (86-02, 86-03, 86-04)
+Plan: 5 of 6 (Wave 3 complete; PERF-04 OR-branch verdict recorded)
+Status: Executing Phase 86 — Waves 1-3 done; Wave 4 (Plan 06, post-merge CI median harvest) pending
+Last activity: 2026-05-17 -- Phase 86 Wave 3 complete (86-05 close, PERF-04 OR-branch verdict)
 
 ```
-Progress: [████████░░] 89%
+Progress: [█████████░] 92%
 ```
 
 ## Completed Milestones
