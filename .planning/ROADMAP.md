@@ -284,9 +284,20 @@ Plans:
 
 **Plans:** 4 plans
 Plans:
+**Wave 1**
+
 - [ ] 84-01-PLAN.md — Author renovate.json + remove .github/dependabot.yml in atomic commit; 13 packageRules with RESEARCH.md corrections #1-#4 (DEPS-01, DEPS-03..DEPS-07)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 84-02-PLAN.md — Install Mend Renovate GitHub App against jegr78/ctc-manager; record onboarding PR + branch-protection audit (DEPS-02)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 84-03-PLAN.md — Synthetic Dockerfile-bump throwaway PR exercising dockerfile-noble-pin-guard (DEPS-08 / SC#6, CONTEXT.md D-24 path 3)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 84-04-PLAN.md — Final ./mvnw verify -Pe2e gate + 84-VERIFICATION.md approval + STATE/ROADMAP/REQUIREMENTS updates
 
 ### Phase 85: CodeQL SAST

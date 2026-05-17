@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
-status: "[ ] pending — to be executed after v1.11 production deploy"
-last_updated: "2026-05-17T10:11:53.814Z"
-last_activity: 2026-05-17 -- Phase 83 marked complete
+status: executing
+last_updated: "2026-05-17T10:52:07.076Z"
+last_activity: 2026-05-17 -- Phase 84 planning complete
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 24
+  total_plans: 28
   completed_plans: 24
   percent: 50
 ---
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 Phase: 83 — COMPLETE
 Plan: 6 of 6
-Status: Phase 83 complete (amber — QUAL-02 local-profile smoke pending operator at milestone-close)
-Last activity: 2026-05-17 -- Phase 83 marked complete
+Status: Ready to execute
+Last activity: 2026-05-17 -- Phase 84 planning complete
 
 ```
 Progress: [█████░░░░░] 50%
@@ -77,7 +77,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (Phase 83 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** [ ] pending — to be executed after v1.11 production deploy
+- **Status:** Ready to execute
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
