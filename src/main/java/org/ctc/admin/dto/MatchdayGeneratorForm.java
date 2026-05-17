@@ -1,6 +1,7 @@
 package org.ctc.admin.dto;
 
 import jakarta.validation.constraints.Min;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,4 +15,6 @@ public class MatchdayGeneratorForm {
 	private int numberOfRounds;
 
 	private boolean homeAndAway;
+
+	private UUID groupId;
 }

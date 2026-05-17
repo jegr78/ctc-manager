@@ -227,10 +227,12 @@ public class SeasonController {
 	public String generateForm(@PathVariable UUID id, Model model) {
 		var formData = matchdayGeneratorService.getFormData(id);
 		var season = formData.season();
+		var regular = seasonPhaseService.findRegularPhase(id);
 		var form = new MatchdayGeneratorForm();
-		Integer rounds = seasonPhaseService.findRegularPhase(id).getTotalRounds();
+		Integer rounds = regular.getTotalRounds();
 		form.setNumberOfRounds(rounds != null ? rounds : formData.optimalRounds());
 		model.addAttribute("season", season);
+		model.addAttribute("phase", regular);
 		model.addAttribute("generatorForm", form);
 		model.addAttribute("teamCount", formData.teamCount());
 		model.addAttribute("optimalRounds", formData.optimalRounds());
@@ -248,7 +250,7 @@ public class SeasonController {
 		}
 		var regular = seasonPhaseService.findRegularPhase(id);
 		try {
-			matchdayGeneratorService.generate(regular.getId(), null, form.getNumberOfRounds(), form.isHomeAndAway());
+			matchdayGeneratorService.generate(regular.getId(), form.getGroupId(), form.getNumberOfRounds(), form.isHomeAndAway());
 			redirectAttributes.addFlashAttribute("successMessage", "Matchdays generated successfully");
 		} catch (IllegalStateException | IllegalArgumentException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
