@@ -282,7 +282,7 @@ Plans:
   5. Renovate never proposes Java 26 (non-LTS) — `renovate.json` constrains `java.version` proposals to LTS-only patterns (`^(?:11|17|21|25|29)`)
   6. The existing `dockerfile-noble-pin-guard` CI job passes after Renovate's first Dockerfile-bump PR is opened, confirming Renovate respects the suffix-only pin
 
-**Plans:** 4 plans
+**Plans:** 0/4 plans executed
 Plans:
 **Wave 1**
 
@@ -350,7 +350,7 @@ Plans:
 | 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 3/3 | Complete   | 2026-05-16 |
 | 82. Backup Cleanup | 10/10 | Complete   | 2026-05-16 |
 | 83. Quality and Polish Sweep | 6/6 | Complete   | 2026-05-17 |
-| 84. Renovate Integration | 0/TBD | Not started | - |
+| 84. Renovate Integration | 0/4 | Planned    |  |
 | 85. CodeQL SAST | 0/TBD | Not started | - |
 | 86. Test Wallclock Reduction | 0/TBD | Not started | - |
 | 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |
