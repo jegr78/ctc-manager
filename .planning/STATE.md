@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-17T17:15:20.348Z"
-last_activity: 2026-05-17 -- Phase 85 marked complete
+last_updated: "2026-05-17T17:53:26.055Z"
+last_activity: 2026-05-17 -- Phase 86 planning complete
 progress:
   total_phases: 8
   completed_phases: 6
-  total_plans: 32
+  total_plans: 38
   completed_plans: 32
   percent: 75
 ---
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 Phase: 85 — COMPLETE
 Plan: 4 of 4
-Status: Phase 85 complete — CodeQL SAST workflow active on push:master + pull_request:master + Sunday cron; SARIF-diff gate-step (pr=/ref= split) verified end-to-end via throwaway PR #128 deliberate java/sql-injection (run #25996558384 exited 1); 0 HIGH/CRITICAL baseline alerts after pre-staged SSRF + ZIP-Slip query-filters; sast-acceptance.md + CLAUDE.md Conventions + renovate.json packageRule shipped; default CodeQL setup disabled (Phase-85 advanced workflow owns scanning); branch-protection-rule operator hoheit per D-11.
-Last activity: 2026-05-17 -- Phase 85 marked complete
+Status: Ready to execute
+Last activity: 2026-05-17 -- Phase 86 planning complete
 
 ```
 Progress: [███████░░░] 75%
@@ -77,7 +77,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (Phase 83 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Executing Phase 84
+- **Status:** Ready to execute
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
