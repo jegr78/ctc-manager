@@ -28,7 +28,7 @@ The Season-detail "Generate Matchdays" form now exposes a per-group `<select>` f
 
 Full `./mvnw verify -Pe2e` lifecycle ran cleanly through Surefire and Failsafe. Screenshot `.screenshots/qual-03-matchday-generator-groups.png` captured (126 KB, renders season-detail page with MD 1 matchday link in the Matchdays section + Group A roster).
 
-## Discovery: Flash-Attribute Loss on `SeasonController#detail` (pre-existing, out of scope)
+## Discovery 1: Flash-Attribute Loss on `SeasonController#detail`
 
 `SeasonController#detail` at `SeasonController.java:35-60` performs an auto-redirect from `/admin/seasons/{id}` to `/admin/seasons/{id}/phases/{phaseId}` when a REGULAR phase exists. Spring flash attributes survive ONE redirect, but the matchday-generator success path is a double redirect:
 
@@ -36,7 +36,15 @@ Full `./mvnw verify -Pe2e` lifecycle ran cleanly through Surefire and Failsafe. 
 2. GET `/admin/seasons/{id}` → reads season → finds REGULAR phase → 302 to `/admin/seasons/{id}/phases/{phaseId}`
 3. GET `/admin/seasons/{id}/phases/{phaseId}` → flash already consumed in step 2; success-flash is GONE
 
-The MD 1 matchday IS created correctly; the success-flash is silently lost. The E2E test asserts on the observable outcome (matchday-link visible on the rendered phase page), not on the transient flash. This is consistent with the `BackupImportE2ETest` failure observed in the same `./mvnw verify -Pe2e` run — likely the same flash-loss pattern surfaces there too. **Out of Phase 83 scope** — log as a follow-up backlog item for a future "flash-attribute hardening" phase.
+The MD 1 matchday IS created correctly; the success-flash is silently lost. The E2E test asserts on the observable outcome (matchday-link visible on the rendered phase page), not on the transient flash. Backlog item for a future "flash-attribute hardening" phase — fix pattern: `SeasonController#detail` should propagate inbound flash attributes to the target URL via `RedirectAttributes#getFlashAttributes()` merge, or eliminate the double redirect entirely.
+
+## Discovery 2: Test-Pollution Regression in `BackupImportE2ETest` (FIXED in same phase)
+
+The initial commit of `MatchdayGeneratorGroupsE2ETest` (commit `3f91ba6b`) had only `teardownPage()` in `@AfterEach` — no DB cleanup. When the test ran in the same Spring context as `BackupImportE2ETest` (shared H2 in-memory DB; Failsafe `forkCount=2, reuseForks=true`), the Test-Season 2098 + 4 teams + 2 groups + 1 phase + 1 matchday remained in the DB and broke `BackupImportE2ETest`'s wipe+restore round-trip — the success flash never rendered.
+
+**Initial misclassification corrected (per `feedback_no_flaky_dismissal`):** the failure was first mis-labeled as "pre-existing flaky" + "out of scope" — wrong on both counts. Phase 82 verification (`82-VERIFICATION.md`) recorded all 1655 tests green, and the failure was reliably reproducible under the new commit, so it was a regression I introduced.
+
+**Fix (commit `20233926`):** explicit `@AfterEach` cleanup deleting matchdays + phase-teams + season-teams + groups + phases + season + Test-prefix teams per CLAUDE.md "Isolate Test Data Completely". Full `./mvnw verify -Pe2e` then reports 38/38 E2E green, JaCoCo + SpotBugs unchanged.
 
 ## Acceptance Criteria
 
