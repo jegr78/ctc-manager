@@ -669,6 +669,7 @@ public class BackupImportService {
         long totalRows = 0;
         List<JsonNode> batch = new ArrayList<>(RESTORE_BATCH_SIZE);
 
+        // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
         ZipEntry entry = zf.getEntry(entryPath);
         if (entry == null) {
             // Absent data files for an entity are not a hard error — an exported empty array is

@@ -83,6 +83,7 @@ public class FileStorageService {
 		}
 	}
 
+	// CodeQL FP: java/ssrf — startsWith-chain hostname blocklist (validateHostname, lines 128-159) not recognized as sanitizer; see docs/security/sast-acceptance.md
 	public String storeFromUrl(String subDir, UUID entityId, String sourceUrl, String filename) throws IOException {
 		if (sourceUrl == null || !sourceUrl.toLowerCase().startsWith("https://")) {
 			log.warn("Rejected non-HTTPS URL: {}", sourceUrl);

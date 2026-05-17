@@ -608,6 +608,7 @@ public class BackupArchiveService {
 	 *                                {@code Reason.PATH_TRAVERSAL} when the entry name escapes
 	 *                                {@code stagingRoot}
 	 */
+	// CodeQL FP: java/zipslip — PathTraversalGuard.assertWithin delegation not traceable by CodeQL; see docs/security/sast-acceptance.md
 	// PATH_TRAVERSAL defense: PathTraversalGuard.assertWithin() is the sanitizer; find-sec-bugs
 	// cannot trace the defense through the delegated utility call. See config/spotbugs-exclude.xml
 	// BackupArchiveService PATH_TRAVERSAL_IN entry for the corresponding suppression rationale.

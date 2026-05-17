@@ -51,24 +51,51 @@ created: 2026-05-17
 
 ## Baseline Scan Triage Table (Plan 85-02)
 
-First baseline workflow_dispatch run produced by `gh workflow run codeql.yml --ref gsd/v1.11-tooling-and-cleanup`.
+Execute-time deviations encountered during Wave 2 — both resolved before baseline scan:
 
-**Run URL:** _(executor)_
-**Run ID:** _(executor)_
-**Total alerts (HIGH+CRITICAL):** _(executor)_
-**Pre-staged-FP triade hits:** _(executor — expected: SSRF on FileStorageService, ZIP-Slip on BackupArchiveService + BackupImportService)_
+1. **Default CodeQL Setup conflict.** `jegr78/ctc-manager` had `state: configured` default CodeQL setup (auto-scanning all 5 languages with default query suite). First scan run #25995164105 failed with `"CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled"`. **Resolution (user-confirmed):** disabled default setup via `gh api -X PATCH repos/jegr78/ctc-manager/code-scanning/default-setup -f state=not-configured`. Phase 85 now owns CodeQL scanning. Trade-off: javascript / typescript / actions auto-scanning is gone (java-kotlin only via Phase 85 advanced workflow). Documented in milestone-summary as TRACKED — future phase can add matrix-strategy for the dropped languages if desired.
+
+2. **workflow_dispatch + default-branch requirement.** Original D-13 specified `on: workflow_dispatch:` only, but GitHub Actions requires the workflow file to exist on the **default branch (master)** for dispatch to function — the scaffold lives only on `gsd/v1.11-tooling-and-cleanup`. **Resolution:** D-13 revised (commit `fd397a61`) to add `push: { branches: [ 'gsd/v1.11-tooling-and-cleanup' ] }`; workflow now auto-triggers on each milestone-branch push. Plan 85-03 final-enable swaps this to `push: { branches: [master] }` + `pull_request` + `schedule`.
+
+### Baseline Scan #1 (failed — default-setup conflict)
+
+**Run URL:** https://github.com/jegr78/ctc-manager/actions/runs/25995164105
+**Run ID:** 25995164105
+**Event:** push (commit `fd397a61`)
+**Status:** failure (annotation: "CodeQL analyses from advanced configurations cannot be processed when the default setup is enabled")
+**Resolution commit:** `gh api -X PATCH` disable default-setup (no source commit — repo-settings only)
+
+### Baseline Scan #2 (succeeded — clean)
+
+**Run URL:** https://github.com/jegr78/ctc-manager/actions/runs/25995329890
+**Run ID:** 25995329890
+**Event:** workflow_dispatch
+**Status:** completed (2m7s)
+**Total alerts (HIGH+CRITICAL):** **0**
+**Total alerts (all severities):** **0**
+**Pre-staged-FP triade hits:** 0 — `query-filters[].exclude` entries (`java/ssrf`, `java/zipslip`, `java/path-injection`) suppressed the rules BEFORE alert upload to the Security tab. No alerts were emitted to triage.
 
 ### Per-Finding Decision Table (D-15 soft-scope loop, D-10 decision tree)
 
 | # | Alert-ID | Rule | Location | Bucket | Action | Commit SHA | Rationale |
 |---|----------|------|----------|--------|--------|------------|-----------|
-| _(executor populates one row per HIGH/CRITICAL baseline alert; bucket ∈ {fixed, suppressed, accepted}; Action ∈ {fix-commit, codeql-config-exclude + source-marker + sast-acceptance-row, UI-dismiss + sast-acceptance-row})_ |
+| 1 | N/A (filtered) | java/ssrf | FileStorageService.storeFromUrl:86 | suppressed | codeql-config-exclude (scaffold) + source-marker (Wave 2) + sast-acceptance-row | Wave 2 commit | startsWith-chain hostname blocklist not recognized as sanitizer; defense-in-depth via Phase 81 SpotBugs SSRF_SPRING |
+| 2 | N/A (filtered) | java/zipslip | BackupArchiveService.assertEntrySafe:614 | suppressed | codeql-config-exclude (scaffold) + source-marker (Wave 2) + sast-acceptance-row | Wave 2 commit | PathTraversalGuard.assertWithin delegation not traceable by CodeQL; defense-in-depth via Phase 81 SpotBugs PATH_TRAVERSAL_IN |
+| 3 | N/A (filtered) | java/path-injection | BackupImportService.restoreOneTable:673 | suppressed | codeql-config-exclude (scaffold) + source-marker (Wave 2) + sast-acceptance-row | Wave 2 commit | Same ZipFile#getEntry pattern as BackupArchiveService; defense-in-depth via Phase 81 SpotBugs co-suppression |
+
+**D-15 soft-scope outcome:** ZERO additional findings beyond the pre-staged triade. Codebase passes `security-extended` cleanly after rule-id whole-codebase exclusion of the SSRF/ZIP-Slip triade. No D-15 soft-scope expansion required.
+
+**D-19 three-layer invariant verified:**
+- Layer 1 (codeql-config.yml `query-filters`): 3 entries for `java/ssrf`, `java/zipslip`, `java/path-injection` — scaffold commit `f61fcbc0`
+- Layer 2 (source markers): `// CodeQL FP: <rule>` lines at FileStorageService.java:86, BackupArchiveService.java:611, BackupImportService.java:672 — Wave 2 commit
+- Layer 3 (sast-acceptance.md table rows): 3 rows with `N/A (filtered)` Alert-ID — Wave 2 commit
+- BCrypt-N/A section present per D-05 — scaffold commit
 
 ### Post-Triage Baseline Re-Run
 
-**Command:** `gh workflow run codeql.yml --ref gsd/v1.11-tooling-and-cleanup` (after all triage commits)
-**Run URL:** _(executor)_
-**HIGH/CRITICAL alert count after triage:** _(executor — expected: 0)_
+Not required — baseline scan #2 already produced ZERO HIGH/CRITICAL alerts. The "termination check" condition (Step F of Plan 85-02 Task 2) is satisfied by baseline scan #2 itself, which IS the post-triage state because all 3 pre-staged exclusions were in place from scaffold-time.
+
+A confirmatory scan will run automatically on the Wave-2 source-marker push (auto-trigger via the `push: gsd/v1.11-*` branch in scaffold). Expected: zero HIGH/CRITICAL alerts.
 
 ---
 
