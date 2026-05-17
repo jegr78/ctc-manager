@@ -1,10 +1,19 @@
 name: CodeQL SAST
 
-# Phase 85 D-12/1 + D-13: scaffold-state triggers -- workflow_dispatch: ONLY.
-# Plan 85-03 (D-12/4 final-enable) extends this block to add push, pull_request,
-# and schedule triggers and activates the inline-bash SARIF-diff gate-step.
+# Phase 85 D-12/1 + D-13 (REVISED at execute-time): scaffold-state triggers.
+# Original D-13 specified workflow_dispatch: ONLY, but GitHub Actions requires the
+# workflow file to exist on the default branch (master) for workflow_dispatch to
+# function -- the scaffold lives only on the milestone branch, so dispatch fails
+# with HTTP 404. Resolution: keep workflow_dispatch (no-op until v1.11 merges to
+# master) AND add push trigger scoped to the milestone branch so each scaffold/
+# triage commit on gsd/v1.11-* auto-runs the workflow. Plan 85-03 (D-12/4
+# final-enable) replaces the milestone-branch push with push:[master] and adds
+# pull_request + schedule + the inline-bash SARIF-diff gate-step.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - 'gsd/v1.11-tooling-and-cleanup'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
