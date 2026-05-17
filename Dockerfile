@@ -1,6 +1,6 @@
 # Stage 1: Build
 # Pinned to -noble: Playwright 1.59.0 does not support Ubuntu 26.04 (Plucky). See Phase 78 / .planning/phases/78-docker-release-image-fix/78-CONTEXT.md.
-FROM eclipse-temurin:25-jdk-noble AS build
+FROM eclipse-temurin:25.0.1_8-jdk-noble AS build
 
 WORKDIR /build
 
