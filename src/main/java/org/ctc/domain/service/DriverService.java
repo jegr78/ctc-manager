@@ -56,6 +56,12 @@ public class DriverService {
     }
 
     @Transactional(readOnly = true)
+    public Driver findDetailById(UUID id) {
+        return driverRepository.findDetailById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Driver", id));
+    }
+
+    @Transactional(readOnly = true)
     public DriverEditData getEditFormData(UUID id) {
         var driver = findById(id);
         var seasonDrivers = seasonDriverRepository.findByDriverId(id);

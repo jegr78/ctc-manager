@@ -33,7 +33,7 @@ public class DriverController {
 
     @GetMapping("/{id}")
     public String detail(@PathVariable UUID id, Model model) {
-        var driver = driverService.findById(id);
+        var driver = driverService.findDetailById(id);
         model.addAttribute("driver", driver);
         model.addAttribute("pageTitle", "Driver: " + driver.getPsnId());
         return "admin/driver-detail";

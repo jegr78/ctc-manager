@@ -57,8 +57,17 @@ Resolve the four v1.9/v1.10 carryover tech-debt items (QUAL-01..QUAL-04) and shi
 
 ### QUAL-01: Driver-Detail Season-Assignment Chip Order
 
-- **D-04:** **`@OrderBy("season.year ASC, season.number ASC")` annotation** on `Driver.seasonDrivers` (entity field `private List<SeasonDriver> seasonDrivers` at `Driver.java:37`). Hibernate emits the `ORDER BY` in the lazy-fetch SQL — JPA-managed, minimal-invasive, no service-layer change. Secondary sort by `season.number` covers split seasons in the same year (e.g., Season 2024-1 vs. Season 2024-2). ROADMAP-SC#1 wording (`ORDER BY year ASC`) matches the primary sort.
-  **Correction 2026-05-17 (post-research):** Initial draft used `season.startDate` — that field does NOT exist on `Season` (entity has only `year`, `number`, `name`, `description`, `active` per `Season.java:25-37`). Secondary sort moved to `season.number`.
+- **D-04:** **Repository-Query `@Query` with `LEFT JOIN FETCH` + `ORDER BY`** on a new `DriverRepository.findDetailById(UUID id)` method. JPQL:
+  ```jpql
+  SELECT DISTINCT d FROM Driver d
+  LEFT JOIN FETCH d.seasonDrivers sd
+  LEFT JOIN FETCH sd.season s
+  LEFT JOIN FETCH sd.team
+  WHERE d.id = :id
+  ORDER BY s.year ASC, s.number ASC
+  ```
+  `DriverService.findDetailById(UUID)` delegates to the repo method. `DriverController#detail` (line 35) switches from `driverService.findById(id)` to `driverService.findDetailById(id)`. `Driver.java` entity stays clean (no `@OrderBy`, no getter override). All other DriverService callers (edit-flow, assignToSeason, save, delete) continue using `findById(...)` unchanged.
+  **Correction 2026-05-17 (twice-revised):** Initial draft (D-04 v1) used `season.startDate` — field does not exist on `Season`. Revised draft (D-04 v2) used `@OrderBy("season.year ASC, season.number ASC")` — Hibernate 7 rejects nested entity-association paths in JPA `@OrderBy` with `PathResolutionException: Unable to resolve path 'season.year'` at EntityManagerFactory startup. Final approach (D-04 v3, user-chosen 2026-05-17): SQL-level `ORDER BY` via JPQL fetch query at repository level. Matches ROADMAP-SC#1 wording (`ORDER BY year ASC`) at the SQL layer; no entity-level annotation; no Java-side getter override; consistent with the QUAL-04 service-layer-DTO pattern.
 - **D-05:** **`driver-detail.html` template untouched.** Already iterates `${driver.seasonDrivers}`; the annotation ensures the iteration order is correct without template changes. No `th:sort` / no chip-list refactor needed.
 - **D-06:** **Repository-IT** in `src/test/java/org/ctc/domain/repository/DriverRepositoryOrderIT.java` (tag: `@Tag("integration")`). Seeds a Driver with 3 SeasonDriver rows referencing Seasons (2024-1, 2023-1, 2025-1), reloads the driver via the repository, asserts `seasonDrivers` list-order matches `[2023-1, 2024-1, 2025-1]`. Tests the JPA `@OrderBy` is respected on the SQL layer, NOT a Java-side `Comparator.comparing` mirage. Single `@Test`.
 - **D-07:** **Playwright smoke** in `src/test/java/org/ctc/e2e/DriverDetailSmokeE2E.java` (tag: `@Tag("e2e")`). Navigates to `/admin/drivers/{id}` of a driver with multi-season chips, asserts chip-list text-order matches ascending year. Reuses existing E2E fixture (Test-prefix driver from TestDataService). Single `@Test`.
