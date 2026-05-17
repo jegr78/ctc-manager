@@ -313,7 +313,23 @@ Plans:
   4. The SSRF blocklist (`FileStorageService.storeFromUrl`), ZIP-Slip defense (`BackupImportService`), and BCrypt usage are each explicitly classified per the triage policy with linked CodeQL alert IDs
   5. Injecting a deliberate SQL-injection or path-traversal pattern on a throwaway branch causes CodeQL to fail the PR gate, confirming the blocking behavior works end-to-end
 
-**Plans**: TBD
+**Plans:** 4/4 plans planned (execution begins on Wave 1)
+Plans:
+**Wave 1**
+
+- [ ] 85-01-PLAN.md — Scaffold codeql.yml (workflow_dispatch only) + codeql-config.yml + sast-acceptance.md skeleton + CLAUDE.md updates + renovate.json packageRule + 85-VERIFICATION.md skeleton (SAST-01..SAST-05, D-22..D-29)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 85-02-PLAN.md — Baseline triage loop: gh workflow run + per-finding D-19 atomic commits + post-triage zero HIGH/CRITICAL re-run (SAST-04, SAST-05, D-12/2-3, D-15)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 85-03-PLAN.md — Final-enable commit: extend codeql.yml on: triggers + activate inline-bash SARIF-diff gate-step + final ./mvnw verify -Pe2e (SAST-01, SAST-06/1, D-06..D-12/4)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 85-04-PLAN.md — SAST-06 throwaway-branch deliberate-violation verification + phase-close (SAST-06, D-14)
 
 ### Phase 86: Test Wallclock Reduction
 
@@ -351,7 +367,7 @@ Plans:
 | 82. Backup Cleanup | 10/10 | Complete   | 2026-05-16 |
 | 83. Quality and Polish Sweep | 6/6 | Complete   | 2026-05-17 |
 | 84. Renovate Integration | 4/4 | Complete   | 2026-05-17 |
-| 85. CodeQL SAST | 0/TBD | Not started | - |
+| 85. CodeQL SAST | 0/4 | Planned     | - |
 | 86. Test Wallclock Reduction | 0/TBD | Not started | - |
 | 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |
 
