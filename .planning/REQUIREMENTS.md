@@ -36,11 +36,11 @@ Requirements for the v1.11 release. Each maps to a roadmap phase.
 
 ### Quality and Polish Sweep (QUAL)
 
-- [ ] **QUAL-01**: Driver-detail Season-Assignment chips render in ascending year order, enforced by an explicit `ORDER BY year ASC` on `Driver.seasonAssignments` (verified by a domain repository IT and a Playwright smoke test)
-- [ ] **QUAL-02**: `DevDataSeeder` is `@Profile({"dev", "local"})` (widened from `dev`-only) so the live-MariaDB UAT bootstrap on `local,demo` no longer requires a separate Saison-2023 fixture path
-- [ ] **QUAL-03**: `SeasonController.generateMatchdays` exposes a per-group matchday-generation UI affordance for GROUPS-layout phases (no more hardcoded `groupId=null` at `SeasonController.java:251`), verified by a Playwright E2E test on Season 2023
-- [ ] **QUAL-04**: `StandingsController.java:139` lazy collection access is refactored into an explicit service-layer call that returns a fully-resolved view object (no OSIV-only lazy collection traversal in controller code)
-- [ ] **QUAL-05**: UAT-02 (legacy season visual smoke against real pre-V4 production data) is executed against the next production deploy and the result recorded in the milestone-audit artifact
+- [x] **QUAL-01**: Driver-detail Season-Assignment chips render in ascending year order, enforced by an explicit `ORDER BY year ASC` on `Driver.seasonAssignments` (verified by a domain repository IT and a Playwright smoke test)
+- [x] **QUAL-02**: `DevDataSeeder` is `@Profile({"dev", "local"})` (widened from `dev`-only) so the live-MariaDB UAT bootstrap on `local,demo` no longer requires a separate Saison-2023 fixture path
+- [x] **QUAL-03**: `SeasonController.generateMatchdays` exposes a per-group matchday-generation UI affordance for GROUPS-layout phases (no more hardcoded `groupId=null` at `SeasonController.java:251`), verified by a Playwright E2E test on Season 2023
+- [x] **QUAL-04**: `StandingsController.java:139` lazy collection access is refactored into an explicit service-layer call that returns a fully-resolved view object (no OSIV-only lazy collection traversal in controller code)
+- [x] **QUAL-05**: UAT-02 (legacy season visual smoke against real pre-V4 production data) is executed against the next production deploy and the result recorded in the milestone-audit artifact
 
 ### Renovate (DEPS)
 
@@ -133,11 +133,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BACK-03 | Phase 82 | Complete |
 | BACK-04 | Phase 82 | Complete |
 | BACK-05 | Phase 82 | Complete |
-| QUAL-01 | Phase 83 | Pending |
-| QUAL-02 | Phase 83 | Pending |
-| QUAL-03 | Phase 83 | Pending |
-| QUAL-04 | Phase 83 | Pending |
-| QUAL-05 | Phase 83 | Pending |
+| QUAL-01 | Phase 83 | Complete |
+| QUAL-02 | Phase 83 | Complete |
+| QUAL-03 | Phase 83 | Complete |
+| QUAL-04 | Phase 83 | Complete |
+| QUAL-05 | Phase 83 | Complete |
 | DEPS-01 | Phase 84 | Pending |
 | DEPS-02 | Phase 84 | Pending |
 | DEPS-03 | Phase 84 | Pending |

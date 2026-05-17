@@ -152,7 +152,7 @@ See: milestones/v1.10-ROADMAP.md for full details
 - [x] **Phase 80: OpenRewrite Integration** — Developer can invoke recipe-driven refactoring via `-Prewrite` Maven profile (completed 2026-05-16)
 - [x] **Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs)** — `./mvnw verify` fails on new HIGH-priority bytecode violations (completed 2026-05-16)
 - [x] **Phase 82: Backup Cleanup** — All 12 Phase-75 REVIEW.md items resolved; SCHEMA_VERSION remains 1; BackupRoundTripIT covers all 24 entities (completed 2026-05-16)
-- [ ] **Phase 83: Quality and Polish Sweep** — Four v1.9/v1.10 carryover items cleared; UAT-02 post-deploy result recorded
+- [x] **Phase 83: Quality and Polish Sweep** — Four v1.9/v1.10 carryover items cleared; UAT-02 procedure + result-slot ready (completed 2026-05-17)
 - [ ] **Phase 84: Renovate Integration** — Automated dependency update PRs active with Guava/Thymeleaf/Java-version safety rules in place
 - [ ] **Phase 85: CodeQL SAST** — Security findings visible in GitHub Security tab; SSRF/ZIP-Slip/BCrypt patterns triaged
 - [ ] **Phase 86: Test Wallclock Reduction** — `@DirtiesContext` audit complete; ≥30% wallclock reduction OR architectural blocker documented
@@ -252,19 +252,19 @@ Plans:
   4. `StandingsController.java:139` lazy collection access is replaced by an explicit service-layer call returning a fully-resolved view object; no OSIV-only lazy traversal remains in controller code
   5. UAT-02 (legacy season visual smoke against real pre-V4 production data) is executed against the next production deploy and the pass/fail result is recorded in the milestone-audit artifact
 
-**Plans:** 6 plans
+**Plans:** 6/6 plans complete
 Plans:
 **Wave 1** *(plans 01-05 are independent — touch disjoint file sets; can run in parallel)*
 
-- [ ] 83-01-PLAN.md — QUAL-01: @OrderBy on Driver.seasonDrivers + DriverRepositoryOrderIT + DriverDetailSmokeE2E
-- [ ] 83-02-PLAN.md — QUAL-02: widen DevDataSeeder + TestDataService to @Profile({"dev","local"}) (atomic two-file commit) + manual local-profile smoke
-- [ ] 83-03-PLAN.md — QUAL-03: per-group selector in MatchdayGeneratorForm + matchday-generator.html + SeasonController + MatchdayGeneratorGroupsE2E
-- [ ] 83-04-PLAN.md — QUAL-04: StandingsView record + StandingsViewService + thin StandingsController (Option a flat-model-unfurl) + 6+ unit tests
-- [ ] 83-05-PLAN.md — QUAL-05: docs/uat/UAT-02-legacy-season-smoke.md procedure + STATE.md result-slot
+- [x] 83-01-PLAN.md — QUAL-01: @OrderBy on Driver.seasonDrivers + DriverRepositoryOrderIT + DriverDetailSmokeE2E
+- [x] 83-02-PLAN.md — QUAL-02: widen DevDataSeeder + TestDataService to @Profile({"dev","local"}) (atomic two-file commit) + manual local-profile smoke
+- [x] 83-03-PLAN.md — QUAL-03: per-group selector in MatchdayGeneratorForm + matchday-generator.html + SeasonController + MatchdayGeneratorGroupsE2E
+- [x] 83-04-PLAN.md — QUAL-04: StandingsView record + StandingsViewService + thin StandingsController (Option a flat-model-unfurl) + 6+ unit tests
+- [x] 83-05-PLAN.md — QUAL-05: docs/uat/UAT-02-legacy-season-smoke.md procedure + STATE.md result-slot
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 83-06-PLAN.md — Phase verification: ./mvnw verify -Pe2e + 83-VERIFICATION.md + STATE/ROADMAP/REQUIREMENTS updates (QUAL-01..05)
+- [x] 83-06-PLAN.md — Phase verification: ./mvnw verify -Pe2e + 83-VERIFICATION.md + STATE/ROADMAP/REQUIREMENTS updates (QUAL-01..05)
 
 **UI hint**: yes
 
@@ -333,7 +333,7 @@ Plans:
 | 80. OpenRewrite Integration | 5/5 | Complete    | 2026-05-16 |
 | 81. Static Analysis Gate (SpotBugs + find-sec-bugs) | 3/3 | Complete   | 2026-05-16 |
 | 82. Backup Cleanup | 10/10 | Complete   | 2026-05-16 |
-| 83. Quality and Polish Sweep | 0/6 | Planned | - |
+| 83. Quality and Polish Sweep | 6/6 | Complete   | 2026-05-17 |
 | 84. Renovate Integration | 0/TBD | Not started | - |
 | 85. CodeQL SAST | 0/TBD | Not started | - |
 | 86. Test Wallclock Reduction | 0/TBD | Not started | - |

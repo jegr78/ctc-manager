@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: completed
-last_updated: "2026-05-17T07:03:16.065Z"
-last_activity: 2026-05-16 -- Phase 82 marked complete
+last_updated: "2026-05-17T11:55:00.000Z"
+last_activity: 2026-05-17 -- Phase 83 marked complete
 progress:
   total_phases: 8
-  completed_phases: 3
-  total_plans: 24
-  completed_plans: 18
-  percent: 38
+  completed_phases: 4
+  total_plans: 30
+  completed_plans: 24
+  percent: 50
 ---
 
 # Project State
@@ -21,17 +21,17 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 82 — backup-cleanup
+**Current focus:** Phase 83 — quality-and-polish-sweep
 
 ## Current Position
 
-Phase: 82 — COMPLETE
-Plan: 10 of 10
-Status: Phase 82 complete
-Last activity: 2026-05-16 -- Phase 82 marked complete
+Phase: 83 — COMPLETE
+Plan: 6 of 6
+Status: Phase 83 complete (amber — QUAL-02 local-profile smoke pending operator at milestone-close)
+Last activity: 2026-05-17 -- Phase 83 marked complete
 
 ```
-Progress: [█████████░] 94%
+Progress: [█████░░░░░] 50%
 ```
 
 ## Completed Milestones
@@ -52,14 +52,14 @@ Items carried forward into v1.11 (all cleared by roadmap phases 80-87):
 
 | Category | Item | Resolution Phase |
 | -------- | ---- | ---------------- |
-| tech_debt | REVIEW.md WR-01..WR-08 + IN-01..IN-04 (12 Info/Warning items) | Phase 82 |
+| tech_debt | REVIEW.md WR-01..WR-08 + IN-01..IN-04 (12 Info/Warning items) | Phase 82 — resolved |
 | tech_debt | Phase 79 D-06 wallclock-reduction (16.85% vs ≥30% target) | Phase 86 |
-| tech_debt | Driver-detail Season-Assignment chip ordering (ORDER BY year) | Phase 83 |
-| tech_debt | DevDataSeeder @Profile("dev")-only widening for local,demo | Phase 83 |
+| tech_debt | Driver-detail Season-Assignment chip ordering (ORDER BY year) | Phase 83 — resolved (QUAL-01) |
+| tech_debt | DevDataSeeder @Profile("dev")-only widening for local,demo | Phase 83 — resolved (QUAL-02; local smoke pending operator at milestone-close) |
 | tech_debt | Nyquist *-VALIDATION.md for 6 phases (72-76, 79) + creation for 71 + 78 | Phase 87 |
-| tech_debt | Per-group matchday generation UI affordance (SeasonController:251) | Phase 83 |
-| tech_debt | StandingsController.java:139 lazy collection style cleanup | Phase 83 |
-| uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | Phase 83 |
+| tech_debt | Per-group matchday generation UI affordance (SeasonController:251) | Phase 83 — resolved (QUAL-03) |
+| tech_debt | StandingsController.java:139 lazy collection style cleanup | Phase 83 — resolved (QUAL-04) |
+| uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | Phase 83 — procedure + slot ready (QUAL-05); live execution post-deploy |
 | backlog | OpenRewrite (Phase 999.1) — promoted to active milestone | Phase 80 |
 | backlog | Clean-Code enforcement (Phase 999.2) — promoted (SpotBugs only) | Phase 81 |
 | backlog | Renovate (Phase 999.3) — promoted to active milestone | Phase 84 |
