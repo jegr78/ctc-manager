@@ -55,7 +55,6 @@ Items carried forward into v1.11 (all cleared by roadmap phases 80-87):
 | tech_debt | Phase 79 D-06 wallclock-reduction (16.85% vs ≥30% target) | Phase 86 |
 | tech_debt | Driver-detail Season-Assignment chip ordering (ORDER BY year) | Phase 83 — resolved (QUAL-01) |
 | tech_debt | DevDataSeeder @Profile("dev")-only widening for local,demo | Phase 83 — resolved (QUAL-02; local smoke pending operator at milestone-close) |
-| tech_debt | Nyquist *-VALIDATION.md for 6 phases (72-76, 79) + creation for 71 + 78 | Phase 87 |
 | tech_debt | Per-group matchday generation UI affordance (SeasonController:251) | Phase 83 — resolved (QUAL-03) |
 | tech_debt | StandingsController.java:139 lazy collection style cleanup | Phase 83 — resolved (QUAL-04) |
 | uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | Phase 83 — procedure + slot ready (QUAL-05); live execution post-deploy |
