@@ -72,10 +72,10 @@ Requirements for the v1.11 release. Each maps to a roadmap phase.
 
 ### Nyquist VALIDATION Closure (VAL)
 
-- [ ] **VAL-01**: Approved `*-VALIDATION.md` files exist for phases 72, 73, 74, 75, 76, and 79 with status `approved` in the frontmatter
-- [ ] **VAL-02**: New `*-VALIDATION.md` files are created for phases 71 (Spring Boot 4.0.6 upgrade) and 78 (Docker noble pin), reaching `approved` status
-- [ ] **VAL-03**: `/gsd:validate-phase` is executed against each of the 8 phases (71-76, 78, 79) and the produced gap-coverage tests are committed atomically per phase
-- [ ] **VAL-04**: STATE.md "Deferred Items" no longer lists the Nyquist VALIDATION items at v1.11 close
+- [x] **VAL-01**: Approved `*-VALIDATION.md` files exist for phases 72, 73, 74, 75, 76, and 79 with status `approved` in the frontmatter
+- [x] **VAL-02**: New `*-VALIDATION.md` files are created for phases 71 (Spring Boot 4.0.6 upgrade) and 78 (Docker noble pin), reaching `approved` status
+- [x] **VAL-03**: `/gsd:validate-phase` is executed against each of the 8 phases (71-76, 78, 79) and the produced gap-coverage tests are committed atomically per phase
+- [x] **VAL-04**: STATE.md "Deferred Items" no longer lists the Nyquist VALIDATION items at v1.11 close
 
 ## Future Requirements
 
@@ -157,10 +157,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERF-03 | Phase 86 | Pending |
 | PERF-04 | Phase 86 | Pending |
 | PERF-05 | Phase 86 | Pending |
-| VAL-01 | Phase 87 | Pending |
-| VAL-02 | Phase 87 | Pending |
-| VAL-03 | Phase 87 | Pending |
-| VAL-04 | Phase 87 | Pending |
+| VAL-01 | Phase 87 | Satisfied |
+| VAL-02 | Phase 87 | Satisfied |
+| VAL-03 | Phase 87 | Satisfied |
+| VAL-04 | Phase 87 | Satisfied |
 
 **Coverage:**
 - v1.11 requirements: 46 total (6+7+5+5+8+6+5+4)
