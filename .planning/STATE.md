@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-18T09:40:00.000Z"
-last_activity: 2026-05-18 -- Phase 87 Plan 87-04 complete (Phase 74 retroactive VALIDATION approved, 1 gap resolved)
+last_updated: "2026-05-18T10:00:00.000Z"
+last_activity: 2026-05-18 -- Phase 87 Plan 87-05 complete (Phase 75 retroactive VALIDATION approved, 2 gaps resolved)
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 46
-  completed_plans: 44
-  percent: 96
+  completed_plans: 45
+  percent: 98
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 ## Current Position
 
-Phase: 87 (nyquist-validation-closure) — **IN PROGRESS** (4/8 plans complete: 87-01 + 87-02 + 87-03 + 87-04)
-Next: Plan 87-05 (Restore + audit + approve v1.10 Phase 75, State A — IMPORT-05..07 + QUAL-03)
-Last activity: 2026-05-18 -- Plan 87-04 complete (Phase 74 retroactive VALIDATION approved, 1 gap resolved via BackupUploadExceptionHandlerScopeIT, commits db41a1d6 + fb68a87e + 7c58e121)
+Phase: 87 (nyquist-validation-closure) — **IN PROGRESS** (5/8 plans complete: 87-01 + 87-02 + 87-03 + 87-04 + 87-05)
+Next: Plan 87-06 (Restore + audit + approve v1.10 Phase 76, State A — SECU-05..07)
+Last activity: 2026-05-18 -- Plan 87-05 complete (Phase 75 retroactive VALIDATION approved, 2 gaps resolved via BackupImportPostCommitEdgeCasesIT, commits 9523616c + e5cb9358 + da6fc9be)
 
 ```
 Progress: [█████████▊] 98%
@@ -129,8 +129,8 @@ at roadmap creation. Research flags:
 
 ## Session Continuity
 
-Last session: 2026-05-18T09:40:00.000Z
+Last session: 2026-05-18T10:00:00.000Z
 
-**Next action:** Spawn /gsd:execute-plan 87-05 (Restore + audit + approve v1.10 Phase 75 — Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT, State A).
+**Next action:** Spawn /gsd:execute-plan 87-06 (Restore + audit + approve v1.10 Phase 76 — Operational Hardening: Lock + Banner + Auto-Backup, State A — SECU-05..07).
 
 **Branch:** `gsd/v1.11-tooling-and-cleanup`
