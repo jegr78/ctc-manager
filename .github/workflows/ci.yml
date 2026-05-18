@@ -30,13 +30,32 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build and Unit/Integration Tests
-        run: ./mvnw verify --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true
+      # Cache Playwright browser binaries (~170 MiB Chromium + ~2.3 MiB FFmpeg) keyed
+      # on the pinned Playwright version in pom.xml. A warm cache short-circuits the
+      # download in the next step and prevents Surefire JVM forks from auto-downloading
+      # Chromium during unit tests (which corrupts the Surefire stdout channel — see
+      # CI run 26015174076 / surefire-reports/2026-05-18T05-24-53_082-jvmRun2.dumpstream).
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-1.59.0
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
+      # Install Playwright Browsers BEFORE Surefire runs. Order matters: when this step
+      # ran AFTER `./mvnw verify` (the old layout), Spring-context-loading Surefire tests
+      # that transitively touched TeamCardService could trigger Playwright's auto-download
+      # inside a forked JVM and corrupt the Surefire fork-channel, breaking the build with
+      # exit code 1 and zero failing tests (cf. CI run 26015174076 root cause).
       - name: Install Playwright Browsers
         run: |
           mvn dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=/tmp/cp.txt -q
-          java -cp "$(cat /tmp/cp.txt):target/test-classes:target/classes" com.microsoft.playwright.CLI install --with-deps chromium
+          java -cp "$(cat /tmp/cp.txt)" com.microsoft.playwright.CLI install --with-deps chromium
+
+      - name: Build and Unit/Integration Tests
+        run: ./mvnw verify --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true
 
       - name: E2E Tests
         run: ./mvnw verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true
