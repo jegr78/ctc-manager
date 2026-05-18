@@ -49,10 +49,18 @@ jobs:
       # that transitively touched TeamCardService could trigger Playwright's auto-download
       # inside a forked JVM and corrupt the Surefire fork-channel, breaking the build with
       # exit code 1 and zero failing tests (cf. CI run 26015174076 root cause).
+      #
+      # Install ALL default browsers (Chromium + Firefox + WebKit), not just Chromium.
+      # Project code only uses chromium() (TeamCardService, AbstractGraphicService) and
+      # E2E tests pin to chromium() in PlaywrightConfig, but `Playwright.create()`'s
+      # internal driver still triggers Firefox + WebKit auto-downloads on first use
+      # (observed in CI run 26031388903 — Firefox 148.0.2 v1511 downloaded mid-Surefire
+      # despite Chromium being pre-installed). Pre-installing the full browser set
+      # avoids that secondary auto-download path entirely. Cache footprint ~360 MiB.
       - name: Install Playwright Browsers
         run: |
           mvn dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=/tmp/cp.txt -q
-          java -cp "$(cat /tmp/cp.txt)" com.microsoft.playwright.CLI install --with-deps chromium
+          java -cp "$(cat /tmp/cp.txt)" com.microsoft.playwright.CLI install --with-deps
 
       - name: Build and Unit/Integration Tests
         run: ./mvnw verify --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true
