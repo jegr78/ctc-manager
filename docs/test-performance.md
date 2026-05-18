@@ -12,13 +12,21 @@ append into the appropriate sections without rewriting the skeleton.
 
 ---
 
-## Result Verdict (PERF-04)
+## Result Verdict (PERF-04 / PERF-05)
 
 Phase 86 closes via the **OR-branch** of PERF-04. The Wave-2 audit did not deliver
 wallclock reduction on the local 3-run measurement: median local wallclock moved
 **from 09:45 (baseline) to 10:24 (post-audit)** — a 39-second regression (-6.7%)
 rather than the ≥30% reduction target or the 20-25% realistic expectation per D-15.
 Context loads decreased marginally from 81 to 79.
+
+**PERF-05 (CI Median):** 23:00 recorded as new v1.11 CI baseline (harvested from
+milestone PR branch CI per D-17; see "CI Results (PERF-05)" section below); gate
+≤7m 50s **MISSED on CI**. The CI runner (`ubuntu-latest` GitHub-hosted) is
+materially slower than the local hardware used for the D-09 baseline, so the CI
+absolute number is not directly comparable to the 9:45 local baseline — but per
+D-11 the CI median is the authoritative source of truth for the PERF-04 gate,
+and 23:00 ≫ 7:50 confirms the OR-branch outcome.
 
 The structural fixes from Plans 02-04 are correct on their own terms (no shared
 `SiteProperties` singleton mutation; per-method `@DirtiesContext` audit honoring
@@ -129,6 +137,58 @@ post-audit runs spread 09:24–10:30 (66s). Run-1 of each is the closest pair
 (09:01 vs 09:24, +23s). The median delta on n=3 is therefore not statistically
 robust on its own — Plan 06's CI 5-run harvest (D-10/D-11) is the authoritative
 re-measurement.
+
+---
+
+## CI Results (PERF-05)
+
+5 consecutive `workflow_dispatch` CI runs on the milestone PR branch
+`gsd/v1.11-tooling-and-cleanup` (commit `b7f20b53`), harvested per D-10 (5 runs,
+drop min+max, median of 3) and D-17 (PR-branch CI ≡ post-merge master CI: ci.yml
+runs identical steps for `pull_request`, `push`, and `workflow_dispatch`
+triggers; PR-branch harvest closes Phase 86 inside PR #122 without an orphan
+post-merge commit).
+
+The harvested metric is the GitHub Actions step wallclock of the **"E2E Tests"**
+step, which runs `./mvnw verify -Pe2e --no-transfer-progress
+-Dspring.profiles.active=dev -Ddocker.available=true` and is the only CI step
+that invokes Maven with the `-Pe2e` profile. Step wallclock ≈ Maven `Total time`
+within ±3s on GitHub-hosted runners (Maven owns the entire step duration; the
+GitHub Actions step wrapper adds only environment setup/teardown overhead that
+is negligible at this scale).
+
+| Run | Run ID | E2E step wallclock | Seconds | Notes |
+| --- | ------ | ------------------ | ------- | ----- |
+| 1   | [26004473138](https://github.com/jegr78/ctc-manager/actions/runs/26004473138) | 23:00 | 1380 | kept |
+| 2   | [26005481397](https://github.com/jegr78/ctc-manager/actions/runs/26005481397) | 23:11 | 1391 | kept |
+| 3   | [26006490986](https://github.com/jegr78/ctc-manager/actions/runs/26006490986) | 22:43 | 1363 | kept |
+| 4   | [26007607311](https://github.com/jegr78/ctc-manager/actions/runs/26007607311) | 21:58 | 1318 | dropped — min |
+| 5   | [26008754136](https://github.com/jegr78/ctc-manager/actions/runs/26008754136) | 23:42 | 1422 | dropped — max |
+
+**CI Median (v1.11 baseline):** **23:00** (1380s; middle 3 = 1363/1380/1391, median = 1380s)
+**Variance:** **7.5%** ((1422 − 1318) / 1380; within D-10 20% tolerance — no
+second 5-run block needed)
+**Reduction vs v1.10 baseline (11:11):** **−105.7%** (CI is 11:49 slower; not a
+like-for-like comparison — v1.10 11:11 was a local measurement)
+**Reduction vs Phase-86 local D-09 baseline (09:45):** **−136%** (CI is 13:15
+slower; reflects ubuntu-latest GitHub-hosted runner vs local hardware, not
+optimization regression)
+**Gate ≤7:50:** **MISSED** (CI median 23:00 ≫ 7:50). PERF-04 satisfied via
+OR-branch (architectural blocker documented above; v1.12 Forward Path levers
+already specified).
+
+Note on the absolute CI wallclock vs the v1.10 11:11 reference: the v1.10
+number was a local 3-run median on personal hardware (Phase 79 verification);
+the CI runner is consistently 2-3× slower for this suite (Surefire + Failsafe
++ Playwright + Docker build all serialized on a single 2-CPU runner). The
+relevant comparison for v1.12 optimization work is **delta** against this new
+23:00 CI baseline, not the absolute 7:50 gate which assumed local-hardware
+timing. The v1.12 plan should re-evaluate the gate target against this CI
+baseline before optimization work begins (D-11: CI is the source of truth).
+
+For full job-step timing breakdown (Set up job, Checkout, Setup JDK 25, Build
+and Unit/Integration Tests, Install Playwright Browsers, E2E Tests, JaCoCo
+Coverage, Upload Test Reports) see the individual run pages linked above.
 
 ---
 

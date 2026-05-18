@@ -344,7 +344,7 @@ Plans:
   4. `./mvnw verify -Pe2e` wallclock is either ≤7m 50s on the same hardware OR `docs/test-performance.md` documents the specific architectural constraint (e.g., MariaDB Testcontainers cold-start cost) that blocks ≥30% reduction and proposes a concrete v1.12 path
   5. The improved (or blocked) wallclock is verified on CI (GitHub Actions runner) over 3 consecutive runs; the median is recorded as the new v1.11 baseline in `docs/test-performance.md`
 
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed — **Phase COMPLETE**
 
 Plans:
 
@@ -362,9 +362,9 @@ Plans:
 
 - [x] 86-05-PLAN.md — Post-audit local wallclock + docs/test-performance.md finalization (Per-Decision + v1.12 levers) + phase-close ./mvnw verify -Pe2e (PERF-02, PERF-04)
 
-**Wave 4** *(blocked on Wave 3 merge — operator-driven post-merge harvest)*
+**Wave 4** *(rescoped per D-17: PR-branch CI ≡ post-merge master CI; harvest inside PR #122)*
 
-- [ ] 86-06-PLAN.md — CI 5-run median harvest on master (drop min+max, median of 3) → v1.11 baseline (D-10, D-11, PERF-05)
+- [x] 86-06-PLAN.md — CI 5-run median harvest on milestone PR branch via workflow_dispatch (drop min+max, median of 3) → v1.11 CI baseline 23:00 → PERF-05 satisfied via OR-branch (D-10, D-11, D-17, PERF-05)
 
 ### Phase 87: Nyquist VALIDATION Closure
 

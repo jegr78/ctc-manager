@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-17T21:13:30.651Z"
-last_activity: 2026-05-17 -- Phase 86 Wave 3 complete (86-05 close, PERF-04 OR-branch verdict)
+last_updated: "2026-05-18T05:25:00.000Z"
+last_activity: 2026-05-18 -- Phase 86 COMPLETE (86-06 CI median 23:00 on PR-branch per D-17, PERF-05 satisfied via OR-branch)
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 38
-  completed_plans: 36
-  percent: 92
+  completed_plans: 37
+  percent: 97
 ---
 
 # Project State
@@ -21,17 +21,16 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 86 — test-wallclock-reduction
+**Current focus:** Phase 87 — Nyquist VALIDATION Closure (last phase of v1.11)
 
 ## Current Position
 
-Phase: 86 (test-wallclock-reduction) — EXECUTING
-Plan: 5 of 6 (Wave 3 complete; PERF-04 OR-branch verdict recorded)
-Status: Executing Phase 86 — Waves 1-3 done; Wave 4 (Plan 06, post-merge CI median harvest) pending
-Last activity: 2026-05-17 -- Phase 86 Wave 3 complete (86-05 close, PERF-04 OR-branch verdict)
+Phase: 86 (test-wallclock-reduction) — **COMPLETE** (6/6 plans, all SUMMARYs landed)
+Next: Phase 87 (Nyquist VALIDATION Closure) — not yet planned
+Last activity: 2026-05-18 -- Phase 86 COMPLETE (86-06 CI median 23:00 on PR-branch per D-17, PERF-05 satisfied via OR-branch)
 
 ```
-Progress: [█████████░] 92%
+Progress: [█████████▌] 97%
 ```
 
 ## Completed Milestones
