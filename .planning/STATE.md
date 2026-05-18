@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-18T06:44:53.152Z"
-last_activity: 2026-05-18 -- Phase 87 planning complete
+last_updated: "2026-05-18T07:18:52.520Z"
+last_activity: 2026-05-18 -- Phase 87 Plan 87-02 complete (Phase 72 retroactive VALIDATION approved, 0 gaps)
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 46
-  completed_plans: 38
-  percent: 83
+  completed_plans: 42
+  percent: 91
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 ## Current Position
 
-Phase: 86 (test-wallclock-reduction) — **COMPLETE** (6/6 plans, all SUMMARYs landed)
-Next: Phase 87 (Nyquist VALIDATION Closure) — not yet planned
-Last activity: 2026-05-18 -- Phase 87 planning complete
+Phase: 87 (nyquist-validation-closure) — **IN PROGRESS** (2/8 plans complete: 87-01 + 87-02)
+Next: Plan 87-03 (Restore + audit + approve v1.10 Phase 73, State A)
+Last activity: 2026-05-18 -- Plan 87-02 complete (Phase 72 retroactive VALIDATION approved, 0 gaps, commits 57613516 + 996f1f3a)
 
 ```
 Progress: [█████████▌] 97%
@@ -129,8 +129,8 @@ at roadmap creation. Research flags:
 
 ## Session Continuity
 
-Last session: 2026-05-18T05:59:56.554Z
+Last session: 2026-05-18T07:18:00.000Z
 
-**Next action:** Run `/gsd:plan-phase 80` to create the plan for Phase 80 (OpenRewrite Integration).
+**Next action:** Spawn /gsd:execute-plan 87-03 (Restore + audit + approve v1.10 Phase 73 — Backup Export Streaming ZIP, State A).
 
 **Branch:** `gsd/v1.11-tooling-and-cleanup`
