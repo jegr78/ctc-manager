@@ -378,6 +378,20 @@ Plans:
   3. `/gsd:validate-phase` is executed against each of the 8 phases (71-76, 78, 79) and any gap-coverage tests produced are committed atomically per phase
   4. STATE.md "Deferred Items" no longer lists any Nyquist VALIDATION items at v1.11 close
 
+**Plans:** 8 plans
+
+Plans:
+**Wave 1** *(strict sequential per CONTEXT D-10: 87-01 → 87-02 → ... → 87-08; no parallel execution; maximum test-resource isolation)*
+
+- [ ] 87-01-PLAN.md — Restore + audit + approve v1.10 Phase 71 (Spring Boot 4.0.6 + Thymeleaf 3.1.5 + Build Guard, State B) (VAL-02, VAL-03)
+- [ ] 87-02-PLAN.md — Restore + audit + approve v1.10 Phase 72 (Backup Wire Contract — Schema + Manifest + ObjectMapper + Audit-Log Scope, State A) (VAL-01, VAL-03)
+- [ ] 87-03-PLAN.md — Restore + audit + approve v1.10 Phase 73 (Backup Export — Jackson MixIns + Streaming ZIP Endpoint, State A) (VAL-01, VAL-03)
+- [ ] 87-04-PLAN.md — Restore + audit + approve v1.10 Phase 74 (Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate, State A) (VAL-01, VAL-03)
+- [ ] 87-05-PLAN.md — Restore + audit + approve v1.10 Phase 75 (Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT, State A) (VAL-01, VAL-03)
+- [ ] 87-06-PLAN.md — Restore + audit + approve v1.10 Phase 76 (Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import, State A; HIGH gap likelihood SECU-06) (VAL-01, VAL-03)
+- [ ] 87-07-PLAN.md — Restore + audit + approve v1.10 Phase 78 (Docker Release Image Fix — Pin to Ubuntu Noble, State B; HIGH gap likelihood DockerfilePinGuardTest) (VAL-02, VAL-03)
+- [ ] 87-08-PLAN.md — Restore + audit + approve v1.10 Phase 79 (Code Cleanup + Test Performance Optimization, State A) + Phase-87 closer (STATE.md row delete + REQUIREMENTS.md flips + v1.10-MILESTONE-AUDIT scoreboard + wallclock guard CI dispatch + PR #122 body refresh) (VAL-01, VAL-03, VAL-04)
+
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
@@ -389,7 +403,7 @@ Plans:
 | 84. Renovate Integration | 4/4 | Complete   | 2026-05-17 |
 | 85. CodeQL SAST | 4/4 | Complete   | 2026-05-17 |
 | 86. Test Wallclock Reduction | 5/6 | In Progress|  |
-| 87. Nyquist VALIDATION Closure | 0/TBD | Not started | - |
+| 87. Nyquist VALIDATION Closure | 0/8 | Not started | - |
 
 | Milestone | Phases | Plans | Status | Shipped |
 | --------- | ------ | ----- | ------ | ------- |
