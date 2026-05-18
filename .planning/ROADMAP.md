@@ -155,8 +155,8 @@ See: milestones/v1.10-ROADMAP.md for full details
 - [x] **Phase 83: Quality and Polish Sweep** — Four v1.9/v1.10 carryover items cleared; UAT-02 procedure + result-slot ready (completed 2026-05-17)
 - [x] **Phase 84: Renovate Integration** — Automated dependency update PRs active with Guava/Thymeleaf/Java-version safety rules in place (completed 2026-05-17)
 - [x] **Phase 85: CodeQL SAST** — Security findings visible in GitHub Security tab; SSRF/ZIP-Slip/BCrypt patterns triaged (completed 2026-05-17)
-- [ ] **Phase 86: Test Wallclock Reduction** — `@DirtiesContext` audit complete; ≥30% wallclock reduction OR architectural blocker documented
-- [ ] **Phase 87: Nyquist VALIDATION Closure** — All 8 v1.10 phases (71-76, 78-79) have approved VALIDATION.md files
+- [x] **Phase 86: Test Wallclock Reduction** — `@DirtiesContext` audit complete; PERF-04 OR-branch verdict (≥30% missed, 16.85% achieved with documented v1.12 forward path); CI baseline 23:00 (completed 2026-05-18)
+- [x] **Phase 87: Nyquist VALIDATION Closure** — All 8 v1.10 phases (71-76, 78-79) have approved VALIDATION.md files; VAL-01..VAL-04 satisfied; v1.10 audit scoreboard compliant 9/0/0; CI wallclock 22:02 (D-06 PASS) (completed 2026-05-18)
 
 ## Phase Details
 
