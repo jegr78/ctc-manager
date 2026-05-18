@@ -87,11 +87,11 @@ audit_method: meta-validation
 - [x] `.planning/milestones/v1.10-MILESTONE-AUDIT.md` Nyquist scoreboard updated to `compliant_phases: 9 / partial_phases: 0 / missing_phases: 0 / overall: compliant`
 - [x] No watch-mode flags
 - [x] Feedback latency < 30 s (quick) / < 9 min (full)
-- [ ] CI wallclock ≤ 24:09 on the milestone branch (Phase-86 23:00 × 1.05 D-06 guard) — **pending CI run `26025633897` completion**
+- [x] CI wallclock ≤ 24:09 on the milestone branch (Phase-86 23:00 × 1.05 D-06 guard) — **22:02 actual, 58s UNDER baseline** (CI run `26025633897`, "E2E Tests" step 10:02:28Z → 10:24:30Z)
 - [x] JaCoCo line coverage ≥ 82 % held after all gap-fill tests committed (added tests are mostly Mockito unit + lightweight IT — coverage-neutral or coverage-additive)
 - [x] `nyquist_compliant: true` set in this VALIDATION.md frontmatter
 
-**Approval:** approved 2026-05-18 (CI wallclock guard verdict pending run `26025633897`)
+**Approval:** approved 2026-05-18
 
 ---
 
@@ -125,9 +125,11 @@ audit_method: meta-validation
 
 - CI run-id: `26025633897` (workflow_dispatch on `gsd/v1.11-tooling-and-cleanup`)
 - Trigger time: 2026-05-18T09:39:57Z
-- Phase-86 baseline: 23:00 CI median (per `86-VERIFICATION.md`)
-- 5 % ceiling (D-06): **24:09**
-- Result: **pending** — final verdict written below once `gh run watch` returns
+- Completion: 2026-05-18T10:24:41Z
+- Phase-86 baseline (per `86-06-SUMMARY.md`): 23:00 CI median (E2E step wallclock = Maven `Total time` ±3s)
+- 5 % ceiling (D-06): **24:09 (1449s)**
+- **"E2E Tests" step duration: 22:02 (1322s)** — startedAt `2026-05-18T10:02:28Z`, completedAt `2026-05-18T10:24:30Z`
+- **Result: PASS — 58s UNDER baseline.** 6 added gap-fill tests landed without measurable wallclock regression (mostly Mockito-only unit + 2 lightweight ITs sharing existing Spring context). No tidy-up cycle needed.
 
 **JaCoCo coverage delta:**
 

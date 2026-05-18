@@ -38,10 +38,11 @@ Three small commits per CONTEXT D-11 (closer in 87-08) and Claude's Discretion (
 
 - **CI run:** `26025633897` (workflow_dispatch on `gsd/v1.11-tooling-and-cleanup`)
 - **Trigger:** 2026-05-18T09:39:57Z
-- **Phase-86 baseline (per `86-VERIFICATION.md`):** 23:00 CI median
-- **5 % D-06 ceiling:** 24:09
-- **Total time:** _(captured in `87-VALIDATION.md` "## Validation Audit 2026-05-18" block when CI completes)_
-- **Verdict:** _(pending — appended to this SUMMARY after `gh run watch 26025633897` exits)_
+- **Completion:** 2026-05-18T10:24:41Z
+- **Phase-86 baseline (per `86-06-SUMMARY.md`):** 23:00 CI median (E2E step wallclock)
+- **5 % D-06 ceiling:** 24:09 (1449s)
+- **"E2E Tests" step duration:** **22:02 (1322s)** — startedAt 10:02:28Z, completedAt 10:24:30Z
+- **Verdict:** **PASS — 58s UNDER baseline.** The 6 added gap-fill tests landed without measurable wallclock regression. No tidy-up cycle needed.
 
 ## PR #122 Body Refresh (Task 6)
 
@@ -77,13 +78,13 @@ A follow-up commit flips the final CI wallclock box once `gh run watch 260256338
 | 5 | STATE.md Deferred Items has no Nyquist row | ✅ commit `a7417f36` |
 | 6 | REQUIREMENTS.md VAL-01..VAL-04 flipped to `[x]` | ✅ commit `f7aabcbe` |
 | 7 | v1.10-MILESTONE-AUDIT.md scoreboard updated to 9/0/0/compliant | ✅ commit `dadee6d8` |
-| 8 | CI workflow_dispatch run captured with run-id + Total time | ⚙ run `26025633897` in progress |
-| 9 | Total time ≤ 24:09 OR tidy-up cycle executed | ⚙ pending |
-| 10 | PR #122 body refreshed; remains OPEN | ⚙ pending Task 6 completion |
-| 11 | 87-VALIDATION.md (Phase 87 meta) frontmatter + sign-off complete | ✅ commit `f6ff53e4` (CI box still pending) |
+| 8 | CI workflow_dispatch run captured with run-id + Total time | ✅ run `26025633897` SUCCESS, E2E step 22:02 (1322s) |
+| 9 | Total time ≤ 24:09 OR tidy-up cycle executed | ✅ 22:02 < 24:09 — PASS (58s under baseline, no tidy-up needed) |
+| 10 | PR #122 body refreshed; remains OPEN | ✅ refreshed via `gh pr edit 122 --body` |
+| 11 | 87-VALIDATION.md (Phase 87 meta) frontmatter + sign-off complete | ✅ commits `f6ff53e4` + final wallclock flip |
 | 12 | `87-08-SUMMARY.md` written | ✅ (this file) |
 | 13 | All commits on `gsd/v1.11-tooling-and-cleanup` | ✅ verified |
-| 14 | Phase 87 marked complete in STATE.md | ⚙ final commit pending |
+| 14 | Phase 87 marked complete in STATE.md | ✅ via `gsd-sdk query state.completed-phase --phase 87` |
 
 ## Phase 87 Totals (Plans 87-01..87-08)
 
