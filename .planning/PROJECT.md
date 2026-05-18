@@ -180,7 +180,13 @@ Architectural Consistency: All controllers delegate to services, exception handl
 
 ### Active
 
-v1.11 Tooling Infrastructure & Tech-Debt Sweep — see REQUIREMENTS.md for REQ-IDs once defined.
+v1.12 candidates (after v1.11 ships):
+
+- **Driver-Import gap-closure** (carries 2 deferred debug sessions from 2026-05-08):
+  - `shortname-resolver-picks-parent-without-phaseteam` — data-correctness bug (resolver picks parent over sub-team-with-PhaseTeam in target season); season-aware algorithm documented in `.planning/debug/deferred/`
+  - `group-warnings-for-non-groups-seasons` — UI-noise bug (per-row "⚠ No group" + tab-level warnings fire for non-GROUPS layouts); root cause + files_to_change documented in `.planning/debug/deferred/`
+- **PERF-FUTURE-01** — split `src/test/java/` into separate Maven modules (carry-forward from v1.11 PERF-04 OR-branch; 3-lever forward path documented in `docs/test-performance.md § v1.12 Forward Path`)
+- Items added by `/gsd:new-milestone` after v1.11 close.
 
 ### Out of Scope
 

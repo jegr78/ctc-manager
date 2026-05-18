@@ -1,8 +1,11 @@
 ---
-status: diagnosed
+status: deferred
 trigger: "Phase 66 driver-import resolver: when a shortName collision occurs (parent + sub-team share shortName), the new resolveTeamByShortName helper unconditionally picks the parent team. In the user's data the parents are organisational buckets without PhaseTeam(REGULAR) entries, so the subsequent phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.id, parent.id) lookup misses → warning 'Team {shortName} has no PhaseTeam in REGULAR phase of target season' → potentially incomplete import (group assignment fails)."
 created: 2026-05-08T05:00:00Z
-updated: 2026-05-08T06:30:00Z
+updated: 2026-05-18T16:00:00Z
+deferred_at: 2026-05-18
+deferred_to: v1.12
+deferred_reason: "Diagnosed with root cause + suggested season-aware algorithm fully documented; out of scope for v1.11 tooling/tech-debt sweep. Hand-off to v1.12 driver-import gap-closure phase. Bug surface is Driver-Import semantic correctness (resolver picks parent over sub-team-with-PhaseTeam) — DATA-CORRECTNESS impact, prioritize over the group-warnings sibling debt."
 ---
 
 # Debug Session: ShortName Resolver Picks Parent Without PhaseTeam

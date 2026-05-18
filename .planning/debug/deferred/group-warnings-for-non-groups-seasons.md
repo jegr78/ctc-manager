@@ -1,8 +1,11 @@
 ---
-status: diagnosed
+status: deferred
 trigger: "Group assignment warnings fire on import preview for seasons whose REGULAR phase has no GROUPS layout — pure noise."
 created: 2026-05-08T05:30:00Z
-updated: 2026-05-08T06:30:00Z
+updated: 2026-05-18T16:00:00Z
+deferred_at: 2026-05-18
+deferred_to: v1.12
+deferred_reason: "Diagnosed with root cause + files_to_change + fix algorithm fully documented; out of scope for v1.11 tooling/tech-debt sweep. Hand-off to v1.12 driver-import gap-closure phase. Bug surface is Driver-Import preview UI noise — not a data-correctness issue."
 ---
 
 ## Current Focus
