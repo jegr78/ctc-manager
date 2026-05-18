@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-18T09:25:00.000Z"
-last_activity: 2026-05-18 -- Phase 87 Plan 87-03 complete (Phase 73 retroactive VALIDATION approved, 0 gaps)
+last_updated: "2026-05-18T09:40:00.000Z"
+last_activity: 2026-05-18 -- Phase 87 Plan 87-04 complete (Phase 74 retroactive VALIDATION approved, 1 gap resolved)
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 46
-  completed_plans: 43
-  percent: 93
+  completed_plans: 44
+  percent: 96
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 ## Current Position
 
-Phase: 87 (nyquist-validation-closure) — **IN PROGRESS** (3/8 plans complete: 87-01 + 87-02 + 87-03)
-Next: Plan 87-04 (Restore + audit + approve v1.10 Phase 74, State A — IMPORT-01..04 + SECU-01..04)
-Last activity: 2026-05-18 -- Plan 87-03 complete (Phase 73 retroactive VALIDATION approved, 0 gaps, commits dbc7b3cf + 3a2b9619)
+Phase: 87 (nyquist-validation-closure) — **IN PROGRESS** (4/8 plans complete: 87-01 + 87-02 + 87-03 + 87-04)
+Next: Plan 87-05 (Restore + audit + approve v1.10 Phase 75, State A — IMPORT-05..07 + QUAL-03)
+Last activity: 2026-05-18 -- Plan 87-04 complete (Phase 74 retroactive VALIDATION approved, 1 gap resolved via BackupUploadExceptionHandlerScopeIT, commits db41a1d6 + fb68a87e + 7c58e121)
 
 ```
-Progress: [█████████▌] 97%
+Progress: [█████████▊] 98%
 ```
 
 ## Completed Milestones
@@ -129,8 +129,8 @@ at roadmap creation. Research flags:
 
 ## Session Continuity
 
-Last session: 2026-05-18T07:18:00.000Z
+Last session: 2026-05-18T09:40:00.000Z
 
-**Next action:** Spawn /gsd:execute-plan 87-03 (Restore + audit + approve v1.10 Phase 73 — Backup Export Streaming ZIP, State A).
+**Next action:** Spawn /gsd:execute-plan 87-05 (Restore + audit + approve v1.10 Phase 75 — Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT, State A).
 
 **Branch:** `gsd/v1.11-tooling-and-cleanup`

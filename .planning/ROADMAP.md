@@ -386,7 +386,7 @@ Plans:
 - [x] 87-01-PLAN.md — Restore + audit + approve v1.10 Phase 71 (Spring Boot 4.0.6 + Thymeleaf 3.1.5 + Build Guard, State B) (VAL-02, VAL-03) — completed 2026-05-18 (0 gaps, 0 escalations)
 - [x] 87-02-PLAN.md — Restore + audit + approve v1.10 Phase 72 (Backup Wire Contract — Schema + Manifest + ObjectMapper + Audit-Log Scope, State A) (VAL-01, VAL-03) — completed 2026-05-18 (0 gaps, 0 escalations)
 - [x] 87-03-PLAN.md — Restore + audit + approve v1.10 Phase 73 (Backup Export — Jackson MixIns + Streaming ZIP Endpoint, State A) (VAL-01, VAL-03) — completed 2026-05-18 (0 gaps, 0 escalations)
-- [ ] 87-04-PLAN.md — Restore + audit + approve v1.10 Phase 74 (Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate, State A) (VAL-01, VAL-03)
+- [x] 87-04-PLAN.md — Restore + audit + approve v1.10 Phase 74 (Backup Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate, State A) (VAL-01, VAL-03) — completed 2026-05-18 (1 gap resolved: SECU-04 advice scope via BackupUploadExceptionHandlerScopeIT, 0 escalations)
 - [ ] 87-05-PLAN.md — Restore + audit + approve v1.10 Phase 75 (Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT, State A) (VAL-01, VAL-03)
 - [ ] 87-06-PLAN.md — Restore + audit + approve v1.10 Phase 76 (Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup-Before-Import, State A; HIGH gap likelihood SECU-06) (VAL-01, VAL-03)
 - [ ] 87-07-PLAN.md — Restore + audit + approve v1.10 Phase 78 (Docker Release Image Fix — Pin to Ubuntu Noble, State B; HIGH gap likelihood DockerfilePinGuardTest) (VAL-02, VAL-03)
@@ -403,7 +403,7 @@ Plans:
 | 84. Renovate Integration | 4/4 | Complete   | 2026-05-17 |
 | 85. CodeQL SAST | 4/4 | Complete   | 2026-05-17 |
 | 86. Test Wallclock Reduction | 5/6 | In Progress|  |
-| 87. Nyquist VALIDATION Closure | 2/8 | In Progress | - |
+| 87. Nyquist VALIDATION Closure | 4/8 | In Progress | - |
 
 | Milestone | Phases | Plans | Status | Shipped |
 | --------- | ------ | ----- | ------ | ------- |
