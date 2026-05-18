@@ -11,6 +11,15 @@
 
 set -u
 
+# Read tool input from stdin; only block when the command is actually `gh pr create`.
+input=$(cat 2>/dev/null || true)
+if [ -n "$input" ] && command -v jq >/dev/null 2>&1; then
+    cmd=$(printf '%s' "$input" | jq -r '.tool_input.command // empty' 2>/dev/null || true)
+    if [ -n "$cmd" ] && ! printf '%s' "$cmd" | grep -qE '(^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+create([[:space:]]|$)'; then
+        exit 0
+    fi
+fi
+
 branch=$(git branch --show-current 2>/dev/null || true)
 if [ -z "$branch" ]; then
     exit 0
