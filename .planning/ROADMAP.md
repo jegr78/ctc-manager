@@ -186,7 +186,13 @@ See: milestones/v1.11-ROADMAP.md for full details
   6. `DriverSheetImportService.resolveTeamByShortName(shortName, SeasonPhase regularPhase)` is season-aware: on multi-match collision, a candidate with `PhaseTeam(regularPhase.id, candidate.id)` wins over the parent bucket; legacy fallback to parent-precedence only when no candidate has a PhaseTeam in the target REGULAR phase (DRIV-01).
   7. `DriverSheetImportService.buildTabPreview` does NOT emit `TEAM_NOT_IN_REGULAR_PHASE` warnings nor perform PhaseTeam lookup when `regularPhase.getLayout() != PhaseLayout.GROUPS`; `TabPreview` record carries a per-tab `usesGroups` boolean; non-GROUPS tab rows render `—` instead of "⚠ No group" badges; `DriverSheetImportServiceTest#16` and `#17` inverted; new test for GROUPS-with-missing-PhaseTeam contract (DRIV-02).
   8. JaCoCo line coverage remains ≥ 88.88 % (v1.11 baseline, no regression); SpotBugs `BugInstance` count stays at 0; 4 edge-cases from `shortname-resolver-picks-parent-without-phaseteam.md` § Resolution covered by tests; v1.12 milestone PR's eventual squash-merge produces a working v1.12.0 release artifact set (last-mile verification of REL-01).
-**Plans**: TBD
+**Plans**: 6 plans (sequential — Wave 1 → Wave 6 per [[wave-pause]])
+- [ ] 88-01-PLAN.md — CLEAN-01 verify-only baseline gate (./mvnw clean verify + REQUIREMENTS.md status flip)
+- [ ] 88-02-PLAN.md — CLEAN-02 + CLEAN-03 @Disabled sweep + SiteGeneratorBaselineRefresh CommandLineRunner utility
+- [ ] 88-03-PLAN.md — REL-01 release.yml hardening (SemVer-strict + fetch-tags + parser + idempotency guard + dry-run gates)
+- [ ] 88-04-PLAN.md — DOCS-01 CLAUDE.md Skill Invocation Naming paragraph + 6-ref rewrite (strict-grep fence)
+- [ ] 88-05-PLAN.md — DRIV-01 + DRIV-02 season-aware resolver + GROUPS-layout gate + usesGroups TabPreview field
+- [ ] 88-06-PLAN.md — REL-02 operator runbook docs/operations/release-runbook.md (retroactive v1.10.0/v1.11.0 + legacy-tag cleanup)
 
 ### Phase 89: PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir)
 **Goal**: Land the largest single-delta PERF lever (per-fork `app.backup.staging-dir` enabling Failsafe `forkCount>1C` on backup ITs) and the instrumentation that drives PERF-03's targeted consolidation, in parallel-runnable plans.
@@ -243,7 +249,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | 0/8 | Not started | - |
+| 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | 0/6 | Not started | - |
 | 89 — PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | 0/2 | Not started | - |
 | 90 — PERF Consolidation & Module-Split Decision | 0/3 | Not started | - |
 | 91 — PERF Re-Harvest, Stretch UX Polish & Milestone Closer | 0/2 | Not started | - |
