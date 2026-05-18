@@ -23,9 +23,19 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - **Admin Features:** `/admin/backup` page with streamed ZIP export (CSRF-protected `POST /admin/backup/export`, `StreamingResponseBody`, ISO-instant filename) + manifest-first preview + replace-all import (`@Transactional` wipe + `JdbcTemplate.batchUpdate` restore bypassing `AuditingEntityListener` + post-commit upload-tree stage-and-rename); concurrent-import `ReentrantLock` + persistent yellow read-only banner + `ImportLockedWriteRejector` HandlerInterceptor + synchronous auto-backup-before-import safety net; 24h recovery retention at `data/.import-backups/<ts>/`
 - **Docker / CI:** Both Dockerfile stages pinned to `eclipse-temurin:25-{jdk,jre}-noble` (Playwright 1.59.0 compatibility); `dockerfile-noble-pin-guard` CI job (whitelist-on-suffix); full `docker build .` on every PR + push to master; ci.yml concurrency block + `--no-transfer-progress`; Surefire `forkCount=2C` + Failsafe default-it `forkCount=1C` + `excludedGroups=flaky` quarantine
 
-## Next Milestone: TBD
+## Current Milestone: v1.12 Driver-Import Gap-Closure & Test Performance Round 2
 
-v1.11 shipped 2026-05-18. Next milestone scope to be defined via `/gsd:new-milestone`. Pre-loaded v1.12 carry-forwards in `### Active` below.
+**Goal:** Close the v1.11-deferred driver-import correctness bugs and substantially reduce CI test wallclock by implementing the documented PERF-FUTURE-01 architectural levers (per-fork backup-staging-dir, shared `@ContextConfiguration`, Testcontainers `withReuse`), plus decide on the test-module-split strategy.
+
+**Target features:**
+- Season-aware shortName resolver: sub-team with PhaseTeam in REGULAR phase wins over parent bucket (data-correctness)
+- GROUPS-layout gate for group-assignment warnings (suppress noise on LEAGUE/BRACKET seasons)
+- Per-fork `backup-staging-dir` enabling Failsafe `forkCount>1C` for backup ITs (PERF-Lever-1)
+- Per-fork Spring context-fingerprint instrumentation + shared `@ContextConfiguration` cluster (PERF-Lever-2)
+- Testcontainers MariaDB `.withReuse(true)` wiring (PERF-Lever-3, pre-emptive)
+- Test-Module-Split decision document and (if approved) extraction of `src/test/java` into Maven sub-modules (PERF-Lever-4)
+- Fix pre-existing Phase-72 `BackupSchemaExclusionIT` Java-25 AssertJ generic-inference compile error
+- Google Sheets/Calendar user-facing error messages (stretch — only if PERF-levers come in under budget)
 
 ## Requirements
 
@@ -172,13 +182,14 @@ v1.11 shipped 2026-05-18. Next milestone scope to be defined via `/gsd:new-miles
 
 ### Active
 
-v1.12 candidates (after v1.11 ships):
+v1.12 in flight (carry-forwards absorbed into roadmap):
 
-- **Driver-Import gap-closure** (carries 2 deferred debug sessions from 2026-05-08):
-  - `shortname-resolver-picks-parent-without-phaseteam` — data-correctness bug (resolver picks parent over sub-team-with-PhaseTeam in target season); season-aware algorithm documented in `.planning/debug/deferred/`
-  - `group-warnings-for-non-groups-seasons` — UI-noise bug (per-row "⚠ No group" + tab-level warnings fire for non-GROUPS layouts); root cause + files_to_change documented in `.planning/debug/deferred/`
-- **PERF-FUTURE-01** — split `src/test/java/` into separate Maven modules (carry-forward from v1.11 PERF-04 OR-branch; 3-lever forward path documented in `docs/test-performance.md § v1.12 Forward Path`)
-- Items added by `/gsd:new-milestone` after v1.11 close.
+- **Driver-Import gap-closure** (2 deferred debug sessions in `.planning/debug/deferred/` — fully diagnosed):
+  - `shortname-resolver-picks-parent-without-phaseteam` → DRIV-01
+  - `group-warnings-for-non-groups-seasons` → DRIV-02
+- **PERF-FUTURE-01** test-wallclock reduction Round 2 → PERF-01..PERF-05 (3-lever forward path in `docs/test-performance.md § v1.12 Forward Path` + test-module-split decision)
+- **BackupSchemaExclusionIT** Java-25 AssertJ generic-inference compile error → CLEAN-01
+- Items added by future `/gsd:new-milestone` after v1.12 close.
 
 ### Out of Scope
 
@@ -280,4 +291,4 @@ The runtime topo-sort returns 24 `EntityRef` instances (CONTEXT.md originally sa
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-18 — v1.11 milestone shipped: Tooling Infrastructure & Tech-Debt Sweep. All 8 phases approved + Nyquist-compliant; 46/46 requirements satisfied; CI run `26033853591` SUCCESS (1675 tests, JaCoCo 88.88 %, SpotBugs 0, E2E 23:33 ≤ 24:09 D-06 ceiling). Promoted Phase 999.1–999.4 backlog (OpenRewrite + SpotBugs/find-sec-bugs + Renovate + CodeQL SAST) into the active pipeline; cleared v1.10/v1.9 carried-over tech debt (Phase 75 REVIEW.md items, polish sweep, Nyquist VALIDATION closure); test-wallclock baseline 23:00 CI median established with v1.12 forward-path documented (OR-branch). 2 v1.12 carry-forwards: driver-import gap-closure (2 deferred debug sessions) + PERF-FUTURE-01 test-module split. Branch: `gsd/v1.11-tooling-and-cleanup`. Next: `/gsd:new-milestone`.*
+*Last updated: 2026-05-18 — v1.12 milestone started: Driver-Import Gap-Closure & Test Performance Round 2. Scope absorbs 2 v1.11 carry-forwards (driver-import data-correctness + UI-noise bugs from deferred debug sessions) and the PERF-FUTURE-01 architectural work (3-lever forward path: per-fork backup-staging-dir, shared `@ContextConfiguration`, Testcontainers `withReuse`) plus a test-module-split decision-point, with `BackupSchemaExclusionIT` Java-25 compile fix and optional Google-API error-UX as stretch. v1.11 baseline: 1675 tests / JaCoCo 88.88 % / CI E2E median 23:00 (gate target ≤7m 50s — Phase 86 OR-branch). Branch: `gsd/v1.12-driver-import-and-test-perf`. Next: roadmap creation via `/gsd:new-milestone`.*

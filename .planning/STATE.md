@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.11
-milestone_name: Tooling Infrastructure & Tech-Debt Sweep
-status: completed
-last_updated: "2026-05-18T14:42:53.402Z"
-last_activity: 2026-05-18 — Milestone v1.11 completed and archived
+milestone: v1.12
+milestone_name: Driver-Import Gap-Closure & Test Performance Round 2
+status: planning
+last_updated: "2026-05-18T16:05:56.719Z"
+last_activity: 2026-05-18
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 46
-  completed_plans: 46
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-16)
+See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 87 — Nyquist VALIDATION Closure (last phase of v1.11)
+**Current focus:** v1.12 milestone planning — defining requirements + roadmap
 
 ## Current Position
 
-Phase: Milestone v1.11 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-18 — Milestone v1.11 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-18 — Milestone v1.12 started
 
 ## Completed Milestones
 
@@ -41,96 +41,85 @@ Last activity: 2026-05-18 — Milestone v1.11 completed and archived
 - v1.8 Bulk Driver Import from Google Sheets (2 phases, 4 plans, +52 tests) — shipped 2026-04-25
 - v1.9 Season Phases & Groups (15 phases, ~70 plans, 38/38 requirements, +88.4k LOC) — shipped 2026-05-09
 - v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (9 phases, 50 plans, 39/39 requirements, +77.4k LOC, 87.80% JaCoCo) — shipped 2026-05-16
+- v1.11 Tooling Infrastructure & Tech-Debt Sweep (8 phases 80-87, 46 plans, 46/46 requirements, JaCoCo 88.88%, 1675 tests, CI E2E median 23:00) — shipped 2026-05-18
 
 ## Deferred Items
 
-Items carried forward into v1.11 (all cleared by roadmap phases 80-87):
+Items carried forward into v1.12 (to be cleared by roadmap phases 88+):
 
-| Category | Item | Resolution Phase |
-| -------- | ---- | ---------------- |
-| tech_debt | REVIEW.md WR-01..WR-08 + IN-01..IN-04 (12 Info/Warning items) | Phase 82 — resolved |
-| tech_debt | Phase 79 D-06 wallclock-reduction (16.85% vs ≥30% target) | Phase 86 |
-| tech_debt | Driver-detail Season-Assignment chip ordering (ORDER BY year) | Phase 83 — resolved (QUAL-01) |
-| tech_debt | DevDataSeeder @Profile("dev")-only widening for local,demo | Phase 83 — resolved (QUAL-02; local smoke pending operator at milestone-close) |
-| tech_debt | Per-group matchday generation UI affordance (SeasonController:251) | Phase 83 — resolved (QUAL-03) |
-| tech_debt | StandingsController.java:139 lazy collection style cleanup | Phase 83 — resolved (QUAL-04) |
-| uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | Phase 83 — procedure + slot ready (QUAL-05); live execution post-deploy |
-| backlog | OpenRewrite (Phase 999.1) — promoted to active milestone | Phase 80 |
-| backlog | Clean-Code enforcement (Phase 999.2) — promoted (SpotBugs only) | Phase 81 |
-| backlog | Renovate (Phase 999.3) — promoted to active milestone | Phase 84 |
-| backlog | SAST (Phase 999.4) — promoted (CodeQL, public repo) | Phase 85 |
+| Category | Item | Resolution Plan |
+| -------- | ---- | --------------- |
+| tech_debt | Driver-import shortname-resolver picks parent without PhaseTeam (data-correctness) | DRIV-01 — season-aware resolver |
+| tech_debt | Driver-import group-warnings fire for non-GROUPS seasons (UI noise) | DRIV-02 — layout gate + per-tab usesGroups flag |
+| tech_debt | PERF-FUTURE-01 — CI test wallclock 23:00 vs target ≤7m 50s (Phase 86 OR-branch) | PERF-01..PERF-05 — 3-lever forward path + module-split decision |
+| tech_debt | BackupSchemaExclusionIT.java:40 Java-25 AssertJ generic-inference compile error | CLEAN-01 — fix or `@SuppressWarnings("unchecked")` |
+| ux_debt | Google Sheets/Calendar generic error messages on auth/network/sheet-id failures | UX-01 (stretch) |
+| uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | post-deploy operator action (procedure docs/uat/UAT-02-legacy-season-smoke.md) |
+| uat | QUAL-02 local-profile MariaDB manual smoke (DevDataSeeder widening) | post-deploy operator action |
 
 Post-merge self-resolving items (not tracked further):
 
 | Category | Item | Status |
 | -------- | ---- | ------ |
-| post_merge | QUAL-05 wiki image embed render | resolved on v1.10 PR merge to master |
-| post_merge | PLAT-CI-02 release-workflow run on master | resolved by-design post-merge |
+| post_merge | v1.11 PR #122 release workflow tagging | resolved by-design post-merge |
 
 ## Pending UATs
 
-### UAT-02: Legacy Season Visual Smoke (Phase 83 QUAL-05)
+### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** v1.11 milestone complete
+- **Status:** post-deploy operator action (procedure + result slot in place)
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
+
+### QUAL-02: Local-Profile MariaDB Smoke (carry-forward from v1.11 QUAL-02)
+
+- **Procedure:** start app with `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` and verify `DevDataSeeder` widened to `@Profile({"dev","local"})` seeds correctly against real MariaDB
+- **Status:** post-deploy operator action
+- **Result:** _(operator fills after execution)_
 
 ## Accumulated Context
 
 ### Decisions
 
-All decisions logged in PROJECT.md "Key Decisions" table and per-milestone in `milestones/v*.x-ROADMAP.md`.
-
-**v1.11 key decisions (from research synthesis 2026-05-16):**
-
-| Decision | Rationale |
-| -------- | --------- |
-| CodeQL instead of Semgrep CE for SAST | Repo is public on GitHub — CodeQL is free with full cross-function taint tracking; Semgrep CE post-Dec 2024 limited to single-function only |
-| SpotBugs only (no Checkstyle, no PMD) | Lombok false positives in Checkstyle + PMD have no proportionate value given CLAUDE.md conventions + code review discipline already in place |
-| OpenRewrite in `-Prewrite` Maven profile only | Plugin with no `<executions>` binding never runs during default `verify` lifecycle — no CI auto-execution risk |
-| Exclude `UpgradeSpringBoot_4_0` recipe | Codebase is already on Boot 4.0.6; the migration composite recipe would attempt re-migration and produce confusing diffs |
-| Phase ordering: 80→81→82→83→84→85→86→87 | OpenRewrite cleanup reduces initial SpotBugs count; gate active before Renovate PRs; CodeQL additive after gate is clean; wallclock last to avoid gate ambiguity |
-| Renovate via Mend GitHub App (not self-hosted) | Zero runner-minute cost; auto-updating; no workflow file required |
-
-- [Phase ?]: Phase 80-03: REWR-01 + REWR-03 structurally verified; dryrun_outcome patch-non-empty (sha256 63072f65…, 25 domain/model entity-file hunks). Plan 04 will execute Branch B cleanup.
-- [Phase ?]: Phase 80-04: OpenRewrite CommonStaticAnalysis applied; D-08 fallback 1 file revert; JaCoCo 88.13% no regression
+All decisions logged in PROJECT.md "Key Decisions" table and per-milestone in `milestones/v*.x-ROADMAP.md`. v1.12 decisions will be captured during phase planning.
 
 ### Phase Numbering
 
-Last phase shipped: **79** (v1.10 closer). v1.11 runs **phases 80-87**.
+Last phase shipped: **87** (v1.11 closer). v1.12 starts at **phase 88**, numbering continues (no `--reset-phase-numbers`).
 
 ### Roadmap Evolution
 
-- 2026-05-16: v1.10 milestone closed. Archives at `milestones/v1.10-ROADMAP.md`, `milestones/v1.10-REQUIREMENTS.md`, `milestones/v1.10-MILESTONE-AUDIT.md`. ROADMAP.md v1.10 block collapsed to `<details>`.
-- 2026-05-16: v1.11 roadmap created. 8 phases (80-87), 46 REQ-IDs across 8 categories. Backlog phases 999.1-999.4 promoted into active milestone.
+- 2026-05-18: v1.11 milestone closed; archived at `milestones/v1.11-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `milestones/v1.11-phases/`.
+- 2026-05-18: v1.12 milestone started. Branch `gsd/v1.12-driver-import-and-test-perf`. Scope: driver-import data-correctness (DRIV-01..02) + test-wallclock Round 2 (PERF-01..05) + cleanup (CLEAN-01) + optional UX (UX-01).
 
 ### Blockers/Concerns
 
-at roadmap creation. Research flags:
+At roadmap creation:
 
-- **MEDIUM confidence** on OpenRewrite recipe diff outcome — `rewrite:dryRun` must be inspected before `rewrite:run` at Phase 80 execution
-- **MEDIUM confidence** on wallclock reduction achievability — `@DirtiesContext` count and context key variation must be measured at Phase 86 start
-- Renovate onboarding requires manual GitHub App installation by repo owner (jegr78) — schedule as Phase 84 first step
-- Pre-existing Phase 72 IT compile error in BackupSchemaExclusionIT.java:40 (Java 25 / AssertJ generic inference) blocks ./mvnw verify exit 0 + JaCoCo CSV generation. Out-of-scope per Plan 80-03 plan_scope; logged in deferred-items.md. Must be resolved before Plan 80-04.
+- **Pre-existing `BackupSchemaExclusionIT.java:40` compile error** (Java-25 AssertJ generic inference) blocks any `./mvnw verify` exit 0 + JaCoCo CSV generation — must be fixed early in v1.12 (CLEAN-01) or all PERF measurements remain blocked. Tracked in v1.11 `80-deferred-items.md`.
+- **Test-Module-Split decision risk** — Lever 4 may not pay off without restructuring `src/test/java` into independent Maven modules; D-decision-point planning required before commitment.
+- **Driver-import resolver semantics** — DRIV-01 inverts the Phase 70 D-05 default ("parent wins"); must coordinate with `SeasonDriver.team_id` invariant (parent reference still holds for non-collision rows).
+- **CI wallclock measurement methodology** — every PERF lever must re-harvest via D-17 trigger-equivalence (PR-branch `workflow_dispatch` ≡ post-merge master CI) to avoid orphan post-merge measurement commits.
 
 ### Baselines to Preserve
 
-- JaCoCo line coverage: **87.80%** (v1.10 baseline; gate 82%)
-- Test count: **1652 Surefire unit + 231 Failsafe IT + 36 Playwright E2E** (v1.10 final)
-- `./mvnw verify -Pe2e` wallclock: **11m 11s** (v1.10 baseline; Phase 86 target ≤7m 50s)
-- `BackupSchema.SCHEMA_VERSION`: **1** (must remain 1 throughout Phase 82)
-- `EXPORT_ORDER` size: **24 entities** (guard test in Phase 82)
+- JaCoCo line coverage: **88.88%** (v1.11 baseline; gate 82%, must not regress)
+- Test count: **1675 tests** (Surefire + Failsafe + Playwright E2E combined; v1.11 final)
+- `./mvnw verify -Pe2e` CI median (E2E step): **23:00** (v1.11 baseline; v1.12 Round-2 target TBD post-PERF-01..03)
+- `BackupSchema.SCHEMA_VERSION`: **1** (must remain 1; schema change → bump to 2)
+- `EXPORT_ORDER` size: **24 entities** (guard test active)
+- SpotBugs `BugInstance` count: **0** (blocking gate)
 
 ## Session Continuity
 
-Last session: 2026-05-18T08:01:39.814Z
+**Next action:** Define v1.12 REQUIREMENTS.md + ROADMAP.md (in progress via `/gsd-new-milestone`).
 
-**Next action:** Spawn /gsd:execute-plan 87-06 (Restore + audit + approve v1.10 Phase 76 — Operational Hardening: Lock + Banner + Auto-Backup, State A — SECU-05..07).
-
-**Branch:** `gsd/v1.11-tooling-and-cleanup`
+**Branch:** `gsd/v1.12-driver-import-and-test-perf`
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Approve v1.12 REQUIREMENTS.md
+- Approve v1.12 ROADMAP.md from roadmapper
+- Then `/gsd:discuss-phase 88` to start the first phase
