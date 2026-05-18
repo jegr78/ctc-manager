@@ -28,6 +28,19 @@ Closes the v1.11 PERF-FUTURE-01 forward path. v1.11 PERF-04 accepted the ≥30 %
 ### Cleanup (CLEAN)
 
 - [ ] **CLEAN-01**: The pre-existing `BackupSchemaExclusionIT.java:40` compile error (Java 25 / AssertJ generic-inference) is fixed so `./mvnw verify` exits 0 and JaCoCo CSV generation succeeds; resolution may be either a typed-witness `assertThat(set, Set.class)` style or a targeted `@SuppressWarnings("unchecked")` with rationale comment; the fix lands as the FIRST commit of phase 88 so all PERF measurements run against a clean baseline
+- [ ] **CLEAN-02**: YAGNI sweep of `@Disabled` tests and conditional skips whose justifications are speculative or stale: (a) DELETE `StandingsPageGeneratorTest.givenGroupsSwissLayoutSeason_whenGeneratePerGroup_thenShowBuchholzColumn` placeholder method (Phase-62 Plan-5/6 deferral never materialized; GROUPS+SWISS fixture combination is not in `TestDataService` and is not in production scope; method body is empty — zero test value lost); (b) DELETE `DriverSheetImportServiceIT.givenPreExistingDriverNotMatchedByMatcher_whenExecuteNewDriverRow_thenReusesExistingDriver` disabled regression-fence (production code path is structurally unreachable via `DriverMatchingService.findDriver` exact-match short-circuit; the defensive `findByPsnId(psnId).orElseGet(...)` recovery is already exercised by Test #7 cross-tab same-PSN scenario; "future change that bypasses short-circuit" is YAGNI speculation — such a change would land with its own tests); (c) SIMPLIFY `AutoBackupBeforeImportFailureIT.java:198-208` by removing the `if (isWindows())` conditional and `Assumptions.assumeFalse(true, "Windows file-locking...")` skip — keep the POSIX assertion unconditional (codebase has zero other Windows-aware code, CI runs `ubuntu-latest`, dev runs darwin; reinstate the guard only if/when a Windows-dev case actually arises). Verified by `grep -rn "@Disabled" src/test/java` returning only `SiteGeneratorBaselineCaptureTest` post-CLEAN-03 absorbed, and `grep -rn "Assumptions\." src/test/java` returning 0 hits
+- [ ] **CLEAN-03**: Refactor `SiteGeneratorBaselineCaptureTest` from the `@Test @Disabled("Run manually to refresh SC4 baselines")` anti-pattern (which forces the developer to "remove `@Disabled`, run, re-add `@Disabled`" on every baseline refresh and gives misleading `@Test` semantics for a maintenance task) into an explicit utility — either a `CommandLineRunner` Spring bean under `src/test/java/org/ctc/sitegen/util/SiteGeneratorBaselineRefresh.java` invoked via `./mvnw exec:java -Dexec.mainClass=...` OR a `main()`-style helper class — preserving Spring-context-bootstrap convenience. The Phase 62 Plan 0/4 baseline-capture procedure documented in `docs/testing/` (or sitegen module README) is updated to reflect the new invocation pattern. Verified: `grep -rn "@Disabled" src/test/java` returns 0 hits after CLEAN-02 + CLEAN-03 land
+
+### Release Workflow (REL)
+
+Closes 4-milestone-long regression in `.github/workflows/release.yml`: every milestone since v1.8 final has failed the release step with `fatal: tag 'vX.Y.0' already exists` (exit 128), so v1.8 (partial), v1.9, v1.10, and v1.11 never produced workflow-generated git tags, GitHub Releases, or `ghcr.io/jegr78/ctc-manager:vX.Y.0` Docker images. pom.xml was manually bumped from `1.8.0-SNAPSHOT` to `1.11.0-SNAPSHOT` (commit 87daec68) to work around the missing automated bump.
+
+- [ ] **REL-01**: `.github/workflows/release.yml` is hardened against the duplicate-tag-pattern that broke 4 consecutive milestone releases: (a) `git describe --tags --abbrev=0` is replaced with `git tag --sort=-version:refname --list 'v[0-9]*.[0-9]*.[0-9]*' | head -1` (strict 3-part SemVer pattern, deterministic, ignores legacy `v1.X` short-form tags); (b) `actions/checkout@v6` is configured with `fetch-tags: true` alongside `fetch-depth: 0`; (c) the version parser defaults `PATCH` to `0` if missing and validates `MAJOR`/`MINOR` are numeric; (d) a pre-`versions:set` idempotency guard `git rev-parse "v${NEW_VERSION}^{}"` short-circuits with a clear `::error::Tag already exists` and exit 1 BEFORE the 19-minute build runs; the fix is verified by a workflow dry-run (manual `workflow_dispatch` on the v1.12 PR-branch with a synthetic `dry-run: true` input that skips push/tag/release steps but exercises the version-determination logic) AND by the next master squash-merge actually producing a v1.12.0 release artifact set
+- [ ] **REL-02**: The 2 missed releases v1.10.0 (master @ `45aabfd0`) and v1.11.0 (master @ `598d1431`) are retroactively published — annotated tags pushed, GitHub Release pages generated with auto-notes, JAR artifacts attached, and Docker images `ghcr.io/jegr78/ctc-manager:1.10.0` + `:1.11.0` built+pushed; legacy short-form tags `v1.5`, `v1.6`, `v1.8`, `v1.9` are deleted (they have no `release:` commit in master history and are artefacts that confuse the SemVer-sort lookup); documented in `docs/operations/release-runbook.md`
+
+### Documentation Conventions (DOCS)
+
+- [ ] **DOCS-01**: CLAUDE.md "Conventions" section gains a "Skill Invocation Naming" paragraph documenting that all GSD skills are invoked via `/gsd-<name>` (dash, current canonical syntax), NOT `/gsd:<name>` (colon, deprecated — pre-2026 syntax). Verified by `grep -r "/gsd:" .planning/*.md` returning zero hits in top-level active planning files (PROJECT.md, STATE.md, ROADMAP.md, REQUIREMENTS.md, MILESTONES.md, RETROSPECTIVE.md). Archived `.planning/milestones/v*.x-*.md` files are explicitly out of scope (historical, immutable). The pre-existing initial inline-sweep that landed in commit `<v1.12-start>` cleared the 16 references found 2026-05-18 — DOCS-01 prevents regression via the CLAUDE.md convention note
 
 ### User Experience Polish (UX, stretch)
 
@@ -56,7 +69,7 @@ Deferred — acknowledged in `.planning/codebase/CONCERNS.md` "Recommended Actio
 Explicit exclusions for v1.12. Prevents scope creep.
 
 | Feature | Reason |
-|---------|--------|
+| ------- | ------ |
 | OAuth2/OIDC | HTTP Basic Auth is sufficient for single-admin app (v1.0 Key Decision) |
 | Full Pagination UI | Repository preparation only; no template rework |
 | Disable OSIV | Deliberately enabled; `@EntityGraph` only optimization (CLAUDE.md Constraint) |
@@ -69,27 +82,33 @@ Explicit exclusions for v1.12. Prevents scope creep.
 
 ## Traceability
 
-Empty initially. Populated by the roadmapper agent during phase mapping.
+Populated by the roadmapper agent (2026-05-18) — 100 % coverage across 4 phases (88-91).
 
 | Requirement | Phase | Status |
-|-------------|-------|--------|
-| DRIV-01 | TBD | Pending |
-| DRIV-02 | TBD | Pending |
-| PERF-01 | TBD | Pending |
-| PERF-02 | TBD | Pending |
-| PERF-03 | TBD | Pending |
-| PERF-04 | TBD | Pending |
-| PERF-05 | TBD | Pending |
-| PERF-06 | TBD | Pending |
-| CLEAN-01 | TBD | Pending |
-| UX-01 | TBD | Pending |
+| ----------- | ----- | ------ |
+| CLEAN-01 | 88 | Pending |
+| CLEAN-02 | 88 | Pending |
+| CLEAN-03 | 88 | Pending |
+| REL-01 | 88 | Pending |
+| REL-02 | 88 | Pending |
+| DRIV-01 | 88 | Pending |
+| DRIV-02 | 88 | Pending |
+| DOCS-01 | 88 | Pending |
+| PERF-01 | 89 | Pending |
+| PERF-02 | 89 | Pending |
+| PERF-03 | 90 | Pending |
+| PERF-04 | 90 | Pending |
+| PERF-05 | 90 | Pending |
+| PERF-06 | 91 | Pending |
+| UX-01 | 91 | Pending (stretch — descopable to v1.13 if PERF over budget) |
 
-**Coverage (pre-roadmap):**
-- v1.12 requirements: 10 total (9 must-have + 1 stretch)
-- Mapped to phases: 0 (roadmapper-pending)
-- Unmapped: 10 ⚠ (expected pre-roadmap)
+**Coverage (post-roadmap):**
+
+- v1.12 requirements: 15 total (14 must-have + 1 stretch)
+- Mapped to phases: 15 (100 %)
+- Unmapped: 0 ✓
 
 ---
 
 *Requirements defined: 2026-05-18*
-*Last updated: 2026-05-18 after initial v1.12 definition*
+*Last updated: 2026-05-18 — roadmapper mapped all 10 REQ-IDs to phases 88-91; ROADMAP.md drafted, awaiting approval*

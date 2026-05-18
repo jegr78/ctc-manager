@@ -30,11 +30,16 @@ Architectural Consistency: All controllers delegate to services, exception handl
 **Target features:**
 - Season-aware shortName resolver: sub-team with PhaseTeam in REGULAR phase wins over parent bucket (data-correctness)
 - GROUPS-layout gate for group-assignment warnings (suppress noise on LEAGUE/BRACKET seasons)
+- Release-workflow hardening: SemVer-strict tag sort + `fetch-tags: true` + parser hardening + pre-build idempotency guard (fixes 4-milestone regression that prevented v1.8 final, v1.9, v1.10, v1.11 from producing release tags + GitHub Releases + Docker images)
+- Retroactive publish of v1.10.0 + v1.11.0 releases + cleanup of legacy short-form tags (`v1.5`/`v1.6`/`v1.8`/`v1.9`)
+- CLAUDE.md "Conventions" Skill Invocation Naming paragraph — documents `/gsd-<name>` (dash) as canonical, deprecates `/gsd:<name>` (colon) form to fence operator copy-paste friction
 - Per-fork `backup-staging-dir` enabling Failsafe `forkCount>1C` for backup ITs (PERF-Lever-1)
 - Per-fork Spring context-fingerprint instrumentation + shared `@ContextConfiguration` cluster (PERF-Lever-2)
 - Testcontainers MariaDB `.withReuse(true)` wiring (PERF-Lever-3, pre-emptive)
 - Test-Module-Split decision document and (if approved) extraction of `src/test/java` into Maven sub-modules (PERF-Lever-4)
 - Fix pre-existing Phase-72 `BackupSchemaExclusionIT` Java-25 AssertJ generic-inference compile error
+- YAGNI sweep of speculative `@Disabled` regression-fence + GROUPS+SWISS placeholder + lone Windows-conditional skip (the codebase has no other Windows-aware logic)
+- Refactor `SiteGeneratorBaselineCaptureTest` from `@Test @Disabled` anti-pattern to a standalone `CommandLineRunner`/`main()` utility (post-CLEAN: `grep -rn "@Disabled" src/test/java` returns 0)
 - Google Sheets/Calendar user-facing error messages (stretch — only if PERF-levers come in under budget)
 
 ## Requirements
@@ -189,7 +194,7 @@ v1.12 in flight (carry-forwards absorbed into roadmap):
   - `group-warnings-for-non-groups-seasons` → DRIV-02
 - **PERF-FUTURE-01** test-wallclock reduction Round 2 → PERF-01..PERF-05 (3-lever forward path in `docs/test-performance.md § v1.12 Forward Path` + test-module-split decision)
 - **BackupSchemaExclusionIT** Java-25 AssertJ generic-inference compile error → CLEAN-01
-- Items added by future `/gsd:new-milestone` after v1.12 close.
+- Items added by future `/gsd-new-milestone` after v1.12 close.
 
 ### Out of Scope
 
@@ -255,7 +260,7 @@ v1.12 in flight (carry-forwards absorbed into roadmap):
 | `StandingsViewService` extraction + `StandingsView` record DTO (Phase 83 QUAL-04) | Controller's lazy collection access (`getGroups()` traversal) was OSIV-dependent and untestable in unit slice; service-layer extraction with `@Transactional(readOnly = true)` boundary and 9 dedicated Mockito tests covers all 5 resolution branches | ✓ v1.11 |
 | PERF-04 accepted as OR-branch (Phase 86) | ≥30 % wallclock target MISSED (CI median 23:00 vs target ≤7m 50s); architectural blocker — Spring-context-per-fork structural cost cannot be amortized without test-module split. 3-lever forward path documented in `docs/test-performance.md`, tracked as PERF-FUTURE-01 for v1.12. Forking further would multiply not amortize | ✓ v1.11 (OR-branch) |
 | PR-branch CI harvest semantically equivalent to post-merge master (Phase 86 D-17) | `ci.yml` runs identical steps for `pull_request`, `push to master`, and `workflow_dispatch` triggers; Maven step timing independent of trigger event. Allowed Phase 86 to close inside the same milestone PR (#122) without an orphan post-merge `docs(86):` commit on master | ✓ v1.11 |
-| In-milestone Nyquist closure (v1.11 Option A) mirrors cross-milestone Phase-87 pattern (v1.10) | After Phase 87 closed v1.10 Nyquist debt, the milestone audit surfaced the same draft VALIDATION pattern in v1.11 itself. Resolution path: 6 retroactive `/gsd:validate-phase` runs + 1 retroactive 86-VERIFICATION.md inline (same morning), avoiding a v1.12 Phase-88 carry-forward. Closing pattern: precedent for future milestones — if Nyquist debt accumulates during execution, prefer inline closure post-audit over cross-milestone closure phase | ✓ v1.11 |
+| In-milestone Nyquist closure (v1.11 Option A) mirrors cross-milestone Phase-87 pattern (v1.10) | After Phase 87 closed v1.10 Nyquist debt, the milestone audit surfaced the same draft VALIDATION pattern in v1.11 itself. Resolution path: 6 retroactive `/gsd-validate-phase` runs + 1 retroactive 86-VERIFICATION.md inline (same morning), avoiding a v1.12 Phase-88 carry-forward. Closing pattern: precedent for future milestones — if Nyquist debt accumulates during execution, prefer inline closure post-audit over cross-milestone closure phase | ✓ v1.11 |
 | Playwright fork-channel corruption fix: pre-install all 3 default browsers + actions/cache@v4 (CI follow-up) | `Playwright.create()` validates all default browsers (Chromium + Firefox + WebKit) on first use, not just `chromium()`. Mid-Surefire auto-download corrupts fork-channel stdout → Maven exit 1, 0 failing tests. Cache footprint (~360 MiB) and 30 s cold-install acceptable for stable forks | ✓ v1.11 |
 
 ### Backup Wire Contract (v1.10)
@@ -291,4 +296,4 @@ The runtime topo-sort returns 24 `EntityRef` instances (CONTEXT.md originally sa
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-18 — v1.12 milestone started: Driver-Import Gap-Closure & Test Performance Round 2. Scope absorbs 2 v1.11 carry-forwards (driver-import data-correctness + UI-noise bugs from deferred debug sessions) and the PERF-FUTURE-01 architectural work (3-lever forward path: per-fork backup-staging-dir, shared `@ContextConfiguration`, Testcontainers `withReuse`) plus a test-module-split decision-point, with `BackupSchemaExclusionIT` Java-25 compile fix and optional Google-API error-UX as stretch. v1.11 baseline: 1675 tests / JaCoCo 88.88 % / CI E2E median 23:00 (gate target ≤7m 50s — Phase 86 OR-branch). Branch: `gsd/v1.12-driver-import-and-test-perf`. Next: roadmap creation via `/gsd:new-milestone`.*
+*Last updated: 2026-05-18 — v1.12 milestone started: Driver-Import Gap-Closure & Test Performance Round 2. Scope absorbs 2 v1.11 driver-import carry-forwards (DRIV-01/02) + PERF-FUTURE-01 3-lever forward path + test-module-split decision (PERF-01..06) + `BackupSchemaExclusionIT` compile fix (CLEAN-01) + YAGNI sweep of speculative `@Disabled`/Windows-conditional cruft (CLEAN-02) + BaselineCapture refactor to standalone utility (CLEAN-03) + 4-milestone release-workflow regression fix (REL-01 hardening + REL-02 v1.10.0/v1.11.0 catch-up) + `/gsd-` skill-naming convention doc (DOCS-01, plus 16-ref inline sweep done this session) + optional Google-API error UX (UX-01 stretch). 15 REQs total (14 must-have + 1 stretch) across 4 phases (88-91). v1.11 baseline: 1675 tests / JaCoCo 88.88 % / CI E2E median 23:00 (gate target ≤7m 50s — Phase 86 OR-branch). Branch: `gsd/v1.12-driver-import-and-test-perf`. Next: roadmap approval, then `/gsd-discuss-phase 88`.*
