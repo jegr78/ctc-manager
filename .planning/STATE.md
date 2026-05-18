@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.11
 milestone_name: Tooling Infrastructure & Tech-Debt Sweep
 status: executing
-last_updated: "2026-05-18T05:59:56.565Z"
-last_activity: "2026-05-18 -- Phase 86 COMPLETE (86-06 CI median 23:00 on PR-branch per D-17, PERF-05 satisfied via OR-branch)"
+last_updated: "2026-05-18T06:44:53.152Z"
+last_activity: 2026-05-18 -- Phase 87 planning complete
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 38
+  total_plans: 46
   completed_plans: 38
-  percent: 88
+  percent: 83
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 Phase: 86 (test-wallclock-reduction) — **COMPLETE** (6/6 plans, all SUMMARYs landed)
 Next: Phase 87 (Nyquist VALIDATION Closure) — not yet planned
-Last activity: 2026-05-18 -- Phase 86 COMPLETE (86-06 CI median 23:00 on PR-branch per D-17, PERF-05 satisfied via OR-branch)
+Last activity: 2026-05-18 -- Phase 87 planning complete
 
 ```
 Progress: [█████████▌] 97%
@@ -76,7 +76,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (Phase 83 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Executing Phase 86
+- **Status:** Ready to execute
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
