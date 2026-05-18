@@ -1,5 +1,8 @@
 package org.ctc.dataimport;
 
+import java.io.IOException;
+import java.util.*;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.DriverMatchingService.MatchResult;
@@ -16,10 +19,6 @@ import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.service.SeasonManagementService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.regex.Pattern;
 
 /**
  * Preview service for bulk driver import from Google Sheets.
@@ -95,7 +94,9 @@ public class DriverSheetImportService {
     @Transactional
     public ExecuteResult execute(String sheetUrl, Map<String, String> allParams) {
         log.info("Executing driver sheet import: sheetUrl={}", sheetUrl);
-        if (allParams == null) allParams = Map.of();
+		if (allParams == null) {
+			allParams = Map.of();
+		}
         DriverSheetImportPreview fullPreview;
         try {
             fullPreview = this.preview(sheetUrl);
@@ -233,7 +234,7 @@ public class DriverSheetImportService {
         UUID suggestedSeasonId;
         String ambiguousReason;
         try {
-            Optional<Season> resolved = (number != null)
+            Optional<Season> resolved = number != null
                     ? seasonManagementService.findUnique(year, number)
                     : seasonManagementService.findUnique(year);
             if (resolved.isPresent()) {
@@ -241,7 +242,7 @@ public class DriverSheetImportService {
                 ambiguousReason = null;
             } else {
                 suggestedSeasonId = null;
-                ambiguousReason = (number != null)
+                ambiguousReason = number != null
                         ? "No season found for (" + year + ", " + number + ")"
                         : "No season found for year " + year;
             }

@@ -1,5 +1,8 @@
 package org.ctc.domain.service;
 
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -10,10 +13,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -137,7 +136,9 @@ public class TeamManagementService {
 	 */
 	@Transactional
 	public void propagateColorsToSubTeams(Team parent) {
-		if (!parent.hasSubTeams()) return;
+		if (!parent.hasSubTeams()) {
+			return;
+		}
 		for (var sub : parent.getSubTeams()) {
 			boolean changed = false;
 			if (sub.getPrimaryColor() == null && parent.getPrimaryColor() != null) {
@@ -164,7 +165,9 @@ public class TeamManagementService {
 	 */
 	@Transactional
 	public void propagateLogoToSubTeams(Team parent, String logoUrl) {
-		if (!parent.hasSubTeams()) return;
+		if (!parent.hasSubTeams()) {
+			return;
+		}
 		for (var sub : parent.getSubTeams()) {
 			if (sub.getLogoUrl() == null) {
 				sub.setLogoUrl(logoUrl);
@@ -279,8 +282,7 @@ public class TeamManagementService {
 		var parent = findById(parentId);
 		var subTeam = new Team(name, shortName);
 		subTeam.setParentTeam(parent);
-		subTeam = teamRepository.save(subTeam);
-		return subTeam;
+		return teamRepository.save(subTeam);
 	}
 
 	/**

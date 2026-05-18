@@ -1,15 +1,14 @@
 package org.ctc.dataimport;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.similarity.LevenshteinDistance;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.repository.DriverRepository;
 import org.springframework.stereotype.Service;
-
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Service
@@ -78,11 +77,15 @@ public class DriverMatchingService {
 	}
 
 	double calculateSimilarity(String a, String b) {
-		if (a == null || b == null) return 0.0;
+		if (a == null || b == null) {
+			return 0.0;
+		}
 		String lowerA = a.toLowerCase();
 		String lowerB = b.toLowerCase();
 		int maxLen = Math.max(lowerA.length(), lowerB.length());
-		if (maxLen == 0) return 1.0;
+		if (maxLen == 0) {
+			return 1.0;
+		}
 		int distance = LEVENSHTEIN.apply(lowerA, lowerB);
 		return 1.0 - ((double) distance / maxLen);
 	}

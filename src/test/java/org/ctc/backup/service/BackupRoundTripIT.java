@@ -1,6 +1,27 @@
 package org.ctc.backup.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import org.ctc.admin.TestDataService;
 import org.ctc.backup.audit.DataImportAudit;
 import org.ctc.backup.audit.DataImportAuditRepository;
@@ -18,8 +39,8 @@ import org.ctc.domain.repository.TeamRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -34,28 +55,6 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MariaDBContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.HexFormat;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Stream;
-import java.util.UUID;
-import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -404,6 +403,30 @@ class BackupRoundTripIT {
 					.containsExactly(preTeamHash);
 		}
 
+		@Test
+		void givenSeasonOneFixture_whenRoundTrip_thenAll24EntityRowCountsMatch() throws Exception {
+			// given
+			Map<String, Long> preCounts = captureRowCounts();
+			assertThat(preCounts.values().stream().filter(c -> c > 0).count())
+					.as("fixture must have data in at least 12 entities for a meaningful parity test")
+					.isGreaterThan(12);
+
+			// when
+			byte[] zipBytes = exportToBytes();
+			MockMultipartFile file = new MockMultipartFile(
+					"file", "h2-parity-export.zip", "application/zip", zipBytes);
+			BackupImportPreview preview = backupImportService.stage(file);
+			backupImportService.execute(preview.stagingId());
+
+			// then
+			Map<String, Long> postCounts = captureRowCounts();
+			for (EntityRef ref : backupSchema.getExportOrder()) {
+				assertThat(postCounts.get(ref.tableName()))
+						.as("row-count parity for table=" + ref.tableName())
+						.isEqualTo(preCounts.get(ref.tableName()));
+			}
+		}
+
 		// -------------------------------------------------------------------------
 		// Helpers — duplicated per @Nested class (each class has its own ApplicationContext)
 		// -------------------------------------------------------------------------
@@ -629,6 +652,30 @@ class BackupRoundTripIT {
 							HexFormat.of().formatHex(preTeamHash),
 							HexFormat.of().formatHex(postTeamHash))
 					.containsExactly(preTeamHash);
+		}
+
+		@Test
+		void givenSeasonOneFixture_whenRoundTrip_thenAll24EntityRowCountsMatch() throws Exception {
+			// given
+			Map<String, Long> preCounts = captureRowCounts();
+			assertThat(preCounts.values().stream().filter(c -> c > 0).count())
+					.as("fixture must have data in at least 12 entities for a meaningful parity test")
+					.isGreaterThan(12);
+
+			// when
+			byte[] zipBytes = exportToBytes();
+			MockMultipartFile file = new MockMultipartFile(
+					"file", "mariadb-parity-export.zip", "application/zip", zipBytes);
+			BackupImportPreview preview = backupImportService.stage(file);
+			backupImportService.execute(preview.stagingId());
+
+			// then
+			Map<String, Long> postCounts = captureRowCounts();
+			for (EntityRef ref : backupSchema.getExportOrder()) {
+				assertThat(postCounts.get(ref.tableName()))
+						.as("row-count parity for table=" + ref.tableName())
+						.isEqualTo(preCounts.get(ref.tableName()));
+			}
 		}
 
 		// -------------------------------------------------------------------------

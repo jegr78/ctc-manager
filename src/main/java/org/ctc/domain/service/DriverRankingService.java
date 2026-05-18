@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
@@ -9,9 +11,6 @@ import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -45,10 +44,6 @@ public class DriverRankingService {
 		List<RaceResult> all = new ArrayList<>(regularResults.size() + playoffResults.size());
 		all.addAll(regularResults);
 		all.addAll(playoffResults);
-
-		// Build phase-specific team lookup from PhaseTeam roster (keyed by teamId)
-		Map<UUID, Team> phaseTeamByTeamId = phaseTeamRepository.findByPhaseId(phaseId).stream()
-				.collect(Collectors.toMap(pt -> pt.getTeam().getId(), PhaseTeam::getTeam, (a, b) -> a));
 
 		// Accumulate per driver
 		Map<UUID, DriverRanking> rankingMap = new LinkedHashMap<>();

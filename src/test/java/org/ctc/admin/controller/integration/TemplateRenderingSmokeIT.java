@@ -1,8 +1,17 @@
 package org.ctc.admin.controller.integration;
 
+import java.lang.reflect.Parameter;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DynamicTest;
-import org.junit.jupiter.api.TestFactory;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,16 +26,6 @@ import org.springframework.web.bind.annotation.ValueConstants;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.mvc.method.RequestMappingInfo;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-
-import java.lang.reflect.Parameter;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -54,7 +53,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @ActiveProfiles("dev")
 @Transactional
 @Sql(scripts = "/sql/template-rendering-smoke-fixture.sql",
-        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+		executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 @Tag("integration")
 class TemplateRenderingSmokeIT {
 
@@ -114,7 +113,9 @@ class TemplateRenderingSmokeIT {
         Map<String, Map<String, String>> routes = new LinkedHashMap<>();
 
         handlerMapping.getHandlerMethods().forEach((info, method) -> {
-            if (!supportsGet(info)) return;
+			if (!supportsGet(info)) {
+				return;
+			}
 
             Set<String> ps;
             if (info.getPathPatternsCondition() != null) {
@@ -153,11 +154,13 @@ class TemplateRenderingSmokeIT {
         Map<String, String> out = new LinkedHashMap<>();
         for (Parameter param : method.getMethod().getParameters()) {
             RequestParam rp = param.getAnnotation(RequestParam.class);
-            if (rp == null || !rp.required() || !rp.defaultValue().equals(ValueConstants.DEFAULT_NONE)) {
+            if (rp == null || !rp.required() || !ValueConstants.DEFAULT_NONE.equals(rp.defaultValue())) {
                 continue;
             }
             String name = rp.name().isEmpty() ? rp.value() : rp.name();
-            if (name.isEmpty()) name = param.getName();
+			if (name.isEmpty()) {
+				name = param.getName();
+			}
             String value;
             if (param.getType() == UUID.class && PATH_VARS.containsKey(name)) {
                 value = PATH_VARS.get(name);
@@ -208,7 +211,6 @@ class TemplateRenderingSmokeIT {
         // Strip any remaining {placeholder} segments for path vars we did not seed:
         // substitute with seeded season UUID as best-effort default. A 404 page rendering
         // cleanly is the desired outcome — TemplateProcessingException assertion still runs.
-        result = result.replaceAll("\\{[^/}]+\\}", PATH_VARS.get("id"));
-        return result;
+        return result.replaceAll("\\{[^/}]+\\}", PATH_VARS.get("id"));
     }
 }

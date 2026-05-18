@@ -1,16 +1,15 @@
 package org.ctc.domain.service;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Set;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Service
@@ -47,7 +46,9 @@ public class FileStorageService {
 	}
 
 	public void delete(String url) {
-		if (url == null || !url.startsWith("/uploads/")) return;
+		if (url == null || !url.startsWith("/uploads/")) {
+			return;
+		}
 
 		Path file = uploadDir.resolve(url.substring("/uploads/".length())).normalize();
 		if (!file.startsWith(uploadDir)) {
@@ -82,6 +83,7 @@ public class FileStorageService {
 		}
 	}
 
+	// CodeQL FP: java/ssrf — startsWith-chain hostname blocklist (validateHostname, lines 128-159) not recognized as sanitizer; see docs/security/sast-acceptance.md
 	public String storeFromUrl(String subDir, UUID entityId, String sourceUrl, String filename) throws IOException {
 		if (sourceUrl == null || !sourceUrl.toLowerCase().startsWith("https://")) {
 			log.warn("Rejected non-HTTPS URL: {}", sourceUrl);
@@ -115,17 +117,22 @@ public class FileStorageService {
 	}
 
 	private String sanitize(String filename) {
-		if (filename == null) return "file";
+		if (filename == null) {
+			return "file";
+		}
 		return filename.replaceAll("[^a-zA-Z0-9._-]", "_");
 	}
 
+	// SSRF defense: find-sec-bugs cannot recognize startsWith-chain hostname blocklists as
+	// sanitizers. This method is the suppressed sanitizer. See config/spotbugs-exclude.xml
+	// FileStorageService SSRF_SPRING,SSRF entry for the corresponding suppression rationale.
 	private void validateHostname(String sourceUrl) {
 		String hostname = java.net.URI.create(sourceUrl).getHost();
 		if (hostname == null) {
 			throw new IllegalArgumentException("URL hostname blocked: <null>");
 		}
 		hostname = hostname.toLowerCase();
-		if (hostname.equals("localhost") || hostname.equals("[::1]")) {
+		if ("localhost".equals(hostname) || "[::1]".equals(hostname)) {
 			log.warn("Blocked SSRF attempt to internal host: {}", hostname);
 			throw new IllegalArgumentException("URL hostname blocked: " + hostname);
 		}
@@ -150,6 +157,10 @@ public class FileStorageService {
 		}
 	}
 
+	// PATH_TRAVERSAL defense: toAbsolutePath().normalize().startsWith() check.
+	// find-sec-bugs detects unresolved path usage at call sites before this validation is
+	// invoked. See config/spotbugs-exclude.xml FileStorageService PATH_TRAVERSAL_IN entry
+	// for the corresponding suppression rationale.
 	private void validatePathWithinUploadDir(Path target) {
 		Path normalized = target.toAbsolutePath().normalize();
 		if (!normalized.startsWith(uploadDir)) {

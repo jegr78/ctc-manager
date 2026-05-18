@@ -1,11 +1,11 @@
 package org.ctc.domain.service;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.ctc.domain.model.*;
-import org.ctc.domain.repository.MatchRepository;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.RaceRepository;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -13,20 +13,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
-
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 
 // LENIENT: existing tests stub seasonRepository.findById which is no longer invoked by the
 // @Deprecated calculateStandings(UUID seasonId) bridge (now delegates to seasonPhaseService).

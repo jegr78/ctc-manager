@@ -2,23 +2,14 @@ package org.ctc.domain.model;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.ctc.domain.repository.MatchScoringRepository;
-import org.ctc.domain.repository.MatchdayRepository;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.PlayoffRepository;
-import org.ctc.domain.repository.RaceScoringRepository;
-import org.ctc.domain.repository.SeasonPhaseGroupRepository;
-import org.ctc.domain.repository.SeasonPhaseRepository;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
+import java.util.List;
+import java.util.UUID;
+import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

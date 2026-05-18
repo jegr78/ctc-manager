@@ -1,5 +1,8 @@
 package org.ctc.domain.service;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
@@ -10,10 +13,6 @@ import org.ctc.domain.repository.SeasonPhaseGroupRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -58,14 +57,14 @@ public class MatchdayGeneratorService {
 		}
 
 		// Pre-existing matchdays check per phase/group
-		var existing = (groupId != null)
+		var existing = groupId != null
 				? matchdayRepository.findByPhaseIdAndGroupIdOrderBySortIndexAsc(phaseId, groupId)
 				: matchdayRepository.findByPhaseIdOrderBySortIndexAsc(phaseId);
 		if (!existing.isEmpty()) {
 			throw new IllegalStateException("Phase/group already has matchdays — delete them first");
 		}
 
-		var rosterRows = (groupId != null)
+		var rosterRows = groupId != null
 				? phaseTeamRepository.findByPhaseIdAndGroupId(phaseId, groupId)
 				: phaseTeamRepository.findByPhaseId(phaseId);
 		var teams = rosterRows.stream().map(PhaseTeam::getTeam).toList();
@@ -73,7 +72,7 @@ public class MatchdayGeneratorService {
 			throw new IllegalStateException("Need at least 2 teams to generate matchdays");
 		}
 
-		SeasonPhaseGroup group = (groupId != null)
+		SeasonPhaseGroup group = groupId != null
 				? seasonPhaseGroupRepository.findById(groupId)
 						.orElseThrow(() -> new EntityNotFoundException("SeasonPhaseGroup", groupId))
 				: null;
@@ -83,7 +82,9 @@ public class MatchdayGeneratorService {
 		int sortIndex = 1;
 		for (var round : rounds) {
 			var matchday = new Matchday(phase, "MD " + sortIndex, sortIndex);
-			if (group != null) matchday.setGroup(group);
+			if (group != null) {
+				matchday.setGroup(group);
+			}
 			matchday = matchdayRepository.save(matchday);
 			createMatchesForRound(matchday, round, teams, false);
 			sortIndex++;
@@ -92,7 +93,9 @@ public class MatchdayGeneratorService {
 		if (homeAndAway) {
 			for (var round : rounds) {
 				var matchday = new Matchday(phase, "MD " + sortIndex, sortIndex);
-				if (group != null) matchday.setGroup(group);
+				if (group != null) {
+					matchday.setGroup(group);
+				}
 				matchday = matchdayRepository.save(matchday);
 				createMatchesForRound(matchday, round, teams, true);
 				sortIndex++;
@@ -109,7 +112,7 @@ public class MatchdayGeneratorService {
 		SeasonPhase phase = regularPhaseOpt.orElse(null);
 		var teams = season.getEligibleTeams();
 		int n = teams.size();
-		int optimalRounds = (n % 2 == 0) ? n - 1 : n;
+		int optimalRounds = n % 2 == 0 ? n - 1 : n;
 		return new GeneratorFormData(season, phase, n, optimalRounds);
 	}
 
@@ -125,7 +128,9 @@ public class MatchdayGeneratorService {
 		boolean odd = teamCount % 2 != 0;
 		int n = odd ? teamCount + 1 : teamCount;
 		int[] circle = new int[n];
-		for (int i = 0; i < n; i++) circle[i] = i;
+		for (int i = 0; i < n; i++) {
+			circle[i] = i;
+		}
 
 		List<List<int[]>> rounds = new ArrayList<>();
 		int totalRounds = Math.min(n - 1, maxRounds);
@@ -137,7 +142,7 @@ public class MatchdayGeneratorService {
 				int b = circle[n - 1 - i];
 
 				if (odd && (a == teamCount || b == teamCount)) {
-					int realTeam = (a == teamCount) ? b : a;
+					int realTeam = a == teamCount ? b : a;
 					pairs.add(new int[]{realTeam, -1});
 				} else {
 					pairs.add(new int[]{a, b});
@@ -166,7 +171,9 @@ public class MatchdayGeneratorService {
 
 		for (var pairs : rounds) {
 			for (int[] pair : pairs) {
-				if (pair[1] == -1) continue;
+				if (pair[1] == -1) {
+					continue;
+				}
 				int a = pair[0];
 				int b = pair[1];
 
@@ -179,12 +186,8 @@ public class MatchdayGeneratorService {
 					pair[1] = a;
 					homeCounts[b]++;
 					awayCounts[a]++;
-				} else if (bDiff > aDiff) {
-					// Keep as is
-					homeCounts[a]++;
-					awayCounts[b]++;
 				} else {
-					// Tie: alternate
+					// b has more home games than a, or tied: keep a as home
 					homeCounts[a]++;
 					awayCounts[b]++;
 				}

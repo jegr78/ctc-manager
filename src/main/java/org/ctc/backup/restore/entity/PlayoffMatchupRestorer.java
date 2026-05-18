@@ -1,11 +1,6 @@
 package org.ctc.backup.restore.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.extern.slf4j.Slf4j;
-import org.ctc.backup.restore.EntityRestorer;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -13,6 +8,10 @@ import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.restore.EntityRestorer;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
 
 /**
  * 2-pass {@link EntityRestorer} for {@link org.ctc.domain.model.PlayoffMatchup}.
@@ -45,8 +44,8 @@ import java.util.UUID;
  *
  * <p>Bypasses {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}.
  */
-@Component
 @Slf4j
+@Component
 public class PlayoffMatchupRestorer implements EntityRestorer {
 
     /**

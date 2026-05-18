@@ -2,47 +2,25 @@ package org.ctc.e2e;
 
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import org.ctc.dataimport.GoogleSheetsService;
-import org.ctc.domain.model.Driver;
-import org.ctc.domain.model.Match;
-import org.ctc.domain.model.Matchday;
-import org.ctc.domain.model.PhaseLayout;
-import org.ctc.domain.model.PhaseTeam;
-import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceLineup;
-import org.ctc.domain.model.RaceSettings;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.model.Team;
-import org.ctc.domain.repository.DriverRepository;
-import org.ctc.domain.repository.MatchRepository;
-import org.ctc.domain.repository.MatchScoringRepository;
-import org.ctc.domain.repository.MatchdayRepository;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.RaceLineupRepository;
-import org.ctc.domain.repository.RaceRepository;
-import org.ctc.domain.repository.RaceScoringRepository;
-import org.ctc.domain.repository.SeasonPhaseGroupRepository;
-import org.ctc.domain.repository.SeasonPhaseRepository;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.*;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
@@ -218,7 +196,9 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 		int rosterRowCount = teamIdInputs.count();
 		for (int i = 0; i < rosterRowCount; i++) {
 			String teamIdVal = teamIdInputs.nth(i).getAttribute("value");
-			if (teamIdVal == null || !teamToGroupId.containsKey(teamIdVal)) continue;
+			if (teamIdVal == null || !teamToGroupId.containsKey(teamIdVal)) {
+				continue;
+			}
 			String includedSelector = "input[type='checkbox'][name='assignments[" + i + "].included']";
 			String groupSelectSelector = "select[name='assignments[" + i + "].groupId']";
 			rosterForm.locator(includedSelector).check();

@@ -59,7 +59,9 @@ public class DriverProfilePageGenerator {
 
         for (var sd : seasonDrivers) {
             var driver = sd.getDriver();
-            if (!generatedDriverIds.add(driver.getId())) continue;
+			if (!generatedDriverIds.add(driver.getId())) {
+				continue;
+			}
             var team = sd.getTeam();
             var results = raceResultRepository.findByDriverId(driver.getId()).stream()
                     .filter(r -> r.getRace().getMatchday().getSeason().getId().equals(season.getId()))
@@ -80,7 +82,9 @@ public class DriverProfilePageGenerator {
                         .map(rl -> rl.getRace().getMatchday().getPhase().getPhaseType())
                         .collect(Collectors.toCollection(java.util.HashSet::new));
                 for (PhaseType pt : PHASE_ORDER) {
-                    if (!participatedPhases.contains(pt)) continue;
+					if (!participatedPhases.contains(pt)) {
+						continue;
+					}
                     var phaseResults = results.stream()
                             .filter(r -> r.getRace().getMatchday().getPhase().getPhaseType() == pt)
                             .toList();
@@ -101,12 +105,12 @@ public class DriverProfilePageGenerator {
             context.setVariable("driver", driver);
             context.setVariable("team", team);
             context.setVariable("results", results);
-            int total = results.stream().mapToInt(r -> r.getPointsTotal()).sum();
+            int total = results.stream().mapToInt(RaceResult::getPointsTotal).sum();
             context.setVariable("totalRaces", results.size());
             context.setVariable("totalPoints", total);
             context.setVariable("averagePoints", results.isEmpty() ? 0.0 : (double) total / results.size());
             context.setVariable("bestPosition", results.isEmpty() ? null :
-                    results.stream().mapToInt(r -> r.getPosition()).min().orElse(0));
+                    results.stream().mapToInt(RaceResult::getPosition).min().orElse(0));
 
             context.setVariable("currentPage", "driver");
             context.setVariable("seasonSlug", siteSlugger.slugify(season.getDisplayLabel()));

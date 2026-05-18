@@ -1,5 +1,13 @@
 package org.ctc.sitegen;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.List;
+import java.util.Locale;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.*;
@@ -7,8 +15,6 @@ import org.ctc.domain.service.DriverRankingService;
 import org.ctc.domain.service.PlayoffBracketViewService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.ctc.domain.service.StandingsService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.core.io.Resource;
@@ -16,13 +22,6 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.thymeleaf.context.Context;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.List;
-import java.util.Locale;
 
 @Slf4j
 @Service
@@ -149,7 +148,9 @@ public class SiteGeneratorService {
 
             @Override
             public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                if (exc != null) throw exc;
+				if (exc != null) {
+					throw exc;
+				}
                 if (!dir.equals(outPath)) {  // do not delete root itself
                     Files.delete(dir);
                     log.debug("Deleted directory: {}", dir);
@@ -188,7 +189,9 @@ public class SiteGeneratorService {
     private void generatePlayoffBracket(Path outPath, Season season, String activeSeasonSlug,
                                          String activeSeasonName, GenerationResult result) throws IOException {
         var playoffOpt = playoffRepository.findBySeasonId(season.getId());
-        if (playoffOpt.isEmpty()) return;
+		if (playoffOpt.isEmpty()) {
+			return;
+		}
 
         var playoff = playoffOpt.get();
         var bracket = playoffBracketViewService.getBracketView(playoff.getId());
@@ -391,7 +394,9 @@ public class SiteGeneratorService {
                 // phase are skipped by the outer generate() loop, so the empty case here is
                 // defensive.
                 var regularPhaseOpt = seasonPhaseService.findByType(season.getId(), org.ctc.domain.model.PhaseType.REGULAR);
-                if (regularPhaseOpt.isEmpty()) continue;
+				if (regularPhaseOpt.isEmpty()) {
+					continue;
+				}
                 var seasonStandings = standingsService.calculateStandings(regularPhaseOpt.get().getId(), null);
                 if (seasonStandings.stream().anyMatch(st -> st.getTeam().getId().equals(teamId))) {
                     teamSlugMap.put(teamId, "season/" + siteSlugger.slugify(season.getDisplayLabel())
@@ -478,6 +483,8 @@ public class SiteGeneratorService {
             // Preserve UUID-prefixed subdirectory to avoid filename collisions
             String relativePart = logoUrl.substring("/uploads/".length());
             Path target = outPath.resolve("assets").resolve("img").resolve("logos").resolve(relativePart);
+            // NP: target has at least 4 path components — parent is guaranteed non-null.
+            // See config/spotbugs-exclude.xml SiteGeneratorService.copyLogoToAssets NP_NULL entry.
             Files.createDirectories(target.getParent());
             Files.copy(logoFile, target, StandardCopyOption.REPLACE_EXISTING);
             log.debug("Copied logo: {} -> {}", logoFile, target);
@@ -503,16 +510,24 @@ public class SiteGeneratorService {
 
         String prefix = "static/site/";
         for (Resource resource : resources) {
-            if (!resource.isReadable()) continue;
+			if (!resource.isReadable()) {
+				continue;
+			}
 
             String uri = resource.getURI().toString();
             int idx = uri.indexOf(prefix);
-            if (idx < 0) continue;
+			if (idx < 0) {
+				continue;
+			}
 
             String relativePath = uri.substring(idx + prefix.length());
-            if (relativePath.isEmpty()) continue;
+			if (relativePath.isEmpty()) {
+				continue;
+			}
 
             Path target = assetsDir.resolve(relativePath);
+            // NP: target = assetsDir.resolve(non-empty-path) — always multi-component, parent non-null.
+            // See config/spotbugs-exclude.xml SiteGeneratorService.copyAssets NP_NULL entry.
             Files.createDirectories(target.getParent());
             try (InputStream is = resource.getInputStream()) {
                 Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING);

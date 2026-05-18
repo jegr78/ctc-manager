@@ -1,19 +1,7 @@
 package org.ctc.domain.service;
 
-import org.ctc.domain.model.Matchday;
-import org.ctc.domain.model.MatchScoring;
-import org.ctc.domain.model.PhaseLayout;
-import org.ctc.domain.model.PhaseTeam;
-import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.Playoff;
-import org.ctc.domain.model.RaceScoring;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonFormat;
-import org.ctc.domain.model.SeasonPhase;
-import org.ctc.domain.model.SeasonPhaseGroup;
-import org.ctc.domain.model.Team;
-
 import java.util.UUID;
+import org.ctc.domain.model.*;
 
 /**
  * Pure-Java entity builder utility for Phase 58 tests.
@@ -48,8 +36,12 @@ public final class PhaseTestFixtures {
         // Tests must explicitly set these via the returned phase if non-default values are required.
         var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
         phase.setId(UUID.randomUUID());
-        if (rs != null) phase.setRaceScoring(rs);
-        if (ms != null) phase.setMatchScoring(ms);
+		if (rs != null) {
+			phase.setRaceScoring(rs);
+		}
+		if (ms != null) {
+			phase.setMatchScoring(ms);
+		}
         return phase;
     }
 
@@ -80,8 +72,12 @@ public final class PhaseTestFixtures {
         phase.setId(UUID.randomUUID());
         phase.setLabel(label);
         phase.setFormat(SeasonFormat.LEAGUE); // DB-default workaround per         // wire scoring onto the phase so callers can read it back.
-        if (rs != null) phase.setRaceScoring(rs);
-        if (ms != null) phase.setMatchScoring(ms);
+		if (rs != null) {
+			phase.setRaceScoring(rs);
+		}
+		if (ms != null) {
+			phase.setMatchScoring(ms);
+		}
         return phase;
     }
 

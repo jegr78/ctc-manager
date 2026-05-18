@@ -1,24 +1,19 @@
 package org.ctc.domain.service;
 
+import java.util.*;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.Team;
-import org.ctc.domain.repository.DriverRepository;
-import org.ctc.domain.repository.PsnAliasRepository;
-import org.ctc.domain.repository.SeasonDriverRepository;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.repository.*;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -57,6 +52,12 @@ public class DriverService {
     @Transactional(readOnly = true)
     public Driver findById(UUID id) {
         return driverRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Driver", id));
+    }
+
+    @Transactional(readOnly = true)
+    public Driver findDetailById(UUID id) {
+        return driverRepository.findDetailById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Driver", id));
     }
 
@@ -125,7 +126,9 @@ public class DriverService {
         var seen = new HashSet<String>();
 
         for (String alias : aliases) {
-            if (alias == null || alias.isBlank()) continue;
+			if (alias == null || alias.isBlank()) {
+				continue;
+			}
 
             String normalized = alias.trim().toLowerCase();
 

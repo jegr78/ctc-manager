@@ -1,12 +1,5 @@
 package org.ctc.admin.service;
 
-import org.ctc.domain.model.*;
-import org.ctc.domain.repository.PlayoffSeedRepository;
-import org.ctc.domain.repository.SeasonTeamRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -15,6 +8,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.PlayoffSeedRepository;
+import org.ctc.domain.repository.SeasonTeamRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;

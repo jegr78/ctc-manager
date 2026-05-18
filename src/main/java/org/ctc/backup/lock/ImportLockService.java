@@ -1,10 +1,9 @@
 package org.ctc.backup.lock;
 
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Service;
-
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Singleton mutex for the import-execute path — exactly one thread may hold this lock at a time.

@@ -1,10 +1,9 @@
 package org.ctc.backup.security;
 
-import org.ctc.backup.exception.BackupArchiveException;
-import org.ctc.backup.exception.BackupArchiveException.Reason;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.ctc.backup.exception.BackupArchiveException;
+import org.ctc.backup.exception.BackupArchiveException.Reason;
 
 /**
  * Static utility that validates a ZIP-entry name resolves safely inside a base directory.

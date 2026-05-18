@@ -1,0 +1,116 @@
+name: CodeQL SAST
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (java-kotlin)
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          queries: security-extended
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Build for CodeQL
+        run: ./mvnw compile --no-transfer-progress -DskipTests -Dspring.profiles.active=dev
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:java-kotlin"
+
+      - name: Gate on new HIGH/CRITICAL security alerts
+        if: github.event_name != 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+          BASE_REF: ${{ github.base_ref || 'master' }}
+          OWNER_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+
+          fetch_alerts_by_ref() {
+            local ref="$1"
+            gh api -X GET "repos/${OWNER_REPO}/code-scanning/alerts" \
+              -f state=open \
+              -f "ref=refs/heads/${ref}" \
+              --paginate \
+              --jq '
+                .[] | select(
+                  .dismissed_at == null and
+                  (.rule.security_severity_level // "" | IN("high","critical"))
+                ) | "\(.rule.id)|\(.most_recent_instance.location.path)"
+              ' 2>/dev/null | sort -u || true
+          }
+
+          fetch_alerts_by_pr() {
+            local pr="$1"
+            gh api -X GET "repos/${OWNER_REPO}/code-scanning/alerts" \
+              -f state=open \
+              -f "pr=${pr}" \
+              --paginate \
+              --jq '
+                .[] | select(
+                  .dismissed_at == null and
+                  (.rule.security_severity_level // "" | IN("high","critical"))
+                ) | "\(.rule.id)|\(.most_recent_instance.location.path)"
+              ' 2>/dev/null | sort -u || true
+          }
+
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            HEAD_ALERTS=$(fetch_alerts_by_pr "${PR_NUMBER}" || true)
+          else
+            HEAD_ALERTS=$(fetch_alerts_by_ref "${HEAD_REF}" || true)
+          fi
+          BASE_ALERTS=$(fetch_alerts_by_ref "${BASE_REF}" || true)
+
+          if [ -z "${BASE_ALERTS}" ] && [ -z "${HEAD_ALERTS}" ]; then
+            echo "No HIGH/CRITICAL alerts on either ref."
+            exit 0
+          fi
+          if [ -z "${BASE_ALERTS}" ] && [ -n "${HEAD_ALERTS}" ]; then
+            echo "::warning::No prior scan data for base ref=${BASE_REF}; treating all HEAD alerts as net-new."
+          fi
+
+          NEW_ALERTS=$(comm -23 <(echo "${HEAD_ALERTS}") <(echo "${BASE_ALERTS}") || true)
+
+          if [ -n "${NEW_ALERTS}" ]; then
+            echo "::error::New HIGH/CRITICAL CodeQL alerts introduced:"
+            echo "${NEW_ALERTS}"
+            exit 1
+          fi

@@ -1,16 +1,10 @@
 package org.ctc.admin.controller;
 
+import java.util.UUID;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.*;
-import org.ctc.domain.repository.MatchRepository;
-import org.ctc.domain.repository.MatchdayRepository;
-import org.ctc.domain.repository.SeasonPhaseRepository;
-import org.ctc.domain.repository.SeasonRepository;
-import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.repository.*;
 import org.ctc.domain.service.SeasonPhaseService;
-import org.ctc.domain.model.PhaseLayout;
-import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.SeasonFormat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +13,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;

@@ -1,5 +1,11 @@
 package org.ctc.admin.service;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.PlayoffSeedRepository;
@@ -10,12 +16,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -42,20 +42,26 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 	public String generateLineup(Race race) throws IOException {
 		var homeTeam = race.getHomeTeam();
 		var awayTeam = race.getAwayTeam();
-		if (homeTeam == null || awayTeam == null) throw new IllegalStateException("Race has no teams assigned");
+		if (homeTeam == null || awayTeam == null) {
+			throw new IllegalStateException("Race has no teams assigned");
+		}
 
 		var season = race.getMatchday().getSeason();
 
 		var lineups = raceLineupRepository.findByRaceId(race.getId());
-		if (lineups.isEmpty()) throw new IllegalStateException("No lineup entries for this race");
+		if (lineups.isEmpty()) {
+			throw new IllegalStateException("No lineup entries for this race");
+		}
 		var pairings = buildPairings(lineups, homeTeam, awayTeam);
 
 		String homeCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), homeTeam.getShortName()));
 		String awayCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), awayTeam.getShortName()));
-		if (homeCardBase64 == null)
+		if (homeCardBase64 == null) {
 			throw new IllegalStateException("Team card not found for " + homeTeam.getShortName());
-		if (awayCardBase64 == null)
+		}
+		if (awayCardBase64 == null) {
 			throw new IllegalStateException("Team card not found for " + awayTeam.getShortName());
+		}
 
 		int homePosition = 0;
 		int awayPosition = 0;
@@ -73,8 +79,12 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 					phase.getId(),
 					group != null ? group.getId() : null);
 			for (int i = 0; i < standings.size(); i++) {
-				if (standings.get(i).getTeam().getId().equals(homeTeam.getId())) homePosition = i + 1;
-				if (standings.get(i).getTeam().getId().equals(awayTeam.getId())) awayPosition = i + 1;
+				if (standings.get(i).getTeam().getId().equals(homeTeam.getId())) {
+					homePosition = i + 1;
+				}
+				if (standings.get(i).getTeam().getId().equals(awayTeam.getId())) {
+					awayPosition = i + 1;
+				}
 			}
 		}
 
@@ -134,7 +144,9 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 	}
 
 	private boolean isTeamOrSubTeam(Team team, Team parentOrSelf) {
-		if (team.getId().equals(parentOrSelf.getId())) return true;
+		if (team.getId().equals(parentOrSelf.getId())) {
+			return true;
+		}
 		return team.getParentTeam() != null && team.getParentTeam().getId().equals(parentOrSelf.getId());
 	}
 
@@ -158,7 +170,7 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 	public String loadDefaultTemplate() throws IOException {
 		var resource = new ClassPathResource(DEFAULT_TEMPLATE);
 		try (var is = resource.getInputStream()) {
-			return new String(is.readAllBytes());
+			return new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
 	}
 

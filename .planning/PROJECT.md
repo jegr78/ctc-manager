@@ -8,9 +8,11 @@ Gran Turismo Racing League Management application (Spring Boot 4 / Thymeleaf / M
 
 Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## Current State (after v1.10 shipped 2026-05-16)
+## Current State (after v1.11 shipped 2026-05-18)
 
-- **Codebase:** ~17k LOC Java (Prod) + ~25k LOC Java (Tests); 1652 Surefire unit + 231 Failsafe IT + 36 Playwright E2E; JaCoCo line coverage **87.80 %** (gate 82 %, comfort buffer 5.80 pp)
+- **Codebase:** ~27k LOC Java (Prod) + ~48k LOC Java (Tests); **1675 tests passing** (Surefire unit + Failsafe IT + Playwright E2E combined); JaCoCo line coverage **88.88 %** (gate 82 %, comfort buffer 6.88 pp, +1.08 pp vs v1.10)
+- **Gates:** SpotBugs + find-sec-bugs blocking (`<goal>check</goal>` verify-bound, 0 BugInstance) · CodeQL SAST blocking on push/PR/weekly-cron (gate-step exits 1 on new HIGH/CRITICAL) · OpenRewrite developer-invoked (`-Prewrite` profile, not in CI) · Renovate active (Mend Free Community plan, patch automerge with branch-protection enforcement) · Dockerfile noble-pin guard CI job · master branch protection: 3 required status checks
+- **Codebase (pre-v1.11 numbers, for delta reference):** ~17k LOC Java (Prod) + ~25k LOC Java (Tests); 1652 Surefire + 231 Failsafe + 36 Playwright E2E; JaCoCo 87.80 %
 - **Tech Stack:** Spring Boot 4.0.6, Java 25, MariaDB 11 / H2, Thymeleaf 3.1.5 (pinned), Playwright 1.59.0, Lombok 1.18.46 (JEP 498 `--sun-misc-unsafe-memory-access=allow`), Guava 33.4.8-jre (override for `AbstractFuture` Unsafe warning)
 - **Security:** HTTP Basic Auth (prod/docker), SSRF hostname blocklist, path traversal defense, CSRF tokens on AJAX POSTs + every backup POST endpoint, SpEL/OGNL injection validation, Content-Disposition sanitization, MatchdayForm DTO (mass assignment protection), ZIP-Slip + ZipBomb defenses on backup import (50 MB/entry, 500 MB total, 50.000 entries cap, `startsWith(uploadDir.toRealPath())` check)
 - **Architecture:** Clean 3-tier (Controller → Service → Repository), no God Services, centralized exception handling, domain services fully decoupled from admin layer, RaceLineup as source of truth for driver-team assignment, sitegen decomposed into 5 page-generator beans + SiteSlugger + TemplateWriter, dedicated `org.ctc.backup.*` package (controller + service + io + dto + audit + lock + event + restore + schema + serialization 24 MixIns + 24 EntityRestorers)
@@ -21,25 +23,9 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - **Admin Features:** `/admin/backup` page with streamed ZIP export (CSRF-protected `POST /admin/backup/export`, `StreamingResponseBody`, ISO-instant filename) + manifest-first preview + replace-all import (`@Transactional` wipe + `JdbcTemplate.batchUpdate` restore bypassing `AuditingEntityListener` + post-commit upload-tree stage-and-rename); concurrent-import `ReentrantLock` + persistent yellow read-only banner + `ImportLockedWriteRejector` HandlerInterceptor + synchronous auto-backup-before-import safety net; 24h recovery retention at `data/.import-backups/<ts>/`
 - **Docker / CI:** Both Dockerfile stages pinned to `eclipse-temurin:25-{jdk,jre}-noble` (Playwright 1.59.0 compatibility); `dockerfile-noble-pin-guard` CI job (whitelist-on-suffix); full `docker build .` on every PR + push to master; ci.yml concurrency block + `--no-transfer-progress`; Surefire `forkCount=2C` + Failsafe default-it `forkCount=1C` + `excludedGroups=flaky` quarantine
 
-## Current Milestone
+## Next Milestone: TBD
 
-(None — v1.10 shipped 2026-05-16. Next milestone definition via `/gsd-new-milestone`. Carried over candidates tracked in REQUIREMENTS.md "Future Requirements" and ROADMAP.md Phase 999.1–999.4 backlog: OpenRewrite, Clean-Code enforcement, Renovate, SAST.)
-
-**Carried over from v1.10 deferred (candidates für nachgelagerte v1.11+ Milestones):**
-
-- 12 REVIEW.md Info/Warning items from Phase 75 (backup-cleanup mini-phase)
-- D-06 wallclock-reduction debt (achieved 16.85 %, target ≥ 30 %; requires architectural test-restructuring — Spring-context-per-fork is structural cost)
-- Driver-detail Season-Assignment chip ordering (cosmetic; explicit `ORDER BY year` on `Driver.seasonAssignments`)
-- `DevDataSeeder` `@Profile` widening for live-MariaDB-UAT bootstrap on `local,demo`
-- Nyquist `*-VALIDATION.md` draft → approved for 6 phases + creation for phases 71 + 78
-- Wiki QUAL-05 image render verification post-merge (self-resolves on PR merge to master)
-- PLAT-CI-02 release-workflow run on master observation (by-design post-merge)
-
-**Carried over from v1.9 deferred (still candidates for v1.11+):**
-
-- Per-group matchday generation UI affordance (`SeasonController.generateMatchdays:251` Rule-3 deviation)
-- `StandingsController.java:139` lazy collection style cleanup
-- UAT-02 (legacy season visual smoke against real pre-V4 production data) on next deploy
+v1.11 shipped 2026-05-18. Next milestone scope to be defined via `/gsd:new-milestone`. Pre-loaded v1.12 carry-forwards in `### Active` below.
 
 ## Requirements
 
@@ -159,9 +145,40 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ JaCoCo line coverage 87.80 % (gate 82 %, v1.9 baseline 87.02 %, +0.78 pp despite +24 MixIns / +24 EntityRestorers / +15 backup-service classes) — Phase 79
 - ✓ TESTING.md "Test Invocation Discipline" section, plan-SUMMARY frontmatter normalized for phases 56/57/62/64 — Phase 79
 
+### Validated (v1.11)
+
+- ✓ OpenRewrite developer-invoked refactoring tool wired (`-Prewrite` profile, `rewrite-spring:6.30.4` + `rewrite-migrate-java:3.34.1` + `rewrite-static-analysis:2.20.0` on plugin classpath, `rewrite.yml` activates `org.openrewrite.staticanalysis.CommonStaticAnalysis` composite, documentary `UpgradeSpringBoot_4_0` tripwire) — Phase 80 (REWR-01..06)
+- ✓ One-shot `CommonStaticAnalysis` cleanup applied: 380 files refactored, +0.33 pp JaCoCo (88.13 %), 1 file 4-line revert per D-08 fallback (`RaceService.MethodReferences` regression) — Phase 80 (REWR-02, REWR-05)
+- ✓ SpotBugs 4.9.8.3 + find-sec-bugs 1.14.0 blocking gate (`<goal>check</goal>`, `<effort>Max</effort>`, verify-bound) with `lombok.config` (`addLombokGeneratedAnnotation` + `addSuppressFBWarnings`) suppressing Lombok-generated false positives — Phase 81 (STAT-01..03)
+- ✓ `config/spotbugs-exclude.xml` with rationale comments on every `<Match>` (D-08 layer 2 architectural filter extended to all service/DTO/record packages; 220 baseline findings triaged to 0; 10 DM_DEFAULT_ENCODING fixed with `StandardCharsets.UTF_8`; STAT-06 throwaway-branch deliberate-violation `NP_ALWAYS_NULL` proved gate blocks on HIGH) — Phase 81 (STAT-04..07)
+- ✓ Backup wire-contract guard tests: `BackupSchemaGuardTest` (SCHEMA_VERSION + EXPORT_ORDER size), `BackupRestoreZipOpenCountIT` (single-pass ZIP read), `BackupRoundTripIT` extended to 24-entity row-count parity on H2 + MariaDB — Phase 82 (BACK-01, BACK-03..05)
+- ✓ 12 Phase-75 REVIEW.md items resolved with atomic per-item commits + `82-BACKLOG-AUDIT.md` ledger; WR-01 `BackupExecutedByResolver` bean extracted; profile-isolated `import-backups-dir` per `data/${spring.profiles.active}/import-backups` — Phase 82 (BACK-02)
+- ✓ Driver-detail Season-Assignment chip ordering enforced via JPQL `ORDER BY s.year ASC, s.number ASC` in `DriverRepository#findDetailById`; `DriverRepositoryOrderIT` + `DriverDetailSmokeE2ETest` — Phase 83 (QUAL-01)
+- ✓ `DevDataSeeder` + `TestDataService` widened to `@Profile({"dev", "local"})` for live-MariaDB UAT bootstrap; `DemoDataSeeder` unchanged at `@Profile("demo")` — Phase 83 (QUAL-02)
+- ✓ Per-group matchday generation UI affordance (`SeasonController.generate` passes `form.getGroupId()`; template `th:if="${phase.layout.name() == 'GROUPS'}"` guard); `MatchdayGeneratorGroupsE2ETest` — Phase 83 (QUAL-03)
+- ✓ `StandingsView` record DTO + `StandingsViewService` (`@Transactional(readOnly = true)`) replace lazy-collection access in `StandingsController`; 9 dedicated Mockito unit tests — Phase 83 (QUAL-04)
+- ✓ `docs/uat/UAT-02-legacy-season-smoke.md` operator procedure + STATE.md result-slot for pre-V4-data post-deploy verification — Phase 83 (QUAL-05; live execution post-v1.11-deploy)
+- ✓ Mend Renovate GitHub App installed (single-repo scope, Free Community plan, Interactive mode), `renovate.json` with safety packageRules: Guava `-jre` allowedVersions, Thymeleaf `enabled: false` (CVE-2026-40478 pin) + secondary vulnerability-override, `config:recommended` LTS preset inheritance, 4 group names (Spring Boot, Spring Security, Google API clients, Testcontainers), eclipse-temurin `-noble` regex with Adoptium underscore-build support, patch automerge with `automergeType: "pr"` — Phase 84 (DEPS-01..07)
+- ✓ Synthetic Dockerfile-bump PR #126 exercises `dockerfile-noble-pin-guard` end-to-end (`[noble-pin-guard] OK`); `.github/dependabot.yml` removed in same atomic commit as `renovate.json` introduction (D-03 T-5 dual-bot mitigation) — Phase 84 (DEPS-08)
+- ✓ CodeQL SAST blocking gate (`.github/workflows/codeql.yml` on push/pull_request/schedule/workflow_dispatch, `java-kotlin` with `security-extended`, inline-bash SARIF-diff gate-step with PR-context vs branch-context query split fix, exit 1 + `::error::` annotation on new HIGH/CRITICAL) — Phase 85 (SAST-01..03, SAST-06)
+- ✓ 3-layer FP suppression invariant: `.github/codeql/codeql-config.yml` `query-filters` (SSRF/ZIP-Slip/path-injection) + `// CodeQL FP: <rule-id>` source markers + `docs/security/sast-acceptance.md` per-finding table; BCrypt-N/A documented as D-05 tracked deviation (no `PasswordEncoder` bean, httpBasic auth path) — Phase 85 (SAST-04, SAST-05)
+- ✓ Test-wallclock baseline established: `ContextLoadCountListener` instruments unique Spring context boots; 3 phase-repository ITs converted from `@SpringBootTest` to `@DataJpaTest`; 8 `@DirtiesContext` removed (sitegen cluster fix) + surgical per-method retention on latch-dependent backup ITs — Phase 86 (PERF-01..03)
+- ✓ PERF-04 OR-branch verdict: target ≤ 7m 50s MISSED (CI median 23:00 ≫ target); architectural blocker (Spring-context-per-fork structural cost) documented in `docs/test-performance.md § v1.12 Forward Path` with 3 prioritized levers (per-fork backup-staging-dir, shared `@ContextConfiguration`, Testcontainers reuse); tracked as `PERF-FUTURE-01` for v1.12 — Phase 86 (PERF-04)
+- ✓ CI 5-run PR-branch median 23:00 captured per D-17 trigger-equivalence (5 `workflow_dispatch` runs on milestone branch, drop min+max, variance 7.5 % within D-10 20 % tolerance) — Phase 86 (PERF-05)
+- ✓ v1.10 Nyquist VALIDATION debt closed retroactively: 8 v1.10 phases (71-76, 78-79) `status: approved` + `nyquist_compliant: true`; 6 gap-fill tests landed atomically across 4 plans (5 new test files, 0 impl bugs surfaced); v1.10-MILESTONE-AUDIT scoreboard `partial 1/6/2` → `compliant 9/0/0` — Phase 87 (VAL-01..04)
+- ✓ v1.11 inline Nyquist closure (post-Phase-87 audit, in-milestone): 6 v1.11 phases (81-86) retroactively approved + Phase-86 retroactive `86-VERIFICATION.md` created; v1.11 scoreboard `compliant 8/0/0` — Option A inline pattern mirrors v1.10 → Phase 87 cross-milestone pattern within a single milestone
+- ✓ CI Playwright fork-channel corruption fix: `actions/cache@v4` for `~/.cache/ms-playwright` + pre-install all 3 default browsers before Surefire (~360 MiB cache footprint, ~30 s cold-cache once per key bump); eliminates `Playwright.create()` mid-Surefire auto-download corrupting fork-channel stdout — Phase 86 follow-up (`5cc76ab9` + `3590b3a7`)
+- ✓ T-2 master branch protection active: `required_status_checks.contexts = [build-and-test, dockerfile-noble-pin-guard, docker-build]`, `strict: true`, `enforce_admins: false`, force-pushes/deletions disabled — Phase 84 follow-up (operator action 2026-05-18)
+
 ### Active
 
-(None — awaiting next milestone definition via `/gsd-new-milestone`.)
+v1.12 candidates (after v1.11 ships):
+
+- **Driver-Import gap-closure** (carries 2 deferred debug sessions from 2026-05-08):
+  - `shortname-resolver-picks-parent-without-phaseteam` — data-correctness bug (resolver picks parent over sub-team-with-PhaseTeam in target season); season-aware algorithm documented in `.planning/debug/deferred/`
+  - `group-warnings-for-non-groups-seasons` — UI-noise bug (per-row "⚠ No group" + tab-level warnings fire for non-GROUPS layouts); root cause + files_to_change documented in `.planning/debug/deferred/`
+- **PERF-FUTURE-01** — split `src/test/java/` into separate Maven modules (carry-forward from v1.11 PERF-04 OR-branch; 3-lever forward path documented in `docs/test-performance.md § v1.12 Forward Path`)
+- Items added by `/gsd:new-milestone` after v1.11 close.
 
 ### Out of Scope
 
@@ -217,6 +234,18 @@ Architectural Consistency: All controllers delegate to services, exception handl
 | Lombok 1.18.46 + JEP 498 `--sun-misc-unsafe-memory-access=allow` (Phase 68) | Java 25 emits terminally-deprecated warnings for `lombok.permit.Permit`'s `sun.misc.Unsafe` calls; Lombok 1.18.46 + the JEP 498 flag silence the warnings without forcing a Java downgrade | ✓ v1.9 |
 | Guava pinned to 33.4.8-jre (`<guava.version>` override) | Transitive Guava 33.1.0-jre from `google-api-client` emitted `AbstractFuture$UnsafeAtomicHelper` Unsafe warning on Java 25; 33.4.x switches to `VarHandle` for Java 9+ | ✓ v1.9 |
 | `data_import_audit` permanently out of export scope (Phase 72 D-15) | Audit log is operational metadata about migrations, not league data — survives every import for traceability; enforced structurally via `BackupSchema` package-name filter `org.ctc.domain.model.*` (D-06), so any entity under `org.ctc.backup.*` is excluded with no opt-in / marker / developer memory required | ✓ v1.10 |
+| OpenRewrite stays developer-invoked, not CI-bound (Phase 80 D-01) | Plugin bound to `verify` lifecycle can silently mutate source files in CI; profile-scoped `-Prewrite` makes refactoring an explicit operator action and prevents accidental upgrades from sneaking into PRs | ✓ v1.11 |
+| `CommonStaticAnalysis` composite + `UpgradeSpringBoot_4_0` documentary tripwire only (Phase 80 D-04, D-05) | Codebase already on Boot 4.0.6; activating Boot-4-migration recipes would regress the modular starter decomposition. Comment-only tripwire in `rewrite.yml` acts as self-enforcing reminder since `rewrite-spring` is on plugin classpath and would resolve the recipe if added back | ✓ v1.11 |
+| D-08 layer 2 SpotBugs filter extended to all service/DTO/record packages (Phase 81) | Runtime baseline showed 197 of 220 findings (89.5 %) are the same `EI_EXPOSE_REP*` false-positive shape on Lombok-generated record/DTO classes across `org.ctc.{domain,admin,backup,dataimport,gt7sync,sitegen}.*` — architectural-filter expansion structurally identical to original D-08 rationale, alternative was per-class `@SuppressFBWarnings` flood | ✓ v1.11 |
+| Mend "Renovate Only" Free Community plan, single-repo install (Phase 84 D-02, T-1 mitigation) | Mend Application Security commercial features unnecessary — SpotBugs+find-sec-bugs (Phase 81) + CodeQL (Phase 85) cover SAST/SCA. Single-repo scope minimizes blast radius of third-party SaaS write access | ✓ v1.11 |
+| Default CodeQL Setup disabled to allow advanced workflow (Phase 85) | `code-scanning/default-setup` and advanced `codeql.yml` are mutually exclusive per GitHub. Trade-off: javascript/typescript/actions auto-scanning lost (java-kotlin only via Phase 85 workflow); future phase may add matrix-strategy if needed | ✓ v1.11 |
+| 3-layer FP suppression invariant: codeql-config-exclude + source-marker + sast-acceptance-row (Phase 85 D-19) | Every CodeQL false-positive requires all three layers (Update-on-Triage discipline). Single source-of-truth checking via `grep` across the three files catches drift between machine-readable filter and human-readable rationale | ✓ v1.11 |
+| Driver-detail chip order via JPQL `ORDER BY` not `@OrderBy` (Phase 83 QUAL-01) | `@OrderBy` on `Driver.seasonAssignments` collection triggers OSIV lazy-init at template render time; explicit `LEFT JOIN FETCH ... ORDER BY` in `findDetailById` resolves in the controller-call boundary | ✓ v1.11 |
+| `StandingsViewService` extraction + `StandingsView` record DTO (Phase 83 QUAL-04) | Controller's lazy collection access (`getGroups()` traversal) was OSIV-dependent and untestable in unit slice; service-layer extraction with `@Transactional(readOnly = true)` boundary and 9 dedicated Mockito tests covers all 5 resolution branches | ✓ v1.11 |
+| PERF-04 accepted as OR-branch (Phase 86) | ≥30 % wallclock target MISSED (CI median 23:00 vs target ≤7m 50s); architectural blocker — Spring-context-per-fork structural cost cannot be amortized without test-module split. 3-lever forward path documented in `docs/test-performance.md`, tracked as PERF-FUTURE-01 for v1.12. Forking further would multiply not amortize | ✓ v1.11 (OR-branch) |
+| PR-branch CI harvest semantically equivalent to post-merge master (Phase 86 D-17) | `ci.yml` runs identical steps for `pull_request`, `push to master`, and `workflow_dispatch` triggers; Maven step timing independent of trigger event. Allowed Phase 86 to close inside the same milestone PR (#122) without an orphan post-merge `docs(86):` commit on master | ✓ v1.11 |
+| In-milestone Nyquist closure (v1.11 Option A) mirrors cross-milestone Phase-87 pattern (v1.10) | After Phase 87 closed v1.10 Nyquist debt, the milestone audit surfaced the same draft VALIDATION pattern in v1.11 itself. Resolution path: 6 retroactive `/gsd:validate-phase` runs + 1 retroactive 86-VERIFICATION.md inline (same morning), avoiding a v1.12 Phase-88 carry-forward. Closing pattern: precedent for future milestones — if Nyquist debt accumulates during execution, prefer inline closure post-audit over cross-milestone closure phase | ✓ v1.11 |
+| Playwright fork-channel corruption fix: pre-install all 3 default browsers + actions/cache@v4 (CI follow-up) | `Playwright.create()` validates all default browsers (Chromium + Firefox + WebKit) on first use, not just `chromium()`. Mid-Surefire auto-download corrupts fork-channel stdout → Maven exit 1, 0 failing tests. Cache footprint (~360 MiB) and 30 s cold-install acceptable for stable forks | ✓ v1.11 |
 
 ### Backup Wire Contract (v1.10)
 
@@ -251,4 +280,4 @@ The runtime topo-sort returns 24 `EntityRef` instances (CONTEXT.md originally sa
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-16 — v1.10 milestone shipped: Spring Boot 4.0.6 Upgrade & Data Export/Import, all 9 phases (71-79) verified, **39/39 requirements satisfied**, 1652 Surefire + 231 Failsafe + 36 Playwright E2E tests green, JaCoCo line coverage 87.80 % (gate 82 %, +0.78 pp vs v1.9 baseline), full export → wipe → import round-trip on H2 + MariaDB (`BackupRoundTripIT`), live 75-HUMAN-UAT 10/10 PASS (Saison 2023 fixture, profile-deviation documented). Audit verdict: passed. Final-gate `./mvnw verify -Pe2e` BUILD SUCCESS, Maven total 11m 11s.*
+*Last updated: 2026-05-18 — v1.11 milestone shipped: Tooling Infrastructure & Tech-Debt Sweep. All 8 phases approved + Nyquist-compliant; 46/46 requirements satisfied; CI run `26033853591` SUCCESS (1675 tests, JaCoCo 88.88 %, SpotBugs 0, E2E 23:33 ≤ 24:09 D-06 ceiling). Promoted Phase 999.1–999.4 backlog (OpenRewrite + SpotBugs/find-sec-bugs + Renovate + CodeQL SAST) into the active pipeline; cleared v1.10/v1.9 carried-over tech debt (Phase 75 REVIEW.md items, polish sweep, Nyquist VALIDATION closure); test-wallclock baseline 23:00 CI median established with v1.12 forward-path documented (OR-branch). 2 v1.12 carry-forwards: driver-import gap-closure (2 deferred debug sessions) + PERF-FUTURE-01 test-module split. Branch: `gsd/v1.11-tooling-and-cleanup`. Next: `/gsd:new-milestone`.*

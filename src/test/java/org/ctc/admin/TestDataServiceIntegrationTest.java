@@ -1,18 +1,10 @@
 package org.ctc.admin;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.sql.DataSource;
-import org.ctc.domain.model.PhaseLayout;
-import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonFormat;
-import org.ctc.domain.model.SeasonPhaseGroup;
-import org.ctc.domain.repository.MatchdayRepository;
-import org.ctc.domain.repository.MatchRepository;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.RaceRepository;
-import org.ctc.domain.repository.RaceResultRepository;
-import org.ctc.domain.repository.SeasonPhaseRepository;
-import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.*;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -20,25 +12,14 @@ import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
-// Phase 79 Wave 1 fix: matches sitegen-test pattern (Flyway clean+migrate+seed in @BeforeAll
-// + @DirtiesContext) to defend against shared H2 (DB_CLOSE_DELAY=-1) state left by preceding
-// @DirtiesContext sitegen tests under random Surefire orderings (e.g. seed=1234).
-// @Transactional remains for lazy-loading support inside test methods (Season.getPhases(),
-// Season.getSeasonTeams(), Race.getMatchday() etc.) — @BeforeAll runs outside any test
-// transaction, so its commit is visible to all subsequent @Test methods.
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext
 @Transactional
 class TestDataServiceIntegrationTest {
 
@@ -150,7 +131,7 @@ class TestDataServiceIntegrationTest {
 		var season = findSeason(2023, 1);
 		// then — at least one sub-team present in the consolidated roster
 		var teams = season.getSeasonTeams().stream()
-				.map(st -> st.getTeam()).toList();
+				.map(SeasonTeam::getTeam).toList();
 		assertThat(teams).anyMatch(t -> t.getParentTeam() != null);
 	}
 
@@ -222,7 +203,7 @@ class TestDataServiceIntegrationTest {
 		var sortIndices = matchdayRepository.findAll().stream()
 				.filter(md -> md.getSeason().getId().equals(season.getId()))
 				.filter(md -> md.getLabel().contains("Matchday"))
-				.map(md -> md.getSortIndex())
+				.map(Matchday::getSortIndex)
 				.sorted()
 				.toList();
 		// then — exactly 6 distinct values [1, 2, 3, 4, 5, 6]
@@ -236,7 +217,7 @@ class TestDataServiceIntegrationTest {
 		var seedMatchdayIds = matchdayRepository.findAll().stream()
 				.filter(md -> md.getSeason().getId().equals(season.getId()))
 				.filter(md -> md.getLabel().matches("Matchday \\d+"))
-				.map(md -> md.getId())
+				.map(Matchday::getId)
 				.collect(Collectors.toSet());
 		var seasonRaces = raceRepository.findAll().stream()
 				.filter(r -> seedMatchdayIds.contains(r.getMatchday().getId()))
@@ -257,7 +238,7 @@ class TestDataServiceIntegrationTest {
 		// given
 		var devSeasonIds = seasonRepository.findAll().stream()
 				.filter(s -> s.getNumber() < 90) // exclude test seasons
-				.map(s -> s.getId())
+				.map(Season::getId)
 				.collect(Collectors.toSet());
 
 		// when
@@ -275,12 +256,12 @@ class TestDataServiceIntegrationTest {
 		// given — filter for seed-created matchdays only (label "Matchday N" or group-prefixed)
 		var devSeasonIds = seasonRepository.findAll().stream()
 				.filter(s -> s.getNumber() < 90) // exclude test seasons
-				.map(s -> s.getId())
+				.map(Season::getId)
 				.collect(Collectors.toSet());
 		var seedMatchdayIds = matchdayRepository.findAll().stream()
 				.filter(md -> devSeasonIds.contains(md.getSeason().getId()))
 				.filter(md -> md.getLabel().contains("Matchday"))
-				.map(md -> md.getId())
+				.map(Matchday::getId)
 				.collect(Collectors.toSet());
 
 		// when

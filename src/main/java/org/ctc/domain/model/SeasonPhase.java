@@ -1,13 +1,12 @@
 package org.ctc.domain.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-
-import java.time.LocalDate;
-import java.util.*;
 
 @Entity
 @Table(name = "season_phases")

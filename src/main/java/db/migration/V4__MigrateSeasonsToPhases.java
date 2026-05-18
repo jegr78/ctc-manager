@@ -1,5 +1,11 @@
 package db.migration;
 
+import java.nio.ByteBuffer;
+import java.sql.Connection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.flywaydb.core.api.FlywayException;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
@@ -7,13 +13,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.SingleConnectionDataSource;
-
-import java.nio.ByteBuffer;
-import java.sql.Connection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * V4 Flyway Java migration: backfills existing production data into the Phase schema introduced
@@ -235,13 +234,19 @@ public class V4__MigrateSeasonsToPhases extends BaseJavaMigration {
      * @throws IllegalArgumentException if the type cannot be converted
      */
     private static UUID toUUID(Object value) {
-        if (value == null) return null;
-        if (value instanceof UUID u) return u;
+		if (value == null) {
+			return null;
+		}
+		if (value instanceof UUID u) {
+			return u;
+		}
         if (value instanceof byte[] b) {
             ByteBuffer bb = ByteBuffer.wrap(b);
             return new UUID(bb.getLong(), bb.getLong());
         }
-        if (value instanceof String s) return UUID.fromString(s);
+		if (value instanceof String s) {
+			return UUID.fromString(s);
+		}
         throw new IllegalArgumentException("Cannot convert " + value.getClass() + " to UUID");
     }
 }

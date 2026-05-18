@@ -1,5 +1,9 @@
 package org.ctc.admin.service;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.UUID;
 import org.ctc.admin.dto.RankedTeamData;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonTeam;
@@ -12,11 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;

@@ -1,5 +1,46 @@
 # Milestones
 
+## v1.11 Tooling Infrastructure & Tech-Debt Sweep (Shipped: 2026-05-18)
+
+**Phases completed:** 8 phases (80-87), 46 plans, 46/46 requirements satisfied
+**Diff:** +81 335 / −3 165 across 718 files (216 commits in milestone range)
+**Tests:** 1675 tests passing (Surefire + Failsafe + Playwright E2E); JaCoCo line coverage 88.88 % (gate 82 %, v1.10 baseline 87.80 %, +1.08 pp)
+**Timeline:** 2 days (2026-05-16 → 2026-05-18)
+**Branch:** `gsd/v1.11-tooling-and-cleanup` (PR #122)
+**Final-gate CI:** Run [26033853591](https://github.com/jegr78/ctc-manager/actions/runs/26033853591) @ SHA `3590b3a7` SUCCESS — E2E step 23:33 ≤ 24:09 D-06 ceiling, SpotBugs 0 BugInstance, no Surefire fork-channel corruption
+**Audit verdict:** passed (`v1.11-MILESTONE-AUDIT.md`); Nyquist scoreboard compliant 8/0/0
+
+**Key accomplishments:**
+
+- OpenRewrite developer-invoked refactoring tool wired (`-Prewrite` profile, `rewrite-spring:6.30.4` + `rewrite-migrate-java:3.34.1` + `rewrite-static-analysis:2.20.0` on plugin classpath, `rewrite.yml` activates `CommonStaticAnalysis` composite with `UpgradeSpringBoot_4_0` documentary tripwire); one-shot cleanup applied to 380 files with D-08 Lombok-triage fallback on 1 file (4-line revert for `RaceService.MethodReferences` regression); JaCoCo +0.33 pp (REWR-01..06)
+- SpotBugs 4.9.8.3 + find-sec-bugs 1.14.0 blocking gate (`<goal>check</goal>` verify-bound, `<effort>Max</effort>`, 144 Spring-Security-aware patterns); `lombok.config` (`addLombokGeneratedAnnotation` + `addSuppressFBWarnings`) suppresses Lombok false positives; `config/spotbugs-exclude.xml` with D-08 layer 2 architectural filter extended to all service/DTO/record packages; 220 baseline findings triaged to 0 (197 EI_EXPOSE_REP* architectural-filter + 10 UTF-8 fixes + 9 NP suppressions + 4 misc fixes); STAT-06 throwaway-branch deliberate `NP_ALWAYS_NULL` proves exit 1 on HIGH (STAT-01..07)
+- Backup cleanup: 12 Phase-75 REVIEW.md Info/Warning items resolved with atomic per-item commits + `82-BACKLOG-AUDIT.md` ledger; `BackupExecutedByResolver` bean extraction (WR-01); profile-isolated `import-backups-dir`; backup wire-contract guard tests (`BackupSchemaGuardTest`, `BackupRestoreZipOpenCountIT`, `BackupRoundTripIT` 24-entity row-count parity on H2 + MariaDB) (BACK-01..05)
+- Quality and Polish sweep: driver-detail chip-order via JPQL `ORDER BY s.year ASC` in `DriverRepository#findDetailById` + repository IT + Playwright smoke; `DevDataSeeder` + `TestDataService` widened to `@Profile({"dev","local"})` for live-MariaDB UAT; per-group matchday-generator UI via `MatchdayGeneratorForm.groupId` + template `th:if="${phase.layout.name() == 'GROUPS'}"` guard + E2E; `StandingsView` record DTO + `StandingsViewService` (`@Transactional(readOnly=true)`) replaces OSIV-lazy controller access with 9 Mockito branch tests; `docs/uat/UAT-02-legacy-season-smoke.md` operator procedure + STATE.md result-slot (QUAL-01..05)
+- Renovate Integration: Mend Renovate GitHub App installed (single-repo scope, Free Community plan, Interactive mode); `renovate.json` safety packageRules — Guava `-jre` allowedVersions regex, Thymeleaf `enabled: false` + secondary vulnerability-override (CVE-2026-40478 pin), `config:recommended` LTS preset inheritance, 4 group names (Spring Boot, Spring Security, Google API clients, Testcontainers), eclipse-temurin `-noble` regex with Adoptium underscore-build support, patch automerge `automergeType: "pr"`; synthetic Dockerfile-bump PR #126 exercises `dockerfile-noble-pin-guard` end-to-end; `.github/dependabot.yml` removed in same atomic commit as `renovate.json` introduction (T-5 dual-bot mitigation) (DEPS-01..08)
+- CodeQL SAST blocking gate (`.github/workflows/codeql.yml` on push/pull_request/schedule/workflow_dispatch, `java-kotlin` with `security-extended`); 3-layer FP suppression invariant — `codeql-config.yml` `query-filters` (SSRF/ZIP-Slip/path-injection) + `// CodeQL FP: <rule-id>` source markers + `docs/security/sast-acceptance.md` per-finding table; BCrypt-N/A documented as D-05 tracked deviation (no `PasswordEncoder` bean, httpBasic auth); SAST-06 throwaway PR #128 surfaced gate-step semantic bug (PR-context vs branch-context alert query split fix via commit `61ccee5f` — the exact failure mode SAST-06 was designed to catch); CodeQL alert #35 dismissed `won't fix` post-verification (SAST-01..06)
+- Test wallclock infrastructure baseline: `ContextLoadCountListener` instruments unique Spring context boots (baseline 81 → post 79 in `docs/test-performance.md`); 3 phase-repository ITs converted from `@SpringBootTest` to `@DataJpaTest` slice; 8 `@DirtiesContext` removed (sitegen cluster fix) + surgical per-method retention on latch-dependent backup-ITs with rationale comments; PERF-04 OR-branch verdict — target ≤7m 50s MISSED (CI median 23:00 ≫ target), architectural blocker documented with 3-lever v1.12 forward path; CI 5-run PR-branch median captured per D-17 trigger-equivalence (PERF-01..05)
+- Phase 87 v1.10 Nyquist VALIDATION closure: 8 v1.10 phases (71-76, 78-79) retroactively brought to `status: approved` + `nyquist_compliant: true` via `/gsd:validate-phase` × 8 against archived v1.10 phase directories restored from git ref `60f5f915^`; 6 gap-fill tests landed atomically across 4 plans (5 new test files, 0 impl bugs surfaced, 0 checkpoint escalations); v1.10-MILESTONE-AUDIT scoreboard `partial 1/6/2` → `compliant 9/0/0` (VAL-01..04)
+- In-milestone v1.11 Nyquist closure (Option A inline pattern): post-Phase-87 audit surfaced v1.11 itself accumulated same Nyquist debt; 6 v1.11 phases (81-86) retroactively approved + retroactive `86-VERIFICATION.md` created + REQUIREMENTS.md/ROADMAP.md bookkeeping flipped; v1.11 scoreboard `compliant 8/0/0`; pattern mirror — v1.10 → Phase 87 cross-milestone → v1.11 in-milestone same-day closure
+- CI Playwright fork-channel corruption fix: `actions/cache@v4` for `~/.cache/ms-playwright` + pre-install all 3 default browsers (Chromium + Firefox + WebKit, ~360 MiB) before Surefire; eliminates `Playwright.create()` mid-Surefire auto-download corrupting fork-channel stdout (commit `5cc76ab9` + `3590b3a7` — diagnosed via dumpstream artifact from broken CI run `26015174076`)
+- T-2 master branch protection activated: `required_status_checks.contexts = [build-and-test, dockerfile-noble-pin-guard, docker-build]`, `strict: true`, `enforce_admins: false`, force-pushes/deletions disabled (operator action 2026-05-18, Phase 84 follow-up)
+
+**Deferred to next milestone (acknowledged at close):**
+
+- Driver-Import gap-closure (2 deferred debug sessions from 2026-05-08, moved to `.planning/debug/deferred/`): `shortname-resolver-picks-parent-without-phaseteam` (data-correctness bug, season-aware algorithm documented) + `group-warnings-for-non-groups-seasons` (UI-noise bug, files_to_change documented)
+- PERF-FUTURE-01: split `src/test/java/` into separate Maven modules (3-lever forward path in `docs/test-performance.md § v1.12 Forward Path` — per-fork backup-staging-dir, shared `@ContextConfiguration`, Testcontainers reuse)
+- QUAL-02 `local`-profile MariaDB manual smoke (amber, operator-driven by Plan 83-02 D-15)
+- QUAL-05 UAT-02 live execution against next production deploy (procedure + STATE.md result-slot in place)
+- Pre-existing Phase-72 IT compile error (`BackupSchemaExclusionIT.java:40` — AssertJ generic inference Java 25), tracked in `80-deferred-items.md` for separate hot-fix plan
+
+**Post-merge self-resolving (not tech debt):**
+
+- v1.11 milestone PR #122 squash-merge to master (carries 217 commits, 718-file diff dominated by Phase 80 OpenRewrite cleanup + Phase 87 v1.10 archive restoration + Phase 86 test-infra refactors)
+- CI release workflow handles tagging post-merge (per `feedback_no_local_git_tags` memory — no local `git tag` on this branch)
+
+Known deferred items at close: see `STATE.md` Deferred Items + `v1.11-MILESTONE-AUDIT.md`
+
+---
+
 ## v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (Shipped: 2026-05-16)
 
 **Phases completed:** 9 phases (71-79), 50 plans, 39/39 requirements satisfied

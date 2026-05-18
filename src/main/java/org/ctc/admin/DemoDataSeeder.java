@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.repository.CarRepository;
 import org.ctc.domain.repository.TrackRepository;
+import org.ctc.gt7sync.Gt7SyncPreview;
 import org.ctc.gt7sync.Gt7SyncService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -36,10 +37,10 @@ public class DemoDataSeeder implements CommandLineRunner {
 		try {
 			var preview = syncService.fetchAndPreview();
 			var allCarIds = preview.cars().stream()
-					.map(c -> c.gt7Id())
+					.map(Gt7SyncPreview.CarEntry::gt7Id)
 					.toList();
 			var allTrackNames = preview.tracks().stream()
-					.map(t -> t.name())
+					.map(Gt7SyncPreview.TrackEntry::name)
 					.toList();
 
 			var result = syncService.executeSync(allCarIds, allTrackNames);

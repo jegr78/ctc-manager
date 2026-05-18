@@ -1,6 +1,8 @@
 package org.ctc.admin.controller;
 
 import jakarta.validation.Valid;
+import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.SeasonPhaseForm;
@@ -22,9 +24,6 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
-import java.util.Map;
-import java.util.UUID;
 
 /**
  * Thin controller for Phase CRUD under {@code /admin/seasons/{seasonId}/phases}.
@@ -149,13 +148,21 @@ public class SeasonPhaseController {
                          Model model) {
         var season = seasonManagementService.findById(seasonId);
         var form = new SeasonPhaseForm();
-        if (phaseType != null) form.setPhaseType(phaseType);
+		if (phaseType != null) {
+			form.setPhaseType(phaseType);
+		}
 
         // Defaults: copy non-identity fields from REGULAR phase
         seasonPhaseService.findByType(seasonId, PhaseType.REGULAR).ifPresent(regular -> {
-            if (form.getFormat() == SeasonFormat.LEAGUE) form.setFormat(regular.getFormat());
-            if (regular.getRaceScoring() != null) form.setRaceScoringId(regular.getRaceScoring().getId());
-            if (regular.getMatchScoring() != null) form.setMatchScoringId(regular.getMatchScoring().getId());
+			if (form.getFormat() == SeasonFormat.LEAGUE) {
+				form.setFormat(regular.getFormat());
+			}
+			if (regular.getRaceScoring() != null) {
+				form.setRaceScoringId(regular.getRaceScoring().getId());
+			}
+			if (regular.getMatchScoring() != null) {
+				form.setMatchScoringId(regular.getMatchScoring().getId());
+			}
             form.setLegs(regular.getLegs());
             form.setEventDurationMinutes(regular.getEventDurationMinutes());
             // dates and totalRounds intentionally NOT copied
@@ -179,8 +186,12 @@ public class SeasonPhaseController {
         form.setPhaseType(phase.getPhaseType());
         form.setLayout(phase.getLayout());
         form.setFormat(phase.getFormat() != null ? phase.getFormat() : SeasonFormat.LEAGUE);
-        if (phase.getRaceScoring() != null) form.setRaceScoringId(phase.getRaceScoring().getId());
-        if (phase.getMatchScoring() != null) form.setMatchScoringId(phase.getMatchScoring().getId());
+		if (phase.getRaceScoring() != null) {
+			form.setRaceScoringId(phase.getRaceScoring().getId());
+		}
+		if (phase.getMatchScoring() != null) {
+			form.setMatchScoringId(phase.getMatchScoring().getId());
+		}
         form.setStartDate(phase.getStartDate());
         form.setEndDate(phase.getEndDate());
         form.setTotalRounds(phase.getTotalRounds());
@@ -294,7 +305,9 @@ public class SeasonPhaseController {
 
     /** Effective label fallback: label field → phaseType default name. */
     private static String effectiveLabel(org.ctc.domain.model.SeasonPhase phase) {
-        if (phase.getLabel() != null && !phase.getLabel().isBlank()) return phase.getLabel();
+		if (phase.getLabel() != null && !phase.getLabel().isBlank()) {
+			return phase.getLabel();
+		}
         return switch (phase.getPhaseType()) {
             case REGULAR -> "Regular Season";
             case PLAYOFF -> "Playoff";

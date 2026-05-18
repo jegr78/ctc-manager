@@ -1,5 +1,10 @@
 package org.ctc.admin.service;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.PowerRankingsGraphicData;
 import org.ctc.admin.dto.PowerRankingsGraphicData.PowerRankingEntry;
@@ -14,11 +19,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.*;
 
 @Slf4j
 @Service
@@ -60,7 +60,9 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 		List<SeasonTeam> filtered = seasonTeamMap.values().stream()
 				.filter(st -> {
 					Team team = st.getTeam();
-					if (!team.hasSubTeams()) return true;
+					if (!team.hasSubTeams()) {
+						return true;
+					}
 					return team.getSubTeams().stream()
 							.noneMatch(sub -> allTeamIds.contains(sub.getId()));
 				})
@@ -101,7 +103,9 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 		for (int i = 0; i < teamIds.size(); i++) {
 			UUID teamId = teamIds.get(i);
 			SeasonTeam st = seasonTeamMap.get(teamId);
-			if (st == null) continue;
+			if (st == null) {
+				continue;
+			}
 
 			Team team = st.getTeam();
 			entries.add(new PowerRankingEntry(
@@ -136,7 +140,9 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 
 	private String encodeLogoBase64(SeasonTeam seasonTeam) {
 		String logoUrl = seasonTeam.getEffectiveLogoUrl();
-		if (logoUrl == null) return null;
+		if (logoUrl == null) {
+			return null;
+		}
 		return encodeCardBase64(logoUrl);
 	}
 
@@ -170,7 +176,7 @@ public class PowerRankingsGraphicService extends AbstractGraphicService implemen
 	public String loadDefaultTemplate() throws IOException {
 		var resource = new ClassPathResource(DEFAULT_TEMPLATE);
 		try (var is = resource.getInputStream()) {
-			return new String(is.readAllBytes());
+			return new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
 	}
 

@@ -10,6 +10,7 @@
 - :white_check_mark: **v1.8 Bulk Driver Import from Google Sheets** — Phases 54-55 (shipped 2026-04-25)
 - :white_check_mark: **v1.9 Season Phases & Groups** — Phases 56-70 (shipped 2026-05-09)
 - :white_check_mark: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-79 (shipped 2026-05-16)
+- :white_check_mark: **v1.11 Tooling Infrastructure & Tech-Debt Sweep** — Phases 80-87 (shipped 2026-05-18)
 
 ## Phases
 
@@ -146,9 +147,21 @@ See: milestones/v1.10-ROADMAP.md for full details
 
 </details>
 
-## Next Milestone
+<details>
+<summary>v1.11 Tooling Infrastructure & Tech-Debt Sweep (Phases 80-87) -- SHIPPED 2026-05-18</summary>
 
-(None — v1.11+ candidates tracked in Backlog below and in `.planning/milestones/v1.10-REQUIREMENTS.md` "Future Requirements" + `.planning/milestones/v1.10-ROADMAP.md` "Issues Deferred" / "Technical Debt Incurred".)
+- [x] Phase 80: OpenRewrite Integration (5/5 plans) -- completed 2026-05-16
+- [x] Phase 81: Static Analysis Gate (SpotBugs + find-sec-bugs) (3/3 plans) -- completed 2026-05-16
+- [x] Phase 82: Backup Cleanup — 12 Phase-75 REVIEW.md items (10/10 plans) -- completed 2026-05-17
+- [x] Phase 83: Quality and Polish Sweep — QUAL-01..05 (6/6 plans) -- completed 2026-05-17
+- [x] Phase 84: Renovate Integration — Mend GitHub App (4/4 plans) -- completed 2026-05-17
+- [x] Phase 85: CodeQL SAST — gate on push/PR/cron (4/4 plans) -- completed 2026-05-17
+- [x] Phase 86: Test Wallclock Reduction — PERF-04 OR-branch verdict, CI baseline 23:00 (6/6 plans) -- completed 2026-05-18
+- [x] Phase 87: Nyquist VALIDATION Closure — 8 v1.10 phases retroactively approved (8/8 plans) -- completed 2026-05-18
+
+See: milestones/v1.11-ROADMAP.md for full details
+
+</details>
 
 ## Progress
 
@@ -162,49 +175,5 @@ See: milestones/v1.10-ROADMAP.md for full details
 | v1.8 Bulk Driver Import | 54-55 | 4 | Complete | 2026-04-25 |
 | v1.9 Season Phases & Groups | 56-70 | ~70 | Complete | 2026-05-09 |
 | v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | 50 | Complete | 2026-05-16 |
+| v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | 46 | Complete | 2026-05-18 |
 
-## Backlog
-
-### Phase 999.1: OpenRewrite Refactoring and Migration Tool Integration (BACKLOG)
-
-**Goal:** [Captured for future planning] Evaluate and integrate OpenRewrite as an automated, AST-based refactoring and migration tool for the CTC Manager codebase. Two complementary tracks the user wants to pursue **together**: (1) **pom.xml-Track** — `rewrite-maven-plugin` in `pom.xml` + checked-in `rewrite.yml` with a curated recipe set (`CommonStaticAnalysis`, `JUnit5BestPractices`, Spring Boot upgrade recipes, Lombok recipes, `UpgradeDependencyVersion`); atomic commit per recipe; respects coverage gate (≥ 82 %) and branch-protection rules; reproducible across CI + local. (2) **Custom-Skill-Track** — a project-local GSD skill (e.g. `gsd-openrewrite-phase` or similar) that wraps the recipe-run-and-commit workflow, parallels existing skills like `gsd-plan-phase`/`gsd-execute-phase`, integrates Trockenlauf → diff-review → atomic-commit-per-recipe → `./mvnw verify` gate. First step before either track: Trockenlauf against a feature branch with `CommonStaticAnalysis` + `JUnit5BestPractices`, review diff, then decide recipe ordering. Stack fit: Spring Boot 4.x, Java 25, Maven, Lombok, JUnit 5, ~1000 tests.
-
-**Requirements:** TBD
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.2: Clean Code Principles Enforcement (BACKLOG)
-
-**Goal:** [Captured for future planning] Establish a systematic, repeatable approach to enforcing Clean Code principles (Robert C. Martin: meaningful names, small functions/SRP, low cyclomatic complexity, expressive code over comments, no dead code, DRY/KISS/YAGNI, command-query separation, error handling at boundaries) across the CTC Manager codebase. Two complementary tracks to explore — analog zu Phase 999.1: (1) **Static-Analysis-Track** — integrate static-analysis tooling into `pom.xml` + `ci.yml` (candidates: Checkstyle + Google Java Style, SpotBugs + FindSecBugs, PMD with Clean-Code ruleset, SonarQube/SonarLint, Error Prone, ArchUnit for architectural rules — z.B. `controller → service → repository` Layer-Constraint aus CLAUDE.md); reports as PR comments analog zum existierenden JaCoCo-Comment-Workflow; sensible thresholds with allowlist for legacy code (no Big-Bang flag-day). (2) **Custom-Skill-Track** — a project-local GSD skill (Arbeitsname `gsd-clean-code-phase` or `gsd-clean-code-review`) that drives the workflow: scan → triage findings by severity → atomic-commit-per-rule-cluster → `./mvnw verify`-Gate; reuses Phase-60 lessons (Schutzwortliste, Branch-Protection, Post-Dispatch-Validation, scope-whitelist). Plays naturally with Phase 999.1 (OpenRewrite) — many Clean-Code findings are auto-fixable via OpenRewrite recipes (`CommonStaticAnalysis`, `RemoveUnusedImports`, `SimplifyBooleanExpression`), so the two phases share a tooling spine. Stack fit: Spring Boot 4.x, Java 25, Maven, Lombok, JUnit 5, ≥ 82 % coverage gate, OSIV + thin-controller + DTO + Schutzwortliste conventions from CLAUDE.md must be preserved.
-
-**Requirements:** TBD
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.3: Renovate Automated Dependency Updates Integration (BACKLOG)
-
-**Goal:** [Captured for future planning] Evaluate Renovate (or alternatives like Dependabot / Scala Steward-style bots) as an automated dependency-update bot for the CTC Manager codebase, and integrate it via two complementary tracks — analog zu Phase 999.1 / 999.2: (1) **Config-Track** — checked-in `renovate.json` / `.github/renovate.json5` in the repo root + GitHub App enablement; sensible defaults for the stack (Java 25 / Maven via `pom.xml`, Spring Boot BOM, Lombok, JUnit 5 + Mockito, Playwright (compile-scope!), Jsoup, Google Sheets/Calendar SDK, Flyway, MariaDB/H2 drivers, Thymeleaf, Docker base images `eclipse-temurin:25-{jdk,jre}-noble` — Phase-78-Pin protection!); groupName/grouping rules (one PR per ecosystem cluster instead of one-per-dependency), schedule (off-hours / weekly batch), `assignees: [jegr78]`, automerge rules for patch-level only when CI green + JaCoCo ≥ 82 % gate holds, `vulnerabilityAlerts` immediate, dashboard issue for visibility. (2) **Custom-Skill-Track** — a project-local GSD skill (Arbeitsname `gsd-renovate-review` or `gsd-deps-review`) that wraps the human-loop: pull current Renovate PRs via `gh pr list --label renovate`, classify by risk (patch/minor/major/security), batch-merge low-risk after `./mvnw verify -Pe2e`, escalate majors into a discuss-phase (e.g. Spring Boot 4.x → 4.y would re-route into a dedicated upgrade phase analog to Phase 71). Querverbindung: synergy with Phase 999.1 (OpenRewrite handles the migration recipes when Renovate proposes a major bump — Renovate raises the PR, OpenRewrite recipe fixes the API breaks, Skill orchestrates the commit cluster) and Phase 999.4 (SAST findings often correlate with vulnerable transitive deps that Renovate would surface). Constraints to preserve: Flyway V1 immutability, Playwright as compile-scope, no breaking URL/endpoint changes, JaCoCo ≥ 82 % gate, Schutzwortliste guardrails — Renovate must not bypass these.
-
-**Requirements:** TBD
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
-
-### Phase 999.4: Security SAST Static Analysis Integration (BACKLOG)
-
-**Goal:** [Captured for future planning] Introduce a systematic Security Static Application Security Testing (SAST) pipeline for the CTC Manager codebase, complementing the existing Spring-Security profile-gating + Mass-Assignment-via-DTO + CSRF posture documented in CLAUDE.md. Two complementary tracks — analog zu Phase 999.1 / 999.2 / 999.3: (1) **Tooling-Track** — integrate SAST tooling into `pom.xml` + `.github/workflows/ci.yml`; candidates: **GitHub CodeQL** (free for public repos, deep dataflow analysis, OWASP Top-10 coverage), **Semgrep** (rule-based, fast, custom rules e.g. "no `style=` on `.btn`" or "no `@ModelAttribute` on JPA entities" — auto-enforce CLAUDE.md architectural principles!), **SpotBugs + FindSecBugs** (Spring-aware security rules), **OWASP Dependency-Check** / **Trivy** for SCA on Maven deps + Docker image scan (catches CVEs in `eclipse-temurin:25-{jdk,jre}-noble`), **Snyk Code** (Spring Boot 4.x rules); SARIF upload to GitHub Code Scanning → findings appear in Security tab + PR annotations analog zum existierenden JaCoCo-Comment-Workflow; baseline-allowlist for existing findings (no Big-Bang flag-day). (2) **Custom-Skill-Track** — a project-local GSD skill (Arbeitsname `gsd-security-review` or `gsd-sast-phase` — to compose with the existing `gsd-secure-phase` which only verifies threat-model mitigations from a phase's PLAN.md threat-model rather than scanning the codebase) that drives the workflow: scan → triage by severity (Critical → fix-now, High → next-phase, Medium → backlog) → atomic-commit-per-CWE-cluster → `./mvnw verify -Pe2e`-Gate; reuses Phase-60 lessons (Schutzwortliste, Branch-Protection, Post-Dispatch-Validation). **Specific high-priority targets** für die Code-Basis: (a) Race-Attachment-Upload-Pfad (Phase 28 hat das schon einmal hard-fixed — SAST würde Regression sofort fangen); (b) Mass-Assignment-Surface (Form-DTO-Pflicht aus CLAUDE.md — Semgrep-Rule erzwingbar); (c) Google-Sheets-Credentials-Handling (`google.sheets.credentials-path` — kein Leak in Logs, kein Commit der `google-credentials.json`); (d) SQL-Injection-Surface in Custom-`@Query`-Repositories; (e) Path-Traversal in `app.upload-dir` + `ctc.site.output-dir`; (f) CSRF-Token-Coverage (Phase 30 hat das fixed — Regression-Guard); (g) Docker-Image-CVEs auf Noble-Base (Trivy als Phase-78-Pin-Companion). Querverbindung: Phase 999.3 (Renovate) liefert die SCA-Lieferseite (transitive Updates); Phase 999.4 liefert die Code-Seite (eigene CVEs/Anti-Patterns); zusammen geschlossener Security-Loop. Constraints: keine breaking URL/endpoint changes, Profile-Gating (`prod`/`docker` only auth) muss erhalten bleiben, OSIV-Side-Effects nicht versehentlich verschärfen.
-
-**Requirements:** TBD
-
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)

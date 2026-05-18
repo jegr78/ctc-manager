@@ -3,21 +3,10 @@ package org.ctc.sitegen;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.ctc.domain.model.Matchday;
-import org.ctc.domain.model.PhaseLayout;
-import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.Race;
-import org.ctc.domain.model.RaceLineup;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonPhase;
-import org.ctc.domain.model.SeasonPhaseGroup;
+import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
@@ -175,7 +164,7 @@ public class MatchdaysPageGenerator {
                                               boolean isLegacyView) {
         var tabs = new ArrayList<PhaseTabView>();
         for (SeasonPhase p : phases) {
-            String label = (p.getLabel() != null && !p.getLabel().isBlank())
+            String label = p.getLabel() != null && !p.getLabel().isBlank()
                     ? p.getLabel()
                     : capitalize(p.getPhaseType().name());
             String href;
@@ -186,7 +175,7 @@ public class MatchdaysPageGenerator {
             } else {
                 href = "matchdays-" + phaseSlug(p) + ".html";
             }
-            boolean active = (p.getPhaseType() == currentPhaseType);
+            boolean active = p.getPhaseType() == currentPhaseType;
             tabs.add(new PhaseTabView(label, href, active, ARIA_CONTROLS_ID));
         }
         return tabs;
@@ -206,12 +195,12 @@ public class MatchdaysPageGenerator {
     private List<GroupSubTabView> buildGroupTabs(SeasonPhase phase, String phaseFileBase,
                                                  String combinedHref, UUID activeGroupId) {
         var tabs = new ArrayList<GroupSubTabView>();
-        boolean combinedActive = (activeGroupId == null);
+        boolean combinedActive = activeGroupId == null;
         tabs.add(new GroupSubTabView("Combined", combinedHref, combinedActive, ARIA_CONTROLS_ID));
         for (SeasonPhaseGroup g : seasonPhaseGroupRepository.findByPhaseIdOrderBySortIndex(phase.getId())) {
             String groupSlug = siteSlugger.slugify(g.getName());
             String href = phaseFileBase + "-group-" + groupSlug + ".html";
-            boolean active = (activeGroupId != null && activeGroupId.equals(g.getId()));
+            boolean active = activeGroupId != null && activeGroupId.equals(g.getId());
             tabs.add(new GroupSubTabView(g.getName(), href, active, ARIA_CONTROLS_ID));
         }
         return tabs;
@@ -225,7 +214,9 @@ public class MatchdaysPageGenerator {
     }
 
     private String capitalize(String input) {
-        if (input == null || input.isEmpty()) return input;
+		if (input == null || input.isEmpty()) {
+			return input;
+		}
         return input.charAt(0) + input.substring(1).toLowerCase(Locale.ENGLISH);
     }
 

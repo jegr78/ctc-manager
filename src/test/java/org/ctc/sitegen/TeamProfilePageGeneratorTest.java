@@ -1,10 +1,5 @@
 package org.ctc.sitegen;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,15 +8,21 @@ import org.ctc.admin.TestDataService;
 import org.flywaydb.core.Flyway;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.ctc.testsupport.SitegenTestDir;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 /**
  * Phase 62 Plan 4 — phase-aware team-profile page tests.
@@ -40,24 +41,25 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext
 class TeamProfilePageGeneratorTest {
 
-    private Path tempDir;
+    static final Path tempDir = SitegenTestDir.create("team-profile");
+
+    @DynamicPropertySource
+    static void siteOutputDir(DynamicPropertyRegistry registry) {
+        registry.add("ctc.site.output-dir", () -> tempDir.toString());
+    }
 
     @Autowired private SiteGeneratorService siteGeneratorService;
-    @Autowired private SiteProperties siteProperties;
     @Autowired private TestDataService testDataService;
     @Autowired private DataSource dataSource;
 
     @MockitoBean private YouTubeScraperService youTubeScraperService;
 
     @BeforeAll
-    void setUp(@TempDir Path injectedTempDir) {
+    void setUp() {
         given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
                 .willReturn("dQw4w9WgXcQ");
-        this.tempDir = injectedTempDir;
-        siteProperties.setOutputDir(tempDir.toString());
 
         // Plan 1 pattern — Flyway clean+migrate guarantees fresh DB regardless of preceding test
         // classes seeding the shared H2 in-memory DB (DB_CLOSE_DELAY=-1 keeps it alive across
@@ -170,7 +172,7 @@ class TeamProfilePageGeneratorTest {
         assertThat(teamProfile).exists();
         Document doc = Jsoup.parse(Files.readString(teamProfile));
         var heading = doc.select("h2.section-title").stream()
-                .filter(h -> h.text().equals("Phase Breakdown"))
+                .filter(h -> "Phase Breakdown".equals(h.text()))
                 .findFirst()
                 .orElse(null);
         assertNotNull(heading,

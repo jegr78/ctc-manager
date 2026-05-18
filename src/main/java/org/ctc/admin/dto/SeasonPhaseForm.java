@@ -1,15 +1,14 @@
 package org.ctc.admin.dto;
 
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDate;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.SeasonFormat;
-
-import java.time.LocalDate;
-import java.util.UUID;
 
 @Getter
 @Setter

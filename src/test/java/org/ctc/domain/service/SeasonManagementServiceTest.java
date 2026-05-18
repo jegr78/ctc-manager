@@ -1,25 +1,22 @@
 package org.ctc.domain.service;
 
+import java.time.LocalDate;
+import java.util.*;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
-import org.springframework.mock.web.MockMultipartFile;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDate;
-import java.util.*;
+import org.springframework.mock.web.MockMultipartFile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -527,7 +524,9 @@ class SeasonManagementServiceTest {
         // given: slim 6-param signature (Phase 60 UI-01 — replaces 14-param save)
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> {
             Season s = inv.getArgument(0);
-            if (s.getId() == null) s.setId(UUID.randomUUID());
+			if (s.getId() == null) {
+				s.setId(UUID.randomUUID());
+			}
             return s;
         });
         // slim save: no REGULAR phase bootstrap needed (bootstrapped separately or already exists)
@@ -680,7 +679,9 @@ class SeasonManagementServiceTest {
         // Add to the matchday's phase + season.phases to wire it through the canonical structure.
         var phase = matchday.getPhase();
         phase.getMatchdays().add(matchday);
-        if (!season.getPhases().contains(phase)) season.getPhases().add(phase);
+		if (!season.getPhases().contains(phase)) {
+			season.getPhases().add(phase);
+		}
 
         when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
 
@@ -903,7 +904,9 @@ class SeasonManagementServiceTest {
         // given — slim save triggers REGULAR phase bootstrap (format=null, layout=LEAGUE per Pitfall 1 Rec a)
         when(seasonRepository.save(any(Season.class))).thenAnswer(inv -> {
             Season s = inv.getArgument(0);
-            if (s.getId() == null) s.setId(UUID.randomUUID());
+			if (s.getId() == null) {
+				s.setId(UUID.randomUUID());
+			}
             return s;
         });
         when(seasonPhaseService.findByType(any(UUID.class), eq(PhaseType.REGULAR)))

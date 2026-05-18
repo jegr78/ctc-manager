@@ -1,5 +1,7 @@
 package org.ctc.sitegen;
 
+import java.util.List;
+import java.util.UUID;
 import org.ctc.domain.model.MatchScoring;
 import org.ctc.domain.model.RaceScoring;
 import org.ctc.domain.model.Season;
@@ -7,25 +9,16 @@ import org.ctc.domain.repository.PlayoffRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.SeasonTeamRepository;
-import org.ctc.domain.service.DriverRankingService;
-import org.ctc.domain.service.PhaseTestFixtures;
-import org.ctc.domain.service.PlayoffBracketViewService;
-import org.ctc.domain.service.SeasonPhaseService;
-import org.ctc.domain.service.StandingsService;
-import org.junit.jupiter.api.Test;
+import org.ctc.domain.service.*;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
-import java.util.UUID;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 /**
  * Mockito-style contract test for {@link SiteGeneratorService} D-23 caller-side update.

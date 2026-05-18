@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import java.util.*;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -8,8 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -261,7 +260,9 @@ class MatchdayGeneratorServiceTest {
 		var homeCounts = new HashMap<UUID, Integer>();
 		var awayCounts = new HashMap<UUID, Integer>();
 		for (var match : allMatches) {
-			if (match.isBye()) continue;
+			if (match.isBye()) {
+				continue;
+			}
 			homeCounts.merge(match.getHomeTeam().getId(), 1, Integer::sum);
 			awayCounts.merge(match.getAwayTeam().getId(), 1, Integer::sum);
 		}

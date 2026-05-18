@@ -1,6 +1,7 @@
 package org.ctc.dataimport;
 
 import jakarta.persistence.EntityManager;
+import java.util.List;
 import org.ctc.TestHelper;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Season;
@@ -17,8 +18,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;

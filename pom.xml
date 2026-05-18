@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.ctc</groupId>
 	<artifactId>ctc-manager</artifactId>
-	<version>1.8.0-SNAPSHOT</version>
+	<version>1.11.0-SNAPSHOT</version>
 	<name>ctc-manager</name>
 	<description>Community Team Cup - Gran Turismo Racing League Manager</description>
 	<properties>
@@ -135,6 +135,17 @@
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
+		</dependency>
+		<!-- SpotBugs annotations — required at compile time for lombok.config
+		     lombok.extern.findbugs.addSuppressFBWarnings=true: Lombok emits
+		     @edu.umd.cs.findbugs.annotations.SuppressFBWarnings on generated
+		     methods; the annotation class must be on the javac classpath.
+		     Scope provided: compile-only, not packaged in the final JAR. -->
+		<dependency>
+			<groupId>com.github.spotbugs</groupId>
+			<artifactId>spotbugs-annotations</artifactId>
+			<version>4.9.8</version>
+			<scope>provided</scope>
 		</dependency>
 		<!-- Fuzzy String Matching -->
 		<dependency>
@@ -353,6 +364,39 @@
 					</execution>
 				</executions>
 			</plugin>
+			<!-- STAT-02: SpotBugs bytecode static analysis gate — verify-bound, always-on.
+			     find-sec-bugs 1.14.0 adds 144 Spring Security-aware patterns (SSRF, path traversal, etc.).
+			     Insertion point: after jacoco:check, before exec template-fragment-call-guard.
+			     NO <argLine> ever — SpotBugs is a bytecode scanner, not a JVM agent (Pitfall #7). -->
+			<plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+				<version>4.9.8.3</version>
+				<configuration>
+					<effort>Max</effort>
+					<threshold>Default</threshold>
+					<failOnError>true</failOnError>
+					<excludeFilterFile>${project.basedir}/config/spotbugs-exclude.xml</excludeFilterFile>
+				</configuration>
+				<executions>
+					<execution>
+						<id>spotbugs-check</id>
+						<phase>verify</phase>
+						<goals>
+							<!-- STAT-05/2: blocking gate — fails build on Medium+HIGH violations -->
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+				<dependencies>
+					<!-- STAT-03: find-sec-bugs detector pack — 144 Spring Security-aware patterns -->
+					<dependency>
+						<groupId>com.h3xstream.findsecbugs</groupId>
+						<artifactId>findsecbugs-plugin</artifactId>
+						<version>1.14.0</version>
+					</dependency>
+				</dependencies>
+			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>exec-maven-plugin</artifactId>
@@ -415,6 +459,41 @@ exit 0;
 								</configuration>
 							</execution>
 						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>rewrite</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.openrewrite.maven</groupId>
+						<artifactId>rewrite-maven-plugin</artifactId>
+						<version>6.39.0</version>
+						<configuration>
+							<activeRecipes>
+								<recipe>org.ctc.RewriteCleanup</recipe>
+							</activeRecipes>
+							<configLocation>${project.basedir}/rewrite.yml</configLocation>
+							<exportDatatables>false</exportDatatables>
+						</configuration>
+						<dependencies>
+							<dependency>
+								<groupId>org.openrewrite.recipe</groupId>
+								<artifactId>rewrite-spring</artifactId>
+								<version>6.30.4</version>
+							</dependency>
+							<dependency>
+								<groupId>org.openrewrite.recipe</groupId>
+								<artifactId>rewrite-migrate-java</artifactId>
+								<version>3.34.1</version>
+							</dependency>
+							<!-- rewrite-static-analysis:2.34.1 (home of CommonStaticAnalysis) is
+							     pulled in transitively via rewrite-spring:6.30.4 — no explicit
+							     declaration required. Verified against rewrite-spring-6.30.4.pom
+							     on Maven Central. -->
+						</dependencies>
 					</plugin>
 				</plugins>
 			</build>

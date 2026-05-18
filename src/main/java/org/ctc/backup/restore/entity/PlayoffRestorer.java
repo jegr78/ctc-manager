@@ -1,11 +1,6 @@
 package org.ctc.backup.restore.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.extern.slf4j.Slf4j;
-import org.ctc.backup.restore.EntityRestorer;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
-
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -15,6 +10,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.restore.EntityRestorer;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
 
 /**
  * {@link EntityRestorer} for {@link org.ctc.domain.model.Playoff}.
@@ -39,8 +38,8 @@ import java.util.UUID;
  * <p>Single-pass insert — no FK self-cycle. Bypasses {@link org.ctc.domain.model.BaseEntity}'s
  * {@code AuditingEntityListener}.
  */
-@Component
 @Slf4j
+@Component
 public class PlayoffRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =

@@ -1,10 +1,5 @@
 package org.ctc.sitegen;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,15 +14,21 @@ import org.ctc.domain.service.SeasonPhaseService;
 import org.flywaydb.core.Flyway;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.ctc.testsupport.SitegenTestDir;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 /**
  * Phase 62 Plan 3 — phase-aware driver-ranking page tests.
@@ -62,14 +63,18 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext
 class DriverRankingPageGeneratorTest {
 
-    private Path tempDir;
+    static final Path tempDir = SitegenTestDir.create("driver-ranking");
+
+    @DynamicPropertySource
+    static void siteOutputDir(DynamicPropertyRegistry registry) {
+        registry.add("ctc.site.output-dir", () -> tempDir.toString());
+    }
+
     private UUID season2023Id;
 
     @Autowired private SiteGeneratorService siteGeneratorService;
-    @Autowired private SiteProperties siteProperties;
     @Autowired private TestDataService testDataService;
     @Autowired private DataSource dataSource;
     @Autowired private DriverRankingService driverRankingService;
@@ -79,11 +84,9 @@ class DriverRankingPageGeneratorTest {
     @MockitoBean private YouTubeScraperService youTubeScraperService;
 
     @BeforeAll
-    void setUp(@TempDir Path injectedTempDir) {
+    void setUp() {
         given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
                 .willReturn("dQw4w9WgXcQ");
-        this.tempDir = injectedTempDir;
-        siteProperties.setOutputDir(tempDir.toString());
 
         // Flyway clean+migrate guarantees a fresh DB state regardless of preceding test classes
         // having seeded data into the shared H2 in-memory DB (DB_CLOSE_DELAY=-1 keeps the DB
@@ -206,7 +209,7 @@ class DriverRankingPageGeneratorTest {
         Document doc = Jsoup.parse(Files.readString(
                 tempDir.resolve("season").resolve("2023-1-season-2023").resolve("driver-ranking-regular.html")));
         var allPhasesTab = doc.select("nav.phase-tab-row a.phase-tab").stream()
-                .filter(a -> a.text().equals("All Phases"))
+                .filter(a -> "All Phases".equals(a.text()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("All Phases tab must be present in the row"));
         assertThat(allPhasesTab.attr("aria-selected")).isEqualTo("false");

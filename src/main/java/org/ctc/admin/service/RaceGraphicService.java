@@ -1,17 +1,16 @@
 package org.ctc.admin.service;
 
+import java.io.IOException;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.AttachmentType;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceAttachment;
 import org.ctc.domain.repository.RaceAttachmentRepository;
 import org.ctc.domain.repository.RaceRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.io.IOException;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -27,22 +26,22 @@ public class RaceGraphicService {
 
     @Transactional
     public void generateLineup(UUID raceId) {
-        generateAndSaveGraphic(raceId, "Lineups", race -> lineupGraphicService.generateLineup(race));
+        generateAndSaveGraphic(raceId, "Lineups", lineupGraphicService::generateLineup);
     }
 
     @Transactional
     public void generateResults(UUID raceId) {
-        generateAndSaveGraphic(raceId, "Results", race -> resultsGraphicService.generateResults(race));
+        generateAndSaveGraphic(raceId, "Results", resultsGraphicService::generateResults);
     }
 
     @Transactional
     public void generateSettings(UUID raceId) {
-        generateAndSaveGraphic(raceId, "Settings", race -> settingsGraphicService.generateSettings(race));
+        generateAndSaveGraphic(raceId, "Settings", settingsGraphicService::generateSettings);
     }
 
     @Transactional
     public void generateOverlay(UUID raceId) {
-        generateAndSaveGraphic(raceId, "Overlay", race -> overlayGraphicService.generateOverlay(race));
+        generateAndSaveGraphic(raceId, "Overlay", overlayGraphicService::generateOverlay);
     }
 
     private void generateAndSaveGraphic(UUID raceId, String suffix, GraphicGenerator generator) {

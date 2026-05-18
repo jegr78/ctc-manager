@@ -1,10 +1,5 @@
 package org.ctc.sitegen;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.BDDMockito.given;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,16 +8,22 @@ import org.ctc.admin.TestDataService;
 import org.flywaydb.core.Flyway;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.ctc.testsupport.SitegenTestDir;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
 
 /**
  * Phase 62 Plan 1 — phase- and group-aware standings page tests.
@@ -40,24 +41,25 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext
 class StandingsPageGeneratorTest {
 
-    private Path tempDir;
+    static final Path tempDir = SitegenTestDir.create("standings");
+
+    @DynamicPropertySource
+    static void siteOutputDir(DynamicPropertyRegistry registry) {
+        registry.add("ctc.site.output-dir", () -> tempDir.toString());
+    }
 
     @Autowired private SiteGeneratorService siteGeneratorService;
-    @Autowired private SiteProperties siteProperties;
     @Autowired private TestDataService testDataService;
     @Autowired private DataSource dataSource;
 
     @MockitoBean private YouTubeScraperService youTubeScraperService;
 
     @BeforeAll
-    void setUp(@TempDir Path injectedTempDir) {
+    void setUp() {
         given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
                 .willReturn("dQw4w9WgXcQ");
-        this.tempDir = injectedTempDir;
-        siteProperties.setOutputDir(tempDir.toString());
 
         // Flyway clean+migrate guarantees a fresh DB state regardless of preceding test classes
         // having seeded data into the shared H2 in-memory DB (DB_CLOSE_DELAY=-1 keeps the DB
@@ -142,7 +144,7 @@ class StandingsPageGeneratorTest {
         Document doc = Jsoup.parse(
                 Files.readString(tempDir.resolve("season").resolve("2023-1-season-2023").resolve("standings.html")));
         var playoffTab = doc.select("nav.phase-tab-row a.phase-tab").stream()
-                .filter(a -> a.text().equalsIgnoreCase("Playoff") || a.attr("href").endsWith("playoff.html"))
+                .filter(a -> "Playoff".equalsIgnoreCase(a.text()) || a.attr("href").endsWith("playoff.html"))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("Phase-tab row must contain a PLAYOFF tab"));
         assertThat(playoffTab.attr("href")).endsWith("playoff.html");

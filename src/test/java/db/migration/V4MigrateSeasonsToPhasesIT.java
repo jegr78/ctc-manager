@@ -1,19 +1,18 @@
 package db.migration;
 
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.UUID;
+import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.Tag;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
 import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
-
-import javax.sql.DataSource;
-import java.time.LocalDate;
-import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -338,13 +337,19 @@ class V4MigrateSeasonsToPhasesIT {
     // H2 returns java.util.UUID; MariaDB may return byte[] (Pitfall 1 in RESEARCH.md)
 
     private static UUID toUUID(Object value) {
-        if (value == null) return null;
-        if (value instanceof UUID u) return u;
+		if (value == null) {
+			return null;
+		}
+		if (value instanceof UUID u) {
+			return u;
+		}
         if (value instanceof byte[] b) {
             java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(b);
             return new UUID(bb.getLong(), bb.getLong());
         }
-        if (value instanceof String s) return UUID.fromString(s);
+		if (value instanceof String s) {
+			return UUID.fromString(s);
+		}
         throw new IllegalArgumentException("Cannot convert " + value.getClass() + " to UUID");
     }
 }

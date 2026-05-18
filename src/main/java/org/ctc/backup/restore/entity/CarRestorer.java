@@ -1,11 +1,6 @@
 package org.ctc.backup.restore.entity;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import lombok.extern.slf4j.Slf4j;
-import org.ctc.backup.restore.EntityRestorer;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
-
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -13,6 +8,10 @@ import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.restore.EntityRestorer;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Component;
 
 /**
  * {@link EntityRestorer} for {@link org.ctc.domain.model.Car}.
@@ -34,8 +33,8 @@ import java.util.UUID;
  * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener} so the imported
  * {@code created_at} / {@code updated_at} values survive verbatim.
  */
-@Component
 @Slf4j
+@Component
 public class CarRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =

@@ -1,15 +1,14 @@
 package org.ctc.gt7sync;
 
-import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -170,7 +169,9 @@ public class Gt7ScraperService {
 			String nameShort = extractField(block, "nameShort");
 			String manufacturerId = extractField(block, "manufacturerId");
 
-			if (gt7Id == null || nameLong == null || nameShort == null) continue;
+			if (gt7Id == null || nameLong == null || nameShort == null) {
+				continue;
+			}
 
 			// Primary: look up manufacturer by ID from tuners table
 			String manufacturer = manufacturerId != null ? manufacturerMap.get(manufacturerId) : null;

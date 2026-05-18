@@ -1,261 +1,308 @@
 # Project Research Summary
 
-**Project:** CTC Manager v1.10 — Spring Boot 4.0.6 Upgrade + Admin Data Export/Import
-**Domain:** Brownfield Spring Boot 4 / Thymeleaf / MariaDB admin tool — platform hygiene + new ZIP-based backup/restore feature
-**Researched:** 2026-05-09
-**Confidence:** HIGH (overall)
+**Project:** CTC Manager — v1.11 Tooling Infrastructure & Tech-Debt Sweep
+**Domain:** Java 25 / Spring Boot 4 / Maven tooling addition onto a production single-module project
+**Researched:** 2026-05-16
+**Confidence:** HIGH (stack versions, CodeQL, Renovate, pitfalls) / MEDIUM (OpenRewrite Spring Boot 4 recipe maturity, clean-code scope at bootstrap)
 
 ---
 
 ## Executive Summary
 
-v1.10 is a brownfield SUBSEQUENT milestone immediately after the v1.9 close. It groups two architecturally orthogonal work streams that share **zero code paths** and can be implemented in parallel:
+CTC Manager enters v1.11 as a mature, architecturally clean codebase (~17k LOC prod, ~25k LOC test, 87.80% JaCoCo coverage) with zero existing static-analysis tooling. The milestone has two distinct work streams: (1) adding four new developer tooling layers (OpenRewrite, clean-code enforcement, Renovate, CodeQL SAST), and (2) clearing concrete carried-over tech-debt from v1.10 and v1.9. Because the repo is **public on GitHub**, CodeQL is available free with full cross-function taint tracking — this is the single most consequential scope decision: FEATURES.md's Semgrep recommendation was based on an incorrect private-repo assumption and is overridden.
 
-**Cluster A — Platform hygiene.** Bump `spring-boot-starter-parent` 4.0.5 → 4.0.6 (one POM line, 25–65 bug fixes, 8 CVE patches transitively, none in CTC's stack), then perform a preventive audit of all ~80 Thymeleaf templates against the **Thymeleaf 3.1.5** restricted-expression hardening (CVE-2026-40478 SpEL canonicalization fix). Critically: all four researchers independently corrected the milestone wording — Spring Boot 4.0.6 ships **Thymeleaf 3.1.5.RELEASE, NOT 3.2** (3.2 has no GA release as of 2026-05-09). The v1.9 template breakage was caused by `ExpressionUtils.normalize()` + the new `containsExternalAccess()` filter being far stricter on fragment-parameter expressions in restricted context. Maintainer-recommended fix (Daniel Fernandez, thymeleaf/thymeleaf#1082): compute conditional values in the controller as a `pageTitle` model attribute and reference plain `${pageTitle}` in `th:replace`. This aligns with CTC's existing "Keep Templates Lean" convention (CLAUDE.md L70).
+The recommended approach is incremental and gate-aware. Every new tooling stream runs parallel to the existing `./mvnw verify` gate rather than replacing it, except SpotBugs (which joins the verify phase after the existing JaCoCo and Failsafe executions). OpenRewrite is strictly developer-invoked and never bound to the Maven lifecycle. CodeQL lives in a separate `codeql.yml` workflow. Renovate runs as the Mend-hosted GitHub App with zero runner-minute cost. The tech-debt items are well-understood concrete fixes — no research uncertainty there.
 
-**Cluster B — Admin Data Export/Import.** New `org.ctc.backup` module mirroring the `org.ctc.dataimport` package shape (validated v1.5/v1.8 pattern). Single-admin downloads a ZIP containing `data.json` + `uploads/` (or per-entity JSON files — see ARCHITECTURE for refinement) with SemVer schema header; upload runs through preview screen (reuse `CsvImportController`/`DriverSheetImportController` D-15 stateless re-parse pattern) → confirm → atomic Replace-All wipe + restore in one `@Transactional` boundary. Scope: ~20 operative entities (Seasons → SeasonPhases → SeasonPhaseGroups → PhaseTeams → Teams → SeasonTeams → Drivers → SeasonDrivers → PsnAlias → Matchdays → Matches → Races → RaceLineups → RaceResults → Playoffs → PlayoffRounds → PlayoffMatchups → PlayoffSeeds → RaceScoring → MatchScoring + RaceSettings/RaceAttachments). **Audit log table is OUT of scope** (operational metadata, never wiped).
-
-**Net dependency cost: ZERO new Maven artifacts.** Everything (ZIP I/O, Jackson, multipart, JPA bulk delete) is already on the classpath via existing Spring Boot starters. The risk surface is concentrated in three places: (1) the Thymeleaf audit catching latent template breakage that only renders under specific data conditions, (2) the Replace-All transaction's MariaDB-vs-H2 quirks (TRUNCATE auto-commits on MariaDB → must use DELETE; `SET FOREIGN_KEY_CHECKS` syntax diverges → use FK-ordered DELETE instead), and (3) the entity↔JSON serialization strategy (Jackson MixIns with `@JsonIdentityInfo` is preferred — DTOs were considered but deemed over-engineered for an internal backup format; consensus is MEDIUM confidence and demands a round-trip integration test).
+The primary risks are all in the first clean-code phase: Lombok false positives will produce triple-digit violations on first SpotBugs runs if `lombok.config` and exclusion filters are not in place before the gate is enabled. The correct mitigation sequence is `lombok.config` first, then gate configuration in report-only mode, then baseline violation inventory, then enable `failOnError`. The second major risk is the OpenRewrite recipe set: the `UpgradeSpringBoot_4_0` composite recipe must NOT be used on a codebase already at Boot 4 — only targeted maintenance recipes should be activated. Both risks are fully preventable with correct phase sequencing.
 
 ---
 
 ## Key Findings
 
-### Recommended Stack
+### Reconciled Stack Additions
 
-**Net new dependencies in `pom.xml`: zero.** The upgrade is a single-line `<version>` bump; the new feature reuses what is already on the classpath.
+Four new tooling layers are added to the project. No new Java packages or application dependencies are introduced — all changes are to `pom.xml` build plugins, CI workflow files, and project-root config files.
 
-**Core technologies (all already present):**
+**Core tool coordinates (all versions verified against Maven Central and official release pages, 2026-05-16):**
 
-- **Spring Boot 4.0.6** (target) — patch release, 25–65 bug fixes, no breaking changes, 8 CVE patches (none affecting CTC's stack since we don't use Elasticsearch/RabbitMQ/Cassandra/DevTools/PID files)
-- **Thymeleaf 3.1.5** (transitive) — the actual version SB 4.0.6 ships; CVE-2026-40478 SpEL hardening tightened restricted-context evaluation; **3.2 is NOT released**
-- **`java.util.zip.{ZipOutputStream,ZipInputStream}` (JDK)** — ZIP packaging; archives ≪4 GB, no Zip64 needed → `commons-compress` rejected (~700 KB jar bloat for zero benefit at our scale)
-- **Jackson 3.1.2 (transitive)** + `ObjectMapper` + Jackson MixIns + `@JsonIdentityInfo` for cycle handling — already auto-configured by Spring Boot, no dependency change
-- **Spring MVC `MultipartFile`** + `StreamingResponseBody` — standard Spring patterns
-- **`jakarta.persistence.EntityManager`** for bulk DELETE in FK-reverse order + L1 cache discipline (`flush()` + `clear()`); native SQL preferred over JPA cascades for explicit per-table control
-- **Flyway migration V7** — new `data_import_audit` table (audit log scope is OPERATIONAL, lives outside Export/Import scope per Pitfall 9)
+| Tool | GroupId | ArtifactId | Version | Notes |
+|------|---------|-----------|---------|-------|
+| `rewrite-maven-plugin` | `org.openrewrite.maven` | `rewrite-maven-plugin` | **6.39.0** | STACK.md verified; ARCHITECTURE.md cited 6.40.0 (2026-05-07) — confirm current at implementation time |
+| `rewrite-spring` | `org.openrewrite.recipe` | `rewrite-spring` | **6.30.4** | Plugin dependency only (not project dependency) |
+| `rewrite-migrate-java` | `org.openrewrite.recipe` | `rewrite-migrate-java` | **3.34.1** | Plugin dependency only |
+| `spotbugs-maven-plugin` | `com.github.spotbugs` | `spotbugs-maven-plugin` | **4.9.8.3** | Explicit Java 25 JDK support |
+| `findsecbugs-plugin` | `com.h3xstream.findsecbugs` | `findsecbugs-plugin` | **1.14.0** | SpotBugs plugin — 144 Spring security patterns |
+| `codeql-action` | GitHub Actions | `github/codeql-action@v4` | **v4** (floating tag) | Current patch v4.35.5; Java 25 explicit since CodeQL 2.23.1 |
+| Renovate | Mend GitHub App | — | hosted v46.x | Self-updating; no pom.xml or workflow file required |
 
-**Configuration changes (yaml only):**
+**What NOT to use:**
 
-- `spring.servlet.multipart.max-file-size`: 1 MB → **100 MB** (some researchers suggested 200–500 MB; pick 100 MB MVP, document as bumpable)
-- `spring.servlet.multipart.max-request-size`: 10 MB → **100 MB**
-- `server.tomcat.max-http-form-post-size` + `max-swallow-size`: 100 MB
-- `app.backup.staging-dir` (configurable; default `data/{profile}/backup-staging/`)
-- `app.backup.max-upload-size` (read separately from generic multipart cap)
+| Avoid | Why |
+|-------|-----|
+| Checkstyle | Naming/formatting already enforced via CLAUDE.md; Lombok false positives require extensive suppression for zero net value |
+| PMD | Overlaps with Java 25 compiler warnings and existing review discipline; Lombok false positives; category-level includes silently add rules on version bumps |
+| Semgrep CE | Single-function taint tracking only after Dec 2024 licensing change — misses multi-step SSRF/ZIP-Slip chains. Moot since repo is public and CodeQL is free |
+| `codeql-action@v3` | Deprecated December 2026; Java 25 improvements (CodeQL 2.23.1+) in v4 only |
+| OpenRewrite bound to `verify` lifecycle | Rewrites source files in-place on every build — destructive in CI |
 
-**Critical version correction (all four researchers flagged independently):** PROJECT.md L30 has been corrected to read **"Thymeleaf 3.1.5 (CVE-2026-40478 SpEL hardening)"**. Roadmapper, requirements writer, and all phase planners must use the same wording — never "Thymeleaf 3.2".
+### Reconciled Feature Recommendations
 
-See `.planning/research/STACK.md` for full version matrix and per-decision rationale.
+**Stream 1 — OpenRewrite:**
+- Plugin in `<build><plugins>` with NO `<executions>` binding (developer-invoked only)
+- Active recipes: `UpgradeToJava25` (idempotent maintenance), targeted cleanup recipes
+- NEVER activate `UpgradeSpringBoot_4_0` — this is a FROM-Boot-3 migration recipe; codebase is already at Boot 4.0.6
+- `mvn rewrite:dryRun` always before `mvn rewrite:run`; inspect patch file at `target/site/rewrite/rewrite.patch`
 
-### Expected Features
+**Stream 2 — Clean Code (SpotBugs only):**
+- `lombok.config` with `lombok.addLombokGeneratedAnnotation = true` AND `lombok.extern.findbugs.addSuppressFBWarnings = true` created BEFORE SpotBugs gate is enabled
+- `spotbugs-exclude.xml` excluding: 11 Playwright graphic services, test classes, `EI_EXPOSE_REP*` on `org.ctc.domain.model.*`
+- `findsecbugs-plugin` 1.14.0 as SpotBugs plugin dependency
+- Bound to `verify` phase, declared AFTER JaCoCo in `pom.xml`
+- Bootstrap: report-only first → inventory → configure exclusions → enable `failOnError`
 
-See `.planning/research/FEATURES.md` for full table-stakes / differentiator / anti-feature analysis.
+**Stream 3 — Renovate:**
+- Mend Renovate GitHub App (not self-hosted GitHub Action) — free, zero runner cost
+- Critical `packageRules` required before enabling automerge: Guava locked to `-jre` variants; Thymeleaf pin protected; Java version LTS-only; GitHub Actions manual-review only
+- No `.github/dependabot.yml` exists — confirmed, no conflict
 
-**Must have (table stakes for v1.10):**
+**Stream 4 — SAST (CodeQL):**
+- Separate `.github/workflows/codeql.yml` — NOT added to `ci.yml`
+- Language: `java-kotlin`; queries: `security-extended`
+- Build: `./mvnw compile --no-transfer-progress -DskipTests` (not autobuild)
+- Job-level `permissions: security-events: write`
+- Triage mode first — three known false-positive patterns to mark upfront: SSRF blocklist in `FileStorageService`, BCrypt in `SecurityConfig`, ZIP-Slip defense in `BackupImportService`
 
-Cluster A (Platform):
-
-- `pom.xml` parent bump 4.0.5 → 4.0.6
-- Fix the 3 known fragment-parameter ternaries (`match-scoring-form.html`, `race-scoring-form.html`, `season-phase-form.html`, all line 3) via controller-side `pageTitle` model attribute
-- Preventive audit of all ~80 templates (62 admin + 16 site) for the same pattern, fix any new findings
-- `./mvnw verify -Pe2e` green on 4.0.6
-- JaCoCo ≥ 82 % held (currently 87.02 % — comfortable buffer)
-
-Cluster B (Backup feature):
-
-- `GET/POST /admin/backup/export` → streaming ZIP (`Content-Disposition: attachment; filename=ctc-backup-{ISO-instant}.zip`)
-- ZIP packs `data.json` (or per-entity files — see ARCHITECTURE) + `uploads/` mirror
-- JSON header: `schema_version` (SemVer or integer — see GAP-2), `app_version`, `export_date`, `table_counts`
-- `POST /admin/backup/import-preview` (multipart) → preview screen with per-table wipe+restore counts
-- `POST /admin/backup/import-execute` → atomic Replace-All in single `@Transactional` boundary
-- Schema-version refusal **before** wipe (manifest read first; rejection leaves DB untouched)
-- Confirm dialog with explicit "ALL operative data will be deleted" wording (mirror `DriverMergeController`)
-- Audit log entry per import (who/when/wiped+restored row counts) → new `data_import_audit` table (Flyway V7), AUDIT TABLE ITSELF IS OUT OF SCOPE OF EXPORT
-- Multipart limits raised + documented
-- Round-trip integration test (export → import → assert no diff) on **both** H2 and MariaDB
-- Build-time regex guard (lightweight Maven exec/grep gate) against re-introduction of fragment-parameter ternaries
-
-**Should have (defer to v1.11 unless trivially in-scope):**
-
-- Verify-only "validate this ZIP" mode
-- SHA-256 checksum file inside ZIP
-- Diff preview row-count comparison
-
-**Defer to v1.11+:**
-
-- **Per-season selective export** (explicitly user-deferred)
-- `?includeUploads=false` query parameter
-- Filesystem atomicity hardening via stage+rename pattern
-
-**Anti-features (rejected — would harm v1.10 scope):**
-
-- Cloud destinations (S3/GCS), scheduled/cron'd backups, multi-format support, merge-import, encryption at rest, async with progress polling, Maven Enforcer custom rule
+**Tech-debt streams (no research required — concrete known fixes):**
+1. 12 REVIEW.md Info/Warning items from Phase 75 backup cleanup
+2. Driver-detail Season-Assignment chip ordering (`ORDER BY year`)
+3. `DevDataSeeder` `@Profile` widening for `local,demo`
+4. Per-group matchday generation UI affordance (`SeasonController:251`)
+5. `StandingsController.java:139` lazy collection style cleanup
+6. UAT-02 legacy season visual smoke (post-deploy verification)
+7. Phase 79 D-06 wallclock-reduction (`@DirtiesContext` audit, context key consolidation, selective slice conversion)
+8. Nyquist `*-VALIDATION.md` drafts for 6 phases (72-76, 79) + creation for phases 71 + 78
 
 ### Architecture Approach
 
-See `.planning/research/ARCHITECTURE.md` for full diagrams, file lists, and integration points.
+All four tooling streams operate on config files, `pom.xml`, and CI workflow files — no new Java source packages. Key architectural constraint: OpenRewrite never binds to the Maven verify lifecycle; SpotBugs joins verify after JaCoCo; CodeQL runs in a completely separate workflow.
 
-The new `org.ctc.backup` package mirrors the proven `org.ctc.dataimport` shape (controller + 1–3 services + DTO records). Reuses every existing repository (`findAll`, `saveAll`, `deleteAllInBatch`), the existing exception handling, flash messaging, OSIV, and `FileStorageService` (additively extended).
+**Component map after v1.11:**
 
-**Major components (new):**
+| Component | Location | Change |
+|-----------|----------|--------|
+| SpotBugs gate | `pom.xml` `<build><plugins>` | NEW — bound to `verify`, after JaCoCo |
+| OpenRewrite plugin | `pom.xml` `<build><plugins>` | NEW — no lifecycle binding |
+| `spotbugs-exclude.xml` | Project root | NEW |
+| `lombok.config` | Project root | NEW (does not exist yet — must be created) |
+| `rewrite.yml` | Project root | NEW — recipe config |
+| `renovate.json` | Project root | NEW |
+| `codeql.yml` | `.github/workflows/` | NEW standalone workflow |
+| `ci.yml` | `.github/workflows/` | UNCHANGED (SpotBugs runs inside existing verify) |
 
-1. **`BackupController`** — thin: 4 handlers (GET form, POST export streams, POST import-preview, POST import-execute), multipart upload, redirect-flash, no business logic
-2. **`BackupExportService`** — `@Transactional(readOnly = true)`, walks DB in FK-respecting order via `BackupSchema.EXPORT_ORDER`, builds bundle, streams to `OutputStream`
-3. **`BackupImportService`** — `@Transactional` (write); preview re-parses ZIP (D-15 stateless pattern, NO `@SessionAttributes`); execute does FK-reverse-order DELETE + `em.flush()` + `em.clear()` + insert in EXPORT order
-4. **`BackupArchiveService`** — pure ZIP I/O mechanics (read/write); no domain knowledge; supports `StreamingResponseBody`
-5. **`BackupSchema`** — static utility class holding `SCHEMA_VERSION` constant, `EXPORT_ORDER` and `DELETE_ORDER` lists (single ordered list, NO Strategy pattern across 22 entity types)
-6. **`BackupManifest` / `BackupBundle` / `BackupPreview`** — DTO records
-7. **`BackupObjectMapperConfig`** — `@Qualifier("backupObjectMapper")` — explicit `FAIL_ON_UNKNOWN_PROPERTIES = true`, `WRITE_DATES_AS_TIMESTAMPS = false`, `JavaTimeModule`, MixIns registered → does NOT pollute the default Spring `ObjectMapper`
-8. **Per-entity Jackson MixIn classes** in `org.ctc.backup.serialization` — applies `@JsonIdentityInfo`, `@JsonIgnore createdAt/updatedAt/version` externally → entities stay clean
+**Maven verify phase execution order after v1.11 (declaration order in pom.xml):**
+1. `failsafe:integration-test` (existing)
+2. `jacoco:report` (existing)
+3. `jacoco:check` 82% gate (existing)
+4. `failsafe:verify` (existing)
+5. `spotbugs:check` (NEW — declared after JaCoCo)
 
-**Templates (new):** `templates/admin/backup.html` (form), `templates/admin/backup-preview.html` (per-bucket-table pattern from `driver-import-preview.html`)
+### Watch Out For (Top 10 CTC-Specific Pitfalls)
 
-**Modified:** `pom.xml` (1 line), `templates/admin/layout.html` (sidebar), `application.yml` (multipart + `app.backup.*`), `FileStorageService.java` (additive helper methods), 3+ Thymeleaf templates (line-3 ternary fix).
+1. **OpenRewrite `UpgradeSpringBoot_4_0` composite recipe on an already-Boot-4 codebase** — will attempt to re-add `spring-boot-starter-web`, remove modular starters, produce confusing pom.xml diffs. Only use targeted maintenance recipes. Always `mvn rewrite:dryRun` first, inspect patch before `mvn rewrite:run`.
 
-**Architecturally NOT modified:** any operative entity (MixIns), any repository, any Flyway migration except the new V7, any existing controller, any auto-config bean. **No SPI/auto-config changes from SB 4.0.6** affect CTC's MVC/JPA/Thymeleaf consumers.
+2. **SpotBugs `EI_EXPOSE_REP`/`EI_EXPOSE_REP2` mass false positives on Lombok `@Getter` for JPA collection fields** — 24 entities with `@OneToMany` collections = 40-80 false-positive violations on first run. Mitigate by adding both lines to `lombok.config` BEFORE enabling the SpotBugs gate, plus `EI_EXPOSE_REP*` suppression in `spotbugs-exclude.xml` for `org.ctc.domain.model.*`.
 
-**One ARCHITECTURE-vs-STACK divergence to resolve in roadmap:** STACK proposed a single `data.json` document; ARCHITECTURE proposed per-entity files for streaming-friendly read + diagnosability + future selective import. Both are valid; ARCHITECTURE's per-entity choice is slightly more future-proof.
+3. **JaCoCo `argLine` overwrite by new Maven plugins** — if any new plugin declares a plain `<argLine>` string (not `@{argLine} ...`), it overwrites JaCoCo's late-evaluated agent injection and coverage drops to 0%. SpotBugs does not require `<argLine>`. Verify coverage after every new plugin addition.
 
-### Critical Pitfalls
+4. **Renovate proposing Guava `-android` variant** — Guava's `-jre`/`-android` suffix is not a standard Maven qualifier; Renovate may sort incorrectly. Requires explicit `allowedVersions` constraint in `renovate.json` before enabling patch automerge.
 
-See `.planning/research/PITFALLS.md` for all 13 pitfalls with full warning signs, recovery costs, and phase mappings. The five highest-stakes:
+5. **Renovate proposing `java.version=26`** — Java 26 is non-LTS. Requires LTS-only `allowedVersions` regex in `renovate.json`.
 
-1. **Thymeleaf 3.1.5 fragment-parameter restricted-mode breakage beyond the 3 known templates** — coverage is partial because templates compile lazily. **Prevention:** mechanical grep audit of all `th:(replace|insert|include)=".*\(.*\$\{.*\}.*\)"` (not just ternaries); CI `TemplateRenderingSmokeIT` GETs every `/admin/**` URL with `DEV_DATA_SEEDED=true`; pin `org.thymeleaf:thymeleaf` in `<dependencyManagement>`.
+6. **Renovate bumping Spring Boot parent independently from the pinned Thymeleaf version** — `thymeleaf:3.1.5.RELEASE` pin is a CVE-2026-40478 mitigation. Must require manual approval for `org.thymeleaf:*` in `renovate.json`.
 
-2. **Replace-All transaction divergence on MariaDB vs H2** — TRUNCATE auto-commits on MariaDB; `SET FOREIGN_KEY_CHECKS=0` is MariaDB-only. **Prevention:** `DELETE FROM <table>` in FK-reverse order via `EntityManager.createNativeQuery().executeUpdate()`; single `@Transactional`; `em.flush() + em.clear()` between phases (mandatory); two-pass `UPDATE … SET parent_team_id = NULL` for `Team.parentTeam` self-FK; `innodb_lock_wait_timeout = 600`. Test on **both** profiles.
+7. **CodeQL false positive on `FileStorageService.storeFromUrl()` SSRF blocklist** — custom `Set.contains(hostname)` blocklists are not recognized CodeQL sanitizers. Triage this alert as intentional before enabling any blocking gate.
 
-3. **JPA Auditing overwriting imported timestamps** — `AuditingEntityListener` silently overwrites `created_at` with `LocalDateTime.now()`. **Prevention:** restore via native SQL `JdbcTemplate.batchUpdate` (bypasses JPA listeners); IT `givenExportWithCreatedAt2024_whenImport_thenCreatedAtIsStill2024()`.
+8. **`BackupSchema.SCHEMA_VERSION` incremented on non-wire-format changes during Phase 82** — the 12 REVIEW.md items are all internal I/O improvements, not wire-format changes. SCHEMA_VERSION must remain at `1`. Incrementing it breaks import of all existing production backup ZIPs.
 
-4. **ZIP Slip + ZipBomb on import** — **Prevention:** reuse `FileStorageService.store()` SECU-02 defense; validate `startsWith(uploadDir.toRealPath())`; reject absolute paths and `..`; per-entry size cap (50 MB), total cap (500 MB), entry-count cap (50,000); reject duplicate names.
+9. **`@DirtiesContext` removal during wallclock-reduction poisoning Spring contexts** — some annotations compensate for missing `@AfterEach` cleanup (e.g., `ImportLockService` lock state). Each removal must be individually verified with three random-order Surefire runs.
 
-5. **Schema-version drift = catastrophic data loss** — naive flow wipes before discovering mismatch. **Prevention:** read `manifest.json` (must be first ZIP entry — enforce in writer) and validate `schema_version == SCHEMA_VERSION` BEFORE entering wipe transaction; HTTP 400 + admin-readable message; counter-test asserts row count unchanged after rejection.
+10. **OpenRewrite plugin in the main `<build><plugins>` block without profile isolation is NOT the pitfall here** — the plugin CAN be in `<build><plugins>` as long as there are no `<executions>` binding it to a Maven lifecycle phase. Without `<executions>`, Maven will not auto-execute OpenRewrite goals; they remain explicitly invoked only. The pitfall is adding `<executions>` with a phase binding.
 
-**Honorable mentions:** concurrent-import lock (Pitfall 8); `StreamingResponseBody` LazyInit (Pitfall 3); audit-log scope decision baked into Phase 2 (Pitfall 9); explicit `ObjectMapper` bean (Pitfall 13).
+---
+
+## Conflicts Resolved
+
+### Conflict 1: SAST Tool Choice
+
+**Disagreement:** FEATURES.md recommends Semgrep CE. STACK.md and ARCHITECTURE.md recommend CodeQL.
+
+**Root cause:** FEATURES.md assumed the repo is private and concluded CodeQL requires a paid GHAS license (~$30/committer/month). This is WRONG.
+
+**Ground truth:** `jegr78/ctc-manager` is **public on GitHub** (verified via `gh repo view`). CodeQL Code Scanning is completely free for public repos with full cross-function semantic taint tracking.
+
+**Decision: CodeQL via `github/codeql-action@v4`.**
+
+Semgrep CE after December 2024 provides only single-function taint tracking — it cannot trace the multi-step SSRF chain through `FileStorageService` or ZIP-Slip through `BackupImportService`. Since the cost barrier does not exist, Semgrep CE has no advantage here.
+
+### Conflict 2: Clean Code Scope (Checkstyle + PMD vs. SpotBugs only)
+
+**Disagreement:** STACK.md says SpotBugs only. FEATURES.md, ARCHITECTURE.md, and PITFALLS.md assume all three tools.
+
+**Decision: SpotBugs only (no Checkstyle, no PMD).**
+
+Rationale for this Lombok-heavy single-team project:
+- **Checkstyle:** Naming/formatting enforced via CLAUDE.md + code reviews. Lombok annotation stacks violate standard Checkstyle rulesets (`DesignForExtension`, `MagicNumber`, annotation-per-line) requiring extensive suppression for zero marginal value.
+- **PMD:** Highest-value rules already caught by Java 25 compiler `-Xlint` and existing discipline. Category-level includes silently add rules on PMD version bumps, breaking the gate without code changes. Test isolation prefixes (`"Test-Season 2026"`, `"T-ALF"`) trigger `AvoidDuplicateLiterals` as false positives on every test class.
+- **SpotBugs:** Analyzes compiled bytecode — catches null dereferences, resource leaks, and security patterns that source-only tools cannot see. `findsecbugs-plugin` adds 144 Spring-specific security patterns directly relevant to this codebase's attack surface.
+
+ARCHITECTURE.md's three-tool recommendation is overridden. STACK.md's SpotBugs-only recommendation is correct for this specific project.
+
+### Conflict 3: Phase Ordering
+
+Four conflicting orderings across research files. **Decision: PITFALLS.md ordering with adjustments.**
+
+| Phase | Stream | Rationale |
+|-------|--------|-----------|
+| 80 | OpenRewrite | Establishes recipe tooling before quality gate; allows proactive cleanup pass |
+| 81 | SpotBugs gate | `lombok.config` precondition established here; gate active before Renovate PRs start arriving |
+| 82 | Backup cleanup | Concrete known fixes, independent of tooling; clear test gates (BackupRoundTripIT) |
+| 83 | Quality/polish sweep | Four concrete carryover items; low risk, no dependencies |
+| 84 | Renovate | After build gate is clean; incoming PRs hit a meaningful CI gate |
+| 85 | CodeQL SAST | Additive, separate workflow; less noise after SpotBugs cleanup |
+| 86 | Test wallclock reduction | Architectural work; last to avoid gate ambiguity during implementation |
+| 87 | Nyquist VALIDATION closure | Documentation; must follow all code changes |
+
+FEATURES.md ordering (Renovate first) is rejected — Renovate PRs should hit a clean, gated build. ARCHITECTURE.md ordering (Clean Code first) is correct in spirit but prescribes all three tools; adjusted to SpotBugs only.
+
+### Conflict 4: OpenRewrite Lifecycle Binding
+
+All four research outputs agree OpenRewrite must NOT be bound to the Maven verify lifecycle. This is codified as a hard constraint:
+
+- Plugin in `<build><plugins>` with NO `<executions>` block
+- Invoked only via explicit `mvn rewrite:dryRun` or `mvn rewrite:run` commands
+- No CI job for OpenRewrite (developer productivity tool, not quality gate)
 
 ---
 
 ## Implications for Roadmap
 
-### Phase 1: SB 4.0.6 Upgrade + Thymeleaf 3.1.5 Template Audit + Build Guard
+Phase numbering continues from Phase 79. All 12 v1.11 streams mapped:
 
-**Rationale:** Eliminates v1.9 platform debt; produces green test baseline before any feature code.
-**Delivers:** `pom.xml` 4.0.5 → 4.0.6; 3 known + N audit-discovered template fixes via controller-side `pageTitle`; CI `TemplateRenderingSmokeIT`; lightweight regex grep gate via `exec-maven-plugin`; `<dependencyManagement>` pin on Thymeleaf.
-**Avoids:** Pitfalls 1, 11, 12.
+### Phase 80: OpenRewrite Integration
+**Rationale:** Recipe tooling baseline before quality gate is active. Proactive cleanup reduces initial SpotBugs violation count.
+**Delivers:** `rewrite-maven-plugin` in pom.xml, `rewrite.yml` with curated recipe list, developer workflow documented
+**Avoids:** Pitfall 1 (Boot-4 composite recipe), Pitfall 3 (structural recipe interference with Lombok entities), Pitfall 10 (plugin auto-execution in default build)
+**Research flag:** Standard patterns — complete in STACK.md.
 
-### Phase 2: Audit-Log Scope Decision + Schema Versioning + ObjectMapper Bean + Flyway V7
+### Phase 81: SpotBugs + find-sec-bugs Gate
+**Rationale:** Only clean-code tool appropriate for this codebase. `lombok.config` precondition must be first deliverable.
+**Delivers:** `lombok.config` (new), `spotbugs-exclude.xml` (new), `spotbugs-maven-plugin` in pom.xml, SpotBugs gate green in CI
+**Avoids:** Pitfall 4 (EI_EXPOSE_REP mass false positives), Pitfall 7 (JaCoCo argLine overwrite)
+**Research flag:** Standard patterns — complete in STACK.md.
 
-**Rationale:** Defines wire contract before any export/import code; bakes audit-log-out-of-scope decision into PROJECT.md Decisions row.
-**Delivers:** `BackupSchema.SCHEMA_VERSION`; `BackupManifest`; `BackupObjectMapperConfig` (`@Qualifier("backupObjectMapper")`); Flyway V7 `data_import_audit` table; PROJECT.md Decisions row.
-**Avoids:** Pitfalls 7, 9, 13.
+### Phase 82: Backup Cleanup (Phase 75 REVIEW.md Items)
+**Rationale:** 12 concrete known fixes, clear test gates, independent of tooling streams.
+**Delivers:** All 12 REVIEW.md items resolved; `BackupRoundTripIT` passing before and after on pre-existing backup ZIPs; SCHEMA_VERSION remains 1
+**Avoids:** Pitfall 8 (SCHEMA_VERSION increment), Pitfall 9 (restoreOneTable single-pass re-ordering bug)
+**Research flag:** No research needed.
 
-### Phase 3: Export Service + Jackson MixIns + Streaming Endpoint
+### Phase 83: Quality and Polish Sweep
+**Rationale:** Four carryover items from v1.9/v1.10, all small and independent. Grouped to clear backlog efficiently.
+**Delivers:** Driver chip ordering, DevDataSeeder @Profile widening, SeasonController:251 UI affordance, StandingsController:139 cleanup
+**Research flag:** No research needed.
 
-**Rationale:** Read-only path is safer half; produces artifact for round-trip.
-**Delivers:** Per-entity MixIn classes (~22 files); `BackupExportService` with `@EntityGraph` eager-fetch; `BackupArchiveService.writeZip()`; `BackupController.export()` with `StreamingResponseBody`; `templates/admin/backup.html`; `FileStorageService` additive helpers; serialization unit tests.
-**Avoids:** Pitfalls 3, 10.
+### Phase 84: Renovate Automated Dependency Updates
+**Rationale:** After build gate is clean, incoming Renovate PRs hit meaningful CI.
+**Delivers:** `renovate.json` at project root, Mend GitHub App installed, Dependency Dashboard active, critical package rules in place before automerge enabled
+**Avoids:** Pitfall 4 in Renovate context (Guava android), Pitfall 5 (Thymeleaf pin), Pitfall 6 (Java 26), Pitfall 7 (GitHub Actions misaligned bumps)
+**Research flag:** Standard patterns — complete in STACK.md.
 
-### Phase 4: Import Preview + ZIP Hardening + Multipart Config + Schema-Version Gate
+### Phase 85: CodeQL SAST Integration
+**Rationale:** Additive, non-blocking, separate workflow. Less false-positive noise after OpenRewrite and SpotBugs improvements.
+**Delivers:** `.github/workflows/codeql.yml`, initial triage complete, all intentional patterns marked in Security tab
+**Avoids:** Pitfall 12 (SSRF blocklist false positive), Pitfall 13 (BCrypt false positive), Pitfall 14 (ZIP-Slip defense false positive)
+**Research flag:** Standard patterns — complete codeql.yml in STACK.md.
 
-**Rationale:** No-write path; schema-version refusal BEFORE wipe.
-**Delivers:** `BackupImportService.preview()`; `BackupArchiveService.readManifest()/readBundle()`; ZIP-Slip + ZipBomb defenses; multipart YAML config; staging-dir lifecycle; `templates/admin/backup-preview.html`; `MaxUploadSizeExceededException` mapped; `X-CSRF-TOKEN` header from JS.
-**Avoids:** Pitfalls 2, 6, 7, 13.
+### Phase 86: Test Wallclock Reduction
+**Rationale:** Phase 79 achieved 16.85% (target ≥30%). Architectural test-infrastructure work — placed last to avoid gate ambiguity.
+**Delivers:** @DirtiesContext audit, context key consolidation if >5 unique contexts, selective @DataJpaTest conversion, forkCount increase if H2 URL isolation confirmed safe
+**Avoids:** Pitfall 17 (@DirtiesContext removal poisoning), Pitfall 18 (H2 file-based URL cross-fork collision)
+**Research flag:** ARCHITECTURE.md has complete Options A-E analysis. No external research needed.
 
-### Phase 5: Replace-All Transaction + JPA Auditing Bypass + Live MariaDB UAT
-
-**Rationale:** Riskiest phase. MariaDB-vs-H2 quirks make this a "passes on H2, breaks on MariaDB" trap.
-**Delivers:** `BackupImportService.execute()` with self-FK two-pass pre-step → FK-reverse DELETE via native SQL → `em.flush() + em.clear()` → restore via `JdbcTemplate.batchUpdate`; `data_import_audit` row written on success; post-commit upload-tree restore; `innodb_lock_wait_timeout` bump; H2 + MariaDB ITs; mid-restore-failure rollback test; live UAT against Saison-2023.
-**Avoids:** Pitfalls 4, 5, 10.
-
-### Phase 6: Operational Hardening — Import Lock + Read-Only Banner + Auto-Backup + Runbook
-
-**Rationale:** Safety net for single-admin-but-not-enforced model.
-**Delivers:** `ImportLockService` `ReentrantLock` singleton; `@ControllerAdvice` filter rejecting `/admin/.*POST.*` with 503; persistent yellow banner; auto-export-before-import to `data/.import-backups/<timestamp>/`; operational runbook.
-**Avoids:** Pitfall 8.
-
-### Phase 7: Final UAT + JaCoCo Gate Hold + Docs Update
-
-**Delivers:** `./mvnw verify -Pe2e` green; round-trip IT on H2 AND MariaDB; JaCoCo ≥ 82%; README backup section; WIKI page; final UAT checklist.
+### Phase 87: Nyquist VALIDATION Closure
+**Rationale:** Documentation of completed work. Must follow all code changes.
+**Delivers:** VALIDATION.md approved for phases 72-76 + 79; created for phases 71 + 78
+**Research flag:** No research needed.
 
 ### Phase Ordering Rationale
 
-- Cluster A (Phase 1) first is lower-risk default — green baseline before feature code.
-- Phase 2 before any export/import code because manifest format + audit-log-scope + Jackson defaults are the wire contract.
-- Phase 3 (export) before Phase 4 (import) because round-trip is the natural integration test.
-- Phase 5 last among implementation phases — failing Phase 5 is then *clearly* a Replace-All issue.
-- Phase 6 drop-in-late-friendly except for `@ControllerAdvice` design hook — flag early.
-- Audit-log-scope decision baked into Phase 2 (PROJECT.md Decisions row).
+```
+80 OpenRewrite  -->  81 SpotBugs  -->  82 Backup Cleanup  -->  83 Polish Sweep
+    (tool setup)       (gate active)      (concrete fixes)       (carryover)
+
+84 Renovate  -->  85 CodeQL  -->  86 Wallclock  -->  87 Nyquist
+  (clean CI)     (additive)     (arch work)       (docs)
+```
+
+UAT-02 (legacy season visual smoke) is a post-deploy verification step, not a development phase. It should be a checklist item triggered by the next production deployment.
 
 ### Research Flags
 
-**Phases needing deeper research during planning:**
-
-- **Phase 1:** Smoke-IT seeded-data preconditions for ALL admin routes including phase-specific ones.
-- **Phase 5:** `repository.save()` `isNew()` on pre-set UUIDs (H2 + MariaDB); `AuditingHandler.setDateTimeProvider()` thread-safety; self-ref entity completeness audit.
-- **Phase 6:** `@ControllerAdvice` read-only-mode filter bypass for import-execute without CSRF hole.
-
-**Phases with standard patterns (skip research-phase):** Phase 2, 3, 4, 7.
+All phases have complete implementation guidance in the research files. No phase requires a separate `/gsd-research-phase` invocation.
 
 ---
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
-| ---- | ---------- | ----- |
-| Stack | **HIGH** | SB 4.0.6 + Thymeleaf 3.1.5 verified via official sources; one MEDIUM call-out on Hibernate proxy via eager-fetch (flag for monitoring during Phase 3) |
-| Features | **HIGH** | Cross-validated against GitLab/Discourse/GitHub Migrations; UI patterns have 1:1 in-codebase precedents |
-| Architecture | **HIGH** | Mirrors proven `org.ctc.dataimport` pattern; SB 4.0.6 has zero SPI impact; MEDIUM call-out on `@JsonIdentityInfo` collection edge case (round-trip IT mandatory) |
-| Pitfalls | **HIGH** | All 13 cross-checked against official sources; MEDIUM on Hibernate 7.2 specifics (verify in Phase 1 smoke) |
+|------|------------|-------|
+| Stack versions | HIGH | All verified against Maven Central and official release pages as of 2026-05-16. Minor version divergence (6.39.0 vs 6.40.0 for rewrite-maven-plugin) — confirm current at Phase 80 execution. |
+| SAST tool choice | HIGH | CodeQL free for public repos is GitHub-documented. Ground truth override applied. |
+| SpotBugs-only clean code scope | HIGH | Checkstyle/PMD exclusion based on well-documented Lombok false-positive patterns and existing CLAUDE.md convention discipline. |
+| OpenRewrite recipe maturity | MEDIUM | Spring Boot 4 community recipes published December 2025 — still maturing. `UpgradeSpringBoot_4_0` behavior on already-Boot-4 codebase documented from pitfall analysis, not from real project experiment. |
+| Renovate configuration | HIGH | Maven manager and package rules are well-established patterns. |
+| Pitfall prevention | HIGH | SpotBugs/Lombok pitfalls cross-referenced from SpotBugs issue tracker; JaCoCo argLine pitfall from documented Maven property evaluation; backup pitfalls from project-specific domain knowledge. |
+| Wallclock reduction outcomes | MEDIUM | Options A-C are well-documented techniques; actual gains are architecture-specific and depend on @DirtiesContext count and context key variation, which requires a live audit to determine. |
 
-**Overall confidence: HIGH.**
+**Overall confidence: HIGH** on tooling setup (Phases 80-85) and tech-debt fixes (82-83). MEDIUM on wallclock reduction outcome (Phase 86).
 
-### Gaps to Address
+### Gaps to Address During Planning
 
-- **GAP-1** ZIP layout (single `data.json` vs per-entity files) — Phase 2; per-entity slightly preferred
-- **GAP-2** Schema version representation (integer vs SemVer) — Phase 2; integer simpler
-- **GAP-3** Multipart cap size (100 vs 200 vs 500 MB) — MVP 100 MB profile-overridable
-- **GAP-4** JPA auditing bypass strategy (native SQL vs `AuditingHandler` scope-disable) — Phase 5 research
-- **GAP-5** Canonical 22-entity FK ordering — generate from live entity classes, do NOT trust hand-written research lists
-- **GAP-6** Hibernate 7.2 entity equality / OSIV deprecation chatter — verify in Phase 1 upgrade smoke
+1. **OpenRewrite recipe set final selection:** Confirm via `mvn rewrite:dryRun` on a clean branch before activating. Some recipes may produce unexpected diffs on CTC-specific patterns. Resolve at Phase 80 start.
+
+2. **SpotBugs initial violation count after lombok.config mitigation:** Research predicts 40-80 EI_EXPOSE_REP* false positives. Actual count after mitigation is unknown. Bootstrap strategy (report-only first) handles this — Phase 81 plan must not assume "zero violations" before the baseline inventory.
+
+3. **@DirtiesContext actual count in current test suite:** Determines whether Options A and C are worth pursuing in Phase 86. Resolve at Phase 86 start: `grep -rn "@DirtiesContext" src/test/java/`.
+
+4. **Renovate onboarding PR timing:** The Mend GitHub App requires a manual installation step by the repo owner (jegr78). The onboarding PR is created by Renovate on first run and must be merged before configuration takes effect. Must be scheduled as part of Phase 84.
 
 ---
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-- Spring Boot v4.0.6 Release Notes (GitHub) — patch-only, no breaking changes
-- Spring Boot 4.0.6 announcement (spring.io blog) — confirms Thymeleaf 3.1.5
-- Spring Boot Dependency Versions Documentation
-- thymeleaf/thymeleaf#1082 — maintainer recommends controller `pageTitle`
-- Endor Labs — CVE-2026-40478 root-cause analysis
-- GitLab Advisory — CVE-2026-40478
-- SEI CERT IDS04-J — ZIP Slip defense
-- Snyk Zip Slip vulnerability database
-- MariaDB Foreign Key Constraints documentation — TRUNCATE-auto-commit semantics
-- Spring Security CSRF reference — Multipart section
+- OpenRewrite latest module versions: https://docs.openrewrite.org/reference/latest-versions-of-every-openrewrite-module
+- OpenRewrite Maven plugin docs: https://docs.openrewrite.org/reference/rewrite-maven-plugin
+- SpotBugs Maven plugin releases: https://github.com/spotbugs/spotbugs-maven-plugin/releases
+- find-sec-bugs releases: https://github.com/find-sec-bugs/find-sec-bugs/releases
+- CodeQL Java 25 support: https://github.blog/changelog/2025-09-26-codeql-2-23-1-adds-support-for-java-25-typescript-5-9-and-swift-6-1-3/
+- codeql-action v4: https://github.com/github/codeql-action/releases
+- Mend Renovate GitHub App: https://github.com/marketplace/renovate
+- Renovate Maven manager: https://docs.renovatebot.com/modules/manager/maven/
+- Renovate configuration options: https://docs.renovatebot.com/configuration-options/
+- GitHub CodeQL for compiled languages: https://docs.github.com/en/code-security/code-scanning/creating-an-advanced-setup-for-code-scanning/codeql-code-scanning-for-compiled-languages
 
 ### Secondary (MEDIUM confidence)
-
-- Baeldung — Jackson Bidirectional Relationships, JPA Auditing, TRUNCATE TABLE in Spring Data JPA, MaxUploadSizeExceededException
-- FasterXML/jackson-datatype-hibernate
-- Mastering Hibernate 7: Proxies and LazyInitializationException
-- Java Code Geeks — Spring Boot 4 Migration: Breaking Changes
-- Wim Deblauwe — Migrating away from Thymeleaf Layout Dialect (anti-feature reference)
-- Hibernate Forum — disable first-level cache
-- GitLab Backup/Restore documentation, Discourse backup admin UI thread
-
-### Tertiary (LOW confidence — needs validation in implementation)
-
-- Spring Boot 4.0.6 GitHub milestone #422
-- Hibernate 7.2 entity-equality / OSIV-deprecation specifics
-- Jackson 3.1.2 `use-jackson2-defaults` flip
-
-### Project-internal
-
-- `.planning/PROJECT.md`, `.planning/research/{STACK,FEATURES,ARCHITECTURE,PITFALLS}.md`, `.planning/codebase/{ARCHITECTURE,CONVENTIONS,STACK,STRUCTURE,TESTING}.md`, `CLAUDE.md`
-- In-codebase precedents: `DriverSheetImportController/Service`, `CsvImportController`, `driver-import-preview.html`, `gt7-sync-preview.html`, `driver-merge.html`, `FileStorageService` (SECU-02), `match-scoring-form.html`/`race-scoring-form.html`/`season-phase-form.html` (line 3 — known broken)
+- Semgrep CE single-function limitation post-Dec 2024: https://konvu.com/compare/semgrep-vs-codeql
+- SpotBugs EI_EXPOSE_REP Lombok false positive: https://github.com/spotbugs/spotbugs-gradle-plugin/issues/731
+- Checkstyle Lombok generated code issue: https://github.com/checkstyle/checkstyle/issues/13508
+- Renovate Maven BOM parent conflict: https://github.com/renovatebot/renovate/issues/15170
+- OpenRewrite issue #1407: Delombok before publishing (open/deferred)
+- Zalando Engineering Blog: Spring Boot test optimization (DirtiesContext impact, context caching)
 
 ---
 
-*Research completed: 2026-05-09*
+*Research completed: 2026-05-16*
 *Ready for roadmap: yes*
+*Milestone: v1.11 Tooling Infrastructure & Tech-Debt Sweep*
+*Phases: 80-87 (continuing from Phase 79)*

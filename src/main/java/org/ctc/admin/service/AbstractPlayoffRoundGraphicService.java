@@ -1,5 +1,13 @@
 package org.ctc.admin.service;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGraphicData;
 import org.ctc.admin.dto.MatchdayGraphicData.MatchGraphicRow;
@@ -9,14 +17,6 @@ import org.ctc.domain.repository.SeasonTeamRepository;
 import org.springframework.core.io.ClassPathResource;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
 
 @Slf4j
 public abstract class AbstractPlayoffRoundGraphicService extends AbstractGraphicService implements TemplateManageable {
@@ -103,7 +103,9 @@ public abstract class AbstractPlayoffRoundGraphicService extends AbstractGraphic
 
 	private String encodeLogoBase64(Team team, SeasonTeam seasonTeam) {
 		String logoUrl = seasonTeam != null ? seasonTeam.getEffectiveLogoUrl() : team.getLogoUrl();
-		if (logoUrl == null) return null;
+		if (logoUrl == null) {
+			return null;
+		}
 		return encodeCardBase64(logoUrl);
 	}
 
@@ -117,7 +119,9 @@ public abstract class AbstractPlayoffRoundGraphicService extends AbstractGraphic
 
 	private String formatScheduledDateTime(PlayoffMatchup matchup) {
 		var earliest = getEarliestDateTime(matchup);
-		if (earliest == null) return null;
+		if (earliest == null) {
+			return null;
+		}
 		var sourceTime = earliest.atZone(ZoneId.systemDefault());
 		var londonTime = sourceTime.withZoneSameInstant(LONDON_ZONE);
 		return londonTime.format(SCHEDULE_FORMAT);
@@ -153,7 +157,7 @@ public abstract class AbstractPlayoffRoundGraphicService extends AbstractGraphic
 	public String loadDefaultTemplate() throws IOException {
 		var resource = new ClassPathResource("templates/" + getDefaultTemplatePath() + ".html");
 		try (var is = resource.getInputStream()) {
-			return new String(is.readAllBytes());
+			return new String(is.readAllBytes(), StandardCharsets.UTF_8);
 		}
 	}
 

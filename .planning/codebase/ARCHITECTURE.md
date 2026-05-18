@@ -1,275 +1,350 @@
+<!-- refreshed: 2026-05-18 -->
 # Architecture
 
-**Analysis Date:** 2026-04-04
+**Analysis Date:** 2026-05-18
+
+## System Overview
+
+CTC Manager is a Spring Boot 4 admin application for managing Gran Turismo racing league competitions. It uses server-side rendering (Thymeleaf), H2/MariaDB persistence, and Playwright for graphic generation. The architecture follows strict layering: controllers delegate to services, services own business logic and repository access, DTOs protect against mass assignment, and OSIV is deliberately enabled for lazy-load support in templates.
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    HTTP / Web Layer                          │
+│  Controllers (`admin.controller.*`) + Thymeleaf Templates   │
+│         `src/main/resources/templates/admin/`               │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│          Form DTOs & Data Transfer Objects                  │
+│  `admin.dto.*` (Form binding, display models, graphics)     │
+│      Protects against mass assignment via @Valid            │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│               Service Layer (Business Logic)                 │
+│  ┌─────────────────┬──────────────────┬───────────────────┐ │
+│  │ domain.service  │ admin.service    │ dataimport.*      │ │
+│  │ (Core domain)   │ (Graphics/UI)    │ (CSV/Google/GT7)  │ │
+│  └─────────────────┴──────────────────┴───────────────────┘ │
+│       Scoring, Matchday Gen, Standings, RaceLineup, etc.     │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│           Domain Model + Repository Layer                    │
+│  JPA Entities (`domain.model.*`) + Spring Data Repositories  │
+│  Transactional consistency; Flyway migrations (V1__...sql)   │
+└──────────────────┬──────────────────────────────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│         Persistent Storage & External Services              │
+│  MariaDB/H2 | Google Sheets | Google Calendar | GT7 Scraper │
+│  File uploads: `data/dev/uploads/`; Site output: `docs/site/`
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Component Responsibilities
+
+| Component | Responsibility | File |
+|-----------|----------------|------|
+| **SeasonController** | HTTP entry point for season CRUD, phase tabs, matchday nav | `src/main/java/org/ctc/admin/controller/SeasonController.java` |
+| **RaceScoringController** | Race scoring template (points arrays), CRUD | `src/main/java/org/ctc/admin/controller/RaceScoringController.java` |
+| **MatchScoringController** | Match scoring template (W/D/L points), CRUD | `src/main/java/org/ctc/admin/controller/MatchScoringController.java` |
+| **RaceController** | Race form, results entry, graphic generation triggers | `src/main/java/org/ctc/admin/controller/RaceController.java` |
+| **RaceLineupController** | Driver-team assignment per race, edit | `src/main/java/org/ctc/admin/controller/RaceLineupController.java` |
+| **StandingsController** | Playoff bracket, final standings view | `src/main/java/org/ctc/admin/controller/StandingsController.java` |
+| **TeamCardController** | Team card (graphic), generation/preview | `src/main/java/org/ctc/admin/controller/TeamCardController.java` |
+| **DriverSheetImportController** | Google Sheets driver import flow | `src/main/java/org/ctc/admin/controller/DriverSheetImportController.java` |
+| **CsvImportController** | Race result CSV import + multi-race leg support | `src/main/java/org/ctc/admin/controller/CsvImportController.java` |
+| **Gt7SyncController** | GT7 car/track scrape + sync | `src/main/java/org/ctc/gt7sync/Gt7SyncController.java` |
+| **SeasonManagementService** | Season CRUD, phase/team queries, data prep | `src/main/java/org/ctc/domain/service/SeasonManagementService.java` |
+| **RaceScoringService** | RaceScoring CRUD + validation (monotonic points) | `src/main/java/org/ctc/domain/service/RaceScoringService.java` |
+| **MatchScoringService** | MatchScoring CRUD | `src/main/java/org/ctc/domain/service/MatchScoringService.java` |
+| **RaceService** | Race persistence, result entry, score aggregation kickoff | `src/main/java/org/ctc/domain/service/RaceService.java` |
+| **ScoringService** | Calculate points (race/quali/FL), aggregate match scores from legs | `src/main/java/org/ctc/domain/service/ScoringService.java` |
+| **RaceLineupService** | RaceLineup CRUD (driver-team binding per race) | `src/main/java/org/ctc/domain/service/RaceLineupService.java` |
+| **CsvImportService** | CSV parsing, driver matching, multi-race import, RaceLineup creation | `src/main/java/org/ctc/dataimport/CsvImportService.java` |
+| **DriverSheetImportService** | Google Sheets fetch, driver name → driver entity resolution | `src/main/java/org/ctc/dataimport/DriverSheetImportService.java` |
+| **Gt7SyncService** | Scrape GT7 cars/tracks, persist to DB | `src/main/java/org/ctc/gt7sync/Gt7SyncService.java` |
+| **AbstractGraphicService** | Playwright-based HTML→PNG rendering (base class) | `src/main/java/org/ctc/admin/service/AbstractGraphicService.java` |
+| **TeamCardService** | Team card image generation/storage | `src/main/java/org/ctc/admin/service/TeamCardService.java` |
+| **MatchdayOverviewGraphicService** | Matchday schedule/results/overview PNG | `src/main/java/org/ctc/admin/service/MatchdayOverviewGraphicService.java` |
+| **BaseEntity** | Audit mixin (`createdAt`, `updatedAt`) via Spring JPA Auditing | `src/main/java/org/ctc/domain/model/BaseEntity.java` |
+| **Race**, **Match**, **RaceResult** | Race outcome modeling; home/away score aggregation | `src/main/java/org/ctc/domain/model/Race.java` |
+| **RaceLineup** | Driver-team assignment per race (Source of Truth for scoring) | `src/main/java/org/ctc/domain/model/RaceLineup.java` |
+| **GlobalExceptionHandler** | Centralized exception → error template routing | `src/main/java/org/ctc/admin/controller/GlobalExceptionHandler.java` |
 
 ## Pattern Overview
 
-**Overall:** Three-tier server-rendered MVC with domain-driven package structure
+**Overall:** Layered N-tier (DAO/Repository → Service → Controller).
 
 **Key Characteristics:**
-- Server-side HTML rendering via Thymeleaf -- no REST API, no SPA
-- POST-Redirect-GET pattern for all form submissions with flash messages
-- OSIV (Open Session in View) deliberately enabled for lazy-loading in templates
-- Profile-based security: authenticated (prod/docker) vs. open (dev/local)
-- Graphic generation via Playwright headless browser (Thymeleaf HTML -> screenshot -> PNG)
-- Two-phase import/sync: parse+preview then confirm+execute
-- Static site generation: domain data -> Thymeleaf templates -> HTML files
+- **Thin Controllers:** HTTP binding only. All business logic in services (`domain.service` and `admin.service`).
+- **DTOs for Form Input:** All POST requests use Form DTOs (`admin.dto.*Form`) with `@Valid` + `BindingResult`. Never bind entities directly (`@ModelAttribute`).
+- **OSIV Enabled:** `spring.jpa.open-in-view=true` intentionally active. Thymeleaf templates can access lazy-loaded fields without extra service calls.
+- **Flash Attributes:** Success/error messages via `RedirectAttributes.addFlashAttribute("successMessage"|"errorMessage", msg)`.
+- **Transactional Consistency:** Domain services use `@Transactional`; multiple writes within one transaction stay consistent (e.g., race results → score aggregation).
+- **Dual Scoring Pipelines:** Race results (RaceResult points) feed MatchScore aggregation; MatchScoring (W/D/L) is separate config.
+- **RaceLineup Source of Truth:** `isDriverInTeam()` checks RaceLineup first, fallback to SeasonDriver for legacy data only.
 
 ## Layers
 
-**Controller Layer (HTTP Handling):**
-- Purpose: Accept HTTP requests, delegate to services, populate Model/Redirect/Flash
+**Controller Layer (HTTP):**
+- Purpose: Receive requests, delegate to services, fill model attributes, return view names or redirects
 - Location: `src/main/java/org/ctc/admin/controller/`
-- Contains: 18 `@Controller` classes, all under `/admin/*` URL space
-- Depends on: Domain services (`domain.service`), DTOs (`admin.dto`)
-- Used by: Thymeleaf templates via Spring MVC dispatcher
-- Rule: No business logic, no direct repository access. Services handle everything.
+- Contains: `@Controller` classes with `@GetMapping`, `@PostMapping`
+- Depends on: `admin.service.*`, `admin.dto.*`, `domain.service.*`, `domain.model.*`
+- Used by: HTTP clients (browser, Playwright E2E)
 
-**Service Layer (Business Logic):**
-- Purpose: Business rules, data aggregation, scoring calculations
-- Location: `src/main/java/org/ctc/domain/service/` (domain logic), `src/main/java/org/ctc/admin/service/` (graphic generation)
-- Contains: 17 domain services, 15 graphic services
-- Depends on: Repositories, other services, DTOs for structured return data
-- Used by: Controllers, other services
-- Pattern: `@Service` + `@RequiredArgsConstructor` + `@Slf4j`
+**Form DTO Layer (Data Transfer):**
+- Purpose: Bind form inputs with `@Valid`, protect against mass assignment
+- Location: `src/main/java/org/ctc/admin/dto/`
+- Contains: `*Form` classes (binding input), `*Dto` classes (display), `*GraphicData` (graphics prep)
+- Depends on: Jakarta validation annotations
+- Used by: Controllers (`@ModelAttribute`), services for data prep
+
+**Domain Service Layer (Business Logic):**
+- Purpose: Core domain operations (scoring, standings, season management, matchday generation, CSV import)
+- Location: `src/main/java/org/ctc/domain/service/`
+- Contains: `SeasonManagementService`, `RaceService`, `ScoringService`, `MatchdayGeneratorService`, `RaceLineupService`, `CsvImportService`, etc.
+- Depends on: `domain.repository.*`, `domain.model.*`, `domain.exception.*`
+- Used by: Controllers, admin services
+
+**Admin Service Layer (UI/Graphics):**
+- Purpose: Generate graphics (Playwright), format data for UI, manage team cards
+- Location: `src/main/java/org/ctc/admin/service/`
+- Contains: `AbstractGraphicService`, `MatchdayOverviewGraphicService`, `PowerRankingsGraphicService`, `TeamCardService`
+- Depends on: `domain.service.*`, `domain.model.*`, Playwright API
+- Used by: Controllers (`TeamCardController`, `RaceController`)
 
 **Repository Layer (Data Access):**
-- Purpose: JPA data access via Spring Data repositories
+- Purpose: JPA entity queries; one repository per entity type
 - Location: `src/main/java/org/ctc/domain/repository/`
-- Contains: 18 `@Repository` interfaces extending `JpaRepository`
-- Depends on: JPA entities
-- Used by: Services exclusively (never directly from controllers)
+- Contains: `CarRepository`, `DriverRepository`, `RaceRepository`, `MatchRepository`, `RaceLineupRepository`, etc. (all Spring Data JPA)
+- Depends on: JPA, entity models
+- Used by: Domain services
 
-**Domain Model (Entities):**
-- Purpose: JPA entities representing the domain
+**Model Layer (Entities):**
+- Purpose: JPA entity definitions; extend `BaseEntity` for audit fields
 - Location: `src/main/java/org/ctc/domain/model/`
-- Contains: 20 entity classes, 2 enums, 1 `@MappedSuperclass`
-- All entities extend `BaseEntity` for `createdAt`/`updatedAt` auditing
-- UUID primary keys generated by JPA (`GenerationType.UUID`)
+- Contains: `Season`, `Matchday`, `Race`, `Match`, `RaceResult`, `RaceLineup`, `Team`, `Driver`, `Car`, `Track`, etc.
+- Depends on: JPA, Lombok
+- Used by: Services, repositories
 
 **Exception Layer:**
-- Purpose: Typed domain exceptions for centralized error handling
+- Purpose: Custom exceptions for domain errors
 - Location: `src/main/java/org/ctc/domain/exception/`
 - Contains: `EntityNotFoundException`, `BusinessRuleException`, `ValidationException`
-- Used by: Services throw these; `GlobalExceptionHandler` catches and renders error views
-
-**DTO Layer:**
-- Purpose: Form binding (POST) and structured display data (GET)
-- Location: `src/main/java/org/ctc/admin/dto/`
-- Contains: Form DTOs (`*Form`), display DTOs (`*Dto`, `*Data`), request records (`*Request`)
-- Rule: Form DTOs with `@Valid` + `BindingResult` for POST; entities can go directly to GET templates (OSIV)
-
-**Feature Modules:**
-- `org.ctc.dataimport` -- CSV/Google Sheets import with preview workflow
-- `org.ctc.gt7sync` -- Gran Turismo 7 car/track scraping via Jsoup
-- `org.ctc.sitegen` -- Static HTML site generation from domain data
+- Used by: Services, caught by `GlobalExceptionHandler`
 
 ## Data Flow
 
-**Standard CRUD Request (e.g., Save Season):**
+### Primary Request Path (Race Result Entry)
 
-1. User submits form (POST `/admin/seasons/save`)
-2. `SeasonController.save()` receives `@Valid SeasonForm` + `BindingResult`
-3. On validation errors: return form template with errors
-4. On success: delegate to `SeasonManagementService.save(form, scoringIds)`
-5. Service creates/updates entity, persists via `SeasonRepository.save()`
-6. Controller adds flash `successMessage`, redirects to list page
-7. On exception: `GlobalExceptionHandler` catches, renders `admin/error.html`
+1. **GET /admin/races/{id}** → `RaceController.detail()` (`src/main/java/org/ctc/admin/controller/RaceController.java`)
+   - Calls `RaceService.getRaceDetailData()` (query race, check lineup graphics, etc.)
+   - Renders `admin/race-detail.html` with form
 
-**Race Import Flow (Two-Phase):**
+2. **POST /admin/races/{id}/results/save** → `RaceController.saveResults()` (`src/main/java/org/ctc/admin/controller/RaceController.java`)
+   - Binds `@ModelAttribute("raceScoringForm") RaceResultForm` (DTO protection)
+   - Calls `RaceService.saveResults(raceId, resultsList)`
 
-1. User uploads CSV or provides Google Sheets URL (POST `/admin/import/preview`)
-2. `CsvImportController` delegates to `CsvImportService.parseAndPreview()` or `ScorecardParser.parse()`
-3. `DriverMatchingService` resolves PSN IDs: exact match, fuzzy match, or new driver
-4. Preview page shows parsed data with fuzzy match confirmations
-5. User confirms and submits (POST `/admin/import/execute`)
-6. `CsvImportService.executeImport()`: creates Matchday, Match, Race, RaceResult, RaceLineup
-7. `ScoringService.calculatePoints()` applies `RaceScoring` rules to each result
-8. `ScoringService.aggregateMatchScores()` updates Match/PlayoffMatchup totals
+3. **RaceService.saveResults()** (`src/main/java/org/ctc/domain/service/RaceService.java:241`)
+   - Loop: For each result, create `RaceResult` entity
+   - Call `ScoringService.calculatePoints(result, raceScoring)` — sets pointsRace, pointsQuali, pointsFl, pointsTotal
+   - Save race (cascade to results)
+   - **Call `ScoringService.aggregateMatchScores(race)`** — critical: updates `Match.homeScore` / `Match.awayScore` by summing leg results
+   - Return success message
 
-**Graphic Generation Flow:**
+4. **ScoringService.aggregateMatchScores()** (`src/main/java/org/ctc/domain/service/ScoringService.java:56`)
+   - Query `raceRepository.findByMatchId(matchId)` to get all legs for this match
+   - For each leg, sum team points using `isDriverInTeam()` (RaceLineup check)
+   - Write aggregated scores back to `Match`
+   - Log aggregation event
 
-1. Controller calls graphic service (e.g., `MatchdayScheduleGraphicService`)
-2. Service extends `AbstractMatchdayGraphicService` -> `AbstractGraphicService`
-3. Service prepares data context (team colors, logos, standings)
-4. Thymeleaf renders HTML template (either default from classpath or custom from upload dir)
-5. `renderScreenshot()`: writes HTML to temp file, launches headless Chromium via Playwright
-6. Playwright navigates to temp file, takes screenshot, saves PNG
-7. PNG bytes returned to controller -> sent as HTTP response
+5. **Controller redirects** → `RedirectAttributes.addFlashAttribute("successMessage", msg)`
 
-**Static Site Generation Flow:**
+**Critical:** `aggregateMatchScores()` is always called after race results are saved — this is the synchronization point between race-level scoring and match-level aggregation.
 
-1. Trigger via `SiteGeneratorController` (POST `/admin/site/generate`)
-2. `SiteGeneratorService.generate()` loads all seasons
-3. For each season: generates standings, driver rankings, matchday pages, team/driver profiles, playoff brackets
-4. Thymeleaf processes `site/*` templates with domain data context
-5. HTML files written to `docs/site/` (configurable via `ctc.site.output-dir`)
-6. Static assets copied from `static/site/` to `docs/site/assets/`
-7. GitHub Pages deployment triggered on push to `docs/site/**`
+### Secondary Flow: CSV Import (Multi-Race, Multi-Leg)
 
-**Scoring Calculation Flow:**
+1. **GET /admin/import** → `CsvImportController.showImportForm()` (`src/main/java/org/ctc/admin/controller/CsvImportController.java`)
+   - Renders form with season/matchday dropdowns
 
-1. Race results imported or manually saved
-2. `ScoringService.calculatePoints(result, raceScoring)`:
-   - Looks up position in `RaceScoring.racePointsArray` (comma-separated string -> int array)
-   - Looks up quali position in `qualiPointsArray`
-   - Adds fastest lap bonus if applicable
-   - Sets `pointsRace`, `pointsQuali`, `pointsFl`, `pointsTotal` on `RaceResult`
-3. `ScoringService.aggregateMatchScores(race)`:
-   - Sums all race result points per team across all legs of a Match
-   - Uses `isDriverInTeam()` to determine team assignment (RaceLineup is source of truth)
-   - Sets `homeScore`/`awayScore` on Match or PlayoffMatchup
-4. `StandingsService.calculateStandings(seasonId)`:
-   - Loads all matches for season, applies `MatchScoring` (win/draw/loss points)
-   - Handles team succession (replaced teams -> successor inherits results)
-   - Sorts by points, then point difference, then points for
+2. **POST /admin/import/preview** → `CsvImportController.preview()` with CSV file
+   - Calls `CsvImportService.parseAndPreview(csvStream, metadata)` → `ImportPreview` (DTO with errors/rows)
+   - Renders `admin/import-preview.html` showing driver matches and warnings
+
+3. **POST /admin/import/execute** → `CsvImportController.execute()` with confirmed matches
+   - Calls `CsvImportService.executeImport(preview, confirmedMatches, createNewDrivers, overwriteExisting)`
+
+4. **CsvImportService.executeImport()** → **CsvImportService.executeMultiRaceImport()** (`src/main/java/org/ctc/dataimport/CsvImportService.java:120`)
+   - For each ImportPreview (one per CSV/race/leg):
+     - Create or find Match for (home team, away team) pair
+     - Create Race, add to Match
+     - Create RaceResult entries with driver PSN → entity resolution
+     - **Create RaceLineup** entries (CSV row team → team lookup)
+     - Call `ScoringService.calculatePoints()` for each result
+     - **Call `ScoringService.aggregateMatchScores(race)`** after race results saved
+   - Return cumulative result (total races, drivers created, errors)
+
+**Key:** Multiple CSV previews (legs) processed in one transaction; one Match with multiple Races; RaceLineup entries explicitly created to bind drivers to teams per race.
+
+### Tertiary Flow: Google Sheets Driver Import
+
+1. **GET /admin/driver-import** → `DriverSheetImportController.showForm()` (`src/main/java/org/ctc/admin/controller/DriverSheetImportController.java`)
+
+2. **POST /admin/driver-import/fetch** → `DriverSheetImportController.fetch()`
+   - Calls `DriverSheetImportService.fetchSheet(sheetUrl)`
+   - Calls `GoogleSheetsService.readSheet(spreadsheetId, range)` (Google API)
+   - Parse names → `DriverSheetImportService.resolveDrivers()` (fuzzy match + user confirmation)
+   - Render preview with matches
+
+3. **POST /admin/driver-import/save** → `DriverSheetImportController.save()`
+   - Calls `DriverSheetImportService.importDrivers()` (create new Driver entities)
+   - Return success count
+
+### Quaternary Flow: GT7 Car/Track Sync
+
+1. **GET /admin/gt7-sync** → `Gt7SyncController.showForm()` (`src/main/java/org/ctc/gt7sync/Gt7SyncController.java`)
+
+2. **POST /admin/gt7-sync/preview** → `Gt7SyncController.preview()`
+   - Calls `Gt7SyncService.preview()` → `Gt7ScraperService.scrapeGt7()`
+   - Fetches GT7 official data, compares with DB
+   - Render diff view
+
+3. **POST /admin/gt7-sync/execute** → `Gt7SyncController.execute()`
+   - Calls `Gt7SyncService.sync()` — creates/updates Car and Track entities
 
 ## Key Abstractions
 
-**BaseEntity:**
-- Purpose: JPA auditing base class with `createdAt`/`updatedAt`
-- Location: `src/main/java/org/ctc/domain/model/BaseEntity.java`
-- Pattern: `@MappedSuperclass` + `@EntityListeners(AuditingEntityListener.class)`
-- All 20 entities extend this
+**RaceLineup (Driver-Team Binding):**
+- Purpose: Records which team a driver belongs to in a specific race
+- Examples: `src/main/java/org/ctc/domain/model/RaceLineup.java`
+- Pattern: One-to-one mapping (race, driver) → team
+- Usage: CSV import creates lineups; `ScoringService.isDriverInTeam()` queries for score aggregation
+- Source of Truth: Always checked first; `SeasonDriver` is fallback for legacy data
 
-**Scoring System (RaceScoring + MatchScoring):**
-- Purpose: Decoupled, configurable scoring rules stored in DB
-- `RaceScoring` (`src/main/java/org/ctc/domain/model/RaceScoring.java`): defines points per race position, quali position, fastest lap as comma-separated strings
-- `MatchScoring` (`src/main/java/org/ctc/domain/model/MatchScoring.java`): defines points for win/draw/loss at match level
-- Each `Season` references one `RaceScoring` and one `MatchScoring`
-- `ScoringService` (`src/main/java/org/ctc/domain/service/ScoringService.java`): applies rules to results
+**Match & PlayoffMatchup (Score Aggregation):**
+- Purpose: Hold aggregated home/away scores across race legs
+- Examples: `src/main/java/org/ctc/domain/model/Match.java`, `src/main/java/org/ctc/domain/model/PlayoffMatchup.java`
+- Pattern: One Match = multiple Race legs; `aggregateMatchScores()` sums race results into match scores
+- Usage: Standings, bracket visualization, final results
 
-**Graphic Service Hierarchy:**
-- `AbstractGraphicService` (`src/main/java/org/ctc/admin/service/AbstractGraphicService.java`): Playwright screenshot rendering, base64 encoding, template processing
-- `AbstractMatchdayGraphicService` (`src/main/java/org/ctc/admin/service/AbstractMatchdayGraphicService.java`): matchday-specific context (standings, team colors, schedule formatting), custom template management
-- `AbstractPlayoffRoundGraphicService` (`src/main/java/org/ctc/admin/service/AbstractPlayoffRoundGraphicService.java`): playoff round context
-- Concrete services: `MatchdayScheduleGraphicService`, `MatchdayResultsGraphicService`, `MatchdayOverviewGraphicService`, `LineupGraphicService`, `ResultsGraphicService`, `SettingsGraphicService`, `OverlayGraphicService`, `TeamCardService`, `PowerRankingsGraphicService`, etc.
+**Matchday & SeasonPhase (Tournament Structure):**
+- Purpose: Organize races into phases (REGULAR, PLAYOFF) and matchdays (MD1, MD2, etc.)
+- Examples: `src/main/java/org/ctc/domain/model/Matchday.java`, `src/main/java/org/ctc/domain/model/SeasonPhase.java`
+- Pattern: Season → Phase → Matchday → Match → Race → RaceResult
+- Scoring Config: Phase holds RaceScoring (points arrays) and MatchScoring (W/D/L)
 
-**SeasonTeam (Join Table with Business Logic):**
-- Purpose: Links teams to seasons with per-season overrides and succession tracking
-- Location: `src/main/java/org/ctc/domain/model/SeasonTeam.java`
-- Has: rating, color overrides, logo override, successor chain (for team replacement mid-season)
-- `getEffective*()` methods fall back to team defaults when no override is set
-- `getActiveSeasonTeam()` follows successor chain to find current active team
-
-**RaceLineup (Source of Truth for Driver-Team Assignment):**
-- Purpose: Per-race driver-to-team mapping (handles sub-teams correctly)
-- Location: `src/main/java/org/ctc/domain/model/RaceLineup.java`
-- Used by: `ScoringService.isDriverInTeam()` prioritizes RaceLineup over SeasonDriver
-- Created during: CSV import and manual lineup management
-
-**Team Hierarchy (Parent/Sub-Teams):**
-- Teams have optional `parentTeam` relationship (self-referencing FK)
-- `isSubTeam()`, `hasSubTeams()`, `getParentOrSelf()` convenience methods on `src/main/java/org/ctc/domain/model/Team.java`
-- `Season.getEligibleTeams()` filters out parent teams when sub-teams are present
-- Sub-team auto-management: adding a sub-team auto-adds parent; removing last sub-team auto-removes parent
+**Graphic Services (Playwright):**
+- Purpose: Generate PNG graphics for team cards, matchday overviews, standings
+- Examples: `AbstractGraphicService`, `MatchdayOverviewGraphicService`, `TeamCardService`
+- Pattern: Render Thymeleaf HTML → Page.screenshot() → PNG file in `data/{profile}/uploads/`
+- Usage: Triggered by controller endpoints; cached/retrieved via `RaceAttachment`
 
 ## Entry Points
 
-**Application Entry:**
+**Web Application:**
 - Location: `src/main/java/org/ctc/CtcManagerApplication.java`
-- Standard Spring Boot application with `@EnableJpaAuditing`
+- Triggers: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`
+- Responsibilities: Spring Boot autoconfiguration, enable JPA auditing, start embedded Tomcat
 
-**HTTP Entry (Admin UI):**
-- All controllers map under `/admin/*`
-- `AdminRedirectController` (`src/main/java/org/ctc/admin/controller/AdminRedirectController.java`): redirects `/` -> `/admin/seasons`
-- Layout: `src/main/resources/templates/admin/layout.html` (Thymeleaf fragment pattern: `th:replace="~{admin/layout :: layout(...)}"`)
-- Feature modules have own controllers: `CsvImportController`, `Gt7SyncController`, `SiteGeneratorController`
+**Controller Entry Points (HTTP):**
+- `/admin/seasons` — Season list/form
+- `/admin/races/{id}` — Race detail, results entry
+- `/admin/race-scorings` — RaceScoring config
+- `/admin/match-scorings` — MatchScoring config
+- `/admin/driver-import` — Google Sheets import
+- `/admin/import` — CSV race import
+- `/admin/gt7-sync` — GT7 car/track sync
+- `/admin/teams`, `/admin/drivers`, `/admin/cars`, `/admin/tracks` — Master data CRUD
 
-**Dev Data Seeding:**
-- `DevDataSeeder` (`src/main/java/org/ctc/admin/DevDataSeeder.java`): runs on dev profile, creates test entities via `TestDataService`
-- `DemoDataSeeder` (`src/main/java/org/ctc/admin/DemoDataSeeder.java`): runs on demo profile, imports GT7 cars/tracks with images
+**Background Tasks:**
+- None (no scheduled jobs); all triggered via HTTP request
+- Exception: E2E tests use `TestDataService.seedData()` to populate demo data
+
+## Architectural Constraints
+
+- **Threading:** Single-threaded event loop (Spring Boot Tomcat, default pool size)
+- **Global State:** None (stateless HTTP handlers)
+- **Session State:** Spring Security session for auth (prod/docker only)
+- **Lazy Loading:** OSIV enabled; controllers can safely access lazy relations in templates without triggering lazy-init errors
+- **Transaction Scope:** `@Transactional` methods; one HTTP request = one transaction (typically)
+- **Circular Imports:** None detected
+- **Circular Dependencies:** Controller → Service → Repository → Model; no backward references
+- **Immutable Flyway V1:** `src/main/resources/db/migration/V1__*.sql` must never change after release; V2+ migrations only
+
+## Anti-Patterns
+
+### Missing aggregateMatchScores() Call
+
+**What happens:** Race results are saved but match-level scores are not updated. Standings show stale data.
+
+**Why it's wrong:** RaceResult points are calculated and persisted, but Match.homeScore/awayScore remain unchanged. Controllers/templates then read stale match scores.
+
+**Do this instead:** Always call `ScoringService.aggregateMatchScores(race)` immediately after saving RaceResults. See `RaceService.saveResults()` line 259 (`src/main/java/org/ctc/domain/service/RaceService.java`).
+
+### Not Using RaceLineup for Team Assignment
+
+**What happens:** `isDriverInTeam()` fallback to SeasonDriver; multi-leg CSV imports assign drivers to wrong teams.
+
+**Why it's wrong:** CSV import can place same driver on different teams across legs. SeasonDriver is season-wide; RaceLineup is race-specific and accurate.
+
+**Do this instead:** Always create RaceLineup entries during CSV import. `CsvImportService.executeMultiRaceImport()` does this at `src/main/java/org/ctc/dataimport/CsvImportService.java:120`. Never skip RaceLineup creation.
+
+### Binding Form DTOs Directly to Entities
+
+**What happens:** Controller uses `@ModelAttribute Season season` (entity) instead of `@ModelAttribute SeasonForm form` (DTO).
+
+**Why it's wrong:** Mass assignment: user can modify fields not intended for editing (e.g., createdAt, foreign key IDs).
+
+**Do this instead:** Always use Form DTOs (`admin.dto.*Form`) for POST requests. Copy validated form fields to entity in service layer. Example: `SeasonController.save()` uses `SeasonForm` (see `src/main/java/org/ctc/admin/controller/SeasonController.java:94`).
+
+### Complex Logic in Thymeleaf Templates
+
+**What happens:** Template uses SpEL expressions, collection projections, or conditional formatting.
+
+**Why it's wrong:** Reduces testability; logic is not unit-tested; hard to refactor.
+
+**Do this instead:** Prepare all data in service layer and pass simple objects/lists to template. Example: Use `StandingsViewService` to pre-calculate standings, pass to template as simple list of rows (see `src/main/java/org/ctc/domain/service/StandingsViewService.java`).
+
+### Inline Styles on Buttons
+
+**What happens:** Template contains `<button style="color: red; padding: 10px;">Save</button>`.
+
+**Why it's wrong:** Styling logic scattered across codebase; hard to maintain; doesn't scale.
+
+**Do this instead:** Use CSS classes from `admin.css`: `<button class="btn btn-primary btn-sm">Save</button>`. When JavaScript sets className, include CSS classes: `element.className = 'btn btn-primary btn-sm'` (see CLAUDE.md "No Inline Styles on Buttons").
 
 ## Error Handling
 
-**Strategy:** Centralized `@ControllerAdvice` with typed domain exceptions
+**Strategy:** Centralized exception catching in `GlobalExceptionHandler` (`src/main/java/org/ctc/admin/controller/GlobalExceptionHandler.java`).
 
-**Exception Hierarchy:**
-- `EntityNotFoundException` (`src/main/java/org/ctc/domain/exception/EntityNotFoundException.java`) -> 404 Not Found (logged as warn)
-- `ValidationException` (`src/main/java/org/ctc/domain/exception/ValidationException.java`) -> 400 Bad Request (logged as warn)
-- `BusinessRuleException` (`src/main/java/org/ctc/domain/exception/BusinessRuleException.java`) -> 409 Conflict (logged as warn)
-- `NoSuchElementException` -> 404 Not Found (legacy compat)
-- `ResponseStatusException` -> re-thrown (Spring handling)
-- `Exception` (catch-all) -> 500 Internal Error (logged as error)
+**Patterns:**
+- `EntityNotFoundException` → 404 Not Found + error template
+- `ValidationException` → 400 Bad Request
+- `BusinessRuleException` → 409 Conflict (e.g., duplicate scoring name, ref integrity)
+- `Exception` (uncaught) → 500 Internal Server Error
+- Development mode (`dev` profile) shows exception type and stack trace; production hides details
 
-**Handler:** `GlobalExceptionHandler` (`src/main/java/org/ctc/admin/controller/GlobalExceptionHandler.java`)
-- Renders `admin/error.html` with status, title, message
-- Shows exception type details only in dev profile
-
-**Controller-Level Handling:**
-- `IllegalStateException` from services caught in controllers, converted to flash `errorMessage`
-- Used for business rule violations in older code paths (pre-exception-hierarchy)
+**Flash Attributes:** Services throw exceptions; controllers catch and convert to flash messages (success/error) for user-friendly redirect. Example: `RaceScoringController.save()` catches `BusinessRuleException` and adds `"errorMessage"` flash attribute (see `src/main/java/org/ctc/admin/controller/RaceScoringController.java:51`).
 
 ## Cross-Cutting Concerns
 
-**Logging:**
-- SLF4J via Lombok `@Slf4j`
-- `log.info()` for state changes (CRUD operations, imports)
-- `log.debug()` for calculations (scoring, standings)
-- Parameterized `{}` placeholders, never string concatenation
-- Logback config: `src/main/resources/logback-spring.xml`
+**Logging:** All services use `@Slf4j` with parameterized `log.info("msg {}", value)` format. Key events: entity CRUD, score calculations, imports. Development mode includes debug logs for calculations.
 
-**Validation:**
-- Jakarta Bean Validation (`@NotBlank`, `@NotNull`) on entities and form DTOs
-- `@Valid` + `BindingResult` in controller methods
-- Business rule validation in services (throw `BusinessRuleException` or `IllegalStateException`)
+**Validation:** Two-tier approach:
+- Form-level: Jakarta `@NotBlank`, `@Valid` + `BindingResult` in controller
+- Business-level: Service methods throw `BusinessRuleException` for domain rules (e.g., monotonic race points)
 
-**Authentication:**
-- Profile-split configuration:
-  - `SecurityConfig` (`src/main/java/org/ctc/admin/SecurityConfig.java`): prod/docker -- HTTP Basic, all requests authenticated except `/actuator/health`
-  - `OpenSecurityConfig` (`src/main/java/org/ctc/admin/OpenSecurityConfig.java`): dev/local -- all requests permitted, frame options disabled (H2 console)
-- CSRF disabled (admin-only app, no public-facing forms)
+**Authentication:** Spring Security configured in `SecurityConfig.java` and `OpenSecurityConfig.java` (`src/main/java/org/ctc/admin/`). Auth enabled for `prod`/`docker` profiles only; `dev`/`local` are open. No role-based access control (RBAC) in current implementation.
 
-**File Storage:**
-- `FileStorageService` (`src/main/java/org/ctc/domain/service/FileStorageService.java`): stores uploaded files (logos, images)
-- Upload dir configurable: `app.upload-dir` (default: `data/dev/uploads`)
-- `WebConfig` (`src/main/java/org/ctc/admin/WebConfig.java`): maps `/uploads/**` to filesystem
-
-**Global Model Attributes:**
-- `GlobalModelAdvice` (`src/main/java/org/ctc/admin/controller/GlobalModelAdvice.java`): injects `appVersion` into all views
-
-**Database Migrations:**
-- Flyway with 2 migrations: `V1__initial_schema.sql` (frozen since v1.0.0), `V2__add_fk_indexes.sql`
-- Location: `src/main/resources/db/migration/`
-- Rule: Never modify existing migrations. New changes require new `V{N}__*.sql` files.
-
-## Season Formats
-
-**LEAGUE:** Round-robin format with matchday generation
-- `MatchdayGeneratorService` (`src/main/java/org/ctc/domain/service/MatchdayGeneratorService.java`) creates round-robin pairings
-- Supports home-and-away option, configurable number of rounds
-- Multiple legs per match (configurable via `season.legs`)
-
-**SWISS:** Swiss-system pairing
-- `SwissPairingService` (`src/main/java/org/ctc/domain/service/SwissPairingService.java`) generates one round at a time based on current standings
-- Rounds generated incrementally as previous round completes
-- Buchholz tiebreaker support
-
-**PLAYOFF:** Bracket-style elimination
-- `PlayoffService` (`src/main/java/org/ctc/domain/service/PlayoffService.java`) manages bracket structure, seeding, advancement
-- Rounds with configurable best-of legs
-- `PlayoffMatchup` tracks bracket position, teams, scores, winner, next matchup link
-
-## Entity Relationship Overview
-
-```
-Season (1) --- (*) Matchday (1) --- (*) Match (1) --- (*) Race (1) --- (*) RaceResult
-  |                                   |                   |                   |
-  |--- (*) SeasonTeam --- Team        |--- homeTeam       |--- (*) RaceLineup |--- Driver
-  |--- (*) SeasonDriver              |--- awayTeam       |--- Track
-  |--- (*) Car (M:N)                                     |--- Car
-  |--- (*) Track (M:N)                                   |--- RaceSettings (1:1)
-  |--- RaceScoring                                       |--- (*) RaceAttachment
-  |--- MatchScoring                                      |--- PlayoffMatchup (optional)
-  |
-  +--- Playoff (0..1) --- (*) PlayoffRound --- (*) PlayoffMatchup --- (*) Race
-                    |
-                    +--- (*) PlayoffSeed
-
-Team --- parentTeam (self-ref) --- (*) subTeams
-Driver --- (*) PsnAlias
-```
+**Transactional Consistency:** All state-mutating service methods are `@Transactional`. Multiple writes (race + results + lineup + aggregation) complete atomically within one transaction. Rollback on any exception.
 
 ---
 
-*Architecture analysis: 2026-04-04*
+*Architecture analysis: 2026-05-18*

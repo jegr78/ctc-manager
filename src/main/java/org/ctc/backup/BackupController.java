@@ -1,13 +1,12 @@
 package org.ctc.backup;
 
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
-
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.backup.dto.BackupImportConfirmForm;
@@ -229,7 +228,7 @@ public class BackupController {
 						? ex.getAuditUuid().toString()
 						: "unavailable (audit write failed; see logs for " + ex.getAuditUuid() + ")";
 				// Surface BackupArchiveException cause detail when present (e.g. SCHEMA_MISMATCH).
-				String causeDetail = (ex.getCause() instanceof BackupArchiveException bae)
+				String causeDetail = ex.getCause() instanceof BackupArchiveException bae
 						? " (" + bae.reason() + ")"
 						: "";
 				ra.addFlashAttribute("errorMessage",

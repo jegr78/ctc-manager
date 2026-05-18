@@ -4,8 +4,6 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.metamodel.Attribute.PersistentAttributeType;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.SingularAttribute;
-import org.springframework.stereotype.Component;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.util.ArrayDeque;
@@ -17,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.stereotype.Component;
 
 /**
  * Kahn's-algorithm topo-sort over JPA {@link EntityType}. Dependency edge:
@@ -42,27 +41,29 @@ class EntityTopoSorter {
         }
         for (EntityType<?> owner : entityTypes) {
             for (SingularAttribute<?, ?> attr : owner.getSingularAttributes()) {
-                var type = attr.getPersistentAttributeType();
-                if (type != PersistentAttributeType.MANY_TO_ONE
-                        && type != PersistentAttributeType.ONE_TO_ONE) {
-                    continue;
-                }
-                // @ManyToOne is always owning. @OneToOne can be either side: the inverse side
-                // also surfaces as a SingularAttribute. We must skip the inverse side, or both
-                // ends record an edge and Kahn deadlocks (e.g. Race <-> RaceSettings).
-                if (type == PersistentAttributeType.ONE_TO_ONE && isInverseOneToOne(attr)) {
-                    continue;
-                }
-                Class<?> depClass = attr.getJavaType();
-                if (!byClass.containsKey(depClass)) {
-                    continue;                                       // FK to non-domain entity — skip
-                }
-                Class<?> ownerClass = owner.getJavaType();
-                if (depClass.equals(ownerClass)) continue;        // self-FK (Team.parentTeam) — skip
-                if (outgoing.get(depClass).add(ownerClass)) {       // dedupe duplicate edges
-                    inDegree.merge(ownerClass, 1, Integer::sum);
-                }
-            }
+				var type = attr.getPersistentAttributeType();
+				if (type != PersistentAttributeType.MANY_TO_ONE
+						&& type != PersistentAttributeType.ONE_TO_ONE) {
+					continue;
+				}
+				// @ManyToOne is always owning. @OneToOne can be either side: the inverse side
+				// also surfaces as a SingularAttribute. We must skip the inverse side, or both
+				// ends record an edge and Kahn deadlocks (e.g. Race <-> RaceSettings).
+				if (type == PersistentAttributeType.ONE_TO_ONE && isInverseOneToOne(attr)) {
+					continue;
+				}
+				Class<?> depClass = attr.getJavaType();
+				if (!byClass.containsKey(depClass)) {
+					continue;                                       // FK to non-domain entity — skip
+				}
+				Class<?> ownerClass = owner.getJavaType();
+				if (depClass.equals(ownerClass)) {
+					continue;        // self-FK (Team.parentTeam) — skip
+				}
+				if (outgoing.get(depClass).add(ownerClass)) {       // dedupe duplicate edges
+					inDegree.merge(ownerClass, 1, Integer::sum);
+				}
+			}
         }
 
         Deque<Class<?>> queue = inDegree.entrySet().stream()

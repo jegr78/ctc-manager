@@ -1,697 +1,537 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-04-07
+**Analysis Date:** 2026-05-18
 
 ## Test Framework
 
 **Runner:**
-- JUnit 5 (Jupiter)
-- Maven Surefire (unit/integration tests)
-- Maven Failsafe (E2E tests, activated via `-Pe2e` profile)
-- Config: `pom.xml` (lines 184-194 for Surefire, lines 256-278 for Failsafe)
+- JUnit 5 (Jupiter) via Spring Boot 4.0.6 default test starter
+- Config: `pom.xml` lines 266–309 (Surefire plugin)
 
 **Assertion Library:**
-- AssertJ (primary, for fluent assertions)
-- JUnit Jupiter assertions (legacy, gradually phased out)
-- Mockito assertions (for mock verification)
-- Playwright assertions (for E2E)
+- AssertJ for fluent assertions (e.g., `assertThat(...).isEqualTo(...)`)
+- Spring Test assertions for web tests (e.g., `MockMvc.andExpect(status().isOk())`)
+- Playwright assertions for E2E tests (e.g., `assertThat(page.getByRole(...)).isVisible()`)
+
+**Mock Framework:**
+- Mockito 4.x (Spring Boot managed version)
+- `@Mock` for dependency injection in unit tests
+- `@InjectMocks` for service-under-test instantiation
+- `when(...).thenReturn(...)` for stubbing
 
 **Run Commands:**
 ```bash
-./mvnw verify                    # Run all unit + integration tests
-./mvnw verify -Pe2e              # Run all tests including Playwright E2E
-./mvnw test                      # Unit tests only (Surefire)
-./mvnw verify -Pe2e -Dtest=AdminWorkflowE2ETest   # Single E2E test
-```
+# Run all tests (unit + integration, excludes E2E)
+./mvnw verify
 
-**Coverage:**
-```bash
-./mvnw verify                    # Generates target/site/jacoco/index.html
+# Run with E2E (full test suite)
+./mvnw verify -Pe2e
+
+# Run specific test class
+./mvnw -Dtest=Gt7SyncServiceTest test
+
+# Run specific test method
+./mvnw -Dtest=Gt7SyncServiceTest#givenMixOfNewAndExistingCarsAndTracks_whenFetchAndPreview_thenReturnsCorrectCounts test
+
+# Run only integration tests
+./mvnw -Dit.test=V4MigrationSmokeIT verify
+
+# Watch mode / repeated runs
+./mvnw -f /path/to/pom.xml verify -Drepeat=0  # Not natively supported; use IDE watch
+
+# Coverage report
+./mvnw verify
 open target/site/jacoco/index.html
 ```
 
 ## Test File Organization
 
 **Location:**
-- Unit/integration: `src/test/java/org/ctc/{domain,admin,dataimport,gt7sync}/...`
-- E2E tests: `src/test/java/org/ctc/e2e/`
-- Test data: `src/test/resources/` (logback-test.xml, GT7 fixtures)
-- Test helper: `src/test/java/org/ctc/TestHelper.java`
+- Unit tests: `src/test/java/{package}/` (same package structure as main)
+- Integration tests (`*IT.java`): Same directory as unit tests
+- E2E tests: `src/test/java/org/ctc/e2e/{test-name}E2ETest.java` or `*Test.java` (not `*IT.java`)
+- Migration tests: `src/test/java/db/migration/{version}MigrationTest.java` or `*IT.java`
 
 **Naming:**
-- Class: `{Classname}Test.java` (unit) or `{Feature}E2ETest.java` (E2E)
-- Method: BDD pattern `givenContext_whenAction_thenResult()` or `whenAction_thenResult()` for simple cases
+- Unit test: `{ClassName}Test.java` (no `@Tag`, no Spring context)
+- Integration test: `{ClassName}IT.java` with `@Tag("integration")`
+- E2E test: `{ClassName}E2ETest.java` or `*Test.java` in `org.ctc.e2e.*` with `@Tag("e2e")`
+- Example files:
+  - `src/test/java/org/ctc/gt7sync/Gt7SyncServiceTest.java` (unit test, no tag)
+  - `src/test/java/db/migration/V4MigrationSmokeIT.java` (integration test with `@Tag("integration")`)
+  - `src/test/java/org/ctc/e2e/ScoringE2ETest.java` (E2E test with `@Tag("e2e")`)
 
-**File Count:**
-- 78 test classes across ~14 directories
-- ~773 total tests (per CLAUDE.md)
-- Excludes: Graphic services (Playwright compilation dependency, not testable), TestDataService, DemoDataSeeder
+**Directory Pattern:**
+```
+src/test/java/
+├── org/ctc/
+│   ├── domain/
+│   │   ├── service/
+│   │   │   ├── {Service}Test.java          # Unit tests
+│   │   │   └── {Service}IT.java            # Integration tests (@Tag("integration"))
+│   ├── admin/
+│   │   ├── controller/
+│   │   │   ├── {Controller}Test.java
+│   │   │   └── {Controller}IT.java
+│   │   └── service/
+│   │       └── {Service}Test.java
+│   ├── e2e/
+│   │   ├── {Feature}E2ETest.java           # Playwright tests (@Tag("e2e"))
+│   │   └── PlaywrightConfig.java           # Base class for E2E
+│   └── testsupport/
+│       └── {Helper}Test.java
+└── db/
+    └── migration/
+        ├── V4MigrationSmokeIT.java         # Integration with Flyway
+        └── V3MigrationTest.java            # Unit test of SQL
+```
 
-**Test Distribution:**
-- Unit tests: `src/test/java/org/ctc/domain/service/` (24 service tests)
-- Integration: `src/test/java/org/ctc/admin/controller/` (20+ controller tests)
-- Domain models: `src/test/java/org/ctc/domain/model/` (6 model tests)
-- Exceptions: `src/test/java/org/ctc/domain/exception/` (1+ exception tests)
-- Admin services: `src/test/java/org/ctc/admin/service/` (10+ graphic/template tests)
-- Import: `src/test/java/org/ctc/dataimport/` (3+ import tests)
-- GT7 sync: `src/test/java/org/ctc/gt7sync/` (3+ sync tests)
-- E2E: `src/test/java/org/ctc/e2e/` (4 E2E tests)
+## Test Categorization (`@Tag`)
+
+**Tag-based Routing (not filename-based):**
+
+The Maven Surefire and Failsafe plugins route tests by `@Tag` annotations, NOT by filename patterns. This is critical because `@Nested` inner classes compile to `ClassName$InnerName.class` and would match `*IT.java` glob patterns even if the parent is a unit test.
+
+**Tag Categories:**
+
+| Tag | File Pattern | Plugin | Spring Context | Notes |
+|-----|--------------|--------|-----------------|-------|
+| (none) | `*Test.java` | Surefire | ✗ No | Pure unit tests; mocked dependencies |
+| `@Tag("integration")` | `*IT.java` | Failsafe | ✓ Yes (`@SpringBootTest`) | Spring-context ITs; databases; repositories |
+| `@Tag("e2e")` | `*Test.java` in `org.ctc.e2e.*` OR `*E2ETest.java` | Failsafe + `-Pe2e` profile | ✓ Yes | Playwright browser tests; live server |
+| `@Tag("flaky")` | Any | Excluded from CI | — | Known intermittent failures; skip in CI |
+
+**Surefire Configuration** (lines 266–279):
+```xml
+<excludedGroups>integration,e2e,flaky</excludedGroups>
+```
+Runs unit tests WITHOUT these tags (pure Mockito tests).
+
+**Failsafe Configuration for Integration** (lines 291–308):
+```xml
+<groups>integration</groups>
+<excludedGroups>e2e,flaky</excludedGroups>
+```
+Runs ONLY `@Tag("integration")` tests, excludes E2E.
+
+**Failsafe Configuration for E2E** (lines 440–460, with `-Pe2e` profile):
+```xml
+<includes>
+    <include>**/e2e/**/*Test.java</include>
+</includes>
+<groups>e2e</groups>
+```
+Runs ONLY `@Tag("e2e")` tests from `org.ctc.e2e.*` package.
+
+**`@Nested` Inheritance:**
+- Inner classes automatically inherit the parent's `@Tag`
+- Example from `SecurityIntegrationTest.java` (lines 17–69):
+  - Parent class: unmarked (unit test context is implicit)
+  - `@Nested class ProdProfileSecurityTest @Tag("integration")` at line 17 → all methods inherit `@Tag("integration")`
+  - `@Nested class DevProfileSecurityTest @Tag("integration")` at line 54 → all methods inherit `@Tag("integration")`
+  - This prevents accidentally discovering nested ITs via filename glob patterns
+
+**Example: Proper Test Tagging**
+
+Unit test (no Spring context):
+```java
+@ExtendWith(MockitoExtension.class)
+class Gt7SyncServiceTest {
+    @Mock Gt7ScraperService scraperService;
+    @InjectMocks Gt7SyncService syncService;
+    
+    @Test
+    void givenMixOfNewAndExistingCarsAndTracks_whenFetchAndPreview_thenReturnsCorrectCounts() { ... }
+}
+```
+
+Integration test (Spring context + JPA):
+```java
+@SpringBootTest(classes = CtcManagerApplication.class)
+@ActiveProfiles("dev")
+@Transactional
+@Tag("integration")
+class V4MigrationSmokeIT {
+    @Autowired SeasonRepository seasonRepository;
+    
+    @Test
+    void whenSpringBootContextLoads_thenSeasonsCanBeQueried() { ... }
+}
+```
+
+E2E test (Playwright):
+```java
+@Tag("e2e")
+class ScoringE2ETest extends PlaywrightConfig {
+    @Test
+    void givenRaceScoringForm_whenSaveWithValidData_thenScoringAppearsInList() { ... }
+}
+```
 
 ## Test Structure
 
-**Unit Test Pattern (Mockito with @ExtendWith):**
+**BDD Test Naming Pattern:**
+All test methods follow Given-When-Then naming:
+- `givenContext_whenAction_thenExpectedResult()`
+- For simple tests without preconditions: `whenAction_thenResult()` is allowed
+- Exception tests: `// when / then` combined with `assertThatThrownBy(...)`
+
+**Example from `Gt7SyncServiceTest.java` (lines 47–78):**
 ```java
-@ExtendWith(MockitoExtension.class)
-class RaceServiceTest {
-
-    @Mock private RaceRepository raceRepository;
-    @Mock private MatchRepository matchRepository;
-
-    @InjectMocks
-    private RaceService service;
-
-    @Test
-    void givenMatchdayId_whenGetRaceListData_thenReturnsFilteredRaces() {
-        // given
-        var matchdayId = UUID.randomUUID();
-        var race = createRaceWithScore(10, 5);
-        
-        when(raceRepository.findByMatchdayId(matchdayId)).thenReturn(List.of(race));
-
-        // when
-        var result = service.getRaceListData(matchdayId, null);
-
-        // then
-        assertThat(result.races()).hasSize(1);
-        verify(raceRepository).findByMatchdayId(matchdayId);
-    }
-}
-```
-Source: `src/test/java/org/ctc/domain/service/RaceServiceTest.java`
-
-**Integration Test Pattern (@SpringBootTest + @Transactional):**
-```java
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("dev")
-@Transactional
-class SeasonControllerTest {
-
-    @Autowired private MockMvc mockMvc;
-    @Autowired private SeasonRepository seasonRepository;
-    @Autowired private TestHelper testHelper;
-
-    @Test
-    void givenValidScoringRefs_whenSaveSeason_thenRedirects() throws Exception {
-        // given
-        var rs = testHelper.createSeason("Dummy").getRaceScoring();
-
-        // when
-        mockMvc.perform(post("/admin/seasons/save")
-                .param("name", "Test Season")
-                .param("raceScoring", rs.getId().toString()))
-                
-        // then
-                .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrl("/admin/seasons"));
-    }
-}
-```
-Source: `src/test/java/org/ctc/admin/controller/SeasonControllerTest.java`
-
-**Test Sections:**
-- `// given` — Precondition setup (mocks, database state, fixtures)
-- `// when` — Action invocation
-- `// then` — Assertion/verification
-- For simple tests or exceptions: `// when / then` combined is acceptable
-
-## Mocking
-
-**Framework:**
-- Mockito Core (3.x, included in Spring Boot Test)
-- Mockito JUnit Jupiter integration (`mockito-junit-jupiter`)
-
-**Activation:**
-- `@ExtendWith(MockitoExtension.class)` for unit tests
-- Automatically available in `@SpringBootTest` integration tests
-
-**Common Patterns:**
-
-```java
-// Basic mock setup
-@Mock
-private RaceScoringRepository raceScoringRepository;
-
-// Inject mocks into service
-@InjectMocks
-private RaceScoringService raceScoringService;
-
-// Set up behavior
-when(raceScoringRepository.findById(id))
-    .thenReturn(Optional.of(scoring));
-
-// Answer with function
-when(raceScoringRepository.saveAndFlush(any(RaceScoring.class)))
-    .thenAnswer(inv -> inv.getArgument(0));
-
-// Verify interactions
-verify(raceScoringRepository).findById(id);
-verify(raceRepository, never()).findAll();
-
-// Verify call order
-InOrder inOrder = inOrder(repo1, repo2);
-inOrder.verify(repo1).findAll();
-inOrder.verify(repo2).save(any());
-```
-Source: `src/test/java/org/ctc/domain/service/RaceScoringServiceTest.java`
-
-**What to Mock:**
-- Repositories (database calls)
-- External services (Google Calendar, Google Sheets, Jsoup GT7)
-- File storage operations
-- Slow or side-effect operations (TeamCardService, graphic generators)
-
-**What NOT to Mock:**
-- Entity classes (use real constructors)
-- Spring autoconfigured components in @SpringBootTest
-- Exception classes (test real throw/catch)
-- JPA EntityManager (use @Transactional to manage)
-
-## Fixtures and Factories
-
-**TestHelper Component:**
-Location: `src/test/java/org/ctc/TestHelper.java`
-
-Provides convenient factory methods for test data creation:
-```java
-public Season createSeason(String name)
-public Season createSeason(String name, int year, int number)
-
-public Matchday createMatchday(Season season, String label, int sortIndex)
-public Team createTeam(String name, String shortName)
-public Match createMatch(Matchday matchday, Team homeTeam, Team awayTeam)
-public Race createRace(Matchday matchday, Match match)
-public Driver createDriver(String psnId, String nickname)
-public SeasonDriver createSeasonDriver(Season season, Driver driver, Team team)
-
-// Composite fixture: creates full season, teams, matchday, match, race
-public SeasonFixture createFullSeasonFixture(String prefix)
-```
-
-**Fixture Data Isolation:**
-- Use unique names with UUID suffixes: `"RS " + suffix` (line 31)
-- For E2E tests: Use test-prefixed data (`T-ALF`, `Test_Alpha_1`, `Test-Season 2026`)
-- Never use real team/driver/season names in automated tests
-- **Why:** Prevent collisions with manual testing on imported real data
-
-**Database State:**
-- H2 in-memory (`dev` profile) auto-initializes via Flyway migrations
-- Transactional tests auto-rollback after each test
-- No manual cleanup required for unit/integration tests
-
-## Integration Testing
-
-**Configuration:**
-- `@SpringBootTest` — Full application context, real beans
-- `@AutoConfigureMockMvc` — Enables `MockMvc` for HTTP testing
-- `@ActiveProfiles("dev")` — Use H2 in-memory database
-- `@Transactional` — Rollback after test, preserves isolation
-
-**Security Testing with Nested Classes:**
-```java
-@Nested
-@SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:h2:mem:sectest;DB_CLOSE_DELAY=-1",
-})
-@AutoConfigureMockMvc
-@ActiveProfiles("prod")
-class ProdProfileSecurityTest {
+@Test
+void givenMixOfNewAndExistingCarsAndTracks_whenFetchAndPreview_thenReturnsCorrectCounts() throws IOException {
+    // given
+    when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
+    when(scraperService.scrapeTracks()).thenReturn(SCRAPED_TRACKS);
+    when(carRepository.existsByGt7Id("car102")).thenReturn(true);
     
-    @Autowired private MockMvc mockMvc;
-
-    @Test
-    void givenNoCredentials_whenAccessAdmin_thenUnauthorized() throws Exception {
-        mockMvc.perform(get("/admin/seasons"))
-            .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    @WithMockUser
-    void givenValidCredentials_whenAccessAdmin_thenOk() throws Exception {
-        mockMvc.perform(get("/admin/seasons"))
-            .andExpect(status().isOk());
-    }
-}
-```
-Source: `src/test/java/org/ctc/admin/SecurityIntegrationTest.java`
-
-**MockMvc Patterns:**
-```java
-// GET with assertions
-mockMvc.perform(get("/admin/seasons"))
-    .andExpect(status().isOk())
-    .andExpect(view().name("admin/seasons"))
-    .andExpect(model().attributeExists("seasons"));
-
-// POST with form parameters and redirect verification
-mockMvc.perform(post("/admin/seasons/save")
-        .param("name", "Season Name")
-        .param("raceScoring", id.toString()))
-    .andExpect(status().is3xxRedirection())
-    .andExpect(redirectedUrl("/admin/seasons"));
-
-// Error response expectations
-mockMvc.perform(post("/admin/seasons/save")
-        .param("name", ""))
-    .andExpect(status().isOk())
-    .andExpect(view().name("admin/season-form"))
-    .andExpect(model().hasErrors());
-```
-
-## Error Testing
-
-**Exception Assertion Pattern:**
-```java
-@Test
-void givenNonExistentId_whenFindById_thenThrowsEntityNotFoundException() {
-    // given
-    var id = UUID.randomUUID();
-    when(raceScoringRepository.findById(id)).thenReturn(Optional.empty());
-
-    // when / then
-    assertThatThrownBy(() -> raceScoringService.findById(id))
-            .isInstanceOf(EntityNotFoundException.class)
-            .hasMessageContaining("RaceScoring")
-            .hasMessageContaining(id.toString());
-}
-```
-Source: `src/test/java/org/ctc/domain/service/RaceScoringServiceTest.java`
-
-**Custom Exception Testing:**
-```java
-@Test
-void givenCustomException_whenHandled_thenReturnsProperHttpStatus() {
-    // given
-    var ex = new ValidationException("Name is required");
-
     // when
-    var mav = handler.handleValidation(ex);
-
+    Gt7SyncPreview preview = syncService.fetchAndPreview();
+    
     // then
-    assertThat(mav.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-    assertThat(mav.getModel().get("message")).isEqualTo("Name is required");
+    assertThat(preview.getNewCarCount()).isEqualTo(1);
+    assertThat(preview.getExistingCarCount()).isEqualTo(2);
 }
 ```
-Source: `src/test/java/org/ctc/admin/controller/GlobalExceptionHandlerTest.java`
 
-**Illegal State Testing:**
+**Suite Organization with `@Nested`:**
+Multiple test scenarios grouped inside a single outer class:
+
 ```java
-assertThatThrownBy(() -> service.generateLineup(race))
-    .isInstanceOf(IllegalStateException.class)
-    .hasMessageContaining("No teams");
-```
-
-## Parameterized Testing
-
-**Framework:**
-- JUnit 5 `@ParameterizedTest` + `@ValueSource`
-
-**Pattern:**
-```java
-@ParameterizedTest
-@ValueSource(strings = {"team-cards", "lineup", "settings", "race-results"})
-void givenTemplateType_whenRenderPreview_thenContainsExpectedData(String template) {
-    // when
-    String html = service.renderPreview(template, sampleHtml);
-
-    // then
-    assertThat(html).contains("Expected data for " + template);
-}
-```
-Source: `src/test/java/org/ctc/admin/service/TemplatePreviewServiceTest.java`
-
-## Nested Test Classes
-
-**Usage:**
-- `@Nested` for organizing related test groups within a single test class
-- Commonly used for profile-specific or feature-specific grouping
-
-**Example:**
-```java
+@Tag("integration")
 class SecurityIntegrationTest {
-
+    
     @Nested
-    @SpringBootTest
+    @SpringBootTest(properties = { ... })
     @ActiveProfiles("prod")
     class ProdProfileSecurityTest {
-        // Tests requiring prod authentication
+        @Test void givenNoCredentials_whenAccessAdmin_thenUnauthorized() { ... }
+        @Test void givenValidCredentials_whenAccessAdmin_thenOk() { ... }
     }
-
+    
     @Nested
     @SpringBootTest
     @ActiveProfiles("dev")
     class DevProfileSecurityTest {
-        // Tests with dev profile (no auth)
+        @Test void givenDevProfile_whenAccessAdmin_thenOk() { ... }
     }
 }
 ```
-Source: `src/test/java/org/ctc/admin/SecurityIntegrationTest.java`
 
-## E2E Testing (Playwright)
+**Setup/Teardown:**
+- `@BeforeEach` for per-test setup (e.g., `setupPage()` in E2E, entity creation)
+- `@AfterEach` for cleanup (e.g., `teardownPage()` in E2E)
+- `@BeforeAll` / `@AfterAll` for class-level one-time setup (e.g., static resource initialization)
+- Spring Boot integration tests: `@Transactional` rolls back all DB changes automatically
+
+## Mocking
 
 **Framework:**
-- Playwright Browser Automation 1.58.0
-- JUnit 5 integration
-- Headless Chromium
+- Mockito 4.x via `@ExtendWith(MockitoExtension.class)` (not Spring Boot test context)
 
-**Base Class:**
-Location: `src/test/java/org/ctc/e2e/PlaywrightConfig.java`
-
+**Dependency Injection:**
 ```java
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("dev")
-public abstract class PlaywrightConfig {
-
-    static Playwright playwright;
-    static Browser browser;
-
-    @LocalServerPort
-    int port;
-
-    BrowserContext context;
-    Page page;
-
-    @BeforeAll
-    static void setupBrowser() {
-        playwright = Playwright.create();
-        browser = playwright.chromium().launch(
-            new BrowserType.LaunchOptions().setHeadless(true));
-    }
-
-    @AfterAll
-    static void teardownBrowser() {
-        if (browser != null) browser.close();
-        if (playwright != null) playwright.close();
-    }
-
-    protected void setupPage() {
-        context = browser.newContext();
-        page = context.newPage();
-    }
-
-    protected void teardownPage() {
-        if (context != null) context.close();
-    }
-
-    protected String url(String path) {
-        return "http://localhost:" + port + path;
-    }
-}
-```
-
-**E2E Test Pattern:**
-```java
-class AdminWorkflowE2ETest extends PlaywrightConfig {
-
-    @BeforeEach
-    void setUp() {
-        setupPage();
-    }
-
-    @AfterEach
-    void tearDown() {
-        teardownPage();
-    }
-
-    @Test
-    void givenSeasonForm_whenSaveWithValidData_thenSeasonAppearsInList() {
-        // given
-        page.navigate(url("/admin/seasons/new"));
-
-        // when
-        page.getByRole(AriaRole.TEXTBOX, 
-            new Page.GetByRoleOptions().setName("Name").setExact(true))
-            .fill("E2E Season");
-        page.fill("#year", "2026");
-        page.selectOption("#raceScoring", 
-            new SelectOption().setLabel("CTC Standard"));
-        page.getByRole(AriaRole.BUTTON, 
-            new Page.GetByRoleOptions().setName("Save"))
-            .click();
-
-        // then
-        assertThat(page).hasTitle("CTC Admin - Seasons");
-        assertThat(page.getByRole(AriaRole.CELL, 
-            new Page.GetByRoleOptions().setName("E2E Season")))
-            .isVisible();
-        assertThat(page.locator(".alert-success"))
-            .containsText("Season saved");
-    }
-}
-```
-Source: `src/test/java/org/ctc/e2e/AdminWorkflowE2ETest.java`
-
-**E2E Test Files:**
-- `src/test/java/org/ctc/e2e/AdminWorkflowE2ETest.java` — Navigation, CRUD workflows
-- `src/test/java/org/ctc/e2e/ScoringE2ETest.java` — Scoring calculations
-- `src/test/java/org/ctc/e2e/ImportE2eTest.java` — CSV import workflows
-
-**Locators & Interaction:**
-```java
-// Find by role (ARIA-compliant, accessible)
-page.getByRole(AriaRole.BUTTON, 
-    new Page.GetByRoleOptions().setName("Save"))
-    .click();
-
-// Find by text
-page.locator("text=My Text").click();
-
-// Find by selector
-page.fill("#year", "2026");
-
-// Assertions
-assertThat(page).hasTitle("Expected Title");
-assertThat(element).isVisible();
-assertThat(element).containsText("text");
-```
-
-**DevDataSeeder (Test Data Provider):**
-Runs at startup in `dev` profile to create predictable test fixtures (scoring presets, GT7 cars/tracks).
-- Never edit or run this for specific test needs — use TestHelper fixtures instead
-- E2E tests select from DevDataSeeder presets (e.g., "CTC Standard" race scoring)
-
-**Playwright Visual Inspection:**
-For UI changes, verify with: `playwright-cli open http://localhost:9090/admin/seasons`
-(Requires dev server running: `./mvnw spring-boot:run -Dspring-boot.run.profiles=dev`)
-
-## Coverage
-
-**JaCoCo Configuration:**
-Location: `pom.xml` (lines 198-249)
-
-**Minimum Threshold:**
-- Line coverage: 82% (enforced by `<minimum>0.82</minimum>`)
-- Checked at verify phase
-
-**Excluded from Coverage:**
-- `CtcManagerApplication` — Spring Boot entry point
-- `TestDataService` — Test fixture provider
-- `DemoDataSeeder` — Development data initializer
-- Graphic services: `TeamCardService`, `LineupGraphicService`, `ResultsGraphicService`, `SettingsGraphicService`, `OverlayGraphicService`, `MatchResultsGraphicService`, `PowerRankingsGraphicService`, `AbstractGraphicService`, `PlayoffRoundOverviewGraphicService`, `PlayoffRoundScheduleGraphicService`, `PlayoffRoundResultsGraphicService`
-- **Why:** Graphic services use Playwright for rendering (runtime compile dependency) — not practical to unit test
-
-**Coverage Measurement:**
-```bash
-./mvnw verify
-# Report: target/site/jacoco/index.html
-open target/site/jacoco/index.html
-
-# CI automatically posts coverage comment to PR via madrapps/jacoco-report
-```
-
-## Logging in Tests
-
-**Configuration:**
-- Log level: WARN (suppresses debug/info during test runs)
-- Config: `src/test/resources/logback-test.xml`
-
-**Pattern:**
-```xml
-<root level="WARN">
-    <appender-ref ref="CONSOLE"/>
-</root>
-```
-
-**Usage in Tests:**
-- Log only state-changing operations (saves, deletes)
-- Use SLF4J via `@Slf4j` (Lombok)
-- Parameterized format: `log.info("Created season {}", season.getId())`
-
-## Test Naming Convention (BDD Style)
-
-**Required Pattern:**
-`givenContext_whenAction_thenExpectedResult()`
-
-**Breakdown:**
-- `given` — Preconditions (setup state, mocks)
-- `when` — Action invoked (method call)
-- `then` — Expected outcome (assertions)
-
-**Examples:**
-```java
-void givenValidScoringRefs_whenSaveSeason_thenRedirects()
-void givenNonExistentId_whenFindById_thenThrowsEntityNotFoundException()
-void givenMatchdayId_whenGetRaceListData_thenReturnsFilteredRaces()
-```
-
-**Simplification:**
-For tests without preconditions, `whenAction_thenResult()` is acceptable:
-```java
-void whenGetSeasons_thenReturnsSeasonsView()
-```
-
-**Exception Tests:**
-Combine `when/then` for exception assertions:
-```java
-void givenBlankName_whenSaveSeason_thenReturnsFormWithErrors()
-```
-
-## Transactional Boundaries
-
-**@Transactional in Tests:**
-- Automatically rolls back after each test
-- Maintains database isolation between tests
-- Prevents test order dependencies
-- Required for integration tests with `@SpringBootTest`
-
-**Use Case:**
-```java
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("dev")
-@Transactional  // <-- Auto-rollback after test
-class SeasonControllerTest {
+@ExtendWith(MockitoExtension.class)
+class Gt7SyncServiceTest {
+    @Mock Gt7ScraperService scraperService;       // Mocked dependency
+    @Mock CarRepository carRepository;            // Mocked repository
+    @InjectMocks Gt7SyncService syncService;      // Service under test
     
     @Test
-    void givenValidScoringRefs_whenSaveSeason_thenRedirects() throws Exception {
-        // Changes are committed during test but rolled back after
+    void testName() {
+        when(scraperService.scrapeCars()).thenReturn(SCRAPED_CARS);
+        // ... assertions
     }
 }
 ```
 
-**OSIV (Open Session in View) Implication:**
-- Enabled in Spring Boot config (`spring.jpa.open-in-view=true`)
-- Lazy-loaded associations can be accessed in tests without explicit fetch
-- No need for `@EntityGraph` workarounds in tests (unlike controllers)
+**Patterns (from actual code):**
 
-## Test Categorization (`@Tag`)
-
-Tests are routed into Surefire/Failsafe phases by **JUnit 5 `@Tag` annotation**, not by filename suffix. This makes routing explicit, avoids `@Nested`-inner-class leakage into the wrong phase, and lets the `flaky` quarantine mechanism (D-07) compose with category tags.
-
-**Convention — every new test class MUST be tagged:**
-
-| Tag | Meaning | Phase | Required on |
-|-----|---------|-------|-------------|
-| `@Tag("integration")` | Spring-context integration test | Failsafe `default-it` | Every `*IT.java` class |
-| `@Tag("e2e")` | Playwright UI walkthrough | Failsafe `e2e-it` (only in `-Pe2e` profile) | Every test in `org.ctc.e2e.*` |
-| `@Tag("flaky")` | Quarantined as observed-flaky | Excluded from all phases | Add temporarily; max-5 cap (D-07); CD-05 monthly review |
-| _no tag_ | Plain unit test | Surefire `default-test` | All `*Test.java` (unless behavior is integration/e2e) |
-
-**Inheritance:** `@Nested` inner classes inherit their parent class's tags. So `BackupRoundTripIT` (`@Tag("integration")`) covers its `@Nested H2DevRoundTripTests` and `@Nested MariaDbRoundTripTests` automatically — no per-nested re-tagging needed.
-
-**Imports:** add `import org.junit.jupiter.api.Tag;` alongside other JUnit Jupiter imports.
-
-**Placement:** put `@Tag(...)` immediately above the `class` declaration, after any `@SpringBootTest`/`@DirtiesContext`/etc. Example:
-
+Stub simple return values:
 ```java
-@SpringBootTest
-@ActiveProfiles("dev")
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@DirtiesContext
-@Tag("integration")
-class BackupRoundTripIT {
-    // ...
+when(carRepository.existsByGt7Id("car102")).thenReturn(true);
+```
+
+Throw exceptions:
+```java
+when(someService.someMethod()).thenThrow(new IOException("Test error"));
+```
+
+Capture arguments:
+```java
+ArgumentCaptor<Car> carCaptor = ArgumentCaptor.forClass(Car.class);
+verify(carRepository).save(carCaptor.capture());
+Car savedCar = carCaptor.getValue();
+```
+
+**What to Mock:**
+- External services (API clients, file storage)
+- Repositories (in unit tests; use real DB in integration tests)
+- Dependencies injected into the service-under-test
+
+**What NOT to Mock:**
+- The service being tested itself (use `@InjectMocks`)
+- Value objects (e.g., `UUID`, `String` — just construct them)
+- Utility classes (e.g., `Collections`, `LocalDateTime`)
+- In integration tests, do NOT mock repositories — use `@Autowired` and let Spring manage the real H2 database
+
+## Test Data Management
+
+**TestDataService** (for dev/demo profiles):
+- Location: `src/main/java/org/ctc/admin/TestDataService.java`
+- Seeds deterministic fixtures into H2 in-memory database
+- Excluded from code coverage analysis (`pom.xml` line 321)
+- Fixtures include: Season 2023, Season 2024 (Regular + Empty), Season 2026
+- Auto-seeded on startup when `spring.profiles.active` includes `dev` or `local`
+
+**Test Entity Naming Prefix** (CRITICAL for E2E Test Isolation):
+- All E2E test entities MUST use a test prefix to avoid collision with manual test data
+- Prefixes: `T-ALF`, `Test_Alpha_1`, `Test-Season 2026`, `Phase57-Smoke-Season`
+- Example from `V4MigrationSmokeIT.java` (lines 45–47):
+```java
+private static final UUID SMOKE_RACE_SCORING_ID = UUID.fromString("00000000-0000-0057-0000-000000000001");
+private static final UUID SMOKE_SEASON_ID = UUID.fromString("00000000-0000-0057-0000-000000000010");
+```
+- Why: DevDataSeeder populates real seasons; test data seeded with distinct names prevents accidental merges/overwrites
+
+**Spring Boot Test Profiles:**
+- `@ActiveProfiles("dev")` → H2 in-memory, DevDataSeeder runs, full test data available
+- `@ActiveProfiles("local")` → MariaDB on localhost, no seeding (for manual testing)
+- `@ActiveProfiles("prod")` → Simulates production (auth enabled), requires environment variables
+
+## Fixtures and Factories
+
+**Test Data Patterns:**
+
+Static constants for unit tests (from `Gt7SyncServiceTest.java`, lines 26–34):
+```java
+private static final List<ScrapedCar> SCRAPED_CARS = List.of(
+    new ScrapedCar("car102", "Nissan", "Skyline GTS-R (R31) '87", "https://example.com/car102.png"),
+    new ScrapedCar("car205", "Toyota", "Sports 800 '65", "https://example.com/car205.png")
+);
+```
+
+Entity creation in integration tests (from `V4MigrationSmokeIT.java`, lines 76–80):
+```java
+@BeforeEach
+void seedSmokeTestData() {
+    jdbcTemplate.update(
+        "INSERT INTO seasons (id, name, season_year, season_number, active, created_at, updated_at) "
+        + "VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+        SMOKE_SEASON_ID, "Phase57-Smoke-Season", 2099, 99, false);
 }
 ```
 
-**Maven plugin routing (pom.xml):**
+**Location:**
+- Inline fixture constants: Within test class (common for small datasets)
+- Shared fixtures: `src/test/java/org/ctc/testsupport/` package (for reusable test data)
+- TestDataService seeding: `src/main/java/org/ctc/admin/TestDataService.java` (dev profile)
 
-| Plugin/execution | Filter | Effect |
-|------------------|--------|--------|
-| `maven-surefire-plugin` (default-test) | `<excludedGroups>integration,e2e,flaky</excludedGroups>` | Runs untagged unit tests only |
-| `maven-failsafe-plugin` (default-it, base lifecycle) | `<groups>integration</groups>`, `<excludedGroups>e2e,flaky</excludedGroups>` | Runs `@Tag("integration")` only |
-| `maven-failsafe-plugin` (e2e-it, in `<profile id="e2e">`) | `<groups>e2e</groups>` | Runs `@Tag("e2e")` only |
+## Coverage Requirements
 
-There are NO filename-based `<includes>` / `<excludes>` for test discovery anymore — tags are the single source of truth.
+**Minimum Coverage:**
+- **Line coverage: 82%** (configured in `pom.xml` lines 351–363)
+- Gate: `./mvnw verify` fails if coverage < 82%
 
-**Why we moved away from filename routing (Phase 79 D-05):** Surefire's `<exclude>**/*IT.java</exclude>` filtered top-level class files but not `@Nested`-compiled inner classes (`*IT$*.class`). JUnit Platform discovered the inner classes via class-graph scan and dragged the parent IT into Surefire — making `BackupRoundTripIT`, `BackupControllerSecurityIT`, and `BackupImportControllerSecurityIT` run twice (once in Surefire, once in Failsafe) and racing on shared file paths under parallel forks. `@Tag` is inherited by `@Nested` classes so the leak is structurally impossible.
+**Excluded Classes** (from `pom.xml` lines 319–334):
+- `CtcManagerApplication.class` — Boot entry point
+- `TestDataService.class` — dev-profile seeder
+- `DemoDataSeeder.class` — demo-profile seeder
+- All `*GraphicService` classes (Playwright service classes for team-card/graphics generation)
+  - `TeamCardService`
+  - `LineupGraphicService`
+  - `ResultsGraphicService`
+  - `SettingsGraphicService`
+  - `OverlayGraphicService`
+  - `MatchResultsGraphicService`
+  - `PowerRankingsGraphicService`
+  - `AbstractGraphicService`
+  - `PlayoffRoundOverviewGraphicService`
+  - `PlayoffRoundScheduleGraphicService`
+  - `PlayoffRoundResultsGraphicService`
 
-## Test Invocation Discipline
+**Why Graphics Are Excluded:**
+- Playwright's browser automation cannot be reliably unit-tested
+- Visual correctness is validated via `playwright-cli` manual inspection (separate from JaCoCo)
+- E2E tests verify the endpoints work; coverage measurement is not applicable
 
-**Codified from `feedback_test_call_optimization` (Phase 79 D-08).**
-
-### Rule: One Final Full Run Per Phase
-
-Each GSD phase uses **one and only one** `./mvnw verify -Pe2e` invocation as its final gate (D-19 / Phase 77 D-13). This is the only invocation that counts for coverage, E2E smoke, and CI GREEN status.
-
-Between waves within a phase, use **targeted invocations** for fast feedback:
-
+**Coverage Report:**
 ```bash
-# Run only a single test class
-./mvnw test -Dtest=BackupImportServiceTest
-
-# Run only a single IT class
-./mvnw verify -Dit.test=BackupRoundTripIT
-
-# Run all tests in a package
-./mvnw test -Dtest="org.ctc.backup.service.*"
-
-# Run tests matching a method name pattern
-./mvnw test -Dtest="BackupImportServiceTest#givenValid*"
+./mvnw verify
+open target/site/jacoco/index.html
 ```
 
-### Rule: Do Not Re-Run Full Suite Between Waves
+Report shows line/branch/instruction coverage per package and class.
 
-Running `./mvnw verify` (or `./mvnw verify -Pe2e`) after every plan task wastes CI minutes and developer time. The full suite is a GATE, not a development loop.
+## Playwright E2E Tests
 
-| Context | Invocation |
-|---------|-----------|
-| After implementing a single task | `./mvnw test -Dtest=<AffectedTestClass>` |
-| After per-package cleanup commit (D-03) | `./mvnw test` (unit + IT, no E2E) |
-| After pom.xml / ci.yml change | `./mvnw verify` (full, no E2E) |
-| Phase final gate (D-19) | `./mvnw verify -Pe2e` |
-| Triage a test failure | `./mvnw verify -fae` (fail-at-end, sees all failures) |
+**Framework:**
+- Playwright Java 1.59.0 (managed in `pom.xml` line 18)
+- Scope: `compile` (used at runtime for graphics) + test scope for E2E tests
+- Config: `src/test/java/org/ctc/e2e/PlaywrightConfig.java` (base class for all E2E tests)
 
-### Rule: Run Order for Independence Verification
+**Test Location & Naming:**
+- Package: `org.ctc.e2e.*`
+- Class naming: `{Feature}E2ETest.java` or `*Test.java` (NOT `*IT.java`)
+- Example: `src/test/java/org/ctc/e2e/ScoringE2ETest.java` (line 11: extends `PlaywrightConfig`)
 
-Before enabling Surefire/Failsafe parallelism, verify test independence:
-
+**Run E2E Tests:**
 ```bash
-# Reverse alphabetical order — detects setup-dependent ordering
-./mvnw test -Dsurefire.runOrder=reversealphabetical
+# Full test suite including E2E
+./mvnw verify -Pe2e
 
-# Random order — three seeds for statistical confidence
-./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=1234
-./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=5678
-./mvnw test -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed=9999
+# E2E only
+./mvnw -Dit.test='**/e2e/**/*Test' verify -Pe2e
 ```
 
-All three random-seed runs must be GREEN before `forkCount` is increased.
+**Base Class (`PlaywrightConfig`):**
+Provides:
+- `page` field (shared Playwright Page instance)
+- `setupPage()` → initializes page before each test
+- `teardownPage()` → closes page after each test
+- `url(String path)` → constructs full URL (e.g., `http://localhost:9090/admin/seasons`)
 
-## Common Patterns Summary
+Example from `ScoringE2ETest.java` (lines 13–21):
+```java
+@Tag("e2e")
+class ScoringE2ETest extends PlaywrightConfig {
+    @BeforeEach void setUp() { setupPage(); }
+    @AfterEach void tearDown() { teardownPage(); }
+    
+    @Test
+    void whenNavigateToRaceScoringPage_thenScoringNavigationLinksAreVisible() {
+        page.navigate(url("/admin/race-scorings"));
+        assertThat(page.getByRole(...)).isVisible();
+    }
+}
+```
 
-| Scenario | Approach | Example |
-|----------|----------|---------|
-| Unit test (no Spring) | `@ExtendWith(MockitoExtension.class)` | `RaceServiceTest` |
-| Integration test | `@SpringBootTest`, `@AutoConfigureMockMvc`, `@Transactional` | `SeasonControllerTest` |
-| Profile-specific | `@Nested` + `@ActiveProfiles("prod"/"dev")` | `SecurityIntegrationTest` |
-| Exception handling | `assertThatThrownBy(...).isInstanceOf(...)` | `RaceScoringServiceTest` |
-| Data fixtures | `TestHelper.createX()` methods | All integration tests |
-| HTTP testing | `mockMvc.perform(get/post(...))` | `SeasonControllerTest` |
-| Security testing | `@WithMockUser` + unauthorized assertions | `SecurityIntegrationTest` |
-| Parameterized | `@ParameterizedTest`, `@ValueSource` | `TemplatePreviewServiceTest` |
-| UI/E2E | Extends `PlaywrightConfig`, `page.navigate()`, `PlaywrightAssertions` | `AdminWorkflowE2ETest` |
+**Assertions (Playwright Assertions):**
+```java
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
+assertThat(page).hasTitle("CTC Admin - Race-Scorings");
+assertThat(page.locator("h1")).containsText("Race-Scorings");
+assertThat(page.locator("table")).containsText("E2E Test Scoring");
+assertThat(page.getByRole(AriaRole.LINK, ...)).isVisible();
+```
+
+**Visual Verification with `playwright-cli`:**
+After making UI changes (templates, CSS), verify visually using the Playwright CLI:
+```bash
+# Start dev server in one terminal
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+# In another terminal, open Playwright inspector on a specific page
+playwright-cli open http://localhost:9090/admin/match-scorings
+
+# Playwright will open an interactive inspector in a browser
+# Check both Desktop and Mobile viewports
+```
+
+This ensures visual rendering is correct before committing.
+
+**Screenshot Storage:**
+- Screenshots from E2E tests go to `.screenshots/` directory (never repo root)
+- Example path: `.screenshots/test-name-2026-05-18-123456.png`
+- Gitignore `.screenshots/` (transient test artifacts)
+
+## Integration Testing
+
+**Spring Boot Test Context:**
+- `@SpringBootTest` loads the full application context (all beans)
+- `classes = CtcManagerApplication.class` required for tests outside `org.ctc` package (e.g., `db.migration` package)
+- `@ActiveProfiles("dev")` uses H2 in-memory database with DevDataSeeder
+- `@Transactional` rolls back changes after each test (database state is clean)
+
+Example from `V4MigrationSmokeIT.java` (lines 38–42):
+```java
+@SpringBootTest(classes = CtcManagerApplication.class)
+@ActiveProfiles("dev")
+@Transactional
+@Tag("integration")
+class V4MigrationSmokeIT { ... }
+```
+
+**Database Access:**
+```java
+@Autowired SeasonRepository seasonRepository;  // Real repository
+@Autowired JdbcTemplate jdbcTemplate;          // Direct SQL access
+
+// Use repository for ORM testing
+seasonRepository.save(new Season(...));
+
+// Use JdbcTemplate for Flyway/schema testing
+jdbcTemplate.update("INSERT INTO seasons (...) VALUES (...)", params);
+```
+
+**Testcontainers for MariaDB** (optional smoke tests):
+- Dependency: `testcontainers:2.0.5` (supports Docker API 1.44 for Docker Engine 29+)
+- Used in `BackupImportMariaDbSmokeIT` to verify backup round-trip against live MariaDB
+- `@DynamicPropertySource` overrides `spring.datasource.url` at test startup
+
+## Common Test Patterns
+
+**Async/Reactive Testing:**
+- Not used in this project (synchronous Spring Boot MVC)
+- For any future reactive code: use `StepVerifier` from Project Reactor test support
+
+**Exception Testing:**
+```java
+// AssertJ style
+assertThatThrownBy(() -> service.findById(UUID.randomUUID()))
+    .isInstanceOf(EntityNotFoundException.class)
+    .hasMessageContaining("not found");
+
+// Or use assertThrows (JUnit 5 style)
+assertThrows(BusinessRuleException.class, 
+    () -> service.save(null, "Invalid", ...));
+```
+
+**Verification of Method Calls:**
+```java
+verify(mockRepository).save(any(Entity.class));  // Called at least once
+verify(mockRepository, times(2)).findById(any());  // Called exactly twice
+verify(mockRepository, never()).delete(any());  // Never called
+```
+
+## Test Execution in CI
+
+**GitHub Actions:**
+- On push/PR to `master`: Run full test suite via `./mvnw verify`
+- On push/PR with `-Pe2e` profile: Run Playwright E2E tests (may be conditional)
+- JaCoCo coverage report auto-commented on PR via `madrapps/jacoco-report` action
+- SpotBugs + find-sec-bugs gate: Medium+ findings block the build (always-on)
+- CodeQL SAST scanning: Run on push, PR, and weekly cron
+
+**Local Execution:**
+```bash
+# Fast: unit tests only (no Spring context, no E2E)
+./mvnw test
+
+# Thorough: unit + integration (with Spring context)
+./mvnw verify
+
+# Full: unit + integration + E2E (includes Playwright)
+./mvnw verify -Pe2e
+
+# Single test class
+./mvnw -Dtest=Gt7SyncServiceTest test
+
+# Single test method
+./mvnw -Dtest=Gt7SyncServiceTest#givenMixOfNewAndExistingCarsAndTracks_whenFetchAndPreview_thenReturnsCorrectCounts test
+```
+
+## Anti-Patterns to Avoid
+
+**Don't:**
+- Mix unit test and integration test in same file (use separate `*Test.java` and `*IT.java` files)
+- Create tests in Spring context when pure unit test suffices (slows build, masks slow code)
+- Mock everything indiscriminately (integration tests benefit from real DB + repositories)
+- Use filename-based test routing instead of `@Tag` (brittle with `@Nested` classes)
+- Commit hardcoded test data with production values (use prefixed test names like `T-`, `Test_`)
+- Ignore test failures as "flaky" without fixing (tag as `@Tag("flaky")` only if truly intermittent and diagnosed)
 
 ---
 
-*Testing analysis: 2026-04-07 (last updated: 2026-05-15 — Phase 79 D-08 added Test Invocation Discipline section + Test Categorization (`@Tag`) section)*
+*Testing analysis: 2026-05-18*

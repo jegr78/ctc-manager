@@ -1,12 +1,11 @@
 package db.migration;
 
+import java.sql.Connection;
+import java.sql.Statement;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.sql.Connection;
-import java.sql.Statement;
 
 /**
  * V6 Flyway Java migration: drops all legacy season-level fields and bridge tables.

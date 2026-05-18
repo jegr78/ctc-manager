@@ -1,16 +1,25 @@
 package org.ctc.backup.it;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.UUID;
+import java.util.concurrent.*;
 import org.ctc.admin.TestDataService;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.it.support.BlockingRestoreFailureInjector;
 import org.ctc.backup.lock.ImportLockService;
 import org.ctc.backup.service.BackupArchiveService;
 import org.ctc.backup.service.BackupImportService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,19 +31,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Instant;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -59,14 +55,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @ActiveProfiles("dev")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@Import(BlockingRestoreFailureInjector.Config.class)
+@Import({BlockingRestoreFailureInjector.Config.class, ImportLockServiceResetHelper.class})
 @TestPropertySource(properties = "spring.main.allow-bean-definition-overriding=true")
 @AutoConfigureMockMvc
-// See ImportLockBannerAdviceIT for the rationale: BlockingRestoreFailureInjector exposes
-// singleton CountDownLatches per context, the Spring context is shared with
-// ImportConcurrentLockIT, and CountDownLatch is non-resettable. Refreshing the context
-// before each method ensures every givenLockHeld_* test starts with fresh latches.
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 @Tag("integration")
 class ImportLockedPostRejectorIT {
 
@@ -84,6 +75,9 @@ class ImportLockedPostRejectorIT {
 
     @Autowired
     ImportLockService importLockService;
+
+    @Autowired
+    ImportLockServiceResetHelper importLockServiceResetHelper;
 
     @Autowired
     CountDownLatch hasAcquired;
@@ -118,6 +112,13 @@ class ImportLockedPostRejectorIT {
         stagingIdA = preview.stagingId();
     }
 
+    @AfterEach
+    void tearDownLock() {
+        importLockServiceResetHelper.reset();
+    }
+
+    // @DirtiesContext retained on this method — uses CountDownLatch handshake (non-resettable, RESEARCH Assumption A1)
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
     @Test
     void givenLockHeld_whenPostToAdminTeamsSave_thenHttp503AndBannerWordingInBody() throws Exception {
         // given — thread A holds the import lock mid-restore
@@ -158,6 +159,8 @@ class ImportLockedPostRejectorIT {
         executor.shutdown();
     }
 
+    // @DirtiesContext retained on this method — uses CountDownLatch handshake (non-resettable, RESEARCH Assumption A1)
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
     @Test
     void givenLockHeld_whenPostToWhitelistedImportExecuteFromSecondClient_thenInterceptorAllowsButControllerReturns409()
             throws Exception {
@@ -193,6 +196,8 @@ class ImportLockedPostRejectorIT {
         executor.shutdown();
     }
 
+    // @DirtiesContext retained on this method — uses CountDownLatch handshake (non-resettable, RESEARCH Assumption A1)
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
     @Test
     void givenLockHeld_whenGetAdminSeasons_thenPassesThrough() throws Exception {
         // given — thread A holds the import lock

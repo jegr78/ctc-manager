@@ -2,14 +2,13 @@ package org.ctc.domain.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Entity
 @Table(name = "matches")
@@ -42,7 +41,7 @@ public class Match extends BaseEntity {
 	private Integer awayScore;
 
 	@Column(nullable = false)
-	private boolean bye = false;
+	private boolean bye;
 
 	@OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("dateTime ASC NULLS LAST")

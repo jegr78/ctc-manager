@@ -1,5 +1,11 @@
 package org.ctc.dataimport;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,13 +16,6 @@ import org.ctc.domain.service.ScoringService;
 import org.ctc.domain.service.SeasonPhaseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.*;
 
 @Slf4j
 @Service
@@ -91,7 +90,9 @@ public class CsvImportService {
 			var qualiPosition = parseIntSafe(fields[3].trim(), "Quali", i + 2, preview);
 			var fastestLap = parseBooleanSafe(fields[4].trim());
 
-			if (position == null || qualiPosition == null) continue;
+			if (position == null || qualiPosition == null) {
+				continue;
+			}
 
 			var matchResult = driverMatchingService.findDriver(psnId);
 			preview.addRow(new ImportRow(teamShortName, psnId, position, qualiPosition, fastestLap, matchResult));
@@ -224,7 +225,9 @@ public class CsvImportService {
 
 				for (var row : raceRows) {
 					var driver = resolveDriver(row, confirmedMatches, createNewDrivers, result);
-					if (driver == null) continue;
+					if (driver == null) {
+						continue;
+					}
 
 					// Ensure SeasonDriver exists
 					ensureSeasonDriver(season, driver, row.teamShortName());
@@ -332,7 +335,9 @@ public class CsvImportService {
 
 			for (var row : entry.getValue()) {
 				var driver = resolveDriver(row, confirmedMatches, createNewDrivers, result);
-				if (driver == null) continue;
+				if (driver == null) {
+					continue;
+				}
 
 				// Ensure SeasonDriver exists
 				ensureSeasonDriver(season, driver, row.teamShortName());
@@ -398,7 +403,9 @@ public class CsvImportService {
 
 	private void ensureSeasonDriver(Season season, Driver driver, String teamShortName) {
 		var team = findTeamFlexible(teamShortName, season.getTeams());
-		if (team == null) return;
+		if (team == null) {
+			return;
+		}
 
 		var existing = seasonDriverRepository.findBySeasonIdAndDriverId(season.getId(), driver.getId());
 		if (existing.isEmpty()) {
@@ -418,18 +425,24 @@ public class CsvImportService {
 	private Team findTeamFlexible(String shortName, List<Team> seasonTeams) {
 		// 1. Exact match within season teams
 		for (var team : seasonTeams) {
-			if (team.getShortName().equals(shortName)) return team;
+			if (team.getShortName().equals(shortName)) {
+				return team;
+			}
 		}
 		// 2. Case-insensitive
 		for (var team : seasonTeams) {
-			if (team.getShortName().equalsIgnoreCase(shortName)) return team;
+			if (team.getShortName().equalsIgnoreCase(shortName)) {
+				return team;
+			}
 		}
 		// 3. Normalized (spaces ↔ underscores)
 		var withUnderscores = shortName.replace(" ", "_");
 		var withSpaces = shortName.replace("_", " ");
 		for (var team : seasonTeams) {
 			var sn = team.getShortName();
-			if (sn.equalsIgnoreCase(withUnderscores) || sn.equalsIgnoreCase(withSpaces)) return team;
+			if (sn.equalsIgnoreCase(withUnderscores) || sn.equalsIgnoreCase(withSpaces)) {
+				return team;
+			}
 		}
 		return null;
 	}
@@ -478,7 +491,9 @@ public class CsvImportService {
 						continue; // Skip header
 					}
 				}
-				if (line.isBlank()) continue;
+				if (line.isBlank()) {
+					continue;
+				}
 				lines.add(line.split("[,;\\t]", -1));
 			}
 		}
@@ -503,7 +518,9 @@ public class CsvImportService {
 	public boolean checkDuplicate(ImportPreview preview) {
 		var metadata = preview.getMetadata();
 		var season = seasonRepository.findById(metadata.seasonId()).orElse(null);
-		if (season == null) return false;
+		if (season == null) {
+			return false;
+		}
 
 		org.ctc.domain.model.Matchday matchday;
 		if (metadata.hasMatchdayId()) {
@@ -516,15 +533,21 @@ public class CsvImportService {
 					.filter(md -> md.getLabel().equals(metadata.matchdayLabel()))
 					.findFirst().orElse(null);
 		}
-		if (matchday == null) return false;
+		if (matchday == null) {
+			return false;
+		}
 
 		var teams = preview.getRows().stream().map(ImportRow::teamShortName).distinct().toList();
-		if (teams.size() < 2) return false;
+		if (teams.size() < 2) {
+			return false;
+		}
 
 		var seasonTeams = season.getTeams();
 		var homeTeam = findTeamFlexible(teams.get(0), seasonTeams);
 		var awayTeam = findTeamFlexible(teams.get(1), seasonTeams);
-		if (homeTeam == null || awayTeam == null) return false;
+		if (homeTeam == null || awayTeam == null) {
+			return false;
+		}
 
 		boolean exists = matchRepository.existsByMatchdayIdAndHomeTeamIdAndAwayTeamId(
 				matchday.getId(), homeTeam.getId(), awayTeam.getId());

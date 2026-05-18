@@ -1,28 +1,5 @@
 package org.ctc.backup.service;
 
-import org.ctc.admin.TestDataService;
-import org.ctc.backup.audit.DataImportAudit;
-import org.ctc.backup.audit.DataImportAuditRepository;
-import org.ctc.backup.dto.BackupImportPreview;
-import org.ctc.backup.dto.BackupImportResult;
-import org.ctc.backup.schema.BackupSchema;
-import org.ctc.backup.schema.EntityRef;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MariaDBContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -35,6 +12,28 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import org.ctc.admin.TestDataService;
+import org.ctc.backup.audit.DataImportAudit;
+import org.ctc.backup.audit.DataImportAuditRepository;
+import org.ctc.backup.dto.BackupImportPreview;
+import org.ctc.backup.dto.BackupImportResult;
+import org.ctc.backup.schema.BackupSchema;
+import org.ctc.backup.schema.EntityRef;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.MariaDBContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -88,7 +87,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles({"local", "dev"})
 @Testcontainers
 @EnabledIfSystemProperty(named = "docker.available", matches = "true",
-        disabledReason = "Set -Ddocker.available=true (with a running Docker daemon) to run the MariaDB Testcontainers round-trip IT")
+		disabledReason = "Set -Ddocker.available=true (with a running Docker daemon) to run the MariaDB Testcontainers round-trip IT")
 @Tag("integration")
 class BackupImportMariaDbSmokeIT {
 

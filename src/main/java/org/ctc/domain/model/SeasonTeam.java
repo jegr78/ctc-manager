@@ -1,12 +1,11 @@
 package org.ctc.domain.model;
 
 import jakarta.persistence.*;
+import java.time.LocalDate;
+import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDate;
-import java.util.UUID;
 
 @Entity
 @Table(name = "season_teams")

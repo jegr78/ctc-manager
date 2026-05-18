@@ -4,6 +4,11 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Base64;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.thymeleaf.TemplateEngine;
@@ -11,12 +16,6 @@ import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.StringTemplateResolver;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Base64;
 
 @Slf4j
 public abstract class AbstractGraphicService {
@@ -68,10 +67,14 @@ public abstract class AbstractGraphicService {
 	}
 
 	protected String encodeCardBase64(String cardUrl) {
-		if (cardUrl == null || !cardUrl.startsWith("/uploads/")) return null;
+		if (cardUrl == null || !cardUrl.startsWith("/uploads/")) {
+			return null;
+		}
 		try {
 			Path cardFile = uploadDir.resolve(cardUrl.substring("/uploads/".length())).normalize();
-			if (!cardFile.startsWith(uploadDir)) return null;
+			if (!cardFile.startsWith(uploadDir)) {
+				return null;
+			}
 			if (Files.exists(cardFile)) {
 				byte[] bytes = Files.readAllBytes(cardFile);
 				return "data:image/png;base64," + Base64.getEncoder().encodeToString(bytes);

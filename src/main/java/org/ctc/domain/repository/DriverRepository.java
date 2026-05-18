@@ -1,14 +1,13 @@
 package org.ctc.domain.repository;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import org.ctc.domain.model.Driver;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 public interface DriverRepository extends JpaRepository<Driver, UUID> {
 
@@ -20,6 +19,16 @@ public interface DriverRepository extends JpaRepository<Driver, UUID> {
 
 	@Query("SELECT a.driver FROM PsnAlias a WHERE LOWER(a.alias) = LOWER(:alias)")
 	Optional<Driver> findByAliasIgnoreCase(@Param("alias") String alias);
+
+	@Query("""
+			SELECT DISTINCT d FROM Driver d
+			LEFT JOIN FETCH d.seasonDrivers sd
+			LEFT JOIN FETCH sd.season s
+			LEFT JOIN FETCH sd.team
+			WHERE d.id = :id
+			ORDER BY s.year ASC, s.number ASC
+			""")
+	Optional<Driver> findDetailById(@Param("id") UUID id);
 
 	/**
 	 * Full-table finder used by {@code BackupExportService}.

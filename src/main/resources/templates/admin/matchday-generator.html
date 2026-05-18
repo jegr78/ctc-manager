@@ -26,6 +26,12 @@
                     </div>
                 </div>
             </div>
+            <div class="form-group" th:if="${phase.layout.name() == 'GROUPS'}">
+                <label for="groupId">Group</label>
+                <select id="groupId" th:field="*{groupId}" required>
+                    <option th:each="g : ${phase.groups}" th:value="${g.id}" th:text="${g.name}"></option>
+                </select>
+            </div>
 
             <p id="summary" class="text-dim mt-xs"></p>
 

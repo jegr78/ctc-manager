@@ -4,19 +4,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
-import org.ctc.backup.exception.BackupArchiveException;
-import org.ctc.backup.exception.BackupArchiveException.Reason;
-import org.ctc.backup.io.LimitedInputStream;
-import org.ctc.backup.schema.BackupManifest;
-import org.ctc.backup.schema.BackupSchema;
-import org.ctc.backup.schema.EntityRef;
-import org.ctc.backup.security.PathTraversalGuard;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,10 +20,20 @@ import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.exception.BackupArchiveException;
+import org.ctc.backup.exception.BackupArchiveException.Reason;
+import org.ctc.backup.io.LimitedInputStream;
+import org.ctc.backup.schema.BackupManifest;
+import org.ctc.backup.schema.BackupSchema;
+import org.ctc.backup.schema.EntityRef;
+import org.ctc.backup.security.PathTraversalGuard;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import static org.ctc.backup.service.BackupImportLimits.MAX_ENTRIES;
-import static org.ctc.backup.service.BackupImportLimits.MAX_ENTRY_BYTES;
-import static org.ctc.backup.service.BackupImportLimits.MAX_TOTAL_BYTES;
+import static org.ctc.backup.service.BackupImportLimits.*;
 
 /**
  * Stateless ZIP plumbing for the backup export and import pipeline.
@@ -264,8 +261,6 @@ public class BackupArchiveService {
 				log.info("Backup manifest read: schemaVersion={}, appVersion={}",
 						manifest.schemaVersion(), manifest.appVersion());
 				return manifest;
-			} catch (BackupArchiveException ex) {
-				throw ex;
 			} catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
 				log.warn("Backup manifest rejected: reason={}, msg={}", Reason.MANIFEST_INVALID,
 						ex.getMessage());
@@ -277,8 +272,6 @@ public class BackupArchiveService {
 				throw new BackupArchiveException(Reason.MANIFEST_INVALID,
 						"ZIP read failure", ex);
 			}
-		} catch (BackupArchiveException ex) {
-			throw ex;
 		} catch (IOException ex) {
 			throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
 		}
@@ -357,8 +350,6 @@ public class BackupArchiveService {
 
 				assertEntrySafe(entry, stagingRoot, entryCount, inflatedAcc[0]);
 			}
-		} catch (BackupArchiveException ex) {
-			throw ex;
 		} catch (IOException ex) {
 			throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
 		}
@@ -417,8 +408,6 @@ public class BackupArchiveService {
 
 				assertEntrySafe(entry, stagingRoot, entryCount, inflatedAcc[0]);
 			}
-		} catch (BackupArchiveException ex) {
-			throw ex;
 		} catch (IOException ex) {
 			throw new BackupArchiveException(Reason.MANIFEST_INVALID, "ZIP read failure", ex);
 		}
@@ -508,6 +497,9 @@ public class BackupArchiveService {
 				}
 
 				Path target = absoluteDest.resolve(relativePath).normalize();
+				// NP: target.getParent() is called only inside the null-guard at the preceding line —
+				// SpotBugs reports a false positive because it evaluates each getParent() call independently.
+				// See config/spotbugs-exclude.xml BackupArchiveService NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE.
 				if (target.getParent() != null) {
 					Files.createDirectories(target.getParent());
 				}
@@ -616,6 +608,10 @@ public class BackupArchiveService {
 	 *                                {@code Reason.PATH_TRAVERSAL} when the entry name escapes
 	 *                                {@code stagingRoot}
 	 */
+	// CodeQL FP: java/zipslip — PathTraversalGuard.assertWithin delegation not traceable by CodeQL; see docs/security/sast-acceptance.md
+	// PATH_TRAVERSAL defense: PathTraversalGuard.assertWithin() is the sanitizer; find-sec-bugs
+	// cannot trace the defense through the delegated utility call. See config/spotbugs-exclude.xml
+	// BackupArchiveService PATH_TRAVERSAL_IN entry for the corresponding suppression rationale.
 	private static void assertEntrySafe(ZipEntry entry, Path stagingRoot,
 			int currentEntryCount, long currentInflatedBytes) {
 		if (currentEntryCount > MAX_ENTRIES) {

@@ -1,9 +1,8 @@
 package org.ctc.backup.restore;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.springframework.jdbc.core.JdbcTemplate;
-
 import java.util.List;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * SPI — restores a single entity's JSON-array slice into its target table.

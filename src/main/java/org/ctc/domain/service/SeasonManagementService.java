@@ -1,19 +1,18 @@
 package org.ctc.domain.service;
 
-import org.ctc.domain.exception.BusinessRuleException;
-import org.ctc.domain.exception.EntityNotFoundException;
-import org.ctc.domain.model.*;
-import org.ctc.domain.repository.*;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.exception.EntityNotFoundException;
+import org.ctc.domain.model.*;
+import org.ctc.domain.repository.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @Service
@@ -149,7 +148,7 @@ public class SeasonManagementService {
     @Transactional
     public Season save(UUID id, String name, int year, int number, String description, boolean active) {
         Season season;
-        boolean isNew = (id == null);
+        boolean isNew = id == null;
         if (isNew) {
             season = new Season();
         } else {
@@ -215,7 +214,9 @@ public class SeasonManagementService {
         Map<UUID, int[]> raceScores = new HashMap<>();
         for (var md : season.getMatchdays()) {
             for (var race : md.getRaces()) {
-                if (race.isBye()) continue;
+				if (race.isBye()) {
+					continue;
+				}
                 if (race.getHomeScore() != null && race.getAwayScore() != null) {
                     raceScores.put(race.getId(), new int[]{race.getHomeScore(), race.getAwayScore()});
                 } else if (!race.getResults().isEmpty()) {
@@ -410,7 +411,9 @@ public class SeasonManagementService {
                 added++;
             }
         }
-        if (added > 0) seasonRepository.save(season);
+		if (added > 0) {
+			seasonRepository.save(season);
+		}
         return added;
     }
 
@@ -441,7 +444,9 @@ public class SeasonManagementService {
                 added++;
             }
         }
-        if (added > 0) seasonRepository.save(season);
+		if (added > 0) {
+			seasonRepository.save(season);
+		}
         return added;
     }
 

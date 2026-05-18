@@ -1,20 +1,20 @@
 package org.ctc.admin.service;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGraphicData;
 import org.ctc.admin.dto.MatchdayGraphicData.MatchGraphicRow;
 import org.ctc.admin.dto.PowerRankingsGraphicData;
 import org.ctc.admin.dto.PowerRankingsGraphicData.PowerRankingEntry;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.context.Context;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 import org.thymeleaf.templatemode.TemplateMode;
 import org.thymeleaf.templateresolver.StringTemplateResolver;
-
-import java.io.IOException;
-import java.util.Base64;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -33,10 +33,10 @@ public class TemplatePreviewService {
             "javax.script", "java.lang.reflect"
     );
 
-    private String cachedFontBase64;
-    private String cachedLogoBase64;
-    private String cachedCommentatorBase64;
-    private String cachedVsBadgeBase64;
+    private volatile String cachedFontBase64;
+    private volatile String cachedLogoBase64;
+    private volatile String cachedCommentatorBase64;
+    private volatile String cachedVsBadgeBase64;
 
     public String renderPreview(String templateType, String templateContent) {
         var ctx = switch (templateType) {
@@ -262,7 +262,7 @@ public class TemplatePreviewService {
                           font-family="Arial,sans-serif" font-size="120" font-weight="bold" fill="white">%s</text>
                 </svg>
                 """.formatted(color, label);
-        return "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString(svg.getBytes());
+        return "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString(svg.getBytes(StandardCharsets.UTF_8));
     }
 
     private String getFontBase64() {
@@ -309,7 +309,9 @@ public class TemplatePreviewService {
     }
 
     private String formatTeamNameHtml(String name) {
-        if (name == null) return "";
+		if (name == null) {
+			return "";
+		}
         String[] words = name.split("\\s+");
         if (words.length <= 3) {
             return String.join("<br>", words);
@@ -350,7 +352,9 @@ public class TemplatePreviewService {
         int idx = 0;
         while ((idx = content.indexOf("${", idx)) != -1) {
             int end = content.indexOf('}', idx + 2);
-            if (end == -1) break;
+			if (end == -1) {
+				break;
+			}
             String expr = content.substring(idx + 2, end);
             int tIdx = 0;
             while ((tIdx = expr.indexOf('T', tIdx)) != -1) {
@@ -372,7 +376,9 @@ public class TemplatePreviewService {
         int idx = 0;
         while ((idx = content.indexOf("${", idx)) != -1) {
             int end = content.indexOf('}', idx + 2);
-            if (end == -1) break;
+			if (end == -1) {
+				break;
+			}
             String expr = content.substring(idx + 2, end);
             for (int i = 0; i < expr.length() - 1; i++) {
                 if (expr.charAt(i) == '@' && Character.isLetterOrDigit(expr.charAt(i + 1))) {
@@ -391,6 +397,8 @@ public class TemplatePreviewService {
     }
 
     public record LineupPairing(String homeDriver, String homeNickname, String awayDriver, String awayNickname) {}
+
     public record ResultRow(String homeDriver, String homeNickname, int homePoints, int awayPoints, String awayDriver, String awayNickname) {}
+
     public record RaceRow(String label, int homePoints, int awayPoints) {}
 }

@@ -1,11 +1,10 @@
 package org.ctc.admin.dto;
 
+import java.util.List;
+import java.util.Map;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
-
-import java.util.List;
-import java.util.Map;
 
 public record SeasonDriverGroupDto(
 		Season season,

@@ -4,11 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import java.util.List;
 import org.ctc.domain.model.Car;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Track;
-
-import java.util.List;
 
 /**
  * Externalised Jackson annotations for {@link Season}.
@@ -26,8 +25,8 @@ import java.util.List;
  */
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler",
-        "phases", "seasonDrivers", "seasonTeams",
-        "displayLabel", "teams", "matchdays", "activeTeams", "eligibleTeams"})
+		"phases", "seasonDrivers", "seasonTeams",
+		"displayLabel", "teams", "matchdays", "activeTeams", "eligibleTeams"})
 public abstract class SeasonMixIn {
 
     @JsonIdentityReference(alwaysAsId = true)

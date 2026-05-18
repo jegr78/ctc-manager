@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
@@ -9,9 +11,6 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -44,7 +43,7 @@ public class StandingsService {
 		List<Match> matches = matchRepository.findByMatchdayPhaseId(phaseId);
 
 		// Source teams from PhaseTeam, optionally filtered by groupId
-		List<PhaseTeam> rosterRows = (groupId != null)
+		List<PhaseTeam> rosterRows = groupId != null
 				? phaseTeamRepository.findByPhaseIdAndGroupId(phaseId, groupId)
 				: phaseTeamRepository.findByPhaseId(phaseId);
 
@@ -59,7 +58,7 @@ public class StandingsService {
 		Map<UUID, UUID> successionMap = phase.getSeason().buildSuccessionMap();
 
 		// If groupId given, filter matches to only those belonging to that group
-		List<Match> filteredMatches = (groupId != null)
+		List<Match> filteredMatches = groupId != null
 				? matches.stream()
 					.filter(m -> m.getMatchday().getGroup() != null
 							&& m.getMatchday().getGroup().getId().equals(groupId))
@@ -101,10 +100,12 @@ public class StandingsService {
 	@Transactional(readOnly = true)
 	public List<TeamStanding> calculateStandingsWithBuchholz(UUID phaseId, UUID groupId) {
 		var standings = calculateStandings(phaseId, groupId);
-		if (standings.isEmpty()) return standings;
+		if (standings.isEmpty()) {
+			return standings;
+		}
 
 		var phase = seasonPhaseService.findById(phaseId);
-		boolean isGroupsCombinedView = (phase.getLayout() == PhaseLayout.GROUPS && groupId == null);
+		boolean isGroupsCombinedView = phase.getLayout() == PhaseLayout.GROUPS && groupId == null;
 
 		// Populate buchholz field for display (regardless of whether it's used as tiebreaker)
 		Map<UUID, Integer> buchholzScores = calculateBuchholzScoresForPhase(phase);
@@ -155,7 +156,9 @@ public class StandingsService {
 		for (Season season : seasons) {
 			for (SeasonPhase phase : seasonPhaseService.findAllPhases(season.getId())) {
 				List<TeamStanding> phaseStandings = calculateStandings(phase.getId(), null);
-				if (phaseStandings.isEmpty()) continue;
+				if (phaseStandings.isEmpty()) {
+					continue;
+				}
 
 				for (TeamStanding standing : phaseStandings) {
 					Team parentTeam = standing.getTeam().getParentOrSelf();
@@ -186,7 +189,9 @@ public class StandingsService {
 	 */
 	private Map<UUID, Integer> calculateBuchholzScoresForPhase(SeasonPhase phase) {
 		var season = phase.getSeason();
-		if (season == null) return Map.of();
+		if (season == null) {
+			return Map.of();
+		}
 
 		Map<UUID, UUID> successionMap = season.buildSuccessionMap();
 
@@ -199,7 +204,9 @@ public class StandingsService {
 		List<Race> races = raceRepository.findByMatchdaySeasonIdAndPlayoffMatchupIsNull(season.getId());
 		Map<UUID, Set<UUID>> opponents = new HashMap<>();
 		for (Race race : races) {
-			if (race.isBye() || race.getAwayTeam() == null) continue;
+			if (race.isBye() || race.getAwayTeam() == null) {
+				continue;
+			}
 			UUID home = successionMap.getOrDefault(race.getHomeTeam().getId(), race.getHomeTeam().getId());
 			UUID away = successionMap.getOrDefault(race.getAwayTeam().getId(), race.getAwayTeam().getId());
 			opponents.computeIfAbsent(home, k -> new HashSet<>()).add(away);
@@ -230,7 +237,9 @@ public class StandingsService {
 			return;
 		}
 
-		if (match.getHomeScore() == null || match.getAwayScore() == null) return;
+		if (match.getHomeScore() == null || match.getAwayScore() == null) {
+			return;
+		}
 
 		int homeTotal = match.getHomeScore();
 		int awayTotal = match.getAwayScore();
@@ -241,7 +250,9 @@ public class StandingsService {
 		var homeStanding = standingsMap.get(homeId);
 		var awayStanding = awayId != null ? standingsMap.get(awayId) : null;
 
-		if (homeStanding == null) return;
+		if (homeStanding == null) {
+			return;
+		}
 
 		homeStanding.addPointsFor(homeTotal);
 		homeStanding.addPointsAgainst(awayTotal);

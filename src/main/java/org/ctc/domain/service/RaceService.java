@@ -1,5 +1,8 @@
 package org.ctc.domain.service;
 
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.TeamCardService;
@@ -7,10 +10,6 @@ import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -246,7 +245,9 @@ public class RaceService {
 		race.getResults().clear();
 
 		for (var rd : results) {
-			if (rd.driverId() == null) continue;
+			if (rd.driverId() == null) {
+				continue;
+			}
 
 			var driver = driverRepository.findById(rd.driverId()).orElseThrow();
 			var result = new RaceResult(race, driver, rd.position(), rd.qualiPosition(), rd.fastestLap());

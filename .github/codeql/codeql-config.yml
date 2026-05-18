@@ -1,0 +1,13 @@
+name: ctc-manager-codeql-config
+
+queries:
+  - uses: security-extended
+
+# Suppression rationale + Alert-ID mapping: docs/security/sast-acceptance.md
+query-filters:
+  - exclude:
+      id: java/ssrf
+  - exclude:
+      id: java/zipslip
+  - exclude:
+      id: java/path-injection

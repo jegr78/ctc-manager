@@ -6,6 +6,13 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
 import com.microsoft.playwright.options.FormData;
 import com.microsoft.playwright.options.RequestOptions;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.UUID;
+import java.util.regex.Pattern;
 import org.assertj.core.api.Assertions;
 import org.ctc.backup.service.BackupArchiveService;
 import org.junit.jupiter.api.AfterEach;
@@ -15,14 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.Instant;
-import java.util.UUID;
-import java.util.regex.Pattern;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
 
@@ -196,7 +195,7 @@ class BackupImportE2ETest extends PlaywrightConfig {
 
         // when — click Cancel (POST form button), pin the HTTP method via waitForRequest
         page.waitForRequest(
-                req -> req.method().equals("POST") && req.url().endsWith("/import-cancel"),
+                req -> "POST".equals(req.method()) && req.url().endsWith("/import-cancel"),
                 () -> page.locator("form[action$='/import-cancel'] button[type='submit']").click()
         );
 

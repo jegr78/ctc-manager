@@ -7,7 +7,32 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.audit.BackupExecutedByResolver;
 import org.ctc.backup.audit.DataImportAuditService;
 import org.ctc.backup.dto.BackupImportPreview;
 import org.ctc.backup.dto.BackupImportResult;
@@ -26,40 +51,13 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.GenericTypeResolver;
-import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.Paths;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 /**
  * Stateless orchestrator for the backup import pipeline.
@@ -124,6 +122,12 @@ public class BackupImportService {
     /** Defensive allow-list for native-SQL table-name concatenation (no SQL injection on hard-coded BackupSchema slugs). */
     private static final Pattern SAFE_TABLE_NAME = Pattern.compile("^[a-z_]+$");
 
+    private final AtomicInteger zipOpenCounter = new AtomicInteger(0);
+
+    public int getZipOpenCount() {
+        return zipOpenCounter.get();
+    }
+
     private final BackupArchiveService backupArchive;
     private final BackupSchema backupSchema;
     private final List<JpaRepository<?, ?>> allRepositories;
@@ -133,7 +137,7 @@ public class BackupImportService {
     private final RestoreFailureInjector failureInjector;
     private final DataImportAuditService dataImportAuditService;
     private final ApplicationEventPublisher eventPublisher;
-    private final Environment environment;
+    private final BackupExecutedByResolver executedByResolver;
     private final Path stagingDir;
     private final Path importBackupsDir;
     private final Path uploadsTargetDir;
@@ -168,7 +172,7 @@ public class BackupImportService {
             RestoreFailureInjector failureInjector,
             DataImportAuditService dataImportAuditService,
             ApplicationEventPublisher eventPublisher,
-            Environment environment,
+            BackupExecutedByResolver executedByResolver,
             @Value("${app.backup.staging-dir}") String stagingDirRaw,
             @Value("${app.backup.import-backups-dir}") String importBackupsDirRaw,
             @Value("${app.upload-dir}") String uploadDirRaw
@@ -182,7 +186,7 @@ public class BackupImportService {
         this.failureInjector = failureInjector;
         this.dataImportAuditService = dataImportAuditService;
         this.eventPublisher = eventPublisher;
-        this.environment = environment;
+        this.executedByResolver = executedByResolver;
         this.stagingDir = Paths.get(stagingDirRaw).toAbsolutePath().normalize();
         this.importBackupsDir = Paths.get(importBackupsDirRaw).toAbsolutePath().normalize();
         this.uploadsTargetDir = Paths.get(uploadDirRaw).toAbsolutePath().normalize();
@@ -368,6 +372,8 @@ public class BackupImportService {
                     "Staging file not found for id=" + stagingId);
         }
         // Restore original filename from sidecar; fall back to staging filename if absent
+        // NP: staged.getFileName() cannot return null — staged is a staging file path, never a root.
+        // See config/spotbugs-exclude.xml BackupImportService.reparse NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE.
         String originalFilename = Files.exists(metaFile)
                 ? Files.readString(metaFile, java.nio.charset.StandardCharsets.UTF_8)
                 : staged.getFileName().toString();
@@ -422,6 +428,7 @@ public class BackupImportService {
             isolation = Isolation.READ_COMMITTED,
             rollbackFor = Exception.class)
     public BackupImportResult execute(UUID stagingId) {
+        zipOpenCounter.set(0);
         log.info("Backup import execute started: stagingId={}", stagingId);
 
         UUID auditUuid = UUID.randomUUID();
@@ -446,6 +453,8 @@ public class BackupImportService {
         // Target ZIP for the pre-import auto-backup (runs BEFORE any DB mutation).
         Path autoBackupZip = importBackupDir.resolve("auto-backup-before-import.zip");
 
+        // NP: staged.getFileName() cannot return null — staged is a path to a staging file,
+        // never a root path. See config/spotbugs-exclude.xml BackupImportService.execute entry.
         String sourceFilename;
         try {
             sourceFilename = Files.exists(metaFile)
@@ -512,7 +521,7 @@ public class BackupImportService {
             // Step 4: publish the success event as the LAST statement inside the try block.
             // Spring's TransactionalEventListener(phase=AFTER_COMMIT) buffers delivery until
             // the outer @Transactional method commits — Plan 07 consumes the event there.
-            String executedBy = resolveExecutedBy();
+            String executedBy = executedByResolver.resolve(null);
             long totalRestored = restoredCounts.values().stream().mapToLong(Long::longValue).sum();
             // WR-02: entityCount documents "entities that contributed rows" — filter to
             // non-zero counts so the D-15 success flash ("across N tables") tells the truth
@@ -629,6 +638,7 @@ public class BackupImportService {
         // race where the listener's Step-4 cleanup can hit the same staging file while a
         // JVM-internal ZipInputStream lifecycle is still settling, and is a meaningful perf
         // win on the Saison-2023 ~1000-row fixture.
+        zipOpenCounter.incrementAndGet();
         try (ZipFile zf = new ZipFile(staged.toFile())) {
             for (EntityRef ref : backupSchema.getExportOrder()) {
                 String table = ref.tableName();
@@ -659,11 +669,12 @@ public class BackupImportService {
         long totalRows = 0;
         List<JsonNode> batch = new ArrayList<>(RESTORE_BATCH_SIZE);
 
+        // CodeQL FP: java/path-injection — assertEntrySafe + PathTraversalGuard.assertWithin defense not traceable; see docs/security/sast-acceptance.md
         ZipEntry entry = zf.getEntry(entryPath);
         if (entry == null) {
             // Absent data files for an entity are not a hard error — an exported empty array is
             // semantically equivalent. The restorer is simply not invoked and the count is 0.
-            log.debug("No data entry for table={} (entryPath={}) — restore count is 0",
+            log.warn("Backup ZIP has no data entry for table={} (entryPath={}) — possible corruption or schema regression",
                     ref.tableName(), entryPath);
             return totalRows;
         }
@@ -718,22 +729,6 @@ public class BackupImportService {
         if (tableName == null || !SAFE_TABLE_NAME.matcher(tableName).matches()) {
             throw new IllegalStateException("Refusing native-SQL concat for unsafe table name: " + tableName);
         }
-    }
-
-    /**
-     * Resolves the {@code executedBy} string for the success-path audit row (D-02):
-     * dev/local profile → literal {@code "dev"}; else SecurityContext authentication name;
-     * fall-back {@code "unknown"}.
-     */
-    private String resolveExecutedBy() {
-        if (environment.matchesProfiles("dev | local")) {
-            return "dev";
-        }
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getName() != null && !auth.getName().isBlank()) {
-            return auth.getName();
-        }
-        return "unknown";
     }
 
     /**

@@ -226,20 +226,82 @@ Living retrospective across milestones. Updated at each milestone completion.
 - Notable: Phase 70 wurde nach dem post-Phase-69-Audit eingefügt — der zweite Audit-Run (post-Phase-70) kostete weitere 30 Min, war aber nötig, um die 14-→-15-Phasen-Inversion sauber zu dokumentieren
 - Notable: Phase 61 war mit 14 Plans (5 + 9 gap) der größte Gap-Tail des Milestones — pure Service-Cutover-Restwerk-Plans hätten Phase 58 Plan-Checker abfangen können
 
+## Milestone: v1.11 — Tooling Infrastructure & Tech-Debt Sweep
+
+**Shipped:** 2026-05-18
+**Phases:** 8 (80-87) | **Plans:** 46 | **Timeline:** 2026-05-16 → 2026-05-18 (2 days)
+
+> Note: v1.10 retrospective section was skipped during that milestone close — gap acknowledged, not retroactively filled here.
+
+### What Was Built
+
+- OpenRewrite developer-invoked refactoring (`-Prewrite` Maven profile), one-shot `CommonStaticAnalysis` cleanup across 380 files
+- SpotBugs 4.9.8.3 + find-sec-bugs 1.14.0 blocking gate verify-bound, 220 baseline findings triaged to 0
+- 12 Phase-75 backup REVIEW.md Info/Warning items resolved + `BackupSchemaGuardTest` + `BackupRestoreZipOpenCountIT` + 24-entity row-count parity
+- Quality and Polish sweep: 4 v1.9/v1.10 carryover items (driver-detail chip order, DevDataSeeder widening, per-group matchday UI, OSIV cleanup) + UAT-02 procedure
+- Mend Renovate GitHub App integration with comprehensive safety packageRules (Guava/Thymeleaf/Java LTS pins + noble Dockerfile regex + patch automerge)
+- CodeQL SAST blocking gate (`security-extended`) with 3-layer FP suppression invariant (codeql-config + source markers + sast-acceptance.md)
+- Test wallclock baseline established (CI median 23:00); PERF-04 OR-branch verdict with documented v1.12 forward path
+- Phase 87 retroactive v1.10 Nyquist VALIDATION closure (8 phases approved, 6 gap-fill tests, 0 impl bugs)
+- In-milestone v1.11 Nyquist closure (Option A inline, 6 retroactive approves + 1 retroactive 86-VERIFICATION.md)
+- CI Playwright fork-channel corruption fix (`actions/cache@v4` + pre-install all 3 default browsers)
+- T-2 master branch protection activated post-merge gate
+
+### What Worked
+
+- **In-milestone Nyquist closure (Option A pattern):** Discovering during milestone audit that the milestone itself accumulated Nyquist debt (same shape Phase 87 just closed for v1.10) and resolving it inline same-day via 6 retroactive `/gsd:validate-phase` runs + 1 retroactive VERIFICATION.md — avoided creating a v1.12 carry-forward phase. Sets precedent for future milestones.
+- **gsd-nyquist-auditor agent dispatched per phase with CI baseline as authority:** Each agent had ~7 minutes wall-time to confirm coverage against `CI run 26033853591` SHA `3590b3a7` + shipped code; 0 impl bugs surfaced across 14 audits (8 v1.10 phases + 6 v1.11 phases) confirming both milestones shipped with strong test coverage.
+- **Synthetic deliberate-violation testing (STAT-06 + SAST-06 + DEPS-08):** Throwaway-branch deliberate-failure PRs surfaced semantic bugs that structural testing missed — SAST-06's gate-step `ref=` vs `pr=` query bug only manifested on a real PR-context alert. Exactly the failure mode SAST-06 was designed to catch.
+- **CI dumpstream artifact as debugging tool:** Surefire fork-channel corruption (Playwright Chromium auto-download mid-test) diagnosed via the `2026-05-18T05-24-53_082-jvmRun2.dumpstream` artifact from a broken CI run — file pointed straight at the failure mode.
+- **D-17 PR-branch CI harvest = post-merge master harvest:** Recognizing that `ci.yml` runs identical steps for `pull_request`/`push`/`workflow_dispatch` triggers allowed Phase 86 PERF-05 baseline harvest within the same PR (5 `workflow_dispatch` runs) — no orphan post-merge `docs(86):` commit needed.
+
+### What Was Inefficient
+
+- **Auditor agent ignored "do not modify VALIDATION.md" instruction (Phase 84, 85):** Despite explicit "write to /tmp only" instructions, the gsd-nyquist-auditor agents directly modified `84-VALIDATION.md` / `85-VALIDATION.md` files. Outcome was actually fine (consistent shape, fewer steps), but breaks the orchestrator-driven atomic-commit pattern. Future audits: either accept the agent's direct-modification pattern (simpler) or enforce instruction more strictly.
+- **REQUIREMENTS.md bookkeeping drift (recurring theme — see Cross-Milestone Trends):** STAT-01..07 + PERF-01..05 (12 checkboxes) remained `[ ]` for ~3 days post-shipping despite work being green in CI; only the milestone audit surfaced the drift. Tooling solution (auto-flip on phase-complete commit hook) still overdue.
+- **Phase 86 missed VERIFICATION.md creation (during execution):** No goal-backward verification artifact was created during Plans 86-01..86-06 execution, only at retroactive audit time. Phase plans should include explicit "generate VERIFICATION.md" task or `/gsd:verify-work` invocation.
+- **gsd-sdk `milestone.complete` accomplishment extraction noisy:** SUMMARYs without `one_liner:` frontmatter field produce literal "One-liner:" placeholders in MILESTONES.md. Future: enforce `one_liner:` in SUMMARY template or filter placeholders in CLI.
+
+### Patterns Established
+
+- **In-milestone Nyquist closure path (Option A):** When a milestone audit surfaces draft VALIDATION.md across the milestone's own phases, run retroactive `/gsd:validate-phase` + `gsd-nyquist-auditor` per phase + Phase-86-style retroactive VERIFICATION.md inline same-day. Avoids cross-milestone carry-forward.
+- **CI Playwright cache invariant:** `actions/cache@v4` for `~/.cache/ms-playwright` + pre-install all 3 default browsers (`Playwright.create()` validates Chromium + Firefox + WebKit on first use — not just `chromium()`). Documented in `ci.yml` comment block + memory `feedback_gh_api_zsh_globs` (sibling memory `feedback_clean_build_only`).
+- **3-layer FP suppression invariant (CodeQL):** codeql-config `query-filters` + source-marker comment + sast-acceptance.md table row — all three required for every suppression. Update-on-Triage discipline catches drift.
+- **D-08 layer 2 architectural filter extension (SpotBugs):** When `EI_EXPOSE_REP*` false-positives appear across multiple service/DTO/record packages, extend the package-level `<Match>` filter rather than per-class `@SuppressFBWarnings` flood.
+- **D-17 trigger-equivalence (CI workflows):** For step-timing baselines, `workflow_dispatch` on milestone branch is semantically equivalent to post-merge master `push` because `ci.yml` runs identical steps.
+
+### Key Lessons
+
+- **Auto-Nyquist-debt scanning IS the v1.11 lesson:** Both v1.10 and v1.11 accumulated identical draft-VALIDATION patterns during execution. The lesson isn't "phases should close Nyquist inline" — it's that milestone-close audit is the right moment to surface and resolve it, and Option A inline closure is faster than cross-milestone phases (~3 hours for 6 phases + 1 retroactive VERIFICATION).
+- **`feedback_no_local_git_tags` invariant validated:** Even though `/gsd-complete-milestone` workflow's `git_tag` step suggests local tagging, the user's CLAUDE.md feedback memory was right — CI release workflow handles tagging post-merge, no local tag should ever be created.
+- **`gh api -F field[]=value` breaks in zsh** (new `feedback_gh_api_zsh_globs` memory): Brackets interpreted as globs. JSON via `--input -` heredoc is the robust form.
+- **PERF-04 OR-branch is honest closure, not failure:** The requirement explicitly allowed "≥30% reduction OR architectural blocker documented with v1.12 forward path". Documenting the blocker (Spring-context-per-fork structural cost) + 3 prioritized levers + `PERF-FUTURE-01` tracking IS satisfying the requirement.
+- **Synthetic deliberate-violation PRs are the gold-standard gate test:** STAT-06 (NP_ALWAYS_NULL throwaway), SAST-06 (java/sql-injection throwaway PR #128), DEPS-08 (Dockerfile-bump throwaway PR #126), Phase 78 (DockerfilePinGuardTest in-process duplicate) — each surfaced gate semantics issues that structural testing missed.
+
+### Cost Observations
+
+- Model mix: ~60% opus (audits, planner, gsd-nyquist-auditor agents), ~30% sonnet (executor + integration-checker agents), ~10% haiku (read-only reviewers)
+- Sessions: 2 calendar days, dense — ~14 hours active orchestration across audit/closure/CI-fix cycles
+- Notable: gsd-nyquist-auditor agents averaged ~3-5 min wall-time per phase (~200-300s) — fast because all 6 v1.11 phases had complete VERIFICATION.md + plan SUMMARYs already in place
+- Notable: 8 atomic closure commits + 3 milestone-archive commits + 2 CI-fix commits = 13 commits in the inline-closure tail (16:00–16:38 on 2026-05-18)
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v1.1 | v1.2 | v1.8 | v1.9 |
-| ------ | ---- | ---- | ---- | ---- | ---- |
-| Phases | 5 | 10 | 4 | 2 | 15 |
-| Plans | 12 | 20 | 5 | 4 | ~70 |
-| Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 | 1011 → 1064 | 1064 → 1258 |
-| Coverage | 82%+ | 82%+ | 82%+ | 82%+ | 87.02% |
-| Timeline (days) | 8 | 4 | 11 | 2 | 14 |
-| Files changed | 68 | ~80 | ~15 | 39 | 567 |
-| LOC delta | +3850 / -962 | +5100 / -1300 | +600 / -30 | +11.2k / -539 | +88.4k / -2.5k |
+| Metric | v1.0 | v1.1 | v1.2 | v1.8 | v1.9 | v1.10 | v1.11 |
+| ------ | ---- | ---- | ---- | ---- | ---- | ----- | ----- |
+| Phases | 5 | 10 | 4 | 2 | 15 | 9 | 8 |
+| Plans | 12 | 20 | 5 | 4 | ~70 | 50 | 46 |
+| Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 | 1011 → 1064 | 1064 → 1258 | 1258 → 1652 | 1652 → 1675 |
+| Coverage | 82%+ | 82%+ | 82%+ | 82%+ | 87.02% | 87.80% | 88.88% |
+| Timeline (days) | 8 | 4 | 11 | 2 | 14 | 7 | 2 |
+| Files changed | 68 | ~80 | ~15 | 39 | 567 | 521 | 718 |
+| LOC delta | +3850 / -962 | +5100 / -1300 | +600 / -30 | +11.2k / -539 | +88.4k / -2.5k | +77.4k / -1.2k | +81.3k / -3.2k |
+| Nyquist verdict at close | n/a | n/a | n/a | n/a | n/a | partial → compliant (via v1.11 Phase 87) | compliant 8/0/0 |
 
 ### Recurring Themes
 
-- **Bookkeeping-Drift in `requirements-completed` Frontmatter:** Milestones v1.0 / v1.1 / v1.2 / v1.9 alle mit Drift — überfällig für Tooling-Lösung (Pre-Commit-Hook).
-- **Audit-getriebene Phase-Insertion:** v1.1 (Recovery 12-15), v1.2 (Phase 19), v1.9 (Phasen 62, 66, 67, 68, 70) — Pattern hat sich als wertvoller Mechanismus etabliert, um Mid-Milestone-Discoveries strukturiert zu integrieren.
-- **Live-DB / Real-World UAT entdeckt Domain-Gaps:** v1.8 (DevDataSeeder Year-Collision), v1.9 (Phase-66-D-04 Domain-Violation + GAP-70-01) — Lokale Dev-Profile decken nicht alle Pfade ab.
+- **Bookkeeping-Drift in `requirements-completed` Frontmatter:** Milestones v1.0 / v1.1 / v1.2 / v1.9 / v1.11 alle mit Drift (v1.11: STAT-01..07 + PERF-01..05 stale for 3 days) — überfällig für Tooling-Lösung (Pre-Commit-Hook auto-flip auf phase-complete commit).
+- **Audit-getriebene Phase-Insertion:** v1.1 (Recovery 12-15), v1.2 (Phase 19), v1.9 (Phasen 62, 66, 67, 68, 70), v1.10 (Phase 78) — Pattern hat sich als wertvoller Mechanismus etabliert. v1.11 evolution: in-milestone Nyquist closure als Option A inline pattern (post-audit), kein neuer Phase-Insert nötig.
+- **Live-DB / Real-World UAT entdeckt Domain-Gaps:** v1.8 (DevDataSeeder Year-Collision), v1.9 (Phase-66-D-04 Domain-Violation + GAP-70-01), v1.10 (75-HUMAN-UAT Driver chip-order observation → QUAL-01 in v1.11) — Lokale Dev-Profile decken nicht alle Pfade ab.
+- **Nyquist-Debt akkumuliert während Execution, wird beim Milestone-Audit sichtbar:** v1.10 (6/9 phases draft) → Phase 87 → v1.10 compliant; v1.11 (6/8 phases draft) → in-milestone Option A → v1.11 compliant. Pattern reproduzierbar; Tooling-Verbesserung wäre nyquist-Status als Quality-Gate auf phase-complete commit (analog zu SpotBugs/CodeQL/JaCoCo gates).
+- **Synthetic deliberate-violation PRs als Gold-Standard für Gate-Tests:** STAT-06 (Phase 81), DEPS-08 (Phase 84), SAST-06 (Phase 85), DockerfilePinGuardTest (Phase 87) — alle nutzen Throwaway-Branch oder In-Process-Duplikat um Gate-Semantik zu beweisen, nicht nur Gate-Struktur. Strukturelle Tests (`yq`/`actionlint`/`grep`) reichen nicht aus.

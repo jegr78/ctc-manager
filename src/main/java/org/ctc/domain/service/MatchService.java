@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.exception.EntityNotFoundException;
@@ -13,9 +15,6 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -85,7 +84,7 @@ public class MatchService {
 			var race = new Race();
 			race.setMatchday(matchday);
 			race.setMatch(match);
-			if (leg % 2 == 1 && !bye) {
+			if (leg % 2 != 0 && !bye) {
 				race.setHomeTeamOverride(awayTeam);
 				race.setAwayTeamOverride(homeTeam);
 			}

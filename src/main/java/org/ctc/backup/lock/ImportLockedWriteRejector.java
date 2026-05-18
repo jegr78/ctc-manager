@@ -2,14 +2,13 @@ package org.ctc.backup.lock;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
-import java.io.IOException;
-import java.util.Set;
 
 /**
  * Intercepts every mutating request under {@code /admin/**} while the import lock is held
@@ -60,13 +59,19 @@ public class ImportLockedWriteRejector implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest req, HttpServletResponse res, Object handler)
             throws IOException {
-        if (!MUTATING_METHODS.contains(req.getMethod().toUpperCase())) return true;   // step 1 — read-only verb: allow
-        if (!importLockService.isLocked()) return true;                                // step 2 — no lock: allow
-        if ("/admin/backup/import-execute".equals(req.getRequestURI())) return true;   // step 3 — whitelist
-        log.info("Rejected admin POST during import lock: {} {}", req.getMethod(), req.getRequestURI());
-        res.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
-        res.setContentType("text/html;charset=UTF-8");
-        res.getWriter().write(LOCK_HTML);
-        return false;                                                        // step 4 — reject
-    }
+		if (!MUTATING_METHODS.contains(req.getMethod().toUpperCase())) {
+			return true;   // step 1 — read-only verb: allow
+		}
+		if (!importLockService.isLocked()) {
+			return true;                                // step 2 — no lock: allow
+		}
+		if ("/admin/backup/import-execute".equals(req.getRequestURI())) {
+			return true;   // step 3 — whitelist
+		}
+		log.info("Rejected admin POST during import lock: {} {}", req.getMethod(), req.getRequestURI());
+		res.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+		res.setContentType("text/html;charset=UTF-8");
+		res.getWriter().write(LOCK_HTML);
+		return false;                                                        // step 4 — reject
+	}
 }

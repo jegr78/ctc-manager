@@ -1,12 +1,12 @@
 package org.ctc.domain.service;
 
 import jakarta.persistence.EntityManager;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
 import org.ctc.domain.model.*;
-import org.ctc.domain.repository.PhaseTeamRepository;
-import org.ctc.domain.repository.PlayoffMatchupRepository;
-import org.ctc.domain.repository.PlayoffRepository;
-import org.ctc.domain.repository.PlayoffSeedRepository;
-import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,10 +15,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -415,7 +411,7 @@ class PlayoffSeedingServiceTest {
 			// then — D-15: combined-view drives the seed pool, not per-group calls
 			verify(standingsService).calculateStandings(regularPhase.getId(), null);
 			verify(standingsService, never()).calculateStandings(eq(regularPhase.getId()),
-					argThat(id -> id != null));
+					argThat(Objects::nonNull));
 			assertEquals(team1, matchup0.getTeam1());
 			assertEquals(team4, matchup0.getTeam2());
 			assertEquals(team2, matchup1.getTeam1());

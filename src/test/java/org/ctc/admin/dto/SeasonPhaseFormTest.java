@@ -6,7 +6,6 @@ import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.PhaseType;
 import org.junit.jupiter.api.Test;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -76,9 +75,9 @@ class SeasonPhaseFormTest {
         var violations = validator.validate(form);
 
         // then — no violations since phaseType, layout, format are all provided; seasonId is not a DTO field
-        assertThat(violations).noneMatch(v -> v.getPropertyPath().toString().equals("phaseType")
-                || v.getPropertyPath().toString().equals("layout")
-                || v.getPropertyPath().toString().equals("format"));
+        assertThat(violations).noneMatch(v -> "phaseType".equals(v.getPropertyPath().toString())
+                || "layout".equals(v.getPropertyPath().toString())
+                || "format".equals(v.getPropertyPath().toString()));
     }
 
     @Test
