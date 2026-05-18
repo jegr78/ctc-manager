@@ -18,13 +18,13 @@ Requirements for the v1.11 release. Each maps to a roadmap phase.
 
 ### Static Analysis Gate (STAT)
 
-- [ ] **STAT-01**: A project-root `lombok.config` exists with `lombok.addLombokGeneratedAnnotation = true` and `lombok.extern.findbugs.addSuppressFBWarnings = true` so SpotBugs skips Lombok-generated code
-- [ ] **STAT-02**: `spotbugs-maven-plugin` is wired into the `verify` phase after the existing JaCoCo execution in `pom.xml`, configured with `<effort>Max</effort>` and `<threshold>Default</threshold>`
-- [ ] **STAT-03**: `findsecbugs-plugin` is registered as a SpotBugs plugin dependency so 144 Spring Security-aware bytecode patterns participate in the gate
-- [ ] **STAT-04**: A `config/spotbugs-exclude.xml` filter exists with documented suppressions for any intentional patterns (e.g., `MatchdayForm` builder, SSRF blocklist `Set.contains` sanitizer)
-- [ ] **STAT-05**: The SpotBugs gate is wired in two atomic commits — first as report-only (`<goal>spotbugs</goal>`) for baseline inventory, then upgraded to blocking (`<goal>check</goal>`) once `config/spotbugs-exclude.xml` covers triaged violations
-- [ ] **STAT-06**: `./mvnw verify` fails the build when a new HIGH-priority SpotBugs violation is introduced (verified via a deliberate test-case violation in a throwaway branch)
-- [ ] **STAT-07**: CLAUDE.md "Conventions" section gains a paragraph documenting the SpotBugs gate, the suppression-file workflow, and the lombok.config invariant
+- [x] **STAT-01**: A project-root `lombok.config` exists with `lombok.addLombokGeneratedAnnotation = true` and `lombok.extern.findbugs.addSuppressFBWarnings = true` so SpotBugs skips Lombok-generated code
+- [x] **STAT-02**: `spotbugs-maven-plugin` is wired into the `verify` phase after the existing JaCoCo execution in `pom.xml`, configured with `<effort>Max</effort>` and `<threshold>Default</threshold>`
+- [x] **STAT-03**: `findsecbugs-plugin` is registered as a SpotBugs plugin dependency so 144 Spring Security-aware bytecode patterns participate in the gate
+- [x] **STAT-04**: A `config/spotbugs-exclude.xml` filter exists with documented suppressions for any intentional patterns (e.g., `MatchdayForm` builder, SSRF blocklist `Set.contains` sanitizer)
+- [x] **STAT-05**: The SpotBugs gate is wired in two atomic commits — first as report-only (`<goal>spotbugs</goal>`) for baseline inventory, then upgraded to blocking (`<goal>check</goal>`) once `config/spotbugs-exclude.xml` covers triaged violations
+- [x] **STAT-06**: `./mvnw verify` fails the build when a new HIGH-priority SpotBugs violation is introduced (verified via a deliberate test-case violation in a throwaway branch)
+- [x] **STAT-07**: CLAUDE.md "Conventions" section gains a paragraph documenting the SpotBugs gate, the suppression-file workflow, and the lombok.config invariant
 
 ### Backup Cleanup (BACK)
 
@@ -64,11 +64,11 @@ Requirements for the v1.11 release. Each maps to a roadmap phase.
 
 ### Test Performance / Wallclock (PERF)
 
-- [ ] **PERF-01**: Every `@DirtiesContext` usage in `src/test/java/` is audited and either removed (after random-order verification) or retained with an explanatory comment naming the specific shared state that requires fresh context (e.g., `ImportLockService` singleton lock state)
-- [ ] **PERF-02**: A diagnostic logging pass counts unique Spring `ApplicationContext` initialisations during `./mvnw verify -Pe2e` and the baseline + post-optimization counts are recorded in `docs/test-performance.md`
-- [ ] **PERF-03**: At least one repository-only IT is converted from full `@SpringBootTest` to `@DataJpaTest` (slice) without losing assertion coverage, demonstrating the pattern for future conversions
-- [ ] **PERF-04**: `./mvnw verify -Pe2e` wallclock is reduced by ≥30% versus the v1.10 baseline of 11m 11s (target ≤7m 50s on the same hardware) OR the architectural blocker is documented with the specific constraint (e.g., MariaDB Testcontainers cold-start) and a forward path for v1.12
-- [ ] **PERF-05**: The improved wallclock is verified on CI (GitHub Actions runner) over 3 consecutive runs to filter cold-cache noise; the median is recorded as the new baseline
+- [x] **PERF-01**: Every `@DirtiesContext` usage in `src/test/java/` is audited and either removed (after random-order verification) or retained with an explanatory comment naming the specific shared state that requires fresh context (e.g., `ImportLockService` singleton lock state)
+- [x] **PERF-02**: A diagnostic logging pass counts unique Spring `ApplicationContext` initialisations during `./mvnw verify -Pe2e` and the baseline + post-optimization counts are recorded in `docs/test-performance.md`
+- [x] **PERF-03**: At least one repository-only IT is converted from full `@SpringBootTest` to `@DataJpaTest` (slice) without losing assertion coverage, demonstrating the pattern for future conversions
+- [x] **PERF-04**: `./mvnw verify -Pe2e` wallclock is reduced by ≥30% versus the v1.10 baseline of 11m 11s (target ≤7m 50s on the same hardware) OR the architectural blocker is documented with the specific constraint (e.g., MariaDB Testcontainers cold-start) and a forward path for v1.12
+- [x] **PERF-05**: The improved wallclock is verified on CI (GitHub Actions runner) over 3 consecutive runs to filter cold-cache noise; the median is recorded as the new baseline
 
 ### Nyquist VALIDATION Closure (VAL)
 
@@ -115,48 +115,48 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REWR-01 | Phase 80 | Complete |
-| REWR-02 | Phase 80 | Complete |
-| REWR-03 | Phase 80 | Complete |
-| REWR-04 | Phase 80 | Complete |
-| REWR-05 | Phase 80 | Complete |
-| REWR-06 | Phase 80 | Complete |
-| STAT-01 | Phase 81 | Pending |
-| STAT-02 | Phase 81 | Pending |
-| STAT-03 | Phase 81 | Pending |
-| STAT-04 | Phase 81 | Pending |
-| STAT-05 | Phase 81 | Pending |
-| STAT-06 | Phase 81 | Pending |
-| STAT-07 | Phase 81 | Pending |
-| BACK-01 | Phase 82 | Complete |
-| BACK-02 | Phase 82 | Complete |
-| BACK-03 | Phase 82 | Complete |
-| BACK-04 | Phase 82 | Complete |
-| BACK-05 | Phase 82 | Complete |
-| QUAL-01 | Phase 83 | Complete |
-| QUAL-02 | Phase 83 | Complete |
-| QUAL-03 | Phase 83 | Complete |
-| QUAL-04 | Phase 83 | Complete |
-| QUAL-05 | Phase 83 | Complete |
-| DEPS-01 | Phase 84 | Done    |
-| DEPS-02 | Phase 84 | Done    |
-| DEPS-03 | Phase 84 | Done    |
-| DEPS-04 | Phase 84 | Done    |
-| DEPS-05 | Phase 84 | Done    |
-| DEPS-06 | Phase 84 | Done    |
-| DEPS-07 | Phase 84 | Done    |
-| DEPS-08 | Phase 84 | Done    |
-| SAST-01 | Phase 85 | Complete |
-| SAST-02 | Phase 85 | Complete |
-| SAST-03 | Phase 85 | Complete |
-| SAST-04 | Phase 85 | Complete |
-| SAST-05 | Phase 85 | Complete |
-| SAST-06 | Phase 85 | Complete |
-| PERF-01 | Phase 86 | Pending |
-| PERF-02 | Phase 86 | Pending |
-| PERF-03 | Phase 86 | Pending |
-| PERF-04 | Phase 86 | Pending |
-| PERF-05 | Phase 86 | Pending |
+| REWR-01 | Phase 80 | Satisfied |
+| REWR-02 | Phase 80 | Satisfied |
+| REWR-03 | Phase 80 | Satisfied |
+| REWR-04 | Phase 80 | Satisfied |
+| REWR-05 | Phase 80 | Satisfied |
+| REWR-06 | Phase 80 | Satisfied |
+| STAT-01 | Phase 81 | Satisfied |
+| STAT-02 | Phase 81 | Satisfied |
+| STAT-03 | Phase 81 | Satisfied |
+| STAT-04 | Phase 81 | Satisfied |
+| STAT-05 | Phase 81 | Satisfied |
+| STAT-06 | Phase 81 | Satisfied |
+| STAT-07 | Phase 81 | Satisfied |
+| BACK-01 | Phase 82 | Satisfied |
+| BACK-02 | Phase 82 | Satisfied |
+| BACK-03 | Phase 82 | Satisfied |
+| BACK-04 | Phase 82 | Satisfied |
+| BACK-05 | Phase 82 | Satisfied |
+| QUAL-01 | Phase 83 | Satisfied |
+| QUAL-02 | Phase 83 | Satisfied |
+| QUAL-03 | Phase 83 | Satisfied |
+| QUAL-04 | Phase 83 | Satisfied |
+| QUAL-05 | Phase 83 | Satisfied |
+| DEPS-01 | Phase 84 | Satisfied |
+| DEPS-02 | Phase 84 | Satisfied |
+| DEPS-03 | Phase 84 | Satisfied |
+| DEPS-04 | Phase 84 | Satisfied |
+| DEPS-05 | Phase 84 | Satisfied |
+| DEPS-06 | Phase 84 | Satisfied |
+| DEPS-07 | Phase 84 | Satisfied |
+| DEPS-08 | Phase 84 | Satisfied |
+| SAST-01 | Phase 85 | Satisfied |
+| SAST-02 | Phase 85 | Satisfied |
+| SAST-03 | Phase 85 | Satisfied |
+| SAST-04 | Phase 85 | Satisfied |
+| SAST-05 | Phase 85 | Satisfied |
+| SAST-06 | Phase 85 | Satisfied |
+| PERF-01 | Phase 86 | Satisfied |
+| PERF-02 | Phase 86 | Satisfied |
+| PERF-03 | Phase 86 | Satisfied |
+| PERF-04 | Phase 86 | Satisfied |
+| PERF-05 | Phase 86 | Satisfied |
 | VAL-01 | Phase 87 | Satisfied |
 | VAL-02 | Phase 87 | Satisfied |
 | VAL-03 | Phase 87 | Satisfied |
