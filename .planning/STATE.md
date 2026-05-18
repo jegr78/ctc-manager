@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Driver-Import Gap-Closure & Test Performance Round 2
 status: planning
-last_updated: "2026-05-18T16:30:00.000Z"
-last_activity: 2026-05-18
+last_updated: "2026-05-18T19:30:00.000Z"
+last_activity: 2026-05-18 — Phase 88 context gathered via `/gsd-discuss-phase 88`
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 15
+  total_plans: 13
   completed_plans: 0
   percent: 0
 ---
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-18)
 
 ## Current Position
 
-Phase: 88 — Driver-Import Gap-Closure & CLEAN-01 Unblock (not started)
-Plan: —
-Status: Roadmap drafted, awaiting approval
-Last activity: 2026-05-18 — v1.12 ROADMAP.md created via `/gsd-new-milestone`
+Phase: 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure (context gathered)
+Plan: — (planning next — 6 themen-gebundelte sequential plans designed in CONTEXT.md)
+Status: CONTEXT.md committed (efd5794d), ready for `/gsd-plan-phase 88`
+Last activity: 2026-05-18 — `/gsd-discuss-phase 88` completed, 88-CONTEXT.md + 88-DISCUSSION-LOG.md committed
 
 ## Completed Milestones
 
@@ -47,7 +47,7 @@ Last activity: 2026-05-18 — v1.12 ROADMAP.md created via `/gsd-new-milestone`
 
 | Phase | Name | Requirements | Status | Plans |
 | ----- | ---- | ------------ | ------ | ----- |
-| 88 | Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | CLEAN-01, CLEAN-02, CLEAN-03, REL-01, REL-02, DOCS-01, DRIV-01, DRIV-02 | Not started | 0/8 (est.) |
+| 88 | Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | CLEAN-01, CLEAN-02, CLEAN-03, REL-01, REL-02, DOCS-01, DRIV-01, DRIV-02 | Context gathered (6 sequential plans designed) | 0/6 |
 | 89 | PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | PERF-01, PERF-02 | Not started | 0/2 (est.) |
 | 90 | PERF Consolidation & Module-Split Decision | PERF-03, PERF-04, PERF-05 | Not started | 0/3 (est.) |
 | 91 | PERF Re-Harvest, Stretch UX Polish & Milestone Closer | PERF-06, UX-01 (stretch) | Not started | 0/2 (est.) |
@@ -145,14 +145,15 @@ At roadmap creation:
 
 ## Session Continuity
 
-**Next action:** User reviews v1.12 ROADMAP.md (4 phases 88-91 covering 10 REQ-IDs). On approval → `/gsd-discuss-phase 88` to start Phase 88 (Driver-Import Gap-Closure & CLEAN-01 Unblock).
+**Next action:** `/gsd-plan-phase 88` to create the 6 themen-gebundelte sequential plans defined in 88-CONTEXT.md.
+
+**Resume file:** `.planning/milestones/v1.12-phases/88-build-release-unblockers-yagni-sweep-doc-conventions-driver-/88-CONTEXT.md`
 
 **Branch:** `gsd/v1.12-driver-import-and-test-perf`
 
 ## Operator Next Steps
 
-- Approve v1.12 ROADMAP.md (4 phases, 10 requirements mapped, 100% coverage)
-- Then `/gsd-discuss-phase 88` to start the first phase (CLEAN-01 first commit + DRIV-01 + DRIV-02)
+- `/gsd-plan-phase 88` — generate the 6 plans: (01) CLEAN-01 verify-only, (02) CLEAN-02+03 `@Disabled` sweep, (03) REL-01 release.yml hardening + dry-run, (04) DOCS-01 CLAUDE.md convention, (05) DRIV-01+02 resolver+layout-gate, (06) REL-02 retroactive v1.10.0/v1.11.0 + legacy-tag cleanup
 - After Phase 88 closure: `/gsd-discuss-phase 89` for PERF-01 + PERF-02
 - After Phase 90 closure: re-harvest CI median via 5 `workflow_dispatch` runs (Phase 91 / PERF-06)
 - Stretch decision: if PERF wallclock budget allows, execute UX-01 in Phase 91; otherwise descope to v1.13 with explicit note in 91-CONTEXT.md
