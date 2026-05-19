@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Driver-Import Gap-Closure & Test Performance Round 2
 status: executing
-last_updated: "2026-05-19T15:52:18.551Z"
-last_activity: 2026-05-19 -- Phase 89 planning complete
+last_updated: "2026-05-19T22:15:00.000Z"
+last_activity: 2026-05-19 -- Phase 89 complete (Wave-4 median 09:19, -10.4 % vs 10:24 baseline)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 2
   total_plans: 13
-  completed_plans: 0
-  percent: 0
+  completed_plans: 9
+  percent: 69
 ---
 
 # Project State
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-05-18)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** v1.12 Phase 89 context gathered (17 decisions D-01..D-17, 3 sequential inline plans: 89-01 PERF-01 refactor + 89-02 PERF-02 fingerprint + 89-03 Wave-4 measurement); next up `/gsd-plan-phase 89`
+**Current focus:** v1.12 Phase 89 complete — 3 plans shipped (89-01 PERF-01 per-fork refactor + 89-02 PERF-02 fingerprint listener + 89-03 Wave-4 measurement). Local median Maven 09:19 = -10.4 % vs Phase-86 10:24 baseline. JaCoCo 0.8902, SpotBugs 0, PERF-02 active. Next up `/gsd-discuss-phase 90`.
 
 ## Current Position
 
-Phase: 89 (perf-instrumentation-lever-1-per-fork-backup-staging-dir) — Context gathered
-Plans: 0 of 3 (est.; 89-01 PERF-01 per-fork refactor + Failsafe forkCount=2 + 2 assertion ITs + 3-seed verification, 89-02 PERF-02 fingerprint listener + aggregator + docs §PERF-02, 89-03 Wave-4 measurement + docs §Wave-4 + README pointer)
-Status: Ready to execute
-Last activity: 2026-05-19 -- Phase 89 planning complete
+Phase: 89 (perf-instrumentation-lever-1-per-fork-backup-staging-dir) — Complete
+Plans: 3 of 3 shipped
+Status: Closed; Phase 90 ready to start
+Last activity: 2026-05-19 -- Phase 89 closed with Wave-4 measurement
 
 ## Completed Milestones
 
@@ -48,7 +48,7 @@ Last activity: 2026-05-19 -- Phase 89 planning complete
 | Phase | Name | Requirements | Status | Plans |
 | ----- | ---- | ------------ | ------ | ----- |
 | 88 | Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | CLEAN-01, CLEAN-02, CLEAN-03, REL-01, REL-02, DOCS-01, DRIV-01, DRIV-02 | Complete (6/6 plans, VERIFICATION passed, REQUIREMENTS Resolved) | 6/6 |
-| 89 | PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | PERF-01, PERF-02 | Context gathered (3 sequential plans designed) | 0/3 (est.) |
+| 89 | PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | PERF-01, PERF-02 | Complete (3/3 plans shipped; Wave-4 local median 09:19, -10.4 % vs 10:24, JaCoCo 0.8902) | 3/3 |
 | 90 | PERF Consolidation & Module-Split Decision | PERF-03, PERF-04, PERF-05 | Not started | 0/3 (est.) |
 | 91 | PERF Re-Harvest, Stretch UX Polish & Milestone Closer | PERF-06, UX-01 (stretch) | Not started | 0/2 (est.) |
 
@@ -145,15 +145,14 @@ At roadmap creation:
 
 ## Session Continuity
 
-**Next action:** `/gsd-plan-phase 89` to create the 3 sequential inline plans defined in 89-CONTEXT.md (89-01 PERF-01 refactor, 89-02 PERF-02 fingerprint, 89-03 Wave-4 measurement).
+**Next action:** `/gsd-discuss-phase 90` to gather context for PERF-03 + PERF-04 + PERF-05 (consumes PERF-02 Top-5 cluster output from `89-03-SUMMARY.md` — db.migration cluster is the primary consolidation candidate).
 
-**Resume file:** .planning/milestones/v1.12-phases/89-perf-instrumentation-lever-1-per-fork-backup-staging-dir/89-CONTEXT.md
+**Resume file:** .planning/milestones/v1.12-phases/89-perf-instrumentation-lever-1-per-fork-backup-staging-dir/89-03-SUMMARY.md
 
 **Branch:** `gsd/v1.12-driver-import-and-test-perf`
 
 ## Operator Next Steps
 
-- `/gsd-plan-phase 89` — generate the 3 plans: (01) PERF-01 per-fork `app.backup.staging-dir` + Failsafe `default-it` forkCount=2 + `BackupStagingDirPerForkIT` + `BackupStagingCleanupRaceIT` + 3-seed verification on `org.ctc.backup.**`, (02) PERF-02 `ContextCacheKeyFingerprintListener` (`TestExecutionListener`) + extended `target/test-perf/context-loads-{PID}.txt` format + `scripts/test-perf/aggregate-fingerprints.sh` + `docs/test-performance.md §PERF-02 Forensics`, (03) Wave-4 honest measurement (3 local runs idle protocol) + `docs/test-performance.md §Post-Optimization Wallclock (Wave 4)` + Forward-Path-Update + README pointer
-- After Phase 89 closure: `/gsd-discuss-phase 90` for PERF-03 + PERF-04 + PERF-05 (consumes PERF-02 fingerprint data)
+- `/gsd-discuss-phase 90` for PERF-03 + PERF-04 + PERF-05 (consumes Plan 89-03 Top-5 cluster hand-off: db.migration.V5MigrationTest cluster — 29 classes sharing one cache key — is the primary consolidation target)
 - After Phase 90 closure: re-harvest CI median via 5 `workflow_dispatch` runs (Phase 91 / PERF-06)
 - Stretch decision: if PERF wallclock budget allows, execute UX-01 in Phase 91; otherwise descope to v1.13 with explicit note in 91-CONTEXT.md
