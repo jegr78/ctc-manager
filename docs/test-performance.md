@@ -140,6 +140,46 @@ re-measurement.
 
 ---
 
+## Post-Optimization Wallclock (Wave 4)
+
+Local 3-run measurement after Phase 89 Plans 89-01 (PERF-01 per-fork
+`app.backup.staging-dir` + Failsafe `default-it` `forkCount=2 reuseForks=true`)
+and 89-02 (PERF-02 cache-key fingerprint listener) merged on branch
+`gsd/v1.12-driver-import-and-test-perf` (commit `27358d94`). Identical command
+and idle protocol as Phase 86 Wave 3 (D-09).
+
+| Run | Maven Total time | bash `real`         | Context loads | Notes                    |
+| --- | ---------------- | ------------------- | ------------- | ------------------------ |
+| 1   | 08:50            | 531.68s (8m 51.68s) | 55            | BUILD SUCCESS, no flakes |
+| 2   | 09:19            | 560.04s (9m 20.04s) | 55            | BUILD SUCCESS, no flakes |
+| 3   | 09:50            | 591.28s (9m 51.28s) | 56            | BUILD SUCCESS, no flakes |
+
+**Median (Maven): 09:19 (run 2).** **Median (bash real): 560.04s = 9m 20s.**
+
+**Delta vs. Phase-86 post-audit baseline (10:24 local median):** **-10.4 %**
+(560s vs. 624s). Plan 89-01's per-fork-staging refactor enabled Failsafe
+`forkCount=2 reuseForks=true` across the entire IT suite (not just backup),
+parallelising the largest IT cluster. Local measurement is observational only
+(D-02 — no hard local gate); Phase 91 PERF-06 will re-harvest the CI median
+(Phase-86 baseline 23:00) for the authoritative cumulative effect of Phases
+88-90.
+
+**JaCoCo line coverage:** minimum 0.8902 across the 3 runs (gate ≥ 0.8888 per
+D-15 — gate held).
+
+**Context-load count:** 55 / 55 / 56 (median 55), down from the Phase-86
+post-audit median of 79 — a 30 % reduction that is the algebraic side-effect of
+forkCount=2 splitting the test load across two JVMs (each JVM holds its own
+context cache; the same logical class may now be in one fork's cache or the
+other's, but not both — net: fewer rebuilds per JVM).
+
+PERF-02 instrumentation active per run (D-08 marker `total <N>` Line 1 + sidecar
+fingerprint lines present); the Top-5 cluster output produced by
+`scripts/test-perf/aggregate-fingerprints.sh` is recorded in the Plan-89-03
+SUMMARY for Phase 90 PERF-03 consumption.
+
+---
+
 ## CI Results (PERF-05)
 
 5 consecutive `workflow_dispatch` CI runs on the milestone PR branch
@@ -387,7 +427,7 @@ is set by D-14 (`data/dev/backup-staging/` per-fork refactor is Top-1) and
 
 | Lever | Estimated Wallclock Delta | Effort (S/M/L) | Risks/Dependencies | Required Touchpoints |
 | ----- | ------------------------- | -------------- | ------------------ | -------------------- |
-| **1. Per-fork `data/dev/backup-staging/` refactor** (Top-1 per D-14) — replace the global singleton staging-dir path with a per-fork variant resolved from the Surefire fork-numbering system property, enabling Failsafe `forkCount>1C` for backup ITs without staging-dir races. Backup ITs are currently 27+27 = 54 of the 79 context loads (~68% of the suite's total context-bootstrap weight); even a 2x parallelism gain on this fork would compress this band by 30-60s. | ~60-90s | M | (a) Surefire/Failsafe fork-numbering API may not survive across Maven 3 → 4 (not yet validated); (b) backup tests use `@PostConstruct` directory creation — needs `@DynamicPropertySource` per-fork wiring that mirrors the sitegen pattern from Plan 02 but with the fork-number suffix; (c) `BackupStagingCleanup` startup listener must respect the per-fork path. | `src/main/java/org/ctc/backup/service/BackupImportService.java`, `src/main/java/org/ctc/backup/service/BackupStagingCleanup.java`, `src/main/resources/application*.yml` (app.backup.staging-dir), Failsafe configuration in `pom.xml` (forkCount + system-property propagation) |
+| **1. Per-fork `data/dev/backup-staging/` refactor** (Top-1 per D-14) — **DONE (Phase 89)** — replace the global singleton staging-dir path with a per-fork variant resolved from the Surefire fork-numbering system property, enabling Failsafe `forkCount>1C` for backup ITs without staging-dir races. Backup ITs are currently 27+27 = 54 of the 79 context loads (~68% of the suite's total context-bootstrap weight); even a 2x parallelism gain on this fork would compress this band by 30-60s. | ~60-90s | M | (a) Surefire/Failsafe fork-numbering API may not survive across Maven 3 → 4 (not yet validated); (b) backup tests use `@PostConstruct` directory creation — needs `@DynamicPropertySource` per-fork wiring that mirrors the sitegen pattern from Plan 02 but with the fork-number suffix; (c) `BackupStagingCleanup` startup listener must respect the per-fork path. | `src/main/java/org/ctc/backup/service/BackupImportService.java`, `src/main/java/org/ctc/backup/service/BackupStagingCleanup.java`, `src/main/resources/application*.yml` (app.backup.staging-dir), Failsafe configuration in `pom.xml` (forkCount + system-property propagation) |
 | **2. Shared `@SpringBootTest` `@ContextConfiguration` strategy** — introduce a small number of explicit shared configuration classes referenced across IT clusters to maximize Spring TCF cache reuse and avoid the Plan-02-style cache-key fragmentation that this phase's post-audit data suggests is the dominant remaining cost. Profile the post-audit context fingerprint via per-fork ContextLoadCountListener output (already PID-keyed, easy extension) to identify the highest-fragmentation clusters before refactoring. | ~30-60s | M-L | (a) Risk of accidentally widening the cache surface and re-introducing the shared-singleton mutation issues that Plan 02 fixed; (b) requires per-fork context fingerprinting tool that doesn't exist yet — extend `ContextLoadCountListener` to dump cache-key hashes (1-2h work) before the refactor; (c) test isolation needs revisiting if shared contexts touch DB state. | All IT clusters (sitegen, backup, admin, phase-repo), `org.ctc.testsupport.ContextLoadCountListener` extension, possibly a new `BaseFailsafeIT` super-class or a shared `@TestConfiguration` per cluster |
 | **3. Testcontainers MariaDB `withReuse(true)`** — once any MariaDB IT exists (none in v1.11), enable `~/.testcontainers.properties` reuse for warm-container startups. The `local`/`docker` profile already uses MariaDB, but no IT runs against it today; this lever pre-empts the cold-start cost (~5-7s per fork) at the point MariaDB ITs are introduced. Note: a forced regression test for the Hibernate dialect (D-23) is the most likely scenario that introduces MariaDB ITs. | ~0s in v1.12 (pre-emptive); ~5-7s per fork once MariaDB ITs land | S (config only) | (a) Requires developer-side `~/.testcontainers.properties` file; (b) Testcontainers reuse skipped on CI by default — CI gets cold container start regardless; (c) only relevant once at least one MariaDB IT exists (none planned in v1.11). | Testcontainers setup, `~/.testcontainers.properties`, future MariaDB IT introduction |
 
@@ -396,5 +436,15 @@ first move in v1.12. Lever 2 requires a small instrumentation extension before t
 refactor proper; without per-fork context-fingerprint data, a blind refactor risks
 re-introducing the same fragmentation pattern from a different angle. Lever 3 is
 pre-emptive and only pays off when MariaDB ITs land.
+
+*Lever-1 status:* DONE — see **§ Post-Optimization Wallclock (Wave 4)** for the
+local median + delta and **§ PERF-02 Forensics** for the cache-key fingerprint
+data that feeds Phase 90 PERF-03. Plan 89-01 also extended the per-fork pattern
+beyond `app.backup.staging-dir` to `app.backup.import-backups-dir` and
+`app.upload-dir` (discovered during execute — see `89-FLAKE-DIAGNOSTIC.md`
+Finding 6) and unbound an inherited duplicate Failsafe execution from the
+Spring Boot parent that was silently running every IT twice (Finding 7). Phase
+91 PERF-06 will re-harvest the CI authoritative median to update the v1.11
+23:00 baseline.
 
 ---
