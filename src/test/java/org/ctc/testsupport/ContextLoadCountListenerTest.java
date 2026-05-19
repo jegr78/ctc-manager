@@ -19,4 +19,13 @@ class ContextLoadCountListenerTest {
         // then
         assertThat(ContextLoadCountListener.getCount()).isEqualTo(before + 2);
     }
+
+    @Test
+    void whenShutdownHookFormat_thenLineOneStartsWithTotalPrefix() {
+        // given / when
+        String formatted = "total " + ContextLoadCountListener.getCount();
+
+        // then
+        assertThat(formatted).matches("^total \\d+$");
+    }
 }
