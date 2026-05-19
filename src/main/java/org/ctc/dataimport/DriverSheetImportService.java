@@ -70,11 +70,7 @@ public class DriverSheetImportService {
         List<String> yearTabs = allTabs.stream()
                 .filter(name -> YEAR_TAB_PATTERN.matcher(name).matches())
                 // Sort by year extracted from regex group(1); legacy 4-digit names still sort correctly.
-                .sorted(Comparator.comparingInt(name -> {
-                    var m = YEAR_TAB_PATTERN.matcher(name);
-                    m.matches();
-                    return Integer.parseInt(m.group(1));
-                }))
+                .sorted(Comparator.comparingInt(DriverSheetImportService::parseYearFromTabName))
                 .toList();
 
         log.debug("Found {} year-numbered tabs: {}", yearTabs.size(), yearTabs);
@@ -101,9 +97,9 @@ public class DriverSheetImportService {
     @Transactional
     public ExecuteResult execute(String sheetUrl, Map<String, String> allParams) {
         log.info("Executing driver sheet import: sheetUrl={}", sheetUrl);
-		if (allParams == null) {
-			allParams = Map.of();
-		}
+        if (allParams == null) {
+            allParams = Map.of();
+        }
         DriverSheetImportPreview fullPreview;
         try {
             fullPreview = this.preview(sheetUrl);
@@ -234,9 +230,11 @@ public class DriverSheetImportService {
     }
 
     private TabPreview buildTabPreview(String spreadsheetId, String tabName) throws IOException {
-        // Parse tab name via union pattern; group(2) is null for legacy form.
-        var matcher = YEAR_TAB_PATTERN.matcher(tabName);
-        matcher.matches(); // upstream filter already proved this matches
+        // Parse tab name via union pattern; group(2) is null for legacy form. The upstream
+        // filter in preview() already proved the name matches the pattern — if a future
+        // refactor breaks that invariant the helper throws loudly instead of failing later
+        // with `IllegalStateException: No match found` from group().
+        var matcher = matchTabPattern(tabName);
         int year = Integer.parseInt(matcher.group(1));
         Integer number = matcher.group(2) == null ? null : Integer.parseInt(matcher.group(2));
 
@@ -373,6 +371,24 @@ public class DriverSheetImportService {
 
         return new TabPreview(tabName, year, number, suggestedSeasonId, ambiguousReason,
                 newDrivers, newAssignments, conflicts, fuzzySuggestions, unchanged, errors, usesGroups);
+    }
+
+    /**
+     * Returns a {@link java.util.regex.Matcher} positioned on a successful match against the
+     * year-tab pattern. Throws if the name does not match — replaces the previous
+     * `matcher.matches();` side-effect call so the precondition is asserted explicitly.
+     */
+    private static java.util.regex.Matcher matchTabPattern(String tabName) {
+        var m = YEAR_TAB_PATTERN.matcher(tabName);
+        if (!m.matches()) {
+            throw new IllegalStateException("Tab name does not match year pattern: " + tabName);
+        }
+        return m;
+    }
+
+    /** Parses the year (group 1) from a year-tab name. */
+    private static int parseYearFromTabName(String tabName) {
+        return Integer.parseInt(matchTabPattern(tabName).group(1));
     }
 
     /**
