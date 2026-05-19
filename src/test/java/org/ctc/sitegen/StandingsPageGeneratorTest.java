@@ -10,7 +10,6 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.ctc.testsupport.SitegenTestDir;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -237,16 +236,5 @@ class StandingsPageGeneratorTest {
         assertThat(groupCells.stream().anyMatch(td -> td.text().matches("Group [AB]")))
                 .as("First row must contain a 'Group A' or 'Group B' cell")
                 .isTrue();
-    }
-
-    /**
-     * D-33: Buchholz column appears only on per-group + Swiss-format pages. The current
-     * TestDataService has no Swiss + GROUPS fixture (Season 2024 is SWISS but LEAGUE-layout;
-     * Season 2023 is GROUPS but ROUND_ROBIN). Disabled with a clear deferral note for Plan 6.
-     */
-    @Test
-    @Disabled("requires Swiss + GROUPS fixture; deferred to Plan 5/6 fixture extension")
-    void givenGroupsSwissLayoutSeason_whenGeneratePerGroup_thenShowBuchholzColumn() {
-        // Placeholder for the Swiss + GROUPS Buchholz column check.
     }
 }
