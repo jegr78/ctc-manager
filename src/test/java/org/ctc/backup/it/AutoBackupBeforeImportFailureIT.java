@@ -17,7 +17,6 @@ import org.ctc.backup.exception.AutoBackupBeforeImportException;
 import org.ctc.backup.lock.ImportLockService;
 import org.ctc.backup.service.BackupArchiveService;
 import org.ctc.backup.service.BackupImportService;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -197,15 +196,9 @@ class AutoBackupBeforeImportFailureIT {
         // operations in tryDeletePartialAutoBackup — but the ZIP file itself MUST be gone.
         if (!newDirs.isEmpty()) {
             Path autoBackupZip = newDirs.get(0).resolve("auto-backup-before-import.zip");
-            if (isWindows()) {
-                // RESEARCH Pitfall #7 — Windows file-locking may prevent Files.deleteIfExists;
-                // the D-19 contract is "best-effort, never throws", NOT "always deletes".
-                Assumptions.assumeFalse(true, "Windows file-locking — skipping cleanup assertion");
-            } else {
-                assertThat(Files.notExists(autoBackupZip))
-                        .as("partial auto-backup ZIP must be cleaned up on POSIX (D-19)")
-                        .isTrue();
-            }
+            assertThat(Files.notExists(autoBackupZip))
+                    .as("partial auto-backup ZIP must be cleaned up (D-19)")
+                    .isTrue();
         }
     }
 
@@ -280,9 +273,5 @@ class AutoBackupBeforeImportFailureIT {
         try (Stream<Path> children = Files.list(importBackupsDir)) {
             return children.filter(Files::isDirectory).sorted().toList();
         }
-    }
-
-    private static boolean isWindows() {
-        return System.getProperty("os.name", "").toLowerCase().contains("win");
     }
 }
