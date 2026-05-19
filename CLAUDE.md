@@ -219,6 +219,12 @@ Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session rem
 
 * Use CSS classes from `admin.css` instead of inline styles: `btn-xs`, `btn-sm`, etc.
 
+### Skill Invocation Naming
+
+* **Canonical prefix:** GSD skills are invoked via the dash form `/gsd-<name>`. Examples: `/gsd-plan-phase`, `/gsd-execute-phase`, `/gsd-validate-phase`, `/gsd-verify-work`, `/gsd-new-milestone`, `/gsd-discuss-phase`, `/gsd-research-phase`.
+* **Deprecated prefix:** the pre-2026 colon-form prefix is no longer recognised. Replace any historical reference in active planning files with the dash form on sight; archived `.planning/milestones/v*.x-*.md` is left untouched (historical immutability).
+* **Regression fence:** active top-level planning files (`.planning/PROJECT.md`, `.planning/STATE.md`, `.planning/ROADMAP.md`, `.planning/REQUIREMENTS.md`, `.planning/MILESTONES.md`, `.planning/RETROSPECTIVE.md`) must contain zero literal colon-form references. Treat any literal colon-form occurrence in those six files as a regression to fix before merging.
+
 ### Static Analysis (SpotBugs + find-sec-bugs)
 
 * **Gate:** `spotbugs-maven-plugin` 4.9.8.3 + `findsecbugs-plugin` 1.14.0 run on every `./mvnw verify` (Medium+HIGH findings block the build). No separate CI job — SpotBugs runs inside the existing `verify` step.
