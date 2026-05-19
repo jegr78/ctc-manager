@@ -29,7 +29,7 @@ key-files:
     - src/test/java/org/ctc/sitegen/SiteGeneratorBaselineCaptureTest.java
 
 key-decisions:
-  - "Smoke-test of the new SiteGeneratorBaselineRefresh `./mvnw exec:java` invocation NOT executed: the runner rewrites three committed baseline files (`single-league-{standings,team-profile,driver-profile}.html`), and silent re-write would mask any drift the byte-identity tests are meant to catch. Compile-time + Spring-annotation correctness verified instead. Operator runs the smoke-test the first time a real baseline refresh is needed."
+  - "Smoke-test of the new SiteGeneratorBaselineRefresh `./mvnw exec:java` invocation EXECUTED post-commit on user request: BUILD SUCCESS in 31 s, 319 pages generated, 3 baseline files rewritten. 2 of 3 files matched the committed MD5 exactly (single-league-standings.html, single-league-driver-profile.html); 1 file (single-league-team-profile.html) showed a UUID-only delta in the team-logo `<img src=...>` path — this is the non-deterministic `TestDataService.seed()` UUID for the ADR team and is normalized out by `TeamProfilePageGeneratorTest.canonicalize()` → `normalizeUuids()`. Restored the original baseline file (git checkout). Utility verified working end-to-end."
   - "Plan invocation example uses `org.springframework.boot.SpringApplication` as main class — replaced with `org.ctc.CtcManagerApplication` in the utility's Javadoc because exec:java requires the actual @SpringBootApplication class (the SpringApplication helper class has no main method)."
 
 patterns-established:
@@ -91,13 +91,13 @@ Each task was committed atomically:
 
 ### Auto-fixed Issues
 
-**1. [Plan-Output / Smoke-Test Constraint] Smoke-test of `./mvnw exec:java` invocation deferred**
+**1. [Plan-Output / Smoke-Test Constraint] Smoke-test executed post-commit on user request**
 - **Found during:** Plan-02 gate (Task 5) — review of SUMMARY output requirements
-- **Issue:** Plan output requires a smoke-test of the new utility's `./mvnw exec:java` invocation, but the runner rewrites three committed baseline files. Executing it as a non-targeted smoke-test would mask any byte-identity drift.
-- **Fix:** Documented compile-time + annotation correctness verification instead. Smoke-test deferred to the first real baseline refresh use-case, at which point any baseline drift becomes the intended human-review surface.
-- **Files modified:** none
-- **Verification:** `./mvnw clean test-compile -q` exits 0; `grep -c 'implements CommandLineRunner' src/test/java/org/ctc/sitegen/util/SiteGeneratorBaselineRefresh.java` == 1; `grep -c '@Profile("baseline-refresh")' ...` == 2
-- **Committed in:** N/A (this deviation has no code-side commit)
+- **Issue:** Plan output requires a smoke-test of the new utility's `./mvnw exec:java` invocation. The runner rewrites three committed baseline files, so any silent re-write could mask byte-identity drift.
+- **Fix:** Smoke-test deferred at first, then executed after user request. Command: `./mvnw test-compile exec:java -Dexec.mainClass=org.ctc.CtcManagerApplication -Dexec.classpathScope=test -Dspring.profiles.active=dev,baseline-refresh`. Result: BUILD SUCCESS in 31 s, 319 pages generated, 3 baselines rewritten. Compared MD5 hashes before/after: `single-league-standings.html` and `single-league-driver-profile.html` matched exactly; `single-league-team-profile.html` showed a single-line diff (UUID `a6c8696a-...` → `1bf07602-...`) in a team-logo `<img src=>` path. Verified `TeamProfilePageGeneratorTest.canonicalize()` runs `normalizeUuids()` before the byte-identity comparison so the drift is harmless. Restored the original baseline (`git checkout -- src/test/resources/sitegen/baseline/single-league-team-profile.html`).
+- **Files modified:** none after restoration
+- **Verification:** Pre-/post-smoke-test MD5: 2/3 unchanged; the 1 changed file diffed to UUID-only path. `git status --short src/test/resources/sitegen/baseline/` returns empty after restore. Utility BUILD SUCCESS in 31 s.
+- **Committed in:** N/A (no committed change; utility itself is `ef00a5ca`)
 
 **2. [Plan-Invocation Correction] Replaced `SpringApplication` with `CtcManagerApplication` in invocation example**
 - **Found during:** Task 4 — drafting the utility's top-of-file Javadoc
@@ -109,8 +109,8 @@ Each task was committed atomically:
 
 ---
 
-**Total deviations:** 2 auto-fixed (1 smoke-test deferral, 1 invocation correction)
-**Impact on plan:** D-03 gate fully satisfied; coverage preserved; smoke-test deferral documented and surfaced to Wave-Pause for operator decision
+**Total deviations:** 2 auto-fixed (1 smoke-test executed on user request, 1 invocation correction)
+**Impact on plan:** D-03 gate fully satisfied; coverage preserved; utility smoke-tested end-to-end; UUID drift in 1 of 3 baselines documented as harmless (normalized away by byte-identity canonicalizer)
 
 ## Issues Encountered
 - **Stale Eclipse JDT diagnostics during import cleanup:** after removing unused `Disabled` / `Assumptions` imports, the IDE continued to report stale "unused import" warnings on adjacent lines. Per `[[clean-maven-build-authority]]` `./mvnw clean test-compile` was used as the source of truth — all four affected files compile clean.
@@ -141,7 +141,7 @@ None — test-source-only changes + 1 new test-source utility. No new runtime de
 - Clean v1.12 baseline preserved: LINE 89.01 %, 1679 tests, SpotBugs 0
 - D-03 grep gate combined satisfaction confirmed across full `src/test/java`
 - Plan 88-03 (REL-01 release.yml hardening) starts against this baseline
-- Operator decision pending (Wave-Pause): smoke-test the new `SiteGeneratorBaselineRefresh` utility now (rewrites 3 baseline files) or defer to first real refresh use-case?
+- Utility smoke-test completed: BUILD SUCCESS in 31 s, 319 pages generated; 2/3 baselines byte-identical post-refresh, 1/3 had UUID-only drift handled by `normalizeUuids()` canonicalizer. Original baselines restored.
 
 ---
 *Phase: 88-build-release-unblockers-yagni-sweep-doc-conventions-driver*
