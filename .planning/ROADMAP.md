@@ -195,7 +195,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 - [x] 88-06-PLAN.md — REL-02 operator runbook docs/operations/release-runbook.md (retroactive v1.10.0/v1.11.0 + legacy-tag cleanup)
 
 ### Phase 89: PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir)
-**Goal**: Land the largest single-delta PERF lever (per-fork `app.backup.staging-dir` enabling Failsafe `forkCount>1C` on backup ITs) and the instrumentation that drives PERF-03's targeted consolidation, in parallel-runnable plans.
+**Goal**: Land the largest single-delta PERF lever (per-fork `app.backup.staging-dir` enabling Failsafe `forkCount>1C` on backup ITs) and the instrumentation that drives PERF-03's targeted consolidation. Per CONTEXT.md D-01 (sequential inline override of the ROADMAP-level "parallel-runnable" wording): three plans, three waves, inline on `gsd/v1.12-driver-import-and-test-perf`.
 **Depends on**: Phase 88 (CLEAN-01 must be merged so `./mvnw verify` runs clean for PERF baseline)
 **Requirements**: PERF-01, PERF-02
 **Success Criteria** (what must be TRUE):
@@ -204,7 +204,11 @@ See: milestones/v1.11-ROADMAP.md for full details
   3. `ContextLoadCountListener` dumps per-context cache-key hashes (`MergedContextConfiguration.hashCode()` or equivalent Spring TCF surface) into existing `target/test-perf/context-loads-{PID}.txt` markers alongside the load count.
   4. A bash aggregator sample script is added to `docs/test-performance.md` § PERF-02 Forensics, grouping loads by hash and listing the highest-fragmentation clusters (top-5 by occurrence × cluster size).
   5. After running the post-Phase-89 measurement (3 local runs, idle protocol), the `docs/test-performance.md` "Post-Optimization Wallclock (Wave 4)" section is populated with delta vs Phase-86 baseline (median 10:24 local / 23:00 CI); JaCoCo coverage stays ≥ 88.88 %.
-**Plans**: TBD
+**Plans**: 3 plans (sequential inline — Wave 1 → Wave 2 → Wave 3 per CONTEXT.md D-01 + [[inline-sequential-execution]] + [[wave-pause]])
+
+- [ ] 89-01-perf-01-per-fork-staging-refactor-PLAN.md — PERF-01 per-fork `app.backup.staging-dir` refactor + Failsafe `default-it` forkCount=2 + `BackupStagingDirPerForkIT` + `BackupStagingCleanupRaceIT` + 3-seed verification (Wave 1)
+- [ ] 89-02-perf-02-fingerprint-listener-aggregator-PLAN.md — PERF-02 `ContextCacheKeyFingerprintListener` (`TestExecutionListener`) + marker-file format migration + `scripts/test-perf/aggregate-fingerprints.sh` + `docs/test-performance.md § PERF-02 Forensics` (Wave 2)
+- [ ] 89-03-wave-4-measurement-docs-PLAN.md — Wave-4 measurement (3 local idle-protocol runs) + `docs/test-performance.md § Post-Optimization Wallclock (Wave 4)` + `§ v1.12 Forward Path` Lever-1 DONE update + `README.md § Test Performance` pointer (Wave 3, autonomous=false on Task 1)
 
 ### Phase 90: PERF Consolidation & Module-Split Decision
 **Goal**: Use Phase 89's cache-key fingerprint data to consolidate at least one IT cluster onto a shared `@ContextConfiguration`, wire Testcontainers `withReuse` pre-emptively, and record the verdict on splitting `src/test/java/` into Maven sub-modules (proceed / defer / reject).
@@ -243,13 +247,13 @@ See: milestones/v1.11-ROADMAP.md for full details
 | v1.9 Season Phases & Groups | 56-70 | ~70 | Complete | 2026-05-09 |
 | v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | 50 | Complete | 2026-05-16 |
 | v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | 46 | Complete | 2026-05-18 |
-| v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | ~15 | In flight | - |
+| v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | ~16 | In flight | - |
 
 ### v1.12 Phase Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | 6/6 | Complete   | 2026-05-19 |
-| 89 — PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | 0/2 | Not started | - |
+| 89 — PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | 0/3 | Planned | - |
 | 90 — PERF Consolidation & Module-Split Decision | 0/3 | Not started | - |
 | 91 — PERF Re-Harvest, Stretch UX Polish & Milestone Closer | 0/2 | Not started | - |
