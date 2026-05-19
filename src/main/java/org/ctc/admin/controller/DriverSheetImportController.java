@@ -11,6 +11,7 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.ValidationException;
 import org.ctc.domain.service.SeasonManagementService;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -73,6 +74,17 @@ public class DriverSheetImportController {
             redirectAttributes.addFlashAttribute("errorMessage", "Sheet URL must not be blank");
             return "redirect:/admin/drivers/import";
         }
+        Map<String, String> safeParams = allParams != null ? allParams : Map.of();
+        long seasonKeys = safeParams.keySet().stream().filter(k -> k.startsWith("seasonId_")).count();
+        long acceptKeys = safeParams.keySet().stream().filter(k -> k.startsWith("accept_")).count();
+        long skipKeys = safeParams.keySet().stream().filter(k -> k.startsWith("skip_")).count();
+        log.info("Driver sheet execute: sheetUrl={}, {} seasonId keys, {} accept keys, {} skip keys",
+                sheetUrl, seasonKeys, acceptKeys, skipKeys);
+        if (seasonKeys == 0) {
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "No tabs were assigned a season. Nothing imported.");
+            return "redirect:/admin/drivers/import";
+        }
         try {
             var result = driverSheetImportService.execute(sheetUrl, allParams);
             var msg = new StringBuilder("Import successful: ")
@@ -90,6 +102,10 @@ public class DriverSheetImportController {
         } catch (BusinessRuleException | ValidationException | IllegalArgumentException e) {
             log.error("Error executing driver sheet import", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Import failed: " + e.getMessage());
+        } catch (DataIntegrityViolationException e) {
+            log.error("Driver sheet import hit DB constraint — transaction rolled back, no rows inserted", e);
+            redirectAttributes.addFlashAttribute("errorMessage",
+                    "Import failed due to a database constraint. Nothing was imported. See server logs for details.");
         } catch (IllegalStateException | DataAccessException e) {
             log.error("Error executing driver sheet import", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Import failed due to an internal error. See server logs for details.");
