@@ -1,7 +1,7 @@
 # Phase 89: PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) - Context
 
-**Gathered:** 2026-05-19
-**Status:** Ready for planning
+**Gathered:** 2026-05-19 (revised after Plan 89-01 Attempt 1 flake diagnostic — see `89-FLAKE-DIAGNOSTIC.md`)
+**Status:** Re-planning required (existing Plan 89-01/02/03 outdated; D-04 superseded; D-12 strengthened; D-18 and D-19 added)
 
 <domain>
 ## Phase Boundary
@@ -34,8 +34,8 @@ Out of scope (deferred to later phases):
 
 ### Plan Structure
 
-- **D-01: Three plans, sequential inline, one wave.**
-  - **Plan 89-01 — PERF-01 (per-fork refactor + assertion ITs + 3-seed verification).** Refactors the property surface, lifts Failsafe `default-it` to `forkCount=2`, adds `BackupStagingDirPerForkIT` + `BackupStagingCleanupRaceIT`, runs 3-seed Failsafe verification on all `org.ctc.backup.**` ITs. Highest risk → goes first.
+- **D-01 (REVISED Plan 89-01 task count): Three plans, sequential inline, one wave. Plan 89-01 now has 5 tasks (was 4).**
+  - **Plan 89-01 — PERF-01 (per-fork refactor + 2 assertion ITs + lock-timeout fix + 3-seed verification).** Task 1: pom.xml `<systemPropertyVariables>` per D-03/D-04R/D-04R.2/D-18 (FOUR entries per plugin block, no project-property fallback). Task 2: `BackupStagingDirPerForkIT` per D-12 (Test 2 now non-vacuous). Task 3: `BackupStagingCleanupRaceIT` per D-17. **Task 4 (NEW): `ImportLockedPostRejectorIT` lock-timeout investigation + fix per D-19** — root-cause-first, deadline-bump only with explicit justification. Task 5: 3-seed Failsafe verification on `org.ctc.backup.**` per D-13 + legacy `data/*/backup-staging/` `rm -rf` per D-06. Highest risk → goes first.
   - **Plan 89-02 — PERF-02 (`ContextCacheKeyFingerprintListener` + aggregator script + docs § PERF-02 Forensics).** Depends on Plan-01 only for "clean verify baseline"; independent code surface.
   - **Plan 89-03 — Wave-4 measurement + docs.** 3 local `./mvnw clean verify -Pe2e` runs per Phase-86 D-09 idle protocol; populates `docs/test-performance.md` "Post-Optimization Wallclock (Wave 4)" + "v1.12 Forward Path"-update (Lever 1 = DONE); updates README pointer. Atomic own SUMMARY.md.
   - Reason: ROADMAP literally says "independent parallel-runnable plans" but [[inline-sequential-execution]] + [[wave-pause]] override — sequential inline is the explicit user-locked policy for v1.12. Three plans cleanly separate Refactor / Instrumentation / Measurement; each commit history milestone is self-contained for revert/forensics.
@@ -46,7 +46,11 @@ Out of scope (deferred to later phases):
 
 - **D-03: Failsafe + Surefire `<systemPropertyVariables>` in pom.xml.** Both Maven plugins set `app.backup.staging-dir=data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}` as a per-fork JVM system property; Spring's standard `SystemEnvironmentPropertySource` (highest precedence among defaults) picks it up. No production application.yml change. `application.yml` stays at `data/${spring.profiles.active:dev}/backup-staging` (D-14).
 
-- **D-04: Per-fork path schema = `data/${profile}/backup-staging-fork-${surefire.forkNumber}`.** Hyphen-separator, fork-number visible (1, 2, …). pom.xml sets `<properties><surefire.forkNumber>0</surefire.forkNumber></properties>` as a project-level default so non-fork test invocations (`./mvnw test -Dtest=...` without forkCount, IDE invocations) resolve to `…-fork-0` instead of `…-fork-` (trailing hyphen).
+- **D-04 (SUPERSEDED by D-04R after Attempt 1 flake diagnostic):** ~~Per-fork path schema = `data/${profile}/backup-staging-fork-${surefire.forkNumber}` with project-level fallback `<properties><surefire.forkNumber>0</surefire.forkNumber></properties>`.~~ Empirically falsified: Maven eager-substitutes `${surefire.forkNumber}` from the project-property at POM-load time, defeating Surefire's fork-dispatch substitution. All forks landed in `backup-staging-fork-0`. See `89-FLAKE-DIAGNOSTIC.md` Finding 1.
+
+- **D-04R (REVISED): No project-level `<surefire.forkNumber>` fallback. Path schema stays `data/${profile}/backup-staging-fork-${surefire.forkNumber}`.** pom.xml `<properties>` block does NOT carry a `surefire.forkNumber` entry. Maven sees `${surefire.forkNumber}` as unresolvable and leaves it literal; Surefire/Failsafe substitute at fork-dispatch time. Non-forked invocations (IDE direct-launch without Surefire) consume `application.yml` `app.backup.staging-dir: data/${profile}/backup-staging` directly (no fork suffix) — they bypass `<systemPropertyVariables>` entirely. Single-JVM scenarios don't race; no per-fork isolation needed there.
+
+- **D-04R.2 (NEW companion to D-04R): pom.xml `<systemPropertyVariables>` exposes `surefire.forkNumber` to the JVM as a system property.** Both Surefire and Failsafe `default-it` `<systemPropertyVariables>` carry TWO entries: (1) `<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>` per D-03/D-05, and (2) `<surefire.forkNumber>${surefire.forkNumber}</surefire.forkNumber>` so the JVM sees `surefire.forkNumber` via `System.getProperty(...)`. Reason: Surefire 3.5.5 does NOT automatically inject `surefire.forkNumber` as a JVM system property (only as a placeholder substitution token); the test parity assertion in D-12 needs the JVM-side value. See `89-FLAKE-DIAGNOSTIC.md` Finding 2.
 
 - **D-05: Both Surefire AND Failsafe `<systemPropertyVariables>` set the same value.** Surefire already runs `forkCount=2`; some surefire-routed tests load a Spring context that resolves `app.backup.staging-dir` (e.g., `BackupImportServiceIT`, `BackupImportConfirmFormValidationIT`). Consistent per-fork isolation across both Maven phases. Single source of truth: a shared `<properties>` definition `<staging.dir.test>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</staging.dir.test>` referenced by both plugin configurations OR identical literal in both (planner picks).
 
@@ -66,10 +70,11 @@ Out of scope (deferred to later phases):
 
 - **D-11: Failsafe `default-it` permanently `<forkCount>2</forkCount><reuseForks>true</reuseForks>` in pom.xml.** Mirrors Surefire's existing `forkCount=2` config; Wallclock-Lever-1 gain realises immediately in CI (and is measurable in the Phase-91 PERF-06 re-harvest). Failsafe `e2e-it` execution stays single-fork (Playwright requires a single Spring context per RANDOM_PORT; pom.xml L450-454 comment from Phase 86).
 
-- **D-12: Per-Fork-Dir Assertion IT shape = single-fork self-assertion + 3-seed suite-run as empirical cross-fork-collision proof.**
-  - New `BackupStagingDirPerForkIT` (`src/test/java/org/ctc/backup/service/`, `@SpringBootTest @ActiveProfiles("dev") @Tag("integration")`).
+- **D-12 (CLARIFIED — Test 2 now actually fires after D-04R.2):** Per-Fork-Dir Assertion IT shape = single-fork self-assertion + 3-seed suite-run as empirical cross-fork-collision proof.
+  - New `BackupStagingDirPerForkIT` (`src/test/java/org/ctc/backup/service/`, `@SpringBootTest @ActiveProfiles("dev") @TestInstance(PER_CLASS) @Tag("integration")`).
   - `@Value("${app.backup.staging-dir}") Path stagingDir;`
-  - Asserts: `stagingDir.getFileName().toString()` matches regex `backup-staging-fork-\d+`; suffix-number === `System.getProperty("surefire.forkNumber")` (asserted only when the system property is non-null; ignored under IDE invocations).
+  - Test 1 — `stagingDir.getFileName().toString()` matches regex `backup-staging-fork-\d+`.
+  - Test 2 — `System.getProperty("surefire.forkNumber")` parity check. Per D-04R.2, the property IS exposed to the JVM; Test 2 fires non-vacuously under Failsafe forks. Conditional skip remains for IDE-direct invocations where `surefire.forkNumber` is null. Attempt 1 had Test 2 silently passing because the property wasn't exposed (Finding 2 in `89-FLAKE-DIAGNOSTIC.md`) — D-04R.2 resolves that.
   - Empirical cross-fork-collision proof: D-13's 3-seed suite-run produces zero flakes/failures = no race.
 
 - **D-13: 3-seed verification scope = all `src/test/java/org/ctc/backup/**` ITs.** Broader than the 7 ROADMAP-SC#2-named ITs. Command: `./mvnw verify -Dit.test='org.ctc.backup.**' -Dsurefire.runOrder=random -Dsurefire.runOrder.random.seed={1234,5678,9999}` (one run per seed; 3 runs total). Plan-01 SUMMARY lists every covered IT class (BackupRoundTripIT, BackupImportMariaDbSmokeIT, BackupImportRollbackIT, BackupRestoreZipOpenCountIT, ImportConcurrentLockIT, ImportLockBannerAdviceIT, ImportLockedPostRejectorIT, BackupImportServiceIT, BackupImportConfirmFormValidationIT, BackupImportSchemaMismatchIT, BackupUploadsMirrorIT, BackupExportServiceIT, BackupSchemaTopologyIT, BackupSchemaExclusionIT, BackupControllerSecurityIT, BackupImportControllerSecurityIT, BackupControllerIT, BackupObjectMapperConfigIT, BackupEntityAnnotationCleanlinessIT, BackupRepositoryEntityGraphIT, AutoBackupBeforeImportPathIT, AutoBackupCatchOrderIT, AutoBackupBeforeImportFailureIT, AdminLayoutIT, plus the two new per-fork ITs).
@@ -93,6 +98,14 @@ Out of scope (deferred to later phases):
 
 - **D-17: New `BackupStagingCleanupRaceIT` proves sweep-isolation under `forkCount=2`.** `src/test/java/org/ctc/backup/service/`, `@SpringBootTest @ActiveProfiles("dev") @Tag("integration")`. `@BeforeAll` (or `@BeforeEach`) writes test files into: (a) the test's own per-fork dir; (b) a sibling dummy fork dir like `…-fork-99` that no real fork ever uses. After `BackupStagingCleanup` runs (either via injected bean + manual invocation OR by reading already-completed sweep state), assertion: own-fork files removed (those matching `upload-*.zip` / `upload-*.zip.meta`), sibling-fork files completely untouched. Cleanup target dir (`-fork-99`) is removed in `@AfterAll`.
 
+### Scope Extension — Second Shared Filesystem Path
+
+- **D-18 (NEW after Attempt 1 flake diagnostic): `app.backup.import-backups-dir` ALSO requires per-fork isolation via the same Surefire/Failsafe `<systemPropertyVariables>` mechanism.** `AutoBackupBeforeImportPathIT` failed under `forkCount=2` with `FileAlreadyExistsException: data/dev/import-backups/<ts>/auto-backup-before-import.zip` because two forks materialised the same auto-backup path. Mirror the D-03/D-05 pattern: both Surefire and Failsafe `default-it` `<systemPropertyVariables>` carry a SECOND entry `<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>`. Production `application.yml` `app.backup.import-backups-dir: data/${profile}/import-backups` stays UNCHANGED (D-14 invariant — production data layout unaffected). Plan 89-01 Task 1 grows to inject FOUR `<systemPropertyVariables>` total per plugin (2 plugins × 2 properties incl. `surefire.forkNumber` from D-04R.2 = 4 entries each). See `89-FLAKE-DIAGNOSTIC.md` Finding 3.
+
+### Lock-Timeout Investigation
+
+- **D-19 (NEW after Attempt 1 flake diagnostic): `ImportLockedPostRejectorIT` lock-acquisition timeout investigation as Plan 89-01 Task 5.** Under `reuseForks=true + forkCount=2`, `ImportLockedPostRejectorIT.givenLockHeld_whenGetAdminSeasons_thenPassesThrough` failed at line 214 with `[thread A must acquire the lock within 10 s]` (actual wallclock 12.10 s). Plan 89-01 must add a dedicated Task 5 that: (1) reads `ImportLock` acquisition path + the test's lock-handoff threading model, (2) checks whether `ImportLock` is `static`-shared across test classes in the same JVM (latent state-leak under `reuseForks=true`), (3) chooses ONE of: (a) fix the latent isolation bug with a targeted source patch, (b) tighten test-isolation via `@AfterEach` lock-release, OR (c) bump the deadline to 20 s with an explanatory comment + follow-up issue if a-or-b can't be done within Plan 89-01's scope. Per `[[no-flaky-dismissal]]`: silent deadline-bump without root-cause analysis is forbidden. See `89-FLAKE-DIAGNOSTIC.md` Finding 4.
+
 ### Claude's Discretion
 
 - Exact wording of `docs/test-performance.md § PERF-02 Forensics` prose; exact Top-5-cluster output format (table vs. plain list — planner picks the shape that reads well alongside the existing § Context Load Counts section).
@@ -111,6 +124,7 @@ Out of scope (deferred to later phases):
 
 ### Scope & Requirements
 
+- **`89-FLAKE-DIAGNOSTIC.md` (MANDATORY for re-plan):** load-bearing empirical input — RESEARCH RQ-1 falsified, Surefire 3.5.5 doesn't expose `surefire.forkNumber` as JVM property, `app.backup.import-backups-dir` is a second shared path, `ImportLockedPostRejectorIT` lock-timeout under elevated load. Re-planning MUST read this file first.
 - `.planning/ROADMAP.md` — Phase 89 section (Goal, Depends-on, Requirements, Success Criteria 1-5); Phase 90 (downstream dependency — PERF-03 reads PERF-02 fingerprint data); Phase 91 (PERF-06 re-harvests CI median after this phase ships)
 - `.planning/REQUIREMENTS.md` lines 21-22 — full PERF-01 and PERF-02 text
 - `.planning/PROJECT.md` — v1.12 milestone scope; "Phase 86 D-14 / D-15 / D-16 forward-path"
@@ -156,7 +170,7 @@ Out of scope (deferred to later phases):
 - `src/test/java/org/ctc/testsupport/ContextCacheKeyFingerprintListener.java` — NEW
 - `src/test/java/org/ctc/backup/service/BackupStagingDirPerForkIT.java` — NEW
 - `src/test/java/org/ctc/backup/service/BackupStagingCleanupRaceIT.java` — NEW
-- `pom.xml` — Surefire + Failsafe `<systemPropertyVariables>`; Failsafe `default-it` `<forkCount>2</forkCount><reuseForks>true</reuseForks>`; `<properties><surefire.forkNumber>0</surefire.forkNumber></properties>` default
+- `pom.xml` — Surefire + Failsafe `default-it` `<systemPropertyVariables>` carrying TWO entries each (`app.backup.staging-dir`, `app.backup.import-backups-dir`) per D-04R/D-18 + a third entry exposing `surefire.forkNumber` to the JVM per D-04R.2. Failsafe `default-it` `<forkCount>2</forkCount><reuseForks>true</reuseForks>` per D-11. NO project-level `<surefire.forkNumber>` fallback (D-04 superseded).
 
 </canonical_refs>
 

@@ -252,3 +252,80 @@ Captured in CONTEXT.md `<deferred>`:
 - `CLAUDE.md` 3-seed verification command shortcut → deferred (current `-Dit.test` discipline sufficient).
 - JaCoCo gate increase 88.88% → 89.0% → rejected (wrong metric for PERF phase).
 - Legacy `data/dev/backup-staging/` startup sweeper bean → rejected as YAGNI.
+
+---
+
+## 2026-05-19 — Revision After Plan 89-01 Attempt 1 Flake Diagnostic
+
+**Trigger:** Plan 89-01 Attempt 1 executed inline; Seed 1234 Failsafe verification surfaced 3 regressions. Working tree reverted (commit `ec4732c7`), `89-FLAKE-DIAGNOSTIC.md` written. Re-discuss session opened to revise CONTEXT.md decisions before re-planning.
+
+### Re-Discuss Area Selection (multiselect)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| A: Per-fork-Mechanik (D-04 korrigieren, RQ-1 widerlegt) | Maven eager-substitution defeats Surefire late-binding | ✓ |
+| B: `app.backup.import-backups-dir` Scope-Extension | Second shared filesystem path not covered | ✓ |
+| C: ImportLockedPostRejectorIT Lock-Timeout | Lock-acquire fails in 10s under reuseForks=true+forkCount=2 | ✓ |
+| D: BackupStagingDirPerForkIT Test 2 Redesign | Vacuous-pass because `surefire.forkNumber` not exposed | ✓ |
+
+---
+
+### Area A — Per-fork Injektion (D-04 → D-04R + D-04R.2)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Projekt-Property raus + `surefire.forkNumber` als JVM-Property injizieren | D-14 bleibt zu, Test 2 wird scharf | ✓ |
+| D-14 öffnen, application.yml auf Spring-Default-Syntax `${surefire.forkNumber:0}` | Single source of truth, aber breaking change in import-backups-dir | |
+| forkCount=2 droppen, Plan 89-01 zu PERF-02-only umbauen | Konservativ aber bricht Roadmap-Lever-1 | |
+
+**Result → D-04R, D-04R.2:** pom.xml `<properties>` block ENTHÄLT KEIN `surefire.forkNumber`. `<systemPropertyVariables>` in Surefire + Failsafe `default-it` enthalten zusätzlich `<surefire.forkNumber>${surefire.forkNumber}</surefire.forkNumber>` als JVM-System-Property-Exposition. Maven lässt `${surefire.forkNumber}` unresolved durch; Surefire substituiert at fork-dispatch. Test 2-Parity-Check funktioniert.
+
+---
+
+### Area B — `app.backup.import-backups-dir` Scope (D-18 NEW)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Mirror staging-dir Pattern via pom.xml | Zweiter `<systemPropertyVariables>`-Eintrag, application.yml unverändert | ✓ |
+| BackupImportService auf TestPropertySource-overrides refactorn | Production-Code-Anfassen, invasive | |
+| Nur `AutoBackupBeforeImportPathIT` mit `@DynamicPropertySource`+`@TempDir` flicken | Latentes Risiko bei neuen ITs | |
+
+**Result → D-18:** Pom.xml `<systemPropertyVariables>` blocks (Surefire + Failsafe `default-it`) bekommen zweiten Eintrag: `<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>`. application.yml unverändert (D-14 bleibt). Plan 89-01 Task 1 wächst auf 3 properties × 2 plugins = 6 `<systemPropertyVariables>`-Einträge total.
+
+---
+
+### Area C — ImportLockedPostRejectorIT Lock-Timeout (D-19 NEW)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Wurzel-Analyse + Fix als Plan 89-01 Task 5 (per [[no-flaky-dismissal]]) | Root-cause-first, deadline-bump nur mit Justification | ✓ |
+| Nur Deadline auf 20s bumpen, tech-debt dokumentieren | Schneller, aber deckt latenten Bug zu | |
+| Test mit `@DisabledIfSystemProperty` unter forkCount>1 skippen | Verliert Coverage, Anti-Pattern | |
+
+**Result → D-19:** Plan 89-01 bekommt eigenen Task 5 für ImportLock-Acquire-Pfad-Analyse + Static-Lock-Leak-Check unter `reuseForks=true`. Drei zulässige Outcomes: (a) source patch fix, (b) `@AfterEach` lock-release strengthening, (c) deadline-bump auf 20s NUR mit Justification + Follow-up-Issue.
+
+---
+
+### Area D — BackupStagingDirPerForkIT Test 2 (D-12 clarified)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Test 2 bleibt unverändert, weil D-04R.2 die Property exposed | Test 2 wird non-vacuous unter Failsafe | ✓ |
+| Test 2 droppen, Test 1 Regex auf `backup-staging-fork-[12]` einengen | Schneidet IDE-Runs ab | |
+| Test 2 zu strikter Assertion: forkNum MUSS gesetzt sein | Brittle Run-Mode-Abhängigkeit | |
+
+**Result → D-12 (clarified):** Test 2 (`if (forkNum != null && !forkNum.isBlank()) endsWith("-" + forkNum)`) bleibt im IT-Code, aber feuert jetzt scharf weil D-04R.2 die Property als JVM-Property injiziert. Vacuous-pass von Attempt 1 ist behoben.
+
+---
+
+### Plan 89-01 Task Count (D-01 revised)
+
+Plan 89-01 wächst von 4 auf 5 Tasks:
+
+1. pom.xml — 6 `<systemPropertyVariables>`-Einträge (3 properties × 2 plugins), Failsafe `default-it` forkCount=2+reuseForks=true, KEIN project-property fallback.
+2. `BackupStagingDirPerForkIT` per D-12 (clarified).
+3. `BackupStagingCleanupRaceIT` per D-17.
+4. **NEW:** ImportLock-Timeout-Analyse + Fix per D-19.
+5. 3-seed Failsafe verification per D-13 + Legacy `rm -rf` per D-06.
+
+Plans 89-02 + 89-03 sind unberührt; ihre Dependency auf 89-01 bleibt bestehen.
