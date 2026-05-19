@@ -3,6 +3,7 @@ package org.ctc.dataimport;
 import java.io.IOException;
 import java.util.*;
 import java.util.regex.Pattern;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.DriverMatchingService.MatchResult;
@@ -222,7 +223,7 @@ public class DriverSheetImportService {
             // ERRORS (never imported)
             result.addErrors(tab.errors().size());
 
-            log.debug("Tab {} processed: {} new drivers, {} new assignments",
+            log.debug("After tab {}: cumulative new drivers={}, cumulative new assignments={}",
                     tab.tabName(), result.getNewDriversCount(), result.getNewAssignmentsCount());
         }
 
@@ -527,7 +528,7 @@ public class DriverSheetImportService {
         }
     }
 
-    @lombok.Getter
+    @Getter
     public static class ExecuteResult {
         private int newDriversCount;
         private int newAssignmentsCount;
@@ -537,7 +538,7 @@ public class DriverSheetImportService {
         private int errorCount;
         // Holds raw tab names (e.g. "2024" or "2025_S2") so the user-facing flash
         // message can disambiguate multiple seasoned tabs in the same year.
-        private final java.util.List<String> skippedTabNames = new java.util.ArrayList<>();
+        private final List<String> skippedTabNames = new ArrayList<>();
 
         void incrementNewDrivers()           { newDriversCount++; }
         void incrementNewAssignments()       { newAssignmentsCount++; }
