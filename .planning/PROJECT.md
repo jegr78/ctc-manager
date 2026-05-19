@@ -32,7 +32,7 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - GROUPS-layout gate for group-assignment warnings (suppress noise on LEAGUE/BRACKET seasons)
 - Release-workflow hardening: SemVer-strict tag sort + `fetch-tags: true` + parser hardening + pre-build idempotency guard (fixes 4-milestone regression that prevented v1.8 final, v1.9, v1.10, v1.11 from producing release tags + GitHub Releases + Docker images)
 - Retroactive publish of v1.10.0 + v1.11.0 releases + cleanup of legacy short-form tags (`v1.5`/`v1.6`/`v1.8`/`v1.9`)
-- CLAUDE.md "Conventions" Skill Invocation Naming paragraph — documents `/gsd-<name>` (dash) as canonical, deprecates `/gsd:<name>` (colon) form to fence operator copy-paste friction
+- CLAUDE.md "Conventions" Skill Invocation Naming paragraph — documents `/gsd-<name>` (dash) as canonical, deprecates the colon-form prefix (pre-2026 syntax) to fence operator copy-paste friction
 - Per-fork `backup-staging-dir` enabling Failsafe `forkCount>1C` for backup ITs (PERF-Lever-1)
 - Per-fork Spring context-fingerprint instrumentation + shared `@ContextConfiguration` cluster (PERF-Lever-2)
 - Testcontainers MariaDB `.withReuse(true)` wiring (PERF-Lever-3, pre-emptive)

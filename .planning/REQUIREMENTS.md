@@ -40,7 +40,7 @@ Closes 4-milestone-long regression in `.github/workflows/release.yml`: every mil
 
 ### Documentation Conventions (DOCS)
 
-- [ ] **DOCS-01**: CLAUDE.md "Conventions" section gains a "Skill Invocation Naming" paragraph documenting that all GSD skills are invoked via `/gsd-<name>` (dash, current canonical syntax), NOT `/gsd:<name>` (colon, deprecated — pre-2026 syntax). Verified by `grep -r "/gsd:" .planning/*.md` returning zero hits in top-level active planning files (PROJECT.md, STATE.md, ROADMAP.md, REQUIREMENTS.md, MILESTONES.md, RETROSPECTIVE.md). Archived `.planning/milestones/v*.x-*.md` files are explicitly out of scope (historical, immutable). The pre-existing initial inline-sweep that landed in commit `<v1.12-start>` cleared the 16 references found 2026-05-18 — DOCS-01 prevents regression via the CLAUDE.md convention note
+- [ ] **DOCS-01**: CLAUDE.md "Conventions" section gains a "Skill Invocation Naming" paragraph documenting that all GSD skills are invoked via `/gsd-<name>` (dash, current canonical syntax), NOT the pre-2026 colon-form prefix (deprecated). Verified by the regression-fence grep documented in CLAUDE.md § Skill Invocation Naming returning zero hits across the six top-level active planning files (PROJECT.md, STATE.md, ROADMAP.md, REQUIREMENTS.md, MILESTONES.md, RETROSPECTIVE.md). Archived `.planning/milestones/v*.x-*.md` files are explicitly out of scope (historical, immutable). The pre-existing initial inline-sweep that landed in commit `<v1.12-start>` cleared the 16 references found 2026-05-18 — DOCS-01 prevents regression via the CLAUDE.md convention note
 
 ### User Experience Polish (UX, stretch)
 
