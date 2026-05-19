@@ -302,6 +302,13 @@
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<executions>
 					<execution>
+						<!-- Spring Boot parent inherits an anonymous Failsafe execution bound to
+						     integration-test + verify with no per-execution config; unbind it so
+						     only `default-it` (and `e2e-it` under the e2e profile) runs. -->
+						<id>default</id>
+						<phase>none</phase>
+					</execution>
+					<execution>
 						<id>default-it</id>
 						<goals>
 							<goal>integration-test</goal>
