@@ -473,19 +473,24 @@ class DriverSheetImportControllerTest {
     }
 
     @Test
-    void givenTabWithoutSeasonId_whenExecute_thenTabSkippedAndFlaggedInFlash() throws Exception {
-        // given — only one tab (2021); no seasonId_2021 param provided → tab skipped
+    void givenNoSeasonIdsAtAll_whenExecute_thenExplicitErrorMessage() throws Exception {
+        // given — sheet contains a tab, but the operator submitted zero seasonId_* params
+        // (e.g. all dropdowns left at the empty default). Per REVIEW WR-02 the controller
+        // now short-circuits with an explicit error message instead of letting the service
+        // produce a "Skipped tabs: …" success — silent skipping looked like success in the
+        // operator-facing flash banner.
         stubSheets("https://sheets.test/d/abc", 2021, newDriverRows("skipped_drv", "I_AHR"));
 
-        // when — no seasonId_2021 param → tab is skipped
+        // when — no seasonId_* params at all
         mockMvc.perform(post("/admin/drivers/import/execute")
                         .param("sheetUrl", "https://sheets.test/d/abc"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/admin/drivers/import"))
-                .andExpect(flash().attributeExists("successMessage"))
-                .andExpect(flash().attribute("successMessage", containsString("Skipped tabs")));
+                .andExpect(flash().attributeExists("errorMessage"))
+                .andExpect(flash().attribute("errorMessage",
+                        containsString("No tabs were assigned a season")));
 
-        // then — driver not created (tab skipped)
+        // then — driver not created (service execute() never invoked)
         assertThat(driverRepository.findByPsnId("skipped_drv")).isEmpty();
     }
 
