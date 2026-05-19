@@ -19,7 +19,13 @@ findings:
   warning: 6
   info: 4
   total: 12
-status: issues_found
+status: resolved
+resolved_summary:
+  critical: 2  # CR-01 (f1761352), CR-02 (01173ccb)
+  warning: 6   # WR-01 (d121bfd1), WR-02 (f613d6aa + 3fdd9e1b), WR-03 (d5376c97), WR-04 (01173ccb), WR-05 (f1761352), WR-06 (f613d6aa)
+  info: 3      # IN-01 (c746b636), IN-02 (c746b636), IN-04 (d121bfd1)
+  intentional_skip:
+    - "IN-03: preview/execute DataAccessException asymmetry kept intentionally — preview is read-only and should fail loud; execute mutates state and needs graceful flash redirect"
 ---
 
 # Phase 88: Code Review Report
