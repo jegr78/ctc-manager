@@ -15,6 +15,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -83,7 +84,16 @@ public class SiteGeneratorBaselineRefresh implements CommandLineRunner {
     @Profile("baseline-refresh")
     static class YouTubeScraperMockConfig {
 
+        /**
+         * The real {@code YouTubeScraperService} is a plain {@code @Service} bean without a
+         * profile/conditional gate, so under {@code dev,baseline-refresh} both beans would
+         * otherwise be candidates and Spring would fail-fast with
+         * {@code NoUniqueBeanDefinitionException}. {@code @Primary} forces this mock to win
+         * the autowire and prevents the real network-touching scraper from being used during
+         * baseline refresh.
+         */
         @Bean
+        @Primary
         YouTubeScraperService youTubeScraperService() {
             YouTubeScraperService mock = Mockito.mock(YouTubeScraperService.class);
             Mockito.when(mock.scrapeVideoId(Mockito.anyString(), Mockito.anyString())).thenReturn("dQw4w9WgXcQ");
