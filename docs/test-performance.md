@@ -227,20 +227,70 @@ breakdown and is queued for v1.12 (lever 2 below).
 
 PID-keyed marker files are emitted by `org.ctc.testsupport.ContextLoadCountListener`
 (registered via `src/test/resources/META-INF/spring.factories`) at JVM shutdown to
-`target/test-perf/context-loads-{PID}.txt`. The total context-load count is computed
-as the sum of integer contents across all marker files after the build:
+`target/test-perf/context-loads-{PID}.txt`.
+
+Phase 89 (PERF-02) extended the marker file: Line 1 now carries `total <N>`, and a
+companion sidecar `target/test-perf/context-loads-{PID}-fingerprints.txt` records
+per-context cache-key fingerprints (one `<hex-hash>\t<mcc-display>` line per
+`beforeTestClass` event). The aggregator below extracts the `total` from Line 1
+of the primary marker and skips the sidecar files; cache-key forensics are handled
+separately by `scripts/test-perf/aggregate-fingerprints.sh` (see § PERF-02 Forensics).
 
 ```bash
 TOTAL=0
 for f in target/test-perf/context-loads-*.txt; do
-  TOTAL=$((TOTAL + $(cat "$f")))
+  # Exclude PERF-02 sidecar fingerprint files (they carry hash lines, not totals).
+  case "$f" in *-fingerprints.txt) continue ;; esac
+  TOTAL=$((TOTAL + $(head -1 "$f" | awk '{print $2}')))
 done
 echo "Total context loads: $TOTAL"
 ```
 
-The marker files do not contain trailing newlines, so `paste -sd+ - | bc` reads the
-file contents as a single concatenated digit string and produces the wrong number;
-the loop form above (or equivalent) is the correct aggregation.
+---
+
+## PERF-02 Forensics — Cache-Key Fingerprint Analysis
+
+`org.ctc.testsupport.ContextCacheKeyFingerprintListener` is a `TestExecutionListener`
+auto-registered via `src/test/resources/META-INF/spring.factories`. On every
+`beforeTestClass` event it captures the test's `MergedContextConfiguration` (Spring
+TCF's `DefaultContextCache` bucketing function — `Integer.toHexString(mcc.hashCode())`)
+and appends a `<hex-hash>\t<display>` line (display truncated to 200 chars) to an
+in-memory list, persisted at JVM shutdown to
+`target/test-perf/context-loads-{PID}-fingerprints.txt`. The sidecar approach avoids
+shutdown-hook ordering races with the primary `ContextLoadCountListener`.
+
+The hash is the cache-bucket key, so any cluster of distinct test classes sharing
+one hex hash represents a single cached context that those classes reuse — exactly
+the data needed to choose targeted-consolidation candidates for Phase 90 (PERF-03).
+
+```bash
+scripts/test-perf/aggregate-fingerprints.sh target/test-perf 5
+```
+
+Sample output:
+
+```text
+# Top 5 cache-key clusters by occurrence x cluster-size
+# Source: 4 sidecar file(s) in target/test-perf
+
+1. 7b63d1a9 -- 29 occurrences across 29 classes (score=841)
+   [WebMergedContextConfiguration@... testClass = db.migration.V5MigrationTest
+2. d5ef50be -- 12 occurrences across 12 classes (score=144)
+   [WebMergedContextConfiguration@... testClass = org.ctc.dataimport.CsvImport
+3. a1c32ec1 -- 10 occurrences across 10 classes (score=100)
+   [WebMergedContextConfiguration@... testClass = org.ctc.backup.service.Backu
+4. f3cd1b41 -- 10 occurrences across 10 classes (score=100)
+   [WebMergedContextConfiguration@... testClass = org.ctc.backup.exception.Bac
+5. b2bac94  --  6 occurrences across  6 classes (score=36)
+   [WebMergedContextConfiguration@... testClass = org.ctc.admin.controller.Tea
+```
+
+PERF-03 (Phase 90) consumes the Top-N list to pick the highest-fragmentation cluster
+for consolidation onto a shared `@ContextConfiguration`. Phase 86 Lesson (Plan 02
+SUMMARY) is the canonical pitfall on the reverse path: per-class
+`@DynamicPropertySource` split one shared cache key into seven, fragmenting reuse;
+PERF-03's targeted consolidation prevents the same regression in the other
+direction.
 
 ---
 
