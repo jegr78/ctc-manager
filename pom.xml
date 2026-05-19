@@ -265,8 +265,12 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
-					<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+					<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands.
+					     -Dtest.fork.number=${surefire.forkNumber} exposes the fork number as a JVM
+					     System.getProperty(...) value (Surefire substitutes the placeholder at
+					     fork-dispatch time inside argLine, but evaluates standalone systemPropertyVariables
+					     values too early to substitute reliably). -->
+					<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Dtest.fork.number=${surefire.forkNumber}</argLine>
 					<!-- Conservative process-level parallelism: 2 forked JVMs total (not 2C). -->
 					<forkCount>2</forkCount>
 					<reuseForks>true</reuseForks>
@@ -276,9 +280,6 @@
 					<systemPropertyVariables>
 						<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
 						<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
-						<!-- Surefire 3.5.5 does not auto-inject surefire.forkNumber as a JVM
-						     System.getProperty(...)-visible property; expose it explicitly. -->
-						<surefire.forkNumber>${surefire.forkNumber}</surefire.forkNumber>
 					</systemPropertyVariables>
 					<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 					     Surefire runs only tests WITHOUT @Tag("integration") / @Tag("e2e") / @Tag("flaky").
@@ -306,8 +307,10 @@
 							<goal>verify</goal>
 						</goals>
 						<configuration>
-							<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
-							<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+							<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands.
+							     -Dtest.fork.number=${surefire.forkNumber} exposes the fork number as a JVM
+							     System.getProperty(...) value (see Surefire block above for rationale). -->
+							<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Dtest.fork.number=${surefire.forkNumber}</argLine>
 							<!-- e2e-it stays single-fork (defined inside the `e2e` profile) per the
 							     Playwright RANDOM_PORT constraint; default-it is safe to fork. -->
 							<forkCount>2</forkCount>
@@ -315,7 +318,6 @@
 							<systemPropertyVariables>
 								<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
 								<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
-								<surefire.forkNumber>${surefire.forkNumber}</surefire.forkNumber>
 							</systemPropertyVariables>
 							<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 							     run @Tag("integration") tests, exclude @Tag("e2e") and @Tag("flaky").
