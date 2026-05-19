@@ -61,6 +61,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Tag("integration")
 class ImportLockedPostRejectorIT {
 
+    /**
+     * Latch-await budget for thread A entering the restore-injector mid-table.
+     * Bumped from 10s to 20s: under reuseForks=true + forkCount=2 the Spring context
+     * is rebuilt by @DirtiesContext concurrently with team-card generation in
+     * DevDataSeeder (14+ Playwright launches), which stretches MVC dispatch latency
+     * past the original budget. Root-cause fix is upstream — reduce DevDataSeeder
+     * Chromium pressure or move team-card generation off the per-class rebuild path.
+     */
+    private static final long LOCK_ACQ_DEADLINE_SECONDS = 20L;
+
     @Autowired
     MockMvc mockMvc;
 
@@ -130,7 +140,7 @@ class ImportLockedPostRejectorIT {
                         .andReturn()
         );
 
-        assertThat(hasAcquired.await(10, TimeUnit.SECONDS))
+        assertThat(hasAcquired.await(LOCK_ACQ_DEADLINE_SECONDS, TimeUnit.SECONDS))
                 .as("thread A must acquire the lock within 10 s")
                 .isTrue();
         assertThat(importLockService.isLocked()).as("lock must be held by thread A").isTrue();
@@ -173,7 +183,7 @@ class ImportLockedPostRejectorIT {
                         .andReturn()
         );
 
-        assertThat(hasAcquired.await(10, TimeUnit.SECONDS))
+        assertThat(hasAcquired.await(LOCK_ACQ_DEADLINE_SECONDS, TimeUnit.SECONDS))
                 .as("thread A must acquire the lock within 10 s")
                 .isTrue();
 
@@ -209,7 +219,7 @@ class ImportLockedPostRejectorIT {
                         .andReturn()
         );
 
-        assertThat(hasAcquired.await(10, TimeUnit.SECONDS))
+        assertThat(hasAcquired.await(LOCK_ACQ_DEADLINE_SECONDS, TimeUnit.SECONDS))
                 .as("thread A must acquire the lock within 10 s")
                 .isTrue();
 
