@@ -278,6 +278,7 @@
 					     eager-substitutes project properties at POM-load time, before Surefire's
 					     fork-dispatch substitution can run, so all forks land in the same path. -->
 					<systemPropertyVariables>
+						<app.upload-dir>data/${spring.profiles.active:dev}/uploads-fork-${surefire.forkNumber}</app.upload-dir>
 						<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
 						<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
 					</systemPropertyVariables>
@@ -316,6 +317,7 @@
 							<forkCount>2</forkCount>
 							<reuseForks>true</reuseForks>
 							<systemPropertyVariables>
+								<app.upload-dir>data/${spring.profiles.active:dev}/uploads-fork-${surefire.forkNumber}</app.upload-dir>
 								<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
 								<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
 							</systemPropertyVariables>
