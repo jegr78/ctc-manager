@@ -189,7 +189,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 **Plans**: 6 plans (sequential — Wave 1 → Wave 6 per [[wave-pause]])
 - [x] 88-01-PLAN.md — CLEAN-01 verify-only baseline gate (./mvnw clean verify + REQUIREMENTS.md status flip)
 - [x] 88-02-PLAN.md — CLEAN-02 + CLEAN-03 @Disabled sweep + SiteGeneratorBaselineRefresh CommandLineRunner utility
-- [ ] 88-03-PLAN.md — REL-01 release.yml hardening (SemVer-strict + fetch-tags + parser + idempotency guard + dry-run gates)
+- [x] 88-03-PLAN.md — REL-01 release.yml hardening (SemVer-strict + fetch-tags + parser + idempotency guard + dry-run gates)
 - [ ] 88-04-PLAN.md — DOCS-01 CLAUDE.md Skill Invocation Naming paragraph + 6-ref rewrite (strict-grep fence)
 - [ ] 88-05-PLAN.md — DRIV-01 + DRIV-02 season-aware resolver + GROUPS-layout gate + usesGroups TabPreview field
 - [ ] 88-06-PLAN.md — REL-02 operator runbook docs/operations/release-runbook.md (retroactive v1.10.0/v1.11.0 + legacy-tag cleanup)
@@ -249,7 +249,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | 2/6 | In Progress|  |
+| 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | 3/6 | In Progress|  |
 | 89 — PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | 0/2 | Not started | - |
 | 90 — PERF Consolidation & Module-Split Decision | 0/3 | Not started | - |
 | 91 — PERF Re-Harvest, Stretch UX Polish & Milestone Closer | 0/2 | Not started | - |
