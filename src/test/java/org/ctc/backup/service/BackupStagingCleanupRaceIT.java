@@ -45,16 +45,19 @@ class BackupStagingCleanupRaceIT {
 
     @AfterAll
     void tearDown() throws IOException {
+        deleteIfExists(ownForkDir.resolve("unrelated.txt"));
         if (siblingForkDir != null && Files.exists(siblingForkDir)) {
             try (Stream<Path> walk = Files.walk(siblingForkDir)) {
-                walk.sorted(Comparator.reverseOrder()).forEach(p -> {
-                    try {
-                        Files.delete(p);
-                    } catch (IOException ignored) {
-                        // best-effort cleanup; surfacing failures here only obscures the test verdict
-                    }
-                });
+                walk.sorted(Comparator.reverseOrder()).forEach(BackupStagingCleanupRaceIT::deleteIfExists);
             }
+        }
+    }
+
+    private static void deleteIfExists(Path p) {
+        try {
+            Files.deleteIfExists(p);
+        } catch (IOException _) {
+            // best-effort cleanup; surfacing failures here only obscures the test verdict
         }
     }
 
