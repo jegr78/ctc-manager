@@ -5,6 +5,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.DriverSheetImportService;
+import org.ctc.dataimport.DriverSheetImportService.TabPreview;
 import org.ctc.dataimport.GoogleSheetsService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.ValidationException;
@@ -47,6 +48,8 @@ public class DriverSheetImportController {
             model.addAttribute("sheetUrl", sheetUrl);
             model.addAttribute("hasAmbiguousTabs", preview.tabPreviews().stream()
                     .anyMatch(t -> t.suggestedSeasonId() == null));
+            model.addAttribute("showGroupColumn", preview.tabPreviews().stream()
+                    .anyMatch(TabPreview::usesGroups));
             addCommonAttributes(model);
             return "admin/driver-import-preview";
         } catch (IOException e) {

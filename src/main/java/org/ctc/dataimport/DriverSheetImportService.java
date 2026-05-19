@@ -9,6 +9,7 @@ import org.ctc.dataimport.DriverMatchingService.MatchResult;
 import org.ctc.dataimport.DriverMatchingService.MatchType;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
@@ -264,6 +265,7 @@ public class DriverSheetImportService {
         SeasonPhase regularPhase = suggestedSeasonId != null
                 ? seasonPhaseService.findByType(suggestedSeasonId, PhaseType.REGULAR).orElse(null)
                 : null;
+        boolean usesGroups = regularPhase != null && regularPhase.getLayout() == PhaseLayout.GROUPS;
 
         List<List<Object>> rows = googleSheetsService.readRangeFromSheet(spreadsheetId, tabName, "A:C");
 
@@ -370,7 +372,7 @@ public class DriverSheetImportService {
                 fuzzySuggestions.size(), unchanged.size(), errors.size());
 
         return new TabPreview(tabName, year, number, suggestedSeasonId, ambiguousReason,
-                newDrivers, newAssignments, conflicts, fuzzySuggestions, unchanged, errors);
+                newDrivers, newAssignments, conflicts, fuzzySuggestions, unchanged, errors, usesGroups);
     }
 
     /**
@@ -450,7 +452,8 @@ public class DriverSheetImportService {
             List<ConflictRow> conflicts,
             List<FuzzySuggestionRow> fuzzySuggestions,
             List<UnchangedRow> unchanged,
-            List<ErrorRow> errors
+            List<ErrorRow> errors,
+            boolean usesGroups
     ) {}
 
     public record NewDriverRow(String psnId, String teamShortName) {}

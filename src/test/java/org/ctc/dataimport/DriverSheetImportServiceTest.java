@@ -848,4 +848,57 @@ class DriverSheetImportServiceTest {
         assertThat(written.getTeam().getId()).isEqualTo(subA.getId());
     }
 
+    // 28. DRIV-02 — LEAGUE-layout REGULAR phase reports usesGroups=false so future Group-aware
+    // UI surfaces (e.g. the page-wide showGroupColumn aggregation in DriverSheetImportController)
+    // suppress group rendering on non-GROUPS tabs.
+
+    @Test
+    void givenLeagueLayoutRegularPhase_whenPreview_thenTabPreviewUsesGroupsIsFalse() throws IOException {
+        // given — season with a LEAGUE-layout REGULAR phase
+        SeasonPhase leaguePhase = PhaseTestFixtures.regularPhase(season2024, null, null);
+        when(seasonPhaseService.findByType(season2024.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(leaguePhase));
+
+        Team team = new Team("Test-League Team", "T-LG");
+        team.setId(UUID.randomUUID());
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("lg-driver", "League Driver", "T-LG")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(teamRepository.findAllByShortName("T-LG")).thenReturn(List.of(team));
+        when(driverMatchingService.findDriver("lg-driver"))
+                .thenReturn(MatchResult.noMatch("lg-driver"));
+
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — usesGroups is false because the phase is LEAGUE-layout
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.usesGroups()).isFalse();
+    }
+
+    // 29. DRIV-02 — GROUPS-layout REGULAR phase reports usesGroups=true so the controller's
+    // showGroupColumn aggregation lights up the page-wide Group column for mixed multi-tab previews.
+
+    @Test
+    void givenGroupsLayoutRegularPhase_whenPreview_thenTabPreviewUsesGroupsIsTrue() throws IOException {
+        // given — season with a GROUPS-layout REGULAR phase
+        SeasonPhase groupsPhase = PhaseTestFixtures.groupsRegularPhase(season2024, null, null, "Group A", "Group B");
+        when(seasonPhaseService.findByType(season2024.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(groupsPhase));
+
+        Team team = new Team("Test-Groups Team", "T-GR");
+        team.setId(UUID.randomUUID());
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("gr-driver", "Groups Driver", "T-GR")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(teamRepository.findAllByShortName("T-GR")).thenReturn(List.of(team));
+        when(driverMatchingService.findDriver("gr-driver"))
+                .thenReturn(MatchResult.noMatch("gr-driver"));
+
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — usesGroups is true because the phase is GROUPS-layout
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.usesGroups()).isTrue();
+    }
+
 }
