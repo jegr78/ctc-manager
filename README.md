@@ -148,3 +148,7 @@ adds zero overhead.
 ## Documentation
 
 See the [Wiki](../../wiki) for detailed documentation on architecture, features, setup, and configuration.
+
+## Test Performance
+
+Test wallclock metrics, per-phase optimisation history, and the per-fork backup-staging-dir + cache-key fingerprint instrumentation are documented in [`docs/test-performance.md`](docs/test-performance.md). The current local baseline is the v1.12 Wave-4 median (Phase 89, per-fork `app.backup.staging-dir` + Failsafe `default-it` `forkCount=2 reuseForks=true` + PERF-02 cache-key fingerprint listener). The authoritative CI median will be re-harvested in v1.12 Phase 91 (PERF-06).
