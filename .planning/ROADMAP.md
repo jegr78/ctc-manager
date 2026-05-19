@@ -166,7 +166,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 
 ### v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (Phases 88-91) — IN FLIGHT
 
-- [ ] **Phase 88: Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure** — Fix BackupSchemaExclusionIT compile error (CLEAN-01), YAGNI-sweep speculative `@Disabled`/Windows-skip cruft (CLEAN-02), refactor BaselineCaptureTest to standalone utility (CLEAN-03), harden release workflow against duplicate-tag-pattern regression (REL-01), publish retroactive v1.10.0 + v1.11.0 releases + cleanup legacy short-form tags (REL-02), document canonical `/gsd-` skill-invocation prefix (DOCS-01), close DRIV-01 (season-aware shortName resolver) and DRIV-02 (GROUPS-layout gate for group warnings)
+- [x] **Phase 88: Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure** — Fix BackupSchemaExclusionIT compile error (CLEAN-01), YAGNI-sweep speculative `@Disabled`/Windows-skip cruft (CLEAN-02), refactor BaselineCaptureTest to standalone utility (CLEAN-03), harden release workflow against duplicate-tag-pattern regression (REL-01), publish retroactive v1.10.0 + v1.11.0 releases + cleanup legacy short-form tags (REL-02), document canonical `/gsd-` skill-invocation prefix (DOCS-01), close DRIV-01 (season-aware shortName resolver) and DRIV-02 (GROUPS-layout gate for group warnings) (completed 2026-05-19)
 - [ ] **Phase 89: PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir)** — Implement PERF-01 (per-fork `app.backup.staging-dir`) and PERF-02 (context cache-key fingerprinting via extended ContextLoadCountListener); independent parallel-runnable plans
 - [ ] **Phase 90: PERF Consolidation & Module-Split Decision** — PERF-03 (shared `@ContextConfiguration` cluster identified by PERF-02 data), PERF-04 (Testcontainers `withReuse` pre-emptive wiring), PERF-05 (test-module-split verdict + extraction plan or defer-rationale)
 - [ ] **Phase 91: PERF Re-Harvest, Stretch UX Polish & Milestone Closer** — PERF-06 (CI 5-run median re-harvest, D-17 trigger-equivalence), UX-01 stretch (Google API typed-exception hierarchy + categorized error UX), README/test-performance.md updates, milestone close
@@ -192,7 +192,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 - [x] 88-03-PLAN.md — REL-01 release.yml hardening (SemVer-strict + fetch-tags + parser + idempotency guard + dry-run gates)
 - [x] 88-04-PLAN.md — DOCS-01 CLAUDE.md Skill Invocation Naming paragraph + 6-ref rewrite (strict-grep fence)
 - [x] 88-05-PLAN.md — DRIV-01 + DRIV-02 season-aware resolver + GROUPS-layout gate + usesGroups TabPreview field
-- [ ] 88-06-PLAN.md — REL-02 operator runbook docs/operations/release-runbook.md (retroactive v1.10.0/v1.11.0 + legacy-tag cleanup)
+- [x] 88-06-PLAN.md — REL-02 operator runbook docs/operations/release-runbook.md (retroactive v1.10.0/v1.11.0 + legacy-tag cleanup)
 
 ### Phase 89: PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir)
 **Goal**: Land the largest single-delta PERF lever (per-fork `app.backup.staging-dir` enabling Failsafe `forkCount>1C` on backup ITs) and the instrumentation that drives PERF-03's targeted consolidation, in parallel-runnable plans.
@@ -249,7 +249,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | 5/6 | In Progress|  |
+| 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | 6/6 | Complete   | 2026-05-19 |
 | 89 — PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | 0/2 | Not started | - |
 | 90 — PERF Consolidation & Module-Split Decision | 0/3 | Not started | - |
 | 91 — PERF Re-Harvest, Stretch UX Polish & Milestone Closer | 0/2 | Not started | - |
