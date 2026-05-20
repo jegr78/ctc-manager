@@ -54,6 +54,8 @@ If an import fails or you need to revert, see [`docs/operations/import-runbook.m
 for step-by-step recovery from `data/<profile>/import-backups/<ts>/`.
 
 > **Note (v1.11):** Recovery storage is now profile-isolated to `data/<profile>/import-backups/` (e.g., `data/dev/import-backups/` or `data/prod/import-backups/`). Pre-v1.11 artifacts under `data/.import-backups/` remain in place and are not migrated automatically.
+>
+> **Note (v1.12):** Google Sheets / Calendar API errors during driver-import or calendar-event creation now surface a categorized error badge (Transient / Auth / NotFound / Permission) with actionable hardcoded messages. Operator setup, error-category reference, and troubleshooting steps are documented in [`docs/operations/google-integration.md`](docs/operations/google-integration.md). Milestone PR #129.
 
 ### Full Guide
 
@@ -151,6 +153,6 @@ See the [Wiki](../../wiki) for detailed documentation on architecture, features,
 
 ## Test Performance
 
-Test wallclock metrics, per-phase optimisation history, and the per-fork backup-staging-dir + cache-key fingerprint instrumentation are documented in [`docs/test-performance.md`](docs/test-performance.md). The current local baseline is the v1.12 Wave-4 median (Phase 89, per-fork `app.backup.staging-dir` + Failsafe `default-it` `forkCount=2 reuseForks=true` + PERF-02 cache-key fingerprint listener). The authoritative CI median will be re-harvested in v1.12 Phase 91 (PERF-06).
+Test wallclock metrics, per-phase optimisation history, and the per-fork backup-staging-dir + cache-key fingerprint instrumentation are documented in [`docs/test-performance.md`](docs/test-performance.md). The current authoritative CI E2E-step baseline is the **v1.12 Phase 91 PERF-06 5-run median of 17:39** (Δ−23.3 % vs v1.11 23:00 baseline; harvested via `workflow_dispatch` on milestone PR #129 head SHA `b63a2be1`; methodology in [`docs/test-performance.md § PERF-06 Re-Harvest`](docs/test-performance.md#perf-06-re-harvest-phase-91)). The local Wave-4 median (Phase 89, per-fork `app.backup.staging-dir` + Failsafe `default-it` `forkCount=2 reuseForks=true` + PERF-02 cache-key fingerprint listener) is 09:19 (−10.4 % vs Phase-86 10:24 local baseline).
 
 Developers can enable Testcontainers MariaDB container reuse by adding `testcontainers.reuse.enable=true` to `~/.testcontainers.properties` — see the [`## PERF-04 Testcontainers Reuse`](docs/test-performance.md#perf-04-testcontainers-reuse) section in `docs/test-performance.md` for the opt-in protocol, the `docker ps` verification command, and the cleanup hint. CI behavior is unchanged; both MariaDB-backed ITs are gated by `@EnabledIfSystemProperty(named = "docker.available", matches = "true")` and CI never sets the flag.
