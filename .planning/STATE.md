@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.12
-milestone_name: Driver-Import Gap-Closure & Test Performance Round 2
-status: completed
-stopped_at: "Phase 91 context gathered (13 decisions; 3 plans planned: PERF-06, UX-01, Closer)"
-last_updated: "2026-05-20T18:13:55.264Z"
-last_activity: 2026-05-20 — Milestone v1.12 completed and archived
+milestone: v1.13
+milestone_name: Discord Integration & Carry-Forwards
+status: planning
+last_updated: "2026-05-20T21:26:19.368Z"
+last_activity: 2026-05-20
 progress:
-  total_phases: 4
-  completed_phases: 3
-  total_plans: 13
-  completed_plans: 12
-  percent: 92
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -26,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 ## Current Position
 
-Phase: Milestone v1.12 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-20 — Milestone v1.12 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-20 — Milestone v1.13 started
 
 ## Completed Milestones
 
