@@ -3,6 +3,7 @@ package org.ctc.dataimport;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import org.ctc.dataimport.exception.TransientGoogleApiException;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,7 +68,7 @@ class CsvImportControllerExceptionTest {
 		when(googleSheetsService.isAvailable()).thenReturn(true);
 		when(googleSheetsService.extractSpreadsheetId(anyString())).thenReturn("abc123");
 		when(googleSheetsService.readRange(anyString(), anyString()))
-				.thenThrow(new IOException("network error"));
+				.thenThrow(new TransientGoogleApiException("network error", null));
 		when(csvImportService.getAllSeasons()).thenReturn(List.of());
 		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
 

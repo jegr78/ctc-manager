@@ -1,10 +1,11 @@
 package org.ctc.domain.service;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import org.ctc.dataimport.GoogleCalendarService;
+import org.ctc.dataimport.exception.GoogleApiException;
+import org.ctc.dataimport.exception.TransientGoogleApiException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.RaceRepository;
 import org.junit.jupiter.api.Test;
@@ -139,11 +140,11 @@ class RaceCalendarServiceTest {
 		when(raceRepository.findById(race.getId())).thenReturn(Optional.of(race));
 		when(googleCalendarService.isAvailable()).thenReturn(true);
 		when(googleCalendarService.createEvent(any(), any(), anyInt()))
-				.thenThrow(new IOException("Calendar API error"));
+				.thenThrow(new TransientGoogleApiException("Calendar API error", null));
 
 		// when / then
 		assertThatThrownBy(() -> service.createOrUpdateCalendarEvent(race.getId()))
-				.isInstanceOf(IOException.class)
+				.isInstanceOf(GoogleApiException.class)
 				.hasMessageContaining("Calendar API error");
 	}
 

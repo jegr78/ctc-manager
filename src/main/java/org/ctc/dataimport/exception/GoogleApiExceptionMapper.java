@@ -31,8 +31,6 @@ public final class GoogleApiExceptionMapper {
 
 	private static final Set<String> AUTH_REASONS = Set.of(
 			"authError", "invalidCredentials", "unauthorized");
-	private static final Set<Integer> TRANSIENT_STATUS_CODES = Set.of(
-			408, 429, 500, 502, 503, 504);
 
 	private GoogleApiExceptionMapper() {
 	}
@@ -49,17 +47,13 @@ public final class GoogleApiExceptionMapper {
 	}
 
 	private static GoogleApiException fromGoogleJson(GoogleJsonResponseException gjre) {
-		int status = gjre.getStatusCode();
-		return switch (status) {
+		// 408, 429, 5xx, and unknown status codes all map to TRANSIENT (lenient default);
+		// only 401 / 403 / 404 dispatch to specific subtypes per RESEARCH § Pattern 2.
+		return switch (gjre.getStatusCode()) {
 			case 401 -> new AuthGoogleApiException(AUTH_MESSAGE, gjre);
 			case 403 -> from403(gjre);
 			case 404 -> new NotFoundGoogleApiException(NOT_FOUND_MESSAGE, gjre);
-			default -> {
-				if (TRANSIENT_STATUS_CODES.contains(status)) {
-					yield new TransientGoogleApiException(TRANSIENT_MESSAGE, gjre);
-				}
-				yield new TransientGoogleApiException(TRANSIENT_MESSAGE, gjre);
-			}
+			default -> new TransientGoogleApiException(TRANSIENT_MESSAGE, gjre);
 		};
 	}
 
