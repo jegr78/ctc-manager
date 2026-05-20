@@ -355,6 +355,24 @@ select option {
 .badge-active { background: var(--success-bg); color: #66bb6a; }
 .badge-inactive { background: #222; color: #999; }
 .badge-warning { background: #3b2e0e; color: #ffb74d; }
+
+/* Google API error categories (Phase 91 / UX-01) */
+.error-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+.error-badge--transient  { background: #3b2e0e; color: #ffb74d; border: 1px solid #b26a00; }
+.error-badge--auth       { background: var(--danger-bg); color: #ef5350; border: 1px solid #d32f2f; }
+.error-badge--not-found  { background: #2a2a3a; color: #90caf9; border: 1px solid #1976d2; }
+.error-badge--permission { background: var(--danger-bg); color: #ef5350; border: 1px solid #d32f2f; }
+
 .hidden { display: none !important; }
 
 .result-grid {
