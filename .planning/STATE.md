@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: planning
-last_updated: "2026-05-20T21:26:19.368Z"
+last_updated: "2026-05-20T22:00:00.000Z"
 last_activity: 2026-05-20
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
-  total_plans: 0
+  total_plans: 23
   completed_plans: 0
   percent: 0
 ---
@@ -21,14 +21,14 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Planning next milestone (v1.13) — pre-merge milestone closure complete; awaiting `gh pr merge --squash --subject "feat(v1.12): ..."` then `/gsd-new-milestone`.
+**Current focus:** v1.13 Discord Integration & Carry-Forwards — roadmap defined (7 phases, 25 REQ-IDs, 100 % coverage); awaiting `/gsd-discuss-phase 92` to start Phase 92 (Carry-Forwards & Cleanup).
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 92 (Carry-Forwards & Cleanup) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-20 — Milestone v1.13 started
+Status: Roadmap defined, awaiting `/gsd-discuss-phase 92`
+Last activity: 2026-05-20 — Milestone v1.13 roadmap created (7 phases, 25 REQ-IDs)
 
 ## Completed Milestones
 
@@ -46,19 +46,39 @@ Last activity: 2026-05-20 — Milestone v1.13 started
 
 ## Active Milestone
 
-None — v1.12 closed 2026-05-20. Next milestone (v1.13) starts via `/gsd-new-milestone` after the v1.12 PR squash-merge produces `v1.12.0` on master.
+**v1.13 Discord Integration & Carry-Forwards** — Phases 92-98 (in flight).
+
+- Branch: `gsd/v1.13-discord-integration` (off `origin/master`)
+- Design spec: `docs/superpowers/specs/2026-05-20-discord-integration-design.md` (18 decisions)
+- Detailed roadmap: `.planning/milestones/v1.13-ROADMAP.md`
+- Coverage: 25/25 REQ-IDs mapped to 7 phases (5 carry-forward + 20 Discord)
+- Estimated duration: 15-20 working days
+- New Flyway migrations: V8 (`discord_global_config`), V9 (`teams.discord_role_id`), V10 (`matches.discord_*`), V11 (`discord_post`), V12 (`seasons.discord_*_thread_id`)
+- Zero new production dependencies (Spring `RestClient` is Spring 6.1+ core)
+
+### Phase Order (Sequenced)
+
+| Phase | Name | REQ-IDs | Depends on |
+| ----- | ---- | ------- | ---------- |
+| 92 | Carry-Forwards & Cleanup | UX-01, COV-01, CLEAN-01, DOCS-01, BOOK-01 | — |
+| 93 | Discord Foundation | INFRA-01, INFRA-02, INFRA-03 | 92 |
+| 94 | Team Roles + Match Channel Lifecycle | CHAN-01, CHAN-02, CHAN-03 | 93 |
+| 95 | Match Channel Posts | POST-01..05 | 94 |
+| 96 | Provisional Graphic + Forum Threads | GRAFX-01, FORUM-01, FORUM-02 | 95 |
+| 97 | Matchday-Level Posts | POST-06, POST-07, POST-08 | 96 |
+| 98 | Polish + E2E + Docs + Close | E2E-01, DOCS-02, DOCS-03 | 97 |
 
 ## Deferred Items
 
-Items carried forward into v1.13 (from v1.12 audit + post-merge follow-ups):
+Items carried forward into v1.13 (from v1.12 audit + post-merge follow-ups) — all absorbed into Phase 92:
 
 | Category | Item | Resolution Plan |
 | -------- | ---- | --------------- |
-| tech_debt | UX-01 scope-gap — `CsvImportController` (race-results sheet-import) not migrated to typed-catch + `errorCategory` flash + badge UX; T-91-02-IL info-leak (`e.getMessage()` echo) re-introduced for this 3rd consumer of typed `GoogleSheetsService` | v1.13 — apply typed-catch + `errorCategory` flash + badge UX to `CsvImportController` for parity (see v1.12 audit Warning 1) |
-| tech_debt | JaCoCo Δ−0.44 pp (88.44 % vs 88.88 %, above 82 % gate); root cause javac-mandated defensive `catch (GoogleApiException)` blocks (Java 25 lacks sealed-exhaustiveness on catch) + uncovered service-layer IOException paths | v1.13 — add `RaceControllerCalendarTest` + IT coverage for Google service error paths (see 91-02-SUMMARY § JaCoCo coverage delta) |
-| tech_debt | CLEAN-02 grep-predicate drift — Phase 89 PERF-01 introduced AssertJ `Assumptions.assumeThat` in `BackupStagingDirPerForkIT.java:12,37`; different package + intent than the JUnit `Assumptions.assumeFalse` that CLEAN-02 originally targeted, but grep can't distinguish | v1.13 — tighten predicate to `org\.junit\.jupiter\.api\.Assumptions` OR whitelist `BackupStagingDirPerForkIT` (see v1.12 audit Warning 2) |
-| docs_debt | Optional audit-trail retrofill — Phases 89/90/91 close on VALIDATION.md + per-plan SUMMARY.md without phase-level VERIFICATION.md (v1.11 had VERIFICATION.md per phase, some retroactively via commit `2e84fd57`) | v1.13 — optional retroactive `89-VERIFICATION.md` / `90-VERIFICATION.md` / `91-VERIFICATION.md` authoring; substantive verification already present via VALIDATION.md + SUMMARY.md (see v1.12 audit Warning 4) |
-| bookkeeping_debt | REQUIREMENTS.md checkbox + traceability lag — 7 of 15 v1.12 REQ-IDs require post-merge flip from `Pending`/`[ ]` to `Resolved`/`[x]` (PERF-01, PERF-02, PERF-03, PERF-04, PERF-05, PERF-06, UX-01); Plan 91-03 deliberately deferred per stale-state avoidance pattern | post-merge — flip in a single doc-only commit on master after `v1.12.0` release fires |
+| tech_debt | UX-01 scope-gap — `CsvImportController` (race-results sheet-import) not migrated to typed-catch + `errorCategory` flash + badge UX; T-91-02-IL info-leak (`e.getMessage()` echo) re-introduced for this 3rd consumer of typed `GoogleSheetsService` | **Phase 92** — apply typed-catch + `errorCategory` flash + badge UX to `CsvImportController` for parity (REQ UX-01) |
+| tech_debt | JaCoCo Δ−0.44 pp (88.44 % vs 88.88 %, above 82 % gate); root cause javac-mandated defensive `catch (GoogleApiException)` blocks (Java 25 lacks sealed-exhaustiveness on catch) + uncovered service-layer IOException paths | **Phase 92** — add `RaceControllerCalendarTest` + IT coverage for Google service error paths (REQ COV-01) |
+| tech_debt | CLEAN-02 grep-predicate drift — Phase 89 PERF-01 introduced AssertJ `Assumptions.assumeThat` in `BackupStagingDirPerForkIT.java:12,37`; different package + intent than the JUnit `Assumptions.assumeFalse` that CLEAN-02 originally targeted, but grep can't distinguish | **Phase 92** — tighten predicate to `org\.junit\.jupiter\.api\.Assumptions` (REQ CLEAN-01) |
+| docs_debt | Optional audit-trail retrofill — Phases 89/90/91 close on VALIDATION.md + per-plan SUMMARY.md without phase-level VERIFICATION.md (v1.11 had VERIFICATION.md per phase, some retroactively via commit `2e84fd57`) | **Phase 92** — optional retroactive `89-VERIFICATION.md` / `90-VERIFICATION.md` / `91-VERIFICATION.md` (REQ DOCS-01) |
+| bookkeeping_debt | REQUIREMENTS.md checkbox + traceability lag — 7 of 15 v1.12 REQ-IDs require flip from `Pending`/`[ ]` to `Resolved`/`[x]` (PERF-01..06 + UX-01); Plan 91-03 deliberately deferred per stale-state avoidance pattern | **Phase 92** — flip 7 stale checkboxes + 4 stale `Pending` traceability rows in `milestones/v1.12-REQUIREMENTS.md` (REQ BOOK-01) |
 | uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | post-deploy operator action (procedure docs/uat/UAT-02-legacy-season-smoke.md) |
 | uat | QUAL-02 local-profile MariaDB manual smoke (DevDataSeeder widening) | post-deploy operator action |
 | uat | UX-01 visual UAT — 4 error-category badges × Desktop + Mobile (8 Playwright screenshots) | post-deploy operator action (procedure 91-02-SUMMARY.md § Manual UAT) |
@@ -67,14 +87,14 @@ Post-merge self-resolving items (not tracked further):
 
 | Category | Item | Status |
 | -------- | ---- | ------ |
-| post_merge | v1.12 release workflow tagging (produces `v1.12.0` annotated tag + GitHub Release + `ghcr.io/jegr78/ctc-manager:1.12.0` + `:latest`) | will resolve when squash-merge subject `feat(v1.12): ...` lands on master (see `docs/operations/release-runbook.md § 6 — Squash-merge subject discipline`) |
+| post_merge | v1.13 release workflow tagging (produces `v1.13.0` annotated tag + GitHub Release + `ghcr.io/jegr78/ctc-manager:1.13.0` + `:latest`) | will resolve on squash-merge with subject `feat(v1.13): discord integration & carry-forwards` (per `docs/operations/release-runbook.md § 6 — Squash-merge subject discipline`) |
 
 ## Pending UATs
 
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** v1.12 milestone complete
+- **Status:** v1.12 milestone complete; carries into v1.13
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
@@ -85,68 +105,74 @@ Post-merge self-resolving items (not tracked further):
 - **Status:** post-deploy operator action
 - **Result:** _(operator fills after execution)_
 
+### UX-01: Driver-Import Error-Category Badges (carry-forward from v1.12)
+
+- **Procedure:** Trigger each of the 4 typed `GoogleApiException` permits (transient/auth/not-found/permission) in `/admin/driver-import` and capture Desktop + Mobile screenshots per `feedback_playwright_cli`
+- **Status:** post-deploy operator action
+- **Result:** _(operator fills)_
+
 ## Accumulated Context
 
 ### Decisions
 
-All decisions logged in PROJECT.md "Key Decisions" table and per-milestone in `milestones/v*.x-ROADMAP.md`. v1.12 decisions will be captured per phase during `/gsd-discuss-phase`.
+All decisions logged in PROJECT.md "Key Decisions" table and per-milestone in `milestones/v*.x-ROADMAP.md`. v1.13 decisions will be captured per phase during `/gsd-discuss-phase`.
 
-Roadmap-level decisions (captured during ROADMAP.md drafting):
+Roadmap-level decisions for v1.13 (captured during ROADMAP.md drafting 2026-05-20):
 
-- **CLEAN-01 sequenced first in Phase 88** — `BackupSchemaExclusionIT.java:40` AssertJ compile error blocks `./mvnw verify` exit 0 + JaCoCo CSV; without fix all PERF measurements run against a broken baseline. Lands as FIRST commit of Phase 88.
-- **CLEAN-02 + CLEAN-03 YAGNI-driven** — user-raised challenge during milestone planning: are the 3 "intentional" disabled tests actually justified? Re-evaluation found (a) `DriverSheetImportServiceIT` regression-fence covers a structurally unreachable path (covered by Test #7 already; "future-change" speculation), (b) Windows-conditional skip is single outlier in OS-agnostic codebase (CI ubuntu, dev darwin), (c) `SiteGeneratorBaselineCaptureTest` `@Test @Disabled` semantically misleading. CLEAN-02 deletes/simplifies the YAGNI violators; CLEAN-03 refactors the baseline utility. Combined acceptance: `grep -rn "@Disabled" src/test/java` returns 0.
-- **REL-01 + REL-02 co-located in Phase 88** — release-workflow regression has broken 4 consecutive milestone releases. Without REL-01 the v1.12 milestone PR squash-merge will fail identically, leaving v1.12.0 untagged. REL-02 catches up the 2 missed releases (v1.10.0 + v1.11.0) so the release history is contiguous. Both must merge before any PERF phase opens its own milestone-tracking PR.
-- **PERF-02 (instrumentation) MUST precede PERF-03 (consolidation)** — cache-key fingerprint data identifies the cluster to consolidate. Blind consolidation risks re-introducing Plan-02 fragmentation pattern (Phase 86 Lesson).
-- **PERF-06 sequenced last** — measures the cumulative effect of PERF-01..05 via D-17 trigger-equivalence (PR-branch `workflow_dispatch` ≡ post-merge master CI).
-- **DRIV-01 + DRIV-02 co-located in Phase 88** — test rewrite has cross-dependency (DRIV-02 inverts `DriverSheetImportServiceTest#16` and `#17`; once DRIV-01 lands, the `TEAM_NOT_IN_REGULAR_PHASE` warning becomes legitimate again for genuinely missing teams in GROUPS seasons, so the test rewrite handles both contracts without churn).
-- **UX-01 stretch in Phase 91** — separate optional plan, descopable to v1.13 if PERF budget exhausted.
+- **Phase 92 sequenced first (D-Phase-92-First)** — JaCoCo recovery + CLEAN-01 grep-predicate fix creates a clean baseline before Flyway V8-V12 migrations land. Running coverage measurements against a broken baseline would mask Discord-phase regressions. UX-01 + COV-01 + CLEAN-01 + DOCS-01 + BOOK-01 all bundled into a single sequencing-first phase to clear the v1.12 audit slate before any new business logic.
+- **Phase 93 hard-precedes Phase 94 (D-Foundation-Before-Lifecycle)** — `DiscordRestClient` + `DiscordWebhookClient` + sealed `DiscordApiException` hierarchy + `DiscordEmojiCache` must exist before channel-creation buttons can be wired. CHAN-02's "Create Discord Channel" button requires `DiscordRestClient.createChannel` + `createWebhook` and a working CSRF + DTO mass-assignment surface from INFRA-02.
+- **Phase 95 hard-precedes Phase 96 (D-Tracking-Before-Forum)** — `DiscordPost` tracking entity from POST-01 (Flyway V11) is structurally reused by FORUM-02 (race-result forum-thread posts). Same `DiscordPostService.postOrEdit` pattern + same `discord_post` row tracking; FORUM-02 only adds the `?thread_id=` query param + auto-unarchive logic.
+- **Phase 96 hard-precedes Phase 97 (D-Threads-Before-MatchdayPosts)** — Forum-threads must be linkable on `seasons.discord_*_thread_id` before POST-07 (Matchday Overview + Power Rankings → race-results thread) and POST-08 (Standings → standings thread) can target them.
+- **Phase 98 sequenced last (D-E2E-After-All-Buttons)** — E2E suite exercises the full create-channel → post-all-stages → archive lifecycle covering Phases 94-97; cannot run before all 11 post types from POST-01..08 have buttons.
+- **Zero new production dependencies (D-No-New-Deps)** — Spring `RestClient` is Spring 6.1+ core, multipart via `MultipartBodyBuilder`, WireMock already in test scope. Avoids JDA / Discord4J transitive-dependency footprint + license review.
+- **Outbound-only architecture (D-Outbound-Only)** — No inbound slash commands or reaction reads. Local app, no always-online endpoint feasible. Inbound is out-of-scope per design spec § 2.2 and tracked as DISC-FUTURE-01.
+- **Button-triggered, no auto-post (D-Operator-Control)** — All Discord posting is operator-button-triggered. No DB-event auto-trigger pipeline (DISC-FUTURE-02). Preserves full operator control over what lands in Discord.
 
 ### Phase Numbering
 
-Last phase shipped: **87** (v1.11 closer). v1.12 spans phases **88-91** (integer phases, no insertions). Next milestone (v1.13) starts at **phase 92**.
+Last phase shipped: **91** (v1.12 closer). v1.13 spans phases **92-98** (integer phases, no insertions). Per design spec § 5: 7 phases, ~23 plans estimated.
 
 ### Roadmap Evolution
 
-- 2026-05-18: v1.11 milestone closed; archived at `milestones/v1.11-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `milestones/v1.11-phases/`.
-- 2026-05-18: v1.12 milestone started. Branch `gsd/v1.12-driver-import-and-test-perf`. Scope: driver-import data-correctness (DRIV-01..02) + test-wallclock Round 2 (PERF-01..05) + cleanup (CLEAN-01) + optional UX (UX-01).
-- 2026-05-18: v1.12 ROADMAP.md created via `/gsd-new-milestone` — 4 phases (88-91), 10 requirements mapped (100 % coverage). Scope expanded same-session to 15 requirements: (a) 4-milestone release-workflow regression surfaced → REL-01 + REL-02 added to Phase 88; (b) colon-form deprecated-prefix copy-paste friction surfaced → DOCS-01 added to Phase 88 + inline-swept 16 refs in active files; (c) YAGNI audit of disabled tests surfaced 3 speculative/stale patterns → CLEAN-02 (sweep) + CLEAN-03 (BaselineCapture refactor) added to Phase 88. Awaiting user approval before `/gsd-discuss-phase 88`.
-- 2026-05-20: Phase 90 closed via `/gsd-verify-work 90` (UAT 7/7 passed) + `/gsd-secure-phase 90` (3 plan-time threats verified CLOSED — short-circuit, no auditor spawn needed). PERF-03/04/05 REQUIREMENTS rows flipped to Resolved. v1.12 progress now 12/13 plans (92 %). Next phase 91 — PERF-06 CI re-harvest + UX-01 stretch + milestone closer.
+- 2026-05-20: v1.12 milestone closed via `/gsd-complete-milestone v1.12`; PR #129 awaits squash-merge.
+- 2026-05-20: v1.13 milestone started. Branch `gsd/v1.13-discord-integration` created off `origin/master`. Brainstorming session (multi-round) resolved 18 design decisions; design spec committed at `docs/superpowers/specs/2026-05-20-discord-integration-design.md`. 25 REQ-IDs defined in `.planning/REQUIREMENTS.md` (5 carry-forward UX-01/COV-01/CLEAN-01/DOCS-01/BOOK-01 + 20 Discord INFRA-01..03/CHAN-01..03/POST-01..08/GRAFX-01/FORUM-01..02/E2E-01/DOCS-02..03).
+- 2026-05-20: v1.13 ROADMAP.md created — 7 phases (92-98), 25/25 REQ-IDs mapped (100 % coverage), no orphans. Per-phase REQ counts: 5+3+3+5+3+3+3 = 25 ✓. Awaiting user approval before `/gsd-discuss-phase 92`.
 
 ### Blockers/Concerns
 
-At roadmap creation:
+At roadmap creation (2026-05-20):
 
-- **Pre-existing `BackupSchemaExclusionIT.java:40` compile error** (Java-25 AssertJ generic inference) blocks any `./mvnw verify` exit 0 + JaCoCo CSV generation — fixed FIRST in Phase 88 (CLEAN-01). Tracked in v1.11 `80-deferred-items.md`.
-- **Release-workflow regression (4 milestones)** — `git describe --tags --abbrev=0` non-deterministic on duplicate-tag pattern (`v1.X` short-form coexists with `v1.X.0`); naive parser leaves PATCH empty on short-form input; minor-bump produces an existing tag (`v1.9.0`), `git tag` fails exit 128. Failed runs: 26044380205 (v1.11), 25955094759 (v1.10), 25609204039 (v1.9), 24925033178 (v1.8 final). Fixed in Phase 88 (REL-01 + REL-02).
-- **Test-Module-Split decision risk** — Lever 4 (PERF-05) may not pay off without restructuring `src/test/java` into independent Maven modules; Phase 90 plans BOTH branches (proceed + extraction, or defer + rationale).
-- **Driver-import resolver semantics** — DRIV-01 refines (not inverts) the Phase 70 D-05 default ("parent wins"); season-aware variant prefers candidate with PhaseTeam in target REGULAR phase, falls back to parent-precedence when no candidate has a PhaseTeam (legacy seasons preserved).
-- **CI wallclock measurement methodology** — every PERF lever must re-harvest via D-17 trigger-equivalence (PR-branch `workflow_dispatch` ≡ post-merge master CI) to avoid orphan post-merge measurement commits.
-- **Cache-key fragmentation risk on PERF-03** — Phase 86 Lesson: per-class `@DynamicPropertySource` fragmented 1 shared cache key into 7 keys for sitegen cluster. PERF-02 instrumentation MUST land first so PERF-03 has the data to make a targeted consolidation decision.
+- **JaCoCo baseline regression must be closed in Phase 92** — current 88.44 % vs v1.11 88.88 % baseline; Discord-phase test coverage assumed to maintain ≥ 88.88 % only if Phase 92's `RaceControllerCalendarTest` + Google service IT lands first. Phase 93+ measurements run against the post-Phase-92 baseline.
+- **Live Discord UAT required for Phase 93's INFRA-03** — `Test Connection` button (Bot `GET /users/@me`) only meaningfully verifies against a live Discord token + a real (test) guild. WireMock-only ITs cover the happy + 4-permit exception paths but cannot prove the actual Discord-API contract is honored. UAT step explicit in Phase 93 success criteria.
+- **Permission-overwrite audit (Phase 94 CHAN-02) is security-critical** — wrong role-mapping causes opposing team to see match-channel pre-match (T-93-03 from design spec § 3.4). Post-create permission-audit assertion is non-negotiable.
+- **Rate-limit-burst risk on matchday-batch posting (Phase 97 POST-06)** — "Post Match Previews (batch)" iterates over `matchday.matches` and could exceed Discord's per-bucket token bucket. Mitigated by `DiscordRateLimitInterceptor` (per-bucket token-bucket + max-5-parallel + sequential batch).
+- **Forum-thread auto-unarchive (Phase 96 FORUM-02)** — Discord requires PATCH `archived=false` before posting to an archived thread; default config leaves the thread unarchived after the post (per design spec § 4.7). Configurable but not exposed in v1.13 UI.
+- **WireMock-Discord-simulator divergence risk (Phase 98 E2E-01)** — Mandatory UAT in Phase 98 against live Discord with test-season + edge cases (empty forum, archived thread, full category) to catch any drift between WireMock fixtures and real Discord behaviour.
 
 ### Baselines to Preserve
 
-- JaCoCo line coverage: **88.88%** (v1.11 baseline; gate 82%, must not regress)
-- Test count: **1675 tests** (Surefire + Failsafe + Playwright E2E combined; v1.11 final)
-- `./mvnw verify -Pe2e` CI median (E2E step): **17:39** (v1.12 baseline — Phase 91 PERF-06 5-run median, drop min+max; was 23:00 in v1.11; Δ−23.3%)
-- `BackupSchema.SCHEMA_VERSION`: **1** (must remain 1; schema change → bump to 2)
-- `EXPORT_ORDER` size: **24 entities** (guard test active)
+- JaCoCo line coverage: **≥ 88.88%** (v1.11 baseline; Phase 92 restores; subsequent phases must maintain or improve)
+- Test count: **≥ 1696** (v1.12 baseline; Phase 92 adds ~10, Discord phases add ~50-80)
+- `./mvnw verify -Pe2e` CI median (E2E step): **17:39 ± 20 %** (v1.12 baseline; WireMock-only Discord tests, no live Discord in CI)
+- `BackupSchema.SCHEMA_VERSION`: **1** (must remain 1 unless backup wire contract changes)
+- `EXPORT_ORDER` size: **24 entities** (guard test active; Discord entities under `org.ctc.discord.*` are structurally excluded by the `org.ctc.domain.model.*` package filter per Phase 72 D-15)
 - SpotBugs `BugInstance` count: **0** (blocking gate)
 - CodeQL gate-step: **exit 0 on new HIGH/CRITICAL** (3-layer FP suppression invariant maintained)
-- Flyway migrations: V1-V7 immutable; any new schema is V8+
+- Flyway migrations: V1-V7 immutable; v1.13 adds **V8, V9, V10, V11, V12**
 
 ## Session Continuity
 
-**Last session:** 2026-05-20 — milestone v1.12 closed via `/gsd-complete-milestone v1.12`
+**Last session:** 2026-05-20 — v1.13 ROADMAP.md created (7 phases, 25 REQ-IDs, 100 % coverage)
 
-**Stopped at:** Milestone v1.12 archived; awaiting operator squash-merge of PR #129
+**Stopped at:** Roadmap defined for v1.13; awaiting user approval before `/gsd-discuss-phase 92`
 
-**Next action:** `gh pr merge 129 --squash --subject "feat(v1.12): driver-import gap-closure & test performance round 2"` (subject prefix `feat(v1.12):` is required for the workflow's MINOR bump to `v1.12.0` per `docs/operations/release-runbook.md § 6`).
+**Next action:** `/gsd-discuss-phase 92` to scope Phase 92 (Carry-Forwards & Cleanup): UX-01 `CsvImportController` parity + COV-01 JaCoCo recovery + CLEAN-01 grep-predicate tightening + DOCS-01 retroactive 89/90/91-VERIFICATION.md + BOOK-01 bookkeeping flip in `milestones/v1.12-REQUIREMENTS.md`.
 
-**Branch:** `gsd/v1.12-driver-import-and-test-perf` (squash target: master)
+**Branch:** `gsd/v1.13-discord-integration` (off `origin/master`)
 
 ## Operator Next Steps
 
-1. Squash-merge PR #129 with the `feat(v1.12): ...` subject (critical for `v1.12.0` minor bump).
-2. Observe the release workflow on master — should produce `v1.12.0` tag + GitHub Release page + `ghcr.io/jegr78/ctc-manager:1.12.0` + `:latest` within ~20 min.
-3. Post-merge bookkeeping (single doc-only commit on master): flip 7 REQUIREMENTS.md checkboxes (`PERF-01..06` + `UX-01`) and 4 traceability rows (`PERF-01`, `PERF-02`, `PERF-06`, `UX-01`).
-4. Start v1.13 via `/gsd-new-milestone` — see `## Deferred Items` for audit-surfaced carry-forwards (CsvImportController UX-01 scope-extension, JaCoCo cleanup, CLEAN-02 predicate tightening, optional 89/90/91-VERIFICATION.md retrofill).
+1. Verify v1.13 ROADMAP.md + STATE.md + REQUIREMENTS.md reflect the brainstorming-approved 7-phase / 25-REQ structure (this commit).
+2. Squash-merge v1.12 PR #129 if not yet merged (subject `feat(v1.12): driver-import gap-closure & test performance round 2` for the MINOR bump to `v1.12.0`).
+3. Run `/gsd-discuss-phase 92` to decompose Phase 92 into plans (estimated 4 plans per design spec § 5).
+4. After Phase 92 completes, the JaCoCo baseline is restored to ≥ 88.88 % and Discord-phase development can proceed against a clean coverage gate.
