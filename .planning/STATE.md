@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Driver-Import Gap-Closure & Test Performance Round 2
 status: executing
-last_updated: "2026-05-19T22:15:00.000Z"
-last_activity: 2026-05-19 -- Phase 89 complete (Wave-4 median 09:19, -10.4 % vs 10:24 baseline)
+last_updated: "2026-05-20T05:22:57.383Z"
+last_activity: 2026-05-19 -- Phase 89 closed with Wave-4 measurement
 progress:
   total_phases: 4
   completed_phases: 2
@@ -147,7 +147,7 @@ At roadmap creation:
 
 **Next action:** `/gsd-discuss-phase 90` to gather context for PERF-03 + PERF-04 + PERF-05 (consumes PERF-02 Top-5 cluster output from `89-03-SUMMARY.md` — db.migration cluster is the primary consolidation candidate).
 
-**Resume file:** .planning/milestones/v1.12-phases/89-perf-instrumentation-lever-1-per-fork-backup-staging-dir/89-03-SUMMARY.md
+**Resume file:** .planning/milestones/v1.12-phases/90-perf-consolidation-module-split-decision/90-CONTEXT.md
 
 **Branch:** `gsd/v1.12-driver-import-and-test-perf`
 
