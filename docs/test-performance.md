@@ -334,6 +334,76 @@ direction.
 
 ---
 
+## PERF-03 Cluster Consolidation (Phase 90 Plan 01)
+
+Phase 89's PERF-02 Top-1 (`9cefac4c`) Surefire cluster and Top-4 (`f524774b`, hex
+rotated to `499c01dd` in the Phase 90 pre-refactor re-harvest) Failsafe cluster
+have been consolidated onto a new composed annotation
+`org.ctc.testsupport.CtcDevSpringBootContext`, which meta-annotates
+`@SpringBootTest(classes = CtcManagerApplication.class) + @ActiveProfiles("dev")`.
+The refactor's empirical bucket-audit landed at 19 outer test classes (13 Surefire +
+6 Failsafe; the 15 `@Nested` `PlayoffServiceTest` inner classes inherit per Spring TCF
++ JUnit composed-annotation rules). `@Tag("integration")` stays on every Failsafe
+subclass; `@Transactional` stays on `V4MigrationSmokeIT` + `DriverRepositoryOrderIT`.
+See `.planning/milestones/v1.12-phases/90-perf-consolidation-module-split-decision/90-01-SUMMARY.md`
+for the per-class table.
+
+### Top-5 cache-key clusters — before/after
+
+Hex hashes rotate across `mvn clean` invocations (Java identity-hashCode
+randomization); cluster STRUCTURE (which classes collide) is the stable observable.
+
+| # | Pre-refactor (.test-perf-logs/90-01-aggregator-before.txt) | Post-refactor (.test-perf-logs/90-01-aggregator-after.txt) |
+|---|------------------------------------------------------------|------------------------------------------------------------|
+| 1 | `9cefac4c` — 29 events / 29 classes (V5MigrationTest)      | `baafff8e` — 29 events / 29 classes (V5MigrationTest)      |
+| 2 | `f524774b` — 16 events / 16 classes (BackupException…)     | `6273f4ab` — 15 events / 15 classes (BackupException…)     |
+| 3 | `3c6228fd` — 13 events / 13 classes (CsvImport…)           | `35c60549` — 12 events / 12 classes (CsvImport…)           |
+| 4 | `5ff2b420` — 7 events / 7 classes (AdminWorkflowE2E)       | `286b36be` — 7 events / 7 classes (AdminWorkflowE2E)       |
+| 5 | `84ec5236` — 7 events / 7 classes (BackupImport…)          | `cd67fca0` — 7 events / 7 classes (V4MigrationSmoke)       |
+
+### Cluster collapse — Surefire side (consolidation succeeded)
+
+The Surefire bucket `9cefac4c` → `baafff8e` retains all 29 events / 13 outer
+classes. Every class now wears `@CtcDevSpringBootContext` instead of the two-
+annotation stack. Two pre-existing shape variants — `@SpringBootTest(classes =
+CtcManagerApplication.class)` (the three `db.migration.V*MigrationTest` Surefire
+classes) and bare `@SpringBootTest` (the ten `org.ctc.**.*Test` Surefire classes) —
+folded into one shared cache key.
+
+### Cluster mix-up — Failsafe side (partial consolidation)
+
+The Failsafe V4-cluster `499c01dd` (6 outer classes pre-refactor) → `cd67fca0`
+(7 outer classes post-refactor). Two of the six refactored classes
+(`BackupExportServiceIT`, `BackupImportPostCommitEdgeCasesIT`) migrated to
+cluster `6273f4ab` post-refactor; three previously-unrelated Failsafe classes
+(`TeamRestorerIT`, `BackupArchiveExtractUploadsIT`, `BackupStagingCleanupRaceIT`)
+migrated INTO the V4-cluster. Net Failsafe cache-bucket event count is unchanged
+(7 + 15 = 22, same as pre-refactor 6 + 16). Honest observation per D-07:
+empirical Failsafe consolidation is neutral — the refactor's value on this side
+is documentation clarity + future-drift protection, not raw context-reuse gain.
+
+### Wave-5 idle measurement (Plan 01 D-07)
+
+3 idle `./mvnw clean verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev`
+runs on a developer-grade Mac (no other Maven invocations in parallel; no IDE
+compilation active). Run-1 is the pre-refactor baseline used as both Task-1
+hash-bucket audit input and Wave-5 Run-1; Runs 2 + 3 are post-refactor.
+
+| Run | Maven Total time | bash `real` | Context loads | JaCoCo line cov | SpotBugs | Notes |
+|-----|------------------|-------------|---------------|-----------------|----------|-------|
+| 1 (pre-refactor) | 07:24 min | 7:25.91 | 56 | 0.8902 | 0 | `.test-perf-logs/90-01-wave5-run-1.log` |
+| 2 (post-refactor) | 08:27 min | n/a | 55 | 0.8902 | 0 | `.test-perf-logs/90-01-wave5-run-2.log` |
+| 3 (post-refactor) | 09:31 min | n/a | 55 | 0.8902 | 0 | `.test-perf-logs/90-01-wave5-run-3.log` |
+
+Maven Total median (all 3 runs): **08:27 min**.
+Delta vs. Phase 89 Wave-4 median (09:19): **-52 s ≈ -9.3 %** (honest observational
+delta; influenced by system noise; no hard local wallclock gate per D-07).
+
+The PERF-06 CI re-harvest (Phase 91) remains the authoritative measurement against
+the v1.11 23:00 baseline.
+
+---
+
 ## Per-Decision Evidence (D-03 / D-04 / D-06)
 
 ### D-04 Sitegen Cluster (Plan 02)
@@ -446,5 +516,13 @@ Finding 6) and unbound an inherited duplicate Failsafe execution from the
 Spring Boot parent that was silently running every IT twice (Finding 7). Phase
 91 PERF-06 will re-harvest the CI authoritative median to update the v1.11
 23:00 baseline.
+
+*Lever-2 status:* DONE — see **§ PERF-03 Cluster Consolidation (Phase 90 Plan 01)**.
+Composed annotation `@CtcDevSpringBootContext` applied to the 19-class empirical
+audit surface (13 Surefire outer + 6 Failsafe outer). Surefire cluster collapse
+empirically confirmed (`9cefac4c` → `baafff8e` retains all 29 events / 13 outer
+classes); Failsafe consolidation neutral on raw event counts but documentation
+clarity + future-drift protection achieved. PERF-06 (Phase 91) CI re-harvest
+remains authoritative for cumulative-effect measurement.
 
 ---
