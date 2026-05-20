@@ -168,7 +168,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 
 - [x] **Phase 88: Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure** — Fix BackupSchemaExclusionIT compile error (CLEAN-01), YAGNI-sweep speculative `@Disabled`/Windows-skip cruft (CLEAN-02), refactor BaselineCaptureTest to standalone utility (CLEAN-03), harden release workflow against duplicate-tag-pattern regression (REL-01), publish retroactive v1.10.0 + v1.11.0 releases + cleanup legacy short-form tags (REL-02), document canonical `/gsd-` skill-invocation prefix (DOCS-01), close DRIV-01 (season-aware shortName resolver) and DRIV-02 (GROUPS-layout gate for group warnings) (completed 2026-05-19)
 - [x] **Phase 89: PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir)** — PERF-01 per-fork `app.backup.staging-dir` + `app.backup.import-backups-dir` + `app.upload-dir` (3 shared paths) + Failsafe `default-it forkCount=2 reuseForks=true` + inherited Spring-Boot Failsafe execution unbound; PERF-02 `ContextCacheKeyFingerprintListener` + sidecar marker + `scripts/test-perf/aggregate-fingerprints.sh` + docs § PERF-02 Forensics; Wave-4 local median 09:19 = -10.4 % vs Phase-86 10:24 baseline, JaCoCo 0.8902, SpotBugs 0 (completed 2026-05-19)
-- [ ] **Phase 90: PERF Consolidation & Module-Split Decision** — PERF-03 (shared `@ContextConfiguration` cluster identified by PERF-02 data), PERF-04 (Testcontainers `withReuse` pre-emptive wiring), PERF-05 (test-module-split verdict + extraction plan or defer-rationale)
+- [x] **Phase 90: PERF Consolidation & Module-Split Decision** — PERF-03 (shared `@ContextConfiguration` cluster identified by PERF-02 data), PERF-04 (Testcontainers `withReuse` pre-emptive wiring), PERF-05 (test-module-split verdict + extraction plan or defer-rationale) (completed 2026-05-20)
 - [ ] **Phase 91: PERF Re-Harvest, Stretch UX Polish & Milestone Closer** — PERF-06 (CI 5-run median re-harvest, D-17 trigger-equivalence), UX-01 stretch (Google API typed-exception hierarchy + categorized error UX), README/test-performance.md updates, milestone close
 
 ## Phase Details
@@ -255,5 +255,5 @@ See: milestones/v1.11-ROADMAP.md for full details
 |-------|----------------|--------|-----------|
 | 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | 6/6 | Complete   | 2026-05-19 |
 | 89 — PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | 0/3 | Planned | - |
-| 90 — PERF Consolidation & Module-Split Decision | 0/3 | Not started | - |
+| 90 — PERF Consolidation & Module-Split Decision | 3/3 | Complete   | 2026-05-20 |
 | 91 — PERF Re-Harvest, Stretch UX Polish & Milestone Closer | 0/2 | Not started | - |

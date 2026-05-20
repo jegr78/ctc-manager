@@ -96,9 +96,9 @@ Populated by the roadmapper agent (2026-05-18) — 100 % coverage across 4 phase
 | DOCS-01 | 88 | Resolved |
 | PERF-01 | 89 | Pending |
 | PERF-02 | 89 | Pending |
-| PERF-03 | 90 | Pending |
-| PERF-04 | 90 | Pending |
-| PERF-05 | 90 | Pending |
+| PERF-03 | 90 | Resolved (2026-05-20; composed `@CtcDevSpringBootContext`, Surefire cluster `9cefac4c`→`baafff8e` collapsed 2 annotation-shape variants into 1 shared cache key, 19 outer classes refactored, 3-seed Failsafe + Surefire BUILD SUCCESS, Wave-5 median 08:27) |
+| PERF-04 | 90 | Resolved (2026-05-20; `.withReuse(true)` on both MariaDB ITs, `~/.testcontainers.properties` opt-in documented in `docs/test-performance.md § PERF-04` + README, CI gate `@EnabledIfSystemProperty` preserved, T-90-TC-01/02 threats mitigated) |
+| PERF-05 | 90 | Resolved (2026-05-20; `docs/test-performance.md § Test-Module-Split Decision` verdict `defer`, 3 explicit blockers + v1.13 re-evaluation trigger + "Why not reject?" rationale documented) |
 | PERF-06 | 91 | Pending |
 | UX-01 | 91 | Pending (stretch — descopable to v1.13 if PERF over budget) |
 

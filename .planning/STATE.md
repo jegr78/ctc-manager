@@ -2,33 +2,34 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Driver-Import Gap-Closure & Test Performance Round 2
-status: executing
-last_updated: "2026-05-20T06:03:07.182Z"
-last_activity: 2026-05-20 -- Phase 90 planning complete
+status: in_progress
+last_updated: "2026-05-20T08:10:00.000Z"
+last_activity: 2026-05-20
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 13
-  completed_plans: 9
-  percent: 69
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-18)
+See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** v1.12 Phase 89 complete — 3 plans shipped (89-01 PERF-01 per-fork refactor + 89-02 PERF-02 fingerprint listener + 89-03 Wave-4 measurement). Local median Maven 09:19 = -10.4 % vs Phase-86 10:24 baseline. JaCoCo 0.8902, SpotBugs 0, PERF-02 active. Next up `/gsd-discuss-phase 90`.
+**Current focus:** Phase 91 — perf-re-harvest-stretch-ux-closer
 
 ## Current Position
 
-Phase: 89 (perf-instrumentation-lever-1-per-fork-backup-staging-dir) — Complete
-Plans: 3 of 3 shipped
-Status: Ready to execute
-Last activity: 2026-05-20 -- Phase 90 planning complete
+Phase: 91 (perf-re-harvest-stretch-ux-closer) — READY TO PLAN
+Plan: 0 of 2 (estimate)
+Plans: 0 of 2 shipped
+Status: Ready to plan
+Last activity: 2026-05-20
 
 ## Completed Milestones
 
@@ -49,7 +50,7 @@ Last activity: 2026-05-20 -- Phase 90 planning complete
 | ----- | ---- | ------------ | ------ | ----- |
 | 88 | Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | CLEAN-01, CLEAN-02, CLEAN-03, REL-01, REL-02, DOCS-01, DRIV-01, DRIV-02 | Complete (6/6 plans, VERIFICATION passed, REQUIREMENTS Resolved) | 6/6 |
 | 89 | PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | PERF-01, PERF-02 | Complete (3/3 plans shipped; Wave-4 local median 09:19, -10.4 % vs 10:24, JaCoCo 0.8902) | 3/3 |
-| 90 | PERF Consolidation & Module-Split Decision | PERF-03, PERF-04, PERF-05 | Not started | 0/3 (est.) |
+| 90 | PERF Consolidation & Module-Split Decision | PERF-03, PERF-04, PERF-05 | Complete (3/3 plans, UAT 7/7 passed, SECURITY threats_open: 0, JaCoCo 0.8902, SpotBugs 0, Wave-5 median 08:27, REQUIREMENTS Resolved) | 3/3 |
 | 91 | PERF Re-Harvest, Stretch UX Polish & Milestone Closer | PERF-06, UX-01 (stretch) | Not started | 0/2 (est.) |
 
 Total: 15 requirements mapped across 4 phases (14 must-have + 1 stretch). Plan counts are roadmapper estimates; refined during `/gsd-discuss-phase`.
@@ -84,7 +85,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Ready to execute
+- **Status:** Phase complete — ready for verification
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
@@ -120,6 +121,7 @@ Last phase shipped: **87** (v1.11 closer). v1.12 spans phases **88-91** (integer
 - 2026-05-18: v1.11 milestone closed; archived at `milestones/v1.11-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `milestones/v1.11-phases/`.
 - 2026-05-18: v1.12 milestone started. Branch `gsd/v1.12-driver-import-and-test-perf`. Scope: driver-import data-correctness (DRIV-01..02) + test-wallclock Round 2 (PERF-01..05) + cleanup (CLEAN-01) + optional UX (UX-01).
 - 2026-05-18: v1.12 ROADMAP.md created via `/gsd-new-milestone` — 4 phases (88-91), 10 requirements mapped (100 % coverage). Scope expanded same-session to 15 requirements: (a) 4-milestone release-workflow regression surfaced → REL-01 + REL-02 added to Phase 88; (b) colon-form deprecated-prefix copy-paste friction surfaced → DOCS-01 added to Phase 88 + inline-swept 16 refs in active files; (c) YAGNI audit of disabled tests surfaced 3 speculative/stale patterns → CLEAN-02 (sweep) + CLEAN-03 (BaselineCapture refactor) added to Phase 88. Awaiting user approval before `/gsd-discuss-phase 88`.
+- 2026-05-20: Phase 90 closed via `/gsd-verify-work 90` (UAT 7/7 passed) + `/gsd-secure-phase 90` (3 plan-time threats verified CLOSED — short-circuit, no auditor spawn needed). PERF-03/04/05 REQUIREMENTS rows flipped to Resolved. v1.12 progress now 12/13 plans (92 %). Next phase 91 — PERF-06 CI re-harvest + UX-01 stretch + milestone closer.
 
 ### Blockers/Concerns
 
@@ -145,14 +147,18 @@ At roadmap creation:
 
 ## Session Continuity
 
-**Next action:** `/gsd-discuss-phase 90` to gather context for PERF-03 + PERF-04 + PERF-05 (consumes PERF-02 Top-5 cluster output from `89-03-SUMMARY.md` — db.migration cluster is the primary consolidation candidate).
+**Last session:** 2026-05-20 — Phase 90 closed (UAT 7/7 passed, SECURITY.md verified, REQUIREMENTS PERF-03/04/05 → Resolved).
 
-**Resume file:** .planning/milestones/v1.12-phases/90-perf-consolidation-module-split-decision/90-CONTEXT.md
+**Stopped at:** Phase 90 complete, ready to plan Phase 91 — PERF-06 CI re-harvest + UX-01 stretch + milestone closer.
+
+**Next action:** `/gsd-discuss-phase 91` (no CONTEXT.md yet) or directly `/gsd-plan-phase 91`.
+
+**Resume file:** None.
 
 **Branch:** `gsd/v1.12-driver-import-and-test-perf`
 
 ## Operator Next Steps
 
-- `/gsd-discuss-phase 90` for PERF-03 + PERF-04 + PERF-05 (consumes Plan 89-03 Top-5 cluster hand-off: db.migration.V5MigrationTest cluster — 29 classes sharing one cache key — is the primary consolidation target)
-- After Phase 90 closure: re-harvest CI median via 5 `workflow_dispatch` runs (Phase 91 / PERF-06)
-- Stretch decision: if PERF wallclock budget allows, execute UX-01 in Phase 91; otherwise descope to v1.13 with explicit note in 91-CONTEXT.md
+- `/gsd-discuss-phase 91` for PERF-06 (5 `workflow_dispatch` CI runs on milestone branch, D-17 trigger-equivalence, median replaces 23:00 baseline) + UX-01 stretch (Google API typed-exception hierarchy + categorized error UX; descopable to v1.13 if PERF budget exhausted) + README/test-performance.md updates + milestone closer
+- After Phase 91 closure: `/gsd-complete-milestone v1.12` to archive milestone artifacts + open v1.12 milestone PR (squash-merge target into `master`)
+- v1.13 candidate trigger: PERF-06 CI median outcome (materially below 23:00 unlocks test-module-split re-evaluation per Phase 90 PERF-05 defer rationale)
