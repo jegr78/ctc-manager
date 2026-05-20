@@ -44,17 +44,20 @@ at each tag and requires the operator to type `yes` before sending the DELETE ca
 
 Before starting:
 
-1. **Personal access token** with both `repo` (so `gh release create` can write the tag and Release page) and `write:packages` (so `docker push` can write to GHCR).
-   ```bash
-   gh auth status        # must report "Logged in to github.com" with green checks
-   ```
-   Re-authenticate with `gh auth login --scopes repo,write:packages` if either scope is missing or the token is expired.
+1. **Personal access token(s)** — note that `gh` and `docker login ghcr.io` can (and on Personal Accounts often MUST) use different tokens:
+   - **For `gh release create`**: any token with `repo` write access on `jegr78/ctc-manager`. A fine-grained PAT with `Contents: Read and write` works.
+     ```bash
+     gh auth status        # must report "Logged in to github.com" with green checks
+     ```
+     Re-authenticate with `gh auth login --scopes repo` if the token is missing or expired.
+   - **For `docker push` to GHCR**: a **classic PAT** with `write:packages` scope. Fine-grained PATs **do not support `write:packages` for Personal Accounts** — they can read but not push package versions. You can verify the limitation with `gh api /users/jegr78/packages/container/ctc-manager`; HTTP 403 from a fine-grained token confirms you need a classic PAT for the docker login step. Create the classic PAT at GitHub → Settings → Developer settings → Personal access tokens → **Tokens (classic)** → Generate new token, scope `write:packages` (auto-selects `read:packages`).
 
-2. **GHCR Docker login** for the operator account:
+2. **GHCR Docker login** for the operator account using the classic PAT from step 1:
    ```bash
-   echo "$GH_TOKEN" | docker login ghcr.io -u jegr78 --password-stdin
+   read -rs GHCR_TOKEN          # paste classic PAT, Enter (no echo)
+   echo "$GHCR_TOKEN" | docker login ghcr.io -u jegr78 --password-stdin
    ```
-   Verify package write access at <https://github.com/jegr78?tab=packages> — `ctc-manager` must be listed and the operator must have "Write" permission.
+   Expected output: `Login Succeeded`. On macOS Docker Desktop the credential is stored in the system Keychain via the `desktop` `credsStore`, so `~/.docker/config.json` only contains the pointer `"ghcr.io": {}` — that is the normal, secure state, **not** a sign of a missing credential.
 
 3. **Free disk space** for two throwaway worktrees. Each Maven build of the historical SHAs takes ~1 GB under `/tmp/v1.10-build` and `/tmp/v1.11-build`.
 
@@ -96,8 +99,10 @@ ls -lh target/ctc-manager-1.10.0.jar \
 cd <PROJECT_ROOT>
 
 # Atomic remote tag + Release + JAR upload. Targets the historical SHA, not HEAD.
+# IMPORTANT: --target requires the FULL SHA (40 chars). Short SHAs are rejected
+# with HTTP 422 "Release.target_commitish is invalid" even though git resolves them.
 gh release create v1.10.0 \
-  --target 45aabfd0 \
+  --target 45aabfd0e2629813c2c275877e5b3921d536eca5 \
   --title "v1.10.0" \
   --notes-start-tag v1.9.0 \
   --generate-notes \
@@ -151,8 +156,9 @@ ls -lh target/ctc-manager-1.11.0.jar \
 # Back to project root for the gh call.
 cd <PROJECT_ROOT>
 
+# --target requires the FULL SHA (see Section 2 note on HTTP 422 with short SHAs).
 gh release create v1.11.0 \
-  --target 598d1431 \
+  --target 598d1431b350f583478435248401128d1c21cf2e \
   --title "v1.11.0" \
   --notes-start-tag v1.10.0 \
   --generate-notes \
@@ -181,7 +187,7 @@ docker pull ghcr.io/jegr78/ctc-manager:1.11.0
 
 The repository carries pre-2026 short-form tags (`v1.3`, `v1.5`, `v1.8`) that have no corresponding `release:` commit on `master` and confuse the SemVer-sort lookup the hardened workflow uses (`git tag --sort=-version:refname --list 'v[0-9]*.[0-9]*.[0-9]*'`). Delete them via the GitHub git-refs API.
 
-**This section MUST be run interactively by the operator. No agent automation.** Each DELETE call halts at a `read -p "type yes"` prompt; the operator types `yes` to proceed or anything else to skip. Cancelling a tag is non-destructive (the tag stays on the remote).
+**This section MUST be run interactively by the operator. No agent automation.** Section 4b lists three explicit `gh api -X DELETE` commands — one per legacy tag — that the operator runs by hand. Each invocation is its own confirmation; skip a tag by not running its line.
 
 ### 4a. Live-inventory re-verification
 
@@ -203,28 +209,22 @@ refs/tags/v1.8
 
 `v1.6` and `v1.9` are already absent on the remote and do NOT need to be deleted. If the output does not match the expected three lines, stop and investigate — do not extend the loop below to delete unknown tags.
 
-### 4b. Per-tag confirmation loop
+### 4b. Per-tag deletion — three explicit commands
+
+**The "confirmation" is the act of running each command manually**, one at a time. No interactive prompt loop — interactive `read -p` is a bash builtin with different semantics in zsh (`-p` reads from a coprocess, not as a prompt string), so a portable loop would need shell-specific quoting and `</dev/tty` redirection. Three plain commands are clearer and shell-agnostic.
 
 ```bash
-for tag in v1.3 v1.5 v1.8; do
-  echo ""
-  echo "About to delete legacy short-form tag '$tag' from origin (irreversible)."
-  echo "  Endpoint: DELETE /repos/jegr78/ctc-manager/git/refs/tags/$tag"
-  read -p "Type 'yes' to confirm, anything else to skip: " yn
-  if [ "$yn" = "yes" ]; then
-    gh api -X DELETE "/repos/jegr78/ctc-manager/git/refs/tags/$tag"
-    echo "Deleted $tag"
-  else
-    echo "Skipped $tag"
-  fi
-done
+gh api -X DELETE /repos/jegr78/ctc-manager/git/refs/tags/v1.3
+gh api -X DELETE /repos/jegr78/ctc-manager/git/refs/tags/v1.5
+gh api -X DELETE /repos/jegr78/ctc-manager/git/refs/tags/v1.8
 ```
 
 Operator notes:
 
-- The loop body uses `gh api -X DELETE`, NOT `git push --delete origin <tag>`. Both work in principle but `gh api` keeps the operation on the remote API surface and matches the rest of this runbook's idiom.
-- A tag that is already gone returns HTTP 422 and the operator can safely skip on to the next.
-- After the loop, run the same `gh api /repos/.../git/refs/tags | jq … | grep -E '^refs/tags/v[0-9]+$'` and confirm the output is empty.
+- Each command targets a single tag — copy/paste/Enter is the confirmation. Skip a tag by simply not running its line.
+- The commands use `gh api -X DELETE`, NOT `git push --delete origin <tag>`. Both work in principle but `gh api` keeps the operation on the remote API surface and matches the rest of this runbook's idiom.
+- Successful delete returns HTTP 204 (no output). A tag that is already gone returns HTTP 422 — safe to ignore and move on.
+- After the three commands, run the inventory check `gh api /repos/jegr78/ctc-manager/git/refs/tags | jq -r '.[].ref' | grep -E '^refs/tags/v[0-9]+$'` and confirm the output is empty.
 
 ---
 
@@ -266,4 +266,4 @@ If a future milestone PR squash-merge fails to produce its release, investigate 
 
 ---
 
-**Last updated:** 2026-05-20 (Phase 91 closure). This runbook is **review-ready**, NOT yet executed. Execution is a pre-merge operator action BEFORE the v1.12 milestone PR squash-merges to `master` (see intro § "Timing").
+**Last updated:** 2026-05-20 (Phase 91 closure). **Execution status:** Sections 2-5 executed successfully on 2026-05-20 against the v1.12 milestone branch before the PR squash-merge — v1.10.0 + v1.11.0 releases + GHCR images published, legacy short-form tags `v1.3`/`v1.5`/`v1.8` removed. Three runbook bugs discovered during execution were patched in the same session: (a) Section 1 PAT note now distinguishes fine-grained vs classic for `write:packages`; (b) Sections 2 + 3 `gh release create --target` requires the FULL SHA; (c) Section 4b replaced bash-only interactive loop with three explicit `gh api -X DELETE` commands (shell-agnostic). The runbook remains valid for future retroactive catch-ups — do NOT re-run Sections 2-4 for the already-published v1.10.0/v1.11.0 (idempotency guard / 422 errors).
