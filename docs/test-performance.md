@@ -232,6 +232,43 @@ Coverage, Upload Test Reports) see the individual run pages linked above.
 
 ---
 
+## PERF-06 Re-Harvest (Phase 91)
+
+5 consecutive `workflow_dispatch` CI runs on the v1.12 milestone Draft PR branch
+`gsd/v1.12-driver-import-and-test-perf` (head SHA `b63a2be1`), harvested per D-10
+(5 runs, drop min+max, median of 3) and D-17 (PR-branch CI ≡ post-merge master CI:
+`.github/workflows/ci.yml` runs identical steps for `pull_request`, `push`, and
+`workflow_dispatch` triggers; PR-branch harvest closes Phase 91 inside the v1.12
+milestone PR without an orphan post-merge commit).
+
+| Run | Run ID | E2E step wallclock | Seconds | Notes |
+| --- | ------ | ------------------ | ------- | ----- |
+| 1   | [26157245962](https://github.com/jegr78/ctc-manager/actions/runs/26157245962) | 17:39 | 1059 | kept |
+| 2   | [26159013829](https://github.com/jegr78/ctc-manager/actions/runs/26159013829) | 15:29 | 929 | dropped — min |
+| 3   | [26160533478](https://github.com/jegr78/ctc-manager/actions/runs/26160533478) | 16:55 | 1015 | kept |
+| 4   | [26162245258](https://github.com/jegr78/ctc-manager/actions/runs/26162245258) | 18:42 | 1122 | dropped — max |
+| 5   | [26164197273](https://github.com/jegr78/ctc-manager/actions/runs/26164197273) | 17:52 | 1072 | kept |
+
+**CI Median (v1.12 baseline):** **17:39** (1059s; middle 3 = 1015/1059/1072, median = 1059s)
+**Variance:** **18.2%** ((1122 − 929) / 1059; within D-10 20% tolerance — no
+second 5-run block needed)
+**Comparison vs v1.11 baseline (23:00):** **Δ−23.3%** (reduction — 1059s vs 1380s,
+−321s)
+**Cumulative levers landed:** Phase 89 PERF-01 (per-fork backup-staging-dir) and
+PERF-02 (fingerprint listener); Phase 90 PERF-03 (composed `@CtcDevSpringBootContext`),
+PERF-04 (Testcontainers `.withReuse(true)` opt-in), and PERF-05 (module-split
+defer verdict).
+
+The harvest harness wired `gh workflow run` + `gh run watch --exit-status --interval 30`
+into a sequential loop (Pitfall 1: `concurrency.cancel-in-progress: true` in ci.yml
+forbids parallel triggers; sequential serialization is mandatory). All 5 runs
+completed with `conclusion: success`; E2E-step wallclock extracted via the
+`gh run view <id> --json jobs` step-timing API (Pitfall 2: step-level GitHub
+Actions duration is the authoritative metric; Maven `[INFO] Total time:` agrees
+within ±3 s but mixes nested `mvn` invocations and is less precise).
+
+---
+
 ## Context Load Counts (PERF-02)
 
 | Measurement Point        | Context Loads | Run Command                              |
