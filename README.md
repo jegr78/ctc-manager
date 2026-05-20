@@ -152,3 +152,5 @@ See the [Wiki](../../wiki) for detailed documentation on architecture, features,
 ## Test Performance
 
 Test wallclock metrics, per-phase optimisation history, and the per-fork backup-staging-dir + cache-key fingerprint instrumentation are documented in [`docs/test-performance.md`](docs/test-performance.md). The current local baseline is the v1.12 Wave-4 median (Phase 89, per-fork `app.backup.staging-dir` + Failsafe `default-it` `forkCount=2 reuseForks=true` + PERF-02 cache-key fingerprint listener). The authoritative CI median will be re-harvested in v1.12 Phase 91 (PERF-06).
+
+Developers can enable Testcontainers MariaDB container reuse by adding `testcontainers.reuse.enable=true` to `~/.testcontainers.properties` — see the [`## PERF-04 Testcontainers Reuse`](docs/test-performance.md#perf-04-testcontainers-reuse) section in `docs/test-performance.md` for the opt-in protocol, the `docker ps` verification command, and the cleanup hint. CI behavior is unchanged; both MariaDB-backed ITs are gated by `@EnabledIfSystemProperty(named = "docker.available", matches = "true")` and CI never sets the flag.

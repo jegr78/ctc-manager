@@ -404,6 +404,68 @@ the v1.11 23:00 baseline.
 
 ---
 
+## PERF-04 Testcontainers Reuse
+
+Both existing MariaDB-backed Failsafe ITs — `BackupImportMariaDbSmokeIT` and the
+nested `BackupRoundTripIT.MariaDbRoundTripTests` — declare their containers with
+`.withReuse(true)` appended to the existing `.withDatabaseName(...) /
+.withUsername(...) / .withPassword(...)` chain. The reuse opt-in is
+per-developer-machine: create or edit `~/.testcontainers.properties` and add the
+single line `testcontainers.reuse.enable=true`. With the opt-in present, the
+MariaDB container survives JVM exit (Ryuk teardown is skipped) and re-attaches on
+the next `./mvnw verify -Pe2e` invocation that runs the IT, saving roughly 5–7 s
+per IT per session. Without the opt-in file `.withReuse(true)` is a silent no-op
+and the container cold-starts + Ryuk-reaps exactly as it did before this change.
+
+### Verification (developer machine)
+
+After running the IT twice in succession with the opt-in enabled, the same
+container should be visible across runs:
+
+```bash
+docker ps --filter label=org.testcontainers.reuse.enable=true
+```
+
+Testcontainers also logs the empirical re-attach line `Reusing container ...`
+(instead of `Starting container ...`) on the second invocation; that log line is
+the load-bearing confirmation.
+
+### Zero-CI-impact framing
+
+Both ITs are gated by `@EnabledIfSystemProperty(named = "docker.available",
+matches = "true")` and CI runs `./mvnw verify -Pe2e` WITHOUT setting that flag
+(Phase 77 D-05). CI runners also do not carry `~/.testcontainers.properties`, so
+even if the gate were flipped the `.withReuse(true)` call would be a no-op on CI.
+Net CI behavior change introduced by Phase 90 PERF-04: zero. CI cold-start +
+Ryuk-reap behavior is unchanged.
+
+### Future MariaDB IT authors — seed defensively
+
+Container reuse persists database state across JVM exits. Any future MariaDB IT
+that opts into the same `.withReuse(true)` chain MUST call
+`testDataService.seed(...)` (or an equivalent reset routine) in `@BeforeEach` to
+avoid observing stale rows from a prior developer run. The two existing ITs
+already comply: `BackupImportMariaDbSmokeIT` replaces the entire fixture in
+`@BeforeEach`; `BackupRoundTripIT.MariaDbRoundTripTests` wipes and restores the
+DB inside the test body. This is a documentation invariant (Phase 90 Plan 02
+threat row T-90-TC-01); reviewers should reject any new reuse-enabled IT that
+doesn't reseed.
+
+### Cleanup hint
+
+If a long-lived dev session accumulates orphan reuse-mode containers across
+project rotations, sweep them with:
+
+```bash
+docker container prune --filter "label=org.testcontainers.reuse.enable=true"
+```
+
+This affects only Testcontainers reuse-labelled containers; non-reuse and
+non-Testcontainers containers are untouched (Phase 90 Plan 02 threat row
+T-90-TC-02).
+
+---
+
 ## Per-Decision Evidence (D-03 / D-04 / D-06)
 
 ### D-04 Sitegen Cluster (Plan 02)
