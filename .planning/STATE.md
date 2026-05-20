@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Driver-Import Gap-Closure & Test Performance Round 2
-status: verifying
+status: executing
 stopped_at: "Phase 91 context gathered (13 decisions; 3 plans planned: PERF-06, UX-01, Closer)"
-last_updated: "2026-05-20T09:29:12.266Z"
-last_activity: 2026-05-20
+last_updated: "2026-05-20T10:27:35.531Z"
+last_activity: 2026-05-20 -- Phase 91 planning complete
 progress:
   total_phases: 4
   completed_phases: 3
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 Phase: 91 (perf-re-harvest-stretch-ux-closer) — READY TO PLAN
 Plan: 0 of 2 (estimate)
 Plans: 0 of 2 shipped
-Status: Ready to plan
-Last activity: 2026-05-20
+Status: Ready to execute
+Last activity: 2026-05-20 -- Phase 91 planning complete
 
 ## Completed Milestones
 
@@ -86,7 +86,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Phase complete — ready for verification
+- **Status:** Ready to execute
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_

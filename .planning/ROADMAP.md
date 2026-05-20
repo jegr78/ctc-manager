@@ -232,7 +232,10 @@ See: milestones/v1.11-ROADMAP.md for full details
   3. (Stretch — only if PERF wallclock budget allows): `DriverSheetImportService.preview()` + `execute()` + `GoogleCalendarService` calendar-sync surface user-facing form errors with category badges ("Connection problem — retry", "Authentication problem — re-link Google account", "Sheet not found — check ID") backed by a typed-exception hierarchy; documented in `docs/operations/google-integration.md`. If descoped to v1.13, an explicit `UX-01 deferred` note lands in `91-CONTEXT.md` + `STATE.md`.
   4. README "Test Performance" / Backup sections updated to point at the new v1.12 baseline and v1.12 PR; `MILESTONES.md` carries a v1.12 entry with shipped-date, phase range, plan count, requirements satisfied; v1.12 milestone PR (squash-merge target) is opened on `gsd/v1.12-driver-import-and-test-perf` with full body referencing each REQ-ID, success criteria status, and CI run links.
   5. JaCoCo coverage ≥ 88.88 % held; SpotBugs `BugInstance` 0; CodeQL gate-step exits 0; all Nyquist VALIDATION.md drafts approved (or explicitly carried forward to v1.13 per Option-A in-milestone closure pattern from v1.11).
-**Plans**: TBD
+**Plans**: 3 plans (sequential inline — Wave 1 → Wave 2 → Wave 3 per CONTEXT.md D-02 + [[inline-sequential-execution]] + [[wave-pause]])
+- [ ] 91-01-PLAN.md — PERF-06 CI 5-run workflow_dispatch re-harvest + Draft-PR open early + STATE.md baseline swap + PROJECT.md trend row (D-04 + D-05 + D-17) (Wave 1)
+- [ ] 91-02-PLAN.md — UX-01 sealed GoogleApiException hierarchy + GoogleApiExceptionMapper + flash errorCategory + admin.css badge + Thymeleaf badge + docs/operations/google-integration.md runbook (D-06 + D-07 + D-08 + D-09) (Wave 2)
+- [ ] 91-03-PLAN.md — Milestone closer — MILESTONES.md v1.12 entry + README pointers + v1.12 PR composite body per D-07b + D-11 retroactive Nyquist sweep + Draft→Ready flip (D-05 finalize) (Wave 3)
 
 ## Progress
 
@@ -247,7 +250,7 @@ See: milestones/v1.11-ROADMAP.md for full details
 | v1.9 Season Phases & Groups | 56-70 | ~70 | Complete | 2026-05-09 |
 | v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | 50 | Complete | 2026-05-16 |
 | v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | 46 | Complete | 2026-05-18 |
-| v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | ~16 | In flight | - |
+| v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | In flight | - |
 
 ### v1.12 Phase Progress
 
@@ -256,4 +259,4 @@ See: milestones/v1.11-ROADMAP.md for full details
 | 88 — Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | 6/6 | Complete   | 2026-05-19 |
 | 89 — PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | 0/3 | Planned | - |
 | 90 — PERF Consolidation & Module-Split Decision | 3/3 | Complete   | 2026-05-20 |
-| 91 — PERF Re-Harvest, Stretch UX Polish & Milestone Closer | 0/2 | Not started | - |
+| 91 — PERF Re-Harvest, Stretch UX Polish & Milestone Closer | 0/3 | Planned | - |
