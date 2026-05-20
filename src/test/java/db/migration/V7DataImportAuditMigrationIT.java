@@ -7,12 +7,10 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 import javax.sql.DataSource;
-import org.ctc.CtcManagerApplication;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,8 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code db.migration} package is OUTSIDE the {@code org.ctc.*} component-scan tree
  * (mirrors V4MigrationSmokeIT.java).
  */
-@SpringBootTest(classes = CtcManagerApplication.class)
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 @Tag("integration")
 class V7DataImportAuditMigrationIT {
 

@@ -8,11 +8,10 @@ import org.ctc.backup.schema.EntityRef;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,8 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Not {@code @Transactional} — the production service carries the read-only
  * transaction; a test-class transaction would mask a regression that removed it.
  */
-@SpringBootTest
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 @Tag("integration")
 class BackupExportServiceIT {
 

@@ -16,13 +16,12 @@ import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.schema.BackupManifest;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,8 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>All malicious fixtures are generated programmatically (D-25). No binary blobs
  * committed under {@code src/test/resources/backup-fixtures/malicious/}.
  */
-@SpringBootTest
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 @Tag("integration")
 class BackupArchiveServiceReadIT {
 

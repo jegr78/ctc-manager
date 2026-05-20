@@ -10,11 +10,10 @@ import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.Team;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -22,8 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code seasonDrivers} collection ordered by ascending {@code season.year} then {@code season.number},
  * enforced by SQL {@code ORDER BY} in the JPQL fetch query.
  */
-@SpringBootTest
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 @Transactional
 @Tag("integration")
 class DriverRepositoryOrderIT {
