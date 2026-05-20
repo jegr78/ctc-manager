@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>org.ctc</groupId>
 	<artifactId>ctc-manager</artifactId>
-	<version>1.11.0-SNAPSHOT</version>
+	<version>1.12.0</version>
 	<name>ctc-manager</name>
 	<description>Community Team Cup - Gran Turismo Racing League Manager</description>
 	<properties>
