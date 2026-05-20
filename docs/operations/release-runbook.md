@@ -262,6 +262,25 @@ After Phase 88 / REL-01 hardening lands (`.github/workflows/release.yml` SemVer-
 
 The operator does NOT run this runbook for future v1.X.0 releases. The runbook is reserved for retroactive catch-up of historically missed releases. The hardened workflow refuses to recreate an existing tag (idempotency guard fires `::error::Tag vX.Y.0 already exists. Aborting before build.` BEFORE the 19-minute build), so accidental re-runs are bounded.
 
+### Squash-merge subject discipline (operator action — critical for MINOR bump)
+
+The workflow's bump-determination logic at [.github/workflows/release.yml:70](../../.github/workflows/release.yml#L70) and [:85](../../.github/workflows/release.yml#L85) requires the squash-merge commit subject to match Conventional Commits — **with the `feat:` prefix specifically for the `vX.Y → vX.Y.0` minor bump**:
+
+```bash
+gh pr merge <PR_NUMBER> --squash --subject "feat(vX.Y): <milestone title>"
+```
+
+Operator failure modes (silent or wrong-version):
+
+| Operator action | Result |
+| --------------- | ------ |
+| `gh pr merge --squash --subject "feat(v1.12): driver-import gap-closure & test performance round 2"` | ✓ Minor bump → `v1.12.0` |
+| `gh pr merge --squash` (no `--subject`) | ⚠ Default subject = PR title — if PR title lacks a Conventional prefix, the workflow silently skips (no release fires) |
+| `gh pr merge --squash --subject "release v1.12"` (no Conventional prefix) | ⚠ Workflow silently skips |
+| `gh pr merge --squash --subject "fix: ..."` | ⚠ PATCH bump — publishes `v(X.Y-1).Z+1` instead of `vX.Y.0` |
+
+This mirrors the project's `[[feedback-squash-merge-message]]` memory rule. Add the subject-discipline check to the milestone PR description's pre-merge checklist.
+
 If a future milestone PR squash-merge fails to produce its release, investigate the run before reaching for this runbook — most regressions will be fixable in the workflow itself.
 
 ---
