@@ -113,12 +113,43 @@ created: 2026-05-20
 
 ## Validation Sign-Off
 
-- [ ] All tasks have automated verify command OR an entry in Manual-Only Verifications with explicit instructions
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify (PERF-06 + Closer are docs-heavy; each task's `grep` check counts as automated)
-- [ ] Wave 0 covers UX-01 missing test stubs (`GoogleApiExceptionMapperTest`, service-level typed-throws assertions)
-- [ ] No watch-mode flags (single final `./mvnw verify` per plan per [[test-call-optimization]])
-- [ ] Feedback latency < 600s for `./mvnw verify`; CI re-harvest intentionally async
-- [ ] `nyquist_compliant: true` set in frontmatter after `/gsd-validate-phase 91` passes
-- [ ] Pre-`/gsd-complete-milestone` retroactive sweep: `/gsd-validate-phase {88,89,90,91}` all return `nyquist_compliant: true` (D-11 strict, NOT Option-A)
+- [x] All tasks have automated verify command OR an entry in Manual-Only Verifications with explicit instructions
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (PERF-06 + Closer are docs-heavy; each task's `grep` check counts as automated)
+- [x] Wave 0 covers UX-01 missing test stubs (`GoogleApiExceptionMapperTest`, service-level typed-throws assertions)
+- [x] No watch-mode flags (single final `./mvnw verify` per plan per [[test-call-optimization]])
+- [x] Feedback latency < 600s for `./mvnw verify`; CI re-harvest intentionally async
+- [x] `nyquist_compliant: true` set in frontmatter after `/gsd-validate-phase 91` passes
+- [x] Pre-`/gsd-complete-milestone` retroactive sweep: `/gsd-validate-phase {88,89,90,91}` all return `nyquist_compliant: true` (D-11 strict, NOT Option-A)
 
 **Approval:** approved (Plan 91-03 closed 2026-05-20 — phase-level `nyquist_compliant: true`, all 3 plans landed, milestone PR #129 Ready-for-review).
+
+---
+
+## Validation Audit 2026-05-20
+
+`/gsd-validate-phase 91` — State A (existing VALIDATION.md) audit after Plan 91-03 close.
+
+| Metric | Count |
+| ------ | ----- |
+| Total task rows | 18 (4 × Plan 91-01 + 10 × Plan 91-02 + 4 × Plan 91-03) |
+| ✅ green (automated, passing) | 17 |
+| ⬜ pending-manual (Manual-Only verified) | 1 (91-02-09 visual badge UAT — 4 categories × Desktop + Mobile; properly classified in Manual-Only Verifications table with operator procedure) |
+| ❌ red / failing | 0 |
+| MISSING tests | 0 |
+| PARTIAL tests | 0 |
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+**Verdict:** Nyquist-compliant. All requirements (PERF-06 + UX-01) have either automated verification commands OR an entry in Manual-Only Verifications with explicit operator instructions. No auditor spawn required. Phase-level frontmatter `nyquist_compliant: true` confirmed; D-11 strict gate satisfied.
+
+**D-11 pre-`/gsd-complete-milestone` retroactive sweep (4/4):**
+
+| Phase | VALIDATION.md frontmatter | Verdict |
+| ----- | ------------------------- | ------- |
+| 88 | `status: passed`, `nyquist_compliant: true` | ✅ |
+| 89 | `status: complete`, `nyquist_compliant: true` | ✅ |
+| 90 | `status: verified`, `nyquist_compliant: true` | ✅ |
+| 91 | `status: complete`, `nyquist_compliant: true` | ✅ |
+
+**Scoreboard: compliant 4/0/0.** v1.12 milestone is ready for `/gsd-complete-milestone v1.12` post squash-merge.
