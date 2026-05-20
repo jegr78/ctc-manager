@@ -83,7 +83,13 @@
                     Backup import in progress — write access is temporarily locked.
                 </div>
                 <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
-                <div th:if="${errorMessage}" class="alert alert-error" th:text="${errorMessage}"></div>
+                <div th:if="${errorMessage}" class="alert alert-error">
+                    <span th:if="${errorCategory}"
+                          class="error-badge"
+                          th:classappend="|error-badge--${#strings.toLowerCase(errorCategory)}|"
+                          th:text="${errorCategory}"></span>
+                    <span th:text="${errorMessage}"></span>
+                </div>
                 <div th:replace="${content}"></div>
             </div>
         </main>
