@@ -466,6 +466,82 @@ T-90-TC-02).
 
 ---
 
+## Test-Module-Split Decision
+
+**Verdict (v1.12):** Defer — re-evaluate in v1.13 against PERF-06 CI re-harvest baseline.
+
+The question — whether to extract `src/test/java/` into a separate Maven module
+(`ctc-manager-tests` artifact) — was raised as the next-tier structural lever in
+the v1.12 PERF forward path. After weighing the three architectural blockers
+below against the optionality-preservation principle, Phase 90 PERF-05 lands
+on `defer` (one of the three outcomes — `proceed` / `defer` / `reject` — that
+REQUIREMENTS.md PERF-05 permits).
+
+**Blocker 1 — TestDataService cross-boundary.** `org.ctc.admin.TestDataService`
+lives in `src/main/java` and carries `@Profile({"dev","local"})` (v1.11 QUAL-02
+widened it from the prior `dev`-only annotation so manual smoke runs against the
+`local` MariaDB profile work as well). The class seeds test data but is itself
+production-scope. A clean test-module split would force one of three
+architecturally-poor outcomes: (a) duplicating its fixtures into the test
+module — divergence risk + maintenance overhead; (b) leaving `TestDataService`
+in main with a circular dependency on the test module — Maven cycle violation +
+inverted scope; (c) extracting a third `ctc-manager-fixtures` module — three-
+module project for one cross-boundary class, net negative ergonomics for the
+small surface area involved. None of the three options moves the project
+forward; all three are net negative relative to the single-module status quo.
+See CONTEXT.md D-05 for the full rationale.
+
+**Blocker 2 — IDE-friction risk.** `.planning/milestones/v1.11-phases/80-openrewrite-integration/deferred-items.md`
+(2026-05-16 entry) documents JDT-cache pathologies that have repeatedly bitten
+the team during Maven restructures — stale "Unresolved compilation problem"
+errors that look real but disappear after a clean Maven test-compile. The
+project memory `[[clean-maven-build-authority]]` codifies the rule:
+clean Maven is the source of truth, not the IDE cache. A multi-module
+restructure historically amplifies this pathology (separate classpaths,
+separate compile units, more places for the IDE to disagree with Maven), and
+the single-module project has been stable through 87 phases of compounding
+change. Trading documented stability for speculative gain on the back of
+known IDE-friction risk is not a justified bet without hard data on the gain side.
+
+**Blocker 3 — No hard cumulative-effect data yet.** Phase 89 Wave-4 already
+landed -10.4 % on the local median (per-fork `app.backup.staging-dir` + Failsafe
+`forkCount=2 reuseForks=true` + duplicate-Failsafe-execution removal); Phase 90
+PERF-04 is dev-only (Testcontainers reuse opt-in; zero CI impact). The
+authoritative CI cumulative-effect against the v1.11 23:00 baseline is unknown
+until Phase 91 PERF-06 re-harvests the GitHub Actions median across 5
+representative runs. Splitting modules before that data lands risks substantial
+restructure cost for marginal gain — if PERF-06 reveals the cumulative effect
+already closes most of the 23:00 → 7:50 gap, a module split is unnecessary; if
+it leaves a large remaining gap, the split decision should be made against the
+actual delta, not against the speculative one.
+
+### Re-evaluation trigger
+
+The v1.13 milestone-discuss workflow (`/gsd-new-milestone`) consults this
+section. If PERF-06 (Phase 91) CI median lands materially below the v1.11 23:00
+baseline but still above the 7:50 historical gate, AND no other architectural
+lever surfaces during the v1.13 discovery phase, the v1.13 milestone-discuss
+workflow re-opens the test-module-split decision against the hard CI data
+baseline. The decision at that point may be `proceed` (extract with a concrete
+acceptance criterion against the remaining wallclock gap), `defer` again (still
+incomplete data or a new dominant lever), or `reject` (data shows the split's
+marginal value no longer justifies the IDE-friction + cross-boundary cost).
+
+### Why not reject?
+
+Rejecting now would foreclose v1.13 optionality without the empirical CI data
+to justify the foreclosure. The Phase 86 D-15 OR-branch precedent — choosing
+the explicit-future-condition branch over the close-the-door branch — is the
+canonical pattern for this codebase when authoritative measurement is still
+upstream. Defer-with-explicit-blockers leaves the door open for v1.13 to
+re-decide against hard data; the three blockers above are the structural
+guardrails the v1.13 workflow inherits, not throwaway prose. If any blocker
+materially changes (TestDataService refactored out of `src/main`, JDT-cache
+pathologies resolved by a future tooling upgrade, or PERF-06 leaves an
+unambiguous CI gap), the v1.13 decision-point has a clear axis to move on.
+
+---
+
 ## Per-Decision Evidence (D-03 / D-04 / D-06)
 
 ### D-04 Sitegen Cluster (Plan 02)
