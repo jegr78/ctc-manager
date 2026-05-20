@@ -518,7 +518,8 @@ class BackupRoundTripIT {
 		static MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11")
 				.withDatabaseName("ctc_test")
 				.withUsername("ctc")
-				.withPassword("test");
+				.withPassword("test")
+				.withReuse(true);
 
 		@DynamicPropertySource
 		static void overrideJdbcUrl(DynamicPropertyRegistry registry) {

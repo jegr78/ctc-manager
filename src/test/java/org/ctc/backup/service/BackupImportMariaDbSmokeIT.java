@@ -104,7 +104,8 @@ class BackupImportMariaDbSmokeIT {
     static MariaDBContainer<?> mariadb = new MariaDBContainer<>("mariadb:11")
             .withDatabaseName("ctc_test")
             .withUsername("ctc")
-            .withPassword("test");
+            .withPassword("test")
+            .withReuse(true);
 
     private static final Path IMPORT_BACKUPS_ROOT;
     static {
