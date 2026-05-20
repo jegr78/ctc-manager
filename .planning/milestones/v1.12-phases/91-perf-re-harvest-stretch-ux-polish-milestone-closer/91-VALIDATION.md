@@ -58,10 +58,10 @@ created: 2026-05-20
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 91-01-XX | 01 | 1 | PERF-06 | — | n/a (measurement) | docs | `grep -E '^## PERF-06 Re-Harvest' docs/test-performance.md && grep -E 'median[: ].*[0-9]+:[0-9]+' docs/test-performance.md` | ✅ post-author | ⬜ pending |
-| 91-01-XX | 01 | 1 | PERF-06 | — | n/a | docs | `grep -E '(v1.12 baseline:?\s*[0-9]+:[0-9]+|v1\.12.*CI E2E median)' .planning/STATE.md` (D-04 baseline swap) | ✅ post-author | ⬜ pending |
-| 91-01-XX | 01 | 1 | PERF-06 | — | n/a | ci | `gh run list --workflow ci.yml --branch gsd/v1.12-driver-import-and-test-perf --event workflow_dispatch --limit 5 --json conclusion --jq 'all(.conclusion=="success")'` | ✅ post-runs | ⬜ pending |
-| 91-01-XX | 01 | 1 | PERF-06 | — | n/a | pr | `gh pr view --json isDraft,headRefName --jq '.isDraft == true and .headRefName == "gsd/v1.12-driver-import-and-test-perf"'` (Draft-PR opened per D-05) | ✅ post-open | ⬜ pending |
+| 91-01-01 | 01 | 1 | PERF-06 | — | n/a (measurement) | docs | `grep -E '^## PERF-06 Re-Harvest' docs/test-performance.md && grep -E 'median[: ].*[0-9]+:[0-9]+' docs/test-performance.md` | ✅ committed | ✅ green |
+| 91-01-02 | 01 | 1 | PERF-06 | — | n/a | docs | `grep -E '(v1\.12 baseline\|v1\.12.*CI median\|CI median.*v1\.12 baseline)' .planning/STATE.md` (D-04 baseline swap; BSD-grep-safe — no `\s`) | ✅ committed | ✅ green |
+| 91-01-03 | 01 | 1 | PERF-06 | — | n/a | ci | `gh run list --workflow ci.yml --branch gsd/v1.12-driver-import-and-test-perf --event workflow_dispatch --limit 5 --json conclusion --jq 'all(.conclusion=="success")'` | ✅ 5 runs all success | ✅ green |
+| 91-01-04 | 01 | 1 | PERF-06 | — | n/a | pr | `gh pr view --json isDraft,headRefName --jq '.isDraft == true and .headRefName == "gsd/v1.12-driver-import-and-test-perf"'` (Draft-PR opened per D-05) | ✅ PR #129 Draft | ✅ green |
 
 ### Plan 91-02 — UX-01 Typed-Exception Hierarchy + Flash UX (code + UI validation)
 
