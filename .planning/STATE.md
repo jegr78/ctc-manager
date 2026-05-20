@@ -139,7 +139,7 @@ At roadmap creation:
 
 - JaCoCo line coverage: **88.88%** (v1.11 baseline; gate 82%, must not regress)
 - Test count: **1675 tests** (Surefire + Failsafe + Playwright E2E combined; v1.11 final)
-- `./mvnw verify -Pe2e` CI median (E2E step): **23:00** (v1.11 baseline; v1.12 Round-2 target TBD post-PERF-01..03, re-harvested in Phase 91 PERF-06)
+- `./mvnw verify -Pe2e` CI median (E2E step): **17:39** (v1.12 baseline — Phase 91 PERF-06 5-run median, drop min+max; was 23:00 in v1.11; Δ−23.3%)
 - `BackupSchema.SCHEMA_VERSION`: **1** (must remain 1; schema change → bump to 2)
 - `EXPORT_ORDER` size: **24 entities** (guard test active)
 - SpotBugs `BugInstance` count: **0** (blocking gate)
