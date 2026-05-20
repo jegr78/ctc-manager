@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.12
 milestone_name: Driver-Import Gap-Closure & Test Performance Round 2
-status: executing
+status: completed
 stopped_at: "Phase 91 context gathered (13 decisions; 3 plans planned: PERF-06, UX-01, Closer)"
-last_updated: "2026-05-20T10:27:35.531Z"
-last_activity: 2026-05-20 -- Phase 91 planning complete
+last_updated: "2026-05-20T18:13:55.264Z"
+last_activity: 2026-05-20 — Milestone v1.12 completed and archived
 progress:
   total_phases: 4
   completed_phases: 3
@@ -22,15 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 91 — perf-re-harvest-stretch-ux-closer
+**Current focus:** Planning next milestone (v1.13) — pre-merge milestone closure complete; awaiting `gh pr merge --squash --subject "feat(v1.12): ..."` then `/gsd-new-milestone`.
 
 ## Current Position
 
-Phase: 91 (perf-re-harvest-stretch-ux-closer) — READY TO PLAN
-Plan: 0 of 2 (estimate)
-Plans: 0 of 2 shipped
-Status: Ready to execute
-Last activity: 2026-05-20 -- Phase 91 planning complete
+Phase: Milestone v1.12 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-20 — Milestone v1.12 completed and archived
 
 ## Completed Milestones
 
@@ -44,49 +43,39 @@ Last activity: 2026-05-20 -- Phase 91 planning complete
 - v1.9 Season Phases & Groups (15 phases, ~70 plans, 38/38 requirements, +88.4k LOC) — shipped 2026-05-09
 - v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (9 phases, 50 plans, 39/39 requirements, +77.4k LOC, 87.80% JaCoCo) — shipped 2026-05-16
 - v1.11 Tooling Infrastructure & Tech-Debt Sweep (8 phases 80-87, 46 plans, 46/46 requirements, JaCoCo 88.88%, 1675 tests, CI E2E median 23:00) — shipped 2026-05-18
+- v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (4 phases 88-91, 15 plans, 15/15 requirements substantively satisfied, JaCoCo 88.44%, 1696 tests, CI E2E median **17:39** Δ−23.3 %, Nyquist 4/0/0 compliant) — shipped 2026-05-20
 
-## Active Milestone — v1.12 (Phases 88-91)
+## Active Milestone
 
-| Phase | Name | Requirements | Status | Plans |
-| ----- | ---- | ------------ | ------ | ----- |
-| 88 | Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure | CLEAN-01, CLEAN-02, CLEAN-03, REL-01, REL-02, DOCS-01, DRIV-01, DRIV-02 | Complete (6/6 plans, VERIFICATION passed, REQUIREMENTS Resolved) | 6/6 |
-| 89 | PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) | PERF-01, PERF-02 | Complete (3/3 plans shipped; Wave-4 local median 09:19, -10.4 % vs 10:24, JaCoCo 0.8902) | 3/3 |
-| 90 | PERF Consolidation & Module-Split Decision | PERF-03, PERF-04, PERF-05 | Complete (3/3 plans, UAT 7/7 passed, SECURITY threats_open: 0, JaCoCo 0.8902, SpotBugs 0, Wave-5 median 08:27, REQUIREMENTS Resolved) | 3/3 |
-| 91 | PERF Re-Harvest, Stretch UX Polish & Milestone Closer | PERF-06, UX-01 (stretch) | Not started | 0/2 (est.) |
-
-Total: 15 requirements mapped across 4 phases (14 must-have + 1 stretch). Plan counts are roadmapper estimates; refined during `/gsd-discuss-phase`.
+None — v1.12 closed 2026-05-20. Next milestone (v1.13) starts via `/gsd-new-milestone` after the v1.12 PR squash-merge produces `v1.12.0` on master.
 
 ## Deferred Items
 
-Items carried forward into v1.12 (to be cleared by roadmap phases 88+):
+Items carried forward into v1.13 (from v1.12 audit + post-merge follow-ups):
 
 | Category | Item | Resolution Plan |
 | -------- | ---- | --------------- |
-| tech_debt | Driver-import shortname-resolver picks parent without PhaseTeam (data-correctness) | DRIV-01 — season-aware resolver (Phase 88) |
-| tech_debt | Driver-import group-warnings fire for non-GROUPS seasons (UI noise) | DRIV-02 — layout gate + per-tab usesGroups flag (Phase 88) |
-| tech_debt | PERF-FUTURE-01 — CI test wallclock 23:00 vs target ≤7m 50s (Phase 86 OR-branch) | PERF-01..PERF-05 — 3-lever forward path + module-split decision (Phases 89-90); PERF-06 re-harvest (Phase 91) |
-| tech_debt | BackupSchemaExclusionIT.java:40 Java-25 AssertJ generic-inference compile error | CLEAN-01 — fix or `@SuppressWarnings("unchecked")` (Phase 88, FIRST commit) |
-| tech_debt | Release workflow regression — 4 consecutive milestone releases (v1.8 final, v1.9, v1.10, v1.11) failed with `fatal: tag already exists`; pom.xml manually bumped to 1.11.0-SNAPSHOT (commit 87daec68) | REL-01 — workflow hardening (SemVer-strict tag sort + fetch-tags + parser + idempotency guard) (Phase 88) |
-| release_debt | Missed releases: v1.10.0 + v1.11.0 not tagged, no GitHub Release, no Docker images pushed | REL-02 — retroactive publish + legacy short-form tag cleanup + release-runbook.md (Phase 88) |
-| docs_debt | 16 deprecated colon-form (`/gsd-` predecessor) skill-invocation refs across 6 active top-level planning files caused operator copy-paste friction; inline-swept this session, regression risk going forward | DOCS-01 — CLAUDE.md "Conventions" Skill Invocation Naming paragraph (Phase 88) |
-| tech_debt | YAGNI violations in disabled tests: speculative regression-fence for unreachable code path (DriverSheetImportServiceIT), stale GROUPS+SWISS placeholder (StandingsPageGeneratorTest), single Windows-conditional skip in otherwise OS-agnostic codebase (AutoBackupBeforeImportFailureIT) | CLEAN-02 — YAGNI sweep (Phase 88) |
-| tech_debt | `SiteGeneratorBaselineCaptureTest` uses `@Test @Disabled` anti-pattern for what is structurally a manual maintenance task; forces "remove @Disabled, run, re-add" cycle | CLEAN-03 — refactor to `CommandLineRunner`/`main()` utility (Phase 88) |
-| ux_debt | Google Sheets/Calendar generic error messages on auth/network/sheet-id failures | UX-01 stretch (Phase 91, descope to v1.13 if PERF over budget) |
+| tech_debt | UX-01 scope-gap — `CsvImportController` (race-results sheet-import) not migrated to typed-catch + `errorCategory` flash + badge UX; T-91-02-IL info-leak (`e.getMessage()` echo) re-introduced for this 3rd consumer of typed `GoogleSheetsService` | v1.13 — apply typed-catch + `errorCategory` flash + badge UX to `CsvImportController` for parity (see v1.12 audit Warning 1) |
+| tech_debt | JaCoCo Δ−0.44 pp (88.44 % vs 88.88 %, above 82 % gate); root cause javac-mandated defensive `catch (GoogleApiException)` blocks (Java 25 lacks sealed-exhaustiveness on catch) + uncovered service-layer IOException paths | v1.13 — add `RaceControllerCalendarTest` + IT coverage for Google service error paths (see 91-02-SUMMARY § JaCoCo coverage delta) |
+| tech_debt | CLEAN-02 grep-predicate drift — Phase 89 PERF-01 introduced AssertJ `Assumptions.assumeThat` in `BackupStagingDirPerForkIT.java:12,37`; different package + intent than the JUnit `Assumptions.assumeFalse` that CLEAN-02 originally targeted, but grep can't distinguish | v1.13 — tighten predicate to `org\.junit\.jupiter\.api\.Assumptions` OR whitelist `BackupStagingDirPerForkIT` (see v1.12 audit Warning 2) |
+| docs_debt | Optional audit-trail retrofill — Phases 89/90/91 close on VALIDATION.md + per-plan SUMMARY.md without phase-level VERIFICATION.md (v1.11 had VERIFICATION.md per phase, some retroactively via commit `2e84fd57`) | v1.13 — optional retroactive `89-VERIFICATION.md` / `90-VERIFICATION.md` / `91-VERIFICATION.md` authoring; substantive verification already present via VALIDATION.md + SUMMARY.md (see v1.12 audit Warning 4) |
+| bookkeeping_debt | REQUIREMENTS.md checkbox + traceability lag — 7 of 15 v1.12 REQ-IDs require post-merge flip from `Pending`/`[ ]` to `Resolved`/`[x]` (PERF-01, PERF-02, PERF-03, PERF-04, PERF-05, PERF-06, UX-01); Plan 91-03 deliberately deferred per stale-state avoidance pattern | post-merge — flip in a single doc-only commit on master after `v1.12.0` release fires |
 | uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | post-deploy operator action (procedure docs/uat/UAT-02-legacy-season-smoke.md) |
 | uat | QUAL-02 local-profile MariaDB manual smoke (DevDataSeeder widening) | post-deploy operator action |
+| uat | UX-01 visual UAT — 4 error-category badges × Desktop + Mobile (8 Playwright screenshots) | post-deploy operator action (procedure 91-02-SUMMARY.md § Manual UAT) |
 
 Post-merge self-resolving items (not tracked further):
 
 | Category | Item | Status |
 | -------- | ---- | ------ |
-| post_merge | v1.11 PR #122 release workflow tagging | resolved by-design post-merge |
+| post_merge | v1.12 release workflow tagging (produces `v1.12.0` annotated tag + GitHub Release + `ghcr.io/jegr78/ctc-manager:1.12.0` + `:latest`) | will resolve when squash-merge subject `feat(v1.12): ...` lands on master (see `docs/operations/release-runbook.md § 6 — Squash-merge subject discipline`) |
 
 ## Pending UATs
 
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Ready to execute
+- **Status:** v1.12 milestone complete
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
@@ -148,18 +137,17 @@ At roadmap creation:
 
 ## Session Continuity
 
-**Last session:** 2026-05-20T09:29:12.259Z
+**Last session:** 2026-05-20 — milestone v1.12 closed via `/gsd-complete-milestone v1.12`
 
-**Stopped at:** Phase 91 context gathered (13 decisions; 3 plans planned: PERF-06, UX-01, Closer)
+**Stopped at:** Milestone v1.12 archived; awaiting operator squash-merge of PR #129
 
-**Next action:** `/gsd-discuss-phase 91` (no CONTEXT.md yet) or directly `/gsd-plan-phase 91`.
+**Next action:** `gh pr merge 129 --squash --subject "feat(v1.12): driver-import gap-closure & test performance round 2"` (subject prefix `feat(v1.12):` is required for the workflow's MINOR bump to `v1.12.0` per `docs/operations/release-runbook.md § 6`).
 
-**Resume file:** .planning/milestones/v1.12-phases/91-perf-re-harvest-stretch-ux-polish-milestone-closer/91-CONTEXT.md
-
-**Branch:** `gsd/v1.12-driver-import-and-test-perf`
+**Branch:** `gsd/v1.12-driver-import-and-test-perf` (squash target: master)
 
 ## Operator Next Steps
 
-- `/gsd-discuss-phase 91` for PERF-06 (5 `workflow_dispatch` CI runs on milestone branch, D-17 trigger-equivalence, median replaces 23:00 baseline) + UX-01 stretch (Google API typed-exception hierarchy + categorized error UX; descopable to v1.13 if PERF budget exhausted) + README/test-performance.md updates + milestone closer
-- After Phase 91 closure: `/gsd-complete-milestone v1.12` to archive milestone artifacts + open v1.12 milestone PR (squash-merge target into `master`)
-- v1.13 candidate trigger: PERF-06 CI median outcome (materially below 23:00 unlocks test-module-split re-evaluation per Phase 90 PERF-05 defer rationale)
+1. Squash-merge PR #129 with the `feat(v1.12): ...` subject (critical for `v1.12.0` minor bump).
+2. Observe the release workflow on master — should produce `v1.12.0` tag + GitHub Release page + `ghcr.io/jegr78/ctc-manager:1.12.0` + `:latest` within ~20 min.
+3. Post-merge bookkeeping (single doc-only commit on master): flip 7 REQUIREMENTS.md checkboxes (`PERF-01..06` + `UX-01`) and 4 traceability rows (`PERF-01`, `PERF-02`, `PERF-06`, `UX-01`).
+4. Start v1.13 via `/gsd-new-milestone` — see `## Deferred Items` for audit-surfaced carry-forwards (CsvImportController UX-01 scope-extension, JaCoCo cleanup, CLEAN-02 predicate tightening, optional 89/90/91-VERIFICATION.md retrofill).

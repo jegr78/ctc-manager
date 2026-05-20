@@ -2,6 +2,16 @@
 
 ## v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (Shipped: 2026-05-20)
 
+**Phases completed:** 0 phases, 0 plans, 0 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
+## v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (Shipped: 2026-05-20)
+
 **Phases completed:** 4 phases (88-91), 15 plans, 15/15 requirements satisfied (14 must-have + 1 stretch — UX-01 resolved IN per Phase 91 D-01)
 **Diff:** +19 294 / −462 across 127 files (111 commits in milestone range)
 **Tests:** 1696 tests passing (Surefire + Failsafe + Playwright E2E); JaCoCo line coverage 88.44 % (gate 82 %, v1.11 baseline 88.88 %, Δ−0.44 pp — flagged for v1.13 cleanup; root cause documented in Plan 91-02 SUMMARY § JaCoCo coverage delta)

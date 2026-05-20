@@ -2,16 +2,17 @@
 
 ## What This Is
 
-Gran Turismo Racing League Management application (Spring Boot 4 / Thymeleaf / MariaDB). Manages Seasons, Matchdays, Matches, Races, Teams, Drivers, Scoring, and Standings for the Community Team Cup league. After four milestone cycles (v1.0 Tech Debt, v1.1 Concerns Cleanup, v1.3 English Test Data, v1.5 Code Review Fixes), the codebase is architecturally clean, security-hardened, convention-compliant, and production-ready.
+Gran Turismo Racing League Management application (Spring Boot 4 / Thymeleaf / MariaDB). Manages Seasons, Matchdays, Matches, Races, Teams, Drivers, Scoring, and Standings for the Community Team Cup league. After ten milestone cycles (v1.0 Tech Debt → v1.12 Driver-Import Gap-Closure & Test Performance Round 2), the codebase is architecturally clean, security-hardened, convention-compliant, production-ready, with a hardened release pipeline, full SAST/SCA gating, and a re-harvested CI E2E baseline of 17:39 (−23.3 % vs v1.11 23:00).
 
 ## Core Value
 
 Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-## Current State (after v1.11 shipped 2026-05-18)
+## Current State (after v1.12 shipped 2026-05-20)
 
-- **Codebase:** ~27k LOC Java (Prod) + ~48k LOC Java (Tests); **1675 tests passing** (Surefire unit + Failsafe IT + Playwright E2E combined); JaCoCo line coverage **88.88 %** (gate 82 %, comfort buffer 6.88 pp, +1.08 pp vs v1.10)
-- **Gates:** SpotBugs + find-sec-bugs blocking (`<goal>check</goal>` verify-bound, 0 BugInstance) · CodeQL SAST blocking on push/PR/weekly-cron (gate-step exits 1 on new HIGH/CRITICAL) · OpenRewrite developer-invoked (`-Prewrite` profile, not in CI) · Renovate active (Mend Free Community plan, patch automerge with branch-protection enforcement) · Dockerfile noble-pin guard CI job · master branch protection: 3 required status checks
+- **Codebase:** ~27k LOC Java (Prod) + ~49k LOC Java (Tests); **1696 tests passing** (Surefire unit + Failsafe IT + Playwright E2E combined; +21 net vs v1.11 1675); JaCoCo line coverage **88.44 %** (gate 82 %, comfort buffer 6.44 pp, Δ−0.44 pp vs v1.11 88.88 % — flagged for v1.13 cleanup: `RaceControllerCalendarTest` + IT coverage for Google service error paths)
+- **CI E2E baseline:** **17:39** median (5-run PR-branch `workflow_dispatch` harvest per D-17 trigger-equivalence; Δ−23.3 % vs v1.11 23:00; variance 18.2 % within 20 % tolerance)
+- **Gates:** SpotBugs + find-sec-bugs blocking (`<goal>check</goal>` verify-bound, 0 BugInstance) · CodeQL SAST blocking on push/PR/weekly-cron (gate-step exits 1 on new HIGH/CRITICAL) · OpenRewrite developer-invoked (`-Prewrite` profile, not in CI) · Renovate active (Mend Free Community plan, patch automerge with branch-protection enforcement) · Dockerfile noble-pin guard CI job · master branch protection: 3 required status checks · Hardened release.yml (SemVer-strict tag sort, fetch-tags, parser, idempotency guard, dry-run gates — REL-01)
 - **Codebase (pre-v1.11 numbers, for delta reference):** ~17k LOC Java (Prod) + ~25k LOC Java (Tests); 1652 Surefire + 231 Failsafe + 36 Playwright E2E; JaCoCo 87.80 %
 - **Tech Stack:** Spring Boot 4.0.6, Java 25, MariaDB 11 / H2, Thymeleaf 3.1.5 (pinned), Playwright 1.59.0, Lombok 1.18.46 (JEP 498 `--sun-misc-unsafe-memory-access=allow`), Guava 33.4.8-jre (override for `AbstractFuture` Unsafe warning)
 - **Security:** HTTP Basic Auth (prod/docker), SSRF hostname blocklist, path traversal defense, CSRF tokens on AJAX POSTs + every backup POST endpoint, SpEL/OGNL injection validation, Content-Disposition sanitization, MatchdayForm DTO (mass assignment protection), ZIP-Slip + ZipBomb defenses on backup import (50 MB/entry, 500 MB total, 50.000 entries cap, `startsWith(uploadDir.toRealPath())` check)
@@ -23,24 +24,16 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - **Admin Features:** `/admin/backup` page with streamed ZIP export (CSRF-protected `POST /admin/backup/export`, `StreamingResponseBody`, ISO-instant filename) + manifest-first preview + replace-all import (`@Transactional` wipe + `JdbcTemplate.batchUpdate` restore bypassing `AuditingEntityListener` + post-commit upload-tree stage-and-rename); concurrent-import `ReentrantLock` + persistent yellow read-only banner + `ImportLockedWriteRejector` HandlerInterceptor + synchronous auto-backup-before-import safety net; 24h recovery retention at `data/.import-backups/<ts>/`
 - **Docker / CI:** Both Dockerfile stages pinned to `eclipse-temurin:25-{jdk,jre}-noble` (Playwright 1.59.0 compatibility); `dockerfile-noble-pin-guard` CI job (whitelist-on-suffix); full `docker build .` on every PR + push to master; ci.yml concurrency block + `--no-transfer-progress`; Surefire `forkCount=2C` + Failsafe default-it `forkCount=1C` + `excludedGroups=flaky` quarantine
 
-## Current Milestone: v1.12 Driver-Import Gap-Closure & Test Performance Round 2
+## Next Milestone Goals (v1.13 — to be defined via `/gsd-new-milestone`)
 
-**Goal:** Close the v1.11-deferred driver-import correctness bugs and substantially reduce CI test wallclock by implementing the documented PERF-FUTURE-01 architectural levers (per-fork backup-staging-dir, shared `@ContextConfiguration`, Testcontainers `withReuse`), plus decide on the test-module-split strategy.
+Carry-forwards from the v1.12 audit (see [.planning/milestones/v1.12-MILESTONE-AUDIT.md](milestones/v1.12-MILESTONE-AUDIT.md) for full evidence):
 
-**Target features:**
-- Season-aware shortName resolver: sub-team with PhaseTeam in REGULAR phase wins over parent bucket (data-correctness)
-- GROUPS-layout gate for group-assignment warnings (suppress noise on LEAGUE/BRACKET seasons)
-- Release-workflow hardening: SemVer-strict tag sort + `fetch-tags: true` + parser hardening + pre-build idempotency guard (fixes 4-milestone regression that prevented v1.8 final, v1.9, v1.10, v1.11 from producing release tags + GitHub Releases + Docker images)
-- Retroactive publish of v1.10.0 + v1.11.0 releases + cleanup of legacy short-form tags (`v1.5`/`v1.6`/`v1.8`/`v1.9`)
-- CLAUDE.md "Conventions" Skill Invocation Naming paragraph — documents `/gsd-<name>` (dash) as canonical, deprecates the colon-form prefix (pre-2026 syntax) to fence operator copy-paste friction
-- Per-fork `backup-staging-dir` enabling Failsafe `forkCount>1C` for backup ITs (PERF-Lever-1)
-- Per-fork Spring context-fingerprint instrumentation + shared `@ContextConfiguration` cluster (PERF-Lever-2)
-- Testcontainers MariaDB `.withReuse(true)` wiring (PERF-Lever-3, pre-emptive)
-- Test-Module-Split decision document and (if approved) extraction of `src/test/java` into Maven sub-modules (PERF-Lever-4)
-- Fix pre-existing Phase-72 `BackupSchemaExclusionIT` Java-25 AssertJ generic-inference compile error
-- YAGNI sweep of speculative `@Disabled` regression-fence + GROUPS+SWISS placeholder + lone Windows-conditional skip (the codebase has no other Windows-aware logic)
-- Refactor `SiteGeneratorBaselineCaptureTest` from `@Test @Disabled` anti-pattern to a standalone `CommandLineRunner`/`main()` utility (post-CLEAN: `grep -rn "@Disabled" src/test/java` returns 0)
-- Google Sheets/Calendar user-facing error messages (stretch — only if PERF-levers come in under budget)
+- **UX-01 scope-extension** — Migrate `CsvImportController` (race-results sheet-import) to the typed-catch + `errorCategory` flash + badge UX pattern for parity with `DriverSheetImportController` + `RaceController`; re-closes the T-91-02-IL info-leak threat for the 3rd Google-Sheets-consuming controller
+- **JaCoCo coverage cleanup** — Add `RaceControllerCalendarTest` + IT coverage for service-layer `IOException` error paths to close the Δ−0.44 pp gap (root cause: Java-25 sealed-exhaustiveness-on-catch limitation + uncovered controller defensive blocks)
+- **CLEAN-02 grep-predicate drift** — Tighten the `Assumptions.` regression-fence to JUnit-only OR whitelist `BackupStagingDirPerForkIT` (AssertJ Assumptions added by PERF-01 has different intent than the JUnit Windows-conditional that CLEAN-02 originally targeted)
+- **Optional audit-trail retrofill** — Author retroactive `89-VERIFICATION.md` / `90-VERIFICATION.md` / `91-VERIFICATION.md` (v1.11 precedent: commit `2e84fd57`) to close the goal-backward VERIFICATION.md document-shape gap. Substantive verification is already present via VALIDATION.md + per-plan SUMMARY.md; only the file-shape convention is the gap.
+
+Operator runbook for the v1.12 PR squash-merge: ensure subject starts with `feat(v1.12):` for the workflow's MINOR bump → `v1.12.0` (per `docs/operations/release-runbook.md § 6` and memory rule [[feedback-squash-merge-message]]).
 
 ## Requirements
 
@@ -185,16 +178,27 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - ✓ CI Playwright fork-channel corruption fix: `actions/cache@v4` for `~/.cache/ms-playwright` + pre-install all 3 default browsers before Surefire (~360 MiB cache footprint, ~30 s cold-cache once per key bump); eliminates `Playwright.create()` mid-Surefire auto-download corrupting fork-channel stdout — Phase 86 follow-up (`5cc76ab9` + `3590b3a7`)
 - ✓ T-2 master branch protection active: `required_status_checks.contexts = [build-and-test, dockerfile-noble-pin-guard, docker-build]`, `strict: true`, `enforce_admins: false`, force-pushes/deletions disabled — Phase 84 follow-up (operator action 2026-05-18)
 
+### Validated (v1.12)
+
+- ✓ `BackupSchemaExclusionIT` Java-25 AssertJ generic-inference compile error resolved (Phase-80 JDT-cache diagnosis confirmed clean); `./mvnw verify` exits 0 with JaCoCo CSV — Phase 88 (CLEAN-01)
+- ✓ YAGNI sweep: `@Disabled` placeholder + regression-fence + Windows-conditional skip removed; `grep -rn "@Disabled" src/test/java` returns 0 — Phase 88 (CLEAN-02)
+- ✓ `SiteGeneratorBaselineCaptureTest` refactored from `@Test @Disabled` anti-pattern to `SiteGeneratorBaselineRefresh` CommandLineRunner under `@Profile("baseline-refresh")` with `@Primary` mocked `YouTubeScraperService` — Phase 88 (CLEAN-03)
+- ✓ `.github/workflows/release.yml` hardened against duplicate-tag-pattern (4-milestone regression closed): SemVer-strict tag sort (`git tag --sort=-version:refname --list 'v[0-9]*.[0-9]*.[0-9]*'`), `fetch-tags: true`, parser defaults PATCH=0 with numeric validation, pre-`versions:set` idempotency guard, BREAKING CHANGE footer parser, `workflow_dispatch -F dry-run=true` exercises version-determination — Phase 88 (REL-01)
+- ✓ `docs/operations/release-runbook.md` operator runbook for retroactive `v1.10.0` + `v1.11.0` publishes + legacy short-form tag cleanup; pre-merge executed 2026-05-20: `v1.10.0` + `v1.11.0` releases published (JAR + GHCR images), legacy `v1.3`/`v1.5`/`v1.8` tags deleted; 3 runbook bugs surfaced + patched same session — Phase 88 (REL-02)
+- ✓ Season-aware `DriverSheetImportService.resolveTeamByShortName(shortName, regularPhase)` — sub-team with `PhaseTeam(regularPhase.id, candidate.id)` wins over parent bucket; D-07 legacy fallback to first-match + WARN log preserved when no PhaseTeam in target REGULAR phase — Phase 88 (DRIV-01)
+- ✓ `TabPreview.usesGroups` boolean + `DriverSheetImportController.showGroupColumn` page-wide aggregation defensive future-proofing (template surface intentionally deferred per user-accepted "Defensive Future-Proofing" decision — the deferred-debug-doc surfaces no longer exist in v1.12 code) — Phase 88 (DRIV-02)
+- ✓ CLAUDE.md "Skill Invocation Naming" subsection documents `/gsd-<name>` (dash) as canonical, deprecates pre-2026 colon-form prefix; `/gsd:` regression-fence grep returns 0 on 6 active top-level planning files — Phase 88 (DOCS-01)
+- ✓ Per-fork `app.backup.staging-dir` + `app.backup.import-backups-dir` + `app.upload-dir` resolve to `…-fork-${surefire.forkNumber}` paths; Failsafe `default-it forkCount=2 reuseForks=true` + inherited Spring-Boot Failsafe execution unbound; 3-seed Failsafe `org.ctc.backup.**` (1234/5678/9999) all BUILD SUCCESS — Phase 89 (PERF-01)
+- ✓ `ContextCacheKeyFingerprintListener` (`TestExecutionListener` via `spring.factories`) dumps per-context `MergedContextConfiguration.hashCode()` to sidecar `context-loads-{PID}-fingerprints.txt` markers + `aggregate-fingerprints.sh` Top-N cluster reporter; docs `§ PERF-02 Forensics` — Phase 89 (PERF-02)
+- ✓ Composed `@CtcDevSpringBootContext` annotation applied across 19 outer test classes (13 Surefire + 6 Failsafe); Surefire cluster `9cefac4c → baafff8e` collapse (2 annotation-shape variants → 1 shared cache key, 13 outer classes preserved); 3-seed Failsafe + Surefire BUILD SUCCESS; Wave-5 local median 08:27 (−9.3 % vs Phase 89 09:19) — Phase 90 (PERF-03)
+- ✓ Testcontainers MariaDB `.withReuse(true)` on `BackupImportMariaDbSmokeIT` + `BackupRoundTripIT` nested `MariaDbRoundTripTests`; `~/.testcontainers.properties` opt-in protocol documented in `docs/test-performance.md § PERF-04` + README; CI gate `@EnabledIfSystemProperty(docker.available=true)` preserved (CI cold-starts as today); T-90-TC-01 + T-90-TC-02 threats mitigated — Phase 90 (PERF-04)
+- ✓ `docs/test-performance.md § Test-Module-Split Decision` verdict `defer` with 3 explicit blockers (TestDataService cross-boundary, IDE-friction-risk, no hard cumulative-effect data), v1.13 re-evaluation trigger (against PERF-06 CI median), and "Why not reject?" rationale paragraph — Phase 90 (PERF-05)
+- ✓ CI 5-run median **17:39** re-harvested per D-17 trigger-equivalence (`workflow_dispatch` on PR-branch HEAD `b63a2be1`); sorted seconds 929/1015/**1059**/1072/1122, drop min+max → median of middle 3 = 1059s; variance 18.2 % within 20 % D-10 tolerance; Δ−23.3 % vs v1.11 baseline 23:00 — Phase 91 (PERF-06)
+- ✓ Sealed `org.ctc.dataimport.exception.GoogleApiException` base + 4 typed permits (`TransientGoogleApiException` / `AuthGoogleApiException` / `NotFoundGoogleApiException` / `PermissionGoogleApiException`) + `Category` enum + `GoogleApiExceptionMapper` static helper (13 unit tests cover 8 mapping branches); `GoogleSheetsService` + `GoogleCalendarService` typed-throws; `DriverSheetImportController#preview` + `#execute` + `RaceController#createCalendarEvent` 4 typed catches set `errorCategory` flash key + hardcoded category-specific `errorMessage`; Thymeleaf `layout.html` + `driver-import.html` render `.error-badge--{transient|auth|not-found|permission}` BEM span; `docs/operations/google-integration.md` operator runbook (Setup / Error Categories / Troubleshooting); T-91-02-IL info-leak invariant closed for 2 of 3 GoogleSheets-consuming controllers (`CsvImportController` deferred to v1.13) — Phase 91 (UX-01)
+
 ### Active
 
-v1.12 in flight (carry-forwards absorbed into roadmap):
-
-- **Driver-Import gap-closure** (2 deferred debug sessions in `.planning/debug/deferred/` — fully diagnosed):
-  - `shortname-resolver-picks-parent-without-phaseteam` → DRIV-01
-  - `group-warnings-for-non-groups-seasons` → DRIV-02
-- **PERF-FUTURE-01** test-wallclock reduction Round 2 → PERF-01..PERF-05 (3-lever forward path in `docs/test-performance.md § v1.12 Forward Path` + test-module-split decision)
-- **BackupSchemaExclusionIT** Java-25 AssertJ generic-inference compile error → CLEAN-01
-- Items added by future `/gsd-new-milestone` after v1.12 close.
+v1.12 shipped 2026-05-20. v1.13 to be defined via `/gsd-new-milestone` — see § "Next Milestone Goals" above for the audit-surfaced carry-forwards.
 
 ### Out of Scope
 
@@ -263,6 +267,11 @@ v1.12 in flight (carry-forwards absorbed into roadmap):
 | In-milestone Nyquist closure (v1.11 Option A) mirrors cross-milestone Phase-87 pattern (v1.10) | After Phase 87 closed v1.10 Nyquist debt, the milestone audit surfaced the same draft VALIDATION pattern in v1.11 itself. Resolution path: 6 retroactive `/gsd-validate-phase` runs + 1 retroactive 86-VERIFICATION.md inline (same morning), avoiding a v1.12 Phase-88 carry-forward. Closing pattern: precedent for future milestones — if Nyquist debt accumulates during execution, prefer inline closure post-audit over cross-milestone closure phase | ✓ v1.11 |
 | Playwright fork-channel corruption fix: pre-install all 3 default browsers + actions/cache@v4 (CI follow-up) | `Playwright.create()` validates all default browsers (Chromium + Firefox + WebKit) on first use, not just `chromium()`. Mid-Surefire auto-download corrupts fork-channel stdout → Maven exit 1, 0 failing tests. Cache footprint (~360 MiB) and 30 s cold-install acceptable for stable forks | ✓ v1.11 |
 | PERF-06 v1.12 CI baseline re-harvested (Phase 91 D-17) | 5 `workflow_dispatch` runs on the v1.12 milestone PR-branch HEAD SHA; D-17 trigger-equivalence (PR-branch CI = post-merge master CI because `ci.yml` runs identical steps regardless of trigger event); median of middle 3 after drop min+max per D-10; variance 18.2 % within 20 % tolerance | ✓ v1.12 (CI E2E median **17:39**, was 23:00 in v1.11; Δ−23.3 %) |
+| `release.yml` SemVer-strict tag sort + idempotency guard (Phase 88 REL-01) | 4-milestone regression (v1.8 final → v1.11) caused by `git describe` returning legacy short-form tags like `v1.5` (no 3-part SemVer); pre-`versions:set` guard refuses BEFORE the 19-minute build runs, fast-fails idempotent re-runs; BREAKING CHANGE footer detected via `%B` + `^BREAKING[ -]CHANGE:` regex; dry-run via `workflow_dispatch -F dry-run=true` skips push/tag/release but exercises version-determination | ✓ v1.12 (dispatch run 26080324918 success; v1.10.0/v1.11.0 retroactively published via runbook 2026-05-20; ready to produce v1.12.0 on squash-merge) |
+| Defensive Future-Proofing for DRIV-02 template surface (Phase 88 Plan-05 user-accepted override) | Deferred-debug-doc's three surfaces (`TEAM_NOT_IN_REGULAR_PHASE` warning, per-row Group cell in `driver-import-preview.html`, page-wide `showGroupColumn` aggregation) all do NOT exist in v1.12 code — refactored away between deferral and Phase 88 start. Only service+controller API surfaces wired; template gate deferred until a real Group-UI feature is requested. Override recorded in 88-VERIFICATION.md frontmatter | ✓ v1.12 (override) |
+| Sealed `GoogleApiException` extends `IOException` for backward-compat (Phase 91 Plan 91-02 D-06) | Sealed hierarchy permits `Transient`/`Auth`/`NotFound`/`Permission` subtypes; extending `IOException` keeps callers that catch the supertype working unchanged while new code can pattern-match on subtypes for category-specific UX. Java 25 lacks sealed-exhaustiveness on `catch` — defensive `catch (GoogleApiException e)` blocks are required by javac (root cause of Δ−0.44 pp JaCoCo delta) | ✓ v1.12 |
+| Pre-merge runbook execution for REL-02 (Phase 88 → audit-time inversion 2026-05-20) | Verification (2026-05-19) accepted REL-02 as "post-merge operator action". Audit at 2026-05-20 identified that running it pre-merge is REQUIRED — otherwise the hardened workflow reads `v1.9.0` as last tag and mis-tags `v1.10.0` against the v1.12 HEAD commit + locks out `--target 45aabfd0` retroactive tag via idempotency guard. Runbook timing pinned to "pre-merge" via commit `871d42ff`; 3 runbook bugs (Short-SHA in `gh release create --target`, bash-loop-in-zsh, fine-grained PAT limitation) patched in `1180a627` after live execution | ✓ v1.12 |
+| Three explicit `gh api -X DELETE` commands replace bash interactive loop (Phase 88 REL-02 runbook fix 2026-05-20) | The original Section 4b confirmation loop used `read -p` which is bash-only — in zsh `-p` reads from a coprocess (not a prompt string), so the loop blocks silently. Three explicit DELETE commands per legacy tag are shell-agnostic and each command's execution IS the confirmation. Same Section 4 intro updated to match | ✓ v1.12 |
 
 ### Backup Wire Contract (v1.10)
 
@@ -297,4 +306,4 @@ The runtime topo-sort returns 24 `EntityRef` instances (CONTEXT.md originally sa
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-20 — Phase 90 (PERF Consolidation & Module-Split Decision) closed: PERF-03 composed `@CtcDevSpringBootContext` annotation + Surefire cluster collapse (`9cefac4c`→`baafff8e`, 19 outer classes refactored), PERF-04 Testcontainers `.withReuse(true)` + `~/.testcontainers.properties` opt-in, PERF-05 test-module-split verdict `defer` with explicit v1.13 re-evaluation trigger. UAT 7/7 passed, SECURITY threats_open: 0, JaCoCo 0.8902, SpotBugs 0, Wave-5 median 08:27. REQUIREMENTS PERF-03/04/05 → Resolved. v1.12 progress: 12/13 plans (92 %). Next: `/gsd-plan-phase 91` (PERF-06 CI re-harvest + UX-01 stretch + milestone closer).*
+*Last updated: 2026-05-20 after v1.12 milestone — Driver-Import Gap-Closure & Test Performance Round 2 shipped (4 phases · 15 plans · 15/15 REQ-IDs substantively satisfied). CI E2E baseline re-harvested at 17:39 (Δ−23.3 % vs v1.11 23:00); release.yml hardened against 4-milestone regression + v1.10.0/v1.11.0 retroactively published via operator runbook; sealed `GoogleApiException` hierarchy + categorized flash-error UX badges + 3 runbook bugs patched post-execution. JaCoCo 88.44 % (Δ−0.44 pp vs v1.11 — flagged for v1.13 cleanup), SpotBugs 0, Nyquist 4/0/0, audit verdict tech_debt with 4 non-blocking warnings. Next: `/gsd-new-milestone` for v1.13 (CsvImportController UX-01 scope-extension + coverage cleanup + audit-trail retrofill).*
