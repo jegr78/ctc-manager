@@ -1,10 +1,10 @@
 package org.ctc.domain.service;
 
-import java.io.IOException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.GoogleCalendarService;
+import org.ctc.dataimport.exception.GoogleApiException;
 import org.ctc.domain.repository.RaceRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +25,7 @@ public class RaceCalendarService {
 	}
 
 	@Transactional
-	public void createOrUpdateCalendarEvent(UUID raceId) throws IOException {
+	public void createOrUpdateCalendarEvent(UUID raceId) throws GoogleApiException {
 		var race = raceRepository.findById(raceId).orElseThrow();
 
 		if (!googleCalendarService.isAvailable()) {

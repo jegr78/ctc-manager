@@ -1,6 +1,5 @@
 package org.ctc.dataimport;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.regex.Pattern;
 import lombok.Getter;
@@ -8,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.DriverMatchingService.MatchResult;
 import org.ctc.dataimport.DriverMatchingService.MatchType;
+import org.ctc.dataimport.exception.GoogleApiException;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.PhaseLayout;
@@ -60,10 +60,10 @@ public class DriverSheetImportService {
      *
      * @param sheetUrl Google Sheets URL or bare spreadsheet ID
      * @return typed preview — no DB writes performed
-     * @throws IOException if Google Sheets API call fails
+     * @throws GoogleApiException if the Google Sheets API call fails
      */
     @Transactional(readOnly = true)
-    public DriverSheetImportPreview preview(String sheetUrl) throws IOException {
+    public DriverSheetImportPreview preview(String sheetUrl) throws GoogleApiException {
         String spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
         log.info("Building driver sheet import preview for spreadsheet {}", spreadsheetId);
 
@@ -96,17 +96,12 @@ public class DriverSheetImportService {
      * @return accumulated result counters
      */
     @Transactional
-    public ExecuteResult execute(String sheetUrl, Map<String, String> allParams) {
+    public ExecuteResult execute(String sheetUrl, Map<String, String> allParams) throws GoogleApiException {
         log.info("Executing driver sheet import: sheetUrl={}", sheetUrl);
         if (allParams == null) {
             allParams = Map.of();
         }
-        DriverSheetImportPreview fullPreview;
-        try {
-            fullPreview = this.preview(sheetUrl);
-        } catch (IOException e) {
-            throw new IllegalStateException("Sheet read failed: " + e.getMessage(), e);
-        }
+        DriverSheetImportPreview fullPreview = this.preview(sheetUrl);
 
         ExecuteResult result = new ExecuteResult();
         Map<String, Driver> crossTabCreatedDrivers = new HashMap<>();
@@ -230,7 +225,7 @@ public class DriverSheetImportService {
         return result;
     }
 
-    private TabPreview buildTabPreview(String spreadsheetId, String tabName) throws IOException {
+    private TabPreview buildTabPreview(String spreadsheetId, String tabName) throws GoogleApiException {
         // Parse tab name via union pattern; group(2) is null for legacy form. The upstream
         // filter in preview() already proved the name matches the pattern — if a future
         // refactor breaks that invariant the helper throws loudly instead of failing later

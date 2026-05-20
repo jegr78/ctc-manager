@@ -99,6 +99,9 @@ public class DriverSheetImportController {
                    .append(" (no season selected).");
             }
             redirectAttributes.addFlashAttribute("successMessage", msg.toString());
+        } catch (IOException e) {
+            log.error("Error reading Google Sheet during driver import execute", e);
+            redirectAttributes.addFlashAttribute("errorMessage", "Could not read the Google Sheet. Check the URL and service account credentials.");
         } catch (BusinessRuleException | ValidationException | IllegalArgumentException e) {
             log.error("Error executing driver sheet import", e);
             redirectAttributes.addFlashAttribute("errorMessage", "Import failed: " + e.getMessage());
