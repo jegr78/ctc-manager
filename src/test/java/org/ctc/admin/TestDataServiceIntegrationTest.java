@@ -5,20 +5,18 @@ import java.util.stream.Collectors;
 import javax.sql.DataSource;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Transactional
 class TestDataServiceIntegrationTest {
