@@ -1,12 +1,23 @@
 # CTC Manager — Release Catch-up Runbook
 
 Audience: operator (`@jegr78`) of the CTC Manager release pipeline. This runbook covers
-the **post-merge catch-up procedure** for releases that were not produced automatically
+the **pre-merge catch-up procedure** for releases that were not produced automatically
 by `.github/workflows/release.yml`. Phase 88 / REL-01 hardened that workflow so every
 future milestone PR squash-merge to `master` auto-produces the corresponding
 `vX.Y.0` artifact set; this runbook only applies to the two historically missed releases
 **v1.10.0** (master @ `45aabfd0`) and **v1.11.0** (master @ `598d1431`) plus the cleanup
 of the legacy short-form tags `v1.3`, `v1.5`, `v1.8`.
+
+**Timing — must run BEFORE the v1.12 milestone PR squash-merges to `master`.** The
+hardened workflow computes the next SemVer by reading the most recent `vX.Y.Z` tag
+and bumping based on the Conventional Commit subjects since that tag. With the current
+remote tag set ending at `v1.9.0`, a squash-merge of the v1.12 PR would trigger a
+minor bump to `v1.10.0` — pointed at the v1.12 HEAD commit, embedding the wrong
+version in the JAR + Docker image, and locking out the legitimate `--target 45aabfd0`
+retroactive tag (the idempotency guard refuses to recreate a tag, see
+`.github/workflows/release.yml` § "Idempotency guard"). Run Sections 2 + 3 first so
+`v1.11.0` is the last tag when v1.12 merges; the workflow then bumps correctly to
+`v1.12.0` against the v1.12 HEAD commit.
 
 **Strictly remote-only operations.** Per the project's `feedback-no-local-git-tags`
 memory rule, never run `git tag -a` locally and never `git push origin v…` — the
@@ -255,4 +266,4 @@ If a future milestone PR squash-merge fails to produce its release, investigate 
 
 ---
 
-**Last updated:** 2026-05-19 (Phase 88 / REL-02). This runbook is **review-ready**, NOT yet executed. Execution is a post-merge operator action AFTER the v1.12 milestone PR squash-merges to `master`.
+**Last updated:** 2026-05-20 (Phase 91 closure). This runbook is **review-ready**, NOT yet executed. Execution is a pre-merge operator action BEFORE the v1.12 milestone PR squash-merges to `master` (see intro § "Timing").
