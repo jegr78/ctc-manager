@@ -2,7 +2,6 @@ package org.ctc.e2e;
 
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.options.AriaRole;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -453,8 +452,7 @@ class GroupsSeasonE2ETest extends PlaywrightConfig {
 				}
 
 				@Override
-				public List<List<Object>> readRangeFromSheet(String spreadsheetId, String sheetName, String range)
-						throws IOException {
+				public List<List<Object>> readRangeFromSheet(String spreadsheetId, String sheetName, String range) {
 					return readRowsForTab();
 				}
 

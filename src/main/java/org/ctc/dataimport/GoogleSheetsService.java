@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.dataimport.exception.GoogleApiException;
+import org.ctc.dataimport.exception.GoogleApiExceptionMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -63,13 +65,17 @@ public class GoogleSheetsService {
 	 * @param range         the A1 notation range (e.g. "Sheet1!A1:E10")
 	 * @return list of rows, each row being a list of cell values
 	 */
-	public List<List<Object>> readRange(String spreadsheetId, String range) throws IOException {
+	public List<List<Object>> readRange(String spreadsheetId, String range) throws GoogleApiException {
 		var client = getSheetsClient();
-		ValueRange response = client.spreadsheets().values()
-				.get(spreadsheetId, range)
-				.execute();
-		List<List<Object>> values = response.getValues();
-		return values != null ? values : List.of();
+		try {
+			ValueRange response = client.spreadsheets().values()
+					.get(spreadsheetId, range)
+					.execute();
+			List<List<Object>> values = response.getValues();
+			return values != null ? values : List.of();
+		} catch (IOException e) {
+			throw GoogleApiExceptionMapper.from(e);
+		}
 	}
 
 	/**
@@ -80,7 +86,7 @@ public class GoogleSheetsService {
 	 * @param range         the A1 notation range (e.g. "A:H")
 	 * @return list of rows, each row being a list of cell values
 	 */
-	public List<List<Object>> readRangeFromSheet(String spreadsheetId, String sheetName, String range) throws IOException {
+	public List<List<Object>> readRangeFromSheet(String spreadsheetId, String sheetName, String range) throws GoogleApiException {
 		String fullRange = sheetName + "!" + range;
 		return readRange(spreadsheetId, fullRange);
 	}
@@ -91,12 +97,16 @@ public class GoogleSheetsService {
 	 * @param spreadsheetId the spreadsheet ID
 	 * @return list of sheet names in order
 	 */
-	public List<String> getSheetNames(String spreadsheetId) throws IOException {
+	public List<String> getSheetNames(String spreadsheetId) throws GoogleApiException {
 		var client = getSheetsClient();
-		var spreadsheet = client.spreadsheets().get(spreadsheetId).execute();
-		return spreadsheet.getSheets().stream()
-				.map(sheet -> sheet.getProperties().getTitle())
-				.collect(Collectors.toList());
+		try {
+			var spreadsheet = client.spreadsheets().get(spreadsheetId).execute();
+			return spreadsheet.getSheets().stream()
+					.map(sheet -> sheet.getProperties().getTitle())
+					.collect(Collectors.toList());
+		} catch (IOException e) {
+			throw GoogleApiExceptionMapper.from(e);
+		}
 	}
 
 	/**
@@ -154,7 +164,7 @@ public class GoogleSheetsService {
 		throw new IllegalArgumentException("Invalid Google Sheets URL or ID: " + url);
 	}
 
-	private synchronized Sheets getSheetsClient() throws IOException {
+	private synchronized Sheets getSheetsClient() throws GoogleApiException {
 		if (sheetsClient == null) {
 			if (!isAvailable()) {
 				throw new IllegalStateException(
@@ -174,7 +184,9 @@ public class GoogleSheetsService {
 
 				log.info("Google Sheets API client initialized");
 			} catch (GeneralSecurityException e) {
-				throw new IOException("Failed to initialize Google Sheets API client", e);
+				throw GoogleApiExceptionMapper.from(e);
+			} catch (IOException e) {
+				throw GoogleApiExceptionMapper.from(e);
 			}
 		}
 		return sheetsClient;
