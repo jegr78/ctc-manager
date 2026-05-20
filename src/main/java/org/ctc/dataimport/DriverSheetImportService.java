@@ -60,7 +60,9 @@ public class DriverSheetImportService {
      *
      * @param sheetUrl Google Sheets URL or bare spreadsheet ID
      * @return typed preview — no DB writes performed
-     * @throws GoogleApiException if the Google Sheets API call fails
+     * @throws GoogleApiException if the Google Sheets API call fails — the concrete
+     *   instance is always one of the 4 sealed subtypes; callers catch each typed
+     *   branch and add a defensive catch for the base to satisfy javac.
      */
     @Transactional(readOnly = true)
     public DriverSheetImportPreview preview(String sheetUrl) throws GoogleApiException {
