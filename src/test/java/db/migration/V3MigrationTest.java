@@ -1,11 +1,9 @@
 package db.migration;
 
-import org.ctc.CtcManagerApplication;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,8 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code ./mvnw verify} gate, not the {@code -Pe2e} Failsafe profile.
  * Modelled on V5MigrationTest / V6MigrationTest.
  */
-@SpringBootTest(classes = CtcManagerApplication.class)
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 class V3MigrationTest {
 
     @Autowired private JdbcTemplate jdbcTemplate;
