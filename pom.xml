@@ -265,11 +265,23 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
-					<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+					<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands.
+					     -Dtest.fork.number=${surefire.forkNumber} exposes the fork number as a JVM
+					     System.getProperty(...) value (Surefire substitutes the placeholder at
+					     fork-dispatch time inside argLine, but evaluates standalone systemPropertyVariables
+					     values too early to substitute reliably). -->
+					<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Dtest.fork.number=${surefire.forkNumber}</argLine>
 					<!-- Conservative process-level parallelism: 2 forked JVMs total (not 2C). -->
 					<forkCount>2</forkCount>
 					<reuseForks>true</reuseForks>
+					<!-- DO NOT add <surefire.forkNumber> to the project <properties> block — Maven
+					     eager-substitutes project properties at POM-load time, before Surefire's
+					     fork-dispatch substitution can run, so all forks land in the same path. -->
+					<systemPropertyVariables>
+						<app.upload-dir>data/${spring.profiles.active:dev}/uploads-fork-${surefire.forkNumber}</app.upload-dir>
+						<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
+						<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
+					</systemPropertyVariables>
 					<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 					     Surefire runs only tests WITHOUT @Tag("integration") / @Tag("e2e") / @Tag("flaky").
 					     Filename-based excludes were brittle: @Nested inner classes compile to *IT$*.class
@@ -290,14 +302,32 @@
 				<artifactId>maven-failsafe-plugin</artifactId>
 				<executions>
 					<execution>
+						<!-- Spring Boot parent inherits an anonymous Failsafe execution bound to
+						     integration-test + verify with no per-execution config; unbind it so
+						     only `default-it` (and `e2e-it` under the e2e profile) runs. -->
+						<id>default</id>
+						<phase>none</phase>
+					</execution>
+					<execution>
 						<id>default-it</id>
 						<goals>
 							<goal>integration-test</goal>
 							<goal>verify</goal>
 						</goals>
 						<configuration>
-							<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands -->
-							<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+							<!-- JEP 498 escape: silence Lombok #3959 Permit/Unsafe warnings until upstream fix lands.
+							     -Dtest.fork.number=${surefire.forkNumber} exposes the fork number as a JVM
+							     System.getProperty(...) value (see Surefire block above for rationale). -->
+							<argLine>@{argLine} --sun-misc-unsafe-memory-access=allow -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Dtest.fork.number=${surefire.forkNumber}</argLine>
+							<!-- e2e-it stays single-fork (defined inside the `e2e` profile) per the
+							     Playwright RANDOM_PORT constraint; default-it is safe to fork. -->
+							<forkCount>2</forkCount>
+							<reuseForks>true</reuseForks>
+							<systemPropertyVariables>
+								<app.upload-dir>data/${spring.profiles.active:dev}/uploads-fork-${surefire.forkNumber}</app.upload-dir>
+								<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
+								<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
+							</systemPropertyVariables>
 							<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 							     run @Tag("integration") tests, exclude @Tag("e2e") and @Tag("flaky").
 							     Filename-based includes/excludes have been removed in favor of tags. -->

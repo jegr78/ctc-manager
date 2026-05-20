@@ -1,11 +1,10 @@
 package org.ctc.domain.model;
 
 import org.ctc.domain.repository.*;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,8 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * Completely" rule. `@Transactional` rolls each test back so failed inserts and
  * partial state never leak into the dev seed data.
  */
-@SpringBootTest
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 @Transactional
 class PhaseTeamUniquenessIntegrationTest {
 

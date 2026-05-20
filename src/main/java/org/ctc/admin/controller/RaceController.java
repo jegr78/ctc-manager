@@ -1,13 +1,18 @@
 package org.ctc.admin.controller;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.admin.service.RaceGraphicService;
+import org.ctc.dataimport.exception.AuthGoogleApiException;
+import org.ctc.dataimport.exception.GoogleApiException;
+import org.ctc.dataimport.exception.NotFoundGoogleApiException;
+import org.ctc.dataimport.exception.PermissionGoogleApiException;
+import org.ctc.dataimport.exception.TransientGoogleApiException;
 import org.ctc.domain.service.*;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+@Slf4j
 @Controller
 @RequestMapping("/admin/races")
 @RequiredArgsConstructor
@@ -189,7 +195,29 @@ public class RaceController {
 		try {
 			raceCalendarService.createOrUpdateCalendarEvent(id);
 			redirectAttributes.addFlashAttribute("successMessage", "Calendar event saved");
-		} catch (IOException | IllegalStateException e) {
+		} catch (AuthGoogleApiException e) {
+			log.error("Google Calendar authentication failed for race {}", id, e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Authentication problem — re-link Google account");
+			redirectAttributes.addFlashAttribute("errorCategory", "AUTH");
+		} catch (NotFoundGoogleApiException e) {
+			log.error("Google Calendar not found for race {}", id, e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Calendar not found — check the calendar ID configuration");
+			redirectAttributes.addFlashAttribute("errorCategory", "NOT_FOUND");
+		} catch (PermissionGoogleApiException e) {
+			log.error("Permission denied on Google Calendar for race {}", id, e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Access denied — share the calendar with the service account");
+			redirectAttributes.addFlashAttribute("errorCategory", "PERMISSION");
+		} catch (TransientGoogleApiException e) {
+			log.warn("Transient Google Calendar failure for race {}", id, e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Connection problem — retry");
+			redirectAttributes.addFlashAttribute("errorCategory", "TRANSIENT");
+		} catch (GoogleApiException e) {
+			// Defensive catch on the sealed base — unreachable at runtime (the 4
+			// permits above are exhaustive) but required by javac.
+			log.error("Unexpected GoogleApiException subtype for race {}", id, e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Connection problem — retry");
+			redirectAttributes.addFlashAttribute("errorCategory", "TRANSIENT");
+		} catch (IllegalStateException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", "Calendar: " + e.getMessage());
 		}
 		return "redirect:/admin/races/" + id;

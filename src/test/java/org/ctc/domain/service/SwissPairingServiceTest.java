@@ -3,19 +3,17 @@ package org.ctc.domain.service;
 import java.util.*;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 @Transactional
 class SwissPairingServiceTest {
 

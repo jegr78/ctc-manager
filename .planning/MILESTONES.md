@@ -1,5 +1,53 @@
 # Milestones
 
+## v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (Shipped: 2026-05-20)
+
+**Phases completed:** 0 phases, 0 plans, 0 tasks
+
+**Key accomplishments:**
+
+- (none recorded)
+
+---
+
+## v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (Shipped: 2026-05-20)
+
+**Phases completed:** 4 phases (88-91), 15 plans, 15/15 requirements satisfied (14 must-have + 1 stretch — UX-01 resolved IN per Phase 91 D-01)
+**Diff:** +19 294 / −462 across 127 files (111 commits in milestone range)
+**Tests:** 1696 tests passing (Surefire + Failsafe + Playwright E2E); JaCoCo line coverage 88.44 % (gate 82 %, v1.11 baseline 88.88 %, Δ−0.44 pp — flagged for v1.13 cleanup; root cause documented in Plan 91-02 SUMMARY § JaCoCo coverage delta)
+**Timeline:** 2 days (2026-05-18 → 2026-05-20)
+**Branch:** `gsd/v1.12-driver-import-and-test-perf` (PR #129)
+**Final-gate CI:** PERF-06 5-run harvest median Run [26157245962](https://github.com/jegr78/ctc-manager/actions/runs/26157245962) @ SHA `b63a2be1` SUCCESS — E2E step 17:39 (1059s, median of 5 sequential `workflow_dispatch` runs after dropping min+max; variance 18.2 % within D-10 20 % tolerance), Δ−23.3 % vs v1.11 23:00 baseline, SpotBugs 0 BugInstance
+**Audit verdict:** passed (`v1.12-MILESTONE-AUDIT.md` will land post-`/gsd-complete-milestone v1.12`); Nyquist scoreboard compliant 4/0/0 (Phases 88+89+90+91 all `nyquist_compliant: true` per D-11 strict)
+
+**Key accomplishments:**
+
+- Phase 88 (Build/Release Unblockers, YAGNI Sweep, Doc-Conventions, Driver-Import Gap-Closure) — CLEAN-01..03 (`@Disabled` sweep + `SiteGeneratorBaselineRefresh` utility + Java-25 AssertJ generic-inference compile fix on `BackupSchemaExclusionIT.java:40`), REL-01..02 (release workflow hardening + retroactive v1.10.0 / v1.11.0 publishes + legacy tag cleanup + `docs/operations/release-runbook.md`), DOCS-01 (canonical `/gsd-` skill-invocation prefix across active planning files, six-file regression fence), DRIV-01..02 (season-aware shortName resolver + GROUPS-layout gate — closes 2 deferred debug sessions from 2026-05-08)
+- Phase 89 (PERF Instrumentation + Lever 1) — PERF-01 per-fork `app.backup.staging-dir` + `app.backup.import-backups-dir` + `app.upload-dir` refactor enabling Failsafe `default-it forkCount=2 reuseForks=true`; PERF-02 `ContextCacheKeyFingerprintListener` + sidecar marker + `scripts/test-perf/aggregate-fingerprints.sh`; Wave-4 local median 09:19 = −10.4 % vs. Phase-86 10:24 baseline
+- Phase 90 (PERF Consolidation + Module-Split Decision) — PERF-03 composed `@CtcDevSpringBootContext` annotation across 19 outer classes + Surefire cluster collapse `9cefac4c`→`baafff8e` (29 events / 13 classes preserved); PERF-04 `.withReuse(true)` on both MariaDB ITs + `~/.testcontainers.properties` opt-in documented; PERF-05 module-split `defer` verdict + 3 explicit blockers + v1.13 re-evaluation trigger; Wave-5 local median 08:27
+- Phase 91 (PERF Re-Harvest + UX-01 + Closer) — PERF-06 CI 5-run median **17:39** harvested per D-17 trigger-equivalence (5 `workflow_dispatch` runs on milestone Draft PR HEAD `b63a2be1`; drop min+max; variance 18.2 %); UX-01 sealed `GoogleApiException` hierarchy (4 typed permits: Transient/Auth/NotFound/Permission) + `GoogleApiExceptionMapper` static helper + flash UX with `errorCategory` BEM badge in `admin.css` + Thymeleaf `layout.html` / `driver-import.html` + `docs/operations/google-integration.md` 5-section operator runbook (Setup / Error Categories / Troubleshooting); milestone close with composite D-07b PR body and v1.12 entry in MILESTONES.md
+- JaCoCo line coverage 88.44 % (above 82 % pom gate; −0.44 pp delta vs v1.11 88.88 % attributed to unreachable defensive `catch (GoogleApiException)` blocks required by javac since sealed-exhaustiveness on catch is not yet a Java 25 language feature, plus uncovered service-layer IOException try-catch paths — flagged for v1.13); SpotBugs `BugInstance` 0; CodeQL gate-step exit 0; Flyway V1-V7 unchanged; `EXPORT_ORDER` = 24; `BackupSchema.SCHEMA_VERSION` = 1; D-13 production yml invariant + Flyway-immutable invariant held across all 4 phases
+
+**Deferred to next milestone (acknowledged at close):**
+
+- Test-module-split extraction (`ctc-manager-tests` Maven artifact) — Phase 90 PERF-05 `defer` verdict; v1.13 re-evaluates against PERF-06 CI median 17:39 surfaced in Phase 91
+- Secondary cluster consolidation (backup-exception 12-class, admin-security 12-class, AdminWorkflowE2E 7-class buckets) — Phase 90 D-01 conservative
+- Wider `@CtcDevSpringBootContext` adoption beyond Phase 90's 5-class `db.migration.**` cluster
+- Background-trigger calendar-sync UX surface — UX-01 D-08 keeps non-user-triggered paths in graceful-fallback; future phase if operator demand surfaces
+- Retry-with-backoff for `TransientGoogleApiException` — UX surfaces "retry" wording but no auto-retry
+- OAuth re-link UI flow / Sheet-ID lookup helper / `@ControllerAdvice` typed-exception handler extraction — all out-of-scope per Phase 91 deferred items
+- JaCoCo coverage recovery — add `RaceControllerCalendarTest` + integration tests for Google service IOException paths to recover the 0.44 pp delta vs v1.11 baseline
+- QUAL-02 `local`-profile MariaDB manual smoke (carry-forward from v1.11; amber, operator-driven)
+- QUAL-05 / UAT-02 legacy-season visual smoke (carry-forward from v1.11; procedure + STATE.md result-slot in place)
+
+**Post-merge self-resolving (not tech debt):**
+
+- v1.12 milestone PR #129 squash-merge to master (CI release workflow handles `v1.12.0` tag + GitHub Release + Docker images via the hardened workflow from Phase 88 REL-01 — no local `git tag` per `feedback_no_local_git_tags`)
+
+Known deferred items at close: see `STATE.md` Deferred Items + `v1.12-MILESTONE-AUDIT.md` (lands post-`/gsd-complete-milestone v1.12`)
+
+---
+
 ## v1.11 Tooling Infrastructure & Tech-Debt Sweep (Shipped: 2026-05-18)
 
 **Phases completed:** 8 phases (80-87), 46 plans, 46/46 requirements satisfied
@@ -19,7 +67,7 @@
 - Renovate Integration: Mend Renovate GitHub App installed (single-repo scope, Free Community plan, Interactive mode); `renovate.json` safety packageRules — Guava `-jre` allowedVersions regex, Thymeleaf `enabled: false` + secondary vulnerability-override (CVE-2026-40478 pin), `config:recommended` LTS preset inheritance, 4 group names (Spring Boot, Spring Security, Google API clients, Testcontainers), eclipse-temurin `-noble` regex with Adoptium underscore-build support, patch automerge `automergeType: "pr"`; synthetic Dockerfile-bump PR #126 exercises `dockerfile-noble-pin-guard` end-to-end; `.github/dependabot.yml` removed in same atomic commit as `renovate.json` introduction (T-5 dual-bot mitigation) (DEPS-01..08)
 - CodeQL SAST blocking gate (`.github/workflows/codeql.yml` on push/pull_request/schedule/workflow_dispatch, `java-kotlin` with `security-extended`); 3-layer FP suppression invariant — `codeql-config.yml` `query-filters` (SSRF/ZIP-Slip/path-injection) + `// CodeQL FP: <rule-id>` source markers + `docs/security/sast-acceptance.md` per-finding table; BCrypt-N/A documented as D-05 tracked deviation (no `PasswordEncoder` bean, httpBasic auth); SAST-06 throwaway PR #128 surfaced gate-step semantic bug (PR-context vs branch-context alert query split fix via commit `61ccee5f` — the exact failure mode SAST-06 was designed to catch); CodeQL alert #35 dismissed `won't fix` post-verification (SAST-01..06)
 - Test wallclock infrastructure baseline: `ContextLoadCountListener` instruments unique Spring context boots (baseline 81 → post 79 in `docs/test-performance.md`); 3 phase-repository ITs converted from `@SpringBootTest` to `@DataJpaTest` slice; 8 `@DirtiesContext` removed (sitegen cluster fix) + surgical per-method retention on latch-dependent backup-ITs with rationale comments; PERF-04 OR-branch verdict — target ≤7m 50s MISSED (CI median 23:00 ≫ target), architectural blocker documented with 3-lever v1.12 forward path; CI 5-run PR-branch median captured per D-17 trigger-equivalence (PERF-01..05)
-- Phase 87 v1.10 Nyquist VALIDATION closure: 8 v1.10 phases (71-76, 78-79) retroactively brought to `status: approved` + `nyquist_compliant: true` via `/gsd:validate-phase` × 8 against archived v1.10 phase directories restored from git ref `60f5f915^`; 6 gap-fill tests landed atomically across 4 plans (5 new test files, 0 impl bugs surfaced, 0 checkpoint escalations); v1.10-MILESTONE-AUDIT scoreboard `partial 1/6/2` → `compliant 9/0/0` (VAL-01..04)
+- Phase 87 v1.10 Nyquist VALIDATION closure: 8 v1.10 phases (71-76, 78-79) retroactively brought to `status: approved` + `nyquist_compliant: true` via `/gsd-validate-phase` × 8 against archived v1.10 phase directories restored from git ref `60f5f915^`; 6 gap-fill tests landed atomically across 4 plans (5 new test files, 0 impl bugs surfaced, 0 checkpoint escalations); v1.10-MILESTONE-AUDIT scoreboard `partial 1/6/2` → `compliant 9/0/0` (VAL-01..04)
 - In-milestone v1.11 Nyquist closure (Option A inline pattern): post-Phase-87 audit surfaced v1.11 itself accumulated same Nyquist debt; 6 v1.11 phases (81-86) retroactively approved + retroactive `86-VERIFICATION.md` created + REQUIREMENTS.md/ROADMAP.md bookkeeping flipped; v1.11 scoreboard `compliant 8/0/0`; pattern mirror — v1.10 → Phase 87 cross-milestone → v1.11 in-milestone same-day closure
 - CI Playwright fork-channel corruption fix: `actions/cache@v4` for `~/.cache/ms-playwright` + pre-install all 3 default browsers (Chromium + Firefox + WebKit, ~360 MiB) before Surefire; eliminates `Playwright.create()` mid-Surefire auto-download corrupting fork-channel stdout (commit `5cc76ab9` + `3590b3a7` — diagnosed via dumpstream artifact from broken CI run `26015174076`)
 - T-2 master branch protection activated: `required_status_checks.contexts = [build-and-test, dockerfile-noble-pin-guard, docker-build]`, `strict: true`, `enforce_admins: false`, force-pushes/deletions disabled (operator action 2026-05-18, Phase 84 follow-up)
@@ -68,7 +116,7 @@ Known deferred items at close: see `STATE.md` Deferred Items + `v1.11-MILESTONE-
 - Phase 79 D-06 wallclock-reduction debt: achieved 16.85 % vs ≥ 30 % target; Spring-context startup is structural — architectural test-restructuring needed (Spring-context-per-fork is unavoidable cost without splitting test modules)
 - Driver-detail Season-Assignment chip ordering (cosmetic; 75-HUMAN-UAT test 6) — explicit `ORDER BY year` on `Driver.seasonAssignments` query
 - `DevDataSeeder` is `@Profile("dev")`-only; live-MariaDB-UAT on `local,demo` requires either profile widening or a separate Saison-2023 fixture-bootstrap
-- Nyquist `*-VALIDATION.md` drafts → approved for 6 phases (72-76, 79) + creation for 71 + 78 — optional `/gsd:validate-phase {N}`
+- Nyquist `*-VALIDATION.md` drafts → approved for 6 phases (72-76, 79) + creation for 71 + 78 — optional `/gsd-validate-phase {N}`
 - Backlog: OpenRewrite (Phase 999.1), Clean-Code enforcement (999.2), Renovate (999.3), SAST (999.4)
 
 **Post-merge self-resolving (not tech debt):**

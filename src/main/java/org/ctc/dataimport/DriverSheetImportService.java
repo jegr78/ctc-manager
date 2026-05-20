@@ -1,22 +1,28 @@
 package org.ctc.dataimport;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.regex.Pattern;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.dataimport.DriverMatchingService.MatchResult;
 import org.ctc.dataimport.DriverMatchingService.MatchType;
+import org.ctc.dataimport.exception.GoogleApiException;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.PhaseLayout;
+import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.DriverRepository;
+import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.service.SeasonManagementService;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +48,8 @@ public class DriverSheetImportService {
     private final SeasonDriverRepository seasonDriverRepository;
     private final DriverRepository driverRepository;
     private final SeasonManagementService seasonManagementService;
+    private final SeasonPhaseService seasonPhaseService;
+    private final PhaseTeamRepository phaseTeamRepository;
 
     /**
      * Builds a preview of all year-numbered tabs in the given Google Sheet.
@@ -52,10 +60,12 @@ public class DriverSheetImportService {
      *
      * @param sheetUrl Google Sheets URL or bare spreadsheet ID
      * @return typed preview — no DB writes performed
-     * @throws IOException if Google Sheets API call fails
+     * @throws GoogleApiException if the Google Sheets API call fails — the concrete
+     *   instance is always one of the 4 sealed subtypes; callers catch each typed
+     *   branch and add a defensive catch for the base to satisfy javac.
      */
     @Transactional(readOnly = true)
-    public DriverSheetImportPreview preview(String sheetUrl) throws IOException {
+    public DriverSheetImportPreview preview(String sheetUrl) throws GoogleApiException {
         String spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
         log.info("Building driver sheet import preview for spreadsheet {}", spreadsheetId);
 
@@ -63,11 +73,7 @@ public class DriverSheetImportService {
         List<String> yearTabs = allTabs.stream()
                 .filter(name -> YEAR_TAB_PATTERN.matcher(name).matches())
                 // Sort by year extracted from regex group(1); legacy 4-digit names still sort correctly.
-                .sorted(Comparator.comparingInt(name -> {
-                    var m = YEAR_TAB_PATTERN.matcher(name);
-                    m.matches();
-                    return Integer.parseInt(m.group(1));
-                }))
+                .sorted(Comparator.comparingInt(DriverSheetImportService::parseYearFromTabName))
                 .toList();
 
         log.debug("Found {} year-numbered tabs: {}", yearTabs.size(), yearTabs);
@@ -92,17 +98,12 @@ public class DriverSheetImportService {
      * @return accumulated result counters
      */
     @Transactional
-    public ExecuteResult execute(String sheetUrl, Map<String, String> allParams) {
+    public ExecuteResult execute(String sheetUrl, Map<String, String> allParams) throws GoogleApiException {
         log.info("Executing driver sheet import: sheetUrl={}", sheetUrl);
-		if (allParams == null) {
-			allParams = Map.of();
-		}
-        DriverSheetImportPreview fullPreview;
-        try {
-            fullPreview = this.preview(sheetUrl);
-        } catch (IOException e) {
-            throw new IllegalStateException("Sheet read failed: " + e.getMessage(), e);
+        if (allParams == null) {
+            allParams = Map.of();
         }
+        DriverSheetImportPreview fullPreview = this.preview(sheetUrl);
 
         ExecuteResult result = new ExecuteResult();
         Map<String, Driver> crossTabCreatedDrivers = new HashMap<>();
@@ -116,6 +117,9 @@ public class DriverSheetImportService {
             Season season = seasonRepository
                     .findById(UUID.fromString(seasonIdStr))
                     .orElseThrow(() -> new IllegalArgumentException("Season not found: " + seasonIdStr));
+            SeasonPhase regularPhase = seasonPhaseService
+                    .findByType(season.getId(), PhaseType.REGULAR)
+                    .orElse(null);
 
             // NEW_DRIVER rows
             for (NewDriverRow row : tab.newDrivers()) {
@@ -133,7 +137,7 @@ public class DriverSheetImportService {
                             result.incrementNewDrivers();
                             return saved;
                         }));
-                Team team = resolveTeamByShortName(row.teamShortName())
+                Team team = resolveTeamByShortName(row.teamShortName(), regularPhase)
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 seasonDriverRepository.save(new SeasonDriver(season, driver, team));
                 result.incrementNewAssignments();
@@ -144,7 +148,7 @@ public class DriverSheetImportService {
                 Driver driver = crossTabCreatedDrivers.computeIfAbsent(row.psnId(),
                         psnId -> driverRepository.findById(row.existingDriverId())
                                 .orElseThrow(() -> new IllegalArgumentException("Driver not found: " + row.existingDriverId())));
-                Team team = resolveTeamByShortName(row.teamShortName())
+                Team team = resolveTeamByShortName(row.teamShortName(), regularPhase)
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 boolean alreadyAssigned = seasonDriverRepository
                         .findBySeasonIdAndDriverId(season.getId(), driver.getId())
@@ -164,7 +168,7 @@ public class DriverSheetImportService {
                     SeasonDriver sd = seasonDriverRepository
                             .findById(row.existingSeasonDriverId())
                             .orElseThrow(() -> new IllegalArgumentException("SeasonDriver not found: " + row.existingSeasonDriverId()));
-                    Team newTeam = resolveTeamByShortName(row.sheetTeamShortName())
+                    Team newTeam = resolveTeamByShortName(row.sheetTeamShortName(), regularPhase)
                             .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.sheetTeamShortName()));
                     sd.setTeam(newTeam);
                     seasonDriverRepository.save(sd);
@@ -199,7 +203,7 @@ public class DriverSheetImportService {
                                 return saved;
                             }));
                 }
-                Team team = resolveTeamByShortName(row.teamShortName())
+                Team team = resolveTeamByShortName(row.teamShortName(), regularPhase)
                         .orElseThrow(() -> new IllegalArgumentException("Team not found: " + row.teamShortName()));
                 boolean alreadyAssigned = seasonDriverRepository
                         .findBySeasonIdAndDriverId(season.getId(), driver.getId())
@@ -216,17 +220,19 @@ public class DriverSheetImportService {
             // ERRORS (never imported)
             result.addErrors(tab.errors().size());
 
-            log.debug("Tab {} processed: {} new drivers, {} new assignments",
+            log.debug("After tab {}: cumulative new drivers={}, cumulative new assignments={}",
                     tab.tabName(), result.getNewDriversCount(), result.getNewAssignmentsCount());
         }
 
         return result;
     }
 
-    private TabPreview buildTabPreview(String spreadsheetId, String tabName) throws IOException {
-        // Parse tab name via union pattern; group(2) is null for legacy form.
-        var matcher = YEAR_TAB_PATTERN.matcher(tabName);
-        matcher.matches(); // upstream filter already proved this matches
+    private TabPreview buildTabPreview(String spreadsheetId, String tabName) throws GoogleApiException {
+        // Parse tab name via union pattern; group(2) is null for legacy form. The upstream
+        // filter in preview() already proved the name matches the pattern — if a future
+        // refactor breaks that invariant the helper throws loudly instead of failing later
+        // with `IllegalStateException: No match found` from group().
+        var matcher = matchTabPattern(tabName);
         int year = Integer.parseInt(matcher.group(1));
         Integer number = matcher.group(2) == null ? null : Integer.parseInt(matcher.group(2));
 
@@ -251,6 +257,11 @@ public class DriverSheetImportService {
             suggestedSeasonId = null;
             ambiguousReason = ex.getMessage();
         }
+
+        SeasonPhase regularPhase = suggestedSeasonId != null
+                ? seasonPhaseService.findByType(suggestedSeasonId, PhaseType.REGULAR).orElse(null)
+                : null;
+        boolean usesGroups = regularPhase != null && regularPhase.getLayout() == PhaseLayout.GROUPS;
 
         List<List<Object>> rows = googleSheetsService.readRangeFromSheet(spreadsheetId, tabName, "A:C");
 
@@ -288,7 +299,7 @@ public class DriverSheetImportService {
             }
 
             // Step 3: Unknown team short code
-            Optional<Team> teamOpt = resolveTeamByShortName(rawTeamCode);
+            Optional<Team> teamOpt = resolveTeamByShortName(rawTeamCode, regularPhase);
             if (teamOpt.isEmpty()) {
                 errors.add(new ErrorRow(rawPsnId, rawTeamCode, ErrorReason.UNKNOWN_TEAM_CODE));
                 continue;
@@ -357,7 +368,25 @@ public class DriverSheetImportService {
                 fuzzySuggestions.size(), unchanged.size(), errors.size());
 
         return new TabPreview(tabName, year, number, suggestedSeasonId, ambiguousReason,
-                newDrivers, newAssignments, conflicts, fuzzySuggestions, unchanged, errors);
+                newDrivers, newAssignments, conflicts, fuzzySuggestions, unchanged, errors, usesGroups);
+    }
+
+    /**
+     * Returns a {@link java.util.regex.Matcher} positioned on a successful match against the
+     * year-tab pattern. Throws if the name does not match — replaces the previous
+     * `matcher.matches();` side-effect call so the precondition is asserted explicitly.
+     */
+    private static java.util.regex.Matcher matchTabPattern(String tabName) {
+        var m = YEAR_TAB_PATTERN.matcher(tabName);
+        if (!m.matches()) {
+            throw new IllegalStateException("Tab name does not match year pattern: " + tabName);
+        }
+        return m;
+    }
+
+    /** Parses the year (group 1) from a year-tab name. */
+    private static int parseYearFromTabName(String tabName) {
+        return Integer.parseInt(matchTabPattern(tabName).group(1));
     }
 
     /**
@@ -373,29 +402,44 @@ public class DriverSheetImportService {
     }
 
     /**
-     * Resolves a team by shortName with parent-precedence on multi-match.
+     * Resolves a team by shortName with season-aware precedence on multi-match.
      * <p>
      * The {@code teams.short_name} column is intentionally non-unique — a parent team and
      * one of its sub-teams may share the same shortName (e.g. parent {@code ZFS} + sub
-     * {@code ZFS}). The import always assigns the parent at the season level; sub-team
-     * variation is per-match (RaceLineup), not per-season.
+     * {@code ZFS}). For seasons with a known REGULAR phase, a candidate that has a
+     * {@code PhaseTeam(regularPhase.id, candidate.id)} row wins, allowing the resolver to
+     * route to the correct sub-team in GROUPS-layout phases. For legacy seasons without a
+     * REGULAR phase (pre-V4), the parent-precedence fallback is preserved.
      * <ol>
      *   <li><b>0 matches:</b> empty — caller emits {@code UNKNOWN_TEAM_CODE}.</li>
      *   <li><b>1 match:</b> return it (parent or solo-sub with its own unique shortName, both legitimate).</li>
-     *   <li><b>N matches:</b> return the first {@code parentTeam == null} candidate.
-     *       If no candidate is a parent (data-integrity edge), log WARN and return the first deterministically.</li>
+     *   <li><b>N matches, regularPhase non-null:</b> return the first candidate with a
+     *       {@code PhaseTeam} in that phase. Falls through to parent-precedence if none.</li>
+     *   <li><b>N matches, regularPhase null (legacy):</b> return the first {@code parentTeam == null}.</li>
+     *   <li><b>N matches, no PhaseTeam, no parent:</b> log WARN, return the first match deterministically.</li>
      * </ol>
      *
-     * @param shortName trimmed team short code from the sheet
-     * @return the resolved team (parent precedence on multi-match), or empty if no team matches
+     * @param shortName    trimmed team short code from the sheet
+     * @param regularPhase the season's REGULAR phase, or {@code null} for legacy seasons without one
+     * @return the resolved team, or empty if no team matches
      */
-    private Optional<Team> resolveTeamByShortName(String shortName) {
+    private Optional<Team> resolveTeamByShortName(String shortName, SeasonPhase regularPhase) {
         List<Team> matches = teamRepository.findAllByShortName(shortName);
         if (matches.isEmpty()) {
             return Optional.empty();
         }
         if (matches.size() == 1) {
             return Optional.of(matches.get(0));
+        }
+        if (regularPhase != null) {
+            Optional<Team> phaseTeamMatch = matches.stream()
+                    .filter(t -> phaseTeamRepository
+                            .findByPhaseIdAndTeamId(regularPhase.getId(), t.getId())
+                            .isPresent())
+                    .findFirst();
+            if (phaseTeamMatch.isPresent()) {
+                return phaseTeamMatch;
+            }
         }
         Optional<Team> parent = matches.stream()
                 .filter(t -> t.getParentTeam() == null)
@@ -422,7 +466,8 @@ public class DriverSheetImportService {
             List<ConflictRow> conflicts,
             List<FuzzySuggestionRow> fuzzySuggestions,
             List<UnchangedRow> unchanged,
-            List<ErrorRow> errors
+            List<ErrorRow> errors,
+            boolean usesGroups
     ) {}
 
     public record NewDriverRow(String psnId, String teamShortName) {}
@@ -480,7 +525,7 @@ public class DriverSheetImportService {
         }
     }
 
-    @lombok.Getter
+    @Getter
     public static class ExecuteResult {
         private int newDriversCount;
         private int newAssignmentsCount;
@@ -490,7 +535,7 @@ public class DriverSheetImportService {
         private int errorCount;
         // Holds raw tab names (e.g. "2024" or "2025_S2") so the user-facing flash
         // message can disambiguate multiple seasoned tabs in the same year.
-        private final java.util.List<String> skippedTabNames = new java.util.ArrayList<>();
+        private final List<String> skippedTabNames = new ArrayList<>();
 
         void incrementNewDrivers()           { newDriversCount++; }
         void incrementNewAssignments()       { newAssignmentsCount++; }

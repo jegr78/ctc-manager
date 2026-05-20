@@ -1,12 +1,10 @@
 package db.migration;
 
-import org.ctc.CtcManagerApplication;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,8 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Class suffix is {@code Test} (Surefire) per — runs in the standard
  * {@code ./mvnw verify} gate, not the {@code -Pe2e} Failsafe profile.
  */
-@SpringBootTest(classes = CtcManagerApplication.class)
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 class V6MigrationTest {
 
     @Autowired private JdbcTemplate jdbcTemplate;

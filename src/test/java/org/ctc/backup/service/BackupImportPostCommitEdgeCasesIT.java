@@ -20,12 +20,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,8 +64,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * loaded by {@link BackupImportPostCommitIT} (no new context, ~0 s cold-start cost — Phase 87
  * D-06 wallclock budget).
  */
-@SpringBootTest
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 @ExtendWith(OutputCaptureExtension.class)
 @Tag("integration")
 class BackupImportPostCommitEdgeCasesIT {

@@ -1,11 +1,9 @@
 package db.migration;
 
-import org.ctc.CtcManagerApplication;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,8 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * syntax was PostgreSQL/H2-only and raised MariaDB error 1064 (uncovered by Phase 61
  * UAT Test 3 — V6 migration on MariaDB docker profile).
  */
-@SpringBootTest(classes = CtcManagerApplication.class)
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 class V5MigrationTest {
 
     @Autowired private JdbcTemplate jdbcTemplate;

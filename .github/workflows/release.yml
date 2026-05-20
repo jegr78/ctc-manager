@@ -3,6 +3,13 @@ name: Release
 on:
   push:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Dry-run: exercise version determination + idempotency guard, skip versions:set/build/tag/release/docker/snapshot.'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -19,6 +26,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          fetch-tags: true          # REL-01: required so `git tag` returns remote tags
           # PAT with repo scope — required to push past branch protection
           token: ${{ secrets.RELEASE_TOKEN }}
 
@@ -32,12 +40,14 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          # Check if any tags exist
-          if git describe --tags --abbrev=0 2>/dev/null; then
-            LAST_TAG=$(git describe --tags --abbrev=0)
-            HAS_TAGS=true
-          else
+          # REL-01 (a): strict 3-part SemVer pattern, sorted by version not reachability.
+          # Ignores legacy short-form tags (v1.5, v1.8, etc.) deliberately.
+          LAST_TAG=$(git tag --sort=-version:refname --list 'v[0-9]*.[0-9]*.[0-9]*' | head -1)
+
+          if [ -z "$LAST_TAG" ]; then
             HAS_TAGS=false
+          else
+            HAS_TAGS=true
           fi
           echo "has_tags=$HAS_TAGS" >> $GITHUB_OUTPUT
 
@@ -50,27 +60,40 @@ jobs:
           else
             echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
 
-            # Get commits since last tag
-            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+            # Get commits since last tag — include subject (%s), body, and footer (%B)
+            # so the Conventional Commits `BREAKING CHANGE:` footer token participates
+            # in the major-bump regex (REVIEW finding CR-01).
+            COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:'%H%n%B%n---END---')
+            SUBJECTS=$(git log ${LAST_TAG}..HEAD --pretty=format:'%s')
 
-            # Check for releasable commits
-            if ! echo "$COMMITS" | grep -qE "^(feat|fix|docs|refactor|perf|test|style|chore)(\(.+\))?[!]?:"; then
+            # Check for releasable commits — subject-level check only (skip token starts the subject line).
+            if ! echo "$SUBJECTS" | grep -qE "^(feat|fix|docs|refactor|perf|test|style|chore)(\(.+\))?[!]?:"; then
               echo "should_skip=true" >> $GITHUB_OUTPUT
               echo "No releasable commits found, skipping release"
               exit 0
             fi
 
-            # Determine bump type from conventional commits
+            # Determine bump type:
+            # - `feat!:` / `fix!:` subject (column 0) → major
+            # - `BREAKING CHANGE:` / `BREAKING-CHANGE:` footer (column 0) → major
+            # - `feat:` subject → minor
+            # - everything else releasable → patch
             BUMP="patch"
-            if echo "$COMMITS" | grep -qE "^feat(\(.+\))?!:|BREAKING CHANGE"; then
+            if echo "$SUBJECTS" | grep -qE "^(feat|fix)(\(.+\))?!:" \
+               || echo "$COMMITS" | grep -qE "^BREAKING[ -]CHANGE:"; then
               BUMP="major"
-            elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+            elif echo "$SUBJECTS" | grep -qE "^feat(\(.+\))?:"; then
               BUMP="minor"
             fi
 
-            # Parse version from last tag
+            # REL-01 (c): parser hardening — default PATCH=0; validate numeric MAJOR/MINOR/PATCH.
             VERSION=${LAST_TAG#v}
             IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+            PATCH="${PATCH:-0}"
+            if ! [[ "$MAJOR" =~ ^[0-9]+$ && "$MINOR" =~ ^[0-9]+$ && "$PATCH" =~ ^[0-9]+$ ]]; then
+              echo "::error::Invalid SemVer in last tag '$LAST_TAG' (MAJOR=$MAJOR MINOR=$MINOR PATCH=$PATCH)"
+              exit 1
+            fi
 
             # Apply bump
             case $BUMP in
@@ -86,35 +109,49 @@ jobs:
           fi
 
           # Calculate next SNAPSHOT version (always next minor)
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$NEW_VERSION"
-          NEXT_SNAPSHOT="${MAJOR}.$((MINOR + 1)).0-SNAPSHOT"
+          IFS='.' read -r M N P <<< "$NEW_VERSION"
+          NEXT_SNAPSHOT="${M}.$((N + 1)).0-SNAPSHOT"
           echo "next_snapshot=$NEXT_SNAPSHOT" >> $GITHUB_OUTPUT
 
-      - name: Set release version in pom.xml
+      - name: Idempotency guard — refuse if tag already exists
         if: steps.version.outputs.should_skip != 'true'
+        run: |
+          # REL-01 (d): refuse BEFORE the 19-minute build to avoid a duplicate-tag failure
+          # after a full verify run (previous regression pattern across v1.8/v1.9/v1.10/v1.11).
+          if git rev-parse "v${{ steps.version.outputs.new_version }}^{}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ steps.version.outputs.new_version }} already exists. Aborting before build."
+            exit 1
+          fi
+          echo "Tag v${{ steps.version.outputs.new_version }} is available."
+
+      - name: Set release version in pom.xml
+        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
         run: ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.new_version }} -DgenerateBackupPoms=false
 
       - name: Build and verify
-        if: steps.version.outputs.should_skip != 'true'
+        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
         run: ./mvnw verify -Dspring.profiles.active=dev
 
       - name: Configure git
-        if: steps.version.outputs.should_skip != 'true'
+        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Create release commit and tag
-        if: steps.version.outputs.should_skip != 'true'
+        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
         run: |
           git add pom.xml
           git commit -m "release: v${{ steps.version.outputs.new_version }}"
           git tag -a "v${{ steps.version.outputs.new_version }}" -m "Release v${{ steps.version.outputs.new_version }}"
 
       - name: Push tag and create GitHub Release
-        if: steps.version.outputs.should_skip != 'true'
+        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # REVIEW finding WR-05: use the same PAT as the checkout step so the Release
+          # page is authored by the operator (not `github-actions[bot]`) and `gh release
+          # create` keeps working if branch-protection ever restricts release creation.
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
           git push origin "v${{ steps.version.outputs.new_version }}"
           gh release create "v${{ steps.version.outputs.new_version }}" \
@@ -123,7 +160,7 @@ jobs:
             target/ctc-manager-${{ steps.version.outputs.new_version }}.jar
 
       - name: Login to GHCR
-        if: steps.version.outputs.should_skip != 'true'
+        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -131,7 +168,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        if: steps.version.outputs.should_skip != 'true'
+        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
         run: |
           VERSION=${{ steps.version.outputs.new_version }}
           IMAGE=ghcr.io/${{ github.repository_owner }}/ctc-manager
@@ -141,7 +178,7 @@ jobs:
           docker push ${IMAGE}:latest
 
       - name: Bump to next SNAPSHOT
-        if: steps.version.outputs.should_skip != 'true'
+        if: steps.version.outputs.should_skip != 'true' && inputs.dry-run != true
         run: |
           ./mvnw versions:set -DnewVersion=${{ steps.version.outputs.next_snapshot }} -DgenerateBackupPoms=false
           git add pom.xml

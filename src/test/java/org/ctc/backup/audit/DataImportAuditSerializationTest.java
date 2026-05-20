@@ -6,11 +6,10 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,8 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * via map equality with a {@link TypeReference} so {@code Long} values survive JSON-number
  * coercion.
  */
-@SpringBootTest
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 class DataImportAuditSerializationTest {
 
     @Autowired

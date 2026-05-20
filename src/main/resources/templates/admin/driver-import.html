@@ -6,7 +6,13 @@
     <h1>Import Drivers from Google Sheet</h1>
 
     <div th:if="${errorMessage}" class="alert alert-error mb-md">
-        <p th:text="${errorMessage}"></p>
+        <p>
+            <span th:if="${errorCategory}"
+                  class="error-badge"
+                  th:classappend="|error-badge--${#strings.toLowerCase(errorCategory)}|"
+                  th:text="${errorCategory}"></span>
+            <span th:text="${errorMessage}"></span>
+        </p>
     </div>
 
     <div class="card">

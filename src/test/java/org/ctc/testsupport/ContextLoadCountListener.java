@@ -26,7 +26,7 @@ public class ContextLoadCountListener
                 long pid = ProcessHandle.current().pid();
                 Path out = Paths.get("target/test-perf/context-loads-" + pid + ".txt");
                 Files.createDirectories(out.getParent());
-                Files.writeString(out, String.valueOf(count.get()));
+                Files.writeString(out, "total " + count.get());
             } catch (IOException e) {
                 System.err.println("ContextLoadCountListener: could not write marker file: "
                         + e.getMessage());

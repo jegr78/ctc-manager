@@ -140,6 +140,46 @@ re-measurement.
 
 ---
 
+## Post-Optimization Wallclock (Wave 4)
+
+Local 3-run measurement after Phase 89 Plans 89-01 (PERF-01 per-fork
+`app.backup.staging-dir` + Failsafe `default-it` `forkCount=2 reuseForks=true`)
+and 89-02 (PERF-02 cache-key fingerprint listener) merged on branch
+`gsd/v1.12-driver-import-and-test-perf` (commit `27358d94`). Identical command
+and idle protocol as Phase 86 Wave 3 (D-09).
+
+| Run | Maven Total time | bash `real`         | Context loads | Notes                    |
+| --- | ---------------- | ------------------- | ------------- | ------------------------ |
+| 1   | 08:50            | 531.68s (8m 51.68s) | 55            | BUILD SUCCESS, no flakes |
+| 2   | 09:19            | 560.04s (9m 20.04s) | 55            | BUILD SUCCESS, no flakes |
+| 3   | 09:50            | 591.28s (9m 51.28s) | 56            | BUILD SUCCESS, no flakes |
+
+**Median (Maven): 09:19 (run 2).** **Median (bash real): 560.04s = 9m 20s.**
+
+**Delta vs. Phase-86 post-audit baseline (10:24 local median):** **-10.4 %**
+(560s vs. 624s). Plan 89-01's per-fork-staging refactor enabled Failsafe
+`forkCount=2 reuseForks=true` across the entire IT suite (not just backup),
+parallelising the largest IT cluster. Local measurement is observational only
+(D-02 — no hard local gate); Phase 91 PERF-06 will re-harvest the CI median
+(Phase-86 baseline 23:00) for the authoritative cumulative effect of Phases
+88-90.
+
+**JaCoCo line coverage:** minimum 0.8902 across the 3 runs (gate ≥ 0.8888 per
+D-15 — gate held).
+
+**Context-load count:** 55 / 55 / 56 (median 55), down from the Phase-86
+post-audit median of 79 — a 30 % reduction that is the algebraic side-effect of
+forkCount=2 splitting the test load across two JVMs (each JVM holds its own
+context cache; the same logical class may now be in one fork's cache or the
+other's, but not both — net: fewer rebuilds per JVM).
+
+PERF-02 instrumentation active per run (D-08 marker `total <N>` Line 1 + sidecar
+fingerprint lines present); the Top-5 cluster output produced by
+`scripts/test-perf/aggregate-fingerprints.sh` is recorded in the Plan-89-03
+SUMMARY for Phase 90 PERF-03 consumption.
+
+---
+
 ## CI Results (PERF-05)
 
 5 consecutive `workflow_dispatch` CI runs on the milestone PR branch
@@ -192,6 +232,43 @@ Coverage, Upload Test Reports) see the individual run pages linked above.
 
 ---
 
+## PERF-06 Re-Harvest (Phase 91)
+
+5 consecutive `workflow_dispatch` CI runs on the v1.12 milestone Draft PR branch
+`gsd/v1.12-driver-import-and-test-perf` (head SHA `b63a2be1`), harvested per D-10
+(5 runs, drop min+max, median of 3) and D-17 (PR-branch CI ≡ post-merge master CI:
+`.github/workflows/ci.yml` runs identical steps for `pull_request`, `push`, and
+`workflow_dispatch` triggers; PR-branch harvest closes Phase 91 inside the v1.12
+milestone PR without an orphan post-merge commit).
+
+| Run | Run ID | E2E step wallclock | Seconds | Notes |
+| --- | ------ | ------------------ | ------- | ----- |
+| 1   | [26157245962](https://github.com/jegr78/ctc-manager/actions/runs/26157245962) | 17:39 | 1059 | kept |
+| 2   | [26159013829](https://github.com/jegr78/ctc-manager/actions/runs/26159013829) | 15:29 | 929 | dropped — min |
+| 3   | [26160533478](https://github.com/jegr78/ctc-manager/actions/runs/26160533478) | 16:55 | 1015 | kept |
+| 4   | [26162245258](https://github.com/jegr78/ctc-manager/actions/runs/26162245258) | 18:42 | 1122 | dropped — max |
+| 5   | [26164197273](https://github.com/jegr78/ctc-manager/actions/runs/26164197273) | 17:52 | 1072 | kept |
+
+**CI Median (v1.12 baseline):** **17:39** (1059s; middle 3 = 1015/1059/1072, median = 1059s)
+**Variance:** **18.2%** ((1122 − 929) / 1059; within D-10 20% tolerance — no
+second 5-run block needed)
+**Comparison vs v1.11 baseline (23:00):** **Δ−23.3%** (reduction — 1059s vs 1380s,
+−321s)
+**Cumulative levers landed:** Phase 89 PERF-01 (per-fork backup-staging-dir) and
+PERF-02 (fingerprint listener); Phase 90 PERF-03 (composed `@CtcDevSpringBootContext`),
+PERF-04 (Testcontainers `.withReuse(true)` opt-in), and PERF-05 (module-split
+defer verdict).
+
+The harvest harness wired `gh workflow run` + `gh run watch --exit-status --interval 30`
+into a sequential loop (Pitfall 1: `concurrency.cancel-in-progress: true` in ci.yml
+forbids parallel triggers; sequential serialization is mandatory). All 5 runs
+completed with `conclusion: success`; E2E-step wallclock extracted via the
+`gh run view <id> --json jobs` step-timing API (Pitfall 2: step-level GitHub
+Actions duration is the authoritative metric; Maven `[INFO] Total time:` agrees
+within ±3 s but mixes nested `mvn` invocations and is less precise).
+
+---
+
 ## Context Load Counts (PERF-02)
 
 | Measurement Point        | Context Loads | Run Command                              |
@@ -227,20 +304,278 @@ breakdown and is queued for v1.12 (lever 2 below).
 
 PID-keyed marker files are emitted by `org.ctc.testsupport.ContextLoadCountListener`
 (registered via `src/test/resources/META-INF/spring.factories`) at JVM shutdown to
-`target/test-perf/context-loads-{PID}.txt`. The total context-load count is computed
-as the sum of integer contents across all marker files after the build:
+`target/test-perf/context-loads-{PID}.txt`.
+
+Phase 89 (PERF-02) extended the marker file: Line 1 now carries `total <N>`, and a
+companion sidecar `target/test-perf/context-loads-{PID}-fingerprints.txt` records
+per-context cache-key fingerprints (one `<hex-hash>\t<mcc-display>` line per
+`beforeTestClass` event). The aggregator below extracts the `total` from Line 1
+of the primary marker and skips the sidecar files; cache-key forensics are handled
+separately by `scripts/test-perf/aggregate-fingerprints.sh` (see § PERF-02 Forensics).
 
 ```bash
 TOTAL=0
 for f in target/test-perf/context-loads-*.txt; do
-  TOTAL=$((TOTAL + $(cat "$f")))
+  # Exclude PERF-02 sidecar fingerprint files (they carry hash lines, not totals).
+  case "$f" in *-fingerprints.txt) continue ;; esac
+  TOTAL=$((TOTAL + $(head -1 "$f" | awk '{print $2}')))
 done
 echo "Total context loads: $TOTAL"
 ```
 
-The marker files do not contain trailing newlines, so `paste -sd+ - | bc` reads the
-file contents as a single concatenated digit string and produces the wrong number;
-the loop form above (or equivalent) is the correct aggregation.
+---
+
+## PERF-02 Forensics — Cache-Key Fingerprint Analysis
+
+`org.ctc.testsupport.ContextCacheKeyFingerprintListener` is a `TestExecutionListener`
+auto-registered via `src/test/resources/META-INF/spring.factories`. On every
+`beforeTestClass` event it captures the test's `MergedContextConfiguration` (Spring
+TCF's `DefaultContextCache` bucketing function — `Integer.toHexString(mcc.hashCode())`)
+and appends a `<hex-hash>\t<display>` line (display truncated to 200 chars) to an
+in-memory list, persisted at JVM shutdown to
+`target/test-perf/context-loads-{PID}-fingerprints.txt`. The sidecar approach avoids
+shutdown-hook ordering races with the primary `ContextLoadCountListener`.
+
+The hash is the cache-bucket key, so any cluster of distinct test classes sharing
+one hex hash represents a single cached context that those classes reuse — exactly
+the data needed to choose targeted-consolidation candidates for Phase 90 (PERF-03).
+
+```bash
+scripts/test-perf/aggregate-fingerprints.sh target/test-perf 5
+```
+
+Sample output:
+
+```text
+# Top 5 cache-key clusters by occurrence x cluster-size
+# Source: 4 sidecar file(s) in target/test-perf
+
+1. 7b63d1a9 -- 29 occurrences across 29 classes (score=841)
+   [WebMergedContextConfiguration@... testClass = db.migration.V5MigrationTest
+2. d5ef50be -- 12 occurrences across 12 classes (score=144)
+   [WebMergedContextConfiguration@... testClass = org.ctc.dataimport.CsvImport
+3. a1c32ec1 -- 10 occurrences across 10 classes (score=100)
+   [WebMergedContextConfiguration@... testClass = org.ctc.backup.service.Backu
+4. f3cd1b41 -- 10 occurrences across 10 classes (score=100)
+   [WebMergedContextConfiguration@... testClass = org.ctc.backup.exception.Bac
+5. b2bac94  --  6 occurrences across  6 classes (score=36)
+   [WebMergedContextConfiguration@... testClass = org.ctc.admin.controller.Tea
+```
+
+PERF-03 (Phase 90) consumes the Top-N list to pick the highest-fragmentation cluster
+for consolidation onto a shared `@ContextConfiguration`. Phase 86 Lesson (Plan 02
+SUMMARY) is the canonical pitfall on the reverse path: per-class
+`@DynamicPropertySource` split one shared cache key into seven, fragmenting reuse;
+PERF-03's targeted consolidation prevents the same regression in the other
+direction.
+
+---
+
+## PERF-03 Cluster Consolidation (Phase 90 Plan 01)
+
+Phase 89's PERF-02 Top-1 (`9cefac4c`) Surefire cluster and Top-4 (`f524774b`, hex
+rotated to `499c01dd` in the Phase 90 pre-refactor re-harvest) Failsafe cluster
+have been consolidated onto a new composed annotation
+`org.ctc.testsupport.CtcDevSpringBootContext`, which meta-annotates
+`@SpringBootTest(classes = CtcManagerApplication.class) + @ActiveProfiles("dev")`.
+The refactor's empirical bucket-audit landed at 19 outer test classes (13 Surefire +
+6 Failsafe; the 15 `@Nested` `PlayoffServiceTest` inner classes inherit per Spring TCF
++ JUnit composed-annotation rules). `@Tag("integration")` stays on every Failsafe
+subclass; `@Transactional` stays on `V4MigrationSmokeIT` + `DriverRepositoryOrderIT`.
+See `.planning/milestones/v1.12-phases/90-perf-consolidation-module-split-decision/90-01-SUMMARY.md`
+for the per-class table.
+
+### Top-5 cache-key clusters — before/after
+
+Hex hashes rotate across `mvn clean` invocations (Java identity-hashCode
+randomization); cluster STRUCTURE (which classes collide) is the stable observable.
+
+| # | Pre-refactor (.test-perf-logs/90-01-aggregator-before.txt) | Post-refactor (.test-perf-logs/90-01-aggregator-after.txt) |
+|---|------------------------------------------------------------|------------------------------------------------------------|
+| 1 | `9cefac4c` — 29 events / 29 classes (V5MigrationTest)      | `baafff8e` — 29 events / 29 classes (V5MigrationTest)      |
+| 2 | `f524774b` — 16 events / 16 classes (BackupException…)     | `6273f4ab` — 15 events / 15 classes (BackupException…)     |
+| 3 | `3c6228fd` — 13 events / 13 classes (CsvImport…)           | `35c60549` — 12 events / 12 classes (CsvImport…)           |
+| 4 | `5ff2b420` — 7 events / 7 classes (AdminWorkflowE2E)       | `286b36be` — 7 events / 7 classes (AdminWorkflowE2E)       |
+| 5 | `84ec5236` — 7 events / 7 classes (BackupImport…)          | `cd67fca0` — 7 events / 7 classes (V4MigrationSmoke)       |
+
+### Cluster collapse — Surefire side (consolidation succeeded)
+
+The Surefire bucket `9cefac4c` → `baafff8e` retains all 29 events / 13 outer
+classes. Every class now wears `@CtcDevSpringBootContext` instead of the two-
+annotation stack. Two pre-existing shape variants — `@SpringBootTest(classes =
+CtcManagerApplication.class)` (the three `db.migration.V*MigrationTest` Surefire
+classes) and bare `@SpringBootTest` (the ten `org.ctc.**.*Test` Surefire classes) —
+folded into one shared cache key.
+
+### Cluster mix-up — Failsafe side (partial consolidation)
+
+The Failsafe V4-cluster `499c01dd` (6 outer classes pre-refactor) → `cd67fca0`
+(7 outer classes post-refactor). Two of the six refactored classes
+(`BackupExportServiceIT`, `BackupImportPostCommitEdgeCasesIT`) migrated to
+cluster `6273f4ab` post-refactor; three previously-unrelated Failsafe classes
+(`TeamRestorerIT`, `BackupArchiveExtractUploadsIT`, `BackupStagingCleanupRaceIT`)
+migrated INTO the V4-cluster. Net Failsafe cache-bucket event count is unchanged
+(7 + 15 = 22, same as pre-refactor 6 + 16). Honest observation per D-07:
+empirical Failsafe consolidation is neutral — the refactor's value on this side
+is documentation clarity + future-drift protection, not raw context-reuse gain.
+
+### Wave-5 idle measurement (Plan 01 D-07)
+
+3 idle `./mvnw clean verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev`
+runs on a developer-grade Mac (no other Maven invocations in parallel; no IDE
+compilation active). Run-1 is the pre-refactor baseline used as both Task-1
+hash-bucket audit input and Wave-5 Run-1; Runs 2 + 3 are post-refactor.
+
+| Run | Maven Total time | bash `real` | Context loads | JaCoCo line cov | SpotBugs | Notes |
+|-----|------------------|-------------|---------------|-----------------|----------|-------|
+| 1 (pre-refactor) | 07:24 min | 7:25.91 | 56 | 0.8902 | 0 | `.test-perf-logs/90-01-wave5-run-1.log` |
+| 2 (post-refactor) | 08:27 min | n/a | 55 | 0.8902 | 0 | `.test-perf-logs/90-01-wave5-run-2.log` |
+| 3 (post-refactor) | 09:31 min | n/a | 55 | 0.8902 | 0 | `.test-perf-logs/90-01-wave5-run-3.log` |
+
+Maven Total median (all 3 runs): **08:27 min**.
+Delta vs. Phase 89 Wave-4 median (09:19): **-52 s ≈ -9.3 %** (honest observational
+delta; influenced by system noise; no hard local wallclock gate per D-07).
+
+The PERF-06 CI re-harvest (Phase 91) remains the authoritative measurement against
+the v1.11 23:00 baseline.
+
+---
+
+## PERF-04 Testcontainers Reuse
+
+Both existing MariaDB-backed Failsafe ITs — `BackupImportMariaDbSmokeIT` and the
+nested `BackupRoundTripIT.MariaDbRoundTripTests` — declare their containers with
+`.withReuse(true)` appended to the existing `.withDatabaseName(...) /
+.withUsername(...) / .withPassword(...)` chain. The reuse opt-in is
+per-developer-machine: create or edit `~/.testcontainers.properties` and add the
+single line `testcontainers.reuse.enable=true`. With the opt-in present, the
+MariaDB container survives JVM exit (Ryuk teardown is skipped) and re-attaches on
+the next `./mvnw verify -Pe2e` invocation that runs the IT, saving roughly 5–7 s
+per IT per session. Without the opt-in file `.withReuse(true)` is a silent no-op
+and the container cold-starts + Ryuk-reaps exactly as it did before this change.
+
+### Verification (developer machine)
+
+After running the IT twice in succession with the opt-in enabled, the same
+container should be visible across runs:
+
+```bash
+docker ps --filter label=org.testcontainers.reuse.enable=true
+```
+
+Testcontainers also logs the empirical re-attach line `Reusing container ...`
+(instead of `Starting container ...`) on the second invocation; that log line is
+the load-bearing confirmation.
+
+### Zero-CI-impact framing
+
+Both ITs are gated by `@EnabledIfSystemProperty(named = "docker.available",
+matches = "true")` and CI runs `./mvnw verify -Pe2e` WITHOUT setting that flag
+(Phase 77 D-05). CI runners also do not carry `~/.testcontainers.properties`, so
+even if the gate were flipped the `.withReuse(true)` call would be a no-op on CI.
+Net CI behavior change introduced by Phase 90 PERF-04: zero. CI cold-start +
+Ryuk-reap behavior is unchanged.
+
+### Future MariaDB IT authors — seed defensively
+
+Container reuse persists database state across JVM exits. Any future MariaDB IT
+that opts into the same `.withReuse(true)` chain MUST call
+`testDataService.seed(...)` (or an equivalent reset routine) in `@BeforeEach` to
+avoid observing stale rows from a prior developer run. The two existing ITs
+already comply: `BackupImportMariaDbSmokeIT` replaces the entire fixture in
+`@BeforeEach`; `BackupRoundTripIT.MariaDbRoundTripTests` wipes and restores the
+DB inside the test body. This is a documentation invariant (Phase 90 Plan 02
+threat row T-90-TC-01); reviewers should reject any new reuse-enabled IT that
+doesn't reseed.
+
+### Cleanup hint
+
+If a long-lived dev session accumulates orphan reuse-mode containers across
+project rotations, sweep them with:
+
+```bash
+docker container prune --filter "label=org.testcontainers.reuse.enable=true"
+```
+
+This affects only Testcontainers reuse-labelled containers; non-reuse and
+non-Testcontainers containers are untouched (Phase 90 Plan 02 threat row
+T-90-TC-02).
+
+---
+
+## Test-Module-Split Decision
+
+**Verdict (v1.12):** Defer — re-evaluate in v1.13 against PERF-06 CI re-harvest baseline.
+
+The question — whether to extract `src/test/java/` into a separate Maven module
+(`ctc-manager-tests` artifact) — was raised as the next-tier structural lever in
+the v1.12 PERF forward path. After weighing the three architectural blockers
+below against the optionality-preservation principle, Phase 90 PERF-05 lands
+on `defer` (one of the three outcomes — `proceed` / `defer` / `reject` — that
+REQUIREMENTS.md PERF-05 permits).
+
+**Blocker 1 — TestDataService cross-boundary.** `org.ctc.admin.TestDataService`
+lives in `src/main/java` and carries `@Profile({"dev","local"})` (v1.11 QUAL-02
+widened it from the prior `dev`-only annotation so manual smoke runs against the
+`local` MariaDB profile work as well). The class seeds test data but is itself
+production-scope. A clean test-module split would force one of three
+architecturally-poor outcomes: (a) duplicating its fixtures into the test
+module — divergence risk + maintenance overhead; (b) leaving `TestDataService`
+in main with a circular dependency on the test module — Maven cycle violation +
+inverted scope; (c) extracting a third `ctc-manager-fixtures` module — three-
+module project for one cross-boundary class, net negative ergonomics for the
+small surface area involved. None of the three options moves the project
+forward; all three are net negative relative to the single-module status quo.
+See CONTEXT.md D-05 for the full rationale.
+
+**Blocker 2 — IDE-friction risk.** `.planning/milestones/v1.11-phases/80-openrewrite-integration/deferred-items.md`
+(2026-05-16 entry) documents JDT-cache pathologies that have repeatedly bitten
+the team during Maven restructures — stale "Unresolved compilation problem"
+errors that look real but disappear after a clean Maven test-compile. The
+project memory `[[clean-maven-build-authority]]` codifies the rule:
+clean Maven is the source of truth, not the IDE cache. A multi-module
+restructure historically amplifies this pathology (separate classpaths,
+separate compile units, more places for the IDE to disagree with Maven), and
+the single-module project has been stable through 87 phases of compounding
+change. Trading documented stability for speculative gain on the back of
+known IDE-friction risk is not a justified bet without hard data on the gain side.
+
+**Blocker 3 — No hard cumulative-effect data yet.** Phase 89 Wave-4 already
+landed -10.4 % on the local median (per-fork `app.backup.staging-dir` + Failsafe
+`forkCount=2 reuseForks=true` + duplicate-Failsafe-execution removal); Phase 90
+PERF-04 is dev-only (Testcontainers reuse opt-in; zero CI impact). The
+authoritative CI cumulative-effect against the v1.11 23:00 baseline is unknown
+until Phase 91 PERF-06 re-harvests the GitHub Actions median across 5
+representative runs. Splitting modules before that data lands risks substantial
+restructure cost for marginal gain — if PERF-06 reveals the cumulative effect
+already closes most of the 23:00 → 7:50 gap, a module split is unnecessary; if
+it leaves a large remaining gap, the split decision should be made against the
+actual delta, not against the speculative one.
+
+### Re-evaluation trigger
+
+The v1.13 milestone-discuss workflow (`/gsd-new-milestone`) consults this
+section. If PERF-06 (Phase 91) CI median lands materially below the v1.11 23:00
+baseline but still above the 7:50 historical gate, AND no other architectural
+lever surfaces during the v1.13 discovery phase, the v1.13 milestone-discuss
+workflow re-opens the test-module-split decision against the hard CI data
+baseline. The decision at that point may be `proceed` (extract with a concrete
+acceptance criterion against the remaining wallclock gap), `defer` again (still
+incomplete data or a new dominant lever), or `reject` (data shows the split's
+marginal value no longer justifies the IDE-friction + cross-boundary cost).
+
+### Why not reject?
+
+Rejecting now would foreclose v1.13 optionality without the empirical CI data
+to justify the foreclosure. The Phase 86 D-15 OR-branch precedent — choosing
+the explicit-future-condition branch over the close-the-door branch — is the
+canonical pattern for this codebase when authoritative measurement is still
+upstream. Defer-with-explicit-blockers leaves the door open for v1.13 to
+re-decide against hard data; the three blockers above are the structural
+guardrails the v1.13 workflow inherits, not throwaway prose. If any blocker
+materially changes (TestDataService refactored out of `src/main`, JDT-cache
+pathologies resolved by a future tooling upgrade, or PERF-06 leaves an
+unambiguous CI gap), the v1.13 decision-point has a clear axis to move on.
 
 ---
 
@@ -337,7 +672,7 @@ is set by D-14 (`data/dev/backup-staging/` per-fork refactor is Top-1) and
 
 | Lever | Estimated Wallclock Delta | Effort (S/M/L) | Risks/Dependencies | Required Touchpoints |
 | ----- | ------------------------- | -------------- | ------------------ | -------------------- |
-| **1. Per-fork `data/dev/backup-staging/` refactor** (Top-1 per D-14) — replace the global singleton staging-dir path with a per-fork variant resolved from the Surefire fork-numbering system property, enabling Failsafe `forkCount>1C` for backup ITs without staging-dir races. Backup ITs are currently 27+27 = 54 of the 79 context loads (~68% of the suite's total context-bootstrap weight); even a 2x parallelism gain on this fork would compress this band by 30-60s. | ~60-90s | M | (a) Surefire/Failsafe fork-numbering API may not survive across Maven 3 → 4 (not yet validated); (b) backup tests use `@PostConstruct` directory creation — needs `@DynamicPropertySource` per-fork wiring that mirrors the sitegen pattern from Plan 02 but with the fork-number suffix; (c) `BackupStagingCleanup` startup listener must respect the per-fork path. | `src/main/java/org/ctc/backup/service/BackupImportService.java`, `src/main/java/org/ctc/backup/service/BackupStagingCleanup.java`, `src/main/resources/application*.yml` (app.backup.staging-dir), Failsafe configuration in `pom.xml` (forkCount + system-property propagation) |
+| **1. Per-fork `data/dev/backup-staging/` refactor** (Top-1 per D-14) — **DONE (Phase 89)** — replace the global singleton staging-dir path with a per-fork variant resolved from the Surefire fork-numbering system property, enabling Failsafe `forkCount>1C` for backup ITs without staging-dir races. Backup ITs are currently 27+27 = 54 of the 79 context loads (~68% of the suite's total context-bootstrap weight); even a 2x parallelism gain on this fork would compress this band by 30-60s. | ~60-90s | M | (a) Surefire/Failsafe fork-numbering API may not survive across Maven 3 → 4 (not yet validated); (b) backup tests use `@PostConstruct` directory creation — needs `@DynamicPropertySource` per-fork wiring that mirrors the sitegen pattern from Plan 02 but with the fork-number suffix; (c) `BackupStagingCleanup` startup listener must respect the per-fork path. | `src/main/java/org/ctc/backup/service/BackupImportService.java`, `src/main/java/org/ctc/backup/service/BackupStagingCleanup.java`, `src/main/resources/application*.yml` (app.backup.staging-dir), Failsafe configuration in `pom.xml` (forkCount + system-property propagation) |
 | **2. Shared `@SpringBootTest` `@ContextConfiguration` strategy** — introduce a small number of explicit shared configuration classes referenced across IT clusters to maximize Spring TCF cache reuse and avoid the Plan-02-style cache-key fragmentation that this phase's post-audit data suggests is the dominant remaining cost. Profile the post-audit context fingerprint via per-fork ContextLoadCountListener output (already PID-keyed, easy extension) to identify the highest-fragmentation clusters before refactoring. | ~30-60s | M-L | (a) Risk of accidentally widening the cache surface and re-introducing the shared-singleton mutation issues that Plan 02 fixed; (b) requires per-fork context fingerprinting tool that doesn't exist yet — extend `ContextLoadCountListener` to dump cache-key hashes (1-2h work) before the refactor; (c) test isolation needs revisiting if shared contexts touch DB state. | All IT clusters (sitegen, backup, admin, phase-repo), `org.ctc.testsupport.ContextLoadCountListener` extension, possibly a new `BaseFailsafeIT` super-class or a shared `@TestConfiguration` per cluster |
 | **3. Testcontainers MariaDB `withReuse(true)`** — once any MariaDB IT exists (none in v1.11), enable `~/.testcontainers.properties` reuse for warm-container startups. The `local`/`docker` profile already uses MariaDB, but no IT runs against it today; this lever pre-empts the cold-start cost (~5-7s per fork) at the point MariaDB ITs are introduced. Note: a forced regression test for the Hibernate dialect (D-23) is the most likely scenario that introduces MariaDB ITs. | ~0s in v1.12 (pre-emptive); ~5-7s per fork once MariaDB ITs land | S (config only) | (a) Requires developer-side `~/.testcontainers.properties` file; (b) Testcontainers reuse skipped on CI by default — CI gets cold container start regardless; (c) only relevant once at least one MariaDB IT exists (none planned in v1.11). | Testcontainers setup, `~/.testcontainers.properties`, future MariaDB IT introduction |
 
@@ -346,5 +681,23 @@ first move in v1.12. Lever 2 requires a small instrumentation extension before t
 refactor proper; without per-fork context-fingerprint data, a blind refactor risks
 re-introducing the same fragmentation pattern from a different angle. Lever 3 is
 pre-emptive and only pays off when MariaDB ITs land.
+
+*Lever-1 status:* DONE — see **§ Post-Optimization Wallclock (Wave 4)** for the
+local median + delta and **§ PERF-02 Forensics** for the cache-key fingerprint
+data that feeds Phase 90 PERF-03. Plan 89-01 also extended the per-fork pattern
+beyond `app.backup.staging-dir` to `app.backup.import-backups-dir` and
+`app.upload-dir` (discovered during execute — see `89-FLAKE-DIAGNOSTIC.md`
+Finding 6) and unbound an inherited duplicate Failsafe execution from the
+Spring Boot parent that was silently running every IT twice (Finding 7). Phase
+91 PERF-06 will re-harvest the CI authoritative median to update the v1.11
+23:00 baseline.
+
+*Lever-2 status:* DONE — see **§ PERF-03 Cluster Consolidation (Phase 90 Plan 01)**.
+Composed annotation `@CtcDevSpringBootContext` applied to the 19-class empirical
+audit surface (13 Surefire outer + 6 Failsafe outer). Surefire cluster collapse
+empirically confirmed (`9cefac4c` → `baafff8e` retains all 29 events / 13 outer
+classes); Failsafe consolidation neutral on raw event counts but documentation
+clarity + future-drift protection achieved. PERF-06 (Phase 91) CI re-harvest
+remains authoritative for cumulative-effect measurement.
 
 ---

@@ -17,7 +17,6 @@ import org.ctc.backup.exception.AutoBackupBeforeImportException;
 import org.ctc.backup.lock.ImportLockService;
 import org.ctc.backup.service.BackupArchiveService;
 import org.ctc.backup.service.BackupImportService;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -38,6 +37,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Phase 76 / Plan 03 — failure-path Failsafe IT for the Step 0.5 pre-import auto-backup
@@ -190,23 +191,21 @@ class AutoBackupBeforeImportFailureIT {
         assertThatThrownBy(() -> backupImportService.execute(stagingId))
                 .isInstanceOf(AutoBackupBeforeImportException.class);
 
-        // then — find the <ts> directory created by this run.
+        // then — find the <ts> directory created by this run. The writeZip mock fires its
+        // IOException only AFTER opening the OutputStream (see throwAfterStreamOpen), so a
+        // <ts> directory MUST exist on POSIX once the catch path reaches
+        // tryDeletePartialAutoBackup. An empty newDirs list indicates the test setup never
+        // reached the failure point — assert loudly instead of silently passing.
         List<Path> postTsDirs = listImportBackupsDirs();
         List<Path> newDirs = postTsDirs.stream().filter(p -> !preTsDirs.contains(p)).toList();
-        // The <ts> directory may or may not have been left behind depending on the order of
-        // operations in tryDeletePartialAutoBackup — but the ZIP file itself MUST be gone.
-        if (!newDirs.isEmpty()) {
-            Path autoBackupZip = newDirs.get(0).resolve("auto-backup-before-import.zip");
-            if (isWindows()) {
-                // RESEARCH Pitfall #7 — Windows file-locking may prevent Files.deleteIfExists;
-                // the D-19 contract is "best-effort, never throws", NOT "always deletes".
-                Assumptions.assumeFalse(true, "Windows file-locking — skipping cleanup assertion");
-            } else {
-                assertThat(Files.notExists(autoBackupZip))
-                        .as("partial auto-backup ZIP must be cleaned up on POSIX (D-19)")
-                        .isTrue();
-            }
-        }
+        assertThat(newDirs)
+                .as("a new <ts> directory must be created by the failed writeZip — its absence "
+                        + "indicates the test setup never reached the failure point")
+                .isNotEmpty();
+        Path autoBackupZip = newDirs.get(0).resolve("auto-backup-before-import.zip");
+        assertThat(Files.notExists(autoBackupZip))
+                .as("partial auto-backup ZIP must be cleaned up (D-19)")
+                .isTrue();
     }
 
     // -------------------------------------------------------------------------
@@ -230,9 +229,16 @@ class AutoBackupBeforeImportFailureIT {
         // when — drive POST through the controller so the try { execute(); } finally { unlock(); }
         // wrapper from Plan 76-01 is exercised on the AutoBackup-failure path. Form field
         // names match BackupImportConfirmForm (acknowledged checkbox, not "confirmation").
+        // The controller maps AutoBackupBeforeImportException to a 3xx redirect to
+        // /admin/backup with an `errorMessage` flash attribute (see BackupController
+        // `import-execute` handler). Asserting both locks in the response shape so a
+        // future regression that swallows the exception into a 500 surfaces here, not in
+        // the silently-passing lock-release assertion below.
         mockMvc.perform(post("/admin/backup/import-execute")
                 .param("stagingId", stagingId.toString())
-                .param("acknowledged", "true"));
+                .param("acknowledged", "true"))
+            .andExpect(status().is3xxRedirection())
+            .andExpect(flash().attributeExists("errorMessage"));
 
         // then — finally { importLockService.unlock(); } must have run regardless of the
         // exception type thrown inside the try block.
@@ -280,9 +286,5 @@ class AutoBackupBeforeImportFailureIT {
         try (Stream<Path> children = Files.list(importBackupsDir)) {
             return children.filter(Files::isDirectory).sorted().toList();
         }
-    }
-
-    private static boolean isWindows() {
-        return System.getProperty("os.name", "").toLowerCase().contains("win");
     }
 }

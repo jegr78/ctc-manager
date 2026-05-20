@@ -20,6 +20,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.dataimport.exception.GoogleApiException;
+import org.ctc.dataimport.exception.GoogleApiExceptionMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -58,21 +60,29 @@ public class GoogleCalendarService {
 				&& !calendarId.isBlank();
 	}
 
-	public String createEvent(String title, LocalDateTime startTime, int durationMinutes) throws IOException {
+	public String createEvent(String title, LocalDateTime startTime, int durationMinutes) throws GoogleApiException {
 		var client = getCalendarClient();
 		var event = buildEvent(title, startTime, durationMinutes);
 
-		var created = client.events().insert(calendarId, event).execute();
-		log.info("Created calendar event '{}' (id: {})", title, created.getId());
-		return created.getId();
+		try {
+			var created = client.events().insert(calendarId, event).execute();
+			log.info("Created calendar event '{}' (id: {})", title, created.getId());
+			return created.getId();
+		} catch (IOException e) {
+			throw GoogleApiExceptionMapper.from(e);
+		}
 	}
 
-	public void updateEvent(String eventId, String title, LocalDateTime startTime, int durationMinutes) throws IOException {
+	public void updateEvent(String eventId, String title, LocalDateTime startTime, int durationMinutes) throws GoogleApiException {
 		var client = getCalendarClient();
 		var event = buildEvent(title, startTime, durationMinutes);
 
-		client.events().update(calendarId, eventId, event).execute();
-		log.info("Updated calendar event '{}' (id: {})", title, eventId);
+		try {
+			client.events().update(calendarId, eventId, event).execute();
+			log.info("Updated calendar event '{}' (id: {})", title, eventId);
+		} catch (IOException e) {
+			throw GoogleApiExceptionMapper.from(e);
+		}
 	}
 
 	private Event buildEvent(String title, LocalDateTime startTime, int durationMinutes) {
@@ -92,7 +102,7 @@ public class GoogleCalendarService {
 		return new EventDateTime().setDateTime(dateTime).setTimeZone(TIME_ZONE);
 	}
 
-	private synchronized Calendar getCalendarClient() throws IOException {
+	private synchronized Calendar getCalendarClient() throws GoogleApiException {
 		if (calendarClient == null) {
 			if (!isAvailable()) {
 				throw new IllegalStateException(
@@ -112,7 +122,9 @@ public class GoogleCalendarService {
 
 				log.info("Google Calendar API client initialized");
 			} catch (GeneralSecurityException e) {
-				throw new IOException("Failed to initialize Google Calendar API client", e);
+				throw GoogleApiExceptionMapper.from(e);
+			} catch (IOException e) {
+				throw GoogleApiExceptionMapper.from(e);
 			}
 		}
 		return calendarClient;

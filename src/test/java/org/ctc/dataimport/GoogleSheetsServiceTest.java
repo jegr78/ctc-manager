@@ -1,13 +1,27 @@
 package org.ctc.dataimport;
 
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.services.sheets.v4.Sheets;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import org.ctc.dataimport.exception.AuthGoogleApiException;
+import org.ctc.dataimport.exception.GoogleApiException;
+import org.ctc.dataimport.exception.NotFoundGoogleApiException;
+import org.ctc.dataimport.exception.TransientGoogleApiException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class GoogleSheetsServiceTest {
 
@@ -333,6 +347,75 @@ class GoogleSheetsServiceTest {
 
 			// then
 			assertEquals("abc123def456", id);
+		}
+	}
+
+	/**
+	 * Asserts the typed-throws contract introduced in Phase 91 / UX-01:
+	 * IOExceptions surfacing from the Sheets client are mapped to the
+	 * sealed {@link GoogleApiException} subtypes via the mapper. The mocked
+	 * client is injected through the private {@code sheetsClient} field.
+	 */
+	@Nested
+	class TypedThrowsContractTest {
+
+		@Test
+		void givenReadRangeSignature_whenInspectingThrows_thenDeclaresGoogleApiException() throws NoSuchMethodException {
+			// given / when
+			var method = GoogleSheetsService.class.getMethod("readRange", String.class, String.class);
+
+			// then
+			assertThat(method.getExceptionTypes()).contains(GoogleApiException.class);
+		}
+
+		@Test
+		void givenSheetsClientThrowing401_whenReadRange_thenWrapsToAuthGoogleApiException() throws Exception {
+			// given
+			var service = new GoogleSheetsService("");
+			var mockSheets = mock(Sheets.class, RETURNS_DEEP_STUBS);
+			var gjre = mock(GoogleJsonResponseException.class);
+			when(gjre.getStatusCode()).thenReturn(401);
+			when(mockSheets.spreadsheets().values().get(anyString(), anyString()).execute()).thenThrow(gjre);
+			injectSheetsClient(service, mockSheets);
+
+			// when / then
+			assertThatThrownBy(() -> service.readRange("id", "A1:B2"))
+					.isInstanceOf(AuthGoogleApiException.class);
+		}
+
+		@Test
+		void givenSheetsClientThrowingNetworkFailure_whenReadRange_thenWrapsToTransientGoogleApiException() throws Exception {
+			// given
+			var service = new GoogleSheetsService("");
+			var mockSheets = mock(Sheets.class, RETURNS_DEEP_STUBS);
+			when(mockSheets.spreadsheets().values().get(anyString(), anyString()).execute())
+					.thenThrow(new SocketException("connection reset"));
+			injectSheetsClient(service, mockSheets);
+
+			// when / then
+			assertThatThrownBy(() -> service.readRange("id", "A1:B2"))
+					.isInstanceOf(TransientGoogleApiException.class);
+		}
+
+		@Test
+		void givenSheetsClientThrowing404_whenGetSheetNames_thenWrapsToNotFoundGoogleApiException() throws Exception {
+			// given
+			var service = new GoogleSheetsService("");
+			var mockSheets = mock(Sheets.class, RETURNS_DEEP_STUBS);
+			var gjre = mock(GoogleJsonResponseException.class);
+			when(gjre.getStatusCode()).thenReturn(404);
+			when(mockSheets.spreadsheets().get(anyString()).execute()).thenThrow(gjre);
+			injectSheetsClient(service, mockSheets);
+
+			// when / then
+			assertThatThrownBy(() -> service.getSheetNames("does-not-exist"))
+					.isInstanceOf(NotFoundGoogleApiException.class);
+		}
+
+		private static void injectSheetsClient(GoogleSheetsService service, Sheets client) throws Exception {
+			Field field = GoogleSheetsService.class.getDeclaredField("sheetsClient");
+			field.setAccessible(true);
+			field.set(service, client);
 		}
 	}
 }

@@ -1,15 +1,13 @@
 package org.ctc.domain.model;
 
 import org.ctc.domain.repository.DriverRepository;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 class BaseEntityAuditTest {
 
 	@Autowired

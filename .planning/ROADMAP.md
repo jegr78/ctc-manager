@@ -11,6 +11,7 @@
 - :white_check_mark: **v1.9 Season Phases & Groups** — Phases 56-70 (shipped 2026-05-09)
 - :white_check_mark: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-79 (shipped 2026-05-16)
 - :white_check_mark: **v1.11 Tooling Infrastructure & Tech-Debt Sweep** — Phases 80-87 (shipped 2026-05-18)
+- :white_check_mark: **v1.12 Driver-Import Gap-Closure & Test Performance Round 2** — Phases 88-91 (shipped 2026-05-20)
 
 ## Phases
 
@@ -163,6 +164,18 @@ See: milestones/v1.11-ROADMAP.md for full details
 
 </details>
 
+<details>
+<summary>v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (Phases 88-91) -- SHIPPED 2026-05-20</summary>
+
+- [x] Phase 88: Build/Release Unblockers, YAGNI Sweep, Doc-Conventions & Driver-Import Gap-Closure (6/6 plans) -- completed 2026-05-19
+- [x] Phase 89: PERF Instrumentation & Lever 1 (Per-Fork Backup-Staging-Dir) (3/3 plans) -- completed 2026-05-19
+- [x] Phase 90: PERF Consolidation & Module-Split Decision (3/3 plans) -- completed 2026-05-20
+- [x] Phase 91: PERF Re-Harvest, Stretch UX Polish & Milestone Closer (3/3 plans) -- completed 2026-05-20
+
+See: milestones/v1.12-ROADMAP.md for full details
+
+</details>
+
 ## Progress
 
 | Milestone | Phases | Plans | Status | Shipped |
@@ -176,4 +189,4 @@ See: milestones/v1.11-ROADMAP.md for full details
 | v1.9 Season Phases & Groups | 56-70 | ~70 | Complete | 2026-05-09 |
 | v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | 50 | Complete | 2026-05-16 |
 | v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | 46 | Complete | 2026-05-18 |
-
+| v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | Complete | 2026-05-20 |

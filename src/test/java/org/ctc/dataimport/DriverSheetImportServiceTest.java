@@ -8,13 +8,19 @@ import org.ctc.dataimport.DriverSheetImportService.ErrorReason;
 import org.ctc.dataimport.DriverSheetImportService.TabPreview;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Driver;
+import org.ctc.domain.model.PhaseTeam;
+import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonDriver;
+import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.ctc.domain.service.PhaseTestFixtures;
 import org.ctc.domain.service.SeasonManagementService;
+import org.ctc.domain.service.SeasonPhaseService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,6 +53,10 @@ class DriverSheetImportServiceTest {
     private org.ctc.domain.repository.DriverRepository driverRepository;
     @Mock
     private SeasonManagementService seasonManagementService;
+    @Mock
+    private SeasonPhaseService seasonPhaseService;
+    @Mock
+    private PhaseTeamRepository phaseTeamRepository;
 
     @InjectMocks
     private DriverSheetImportService driverSheetImportService;
@@ -675,6 +685,220 @@ class DriverSheetImportServiceTest {
 
         SeasonDriver written = captor.getValue();
         assertThat(written.getTeam().getId()).isEqualTo(parentMrl.getId());
+    }
+
+    // 24. DRIV-01 happy path — parent (no PhaseTeam) + sub (with PhaseTeam in target REGULAR phase):
+    // sub wins, overriding the legacy parent-precedence rule.
+
+    @Test
+    void givenMultiMatchShortNameAndSubHasPhaseTeam_whenPreview_thenSubTeamWinsOverParent() throws IOException {
+        // given — parent T-MRL (no PhaseTeam) + sub T-MRL (PhaseTeam present in REGULAR phase)
+        Team parentMrl = new Team("Test-MRL Parent", "T-MRL");
+        parentMrl.setId(UUID.randomUUID());
+        Team subMrl = new Team("Test-MRL Sub", "T-MRL", parentMrl);
+        subMrl.setId(UUID.randomUUID());
+
+        SeasonPhase regularPhase = PhaseTestFixtures.groupsRegularPhase(season2024, null, null, "Group A");
+        when(seasonPhaseService.findByType(season2024.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(regularPhase));
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), parentMrl.getId()))
+                .thenReturn(Optional.empty());
+        PhaseTeam subPt = PhaseTestFixtures.assignTeam(regularPhase, subMrl, regularPhase.getGroups().get(0));
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), subMrl.getId()))
+                .thenReturn(Optional.of(subPt));
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("t-mrl-sub-driver", "Sub Driver", "T-MRL")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(teamRepository.findAllByShortName("T-MRL")).thenReturn(List.of(parentMrl, subMrl));
+        when(driverMatchingService.findDriver("t-mrl-sub-driver"))
+                .thenReturn(MatchResult.noMatch("t-mrl-sub-driver"));
+
+        // when — execute persists SeasonDriver pointing at the SUB team, not the parent
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("seasonId_2024", season2024.getId().toString());
+        when(seasonRepository.findById(season2024.getId())).thenReturn(Optional.of(season2024));
+        ArgumentCaptor<SeasonDriver> captor = ArgumentCaptor.forClass(SeasonDriver.class);
+        when(seasonDriverRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+        when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        driverSheetImportService.execute(SHEET_URL, params);
+
+        // then — sub wins because it has the PhaseTeam in the target REGULAR phase
+        SeasonDriver written = captor.getValue();
+        assertThat(written.getTeam().getId()).isEqualTo(subMrl.getId());
+    }
+
+    // 25. DRIV-01 legacy fallback — multi-match where NO candidate has a PhaseTeam in the target
+    // REGULAR phase: resolver falls through to parent-precedence (preserves Phase 66/70 semantics).
+
+    @Test
+    void givenMultiMatchShortNameAndNoPhaseTeamForAnyCandidate_whenPreview_thenParentWins() throws IOException {
+        // given — parent + sub, neither has a PhaseTeam in the target REGULAR phase
+        Team parentMrl = new Team("Test-MRL Parent", "T-MRL");
+        parentMrl.setId(UUID.randomUUID());
+        Team subMrl = new Team("Test-MRL Sub", "T-MRL", parentMrl);
+        subMrl.setId(UUID.randomUUID());
+
+        SeasonPhase regularPhase = PhaseTestFixtures.regularPhase(season2024, null, null);
+        when(seasonPhaseService.findByType(season2024.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(regularPhase));
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), parentMrl.getId()))
+                .thenReturn(Optional.empty());
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), subMrl.getId()))
+                .thenReturn(Optional.empty());
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("t-mrl-driver", "Driver", "T-MRL")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(teamRepository.findAllByShortName("T-MRL")).thenReturn(List.of(parentMrl, subMrl));
+        when(driverMatchingService.findDriver("t-mrl-driver"))
+                .thenReturn(MatchResult.noMatch("t-mrl-driver"));
+
+        // when
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("seasonId_2024", season2024.getId().toString());
+        when(seasonRepository.findById(season2024.getId())).thenReturn(Optional.of(season2024));
+        ArgumentCaptor<SeasonDriver> captor = ArgumentCaptor.forClass(SeasonDriver.class);
+        when(seasonDriverRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+        when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        driverSheetImportService.execute(SHEET_URL, params);
+
+        // then — parent wins via legacy fallback (D-07 semantics preserved)
+        SeasonDriver written = captor.getValue();
+        assertThat(written.getTeam().getId()).isEqualTo(parentMrl.getId());
+    }
+
+    // 26. DRIV-01 legacy season — no REGULAR phase at all (pre-V4 data): resolver falls through to
+    // parent-precedence without calling phaseTeamRepository, WARN-free and exception-free (D-07).
+
+    @Test
+    void givenLegacySeasonWithoutRegularPhaseAndMultiMatchShortName_whenPreview_thenParentWins() throws IOException {
+        // given — multi-match collision + season has NO REGULAR phase (legacy data)
+        Team parentMrl = new Team("Test-MRL Parent", "T-MRL");
+        parentMrl.setId(UUID.randomUUID());
+        Team subMrl = new Team("Test-MRL Sub", "T-MRL", parentMrl);
+        subMrl.setId(UUID.randomUUID());
+
+        when(seasonPhaseService.findByType(season2024.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.empty());
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("legacy-driver", "Legacy", "T-MRL")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(teamRepository.findAllByShortName("T-MRL")).thenReturn(List.of(parentMrl, subMrl));
+        when(driverMatchingService.findDriver("legacy-driver"))
+                .thenReturn(MatchResult.noMatch("legacy-driver"));
+
+        // when — execute does NOT throw BusinessRuleException; falls back to parent
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("seasonId_2024", season2024.getId().toString());
+        when(seasonRepository.findById(season2024.getId())).thenReturn(Optional.of(season2024));
+        ArgumentCaptor<SeasonDriver> captor = ArgumentCaptor.forClass(SeasonDriver.class);
+        when(seasonDriverRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+        when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        driverSheetImportService.execute(SHEET_URL, params);
+
+        // then — parent wins, no PhaseTeam lookup attempted
+        SeasonDriver written = captor.getValue();
+        assertThat(written.getTeam().getId()).isEqualTo(parentMrl.getId());
+        verifyNoInteractions(phaseTeamRepository);
+    }
+
+    // 27. DRIV-01 data-integrity edge — multi-match where NEITHER candidate has a PhaseTeam AND no
+    // candidate has parentTeam==null: resolver returns the first match deterministically with a
+    // WARN log (D-07 — no BusinessRuleException).
+
+    @Test
+    void givenMultiMatchShortNameWithNoParentAndNoPhaseTeam_whenPreview_thenFirstMatchWinsWithoutException() throws IOException {
+        // given — two sub-teams sharing shortName, both have non-null parentTeam refs (synthetic
+        // data-integrity edge), and neither has a PhaseTeam in the target REGULAR phase
+        Team distantParent = new Team("Test-Parent Distant", "OTHER-PARENT");
+        distantParent.setId(UUID.randomUUID());
+        Team subA = new Team("Test-Sub A", "T-DUP", distantParent);
+        subA.setId(UUID.randomUUID());
+        Team subB = new Team("Test-Sub B", "T-DUP", distantParent);
+        subB.setId(UUID.randomUUID());
+
+        SeasonPhase regularPhase = PhaseTestFixtures.regularPhase(season2024, null, null);
+        when(seasonPhaseService.findByType(season2024.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(regularPhase));
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), subA.getId()))
+                .thenReturn(Optional.empty());
+        when(phaseTeamRepository.findByPhaseIdAndTeamId(regularPhase.getId(), subB.getId()))
+                .thenReturn(Optional.empty());
+
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("edge-driver", "Edge", "T-DUP")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(teamRepository.findAllByShortName("T-DUP")).thenReturn(List.of(subA, subB));
+        when(driverMatchingService.findDriver("edge-driver"))
+                .thenReturn(MatchResult.noMatch("edge-driver"));
+
+        // when — execute does NOT throw; first match returned deterministically
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("seasonId_2024", season2024.getId().toString());
+        when(seasonRepository.findById(season2024.getId())).thenReturn(Optional.of(season2024));
+        ArgumentCaptor<SeasonDriver> captor = ArgumentCaptor.forClass(SeasonDriver.class);
+        when(seasonDriverRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+        when(driverRepository.save(any(Driver.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        driverSheetImportService.execute(SHEET_URL, params);
+
+        // then — first match returned (subA), WARN-logged, no exception
+        SeasonDriver written = captor.getValue();
+        assertThat(written.getTeam().getId()).isEqualTo(subA.getId());
+    }
+
+    // 28. DRIV-02 — LEAGUE-layout REGULAR phase reports usesGroups=false so future Group-aware
+    // UI surfaces (e.g. the page-wide showGroupColumn aggregation in DriverSheetImportController)
+    // suppress group rendering on non-GROUPS tabs.
+
+    @Test
+    void givenLeagueLayoutRegularPhase_whenPreview_thenTabPreviewUsesGroupsIsFalse() throws IOException {
+        // given — season with a LEAGUE-layout REGULAR phase
+        SeasonPhase leaguePhase = PhaseTestFixtures.regularPhase(season2024, null, null);
+        when(seasonPhaseService.findByType(season2024.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(leaguePhase));
+
+        Team team = new Team("Test-League Team", "T-LG");
+        team.setId(UUID.randomUUID());
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("lg-driver", "League Driver", "T-LG")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(teamRepository.findAllByShortName("T-LG")).thenReturn(List.of(team));
+        when(driverMatchingService.findDriver("lg-driver"))
+                .thenReturn(MatchResult.noMatch("lg-driver"));
+
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — usesGroups is false because the phase is LEAGUE-layout
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.usesGroups()).isFalse();
+    }
+
+    // 29. DRIV-02 — GROUPS-layout REGULAR phase reports usesGroups=true so the controller's
+    // showGroupColumn aggregation lights up the page-wide Group column for mixed multi-tab previews.
+
+    @Test
+    void givenGroupsLayoutRegularPhase_whenPreview_thenTabPreviewUsesGroupsIsTrue() throws IOException {
+        // given — season with a GROUPS-layout REGULAR phase
+        SeasonPhase groupsPhase = PhaseTestFixtures.groupsRegularPhase(season2024, null, null, "Group A", "Group B");
+        when(seasonPhaseService.findByType(season2024.getId(), PhaseType.REGULAR))
+                .thenReturn(Optional.of(groupsPhase));
+
+        Team team = new Team("Test-Groups Team", "T-GR");
+        team.setId(UUID.randomUUID());
+        setupSheetsStub(SHEET_URL, Map.of("2024", oneDataRow("gr-driver", "Groups Driver", "T-GR")));
+        when(seasonManagementService.findUnique(2024)).thenReturn(Optional.of(season2024));
+        when(teamRepository.findAllByShortName("T-GR")).thenReturn(List.of(team));
+        when(driverMatchingService.findDriver("gr-driver"))
+                .thenReturn(MatchResult.noMatch("gr-driver"));
+
+        // when
+        DriverSheetImportPreview preview = driverSheetImportService.preview(SHEET_URL);
+
+        // then — usesGroups is true because the phase is GROUPS-layout
+        TabPreview tab = preview.tabPreviews().get(0);
+        assertThat(tab.usesGroups()).isTrue();
     }
 
 }

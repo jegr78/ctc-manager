@@ -3,16 +3,14 @@ package db.migration;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import org.ctc.CtcManagerApplication;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.testsupport.CtcDevSpringBootContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,8 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Spring Boot cannot auto-detect the {@code @SpringBootConfiguration} by walking upward from
  * an unrelated root package, so the application entry point must be declared explicitly.
  */
-@SpringBootTest(classes = CtcManagerApplication.class)
-@ActiveProfiles("dev")
+@CtcDevSpringBootContext
 @Transactional
 @Tag("integration")
 class V4MigrationSmokeIT {
