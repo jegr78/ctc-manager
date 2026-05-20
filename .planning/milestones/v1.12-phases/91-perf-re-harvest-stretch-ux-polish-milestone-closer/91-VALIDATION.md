@@ -1,9 +1,9 @@
 ---
 phase: 91
 slug: perf-re-harvest-stretch-ux-polish-milestone-closer
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-20
 ---
 
@@ -82,10 +82,10 @@ created: 2026-05-20
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 91-03-XX | 03 | 3 | PERF-06,UX-01 | — | n/a | docs | `grep -E '^### v1\.12 .*Shipped' .planning/MILESTONES.md` (v1.12 entry inserted at top per v1.11 entry shape lines 3-44) | ✅ post-author | ⬜ pending |
-| 91-03-XX | 03 | 3 | PERF-06 | — | n/a | docs | `grep -E 'v1\.12.*baseline\|v1\.12 .*PR' README.md` (Test-Performance + Backup pointer updates) | ✅ post-author | ⬜ pending |
-| 91-03-XX | 03 | 3 | PERF-06,UX-01 | — | n/a | pr | `gh pr view --json isDraft,body --jq '.isDraft == false'` AND `gh pr view --json body --jq '.body \| contains("REQ-ID") and contains("Coverage") and contains("CodeQL")'` (D-07b composite body + Draft → Ready flip) | ✅ post-author | ⬜ pending |
-| 91-03-XX | 03 | 3 | PERF-06,UX-01 | — | n/a | docs | `grep -E '(v1\.12 baseline.*[0-9]+:[0-9]+\|CI E2E median.*[0-9]+:[0-9]+)' .planning/PROJECT.md` (Key Decisions trend row per D-04) | ✅ post-author | ⬜ pending |
+| 91-03-XX | 03 | 3 | PERF-06,UX-01 | — | n/a | docs | `grep -E '^## v1\.12 .*Shipped' .planning/MILESTONES.md` (H2 — matches v1.11 entry shape; planner-defect fix: was `^### v1\.12` which would not match the actual H2 heading style) (v1.12 entry inserted at top per v1.11 entry shape lines 3-44) | ✅ committed | ✅ green |
+| 91-03-XX | 03 | 3 | PERF-06 | — | n/a | docs | `grep -E 'v1\.12.*baseline\|v1\.12 .*PR' README.md` (Test-Performance + Backup pointer updates) | ✅ committed | ✅ green |
+| 91-03-XX | 03 | 3 | PERF-06,UX-01 | — | n/a | pr | `gh pr view --json isDraft,body --jq '.isDraft == false'` AND `gh pr view --json body --jq '.body \| contains("REQ-ID") and contains("Coverage") and contains("CodeQL")'` (D-07b composite body + Draft → Ready flip) | ✅ committed | ✅ green |
+| 91-03-XX | 03 | 3 | PERF-06,UX-01 | — | n/a | docs | `grep -E '(v1\.12 baseline.*[0-9]+:[0-9]+\|CI E2E median.*[0-9]+:[0-9]+)' .planning/PROJECT.md` (Key Decisions trend row per D-04) | ✅ committed | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -121,4 +121,4 @@ created: 2026-05-20
 - [ ] `nyquist_compliant: true` set in frontmatter after `/gsd-validate-phase 91` passes
 - [ ] Pre-`/gsd-complete-milestone` retroactive sweep: `/gsd-validate-phase {88,89,90,91}` all return `nyquist_compliant: true` (D-11 strict, NOT Option-A)
 
-**Approval:** pending
+**Approval:** approved (Plan 91-03 closed 2026-05-20 — phase-level `nyquist_compliant: true`, all 3 plans landed, milestone PR #129 Ready-for-review).
