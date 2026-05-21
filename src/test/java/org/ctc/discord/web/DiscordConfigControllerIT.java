@@ -14,7 +14,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -50,9 +53,36 @@ class DiscordConfigControllerIT {
 	@Autowired
 	private MockMvc mockMvc;
 
+	@Autowired
+	private DiscordGlobalConfigRepository configRepo;
+
 	@BeforeEach
-	void resetWireMock() {
+	void resetWireMockAndConfigSeed() {
 		wm.resetAll();
+		resetConfigSeedToEmptyDefaults();
+	}
+
+	@AfterEach
+	void leaveDbInKnownEmptyState() {
+		// Tests POST committed mutations (not @Transactional). Reset so downstream
+		// IT classes in the same forked JVM (e.g. DiscordGlobalConfigRepositoryIT)
+		// see a clean discord_global_config row.
+		resetConfigSeedToEmptyDefaults();
+	}
+
+	private void resetConfigSeedToEmptyDefaults() {
+		DiscordGlobalConfig seed = configRepo.findFirstByOrderByIdAsc();
+		if (seed == null) {
+			configRepo.save(new DiscordGlobalConfig());
+			return;
+		}
+		seed.setGuildId("");
+		seed.setAnnouncementWebhookUrl("");
+		seed.setRaceResultsForumChannelId("");
+		seed.setStandingsForumChannelId("");
+		seed.setVsEmojiName("CTC");
+		seed.setBotApplicationId(null);
+		configRepo.save(seed);
 	}
 
 	@Test

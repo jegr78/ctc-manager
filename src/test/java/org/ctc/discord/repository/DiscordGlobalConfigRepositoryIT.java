@@ -3,6 +3,7 @@ package org.ctc.discord.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.ctc.discord.model.DiscordGlobalConfig;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,22 @@ class DiscordGlobalConfigRepositoryIT {
 
 	@Autowired
 	private DiscordGlobalConfigRepository repo;
+
+	@BeforeEach
+	void resetSeedRowToEmptyDefaults() {
+		DiscordGlobalConfig seed = repo.findFirstByOrderByIdAsc();
+		if (seed == null) {
+			repo.save(new DiscordGlobalConfig());
+			return;
+		}
+		seed.setGuildId("");
+		seed.setAnnouncementWebhookUrl("");
+		seed.setRaceResultsForumChannelId("");
+		seed.setStandingsForumChannelId("");
+		seed.setVsEmojiName("CTC");
+		seed.setBotApplicationId(null);
+		repo.save(seed);
+	}
 
 	@Test
 	void givenV8MigrationApplied_whenFindFirstByOrderByIdAsc_thenReturnsSeedRow() {
