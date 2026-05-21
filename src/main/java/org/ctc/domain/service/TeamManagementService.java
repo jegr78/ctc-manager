@@ -216,10 +216,12 @@ public class TeamManagementService {
 
 	/**
 	 * Creates or updates a team from primitive parameters.
+	 * `discordRoleId` is per-team (not propagated to sub-teams).
 	 */
 	@Transactional
 	public Team save(UUID id, String name, String shortName,
-	                 String primaryColor, String secondaryColor, String accentColor) {
+	                 String primaryColor, String secondaryColor, String accentColor,
+	                 String discordRoleId) {
 		Team team;
 		if (id != null) {
 			team = findById(id);
@@ -228,6 +230,7 @@ public class TeamManagementService {
 			team.setPrimaryColor(primaryColor);
 			team.setSecondaryColor(secondaryColor);
 			team.setAccentColor(accentColor);
+			team.setDiscordRoleId(blankToNull(discordRoleId));
 			team = teamRepository.save(team);
 			propagateColorsToSubTeams(team);
 		} else {
@@ -235,9 +238,14 @@ public class TeamManagementService {
 			team.setPrimaryColor(primaryColor);
 			team.setSecondaryColor(secondaryColor);
 			team.setAccentColor(accentColor);
+			team.setDiscordRoleId(blankToNull(discordRoleId));
 			team = teamRepository.save(team);
 		}
 		return team;
+	}
+
+	private static String blankToNull(String value) {
+		return (value == null || value.isBlank()) ? null : value;
 	}
 
 	/**

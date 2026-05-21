@@ -200,7 +200,7 @@ class TeamManagementServiceTest {
 			when(teamRepository.save(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
 
 			// when
-			var result = service.save(null, "New Team", "NT", null, null, null);
+			var result = service.save(null, "New Team", "NT", null, null, null, null);
 
 			// then
 			assertThat(result.getName()).isEqualTo("New Team");
@@ -223,7 +223,7 @@ class TeamManagementServiceTest {
 			when(teamRepository.save(any(Team.class))).thenAnswer(inv -> inv.getArgument(0));
 
 			// when
-			var result = service.save(id, "Updated Team", "UT", "#FF0000", "#00FF00", "#0000FF");
+			var result = service.save(id, "Updated Team", "UT", "#FF0000", "#00FF00", "#0000FF", null);
 
 			// then
 			assertThat(result.getName()).isEqualTo("Updated Team");

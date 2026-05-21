@@ -68,7 +68,8 @@ public class TeamController {
 		}
 		try {
 			teamManagementService.save(form.getId(), form.getName(), form.getShortName(),
-					form.getPrimaryColor(), form.getSecondaryColor(), form.getAccentColor());
+					form.getPrimaryColor(), form.getSecondaryColor(), form.getAccentColor(),
+					form.getDiscordRoleId());
 			redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + form.getName());
 		} catch (BusinessRuleException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
