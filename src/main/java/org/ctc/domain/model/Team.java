@@ -38,6 +38,9 @@ public class Team extends BaseEntity {
 
 	private String accentColor;
 
+	@Column(length = 32)
+	private String discordRoleId;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "parent_team_id")
 	private Team parentTeam;
