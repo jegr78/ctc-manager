@@ -207,7 +207,10 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 **Depends on**: Phase 92 (clean JaCoCo baseline + zero stale bookkeeping markers; CLEAN-01 grep-predicate fix means Discord-phase tests register on the right fence)
 **Requirements**: INFRA-01, INFRA-02, INFRA-03
 **Estimated duration**: 2-3 days
-**Plans**: TBD (estimated 3 plans per design spec § 5)
+**Plans**: 3 plans (all wave 1, sequential inline on `gsd/v1.13-discord-integration` per CONTEXT D-05)
+- [ ] 93-01-PLAN.md — INFRA-01: DiscordRestClient + DiscordWebhookClient + sealed DiscordApiException hierarchy (4 permits) + DiscordRateLimitInterceptor + DiscordEmojiCache + DiscordTimestamps + WireMock-backed ITs
+- [ ] 93-02-PLAN.md — INFRA-02: 93-THREAT-MODEL.md artifact + SSRF positive-whitelist constructor guards + Logback %replace webhook-URL mask + DiscordClientHostWhitelistTest + DiscordLogMaskingIT
+- [ ] 93-03-PLAN.md — INFRA-03: Flyway V8 discord_global_config + JPA entity/repository/service + DiscordConfigForm DTO + DiscordConfigController (4 test buttons, CSRF) + Thymeleaf admin/discord-config.html + Playwright E2E
 **UI hint**: yes
 
 ### Phase 94: Team Roles + Match Channel Lifecycle

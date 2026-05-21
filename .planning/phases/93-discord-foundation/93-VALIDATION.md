@@ -102,9 +102,9 @@ created: 2026-05-21
 
 ### Plan 93-03 (INFRA-03) Wave 0
 
-- [ ] `src/test/java/org/ctc/discord/DiscordGlobalConfigRepositoryIT.java` — `@DataJpaTest` + seed-row assertion + save-updates-same-row assertion
-- [ ] `src/test/java/org/ctc/discord/DiscordGlobalConfigGuardTest.java` — single-row invariant after multiple saves
-- [ ] `src/test/java/org/ctc/discord/web/DiscordConfigFormTest.java` — `@Valid` + `BindingResult` + snowflake regex
+- [ ] `src/test/java/org/ctc/discord/repository/DiscordGlobalConfigRepositoryIT.java` — `@DataJpaTest` + seed-row assertion + save-updates-same-row assertion
+- [ ] `src/test/java/org/ctc/discord/repository/DiscordGlobalConfigGuardTest.java` — single-row invariant after multiple saves
+- [ ] `src/test/java/org/ctc/discord/dto/DiscordConfigFormTest.java` — `@Valid` + `BindingResult` + snowflake regex
 - [ ] `src/test/java/org/ctc/discord/web/DiscordConfigControllerTest.java` — Mockito-only flash-attribute happy paths
 - [ ] `src/test/java/org/ctc/discord/web/DiscordConfigControllerIT.java` — `@SpringBootTest` + `MockMvc` + CSRF + 4 test-button POST endpoints
 - [ ] `src/test/java/org/ctc/discord/web/DiscordConfigControllerErrorCategoryTest.java` — typed-catch BEM resolution

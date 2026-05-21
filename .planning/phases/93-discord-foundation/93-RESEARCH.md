@@ -92,7 +92,7 @@ The three highest-risk technical surfaces are: (1) the **rate-limit interceptor 
 | Rate-limit accounting | API/Backend (`org.ctc.discord.DiscordRateLimitInterceptor`) | — | Per-bucket token-bucket; pre-request sleep; 429-retry; 5xx exponential. |
 | Sealed exception mapping (HTTP → typed) | API/Backend (`org.ctc.discord.exception.DiscordApiExceptionMapper`) | — | Status code + Discord JSON `code` field switch → 4-permit dispatch. |
 | Emoji cache (60-min TTL) | API/Backend (`org.ctc.discord.DiscordEmojiCache`) | — | In-memory; hand-rolled; injectable `Clock`. |
-| Timestamp formatting (`<t:N:STYLE>`) | API/Backend (`org.ctc.discord.util.DiscordTimestamps`) | — | Pure helper; `Clock` + `ZoneId` injectable. |
+| Timestamp formatting (`<t:N:STYLE>`) | API/Backend (`org.ctc.discord.DiscordTimestamps`) | — | Pure helper; `Clock` + `ZoneId` injectable. Spring `@Component` lives at the root `org.ctc.discord` package (NOT `util` — `util` is reserved for records). |
 | Singleton config row | Database/Storage (`discord_global_config`) | API (`DiscordGlobalConfigService.getOrInitialize`) | Seed-row + service-singleton enforcement; no UI-level wizard. |
 | Admin config page (form + 4 buttons) | Frontend (Thymeleaf `admin/discord-config.html`) | API/Backend (controller delegates) | Server-side rendering; CSRF chain; flash-attribute UX. |
 | Form-DTO mass-assignment defense | API/Backend (`org.ctc.admin.dto.DiscordConfigForm` or `org.ctc.discord.web.DiscordConfigForm`) | — | Per CLAUDE.md § DTOs not Entities in Controllers. |
@@ -1979,22 +1979,22 @@ public class DiscordEmojiCache {
 | A11 | Phase 95+ `discord_post.webhook_token` introduces new secret-leak surface; Phase 93 only sets the discipline (`@ToString.Exclude`) | Security Domain | LOW — Phase 95 inherits the discipline via threat-model forward-reference T-93-01 |
 | A12 | `DiscordTimestamps` as `@Component` is preferred over static utility | DiscordTimestamps Utility Shape | LOW — planner discretion; both work |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `DiscordEmojiCache` cold-load on startup or on first `emojiFor()` call?**
    - What we know: D-03 says "manual refresh button on `/admin/discord-config`"; D-12 says "Refresh Emoji Cache button gated on guild_id present".
    - What's unclear: First-call semantics. If guild_id is empty (D-12), `emojiFor` returns `:NAME:` fallback. If guild_id is set but cache cold, does `emojiFor` lazy-refresh or return fallback?
-   - Recommendation: Return fallback `:NAME:` until manual refresh OR background `@Scheduled` refresh (NOT in Phase 93 scope — defer to Phase 97 if matchday-batch posting starts failing). Phase 93 ships with manual-refresh-only.
+   - **RESOLVED:** manual-refresh-only in Phase 93 — admin operator clicks "Refresh Emoji Cache" button to populate. `emojiFor(shortName)` returns `:NAME:` fallback string when cache is cold or has no matching key. Scheduled/lazy refresh deferred to Phase 97 if matchday-batch posting reveals a coverage gap.
 
 2. **Should pre-request bucket-sleep be implemented in Phase 93 or deferred?**
    - What we know: D-03 says "Per-bucket token-bucket semantics: pre-request check `bucket.remaining > 0` else sleep until `resetAt`".
    - What's unclear: First-call bucket-key resolution. Discord only returns `X-RateLimit-Bucket` AFTER the call; we don't know which bucket a new URI will land in.
-   - Recommendation: Implement reactive (post-response) 429-handling in Phase 93. Implement pre-request bucket-sleep ONLY when first-call returns a known bucket-key + subsequent call to same route hits `remaining == 0`. Document the gap in `93-THREAT-MODEL.md` T-93-04 verification column.
+   - **RESOLVED:** post-response reactive 429-handling only for Phase 93. The interceptor inspects the `X-RateLimit-Bucket` header after each response, updates the `ConcurrentHashMap<String, BucketState>` bucket state, and on a 429 response sleeps for the `Retry-After` header value then retries (max 3). No pre-request bucket consultation in Phase 93. Documented as residual risk in `93-THREAT-MODEL.md` T-93-04.
 
 3. **Does the Test-Roles button need a server-roles cache in Phase 93 or just fetch + count?**
    - What we know: D-03 + Design Spec § 4.3 mention "Refresh Server-Roles Cache" button.
    - What's unclear: Cache vs uncached. Phase 93 only has `DiscordEmojiCache` per CONTEXT.md; Phase 94 CHAN-01 adds the live-dropdown that requires a roles cache.
-   - Recommendation: Phase 93 wires "Refresh Server-Roles Cache" button to a `fetchGuildRoles().size()` call without a cache — the success flash shows the count. Phase 94 introduces the actual `DiscordRolesCache`. Document the gap in 93-03 PLAN.
+   - **RESOLVED:** Phase 93 "Refresh Server-Roles Cache" button wires to `discordRestClient.fetchGuildRoles(guildId).size()` and sets a success flash showing the role count. Phase 93 does NOT introduce a roles cache (deferred to Phase 94 CHAN-01 where the dropdown UI needs it). Forward-reference in plan 93-03 task description.
 
 ## Environment Availability
 
