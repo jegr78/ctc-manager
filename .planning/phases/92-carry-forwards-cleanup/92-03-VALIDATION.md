@@ -47,7 +47,7 @@ created: 2026-05-21
 |-------|-------|
 | Shipper | gsd-executor (inline, sequential) |
 | Ship date | 2026-05-21 |
-| Commit SHA short | _(filled by commit step)_ |
+| Commit SHA short | `706728bf` |
 | `./mvnw verify` exit code | 0 (BUILD SUCCESS, 7:18 min) |
 | Fence OK echo | confirmed in build log: `[CLEAN-01 build-guard] OK - no JUnit-Jupiter Assumptions offenders.` |
 | JaCoCo line coverage | 88.8838 % (preserved from Plan 92-02 — no test/coverage regression) |
