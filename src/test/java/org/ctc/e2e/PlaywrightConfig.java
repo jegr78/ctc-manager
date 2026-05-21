@@ -12,13 +12,13 @@ import org.springframework.test.context.ActiveProfiles;
 public abstract class PlaywrightConfig {
 
 	static Playwright playwright;
-	static Browser browser;
+	protected static Browser browser;
 
 	@LocalServerPort
 	int port;
 
 	BrowserContext context;
-	Page page;
+	protected Page page;
 
 	@BeforeAll
 	static void setupBrowser() {
