@@ -31,20 +31,31 @@ public class DiscordWebhookClient {
 
 	private final DiscordRateLimitInterceptor rateLimitInterceptor;
 	private final ObjectMapper objectMapper;
+	private final DiscordHostValidator hostValidator;
 
-	public DiscordWebhookClient(DiscordRateLimitInterceptor rateLimitInterceptor, ObjectMapper objectMapper) {
+	public DiscordWebhookClient(
+			DiscordRateLimitInterceptor rateLimitInterceptor,
+			ObjectMapper objectMapper,
+			DiscordHostValidator hostValidator) {
 		this.rateLimitInterceptor = rateLimitInterceptor;
 		this.objectMapper = objectMapper;
+		this.hostValidator = hostValidator;
 	}
 
 	public WebhookMessage execute(String webhookUrl, WebhookPayload payload) throws DiscordApiException {
-		return execute(() -> forWebhookUrl(webhookUrl)
-				.post()
-				.uri("")
-				.contentType(MediaType.APPLICATION_JSON)
-				.body(payload)
-				.retrieve()
-				.body(WebhookMessage.class));
+		hostValidator.requireAllowed(webhookUrl);
+		try {
+			return execute(() -> forWebhookUrl(webhookUrl)
+					.post()
+					.uri("")
+					.contentType(MediaType.APPLICATION_JSON)
+					.body(payload)
+					.retrieve()
+					.body(WebhookMessage.class));
+		} catch (DiscordApiException e) {
+			log.warn("Discord webhook execute failed for {}: {}", webhookUrl, e.category());
+			throw e;
+		}
 	}
 
 	public WebhookMessage executeMultipart(
@@ -58,6 +69,7 @@ public class DiscordWebhookClient {
 		if (attachments.isEmpty()) {
 			return execute(webhookUrl, payload);
 		}
+		hostValidator.requireAllowed(webhookUrl);
 		String payloadJson;
 		try {
 			payloadJson = objectMapper.writeValueAsString(payload);
@@ -92,6 +104,7 @@ public class DiscordWebhookClient {
 
 	public WebhookMessage editMessage(String webhookUrl, String messageId, WebhookPayload payload)
 			throws DiscordApiException {
+		hostValidator.requireAllowed(webhookUrl);
 		return execute(() -> forWebhookUrl(webhookUrl)
 				.patch()
 				.uri("/messages/{messageId}", messageId)

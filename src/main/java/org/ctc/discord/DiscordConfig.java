@@ -22,7 +22,9 @@ public class DiscordConfig {
 	public RestClient discordBotRestClient(
 			@Value("${app.discord.base-url:https://discord.com/api/v10}") String baseUrl,
 			@Value("${app.discord.bot-token:}") String botToken,
-			DiscordRateLimitInterceptor rateLimitInterceptor) {
+			DiscordRateLimitInterceptor rateLimitInterceptor,
+			DiscordHostValidator hostValidator) {
+		hostValidator.requireAllowed(baseUrl);
 		return RestClient.builder()
 				.baseUrl(baseUrl)
 				.defaultHeader(HttpHeaders.AUTHORIZATION, "Bot " + botToken)
