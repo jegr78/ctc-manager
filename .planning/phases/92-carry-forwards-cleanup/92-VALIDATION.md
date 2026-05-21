@@ -69,12 +69,12 @@ created: 2026-05-21
 
 ## Wave 0 Requirements
 
-- [ ] `src/test/java/org/ctc/dataimport/CsvImportControllerExceptionTest.java` — extend in-place: add 7 new methods + assert `errorCategory` on existing TransientGoogleApi test (researcher Open Q2 recommends extend-in-place)
-- [ ] `src/test/java/org/ctc/admin/controller/RaceControllerCalendarTest.java` — NEW (Plan 92-02)
-- [ ] `src/test/java/org/ctc/build/AssumptionsFencePredicateTest.java` — NEW (Plan 92-03, new package `org.ctc.build` — first usage in codebase)
-- [ ] `src/test/java/org/ctc/dataimport/GoogleSheetsServiceIT.java` — NEW IT sibling (Plan 92-02; researcher Open Q1 recommends new IT)
-- [ ] `src/test/java/org/ctc/dataimport/GoogleCalendarServiceIT.java` — NEW IT sibling (Plan 92-02; researcher Open Q1 recommends new IT)
-- [ ] No new framework — JUnit 5, Mockito, AssertJ, Spring Boot Test, MockMvc all already on classpath
+- [x] `src/test/java/org/ctc/dataimport/CsvImportControllerExceptionTest.java` — extended in place (Plan 92-01 + Plan 92-02 happy-path additions): 16 `@Test` methods total covering 8 typed-permit paths + 4 happy/empty branches + 4 legacy method paths; all use Hamcrest `equalTo` on typed Google catches to encode the T-91-02-IL invariant
+- [x] `src/test/java/org/ctc/admin/controller/RaceControllerCalendarTest.java` — NEW (Plan 92-02): 9 `@Test` methods; GETs use `MockMvcBuilders.standaloneSetup` with a noop view-resolver to skip Thymeleaf rendering on the heavy `race-detail` template
+- [x] `src/test/java/org/ctc/build/AssumptionsFencePredicateTest.java` — NEW greenfield package `org.ctc.build` (Plan 92-03): 2 `@Test` methods × `@TempDir` + `ProcessBuilder`; `FENCE_REGEX` constant locks the test predicate visually against the pom.xml predicate
+- [x] `src/test/java/org/ctc/dataimport/GoogleSheetsServiceIT.java` — NEW IT sibling (Plan 92-02): 3 `@Test` methods, `@Tag("integration")` routes via Failsafe
+- [x] `src/test/java/org/ctc/dataimport/GoogleCalendarServiceIT.java` — NEW IT sibling (Plan 92-02): 3 `@Test` methods covering 403-discriminator + GeneralSecurityException paths
+- [x] No new framework — JUnit 5, Mockito, AssertJ, Spring Boot Test, MockMvc all already on classpath
 
 ---
 
@@ -88,11 +88,29 @@ created: 2026-05-21
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 5s for per-task quick run
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 5s for per-task quick run
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending (set once Phase 92 plans are finalized and per-plan VALIDATION.md derivations are in place)
+**Approval:** approved 2026-05-21 (all 4 plans shipped; 19/19 task-row statuses ✅; 5 requirements (UX-01, COV-01, CLEAN-01, DOCS-01, BOOK-01) COVERED; visual UAT for UX-01 documented as Manual-Only post-deploy operator action).
+
+---
+
+## Validation Audit 2026-05-21
+
+| Metric | Count |
+|--------|-------|
+| Requirements audited | 5 (UX-01, COV-01, CLEAN-01, DOCS-01, BOOK-01) |
+| Task rows audited | 19 (92-01-01..06, 92-02-01..07, 92-03-01..03, 92-04-01..04) |
+| Gaps found | 0 |
+| Resolved | n/a (no gaps) |
+| Escalated to Manual-Only | 0 |
+| Existing Manual-Only entries | 1 (UX-01 4-badge visual verification — post-deploy operator action, recorded pre-audit per STATE.md "Pending UATs UX-01") |
+| Phase-level `nyquist_compliant` | `true` |
+| State | A (Audit existing — no Test infrastructure rebuild, no auditor agent spawn) |
+| Method | Goal-backward audit against `92-{01,02,03,04}-SUMMARY.md` + `92-{01,02,03,04}-VALIDATION.md` shipped-evidence sections (no auditor agent spawned — short-circuit applied per workflow Step 3: "No gaps → skip to Step 6") |
+
+**Verdict:** Phase 92 is Nyquist-compliant. All 5 requirements have automated verification commands; the single Manual-Only entry (UX-01 visual UAT) is documented as post-deploy operator action per STATE.md. No retroactive test generation required. Phase-level `nyquist_compliant: true` confirmed.
