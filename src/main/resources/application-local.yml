@@ -4,8 +4,9 @@
 #   - GOOGLE_CALENDAR_ID — Google Calendar ID for race-schedule export (optional).
 #   - DISCORD_BOT_TOKEN  — Discord bot token (v1.13 Discord Integration). The bot
 #                          token MUST come from an env-var; never commit a literal.
-#                          Cascade: set DISCORD_BOT_TOKEN in your shell, or the
-#                          application.yml default (empty string) is used and the
+#                          Provide via `.env` (base) or `.env.local` (profile-specific);
+#                          `./scripts/app.sh start local` auto-loads both. If absent,
+#                          the application.yml default (empty string) is used and the
 #                          Discord config page surfaces "not configured" badges.
 
 server:

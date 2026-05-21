@@ -106,28 +106,67 @@ after the application).
 The bot token is read from the `DISCORD_BOT_TOKEN` environment variable. It
 MUST never be written into a YAML literal (T-93-01 mitigation surface a).
 
-**Local development** (`local` profile, MariaDB on host):
+**Local startup via `scripts/app.sh`** (recommended — the canonical entry point):
+
+`scripts/app.sh` auto-loads two files from the project root before launching
+the Spring Boot JVM:
+
+1. `.env` — base, always loaded if present.
+2. `.env.<primary-profile>` — profile-specific override. Primary profile is the
+   first segment of the `--profiles` value (`dev,demo` → `.env.dev`).
+
+So you simply add the token to whichever file matches the profile you intend
+to use. Put it in `.env` (base) if you want it for **every** profile, in
+`.env.dev` if it should apply only when starting `dev`/`dev,demo`, in
+`.env.local` only for the `local`/MariaDB profile.
 
 ```bash
-export DISCORD_BOT_TOKEN='<the-token-you-copied>'
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+# .env.dev (example)
+DISCORD_BOT_TOKEN=<the-token-you-copied>
 ```
 
-The `application-local.yml` carries `app.discord.bot-token: ${DISCORD_BOT_TOKEN:}`
-so the JVM picks up the env-var. If the env-var is absent, the bot-token
-defaults to empty string and all 4 admin-page test buttons return a
-`DiscordAuthException` flash badge with the message
-`"Authentication failed. Verify DISCORD_BOT_TOKEN is set in the environment."`.
+Then:
+
+```bash
+./scripts/app.sh start dev          # H2 in-memory, port 9090 — recommended for UAT-03
+# or
+./scripts/app.sh start local        # real MariaDB on port 3307, app on 9091
+./scripts/app.sh stop               # graceful shutdown
+./scripts/app.sh status             # check PID
+```
+
+If the env-var is absent at JVM-start, the bot-token defaults to empty string
+and all 4 admin-page test buttons return a `DiscordAuthException` flash badge
+with the message `"Authentication failed. Verify DISCORD_BOT_TOKEN is set in
+the environment."`.
+
+**Manual startup without the wrapper script** (if you don't want `scripts/app.sh`):
+
+```bash
+set -a; source .env.dev; set +a
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+`set -a` makes every subsequent assignment auto-exported; `source` reads the
+file as Bash; `set +a` turns it back off.
 
 **Docker** (`docker` profile):
 
-Add to your `.env` next to the existing `GOOGLE_CALENDAR_ID`:
+`docker-compose.yml` does not read `.env` files into the container — pass the
+token explicitly via the `app` service's `environment:` block:
 
-```env
-DISCORD_BOT_TOKEN=<the-token>
+```yaml
+services:
+  app:
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      # ...
 ```
 
-`docker-compose.yml` passes it through via `env_file: .env`.
+The `${DISCORD_BOT_TOKEN}` reference in the compose file is interpolated from
+your shell (or from a `.env` next to `docker-compose.yml`, which Compose reads
+**only** for interpolation, not as container env-vars).
 
 **Production** (`prod` profile):
 
@@ -266,19 +305,22 @@ actual Discord-API contract.
 - [ ] Bot application created in Developer Portal
 - [ ] Bot token copied into a password manager
 - [ ] Bot invited into a test guild via OAuth2 URL with the recommended permission set
-- [ ] `DISCORD_BOT_TOKEN` env-var exported in your shell
+- [ ] `DISCORD_BOT_TOKEN=…` line present in `.env` (any profile) or `.env.dev` (dev-only)
 - [ ] Developer Mode enabled in your Discord client
 - [ ] Guild ID copied
 - [ ] (Optional) Webhook URL copied for the test-webhook button
 
 **Procedure:**
 
-1. Start the app in `local` profile against real MariaDB:
+1. Start the app via the wrapper script — `dev` profile is sufficient (H2 in-memory,
+   no MariaDB setup required, the Discord HTTP calls still go to the real
+   `https://discord.com/api/v10`):
    ```bash
-   export DISCORD_BOT_TOKEN='<your-test-bot-token>'
-   ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+   ./scripts/app.sh start dev
    ```
-2. Browse to `http://localhost:9091/admin/discord-config`.
+   (use `start local` if you want to exercise the MariaDB path too; the test
+   buttons themselves don't care which DB backs the singleton config row.)
+2. Browse to `http://localhost:9090/admin/discord-config` (or `:9091` for `local`).
 3. Fill **Guild ID** with the test-guild snowflake; click **Save**.
    → expect green `.alert-success` "Configuration saved."
 4. Click **Test Connection**.
@@ -311,13 +353,19 @@ tokens leaving the JVM should not happen at all).
 
 ### "Test Connection" returns `auth` badge
 
-- `DISCORD_BOT_TOKEN` env-var not set in the JVM's environment (env-vars set
-  in a different terminal session are not inherited by the Maven-launched JVM).
-  Re-export and restart the app.
+- `DISCORD_BOT_TOKEN` not present in the `.env` file matching the active
+  profile (`scripts/app.sh start dev` reads `.env` + `.env.dev`; `start local`
+  reads `.env` + `.env.local`). Add the line and restart the app.
 - Token was reset in the Developer Portal after you copied it — issue a new
-  reset and update the env-var.
-- Token format mangled by shell quoting — wrap in single quotes:
-  `export DISCORD_BOT_TOKEN='…'`.
+  reset and update the `.env` file.
+- Token has surrounding quotes in the `.env` file — `set -a; source` keeps
+  quotes literal, which makes the resulting env-var value start with `"`. Write
+  the line as `DISCORD_BOT_TOKEN=<token>` without quotes (bot tokens contain
+  only `[A-Za-z0-9._-]`, no characters that require quoting).
+- Manual startup (`./mvnw spring-boot:run` directly) without sourcing the
+  `.env` file first — either use `./scripts/app.sh start dev`, or
+  `set -a; source .env.dev; set +a` immediately before the `mvnw` call in the
+  **same** shell session.
 
 ### "Test Connection" returns `not-found` badge
 
