@@ -62,7 +62,7 @@ VALIDATION.md / CONTEXT.md / RESEARCH.md in the 89/90/91 directories was modifie
 |-------|-------|
 | Shipper | gsd-executor (inline, sequential) |
 | Ship date | 2026-05-21 |
-| Commit SHA short | _(filled by commit step)_ |
+| Commit SHA short | `457f4838` |
 | `./mvnw verify` exit code | 0 (BUILD SUCCESS, 7:10 min) |
 | `git diff --stat src/` | empty (D-10 strictest enforcement: docs/bookkeeping-only plan) |
 | Phase-overwrite-prevention | satisfied — 3 new files, 0 modifications under `.planning/milestones/v1.12-phases/` |
