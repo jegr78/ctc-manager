@@ -187,7 +187,68 @@ See: milestones/v1.12-ROADMAP.md for full details
 - [ ] **Phase 97: Matchday-Level Posts** — POST-06 Matchday Pairings + Match Previews (batch) with structured Markdown + emoji-resolved "Game On!" line + auto-edit on stream-link/teaser change; POST-07 Matchday Overview + Power Rankings to race-results Forum-Thread; POST-08 Standings post to standings Forum-Thread with re-post-on-change
 - [ ] **Phase 98: Polish + E2E + Docs + Close** — E2E-01 Playwright + WireMock-backed full-matchday-lifecycle suite (create channel → post all stages → archive); DOCS-02 `docs/operations/discord-integration.md` operator runbook with Bot-application setup screenshots + OAuth-URL-generator + token rotation + troubleshooting; DOCS-03 README + Wiki update + milestone close
 
-See: milestones/v1.13-ROADMAP.md for full details
+See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency Graph, REQ-ID coverage)
+
+### Phase 92: Carry-Forwards & Cleanup
+
+**Goal**: Close v1.12 audit findings (UX parity for `CsvImportController`, JaCoCo recovery to ≥ 88.88 %, grep-predicate tightening, optional VERIFICATION.md doc-shape gap) and `milestones/v1.12-REQUIREMENTS.md` bookkeeping drift so v1.13 starts on a clean baseline before Discord migrations land.
+**Depends on**: Nothing (first phase of v1.13)
+**Requirements**: UX-01, COV-01, CLEAN-01, DOCS-01, BOOK-01
+**Estimated duration**: 1-2 days
+**Plans**: TBD (estimated 4 plans per design spec § 5)
+
+### Phase 93: Discord Foundation
+
+**Goal**: Deliver the Spring `RestClient` Bot + Webhook client + sealed `DiscordApiException` hierarchy + rate-limit interceptor + emoji cache + admin-config page so Phases 94-97 have a stable platform to build business logic on.
+**Depends on**: Phase 92 (clean JaCoCo baseline + zero stale bookkeeping markers; CLEAN-01 grep-predicate fix means Discord-phase tests register on the right fence)
+**Requirements**: INFRA-01, INFRA-02, INFRA-03
+**Estimated duration**: 2-3 days
+**Plans**: TBD (estimated 3 plans per design spec § 5)
+**UI hint**: yes
+
+### Phase 94: Team Roles + Match Channel Lifecycle
+
+**Goal**: Operator can map teams to Discord roles, create per-match Discord channels with full permission-overwrite model, and archive them via a category-picker modal honoring Discord's 50-channels-per-category limit.
+**Depends on**: Phase 93 (Discord client + sealed exception hierarchy + config page must exist before channel-creation buttons can be wired; CHAN-02 requires INFRA-01's `DiscordRestClient.createChannel` + `createWebhook` methods)
+**Requirements**: CHAN-01, CHAN-02, CHAN-03
+**Estimated duration**: 2-3 days
+**Plans**: TBD (estimated 3 plans per design spec § 5)
+**UI hint**: yes
+
+### Phase 95: Match Channel Posts
+
+**Goal**: Five per-match post types (Team Cards, Settings, Lineups, Schedule, Match Results) post via Webhook with stored `message_id` and a uniform in-place edit path via Webhook-PATCH.
+**Depends on**: Phase 94 (a match channel + webhook URL must exist on the match row before posts can target it; `DiscordPostService.postOrEdit` lookup keys on `match.discordChannelId`)
+**Requirements**: POST-01, POST-02, POST-03, POST-04, POST-05
+**Estimated duration**: 2-3 days
+**Plans**: TBD (estimated 4 plans per design spec § 5)
+**UI hint**: yes
+
+### Phase 96: Provisional Graphic + Forum Threads
+
+**Goal**: New `ProvisionalScoresGraphicService` replaces today's manual sheet-screenshot, and operator can link each season's race-results + standings posts to dedicated Discord forum-threads.
+**Depends on**: Phase 95 (`DiscordPost` tracking entity + `DiscordPostService.postOrEdit` from POST-01 is reused by FORUM-02 for race-result forum-thread posts; same pattern with `?thread_id=` query param)
+**Requirements**: GRAFX-01, FORUM-01, FORUM-02
+**Estimated duration**: 2-3 days
+**Plans**: TBD (estimated 3 plans per design spec § 5)
+**UI hint**: yes
+
+### Phase 97: Matchday-Level Posts
+
+**Goal**: Three remaining post types (Matchday Pairings + Match Previews batch, Matchday Overview + Power Rankings, Standings) complete the 11-post-type matchday workflow.
+**Depends on**: Phase 96 (forum-threads must be linkable on the season before matchday-overview + power-rankings + standings can target them; POST-07 + POST-08 require `season.discordRaceResultsThreadId` + `season.discordStandingsThreadId` to be populated)
+**Requirements**: POST-06, POST-07, POST-08
+**Estimated duration**: 2-3 days
+**Plans**: TBD (estimated 3 plans per design spec § 5)
+**UI hint**: yes
+
+### Phase 98: Polish + E2E + Docs + Close
+
+**Goal**: Production-ready Discord integration with end-to-end test coverage of the full matchday lifecycle, operator runbook, README/Wiki update, and milestone close.
+**Depends on**: Phase 97 (E2E test exercises the full create-channel → post-all-stages → archive lifecycle spanning Phases 94-97; all 11 post types must exist before the end-to-end suite can run)
+**Requirements**: E2E-01, DOCS-02, DOCS-03
+**Estimated duration**: 2-3 days
+**Plans**: TBD (estimated 3 plans per design spec § 5)
 
 ## Progress
 
