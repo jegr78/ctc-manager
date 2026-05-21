@@ -2,9 +2,13 @@
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
+    <!-- Mirrors the production logback-spring.xml %replace mask so
+         DiscordLogMaskingIT's OutputCaptureExtension can verify that webhook
+         URLs are redacted even in test contexts. The pattern is otherwise the
+         Spring Boot default console layout. -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%m%n%wEx){'https?://[^/\s]+/api/webhooks/[^/\s]+/[^/\s]+', 'https://***/api/webhooks/***/***'}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
