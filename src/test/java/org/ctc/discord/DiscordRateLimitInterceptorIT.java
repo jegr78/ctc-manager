@@ -57,7 +57,7 @@ class DiscordRateLimitInterceptorIT {
 	}
 
 	@Test
-	void given429ThenSuccess_whenFetchBotUser_thenInterceptorRetriesAndSucceeds() {
+	void given429ThenSuccess_whenFetchBotUser_thenInterceptorRetriesAndSucceeds() throws Exception {
 		// given
 		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
 				.inScenario("rl-429")
@@ -93,7 +93,7 @@ class DiscordRateLimitInterceptorIT {
 	}
 
 	@Test
-	void given500ThenSuccess_whenFetchBotUser_thenInterceptorRetriesAndSucceeds() {
+	void given500ThenSuccess_whenFetchBotUser_thenInterceptorRetriesAndSucceeds() throws Exception {
 		// given
 		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
 				.inScenario("rl-500")
@@ -126,7 +126,7 @@ class DiscordRateLimitInterceptorIT {
 	}
 
 	@Test
-	void given200WithBucketHeaders_whenFetchBotUser_thenBucketStateUpdated() {
+	void given200WithBucketHeaders_whenFetchBotUser_thenBucketStateUpdated() throws Exception {
 		// given
 		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
 				.willReturn(okJson("{\"id\":\"42\",\"username\":\"CTC-Bot\",\"discriminator\":\"0001\"}")
