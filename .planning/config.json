@@ -9,7 +9,7 @@
   "git": {
     "branching_strategy": "milestone",
     "phase_branch_template": "gsd/phase-{phase}-{slug}",
-    "milestone_branch_template": "gsd/v1.11-tooling-and-cleanup",
+    "milestone_branch_template": "gsd/v1.13-discord-integration",
     "quick_branch_template": null
   },
   "workflow": {
