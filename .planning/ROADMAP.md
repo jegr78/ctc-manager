@@ -208,8 +208,8 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 **Requirements**: INFRA-01, INFRA-02, INFRA-03
 **Estimated duration**: 2-3 days
 **Plans**: 3 plans (all wave 1, sequential inline on `gsd/v1.13-discord-integration` per CONTEXT D-05)
-- [ ] 93-01-PLAN.md — INFRA-01: DiscordRestClient + DiscordWebhookClient + sealed DiscordApiException hierarchy (4 permits) + DiscordRateLimitInterceptor + DiscordEmojiCache + DiscordTimestamps + WireMock-backed ITs
-- [ ] 93-02-PLAN.md — INFRA-02: 93-THREAT-MODEL.md artifact + SSRF positive-whitelist constructor guards + Logback %replace webhook-URL mask + DiscordClientHostWhitelistTest + DiscordLogMaskingIT
+- [x] 93-01-PLAN.md — INFRA-01: DiscordRestClient + DiscordWebhookClient + sealed DiscordApiException hierarchy (4 permits) + DiscordRateLimitInterceptor + DiscordEmojiCache + DiscordTimestamps + WireMock-backed ITs
+- [x] 93-02-PLAN.md — INFRA-02: 93-THREAT-MODEL.md artifact + SSRF positive-whitelist constructor guards + Logback %replace webhook-URL mask + DiscordClientHostWhitelistTest + DiscordLogMaskingIT
 - [ ] 93-03-PLAN.md — INFRA-03: Flyway V8 discord_global_config + JPA entity/repository/service + DiscordConfigForm DTO + DiscordConfigController (4 test buttons, CSRF) + Thymeleaf admin/discord-config.html + Playwright E2E
 **UI hint**: yes
 
@@ -278,7 +278,7 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 92 — Carry-Forwards & Cleanup | 0/4 | Not started | - |
-| 93 — Discord Foundation | 0/3 | Not started | - |
+| 93 — Discord Foundation | 2/3 | In Progress|  |
 | 94 — Team Roles + Match Channel Lifecycle | 0/3 | Not started | - |
 | 95 — Match Channel Posts | 0/4 | Not started | - |
 | 96 — Provisional Graphic + Forum Threads | 0/3 | Not started | - |
