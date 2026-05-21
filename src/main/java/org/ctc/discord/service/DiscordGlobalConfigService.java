@@ -35,6 +35,7 @@ public class DiscordGlobalConfigService {
 		current.setStandingsForumChannelId(nullSafe(form.getStandingsForumChannelId()));
 		current.setVsEmojiName(nullSafe(form.getVsEmojiName()));
 		current.setBotApplicationId(form.getBotApplicationId());
+		current.setCurrentMatchCategoryId(nullSafe(form.getCurrentMatchCategoryId()));
 		DiscordGlobalConfig saved = repo.save(current);
 		log.info("Updated discord_global_config (id={}, guildId={})", saved.getId(), saved.getGuildId());
 		return saved;

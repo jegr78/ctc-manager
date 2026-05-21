@@ -41,4 +41,7 @@ public class DiscordGlobalConfig extends BaseEntity {
 
 	@Column(name = "bot_application_id", length = 32)
 	private String botApplicationId;
+
+	@Column(name = "current_match_category_id", length = 32, nullable = false)
+	private String currentMatchCategoryId = "";
 }

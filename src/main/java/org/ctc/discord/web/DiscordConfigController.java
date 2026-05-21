@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.DiscordEmojiCache;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.DiscordRestClient.BotUser;
+import org.ctc.discord.DiscordRoleCache;
 import org.ctc.discord.DiscordWebhookClient;
 import org.ctc.discord.dto.DiscordConfigForm;
 import org.ctc.discord.dto.WebhookPayload;
@@ -36,6 +37,7 @@ public class DiscordConfigController {
 	private final DiscordEmojiCache emojiCache;
 	private final DiscordGlobalConfigService configService;
 	private final DiscordRestClient discordRestClient;
+	private final DiscordRoleCache roleCache;
 	private final DiscordWebhookClient webhookClient;
 
 	@GetMapping
@@ -104,7 +106,8 @@ public class DiscordConfigController {
 			return REDIRECT;
 		}
 		try {
-			int count = discordRestClient.fetchGuildRoles(guildId).size();
+			List<org.ctc.discord.dto.Role> roles = discordRestClient.fetchGuildRoles(guildId);
+			int count = roleCache.refresh(roles);
 			redirectAttributes.addFlashAttribute(
 					"successMessage", "Server roles refreshed (" + count + " entries).");
 		} catch (DiscordApiException e) {
@@ -154,6 +157,7 @@ public class DiscordConfigController {
 		form.setStandingsForumChannelId(nullSafe(config.getStandingsForumChannelId()));
 		form.setVsEmojiName(nullSafe(config.getVsEmojiName()));
 		form.setBotApplicationId(config.getBotApplicationId());
+		form.setCurrentMatchCategoryId(nullSafe(config.getCurrentMatchCategoryId()));
 		return form;
 	}
 

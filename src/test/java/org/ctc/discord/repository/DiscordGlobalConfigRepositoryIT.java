@@ -73,4 +73,19 @@ class DiscordGlobalConfigRepositoryIT {
 		// when / then — singleton invariant on freshly migrated DB
 		assertThat(repo.count()).isEqualTo(1L);
 	}
+
+	@Test
+	void givenCurrentMatchCategoryId_whenSaveAndReload_thenRoundTrips() {
+		// given — V9 adds current_match_category_id NOT NULL DEFAULT ''
+		DiscordGlobalConfig seed = repo.findFirstByOrderByIdAsc();
+		assertThat(seed.getCurrentMatchCategoryId()).isEqualTo("");
+		seed.setCurrentMatchCategoryId("123456789012345678");
+
+		// when
+		repo.save(seed);
+		DiscordGlobalConfig reloaded = repo.findFirstByOrderByIdAsc();
+
+		// then
+		assertThat(reloaded.getCurrentMatchCategoryId()).isEqualTo("123456789012345678");
+	}
 }

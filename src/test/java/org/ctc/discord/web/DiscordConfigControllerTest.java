@@ -2,6 +2,7 @@ package org.ctc.discord.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
@@ -37,6 +38,7 @@ class DiscordConfigControllerTest {
 	private DiscordRestClient discordRestClient;
 	private DiscordWebhookClient webhookClient;
 	private DiscordEmojiCache emojiCache;
+	private org.ctc.discord.DiscordRoleCache roleCache;
 	private DiscordConfigController controller;
 
 	@BeforeEach
@@ -45,7 +47,8 @@ class DiscordConfigControllerTest {
 		discordRestClient = mock(DiscordRestClient.class);
 		webhookClient = mock(DiscordWebhookClient.class);
 		emojiCache = mock(DiscordEmojiCache.class);
-		controller = new DiscordConfigController(emojiCache, configService, discordRestClient, webhookClient);
+		roleCache = mock(org.ctc.discord.DiscordRoleCache.class);
+		controller = new DiscordConfigController(emojiCache, configService, discordRestClient, roleCache, webhookClient);
 		given(configService.getOrInitialize()).willReturn(new DiscordGlobalConfig());
 	}
 
@@ -183,6 +186,7 @@ class DiscordConfigControllerTest {
 		when(discordRestClient.fetchGuildRoles(anyString())).thenReturn(List.of(
 				new org.ctc.discord.dto.Role("r1", "A", 1),
 				new org.ctc.discord.dto.Role("r2", "B", 2)));
+		when(roleCache.refresh(anyList())).thenReturn(2);
 		RedirectAttributes ra = new RedirectAttributesModelMap();
 
 		controller.refreshRolesCache(ra);

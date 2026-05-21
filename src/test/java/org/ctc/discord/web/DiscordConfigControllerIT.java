@@ -5,6 +5,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -55,6 +56,9 @@ class DiscordConfigControllerIT {
 
 	@Autowired
 	private DiscordGlobalConfigRepository configRepo;
+
+	@Autowired
+	private org.ctc.discord.DiscordRoleCache roleCache;
 
 	@BeforeEach
 	void resetWireMockAndConfigSeed() {
@@ -128,6 +132,28 @@ class DiscordConfigControllerIT {
 		mockMvc.perform(MockMvcRequestBuilders.post("/admin/discord-config/test-connection").with(csrf()))
 				.andExpect(status().is3xxRedirection())
 				.andExpect(flash().attribute("errorCategory", "auth"));
+	}
+
+	@Test
+	void givenCsrfAndConfiguredGuildAndRoleList_whenPostRefreshRolesCache_thenFlashesSuccessAndPopulatesCache() throws Exception {
+		// given — seed guildId so the precondition check passes
+		mockMvc.perform(MockMvcRequestBuilders.post("/admin/discord-config/save")
+						.with(csrf())
+						.param("guildId", "123456789012345678")
+						.param("vsEmojiName", "CTC"))
+				.andExpect(status().is3xxRedirection());
+
+		wm.stubFor(get(urlPathEqualTo("/api/v10/guilds/123456789012345678/roles"))
+				.willReturn(okJson("[{\"id\":\"100\",\"name\":\"Admin\",\"position\":5},{\"id\":\"101\",\"name\":\"Member\",\"position\":1}]")));
+
+		// when / then
+		mockMvc.perform(MockMvcRequestBuilders.post("/admin/discord-config/refresh-roles-cache").with(csrf()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attribute("successMessage", "Server roles refreshed (2 entries)."));
+
+		// and — cache is populated after the POST
+		assertThat(roleCache.snapshot()).hasSize(2);
+		assertThat(roleCache.get("100").name()).isEqualTo("Admin");
 	}
 
 	@Test
