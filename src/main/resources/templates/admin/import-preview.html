@@ -4,6 +4,17 @@
 <body>
 <section>
     <h1>Import Preview</h1>
+
+    <div th:if="${errorMessage}" class="alert alert-error mb-md">
+        <p>
+            <span th:if="${errorCategory}"
+                  class="error-badge"
+                  th:classappend="|error-badge--${#strings.toLowerCase(errorCategory)}|"
+                  th:text="${errorCategory}"></span>
+            <span th:text="${errorMessage}"></span>
+        </p>
+    </div>
+
     <div class="card mb-md">
         <p><strong>Season:</strong> <span th:text="${seasonDisplayLabel}"></span> |
            <strong>Matchday:</strong> <span th:text="${matchdayName ?: metadata.matchdayLabel ?: '-'}"></span></p>

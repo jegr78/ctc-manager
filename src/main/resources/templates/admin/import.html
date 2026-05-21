@@ -5,6 +5,16 @@
 <section>
     <h1>Import</h1>
 
+    <div th:if="${errorMessage}" class="alert alert-error mb-md">
+        <p>
+            <span th:if="${errorCategory}"
+                  class="error-badge"
+                  th:classappend="|error-badge--${#strings.toLowerCase(errorCategory)}|"
+                  th:text="${errorCategory}"></span>
+            <span th:text="${errorMessage}"></span>
+        </p>
+    </div>
+
     <!-- Source Tabs -->
     <div class="tab-nav">
         <button id="tabCsv" class="btn btn-primary btn-tab" onclick="switchSource('csv')">CSV Upload</button>
