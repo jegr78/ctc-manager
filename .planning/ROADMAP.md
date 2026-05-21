@@ -219,7 +219,10 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 **Depends on**: Phase 93 (Discord client + sealed exception hierarchy + config page must exist before channel-creation buttons can be wired; CHAN-02 requires INFRA-01's `DiscordRestClient.createChannel` + `createWebhook` methods)
 **Requirements**: CHAN-01, CHAN-02, CHAN-03
 **Estimated duration**: 2-3 days
-**Plans**: TBD (estimated 3 plans per design spec § 5)
+**Plans**: 3 plans (sequential inline on `gsd/v1.13-discord-integration` per CONTEXT D-07)
+- [ ] 94-01-PLAN.md — CHAN-01: Team Discord role mapping + DiscordRoleCache + UI polish base (closes UAT-03 mobile-overflow debt)
+- [ ] 94-02-PLAN.md — CHAN-02: Match-Detail page + DiscordChannelService + permission audit (closes T-93-03)
+- [ ] 94-03-PLAN.md — CHAN-03: Archive modal + DiscordCategoryResolver + UAT-04 staged
 **UI hint**: yes
 
 ### Phase 95: Match Channel Posts
