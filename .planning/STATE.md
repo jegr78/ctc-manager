@@ -83,6 +83,7 @@ Items carried forward into v1.13 (from v1.12 audit + post-merge follow-ups) — 
 | uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | post-deploy operator action (procedure docs/uat/UAT-02-legacy-season-smoke.md) |
 | uat | QUAL-02 local-profile MariaDB manual smoke (DevDataSeeder widening) | post-deploy operator action |
 | uat | UX-01 visual UAT — 4 error-category badges × Desktop + Mobile (8 Playwright screenshots) | post-deploy operator action (procedure 91-02-SUMMARY.md § Manual UAT) |
+| uat | UAT-03 Live-Discord UAT — `Test Connection` button drives a real Discord `GET /users/@me` against a live `DISCORD_BOT_TOKEN` + test guild; WireMock ITs cover the happy + 4-permit exception paths but cannot prove the actual Discord-API contract | post-deploy operator action BEFORE Phase 94 CHAN-02 starts (procedure STATE.md § Pending UATs UAT-03) |
 
 Post-merge self-resolving items (not tracked further):
 
@@ -111,6 +112,23 @@ Post-merge self-resolving items (not tracked further):
 - **Procedure:** Trigger each of the 4 typed `GoogleApiException` permits (transient/auth/not-found/permission) in `/admin/driver-import` and capture Desktop + Mobile screenshots per `feedback_playwright_cli`
 - **Status:** post-deploy operator action
 - **Result:** _(operator fills)_
+
+### UAT-03: Live-Discord Smoke (Phase 93 INFRA-03)
+
+- **Procedure:**
+  1. Set `DISCORD_BOT_TOKEN` environment variable to a real bot token with access to a test guild.
+  2. Start the app in `local` profile (real MariaDB): `./mvnw spring-boot:run -Dspring-boot.run.profiles=local`.
+  3. Browse to `http://localhost:9091/admin/discord-config`.
+  4. Fill `guildId` with the test guild's snowflake; click **Save** → green success badge "Configuration saved.".
+  5. Click **Test Connection** → success badge `Connected as <bot-username>`.
+  6. (Optional) Fill `announcementWebhookUrl` with a real test-channel webhook; click **Test Announcement-Webhook** → success badge.
+  7. Click **Refresh Server-Roles Cache** → success badge `Server roles refreshed (N entries).` matching the guild's role count.
+  8. Click **Refresh Emoji Cache** → success badge `Emoji cache refreshed (N entries).`.
+  9. Capture Desktop + Mobile screenshots per `feedback_playwright_cli` and link them in this entry.
+- **Status:** post-deploy operator action — MUST run BEFORE Phase 94 CHAN-02 starts (channel-creation depends on a proven Discord-API contract; WireMock fixtures cannot validate that).
+- **Result:** _(operator fills)_
+- **Date:** _(operator fills)_
+- **Screenshots:** _(operator links)_
 
 ## Accumulated Context
 
