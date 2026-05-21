@@ -50,7 +50,7 @@ created: 2026-05-21
 |-------|-------|
 | Shipper | gsd-executor (inline, sequential) |
 | Ship date | 2026-05-21 |
-| Commit SHA short | _(filled by commit step)_ |
+| Commit SHA short | `16e09870` |
 | `./mvnw verify` exit code | 0 (BUILD SUCCESS, 6:24 min) |
 | Tests run | 1438 (Failures: 0, Errors: 0; 1 transient Playwright/Chromium screenshot flake in `DriverProfilePageGeneratorTest.setUp` recovered on isolated rerun) |
 | JaCoCo line coverage | 88.2258 % (covered=7643, missed=1020; > 82 % pom gate; v1.11 88.88 % baseline restoration is Plan 92-02's responsibility) |

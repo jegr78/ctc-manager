@@ -48,7 +48,7 @@ Zero `e.getMessage()` echoes on any typed Google catch arm. The 4 whitelisted us
 
 ## Rolling Draft milestone PR
 
-- URL: _(filled by next step)_
+- URL: https://github.com/jegr78/ctc-manager/pull/130
 - Title: `feat(v1.13): discord integration & carry-forwards`
 - State: Draft
 - Body: minimal placeholder (Plan 98-03 owns the final composite body per CONTEXT D-06)
