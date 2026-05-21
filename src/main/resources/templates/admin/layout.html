@@ -75,6 +75,10 @@
                     <span class="sidebar-group-label">Data</span>
                     <a th:href="@{/admin/backup}" th:classappend="${title.contains('Backup') ? 'active' : ''}">Backup</a>
                 </div>
+                <div class="sidebar-group">
+                    <span class="sidebar-group-label">Integrations</span>
+                    <a th:href="@{/admin/discord-config}" th:classappend="${title.contains('Discord') ? 'active' : ''}">Discord Config</a>
+                </div>
             </nav>
         </aside>
         <main class="main-content">
