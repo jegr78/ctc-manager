@@ -195,7 +195,11 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 **Depends on**: Nothing (first phase of v1.13)
 **Requirements**: UX-01, COV-01, CLEAN-01, DOCS-01, BOOK-01
 **Estimated duration**: 1-2 days
-**Plans**: TBD (estimated 4 plans per design spec § 5)
+**Plans**: 4 plans (all wave 1, sequential inline on `gsd/v1.13-discord-integration` per CONTEXT D-05)
+- [ ] 92-01-PLAN.md — UX-01: typed-catch + errorCategory badge UX for CsvImportController (+ opens rolling Draft milestone PR per CONTEXT D-06)
+- [ ] 92-02-PLAN.md — COV-01: RaceControllerCalendarTest + GoogleSheets/CalendarServiceIT restore JaCoCo to ≥ 88.88 %
+- [ ] 92-03-PLAN.md — CLEAN-01: assumptions-fence build-guard (pom.xml + 2 predicate tests in greenfield org.ctc.build package)
+- [ ] 92-04-PLAN.md — DOCS-01 + BOOK-01: retroactive 89/90/91-VERIFICATION.md + 11-marker flip in v1.12-REQUIREMENTS.md
 
 ### Phase 93: Discord Foundation
 

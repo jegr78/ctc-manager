@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
-status: completed
+status: executing
 stopped_at: Phase 92 context gathered
-last_updated: "2026-05-21T05:25:21.092Z"
-last_activity: 2026-05-20 — Milestone v1.13 roadmap created (7 phases, 25 REQ-IDs)
+last_updated: "2026-05-21T06:29:51.291Z"
+last_activity: 2026-05-21 -- Phase 92 planning complete
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 23
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 Phase: 92 (Carry-Forwards & Cleanup) — not started
 Plan: —
-Status: Roadmap defined, awaiting `/gsd-discuss-phase 92`
-Last activity: 2026-05-20 — Milestone v1.13 roadmap created (7 phases, 25 REQ-IDs)
+Status: Ready to execute
+Last activity: 2026-05-21 -- Phase 92 planning complete
 
 ## Completed Milestones
 
@@ -95,7 +95,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** v1.12 milestone complete; carries into v1.13
+- **Status:** Ready to execute
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
