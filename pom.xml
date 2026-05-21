@@ -227,6 +227,19 @@
 			<artifactId>testcontainers-mariadb</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!--
+		    WireMock 3.x for Discord HTTP/Webhook client integration tests.
+		    Test scope only — never reaches the production classpath. First introduced
+		    in Phase 93 (Discord Foundation): stubs Discord REST + webhook endpoints
+		    so DiscordRateLimitInterceptor, DiscordRestClient, and DiscordWebhookClient
+		    can be verified end-to-end against deterministic responses.
+		-->
+		<dependency>
+			<groupId>org.wiremock</groupId>
+			<artifactId>wiremock-standalone</artifactId>
+			<version>3.9.2</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
