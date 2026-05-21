@@ -47,6 +47,13 @@
                 <span th:errors="*{standingsForumChannelId}" class="error-badge error-badge--auth"></span>
             </div>
             <div class="form-group">
+                <label for="currentMatchCategoryId">Current Match Category ID</label>
+                <input type="text" id="currentMatchCategoryId" th:field="*{currentMatchCategoryId}"
+                       placeholder="Discord category snowflake">
+                <span th:if="${#strings.isEmpty(form.currentMatchCategoryId)}" class="badge-warning">not configured</span>
+                <span th:errors="*{currentMatchCategoryId}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
                 <label for="vsEmojiName">VS Emoji Name</label>
                 <input type="text" id="vsEmojiName" th:field="*{vsEmojiName}" placeholder="CTC">
                 <span th:errors="*{vsEmojiName}" class="error-badge error-badge--auth"></span>
@@ -63,7 +70,7 @@
             Each button issues exactly one call to the configured Discord surface.
             Buttons are disabled when their prerequisite field is empty.
         </p>
-        <div class="actions">
+        <div class="discord-actions">
             <form th:action="@{/admin/discord-config/test-connection}" method="post" class="inline-form">
                 <button type="submit" class="btn btn-secondary">Test Connection</button>
             </form>

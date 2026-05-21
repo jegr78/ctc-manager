@@ -23,6 +23,38 @@
                        style="background:var(--bg);color:var(--text-dim);">
             </div>
 
+            <!-- Discord Role (cache-warm dropdown / cache-empty plain-text fallback) -->
+            <div th:if="${discordRoles != null && !discordRoles.isEmpty()}" class="form-group mt-md">
+                <label for="discordRoleSearch">Discord Role</label>
+                <div class="searchable-dropdown" id="discordRoleDropdown"
+                     data-testid="discord-role-dropdown">
+                    <input type="text" id="discordRoleSearch" placeholder="Search roles..."
+                           autocomplete="off" class="dropdown-input">
+                    <input type="hidden" th:field="*{discordRoleId}">
+                    <div class="dropdown-list" id="discordRoleList">
+                        <div th:each="role : ${discordRoles.values()}"
+                             class="dropdown-item"
+                             th:attr="data-id=${role.id()},data-label=${role.name()}"
+                             th:text="${role.name()}">
+                        </div>
+                    </div>
+                </div>
+                <span th:errors="*{discordRoleId}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div th:if="${discordRoles == null || discordRoles.isEmpty()}" class="form-group mt-md">
+                <label for="discordRoleId">Discord Role ID</label>
+                <input type="text" id="discordRoleId" th:field="*{discordRoleId}"
+                       data-testid="discord-role-input"
+                       pattern="^\d{17,20}$"
+                       placeholder="Discord role snowflake (17-20 digits)">
+                <span class="badge-warning">
+                    Role cache empty —
+                    <a th:href="@{/admin/discord-config}">configure Discord &amp; refresh roles</a>
+                    to use a dropdown.
+                </span>
+                <span th:errors="*{discordRoleId}" class="error-badge error-badge--auth"></span>
+            </div>
+
             <!-- Brand Colors (inline, only when editing) -->
             <div th:if="${teamForm.id != null}" class="mt-xl">
                 <h3>Brand Colors</h3>

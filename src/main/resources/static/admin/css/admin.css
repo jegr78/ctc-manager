@@ -208,6 +208,24 @@ th.sortable[data-sort="desc"]::after { content: ' \2193'; opacity: 1; }
 
 .actions { display: flex; gap: 8px; align-items: center; }
 
+/* Discord-page action cluster — responsive-wrap variant shared by discord-config + match-detail.
+   Closes the UAT-03 mobile-overflow debt: at <= 640 px the buttons stack to a single column
+   so the 4-button bar no longer overflows the 375 px viewport. */
+.discord-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+@media (max-width: 640px) {
+    .discord-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .discord-actions > * { width: 100%; }
+    .discord-actions .btn { width: 100%; }
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
