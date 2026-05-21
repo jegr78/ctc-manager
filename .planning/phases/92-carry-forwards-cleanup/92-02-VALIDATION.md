@@ -74,7 +74,7 @@ All 5 declared as `@MockitoBean` in `RaceControllerCalendarTest`.
 |-------|-------|
 | Shipper | gsd-executor (inline, sequential) |
 | Ship date | 2026-05-21 |
-| Commit SHA short | _(filled by commit step)_ |
+| Commit SHA short | `84cae1dd` |
 | `./mvnw verify` exit code | 0 (BUILD SUCCESS, 7:48 min) |
 | Tests run | 1452 (Failures: 0, Errors: 0; +14 new tests vs Plan 92-01 ship state — 9 RaceControllerCalendarTest + 3 GoogleSheetsServiceIT + 3 GoogleCalendarServiceIT + 4 extra Csv happy-path; net Δ accounts for 1 augmented + 1 renamed CsvImportControllerExceptionTest method) |
 | JaCoCo line coverage | **88.8838 %** (covered=7700, missed=963) — v1.11 baseline restored (≥ 88.88 %); Δ +0.44 pp over v1.12 (88.44 %) |
