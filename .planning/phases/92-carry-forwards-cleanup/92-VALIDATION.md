@@ -1,9 +1,9 @@
 ---
 phase: 92
 slug: carry-forwards-cleanup
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: shipped
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-21
 ---
 
@@ -58,10 +58,10 @@ created: 2026-05-21
 | 92-03-01 | 03 | 1 | CLEAN-01 | — | `assumptions-fence` triggers on `import static org.junit.jupiter.api.Assumptions.assumeFalse` (synthetic positive in `@TempDir`) | unit | `./mvnw test -Dtest='AssumptionsFencePredicateTest#givenJunitAssumptionsImport_whenPredicateRuns_thenViolationDetected'` | ✅ | ✅ green |
 | 92-03-02 | 03 | 1 | CLEAN-01 | — | `assumptions-fence` does NOT trigger on `import static org.assertj.core.api.Assumptions.assumeThat` (synthetic negative in `@TempDir`) | unit | `./mvnw test -Dtest='AssumptionsFencePredicateTest#givenAssertjAssumptionsImport_whenPredicateRuns_thenNoViolation'` | ✅ | ✅ green |
 | 92-03-03 | 03 | 1 | CLEAN-01 | — | `./mvnw validate` exit 0 on current codebase (BackupStagingDirPerForkIT.java:12 AssertJ import does NOT trigger fence) | gate | `./mvnw validate` → fence OK echo | ✅ | ✅ green |
-| 92-04-01 | 04 | 1 | DOCS-01 | — | 3 retroactive `89-VERIFICATION.md`, `90-VERIFICATION.md`, `91-VERIFICATION.md` exist under `.planning/milestones/v1.12-phases/{89,90,91}-*/` | file existence | `ls .planning/milestones/v1.12-phases/89-*/89-VERIFICATION.md .planning/milestones/v1.12-phases/90-*/90-VERIFICATION.md .planning/milestones/v1.12-phases/91-*/91-VERIFICATION.md` | ❌ W0 | ⬜ pending |
-| 92-04-02 | 04 | 1 | DOCS-01 | — | Each VERIFICATION.md contains 3 required sections (Phase Goal Recap, Goal-Backward Walk-Through, Verification Outcome) | grep | `for f in .planning/milestones/v1.12-phases/{89,90,91}-*/${N}-VERIFICATION.md; do grep -l "Goal Recap" "$f" && grep -l "Goal-Backward" "$f" && grep -l "Verification Outcome" "$f"; done` | ❌ W0 | ⬜ pending |
-| 92-04-03 | 04 | 1 | BOOK-01 | — | 7 stale `[ ]` checkboxes flipped to `[x]` | grep count | `[[ "$(grep -c '^- \[ \]' .planning/milestones/v1.12-REQUIREMENTS.md)" == "0" ]]` | ❌ W0 | ⬜ pending |
-| 92-04-04 | 04 | 1 | BOOK-01 | — | 4 stale `Pending` rows flipped to `Resolved` | grep count | `[[ "$(grep -c 'Pending' .planning/milestones/v1.12-REQUIREMENTS.md)" == "0" ]]` | ❌ W0 | ⬜ pending |
+| 92-04-01 | 04 | 1 | DOCS-01 | — | 3 retroactive `89-VERIFICATION.md`, `90-VERIFICATION.md`, `91-VERIFICATION.md` exist under `.planning/milestones/v1.12-phases/{89,90,91}-*/` | file existence | `test -f "$(ls -d .planning/milestones/v1.12-phases/89-*)/89-VERIFICATION.md"` + same for 90/91 | ✅ | ✅ green |
+| 92-04-02 | 04 | 1 | DOCS-01 | — | Each VERIFICATION.md contains required section headers (Goal Achievement — Success Criteria + Per-Dimension Verdict Table) + `audit_method: retroactive` front-matter | grep | per-file `grep -q "Goal Achievement — Success Criteria"` + `grep -q "Per-Dimension Verdict Table"` + `grep -q "audit_method: retroactive"` | ✅ | ✅ green |
+| 92-04-03 | 04 | 1 | BOOK-01 | — | 7 stale `[ ]` checkboxes flipped to `[x]` | grep count | `grep -c '^- \[ \]' .planning/milestones/v1.12-REQUIREMENTS.md` returns 0 | ✅ | ✅ green |
+| 92-04-04 | 04 | 1 | BOOK-01 | — | 4 stale `Pending` rows flipped to `Resolved` | grep count | `grep -c 'Pending' .planning/milestones/v1.12-REQUIREMENTS.md` returns 0 | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
