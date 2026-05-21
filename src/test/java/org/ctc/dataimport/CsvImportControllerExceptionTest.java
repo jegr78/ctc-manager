@@ -232,6 +232,107 @@ class CsvImportControllerExceptionTest {
 	}
 
 	@Test
+	void givenValidSheet_whenPreviewSheet_thenRendersPreviewView() throws Exception {
+		// given
+		when(googleSheetsService.isAvailable()).thenReturn(true);
+		when(googleSheetsService.extractSpreadsheetId(anyString())).thenReturn("abc123");
+		when(googleSheetsService.getSheetNames("abc123")).thenReturn(List.of("Race 1", "Overall"));
+		when(googleSheetsService.filterRaceSheets(List.of("Race 1", "Overall"))).thenReturn(List.of("Race 1"));
+		when(googleSheetsService.readRangeFromSheet("abc123", "Race 1", "A:H"))
+				.thenReturn(List.of(List.of((Object) "headers")));
+		var preview = new CsvImportService.ImportPreview(new CsvImportService.ImportMetadata(
+				UUID.randomUUID(), "MD1", null, null, null, null));
+		when(scorecardParser.parseMultipleRaces(any(), any(), any())).thenReturn(List.of(preview));
+		when(csvImportService.getAllSeasons()).thenReturn(List.of());
+		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
+
+		// when
+		mockMvc.perform(post("/admin/import/preview-sheet")
+						.param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123")
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("matchdayLabel", "MD1"))
+				// then
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/import-preview"))
+				.andExpect(model().attributeExists("previews", "raceSheetNames", "isMultiRace", "metadata", "source", "sheetUrl"));
+	}
+
+	@Test
+	void givenEmptyRaceSheets_whenPreviewSheet_thenShowsNoSheetsFoundError() throws Exception {
+		// given
+		when(googleSheetsService.isAvailable()).thenReturn(true);
+		when(googleSheetsService.extractSpreadsheetId(anyString())).thenReturn("abc123");
+		when(googleSheetsService.getSheetNames("abc123")).thenReturn(List.of("Overall"));
+		when(googleSheetsService.filterRaceSheets(List.of("Overall"))).thenReturn(List.of());
+		when(csvImportService.getAllSeasons()).thenReturn(List.of());
+		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
+
+		// when
+		mockMvc.perform(post("/admin/import/preview-sheet")
+						.param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123")
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("matchdayLabel", "MD1"))
+				// then
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/import"))
+				.andExpect(model().attributeExists("errorMessage"));
+	}
+
+	@Test
+	void givenScorecardParserReturnsEmpty_whenPreviewSheet_thenShowsParseError() throws Exception {
+		// given
+		when(googleSheetsService.isAvailable()).thenReturn(true);
+		when(googleSheetsService.extractSpreadsheetId(anyString())).thenReturn("abc123");
+		when(googleSheetsService.getSheetNames("abc123")).thenReturn(List.of("Race 1"));
+		when(googleSheetsService.filterRaceSheets(List.of("Race 1"))).thenReturn(List.of("Race 1"));
+		when(googleSheetsService.readRangeFromSheet("abc123", "Race 1", "A:H"))
+				.thenReturn(List.of(List.of((Object) "garbage")));
+		when(scorecardParser.parseMultipleRaces(any(), any(), any())).thenReturn(List.of());
+		when(csvImportService.getAllSeasons()).thenReturn(List.of());
+		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
+
+		// when
+		mockMvc.perform(post("/admin/import/preview-sheet")
+						.param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123")
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("matchdayLabel", "MD1"))
+				// then
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/import"))
+				.andExpect(model().attribute("errorMessage", equalTo("Unable to parse any race sheets from the spreadsheet")));
+	}
+
+	@Test
+	void givenSheetWithEmptyRaceSheets_whenExecute_thenRedirectsWithNoSheetsError() throws Exception {
+		// given
+		when(googleSheetsService.extractSpreadsheetId(anyString())).thenReturn("abc123");
+		when(googleSheetsService.getSheetNames("abc123")).thenReturn(List.of("Overall"));
+		when(googleSheetsService.filterRaceSheets(List.of("Overall"))).thenReturn(List.of());
+
+		// when
+		mockMvc.perform(post("/admin/import/execute")
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("source", "sheet")
+						.param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123"))
+				// then
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/import"))
+				.andExpect(flash().attributeExists("errorMessage"));
+	}
+
+	@Test
+	void givenNoFileAndNoSheet_whenExecute_thenRedirectsWithError() throws Exception {
+		// when
+		mockMvc.perform(post("/admin/import/execute")
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("source", "csv"))
+				// then
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/import"))
+				.andExpect(flash().attribute("errorMessage", equalTo("No CSV file provided")));
+	}
+
+	@Test
 	void givenBusinessRuleException_whenExecuteImport_thenRedirectsWithError() throws Exception {
 		// given
 		when(csvImportService.parseAndPreview(any(), any()))
