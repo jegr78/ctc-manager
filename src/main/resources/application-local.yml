@@ -1,8 +1,20 @@
+# Local profile (developer machine, MariaDB on localhost:3306).
+#
+# Required env-vars for full functionality:
+#   - GOOGLE_CALENDAR_ID — Google Calendar ID for race-schedule export (optional).
+#   - DISCORD_BOT_TOKEN  — Discord bot token (v1.13 Discord Integration). The bot
+#                          token MUST come from an env-var; never commit a literal.
+#                          Cascade: set DISCORD_BOT_TOKEN in your shell, or the
+#                          application.yml default (empty string) is used and the
+#                          Discord config page surfaces "not configured" badges.
+
 server:
   port: 9091
 
 app:
   upload-dir: data/local/uploads
+  discord:
+    bot-token: ${DISCORD_BOT_TOKEN:}
 
 spring:
   datasource:
