@@ -4,7 +4,7 @@ verified_on: 2026-05-21
 status: passed
 verifier: gsd-executor (inline interactive close — Plan 93-03 Task 7)
 score: 5/5 success-criteria + 8/8 dimensions
-overrides_applied: 1 (Live-Discord UAT-03 — post-deploy operator action per STATE.md "Pending UATs UAT-03")
+overrides_applied: 0 (UAT-03 Live-Discord smoke resolved 2026-05-21 on operator's test bot — all 4 admin buttons green incl. out-of-band Discord-channel webhook delivery; one follow-up UI debt logged: discord-config mobile-viewport overflow, scheduled for Phase 94+)
 audit_method: goal-backward
 ---
 
@@ -68,7 +68,7 @@ verification maps + git log on `gsd/v1.13-discord-integration`.
 | 5 | Wave-1 sequential structure honored (`--interactive` inline) | PASS | 3 plans executed inline on `gsd/v1.13-discord-integration` per CONTEXT D-05 + [[feedback_inline_sequential_execution]] + [[feedback_chain_inline_milestones]]. No subagents, no worktrees. User-checkpoint gates between plans (Plan 93-01 → push + Plan 93-02 → push + Plan 93-03). |
 | 6 | Branch invariant — Flyway V1-V7 immutable, only V8 added | PASS | `git diff --stat src/main/resources/db/migration/V[1-7]*.sql` empty; V8 the sole new migration. |
 | 7 | JaCoCo line coverage ≥ 88.88 % at phase close (carried forward from Plan 93-01's 89.59 %) | PASS | Final % recorded by `./mvnw clean verify -Pe2e` Task 7 — see Sign-Off table below. |
-| 8 | Manual-only UAT documented — UAT-03 Live-Discord UAT (post-deploy operator action BEFORE Phase 94 CHAN-02) | PASS | STATE.md "Pending UATs UAT-03" entry added per CONTEXT D-01. Plan 93-03 Task 6 deferred to operator as documented checkpoint. |
+| 8 | Manual-only UAT executed — UAT-03 Live-Discord UAT (operator-driven against live test bot BEFORE Phase 94 CHAN-02) | PASS (resolved 2026-05-21) | All 4 admin-page buttons return the expected success-badge against the operator's live test bot on dev profile: `Connected as CTC Manager App` / `Server roles refreshed (2 entries).` / `Emoji cache refreshed (1 entries).` / `Webhook test message delivered.` Webhook delivery confirmed out-of-band in the configured Discord channel. Driven via `playwright-cli` from STATE.md "Pending UATs UAT-03". One follow-up UI debt logged: discord-config mobile-viewport overflow at 375 px (Phase 94+ polish — functionality intact, only responsive layout is missing). |
 
 **Score:** 8/8 dimensions PASS.
 
@@ -96,7 +96,8 @@ verification maps + git log on `gsd/v1.13-discord-integration`.
 | Item | Carry-Forward To | Reason |
 |------|-----------------|--------|
 | T-93-03 (Channel-permission bypass) | Phase 94 CHAN-02 | Channel-creation + permission-overwrite model lives in Phase 94. Plan 93-02 threat model explicitly marks this row FORWARD-REFERENCE. |
-| Live Discord UAT (UAT-03) | Post-deploy operator action before Phase 94 CHAN-02 | `Test Connection` button against a real Discord bot + test guild can only happen with a live `DISCORD_BOT_TOKEN`. WireMock ITs cover the happy + 4-permit exception paths but cannot prove the actual Discord-API contract. |
+| ~~Live Discord UAT (UAT-03)~~ | ~~Post-deploy operator action before Phase 94 CHAN-02~~ — **Resolved 2026-05-21** | Operator drove the procedure via `playwright-cli` against a live test bot on dev profile; all 4 admin-page buttons returned the expected success-badge and the Discord-channel received the webhook test message. See STATE.md "Pending UATs UAT-03" for the full result detail. |
+| Discord-config page mobile-viewport overflow | Phase 94+ UI polish pass | Form inputs + the 4-button bar overflow the 375 px viewport (horizontal scroll required to reach `Refresh Server Roles` / `Refresh Emoji Cache`). Identified during UAT-03 mobile sweep. Functionality intact; only responsive layout is missing. Logged in STATE.md "Deferred Items" as `ui_debt`. |
 
 ---
 

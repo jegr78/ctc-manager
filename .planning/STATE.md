@@ -83,7 +83,8 @@ Items carried forward into v1.13 (from v1.12 audit + post-merge follow-ups) — 
 | uat | UAT-02 legacy season visual smoke (real pre-V4 production data) | post-deploy operator action (procedure docs/uat/UAT-02-legacy-season-smoke.md) |
 | uat | QUAL-02 local-profile MariaDB manual smoke (DevDataSeeder widening) | post-deploy operator action |
 | uat | UX-01 visual UAT — 4 error-category badges × Desktop + Mobile (8 Playwright screenshots) | post-deploy operator action (procedure 91-02-SUMMARY.md § Manual UAT) |
-| uat | UAT-03 Live-Discord UAT — `Test Connection` button drives a real Discord `GET /users/@me` against a live `DISCORD_BOT_TOKEN` + test guild; WireMock ITs cover the happy + 4-permit exception paths but cannot prove the actual Discord-API contract | post-deploy operator action BEFORE Phase 94 CHAN-02 starts (procedure `docs/operations/discord-integration.md` § 4) |
+| uat | UAT-03 Live-Discord UAT — `Test Connection` button drives a real Discord `GET /users/@me` against a live `DISCORD_BOT_TOKEN` + test guild; WireMock ITs cover the happy + 4-permit exception paths but cannot prove the actual Discord-API contract | ✅ Resolved 2026-05-21 — all 4 buttons pass on dev profile against the operator's live test bot (procedure `docs/operations/discord-integration.md` § 4); see § Pending UATs UAT-03 for full result detail |
+| ui_debt | Discord-Config page mobile-viewport overflow — at 375 px the form inputs + the 4-button bar in "Connection & cache tests" extend beyond the visible area; horizontal scroll required to reach `Refresh Server Roles` / `Refresh Emoji Cache`. Surfaced during UAT-03 mobile sweep 2026-05-21. Functionality is intact (the underlying typed-catch + flash wiring works on mobile); only the responsive-layout polish is missing. | **Phase 94+** — bundle into the Phase-94 UI polish pass (CHAN-* pages share the same layout container so a single CSS fix benefits both); not blocking for INFRA-03 acceptance because the operator workflow is desktop-driven |
 
 Post-merge self-resolving items (not tracked further):
 
@@ -116,10 +117,15 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-03: Live-Discord Smoke (Phase 93 INFRA-03)
 
 - **Procedure:** `docs/operations/discord-integration.md` § 4 (UAT-03 — Live-Discord Smoke). Covers bot registration in the Developer Portal, OAuth2 invite with the recommended permission set, env-var wiring, Developer Mode toggle, guild-ID copy, and the 4-button click sequence on `/admin/discord-config`.
-- **Status:** post-deploy operator action — MUST run BEFORE Phase 94 CHAN-02 starts (channel-creation depends on a proven Discord-API contract; WireMock fixtures cannot validate that).
-- **Result:** _(operator fills)_
-- **Date:** _(operator fills)_
-- **Screenshots:** _(operator links)_
+- **Status:** ✅ PASSED 2026-05-21 — driven via `playwright-cli` against a live test bot on profile `dev`; all 4 admin buttons returned the expected success-badge and the announcement-webhook test message was confirmed delivered to the configured Discord channel by the operator out-of-band.
+- **Result:**
+  - **Test Connection** → green badge `Connected as CTC Manager App` (real `GET /users/@me` succeeded).
+  - **Refresh Server Roles** → green badge `Server roles refreshed (2 entries).` (matches the test-guild's `@everyone` + bot role).
+  - **Refresh Emoji Cache** → green badge `Emoji cache refreshed (1 entries).` (matches the `CTC` custom emoji configured for VS).
+  - **Test Announcement Webhook** → green badge `Webhook test message delivered.` + operator confirmed message visible in the configured Discord channel.
+  - Mobile (375×667) render: page loads, flash-badge wiring works end-to-end (Test Connection success path confirmed on mobile). **Follow-up UI issue identified** — form inputs + the 4-button bar overflow the 375 px viewport (horizontal scroll required to reach `Refresh Server Roles` / `Refresh Emoji Cache`). Tracked under Deferred Items as a Phase 94+ UX polish.
+- **Date:** 2026-05-21
+- **Screenshots:** `.screenshots/uat-03/` (gitignored locally — 8 PNGs: Desktop initial + 4 button-success states, Mobile initial + scrolled + Test-Connection success).
 
 ## Accumulated Context
 
