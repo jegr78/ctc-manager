@@ -9,13 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-/**
- * Phase 93 invariant: DiscordGlobalConfig lives under org.ctc.discord.model.* (NOT
- * org.ctc.domain.model.*), so the Phase 72 D-15 BackupSchema package filter excludes it
- * from BackupSchema.EXPORT_ORDER. The export-order size therefore MUST stay at 24 — any
- * regression (moving the entity into domain.model or relaxing the package filter) bumps
- * the count and the wire-contract drifts.
- */
 @SpringBootTest
 @ActiveProfiles("dev")
 @Tag("integration")

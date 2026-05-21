@@ -10,13 +10,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Verifies the V8 migration applies cleanly on H2 (dev profile) and the singleton
- * findFirstByOrderByIdAsc contract holds:
- *  - exactly one seed row after migration
- *  - vsEmojiName defaults to "CTC"
- *  - mutating + saving returns the SAME id (UPDATE, not a second INSERT)
- */
 @SpringBootTest
 @ActiveProfiles("dev")
 @Tag("integration")

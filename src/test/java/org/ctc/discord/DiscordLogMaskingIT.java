@@ -23,15 +23,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
-/**
- * Regression fence for T-93-02 (Webhook-URL leak via logs).
- *
- * <p>Provokes a 500-exhausted retry path inside {@link DiscordWebhookClient}; the
- * resulting {@link DiscordTransientException} stacktrace flows through Logback
- * and the captured output must show the {@code %replace} converter swapping the
- * webhook URL for the three-asterisks placeholder pair — the secret token
- * fragment MUST NOT appear in the captured log.
- */
 @SpringBootTest
 @ActiveProfiles("dev")
 @Tag("integration")

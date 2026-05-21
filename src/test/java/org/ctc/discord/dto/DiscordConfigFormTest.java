@@ -11,11 +11,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/**
- * Jakarta-validation contract for DiscordConfigForm. Empty strings remain valid in the
- * bootstrap state (D-12 not-configured badges); populated values must follow the Discord
- * snowflake + webhook URL grammar.
- */
 class DiscordConfigFormTest {
 
 	private static ValidatorFactory factory;

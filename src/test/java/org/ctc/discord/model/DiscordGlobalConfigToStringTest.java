@@ -4,10 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-/**
- * Verifies T-93-01 mitigation surface (d): the entity's @ToString(exclude=...) keeps the
- * announcement_webhook_url out of logged toString() representations.
- */
 class DiscordGlobalConfigToStringTest {
 
 	private static final String SECRET = "secret-token-xyz-12345";

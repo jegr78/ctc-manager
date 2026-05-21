@@ -18,15 +18,6 @@
         <property name="LOG_DIR" value="./logs"/>
     </springProfile>
 
-    <!-- T-93-01 + T-93-02 mitigation: %replace masks Discord webhook URLs
-         (https://discord.com/api/webhooks/{id}/{token} → ***/***) in BOTH
-         console and file appenders. Regex deliberately broadened from the
-         discord.com anchor to https?://[^/\s]+/api/webhooks/[^/\s]+/[^/\s]+ so
-         WireMock loopback URLs in DiscordLogMaskingIT are also masked. False-
-         positive risk is low — no other system writes /api/webhooks/ paths.
-         See .planning/phases/93-discord-foundation/93-THREAT-MODEL.md. -->
-
-    <!-- Console Appender — webhook-URL-masking pattern -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%m%n%wEx){'https?://[^/\s]+/api/webhooks/[^/\s]+/[^/\s]+', 'https://***/api/webhooks/***/***'}</pattern>
@@ -34,7 +25,7 @@
         </encoder>
     </appender>
 
-    <!-- File Appender mit Rolling Policy — webhook-URL-masking pattern -->
+    <!-- File Appender mit Rolling Policy -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/app.log</file>
         <encoder>

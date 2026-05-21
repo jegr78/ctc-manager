@@ -9,23 +9,6 @@ import org.ctc.discord.dto.WebhookPayload;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-/**
- * Unit tests for the SSRF positive-whitelist guard added by Plan 93-02 Task 5.
- *
- * Behaviour contract:
- * - Whitelist is parsed from a CSV string (`app.discord.allowed-hosts`).
- * - Hostname comparison is case-insensitive — `DISCORD.COM` matches `discord.com`.
- * - Hosts not in the whitelist throw {@link IllegalArgumentException} with message
- *   `"Discord host blocked: " + host`.
- * - Malformed URLs (null host) throw the same exception with `<null>` suffix.
- * - Both {@link DiscordHostValidator} (the shared helper) and
- *   {@link DiscordWebhookClient} apply the guard at the call site.
- *
- * RED: {@code DiscordHostValidator} doesn't exist yet and neither client invokes
- * the check, so this test fails to compile. Task 5 lands the validator and wires
- * it into {@link DiscordConfig#discordBotRestClient} and
- * {@link DiscordWebhookClient#forWebhookUrl}.
- */
 class DiscordClientHostWhitelistTest {
 
 	@Test
@@ -96,15 +79,11 @@ class DiscordClientHostWhitelistTest {
 
 	@Test
 	void givenWhitelistedLocalhost_whenWebhookClientExecuteLocalhost_thenGuardPasses() {
-		// given — webhook client construction with localhost-augmented whitelist accepts loopback;
-		// the call still throws once the HTTP layer (mocked interceptor) returns no response,
-		// but it does so AFTER the host guard — not because of it.
 		DiscordWebhookClient client = new DiscordWebhookClient(
 				Mockito.mock(DiscordRateLimitInterceptor.class),
 				new ObjectMapper(),
 				new DiscordHostValidator("discord.com,localhost"));
 
-		// when / then
 		assertThatThrownBy(() -> client.execute(
 				"http://localhost:9999/api/webhooks/100/abc",
 				new WebhookPayload("hi", List.of())))
