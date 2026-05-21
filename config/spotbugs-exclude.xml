@@ -117,6 +117,45 @@
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
 
+    <!-- discord top-level classes (DiscordRestClient, DiscordWebhookClient,
+         DiscordRateLimitInterceptor, DiscordEmojiCache, DiscordTimestamps) inject Spring-managed
+         singletons via constructor — Clock, RestClient, ObjectMapper, DiscordRateLimitInterceptor.
+         These collaborators are framework-owned and thread-safe in practice; defensive copies are
+         not meaningful for Spring-injected beans. Same pattern as admin.service / backup.service
+         / gt7sync top-level Spring-component rules above. -->
+    <Match>
+        <Class name="~org\.ctc\.discord\.[A-Z].+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- discord.dto and discord.util record DTOs: Jackson-serialised request/response carriers
+         (Embed, EmbedField, WebhookPayload, WebhookMessage, NamedAttachment, Channel, Thread,
+         Role, *Request, CachedEntry, BucketState). Record accessors return the backing field
+         directly; Jackson populates List<>/byte[] fields via deserialization or builder code.
+         Defensive copies on a single-request transport DTO would be wasteful and have no
+         observable contract benefit — same pattern as admin.dto / backup.dto exclusions above.
+         9 findings across discord.dto.*. -->
+    <Match>
+        <Class name="~org\.ctc\.discord\.(dto|util)\..+"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- ========== CT_CONSTRUCTOR_THROW suppression ========== -->
+
+    <!-- DiscordRateLimitInterceptor parses app.discord.rate-limit.jitter-ms (range like "100-500")
+         and app.discord.rate-limit.fivexx-backoff-ms (CSV) in its constructor. Malformed values
+         throw NumberFormatException so the Spring context fails to start — exactly the desired
+         fail-fast behavior for misconfigured infrastructure. The "Finalizer attack" surface that
+         CT_CONSTRUCTOR_THROW warns about does not apply: DiscordRateLimitInterceptor is a Spring
+         singleton bean; nobody can subclass-override its finalizer because (a) the class is package
+         layout enforced, (b) Java 25 deprecates Object.finalize anyway, and (c) the misconfigured
+         interceptor is never reachable since the application aborts boot.
+         See DiscordRateLimitInterceptor.java:35-46. -->
+    <Match>
+        <Class name="org.ctc.discord.DiscordRateLimitInterceptor"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+
     <!-- ========== VA_FORMAT_STRING_USES_NEWLINE suppression (STAT-05/triage) ========== -->
 
     <!-- TemplatePreviewService.buildPlaceholderCard: the SVG text block uses natural line endings
