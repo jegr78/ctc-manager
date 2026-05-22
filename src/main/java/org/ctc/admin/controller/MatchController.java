@@ -107,6 +107,10 @@ public class MatchController {
 		model.addAttribute("pageTitle",
 				"Match: " + match.getHomeTeam().getShortName() + " vs " + awayShort);
 		model.addAttribute("teamCardsPost", findTeamCardsPost(match));
+		model.addAttribute("settingsPost", findMatchPost(match, DiscordPostType.SETTINGS));
+		model.addAttribute("lineupsPost", findMatchPost(match, DiscordPostType.LINEUPS));
+		model.addAttribute("matchHasCompleteSettings", discordPostService.matchHasCompleteSettings(match));
+		model.addAttribute("matchHasCompleteLineups", discordPostService.matchHasCompleteLineups(match));
 		return "admin/match-detail";
 	}
 
@@ -173,6 +177,32 @@ public class MatchController {
 		return "redirect:/admin/matches/" + id;
 	}
 
+	@PostMapping("/{id}/post-settings")
+	public String postSettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			discordPostService.postSettings(matchService.findById(id));
+			redirectAttributes.addFlashAttribute("successMessage", "Settings posted.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Post settings");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post settings");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
+	@PostMapping("/{id}/post-lineups")
+	public String postLineups(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			discordPostService.postLineups(matchService.findById(id));
+			redirectAttributes.addFlashAttribute("successMessage", "Lineups posted.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Post lineups");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post lineups");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
 	@PostMapping("/{id}/refresh-team-cards")
 	public String refreshTeamCards(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
 		try {
@@ -221,12 +251,16 @@ public class MatchController {
 	}
 
 	private DiscordPost findTeamCardsPost(Match match) {
+		return findMatchPost(match, DiscordPostType.TEAM_CARDS);
+	}
+
+	private DiscordPost findMatchPost(Match match, DiscordPostType type) {
 		if (match.getDiscordChannelId() == null) {
 			return null;
 		}
 		return discordPostRepository
 				.findByChannelIdAndPostTypeAndMatchId(
-						match.getDiscordChannelId(), DiscordPostType.TEAM_CARDS, match.getId())
+						match.getDiscordChannelId(), type, match.getId())
 				.orElse(null);
 	}
 
@@ -261,5 +295,11 @@ public class MatchController {
 				cause != null ? cause.toString() : "none");
 		ra.addFlashAttribute("errorMessage", message);
 		ra.addFlashAttribute("errorCategory", category);
+	}
+
+	private void applyErrorFlash(RedirectAttributes ra, BusinessRuleException e, String action) {
+		log.warn("{} failed: category=data-incomplete, message={}", action, e.getMessage());
+		ra.addFlashAttribute("errorMessage", e.getMessage());
+		ra.addFlashAttribute("errorCategory", "data-incomplete");
 	}
 }

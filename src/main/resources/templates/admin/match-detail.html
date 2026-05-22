@@ -74,6 +74,44 @@
                     &#x21bb; Refresh Cards
                 </button>
             </form>
+
+            <form th:if="${settingsPost == null and matchHasCompleteSettings}"
+                  th:action="@{/admin/matches/{id}/post-settings(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-settings">
+                    Post Settings
+                </button>
+            </form>
+            <span th:if="${settingsPost == null and not matchHasCompleteSettings}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-settings-disabled"
+                  title="Configure settings for all races first">Post Settings</span>
+            <form th:if="${settingsPost != null}"
+                  th:action="@{/admin/matches/{id}/post-settings(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-settings">
+                    Re-Post Settings
+                </button>
+            </form>
+
+            <form th:if="${lineupsPost == null and matchHasCompleteLineups}"
+                  th:action="@{/admin/matches/{id}/post-lineups(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-lineups">
+                    Post Lineups
+                </button>
+            </form>
+            <span th:if="${lineupsPost == null and not matchHasCompleteLineups}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-lineups-disabled"
+                  title="Configure lineups for all races first">Post Lineups</span>
+            <form th:if="${lineupsPost != null}"
+                  th:action="@{/admin/matches/{id}/post-lineups(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-lineups">
+                    Re-Post Lineups
+                </button>
+            </form>
         </div>
     </div>
 

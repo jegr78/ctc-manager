@@ -392,6 +392,7 @@ select option {
 .error-badge--not-found     { background: #2a2a3a; color: #90caf9; border: 1px solid #1976d2; }
 .error-badge--permission    { background: var(--danger-bg); color: #ef5350; border: 1px solid #d32f2f; }
 .error-badge--category-full { background: #3b2a0a; color: #ffcc80; border: 1px solid #e69138; }
+.error-badge--data-incomplete { background: #3a3015; color: #ffd54f; border: 1px solid #f9a825; }
 
 .hidden { display: none !important; }
 
