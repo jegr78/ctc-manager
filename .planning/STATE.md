@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Phase 94 context gathered
-last_updated: "2026-05-21T19:14:23.041Z"
-last_activity: 2026-05-21 -- Phase 94 execution started
+stopped_at: Plan 94-02 shipped; awaiting wave-pause approval before Plan 94-03
+last_updated: "2026-05-22T05:52:00.000Z"
+last_activity: 2026-05-22 -- Plan 94-02 shipped (T-93-03 closed)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 10
-  completed_plans: 7
-  percent: 29
+  completed_plans: 9
+  percent: 37
 ---
 
 # Project State
@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 94 (team-roles-match-channel-lifecycle) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 94
-Last activity: 2026-05-21 -- Phase 94 execution started
+Plan: 2 of 3 (94-01 + 94-02 shipped; 94-03 pending)
+Status: Wave-pause after Plan 94-02 (CHAN-02) — operator UAT pending before 94-03
+Last activity: 2026-05-22 -- Plan 94-02 shipped at 55a127ac; T-93-03 closed
 
 ## Completed Milestones
 
