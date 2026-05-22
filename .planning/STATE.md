@@ -4,8 +4,8 @@ milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
 stopped_at: Phase 95 context gathered
-last_updated: "2026-05-22T12:24:54.710Z"
-last_activity: 2026-05-22 -- Phase 95 planning complete
+last_updated: "2026-05-22T12:32:05.967Z"
+last_activity: 2026-05-22 -- Phase 95 execution started
 progress:
   total_phases: 7
   completed_phases: 2
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 94 — team-roles-match-channel-lifecycle
+**Current focus:** Phase 95 — match-channel-posts
 
 ## Current Position
 
-Phase: 94 (team-roles-match-channel-lifecycle) — PLAN 3 COMPLETE, PENDING VALIDATE
-Plan: 3 of 3 (94-01 + 94-02 + 94-03 all shipped)
-Status: Ready to execute
-Last activity: 2026-05-22 -- Phase 95 planning complete
+Phase: 95 (match-channel-posts) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 95
+Last activity: 2026-05-22 -- Phase 95 execution started
 
 ## Completed Milestones
 
@@ -97,7 +97,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Ready to execute
+- **Status:** Executing Phase 95
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
@@ -143,6 +143,26 @@ Post-merge self-resolving items (not tracked further):
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
+
+### UAT-05: Live-Discord Post Lifecycle Smoke (Phase 95 POST-01..05)
+
+- **Pre-UAT-05** — UAT-04 (Phase 94 channel lifecycle) must have succeeded; the operator has at least one live test match with a Discord channel + webhook configured.
+- **Procedure** (11 steps per CONTEXT D-95-10, inline until Phase 98 DOCS-02 fills `docs/operations/discord-integration.md`):
+  1. `/admin/matches/{id}` for the test match with a live Discord channel → confirm `.discord-actions--posts` panel is visible. Expect "Post Team Cards" button rendered (no prior TEAM_CARDS row).
+  2. Trigger a `Create Discord Channel` flow on a fresh match: expect green `Discord channel created.` AND a multipart-POST with 2 PNG attachments lands in the new Discord channel within ~30s (auto-post hook from Plan 95-02). If team-card generation fails, expect yellow `Channel created. Team Cards post failed: {category}` flash but the channel + webhook remain persisted.
+  3. Click `Re-Post Team Cards` → expect the existing Discord message is EDITED (no new message), `match-card-home.png` + `match-card-away.png` attachments re-rendered identically. Verify in `/admin/discord/posts` listing that the `attachments_replaced_at` advances.
+  4. Click `Refresh Cards` → expect TeamCardService re-generates BOTH team cards (synchronous, may take 30-60s worst case per RESEARCH Landmine 8), then the same Discord message is PATCHed with the new PNGs.
+  5. Configure RaceSettings for all races in the match (Settings dropdowns) → expect `Post Settings` button transitions from DISABLED-with-tooltip to enabled. Click → expect ONE multipart-POST with N PNG attachments (one per race, indexed `settings-race-1.png`, `settings-race-2.png`, …) lands in Discord.
+  6. Configure RaceLineup for all races (Lineup form) → expect `Post Lineups` button transitions to enabled. Click → expect analog multipart-POST with N lineup PNGs.
+  7. Configure Race.dateTime for first race + Lobby Host / Race Director / Streamer on Match-Detail → expect `Post Schedule` button transitions to enabled. Click → expect ONE JSON-POST (no attachments) with a Discord embed containing 4 fields (Date with `<t:UNIX:F> (<t:UNIX:R>)`, Lobby Host, Race Director, Streamer; nulls render as `_TBD_`).
+  8. **Schedule auto-edit smoke** — back to `/admin/matches/{id}/edit`, change `Lobby Host` → Save → expect the SCHEDULE Discord embed is automatically PATCHed with the new value (no operator click needed). Plan 95-04 hook in `MatchService.updateDiscordFields`. **Verification:** check Discord client embed; "Lobby Host" field reflects the new value within ~5s of save.
+  9. Submit at least one RaceResult per race → expect `Post Match Results` button transitions from DISABLED-with-tooltip to enabled. Click → expect ONE multipart-POST with `match-results.png` attachment in Discord.
+  10. **Stale-detection smoke** — edit ONE RaceResult (e.g. change a position) → re-visit Match-Detail → expect the Match Results button label flips from `Re-Post Match Results` to `Update Match Results` (yellow stale signal). Click → expect the Discord message is PATCHed and the label flips back to `Re-Post Match Results`.
+  11. **Final verification on `/admin/discord/posts` listing** — filter by the test match's UUID → expect 5 DiscordPost rows (TEAM_CARDS / SETTINGS / LINEUPS / SCHEDULE / MATCH_RESULTS), each with non-null `attachments_replaced_at` for the 4 multipart types, and the SCHEDULE row's `updated_at` advanced AFTER the step-8 auto-edit.
+- **Status:** pending operator action — execute on milestone branch AFTER `gsd/v1.13-discord-integration` PR merges per D-95-10. UAT covers all 5 POST types + auto-post hook (95-02) + auto-edit hook (95-04) + stale-detection (95-04).
+- **Result:** _(operator fills after execution)_
+- **Date:** _(operator fills)_
+- **Screenshots:** _(operator links to `.screenshots/uat-05/`)_
 
 ## Accumulated Context
 
