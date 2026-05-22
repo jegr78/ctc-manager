@@ -49,7 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DiscordPostService {
 
 	private static final Pattern WEBHOOK_URL_PATTERN =
-			Pattern.compile("^https?://[^/]+(?:/api/v\\d+)?/webhooks/(\\d+)/([^/?]+)(?:\\?.*)?$");
+			Pattern.compile("^https?://[^/]+(?:/api)?(?:/v\\d+)?/webhooks/(\\d+)/([^/?]+)(?:\\?.*)?$");
 
 	private static final String UPLOADS_PREFIX = "/uploads/";
 
@@ -353,7 +353,7 @@ public class DiscordPostService {
 		return Files.readAllBytes(file);
 	}
 
-	private static WebhookCredentials parseWebhookUrl(String webhookUrl) {
+	static WebhookCredentials parseWebhookUrl(String webhookUrl) {
 		Matcher matcher = WEBHOOK_URL_PATTERN.matcher(webhookUrl);
 		if (!matcher.matches()) {
 			throw new IllegalArgumentException(
@@ -362,6 +362,6 @@ public class DiscordPostService {
 		return new WebhookCredentials(matcher.group(1), matcher.group(2));
 	}
 
-	private record WebhookCredentials(String id, String token) {
+	record WebhookCredentials(String id, String token) {
 	}
 }
