@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Discord Posts', ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <h1>Discord Posts</h1>
+    </div>
+
+    <div class="card mb-md">
+        <h2>Filter</h2>
+        <form th:action="@{/admin/discord/posts}" method="get" th:object="${filter}">
+            <div class="form-group">
+                <label for="seasonId">Season</label>
+                <select id="seasonId" th:field="*{seasonId}">
+                    <option th:value="${null}">— Any season —</option>
+                    <option th:each="s : ${seasons}"
+                            th:value="${s.id}"
+                            th:text="${s.toString()}"></option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="matchId">Match</label>
+                <select id="matchId" th:field="*{matchId}">
+                    <option th:value="${null}">— Any match —</option>
+                    <option th:each="m : ${matches}"
+                            th:value="${m.id}"
+                            th:text="${m.id}"></option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="postType">Post Type</label>
+                <select id="postType" th:field="*{postType}">
+                    <option th:value="${null}">— Any type —</option>
+                    <option th:each="t : ${postTypes}"
+                            th:value="${t}"
+                            th:text="${t}"></option>
+                </select>
+            </div>
+            <div class="actions mt-md">
+                <button type="submit" class="btn btn-primary">Apply</button>
+                <a th:href="@{/admin/discord/posts}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="table-scroll">
+            <table th:if="${!posts.isEmpty()}" id="discordPostsTable">
+                <thead>
+                    <tr>
+                        <th>Post Type</th>
+                        <th>Channel ID</th>
+                        <th>Message ID</th>
+                        <th>Match</th>
+                        <th>Posted At</th>
+                        <th>Updated At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="post : ${posts.content}">
+                        <td th:text="${post.postType}"></td>
+                        <td th:text="${post.channelId}"></td>
+                        <td th:text="${post.messageId}"></td>
+                        <td>
+                            <a th:if="${post.matchId != null}"
+                               th:href="@{/admin/matches/{id}(id=${post.matchId})}"
+                               th:text="${post.matchId}"></a>
+                            <span th:if="${post.matchId == null}" class="text-muted">—</span>
+                        </td>
+                        <td th:text="${post.postedAt}"></td>
+                        <td th:text="${post.updatedAt}"></td>
+                        <td class="actions">
+                            <span class="text-muted">Re-post: see Match-Detail</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div th:if="${posts.isEmpty()}" class="empty-state">
+            <p>No Discord posts recorded yet.</p>
+        </div>
+        <div th:if="${!posts.isEmpty()}" class="pagination pagination-bar" aria-label="Discord posts pagination">
+            <span class="text-dim"
+                  th:text="|${posts.totalElements} posts — Page ${posts.number + 1} of ${posts.totalPages}|"></span>
+            <div class="actions">
+                <a th:if="${!posts.isFirst()}"
+                   th:href="@{/admin/discord/posts(page=${posts.number - 1}, seasonId=${filter.seasonId}, matchId=${filter.matchId}, postType=${filter.postType})}"
+                   class="btn btn-secondary btn-sm">Previous</a>
+                <a th:if="${!posts.isLast()}"
+                   th:href="@{/admin/discord/posts(page=${posts.number + 1}, seasonId=${filter.seasonId}, matchId=${filter.matchId}, postType=${filter.postType})}"
+                   class="btn btn-secondary btn-sm">Next</a>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>
