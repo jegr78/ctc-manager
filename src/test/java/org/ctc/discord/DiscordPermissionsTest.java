@@ -3,6 +3,7 @@ package org.ctc.discord;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.ctc.discord.DiscordPermissions.ADD_REACTIONS;
 import static org.ctc.discord.DiscordPermissions.ATTACH_FILES;
+import static org.ctc.discord.DiscordPermissions.BOT_ALLOW_MASK;
 import static org.ctc.discord.DiscordPermissions.CONNECT;
 import static org.ctc.discord.DiscordPermissions.CREATE_INSTANT_INVITE;
 import static org.ctc.discord.DiscordPermissions.EMBED_LINKS;
@@ -60,5 +61,26 @@ class DiscordPermissionsTest {
 	@Test
 	void givenOverwriteTypeRole_whenRead_thenEqualsZero() {
 		assertThat(OVERWRITE_TYPE_ROLE).isZero();
+	}
+
+	@Test
+	void givenBotAllowMask_whenComputed_thenIncludesViewManageChannelsWebhooksSendEmbedAttachReadHistoryAndExcludesMentionEveryoneAndManageMessages() {
+		long expected = VIEW_CHANNEL
+				| MANAGE_CHANNELS
+				| MANAGE_WEBHOOKS
+				| SEND_MESSAGES
+				| EMBED_LINKS
+				| ATTACH_FILES
+				| READ_MESSAGE_HISTORY;
+		assertThat(BOT_ALLOW_MASK).isEqualTo(expected);
+		assertThat(BOT_ALLOW_MASK & VIEW_CHANNEL).isNotZero();
+		assertThat(BOT_ALLOW_MASK & MANAGE_CHANNELS).isNotZero();
+		assertThat(BOT_ALLOW_MASK & MANAGE_WEBHOOKS).isNotZero();
+		assertThat(BOT_ALLOW_MASK & SEND_MESSAGES).isNotZero();
+		assertThat(BOT_ALLOW_MASK & EMBED_LINKS).isNotZero();
+		assertThat(BOT_ALLOW_MASK & ATTACH_FILES).isNotZero();
+		assertThat(BOT_ALLOW_MASK & READ_MESSAGE_HISTORY).isNotZero();
+		assertThat(BOT_ALLOW_MASK & MENTION_EVERYONE).isZero();
+		assertThat(BOT_ALLOW_MASK & MANAGE_MESSAGES).isZero();
 	}
 }

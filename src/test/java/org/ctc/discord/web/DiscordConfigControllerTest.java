@@ -39,6 +39,7 @@ class DiscordConfigControllerTest {
 	private DiscordWebhookClient webhookClient;
 	private DiscordEmojiCache emojiCache;
 	private org.ctc.discord.DiscordRoleCache roleCache;
+	private org.ctc.discord.DiscordBotIdentityCache botIdentityCache;
 	private DiscordConfigController controller;
 
 	@BeforeEach
@@ -48,7 +49,9 @@ class DiscordConfigControllerTest {
 		webhookClient = mock(DiscordWebhookClient.class);
 		emojiCache = mock(DiscordEmojiCache.class);
 		roleCache = mock(org.ctc.discord.DiscordRoleCache.class);
-		controller = new DiscordConfigController(emojiCache, configService, discordRestClient, roleCache, webhookClient);
+		botIdentityCache = mock(org.ctc.discord.DiscordBotIdentityCache.class);
+		controller = new DiscordConfigController(
+				botIdentityCache, emojiCache, configService, discordRestClient, roleCache, webhookClient);
 		given(configService.getOrInitialize()).willReturn(new DiscordGlobalConfig());
 	}
 
@@ -179,7 +182,7 @@ class DiscordConfigControllerTest {
 	}
 
 	@Test
-	void givenSuccessfulRefreshRolesCache_whenInvoked_thenFlashesCount() throws Exception {
+	void givenSuccessfulRefreshRolesCache_whenInvoked_thenFlashesCountAndRefreshesBotIdentity() throws Exception {
 		DiscordGlobalConfig configured = new DiscordGlobalConfig();
 		configured.setGuildId("123456789012345678");
 		given(configService.getOrInitialize()).willReturn(configured);
@@ -187,11 +190,28 @@ class DiscordConfigControllerTest {
 				new org.ctc.discord.dto.Role("r1", "A", 1),
 				new org.ctc.discord.dto.Role("r2", "B", 2)));
 		when(roleCache.refresh(anyList())).thenReturn(2);
+		when(botIdentityCache.refresh()).thenReturn("bot-id-42");
 		RedirectAttributes ra = new RedirectAttributesModelMap();
 
 		controller.refreshRolesCache(ra);
 
 		assertThat(flash(ra, "successMessage")).isEqualTo("Server roles refreshed (2 entries).");
+		verify(botIdentityCache).refresh();
+	}
+
+	@Test
+	void givenBotIdentityRefreshThrowsAuthException_whenRefreshRolesCache_thenFlashesAuthCategory() throws Exception {
+		DiscordGlobalConfig configured = new DiscordGlobalConfig();
+		configured.setGuildId("123456789012345678");
+		given(configService.getOrInitialize()).willReturn(configured);
+		when(discordRestClient.fetchGuildRoles(anyString())).thenReturn(List.of());
+		when(roleCache.refresh(anyList())).thenReturn(0);
+		when(botIdentityCache.refresh()).thenThrow(new DiscordAuthException("auth", null));
+		RedirectAttributes ra = new RedirectAttributesModelMap();
+
+		controller.refreshRolesCache(ra);
+
+		assertThat(flash(ra, "errorCategory")).isEqualTo("auth");
 	}
 
 	private static String flash(RedirectAttributes ra, String key) {

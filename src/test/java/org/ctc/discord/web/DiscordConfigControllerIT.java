@@ -145,6 +145,8 @@ class DiscordConfigControllerIT {
 
 		wm.stubFor(get(urlPathEqualTo("/api/v10/guilds/123456789012345678/roles"))
 				.willReturn(okJson("[{\"id\":\"100\",\"name\":\"Admin\",\"position\":5},{\"id\":\"101\",\"name\":\"Member\",\"position\":1}]")));
+		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
+				.willReturn(okJson("{\"id\":\"bot-id-42\",\"username\":\"CTC-Bot\",\"discriminator\":\"0001\"}")));
 
 		// when / then
 		mockMvc.perform(MockMvcRequestBuilders.post("/admin/discord-config/refresh-roles-cache").with(csrf()))

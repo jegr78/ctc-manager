@@ -2,9 +2,11 @@ package org.ctc.discord.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
@@ -16,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.ctc.TestHelper;
+import org.ctc.discord.DiscordPermissions;
 import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
@@ -72,9 +75,18 @@ class DiscordChannelServiceWireMockIT {
 	@Autowired
 	TestHelper helper;
 
+	private static final String BOT_USER_ID = "bot-id-42";
+
 	@BeforeEach
 	void resetWireMock() {
 		wm.resetAll();
+		stubBotIdentity();
+	}
+
+	private void stubBotIdentity() {
+		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
+				.willReturn(okJson(
+						"{\"id\":\"" + BOT_USER_ID + "\",\"username\":\"CTC-Bot\",\"discriminator\":\"0001\"}")));
 	}
 
 	private DiscordGlobalConfig seedConfig(String guildId, String categoryId) {
@@ -100,10 +112,11 @@ class DiscordChannelServiceWireMockIT {
 	}
 
 	@Test
-	void givenValidMatchAndConfig_whenCreateMatchChannel_thenDbWriteAnd3OutboundCalls() throws Exception {
+	void givenValidMatchAndConfig_whenCreateMatchChannel_thenDbWriteAnd4OverwritesIncludingBotMember() throws Exception {
 		// given
 		seedConfig("g1", "cat1");
 		Match match = seedMatch("H", "100", "200");
+		String botAllow = String.valueOf(DiscordPermissions.BOT_ALLOW_MASK);
 
 		wm.stubFor(post(urlPathEqualTo("/api/v10/guilds/g1/channels"))
 				.willReturn(okJson(
@@ -118,7 +131,8 @@ class DiscordChannelServiceWireMockIT {
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
 								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"}"
+								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"" + botAllow + "\",\"deny\":\"0\"}"
 								+ "]}")));
 
 		// when
@@ -130,8 +144,11 @@ class DiscordChannelServiceWireMockIT {
 		assertThat(reloaded.getDiscordChannelWebhookUrl())
 				.isEqualTo("https://discord.com/api/webhooks/w1/tok-abc");
 
-		// and — 3 outbound calls in order
-		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/guilds/g1/channels")));
+		// and — 4th permission_overwrite shape verified (type=member, bot-user-id, BOT_ALLOW_MASK)
+		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/guilds/g1/channels"))
+				.withRequestBody(matchingJsonPath("$.permission_overwrites[3].type", equalTo("1")))
+				.withRequestBody(matchingJsonPath("$.permission_overwrites[3].id", equalTo(BOT_USER_ID)))
+				.withRequestBody(matchingJsonPath("$.permission_overwrites[3].allow", equalTo(botAllow))));
 		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/channels/c1/webhooks")));
 		wm.verify(getRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
 		wm.verify(exactly(0), deleteRequestedFor(urlPathMatching("/api/v10/channels/.*")));

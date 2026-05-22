@@ -69,9 +69,18 @@ class DiscordChannelServiceCleanupFailIT {
 	@Autowired
 	TestHelper helper;
 
+	private static final String BOT_USER_ID = "bot-id-42";
+
 	@BeforeEach
 	void resetWireMock() {
 		wm.resetAll();
+		stubBotIdentity();
+	}
+
+	private void stubBotIdentity() {
+		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
+				.willReturn(okJson(
+						"{\"id\":\"" + BOT_USER_ID + "\",\"username\":\"CTC-Bot\",\"discriminator\":\"0001\"}")));
 	}
 
 	private void seedConfig() {
@@ -118,7 +127,8 @@ class DiscordChannelServiceCleanupFailIT {
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
 								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
 								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"999\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"}"
+								+ "{\"id\":\"999\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"1024\",\"deny\":\"0\"}"
 								+ "]}")));
 		wm.stubFor(delete(urlPathEqualTo("/api/v10/channels/c1"))
 				.willReturn(aResponse().withStatus(500)));

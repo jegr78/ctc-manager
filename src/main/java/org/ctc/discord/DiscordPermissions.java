@@ -48,6 +48,15 @@ public final class DiscordPermissions {
 					| CREATE_INSTANT_INVITE
 					| MENTION_EVERYONE;
 
+	public static final long BOT_ALLOW_MASK =
+			VIEW_CHANNEL
+					| MANAGE_CHANNELS
+					| MANAGE_WEBHOOKS
+					| SEND_MESSAGES
+					| EMBED_LINKS
+					| ATTACH_FILES
+					| READ_MESSAGE_HISTORY;
+
 	public static final int OVERWRITE_TYPE_ROLE = 0;
 	public static final int OVERWRITE_TYPE_MEMBER = 1;
 

@@ -69,9 +69,18 @@ class DiscordChannelServicePermissionAuditFailIT {
 	@Autowired
 	TestHelper helper;
 
+	private static final String BOT_USER_ID = "bot-id-42";
+
 	@BeforeEach
 	void resetWireMock() {
 		wm.resetAll();
+		stubBotIdentity();
+	}
+
+	private void stubBotIdentity() {
+		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
+				.willReturn(okJson(
+						"{\"id\":\"" + BOT_USER_ID + "\",\"username\":\"CTC-Bot\",\"discriminator\":\"0001\"}")));
 	}
 
 	private void seedConfig() {
@@ -109,8 +118,8 @@ class DiscordChannelServicePermissionAuditFailIT {
 	}
 
 	@Test
-	void givenFetchChannelReturnsFourOverwrites_whenAudit_thenAuthExceptionAndCleanupDeleteAndDbRollback() {
-		// given — fetchChannel returns 4 overwrites (a 3rd unauthorized role with VIEW)
+	void givenFetchChannelReturnsFiveOverwritesWithExtraRoleVIEW_whenAudit_thenAuthExceptionAndCleanupDeleteAndDbRollback() {
+		// given — fetchChannel returns 5 overwrites (size mismatch — expected 4)
 		seedConfig();
 		Match match = seedMatch("E");
 		stubHappyPathCreate();
@@ -121,7 +130,8 @@ class DiscordChannelServicePermissionAuditFailIT {
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
 								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
 								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
-								+ "{\"id\":\"999\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"}"
+								+ "{\"id\":\"999\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"1024\",\"deny\":\"0\"}"
 								+ "]}")));
 
 		// when / then
@@ -134,8 +144,8 @@ class DiscordChannelServicePermissionAuditFailIT {
 	}
 
 	@Test
-	void givenFetchChannelReturnsTwoOverwrites_whenAudit_thenAuthExceptionAndCleanupDeleteAndDbRollback() {
-		// given — fetchChannel returns 2 overwrites (missing one team-role entry)
+	void givenFetchChannelReturnsFourOverwritesWithWrongRoleSet_whenAudit_thenAuthExceptionAndCleanupDeleteAndDbRollback() {
+		// given — fetchChannel returns 4 overwrites but the role set is {100, 999} not {100, 200}
 		seedConfig();
 		Match match = seedMatch("S");
 		stubHappyPathCreate();
@@ -144,7 +154,37 @@ class DiscordChannelServicePermissionAuditFailIT {
 						"{\"id\":\"c1\",\"name\":\"md1-h-vs-a\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
-								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"}"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"999\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"1024\",\"deny\":\"0\"}"
+								+ "]}")));
+
+		// when / then
+		assertThatThrownBy(() -> service.createMatchChannel(match))
+				.isInstanceOf(DiscordAuthException.class)
+				.hasMessage(DiscordApiExceptionMapper.AUDIT_FAIL_MESSAGE);
+
+		wm.verify(deleteRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
+		assertThat(matchRepository.findById(match.getId()).orElseThrow().getDiscordChannelId()).isNull();
+	}
+
+	@Test
+	void givenFetchChannelReturnsFourRoleOverwritesNoBotMember_whenAudit_thenAuthExceptionAndCleanupDeleteAndDbRollback() {
+		// given — 4 type=0 (role) overwrites with the 4th having allow=0 + deny=0 (noise entry).
+		// Size check passes (4 == 4). Role-set check passes ({100, 200} matches the team roles —
+		// the noise entry's allow=0 means it contributes no VIEW bit and is excluded from the set).
+		// The new member-set check fails because membersWithView is empty, not {botUserId}.
+		seedConfig();
+		Match match = seedMatch("M");
+		stubHappyPathCreate();
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
+				.willReturn(okJson(
+						"{\"id\":\"c1\",\"name\":\"md1-h-vs-a\",\"type\":0,\"parent_id\":\"cat1\","
+								+ "\"permission_overwrites\":["
+								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"noise\",\"type\":0,\"allow\":\"0\",\"deny\":\"0\"}"
 								+ "]}")));
 
 		// when / then

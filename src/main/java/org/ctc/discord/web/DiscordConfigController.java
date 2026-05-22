@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.discord.DiscordBotIdentityCache;
 import org.ctc.discord.DiscordEmojiCache;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.DiscordRestClient.BotUser;
@@ -34,6 +35,7 @@ public class DiscordConfigController {
 	private static final String REDIRECT = "redirect:/admin/discord-config";
 	private static final String VIEW = "admin/discord-config";
 
+	private final DiscordBotIdentityCache botIdentityCache;
 	private final DiscordEmojiCache emojiCache;
 	private final DiscordGlobalConfigService configService;
 	private final DiscordRestClient discordRestClient;
@@ -108,6 +110,7 @@ public class DiscordConfigController {
 		try {
 			List<org.ctc.discord.dto.Role> roles = discordRestClient.fetchGuildRoles(guildId);
 			int count = roleCache.refresh(roles);
+			botIdentityCache.refresh();
 			redirectAttributes.addFlashAttribute(
 					"successMessage", "Server roles refreshed (" + count + " entries).");
 		} catch (DiscordApiException e) {

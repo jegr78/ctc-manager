@@ -401,3 +401,17 @@ tokens leaving the JVM should not happen at all).
   appears in any log line (T-93-02 mitigation surface c). If you see an
   **unmasked** webhook URL anywhere in the logs, that is a regression — file
   an issue immediately and revert the Logback change.
+
+## Minimum Bot Permissions
+
+The bot needs these **server-wide** permissions (set via Discord Server Settings → Roles → CTC Bot Role):
+
+| Permission | Why |
+|------------|-----|
+| `View Channels` | List + read channels the bot creates. Server-default required so the bot can operate in the configured "Current Match Category". |
+| `Manage Channels` | Create + delete + archive-move match-channels. |
+| `Manage Webhooks` | Create the per-channel `CTC Manager` webhook for match-channel posts. |
+
+**No `Administrator` permission required.** Each match-channel created by the bot includes a 4th permission-overwrite for the bot's own user-ID (member-override, not role-override), granting the bot operational access (`VIEW_CHANNEL`, `MANAGE_CHANNELS`, `MANAGE_WEBHOOKS`, `SEND_MESSAGES`, `EMBED_LINKS`, `ATTACH_FILES`, `READ_MESSAGE_HISTORY`) on only the channels it creates. Other channels in the server are unaffected.
+
+If the bot token is rotated to a different bot account, click **Refresh Server Roles** on `/admin/discord-config` to also refresh the cached bot identity. App restart achieves the same effect.
