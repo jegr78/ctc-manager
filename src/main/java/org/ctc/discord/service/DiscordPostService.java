@@ -7,11 +7,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.DiscordHostValidator;
 import org.ctc.discord.DiscordWebhookClient;
@@ -25,8 +28,11 @@ import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.model.DiscordPostType;
 import org.ctc.discord.repository.DiscordPostRepository;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
+import org.ctc.domain.model.Race;
 import org.ctc.domain.model.SeasonTeam;
+import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonTeamRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -47,14 +53,18 @@ public class DiscordPostService {
 	private final Clock clock;
 	private final TeamCardService teamCardService;
 	private final SeasonTeamRepository seasonTeamRepository;
+	private final SettingsGraphicService settingsGraphicService;
+	private final LineupGraphicService lineupGraphicService;
+	private final RaceLineupRepository raceLineupRepository;
 	private final Path uploadDir;
 
 	@SuppressFBWarnings(
 			value = "EI_EXPOSE_REP2",
 			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordPostRepository, DiscordHostValidator, "
-					+ "TeamCardService, SeasonTeamRepository) are intentionally shared by-reference — defensive copying "
-					+ "would break framework wiring. Matches the implicit suppression that lombok.config adds to "
-					+ "@RequiredArgsConstructor (see CLAUDE.md SpotBugs section + lombok.config invariant).")
+					+ "TeamCardService, SeasonTeamRepository, SettingsGraphicService, LineupGraphicService, "
+					+ "RaceLineupRepository) are intentionally shared by-reference — defensive copying would break framework "
+					+ "wiring. Matches the implicit suppression that lombok.config adds to @RequiredArgsConstructor "
+					+ "(see CLAUDE.md SpotBugs section + lombok.config invariant).")
 	public DiscordPostService(
 			DiscordWebhookClient webhookClient,
 			DiscordPostRepository discordPostRepository,
@@ -62,6 +72,9 @@ public class DiscordPostService {
 			Clock clock,
 			TeamCardService teamCardService,
 			SeasonTeamRepository seasonTeamRepository,
+			SettingsGraphicService settingsGraphicService,
+			LineupGraphicService lineupGraphicService,
+			RaceLineupRepository raceLineupRepository,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
 		this.discordPostRepository = discordPostRepository;
@@ -69,7 +82,70 @@ public class DiscordPostService {
 		this.clock = clock;
 		this.teamCardService = teamCardService;
 		this.seasonTeamRepository = seasonTeamRepository;
+		this.settingsGraphicService = settingsGraphicService;
+		this.lineupGraphicService = lineupGraphicService;
+		this.raceLineupRepository = raceLineupRepository;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+	}
+
+	public boolean matchHasCompleteSettings(Match match) {
+		List<Race> races = match.getRaces();
+		return !races.isEmpty() && races.stream().allMatch(r -> r.getSettings() != null);
+	}
+
+	public boolean matchHasCompleteLineups(Match match) {
+		List<Race> races = match.getRaces();
+		return !races.isEmpty()
+				&& races.stream().allMatch(r -> !raceLineupRepository.findByRaceId(r.getId()).isEmpty());
+	}
+
+	@Transactional
+	public DiscordPost postSettings(Match match) throws DiscordApiException {
+		if (!matchHasCompleteSettings(match)) {
+			throw new BusinessRuleException("Configure settings for all races first");
+		}
+		return postRaceBundle(match, DiscordPostType.SETTINGS, "settings-race-",
+				race -> readRaceGraphic(settingsGraphicService.generateSettings(race)));
+	}
+
+	@Transactional
+	public DiscordPost postLineups(Match match) throws DiscordApiException {
+		if (!matchHasCompleteLineups(match)) {
+			throw new BusinessRuleException("Configure lineups for all races first");
+		}
+		return postRaceBundle(match, DiscordPostType.LINEUPS, "lineups-race-",
+				race -> readRaceGraphic(lineupGraphicService.generateLineup(race)));
+	}
+
+	private DiscordPost postRaceBundle(
+			Match match, DiscordPostType type, String filenamePrefix, RaceGraphicLoader loader)
+			throws DiscordApiException {
+		List<Race> races = match.getRaces();
+		List<NamedAttachment> attachments = new ArrayList<>(races.size());
+		try {
+			for (int i = 0; i < races.size(); i++) {
+				byte[] bytes = loader.load(races.get(i));
+				attachments.add(new NamedAttachment(filenamePrefix + (i + 1) + ".png", bytes));
+			}
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		return postOrEdit(
+				match.getDiscordChannelId(),
+				match.getDiscordChannelWebhookUrl(),
+				type,
+				WebhookPayload.empty(),
+				attachments,
+				DiscordPostRef.match(match));
+	}
+
+	private byte[] readRaceGraphic(String uploadsUrl) throws IOException {
+		return readPng(uploadsUrl);
+	}
+
+	@FunctionalInterface
+	private interface RaceGraphicLoader {
+		byte[] load(Race race) throws IOException;
 	}
 
 	@Transactional
