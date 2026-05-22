@@ -657,6 +657,88 @@ Out of scope (deferred / not Phase-94 scope):
   `org.ctc.discord.dto.DiscordConfigForm` package-local constants
   (Phase 93 D-93-02) but now promoted to shared class.
 
+### Bot-Self-Override on Created Channels (post-UAT-04 finding)
+
+- **D-15: Each created match-channel gets a 4th permission-overwrite
+  for the Bot's own User-ID — type=1 (member), not type=0 (role) — so
+  the Bot can audit, archive-move, and delete its own channels WITHOUT
+  needing server-wide `ADMINISTRATOR`.** Added via Plan 94-04
+  (gap-closure inside Phase 94, before `/gsd-validate-phase 94`).
+  - **Origin**: UAT-04 attempt on 2026-05-22 surfaced the gap.
+    `DiscordChannelService.createMatchChannel` shipped in Plan 94-02
+    builds the channel with overwrites
+    `{@everyone DENY VIEW, homeRole ALLOW, awayRole ALLOW}`. The Bot
+    role is NOT in the list, so per Discord's permission-resolution
+    cascade the `@everyone-DENY` removes the Bot's `VIEW_CHANNEL`
+    inherited from server-defaults. Net effect: Bot CAN `POST
+    /guilds/{id}/channels` (server-level `MANAGE_CHANNELS` is enough
+    to create) but cannot `GET /channels/{id}` (audit-fetch) nor
+    `DELETE /channels/{id}` (cleanup) nor `PATCH /channels/{id}`
+    (archive-move). Live log evidence: `data/dev/logs/app.log` lines
+    14025 + 11406–11410 — channel `1507281506408595456` orphaned,
+    `listChannels` 401/403 for every modal-open attempt.
+  - **Decision**: 4th overwrite per channel, member-type, user-ID =
+    Bot's own user-ID (fetched via existing
+    `DiscordRestClient.fetchBotUser()` Phase 93 method, cached
+    once-per-process in a new `DiscordBotIdentityCache` `@Component`).
+    Allow-mask = `BOT_ALLOW_MASK` (new `DiscordPermissions` constant) =
+    `VIEW_CHANNEL | MANAGE_CHANNELS | MANAGE_WEBHOOKS | SEND_MESSAGES
+    | EMBED_LINKS | ATTACH_FILES | READ_MESSAGE_HISTORY`. Deny-mask =
+    `0` (nothing denied for the Bot).
+  - **Cache shape**: `DiscordBotIdentityCache` — single `AtomicReference<String>`
+    holding the cached `userId`; `getBotUserId()` lazy-fetches on cold
+    cache; `refresh()` force-overwrites. Bot's user-ID is **immutable**
+    for a given bot token, so no TTL; cache survives until app
+    restart OR explicit refresh. The existing
+    `DiscordConfigController.refreshRolesCache()` button also calls
+    `botIdentityCache.refresh()` so operators have a manual rotate
+    path without app restart.
+  - **Audit semantic shift**: `assertPermissionAudit` now expects
+    **exactly 4** overwrites (not 3): the 2 team-role overwrites
+    (set-equality on `{homeRoleId, awayRoleId}`) PLUS the 1 Bot
+    member-overwrite (set-equality on `{botUserId}` after filtering by
+    `type == OVERWRITE_TYPE_MEMBER`) PLUS the 1 `@everyone` deny
+    overwrite (implicit — the count check covers it). The audit
+    threat-model is strengthened, not weakened: a malicious server
+    admin who adds a 5th role-overwrite still fails the audit (D-04
+    intent preserved); a malicious admin who tampers with the bot's
+    own member-overwrite (e.g. changes the user-ID) fails the
+    member-set-equality check.
+  - **Production permission requirement**: Bot role needs
+    `MANAGE_CHANNELS` + `MANAGE_WEBHOOKS` + `VIEW_CHANNEL` (the latter
+    as server-default — channel-level override grants are scoped to
+    individual channels). No `ADMINISTRATOR` needed. Phase 98 DOCS-02
+    runbook will document this minimum-permission setup; Plan 94-04
+    ships a stub note in `docs/operations/discord-integration.md`.
+  - **REJECTED alternatives**:
+    - **Server-wide `ADMINISTRATOR`** on the Bot role — bypasses all
+      channel-overrides INCLUDING T-93-03 protection for the
+      operator's own team-channels (Bot could be socially-engineered
+      via reaction-roles or compromised webhooks to do destructive
+      things). Test-server-acceptable, prod-unacceptable.
+    - **Bot-role-override (type=0 with Bot role-ID instead of
+      type=1 with Bot user-ID)** — requires the operator to identify
+      and configure the Bot's auto-managed role-snowflake (Discord
+      auto-creates a role per bot, named after the bot, with
+      `managed: true`). Operator-config surface area > zero-config
+      `/users/@me` self-discovery.
+    - **Category-inheritance** (give Bot role `VIEW_CHANNEL` ALLOW
+      override on the `current_match_category_id` category) —
+      Discord's permission cascade does NOT propagate category
+      role-overrides to child-channels when the child has an
+      explicit `@everyone-DENY`. The child channel's own overrides
+      take precedence. Tested via Discord's permission-resolution
+      docs.
+    - **Bot joins each team-role temporarily** — Discord doesn't
+      let bots self-assign arbitrary user-roles without
+      `MANAGE_ROLES` server-wide + race-condition risk + semantically
+      wrong (Bot is not a team member).
+  - **REJECTED: Channel-overwrite drift over time** — operator could
+    manually edit channel overwrites in Discord client after audit
+    passes (Phase 94 audit is one-shot post-create, not continuous).
+    Mitigation deferred to v1.14+ DISC-FUTURE-07 (periodic audit
+    refresh) — out of scope for v1.13.
+
 ### Claude's Discretion
 
 - **`MatchForm` location**: planner-discretion `org.ctc.admin.dto`
