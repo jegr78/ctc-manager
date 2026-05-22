@@ -1,11 +1,15 @@
 package org.ctc.domain.service;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchForm;
 import org.ctc.discord.dto.ArchiveCategory;
+import org.ctc.discord.exception.DiscordApiException;
+import org.ctc.discord.service.DiscordCategoryResolver;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
@@ -27,6 +31,8 @@ public class MatchService {
 	private final MatchdayRepository matchdayRepository;
 	private final TeamRepository teamRepository;
 	private final RaceRepository raceRepository;
+	private final DiscordCategoryResolver discordCategoryResolver;
+	private final Clock clock;
 
 	public Match getMatch(UUID matchId) {
 		return matchRepository.findById(matchId)
@@ -40,7 +46,17 @@ public class MatchService {
 
 	public MatchDetailData getDetailData(UUID id) {
 		Match match = findById(id);
-		return new MatchDetailData(match, List.of(), null);
+		try {
+			int year = LocalDate.now(clock).getYear();
+			List<ArchiveCategory> categories = discordCategoryResolver.resolveArchiveCategoriesFor(year);
+			String defaultSelectionId = discordCategoryResolver.defaultSelection(categories)
+					.map(ArchiveCategory::id)
+					.orElse(null);
+			return new MatchDetailData(match, categories, defaultSelectionId);
+		} catch (DiscordApiException e) {
+			log.warn("Failed to resolve archive categories for match {}: {}", id, e.toString());
+			return new MatchDetailData(match, List.of(), null);
+		}
 	}
 
 	@Transactional
