@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.admin.dto.MatchForm;
+import org.ctc.discord.dto.ArchiveCategory;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
@@ -29,6 +31,27 @@ public class MatchService {
 	public Match getMatch(UUID matchId) {
 		return matchRepository.findById(matchId)
 				.orElseThrow(() -> new EntityNotFoundException("Match", matchId));
+	}
+
+	public Match findById(UUID id) {
+		return matchRepository.findById(id)
+				.orElseThrow(() -> new EntityNotFoundException("Match", id));
+	}
+
+	public MatchDetailData getDetailData(UUID id) {
+		Match match = findById(id);
+		return new MatchDetailData(match, List.of(), null);
+	}
+
+	@Transactional
+	public void updateDiscordFields(UUID id, MatchForm form) {
+		Match match = findById(id);
+		match.setDiscordTeaser(form.getDiscordTeaser());
+		match.setStreamLink(form.getStreamLink());
+		match.setLobbyHost(form.getLobbyHost());
+		match.setRaceDirector(form.getRaceDirector());
+		match.setStreamer(form.getStreamer());
+		matchRepository.save(match);
 	}
 
 	public CreateFormData getCreateFormData(UUID matchdayId) {
@@ -153,5 +176,11 @@ public class MatchService {
 	 * Returns the matchday and its season's teams for the match creation form.
 	 */
 	public record CreateFormData(Matchday matchday, List<Team> teams) {
+	}
+
+	public record MatchDetailData(
+			Match match,
+			List<ArchiveCategory> archiveCategories,
+			String defaultSelectionId) {
 	}
 }
