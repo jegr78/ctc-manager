@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Plan 94-02 shipped; awaiting wave-pause approval before Plan 94-03
-last_updated: "2026-05-22T05:52:00.000Z"
-last_activity: 2026-05-22 -- Plan 94-02 shipped (T-93-03 closed)
+stopped_at: Phase 94 plan 3 complete; pending /gsd-validate-phase 94 + UAT-04
+last_updated: "2026-05-22T06:30:00.000Z"
+last_activity: 2026-05-22 -- Plan 94-03 shipped (CHAN-03 archive flow + Phase 94 close prep)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 10
-  completed_plans: 9
-  percent: 37
+  completed_plans: 10
+  percent: 41
 ---
 
 # Project State
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 ## Current Position
 
-Phase: 94 (team-roles-match-channel-lifecycle) — EXECUTING
-Plan: 2 of 3 (94-01 + 94-02 shipped; 94-03 pending)
-Status: Wave-pause after Plan 94-02 (CHAN-02) — operator UAT pending before 94-03
-Last activity: 2026-05-22 -- Plan 94-02 shipped at 55a127ac; T-93-03 closed
+Phase: 94 (team-roles-match-channel-lifecycle) — PLAN 3 COMPLETE, PENDING VALIDATE
+Plan: 3 of 3 (94-01 + 94-02 + 94-03 all shipped)
+Status: Phase 94 close — invoke /gsd-validate-phase 94 + stage UAT-04 before Phase 95
+Last activity: 2026-05-22 -- Plan 94-03 shipped at a2ff5070; CHAN-03 archive flow live
 
 ## Completed Milestones
 
@@ -127,6 +127,21 @@ Post-merge self-resolving items (not tracked further):
 - **Date:** 2026-05-21
 - **Screenshots:** `.screenshots/uat-03/` (gitignored locally — 8 PNGs: Desktop initial + 4 button-success states, Mobile initial + scrolled + Test-Connection success).
 
+### UAT-04: Live-Discord Channel Lifecycle Smoke (Phase 94 CHAN-01/02/03)
+
+- **Procedure** (inline until Phase 98 DOCS-02 fills `docs/operations/discord-integration.md`):
+  1. `/admin/discord-config` → click **Refresh Server Roles** → expect green badge with role count matching the test guild's `@everyone` + bot + per-team roles.
+  2. `/admin/discord-config` → enter the test guild's "Current Match Category" snowflake → **Save** → expect green badge `Configuration saved.`.
+  3. `/admin/teams/{id}/edit` for two test teams → select Discord roles from the dropdown → **Save** → confirm the role IDs persist (visible after page reload).
+  4. `/admin/matches/{id}` for a match between the two test teams → click **Create Discord Channel** → expect green badge `Discord channel created.` AND the channel-id badge replaces the button. Operator verifies in the Discord client: a new text channel under the configured category, with only the 2 team roles having View permission, plus a `CTC Manager` webhook.
+  5. **Audit-fail path** — manually add a 3rd role to the just-created channel with View permission via Discord client. Click **Create Discord Channel** on a sibling match between two other teams → expect red `error-badge--auth` flash with hardcoded `AUDIT_FAIL_MESSAGE` AND the sibling channel does NOT appear (cleanup DELETE succeeded). If a manual cleanup follow-up is required (cleanup-fail), the composed message contains the channel-id to delete.
+  6. **Move-to-Archive happy path** — on the original match-detail page, click **Move to Archive** → modal opens with the year's archive categories listed and the highest-num-with-room pre-selected → **Confirm** → expect green badge `Channel moved to archive.` AND the channel relocates under the chosen archive category in Discord.
+  7. **Move-to-Archive category-full** — fill an archive category to 50 channels manually (or pick a category close to full). Attempt **Move to Archive** with a near-full target → expect red `error-badge--category-full` flash with `CATEGORY_FULL_MESSAGE` AND the channel stays in its current category (no PATCH committed Discord-side).
+- **Status:** pending operator action — **required before Phase 95 plans 95-02/03/04 start** (per CONTEXT D-12).
+- **Result:** _(operator fills after execution)_
+- **Date:** _(operator fills)_
+- **Screenshots:** _(operator links)_
+
 ## Accumulated Context
 
 ### Decisions
@@ -178,11 +193,11 @@ At roadmap creation (2026-05-20):
 
 ## Session Continuity
 
-**Last session:** 2026-05-21T17:27:46.771Z
+**Last session:** 2026-05-22T06:30:00.000Z
 
-**Stopped at:** Phase 94 context gathered
+**Stopped at:** Phase 94 plan 3 ready for /gsd-validate-phase 94
 
-**Next action:** `/gsd-discuss-phase 92` to scope Phase 92 (Carry-Forwards & Cleanup): UX-01 `CsvImportController` parity + COV-01 JaCoCo recovery + CLEAN-01 grep-predicate tightening + DOCS-01 retroactive 89/90/91-VERIFICATION.md + BOOK-01 bookkeeping flip in `milestones/v1.12-REQUIREMENTS.md`.
+**Next action:** `/gsd-validate-phase 94` — run Nyquist sampling across all 23 test classes, flip `nyquist_compliant: true` in 94-VALIDATION.md frontmatter. Then stage UAT-04 (Live-Discord Channel Lifecycle Smoke) against the operator's test guild BEFORE `/gsd-discuss-phase 95`.
 
 **Branch:** `gsd/v1.13-discord-integration` (off `origin/master`)
 
