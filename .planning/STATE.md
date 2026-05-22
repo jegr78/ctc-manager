@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Phase 94 plan 3 complete; pending /gsd-validate-phase 94 + UAT-04
-last_updated: "2026-05-22T06:30:00.000Z"
-last_activity: 2026-05-22 -- Plan 94-03 shipped (CHAN-03 archive flow + Phase 94 close prep)
+stopped_at: Phase 95 context gathered
+last_updated: "2026-05-22T11:28:54.993Z"
+last_activity: 2026-05-22 -- Plan 94-03 shipped at a2ff5070; CHAN-03 archive flow live
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 10
+  total_plans: 11
   completed_plans: 10
-  percent: 41
+  percent: 29
 ---
 
 # Project State
@@ -195,9 +195,9 @@ At roadmap creation (2026-05-20):
 
 ## Session Continuity
 
-**Last session:** 2026-05-22T06:30:00.000Z
+**Last session:** 2026-05-22T11:28:54.984Z
 
-**Stopped at:** Phase 94 plan 3 ready for /gsd-validate-phase 94
+**Stopped at:** Phase 95 context gathered
 
 **Next action:** `/gsd-validate-phase 94` — run Nyquist sampling across all 23 test classes, flip `nyquist_compliant: true` in 94-VALIDATION.md frontmatter. Then stage UAT-04 (Live-Discord Channel Lifecycle Smoke) against the operator's test guild BEFORE `/gsd-discuss-phase 95`.
 
