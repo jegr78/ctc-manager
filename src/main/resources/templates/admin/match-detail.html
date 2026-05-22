@@ -112,6 +112,44 @@
                     Re-Post Lineups
                 </button>
             </form>
+
+            <form th:if="${matchResultsPost == null and matchCanRenderResults}"
+                  th:action="@{/admin/matches/{id}/post-match-results(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-match-results">
+                    Post Match Results
+                </button>
+            </form>
+            <span th:if="${matchResultsPost == null and not matchCanRenderResults}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-match-results-disabled"
+                  title="All races must have results first">Post Match Results</span>
+            <form th:if="${matchResultsPost != null}"
+                  th:action="@{/admin/matches/{id}/post-match-results(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm"
+                        th:attr="data-testid=${matchResultsStale ? 'update-match-results' : 'repost-match-results'}"
+                        th:text="${matchResultsStale ? 'Update Match Results' : 'Re-Post Match Results'}"></button>
+            </form>
+
+            <form th:if="${scheduleVisible and schedulePost == null}"
+                  th:action="@{/admin/matches/{id}/post-schedule(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-schedule">
+                    Post Schedule
+                </button>
+            </form>
+            <span th:if="${not scheduleVisible and schedulePost == null}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-schedule-disabled"
+                  title="Schedule a race time first">Post Schedule</span>
+            <form th:if="${schedulePost != null}"
+                  th:action="@{/admin/matches/{id}/post-schedule(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-schedule">
+                    Re-Post Schedule
+                </button>
+            </form>
         </div>
     </div>
 

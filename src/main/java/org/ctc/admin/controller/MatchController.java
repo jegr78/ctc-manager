@@ -111,7 +111,22 @@ public class MatchController {
 		model.addAttribute("lineupsPost", findMatchPost(match, DiscordPostType.LINEUPS));
 		model.addAttribute("matchHasCompleteSettings", discordPostService.matchHasCompleteSettings(match));
 		model.addAttribute("matchHasCompleteLineups", discordPostService.matchHasCompleteLineups(match));
+
+		DiscordPost matchResultsPost = findMatchPost(match, DiscordPostType.MATCH_RESULTS);
+		model.addAttribute("matchResultsPost", matchResultsPost);
+		model.addAttribute("matchResultsStale", isStale(matchResultsPost, match));
+		model.addAttribute("schedulePost", findMatchPost(match, DiscordPostType.SCHEDULE));
+		model.addAttribute("matchCanRenderResults", discordPostService.matchCanRenderResults(match));
+		model.addAttribute("scheduleVisible",
+				match.getRaces().stream().map(r -> r.getDateTime()).anyMatch(t -> t != null));
 		return "admin/match-detail";
+	}
+
+	private static boolean isStale(DiscordPost post, Match match) {
+		if (post == null || post.getUpdatedAt() == null || match.getUpdatedAt() == null) {
+			return false;
+		}
+		return post.getUpdatedAt().isBefore(match.getUpdatedAt());
 	}
 
 	@GetMapping("/{id}/edit")
@@ -199,6 +214,32 @@ public class MatchController {
 			applyErrorFlash(redirectAttributes, e, "Post lineups");
 		} catch (DiscordApiException e) {
 			applyErrorFlash(redirectAttributes, e, "Post lineups");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
+	@PostMapping("/{id}/post-match-results")
+	public String postMatchResults(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			discordPostService.postMatchResults(matchService.findById(id));
+			redirectAttributes.addFlashAttribute("successMessage", "Match results posted.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Post match results");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post match results");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
+	@PostMapping("/{id}/post-schedule")
+	public String postSchedule(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			discordPostService.postSchedule(matchService.findById(id));
+			redirectAttributes.addFlashAttribute("successMessage", "Schedule posted.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Post schedule");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post schedule");
 		}
 		return "redirect:/admin/matches/" + id;
 	}
