@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DiscordPostService {
 
 	private static final Pattern WEBHOOK_URL_PATTERN =
-			Pattern.compile("^https://discord\\.com/api/webhooks/(\\d+)/([^/]+)$");
+			Pattern.compile("^https?://[^/]+(?:/api/v\\d+)?/webhooks/(\\d+)/([^/?]+)(?:\\?.*)?$");
 
 	private final DiscordWebhookClient webhookClient;
 	private final DiscordPostRepository discordPostRepository;
