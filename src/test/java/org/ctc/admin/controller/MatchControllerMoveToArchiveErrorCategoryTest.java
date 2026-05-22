@@ -48,7 +48,11 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 		match.setDiscordChannelId("c1");
 		when(matchService.findById(id)).thenReturn(match);
 
-		MatchController controller = new MatchController(matchService, channelService, restClient);
+		MatchController controller = new MatchController(matchService, channelService, restClient,
+				mock(org.ctc.discord.service.DiscordPostService.class),
+				mock(org.ctc.discord.repository.DiscordPostRepository.class),
+				mock(org.ctc.admin.service.TeamCardService.class),
+				mock(org.ctc.domain.repository.SeasonTeamRepository.class));
 
 		// when
 		String view = invokeMoveToArchive(controller, id, "  ", ra);
@@ -79,7 +83,11 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 		UUID id = UUID.randomUUID();
 		when(matchService.findById(id)).thenReturn(new Match());
 
-		MatchController controller = new MatchController(matchService, channelService, restClient);
+		MatchController controller = new MatchController(matchService, channelService, restClient,
+				mock(org.ctc.discord.service.DiscordPostService.class),
+				mock(org.ctc.discord.repository.DiscordPostRepository.class),
+				mock(org.ctc.admin.service.TeamCardService.class),
+				mock(org.ctc.domain.repository.SeasonTeamRepository.class));
 
 		// when
 		String view = invokeMoveToArchive(controller, id, "cat-1", ra);
