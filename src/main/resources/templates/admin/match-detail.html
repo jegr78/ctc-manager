@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <div>
+            <a th:href="@{/admin/matchdays/{id}(id=${match.matchday.id})}"
+               class="back-link" data-testid="match-detail-back-link">&larr; Back to [[${match.matchday.label}]]</a>
+            <h1>
+                <span th:text="${match.homeTeam.shortName}"></span>
+                <span th:text="' vs '"></span>
+                <span th:text="${match.awayTeam != null ? match.awayTeam.shortName : 'Bye'}"></span>
+            </h1>
+        </div>
+        <div class="actions">
+            <a th:href="@{/admin/matches/{id}/edit(id=${match.id})}"
+               class="btn btn-primary" data-testid="match-detail-edit">Edit</a>
+        </div>
+    </div>
+
+    <!-- Discord Actions -->
+    <div class="card">
+        <h2>Discord Actions</h2>
+        <div class="discord-actions">
+            <form th:if="${match.discordChannelId == null}"
+                  th:action="@{/admin/matches/{id}/create-discord-channel(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit"
+                        class="btn btn-primary btn-sm"
+                        data-testid="create-discord-channel"
+                        th:disabled="${match.homeTeam.discordRoleId == null
+                                or match.awayTeam == null
+                                or match.awayTeam.discordRoleId == null}">
+                    Create Discord Channel
+                </button>
+            </form>
+            <span th:if="${match.discordChannelId != null}"
+                  class="badge badge-active"
+                  data-testid="discord-channel-id"
+                  th:text="'Channel ' + ${match.discordChannelId}"></span>
+            <button th:if="${match.discordChannelId != null}"
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    data-testid="open-archive-modal"
+                    onclick="document.getElementById('archiveModal').classList.add('is-open')">
+                Move to Archive
+            </button>
+        </div>
+
+        <!-- Phase 95 placeholder: POST buttons land here -->
+        <div class="discord-actions discord-actions--posts">
+            <!-- TODO Phase 95: POST buttons land here (POST-01..POST-05) -->
+        </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="card">
+        <h2>Schedule</h2>
+        <div class="detail-fields">
+            <span class="label">Lobby Host</span>
+            <span th:text="${match.lobbyHost ?: '-'}"></span>
+            <span class="label">Race Director</span>
+            <span th:text="${match.raceDirector ?: '-'}"></span>
+            <span class="label">Streamer</span>
+            <span th:text="${match.streamer ?: '-'}"></span>
+            <span class="label">Stream Link</span>
+            <span th:text="${match.streamLink ?: '-'}"></span>
+            <span class="label">Discord Teaser</span>
+            <span>
+                <pre class="markdown-source"
+                     th:text="${match.discordTeaser ?: '-'}"></pre>
+            </span>
+        </div>
+    </div>
+
+    <!-- Races -->
+    <div class="card">
+        <h2 th:text="'Races (' + ${match.races.size()} + ')'"></h2>
+        <div th:if="${match.races.isEmpty()}" class="empty-state empty-state--compact">
+            <p>No races yet.</p>
+        </div>
+        <ul th:if="${!match.races.isEmpty()}" class="match-races-list">
+            <li th:each="race, iter : ${match.races}">
+                <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link"
+                   th:text="'Leg ' + ${iter.count} + ' · '
+                           + (race.track != null ? race.track.name : '—')"></a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Archive Modal (94-03 fills the body) -->
+    <div id="archiveModal" class="modal-overlay">
+        <div class="modal-body modal-body--md">
+            <!-- TODO Plan 94-03: archive category selection lands here -->
+        </div>
+    </div>
+</section>
+</body>
+</html>

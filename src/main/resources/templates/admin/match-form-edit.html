@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Edit Match', ~{::section})}">
+<body>
+<section>
+    <a th:href="@{/admin/matches/{id}(id=${match.id})}" class="back-link"
+       data-testid="match-edit-back-link">&larr; Back to Match</a>
+    <h1>
+        Edit:
+        <span th:text="${match.homeTeam.shortName}"></span>
+        <span th:text="' vs '"></span>
+        <span th:text="${match.awayTeam != null ? match.awayTeam.shortName : 'Bye'}"></span>
+    </h1>
+
+    <form th:action="@{/admin/matches/{id}/save-edit(id=${match.id})}"
+          method="post" th:object="${matchForm}">
+        <input type="hidden" th:field="*{id}">
+
+        <div class="card">
+            <div class="form-group">
+                <label for="discordTeaser">Discord Teaser (Markdown)</label>
+                <textarea id="discordTeaser" th:field="*{discordTeaser}"
+                          rows="6" maxlength="2000"></textarea>
+                <span th:errors="*{discordTeaser}" class="error-badge error-badge--auth"></span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="streamLink">Stream Link</label>
+                    <input id="streamLink" type="text" th:field="*{streamLink}" maxlength="500">
+                    <span th:errors="*{streamLink}" class="error-badge error-badge--auth"></span>
+                </div>
+                <div class="form-group">
+                    <label for="lobbyHost">Lobby Host</label>
+                    <input id="lobbyHost" type="text" th:field="*{lobbyHost}" maxlength="100">
+                    <span th:errors="*{lobbyHost}" class="error-badge error-badge--auth"></span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="raceDirector">Race Director</label>
+                    <input id="raceDirector" type="text" th:field="*{raceDirector}" maxlength="100">
+                    <span th:errors="*{raceDirector}" class="error-badge error-badge--auth"></span>
+                </div>
+                <div class="form-group">
+                    <label for="streamer">Streamer</label>
+                    <input id="streamer" type="text" th:field="*{streamer}" maxlength="100">
+                    <span th:errors="*{streamer}" class="error-badge error-badge--auth"></span>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary" data-testid="match-edit-save">Save</button>
+                <a th:href="@{/admin/matches/{id}(id=${match.id})}"
+                   class="btn btn-secondary" data-testid="match-edit-cancel">Cancel</a>
+            </div>
+        </div>
+    </form>
+</section>
+</body>
+</html>
