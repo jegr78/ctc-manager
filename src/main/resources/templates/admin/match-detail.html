@@ -83,8 +83,7 @@
         <ul th:if="${!match.races.isEmpty()}" class="match-races-list">
             <li th:each="race, iter : ${match.races}">
                 <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link"
-                   th:text="'Leg ' + ${iter.count} + ' · '
-                           + (race.track != null ? race.track.name : '—')"></a>
+                   th:text="'Leg ' + ${iter.count} + ' · ' + ${race.track?.name ?: '—'}"></a>
             </li>
         </ul>
     </div>
