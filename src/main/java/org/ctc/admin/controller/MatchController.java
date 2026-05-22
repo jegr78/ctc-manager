@@ -5,14 +5,21 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchForm;
+import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordCategoryFullException;
+import org.ctc.discord.model.DiscordPost;
+import org.ctc.discord.model.DiscordPostType;
+import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.discord.service.DiscordChannelService;
+import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
+import org.ctc.domain.model.SeasonTeam;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.service.MatchService;
 import org.ctc.domain.service.MatchService.MatchDetailData;
 import org.springframework.stereotype.Controller;
@@ -24,6 +31,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Slf4j
@@ -32,9 +41,15 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class MatchController {
 
+	private static final String AUTO_POST_ERROR_ATTRIBUTE = "discord.autoPostError";
+
 	private final MatchService matchService;
 	private final DiscordChannelService discordChannelService;
 	private final DiscordRestClient discordRestClient;
+	private final DiscordPostService discordPostService;
+	private final DiscordPostRepository discordPostRepository;
+	private final TeamCardService teamCardService;
+	private final SeasonTeamRepository seasonTeamRepository;
 
 	@GetMapping("/new")
 	public String create(@RequestParam UUID matchdayId, Model model) {
@@ -91,6 +106,7 @@ public class MatchController {
 		model.addAttribute("defaultSelectionId", data.defaultSelectionId());
 		model.addAttribute("pageTitle",
 				"Match: " + match.getHomeTeam().getShortName() + " vs " + awayShort);
+		model.addAttribute("teamCardsPost", findTeamCardsPost(match));
 		return "admin/match-detail";
 	}
 
@@ -128,12 +144,52 @@ public class MatchController {
 	public String createDiscordChannel(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
 		try {
 			discordChannelService.createMatchChannel(matchService.findById(id));
-			redirectAttributes.addFlashAttribute("successMessage", "Discord channel created.");
+			String autoPostError = consumeAutoPostError();
+			if (autoPostError != null) {
+				redirectAttributes.addFlashAttribute("errorMessage",
+						"Channel created. Team Cards post failed: " + autoPostError
+								+ " — click Re-Post Team Cards to retry.");
+				redirectAttributes.addFlashAttribute("errorCategory", autoPostError);
+			} else {
+				redirectAttributes.addFlashAttribute("successMessage", "Discord channel created.");
+			}
 		} catch (BusinessRuleException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
 			redirectAttributes.addFlashAttribute("errorCategory", "not-found");
 		} catch (DiscordApiException e) {
 			applyErrorFlash(redirectAttributes, e, "Create Discord Channel");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
+	@PostMapping("/{id}/post-team-cards")
+	public String postTeamCards(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			discordPostService.postTeamCards(matchService.findById(id));
+			redirectAttributes.addFlashAttribute("successMessage", "Team cards posted.");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post team cards");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
+	@PostMapping("/{id}/refresh-team-cards")
+	public String refreshTeamCards(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			Match match = matchService.findById(id);
+			SeasonTeam home = resolveSeasonTeam(match, match.getHomeTeam().getId());
+			SeasonTeam away = resolveSeasonTeam(match, match.getAwayTeam().getId());
+			teamCardService.generateCard(home);
+			teamCardService.generateCard(away);
+			discordPostService.postTeamCards(match);
+			redirectAttributes.addFlashAttribute("successMessage", "Team cards regenerated and re-posted.");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Refresh team cards");
+		} catch (java.io.IOException e) {
+			log.warn("Refresh team cards failed for match {}: {}", id, e.toString());
+			redirectAttributes.addFlashAttribute("errorMessage",
+					"Refresh failed: could not regenerate team cards.");
+			redirectAttributes.addFlashAttribute("errorCategory", "transient");
 		}
 		return "redirect:/admin/matches/" + id;
 	}
@@ -162,6 +218,33 @@ public class MatchController {
 			applyErrorFlash(redirectAttributes, e, "Move to Archive");
 		}
 		return "redirect:/admin/matches/" + id;
+	}
+
+	private DiscordPost findTeamCardsPost(Match match) {
+		if (match.getDiscordChannelId() == null) {
+			return null;
+		}
+		return discordPostRepository
+				.findByChannelIdAndPostTypeAndMatchId(
+						match.getDiscordChannelId(), DiscordPostType.TEAM_CARDS, match.getId())
+				.orElse(null);
+	}
+
+	private SeasonTeam resolveSeasonTeam(Match match, UUID teamId) {
+		return seasonTeamRepository
+				.findBySeasonIdAndTeamId(match.getMatchday().getSeason().getId(), teamId)
+				.orElseThrow(() -> new IllegalStateException(
+						"SeasonTeam missing for season " + match.getMatchday().getSeason().getId()
+								+ " and team " + teamId));
+	}
+
+	private static String consumeAutoPostError() {
+		try {
+			return (String) RequestContextHolder.currentRequestAttributes()
+					.getAttribute(AUTO_POST_ERROR_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST);
+		} catch (IllegalStateException ignoredNoRequestBound) {
+			return null;
+		}
 	}
 
 	private void applyErrorFlash(RedirectAttributes ra, DiscordApiException e, String action) {

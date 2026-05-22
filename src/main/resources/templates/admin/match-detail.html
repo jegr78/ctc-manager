@@ -52,9 +52,28 @@
             </button>
         </div>
 
-        <!-- Phase 95 placeholder: POST buttons land here -->
-        <div class="discord-actions discord-actions--posts">
-            <!-- TODO Phase 95: POST buttons land here (POST-01..POST-05) -->
+        <div class="discord-actions discord-actions--posts" th:if="${match.discordChannelId != null}">
+            <form th:if="${teamCardsPost == null}"
+                  th:action="@{/admin/matches/{id}/post-team-cards(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-team-cards">
+                    Post Team Cards
+                </button>
+            </form>
+            <form th:if="${teamCardsPost != null}"
+                  th:action="@{/admin/matches/{id}/post-team-cards(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-team-cards">
+                    Re-Post Team Cards
+                </button>
+            </form>
+            <form th:if="${teamCardsPost != null}"
+                  th:action="@{/admin/matches/{id}/refresh-team-cards(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="refresh-team-cards">
+                    &#x21bb; Refresh Cards
+                </button>
+            </form>
         </div>
     </div>
 
