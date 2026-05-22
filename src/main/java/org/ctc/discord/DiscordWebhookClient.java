@@ -114,6 +114,53 @@ public class DiscordWebhookClient {
 				.body(WebhookMessage.class));
 	}
 
+	public WebhookMessage editMessageWithAttachments(
+			String webhookUrl,
+			String messageId,
+			WebhookPayload payload,
+			List<NamedAttachment> attachments)
+			throws DiscordApiException {
+		hostValidator.requireAllowed(webhookUrl);
+		if (attachments.size() > MAX_ATTACHMENTS) {
+			throw new IllegalArgumentException(
+					"Discord allows at most " + MAX_ATTACHMENTS + " attachments per webhook (got "
+							+ attachments.size() + ")");
+		}
+		if (attachments.isEmpty()) {
+			return editMessage(webhookUrl, messageId, payload);
+		}
+		String payloadJson;
+		try {
+			payloadJson = objectMapper.writeValueAsString(payload);
+		} catch (JsonProcessingException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		MultiValueMap<String, HttpEntity<?>> parts = new LinkedMultiValueMap<>();
+		HttpHeaders payloadHeaders = new HttpHeaders();
+		payloadHeaders.setContentType(MediaType.APPLICATION_JSON);
+		parts.add("payload_json", new HttpEntity<>(payloadJson, payloadHeaders));
+		for (int i = 0; i < attachments.size(); i++) {
+			NamedAttachment att = attachments.get(i);
+			final String filename = att.filename();
+			HttpHeaders fileHeaders = new HttpHeaders();
+			fileHeaders.setContentType(MediaType.IMAGE_PNG);
+			ByteArrayResource resource = new ByteArrayResource(att.bytes()) {
+				@Override
+				public String getFilename() {
+					return filename;
+				}
+			};
+			parts.add("files[" + i + "]", new HttpEntity<>(resource, fileHeaders));
+		}
+		return execute(() -> forWebhookUrl(webhookUrl)
+				.patch()
+				.uri("/messages/{messageId}", messageId)
+				.contentType(MediaType.MULTIPART_FORM_DATA)
+				.body(parts)
+				.retrieve()
+				.body(WebhookMessage.class));
+	}
+
 	private RestClient forWebhookUrl(String webhookUrl) {
 		return RestClient.builder()
 				.baseUrl(webhookUrl)
