@@ -8,17 +8,23 @@ import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.DiscordHostValidator;
+import org.ctc.discord.DiscordTimestamps;
 import org.ctc.discord.DiscordWebhookClient;
 import org.ctc.discord.dto.DiscordPostRef;
+import org.ctc.discord.dto.Embed;
+import org.ctc.discord.dto.EmbedField;
 import org.ctc.discord.dto.NamedAttachment;
 import org.ctc.discord.dto.WebhookMessage;
 import org.ctc.discord.dto.WebhookPayload;
@@ -56,15 +62,18 @@ public class DiscordPostService {
 	private final SettingsGraphicService settingsGraphicService;
 	private final LineupGraphicService lineupGraphicService;
 	private final RaceLineupRepository raceLineupRepository;
+	private final MatchResultsGraphicService matchResultsGraphicService;
+	private final DiscordTimestamps discordTimestamps;
 	private final Path uploadDir;
 
 	@SuppressFBWarnings(
 			value = "EI_EXPOSE_REP2",
 			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordPostRepository, DiscordHostValidator, "
 					+ "TeamCardService, SeasonTeamRepository, SettingsGraphicService, LineupGraphicService, "
-					+ "RaceLineupRepository) are intentionally shared by-reference — defensive copying would break framework "
-					+ "wiring. Matches the implicit suppression that lombok.config adds to @RequiredArgsConstructor "
-					+ "(see CLAUDE.md SpotBugs section + lombok.config invariant).")
+					+ "RaceLineupRepository, MatchResultsGraphicService, DiscordTimestamps) are intentionally shared "
+					+ "by-reference — defensive copying would break framework wiring. Matches the implicit suppression "
+					+ "that lombok.config adds to @RequiredArgsConstructor (see CLAUDE.md SpotBugs section + "
+					+ "lombok.config invariant).")
 	public DiscordPostService(
 			DiscordWebhookClient webhookClient,
 			DiscordPostRepository discordPostRepository,
@@ -75,6 +84,8 @@ public class DiscordPostService {
 			SettingsGraphicService settingsGraphicService,
 			LineupGraphicService lineupGraphicService,
 			RaceLineupRepository raceLineupRepository,
+			MatchResultsGraphicService matchResultsGraphicService,
+			DiscordTimestamps discordTimestamps,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
 		this.discordPostRepository = discordPostRepository;
@@ -85,7 +96,95 @@ public class DiscordPostService {
 		this.settingsGraphicService = settingsGraphicService;
 		this.lineupGraphicService = lineupGraphicService;
 		this.raceLineupRepository = raceLineupRepository;
+		this.matchResultsGraphicService = matchResultsGraphicService;
+		this.discordTimestamps = discordTimestamps;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
+	}
+
+	public boolean matchCanRenderResults(Match match) {
+		List<Race> races = match.getRaces();
+		return !races.isEmpty() && races.stream().allMatch(r -> !r.getResults().isEmpty());
+	}
+
+	@Transactional
+	public DiscordPost postMatchResults(Match match) throws DiscordApiException {
+		if (!matchCanRenderResults(match)) {
+			throw new BusinessRuleException("Match results require at least one race result.");
+		}
+		byte[] png;
+		try {
+			png = matchResultsGraphicService.generateMatchResults(match);
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		NamedAttachment att = new NamedAttachment("match-results.png", png);
+		return postOrEdit(
+				match.getDiscordChannelId(),
+				match.getDiscordChannelWebhookUrl(),
+				DiscordPostType.MATCH_RESULTS,
+				WebhookPayload.empty(),
+				List.of(att),
+				DiscordPostRef.match(match));
+	}
+
+	@Transactional
+	public DiscordPost postSchedule(Match match) throws DiscordApiException {
+		LocalDateTime firstRaceTime = firstRaceTime(match)
+				.orElseThrow(() -> new BusinessRuleException(
+						"Schedule requires at least one race with a scheduled time."));
+		WebhookPayload payload = buildSchedulePayload(match, firstRaceTime);
+		return postOrEdit(
+				match.getDiscordChannelId(),
+				match.getDiscordChannelWebhookUrl(),
+				DiscordPostType.SCHEDULE,
+				payload,
+				List.of(),
+				DiscordPostRef.match(match));
+	}
+
+	@Transactional
+	public void autoEditScheduleIfNeeded(Match match) throws DiscordApiException {
+		Optional<DiscordPost> existing = discordPostRepository
+				.findByChannelIdAndPostTypeAndMatchId(
+						match.getDiscordChannelId(), DiscordPostType.SCHEDULE, match.getId());
+		if (existing.isEmpty()) {
+			return;
+		}
+		Optional<LocalDateTime> firstRaceTime = firstRaceTime(match);
+		if (firstRaceTime.isEmpty()) {
+			return;
+		}
+		WebhookPayload payload = buildSchedulePayload(match, firstRaceTime.get());
+		postOrEdit(
+				match.getDiscordChannelId(),
+				match.getDiscordChannelWebhookUrl(),
+				DiscordPostType.SCHEDULE,
+				payload,
+				List.of(),
+				DiscordPostRef.match(match));
+	}
+
+	private static Optional<LocalDateTime> firstRaceTime(Match match) {
+		return match.getRaces().stream()
+				.map(Race::getDateTime)
+				.filter(Objects::nonNull)
+				.min(Comparator.naturalOrder());
+	}
+
+	private WebhookPayload buildSchedulePayload(Match match, LocalDateTime firstRaceTime) {
+		String dateField = discordTimestamps.longDateTime(firstRaceTime)
+				+ " (" + discordTimestamps.relative(firstRaceTime) + ")";
+		List<EmbedField> fields = List.of(
+				new EmbedField("Date", dateField, true),
+				new EmbedField("Lobby Host", orTbd(match.getLobbyHost()), true),
+				new EmbedField("Race Director", orTbd(match.getRaceDirector()), true),
+				new EmbedField("Streamer", orTbd(match.getStreamer()), true));
+		Embed embed = new Embed("Match Schedule", null, fields);
+		return new WebhookPayload(null, List.of(embed));
+	}
+
+	private static String orTbd(String value) {
+		return (value == null || value.isBlank()) ? "_TBD_" : value;
 	}
 
 	public boolean matchHasCompleteSettings(Match match) {
