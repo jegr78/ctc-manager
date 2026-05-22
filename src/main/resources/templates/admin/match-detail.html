@@ -39,7 +39,11 @@
                   class="badge badge-active"
                   data-testid="discord-channel-id"
                   th:text="'Channel ' + ${match.discordChannelId}"></span>
-            <button th:if="${match.discordChannelId != null}"
+            <span th:if="${match.discordChannelArchivedAt != null}"
+                  class="badge badge-archived"
+                  data-testid="discord-channel-archived"
+                  th:text="'Archived ' + ${#temporals.format(match.discordChannelArchivedAt, 'yyyy-MM-dd HH:mm')}"></span>
+            <button th:if="${match.discordChannelId != null and match.discordChannelArchivedAt == null}"
                     type="button"
                     class="btn btn-secondary btn-sm"
                     data-testid="open-archive-modal"

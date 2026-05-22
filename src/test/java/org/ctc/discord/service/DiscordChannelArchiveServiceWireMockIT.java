@@ -9,8 +9,11 @@ import static com.github.tomakehurst.wiremock.client.WireMock.patch;
 import static com.github.tomakehurst.wiremock.client.WireMock.patchRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -98,6 +101,28 @@ class DiscordChannelArchiveServiceWireMockIT {
 		wm.verify(patchRequestedFor(urlPathEqualTo("/api/v10/channels/c1"))
 				.withRequestBody(matchingJsonPath("$.parent_id", equalTo("cat-archive-1")))
 				.withRequestBody(notMatching(".*\"name\".*")));
+		assertThat(matchRepository.findById(match.getId()).orElseThrow()
+				.getDiscordChannelArchivedAt()).isNotNull();
+	}
+
+	@Test
+	void givenChannelAlreadyArchived_whenRenderMatchDetail_thenMoveToArchiveButtonIsHidden() throws Exception {
+		// given
+		Match match = seedMatchWithChannel("A");
+		wm.stubFor(patch(urlPathEqualTo("/api/v10/channels/c1"))
+				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1-h-vs-a\",\"type\":0,\"parent_id\":\"cat-archive-1\"}")));
+		mockMvc.perform(post("/admin/matches/" + match.getId() + "/move-to-archive")
+						.with(csrf())
+						.param("categoryId", "cat-archive-1"))
+				.andExpect(status().is3xxRedirection());
+
+		// when / then — re-render the page; archive trigger is gone, archive badge is present
+		mockMvc.perform(get("/admin/matches/" + match.getId()))
+				.andExpect(status().isOk())
+				.andExpect(content().string(org.hamcrest.Matchers.not(
+						org.hamcrest.Matchers.containsString("data-testid=\"open-archive-modal\""))))
+				.andExpect(content().string(
+						org.hamcrest.Matchers.containsString("data-testid=\"discord-channel-archived\"")));
 	}
 
 	@Test

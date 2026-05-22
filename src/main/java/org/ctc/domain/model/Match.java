@@ -2,6 +2,7 @@ package org.ctc.domain.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -67,6 +68,9 @@ public class Match extends BaseEntity {
 
 	@Column(name = "streamer", length = 100)
 	private String streamer;
+
+	@Column(name = "discord_channel_archived_at")
+	private LocalDateTime discordChannelArchivedAt;
 
 	public Match(Matchday matchday, Team homeTeam, Team awayTeam) {
 		this.matchday = matchday;

@@ -2,6 +2,7 @@ package org.ctc.domain.service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -67,6 +68,13 @@ public class MatchService {
 		match.setLobbyHost(form.getLobbyHost());
 		match.setRaceDirector(form.getRaceDirector());
 		match.setStreamer(form.getStreamer());
+		matchRepository.save(match);
+	}
+
+	@Transactional
+	public void markChannelArchived(UUID id) {
+		Match match = findById(id);
+		match.setDiscordChannelArchivedAt(LocalDateTime.now(clock));
 		matchRepository.save(match);
 	}
 

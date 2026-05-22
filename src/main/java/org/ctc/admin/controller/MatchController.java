@@ -153,6 +153,7 @@ public class MatchController {
 			}
 			discordRestClient.modifyChannel(match.getDiscordChannelId(),
 					new ChannelModifyRequest(null, categoryId));
+			matchService.markChannelArchived(id);
 			redirectAttributes.addFlashAttribute("successMessage", "Channel moved to archive.");
 		} catch (BusinessRuleException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());

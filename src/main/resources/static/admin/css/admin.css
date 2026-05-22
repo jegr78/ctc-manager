@@ -373,6 +373,7 @@ select option {
 .badge-active { background: var(--success-bg); color: #66bb6a; }
 .badge-inactive { background: #222; color: #999; }
 .badge-warning { background: #3b2e0e; color: #ffb74d; }
+.badge-archived { background: #2a2a2a; color: #888; }
 
 /* Google API error categories (Phase 91 / UX-01) */
 .error-badge {
