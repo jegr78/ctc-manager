@@ -219,6 +219,18 @@ Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session rem
 
 * Use CSS classes from `admin.css` instead of inline styles: `btn-xs`, `btn-sm`, etc.
 
+### No Comment Pollution
+
+* **Default: no comments.** Code is self-explanatory via naming.
+* **Hard-banned in source files (Java, SQL migrations, Thymeleaf templates, YAML, tests):**
+  * Phase / Plan / Task / UAT / Wave references (e.g. `Phase 94 V11 UAT-04 follow-up:`, `Plan-94-04 fix:`, `// Wave 2 closeout`). They rot — use git history and PR descriptions instead.
+  * File-header comment blocks restating what the file does or repeating conventions (e.g. `Compatible with H2 + MariaDB`, `DO NOT mutate this file after release`). Conventions belong here in CLAUDE.md once, not in every file.
+  * `Added for X`, `used by Y`, `called from Z` cross-references — they are greppable.
+  * Multi-line Javadoc on obvious getters/setters or one-line methods.
+* **Allowed (rare):** single-line comments for non-obvious WHY — hidden constraints, subtle invariants, or workarounds for a specific external bug.
+* **When refactoring, remove pollution from touched files.** Do not preserve it "to stay consistent with the file's existing style" — that calcifies the anti-pattern.
+* **Applies equally to subagents.** Every subagent prompt that writes code must reference this rule.
+
 ### Skill Invocation Naming
 
 * **Canonical prefix:** GSD skills are invoked via the dash form `/gsd-<name>`. Examples: `/gsd-plan-phase`, `/gsd-execute-phase`, `/gsd-validate-phase`, `/gsd-verify-work`, `/gsd-new-milestone`, `/gsd-discuss-phase`, `/gsd-research-phase`.

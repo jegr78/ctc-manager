@@ -94,9 +94,7 @@ class DiscordChannelArchiveServiceWireMockIT {
 				.andExpect(status().is3xxRedirection())
 				.andExpect(flash().attribute("successMessage", "Channel moved to archive."));
 
-		// then — parent_id set; the "name" field must NOT be present in the payload
-		// (Plan-94-04 fix: @JsonInclude(NON_NULL) on ChannelModifyRequest — Discord
-		// rejects PATCH with "name": null, which surfaces as a TRANSIENT flash).
+		// then
 		wm.verify(patchRequestedFor(urlPathEqualTo("/api/v10/channels/c1"))
 				.withRequestBody(matchingJsonPath("$.parent_id", equalTo("cat-archive-1")))
 				.withRequestBody(notMatching(".*\"name\".*")));
