@@ -170,6 +170,45 @@ class DiscordChannelServiceWireMockIT {
 	}
 
 	@Test
+	void givenIntraTeamMatchWithSameEffectiveRole_whenCreateMatchChannel_thenThreeOverwritePayloadAndAuditPasses() throws Exception {
+		// given — both teams resolve to the same effective Discord role (intra-team match,
+		// e.g. VRX A vs VRX B both inheriting from parent VRX role)
+		seedConfig("g1", "cat1");
+		Match match = seedMatch("IT", "100", "100");
+		String botAllow = String.valueOf(DiscordPermissions.BOT_ALLOW_MASK);
+
+		wm.stubFor(post(urlPathEqualTo("/api/v10/guilds/g1/channels"))
+				.willReturn(okJson(
+						"{\"id\":\"c1\",\"name\":\"md1-home-vs-away\",\"type\":0,\"parent_id\":\"cat1\"}")));
+		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
+				.willReturn(okJson(
+						"{\"id\":\"w1\",\"token\":\"tok-abc\","
+								+ "\"url\":\"https://discord.com/api/webhooks/w1/tok-abc\",\"channel_id\":\"c1\"}")));
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
+				.willReturn(okJson(
+						"{\"id\":\"c1\",\"name\":\"md1-home-vs-away\",\"type\":0,\"parent_id\":\"cat1\","
+								+ "\"permission_overwrites\":["
+								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"" + BOT_USER_ID + "\",\"type\":1,\"allow\":\"" + botAllow + "\",\"deny\":\"0\"}"
+								+ "]}")));
+
+		// when
+		service.createMatchChannel(match);
+
+		// then — DB write
+		Match reloaded = matchRepository.findById(match.getId()).orElseThrow();
+		assertThat(reloaded.getDiscordChannelId()).isEqualTo("c1");
+
+		// and — 3-overwrite payload (everyone-deny + 1 deduped team-role + 1 bot-member)
+		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/guilds/g1/channels"))
+				.withRequestBody(matchingJsonPath("$.permission_overwrites[1].id", equalTo("100")))
+				.withRequestBody(matchingJsonPath("$.permission_overwrites[2].type", equalTo("1")))
+				.withRequestBody(matchingJsonPath("$.permission_overwrites[2].id", equalTo(BOT_USER_ID))));
+		wm.verify(exactly(0), deleteRequestedFor(urlPathMatching("/api/v10/channels/.*")));
+	}
+
+	@Test
 	void givenWebhookCreationFails_whenCreateMatchChannel_thenServiceFailsDbUnchanged() {
 		// given — channel created OK, but createWebhook returns 500 transient
 		seedConfig("g1", "cat1");

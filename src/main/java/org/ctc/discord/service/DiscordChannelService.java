@@ -8,6 +8,8 @@ import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_ALLOW_MASK;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_DENY_MASK;
 import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -48,29 +50,33 @@ public class DiscordChannelService {
 		DiscordGlobalConfig cfg = configService.getOrInitialize();
 		assertPreconditions(match, cfg);
 
-		String homeRoleId = match.getHomeTeam().getDiscordRoleId();
-		String awayRoleId = match.getAwayTeam().getDiscordRoleId();
+		String homeRoleId = match.getHomeTeam().getEffectiveDiscordRoleId();
+		String awayRoleId = match.getAwayTeam().getEffectiveDiscordRoleId();
 		String guildId = cfg.getGuildId();
 		String name = channelName(match);
 		String botUserId = botIdentityCache.getBotUserId();
 
-		List<PermissionOverwrite> overwrites = List.of(
-				new PermissionOverwrite(guildId, OVERWRITE_TYPE_ROLE,
-						"0", String.valueOf(EVERYONE_DENY_VIEW_MASK)),
-				new PermissionOverwrite(homeRoleId, OVERWRITE_TYPE_ROLE,
-						String.valueOf(TEAM_MEMBER_ALLOW_MASK), String.valueOf(TEAM_MEMBER_DENY_MASK)),
-				new PermissionOverwrite(awayRoleId, OVERWRITE_TYPE_ROLE,
-						String.valueOf(TEAM_MEMBER_ALLOW_MASK), String.valueOf(TEAM_MEMBER_DENY_MASK)),
-				new PermissionOverwrite(botUserId, OVERWRITE_TYPE_MEMBER,
-						String.valueOf(BOT_ALLOW_MASK), "0"));
+		Set<String> teamRoleIds = new LinkedHashSet<>();
+		teamRoleIds.add(homeRoleId);
+		teamRoleIds.add(awayRoleId);
+
+		List<PermissionOverwrite> overwrites = new ArrayList<>();
+		overwrites.add(new PermissionOverwrite(guildId, OVERWRITE_TYPE_ROLE,
+				"0", String.valueOf(EVERYONE_DENY_VIEW_MASK)));
+		for (String teamRoleId : teamRoleIds) {
+			overwrites.add(new PermissionOverwrite(teamRoleId, OVERWRITE_TYPE_ROLE,
+					String.valueOf(TEAM_MEMBER_ALLOW_MASK), String.valueOf(TEAM_MEMBER_DENY_MASK)));
+		}
+		overwrites.add(new PermissionOverwrite(botUserId, OVERWRITE_TYPE_MEMBER,
+				String.valueOf(BOT_ALLOW_MASK), "0"));
 
 		ChannelCreateRequest req = new ChannelCreateRequest(
-				name, CHANNEL_TYPE_TEXT, cfg.getCurrentMatchCategoryId(), overwrites);
+				name, CHANNEL_TYPE_TEXT, cfg.getCurrentMatchCategoryId(), List.copyOf(overwrites));
 		Channel channel = restClient.createChannel(guildId, req);
 		Webhook webhook = restClient.createWebhook(channel.id(), WEBHOOK_NAME);
 
 		try {
-			assertPermissionAudit(channel.id(), homeRoleId, awayRoleId, botUserId);
+			assertPermissionAudit(channel.id(), teamRoleIds, botUserId);
 		} catch (DiscordAuthException auditEx) {
 			try {
 				restClient.deleteChannel(channel.id());
@@ -96,8 +102,8 @@ public class DiscordChannelService {
 	private static void assertPreconditions(Match match, DiscordGlobalConfig cfg) {
 		boolean missing = match.getHomeTeam() == null
 				|| match.getAwayTeam() == null
-				|| match.getHomeTeam().getDiscordRoleId() == null
-				|| match.getAwayTeam().getDiscordRoleId() == null
+				|| match.getHomeTeam().getEffectiveDiscordRoleId() == null
+				|| match.getAwayTeam().getEffectiveDiscordRoleId() == null
 				|| cfg.getCurrentMatchCategoryId() == null
 				|| cfg.getCurrentMatchCategoryId().isBlank();
 		if (missing) {
@@ -115,11 +121,12 @@ public class DiscordChannelService {
 				.toLowerCase(Locale.ROOT);
 	}
 
-	private void assertPermissionAudit(String channelId, String homeRoleId, String awayRoleId, String botUserId)
+	private void assertPermissionAudit(String channelId, Set<String> expectedTeamRoleIds, String botUserId)
 			throws DiscordApiException {
+		int expectedSize = 2 + expectedTeamRoleIds.size();
 		Channel back = restClient.fetchChannel(channelId);
 		List<PermissionOverwrite> overwrites = back.permissionOverwrites();
-		if (overwrites == null || overwrites.size() != 4) {
+		if (overwrites == null || overwrites.size() != expectedSize) {
 			throw new DiscordAuthException(DiscordApiExceptionMapper.AUDIT_FAIL_MESSAGE, null);
 		}
 		Set<String> rolesWithView = overwrites.stream()
@@ -127,7 +134,7 @@ public class DiscordChannelService {
 				.filter(o -> (Long.parseLong(o.allow()) & VIEW_CHANNEL) != 0L)
 				.map(PermissionOverwrite::id)
 				.collect(Collectors.toSet());
-		if (!rolesWithView.equals(Set.of(homeRoleId, awayRoleId))) {
+		if (!rolesWithView.equals(expectedTeamRoleIds)) {
 			throw new DiscordAuthException(DiscordApiExceptionMapper.AUDIT_FAIL_MESSAGE, null);
 		}
 		Set<String> membersWithView = overwrites.stream()

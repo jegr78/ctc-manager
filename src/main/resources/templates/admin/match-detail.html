@@ -29,9 +29,9 @@
                 <button type="submit"
                         class="btn btn-primary btn-sm"
                         data-testid="create-discord-channel"
-                        th:disabled="${match.homeTeam.discordRoleId == null
+                        th:disabled="${match.homeTeam.effectiveDiscordRoleId == null
                                 or match.awayTeam == null
-                                or match.awayTeam.discordRoleId == null}">
+                                or match.awayTeam.effectiveDiscordRoleId == null}">
                     Create Discord Channel
                 </button>
             </form>
