@@ -43,7 +43,7 @@
                     type="button"
                     class="btn btn-secondary btn-sm"
                     data-testid="open-archive-modal"
-                    onclick="document.getElementById('archiveModal').classList.add('is-open')">
+                    onclick="document.getElementById('archiveModal').style.display='flex'">
                 Move to Archive
             </button>
         </div>
@@ -88,10 +88,36 @@
         </ul>
     </div>
 
-    <!-- Archive Modal (94-03 fills the body) -->
+    <!-- Archive Modal -->
     <div id="archiveModal" class="modal-overlay">
         <div class="modal-body modal-body--md">
-            <!-- TODO Plan 94-03: archive category selection lands here -->
+            <h3 class="modal-title">Move Channel to Archive</h3>
+            <form th:action="@{/admin/matches/{id}/move-to-archive(id=${match.id})}" method="post">
+                <div th:if="${archiveCategories.isEmpty()}" class="alert alert-warning"
+                     data-testid="archive-all-full-banner">
+                    All archive categories are full — see
+                    <a th:href="@{/docs/operations/discord-integration.html#creating-archive-category}">runbook</a>.
+                </div>
+                <div th:each="cat,iter : ${archiveCategories}" class="form-check">
+                    <input type="radio"
+                           th:id="'cat-' + ${iter.index}"
+                           name="categoryId"
+                           th:value="${cat.id}"
+                           th:checked="${defaultSelectionId != null and defaultSelectionId.equals(cat.id)}">
+                    <label th:for="'cat-' + ${iter.index}"
+                           th:text="${cat.name} + ' — ' + ${cat.currentChannelCount} + '/50'"></label>
+                </div>
+                <div class="actions">
+                    <button type="submit"
+                            class="btn btn-primary"
+                            data-testid="archive-confirm"
+                            th:disabled="${archiveCategories.isEmpty()}">Confirm</button>
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-testid="archive-cancel"
+                            onclick="document.getElementById('archiveModal').style.display='none'">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 </section>
