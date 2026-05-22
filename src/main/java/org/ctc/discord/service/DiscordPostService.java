@@ -1,5 +1,6 @@
 package org.ctc.discord.service;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,6 +49,12 @@ public class DiscordPostService {
 	private final SeasonTeamRepository seasonTeamRepository;
 	private final Path uploadDir;
 
+	@SuppressFBWarnings(
+			value = "EI_EXPOSE_REP2",
+			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordPostRepository, DiscordHostValidator, "
+					+ "TeamCardService, SeasonTeamRepository) are intentionally shared by-reference — defensive copying "
+					+ "would break framework wiring. Matches the implicit suppression that lombok.config adds to "
+					+ "@RequiredArgsConstructor (see CLAUDE.md SpotBugs section + lombok.config invariant).")
 	public DiscordPostService(
 			DiscordWebhookClient webhookClient,
 			DiscordPostRepository discordPostRepository,
