@@ -9,6 +9,9 @@ public final class DiscordApiExceptionMapper {
 
 	public static final String TRANSIENT_MESSAGE = "Discord connection problem — retry";
 	public static final String AUTH_MESSAGE = "Discord authentication problem — check bot token";
+	public static final String AUDIT_FAIL_MESSAGE =
+			"Channel permission audit failed - an unexpected role had View permission."
+					+ " Channel was deleted; verify Discord server-role setup and retry.";
 	public static final String NOT_FOUND_MESSAGE = "Discord resource not found — verify guild/channel/webhook ID";
 	public static final String CATEGORY_FULL_MESSAGE =
 			"Discord archive category is full (50 channels). Create a new archive category.";

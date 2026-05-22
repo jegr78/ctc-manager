@@ -11,6 +11,7 @@ import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.dto.Role;
 import org.ctc.discord.dto.Thread;
 import org.ctc.discord.dto.ThreadCreateRequest;
+import org.ctc.discord.dto.Webhook;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordTransientException;
@@ -115,6 +116,32 @@ public class DiscordRestClient {
 				.body(Thread.class));
 	}
 
+	public Webhook createWebhook(String channelId, String name) throws DiscordApiException {
+		return execute(() -> bot.post()
+				.uri("/channels/{channelId}/webhooks", channelId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.body(new WebhookCreateRequest(name))
+				.retrieve()
+				.body(Webhook.class));
+	}
+
+	public Channel fetchChannel(String channelId) throws DiscordApiException {
+		return execute(() -> bot.get()
+				.uri("/channels/{channelId}", channelId)
+				.retrieve()
+				.body(Channel.class));
+	}
+
+	public void deleteChannel(String channelId) throws DiscordApiException {
+		execute(() -> {
+			bot.delete()
+					.uri("/channels/{channelId}", channelId)
+					.retrieve()
+					.toBodilessEntity();
+			return null;
+		});
+	}
+
 	private static <T> T execute(RestCall<T> call) throws DiscordApiException {
 		try {
 			return call.run();
@@ -147,5 +174,8 @@ public class DiscordRestClient {
 
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	private record ThreadList(List<Thread> threads) {
+	}
+
+	private record WebhookCreateRequest(String name) {
 	}
 }

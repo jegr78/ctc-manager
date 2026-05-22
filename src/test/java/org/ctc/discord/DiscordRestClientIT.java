@@ -1,8 +1,11 @@
 package org.ctc.discord;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.delete;
+import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalToJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
+import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.patch;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
@@ -19,6 +22,7 @@ import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.dto.Role;
 import org.ctc.discord.dto.Thread;
 import org.ctc.discord.dto.ThreadCreateRequest;
+import org.ctc.discord.dto.Webhook;
 import org.ctc.discord.exception.DiscordAuthException;
 import org.ctc.discord.exception.DiscordCategoryFullException;
 import org.ctc.discord.exception.DiscordNotFoundException;
@@ -189,5 +193,59 @@ class DiscordRestClientIT {
 				.willReturn(aResponse().withStatus(503)));
 
 		assertThatThrownBy(() -> client.fetchBotUser()).isInstanceOf(DiscordTransientException.class);
+	}
+
+	@Test
+	void givenChannelId_whenCreateWebhook_thenReturnsWebhook() throws Exception {
+		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
+				.willReturn(okJson("{\"id\":\"w1\",\"token\":\"tok-abc\","
+						+ "\"url\":\"https://discord.com/api/webhooks/w1/tok-abc\",\"channel_id\":\"c1\"}")));
+
+		Webhook hook = client.createWebhook("c1", "CTC Manager");
+
+		assertThat(hook.id()).isEqualTo("w1");
+		assertThat(hook.token()).isEqualTo("tok-abc");
+		assertThat(hook.url()).isEqualTo("https://discord.com/api/webhooks/w1/tok-abc");
+		assertThat(hook.channelId()).isEqualTo("c1");
+		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
+				.withRequestBody(equalToJson("{\"name\":\"CTC Manager\"}")));
+	}
+
+	@Test
+	void givenChannelId_whenFetchChannel_thenReturnsChannelWithPermissionOverwrites() throws Exception {
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
+				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1-h-vs-a\",\"type\":0,"
+						+ "\"parent_id\":\"cat1\","
+						+ "\"permission_overwrites\":["
+						+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
+						+ "{\"id\":\"home\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+						+ "{\"id\":\"away\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"}"
+						+ "]}")));
+
+		Channel ch = client.fetchChannel("c1");
+
+		assertThat(ch.id()).isEqualTo("c1");
+		assertThat(ch.permissionOverwrites()).hasSize(3);
+		assertThat(ch.permissionOverwrites()).extracting("id").containsExactly("g1", "home", "away");
+		wm.verify(getRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
+	}
+
+	@Test
+	void givenChannelId_whenDeleteChannel_thenInvokesDelete() throws Exception {
+		wm.stubFor(delete(urlPathEqualTo("/api/v10/channels/c1"))
+				.willReturn(aResponse().withStatus(204)));
+
+		client.deleteChannel("c1");
+
+		wm.verify(deleteRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
+	}
+
+	@Test
+	void givenChannelId_whenDeleteChannelReturns500_thenDiscordTransientExceptionThrown() {
+		wm.stubFor(delete(urlPathEqualTo("/api/v10/channels/c500"))
+				.willReturn(aResponse().withStatus(500)));
+
+		assertThatThrownBy(() -> client.deleteChannel("c500"))
+				.isInstanceOf(DiscordTransientException.class);
 	}
 }
