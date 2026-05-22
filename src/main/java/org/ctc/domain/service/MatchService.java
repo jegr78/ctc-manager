@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.ctc.admin.dto.MatchForm;
 import org.ctc.discord.dto.ArchiveCategory;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.service.DiscordCategoryResolver;
+import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
@@ -33,6 +35,7 @@ public class MatchService {
 	private final TeamRepository teamRepository;
 	private final RaceRepository raceRepository;
 	private final DiscordCategoryResolver discordCategoryResolver;
+	private final DiscordPostService discordPostService;
 	private final Clock clock;
 
 	public Match getMatch(UUID matchId) {
@@ -63,12 +66,30 @@ public class MatchService {
 	@Transactional
 	public void updateDiscordFields(UUID id, MatchForm form) {
 		Match match = findById(id);
+		String beforeLobbyHost = match.getLobbyHost();
+		String beforeRaceDirector = match.getRaceDirector();
+		String beforeStreamer = match.getStreamer();
+
 		match.setDiscordTeaser(form.getDiscordTeaser());
 		match.setStreamLink(form.getStreamLink());
 		match.setLobbyHost(form.getLobbyHost());
 		match.setRaceDirector(form.getRaceDirector());
 		match.setStreamer(form.getStreamer());
-		matchRepository.save(match);
+		Match saved = matchRepository.save(match);
+
+		boolean scheduleFieldsChanged = !Objects.equals(beforeLobbyHost, form.getLobbyHost())
+				|| !Objects.equals(beforeRaceDirector, form.getRaceDirector())
+				|| !Objects.equals(beforeStreamer, form.getStreamer());
+		if (scheduleFieldsChanged) {
+			try {
+				discordPostService.autoEditScheduleIfNeeded(saved);
+			} catch (DiscordApiException e) {
+				log.warn("Auto-edit SCHEDULE failed for match {}: category={}",
+						saved.getId(), e.category().name());
+			} catch (RuntimeException e) {
+				log.warn("Auto-edit SCHEDULE failed for match {}: {}", saved.getId(), e.toString());
+			}
+		}
 	}
 
 	@Transactional
