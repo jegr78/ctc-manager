@@ -114,7 +114,7 @@ public class MatchController {
 
 		DiscordPost matchResultsPost = findMatchPost(match, DiscordPostType.MATCH_RESULTS);
 		model.addAttribute("matchResultsPost", matchResultsPost);
-		model.addAttribute("matchResultsStale", isStale(matchResultsPost, match));
+		model.addAttribute("matchResultsStale", isStale(matchResultsPost, latestRaceResultUpdate(match)));
 		model.addAttribute("schedulePost", findMatchPost(match, DiscordPostType.SCHEDULE));
 		model.addAttribute("matchCanRenderResults", discordPostService.matchCanRenderResults(match));
 		model.addAttribute("scheduleVisible",
@@ -122,11 +122,20 @@ public class MatchController {
 		return "admin/match-detail";
 	}
 
-	private static boolean isStale(DiscordPost post, Match match) {
-		if (post == null || post.getUpdatedAt() == null || match.getUpdatedAt() == null) {
+	private static boolean isStale(DiscordPost post, java.time.LocalDateTime latestRaceResultUpdate) {
+		if (post == null || post.getUpdatedAt() == null || latestRaceResultUpdate == null) {
 			return false;
 		}
-		return post.getUpdatedAt().isBefore(match.getUpdatedAt());
+		return post.getUpdatedAt().isBefore(latestRaceResultUpdate);
+	}
+
+	private static java.time.LocalDateTime latestRaceResultUpdate(Match match) {
+		return match.getRaces().stream()
+				.flatMap(r -> r.getResults().stream())
+				.map(r -> r.getUpdatedAt())
+				.filter(java.util.Objects::nonNull)
+				.max(java.time.LocalDateTime::compareTo)
+				.orElse(null);
 	}
 
 	@GetMapping("/{id}/edit")
