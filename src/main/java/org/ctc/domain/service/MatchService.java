@@ -10,9 +10,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchForm;
 import org.ctc.discord.dto.ArchiveCategory;
+import org.ctc.discord.event.MatchScheduleFieldsChangedEvent;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.service.DiscordCategoryResolver;
-import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
@@ -22,6 +22,7 @@ import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.TeamRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +36,7 @@ public class MatchService {
 	private final TeamRepository teamRepository;
 	private final RaceRepository raceRepository;
 	private final DiscordCategoryResolver discordCategoryResolver;
-	private final DiscordPostService discordPostService;
+	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
 
 	public Match getMatch(UUID matchId) {
@@ -81,14 +82,7 @@ public class MatchService {
 				|| !Objects.equals(beforeRaceDirector, form.getRaceDirector())
 				|| !Objects.equals(beforeStreamer, form.getStreamer());
 		if (scheduleFieldsChanged) {
-			try {
-				discordPostService.autoEditScheduleIfNeeded(saved);
-			} catch (DiscordApiException e) {
-				log.warn("Auto-edit SCHEDULE failed for match {}: category={}",
-						saved.getId(), e.category().name());
-			} catch (RuntimeException e) {
-				log.warn("Auto-edit SCHEDULE failed for match {}: {}", saved.getId(), e.toString());
-			}
+			eventPublisher.publishEvent(new MatchScheduleFieldsChangedEvent(saved.getId()));
 		}
 	}
 

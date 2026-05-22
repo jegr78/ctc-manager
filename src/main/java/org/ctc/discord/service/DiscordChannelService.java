@@ -22,6 +22,7 @@ import org.ctc.discord.dto.Channel;
 import org.ctc.discord.dto.ChannelCreateRequest;
 import org.ctc.discord.dto.PermissionOverwrite;
 import org.ctc.discord.dto.Webhook;
+import org.ctc.discord.event.ChannelCreatedEvent;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordAuthException;
@@ -29,10 +30,9 @@ import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.repository.MatchRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
 
 @Slf4j
 @Service
@@ -42,13 +42,11 @@ public class DiscordChannelService {
 	private static final String WEBHOOK_NAME = "CTC Manager";
 	private static final int CHANNEL_TYPE_TEXT = 0;
 
-	private static final String AUTO_POST_ERROR_ATTRIBUTE = "discord.autoPostError";
-
 	private final DiscordRestClient restClient;
 	private final DiscordGlobalConfigService configService;
 	private final DiscordBotIdentityCache botIdentityCache;
 	private final MatchRepository matchRepository;
-	private final DiscordPostService discordPostService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public void createMatchChannel(Match match) throws DiscordApiException {
@@ -103,25 +101,7 @@ public class DiscordChannelService {
 		log.info("Discord channel created for match {} → {} (channelId={})",
 				match.getId(), channel.name(), channel.id());
 
-		try {
-			discordPostService.postTeamCards(match);
-		} catch (DiscordApiException e) {
-			String category = e.category().name().toLowerCase().replace('_', '-');
-			log.warn("Auto-post TEAM_CARDS failed for match {}: category={}", match.getId(), category);
-			recordAutoPostError(category);
-		} catch (RuntimeException e) {
-			log.warn("Auto-post TEAM_CARDS failed for match {}: category=transient", match.getId(), e);
-			recordAutoPostError("transient");
-		}
-	}
-
-	private static void recordAutoPostError(String category) {
-		try {
-			RequestContextHolder.currentRequestAttributes()
-					.setAttribute(AUTO_POST_ERROR_ATTRIBUTE, category, RequestAttributes.SCOPE_REQUEST);
-		} catch (IllegalStateException ignoredNoRequestBound) {
-			// service may run outside an HTTP request (e.g. scheduled job) — log line already emitted by caller.
-		}
+		eventPublisher.publishEvent(new ChannelCreatedEvent(match.getId()));
 	}
 
 	private static void assertPreconditions(Match match, DiscordGlobalConfig cfg) {
