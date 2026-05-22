@@ -171,7 +171,10 @@ public class MatchController {
 			case CATEGORY_FULL -> DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE;
 		};
 		String category = e.category().name().toLowerCase().replace('_', '-');
-		log.warn("{} failed: category={}", action, category);
+		Throwable cause = e.getCause();
+		log.warn("{} failed: category={}, exception={}, cause={}",
+				action, category, e.getClass().getSimpleName(),
+				cause != null ? cause.toString() : "none");
 		ra.addFlashAttribute("errorMessage", message);
 		ra.addFlashAttribute("errorCategory", category);
 	}

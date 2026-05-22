@@ -3,6 +3,7 @@ package org.ctc.discord.service;
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.notMatching;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.patch;
 import static com.github.tomakehurst.wiremock.client.WireMock.patchRequestedFor;
@@ -93,9 +94,12 @@ class DiscordChannelArchiveServiceWireMockIT {
 				.andExpect(status().is3xxRedirection())
 				.andExpect(flash().attribute("successMessage", "Channel moved to archive."));
 
-		// then
+		// then — parent_id set; the "name" field must NOT be present in the payload
+		// (Plan-94-04 fix: @JsonInclude(NON_NULL) on ChannelModifyRequest — Discord
+		// rejects PATCH with "name": null, which surfaces as a TRANSIENT flash).
 		wm.verify(patchRequestedFor(urlPathEqualTo("/api/v10/channels/c1"))
-				.withRequestBody(matchingJsonPath("$.parent_id", equalTo("cat-archive-1"))));
+				.withRequestBody(matchingJsonPath("$.parent_id", equalTo("cat-archive-1")))
+				.withRequestBody(notMatching(".*\"name\".*")));
 	}
 
 	@Test
