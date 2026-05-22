@@ -1,23 +1,44 @@
 package org.ctc.discord.service;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
+import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
+import static com.github.tomakehurst.wiremock.client.WireMock.patch;
+import static com.github.tomakehurst.wiremock.client.WireMock.patchRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import org.ctc.TestHelper;
+import org.ctc.discord.exception.DiscordApiExceptionMapper;
+import org.ctc.domain.model.Match;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.MatchRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("dev")
 @Tag("integration")
+@Transactional
 class DiscordChannelArchiveServiceWireMockIT {
 
 	@RegisterExtension
@@ -34,23 +55,82 @@ class DiscordChannelArchiveServiceWireMockIT {
 		registry.add("app.discord.rate-limit.fivexx-backoff-ms", () -> "10,10,10");
 	}
 
+	@Autowired
+	MockMvc mockMvc;
+
+	@Autowired
+	MatchRepository matchRepository;
+
+	@Autowired
+	TestHelper helper;
+
 	@BeforeEach
 	void resetWireMock() {
 		wm.resetAll();
 	}
 
-	@Test
-	void givenChannelExistsAndCategoryHasRoom_whenMoveToArchive_thenPatchInvokedWithParentId() {
-		fail("not yet implemented");
+	private Match seedMatchWithChannel(String suffix) {
+		Season season = helper.createSeason("Archive Season " + suffix);
+		Matchday md = helper.createMatchdayInRegularPhase(season, "MD-1-" + suffix, 0);
+		Team home = helper.createTeam("Home " + suffix, "h" + suffix);
+		Team away = helper.createTeam("Away " + suffix, "a" + suffix);
+		Match match = helper.createMatch(md, home, away);
+		match.setDiscordChannelId("c1");
+		return matchRepository.save(match);
 	}
 
 	@Test
-	void givenChannelDoesNotExist_whenMoveToArchive_thenDiscordNotFoundExceptionMapped() {
-		fail("not yet implemented");
+	void givenChannelExistsAndCategoryHasRoom_whenMoveToArchive_thenPatchInvokedWithParentId() throws Exception {
+		// given
+		Match match = seedMatchWithChannel("H");
+		wm.stubFor(patch(urlPathEqualTo("/api/v10/channels/c1"))
+				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1-h-vs-a\",\"type\":0,\"parent_id\":\"cat-archive-1\"}")));
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + match.getId() + "/move-to-archive")
+						.with(csrf())
+						.param("categoryId", "cat-archive-1"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attribute("successMessage", "Channel moved to archive."));
+
+		// then
+		wm.verify(patchRequestedFor(urlPathEqualTo("/api/v10/channels/c1"))
+				.withRequestBody(matchingJsonPath("$.parent_id", equalTo("cat-archive-1"))));
 	}
 
 	@Test
-	void givenCategoryFullResponseFromDiscord_whenMoveToArchive_thenDiscordCategoryFullExceptionMapped() {
-		fail("not yet implemented");
+	void givenChannelDoesNotExist_whenMoveToArchive_thenDiscordNotFoundExceptionMapped() throws Exception {
+		// given
+		Match match = seedMatchWithChannel("N");
+		wm.stubFor(patch(urlPathEqualTo("/api/v10/channels/c1"))
+				.willReturn(aResponse().withStatus(404)
+						.withHeader("Content-Type", "application/json")
+						.withBody("{\"message\":\"Unknown Channel\",\"code\":10003}")));
+
+		// when / then
+		mockMvc.perform(post("/admin/matches/" + match.getId() + "/move-to-archive")
+						.with(csrf())
+						.param("categoryId", "cat-archive-1"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attribute("errorCategory", "not-found"))
+				.andExpect(flash().attribute("errorMessage", DiscordApiExceptionMapper.NOT_FOUND_MESSAGE));
+	}
+
+	@Test
+	void givenCategoryFullResponseFromDiscord_whenMoveToArchive_thenDiscordCategoryFullExceptionMapped() throws Exception {
+		// given — Discord sentinel code 30013 = max channels in category reached
+		Match match = seedMatchWithChannel("F");
+		wm.stubFor(patch(urlPathEqualTo("/api/v10/channels/c1"))
+				.willReturn(aResponse().withStatus(400)
+						.withHeader("Content-Type", "application/json")
+						.withBody("{\"code\":30013,\"message\":\"Max channels reached\"}")));
+
+		// when / then
+		mockMvc.perform(post("/admin/matches/" + match.getId() + "/move-to-archive")
+						.with(csrf())
+						.param("categoryId", "cat-archive-full"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attribute("errorCategory", "category-full"))
+				.andExpect(flash().attribute("errorMessage", DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE));
 	}
 }

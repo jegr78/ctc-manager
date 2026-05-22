@@ -5,8 +5,11 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchForm;
+import org.ctc.discord.DiscordRestClient;
+import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
+import org.ctc.discord.exception.DiscordCategoryFullException;
 import org.ctc.discord.service.DiscordChannelService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
@@ -31,6 +34,7 @@ public class MatchController {
 
 	private final MatchService matchService;
 	private final DiscordChannelService discordChannelService;
+	private final DiscordRestClient discordRestClient;
 
 	@GetMapping("/new")
 	public String create(@RequestParam UUID matchdayId, Model model) {
@@ -130,6 +134,31 @@ public class MatchController {
 			redirectAttributes.addFlashAttribute("errorCategory", "not-found");
 		} catch (DiscordApiException e) {
 			applyErrorFlash(redirectAttributes, e, "Create Discord Channel");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
+	@PostMapping("/{id}/move-to-archive")
+	public String moveToArchive(@PathVariable UUID id,
+	                            @RequestParam(required = false) String categoryId,
+	                            RedirectAttributes redirectAttributes) {
+		try {
+			Match match = matchService.findById(id);
+			if (match.getDiscordChannelId() == null) {
+				throw new BusinessRuleException("Match has no Discord channel to archive.");
+			}
+			if (categoryId == null || categoryId.isBlank()) {
+				throw new DiscordCategoryFullException(
+						DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE, null);
+			}
+			discordRestClient.modifyChannel(match.getDiscordChannelId(),
+					new ChannelModifyRequest(null, categoryId));
+			redirectAttributes.addFlashAttribute("successMessage", "Channel moved to archive.");
+		} catch (BusinessRuleException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+			redirectAttributes.addFlashAttribute("errorCategory", "not-found");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Move to Archive");
 		}
 		return "redirect:/admin/matches/" + id;
 	}
