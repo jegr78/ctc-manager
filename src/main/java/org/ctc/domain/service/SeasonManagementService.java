@@ -178,6 +178,46 @@ public class SeasonManagementService {
         return saved;
     }
 
+    @Transactional
+    public Season linkRaceResultsThread(UUID seasonId, String threadId) {
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        season.setDiscordRaceResultsThreadId(threadId);
+        var saved = seasonRepository.save(season);
+        log.info("Linked race-results thread {} to season {}", threadId, seasonId);
+        return saved;
+    }
+
+    @Transactional
+    public Season linkStandingsThread(UUID seasonId, String threadId) {
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        season.setDiscordStandingsThreadId(threadId);
+        var saved = seasonRepository.save(season);
+        log.info("Linked standings thread {} to season {}", threadId, seasonId);
+        return saved;
+    }
+
+    @Transactional
+    public Season unlinkRaceResultsThread(UUID seasonId) {
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        season.setDiscordRaceResultsThreadId(null);
+        var saved = seasonRepository.save(season);
+        log.info("Unlinked race-results thread from season {}", seasonId);
+        return saved;
+    }
+
+    @Transactional
+    public Season unlinkStandingsThread(UUID seasonId) {
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        season.setDiscordStandingsThreadId(null);
+        var saved = seasonRepository.save(season);
+        log.info("Unlinked standings thread from season {}", seasonId);
+        return saved;
+    }
+
     /**
      * Deletes a season. Strict pre-check: if the season has any active phase content
      * (matchdays, playoffs, or {@code phase_teams} rows), the delete is refused with

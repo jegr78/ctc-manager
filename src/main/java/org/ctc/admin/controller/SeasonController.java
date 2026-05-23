@@ -9,6 +9,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.SeasonForm;
+import org.ctc.discord.dto.Thread;
+import org.ctc.discord.exception.DiscordApiException;
+import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.service.DiscordForumService;
+import org.ctc.discord.service.DiscordGlobalConfigService;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.service.MatchdayGeneratorService;
 import org.ctc.domain.service.SeasonManagementService;
@@ -27,10 +33,15 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class SeasonController {
 
+	private static final String THREAD_TYPE_RACE_RESULTS = "race-results";
+	private static final String THREAD_TYPE_STANDINGS = "standings";
+
 	private final SeasonManagementService seasonManagementService;
 	private final SeasonPhaseService seasonPhaseService;
 	private final SwissPairingService swissPairingService;
 	private final MatchdayGeneratorService matchdayGeneratorService;
+	private final DiscordForumService discordForumService;
+	private final DiscordGlobalConfigService discordGlobalConfigService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable UUID id, Model model) {
@@ -82,12 +93,96 @@ public class SeasonController {
 		form.setNumber(season.getNumber());
 		form.setDescription(season.getDescription());
 		form.setActive(season.isActive());
+		form.setDiscordRaceResultsThreadId(season.getDiscordRaceResultsThreadId());
+		form.setDiscordStandingsThreadId(season.getDiscordStandingsThreadId());
 		model.addAttribute("seasonForm", form);
 		model.addAttribute("season", season);
 		model.addAttribute("allTeams", data.allTeams());
 		model.addAttribute("allCars", data.allCars());
 		model.addAttribute("allTracks", data.allTracks());
+		populateDiscordIntegrationModel(model, season);
 		return "admin/season-form";
+	}
+
+	private void populateDiscordIntegrationModel(Model model, org.ctc.domain.model.Season season) {
+		DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
+		String raceResultsForumId = config.getRaceResultsForumChannelId();
+		String standingsForumId = config.getStandingsForumChannelId();
+		boolean integrationActive = isNonBlank(raceResultsForumId) || isNonBlank(standingsForumId);
+
+		List<Thread> raceResultsOptions = loadThreadOptions(raceResultsForumId, model, "race-results");
+		List<Thread> standingsOptions = loadThreadOptions(standingsForumId, model, "standings");
+
+		model.addAttribute("discordIntegrationActive", integrationActive);
+		model.addAttribute("raceResultsThreadOptions", raceResultsOptions);
+		model.addAttribute("standingsThreadOptions", standingsOptions);
+		model.addAttribute("linkedRaceResultsThread",
+				resolveLinkedThread(season.getDiscordRaceResultsThreadId(), raceResultsOptions));
+		model.addAttribute("linkedStandingsThread",
+				resolveLinkedThread(season.getDiscordStandingsThreadId(), standingsOptions));
+	}
+
+	private List<Thread> loadThreadOptions(String forumChannelId, Model model, String label) {
+		if (!isNonBlank(forumChannelId)) {
+			return List.of();
+		}
+		try {
+			return discordForumService.listThreads(forumChannelId);
+		} catch (DiscordApiException e) {
+			log.warn("Could not load {} forum threads (category={}): {}", label, e.category(), e.getMessage());
+			model.addAttribute("discordIntegrationWarning",
+					"Discord forum threads currently unreachable — list may be empty.");
+			return List.of();
+		}
+	}
+
+	private Thread resolveLinkedThread(String threadId, List<Thread> options) {
+		if (!isNonBlank(threadId)) {
+			return null;
+		}
+		return options.stream()
+				.filter(t -> threadId.equals(t.id()))
+				.findFirst()
+				.orElse(new Thread(threadId, "(unknown)", null, 0, null, null));
+	}
+
+	private static boolean isNonBlank(String value) {
+		return value != null && !value.isBlank();
+	}
+
+	@PostMapping("/{id}/link-thread")
+	public String linkThread(@PathVariable UUID id,
+	                         @RequestParam String threadId,
+	                         @RequestParam String type,
+	                         RedirectAttributes redirectAttributes) {
+		try {
+			switch (type) {
+				case THREAD_TYPE_RACE_RESULTS -> seasonManagementService.linkRaceResultsThread(id, threadId);
+				case THREAD_TYPE_STANDINGS -> seasonManagementService.linkStandingsThread(id, threadId);
+				default -> throw new BusinessRuleException("Unknown thread type: " + type);
+			}
+			redirectAttributes.addFlashAttribute("successMessage", "Thread linked.");
+		} catch (BusinessRuleException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+		}
+		return "redirect:/admin/seasons/" + id + "/edit";
+	}
+
+	@PostMapping("/{id}/unlink-thread")
+	public String unlinkThread(@PathVariable UUID id,
+	                           @RequestParam String type,
+	                           RedirectAttributes redirectAttributes) {
+		try {
+			switch (type) {
+				case THREAD_TYPE_RACE_RESULTS -> seasonManagementService.unlinkRaceResultsThread(id);
+				case THREAD_TYPE_STANDINGS -> seasonManagementService.unlinkStandingsThread(id);
+				default -> throw new BusinessRuleException("Unknown thread type: " + type);
+			}
+			redirectAttributes.addFlashAttribute("successMessage", "Thread unlinked.");
+		} catch (BusinessRuleException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+		}
+		return "redirect:/admin/seasons/" + id + "/edit";
 	}
 
 	@PostMapping("/save")
