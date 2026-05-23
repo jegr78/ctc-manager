@@ -243,6 +243,7 @@ public class RaceService {
 		var race = raceRepository.findById(raceId).orElseThrow();
 
 		race.getResults().clear();
+		raceRepository.saveAndFlush(race);
 
 		for (var rd : results) {
 			if (rd.driverId() == null) {
