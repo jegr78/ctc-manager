@@ -137,6 +137,7 @@ h1, h2, .sidebar-brand span {
 
 .main-content {
     flex: 1;
+    min-width: 0;
     margin-left: 220px;
 }
 
@@ -1061,6 +1062,13 @@ a.season-header-title:hover {
     }
     .form-row {
         grid-template-columns: 1fr;
+    }
+    .transfer-picker {
+        grid-template-columns: 1fr;
+    }
+    .transfer-filter {
+        width: 100%;
+        min-width: 0;
     }
     .detail-fields {
         grid-template-columns: 1fr;
