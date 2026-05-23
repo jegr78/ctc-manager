@@ -162,6 +162,8 @@ public class DiscordConfigController {
 		form.setAnnouncementWebhookUrl(nullSafe(config.getAnnouncementWebhookUrl()));
 		form.setRaceResultsForumChannelId(nullSafe(config.getRaceResultsForumChannelId()));
 		form.setStandingsForumChannelId(nullSafe(config.getStandingsForumChannelId()));
+		form.setRaceResultsForumWebhookUrl(nullSafe(config.getRaceResultsForumWebhookUrl()));
+		form.setStandingsForumWebhookUrl(nullSafe(config.getStandingsForumWebhookUrl()));
 		form.setVsEmojiName(nullSafe(config.getVsEmojiName()));
 		form.setBotApplicationId(config.getBotApplicationId());
 		form.setCurrentMatchCategoryId(nullSafe(config.getCurrentMatchCategoryId()));

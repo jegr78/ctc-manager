@@ -33,6 +33,8 @@ public class DiscordGlobalConfigService {
 		current.setAnnouncementWebhookUrl(nullSafe(form.getAnnouncementWebhookUrl()));
 		current.setRaceResultsForumChannelId(nullSafe(form.getRaceResultsForumChannelId()));
 		current.setStandingsForumChannelId(nullSafe(form.getStandingsForumChannelId()));
+		current.setRaceResultsForumWebhookUrl(nullSafe(form.getRaceResultsForumWebhookUrl()));
+		current.setStandingsForumWebhookUrl(nullSafe(form.getStandingsForumWebhookUrl()));
 		current.setVsEmojiName(nullSafe(form.getVsEmojiName()));
 		current.setBotApplicationId(form.getBotApplicationId());
 		current.setCurrentMatchCategoryId(nullSafe(form.getCurrentMatchCategoryId()));

@@ -103,4 +103,45 @@ class DiscordConfigFormTest {
 		// then
 		assertThat(violations).isEmpty();
 	}
+
+	@Test
+	void givenNonDiscordRaceResultsForumWebhookUrl_whenValidate_thenPatternViolation() {
+		// given
+		DiscordConfigForm form = new DiscordConfigForm();
+		form.setRaceResultsForumWebhookUrl("https://evil.com/api/webhooks/1/abc");
+
+		// when
+		Set<ConstraintViolation<DiscordConfigForm>> violations = validator.validate(form);
+
+		// then
+		assertThat(violations)
+				.anyMatch(v -> v.getPropertyPath().toString().equals("raceResultsForumWebhookUrl"));
+	}
+
+	@Test
+	void givenValidStandingsForumWebhookUrl_whenValidate_thenNoViolation() {
+		// given
+		DiscordConfigForm form = new DiscordConfigForm();
+		form.setStandingsForumWebhookUrl("https://discord.com/api/webhooks/200/standings-token_42");
+
+		// when
+		Set<ConstraintViolation<DiscordConfigForm>> violations = validator.validate(form);
+
+		// then
+		assertThat(violations).isEmpty();
+	}
+
+	@Test
+	void givenEmptyForumWebhookUrls_whenValidate_thenNoViolation() {
+		// given
+		DiscordConfigForm form = new DiscordConfigForm();
+		form.setRaceResultsForumWebhookUrl("");
+		form.setStandingsForumWebhookUrl("");
+
+		// when
+		Set<ConstraintViolation<DiscordConfigForm>> violations = validator.validate(form);
+
+		// then
+		assertThat(violations).isEmpty();
+	}
 }

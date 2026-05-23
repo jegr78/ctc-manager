@@ -17,7 +17,7 @@ import org.ctc.domain.model.BaseEntity;
 @NoArgsConstructor
 @Setter
 @Table(name = "discord_global_config")
-@ToString(exclude = {"announcementWebhookUrl"})
+@ToString(exclude = {"announcementWebhookUrl", "raceResultsForumWebhookUrl", "standingsForumWebhookUrl"})
 public class DiscordGlobalConfig extends BaseEntity {
 
 	@Id
@@ -35,6 +35,12 @@ public class DiscordGlobalConfig extends BaseEntity {
 
 	@Column(name = "standings_forum_channel_id", length = 32, nullable = false)
 	private String standingsForumChannelId = "";
+
+	@Column(name = "race_results_forum_webhook_url", length = 500)
+	private String raceResultsForumWebhookUrl = "";
+
+	@Column(name = "standings_forum_webhook_url", length = 500)
+	private String standingsForumWebhookUrl = "";
 
 	@Column(name = "vs_emoji_name", length = 50, nullable = false)
 	private String vsEmojiName = "CTC";

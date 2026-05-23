@@ -36,6 +36,12 @@ public class Season extends BaseEntity {
 	@Column(nullable = false)
 	private boolean active;
 
+	@Column(name = "discord_race_results_thread_id", length = 32)
+	private String discordRaceResultsThreadId;
+
+	@Column(name = "discord_standings_thread_id", length = 32)
+	private String discordStandingsThreadId;
+
 	@OneToMany(mappedBy = "season", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("sortIndex ASC")
 	private List<SeasonPhase> phases = new ArrayList<>();

@@ -28,6 +28,14 @@ public class DiscordConfigForm {
 	@Pattern(regexp = DiscordSnowflake.PATTERN, message = DiscordSnowflake.MESSAGE)
 	private String standingsForumChannelId = "";
 
+	@Size(max = 500)
+	@Pattern(regexp = WEBHOOK_REGEX, message = WEBHOOK_MESSAGE)
+	private String raceResultsForumWebhookUrl = "";
+
+	@Size(max = 500)
+	@Pattern(regexp = WEBHOOK_REGEX, message = WEBHOOK_MESSAGE)
+	private String standingsForumWebhookUrl = "";
+
 	@NotBlank
 	@Size(max = 50)
 	private String vsEmojiName = "CTC";
