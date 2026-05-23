@@ -11,7 +11,9 @@ public record DiscordDevSeedProperties(
 		String raceResultsForumChannelId,
 		String standingsForumChannelId,
 		String vsEmojiName,
-		String announcementWebhookUrl) {
+		String announcementWebhookUrl,
+		String raceResultsForumWebhookUrl,
+		String standingsForumWebhookUrl) {
 
 	public boolean hasGuildId() {
 		return guildId != null && !guildId.isBlank();

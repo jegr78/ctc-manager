@@ -40,6 +40,8 @@ app:
       standings-forum-channel-id: ${DISCORD_DEV_STANDINGS_FORUM:}
       vs-emoji-name: ${DISCORD_DEV_VS_EMOJI:}
       announcement-webhook-url: ${DISCORD_DEV_ANNOUNCEMENT_WEBHOOK_URL:}
+      race-results-forum-webhook-url: ${DISCORD_DEV_RACE_RESULTS_FORUM_WEBHOOK_URL:}
+      standings-forum-webhook-url: ${DISCORD_DEV_STANDINGS_FORUM_WEBHOOK_URL:}
 
 logging:
   level:

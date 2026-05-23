@@ -92,6 +92,12 @@ public class DiscordDevSeeder {
 		if (properties.announcementWebhookUrl() != null && !properties.announcementWebhookUrl().isBlank()) {
 			cfg.setAnnouncementWebhookUrl(properties.announcementWebhookUrl());
 		}
+		if (properties.raceResultsForumWebhookUrl() != null && !properties.raceResultsForumWebhookUrl().isBlank()) {
+			cfg.setRaceResultsForumWebhookUrl(properties.raceResultsForumWebhookUrl());
+		}
+		if (properties.standingsForumWebhookUrl() != null && !properties.standingsForumWebhookUrl().isBlank()) {
+			cfg.setStandingsForumWebhookUrl(properties.standingsForumWebhookUrl());
+		}
 	}
 
 	private int assignTeamRoles(List<Role> roles) {
