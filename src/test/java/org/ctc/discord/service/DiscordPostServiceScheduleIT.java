@@ -125,6 +125,40 @@ class DiscordPostServiceScheduleIT {
 	}
 
 	@Test
+	void givenStreamerAndStreamLink_whenPostSchedule_thenStreamerFieldIsMarkdownLink() throws Exception {
+		String webhookPath = "/webhooks/915/tok-sc-link";
+		Match match = seedMatchWithRace("SL1", wm.baseUrl() + webhookPath,
+				LocalDateTime.of(2026, 6, 1, 20, 30), "Alice", "Bob", "JeGr");
+		match.setStreamLink("https://youtu.be/Zc4BTe274Ig");
+		matchRepository.save(match);
+		wm.stubFor(post(urlPathEqualTo(webhookPath))
+				.withRequestBody(matchingJsonPath("$.embeds[0].fields[3].value",
+						containing("[JeGr](https://youtu.be/Zc4BTe274Ig)")))
+				.willReturn(okJson("{\"id\":\"msg-sc-link\",\"channel_id\":\"chan-sc-SL1\"}")));
+
+		DiscordPost saved = service.postSchedule(match);
+
+		assertThat(saved.getMessageId()).isEqualTo("msg-sc-link");
+	}
+
+	@Test
+	void givenStreamLinkOnly_whenPostSchedule_thenStreamerFieldIsWatchStreamLink() throws Exception {
+		String webhookPath = "/webhooks/916/tok-sc-link2";
+		Match match = seedMatchWithRace("SL2", wm.baseUrl() + webhookPath,
+				LocalDateTime.of(2026, 6, 1, 20, 30), "Alice", "Bob", null);
+		match.setStreamLink("https://twitch.tv/foo");
+		matchRepository.save(match);
+		wm.stubFor(post(urlPathEqualTo(webhookPath))
+				.withRequestBody(matchingJsonPath("$.embeds[0].fields[3].value",
+						containing("[Watch Stream](https://twitch.tv/foo)")))
+				.willReturn(okJson("{\"id\":\"msg-sc-link2\",\"channel_id\":\"chan-sc-SL2\"}")));
+
+		DiscordPost saved = service.postSchedule(match);
+
+		assertThat(saved.getMessageId()).isEqualTo("msg-sc-link2");
+	}
+
+	@Test
 	void givenBlankStreamer_whenPostSchedule_thenRendersTbdPlaceholder() throws Exception {
 		String webhookPath = "/webhooks/912/tok-sc3";
 		Match match = seedMatchWithRace("S3", wm.baseUrl() + webhookPath,

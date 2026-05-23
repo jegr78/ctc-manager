@@ -187,9 +187,26 @@ public class DiscordPostService {
 				new EmbedField("Date", dateField, true),
 				new EmbedField("Lobby Host", orTbd(match.getLobbyHost()), true),
 				new EmbedField("Race Director", orTbd(match.getRaceDirector()), true),
-				new EmbedField("Streamer", orTbd(match.getStreamer()), true));
+				new EmbedField("Streamer", streamerField(match), true));
 		Embed embed = new Embed("Match Schedule", null, fields);
 		return new WebhookPayload(null, List.of(embed));
+	}
+
+	private static String streamerField(Match match) {
+		String name = match.getStreamer();
+		String link = match.getStreamLink();
+		boolean hasName = name != null && !name.isBlank();
+		boolean hasLink = link != null && !link.isBlank();
+		if (hasName && hasLink) {
+			return "[" + name + "](" + link + ")";
+		}
+		if (hasLink) {
+			return "[Watch Stream](" + link + ")";
+		}
+		if (hasName) {
+			return name;
+		}
+		return "_TBD_";
 	}
 
 	private static String orTbd(String value) {
