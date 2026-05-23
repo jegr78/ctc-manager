@@ -257,41 +257,160 @@ where they conflict, CONTEXT.md takes precedence (later sign-off).
 
 ### Q-97-04 — POST-08 Standings on Season-Form (Area 4)
 
-- **D-97-STA-1: New `StandingsGraphicService` (Playwright-based).** No
-  existing `StandingsGraphicService` in `org.ctc.admin.service`; only
-  `StandingsViewService` (read-side) + `StandingsPageGenerator` (sitegen
-  HTML) + `templates/admin/standings.html` (admin page) + `templates/site/
-  standings.html` exist. Plan 97-03 creates `StandingsGraphicService` with
-  `generateStandingsBytes(Season season) → byte[]` analog to Phase 96
-  `ProvisionalScoresGraphicService` (Playwright runtime, excluded from
-  JaCoCo per CLAUDE.md "Excluded from coverage"). Render-template: NEW
-  `templates/admin/standings-render.html` (Playwright-input variant of
-  the existing `templates/admin/standings.html`). Planner decides whether
-  to reuse the existing template via Thymeleaf fragments or duplicate
-  with graphic-specific styling.
+- **D-97-STA-1: New `StandingsGraphicService` (Playwright-based, iterative
+  layout via playwright-cli).** No existing `StandingsGraphicService` in
+  `org.ctc.admin.service`; only `StandingsViewService` (read-side) +
+  `StandingsPageGenerator` (sitegen HTML) + `templates/admin/standings.html`
+  (admin page) + `templates/site/standings.html` exist. Plan 97-03 creates
+  `StandingsGraphicService` with `generateStandingsBytes(Season season,
+  SeasonPhase phase) → List<byte[]>` (returns 1 or N PNGs depending on
+  phase layout — see D-97-STA-3 below). Playwright runtime → excluded
+  from JaCoCo per CLAUDE.md "Excluded from coverage". Render-template:
+  NEW `templates/admin/standings-render.html` (Playwright-input variant).
+  **Iterative design loop per [[feedback-graphic-pixel-positioning]] +
+  [[feedback-graphic-design-iteration]]** (Phase 96 GRAFX-01 pattern):
+  small commits, operator visual-approval per wave-pause, no autonomous
+  design decisions. Starting point: existing `templates/admin/standings.
+  html` data shape (Position | Team | Played | W-D-L | Points). **Team
+  logo MUST be integrated** (per user direction 2026-05-23, Area 6.2) —
+  consistent with the visual family of `MatchdayResultsGraphic` +
+  `PowerRankingsGraphic` (both already render team logos).
 
 - **D-97-STA-2: Button placement on `season-form.html`
-  `#discordIntegration` card (UI-SPEC verbatim).** Per UI-SPEC § "POST-08
-  button on `templates/admin/season-form.html`" and user direction
-  2026-05-23 (Area 4.2): the button is appended to the BOTTOM of the
-  existing `#discordIntegration` card created by Phase 96 FORUM-01.
-  Visibility predicate (per UI-SPEC): `canPostStandings = seasonForm.id !=
-  null && season.discordStandingsThreadId != null && globalConfig.
-  standingsForumWebhookUrl != null`. One `STANDINGS` `discord_post` row
-  per season with `season_id` FK.
+  `#discordIntegration` card (UI-SPEC verbatim) + phase-selector
+  dropdown.** Per UI-SPEC § "POST-08 button on `templates/admin/season-
+  form.html`" and user direction 2026-05-23 (Area 4.2): the button is
+  appended to the BOTTOM of the existing `#discordIntegration` card
+  created by Phase 96 FORUM-01. Visibility predicate (per UI-SPEC):
+  `canPostStandings = seasonForm.id != null && season.discordStandings
+  ThreadId != null && globalConfig.standingsForumWebhookUrl != null`.
+  **Adjacent UI element (NEW vs UI-SPEC):** a `<select name="phaseId">`
+  dropdown listing the season's existing `SeasonPhase` entries
+  (`REGULAR` / `PLAYOFF` / `PLACEMENT` — only the ones that exist on the
+  season). Operator selects the target phase before clicking. If the
+  season has exactly one phase, the select is hidden and the phase is
+  auto-resolved server-side. One `STANDINGS` `discord_post` row per
+  `(season_id, phase_id)` pair (see D-97-STA-3 for schema implications).
 
-- **D-97-STA-3: Stale-detection via Service-Query MAX(RaceResult.updatedAt
-  in season) > standingsPost.updatedAt.** Per user direction 2026-05-23
-  (Area 4.1, Option A). No schema change needed; pure derived query in
-  `StandingsService.hasNewerResultsSince(seasonId, since) → boolean`,
-  surfaced as `standingsStale` ModelAttribute on
-  `SeasonController.editSeason`. Button label flips Re-Post → "Update
-  Standings" (yellow signal). REJECTED: cross-cutting `RaceResultService`
-  hook bumping `season.updatedAt` (false-positives from non-result
-  Saison-Edits + extra coupling); new `seasons.last_standings_relevant_
-  change_at` column + V14 migration (overkill for v1.13). **NO auto-edit
-  hook** — standings change too frequently to push to Discord
-  automatically; operator-button-triggered remains the rule.
+- **D-97-STA-3: Standings PNG granularity per phase layout** (per user
+  direction 2026-05-23, Area 6.1):
+
+  | Phase | PhaseLayout | PNG count per click | Discord-message shape |
+  |-------|-------------|---------------------|-----------------------|
+  | REGULAR | non-GROUPS | 1 PNG | Single attachment |
+  | REGULAR | GROUPS | N PNGs (1 per `SeasonPhaseGroup`) | **Multipart with N attachments in ONE message** |
+  | PLAYOFF | non-GROUPS (always) | 1 PNG | Single attachment |
+  | PLACEMENT | non-GROUPS (always) | 1 PNG | Single attachment |
+
+  All variants land as ONE Discord-Webhook-POST per click (multipart when
+  N > 1, analog Phase 96 `ProvisionalScoresGraphicService`). ONE
+  `STANDINGS` `discord_post` row per `(season_id, phase_id)`. Re-Post
+  replaces all N attachments atomically. PNG filenames: `standings-
+  {phaseType-lower}.png` (single) or `standings-{phaseType-lower}-
+  {groupName-slug}.png` (multipart, one per group).
+
+- **D-97-STA-4: V14 Flyway migration for `discord_post.phase_id` FK
+  column.** Per user direction 2026-05-23 (Area 6.3, Option A — payload_
+  json) — implementation pivots to **dedicated FK column** for
+  consistency with existing polymorphic FK pattern (match_id / matchday_
+  id / race_id / season_id all in V12 from Phase 95). New `V14__add_
+  discord_post_phase_id.sql`:
+
+  ```sql
+  ALTER TABLE discord_post ADD COLUMN phase_id UUID NULL;
+  ALTER TABLE discord_post ADD CONSTRAINT fk_discord_post_phase
+      FOREIGN KEY (phase_id) REFERENCES season_phases(id) ON DELETE SET NULL;
+  CREATE INDEX idx_discord_post_phase_id ON discord_post (phase_id);
+  ```
+
+  H2 + MariaDB compatible. Identity-key for STANDINGS:
+  `findByChannelIdAndPostTypeAndSeasonIdAndPhaseId(channelId, STANDINGS,
+  seasonId, phaseId)`. Existing repository queries for other post-types
+  (which leave `phase_id NULL`) are unaffected. **`DiscordPostRef.
+  SeasonRef` (Phase 96 D-96-FOR-3b) is EXTENDED** to carry an optional
+  `phaseId`: either widen the record to `SeasonRef(UUID seasonId, UUID
+  phaseId)` (breaking — Phase 96 callers must update; recommended) or
+  add a parallel `SeasonPhaseRef(UUID seasonId, UUID phaseId)` permit
+  to the sealed-hierarchy. Planner-Discretion (recommendation: widen
+  `SeasonRef` since Phase 96 had only one callsite — `FORUM-02` race-
+  result-post — and that callsite always passes `phaseId = null`).
+
+  REJECTED: payload_json TEXT column (less queryable, requires JSON
+  parsing in repository, inconsistent with existing FK pattern); always-
+  current-state-without-discriminator (operator can't have N STANDINGS
+  posts per season — one per phase — without a discriminator); new
+  `SeasonPhaseRef` parallel permit + `SeasonRef` untouched (overcomplete,
+  duplicates lookup-dispatch in `DiscordPostService.postOrEdit`
+  sealed-switch).
+
+- **D-97-STA-5: Stale-detection per (season, phase) via Service-Query
+  MAX(RaceResult.updatedAt in phase) > standingsPost.updatedAt.** Per
+  user direction 2026-05-23 (Area 4.1, Option A) — REFINED to be
+  phase-scoped after D-97-STA-3. `StandingsService.hasNewerResultsSince
+  PhaseScoped(seasonId, phaseId, since) → boolean`. Surfaced as
+  `standingsStaleByPhase: Map<UUID, Boolean>` ModelAttribute on
+  `SeasonController.editSeason` (one boolean per phase the season has).
+  Button label per selected phase flips Re-Post → "Update Standings"
+  (yellow signal). REJECTED: cross-cutting `RaceResultService` hook
+  bumping `season.updatedAt` (false-positives + cross-phase contamination);
+  new column `season_phases.last_standings_relevant_change_at` (overkill).
+  **NO auto-edit hook** — standings change too frequently to push to
+  Discord automatically; operator-button-triggered remains the rule.
+
+### Q-97-05 — Saison-Phasen-Awareness (Area 5)
+
+**Background:** CTC seasons are split into `SeasonPhase` entities with
+`PhaseType` (REGULAR / PLAYOFF / PLACEMENT) and optional `PhaseLayout`
+(STANDARD / GROUPS). `Matchday` belongs to one `SeasonPhase` + optional
+`SeasonPhaseGroup`. Existing graphic services are mixed: a single
+`MatchdayResultsGraphicService` handles any matchday regardless of
+phase, while `PlayoffRoundOverview/Results/Schedule GraphicService` are
+round-orientated (round ≠ matchday). Phase 97 posts must work across all
+phase types.
+
+- **D-97-PHA-1: POST-07a uses `MatchdayResultsGraphicService` for ALL
+  PhaseTypes uniformly.** Per user direction 2026-05-23 (Area 5.1): "Es
+  müssen einfach nur alle Ergebnisse des Matchdays bzw. Playoff Runde
+  dargestellt werden." No bracket-style rendering needed at the post
+  point — the graphic just shows all results of the
+  Matchday (or Playoff-Round-as-Matchday). The existing `Matchday
+  ResultsGraphicService.generateResults(Matchday)` handles all three
+  phase-types via its existing template (`templates/admin/matchday-
+  results-render.html`). REJECTED: per-PhaseType service-dispatch
+  (introducing PlayoffRoundResultsGraphicService dispatch logic for
+  PLAYOFF-Matchdays would require resolving Matchday→PlayoffRound — they
+  are not 1:1; out-of-scope complexity); REGULAR-only with Playoff
+  deferred (CTC operator workflow includes Playoff/Placement matchdays
+  too; would block Phase 97 from closing the matrix).
+
+- **D-97-PHA-1a: POST-07a button label is constant ("Post Match Day
+  Results" / "Re-Post Match Day Results" / "Update Match Day Results").**
+  Same string for all phase-types. The Matchday's own label
+  (`matchday.label`) supplies the context in the rendered PNG via
+  `MatchdayResultsGraphicService` template variables — no per-PhaseType
+  button-label switch needed.
+
+- **D-97-PHA-2: POST-06 MATCH_PREVIEW Markdown H2 = `## {matchday.label}`
+  direkt.** Per user direction 2026-05-23 (Area 5.2): operator-managed
+  matchday label ("Match Day 4" / "Round of 16" / "Placement Match 1" /
+  "Final" — any string). Maximal flexibility, no PhaseType switch. UI-SPEC's
+  hardcoded `## Match Day {N}` is REVISED to `## {matchday.label}` in
+  Plan 97-01. The live screenshot example `## Match Day 4` matches
+  because the operator labelled the regular-season matchday that way.
+
+- **D-97-PHA-3: POST-07b Power Rankings stays season-wide
+  (phase-agnostic).** Per user direction 2026-05-23 (Area 5.3): existing
+  `PowerRankingsGraphicService.loadTeamsForSeasonGroup(year, number)`
+  loads `SeasonTeam.rating` across the entire season (all phases). No
+  phase- or group-specific power-rankings variant in v1.13. REJECTED:
+  per-phase rankings (existing service doesn't support; substantial new
+  work); per-group rankings (existing service doesn't support).
+
+- **D-97-PHA-4: POST-08 Standings IS phase-aware (per D-97-STA-3
+  granularity table).** Standings ARE phase-bound — REGULAR-with-Groups
+  has multi-group standings, Playoffs/Placement have standalone
+  standings. Operator selects target phase via dropdown adjacent to the
+  Post Standings button. See D-97-STA-2 + D-97-STA-3 + D-97-STA-4.
 
 ### Q-97-meta — Plan Decomposition & Sequencing (carry-forward D-96-05)
 
@@ -328,16 +447,31 @@ where they conflict, CONTEXT.md takes precedence (later sign-off).
     `DiscordPostServicePowerRankingsIT`,
     `MatchdayControllerPostEndpointsIT`,
     `MatchdayDetailDiscordActionsE2ETest` + Mobile-Sweep.
-  - **Plan 97-03 — POST-08 (Standings + new StandingsGraphicService).**
-    New: `StandingsGraphicService` (Playwright runtime, JaCoCo-excluded),
-    `templates/admin/standings-render.html`, `SeasonController.postStandings`
-    endpoint, `DiscordPostService.postStandings` (uses SeasonRef from
-    Phase 96 D-96-FOR-3b), `StandingsService.hasNewerResultsSince` stale-
-    query, `season-form.html` button + stale-detection ModelAttribute.
-    Tests: `DiscordPostServiceStandingsIT`,
-    `SeasonControllerPostStandingsIT`,
-    `StandingsServiceStaleDetectionIT`,
-    `SeasonFormStandingsButtonE2ETest` + Mobile-Sweep.
+  - **Plan 97-03 — POST-08 (Standings + new StandingsGraphicService + V14
+    phase_id FK migration + iterative graphic-design loop).** New:
+    `StandingsGraphicService` (Playwright runtime, JaCoCo-excluded,
+    returns `List<byte[]>` per D-97-STA-3 granularity table — 1 PNG for
+    REGULAR-non-GROUPS / PLAYOFF / PLACEMENT; N PNGs for REGULAR-with-
+    GROUPS), `templates/admin/standings-render.html` with team-logo
+    integration (D-97-STA-1), `V14__add_discord_post_phase_id.sql`
+    (D-97-STA-4), `SeasonController.postStandings` endpoint accepting
+    `phaseId` form-param, `DiscordPostService.postStandings(season, phase)`
+    using widened `SeasonRef(seasonId, phaseId)` (D-97-STA-4), `Discord
+    PostRepository.findByChannelIdAndPostTypeAndSeasonIdAndPhaseId`,
+    `StandingsService.hasNewerResultsSincePhaseScoped(seasonId, phaseId,
+    since)` stale-query (D-97-STA-5), `season-form.html` button + phase-
+    selector dropdown + per-phase stale-detection ModelAttribute
+    (`standingsStaleByPhase: Map<UUID, Boolean>`). **Iterative graphic-
+    design loop** (D-97-STA-1) via playwright-cli — small commits per
+    layout step, wave-pause operator-approval per visual checkpoint.
+    Tests: `DiscordPostServiceStandingsIT` (all 4 phase-layout
+    combinations: REG-no-groups / REG-groups / PLAYOFF / PLACEMENT),
+    `SeasonControllerPostStandingsIT` (phase-selector form-binding),
+    `StandingsServicePhaseScopedStaleDetectionIT`,
+    `DiscordPostRefSeasonRefWidenedTest` (Mockito-only, verifies Phase
+    96 callsites still compile after `SeasonRef` widening),
+    `SeasonFormStandingsButtonE2ETest` (multi-phase dropdown UX) +
+    Mobile-Sweep + Visual-Snapshot.
   **Ende von Plan 97-03 = Phase-97-Close via `/gsd-validate-phase 97`.**
   Keine Worktrees, keine writing Subagents per
   [[feedback-inline-sequential-execution]].
@@ -370,14 +504,15 @@ where they conflict, CONTEXT.md takes precedence (later sign-off).
     model` entity; new files are services/controllers/templates/events).
     `BackupSchema.SCHEMA_VERSION` stays **2** (no wire-contract change).
     `BackupSchemaGuardTest` unchanged.
-  - **Flyway: no new migration needed.** Phase 95 V11 introduced
-    `discord_post` with the polymorphic FK columns (`match_id` /
-    `race_id` / `season_id` / `matchday_id`); Phase 96 V13 added the
-    Season Forum-Thread columns. All Phase 97 post-types reuse existing
-    schema. Planner verifies that `discord_post.matchday_id` column
-    exists from Phase 95 V11 — if not (e.g. Phase 95 only created the
-    other 3 FK columns), Plan 97-02 adds V14 with `ADD COLUMN
-    matchday_id BIGINT NULL` + index.
+  - **Flyway: V14 added by Plan 97-03 (`add_discord_post_phase_id`).**
+    Verified: V12 (Phase 95) already provisioned all 4 polymorphic FKs
+    (`match_id` / `matchday_id` / `race_id` / `season_id`) — so Plans
+    97-01 + 97-02 require NO migration. V13 (Phase 96) added Season
+    Forum-Thread columns. NEW V14 by Plan 97-03 adds `discord_post.
+    phase_id` UUID FK + index (D-97-STA-4) to enable per-phase
+    Standings posts with deterministic identity (`season_id, phase_id,
+    post_type=STANDINGS`). Other post-types leave `phase_id NULL` —
+    backward compatible. H2 + MariaDB compatibility verified.
   - `./mvnw verify -Pe2e` finishes within v1.12 CI E2E 17:39 ± 20%
     tolerance. Phase 97 adds ~8-12 WireMock-ITs + 3 Playwright E2E + 3
     Mobile-Sweep variants. Expected impact: < 90s total.
@@ -488,9 +623,19 @@ where they conflict, CONTEXT.md takes precedence (later sign-off).
     matchday-detail to match-detail).
   - `.planning/REQUIREMENTS.md` (Plan 97-01 revises POST-06; Plan 97-02
     splits POST-07 into 7a+7b).
-  - Optional: `src/main/resources/db/migration/V14__add_discord_post_
-    matchday_id.sql` (ONLY IF Phase 95 V11 did not already provision the
-    matchday_id FK column — Planner verifies first).
+  - `src/main/resources/db/migration/V14__add_discord_post_phase_id.sql`
+    (NEW, Plan 97-03 — `ADD COLUMN phase_id UUID NULL` + FK to
+    `season_phases(id)` + index, per D-97-STA-4).
+  - `src/main/java/org/ctc/discord/repository/DiscordPostRepository.java`
+    (Plan 97-03 — `findByChannelIdAndPostTypeAndSeasonIdAndPhaseId`
+    derived query for STANDINGS identity-key).
+  - `src/main/java/org/ctc/discord/model/DiscordPost.java` (Plan 97-03
+    — `@ManyToOne SeasonPhase phase` field nullable, mapped to new
+    column).
+  - `src/main/java/org/ctc/admin/dto/SeasonForm.java` or new
+    `PostStandingsForm.java` (Plan 97-03 — phase-selector form-DTO with
+    `UUID phaseId` field, @NotNull validation, no Mass-Assignment leak
+    via entity).
   Keine Edits in `org.ctc.dataimport.*`, `org.ctc.sitegen.*`,
   `org.ctc.gt7sync.*`, `org.ctc.scoring.*`, `org.ctc.backup.*`. Each
   plan-SUMMARY asserts `src/` clean outside the explicit whitelist.
@@ -627,9 +772,27 @@ where they conflict, CONTEXT.md takes precedence (later sign-off).
   the source-of-truth on `SeasonTeam.rating` ordering.
 - `src/main/java/org/ctc/domain/service/StandingsService.java` /
   `StandingsViewService.java` — read-side standings data (Plan 97-03
-  builds the new graphic service on top + adds `hasNewerResultsSince`).
+  builds the new graphic service on top + adds `hasNewerResultsSince
+  PhaseScoped`). `StandingsService.java:149` confirms aggregation
+  already spans REGULAR + PLAYOFF + PLACEMENT.
 - `src/main/resources/templates/admin/standings.html` — HTML reference
   for the new graphic template (Plan 97-03 picks reuse-vs-duplicate).
+  Existing template already handles per-phase × per-group tab rendering
+  (lines 28-46) — reuse this fragment logic for the graphic-render
+  variant.
+- `src/main/java/org/ctc/domain/model/SeasonPhase.java` +
+  `SeasonPhaseGroup.java` + `PhaseType.java` (REGULAR/PLAYOFF/
+  PLACEMENT) + `PhaseLayout.java` (STANDARD/GROUPS) + `PhaseTeam.java`
+  — domain model the StandingsGraphicService traverses to determine the
+  PNG-count per click (D-97-STA-3 granularity table).
+- `src/main/java/org/ctc/domain/model/Matchday.java` lines 27-31 —
+  `phase` + `group` references that the MatchdayResultsGraphicService
+  already uses (Plan 97-02 confirms behaviour across all PhaseTypes).
+- `src/main/java/org/ctc/admin/service/PlayoffRoundResultsGraphicService.
+  java` / `PlayoffRoundOverviewGraphicService.java` / `PlayoffRound
+  ScheduleGraphicService.java` — round-orientated alternatives NOT used
+  by Phase 97 (per D-97-PHA-1 the matchday-orientated service handles
+  Playoff matchdays uniformly).
 - `src/main/java/org/ctc/discord/service/DiscordPostService.java` (Phase
   95 + 96 implementation) — `postOrEdit(...)` shared code path that
   Phase 97 posts dispatch through; auto-unarchive (D-96-FOR-4) already
@@ -795,6 +958,25 @@ where they conflict, CONTEXT.md takes precedence (later sign-off).
   POST-06 (both attachments in the same Match Preview message, posted
   close to match-day). Same generator services, different message
   shapes + targets.
+- **Phase-Awareness gilt für POST-06/07a/08, NICHT für POST-07b** —
+  POST-06 nutzt `matchday.label` (operator-managed string, phase-
+  agnostisch); POST-07a nutzt `MatchdayResultsGraphicService` für
+  REGULAR/PLAYOFF/PLACEMENT uniformiert (user-direction: "Es müssen
+  einfach nur alle Ergebnisse des Matchdays bzw. Playoff Runde
+  dargestellt werden"); POST-08 hat Phase-Selektor + per-phase Identity-
+  Key; POST-07b Power Rankings bleibt season-wide (operator-curated
+  rating order spans all phases per `SeasonTeam.rating`).
+- **Standings-PNG-Granularität per PhaseLayout** (D-97-STA-3): REGULAR-
+  ohne-Groups → 1 PNG; REGULAR-mit-Groups → N PNGs (multipart, sorted
+  by `SeasonPhaseGroup.sortIndex`); PLAYOFF / PLACEMENT → 1 PNG (kein
+  GROUPS-Layout). User-direction 2026-05-23: "Bei Regular Season Phase
+  ohne Gruppen 1 PNG. Bei Regular Season Phase mit mehreren Gruppen 1
+  PNG je Gruppe im selben Post. Bei Playoff und Placement Matches 1 PNG
+  (hier wird es keine Gruppen geben)".
+- **Standings-Layout muss Team-Logos integrieren** — konsistent mit
+  visueller Familie von `MatchdayResultsGraphic` + `PowerRankingsGraphic`.
+  Iterative design loop ([[feedback-graphic-design-iteration]]) startet
+  von der existing `templates/admin/standings.html` Datenform.
 
 </specifics>
 
@@ -812,11 +994,23 @@ where they conflict, CONTEXT.md takes precedence (later sign-off).
   extend the diff-publish hook to `RaceService.save` (would require
   Spring-Application-Event refactor since RaceService is currently
   Discord-free).
-- **Visual-regression snapshot tests for the 4 new Discord-message
+- **Visual-regression snapshot tests for the 5 new Discord-message
   layouts** (MATCH_PREVIEW Markdown + Settings.png + Lineups.png
-  attachments; MATCHDAY_OVERVIEW PNG; POWER_RANKINGS PNG; STANDINGS PNG)
-  — Plan 97-02 + 97-03 Planner can include a pixel-hash test or defer
-  to Phase 98 polish.
+  attachments; MATCHDAY_OVERVIEW PNG; POWER_RANKINGS PNG; STANDINGS
+  single PNG; STANDINGS multi-group multipart) — Plan 97-02 + 97-03
+  Planner can include a pixel-hash test or defer to Phase 98 polish.
+- **`SeasonRef` widening strategy** (D-97-STA-4) — widen the existing
+  Phase 96 `SeasonRef(UUID seasonId)` record to `SeasonRef(UUID
+  seasonId, UUID phaseId)` (recommended; only one Phase 96 callsite —
+  FORUM-02 race-result-post — that always passes `phaseId = null`) vs
+  add a parallel `SeasonPhaseRef(UUID seasonId, UUID phaseId)` permit
+  to the sealed-hierarchy. Planner picks based on code-grep of
+  `SeasonRef.*new` callsites.
+- **`StandingsGraphicService` Multipart-PNG iteration order** (D-97-STA-3
+  REGULAR-with-GROUPS row) — N PNGs in one multipart-POST: order =
+  `SeasonPhaseGroup.sortIndex ASC` (existing convention); filename
+  pattern reflects sort order so Discord displays Group A → Group B → …
+  left-to-right.
 - **PowerRankings persistent ordering snapshot per Discord-post** — if
   operator-friction with "rating changed between Post and Re-Post"
   appears in UAT-07, a `discord_post.payload_json` snapshot column +
