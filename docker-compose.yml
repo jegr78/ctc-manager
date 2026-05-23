@@ -23,6 +23,11 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_SECURITY_USER_NAME: admin
       SPRING_SECURITY_USER_PASSWORD: ctc-admin
+      # Discord integration (v1.13). Token is required for any Discord API call;
+      # webhook URLs and snowflakes are persisted via /admin/discord-config UI
+      # (no dev-seeder in the docker profile).
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-}
     ports:
       - "8080:8080"
     volumes:
