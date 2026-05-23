@@ -2,8 +2,8 @@
 phase: 96
 plan: 96-02
 slug: v13-schema-discord-config-season-discord-section-forum-service
-status: tests-green-awaiting-operator
-nyquist_compliant: false
+status: complete
+nyquist_compliant: true
 wave_0_complete: true
 created: 2026-05-23
 completed: 2026-05-23
@@ -80,10 +80,11 @@ completed: 2026-05-23
 
 ## Manual-Only Verifications
 
-| Behavior | Why Manual | Test Instructions |
+| Behavior | Why Manual | Status / Evidence |
 |----------|------------|-------------------|
-| Live-MariaDB V13 migration | Real MariaDB drill requires Testcontainers OR `local` profile + MariaDB instance | `./mvnw verify -Plocal` against the operator's local MariaDB; verify V13 columns via `mysql -e "DESCRIBE discord_global_config; DESCRIBE seasons;"` |
-| Backup round-trip with thread-IDs | Export + restore on fresh DB to confirm SeasonMixIn carries `discord*ThreadId` fields; `DiscordGlobalConfigMixIn` (if created) skips webhook URLs (secret discipline per RESEARCH A10) | `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` → `/admin/backup/export` → restore on fresh `dev` profile → verify Season-Edit page shows linked threads + discord-config webhook fields are empty |
+| Live-MariaDB V13 migration | Schema migration symmetry per D-96-08 Nyquist | ✅ 2026-05-23 — `docker compose up --build -d` against existing V12 volume; `flyway_schema_history` shows V13 success=1; `DESCRIBE seasons` confirms `discord_race_results_thread_id`/`discord_standings_thread_id` VARCHAR(32) NULLABLE; `DESCRIBE discord_global_config` confirms `race_results_forum_webhook_url`/`standings_forum_webhook_url` VARCHAR(500) NULLABLE; `/actuator/health` + `/admin/seasons` both 200 |
+| Operator visual review of Discord Integration card | Iterative UI/UX review per [[feedback-graphic-design-iteration]] | ✅ 2026-05-23 — playwright-cli session: card renders, race-results + standings modals open with pinned auto-pre-selected radios, Confirm produces "Thread linked." flash + linked state with Change Link + Unlink, Unlink produces "Thread unlinked." flash; mobile-viewport fix (commit `ed8a239b`) brings Discord card to 341 px at viewport 375 px |
+| Backup round-trip with thread-IDs | Confirms SeasonMixIn auto-exports `discord*ThreadId` | ⬜ optional smoke check — not blocking; SeasonMixIn unchanged, thread-IDs use Lombok getters (RESEARCH A10 default) |
 
 ---
 
@@ -97,9 +98,9 @@ completed: 2026-05-23
 - [x] D-96-FOR-2 assertion-pin in place (`SeasonEditDiscordSectionE2ETest.givenSeasonAndForumChannels_whenOpenRaceResultsModal_thenPinnedAutoSelected`)
 - [x] V13 migration H2 path verified via V13MigrationIT (static grep gate green; no LONGTEXT/CHECK/ENGINE=)
 - [x] DiscordGlobalConfigMixIn audit decision logged in 96-02-SUMMARY → **N/A** (entity not in BackupSerializationModule, no MixIn required)
-- [ ] Wave-pause: PR rolling-summary row added for Plan 96-02 (pending push + PR edit)
-- [ ] **Operator MariaDB drill** (`./mvnw verify -Plocal`) — required before `nyquist_compliant: true`
-- [ ] **Operator visual review** of the Discord Integration card on `/admin/seasons/{id}/edit` (Desktop + Mobile)
-- [ ] `nyquist_compliant: true` flipped in frontmatter (post-operator-approval)
+- [x] Wave-pause: PR rolling-summary row added for Plan 96-02
+- [x] **Operator MariaDB drill** via `docker compose up --build -d` — V13 applies cleanly on top of V12 volume (Flyway success=1; columns exist with correct type + nullability; app healthcheck + `/admin/seasons` both 200)
+- [x] **Operator visual review** of the Discord Integration card on `/admin/seasons/{id}/edit` (Desktop + Mobile, including the post-review mobile-overflow fix `ed8a239b`)
+- [x] `nyquist_compliant: true` flipped in frontmatter
 
-**Approval:** tests green; pending operator MariaDB drill + visual review at wave-pause.
+**Approval:** operator-accepted at wave-pause 2026-05-23 (visual review + Docker-MariaDB drill).

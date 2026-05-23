@@ -96,13 +96,24 @@ stays green (EXPORT_ORDER=25, SCHEMA_VERSION=2).
   for Phase 98 polish; the E2E test now asserts the Discord card and its
   Link buttons render at mobile width.
 
-## Manual-Only Verifications Pending (Operator)
+## Operator Wave-Pause Verification (2026-05-23)
 
-| Behavior | Why Manual | Status |
-|----------|------------|--------|
-| Live-MariaDB V13 drill via `./mvnw verify -Plocal` | Schema migration symmetry per D-96-08 Nyquist | ⬜ pending operator |
-| Operator visual review of the Discord Integration card on `/admin/seasons/{id}/edit` (Desktop + Mobile) | Iterative UI/UX review per `[[feedback-graphic-design-iteration]]` | ⬜ pending operator |
-| Backup round-trip with linked threads | Confirms SeasonMixIn carries `discord*ThreadId` | ⬜ optional (smoke only) |
+| Behavior | Status / Evidence |
+|----------|-------------------|
+| Live-MariaDB V13 drill via `docker compose up --build -d` | ✅ V13 applied cleanly on top of existing V12 volume (`flyway_schema_history.success = 1`); columns exist with correct type + nullability; app `/actuator/health` + `/admin/seasons` both 200. |
+| Visual review of Discord Integration card on `/admin/seasons/{id}/edit` (Desktop + Mobile) | ✅ playwright-cli session walked through link race-results → "Thread linked." → unlink → "Thread unlinked." for both race-results and standings; pinned-auto-select fires on both modals. Mobile follow-up at `ed8a239b` (see below). |
+| Backup round-trip with linked threads | ⬜ optional smoke — SeasonMixIn unchanged, thread-IDs ride along via Lombok getters (RESEARCH A10 default). |
 
-`nyquist_compliant: true` stays deferred until the operator confirms the
-MariaDB drill plus visual review at the wave-pause.
+## Mobile-Overflow Follow-Up (commit `ed8a239b`, in-milestone polish)
+
+Mobile review surfaced a viewport-overflow on the season-edit page: the
+Discord Integration card itself was rendering 632 px wide on a 375 px
+viewport. Root cause was a flexbox pitfall on `.main-content` — the default
+`min-width: auto` prevented the content column from shrinking below its
+intrinsic-content width. Adding `min-width: 0` lets the flex child collapse
+to the visible area; the Discord card now measures 341 px at a 375 px
+viewport. Also folded `.transfer-picker` and `.transfer-filter` into the
+existing `@media (max-width: 480px)` block so Car / Track pool stack to a
+single column on mobile. Residual page-overflow on season-edit is now
+driven by the Teams `<table>` and the "Add team" inline-form — pre-existing
+debt unrelated to Phase 96.
