@@ -12,4 +12,15 @@ public interface DiscordPostRepository
 
 	Optional<DiscordPost> findByChannelIdAndPostTypeAndMatchId(
 			String channelId, DiscordPostType postType, UUID matchId);
+
+	Optional<DiscordPost> findByChannelIdAndPostTypeAndRaceId(
+			String channelId, DiscordPostType postType, UUID raceId);
+
+	Optional<DiscordPost> findByChannelIdAndPostTypeAndSeasonId(
+			String channelId, DiscordPostType postType, UUID seasonId);
+
+	Optional<DiscordPost> findByChannelIdAndPostTypeAndMatchdayId(
+			String channelId, DiscordPostType postType, UUID matchdayId);
+
+	Optional<DiscordPost> findByPostTypeAndRaceId(DiscordPostType postType, UUID raceId);
 }

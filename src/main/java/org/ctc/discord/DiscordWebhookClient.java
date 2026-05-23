@@ -16,12 +16,14 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.util.UriBuilder;
 
 @Slf4j
 @Component
@@ -45,11 +47,17 @@ public class DiscordWebhookClient {
 	}
 
 	public WebhookMessage execute(String webhookUrl, WebhookPayload payload) throws DiscordApiException {
+		return execute(webhookUrl, payload, null);
+	}
+
+	public WebhookMessage execute(String webhookUrl, WebhookPayload payload, @Nullable String threadId)
+			throws DiscordApiException {
 		hostValidator.requireAllowed(webhookUrl);
 		try {
 			return execute(() -> forWebhookUrl(webhookUrl)
 					.post()
-					.uri(uriBuilder -> uriBuilder.path("").queryParam("wait", "true").build())
+					.uri(uriBuilder -> appendThreadId(
+							uriBuilder.path("").queryParam("wait", "true"), threadId).build())
 					.contentType(MediaType.APPLICATION_JSON)
 					.body(payload)
 					.retrieve()
@@ -63,13 +71,22 @@ public class DiscordWebhookClient {
 	public WebhookMessage executeMultipart(
 			String webhookUrl, WebhookPayload payload, List<NamedAttachment> attachments)
 			throws DiscordApiException {
+		return executeMultipart(webhookUrl, payload, attachments, null);
+	}
+
+	public WebhookMessage executeMultipart(
+			String webhookUrl,
+			WebhookPayload payload,
+			List<NamedAttachment> attachments,
+			@Nullable String threadId)
+			throws DiscordApiException {
 		if (attachments.size() > MAX_ATTACHMENTS) {
 			throw new IllegalArgumentException(
 					"Discord allows at most " + MAX_ATTACHMENTS + " attachments per webhook (got "
 							+ attachments.size() + ")");
 		}
 		if (attachments.isEmpty()) {
-			return execute(webhookUrl, payload);
+			return execute(webhookUrl, payload, threadId);
 		}
 		hostValidator.requireAllowed(webhookUrl);
 		String payloadJson;
@@ -97,7 +114,8 @@ public class DiscordWebhookClient {
 		}
 		return execute(() -> forWebhookUrl(webhookUrl)
 				.post()
-				.uri(uriBuilder -> uriBuilder.path("").queryParam("wait", "true").build())
+				.uri(uriBuilder -> appendThreadId(
+						uriBuilder.path("").queryParam("wait", "true"), threadId).build())
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(parts)
 				.retrieve()
@@ -106,10 +124,20 @@ public class DiscordWebhookClient {
 
 	public WebhookMessage editMessage(String webhookUrl, String messageId, WebhookPayload payload)
 			throws DiscordApiException {
+		return editMessage(webhookUrl, messageId, payload, null);
+	}
+
+	public WebhookMessage editMessage(
+			String webhookUrl,
+			String messageId,
+			WebhookPayload payload,
+			@Nullable String threadId)
+			throws DiscordApiException {
 		hostValidator.requireAllowed(webhookUrl);
 		return execute(() -> forWebhookUrl(webhookUrl)
 				.patch()
-				.uri("/messages/{messageId}", messageId)
+				.uri(uriBuilder -> appendThreadId(
+						uriBuilder.path("/messages/{messageId}"), threadId).build(messageId))
 				.contentType(MediaType.APPLICATION_JSON)
 				.body(payload)
 				.retrieve()
@@ -122,6 +150,16 @@ public class DiscordWebhookClient {
 			WebhookPayload payload,
 			List<NamedAttachment> attachments)
 			throws DiscordApiException {
+		return editMessageWithAttachments(webhookUrl, messageId, payload, attachments, null);
+	}
+
+	public WebhookMessage editMessageWithAttachments(
+			String webhookUrl,
+			String messageId,
+			WebhookPayload payload,
+			List<NamedAttachment> attachments,
+			@Nullable String threadId)
+			throws DiscordApiException {
 		hostValidator.requireAllowed(webhookUrl);
 		if (attachments.size() > MAX_ATTACHMENTS) {
 			throw new IllegalArgumentException(
@@ -129,7 +167,7 @@ public class DiscordWebhookClient {
 							+ attachments.size() + ")");
 		}
 		if (attachments.isEmpty()) {
-			return editMessage(webhookUrl, messageId, payload);
+			return editMessage(webhookUrl, messageId, payload, threadId);
 		}
 		String payloadJson;
 		try {
@@ -163,11 +201,19 @@ public class DiscordWebhookClient {
 		}
 		return execute(() -> forWebhookUrl(webhookUrl)
 				.patch()
-				.uri("/messages/{messageId}", messageId)
+				.uri(uriBuilder -> appendThreadId(
+						uriBuilder.path("/messages/{messageId}"), threadId).build(messageId))
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(parts)
 				.retrieve()
 				.body(WebhookMessage.class));
+	}
+
+	private static UriBuilder appendThreadId(UriBuilder builder, @Nullable String threadId) {
+		if (threadId != null) {
+			builder.queryParam("thread_id", threadId);
+		}
+		return builder;
 	}
 
 	private RestClient forWebhookUrl(String webhookUrl) {
