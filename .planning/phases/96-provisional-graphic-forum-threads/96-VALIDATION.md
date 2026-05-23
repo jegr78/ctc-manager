@@ -1,10 +1,11 @@
 ---
 phase: 96
 slug: provisional-graphic-forum-threads
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-23
+completed: 2026-05-23
 ---
 
 # Phase 96 — Validation Strategy
@@ -40,20 +41,20 @@ created: 2026-05-23
 
 | Plan | Wave | Requirement | Test Class | Test Type | Automated Command | File Exists | Status |
 |------|------|-------------|------------|-----------|-------------------|-------------|--------|
-| 96-01 | 1 | GRAFX-01 | `ProvisionalScoresGraphicServiceTest` | unit (Mockito) | `./mvnw test -Dtest=ProvisionalScoresGraphicServiceTest` | ❌ W0 | ⬜ pending |
-| 96-01 | 1 | GRAFX-01 | `DiscordPostServiceProvisionalScoresIT` | IT (WireMock) | `./mvnw verify -Dit.test=DiscordPostServiceProvisionalScoresIT` | ❌ W0 | ⬜ pending |
-| 96-01 | 1 | GRAFX-01 | `MatchControllerProvisionalPostIT` | IT (WireMock + MockMvc) | `./mvnw verify -Dit.test=MatchControllerProvisionalPostIT` | ❌ W0 | ⬜ pending |
-| 96-01 | 1 | GRAFX-01 | `MatchDetailProvisionalButtonsE2ETest` | E2E (Playwright + Mobile sweep) | `./mvnw verify -Pe2e -Dit.test=MatchDetailProvisionalButtonsE2ETest` | ❌ W0 | ⬜ pending |
-| 96-02 | 2 | FORUM-01 | `DiscordForumServiceTest` | unit (Mockito) | `./mvnw test -Dtest=DiscordForumServiceTest` | ❌ W0 | ⬜ pending |
-| 96-02 | 2 | FORUM-01 | `DiscordForumServiceIT` | IT (WireMock) | `./mvnw verify -Dit.test=DiscordForumServiceIT` | ❌ W0 | ⬜ pending |
-| 96-02 | 2 | FORUM-01 | `SeasonControllerLinkThreadIT` | IT (WireMock + MockMvc) | `./mvnw verify -Dit.test=SeasonControllerLinkThreadIT` | ❌ W0 | ⬜ pending |
-| 96-02 | 2 | FORUM-01 | `V13MigrationIT` (Flyway H2+MariaDB drill) | IT (Flyway) | `./mvnw verify -Dit.test=V13MigrationIT` | ❌ W0 | ⬜ pending |
-| 96-02 | 2 | FORUM-01 | `SeasonEditDiscordSectionE2ETest` | E2E (Playwright + Mobile sweep) | `./mvnw verify -Pe2e -Dit.test=SeasonEditDiscordSectionE2ETest` | ❌ W0 | ⬜ pending |
-| 96-03 | 3 | FORUM-02 | `DiscordPostServiceRefBranchesTest` | unit (Mockito) | `./mvnw test -Dtest=DiscordPostServiceRefBranchesTest` | ❌ W0 | ⬜ pending |
-| 96-03 | 3 | FORUM-02 | `DiscordPostServiceForumThreadIT` | IT (WireMock) | `./mvnw verify -Dit.test=DiscordPostServiceForumThreadIT` | ❌ W0 | ⬜ pending |
-| 96-03 | 3 | FORUM-02 | `DiscordWebhookClientThreadIdIT` | IT (WireMock) | `./mvnw verify -Dit.test=DiscordWebhookClientThreadIdIT` | ❌ W0 | ⬜ pending |
-| 96-03 | 3 | FORUM-02 | `RaceControllerPostRaceResultToForumIT` | IT (WireMock + MockMvc) | `./mvnw verify -Dit.test=RaceControllerPostRaceResultToForumIT` | ❌ W0 | ⬜ pending |
-| 96-03 | 3 | FORUM-02 | `RaceDetailForumPostButtonE2ETest` | E2E (Playwright + Mobile sweep) | `./mvnw verify -Pe2e -Dit.test=RaceDetailForumPostButtonE2ETest` | ❌ W0 | ⬜ pending |
+| 96-01 | 1 | GRAFX-01 | `ProvisionalScoresGraphicServiceTest` | unit (Mockito) | `./mvnw test -Dtest=ProvisionalScoresGraphicServiceTest` | ✅ exists | ✅ green |
+| 96-01 | 1 | GRAFX-01 | `DiscordPostServiceProvisionalScoresIT` | IT (WireMock) | `./mvnw verify -Dit.test=DiscordPostServiceProvisionalScoresIT` | ✅ exists | ✅ green |
+| 96-01 | 1 | GRAFX-01 | `MatchControllerProvisionalPostIT` | IT (WireMock + MockMvc) | `./mvnw verify -Dit.test=MatchControllerProvisionalPostIT` | ✅ exists | ✅ green |
+| 96-01 | 1 | GRAFX-01 | `MatchDetailProvisionalButtonsE2ETest` | E2E (Playwright + Mobile sweep) | `./mvnw verify -Pe2e -Dit.test=MatchDetailProvisionalButtonsE2ETest` | ✅ exists | ✅ green |
+| 96-02 | 2 | FORUM-01 | `DiscordForumServiceTest` | unit (Mockito) | `./mvnw test -Dtest=DiscordForumServiceTest` | ✅ exists | ✅ green |
+| 96-02 | 2 | FORUM-01 | `DiscordForumServiceIT` | IT (WireMock) | `./mvnw verify -Dit.test=DiscordForumServiceIT` | ✅ exists | ✅ green |
+| 96-02 | 2 | FORUM-01 | `SeasonControllerLinkThreadIT` | IT (WireMock + MockMvc) | `./mvnw verify -Dit.test=SeasonControllerLinkThreadIT` | ✅ exists | ✅ green |
+| 96-02 | 2 | FORUM-01 | `V13MigrationIT` (Flyway H2+MariaDB drill) | IT (Flyway) | `./mvnw verify -Dit.test=V13MigrationIT` | ✅ exists | ✅ green |
+| 96-02 | 2 | FORUM-01 | `SeasonEditDiscordSectionE2ETest` | E2E (Playwright + Mobile sweep) | `./mvnw verify -Pe2e -Dit.test=SeasonEditDiscordSectionE2ETest` | ✅ exists | ✅ green |
+| 96-03 | 3 | FORUM-02 | `DiscordPostServiceRefBranchesTest` | unit (Mockito) | `./mvnw test -Dtest=DiscordPostServiceRefBranchesTest` | ✅ exists | ✅ green |
+| 96-03 | 3 | FORUM-02 | `DiscordPostServiceForumThreadIT` | IT (WireMock) | `./mvnw verify -Dit.test=DiscordPostServiceForumThreadIT` | ✅ exists | ✅ green |
+| 96-03 | 3 | FORUM-02 | `DiscordWebhookClientThreadIdIT` | IT (WireMock) | `./mvnw verify -Dit.test=DiscordWebhookClientThreadIdIT` | ✅ exists | ✅ green |
+| 96-03 | 3 | FORUM-02 | `RaceControllerPostRaceResultToForumIT` | IT (WireMock + MockMvc) | `./mvnw verify -Dit.test=RaceControllerPostRaceResultToForumIT` | ✅ exists | ✅ green |
+| 96-03 | 3 | FORUM-02 | `RaceDetailForumPostButtonE2ETest` | E2E (Playwright + Mobile sweep) | `./mvnw verify -Pe2e -Dit.test=RaceDetailForumPostButtonE2ETest` | ✅ exists | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -77,20 +78,20 @@ created: 2026-05-23
 
 ## Wave 0 Requirements
 
-- [ ] `ProvisionalScoresGraphicServiceTest` (Plan 96-01 Wave 0)
-- [ ] `DiscordPostServiceProvisionalScoresIT` (Plan 96-01 Wave 0)
-- [ ] `MatchControllerProvisionalPostIT` (Plan 96-01 Wave 0)
-- [ ] `MatchDetailProvisionalButtonsE2ETest` (Plan 96-01 Wave 0)
-- [ ] `DiscordForumServiceTest` (Plan 96-02 Wave 0)
-- [ ] `DiscordForumServiceIT` (Plan 96-02 Wave 0)
-- [ ] `SeasonControllerLinkThreadIT` (Plan 96-02 Wave 0)
-- [ ] `V13MigrationIT` (Plan 96-02 Wave 0)
-- [ ] `SeasonEditDiscordSectionE2ETest` (Plan 96-02 Wave 0)
-- [ ] `DiscordPostServiceRefBranchesTest` (Plan 96-03 Wave 0)
-- [ ] `DiscordPostServiceForumThreadIT` (Plan 96-03 Wave 0)
-- [ ] `DiscordWebhookClientThreadIdIT` (Plan 96-03 Wave 0)
-- [ ] `RaceControllerPostRaceResultToForumIT` (Plan 96-03 Wave 0)
-- [ ] `RaceDetailForumPostButtonE2ETest` (Plan 96-03 Wave 0)
+- [x] `ProvisionalScoresGraphicServiceTest` (Plan 96-01 Wave 0)
+- [x] `DiscordPostServiceProvisionalScoresIT` (Plan 96-01 Wave 0)
+- [x] `MatchControllerProvisionalPostIT` (Plan 96-01 Wave 0)
+- [x] `MatchDetailProvisionalButtonsE2ETest` (Plan 96-01 Wave 0)
+- [x] `DiscordForumServiceTest` (Plan 96-02 Wave 0)
+- [x] `DiscordForumServiceIT` (Plan 96-02 Wave 0)
+- [x] `SeasonControllerLinkThreadIT` (Plan 96-02 Wave 0)
+- [x] `V13MigrationIT` (Plan 96-02 Wave 0)
+- [x] `SeasonEditDiscordSectionE2ETest` (Plan 96-02 Wave 0)
+- [x] `DiscordPostServiceRefBranchesTest` (Plan 96-03 Wave 0)
+- [x] `DiscordPostServiceForumThreadIT` (Plan 96-03 Wave 0)
+- [x] `DiscordWebhookClientThreadIdIT` (Plan 96-03 Wave 0)
+- [x] `RaceControllerPostRaceResultToForumIT` (Plan 96-03 Wave 0)
+- [x] `RaceDetailForumPostButtonE2ETest` (Plan 96-03 Wave 0)
 
 Existing infrastructure (JUnit 5, Mockito, WireMock, Playwright, JaCoCo, SpotBugs, CodeQL) covers all Phase-96 dimensions — no framework install required.
 
@@ -108,12 +109,33 @@ Existing infrastructure (JUnit 5, Mockito, WireMock, Playwright, JaCoCo, SpotBug
 
 ## Validation Sign-Off
 
-- [ ] Plans 96-01..03 each ship with `<acceptance_criteria>` per task referencing the test classes in the Per-Task Verification Map
-- [ ] Plans 96-01..03 each ship with their own `VALIDATION.md` per D-96-08 (per-plan Nyquist file)
-- [ ] Sampling continuity: each plan wave has ≥ 1 unit test + ≥ 1 WireMock IT + ≥ 1 Playwright E2E
-- [ ] Wave 0 covers all 14 MISSING references (created during execution per `superpowers:test-driven-development`)
-- [ ] No watch-mode flags (project convention — `./mvnw verify` is single-shot)
-- [ ] Feedback latency: < 30s task-quick, < 16m wave-full, < 18m phase-close-with-E2E
-- [ ] `nyquist_compliant: true` set in frontmatter after `/gsd-validate-phase 96` PASS
+- [x] Plans 96-01..03 each ship with `<acceptance_criteria>` per task referencing the test classes in the Per-Task Verification Map
+- [x] Plans 96-01..03 each ship with their own `VALIDATION.md` per D-96-08 (per-plan Nyquist file)
+- [x] Sampling continuity: each plan wave has ≥ 1 unit test + ≥ 1 WireMock IT + ≥ 1 Playwright E2E
+- [x] Wave 0 covers all 14 MISSING references (created during execution per `superpowers:test-driven-development`)
+- [x] No watch-mode flags (project convention — `./mvnw verify` is single-shot)
+- [x] Feedback latency: < 30s task-quick, < 16m wave-full, < 18m phase-close-with-E2E
+- [x] `nyquist_compliant: true` set in frontmatter after `/gsd-validate-phase 96` PASS
 
-**Approval:** pending
+**Approval:** COMPLETE 2026-05-23 — Phase 96 close-gate green (2120 tests, commit `3791622f`); UAT-06 full PASS (commit `b01af26d`).
+
+---
+
+## Validation Audit 2026-05-23
+
+| Metric | Count |
+|--------|-------|
+| Planned test classes | 14 |
+| Files exist on disk | 14 |
+| Per-plan VALIDATION marked compliant | 3 / 3 (96-01, 96-02, 96-03) |
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+**Evidence base:**
+
+- Targeted quick run during audit: `./mvnw test -Dtest='ProvisionalScores*,DiscordPostServiceRefBranchesTest,DiscordForumServiceTest'` → **19 tests, 0 failures, 0 errors, 0 skipped** (2.85 s).
+- Phase-close gate: full `./mvnw verify -Pe2e` recorded in commit `3791622f` ("Phase-96 close gate (2120 tests green) + stage UAT-06").
+- Manual-only / live-Discord verification: UAT-06 closed full PASS (commit `b01af26d`, auto-unarchive verified end-to-end against live test guild).
+
+**Drift fixed:** phase-level rollup frontmatter (`status`, `nyquist_compliant`, `wave_0_complete`) and Per-Task Map status column were stale relative to the per-plan VALIDATION.md files. No test gaps; documentation-only update.
