@@ -176,10 +176,18 @@ Post-merge self-resolving items (not tracked further):
   6. **Auto-unarchive smoke** — archive the linked forum thread manually in the Discord client (right-click → Archive Thread). Back to `/admin/races/{id}` → click `Re-Post Race Result` → expect the bot auto-unarchives the thread (D-96-FOR-4) THEN PATCHes the existing post. Verify in Discord — thread is active again AND the race-result message is updated; NO re-archive after.
   7. **3 distinct pre-flight tooltips** — pick 3 races violating each pre-flight gate (no results / no thread linked / no webhook configured) and verify the `Post Race Result` button renders as a disabled span with the corresponding tooltip text (`No race results yet` / `Link a race-results thread first` / `Configure race-results forum-webhook in Discord settings`).
   8. **Final verification on `/admin/discord/posts`** — filter by the test season's UUID → expect ≥1 PROVISIONAL_SCORES row (match channel) + ≥1 RACE_RESULTS row (forum thread, with thread_id captured in the URL). Both with non-null `attachments_replaced_at` after the re-post.
-- **Status:** pending operator action — **required before Phase 97 starts** (per D-96-10).
-- **Result:** _(operator fills after execution)_
-- **Date:** _(operator fills)_
-- **Screenshots:** _(operator links)_
+- **Status:** PARTIAL PASS 2026-05-23 — Steps 1, 2, 5, 5b, 7, 8 verified live via playwright-cli + live Discord client confirmation. Step 6 (manual archive + re-post for auto-unarchive smoke) still pending operator action; Steps 3-4 (Provisional Scores) accepted at Plan 96-01 wave-pause.
+- **Result:**
+  - **Step 1** ✅ `/admin/discord-config` shows both new Forum-Webhook-URL fields populated by `DiscordDevSeeder` from `.env.dev` (`DISCORD_DEV_RACE_RESULTS_FORUM_WEBHOOK_URL` + `DISCORD_DEV_STANDINGS_FORUM_WEBHOOK_URL`).
+  - **Step 2** ✅ `/admin/seasons/{id}/edit` Discord Integration card opens the Link-Thread modal, pinned thread (`Saison 4 - 2026`) auto-pre-selected, Confirm → `Thread linked.` success-flash, linked-state badge + Change Link + Unlink buttons render.
+  - **Steps 3-4** ✅ Provisional Scores accepted at Plan 96-01 wave-pause review (2026-05-23): "Provisional Scores can be posted and the layout looks good — I like that."
+  - **Step 5** ✅ `/admin/races/137b47e6-…` (ICL vs NFR) — `Post Race Result` button enabled when all 3 pre-flight predicates green. Click → `Race result posted to forum-thread.` success-flash. **Live Discord verification:** the `Scorecard ICL vs NFR · Group A — Matchday 3` PNG landed in the linked `Saison 4 - 2026` forum thread at 21:23 (CTC Results bot post).
+  - **Step 5b** ✅ Re-Post → button label flips to `Re-Post Race Result` → Click → same success-flash. **Live Discord verification:** the existing post is PATCHed (the `(edited)` indicator appears below the message); no new message created.
+  - **Step 6** ⬜ pending — operator manually archives the forum thread in the Discord client, then clicks `Re-Post Race Result` to verify the bot auto-unarchives (D-96-FOR-4: GET /channels → PATCH archived=false → POST/PATCH webhook); no re-archive after.
+  - **Step 7** ✅ all 3 distinct disabled-tooltip strings render via the same `Post Race Result` span: `No race results yet` (race in same season but `Results (0)`), `Link a race-results thread first` (race in different season without linked thread), `Configure race-results forum-webhook in Discord settings` (race in same season but global webhook URL cleared). Webhook URL restored to original `DiscordDevSeeder` value after the test.
+  - **Step 8** ✅ `/admin/discord/posts` listing shows the new `RACE_RESULTS` row with channel-id `1507061819448098836` (webhook-id segment) and `attachments_replaced_at` advanced after the Re-Post (the 21:23 row vs the 21:23:50 re-post timestamp).
+- **Date:** 2026-05-23 (Step 6 pending operator follow-up)
+- **Screenshots:** `.screenshots/uat-06/` (8 PNGs gitignored locally) + live Discord screenshot shared inline confirming `Saison 4 - 2026` forum thread received the Scorecard PNG with `(edited)` marker after the Re-Post.
 
 ## Accumulated Context
 
