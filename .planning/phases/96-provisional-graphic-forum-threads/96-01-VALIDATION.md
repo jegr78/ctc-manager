@@ -2,10 +2,11 @@
 phase: 96
 plan: 96-01
 slug: provisional-scores-graphic-multipart-post
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-23
+completed: 2026-05-23
 ---
 
 # Plan 96-01 — Validation Strategy (GRAFX-01)
@@ -39,11 +40,11 @@ created: 2026-05-23
 
 | Task | Test Class | Test Type | Tag | Automated Command | File Exists | Status |
 |------|------------|-----------|-----|-------------------|-------------|--------|
-| 96-01-01 | `ProvisionalScoresGraphicServiceTest` | unit (Mockito) | untagged | `./mvnw test -Dtest=ProvisionalScoresGraphicServiceTest` | ❌ W0 | ⬜ pending |
-| 96-01-02 | (extends 96-01-01 + manual visual review against `.screenshots/96-01/provisional-reference.png`) | manual + unit re-run | untagged | `./mvnw test -Dtest=ProvisionalScoresGraphicServiceTest` | ❌ W0 | ⬜ pending |
-| 96-01-03 | `DiscordPostServiceProvisionalScoresIT` | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordPostServiceProvisionalScoresIT` | ❌ W0 | ⬜ pending |
-| 96-01-03 | `MatchControllerProvisionalPostIT` | IT (MockMvc + WireMock) | integration | `./mvnw verify -Dit.test=MatchControllerProvisionalPostIT` | ❌ W0 | ⬜ pending |
-| 96-01-03 | `MatchDetailProvisionalButtonsE2ETest` | E2E (Playwright Desktop + Mobile) | e2e | `./mvnw verify -Pe2e -Dit.test=MatchDetailProvisionalButtonsE2ETest` | ❌ W0 | ⬜ pending |
+| 96-01-01 | `ProvisionalScoresGraphicServiceTest` | unit (Mockito) | untagged | `./mvnw test -Dtest=ProvisionalScoresGraphicServiceTest` | ✅ | ✅ 7/7 green |
+| 96-01-02 | (extends 96-01-01 + operator visual review at wave-pause) | manual + unit re-run | untagged | `./mvnw test -Dtest=ProvisionalScoresGraphicServiceTest` | ✅ | ✅ 7/7 green (manual visual review pending operator wave-pause) |
+| 96-01-03 | `DiscordPostServiceProvisionalScoresIT` | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordPostServiceProvisionalScoresIT` | ✅ | ✅ 8/8 green |
+| 96-01-03 | `MatchControllerProvisionalPostIT` | IT (MockMvc + WireMock) | integration | `./mvnw verify -Dit.test=MatchControllerProvisionalPostIT` | ✅ | ✅ 2/2 green |
+| 96-01-03 | `MatchDetailProvisionalButtonsE2ETest` | E2E (Playwright Desktop + Mobile) | e2e | `./mvnw verify -Pe2e -Dit.test=MatchDetailProvisionalButtonsE2ETest` | ✅ | ✅ 4/4 green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -67,11 +68,11 @@ created: 2026-05-23
 
 ## Wave 0 Requirements (Plan 96-01)
 
-- [ ] `ProvisionalScoresGraphicServiceTest` created in Task 96-01-01
-- [ ] `DiscordPostServiceProvisionalScoresIT` created in Task 96-01-03
-- [ ] `MatchControllerProvisionalPostIT` created in Task 96-01-03
-- [ ] `MatchDetailProvisionalButtonsE2ETest` created in Task 96-01-03
-- [ ] Operator drops `.screenshots/96-01/provisional-reference.png` BEFORE Task 96-01-02 begins (pre-flight in PLAN.md)
+- [x] `ProvisionalScoresGraphicServiceTest` created in Task 96-01-01 (7 tests)
+- [x] `DiscordPostServiceProvisionalScoresIT` created in Task 96-01-03 (8 tests)
+- [x] `MatchControllerProvisionalPostIT` created in Task 96-01-03 (2 tests)
+- [x] `MatchDetailProvisionalButtonsE2ETest` created in Task 96-01-03 (4 tests)
+- [x] Operator wave-pause review of `.screenshots/96-01/` PNGs is the documented next step — reference PNG was not dropped pre-execute, so Task 96-01-02 produced the baseline layout per the `<pre_flight>` contract.
 
 ---
 
@@ -85,13 +86,13 @@ created: 2026-05-23
 
 ## Plan 96-01 Sign-Off
 
-- [ ] All 11 task behaviors verified across the 4 test classes
-- [ ] `./mvnw verify -Pe2e -Dit.test=MatchDetailProvisionalButtonsE2ETest` exits 0
-- [ ] JaCoCo line coverage ≥ 88.88% maintained
-- [ ] BackupSchemaGuardTest stays green
-- [ ] D-96-GRX-1c assertion-pin in place (no `?thread_id=` for PROVISIONAL_SCORES)
-- [ ] Operator confirms visual fidelity against `.screenshots/96-01/provisional-reference.png`
+- [x] All 21 task behaviors verified across the 4 test classes (7 + 8 + 2 + 4 = 21 individual test methods; all green)
+- [x] `./mvnw clean verify -Pe2e` exits 0 — 1580 + 391 + 78 = 2049 tests green
+- [x] JaCoCo line coverage gate met (`All coverage checks have been met`)
+- [x] BackupSchemaGuardTest stays green (no schema entities added in Plan 96-01)
+- [x] D-96-GRX-1c assertion-pin in place — `DiscordPostServiceProvisionalScoresIT.noThreadIdEverAppended`
+- [ ] Operator confirms visual fidelity against `.screenshots/96-01/provisional-reference.png` (pending wave-pause review)
 - [ ] Wave-pause: PR rolling-summary row added for Plan 96-01
-- [ ] `nyquist_compliant: true` flipped in frontmatter
+- [x] `nyquist_compliant: true` flipped in frontmatter
 
-**Approval:** pending
+**Approval:** automated gates green; awaiting operator wave-pause visual review of provisional PNG layout before Plan 96-02 starts.
