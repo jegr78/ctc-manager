@@ -109,8 +109,10 @@ public class MatchController {
 		model.addAttribute("teamCardsPost", findTeamCardsPost(match));
 		model.addAttribute("settingsPost", findMatchPost(match, DiscordPostType.SETTINGS));
 		model.addAttribute("lineupsPost", findMatchPost(match, DiscordPostType.LINEUPS));
+		model.addAttribute("provisionalPost", findMatchPost(match, DiscordPostType.PROVISIONAL_SCORES));
 		model.addAttribute("matchHasCompleteSettings", discordPostService.matchHasCompleteSettings(match));
 		model.addAttribute("matchHasCompleteLineups", discordPostService.matchHasCompleteLineups(match));
+		model.addAttribute("matchHasProvisionalData", discordPostService.matchHasProvisionalData(match));
 
 		DiscordPost matchResultsPost = findMatchPost(match, DiscordPostType.MATCH_RESULTS);
 		model.addAttribute("matchResultsPost", matchResultsPost);
@@ -236,6 +238,19 @@ public class MatchController {
 			applyErrorFlash(redirectAttributes, e, "Post match results");
 		} catch (DiscordApiException e) {
 			applyErrorFlash(redirectAttributes, e, "Post match results");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
+	@PostMapping("/{id}/post-provisional")
+	public String postProvisional(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			discordPostService.postProvisionalScores(matchService.findById(id));
+			redirectAttributes.addFlashAttribute("successMessage", "Provisional scores posted.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Post provisional scores");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post provisional scores");
 		}
 		return "redirect:/admin/matches/" + id;
 	}

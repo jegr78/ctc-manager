@@ -113,6 +113,25 @@
                 </button>
             </form>
 
+            <form th:if="${provisionalPost == null and matchHasProvisionalData}"
+                  th:action="@{/admin/matches/{id}/post-provisional(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-provisional">
+                    Post Provisional Scores
+                </button>
+            </form>
+            <span th:if="${provisionalPost == null and not matchHasProvisionalData}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-provisional-disabled"
+                  title="Provisional needs at least one completed race">Post Provisional Scores</span>
+            <form th:if="${provisionalPost != null}"
+                  th:action="@{/admin/matches/{id}/post-provisional(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-provisional">
+                    Re-Post Provisional Scores
+                </button>
+            </form>
+
             <form th:if="${matchResultsPost == null and matchCanRenderResults}"
                   th:action="@{/admin/matches/{id}/post-match-results(id=${match.id})}"
                   method="post" class="form-inline">

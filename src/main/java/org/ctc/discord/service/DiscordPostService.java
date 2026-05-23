@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.MatchResultsGraphicService;
+import org.ctc.admin.service.ProvisionalScoresGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
@@ -65,6 +66,7 @@ public class DiscordPostService {
 	private final RaceLineupRepository raceLineupRepository;
 	private final MatchResultsGraphicService matchResultsGraphicService;
 	private final ResultsGraphicService resultsGraphicService;
+	private final ProvisionalScoresGraphicService provisionalScoresGraphicService;
 	private final DiscordTimestamps discordTimestamps;
 	private final Path uploadDir;
 
@@ -72,7 +74,8 @@ public class DiscordPostService {
 			value = "EI_EXPOSE_REP2",
 			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordPostRepository, DiscordHostValidator, "
 					+ "TeamCardService, SeasonTeamRepository, SettingsGraphicService, LineupGraphicService, "
-					+ "RaceLineupRepository, MatchResultsGraphicService, ResultsGraphicService, DiscordTimestamps) are intentionally shared "
+					+ "RaceLineupRepository, MatchResultsGraphicService, ResultsGraphicService, "
+					+ "ProvisionalScoresGraphicService, DiscordTimestamps) are intentionally shared "
 					+ "by-reference — defensive copying would break framework wiring. Matches the implicit suppression "
 					+ "that lombok.config adds to @RequiredArgsConstructor (see CLAUDE.md SpotBugs section + "
 					+ "lombok.config invariant).")
@@ -88,6 +91,7 @@ public class DiscordPostService {
 			RaceLineupRepository raceLineupRepository,
 			MatchResultsGraphicService matchResultsGraphicService,
 			ResultsGraphicService resultsGraphicService,
+			ProvisionalScoresGraphicService provisionalScoresGraphicService,
 			DiscordTimestamps discordTimestamps,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
@@ -101,6 +105,7 @@ public class DiscordPostService {
 		this.raceLineupRepository = raceLineupRepository;
 		this.matchResultsGraphicService = matchResultsGraphicService;
 		this.resultsGraphicService = resultsGraphicService;
+		this.provisionalScoresGraphicService = provisionalScoresGraphicService;
 		this.discordTimestamps = discordTimestamps;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
@@ -222,6 +227,39 @@ public class DiscordPostService {
 		List<Race> races = match.getRaces();
 		return !races.isEmpty()
 				&& races.stream().allMatch(r -> !raceLineupRepository.findByRaceId(r.getId()).isEmpty());
+	}
+
+	public boolean matchHasProvisionalData(Match match) {
+		List<Race> races = match.getRaces();
+		return !races.isEmpty() && races.stream().anyMatch(r -> !r.getResults().isEmpty());
+	}
+
+	@Transactional
+	public DiscordPost postProvisionalScores(Match match) throws DiscordApiException {
+		if (!matchHasProvisionalData(match)) {
+			throw new BusinessRuleException("Provisional needs at least one completed race");
+		}
+		List<NamedAttachment> attachments = new ArrayList<>();
+		try {
+			int raceNumber = 0;
+			for (Race race : match.getRaces()) {
+				if (race.getResults().isEmpty()) {
+					continue;
+				}
+				raceNumber++;
+				byte[] png = provisionalScoresGraphicService.generateProvisional(race, raceNumber);
+				attachments.add(new NamedAttachment("provisional-race-" + raceNumber + ".png", png));
+			}
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		return postOrEdit(
+				match.getDiscordChannelId(),
+				match.getDiscordChannelWebhookUrl(),
+				DiscordPostType.PROVISIONAL_SCORES,
+				WebhookPayload.empty(),
+				attachments,
+				DiscordPostRef.match(match));
 	}
 
 	@Transactional
