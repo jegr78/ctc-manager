@@ -1,9 +1,11 @@
 package org.ctc.discord;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.patch;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -98,6 +100,22 @@ class DiscordWebhookClientIT {
 
 		assertThatThrownBy(() -> client.execute(wm.baseUrl() + webhookPath, new WebhookPayload("hi", List.of())))
 				.isInstanceOf(DiscordTransientException.class);
+	}
+
+	@Test
+	void whenExecute_thenSendsWaitTrueQueryParam() throws Exception {
+		String webhookPath = "/api/v10/webhooks/100/abc";
+		wm.stubFor(post(urlPathEqualTo(webhookPath))
+				.withQueryParam("wait", equalTo("true"))
+				.willReturn(okJson("{\"id\":\"msg-1\",\"channel_id\":\"chan-1\"}")));
+
+		WebhookMessage out = client.execute(
+				wm.baseUrl() + webhookPath, new WebhookPayload("Game On!", List.of()));
+
+		assertThat(out).as("Discord returns 204 without ?wait=true — body must be non-null").isNotNull();
+		assertThat(out.id()).isEqualTo("msg-1");
+		wm.verify(postRequestedFor(urlPathEqualTo(webhookPath))
+				.withQueryParam("wait", equalTo("true")));
 	}
 
 	@Test

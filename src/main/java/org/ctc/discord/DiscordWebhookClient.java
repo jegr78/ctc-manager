@@ -47,7 +47,7 @@ public class DiscordWebhookClient {
 		try {
 			return execute(() -> forWebhookUrl(webhookUrl)
 					.post()
-					.uri("")
+					.uri(uriBuilder -> uriBuilder.path("").queryParam("wait", "true").build())
 					.contentType(MediaType.APPLICATION_JSON)
 					.body(payload)
 					.retrieve()
@@ -95,7 +95,7 @@ public class DiscordWebhookClient {
 		}
 		return execute(() -> forWebhookUrl(webhookUrl)
 				.post()
-				.uri("")
+				.uri(uriBuilder -> uriBuilder.path("").queryParam("wait", "true").build())
 				.contentType(MediaType.MULTIPART_FORM_DATA)
 				.body(parts)
 				.retrieve()

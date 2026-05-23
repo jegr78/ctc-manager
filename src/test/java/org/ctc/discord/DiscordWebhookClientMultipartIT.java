@@ -82,7 +82,24 @@ class DiscordWebhookClientMultipartIT {
 		WebhookMessage out = client.executeMultipart(wm.baseUrl() + webhookPath, payload, attachments);
 
 		assertThat(out.id()).isEqualTo("msg-2");
-		wm.verify(postRequestedFor(urlPathEqualTo(webhookPath)));
+		wm.verify(postRequestedFor(urlPathEqualTo(webhookPath))
+				.withQueryParam("wait", equalTo("true")));
+	}
+
+	@Test
+	void whenExecuteMultipart_thenSendsWaitTrueQueryParam() throws Exception {
+		String webhookPath = "/api/v10/webhooks/100/abc";
+		wm.stubFor(post(urlPathEqualTo(webhookPath))
+				.withQueryParam("wait", equalTo("true"))
+				.willReturn(okJson("{\"id\":\"msg-wait\",\"channel_id\":\"chan-1\"}")));
+
+		WebhookMessage out = client.executeMultipart(
+				wm.baseUrl() + webhookPath,
+				new WebhookPayload("hi", List.of()),
+				List.of(new NamedAttachment("a.png", PNG_BYTES)));
+
+		assertThat(out).as("Discord returns 204 without ?wait=true — body must be non-null").isNotNull();
+		assertThat(out.id()).isEqualTo("msg-wait");
 	}
 
 	@Test
