@@ -43,9 +43,36 @@ class DiscordApiExceptionMapperTest {
 	}
 
 	@Test
-	void givenStatus403_whenFrom_thenReturnsDiscordAuthException() {
-		// given
+	void givenStatus403WithoutMissingPermissionsCode_whenFrom_thenReturnsDiscordAuthException() {
+		// given — bare 403 (no Discord error code) means real token rejection
 		var rcre = mockRcre(403, "{}");
+
+		// when
+		DiscordApiException actual = DiscordApiExceptionMapper.from(rcre);
+
+		// then
+		assertThat(actual).isInstanceOf(DiscordAuthException.class);
+		assertThat(actual.category()).isEqualTo(Category.AUTH);
+	}
+
+	@Test
+	void givenStatus403WithCode50013_whenFrom_thenReturnsDiscordMissingPermissionsException() {
+		// given — Discord JSON error code 50013 == "Missing Permissions"
+		var rcre = mockRcre(403, "{\"code\":50013,\"message\":\"Missing Permissions\"}");
+
+		// when
+		DiscordApiException actual = DiscordApiExceptionMapper.from(rcre);
+
+		// then
+		assertThat(actual).isInstanceOf(DiscordMissingPermissionsException.class);
+		assertThat(actual.category()).isEqualTo(Category.MISSING_PERMISSIONS);
+		assertThat(actual.getMessage()).isEqualTo(DiscordApiExceptionMapper.MISSING_PERMISSIONS_MESSAGE);
+	}
+
+	@Test
+	void givenStatus403WithOtherDiscordCode_whenFrom_thenReturnsDiscordAuthException() {
+		// given — any 403 with a Discord code that is NOT 50013 stays AUTH
+		var rcre = mockRcre(403, "{\"code\":50001,\"message\":\"Missing Access\"}");
 
 		// when
 		DiscordApiException actual = DiscordApiExceptionMapper.from(rcre);
@@ -141,12 +168,14 @@ class DiscordApiExceptionMapperTest {
 		// given — sealed-permits sanity: each permit reports its matching Category
 		DiscordApiException transient_ = new DiscordTransientException("t", null);
 		DiscordApiException auth = new DiscordAuthException("a", null);
+		DiscordApiException missingPermissions = new DiscordMissingPermissionsException("mp", null);
 		DiscordApiException notFound = new DiscordNotFoundException("nf", null);
 		DiscordApiException categoryFull = new DiscordCategoryFullException("cf", null);
 
 		// when / then
 		assertThat(transient_.category()).isEqualTo(Category.TRANSIENT);
 		assertThat(auth.category()).isEqualTo(Category.AUTH);
+		assertThat(missingPermissions.category()).isEqualTo(Category.MISSING_PERMISSIONS);
 		assertThat(notFound.category()).isEqualTo(Category.NOT_FOUND);
 		assertThat(categoryFull.category()).isEqualTo(Category.CATEGORY_FULL);
 	}

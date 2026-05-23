@@ -389,6 +389,7 @@ select option {
 }
 .error-badge--transient     { background: #3b2e0e; color: #ffb74d; border: 1px solid #b26a00; }
 .error-badge--auth          { background: var(--danger-bg); color: #ef5350; border: 1px solid #d32f2f; }
+.error-badge--missing-permissions { background: var(--danger-bg); color: #ef5350; border: 1px solid #d32f2f; }
 .error-badge--not-found     { background: #2a2a3a; color: #90caf9; border: 1px solid #1976d2; }
 .error-badge--permission    { background: var(--danger-bg); color: #ef5350; border: 1px solid #d32f2f; }
 .error-badge--category-full { background: #3b2a0a; color: #ffcc80; border: 1px solid #e69138; }

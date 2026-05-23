@@ -46,16 +46,20 @@ class DiscordPermissionsTest {
 	}
 
 	@Test
-	void givenTeamMemberDenyMask_whenComputed_thenEqualsExpectedComposite() {
-		long expected = CONNECT
-				| SPEAK
-				| MANAGE_CHANNELS
+	void givenTeamMemberDenyMask_whenComputed_thenEqualsExpectedCompositeWithoutVoiceBits() {
+		long expected = MANAGE_CHANNELS
 				| MANAGE_MESSAGES
 				| MANAGE_THREADS
 				| MANAGE_WEBHOOKS
 				| CREATE_INSTANT_INVITE
 				| MENTION_EVERYONE;
 		assertThat(TEAM_MEMBER_DENY_MASK).isEqualTo(expected);
+	}
+
+	@Test
+	void givenTeamMemberDenyMask_whenInspected_thenExcludesVoiceBitsToAvoid50013InCommunityGuilds() {
+		assertThat(TEAM_MEMBER_DENY_MASK & CONNECT).isZero();
+		assertThat(TEAM_MEMBER_DENY_MASK & SPEAK).isZero();
 	}
 
 	@Test

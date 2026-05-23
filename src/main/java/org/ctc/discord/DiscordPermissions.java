@@ -38,10 +38,14 @@ public final class DiscordPermissions {
 					| USE_EXTERNAL_EMOJIS
 					| USE_EXTERNAL_STICKERS;
 
+	// Text-channel-only deny mask. Voice-related bits (CONNECT, SPEAK) are intentionally
+	// excluded because match channels are text channels — including voice bits has no
+	// functional effect but Discord's "you can't grant what you don't have" rule still
+	// inspects every bit, so requiring the bot to hold CONNECT/SPEAK unnecessarily widens
+	// the bot's required-permissions set and triggers code 50013 in Community-mode guilds
+	// where bots rarely carry voice permissions by default.
 	public static final long TEAM_MEMBER_DENY_MASK =
-			CONNECT
-					| SPEAK
-					| MANAGE_CHANNELS
+			MANAGE_CHANNELS
 					| MANAGE_MESSAGES
 					| MANAGE_THREADS
 					| MANAGE_WEBHOOKS
