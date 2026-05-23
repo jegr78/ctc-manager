@@ -22,26 +22,33 @@ import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.DiscordHostValidator;
+import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.DiscordTimestamps;
 import org.ctc.discord.DiscordWebhookClient;
+import org.ctc.discord.dto.Channel;
+import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.dto.DiscordPostRef;
 import org.ctc.discord.dto.Embed;
 import org.ctc.discord.dto.EmbedField;
 import org.ctc.discord.dto.NamedAttachment;
+import org.ctc.discord.dto.ThreadMetadata;
 import org.ctc.discord.dto.WebhookMessage;
 import org.ctc.discord.dto.WebhookPayload;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordTransientException;
+import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.model.DiscordPostType;
 import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Race;
+import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonTeamRepository;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,8 +63,10 @@ public class DiscordPostService {
 	private static final String UPLOADS_PREFIX = "/uploads/";
 
 	private final DiscordWebhookClient webhookClient;
+	private final DiscordRestClient restClient;
 	private final DiscordPostRepository discordPostRepository;
 	private final DiscordHostValidator hostValidator;
+	private final DiscordGlobalConfigService globalConfigService;
 	private final Clock clock;
 	private final TeamCardService teamCardService;
 	private final SeasonTeamRepository seasonTeamRepository;
@@ -72,17 +81,19 @@ public class DiscordPostService {
 
 	@SuppressFBWarnings(
 			value = "EI_EXPOSE_REP2",
-			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordPostRepository, DiscordHostValidator, "
-					+ "TeamCardService, SeasonTeamRepository, SettingsGraphicService, LineupGraphicService, "
-					+ "RaceLineupRepository, MatchResultsGraphicService, ResultsGraphicService, "
-					+ "ProvisionalScoresGraphicService, DiscordTimestamps) are intentionally shared "
+			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordRestClient, DiscordPostRepository, "
+					+ "DiscordHostValidator, DiscordGlobalConfigService, TeamCardService, SeasonTeamRepository, "
+					+ "SettingsGraphicService, LineupGraphicService, RaceLineupRepository, MatchResultsGraphicService, "
+					+ "ResultsGraphicService, ProvisionalScoresGraphicService, DiscordTimestamps) are intentionally shared "
 					+ "by-reference — defensive copying would break framework wiring. Matches the implicit suppression "
 					+ "that lombok.config adds to @RequiredArgsConstructor (see CLAUDE.md SpotBugs section + "
 					+ "lombok.config invariant).")
 	public DiscordPostService(
 			DiscordWebhookClient webhookClient,
+			DiscordRestClient restClient,
 			DiscordPostRepository discordPostRepository,
 			DiscordHostValidator hostValidator,
+			DiscordGlobalConfigService globalConfigService,
 			Clock clock,
 			TeamCardService teamCardService,
 			SeasonTeamRepository seasonTeamRepository,
@@ -95,8 +106,10 @@ public class DiscordPostService {
 			DiscordTimestamps discordTimestamps,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
+		this.restClient = restClient;
 		this.discordPostRepository = discordPostRepository;
 		this.hostValidator = hostValidator;
+		this.globalConfigService = globalConfigService;
 		this.clock = clock;
 		this.teamCardService = teamCardService;
 		this.seasonTeamRepository = seasonTeamRepository;
@@ -320,33 +333,53 @@ public class DiscordPostService {
 			List<NamedAttachment> attachments,
 			DiscordPostRef ref)
 			throws DiscordApiException {
+		return postOrEdit(channelId, webhookUrl, type, payload, attachments, ref, null);
+	}
+
+	@Transactional
+	public DiscordPost postOrEdit(
+			String channelId,
+			String webhookUrl,
+			DiscordPostType type,
+			WebhookPayload payload,
+			List<NamedAttachment> attachments,
+			DiscordPostRef ref,
+			@Nullable String threadId)
+			throws DiscordApiException {
 		hostValidator.requireAllowed(webhookUrl);
-		if (!(ref instanceof DiscordPostRef.MatchRef)) {
-			throw new UnsupportedOperationException(
-					"DiscordPostService.postOrEdit currently supports MatchRef only (Phase 96/97 wires the other permits); got "
-							+ ref.getClass().getSimpleName());
+		if (threadId != null) {
+			unarchiveIfArchived(threadId);
 		}
 		WebhookCredentials creds = parseWebhookUrl(webhookUrl);
-		Optional<DiscordPost> existing = discordPostRepository
-				.findByChannelIdAndPostTypeAndMatchId(channelId, type, ref.matchId());
+		Optional<DiscordPost> existing = switch (ref) {
+			case DiscordPostRef.MatchRef m ->
+					discordPostRepository.findByChannelIdAndPostTypeAndMatchId(channelId, type, m.id());
+			case DiscordPostRef.RaceRef r ->
+					discordPostRepository.findByChannelIdAndPostTypeAndRaceId(channelId, type, r.id());
+			case DiscordPostRef.SeasonRef s ->
+					discordPostRepository.findByChannelIdAndPostTypeAndSeasonId(channelId, type, s.id());
+			case DiscordPostRef.MatchdayRef d ->
+					discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(channelId, type, d.id());
+		};
 		LocalDateTime now = LocalDateTime.now(clock);
 
 		if (existing.isPresent()) {
 			DiscordPost row = existing.get();
 			if (attachments.isEmpty()) {
-				webhookClient.editMessage(webhookUrl, row.getMessageId(), payload);
+				webhookClient.editMessage(webhookUrl, row.getMessageId(), payload, threadId);
 			} else {
-				webhookClient.editMessageWithAttachments(webhookUrl, row.getMessageId(), payload, attachments);
+				webhookClient.editMessageWithAttachments(
+						webhookUrl, row.getMessageId(), payload, attachments, threadId);
 				row.setAttachmentsReplacedAt(now);
 			}
 			DiscordPost saved = discordPostRepository.save(row);
-			log.info("Edited {} for match {} (messageId={})", type, ref.matchId(), saved.getMessageId());
+			log.info("Edited {} for ref {} (messageId={})", type, ref, saved.getMessageId());
 			return saved;
 		}
 
 		WebhookMessage msg = attachments.isEmpty()
-				? webhookClient.execute(webhookUrl, payload)
-				: webhookClient.executeMultipart(webhookUrl, payload, attachments);
+				? webhookClient.execute(webhookUrl, payload, threadId)
+				: webhookClient.executeMultipart(webhookUrl, payload, attachments, threadId);
 		DiscordPost row = new DiscordPost();
 		row.setChannelId(channelId);
 		row.setMessageId(msg.id());
@@ -359,8 +392,59 @@ public class DiscordPostService {
 		}
 		ref.applyTo(row);
 		DiscordPost saved = discordPostRepository.save(row);
-		log.info("Posted {} for match {} (messageId={})", type, ref.matchId(), saved.getMessageId());
+		log.info("Posted {} for ref {} (messageId={})", type, ref, saved.getMessageId());
 		return saved;
+	}
+
+	private void unarchiveIfArchived(String threadId) throws DiscordApiException {
+		Channel thread = restClient.fetchChannel(threadId);
+		ThreadMetadata md = thread.threadMetadata();
+		if (md != null && md.isArchived()) {
+			log.info("Unarchiving forum thread {} before post", threadId);
+			restClient.modifyChannel(threadId, ChannelModifyRequest.unarchive());
+		}
+	}
+
+	public boolean canPostRaceResultToForum(Race race, DiscordGlobalConfig config) {
+		if (race.getResults().isEmpty()) {
+			return false;
+		}
+		Season season = race.getMatchday().getSeason();
+		String threadId = season.getDiscordRaceResultsThreadId();
+		if (threadId == null || threadId.isBlank()) {
+			return false;
+		}
+		String webhookUrl = config.getRaceResultsForumWebhookUrl();
+		return webhookUrl != null && !webhookUrl.isBlank();
+	}
+
+	@Transactional
+	public DiscordPost postRaceResultToForumThread(Race race) throws DiscordApiException {
+		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
+		if (!canPostRaceResultToForum(race, config)) {
+			throw new BusinessRuleException(
+					"Race result cannot be posted to forum-thread — check race results, linked thread, and webhook configuration.");
+		}
+		Season season = race.getMatchday().getSeason();
+		String threadId = season.getDiscordRaceResultsThreadId();
+		String webhookUrl = config.getRaceResultsForumWebhookUrl();
+		WebhookCredentials creds = parseWebhookUrl(webhookUrl);
+		try {
+			byte[] png = resultsGraphicService.generateResultsBytes(race);
+			int raceNumber = race.getMatchday().getRaces().indexOf(race) + 1;
+			String filename = "race-result-" + race.getMatchday().getLabel() + "-race-" + raceNumber + ".png";
+			NamedAttachment attachment = new NamedAttachment(filename, png);
+			return postOrEdit(
+					creds.id(),
+					webhookUrl,
+					DiscordPostType.RACE_RESULTS,
+					WebhookPayload.empty(),
+					List.of(attachment),
+					DiscordPostRef.race(race),
+					threadId);
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
 	}
 
 	@Transactional

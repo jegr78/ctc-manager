@@ -10,9 +10,15 @@ public record Channel(
 		String name,
 		int type,
 		@JsonProperty("parent_id") String parentId,
-		@JsonProperty("permission_overwrites") List<PermissionOverwrite> permissionOverwrites) {
+		@JsonProperty("permission_overwrites") List<PermissionOverwrite> permissionOverwrites,
+		@JsonProperty("thread_metadata") ThreadMetadata threadMetadata) {
 
 	public Channel(String id, String name, int type, String parentId) {
-		this(id, name, type, parentId, null);
+		this(id, name, type, parentId, null, null);
+	}
+
+	public Channel(String id, String name, int type, String parentId,
+			List<PermissionOverwrite> permissionOverwrites) {
+		this(id, name, type, parentId, permissionOverwrites, null);
 	}
 }

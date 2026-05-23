@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.UUID;
 import org.ctc.discord.DiscordHostValidator;
+import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.DiscordWebhookClient;
 import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.model.Match;
@@ -28,8 +29,10 @@ class DiscordPostServicePreFlightTest {
 		raceLineupRepository = mock(RaceLineupRepository.class);
 		service = new DiscordPostService(
 				mock(DiscordWebhookClient.class),
+				mock(DiscordRestClient.class),
 				mock(DiscordPostRepository.class),
 				mock(DiscordHostValidator.class),
+				mock(DiscordGlobalConfigService.class),
 				java.time.Clock.systemUTC(),
 				mock(org.ctc.admin.service.TeamCardService.class),
 				mock(SeasonTeamRepository.class),
