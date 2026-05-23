@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.MatchResultsGraphicService;
+import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.DiscordHostValidator;
@@ -63,6 +64,7 @@ public class DiscordPostService {
 	private final LineupGraphicService lineupGraphicService;
 	private final RaceLineupRepository raceLineupRepository;
 	private final MatchResultsGraphicService matchResultsGraphicService;
+	private final ResultsGraphicService resultsGraphicService;
 	private final DiscordTimestamps discordTimestamps;
 	private final Path uploadDir;
 
@@ -70,7 +72,7 @@ public class DiscordPostService {
 			value = "EI_EXPOSE_REP2",
 			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordPostRepository, DiscordHostValidator, "
 					+ "TeamCardService, SeasonTeamRepository, SettingsGraphicService, LineupGraphicService, "
-					+ "RaceLineupRepository, MatchResultsGraphicService, DiscordTimestamps) are intentionally shared "
+					+ "RaceLineupRepository, MatchResultsGraphicService, ResultsGraphicService, DiscordTimestamps) are intentionally shared "
 					+ "by-reference — defensive copying would break framework wiring. Matches the implicit suppression "
 					+ "that lombok.config adds to @RequiredArgsConstructor (see CLAUDE.md SpotBugs section + "
 					+ "lombok.config invariant).")
@@ -85,6 +87,7 @@ public class DiscordPostService {
 			LineupGraphicService lineupGraphicService,
 			RaceLineupRepository raceLineupRepository,
 			MatchResultsGraphicService matchResultsGraphicService,
+			ResultsGraphicService resultsGraphicService,
 			DiscordTimestamps discordTimestamps,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
@@ -97,6 +100,7 @@ public class DiscordPostService {
 		this.lineupGraphicService = lineupGraphicService;
 		this.raceLineupRepository = raceLineupRepository;
 		this.matchResultsGraphicService = matchResultsGraphicService;
+		this.resultsGraphicService = resultsGraphicService;
 		this.discordTimestamps = discordTimestamps;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
@@ -111,19 +115,24 @@ public class DiscordPostService {
 		if (!matchCanRenderResults(match)) {
 			throw new BusinessRuleException("Match results require at least one race result.");
 		}
-		byte[] png;
+		List<Race> races = match.getRaces();
+		List<NamedAttachment> attachments = new ArrayList<>(races.size() + 1);
 		try {
-			png = matchResultsGraphicService.generateMatchResults(match);
+			byte[] overviewPng = matchResultsGraphicService.generateMatchResults(match);
+			attachments.add(new NamedAttachment("match-results.png", overviewPng));
+			for (int i = 0; i < races.size(); i++) {
+				byte[] racePng = readPng(resultsGraphicService.generateResults(races.get(i)));
+				attachments.add(new NamedAttachment("race-" + (i + 1) + "-results.png", racePng));
+			}
 		} catch (IOException e) {
 			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
 		}
-		NamedAttachment att = new NamedAttachment("match-results.png", png);
 		return postOrEdit(
 				match.getDiscordChannelId(),
 				match.getDiscordChannelWebhookUrl(),
 				DiscordPostType.MATCH_RESULTS,
 				WebhookPayload.empty(),
-				List.of(att),
+				attachments,
 				DiscordPostRef.match(match));
 	}
 

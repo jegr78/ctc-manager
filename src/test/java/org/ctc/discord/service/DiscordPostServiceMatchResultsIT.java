@@ -17,6 +17,7 @@ import static org.mockito.Mockito.when;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.ctc.TestHelper;
 import org.ctc.admin.service.MatchResultsGraphicService;
+import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Driver;
@@ -79,10 +80,20 @@ class DiscordPostServiceMatchResultsIT {
 	@MockitoBean
 	MatchResultsGraphicService matchResultsGraphicService;
 
+	@MockitoBean
+	ResultsGraphicService resultsGraphicService;
+
+	@org.springframework.beans.factory.annotation.Value("${app.upload-dir:uploads}")
+	String uploadDir;
+
 	@BeforeEach
 	void resetWireMock() throws Exception {
 		wm.resetAll();
 		when(matchResultsGraphicService.generateMatchResults(any(Match.class))).thenReturn(PNG_BYTES);
+		java.nio.file.Path dummy = java.nio.file.Path.of(uploadDir, "races/mr-dummy.png").toAbsolutePath().normalize();
+		java.nio.file.Files.createDirectories(dummy.getParent());
+		java.nio.file.Files.write(dummy, PNG_BYTES);
+		when(resultsGraphicService.generateResults(any(Race.class))).thenReturn("/uploads/races/mr-dummy.png");
 	}
 
 	private Match seedMatchWith2RacesAndResults(String suffix, String webhookUrl, boolean allHaveResults) {
@@ -161,5 +172,26 @@ class DiscordPostServiceMatchResultsIT {
 		DiscordPost saved = service.postMatchResults(match);
 
 		assertThat(saved.getMessageId()).isEqualTo("msg-mr4");
+	}
+
+	@Test
+	void givenMatchWith2Races_whenPostMatchResults_thenBundleContainsOverviewPlusOnePerRace() throws Exception {
+		String webhookPath = "/webhooks/904/tok-mr5";
+		Match match = seedMatchWith2RacesAndResults("R5", wm.baseUrl() + webhookPath, true);
+		wm.stubFor(post(urlPathEqualTo(webhookPath))
+				.withMultipartRequestBody(aMultipart("files[0]")
+						.withHeader("Content-Type", equalTo("image/png")))
+				.withMultipartRequestBody(aMultipart("files[1]")
+						.withHeader("Content-Type", equalTo("image/png")))
+				.withMultipartRequestBody(aMultipart("files[2]")
+						.withHeader("Content-Type", equalTo("image/png")))
+				.willReturn(okJson("{\"id\":\"msg-mr5\",\"channel_id\":\"chan-mr-R5\"}")));
+
+		DiscordPost saved = service.postMatchResults(match);
+
+		assertThat(saved.getMessageId())
+				.as("MATCH_RESULTS must bundle 1 overview + 1 per-race PNG (3 attachments for 2 races)")
+				.isEqualTo("msg-mr5");
+		verify(resultsGraphicService, org.mockito.Mockito.times(2)).generateResults(any(Race.class));
 	}
 }
