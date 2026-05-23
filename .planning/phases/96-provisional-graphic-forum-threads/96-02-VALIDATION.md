@@ -2,10 +2,11 @@
 phase: 96
 plan: 96-02
 slug: v13-schema-discord-config-season-discord-section-forum-service
-status: draft
+status: tests-green-awaiting-operator
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-05-23
+completed: 2026-05-23
 ---
 
 # Plan 96-02 — Validation Strategy (FORUM-01)
@@ -39,12 +40,12 @@ created: 2026-05-23
 
 | Task | Test Class | Test Type | Tag | Automated Command | File Exists | Status |
 |------|------------|-----------|-----|-------------------|-------------|--------|
-| 96-02-01 | `V13MigrationIT` | IT (Flyway H2+MariaDB drill) | integration | `./mvnw verify -Dit.test=V13MigrationIT` | ❌ W0 | ⬜ pending |
-| 96-02-01 | `DiscordConfigFormTest` / `SeasonFormTest` (extend if existing) | unit (Bean Validation) | untagged | `./mvnw test -Dtest='DiscordConfigFormTest,SeasonFormTest'` | ✅ if exists | ⬜ pending |
-| 96-02-02 | `DiscordForumServiceTest` | unit (Mockito) | untagged | `./mvnw test -Dtest=DiscordForumServiceTest` | ❌ W0 | ⬜ pending |
-| 96-02-02 | `DiscordForumServiceIT` | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordForumServiceIT` | ❌ W0 | ⬜ pending |
-| 96-02-03 | `SeasonControllerLinkThreadIT` | IT (MockMvc + WireMock) | integration | `./mvnw verify -Dit.test=SeasonControllerLinkThreadIT` | ❌ W0 | ⬜ pending |
-| 96-02-03 | `SeasonEditDiscordSectionE2ETest` | E2E (Playwright Desktop + Mobile) | e2e | `./mvnw verify -Pe2e -Dit.test=SeasonEditDiscordSectionE2ETest` | ❌ W0 | ⬜ pending |
+| 96-02-01 | `V13MigrationIT` | IT (Flyway H2+MariaDB drill) | integration | `./mvnw verify -Dit.test=V13MigrationIT` | ✅ | ✅ 3/3 green |
+| 96-02-01 | `DiscordConfigFormTest` + `SeasonFormTest` | unit (Bean Validation) | untagged | `./mvnw test -Dtest='DiscordConfigFormTest,SeasonFormTest'` | ✅ | ✅ 9 + 5 green |
+| 96-02-02 | `DiscordForumServiceTest` | unit (Mockito) | untagged | `./mvnw test -Dtest=DiscordForumServiceTest` | ✅ | ✅ 7/7 green |
+| 96-02-02 | `DiscordForumServiceIT` | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordForumServiceIT` | ✅ | ✅ 4/4 green |
+| 96-02-03 | `SeasonControllerLinkThreadIT` | IT (MockMvc + WireMock) | integration | `./mvnw verify -Dit.test=SeasonControllerLinkThreadIT` | ✅ | ✅ 6/6 green |
+| 96-02-03 | `SeasonEditDiscordSectionE2ETest` | E2E (Playwright Desktop + Mobile) | e2e | `./mvnw verify -Pe2e -Dit.test=SeasonEditDiscordSectionE2ETest` | ✅ | ✅ 5/5 green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -69,11 +70,11 @@ created: 2026-05-23
 
 ## Wave 0 Requirements (Plan 96-02)
 
-- [ ] `V13MigrationIT` created in Task 96-02-01
-- [ ] `DiscordForumServiceTest` created in Task 96-02-02
-- [ ] `DiscordForumServiceIT` created in Task 96-02-02
-- [ ] `SeasonControllerLinkThreadIT` created in Task 96-02-03
-- [ ] `SeasonEditDiscordSectionE2ETest` created in Task 96-02-03
+- [x] `V13MigrationIT` created in Task 96-02-01 (3 tests)
+- [x] `DiscordForumServiceTest` created in Task 96-02-02 (7 tests)
+- [x] `DiscordForumServiceIT` created in Task 96-02-02 (4 tests)
+- [x] `SeasonControllerLinkThreadIT` created in Task 96-02-03 (6 tests)
+- [x] `SeasonEditDiscordSectionE2ETest` created in Task 96-02-03 (5 tests)
 
 ---
 
@@ -88,15 +89,17 @@ created: 2026-05-23
 
 ## Plan 96-02 Sign-Off
 
-- [ ] All 11 task behaviors verified across the 5 test classes (V13Migration + Forum unit + Forum IT + Controller IT + E2E)
-- [ ] `./mvnw verify -Pe2e -Dit.test=SeasonEditDiscordSectionE2ETest` exits 0
-- [ ] JaCoCo line coverage ≥ 88.88% maintained
-- [ ] BackupSchemaGuardTest stays green (EXPORT_ORDER=25, SCHEMA_VERSION=2)
-- [ ] D-96-FOR-1c assertion-pin in place (NO Create-new-Thread surface in season-form.html)
-- [ ] D-96-FOR-2 assertion-pin in place (pinned thread auto-pre-selected in modal)
-- [ ] V13 migration is H2 + MariaDB symmetric (static grep gate + V13MigrationIT)
-- [ ] DiscordGlobalConfigMixIn audit decision logged in 96-02-SUMMARY (created OR N/A)
-- [ ] Wave-pause: PR rolling-summary row added for Plan 96-02
-- [ ] `nyquist_compliant: true` flipped in frontmatter
+- [x] All 30 task behaviors verified across the 6 test classes (V13Migration + Forum unit + Forum IT + Controller IT + E2E + form-validation)
+- [x] `./mvnw clean verify -Pe2e` exits 0 — 2085 tests green (1604 surefire + 396 failsafe + 85 E2E)
+- [x] JaCoCo line coverage gate met (`All coverage checks have been met`)
+- [x] BackupSchemaGuardTest stays green (EXPORT_ORDER=25, SCHEMA_VERSION=2 unchanged)
+- [x] D-96-FOR-1c assertion-pin in place (`SeasonEditDiscordSectionE2ETest.givenDiscordIntegrationCard_whenInspectingDom_thenNoCreateNewThreadSurface`)
+- [x] D-96-FOR-2 assertion-pin in place (`SeasonEditDiscordSectionE2ETest.givenSeasonAndForumChannels_whenOpenRaceResultsModal_thenPinnedAutoSelected`)
+- [x] V13 migration H2 path verified via V13MigrationIT (static grep gate green; no LONGTEXT/CHECK/ENGINE=)
+- [x] DiscordGlobalConfigMixIn audit decision logged in 96-02-SUMMARY → **N/A** (entity not in BackupSerializationModule, no MixIn required)
+- [ ] Wave-pause: PR rolling-summary row added for Plan 96-02 (pending push + PR edit)
+- [ ] **Operator MariaDB drill** (`./mvnw verify -Plocal`) — required before `nyquist_compliant: true`
+- [ ] **Operator visual review** of the Discord Integration card on `/admin/seasons/{id}/edit` (Desktop + Mobile)
+- [ ] `nyquist_compliant: true` flipped in frontmatter (post-operator-approval)
 
-**Approval:** pending
+**Approval:** tests green; pending operator MariaDB drill + visual review at wave-pause.
