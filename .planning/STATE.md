@@ -159,10 +159,10 @@ Post-merge self-resolving items (not tracked further):
   9. Submit at least one RaceResult per race → expect `Post Match Results` button transitions from DISABLED-with-tooltip to enabled. Click → expect ONE multipart-POST with `match-results.png` attachment in Discord.
   10. **Stale-detection smoke** — edit ONE RaceResult (e.g. change a position) → re-visit Match-Detail → expect the Match Results button label flips from `Re-Post Match Results` to `Update Match Results` (yellow stale signal). Click → expect the Discord message is PATCHed and the label flips back to `Re-Post Match Results`.
   11. **Final verification on `/admin/discord/posts` listing** — filter by the test match's UUID → expect 5 DiscordPost rows (TEAM_CARDS / SETTINGS / LINEUPS / SCHEDULE / MATCH_RESULTS), each with non-null `attachments_replaced_at` for the 4 multipart types, and the SCHEDULE row's `updated_at` advanced AFTER the step-8 auto-edit.
-- **Status:** pending operator action — execute on milestone branch AFTER `gsd/v1.13-discord-integration` PR merges per D-95-10. UAT covers all 5 POST types + auto-post hook (95-02) + auto-edit hook (95-04) + stale-detection (95-04).
-- **Result:** _(operator fills after execution)_
-- **Date:** _(operator fills)_
-- **Screenshots:** _(operator links to `.screenshots/uat-05/`)_
+- **Status:** PASS — executed inline on milestone branch BEFORE PR merge (deviation from D-95-10) because live-Discord drift surfaced 5 production regressions that had to land in the same PR.
+- **Result:** PASS — all 11 steps green after Bugs A-E fixes (commits `64b5d06b` URL regex, `dd5b0ca2` AFTER_COMMIT listener pivot, `b0dd2962` `?wait=true`, `730e1151` Match Results bundle, `57e1130c` PATCH attachments descriptor, `2f5b5aad` Stream Link hyperlink, `aa25209d` orphan-remove flush). All 5 DiscordPost types created in `/admin/discord/posts` listing. Auto-post + auto-edit + stale-detection all verified live.
+- **Date:** 2026-05-23
+- **Screenshots:** captured in chat (channel-create, match-results bundle, schedule embed with stream-link, re-post team cards, stale-detection)
 
 ## Accumulated Context
 
