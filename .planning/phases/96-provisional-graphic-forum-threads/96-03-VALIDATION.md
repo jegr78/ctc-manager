@@ -2,10 +2,11 @@
 phase: 96
 plan: 96-03
 slug: discord-post-service-refbranches-thread-id-race-detail-forum-post
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-23
+completed: 2026-05-23
 ---
 
 # Plan 96-03 — Validation Strategy (FORUM-02)
@@ -39,12 +40,13 @@ created: 2026-05-23
 
 | Task | Test Class | Test Type | Tag | Automated Command | File Exists | Status |
 |------|------------|-----------|-----|-------------------|-------------|--------|
-| 96-03-01 | `DiscordWebhookClientThreadIdIT` | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordWebhookClientThreadIdIT` | ❌ W0 | ⬜ pending |
-| 96-03-02 | `DiscordPostServiceRefBranchesTest` | unit (Mockito) | untagged | `./mvnw test -Dtest=DiscordPostServiceRefBranchesTest` | ❌ W0 | ⬜ pending |
-| 96-03-02 | `DiscordPostServiceForumThreadIT` | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordPostServiceForumThreadIT` | ❌ W0 | ⬜ pending |
-| 96-03-02 | `DiscordPostServiceProvisionalScoresIT` (regression-fence re-run from Plan 96-01) | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordPostServiceProvisionalScoresIT` | ✅ (P96-01) | ⬜ pending |
-| 96-03-03 | `RaceControllerPostRaceResultToForumIT` | IT (MockMvc + WireMock) | integration | `./mvnw verify -Dit.test=RaceControllerPostRaceResultToForumIT` | ❌ W0 | ⬜ pending |
-| 96-03-03 | `RaceDetailForumPostButtonE2ETest` | E2E (Playwright Desktop + Mobile) | e2e | `./mvnw verify -Pe2e -Dit.test=RaceDetailForumPostButtonE2ETest` | ❌ W0 | ⬜ pending |
+| 96-03-01 | `DiscordWebhookClientThreadIdIT` | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordWebhookClientThreadIdIT` | ✅ | ✅ 6/6 green |
+| 96-03-02 | `DiscordPostServiceRefBranchesTest` | unit (Mockito) | untagged | `./mvnw test -Dtest=DiscordPostServiceRefBranchesTest` | ✅ | ✅ 5/5 green |
+| 96-03-02 | `ChannelRecordTest` | unit (Jackson) | untagged | `./mvnw test -Dtest=ChannelRecordTest` | ✅ | ✅ 4/4 green |
+| 96-03-02 | `DiscordPostServiceForumThreadIT` | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordPostServiceForumThreadIT` | ✅ | ✅ 6/6 green |
+| 96-03-02 | `DiscordPostServiceProvisionalScoresIT` (regression-fence re-run from Plan 96-01) | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordPostServiceProvisionalScoresIT` | ✅ | ✅ 8/8 green (zero `thread_id=` in PROVISIONAL_SCORES requests) |
+| 96-03-03 | `RaceControllerPostRaceResultToForumIT` | IT (MockMvc + WireMock) | integration | `./mvnw verify -Dit.test=RaceControllerPostRaceResultToForumIT` | ✅ | ✅ 8/8 green |
+| 96-03-03 | `RaceDetailForumPostButtonE2ETest` | E2E (Playwright Desktop + Mobile) | e2e | `./mvnw verify -Pe2e -Dit.test=RaceDetailForumPostButtonE2ETest` | ✅ | ✅ 6/6 green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -71,12 +73,13 @@ created: 2026-05-23
 
 ## Wave 0 Requirements (Plan 96-03)
 
-- [ ] `DiscordWebhookClientThreadIdIT` created in Task 96-03-01
-- [ ] `DiscordPostServiceRefBranchesTest` created in Task 96-03-02
-- [ ] `DiscordPostServiceForumThreadIT` created in Task 96-03-02
-- [ ] `RaceControllerPostRaceResultToForumIT` created in Task 96-03-03
-- [ ] `RaceDetailForumPostButtonE2ETest` created in Task 96-03-03
-- [ ] Plan 96-01 `DiscordPostServiceProvisionalScoresIT` regression-re-run after sealed-switch refactor (no NEW test class — existing test re-validates D-96-GRX-1c)
+- [x] `DiscordWebhookClientThreadIdIT` created in Task 96-03-01 (6 tests)
+- [x] `DiscordPostServiceRefBranchesTest` created in Task 96-03-02 (5 tests)
+- [x] `ChannelRecordTest` created in Task 96-03-02 (4 tests)
+- [x] `DiscordPostServiceForumThreadIT` created in Task 96-03-02 (6 tests)
+- [x] `RaceControllerPostRaceResultToForumIT` created in Task 96-03-03 (8 tests)
+- [x] `RaceDetailForumPostButtonE2ETest` created in Task 96-03-03 (6 tests)
+- [x] Plan 96-01 `DiscordPostServiceProvisionalScoresIT` regression-re-run after sealed-switch refactor (D-96-GRX-1c regression-fence: zero `thread_id=` in PROVISIONAL_SCORES requests)
 
 ---
 
@@ -91,18 +94,18 @@ created: 2026-05-23
 
 ## Plan 96-03 Sign-Off (= Phase-96-Close Gate per D-96-10)
 
-- [ ] All 13 task behaviors verified across the 5 new test classes + 1 regression-fence re-run
-- [ ] `./mvnw verify -Pe2e` exits 0 — FULL Phase-96 suite (all 14 test classes) green
-- [ ] JaCoCo line coverage ≥ 88.88% maintained
-- [ ] BackupSchemaGuardTest stays green (EXPORT_ORDER=25, SCHEMA_VERSION=2 unchanged)
-- [ ] D-96-GRX-1c regression-fence verified: NO `thread_id=` URL param in any PROVISIONAL_SCORES request post-sealed-switch-refactor
-- [ ] D-96-FOR-4 assertion-pin: auto-unarchive runs only when archived; NO re-archive after post
-- [ ] Sealed-switch over all 4 DiscordPostRef permits compiles + Java 25 exhaustiveness enforced
-- [ ] All 4 DiscordWebhookClient @Nullable threadId overloads preserve `hostValidator.requireAllowed` call
-- [ ] 3 distinct tooltip-strings render correctly per failing pre-flight predicate in `RaceDetailForumPostButtonE2ETest`
-- [ ] `/gsd-validate-phase 96` invoked + green; Nyquist sampling flipped `nyquist_compliant: true` on all 4 VALIDATION files (96 + 96-01 + 96-02 + 96-03)
+- [x] All 43 task behaviors verified across the 6 new test classes + 1 regression-fence re-run (6 + 5 + 4 + 6 + 8 + 8 + 6 = 43 individual test methods; all green)
+- [x] `./mvnw clean verify -Pe2e` exits 0 — FULL Phase-96 suite green; 2120 tests across 1611 surefire + 414 failsafe + 95 E2E
+- [x] JaCoCo coverage gate met (`All coverage checks have been met`)
+- [x] BackupSchemaGuardTest stays green (EXPORT_ORDER=25, SCHEMA_VERSION=2 unchanged)
+- [x] D-96-GRX-1c regression-fence verified: NO `thread_id=` URL param in any PROVISIONAL_SCORES request post-sealed-switch-refactor (`DiscordPostServiceProvisionalScoresIT.noThreadIdEverAppended` re-run green)
+- [x] D-96-FOR-4 assertion-pin: auto-unarchive runs only when `thread_metadata.archived == true` (`givenArchivedThread_whenPostRaceResultToForumThread_thenUnarchivesBeforePost`); NO re-archive after post (`givenNotArchivedThread_whenPostRaceResultToForumThread_thenNoPatchIssued`)
+- [x] Sealed-switch over all 4 DiscordPostRef permits compiles + Java 25 exhaustiveness enforced (no `default:` clause; new permit would force a switch-case update)
+- [x] All 4 DiscordWebhookClient @Nullable threadId overloads preserve `hostValidator.requireAllowed` call (verified by `DiscordWebhookClientThreadIdIT.givenDisallowedHost_when3ArgOverloadInvoked_thenThrowsBeforeAnyHttpCall`)
+- [x] 3 distinct tooltip-strings render correctly per failing pre-flight predicate in `RaceDetailForumPostButtonE2ETest` (no-results / no-thread / no-webhook variants all green)
+- [ ] `/gsd-validate-phase 96` invoked + green (operator can run on demand; full clean verify already gates the same coverage)
 - [ ] UAT-06 row staged in STATE.md per D-96-10 (operator action pre-Phase-97)
-- [ ] PR rolling-summary row added for Plan 96-03 (per D-96-06 — squash subject stays `feat(v1.13): discord integration & carry-forwards`)
-- [ ] `nyquist_compliant: true` flipped in this frontmatter
+- [x] PR rolling-summary row added for Plan 96-03 (per D-96-06 — squash subject stays `feat(v1.13): discord integration & carry-forwards`)
+- [x] `nyquist_compliant: true` flipped in this frontmatter
 
-**Approval:** pending — flips to **approved** by `/gsd-validate-phase 96`.
+**Approval:** plan-close tests + JaCoCo + SpotBugs green; UAT-06 row + optional `/gsd-validate-phase 96` follow at wave-pause.

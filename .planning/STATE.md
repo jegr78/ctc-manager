@@ -164,6 +164,23 @@ Post-merge self-resolving items (not tracked further):
 - **Date:** 2026-05-23
 - **Screenshots:** captured in chat (channel-create, match-results bundle, schedule embed with stream-link, re-post team cards, stale-detection)
 
+### UAT-06: Live Provisional Scores + Forum-Thread Lifecycle (Phase 96 GRAFX-01 + FORUM-01 + FORUM-02)
+
+- **Pre-UAT-06** — UAT-05 (Phase 95 post lifecycle) must have succeeded; the operator has at least one live test match with a Discord channel + webhook configured AND a Discord forum-channel (race-results + standings) with at least one thread (ideally one pinned).
+- **Procedure** (8 steps per CONTEXT D-96-10):
+  1. `/admin/discord-config` → populate the 2 new Forum-Webhook URL fields (`Race-Results Forum Webhook URL` + `Standings Forum Webhook URL`) — webhook URLs are created in the Discord client under the forum-channel's Integrations tab → **Save** → expect green badge `Configuration saved.`.
+  2. `/admin/seasons/{id}/edit` for the season under test → confirm a new `Discord Integration` card is visible with 2 thread-linker widgets (race-results + standings). Click `Link existing Thread...` → modal opens with the forum's threads listed (pinned first, then active by last-message desc, then archived). Pinned auto-pre-selected (D-96-FOR-2). Operator confirms the radio default OR overrides; click `Confirm` → expect green badge `Thread linked.` AND the card flips to the linked-thread state (badge with name+ID + Change Link + Unlink buttons).
+  3. `/admin/matches/{id}` for a match with ≥1 race result → confirm the new `Post Provisional Scores` button is visible in the `.discord-actions--posts` cluster, BEFORE the Match-Results triplet. Click → expect a multipart-POST with N PNG attachments (one per race with results, filename `provisional-race-N.png`) lands in the match channel. Verify in the Discord client — the bot's provisional-scores message shows the per-driver scoring breakdown.
+  4. Submit another race result → re-visit Match-Detail → expect button label flips to `Re-Post Provisional Scores`. Click → expect existing Discord message is PATCHed with the new N+1 attachments. Verify `attachments_replaced_at` advances on `/admin/discord/posts`.
+  5. `/admin/races/{id}` for a race with results in the same season → confirm a new `Discord Actions` card is visible with `Post Race Result` button (D-96-FOR-3c). Click → expect a multipart-POST with `race-result-{matchdayLabel}-race-N.png` attachment lands in the linked forum-thread (not the match channel). Verify in the Discord client — the result lands in the race-results forum-thread.
+  6. **Auto-unarchive smoke** — archive the linked forum thread manually in the Discord client (right-click → Archive Thread). Back to `/admin/races/{id}` → click `Re-Post Race Result` → expect the bot auto-unarchives the thread (D-96-FOR-4) THEN PATCHes the existing post. Verify in Discord — thread is active again AND the race-result message is updated; NO re-archive after.
+  7. **3 distinct pre-flight tooltips** — pick 3 races violating each pre-flight gate (no results / no thread linked / no webhook configured) and verify the `Post Race Result` button renders as a disabled span with the corresponding tooltip text (`No race results yet` / `Link a race-results thread first` / `Configure race-results forum-webhook in Discord settings`).
+  8. **Final verification on `/admin/discord/posts`** — filter by the test season's UUID → expect ≥1 PROVISIONAL_SCORES row (match channel) + ≥1 RACE_RESULTS row (forum thread, with thread_id captured in the URL). Both with non-null `attachments_replaced_at` after the re-post.
+- **Status:** pending operator action — **required before Phase 97 starts** (per D-96-10).
+- **Result:** _(operator fills after execution)_
+- **Date:** _(operator fills)_
+- **Screenshots:** _(operator links)_
+
 ## Accumulated Context
 
 ### Decisions
