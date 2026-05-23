@@ -123,6 +123,30 @@ class DiscordWebhookClientMultipartEditIT {
 	}
 
 	@Test
+	void givenTwoAttachments_whenEditMessageWithAttachments_thenPayloadJsonDeclaresAttachmentsArrayToDropOldFiles() throws Exception {
+		String webhookPath = "/api/v10/webhooks/100/abc";
+		String messageId = "msg-edit-drop";
+		wm.stubFor(patch(urlPathEqualTo(webhookPath + "/messages/" + messageId))
+				.withMultipartRequestBody(aMultipart("payload_json")
+						.withBody(matchingJsonPath("$.attachments[0].id", equalTo("0")))
+						.withBody(matchingJsonPath("$.attachments[0].filename", equalTo("home.png")))
+						.withBody(matchingJsonPath("$.attachments[1].id", equalTo("1")))
+						.withBody(matchingJsonPath("$.attachments[1].filename", equalTo("away.png"))))
+				.willReturn(okJson("{\"id\":\"msg-edit-drop\",\"channel_id\":\"chan-1\"}")));
+
+		WebhookMessage out = client.editMessageWithAttachments(
+				wm.baseUrl() + webhookPath,
+				messageId,
+				new WebhookPayload(null, List.of()),
+				List.of(
+						new NamedAttachment("home.png", PNG_BYTES),
+						new NamedAttachment("away.png", PNG_BYTES)));
+
+		assertThat(out).as("Discord drops previous attachments only when payload_json declares the new ones").isNotNull();
+		assertThat(out.id()).isEqualTo("msg-edit-drop");
+	}
+
+	@Test
 	void givenTenAttachments_whenEditMessageWithAttachments_thenAcceptsAtBoundary() throws Exception {
 		String webhookPath = "/api/v10/webhooks/100/abc";
 		String messageId = "msg-edit-4";

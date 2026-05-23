@@ -2,6 +2,8 @@ package org.ctc.discord;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.dto.NamedAttachment;
@@ -131,7 +133,14 @@ public class DiscordWebhookClient {
 		}
 		String payloadJson;
 		try {
-			payloadJson = objectMapper.writeValueAsString(payload);
+			ObjectNode payloadNode = (ObjectNode) objectMapper.valueToTree(payload);
+			ArrayNode attachmentsArray = payloadNode.putArray("attachments");
+			for (int i = 0; i < attachments.size(); i++) {
+				ObjectNode attNode = attachmentsArray.addObject();
+				attNode.put("id", i);
+				attNode.put("filename", attachments.get(i).filename());
+			}
+			payloadJson = objectMapper.writeValueAsString(payloadNode);
 		} catch (JsonProcessingException e) {
 			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
 		}
