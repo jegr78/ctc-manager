@@ -739,27 +739,32 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 
 **If this table is empty:** N/A — 10 assumptions logged; all have either codebase verification, fallback paths, or test coverage planned. None block planning.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Provisional reference image fidelity** (Plan 96-01 visual loop)
+   - **RESOLVED:** Plan 96-01 stages the User-Reference under `.screenshots/96-01/provisional-reference.png` BEFORE Task 96-01-02 and iterates with wave-pause operator approval before plan-close (no pixel-perfect mockup required upfront — iterate to match).
    - What we know: User provided 2 chat-screenshots 2026-05-23 (Google-Sheets workflow + existing CTC Race-Detail results table); CONTEXT documents an iterative `playwright-cli` loop per `[[feedback-graphic-pixel-positioning]]`.
    - What's unclear: pixel-exact spacing/font/color targets — user has not provided a pixel-perfect mockup. The PNG is iterated, not specified.
    - Recommendation: Plan 96-01 stages the User-Reference under `.screenshots/96-01/provisional-reference.png` BEFORE the implementation task; each iteration commits to `gsd/v1.13-discord-integration` with the rendered output also in `.screenshots/96-01/`. Wave-pause after each rendered iteration per `[[feedback-wave-pause]]` + `[[feedback-graphic-design-iteration]]`. User approves before plan-close.
 
 2. **Mobile-viewport `.card` overflow on Season-Edit after Discord-Integration section add**
+   - **RESOLVED:** Plan 96-02 sweeps Desktop + Mobile via `playwright-cli` for surface-only detection; the actual fix is DEFERRED to Phase 98 polish-CSS-sweep (success criterion 6).
    - What we know: Phase 98 success criterion 6 covers `.card`/`.form-group` overflow on all Discord-touching pages.
    - What's unclear: Whether Plan 96-02's new section measurably worsens the overflow vs being absorbed into the Phase-98 polish.
    - Recommendation: Plan 96-02 sweeps Desktop + Mobile via `playwright-cli`, captures `.screenshots/96-02/season-form-discord-section-{desktop,mobile}.png`. Surface-only — actual fix in Phase 98.
 
 3. **Backup `DiscordGlobalConfigMixIn` — does it exist?**
+   - **RESOLVED:** Plan 96-02 Task 96-02-02 audits-and-acts: if DiscordGlobalConfig participates in backup, create `DiscordGlobalConfigMixIn` with `@JsonIgnoreProperties` excluding all 3 webhook-URLs; if it does not participate, document the absence in 96-02-SUMMARY (no action needed — operator restores webhook-URLs out-of-band).
    - What we know: `BackupSerializationModule` (verified via `ls` on `src/main/java/org/ctc/backup/serialization/`) lists 24 MixIn files for top-level entities. `DiscordGlobalConfigMixIn` is **not** in that list — Phase 93 INFRA-03 didn't add one.
    - What's unclear: Whether `DiscordGlobalConfig` is currently in `EXPORT_ORDER` at all (CONTEXT D-96-07 says "EXPORT_ORDER stays 25" — that's referring to Phase 95 D-95-07's bump for `DiscordPost`; whether `DiscordGlobalConfig` was included separately is open).
    - Recommendation: Plan 96-02's Task to add 2 webhook-URL columns should also audit whether `DiscordGlobalConfig` participates in backup at all. If yes — add `DiscordGlobalConfigMixIn` with `@JsonIgnoreProperties({"announcementWebhookUrl", "raceResultsForumWebhookUrl", "standingsForumWebhookUrl"})` for secret-discipline. If no — no action needed (operator restores webhook-URLs out-of-band).
 
 4. **Whether Discord's `?thread_id=` query-param triggers a separate rate-limit bucket vs the parent webhook**
+   - **RESOLVED:** Out of Phase 96 scope. Phase 97 will surface the issue empirically if matchday-batch forum-posts trigger 429s; Phase 93's `DiscordRateLimitInterceptor` already handles 429 with 3-retry + jitter, so worst case is slower posts.
    - What we know: Discord's rate-limit interceptor uses `X-RateLimit-Bucket` header (per Phase 93). Each webhook+thread combination might bucket separately; we won't know until live UAT-06.
    - What's unclear: Whether matchday-batch forum-posts (Phase 97 POST-07) trigger 429s on the same webhook bucket.
    - Recommendation: Out of Phase 96 scope. Phase 97 will surface it if it bites — Phase 93's `DiscordRateLimitInterceptor` already handles 429 with 3-retry + jitter, so worst case is slower posts.
+
 
 ## Environment Availability
 

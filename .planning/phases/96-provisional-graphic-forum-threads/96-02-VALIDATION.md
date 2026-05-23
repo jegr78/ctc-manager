@@ -1,0 +1,102 @@
+---
+phase: 96
+plan: 96-02
+slug: v13-schema-discord-config-season-discord-section-forum-service
+status: draft
+nyquist_compliant: false
+wave_0_complete: false
+created: 2026-05-23
+---
+
+# Plan 96-02 — Validation Strategy (FORUM-01)
+
+> Per-plan validation contract specializing `96-VALIDATION.md` for Plan 96-02.
+
+---
+
+## Test Infrastructure
+
+| Property | Value |
+|----------|-------|
+| **Framework** | JUnit 5 + Mockito + WireMock + Flyway + Playwright |
+| **Quick run command** | `./mvnw test -Dtest=DiscordForumServiceTest` |
+| **Wave run command** | `./mvnw verify -Dit.test='DiscordForumServiceIT,SeasonControllerLinkThreadIT,V13MigrationIT'` |
+| **Plan-close command** | `./mvnw verify -Pe2e -Dit.test=SeasonEditDiscordSectionE2ETest` |
+| **Estimated runtime** | Quick < 30 s · Wave < 16 m · Plan-close < 18 m |
+
+---
+
+## Sampling Rate
+
+- **After every task commit:** Run the touched-class unit test or migration-IT (feedback < 30 s for unit, < 60 s for V13MigrationIT).
+- **After each task:** Run `./mvnw verify` (Surefire + Failsafe + JaCoCo, no Playwright) for full IT coverage.
+- **Before plan close (wave-pause):** Run `./mvnw verify -Pe2e -Dit.test=SeasonEditDiscordSectionE2ETest` for Playwright Desktop + Mobile sweep.
+- **Max feedback latency:** 60 s for task-local quick run; 16 m for wave-level verify.
+
+---
+
+## Per-Task Verification Map
+
+| Task | Test Class | Test Type | Tag | Automated Command | File Exists | Status |
+|------|------------|-----------|-----|-------------------|-------------|--------|
+| 96-02-01 | `V13MigrationIT` | IT (Flyway H2+MariaDB drill) | integration | `./mvnw verify -Dit.test=V13MigrationIT` | ❌ W0 | ⬜ pending |
+| 96-02-01 | `DiscordConfigFormTest` / `SeasonFormTest` (extend if existing) | unit (Bean Validation) | untagged | `./mvnw test -Dtest='DiscordConfigFormTest,SeasonFormTest'` | ✅ if exists | ⬜ pending |
+| 96-02-02 | `DiscordForumServiceTest` | unit (Mockito) | untagged | `./mvnw test -Dtest=DiscordForumServiceTest` | ❌ W0 | ⬜ pending |
+| 96-02-02 | `DiscordForumServiceIT` | IT (WireMock) | integration | `./mvnw verify -Dit.test=DiscordForumServiceIT` | ❌ W0 | ⬜ pending |
+| 96-02-03 | `SeasonControllerLinkThreadIT` | IT (MockMvc + WireMock) | integration | `./mvnw verify -Dit.test=SeasonControllerLinkThreadIT` | ❌ W0 | ⬜ pending |
+| 96-02-03 | `SeasonEditDiscordSectionE2ETest` | E2E (Playwright Desktop + Mobile) | e2e | `./mvnw verify -Pe2e -Dit.test=SeasonEditDiscordSectionE2ETest` | ❌ W0 | ⬜ pending |
+
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+---
+
+## Validation Dimensions (Nyquist)
+
+| Dimension | Coverage Method | Tests / Artifact |
+|-----------|-----------------|------------------|
+| **Database — Flyway H2+MariaDB symmetry** | `V13MigrationIT` runs Flyway against H2; grep gate on V13 SQL file enforces NO `LONGTEXT`/`ENGINE=`/`CHECK`/MariaDB-only syntax | `V13MigrationIT` + static grep gate |
+| **Code — Form validation** | Bean Validation `@Pattern(WEBHOOK_REGEX)` on 2 new DiscordConfigForm fields; `@Pattern(DiscordSnowflake.PATTERN)` on 2 new SeasonForm fields | `DiscordConfigFormTest` / `SeasonFormTest` (extend if existing; new if absent) |
+| **Code — Discord forum thread orchestration** | Mockito unit + WireMock IT verify listActive (parentId filter) + listArchived (channel-scoped) + sort pinned > active-by-lastMessageId > archived-by-lastMessageId | `DiscordForumServiceTest` (sort + filter + pinned fallback) + `DiscordForumServiceIT` (WireMock end-to-end with 3+2 thread mix + empty-forum edge case + error paths) |
+| **Code — Controller link/unlink** | MockMvc + WireMock + flash + DB-mutation verification | `SeasonControllerLinkThreadIT` (link + unlink + unknown-type + Discord-Integration model attrs preload) |
+| **UI — Season-Edit Discord-Integration card** | Playwright Desktop: card visible, modal opens, pinned auto-pre-select, Confirm submits, Unlink clears DB only | `SeasonEditDiscordSectionE2ETest` |
+| **UI — NO Create-new-Thread surface** | Explicit Playwright assertion that no "Create new Thread..." button or link exists (D-96-FOR-1c) | `SeasonEditDiscordSectionE2ETest` Test 11 |
+| **Mobile-viewport** | Playwright Mobile sweep at 375 px on Season-Edit + modal | `SeasonEditDiscordSectionE2ETest` Mobile variant |
+| **Backup wire-contract** | `BackupSchemaGuardTest` stays green (EXPORT_ORDER=25, SCHEMA_VERSION=2 unchanged); SeasonMixIn auto-exports thread-IDs (Saison-Identity); `DiscordGlobalConfigMixIn` audit decision logged in plan-summary | `BackupSchemaGuardTest`, optional `SeasonRoundTripIT` extension |
+| **Static analysis — SpotBugs** | New `DiscordForumService` reuses existing constructor-injection + EI_EXPOSE_REP2 justification patterns | gate-step on `verify` |
+| **Static analysis — CodeQL** | No new SSRF suppression expected (forum-webhook URLs use existing DiscordHostValidator | `gh run watch` after PR push |
+
+---
+
+## Wave 0 Requirements (Plan 96-02)
+
+- [ ] `V13MigrationIT` created in Task 96-02-01
+- [ ] `DiscordForumServiceTest` created in Task 96-02-02
+- [ ] `DiscordForumServiceIT` created in Task 96-02-02
+- [ ] `SeasonControllerLinkThreadIT` created in Task 96-02-03
+- [ ] `SeasonEditDiscordSectionE2ETest` created in Task 96-02-03
+
+---
+
+## Manual-Only Verifications
+
+| Behavior | Why Manual | Test Instructions |
+|----------|------------|-------------------|
+| Live-MariaDB V13 migration | Real MariaDB drill requires Testcontainers OR `local` profile + MariaDB instance | `./mvnw verify -Plocal` against the operator's local MariaDB; verify V13 columns via `mysql -e "DESCRIBE discord_global_config; DESCRIBE seasons;"` |
+| Backup round-trip with thread-IDs | Export + restore on fresh DB to confirm SeasonMixIn carries `discord*ThreadId` fields; `DiscordGlobalConfigMixIn` (if created) skips webhook URLs (secret discipline per RESEARCH A10) | `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` → `/admin/backup/export` → restore on fresh `dev` profile → verify Season-Edit page shows linked threads + discord-config webhook fields are empty |
+
+---
+
+## Plan 96-02 Sign-Off
+
+- [ ] All 11 task behaviors verified across the 5 test classes (V13Migration + Forum unit + Forum IT + Controller IT + E2E)
+- [ ] `./mvnw verify -Pe2e -Dit.test=SeasonEditDiscordSectionE2ETest` exits 0
+- [ ] JaCoCo line coverage ≥ 88.88% maintained
+- [ ] BackupSchemaGuardTest stays green (EXPORT_ORDER=25, SCHEMA_VERSION=2)
+- [ ] D-96-FOR-1c assertion-pin in place (NO Create-new-Thread surface in season-form.html)
+- [ ] D-96-FOR-2 assertion-pin in place (pinned thread auto-pre-selected in modal)
+- [ ] V13 migration is H2 + MariaDB symmetric (static grep gate + V13MigrationIT)
+- [ ] DiscordGlobalConfigMixIn audit decision logged in 96-02-SUMMARY (created OR N/A)
+- [ ] Wave-pause: PR rolling-summary row added for Plan 96-02
+- [ ] `nyquist_compliant: true` flipped in frontmatter
+
+**Approval:** pending

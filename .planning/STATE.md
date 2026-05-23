@@ -4,12 +4,12 @@ milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
 stopped_at: Phase 96 context gathered
-last_updated: "2026-05-23T09:38:16.298Z"
-last_activity: 2026-05-22 -- Phase 95 execution started
+last_updated: "2026-05-23T10:51:38.618Z"
+last_activity: 2026-05-23 -- Phase 96 planning complete
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 15
+  total_plans: 18
   completed_plans: 15
   percent: 57
 ---
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 Phase: 95 (match-channel-posts) — EXECUTING
 Plan: 1 of 4
-Status: Executing Phase 95
-Last activity: 2026-05-22 -- Phase 95 execution started
+Status: Ready to execute
+Last activity: 2026-05-23 -- Phase 96 planning complete
 
 ## Completed Milestones
 
@@ -97,7 +97,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Executing Phase 95
+- **Status:** Ready to execute
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
