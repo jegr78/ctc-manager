@@ -64,6 +64,11 @@ public class TestDataService {
 	@org.springframework.beans.factory.annotation.Value("${app.upload-dir:data/dev/uploads}")
 	private String uploadDir;
 
+	// Skip team-card rendering during seed when set to false; tests inject false via
+	// surefire/failsafe systemPropertyVariables to avoid Chromium-resource exhaustion.
+	@org.springframework.beans.factory.annotation.Value("${app.seed.generate-team-cards:true}")
+	private boolean generateTeamCardsOnSeed;
+
 	@Transactional
 	public void seed() {
 		if (seasonRepository.count() > 0) {
@@ -1028,6 +1033,10 @@ public class TestDataService {
 	}
 
 	private void generateTeamCards() {
+		if (!generateTeamCardsOnSeed) {
+			log.info("Skipping team-card generation (app.seed.generate-team-cards=false)");
+			return;
+		}
 		try {
 			var seasons = seasonRepository.findAll();
 			for (var season : seasons) {

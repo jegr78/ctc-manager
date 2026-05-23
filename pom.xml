@@ -294,6 +294,12 @@
 						<app.upload-dir>data/${spring.profiles.active:dev}/uploads-fork-${surefire.forkNumber}</app.upload-dir>
 						<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
 						<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
+						<!-- Skip team-card PNG generation during seed in tests: cards aren't needed for
+						     the vast majority of tests, but their ~46 Chromium spawns per Spring context
+						     bootstrap compound across the ~131 @SpringBootTest classes and exhaust
+						     Playwright/macOS file-descriptor budgets ("Protocol error (Page.captureScreenshot)"
+						     flake). Tests that genuinely need rendered team cards can override per-class. -->
+						<app.seed.generate-team-cards>false</app.seed.generate-team-cards>
 					</systemPropertyVariables>
 					<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 					     Surefire runs only tests WITHOUT @Tag("integration") / @Tag("e2e") / @Tag("flaky").
@@ -340,6 +346,7 @@
 								<app.upload-dir>data/${spring.profiles.active:dev}/uploads-fork-${surefire.forkNumber}</app.upload-dir>
 								<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
 								<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
+								<app.seed.generate-team-cards>false</app.seed.generate-team-cards>
 							</systemPropertyVariables>
 							<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 							     run @Tag("integration") tests, exclude @Tag("e2e") and @Tag("flaky").
@@ -524,6 +531,9 @@ exit 0;
 										<include>**/e2e/**/*Test.java</include>
 									</includes>
 									<groups>e2e</groups>
+									<systemPropertyVariables>
+										<app.seed.generate-team-cards>false</app.seed.generate-team-cards>
+									</systemPropertyVariables>
 								</configuration>
 							</execution>
 						</executions>

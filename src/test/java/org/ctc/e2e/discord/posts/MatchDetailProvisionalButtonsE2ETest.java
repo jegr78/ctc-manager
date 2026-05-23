@@ -77,7 +77,8 @@ class MatchDetailProvisionalButtonsE2ETest extends PlaywrightConfig {
 	private void seedExistingProvisionalPost(Match match) {
 		DiscordPost post = new DiscordPost();
 		post.setChannelId(match.getDiscordChannelId());
-		post.setMessageId("msg-eps-existing-" + match.getId());
+		// MESSAGE_ID column is VARCHAR(32); use a short snowflake-shaped synthetic id.
+		post.setMessageId("msg-eps-" + match.getId().toString().substring(0, 8));
 		post.setWebhookId("950");
 		post.setWebhookToken("tok-eps-existing");
 		post.setPostType(DiscordPostType.PROVISIONAL_SCORES);
