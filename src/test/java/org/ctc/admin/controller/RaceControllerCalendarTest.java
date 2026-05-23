@@ -67,6 +67,12 @@ class RaceControllerCalendarTest {
 	private RaceAttachmentService raceAttachmentService;
 	@MockitoBean
 	private RaceGraphicService raceGraphicService;
+	@MockitoBean
+	private org.ctc.discord.service.DiscordPostService discordPostService;
+	@MockitoBean
+	private org.ctc.discord.service.DiscordGlobalConfigService discordGlobalConfigService;
+	@MockitoBean
+	private org.ctc.discord.repository.DiscordPostRepository discordPostRepository;
 
 	private MockMvc modelOnlyMockMvc;
 
@@ -79,7 +85,8 @@ class RaceControllerCalendarTest {
 	void setupModelOnlyMockMvc() {
 		var controller = new RaceController(
 				raceService, raceFormDataService, raceCalendarService,
-				raceAttachmentService, raceGraphicService);
+				raceAttachmentService, raceGraphicService,
+				discordPostService, discordGlobalConfigService, discordPostRepository);
 		modelOnlyMockMvc = MockMvcBuilders.standaloneSetup(controller)
 				.setViewResolvers(NOOP_VIEW_RESOLVER)
 				.build();

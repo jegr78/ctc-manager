@@ -13,6 +13,16 @@ import org.ctc.dataimport.exception.GoogleApiException;
 import org.ctc.dataimport.exception.NotFoundGoogleApiException;
 import org.ctc.dataimport.exception.PermissionGoogleApiException;
 import org.ctc.dataimport.exception.TransientGoogleApiException;
+import org.ctc.discord.exception.DiscordApiException;
+import org.ctc.discord.exception.DiscordApiExceptionMapper;
+import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.model.DiscordPost;
+import org.ctc.discord.model.DiscordPostType;
+import org.ctc.discord.repository.DiscordPostRepository;
+import org.ctc.discord.service.DiscordGlobalConfigService;
+import org.ctc.discord.service.DiscordPostService;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.model.Race;
 import org.ctc.domain.service.*;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +43,9 @@ public class RaceController {
 	private final RaceCalendarService raceCalendarService;
 	private final RaceAttachmentService raceAttachmentService;
 	private final RaceGraphicService raceGraphicService;
+	private final DiscordPostService discordPostService;
+	private final DiscordGlobalConfigService discordGlobalConfigService;
+	private final DiscordPostRepository discordPostRepository;
 
 	@GetMapping
 	public String list(@RequestParam(required = false) UUID matchdayId,
@@ -69,10 +82,75 @@ public class RaceController {
 		model.addAttribute("calendarAvailable", data.calendarAvailable());
 		model.addAttribute("hasCalendarEvent", data.hasCalendarEvent());
 		model.addAttribute("canCreateCalendarEvent", data.canCreateCalendarEvent());
+		populateRaceForumPostModel(model, data.race());
 		model.addAttribute("pageTitle",
 				"Race: " + data.race().getHomeTeam().getShortName() + " vs "
 						+ (data.race().getAwayTeam() != null ? data.race().getAwayTeam().getShortName() : "Bye"));
 		return "admin/race-detail";
+	}
+
+	private void populateRaceForumPostModel(Model model, Race race) {
+		DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
+		boolean canPost = discordPostService.canPostRaceResultToForum(race, config);
+		String disabledReason = computeForumPostDisabledReason(race, config);
+		DiscordPost existingPost = discordPostRepository
+				.findByPostTypeAndRaceId(DiscordPostType.RACE_RESULTS, race.getId())
+				.orElse(null);
+		model.addAttribute("canPostRaceResultToForum", canPost);
+		model.addAttribute("forumPostDisabledReason", disabledReason);
+		model.addAttribute("raceResultsForumPost", existingPost);
+	}
+
+	private static String computeForumPostDisabledReason(Race race, DiscordGlobalConfig config) {
+		if (race.getResults().isEmpty()) {
+			return "No race results yet";
+		}
+		String threadId = race.getMatchday().getSeason().getDiscordRaceResultsThreadId();
+		if (threadId == null || threadId.isBlank()) {
+			return "Link a race-results thread first";
+		}
+		String webhookUrl = config.getRaceResultsForumWebhookUrl();
+		if (webhookUrl == null || webhookUrl.isBlank()) {
+			return "Configure race-results forum-webhook in Discord settings";
+		}
+		return null;
+	}
+
+	@PostMapping("/{id}/post-race-result-to-forum")
+	public String postRaceResultToForum(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		Race race = raceService.getRaceDetailData(id).race();
+		try {
+			discordPostService.postRaceResultToForumThread(race);
+			redirectAttributes.addFlashAttribute("successMessage", "Race result posted to forum-thread.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Post race result to forum");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post race result to forum");
+		}
+		return "redirect:/admin/races/" + id;
+	}
+
+	private void applyErrorFlash(RedirectAttributes ra, DiscordApiException e, String action) {
+		String message = switch (e.category()) {
+			case TRANSIENT -> DiscordApiExceptionMapper.TRANSIENT_MESSAGE;
+			case AUTH -> DiscordApiExceptionMapper.AUTH_MESSAGE;
+			case MISSING_PERMISSIONS -> DiscordApiExceptionMapper.MISSING_PERMISSIONS_MESSAGE;
+			case NOT_FOUND -> DiscordApiExceptionMapper.NOT_FOUND_MESSAGE;
+			case CATEGORY_FULL -> DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE;
+		};
+		String category = e.category().name().toLowerCase().replace('_', '-');
+		Throwable cause = e.getCause();
+		log.warn("{} failed: category={}, exception={}, cause={}",
+				action, category, e.getClass().getSimpleName(),
+				cause != null ? cause.toString() : "none");
+		ra.addFlashAttribute("errorMessage", message);
+		ra.addFlashAttribute("errorCategory", category);
+	}
+
+	private void applyErrorFlash(RedirectAttributes ra, BusinessRuleException e, String action) {
+		log.warn("{} failed: category=data-incomplete, message={}", action, e.getMessage());
+		ra.addFlashAttribute("errorMessage", e.getMessage());
+		ra.addFlashAttribute("errorCategory", "data-incomplete");
 	}
 
 	@GetMapping("/new")
