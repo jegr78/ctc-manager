@@ -91,8 +91,8 @@ completed: 2026-05-23
 - [x] JaCoCo line coverage gate met (`All coverage checks have been met`)
 - [x] BackupSchemaGuardTest stays green (no schema entities added in Plan 96-01)
 - [x] D-96-GRX-1c assertion-pin in place — `DiscordPostServiceProvisionalScoresIT.noThreadIdEverAppended`
-- [ ] Operator confirms visual fidelity against `.screenshots/96-01/provisional-reference.png` (pending wave-pause review)
+- [x] Operator confirmed visual fidelity at wave-pause review (2026-05-23): "Provisional Scores can be posted and the layout looks good" — baseline layout accepted without further pixel-fidelity iteration; reference PNG was never dropped (per the pre_flight contract, baseline layout per 96-PATTERNS.md was used)
 - [ ] Wave-pause: PR rolling-summary row added for Plan 96-01
 - [x] `nyquist_compliant: true` flipped in frontmatter
 
-**Approval:** automated gates green; awaiting operator wave-pause visual review of provisional PNG layout before Plan 96-02 starts.
+**Approval:** operator-accepted at wave-pause 2026-05-23.
