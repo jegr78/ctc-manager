@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchForm;
 import org.ctc.discord.dto.ArchiveCategory;
+import org.ctc.discord.event.MatchPreviewFieldsChangedEvent;
 import org.ctc.discord.event.MatchScheduleFieldsChangedEvent;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.service.DiscordCategoryResolver;
@@ -67,6 +68,8 @@ public class MatchService {
 	@Transactional
 	public void updateDiscordFields(UUID id, MatchForm form) {
 		Match match = findById(id);
+		String beforeTeaser = match.getDiscordTeaser();
+		String beforeStreamLink = match.getStreamLink();
 		String beforeLobbyHost = match.getLobbyHost();
 		String beforeRaceDirector = match.getRaceDirector();
 		String beforeStreamer = match.getStreamer();
@@ -83,6 +86,12 @@ public class MatchService {
 				|| !Objects.equals(beforeStreamer, form.getStreamer());
 		if (scheduleFieldsChanged) {
 			eventPublisher.publishEvent(new MatchScheduleFieldsChangedEvent(saved.getId()));
+		}
+
+		boolean previewFieldsChanged = !Objects.equals(beforeTeaser, form.getDiscordTeaser())
+				|| !Objects.equals(beforeStreamLink, form.getStreamLink());
+		if (previewFieldsChanged) {
+			eventPublisher.publishEvent(new MatchPreviewFieldsChangedEvent(saved.getId()));
 		}
 	}
 
