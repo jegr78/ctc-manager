@@ -6,6 +6,8 @@ import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonPhase;
+import org.jspecify.annotations.Nullable;
 
 public sealed interface DiscordPostRef
 		permits DiscordPostRef.MatchRef,
@@ -36,7 +38,11 @@ public sealed interface DiscordPostRef
 	}
 
 	static DiscordPostRef season(Season s) {
-		return new SeasonRef(s.getId());
+		return new SeasonRef(s.getId(), null);
+	}
+
+	static DiscordPostRef seasonPhase(Season s, SeasonPhase p) {
+		return new SeasonRef(s.getId(), p.getId());
 	}
 
 	record MatchRef(UUID id) implements DiscordPostRef {
@@ -120,10 +126,10 @@ public sealed interface DiscordPostRef
 		}
 	}
 
-	record SeasonRef(UUID id) implements DiscordPostRef {
+	record SeasonRef(UUID seasonId, @Nullable UUID phaseId) implements DiscordPostRef {
 		@Override
 		public void applyTo(DiscordPost row) {
-			row.setSeasonId(id);
+			row.setSeasonId(seasonId);
 		}
 
 		@Override
@@ -139,11 +145,6 @@ public sealed interface DiscordPostRef
 		@Override
 		public UUID raceId() {
 			return null;
-		}
-
-		@Override
-		public UUID seasonId() {
-			return id;
 		}
 	}
 }

@@ -56,6 +56,9 @@ public class DiscordPost extends BaseEntity {
 	@Column(name = "season_id")
 	private UUID seasonId;
 
+	@Column(name = "phase_id")
+	private UUID phaseId;
+
 	@Column(name = "posted_at", nullable = false)
 	private LocalDateTime postedAt;
 

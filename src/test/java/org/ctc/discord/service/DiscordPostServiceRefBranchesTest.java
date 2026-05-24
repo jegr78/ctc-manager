@@ -64,6 +64,7 @@ class DiscordPostServiceRefBranchesTest {
 				mock(org.ctc.discord.DiscordEmojiCache.class),
 				mock(org.ctc.admin.service.MatchdayResultsGraphicService.class),
 				mock(org.ctc.admin.service.PowerRankingsGraphicService.class),
+				mock(org.ctc.admin.service.StandingsGraphicService.class),
 				"uploads");
 
 		WebhookMessage msg = new WebhookMessage("msg-1", CHANNEL_ID);
@@ -105,7 +106,7 @@ class DiscordPostServiceRefBranchesTest {
 				.thenReturn(Optional.empty());
 
 		service.postOrEdit(CHANNEL_ID, WEBHOOK_URL, DiscordPostType.STANDINGS,
-				WebhookPayload.empty(), List.of(), new DiscordPostRef.SeasonRef(seasonId));
+				WebhookPayload.empty(), List.of(), new DiscordPostRef.SeasonRef(seasonId, null));
 
 		verify(repository).findByChannelIdAndPostTypeAndSeasonId(CHANNEL_ID, DiscordPostType.STANDINGS, seasonId);
 	}

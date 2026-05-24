@@ -23,6 +23,7 @@ import org.ctc.admin.service.PowerRankingsGraphicService;
 import org.ctc.admin.service.ProvisionalScoresGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
+import org.ctc.admin.service.StandingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.DiscordEmojiCache;
 import org.ctc.discord.DiscordHostValidator;
@@ -48,8 +49,11 @@ import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.PhaseLayout;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonPhase;
+import org.ctc.domain.model.SeasonPhaseGroup;
 import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonTeamRepository;
@@ -85,6 +89,7 @@ public class DiscordPostService {
 	private final DiscordEmojiCache emojiCache;
 	private final MatchdayResultsGraphicService matchdayResultsGraphicService;
 	private final PowerRankingsGraphicService powerRankingsGraphicService;
+	private final StandingsGraphicService standingsGraphicService;
 	private final Path uploadDir;
 
 	@SuppressFBWarnings(
@@ -93,7 +98,7 @@ public class DiscordPostService {
 					+ "DiscordHostValidator, DiscordGlobalConfigService, TeamCardService, SeasonTeamRepository, "
 					+ "SettingsGraphicService, LineupGraphicService, RaceLineupRepository, MatchResultsGraphicService, "
 					+ "ResultsGraphicService, ProvisionalScoresGraphicService, DiscordTimestamps, DiscordEmojiCache, "
-					+ "MatchdayResultsGraphicService, PowerRankingsGraphicService) "
+					+ "MatchdayResultsGraphicService, PowerRankingsGraphicService, StandingsGraphicService) "
 					+ "are intentionally shared by-reference — defensive copying would break framework wiring. "
 					+ "Matches the implicit suppression that lombok.config adds to @RequiredArgsConstructor "
 					+ "(see CLAUDE.md SpotBugs section + lombok.config invariant).")
@@ -116,6 +121,7 @@ public class DiscordPostService {
 			DiscordEmojiCache emojiCache,
 			MatchdayResultsGraphicService matchdayResultsGraphicService,
 			PowerRankingsGraphicService powerRankingsGraphicService,
+			StandingsGraphicService standingsGraphicService,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
 		this.restClient = restClient;
@@ -135,6 +141,7 @@ public class DiscordPostService {
 		this.emojiCache = emojiCache;
 		this.matchdayResultsGraphicService = matchdayResultsGraphicService;
 		this.powerRankingsGraphicService = powerRankingsGraphicService;
+		this.standingsGraphicService = standingsGraphicService;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
 
@@ -403,6 +410,63 @@ public class DiscordPostService {
 				threadId);
 	}
 
+	public MatchPreviewPreFlightResult canPostStandings(Season season, DiscordGlobalConfig config) {
+		String threadId = season.getDiscordStandingsThreadId();
+		if (threadId == null || threadId.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Link a standings forum-thread above first");
+		}
+		String webhookUrl = config.getStandingsForumWebhookUrl();
+		if (webhookUrl == null || webhookUrl.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Configure standings forum-webhook in Discord settings");
+		}
+		return new MatchPreviewPreFlightResult(true, null);
+	}
+
+	@Transactional
+	public DiscordPost postStandings(Season season, SeasonPhase phase) throws DiscordApiException {
+		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
+		MatchPreviewPreFlightResult pre = canPostStandings(season, config);
+		if (!pre.canPost()) {
+			throw new BusinessRuleException("Cannot post Standings: " + pre.disabledReason());
+		}
+		String threadId = season.getDiscordStandingsThreadId();
+		String webhookUrl = config.getStandingsForumWebhookUrl();
+		String channelId = parseWebhookUrl(webhookUrl).id();
+		List<byte[]> pngs;
+		try {
+			pngs = standingsGraphicService.generateStandingsBytes(season, phase);
+		} catch (DiscordApiException e) {
+			throw e;
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		List<NamedAttachment> attachments = buildStandingsAttachments(phase, pngs);
+		return postOrEdit(
+				channelId,
+				webhookUrl,
+				DiscordPostType.STANDINGS,
+				WebhookPayload.empty(),
+				attachments,
+				DiscordPostRef.seasonPhase(season, phase),
+				threadId);
+	}
+
+	private static List<NamedAttachment> buildStandingsAttachments(SeasonPhase phase, List<byte[]> pngs) {
+		String typeSlug = phase.getPhaseType().name().toLowerCase(java.util.Locale.ROOT);
+		if (phase.getLayout() != PhaseLayout.GROUPS || pngs.size() == 1) {
+			return List.of(new NamedAttachment("standings-" + typeSlug + ".png", pngs.get(0)));
+		}
+		List<SeasonPhaseGroup> groups = phase.getGroups().stream()
+				.sorted(Comparator.comparingInt(SeasonPhaseGroup::getSortIndex))
+				.toList();
+		List<NamedAttachment> out = new ArrayList<>(pngs.size());
+		for (int i = 0; i < pngs.size(); i++) {
+			String groupSlug = i < groups.size() ? slug(groups.get(i).getName()) : "group-" + (i + 1);
+			out.add(new NamedAttachment("standings-" + typeSlug + "-" + groupSlug + ".png", pngs.get(i)));
+		}
+		return out;
+	}
+
 	private static boolean allNonByeMatchesFinal(Matchday matchday) {
 		List<Match> matches = matchday.getMatches();
 		if (matches.isEmpty()) {
@@ -597,8 +661,10 @@ public class DiscordPostService {
 					discordPostRepository.findByChannelIdAndPostTypeAndMatchId(channelId, type, m.id());
 			case DiscordPostRef.RaceRef r ->
 					discordPostRepository.findByChannelIdAndPostTypeAndRaceId(channelId, type, r.id());
-			case DiscordPostRef.SeasonRef s ->
-					discordPostRepository.findByChannelIdAndPostTypeAndSeasonId(channelId, type, s.id());
+			case DiscordPostRef.SeasonRef s -> s.phaseId() != null
+					? discordPostRepository.findByChannelIdAndPostTypeAndSeasonIdAndPhaseId(
+							channelId, type, s.seasonId(), s.phaseId())
+					: discordPostRepository.findByChannelIdAndPostTypeAndSeasonId(channelId, type, s.seasonId());
 			case DiscordPostRef.MatchdayRef d ->
 					discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(channelId, type, d.id());
 		};
@@ -632,6 +698,9 @@ public class DiscordPostService {
 			row.setAttachmentsReplacedAt(now);
 		}
 		ref.applyTo(row);
+		if (ref instanceof DiscordPostRef.SeasonRef s && s.phaseId() != null) {
+			row.setPhaseId(s.phaseId());
+		}
 		DiscordPost saved = discordPostRepository.save(row);
 		log.info("Posted {} for ref {} (messageId={})", type, ref, saved.getMessageId());
 		return saved;

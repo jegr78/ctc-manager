@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8" />
+<style th:inline="text">
+	@font-face {
+		font-family: 'Conthrax';
+		src: url([[${fontBase64}]]) format('woff2');
+	}
+	* { box-sizing: border-box; margin: 0; padding: 0; }
+	html, body {
+		width: 1920px;
+		height: 1080px;
+		background: #0f1115;
+		color: #f5f6f8;
+		font-family: 'Conthrax', 'Helvetica Neue', Arial, sans-serif;
+	}
+	body {
+		display: flex;
+		flex-direction: column;
+		padding: 56px 80px;
+	}
+	header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 36px;
+	}
+	header .titles h1 {
+		font-size: 56px;
+		letter-spacing: 4px;
+		text-transform: uppercase;
+	}
+	header .titles h2 {
+		margin-top: 8px;
+		font-size: 28px;
+		letter-spacing: 6px;
+		color: #4fc3f7;
+		text-transform: uppercase;
+	}
+	header img.ctc-logo {
+		height: 96px;
+		width: auto;
+	}
+	table.standings {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 30px;
+	}
+	table.standings thead th {
+		text-align: left;
+		padding: 16px 18px;
+		border-bottom: 2px solid #4fc3f7;
+		font-size: 24px;
+		text-transform: uppercase;
+		letter-spacing: 2px;
+		color: #9aa3ad;
+	}
+	table.standings tbody td {
+		padding: 18px;
+		border-bottom: 1px solid #1f242b;
+		vertical-align: middle;
+	}
+	td.pos { width: 96px; text-align: center; font-size: 34px; color: #4fc3f7; }
+	td.team { display: flex; align-items: center; gap: 18px; }
+	td.team img { height: 56px; width: 56px; object-fit: contain; }
+	td.team .team-meta { display: flex; flex-direction: column; gap: 4px; }
+	td.team .team-meta .short { color: #9aa3ad; font-size: 20px; letter-spacing: 2px; }
+	td.num { width: 110px; text-align: center; font-variant-numeric: tabular-nums; }
+	td.num.pts { color: #4fc3f7; font-weight: bold; }
+	.color-strip { width: 8px; height: 56px; border-radius: 2px; }
+</style>
+</head>
+<body>
+	<header>
+		<div class="titles">
+			<h1 th:text="${seasonName}"></h1>
+			<h2 th:text="${phaseLabel}"></h2>
+		</div>
+		<img class="ctc-logo" th:src="${ctcLogoBase64}" alt="" />
+	</header>
+	<table class="standings">
+		<thead>
+			<tr>
+				<th>#</th>
+				<th>Team</th>
+				<th class="num">W</th>
+				<th class="num">D</th>
+				<th class="num">L</th>
+				<th class="num">PTS</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="row : ${standings}">
+				<td class="pos" th:text="${row.position}"></td>
+				<td class="team">
+					<div class="color-strip" th:style="'background:' + ${row.primaryColor}"></div>
+					<img th:if="${row.teamLogoBase64}" th:src="${row.teamLogoBase64}" alt="" />
+					<div class="team-meta">
+						<span th:text="${row.teamName}"></span>
+						<span class="short" th:text="${row.teamShortName}"></span>
+					</div>
+				</td>
+				<td class="num" th:text="${row.wins}"></td>
+				<td class="num" th:text="${row.draws}"></td>
+				<td class="num" th:text="${row.losses}"></td>
+				<td class="num pts" th:text="${row.points}"></td>
+			</tr>
+		</tbody>
+	</table>
+</body>
+</html>

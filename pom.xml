@@ -377,6 +377,7 @@
 						<exclude>org/ctc/admin/service/OverlayGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/MatchResultsGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/PowerRankingsGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/StandingsGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/ProvisionalScoresGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/AbstractGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/PlaywrightScreenshotter.class</exclude>

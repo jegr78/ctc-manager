@@ -46,6 +46,7 @@ class DiscordPostServicePreFlightTest {
 				mock(org.ctc.discord.DiscordEmojiCache.class),
 				mock(org.ctc.admin.service.MatchdayResultsGraphicService.class),
 				mock(org.ctc.admin.service.PowerRankingsGraphicService.class),
+				mock(org.ctc.admin.service.StandingsGraphicService.class),
 				"uploads");
 	}
 
