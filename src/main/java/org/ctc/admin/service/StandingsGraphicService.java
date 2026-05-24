@@ -82,11 +82,22 @@ public class StandingsGraphicService extends AbstractGraphicService {
 			));
 		}
 
+		int rowCount = Math.max(1, rows.size());
+		int tableAvailablePx = 1080 - 240;
+		int rowHeightPx = Math.max(36, Math.min(80, tableAvailablePx / rowCount));
+		int fontSizePx = Math.max(18, Math.min(36, rowHeightPx - 10));
+		int logoSizePx = Math.max(28, Math.min(60, rowHeightPx - 8));
+		int posFontSizePx = Math.min(44, fontSizePx + 4);
+
 		Context ctx = new Context();
-		ctx.setVariable("seasonName", season.getName());
+		ctx.setVariable("seasonYear", season.getYear());
 		ctx.setVariable("phaseLabel", phase.getPhaseType().name()
-				+ (group != null ? " — " + group.getName() : ""));
+				+ (group != null ? " — " + group.getName().toUpperCase(java.util.Locale.ROOT) : ""));
 		ctx.setVariable("standings", rows);
+		ctx.setVariable("rowHeightPx", rowHeightPx);
+		ctx.setVariable("fontSizePx", fontSizePx);
+		ctx.setVariable("logoSizePx", logoSizePx);
+		ctx.setVariable("posFontSizePx", posFontSizePx);
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 
