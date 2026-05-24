@@ -148,6 +148,49 @@
                 </div>
             </div>
         </div>
+
+        <div th:if="${matchdayDiscordActive}" class="detail-section mt-lg">
+            <h2>Discord Actions</h2>
+            <div class="discord-actions discord-actions--posts">
+                <span th:if="${not canPostMatchdayResults and matchdayOverviewPost == null}"
+                      class="btn btn-secondary btn-sm disabled"
+                      data-testid="post-matchday-results-disabled"
+                      th:title="${matchdayResultsDisabledReason}">Post Match Day Results</span>
+                <form th:if="${canPostMatchdayResults and matchdayOverviewPost == null}"
+                      th:action="@{/admin/matchdays/{id}/post-matchday-results(id=${matchday.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-matchday-results">
+                        Post Match Day Results
+                    </button>
+                </form>
+                <form th:if="${matchdayOverviewPost != null}"
+                      th:action="@{/admin/matchdays/{id}/post-matchday-results(id=${matchday.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-secondary btn-sm"
+                            th:attr="data-testid=${matchdayResultsStale ? 'update-matchday-results' : 'repost-matchday-results'}"
+                            th:text="${matchdayResultsStale ? 'Update Match Day Results' : 'Re-Post Match Day Results'}"></button>
+                </form>
+
+                <span th:if="${not canPostPowerRankings and powerRankingsPost == null}"
+                      class="btn btn-secondary btn-sm disabled"
+                      data-testid="post-power-rankings-disabled"
+                      th:title="${powerRankingsDisabledReason}">Post Power Rankings</span>
+                <form th:if="${canPostPowerRankings and powerRankingsPost == null}"
+                      th:action="@{/admin/matchdays/{id}/post-power-rankings(id=${matchday.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-power-rankings">
+                        Post Power Rankings
+                    </button>
+                </form>
+                <form th:if="${powerRankingsPost != null}"
+                      th:action="@{/admin/matchdays/{id}/post-power-rankings(id=${matchday.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-secondary btn-sm"
+                            th:attr="data-testid=${powerRankingsStale ? 'update-power-rankings' : 'repost-power-rankings'}"
+                            th:text="${powerRankingsStale ? 'Update Power Rankings' : 'Re-Post Power Rankings'}"></button>
+                </form>
+            </div>
+        </div>
     </div>
 </section>
 </body>

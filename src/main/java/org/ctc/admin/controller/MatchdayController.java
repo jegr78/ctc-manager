@@ -2,16 +2,34 @@ package org.ctc.admin.controller;
 
 import jakarta.validation.Valid;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.CreateMatchdayRequest;
 import org.ctc.admin.dto.MatchdayForm;
+import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.MatchdayScheduleGraphicService;
+import org.ctc.discord.exception.DiscordApiException;
+import org.ctc.discord.exception.DiscordApiExceptionMapper;
+import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.model.DiscordPost;
+import org.ctc.discord.model.DiscordPostType;
+import org.ctc.discord.repository.DiscordPostRepository;
+import org.ctc.discord.service.DiscordGlobalConfigService;
+import org.ctc.discord.service.DiscordPostService;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.model.Match;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Season;
+import org.ctc.domain.model.SeasonTeam;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.service.MatchService;
 import org.ctc.domain.service.MatchdayService;
 import org.springframework.http.HttpHeaders;
@@ -36,6 +54,10 @@ public class MatchdayController {
     private final MatchdayResultsGraphicService resultsGraphicService;
     private final MatchResultsGraphicService matchResultsGraphicService;
     private final MatchService matchService;
+    private final DiscordPostService discordPostService;
+    private final DiscordPostRepository discordPostRepository;
+    private final DiscordGlobalConfigService discordGlobalConfigService;
+    private final SeasonTeamRepository seasonTeamRepository;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
@@ -59,7 +81,120 @@ public class MatchdayController {
         model.addAttribute("scheduleMissingCount", data.scheduleMissingCount());
         model.addAttribute("hasResults", data.hasResults());
         model.addAttribute("pageTitle", "Matchday: " + matchday.getLabel());
+        populateMatchdayDiscordModel(model, matchday);
         return "admin/matchday-detail";
+    }
+
+    private void populateMatchdayDiscordModel(Model model, Matchday matchday) {
+        DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
+        String webhookUrl = config.getRaceResultsForumWebhookUrl();
+        boolean threadLinked = matchday.getSeason().getDiscordRaceResultsThreadId() != null
+                && !matchday.getSeason().getDiscordRaceResultsThreadId().isBlank();
+        boolean webhookConfigured = webhookUrl != null && !webhookUrl.isBlank();
+        boolean matchdayDiscordActive = threadLinked && webhookConfigured;
+
+        MatchPreviewPreFlightResult resultsPreFlight = discordPostService.canPostMatchdayResults(matchday, config);
+        MatchPreviewPreFlightResult rankingsPreFlight = discordPostService.canPostPowerRankings(matchday, config);
+
+        DiscordPost matchdayOverviewPost = null;
+        DiscordPost powerRankingsPost = null;
+        if (matchdayDiscordActive) {
+            String channelId = discordPostService.resolveAnnouncementChannelId(webhookUrl);
+            matchdayOverviewPost = discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
+                    channelId, DiscordPostType.MATCHDAY_OVERVIEW, matchday.getId()).orElse(null);
+            powerRankingsPost = discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
+                    channelId, DiscordPostType.POWER_RANKINGS, matchday.getId()).orElse(null);
+        }
+
+        boolean matchdayResultsStale = matchdayOverviewPost != null
+                && isMatchdayResultsStale(matchday, matchdayOverviewPost);
+        boolean powerRankingsStale = powerRankingsPost != null
+                && isPowerRankingsStale(matchday.getSeason(), powerRankingsPost);
+
+        model.addAttribute("matchdayDiscordActive", matchdayDiscordActive);
+        model.addAttribute("canPostMatchdayResults", resultsPreFlight.canPost());
+        model.addAttribute("canPostPowerRankings", rankingsPreFlight.canPost());
+        model.addAttribute("matchdayResultsDisabledReason", resultsPreFlight.disabledReason());
+        model.addAttribute("powerRankingsDisabledReason", rankingsPreFlight.disabledReason());
+        model.addAttribute("matchdayOverviewPost", matchdayOverviewPost);
+        model.addAttribute("powerRankingsPost", powerRankingsPost);
+        model.addAttribute("matchdayResultsStale", matchdayResultsStale);
+        model.addAttribute("powerRankingsStale", powerRankingsStale);
+    }
+
+    private static boolean isMatchdayResultsStale(Matchday matchday, DiscordPost post) {
+        LocalDateTime postUpdated = post.getUpdatedAt();
+        if (postUpdated == null) {
+            return false;
+        }
+        return matchday.getMatches().stream()
+                .flatMap(m -> m.getRaces().stream())
+                .flatMap(r -> r.getResults().stream())
+                .map(r -> r.getUpdatedAt())
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .map(latest -> latest.isAfter(postUpdated))
+                .orElse(false);
+    }
+
+    private boolean isPowerRankingsStale(Season season, DiscordPost post) {
+        LocalDateTime postUpdated = post.getUpdatedAt();
+        if (postUpdated == null) {
+            return false;
+        }
+        Optional<LocalDateTime> latest = seasonTeamRepository.findBySeasonId(season.getId()).stream()
+                .map(SeasonTeam::getUpdatedAt)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo);
+        return latest.map(t -> t.isAfter(postUpdated)).orElse(false);
+    }
+
+    @PostMapping("/{id}/post-matchday-results")
+    public String postMatchdayResults(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            Matchday matchday = matchdayService.getMatchdayDetail(id).matchday();
+            discordPostService.postMatchdayResults(matchday);
+            redirectAttributes.addFlashAttribute("successMessage", "Match day results posted.");
+        } catch (BusinessRuleException e) {
+            applyErrorFlash(redirectAttributes, e, "Post match day results");
+        } catch (DiscordApiException e) {
+            applyErrorFlash(redirectAttributes, e, "Post match day results");
+        }
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    @PostMapping("/{id}/post-power-rankings")
+    public String postPowerRankings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            Matchday matchday = matchdayService.getMatchdayDetail(id).matchday();
+            discordPostService.postPowerRankings(matchday);
+            redirectAttributes.addFlashAttribute("successMessage", "Power rankings posted.");
+        } catch (BusinessRuleException e) {
+            applyErrorFlash(redirectAttributes, e, "Post power rankings");
+        } catch (DiscordApiException e) {
+            applyErrorFlash(redirectAttributes, e, "Post power rankings");
+        }
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    private void applyErrorFlash(RedirectAttributes ra, DiscordApiException e, String action) {
+        String message = switch (e.category()) {
+            case TRANSIENT -> DiscordApiExceptionMapper.TRANSIENT_MESSAGE;
+            case AUTH -> DiscordApiExceptionMapper.AUTH_MESSAGE;
+            case MISSING_PERMISSIONS -> DiscordApiExceptionMapper.MISSING_PERMISSIONS_MESSAGE;
+            case NOT_FOUND -> DiscordApiExceptionMapper.NOT_FOUND_MESSAGE;
+            case CATEGORY_FULL -> DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE;
+        };
+        String category = e.category().name().toLowerCase().replace('_', '-');
+        log.warn("{} failed: category={}, exception={}", action, category, e.getClass().getSimpleName());
+        ra.addFlashAttribute("errorMessage", message);
+        ra.addFlashAttribute("errorCategory", category);
+    }
+
+    private void applyErrorFlash(RedirectAttributes ra, BusinessRuleException e, String action) {
+        log.warn("{} failed: category=data-incomplete, message={}", action, e.getMessage());
+        ra.addFlashAttribute("errorMessage", e.getMessage());
+        ra.addFlashAttribute("errorCategory", "data-incomplete");
     }
 
     @GetMapping("/new")
