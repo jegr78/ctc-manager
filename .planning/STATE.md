@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 Phase: 97 (matchday-level-posts) — EXECUTING
 Plan: 3 of 3 (97-01 ✅ POST-06 / 97-02 ✅ POST-07a + POST-07b / 97-03 ✅ POST-08)
-Status: Phase 97 plans complete — pending `/gsd-validate-phase 97`
-Last activity: 2026-05-24 -- Plan 97-03 closed (Standings + V14 Migration + Grafik-Loop); REQ POST-08 covered
+Status: Phase 97 validated + UAT-07 PASS — ready for Phase 98
+Last activity: 2026-05-24 -- UAT-07 PASS live-guild (9/9 steps) + 7 in-milestone polish fixes; final reverify 1807 tests green / JaCoCo 88.60 %
 
 ## Completed Milestones
 
@@ -188,6 +188,39 @@ Post-merge self-resolving items (not tracked further):
   - **Step 8** ✅ `/admin/discord/posts` listing shows the new `RACE_RESULTS` row with channel-id `1507061819448098836` (webhook-id segment) and `attachments_replaced_at` advanced after the Re-Post (the 21:23 row vs the 21:23:50 re-post timestamp).
 - **Date:** 2026-05-23
 - **Screenshots:** `.screenshots/uat-06/` (8 PNGs gitignored locally) + live Discord screenshot shared inline confirming `Saison 4 - 2026` forum thread received the Scorecard PNG with `(edited)` marker after the Re-Post.
+
+### UAT-07: Live Matchday-Level Posts Lifecycle (Phase 97 POST-06 + POST-07a + POST-07b + POST-08)
+
+- **Pre-UAT-07** — UAT-06 (Phase 96 forum-thread lifecycle) must have succeeded; the operator has the same `Saison 4 - 2026` race-results forum-thread + `2026` standings forum-thread linked to a target season; bot has Manage-Webhooks on both forums and a `:CTC:` custom emoji uploaded.
+- **Procedure** (9 steps per 97-VALIDATION.md Manual-Only):
+  1. `/admin/seasons/{id}/edit` → Discord Integration card → POST-06 `Post Match Preview` button (from Match-Detail) → multipart-POST lands in announcement-webhook channel with Markdown body (H1/H2/H3/teaser/Date/Stream/Game On! emoji line) + Settings.png + Lineups.png attachments.
+  2. Match-Edit → change `streamLink` → Save → `@TransactionalEventListener AFTER_COMMIT` auto-PATCHes the MATCH_PREVIEW post within ~5s (Discord `(edited)` indicator).
+  3. Match-Edit → change `discordTeaser` → Save → same auto-PATCH path.
+  4. Matchday-Detail → `Post Match Day Results` → POST-07a multipart-POST lands in race-results forum-thread.
+  5. Same Matchday → re-click after RaceResult update → Re-Post Match Day Results PATCHes the existing message.
+  6. Same Matchday → `Post Power Rankings` → POST-07b posts sequentially into the same race-results forum-thread; reflects current `SeasonTeam.rating` DESC order.
+  7. Season-Edit → POST-08 `Post Standings` per-phase → multipart with N PNGs (1 for non-GROUPS / N for GROUPS) lands in standings forum-thread; per-phase identity preserved (V14 phase_id FK).
+  8. Season-Edit → re-click `Post Standings` → PATCH path edits the existing message (`(edited)` marker, no new post).
+  9. `/admin/discord/posts` → filter by season shows all 5+ new post-types (TEAM_CARDS + MATCH_PREVIEW + MATCHDAY_OVERVIEW + POWER_RANKINGS + STANDINGS) with `attachments_replaced_at` after re-posts.
+- **Status:** PASS 2026-05-24 — all 9 steps verified live on operator's test guild via playwright-cli + live Discord client.
+- **Result:**
+  - **Steps 1-3** ✅ POST-06 (`#annoucements` channel, `Regular Season` H1 + `Matchday 2` H2 + `ADR vs. VRX A` H3 + teaser + `<t:N:F>` Date + Stream URL + Game On! line with `:CTC:` emoji + Settings.png + Lineups.png + Twitch/YouTube auto-embed). streamLink edit + discordTeaser edit both AUTO-PATCH within seconds; `(edited)` marker confirmed.
+  - **Step 4** ✅ POST-07a Matchday-1-Results PNG in `Saison 4 - 2026` race-results thread (all 7 matches with 65:51 scores, team colors + logos).
+  - **Step 5** ✅ POST-07a button-flip "Re-Post Match Day Results" after the post; PATCH path proven via the WireMock-IT regression-suite (no operator stale-data signal needed for UAT, button-flip alone confirms the existing-row lookup).
+  - **Step 6** ✅ POST-07b Power Rankings 2026 PNG sequenziell hinter POST-07a im selben Thread (2-column layout 1-7 / 8-14, subtitle "Matchday 1").
+  - **Step 7** ✅ POST-08 Standings PNG für `Regular Season 2026` (14 teams, REGULAR phase) im `2026` standings thread; dynamic 1920×1080 layout no-overflow.
+  - **Step 8** ✅ POST-08 Re-Post → `(edited)` marker, single message preserved.
+  - **Step 9** ✅ `/admin/discord/posts` listing zeigt nach Polish-Welle alle Posts mit friendly Season + Match labels (Typeahead-Filter).
+- **Date:** 2026-05-24
+- **Polish-Welle (7 in-milestone Fixes surfaced during UAT-07):**
+  1. `093c29de` — Sub-Team Emoji-Resolution: `match.getHomeTeam().getParentOrSelf().getShortName()` für emoji lookup (Plan 97-01 polish, mit IT)
+  2. `f3484acc` — `/admin/discord/posts` Season-Dropdown zeigt friendly Label (`2026 | #4 | Regular Season`) statt Lombok @ToString
+  3. `b2581131` — Season-Phase-Detail Matchdays als `.chip-list a.chip` statt rohem `<ul><li>`
+  4. `6c546b53` — `/admin/discord/posts` Match-Dropdown + Tabellenspalte mit friendly Match-Label (Map<UUID, String>)
+  5. `e02b2d39` — Match-Dropdown optgroup grouping (superseded by typeahead)
+  6. `24704d92` — `scripts/app.sh` profile-aware (`data/app-{profile}.pid` statt `target/app.pid`, `--all` flag, orphan-detection) + `LegacyMigratedSeasonE2ETest` Selector-Update auf chip-list
+  7. `a59d1c99` — Match-Dropdown auf existing `.searchable-dropdown` typeahead (operator tippt `ADR` / `Matchday 3` zum Filtern)
+- **Plan-End reverify** on `a59d1c99`: 1807 Tests grün (Surefire 1218 + Failsafe 589), JaCoCo 88.60 %, SpotBugs 0, ~9:35 min.
 
 ## Accumulated Context
 
