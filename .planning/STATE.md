@@ -4,8 +4,8 @@ milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
 stopped_at: Phase 97 context gathered
-last_updated: "2026-05-24T07:13:51.304Z"
-last_activity: 2026-05-24 -- Phase 97 planning complete
+last_updated: "2026-05-24T08:24:48.308Z"
+last_activity: 2026-05-24 -- Phase 97 execution started
 progress:
   total_phases: 7
   completed_phases: 5
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 96 — provisional-graphic-forum-threads
+**Current focus:** Phase 97 — matchday-level-posts
 
 ## Current Position
 
-Phase: 96 (provisional-graphic-forum-threads) — EXECUTING
+Phase: 97 (matchday-level-posts) — EXECUTING
 Plan: 1 of 3
-Status: Ready to execute
-Last activity: 2026-05-24 -- Phase 97 planning complete
+Status: Executing Phase 97
+Last activity: 2026-05-24 -- Phase 97 execution started
 
 ## Completed Milestones
 
@@ -97,7 +97,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Ready to execute
+- **Status:** Executing Phase 97
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_

@@ -250,7 +250,7 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 **Requirements**: POST-06, POST-07, POST-08
 **Estimated duration**: 2-3 days
 **Plans**: 3 plans
-- [ ] 97-01-PLAN.md — POST-06 Match Preview Announcement + Auto-Edit Hook on streamLink/teaser change
+- [x] 97-01-PLAN.md — POST-06 Match Preview Announcement + Auto-Edit Hook on streamLink/teaser change
 - [ ] 97-02-PLAN.md — POST-07a Match Day Results + POST-07b Power Rankings (2 buttons on Matchday-Detail)
 - [ ] 97-03-PLAN.md — POST-08 Standings + StandingsGraphicService + V14 phase_id FK migration + iterative graphic-design loop
 **UI hint**: yes
@@ -288,5 +288,5 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 | 94 — Team Roles + Match Channel Lifecycle | 0/3 | Not started | - |
 | 95 — Match Channel Posts | 4/4 | Complete   | 2026-05-22 |
 | 96 — Provisional Graphic + Forum Threads | 0/3 | Not started | - |
-| 97 — Matchday-Level Posts | 0/3 | Plans drafted | - |
+| 97 — Matchday-Level Posts | 1/3 | In Progress|  |
 | 98 — Polish + E2E + Docs + Close | 0/3 | Not started | - |
