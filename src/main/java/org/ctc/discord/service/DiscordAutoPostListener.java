@@ -3,6 +3,7 @@ package org.ctc.discord.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.event.ChannelCreatedEvent;
+import org.ctc.discord.event.MatchPreviewFieldsChangedEvent;
 import org.ctc.discord.event.MatchScheduleFieldsChangedEvent;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.domain.model.Match;
@@ -62,6 +63,26 @@ public class DiscordAutoPostListener {
 			recordRequestAttribute(AUTO_EDIT_ERROR_ATTRIBUTE, e.category().name().toLowerCase().replace('_', '-'));
 		} catch (RuntimeException e) {
 			log.warn("Auto-edit SCHEDULE failed for match {}: {}", event.matchId(), e.toString());
+			recordRequestAttribute(AUTO_EDIT_ERROR_ATTRIBUTE, "transient");
+		}
+	}
+
+	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+	@Transactional(propagation = Propagation.REQUIRES_NEW)
+	public void onMatchPreviewFieldsChanged(MatchPreviewFieldsChangedEvent event) {
+		Match match = matchRepository.findById(event.matchId()).orElse(null);
+		if (match == null) {
+			log.warn("Auto-edit MATCH_PREVIEW skipped — match {} not found post-commit", event.matchId());
+			return;
+		}
+		try {
+			discordPostService.autoEditMatchPreviewIfNeeded(match);
+		} catch (DiscordApiException e) {
+			log.warn("Auto-edit MATCH_PREVIEW failed for match {}: category={}",
+					event.matchId(), e.category().name());
+			recordRequestAttribute(AUTO_EDIT_ERROR_ATTRIBUTE, e.category().name().toLowerCase().replace('_', '-'));
+		} catch (RuntimeException e) {
+			log.warn("Auto-edit MATCH_PREVIEW failed for match {}: {}", event.matchId(), e.toString());
 			recordRequestAttribute(AUTO_EDIT_ERROR_ATTRIBUTE, "transient");
 		}
 	}

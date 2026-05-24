@@ -15,12 +15,14 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.ProvisionalScoresGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
 import org.ctc.admin.service.TeamCardService;
+import org.ctc.discord.DiscordEmojiCache;
 import org.ctc.discord.DiscordHostValidator;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.DiscordTimestamps;
@@ -77,6 +79,7 @@ public class DiscordPostService {
 	private final ResultsGraphicService resultsGraphicService;
 	private final ProvisionalScoresGraphicService provisionalScoresGraphicService;
 	private final DiscordTimestamps discordTimestamps;
+	private final DiscordEmojiCache emojiCache;
 	private final Path uploadDir;
 
 	@SuppressFBWarnings(
@@ -84,10 +87,10 @@ public class DiscordPostService {
 			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordRestClient, DiscordPostRepository, "
 					+ "DiscordHostValidator, DiscordGlobalConfigService, TeamCardService, SeasonTeamRepository, "
 					+ "SettingsGraphicService, LineupGraphicService, RaceLineupRepository, MatchResultsGraphicService, "
-					+ "ResultsGraphicService, ProvisionalScoresGraphicService, DiscordTimestamps) are intentionally shared "
-					+ "by-reference — defensive copying would break framework wiring. Matches the implicit suppression "
-					+ "that lombok.config adds to @RequiredArgsConstructor (see CLAUDE.md SpotBugs section + "
-					+ "lombok.config invariant).")
+					+ "ResultsGraphicService, ProvisionalScoresGraphicService, DiscordTimestamps, DiscordEmojiCache) "
+					+ "are intentionally shared by-reference — defensive copying would break framework wiring. "
+					+ "Matches the implicit suppression that lombok.config adds to @RequiredArgsConstructor "
+					+ "(see CLAUDE.md SpotBugs section + lombok.config invariant).")
 	public DiscordPostService(
 			DiscordWebhookClient webhookClient,
 			DiscordRestClient restClient,
@@ -104,6 +107,7 @@ public class DiscordPostService {
 			ResultsGraphicService resultsGraphicService,
 			ProvisionalScoresGraphicService provisionalScoresGraphicService,
 			DiscordTimestamps discordTimestamps,
+			DiscordEmojiCache emojiCache,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
 		this.restClient = restClient;
@@ -120,6 +124,7 @@ public class DiscordPostService {
 		this.resultsGraphicService = resultsGraphicService;
 		this.provisionalScoresGraphicService = provisionalScoresGraphicService;
 		this.discordTimestamps = discordTimestamps;
+		this.emojiCache = emojiCache;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
 
@@ -196,6 +201,122 @@ public class DiscordPostService {
 				.map(Race::getDateTime)
 				.filter(Objects::nonNull)
 				.min(Comparator.naturalOrder());
+	}
+
+	public String resolveAnnouncementChannelId(String webhookUrl) {
+		return parseWebhookUrl(webhookUrl).id();
+	}
+
+	public MatchPreviewPreFlightResult canPostMatchPreview(Match match) {
+		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
+		if (match.getDiscordTeaser() == null || match.getDiscordTeaser().isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Add a teaser text on Match-Edit first");
+		}
+		if (!matchHasCompleteSettings(match)) {
+			return new MatchPreviewPreFlightResult(false, "Configure Race Settings for all races first");
+		}
+		if (!matchHasCompleteLineups(match)) {
+			return new MatchPreviewPreFlightResult(false, "Configure Race Lineups for all races first");
+		}
+		if (firstRaceTime(match).isEmpty()) {
+			return new MatchPreviewPreFlightResult(false, "Set Race date+time first");
+		}
+		String webhookUrl = config.getAnnouncementWebhookUrl();
+		if (webhookUrl == null || webhookUrl.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Configure announcement-webhook in Discord settings");
+		}
+		return new MatchPreviewPreFlightResult(true, null);
+	}
+
+	@Transactional
+	public DiscordPost postMatchPreview(Match match) throws DiscordApiException {
+		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
+		MatchPreviewPreFlightResult pre = canPostMatchPreview(match);
+		if (!pre.canPost()) {
+			throw new BusinessRuleException("Cannot post Match Preview: " + pre.disabledReason());
+		}
+		String webhookUrl = config.getAnnouncementWebhookUrl();
+		String channelId = parseWebhookUrl(webhookUrl).id();
+		LocalDateTime firstRaceTime = firstRaceTime(match).orElseThrow();
+		String content = buildMatchPreviewMarkdown(match, config, firstRaceTime);
+		List<NamedAttachment> attachments = buildMatchPreviewAttachments(match);
+		return postOrEdit(
+				channelId,
+				webhookUrl,
+				DiscordPostType.MATCH_PREVIEW,
+				new WebhookPayload(content, List.of()),
+				attachments,
+				DiscordPostRef.match(match));
+	}
+
+	@Transactional
+	public void autoEditMatchPreviewIfNeeded(Match match) throws DiscordApiException {
+		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
+		String webhookUrl = config.getAnnouncementWebhookUrl();
+		if (webhookUrl == null || webhookUrl.isBlank()) {
+			return;
+		}
+		String channelId = parseWebhookUrl(webhookUrl).id();
+		Optional<DiscordPost> existing = discordPostRepository
+				.findByChannelIdAndPostTypeAndMatchId(channelId, DiscordPostType.MATCH_PREVIEW, match.getId());
+		if (existing.isEmpty()) {
+			return;
+		}
+		Optional<LocalDateTime> firstRaceTime = firstRaceTime(match);
+		if (firstRaceTime.isEmpty()) {
+			return;
+		}
+		String content = buildMatchPreviewMarkdown(match, config, firstRaceTime.get());
+		List<NamedAttachment> attachments = buildMatchPreviewAttachments(match);
+		postOrEdit(
+				channelId,
+				webhookUrl,
+				DiscordPostType.MATCH_PREVIEW,
+				new WebhookPayload(content, List.of()),
+				attachments,
+				DiscordPostRef.match(match));
+	}
+
+	private String buildMatchPreviewMarkdown(Match match, DiscordGlobalConfig config, LocalDateTime firstRaceTime) {
+		String seasonName = match.getMatchday().getSeason().getName();
+		String matchdayLabel = match.getMatchday().getLabel();
+		String homeShort = match.getHomeTeam().getShortName();
+		String awayShort = match.getAwayTeam().getShortName();
+		String teaser = match.getDiscordTeaser();
+		String dateLine = discordTimestamps.longDateTime(firstRaceTime);
+		String streamLine = (match.getStreamLink() != null && !match.getStreamLink().isBlank())
+				? match.getStreamLink()
+				: "TBA";
+		String homeEmoji = emojiCache.emojiFor(homeShort);
+		String vsEmoji = emojiCache.emojiFor(config.getVsEmojiName());
+		String awayEmoji = emojiCache.emojiFor(awayShort);
+		return "# " + seasonName + "\n"
+				+ "## " + matchdayLabel + "\n"
+				+ "### " + homeShort + " vs. " + awayShort + "\n\n"
+				+ teaser + "\n\n"
+				+ "- Date: " + dateLine + "\n"
+				+ "- Stream: " + streamLine + "\n\n"
+				+ "Game On! " + homeEmoji + " " + vsEmoji + " " + awayEmoji;
+	}
+
+	private List<NamedAttachment> buildMatchPreviewAttachments(Match match) throws DiscordApiException {
+		List<Race> races = match.getRaces();
+		List<NamedAttachment> attachments = new ArrayList<>(races.size() * 2);
+		try {
+			for (int i = 0; i < races.size(); i++) {
+				Race race = races.get(i);
+				int n = i + 1;
+				attachments.add(new NamedAttachment(
+						"settings-md" + n + ".png",
+						readPng(settingsGraphicService.generateSettings(race))));
+				attachments.add(new NamedAttachment(
+						"lineups-md" + n + ".png",
+						readPng(lineupGraphicService.generateLineup(race))));
+			}
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		return attachments;
 	}
 
 	private WebhookPayload buildSchedulePayload(Match match, LocalDateTime firstRaceTime) {
