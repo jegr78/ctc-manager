@@ -128,3 +128,30 @@ Phase 97 is an extension of an existing, fully-tested test infrastructure (Suref
 **Verification method:** filesystem existence check per Area row + cross-reference with green plan-end full-suite run (`3aa5b6e6`). The 16 named test classes from the Per-Task Verification Map all map 1:1 to existing `src/test/java/**/*.java` files and ran green in the same suite.
 
 **Manual-Only UATs unchanged:** UAT-07 (9 live-Discord steps spanning POST-06 + POST-07a + POST-07b + POST-08) remains staged in `STATE.md` per CONTEXT D-97-10. To run after Phase 97 closes and before `/gsd-execute-phase 98` starts.
+
+---
+
+## Validation Audit 2026-05-24 (Re-Audit after UAT-07 + Polish-Welle)
+
+| Metric | Count |
+|--------|-------|
+| Areas in scope | 16 |
+| Test classes verified to exist | 16 |
+| Gaps found | 0 |
+| Gaps resolved | 0 (none needed) |
+| Escalated to manual-only | 0 |
+| Status changes since first audit | 0 (all stayed ✅ green) |
+| Manual-Only UAT outcomes flipped | 1 (UAT-07 pending → PASS) |
+
+**Auditor:** orchestrator (inline) — zero gaps, no `gsd-nyquist-auditor` spawn needed.
+
+**Polish-Welle reflection (7 in-milestone commits between first audit `cdab56d1` and re-audit `a48ed284`):**
+- `093c29de` — Sub-Team Emoji-Resolution (Plan 97-01 polish). Added new test method `givenSubTeamHomeAndAway_whenPostMatchPreview_thenGameOnLineUsesParentShortNamesForEmoji` INSIDE existing `DiscordPostServiceMatchPreviewIT` (Area row "MATCH_PREVIEW Markdown body" already covers this class) — coverage strengthened, no new Area row needed.
+- `f3484acc`, `b2581131`, `6c546b53`, `e02b2d39`, `a59d1c99` — Template-only or controller-only UX fixes; covered by existing controller ITs.
+- `24704d92` — `LegacyMigratedSeasonE2ETest` selector update (Phase-80-legacy test, not in Phase-97 Area map — unaffected).
+
+**UAT-07 outcome:** PASS 2026-05-24 — all 9 manual-only steps verified live on operator's test guild via playwright-cli + live Discord client. Full result in `.planning/STATE.md` § Pending UATs → UAT-07.
+
+**Plan-end reverify:** `./mvnw clean verify -Pe2e` on `a59d1c99` (final polish commit before this audit) — 1807 tests green (Surefire 1218 + Failsafe 589), JaCoCo line coverage 88.60 %, SpotBugs 0 BugInstances, ~9:35 min.
+
+**Conclusion:** Phase 97 stays NYQUIST-COMPLIANT. Ready for `/gsd-execute-phase 98 --interactive`.
