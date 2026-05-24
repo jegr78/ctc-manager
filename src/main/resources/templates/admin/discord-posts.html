@@ -20,15 +20,21 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="matchId">Match</label>
-                <select id="matchId" th:field="*{matchId}">
-                    <option th:value="${null}">— Any match —</option>
-                    <optgroup th:each="group : ${matchesByGroup}" th:label="${group.key}">
-                        <option th:each="m : ${group.value}"
-                                th:value="${m.id}"
-                                th:text="${matchPairings[m.id]}"></option>
-                    </optgroup>
-                </select>
+                <label for="matchSearch">Match</label>
+                <div class="searchable-dropdown" id="matchDropdown">
+                    <input type="text" id="matchSearch" class="dropdown-input"
+                           placeholder="Search match (type season, matchday or team)..."
+                           autocomplete="off">
+                    <input type="hidden" name="matchId" id="matchId" th:value="${filter.matchId}">
+                    <div class="dropdown-list" id="matchList">
+                        <div class="dropdown-item"
+                             th:attr="data-id='',data-label='— Any match —'">— Any match —</div>
+                        <div th:each="m : ${matches}"
+                             class="dropdown-item"
+                             th:attr="data-id=${m.id},data-label=${matchLabels[m.id]}"
+                             th:text="${matchLabels[m.id]}"></div>
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label for="postType">Post Type</label>
