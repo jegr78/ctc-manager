@@ -184,7 +184,7 @@ See: milestones/v1.12-ROADMAP.md for full details
 - [ ] **Phase 94: Team Roles + Match Channel Lifecycle** — CHAN-01 Flyway V9 `teams.discord_role_id` + Team-Form snowflake-validated field + live-dropdown via cached guild roles; CHAN-02 Flyway V10 `matches.discord_*` + scheduling fields + "Create Discord Channel" button with full permission-overwrite model + webhook creation + post-create permission-audit assertion; CHAN-03 Archive modal with category regex `^Match Days Archive (?<year>\d{4})(?: \((?<num>\d+)\))?$` + live channel-count + default-suggestion of highest-num with `< 50`
 - [x] **Phase 95: Match Channel Posts** — POST-01 Flyway V11 `discord_post` table + `DiscordPostService.postOrEdit` pattern + `/admin/discord/posts` listing; POST-02 Team Cards (one multipart post with 2 PNGs); POST-03 Settings + Lineups graphic posts; POST-04 Match Results with auto-detected re-post on stale-data; POST-05 Schedule embed with auto-edit on host/RD/streamer field changes (completed 2026-05-22)
 - [ ] **Phase 96: Provisional Graphic + Forum Threads** — GRAFX-01 new `ProvisionalScoresGraphicService` + Thymeleaf template (pixel-accurate to existing Google-Sheets screenshot); FORUM-01 Flyway V12 `seasons.discord_*_thread_id` + Season-Detail "Discord Integration" section + Link-existing-Thread modal + Create-new-Thread modal; FORUM-02 Race-Detail "Post Race Result to Forum-Thread" with `?thread_id=` query param + auto-unarchive-if-archived
-- [ ] **Phase 97: Matchday-Level Posts** — POST-06 Matchday Pairings + Match Previews (batch) with structured Markdown + emoji-resolved "Game On!" line + auto-edit on stream-link/teaser change; POST-07 Matchday Overview + Power Rankings to race-results Forum-Thread; POST-08 Standings post to standings Forum-Thread with re-post-on-change
+- [ ] **Phase 97: Matchday-Level Posts** — POST-06 per-match Match Preview Announcement (Markdown + Settings/Lineups attachments + auto-edit hook on streamLink/teaser change); POST-07a Match Day Results + POST-07b Power Rankings (2 independent buttons on Matchday-Detail to race-results forum-thread); POST-08 phase-aware Standings to standings forum-thread (V14 phase_id FK migration + new StandingsGraphicService with iterative design loop)
 - [ ] **Phase 98: Polish + E2E + Docs + Close** — E2E-01 Playwright + WireMock-backed full-matchday-lifecycle suite (create channel → post all stages → archive); DOCS-02 `docs/operations/discord-integration.md` operator runbook with Bot-application setup screenshots + OAuth-URL-generator + token rotation + troubleshooting; DOCS-03 README + Wiki update + milestone close
 
 See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency Graph, REQ-ID coverage)
@@ -245,11 +245,14 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 
 ### Phase 97: Matchday-Level Posts
 
-**Goal**: Three remaining post types (Matchday Pairings + Match Previews batch, Matchday Overview + Power Rankings, Standings) complete the 11-post-type matchday workflow.
-**Depends on**: Phase 96 (forum-threads must be linkable on the season before matchday-overview + power-rankings + standings can target them; POST-07 + POST-08 require `season.discordRaceResultsThreadId` + `season.discordStandingsThreadId` to be populated)
+**Goal**: Close the matchday- + season-level Discord post matrix on top of the Phase 95 + 96 foundation: per-match Match Preview Announcement (POST-06) with auto-edit hook, two independent Matchday-Detail buttons for Match Day Results + Power Rankings (POST-07a + 07b) to the race-results forum-thread, and phase-aware Standings (POST-08) to the standings forum-thread with a new `StandingsGraphicService` + V14 `discord_post.phase_id` FK migration.
+**Depends on**: Phase 96 (forum-threads must be linkable on the season before POST-07a/07b + POST-08 can target them; POST-07 + POST-08 require `season.discordRaceResultsThreadId` + `season.discordStandingsThreadId`; Plan 97-03 widens Phase 96's `SeasonRef` sealed-record for phase-scoped identity-key)
 **Requirements**: POST-06, POST-07, POST-08
 **Estimated duration**: 2-3 days
-**Plans**: TBD (estimated 3 plans per design spec § 5)
+**Plans**: 3 plans
+- [ ] 97-01-PLAN.md — POST-06 Match Preview Announcement + Auto-Edit Hook on streamLink/teaser change
+- [ ] 97-02-PLAN.md — POST-07a Match Day Results + POST-07b Power Rankings (2 buttons on Matchday-Detail)
+- [ ] 97-03-PLAN.md — POST-08 Standings + StandingsGraphicService + V14 phase_id FK migration + iterative graphic-design loop
 **UI hint**: yes
 
 ### Phase 98: Polish + E2E + Docs + Close
@@ -285,5 +288,5 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 | 94 — Team Roles + Match Channel Lifecycle | 0/3 | Not started | - |
 | 95 — Match Channel Posts | 4/4 | Complete   | 2026-05-22 |
 | 96 — Provisional Graphic + Forum Threads | 0/3 | Not started | - |
-| 97 — Matchday-Level Posts | 0/3 | Not started | - |
+| 97 — Matchday-Level Posts | 0/3 | Plans drafted | - |
 | 98 — Polish + E2E + Docs + Close | 0/3 | Not started | - |
