@@ -279,4 +279,46 @@ class DiscordPostServiceMatchPreviewIT {
 		assertThatThrownBy(() -> service.postMatchPreview(match))
 				.hasMessageContaining("Add a teaser text");
 	}
+
+	@Test
+	void givenSubTeamHomeAndAway_whenPostMatchPreview_thenGameOnLineUsesParentShortNamesForEmoji() throws Exception {
+		String webhookPath = "/webhooks/937/tok-prev-sub";
+		String webhookUrl = wm.baseUrl() + webhookPath;
+		setAnnouncementWebhook(webhookUrl);
+		Match match = seedFullMatchWithSubTeams("PSUB", "Sub-team rivalry", "https://x.tv");
+		wm.stubFor(post(urlPathEqualTo(webhookPath))
+				.willReturn(okJson("{\"id\":\"msg-sub\",\"channel_id\":\"937\"}")));
+
+		service.postMatchPreview(match);
+
+		var requests = wm.findAll(postRequestedFor(urlPathEqualTo(webhookPath)));
+		String body = requests.get(0).getBodyAsString();
+		assertThat(body)
+				.as("H3 keeps sub-team shortNames so the matchup display stays accurate")
+				.contains("### PHMPSUB B vs. PAWPSUB A");
+		assertThat(body)
+				.as("Game On! emoji-resolution must use the PARENT team's shortName for sub-teams")
+				.contains("Game On! :PHMPSUB: :CTC: :PAWPSUB:");
+	}
+
+	private Match seedFullMatchWithSubTeams(String suffix, String teaser, String streamLink) {
+		Season season = helper.createSeason("Preview Season " + suffix);
+		Matchday md = helper.createMatchdayInRegularPhase(season, "MD-Preview-" + suffix, 0);
+		Team homeParent = helper.createTeam("Preview Home Parent " + suffix, "PHM" + suffix);
+		Team home = helper.createSubTeam("Preview Home B " + suffix, "PHM" + suffix + " B", homeParent);
+		Team awayParent = helper.createTeam("Preview Away Parent " + suffix, "PAW" + suffix);
+		Team away = helper.createSubTeam("Preview Away A " + suffix, "PAW" + suffix + " A", awayParent);
+		Match match = helper.createMatch(md, home, away);
+
+		org.ctc.domain.model.Driver driver = helper.createDriver("psn-" + suffix, "Drv " + suffix);
+		Race race1 = helper.createRace(md, match);
+		race1.setDateTime(LocalDateTime.of(2026, 6, 1, 20, 30));
+		race1.setSettings(new RaceSettings(race1));
+		raceRepository.save(race1);
+		seedLineup(race1, home, driver);
+		match.getRaces().add(race1);
+		match.setDiscordTeaser(teaser);
+		match.setStreamLink(streamLink);
+		return matchRepository.save(match);
+	}
 }

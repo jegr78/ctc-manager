@@ -105,6 +105,10 @@ public class TestHelper {
 		return teamRepository.save(new Team(name, shortName));
 	}
 
+	public Team createSubTeam(String name, String shortName, Team parentTeam) {
+		return teamRepository.save(new Team(name, shortName, parentTeam));
+	}
+
 	public Match createMatch(Matchday matchday, Team homeTeam, Team awayTeam) {
 		return matchRepository.save(new Match(matchday, homeTeam, awayTeam));
 	}

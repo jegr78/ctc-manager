@@ -304,9 +304,9 @@ public class DiscordPostService {
 		String streamLine = (match.getStreamLink() != null && !match.getStreamLink().isBlank())
 				? match.getStreamLink()
 				: "TBA";
-		String homeEmoji = emojiCache.emojiFor(homeShort);
+		String homeEmoji = emojiCache.emojiFor(match.getHomeTeam().getParentOrSelf().getShortName());
 		String vsEmoji = emojiCache.emojiFor(config.getVsEmojiName());
-		String awayEmoji = emojiCache.emojiFor(awayShort);
+		String awayEmoji = emojiCache.emojiFor(match.getAwayTeam().getParentOrSelf().getShortName());
 		return "# " + seasonName + "\n"
 				+ "## " + matchdayLabel + "\n"
 				+ "### " + homeShort + " vs. " + awayShort + "\n\n"
