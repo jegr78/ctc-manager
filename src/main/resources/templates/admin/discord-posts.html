@@ -16,7 +16,7 @@
                     <option th:value="${null}">— Any season —</option>
                     <option th:each="s : ${seasons}"
                             th:value="${s.id}"
-                            th:text="${s.toString()}"></option>
+                            th:text="${s.year + ' | #' + s.number + ' | ' + s.name}"></option>
                 </select>
             </div>
             <div class="form-group">
