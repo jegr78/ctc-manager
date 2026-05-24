@@ -4,6 +4,7 @@ import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -56,11 +57,21 @@ public class DiscordPostController {
 				.toList();
 		Map<UUID, String> matchLabels = matches.stream()
 				.collect(Collectors.toMap(Match::getId, DiscordPostController::matchLabel));
+		Map<UUID, String> matchPairings = matches.stream()
+				.collect(Collectors.toMap(Match::getId,
+						m -> m.getHomeTeam().getShortName() + " vs. " + m.getAwayTeam().getShortName()));
+		Map<String, List<Match>> matchesByGroup = matches.stream()
+				.collect(Collectors.groupingBy(
+						m -> m.getMatchday().getSeason().getYear() + " | " + m.getMatchday().getLabel(),
+						LinkedHashMap::new,
+						Collectors.toList()));
 
 		model.addAttribute("posts", posts);
 		model.addAttribute("seasons", seasonRepository.findAll(Sort.by(Sort.Direction.DESC, "year")));
 		model.addAttribute("matches", matches);
 		model.addAttribute("matchLabels", matchLabels);
+		model.addAttribute("matchPairings", matchPairings);
+		model.addAttribute("matchesByGroup", matchesByGroup);
 		model.addAttribute("postTypes", Arrays.asList(DiscordPostType.values()));
 		model.addAttribute("activeRoute", "discord-posts");
 		return VIEW;
