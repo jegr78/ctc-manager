@@ -18,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.MatchResultsGraphicService;
+import org.ctc.admin.service.MatchdayResultsGraphicService;
+import org.ctc.admin.service.PowerRankingsGraphicService;
 import org.ctc.admin.service.ProvisionalScoresGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
 import org.ctc.admin.service.SettingsGraphicService;
@@ -45,6 +47,7 @@ import org.ctc.discord.model.DiscordPostType;
 import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
+import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.SeasonTeam;
@@ -80,6 +83,8 @@ public class DiscordPostService {
 	private final ProvisionalScoresGraphicService provisionalScoresGraphicService;
 	private final DiscordTimestamps discordTimestamps;
 	private final DiscordEmojiCache emojiCache;
+	private final MatchdayResultsGraphicService matchdayResultsGraphicService;
+	private final PowerRankingsGraphicService powerRankingsGraphicService;
 	private final Path uploadDir;
 
 	@SuppressFBWarnings(
@@ -87,7 +92,8 @@ public class DiscordPostService {
 			justification = "Spring-managed singleton beans (DiscordWebhookClient, DiscordRestClient, DiscordPostRepository, "
 					+ "DiscordHostValidator, DiscordGlobalConfigService, TeamCardService, SeasonTeamRepository, "
 					+ "SettingsGraphicService, LineupGraphicService, RaceLineupRepository, MatchResultsGraphicService, "
-					+ "ResultsGraphicService, ProvisionalScoresGraphicService, DiscordTimestamps, DiscordEmojiCache) "
+					+ "ResultsGraphicService, ProvisionalScoresGraphicService, DiscordTimestamps, DiscordEmojiCache, "
+					+ "MatchdayResultsGraphicService, PowerRankingsGraphicService) "
 					+ "are intentionally shared by-reference — defensive copying would break framework wiring. "
 					+ "Matches the implicit suppression that lombok.config adds to @RequiredArgsConstructor "
 					+ "(see CLAUDE.md SpotBugs section + lombok.config invariant).")
@@ -108,6 +114,8 @@ public class DiscordPostService {
 			ProvisionalScoresGraphicService provisionalScoresGraphicService,
 			DiscordTimestamps discordTimestamps,
 			DiscordEmojiCache emojiCache,
+			MatchdayResultsGraphicService matchdayResultsGraphicService,
+			PowerRankingsGraphicService powerRankingsGraphicService,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
 		this.restClient = restClient;
@@ -125,6 +133,8 @@ public class DiscordPostService {
 		this.provisionalScoresGraphicService = provisionalScoresGraphicService;
 		this.discordTimestamps = discordTimestamps;
 		this.emojiCache = emojiCache;
+		this.matchdayResultsGraphicService = matchdayResultsGraphicService;
+		this.powerRankingsGraphicService = powerRankingsGraphicService;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
 
@@ -297,6 +307,116 @@ public class DiscordPostService {
 				+ "- Date: " + dateLine + "\n"
 				+ "- Stream: " + streamLine + "\n\n"
 				+ "Game On! " + homeEmoji + " " + vsEmoji + " " + awayEmoji;
+	}
+
+	public MatchPreviewPreFlightResult canPostMatchdayResults(Matchday matchday, DiscordGlobalConfig config) {
+		if (!allNonByeMatchesFinal(matchday)) {
+			return new MatchPreviewPreFlightResult(false, "Mark all matches as final first");
+		}
+		String threadId = matchday.getSeason().getDiscordRaceResultsThreadId();
+		if (threadId == null || threadId.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Link a race-results thread on the Season page first");
+		}
+		String webhookUrl = config.getRaceResultsForumWebhookUrl();
+		if (webhookUrl == null || webhookUrl.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Configure race-results forum-webhook in Discord settings");
+		}
+		return new MatchPreviewPreFlightResult(true, null);
+	}
+
+	public MatchPreviewPreFlightResult canPostPowerRankings(Matchday matchday, DiscordGlobalConfig config) {
+		String threadId = matchday.getSeason().getDiscordRaceResultsThreadId();
+		if (threadId == null || threadId.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Link a race-results thread on the Season page first");
+		}
+		String webhookUrl = config.getRaceResultsForumWebhookUrl();
+		if (webhookUrl == null || webhookUrl.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Configure race-results forum-webhook in Discord settings");
+		}
+		return new MatchPreviewPreFlightResult(true, null);
+	}
+
+	@Transactional
+	public DiscordPost postMatchdayResults(Matchday matchday) throws DiscordApiException {
+		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
+		MatchPreviewPreFlightResult pre = canPostMatchdayResults(matchday, config);
+		if (!pre.canPost()) {
+			throw new BusinessRuleException("Cannot post Match Day Results: " + pre.disabledReason());
+		}
+		String threadId = matchday.getSeason().getDiscordRaceResultsThreadId();
+		String webhookUrl = config.getRaceResultsForumWebhookUrl();
+		String channelId = parseWebhookUrl(webhookUrl).id();
+		byte[] png;
+		try {
+			png = matchdayResultsGraphicService.generateResults(matchday);
+		} catch (DiscordApiException e) {
+			throw e;
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		String filename = "matchday-results-" + slug(matchday.getLabel()) + ".png";
+		NamedAttachment attachment = new NamedAttachment(filename, png);
+		return postOrEdit(
+				channelId,
+				webhookUrl,
+				DiscordPostType.MATCHDAY_OVERVIEW,
+				WebhookPayload.empty(),
+				List.of(attachment),
+				DiscordPostRef.matchday(matchday),
+				threadId);
+	}
+
+	@Transactional
+	public DiscordPost postPowerRankings(Matchday matchday) throws DiscordApiException {
+		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
+		MatchPreviewPreFlightResult pre = canPostPowerRankings(matchday, config);
+		if (!pre.canPost()) {
+			throw new BusinessRuleException("Cannot post Power Rankings: " + pre.disabledReason());
+		}
+		String threadId = matchday.getSeason().getDiscordRaceResultsThreadId();
+		String webhookUrl = config.getRaceResultsForumWebhookUrl();
+		String channelId = parseWebhookUrl(webhookUrl).id();
+		Season season = matchday.getSeason();
+		int year = season.getYear();
+		int number = season.getNumber();
+		List<java.util.UUID> teamIds = powerRankingsGraphicService.loadTeamsForSeasonGroup(year, number).stream()
+				.map(org.ctc.admin.dto.RankedTeamData::teamId)
+				.toList();
+		String subtitle = matchday.getLabel();
+		byte[] png;
+		try {
+			png = powerRankingsGraphicService.generateRankings(year, number, subtitle, teamIds);
+		} catch (DiscordApiException e) {
+			throw e;
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		String filename = "power-rankings-" + slug(matchday.getLabel()) + ".png";
+		NamedAttachment attachment = new NamedAttachment(filename, png);
+		return postOrEdit(
+				channelId,
+				webhookUrl,
+				DiscordPostType.POWER_RANKINGS,
+				WebhookPayload.empty(),
+				List.of(attachment),
+				DiscordPostRef.matchday(matchday),
+				threadId);
+	}
+
+	private static boolean allNonByeMatchesFinal(Matchday matchday) {
+		List<Match> matches = matchday.getMatches();
+		if (matches.isEmpty()) {
+			return false;
+		}
+		List<Match> contested = matches.stream().filter(m -> !m.isBye()).toList();
+		if (contested.isEmpty()) {
+			return false;
+		}
+		return contested.stream().allMatch(m -> m.getHomeScore() != null && m.getAwayScore() != null);
+	}
+
+	private static String slug(String label) {
+		return label.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9]+", "-").replaceAll("(^-|-$)", "");
 	}
 
 	private List<NamedAttachment> buildMatchPreviewAttachments(Match match) throws DiscordApiException {
