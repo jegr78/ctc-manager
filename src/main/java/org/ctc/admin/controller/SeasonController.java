@@ -7,18 +7,28 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.ctc.admin.dto.MatchdayGeneratorForm;
+import org.ctc.admin.dto.PostStandingsForm;
 import org.ctc.admin.dto.SeasonForm;
 import org.ctc.discord.dto.Thread;
 import org.ctc.discord.exception.DiscordApiException;
+import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.model.DiscordPost;
+import org.ctc.discord.model.DiscordPostType;
+import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.discord.service.DiscordForumService;
 import org.ctc.discord.service.DiscordGlobalConfigService;
+import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.PhaseType;
+import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.service.MatchdayGeneratorService;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.SeasonPhaseService;
+import org.ctc.domain.service.StandingsService;
 import org.ctc.domain.service.SwissPairingService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -42,6 +52,9 @@ public class SeasonController {
 	private final MatchdayGeneratorService matchdayGeneratorService;
 	private final DiscordForumService discordForumService;
 	private final DiscordGlobalConfigService discordGlobalConfigService;
+	private final DiscordPostService discordPostService;
+	private final DiscordPostRepository discordPostRepository;
+	private final StandingsService standingsService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable UUID id, Model model) {
@@ -120,6 +133,76 @@ public class SeasonController {
 				resolveLinkedThread(season.getDiscordRaceResultsThreadId(), raceResultsOptions));
 		model.addAttribute("linkedStandingsThread",
 				resolveLinkedThread(season.getDiscordStandingsThreadId(), standingsOptions));
+
+		List<SeasonPhase> allPhases = seasonPhaseService.findAllPhases(season.getId());
+		boolean canPostStandings = discordPostService.canPostStandings(season, config).canPost();
+		Map<UUID, DiscordPost> standingsPostByPhase = new LinkedHashMap<>();
+		Map<UUID, Boolean> standingsStaleByPhase = new LinkedHashMap<>();
+		if (canPostStandings) {
+			String channelId = discordPostService.resolveAnnouncementChannelId(config.getStandingsForumWebhookUrl());
+			for (SeasonPhase p : allPhases) {
+				DiscordPost post = discordPostRepository
+						.findByChannelIdAndPostTypeAndSeasonIdAndPhaseId(
+								channelId, DiscordPostType.STANDINGS, season.getId(), p.getId())
+						.orElse(null);
+				standingsPostByPhase.put(p.getId(), post);
+				boolean stale = post != null && standingsService.hasNewerResultsSincePhaseScoped(
+						season.getId(), p.getId(), post.getUpdatedAt());
+				standingsStaleByPhase.put(p.getId(), stale);
+			}
+		} else {
+			for (SeasonPhase p : allPhases) {
+				standingsPostByPhase.put(p.getId(), null);
+				standingsStaleByPhase.put(p.getId(), false);
+			}
+		}
+		model.addAttribute("allPhases", allPhases);
+		model.addAttribute("canPostStandings", canPostStandings);
+		model.addAttribute("standingsPostByPhase", standingsPostByPhase);
+		model.addAttribute("standingsStaleByPhase", standingsStaleByPhase);
+	}
+
+	@PostMapping("/{id}/post-standings")
+	public String postStandings(@PathVariable UUID id,
+	                            @Valid @ModelAttribute PostStandingsForm form,
+	                            BindingResult bindingResult,
+	                            RedirectAttributes redirectAttributes) {
+		if (bindingResult.hasErrors()) {
+			redirectAttributes.addFlashAttribute("errorMessage", "Phase is required.");
+			redirectAttributes.addFlashAttribute("errorCategory", "data-incomplete");
+			return "redirect:/admin/seasons/" + id + "/edit";
+		}
+		try {
+			var season = seasonManagementService.findById(id);
+			var phase = seasonPhaseService.findById(form.getPhaseId());
+			discordPostService.postStandings(season, phase);
+			redirectAttributes.addFlashAttribute("successMessage", "Standings posted.");
+		} catch (BusinessRuleException e) {
+			applyStandingsErrorFlash(redirectAttributes, e, "Post standings");
+		} catch (DiscordApiException e) {
+			applyStandingsErrorFlash(redirectAttributes, e, "Post standings");
+		}
+		return "redirect:/admin/seasons/" + id + "/edit";
+	}
+
+	private void applyStandingsErrorFlash(RedirectAttributes ra, DiscordApiException e, String action) {
+		String message = switch (e.category()) {
+			case TRANSIENT -> DiscordApiExceptionMapper.TRANSIENT_MESSAGE;
+			case AUTH -> DiscordApiExceptionMapper.AUTH_MESSAGE;
+			case MISSING_PERMISSIONS -> DiscordApiExceptionMapper.MISSING_PERMISSIONS_MESSAGE;
+			case NOT_FOUND -> DiscordApiExceptionMapper.NOT_FOUND_MESSAGE;
+			case CATEGORY_FULL -> DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE;
+		};
+		String category = e.category().name().toLowerCase().replace('_', '-');
+		log.warn("{} failed: category={}, exception={}", action, category, e.getClass().getSimpleName());
+		ra.addFlashAttribute("errorMessage", message);
+		ra.addFlashAttribute("errorCategory", category);
+	}
+
+	private void applyStandingsErrorFlash(RedirectAttributes ra, BusinessRuleException e, String action) {
+		log.warn("{} failed: category=data-incomplete, message={}", action, e.getMessage());
+		ra.addFlashAttribute("errorMessage", e.getMessage());
+		ra.addFlashAttribute("errorCategory", "data-incomplete");
 	}
 
 	private List<Thread> loadThreadOptions(String forumChannelId, Model model, String label) {

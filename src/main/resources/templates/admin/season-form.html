@@ -228,6 +228,37 @@
                     </button>
                 </div>
             </div>
+
+            <div th:if="${canPostStandings and !allPhases.isEmpty()}"
+                 class="discord-actions discord-actions--posts mt-md"
+                 data-testid="standings-post-cluster">
+                <form th:action="@{/admin/seasons/{id}/post-standings(id=${seasonForm.id})}"
+                      method="post" class="form-inline">
+                    <input th:if="${_csrf != null}" type="hidden"
+                           th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <select th:if="${allPhases.size() > 1}" name="phaseId"
+                            class="form-control form-control-sm" data-testid="post-standings-phase-select">
+                        <option th:each="p : ${allPhases}"
+                                th:value="${p.id}"
+                                th:text="${p.phaseType.name()}"></option>
+                    </select>
+                    <input th:if="${allPhases.size() == 1}" type="hidden" name="phaseId"
+                           th:value="${allPhases[0].id}" data-testid="post-standings-phase-hidden"/>
+                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-standings">
+                        Post Standings
+                    </button>
+                </form>
+                <ul class="text-dim text-xs" data-testid="standings-phase-status-list">
+                    <li th:each="p : ${allPhases}" th:with="post=${standingsPostByPhase[p.id]},stale=${standingsStaleByPhase[p.id]}">
+                        <span th:text="${p.phaseType.name()}"></span>:
+                        <span th:if="${post == null}" data-testid="standings-phase-status-none">never posted</span>
+                        <span th:if="${post != null and stale}"
+                              class="badge badge-warning" data-testid="standings-phase-status-stale">Update needed</span>
+                        <span th:if="${post != null and !stale}"
+                              class="badge badge-active" data-testid="standings-phase-status-fresh">Posted</span>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 

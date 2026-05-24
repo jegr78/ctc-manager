@@ -1,13 +1,16 @@
 package org.ctc.domain.service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.RaceRepository;
+import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,20 @@ public class StandingsService {
 	private final RaceRepository raceRepository;
 	private final SeasonPhaseService seasonPhaseService;
 	private final PhaseTeamRepository phaseTeamRepository;
+	private final RaceResultRepository raceResultRepository;
+
+	@Transactional(readOnly = true)
+	public boolean hasNewerResultsSincePhaseScoped(UUID seasonId, UUID phaseId, LocalDateTime since) {
+		if (since == null) {
+			return false;
+		}
+		List<RaceResult> regular = raceResultRepository.findByRaceMatchdayPhaseId(phaseId);
+		List<RaceResult> playoff = raceResultRepository.findByRacePlayoffMatchupRoundPlayoffPhaseId(phaseId);
+		return Stream.concat(regular.stream(), playoff.stream())
+				.map(RaceResult::getUpdatedAt)
+				.filter(Objects::nonNull)
+				.anyMatch(updatedAt -> updatedAt.isAfter(since));
+	}
 
 	/**
 	 * Calculates standings for the given phase and optional group.
