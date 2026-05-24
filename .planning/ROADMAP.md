@@ -261,7 +261,11 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 **Depends on**: Phase 97 (E2E test exercises the full create-channel → post-all-stages → archive lifecycle spanning Phases 94-97; all 11 post types must exist before the end-to-end suite can run)
 **Requirements**: E2E-01, DOCS-02, DOCS-03
 **Estimated duration**: 2-3 days
-**Plans**: TBD (estimated 3 plans per design spec § 5)
+**Plans**: 3 plans (sequential inline on `gsd/v1.13-discord-integration` per CONTEXT D-98-PLAN-1)
+- [ ] 98-01-PLAN.md — Mobile-Polish CSS-Sweep (`.card` / `.form-group` / `.searchable-dropdown` + 640px MQ padding) + DOCS-02 Runbook-Erweiterung (§§ 1.9 Forum-Channel + 2.3 Daily Operations + 6 Token-Rotation + 7 UAT-08 Procedure)
+- [ ] 98-02-PLAN.md — E2E-01 DiscordFullMatchdayLifecycleE2ETest (8-Stage Mega-Walkthrough, WireMockExtension + app.discord.base-url, TestDataService.seedFullMatchdayLifecycle + WireMockDiscordStubs helper)
+- [ ] 98-03-PLAN.md — DOCS-03 README + Wiki (canonical paragraph) + MILESTONES.md v1.13-Entry + REQUIREMENTS.md 22-REQ Pre-Merge-Flip + STATE.md UAT-08-Staging + PR-Body Final-Update (no git tag, no gh pr merge — User-Manual after UAT-08)
+**UI hint**: yes
 
 ## Progress
 

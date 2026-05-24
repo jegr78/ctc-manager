@@ -4,12 +4,12 @@ milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
 stopped_at: Phase 98 context gathered
-last_updated: "2026-05-24T17:40:08.561Z"
-last_activity: 2026-05-24 -- UAT-07 PASS live-guild (9/9 steps) + 7 in-milestone polish fixes; final reverify 1807 tests green / JaCoCo 88.60 %
+last_updated: "2026-05-24T21:06:54.376Z"
+last_activity: 2026-05-24 -- Phase 98 planning complete
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 21
+  total_plans: 24
   completed_plans: 21
   percent: 86
 ---
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 Phase: 97 (matchday-level-posts) — EXECUTING
 Plan: 3 of 3 (97-01 ✅ POST-06 / 97-02 ✅ POST-07a + POST-07b / 97-03 ✅ POST-08)
-Status: Phase 97 validated + UAT-07 PASS — ready for Phase 98
-Last activity: 2026-05-24 -- UAT-07 PASS live-guild (9/9 steps) + 7 in-milestone polish fixes; final reverify 1807 tests green / JaCoCo 88.60 %
+Status: Ready to execute
+Last activity: 2026-05-24 -- Phase 98 planning complete
 
 ## Completed Milestones
 
@@ -97,7 +97,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Executing Phase 97
+- **Status:** Ready to execute
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_

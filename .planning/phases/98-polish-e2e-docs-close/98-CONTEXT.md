@@ -649,10 +649,17 @@ von Phase 92-97 D-9*-05/07/D-9*-08):
 
 ### Reusable Assets
 
-- **`@AutoConfigureWireMock(port = 0)` Pattern** (Phase 93-97): Plan 98-02
-  spiegelt 1:1 die bestehende WireMock-IT-Konvention. Property
-  `discord.api.base-url=http://localhost:${wiremock.server.port}` wird in
-  Spring-Boot-Context injiziert + von `DiscordRestClient` gelesen.
+- **WireMock-Setup (Phase 93-97 actual pattern, see 98-PATTERNS.md):**
+  `@RegisterExtension static WireMockExtension wm =
+  WireMockExtension.newInstance().options(WireMockConfiguration.options()
+  .dynamicPort()).build();` + `@DynamicPropertySource static void
+  overrideBaseUrl(DynamicPropertyRegistry r) { r.add("app.discord.base-url",
+  () -> wm.baseUrl() + "/api/v10"); }`. Plan 98-02 spiegelt 1:1 dieses
+  Pattern, das alle 14 Discord-ITs in `src/test/java/org/ctc/discord/`
+  nutzen. **DEPRECATED guidance:** D-98-E2E-2 erwähnte ursprünglich
+  `@AutoConfigureWireMock(port = 0)` + Property `discord.api.base-url` —
+  diese Form existiert NICHT im Codebase und ist durch PATTERNS.md +
+  98-02-PLAN.md `<key_constraints>` überschrieben.
 - **`TestDataService` Methoden-Bibliothek** (alle Phasen): bestehende
   Test-Prefix-Daten-Konvention (`T-`/`Test-`). Plan 98-02 erweitert um
   `seedFullMatchdayLifecycle()` — nutzt existierende `Team`-/`Driver`-/
