@@ -64,7 +64,10 @@ class SeasonFormStandingsButtonE2ETest extends PlaywrightConfig {
 		}
 		Season saved = seasonRepository.save(season);
 		if (multiPhase) {
+			SeasonPhase regular = saved.getPhases().get(0);
 			SeasonPhase playoff = new SeasonPhase(saved, PhaseType.PLAYOFF, PhaseLayout.BRACKET, 1);
+			playoff.setRaceScoring(regular.getRaceScoring());
+			playoff.setMatchScoring(regular.getMatchScoring());
 			seasonPhaseRepository.save(playoff);
 		}
 
