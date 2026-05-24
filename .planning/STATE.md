@@ -27,9 +27,9 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 97 (matchday-level-posts) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 97
-Last activity: 2026-05-24 -- Phase 97 execution started
+Plan: 3 of 3 (97-01 ✅ POST-06 / 97-02 ✅ POST-07a + POST-07b / 97-03 ✅ POST-08)
+Status: Phase 97 plans complete — pending `/gsd-validate-phase 97`
+Last activity: 2026-05-24 -- Plan 97-03 closed (Standings + V14 Migration + Grafik-Loop); REQ POST-08 covered
 
 ## Completed Milestones
 

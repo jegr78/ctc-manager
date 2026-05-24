@@ -62,7 +62,6 @@ class StandingsGraphicServiceContractTest {
 	private Season seasonMock(UUID id) {
 		Season s = org.mockito.Mockito.mock(Season.class);
 		when(s.getId()).thenReturn(id);
-		when(s.getName()).thenReturn("Test Season");
 		return s;
 	}
 
