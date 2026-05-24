@@ -169,6 +169,27 @@
                     Re-Post Schedule
                 </button>
             </form>
+
+            <div th:if="${discordAnnouncementsConfigured}" class="discord-post-cluster">
+                <span th:if="${not matchPreviewPreFlight.canPost()}"
+                      class="btn btn-secondary btn-sm disabled"
+                      data-testid="post-match-preview-disabled"
+                      th:title="${matchPreviewPreFlight.disabledReason()}">Post Match Preview</span>
+                <form th:if="${matchPreviewPreFlight.canPost() and matchPreviewPost == null}"
+                      th:action="@{/admin/matches/{id}/post-match-preview(id=${match.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-match-preview">
+                        Post Match Preview
+                    </button>
+                </form>
+                <form th:if="${matchPreviewPreFlight.canPost() and matchPreviewPost != null}"
+                      th:action="@{/admin/matches/{id}/post-match-preview(id=${match.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-match-preview">
+                        Re-Post Match Preview
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 

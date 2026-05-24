@@ -5,16 +5,19 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchForm;
+import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordCategoryFullException;
+import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.model.DiscordPostType;
 import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.discord.service.DiscordChannelService;
+import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
@@ -50,6 +53,7 @@ public class MatchController {
 	private final DiscordPostRepository discordPostRepository;
 	private final TeamCardService teamCardService;
 	private final SeasonTeamRepository seasonTeamRepository;
+	private final DiscordGlobalConfigService discordGlobalConfigService;
 
 	@GetMapping("/new")
 	public String create(@RequestParam UUID matchdayId, Model model) {
@@ -121,6 +125,20 @@ public class MatchController {
 		model.addAttribute("matchCanRenderResults", discordPostService.matchCanRenderResults(match));
 		model.addAttribute("scheduleVisible",
 				match.getRaces().stream().map(r -> r.getDateTime()).anyMatch(t -> t != null));
+
+		DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
+		String announcementWebhookUrl = config.getAnnouncementWebhookUrl();
+		boolean discordAnnouncementsConfigured =
+				announcementWebhookUrl != null && !announcementWebhookUrl.isBlank();
+		DiscordPost matchPreviewPost = discordAnnouncementsConfigured
+				? discordPostRepository.findByChannelIdAndPostTypeAndMatchId(
+						discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl),
+						DiscordPostType.MATCH_PREVIEW, match.getId()).orElse(null)
+				: null;
+		MatchPreviewPreFlightResult matchPreviewPreFlight = discordPostService.canPostMatchPreview(match);
+		model.addAttribute("discordAnnouncementsConfigured", discordAnnouncementsConfigured);
+		model.addAttribute("matchPreviewPost", matchPreviewPost);
+		model.addAttribute("matchPreviewPreFlight", matchPreviewPreFlight);
 		return "admin/match-detail";
 	}
 
@@ -264,6 +282,19 @@ public class MatchController {
 			applyErrorFlash(redirectAttributes, e, "Post schedule");
 		} catch (DiscordApiException e) {
 			applyErrorFlash(redirectAttributes, e, "Post schedule");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
+	@PostMapping("/{id}/post-match-preview")
+	public String postMatchPreview(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			discordPostService.postMatchPreview(matchService.findById(id));
+			redirectAttributes.addFlashAttribute("successMessage", "Match preview posted.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Post match preview");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post match preview");
 		}
 		return "redirect:/admin/matches/" + id;
 	}

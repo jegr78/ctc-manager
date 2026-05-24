@@ -81,7 +81,7 @@ All values from `static/admin/css/admin.css` `:root` block. Phase 97 introduces 
 | Destructive | `#d32f2f` | `--danger` | Destructive actions only (no destructive action in Phase 97 itself) |
 
 Accent (`#4fc3f7`) reserved for:
-1. `.btn-primary` active state (`background: #1976d2`, hover `#1565c0`) — used by the three "Post X" CTAs in their initial post state (Post Matchday Pairings, Post Match Previews (batch), Post Matchday Overview + Power Rankings, Post Standings).
+1. `.btn-primary` active state (`background: #1976d2`, hover `#1565c0`) — used by the four "Post X" CTAs in their initial post state (Post Match Preview, Post Match Day Results, Post Power Rankings, Post Standings).
 2. `.error-badge--not-found` border (`color: #90caf9` blue tint) — used for "not-found" Discord errors.
 3. `:focus-visible` outline (2px solid) on all interactive elements.
 4. `.entity-link` hover state (existing pattern, not new in this phase).
@@ -103,49 +103,44 @@ Second semantic color (destructive `#d32f2f`): **not used in Phase 97 button clu
 
 Phase 97 adds the following Thymeleaf fragments — all reuse existing CSS classes verbatim. Zero new CSS classes for this phase except a single optional inline `.discord-post-status--auto-edit` pill variant (declared below).
 
-### POST-06 buttons on `templates/admin/matchday-detail.html`
+### POST-06 button on `templates/admin/match-detail.html`
 
-Placement: NEW `<div class="discord-actions discord-actions--posts">` cluster inserted into a NEW `<div class="card">` titled "Discord Actions" — positioned immediately after the existing `<!-- Graphics -->` `detail-section` (line 110) and before the `<!-- Lineup -->` `detail-section` (line 140). Visibility: only when `season.discordChannelAnnouncementsConfigured` is `true` (server-side computed; predicate name: `discordAnnouncementsConfigured`).
+Placement: APPENDED inside the EXISTING `<div class="discord-actions discord-actions--posts">` cluster (match-detail.html lines 55–172, the Phase 95 button cluster), AFTER the Schedule triplet. Wrapped in an outer `<div th:if="${discordAnnouncementsConfigured}">` gate so the cluster only appears when the global announcement webhook is configured.
 
-Three buttons in this cluster, in left-to-right tab order:
+Per-match button triplet (one outer state, three inner branches mutually exclusive via `th:if`):
 
-1. **Post Matchday Pairings** (initial) / **Re-Post Matchday Pairings** (after row exists).
-   - HTML pattern (exact analog of match-detail line 56–69 Team Cards cluster):
-     ```html
-     <form th:if="${matchdayPairingsPost == null}"
-           th:action="@{/admin/matchdays/{id}/post-matchday-pairings(id=${matchday.id})}"
-           method="post" class="form-inline">
-       <button type="submit" class="btn btn-primary btn-sm"
-               data-testid="post-matchday-pairings">Post Matchday Pairings</button>
-     </form>
-     <form th:if="${matchdayPairingsPost != null}" ...>
-       <button type="submit" class="btn btn-secondary btn-sm"
-               data-testid="repost-matchday-pairings">Re-Post Matchday Pairings</button>
-     </form>
-     ```
-
-2. **Post Match Previews (batch)** (initial) / **Re-Post Match Previews (batch)** (after rows exist).
-   - On the INITIAL post, the button triggers the confirmation modal (see below) — the click target is a `<button type="button">` that opens `#matchPreviewsBatchModal`, NOT a direct form submit. The modal's Confirm button is the real submit.
-   - On RE-POST, no modal — direct `.btn-secondary` form submit (matches the Phase 95 re-post pattern where the user has already accepted the N-posts cost).
+1. **Post Match Preview** (initial post) / **Re-Post Match Preview** (after row exists) / **disabled span** (pre-flight not met).
    - HTML pattern:
      ```html
-     <button type="button" class="btn btn-primary btn-sm"
-             th:if="${matchPreviewsPostCount == 0}"
-             data-testid="post-match-previews-open"
-             onclick="document.getElementById('matchPreviewsBatchModal').style.display='flex'">
-       Post Match Previews (batch)
-     </button>
-     <form th:if="${matchPreviewsPostCount > 0}"
-           th:action="@{/admin/matchdays/{id}/post-match-previews(id=${matchday.id})}"
-           method="post" class="form-inline">
-       <button type="submit" class="btn btn-secondary btn-sm"
-               data-testid="repost-match-previews">Re-Post Match Previews (batch)</button>
-     </form>
+     <div th:if="${discordAnnouncementsConfigured}" class="discord-post-cluster">
+         <span th:if="${not matchPreviewPreFlight.canPost()}"
+               class="btn btn-secondary btn-sm disabled"
+               data-testid="post-match-preview-disabled"
+               th:title="${matchPreviewPreFlight.disabledReason()}">Post Match Preview</span>
+         <form th:if="${matchPreviewPreFlight.canPost() and matchPreviewPost == null}"
+               th:action="@{/admin/matches/{id}/post-match-preview(id=${match.id})}"
+               method="post" class="form-inline">
+             <button type="submit" class="btn btn-primary btn-sm"
+                     data-testid="post-match-preview">Post Match Preview</button>
+         </form>
+         <form th:if="${matchPreviewPreFlight.canPost() and matchPreviewPost != null}"
+               th:action="@{/admin/matches/{id}/post-match-preview(id=${match.id})}"
+               method="post" class="form-inline">
+             <button type="submit" class="btn btn-secondary btn-sm"
+                     data-testid="repost-match-preview">Re-Post Match Preview</button>
+         </form>
+     </div>
      ```
-   - Inline hint to the right of the button (always visible): `<span class="text-dim text-xs"
-     th:text="'Will post ' + ${matchday.matches.size()} + ' preview messages'"></span>` — replaces the pre-flight tooltip pattern from Phase 95.
+   - Pre-flight predicates evaluated server-side top-down per CONTEXT D-97-PREV-2c — first failure wins as the disabled-tooltip string (one of 5 strings enumerated in the Copywriting table below).
+   - The target webhook is `discordGlobalConfig.announcementWebhookUrl` (NOT the per-match channel webhook). Phase 97 deliberately drops the original matchday-level batch flow per D-97-PREV-2: operator posts each match individually from Match-Detail.
 
-3. **Post Matchday Overview + Power Rankings** (initial) / **Re-Post Matchday Overview + Power Rankings** (after row exists). Direct submit — no modal (the user has only 2 posts here, not N).
+### POST-07 buttons on `templates/admin/matchday-detail.html`
+
+Placement: NEW `<div class="discord-actions discord-actions--posts">` cluster inserted into a NEW `<div class="card">` titled "Discord Actions" on the Matchday-Detail page. Visibility: only when `matchdayDiscordActive` (server-side; true when the season has `discordRaceResultsThreadId` set AND `globalConfig.raceResultsForumWebhookUrl` set).
+
+Two independent buttons in this cluster (per D-97-MD-1 — split from the original single POST-07 button):
+
+1. **Post Matchday Overview + Power Rankings** (initial) / **Re-Post Matchday Overview + Power Rankings** (after row exists). Direct submit — no modal (the user has only 2 posts here, not N).
    - Visible only when `allMatchesFinal && season.discordRaceResultsThreadId != null` (server-side predicate `canPostMatchdayOverview`). When NOT visible, render a disabled span with one of the 3 distinct tooltip strings — same pattern as Phase 96 D-96-FOR-3c:
      - `Mark all matches as final first` (when `!allMatchesFinal`)
      - `Link a race-results thread on the Season page first` (when `season.discordRaceResultsThreadId == null`) — clickable link routing to `/admin/seasons/{id}/edit#discordIntegration`.
@@ -196,20 +191,6 @@ One button in this cluster:
 
 > **Note on location ambiguity:** Design spec § 5 line 241 lists POST-08 on `/admin/seasons/{id}` (Season-**Detail**). Phase 96 FORUM-01 (per D-96-FOR-2b) implemented the Discord-Integration surface on `season-form.html` (Season-**Edit**, edit-only). Phase 97 follows the Phase 96 location (season-form.html) to keep all season-scoped Discord controls in one card. Locked: **POST-08 lives in `season-form.html` `#discordIntegration` card**, not on a future season-detail Discord card. Pre-existing operator muscle-memory from Phase 96 UAT-06 Step 2 confirms this location.
 
-### Confirmation Modal — Match Previews batch
-
-NEW `<div id="matchPreviewsBatchModal" class="modal-overlay">` reusing existing `.modal-overlay` + `.modal-body` + `.modal-body--md` + `.modal-title` classes verbatim (matches Phase 94 Archive Modal and Phase 96 Link-Thread Modal patterns; zero new CSS).
-
-Placement: inside the matchday-detail `<section>` near end-of-template (after the existing structural blocks, analog to where `#archiveModal` lives in match-detail.html line 209).
-
-Modal contents:
-- Title: `Post Match Previews (batch)`
-- Body: `<p th:text="'You are about to post ' + ${matchday.matches.size()} + ' match preview messages to the announcement channel. Each message includes the team teaser, schedule, stream link, and settings + lineups graphics. Continue?'"></p>`
-- If `matchday.matches.size() == 0`: body becomes empty-state alert: `<div class="alert alert-warning" data-testid="match-previews-empty">No matches in this matchday yet — add matches first.</div>` and Confirm disabled.
-- Actions row (`<div class="actions">`):
-  - Primary: `<button type="submit" class="btn btn-primary" data-testid="match-previews-batch-confirm" th:disabled="${matchday.matches.isEmpty()}" th:text="${'Post ' + matchday.matches.size() + ' Preview Messages'}"></button>` — text dynamically renders the count for clarity.
-  - Secondary: `<button type="button" class="btn btn-secondary" data-testid="match-previews-batch-cancel" onclick="document.getElementById('matchPreviewsBatchModal').style.display='none'">Cancel</button>`
-
 ### Status Badges and Auto-Edit Pill
 
 Phase 97 reuses the Phase 95 status-display convention but does NOT introduce a separate `<div class="discord-post-status">` row beneath each button (Phase 95 chose inline-only via button label flips). The status surfaces are:
@@ -223,8 +204,8 @@ Optional inline auto-edit indicator pill (locked as opt-in, NOT mandatory — Pl
 
 ```html
 <span class="badge badge-active discord-post-status--auto-edit"
-      th:if="${matchPreviewsPostCount > 0 and (matchHasTeaserOrStreamLink)}"
-      data-testid="match-previews-auto-edit-indicator">Auto-edits on save</span>
+      th:if="${matchPreviewPost != null}"
+      data-testid="match-preview-auto-edit-indicator">Auto-edits on save</span>
 ```
 
 `.discord-post-status--auto-edit` is the ONLY new CSS class declared by this UI-SPEC. Definition (additive in `admin.css`, placed in the discord-actions block region around line 228):
@@ -237,7 +218,7 @@ Optional inline auto-edit indicator pill (locked as opt-in, NOT mandatory — Pl
 }
 ```
 
-If executor omits this pill, the auto-edit behaviour still works (it is server-side hook from Phase 95 D-95-04 analog — `MatchService.save` Pre/Post-Diff detects streamLink/teaser change and triggers Webhook-PATCH on the existing `MATCH_PREVIEW` rows). The pill is a discoverability hint only.
+If executor omits this pill, the auto-edit behaviour still works (it is server-side: `MatchService.updateDiscordFields` Pre/Post-Diff on `discordTeaser`/`streamLink` publishes `MatchPreviewFieldsChangedEvent` AFTER_COMMIT; `DiscordAutoPostListener.onMatchPreviewFieldsChanged` invokes `DiscordPostService.autoEditMatchPreviewIfNeeded` which PATCHes the existing `MATCH_PREVIEW` row when present). The pill is a discoverability hint only.
 
 ---
 
@@ -247,16 +228,18 @@ All UI text is English. Per CLAUDE.md "Language" — communication is German, bu
 
 | Element | Copy |
 |---------|------|
-| Primary CTA (POST-06a, initial) | `Post Matchday Pairings` |
-| Primary CTA (POST-06a, re-post) | `Re-Post Matchday Pairings` |
-| Primary CTA (POST-06b, initial — opens modal) | `Post Match Previews (batch)` |
-| Primary CTA (POST-06b, re-post) | `Re-Post Match Previews (batch)` |
+| Primary CTA (POST-06, initial) | `Post Match Preview` |
+| Primary CTA (POST-06, re-post) | `Re-Post Match Preview` |
+| Disabled-tooltip POST-06 (no teaser) | `Add a teaser text on Match-Edit first` |
+| Disabled-tooltip POST-06 (no settings) | `Configure Race Settings for all races first` |
+| Disabled-tooltip POST-06 (no lineups) | `Configure Race Lineups for all races first` |
+| Disabled-tooltip POST-06 (no race date) | `Set Race date+time first` |
+| Disabled-tooltip POST-06 (no webhook) | `Configure announcement-webhook in Discord settings` |
 | Primary CTA (POST-07, initial) | `Post Matchday Overview + Power Rankings` |
 | Primary CTA (POST-07, re-post) | `Re-Post Matchday Overview + Power Rankings` |
 | Primary CTA (POST-08, initial) | `Post Standings` |
 | Primary CTA (POST-08, re-post fresh) | `Re-Post Standings` |
 | Primary CTA (POST-08, stale signal) | `Update Standings` |
-| Inline hint (POST-06b) | `Will post {N} preview messages` (N = `matchday.matches.size()`) |
 | Auto-edit pill (optional) | `Auto-edits on save` |
 | Status — posted-at timestamp (admin listing only, NOT button-area) | `Posted YYYY-MM-DD HH:mm` |
 | Status — edited-at timestamp (admin listing only) | `Edited YYYY-MM-DD HH:mm` |
@@ -264,21 +247,14 @@ All UI text is English. Per CLAUDE.md "Language" — communication is German, bu
 | Disabled-tooltip POST-07 (no thread) | `Link a race-results thread on the Season page first` (links to `/admin/seasons/{seasonId}/edit#discordIntegration`) |
 | Disabled-tooltip POST-07 (no webhook) | `Configure race-results forum-webhook in Discord settings` (links to `/admin/discord-config`) |
 | Disabled-tooltip POST-08 (no thread) | `Link a standings forum-thread above first` |
-| Empty state POST-06b modal (no matches) | `No matches in this matchday yet — add matches first.` |
-| Modal title (POST-06b confirmation) | `Post Match Previews (batch)` |
-| Modal body (POST-06b confirmation) | `You are about to post {N} match preview messages to the announcement channel. Each message includes the team teaser, schedule, stream link, and settings + lineups graphics. Continue?` |
-| Modal Confirm button (POST-06b) | `Post {N} Preview Messages` (count rendered into label per UX best practice) |
-| Modal Cancel button (POST-06b) | `Cancel` |
 | Discord-side Markdown — H1 | `# {season.name}` |
-| Discord-side Markdown — H2 | `## Match Day {N}` |
-| Discord-side Markdown — H3 | `### {teamA.name} vs. {teamB.name}` |
+| Discord-side Markdown — H2 | `## {matchday.label}` |
+| Discord-side Markdown — H3 | `### {teamA.shortName} vs. {teamB.shortName}` |
 | Discord-side Markdown — Date bullet | `- Date: <t:{unixSeconds}:F>` (Discord timestamp tag, F=Friday April 26 2026 12:00) |
-| Discord-side Markdown — Stream bullet | `- Stream: {match.streamLink}` (literal) or `- Stream: TBD` (when null) |
+| Discord-side Markdown — Stream bullet | `- Stream: {match.streamLink}` (literal) or `- Stream: TBA` (when null) |
 | Discord-side Markdown — Game-on line | `Game On! {emoji(teamA.shortName)} {emoji(vsEmojiName)} {emoji(teamB.shortName)}` |
-| Discord-side Markdown — TBD field placeholder | `_TBD_` (italic markdown, matches Phase 95 POST-05 Schedule convention) |
-| Flash success (POST-06a) | `Matchday pairings posted to Discord.` |
-| Flash success (POST-06b) | `{N} match preview messages posted to Discord.` |
-| Flash success (POST-06b re-edit) | `{N} match preview messages updated in Discord.` |
+| Discord-side Markdown — TBD field placeholder | `_TBD_` (italic markdown, matches Phase 95 POST-05 Schedule convention; POST-06 uses the literal `TBA` for the Stream bullet instead) |
+| Flash success (POST-06) | `Match preview posted.` |
 | Flash success (POST-07) | `Matchday overview + power rankings posted to forum-thread.` |
 | Flash success (POST-08) | `Standings posted to forum-thread.` |
 | Flash success (POST-08 re-edit) | `Standings updated in forum-thread.` |
@@ -287,7 +263,7 @@ All UI text is English. Per CLAUDE.md "Language" — communication is German, bu
 | Flash error (not-found) | `Discord channel or thread not found. Re-link in /admin/seasons/{id}/edit.` (rendered with `.error-badge--not-found`) |
 | Flash error (permission) | `Bot lacks Manage Webhooks or Send Messages permission in the target channel.` (rendered with `.error-badge--permission`) |
 
-No destructive actions in Phase 97 — no destructive-confirmation copy. The POST-06b batch-confirmation modal is NOT a destructive guard (no data is destroyed); it is a quantity-acknowledgement guard ("you are about to make N network calls"). It uses `.btn-primary` Confirm, NOT `.btn-danger`.
+No destructive actions in Phase 97 — no destructive-confirmation copy. POST-06 ships as a per-match button without a batch-confirmation modal (the original batch flow was dropped per D-97-PREV-2: operator posts one match at a time from Match-Detail).
 
 ---
 
@@ -299,9 +275,9 @@ All visibility is server-computed. Zero client-side JS toggles. The 5 predicates
 
 | Predicate | Type | True when |
 |-----------|------|-----------|
-| `discordAnnouncementsConfigured` | boolean | `globalConfig.announcementWebhookUrl != null && !blank` |
-| `matchdayPairingsPost` | `DiscordPost?` | repo lookup `(matchdayId, MATCHDAY_PAIRINGS)` returns row (or null) |
-| `matchPreviewsPostCount` | int | repo count `(matchdayId, MATCH_PREVIEW)` rows |
+| `discordAnnouncementsConfigured` | boolean | `globalConfig.announcementWebhookUrl != null && !blank` (passed by both MatchController.detail and MatchdayController.viewMatchday) |
+| `matchPreviewPost` | `DiscordPost?` | repo lookup `(announcementChannelId, MATCH_PREVIEW, matchId)` returns row (or null) — populated by MatchController.detail |
+| `matchPreviewPreFlight` | `MatchPreviewPreFlightResult` | record `(canPost, disabledReason)` from `DiscordPostService.canPostMatchPreview(match)` — populated by MatchController.detail |
 | `canPostMatchdayOverview` | boolean | `allMatchesFinal && season.discordRaceResultsThreadId != null && globalConfig.raceResultsForumWebhookUrl != null` |
 | `matchdayOverviewDisabledReason` | String | one of the 3 strings above, computed in order of failure (final → thread → webhook) |
 | `matchdayOverviewPost` | `DiscordPost?` | repo lookup `(matchdayId, MATCHDAY_OVERVIEW)` returns row |
@@ -309,24 +285,13 @@ All visibility is server-computed. Zero client-side JS toggles. The 5 predicates
 | `standingsPost` | `DiscordPost?` | repo lookup `(seasonId, STANDINGS)` returns row |
 | `standingsStale` | boolean | `standingsPost != null && standingsPost.updated_at < season.lastModifiedAt` (Phase 95 stale-detection pattern) |
 
-### Click Order — POST-06b Match Previews Batch Modal
+### Auto-Edit Hook (POST-06)
 
-1. Operator clicks `Post Match Previews (batch)` `.btn-primary` button.
-2. JS handler shows `#matchPreviewsBatchModal` (sets `style.display='flex'`). Modal traps focus on Confirm button by browser default (no JS focus-management needed — same as Phase 94 Archive Modal).
-3. Operator clicks `Post {N} Preview Messages` Confirm — submits POST form to `/admin/matchdays/{id}/post-match-previews`.
-4. Controller calls `MatchdayPreviewService.postPreviews(matchday)` which iterates `matchday.matches` sequentially (single-threaded, respects existing `DiscordRateLimitInterceptor` per-bucket token-bucket).
-5. After completion, controller redirects to GET `/admin/matchdays/{id}` with one of: `successMessage` flash (all posted) OR `errorMessage` flash (partial fail — error rendered with the appropriate `.error-badge--{category}`).
-6. Modal does NOT close on its own — the redirect re-renders the page from scratch, so `style.display='flex'` is gone implicitly.
-7. Cancel button sets `style.display='none'` and does NOT POST — same convention as `#archiveModal` in match-detail.html.
-
-### Auto-Edit Hook (POST-06b)
-
-Server-side `MatchService.save(MatchForm)` Pre/Post-Diff (Phase 95 D-95-04 pattern, extended for Phase 97):
-- Detect diff on `streamLink` OR `discordTeaser`.
-- Lookup `discord_post` row by `(matchId, MATCH_PREVIEW)`.
-- If row exists AND diff detected → trigger `DiscordPostService.postOrEdit(...)` Webhook-PATCH (Auto-Edit).
-- No UI feedback (silent edit) — Phase 95 D-95-04 precedent.
-- Optionally surface in admin listing `/admin/discord/posts` via the `updated_at` column (existing).
+Server-side flow on Match-Edit save (Phase 95 D-95-04 pattern, extended via Spring application event for Phase 97):
+- `MatchService.updateDiscordFields(id, form)` snapshots `discordTeaser` + `streamLink` BEFORE setter chain and AFTER `matchRepository.save(match)` publishes `MatchPreviewFieldsChangedEvent` if either field diverged (null-safe `Objects.equals`).
+- `DiscordAutoPostListener.onMatchPreviewFieldsChanged` is bound `@TransactionalEventListener(AFTER_COMMIT) + @Transactional(REQUIRES_NEW)` and invokes `DiscordPostService.autoEditMatchPreviewIfNeeded(match)`.
+- `autoEditMatchPreviewIfNeeded` derives the announcement channel via `parseWebhookUrl(globalConfig.announcementWebhookUrl).id()`, looks up `(channelId, MATCH_PREVIEW, matchId)`, and PATCHes the existing row's message with the rebuilt Markdown + attachments. No-op when the row does not exist or when no race has `dateTime`.
+- No UI feedback (silent edit) — same Phase 95 D-95-04 precedent. Failures are caught inside the listener and routed to the `discord.autoEditError` request attribute for the existing controller error-flash mechanism.
 
 ### Mobile (`max-width: 640px`)
 
@@ -350,7 +315,7 @@ UAT-03 mobile-overflow debt (closed in Phase 94 CHAN-01) extends to Phase 97 by 
 ### Accessibility
 
 - All buttons use native `<button type="submit">` or `<button type="button">` — keyboard reachable via Tab, activatable via Enter/Space (no ARIA needed beyond what `<button>` provides natively).
-- Modal `#matchPreviewsBatchModal` does NOT add `role="dialog"` / `aria-modal="true"` in this phase — Phase 94 Archive Modal and Phase 96 Link-Thread Modal precedent omitted these too (existing convention; out of scope to retrofit here).
+- POST-06 ships without a modal (per D-97-PREV-2 the batch flow was dropped). The existing match-detail Archive Modal pattern remains unchanged.
 - Disabled spans (`.btn-secondary .disabled`) use `title` attribute for tooltip — screen readers announce the tooltip on hover/focus. No `aria-disabled` because they are `<span>` not `<button>` (semantically informative, not interactive).
 - Color is NEVER the only signal: stale-state uses both text label ("Update X") AND optional yellow badge color; pre-flight failures use text label ("disabled" + tooltip text) — passes WCAG 1.4.1.
 
@@ -381,13 +346,18 @@ The single new class is OPTIONAL — Plan-97 executor may omit if it adds noise.
 
 ## Server-Side Model Contract (for `gsd-planner` and `gsd-executor`)
 
-### `MatchdayController.viewMatchday(UUID id, Model model)` — additions to existing model
+### `MatchController.detail(UUID id, Model model)` — additions to existing model (POST-06)
 
 ```
 model.addAttribute("discordAnnouncementsConfigured", boolean)
-model.addAttribute("matchdayPairingsPost", DiscordPost?)
-model.addAttribute("matchPreviewsPostCount", int)
-model.addAttribute("matchHasTeaserOrStreamLink", boolean) // true if ANY match.discordTeaser != null OR streamLink != null
+model.addAttribute("matchPreviewPost", DiscordPost?)
+model.addAttribute("matchPreviewPreFlight", MatchPreviewPreFlightResult) // record(canPost, disabledReason)
+```
+
+### `MatchdayController.viewMatchday(UUID id, Model model)` — additions to existing model (POST-07)
+
+```
+model.addAttribute("matchdayDiscordActive", boolean) // season.discordRaceResultsThreadId set AND globalConfig.raceResultsForumWebhookUrl set
 model.addAttribute("canPostMatchdayOverview", boolean)
 model.addAttribute("matchdayOverviewDisabledReason", String?)
 model.addAttribute("matchdayOverviewPost", DiscordPost?)
@@ -405,13 +375,13 @@ model.addAttribute("standingsStale", boolean)
 ### New controller endpoints
 
 ```
-POST /admin/matchdays/{id}/post-matchday-pairings   → flash + redirect to GET /admin/matchdays/{id}
-POST /admin/matchdays/{id}/post-match-previews      → flash + redirect to GET /admin/matchdays/{id}
-POST /admin/matchdays/{id}/post-matchday-overview   → flash + redirect to GET /admin/matchdays/{id}
-POST /admin/seasons/{id}/post-standings             → flash + redirect to GET /admin/seasons/{id}/edit
+POST /admin/matches/{id}/post-match-preview         → flash + redirect to GET /admin/matches/{id}      (Plan 97-01, POST-06)
+POST /admin/matchdays/{id}/post-matchday-results    → flash + redirect to GET /admin/matchdays/{id}    (Plan 97-02, POST-07a)
+POST /admin/matchdays/{id}/post-power-rankings      → flash + redirect to GET /admin/matchdays/{id}    (Plan 97-02, POST-07b)
+POST /admin/seasons/{id}/post-standings             → flash + redirect to GET /admin/seasons/{id}/edit (Plan 97-03, POST-08)
 ```
 
-All 4 endpoints use the existing CSRF-protected POST + flash + redirect pattern. All 4 return one of: `successMessage` (string) or `errorMessage` (string) + `errorCategory` (one of `transient` / `auth` / `not-found` / `permission` — matches Phase 92 UX-01 typed-catch pattern).
+All 4 endpoints use the existing CSRF-protected POST + flash + redirect pattern. All 4 return one of: `successMessage` (string) or `errorMessage` (string) + `errorCategory` (one of `transient` / `auth` / `not-found` / `missing-permissions` — matches Phase 92 UX-01 typed-catch pattern). POST-06 covers 4 of the 5 sealed `DiscordApiException` permits (the `CATEGORY_FULL` permit is impossible for the announcement-webhook path).
 
 ---
 
@@ -421,14 +391,14 @@ All 4 endpoints use the existing CSRF-protected POST + flash + redirect pattern.
 |--------|------------------------|
 | REQUIREMENTS.md POST-06/07/08 | Button labels, target webhooks/threads, Markdown structure, attachments, auto-edit triggers, discord_post row types |
 | docs/superpowers/specs/2026-05-20-discord-integration-design.md § 5 | Post-type list, button placement (matchday-detail, season-form/detail), Markdown skeleton, emoji-cache integration |
-| 95-CONTEXT.md D-95-04 | Auto-edit hook pattern (`MatchService.save` Pre/Post-Diff → Webhook-PATCH on existing row) — reused verbatim for POST-06b |
+| 95-CONTEXT.md D-95-04 | Auto-edit hook pattern (`MatchService.updateDiscordFields` Pre/Post-Diff → Spring application event → AFTER_COMMIT listener → Webhook-PATCH on existing row) — reused verbatim for POST-06 |
 | 95-CONTEXT.md D-95-11 | Production-code-path boundary; controller redirect to GET + flash + `errorCategory` pattern (no JSON API surface) |
 | 95-CONTEXT.md (Phase 95 button labels) | "Post X" / "Re-Post X" / "Update X" naming convention — verbatim continuation |
 | 96-CONTEXT.md D-96-FOR-2b | Season-Edit-Page location (NOT Season-Detail) for Discord-Integration card — POST-08 inherits this location |
 | 96-CONTEXT.md D-96-FOR-3a | `?thread_id={id}` Webhook query-param overload — POST-07 + POST-08 reuse via `DiscordWebhookClient` |
 | 96-CONTEXT.md D-96-FOR-3c | 3-distinct-tooltip-strings pre-flight pattern — POST-07 replicates verbatim |
 | 96-CONTEXT.md D-96-FOR-4 | Auto-unarchive-before-post, no-re-archive — POST-07 + POST-08 inherit via `DiscordPostService.postOrEdit` shared code path |
-| 96-PATTERNS.md S5 | Modal Show/Hide via inline JS (`onclick="document.getElementById('X').style.display='flex'"`) — POST-06b confirmation modal reuses |
+| 96-PATTERNS.md S5 | Modal Show/Hide via inline JS — not used by Phase 97 (POST-06 batch modal was dropped per D-97-PREV-2) |
 | match-detail.html lines 55–172 | Discord-Actions cluster shape, button forms, `data-testid` convention, `.form-inline` usage — verbatim analog |
 | season-form.html lines 170–232 | `#discordIntegration` card location, `linkedStandingsThread`/`linkedRaceResultsThread` model attribute names, existing `discord-actions` reuse inside `form-row` — POST-08 button appended after these |
 | admin.css `:root` lines 12–31 | All color tokens (dark theme, `--accent: #4fc3f7`) |
@@ -460,4 +430,4 @@ No component registry used. All UI is hand-written Thymeleaf + plain CSS in `sta
 - [x] Dimension 5 Spacing: PASS
 - [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** approved 2026-05-23
+**Approval:** approved 2026-05-23. Revised 2026-05-24 per Plan 97-01 (POST-06 simplified to a single per-match Post Match Preview button on Match-Detail per D-97-PREV-2; original matchday-level batch modal and the related per-matchday pairings/previews predicates removed; Markdown H2 changed to `{matchday.label}`, H3 to `{teamA.shortName} vs. {teamB.shortName}`, Stream-bullet fallback changed to `TBA`).
