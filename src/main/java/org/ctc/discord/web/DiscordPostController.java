@@ -3,13 +3,18 @@ package org.ctc.discord.web;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.dto.DiscordPostFilterForm;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.model.DiscordPostType;
 import org.ctc.discord.repository.DiscordPostRepository;
+import org.ctc.domain.model.Match;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.SeasonRepository;
 import org.springframework.data.domain.Page;
@@ -43,12 +48,27 @@ public class DiscordPostController {
 		Specification<DiscordPost> spec = buildSpec(filter);
 		Page<DiscordPost> posts = discordPostRepository.findAll(spec, pageable);
 
+		List<Match> matches = matchRepository.findAll().stream()
+				.sorted(Comparator
+						.comparing((Match m) -> m.getMatchday().getSeason().getYear(), Comparator.reverseOrder())
+						.thenComparing(m -> m.getMatchday().getLabel())
+						.thenComparing(m -> m.getHomeTeam().getShortName()))
+				.toList();
+		Map<UUID, String> matchLabels = matches.stream()
+				.collect(Collectors.toMap(Match::getId, DiscordPostController::matchLabel));
+
 		model.addAttribute("posts", posts);
 		model.addAttribute("seasons", seasonRepository.findAll(Sort.by(Sort.Direction.DESC, "year")));
-		model.addAttribute("matches", matchRepository.findAll());
+		model.addAttribute("matches", matches);
+		model.addAttribute("matchLabels", matchLabels);
 		model.addAttribute("postTypes", Arrays.asList(DiscordPostType.values()));
 		model.addAttribute("activeRoute", "discord-posts");
 		return VIEW;
+	}
+
+	private static String matchLabel(Match m) {
+		return m.getMatchday().getSeason().getYear() + " | " + m.getMatchday().getLabel()
+				+ " | " + m.getHomeTeam().getShortName() + " vs. " + m.getAwayTeam().getShortName();
 	}
 
 	private static Specification<DiscordPost> buildSpec(DiscordPostFilterForm filter) {
