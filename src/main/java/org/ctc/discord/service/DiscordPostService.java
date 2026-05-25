@@ -94,7 +94,7 @@ public class DiscordPostService {
 	private final MatchdayPairingsGraphicService matchdayPairingsGraphicService;
 	private final Path uploadDir;
 
-	private static final String DEFAULT_MATCHDAY_PAIRINGS_TEMPLATE =
+	public static final String DEFAULT_MATCHDAY_PAIRINGS_TEMPLATE =
 			"# {{matchdayNumber}} Pairings\n\n"
 					+ "- Home Teams are on the left hand side.\n"
 					+ "- Deadline for the picks: {{deadline}} (use the pinned form in your private team chat channel)\n"

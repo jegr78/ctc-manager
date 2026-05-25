@@ -10,6 +10,7 @@ import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.ctc.discord.service.DiscordGlobalConfigService;
+import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.TeamRepository;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -37,14 +38,17 @@ public class DiscordDevSeeder {
 			log.info("Discord dev-seed disabled — skipping");
 			return;
 		}
+		DiscordGlobalConfig cfg = configService.getOrInitialize();
+		boolean templateBackfilled = backfillDefaultTemplates(cfg);
 		if (!properties.hasGuildId()) {
 			log.info("Discord dev-seed: no guild-id configured — skipping (set DISCORD_DEV_GUILD_ID to enable)");
+			persistIfDirty(cfg, templateBackfilled);
 			return;
 		}
-		DiscordGlobalConfig cfg = configService.getOrInitialize();
 		if (cfg.getGuildId() != null && !cfg.getGuildId().isBlank()) {
 			log.info("Discord dev-seed: DiscordGlobalConfig already populated (guildId={}) — skipping",
 					cfg.getGuildId());
+			persistIfDirty(cfg, templateBackfilled);
 			return;
 		}
 
@@ -69,6 +73,26 @@ public class DiscordDevSeeder {
 			log.warn("Discord dev-seed: live API call failed — config persisted but caches/role-IDs "
 					+ "are not populated. Operator can click 'Refresh Server Roles' on /admin/discord-config "
 					+ "once Discord is reachable. Cause: {}", e.toString());
+		}
+	}
+
+	private boolean backfillDefaultTemplates(DiscordGlobalConfig cfg) {
+		boolean dirty = false;
+		if (cfg.getMatchdayPairingsTemplate() == null || cfg.getMatchdayPairingsTemplate().isBlank()) {
+			cfg.setMatchdayPairingsTemplate(DiscordPostService.DEFAULT_MATCHDAY_PAIRINGS_TEMPLATE);
+			log.info("Discord dev-seed: seeded default Matchday-Pairings template");
+			dirty = true;
+		}
+		return dirty;
+	}
+
+	private void persistIfDirty(DiscordGlobalConfig cfg, boolean dirty) {
+		if (dirty) {
+			try {
+				configRepository.save(cfg);
+			} catch (RuntimeException e) {
+				log.warn("Discord dev-seed: failed to persist default-template backfill: {}", e.toString());
+			}
 		}
 	}
 
