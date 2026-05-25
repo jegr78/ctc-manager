@@ -81,6 +81,10 @@ class MatchdayControllerPostEndpointsIT {
 				.thenReturn(new MatchPreviewPreFlightResult(true, null));
 		when(discordPostService.canPostPowerRankings(any(), any()))
 				.thenReturn(new MatchPreviewPreFlightResult(true, null));
+		when(discordPostService.canPostMatchdayPairings(any(), any()))
+				.thenReturn(new MatchPreviewPreFlightResult(true, null));
+		when(discordPostService.canPostMatchdaySchedule(any(), any()))
+				.thenReturn(new MatchPreviewPreFlightResult(true, null));
 	}
 
 	@AfterEach
