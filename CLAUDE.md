@@ -146,19 +146,7 @@ Deliberately enabled (`spring.jpa.open-in-view=true`). The Hibernate session rem
 * **Milestone PR Already Exists.** From milestone start, a single PR tracks the milestone branch. NEVER propose or run `gh pr create` without first running `gh pr list --head <milestone-branch>`. After every phase push, update the PR body via `gh pr edit <num> --body "..."` so it functions as a rolling summary (phase list with ✓ markers, coverage/test-count deltas, key outcomes) — not a Branch-start snapshot. A repository PreToolUse hook (`.claude/hooks/check-pr-exists.sh`) enforces this; the rule still applies when the hook is bypassed.
 * **No Local Git Tags.** Never run `git tag -a v…` or `git push origin v…`. The release CI workflow tags after merge — a pre-pushed tag collides with the CI tag and breaks the merge CI run. `/gsd-complete-milestone`: skip the `git_tag` step even if the skill template suggests it. Cleanup if an accidental tag landed: `git push --delete origin <tag>` AND `git tag -d <tag>` (both, otherwise the next push resurrects it).
 * **Sequential PR Merges & Rebase.** When dependent PRs squash-merge in sequence, later branches need `git fetch origin && git rebase origin/master` before merge. Push with `--force-with-lease`, never `--force`. Prefer branching all PRs from master (no inter-PR dependency) when possible.
-* **Commits:** English commit messages using Conventional Commits prefixes:
-  * `feat:` — New feature (Minor bump)
-  * `fix:` — Bugfix (Patch bump)
-  * `docs:` — Documentation (Patch bump)
-  * `chore:` — Maintenance (Patch bump)
-  * `refactor:` — Refactoring (Patch bump)
-  * `test:` — Tests (Patch bump)
-  * `style:` — Formatting/CSS (Patch bump)
-  * `perf:` — Performance (Patch bump)
-  * `ci:` — CI/CD (No release)
-  * `BREAKING CHANGE` in footer → Major bump.
-  * Format: `<type>(<optional scope>): <description>`
-  * Example: `feat(scoring): add penalty point deduction`
+* **Commits:** English Conventional Commits. Full type list (feat/fix/docs/chore/refactor/test/style/perf/ci + `BREAKING CHANGE` footer) and format spec live in [`.gitmessage`](.gitmessage) — Single Source of Truth, also serves as IDE commit-dialog template. Activate locally once via `git config commit.template .gitmessage` so IntelliJ / VS Code / `git commit` (no `-m`) pre-fill the cheat-sheet. Squash-merge subjects MUST follow the same format — PR title alone does NOT trigger Semantic Release.
 * **Before PR:**
     1. Ensure tests pass locally with `./mvnw verify`.
     2. Perform a code review of your own changes (`superpowers:code-reviewer`).
