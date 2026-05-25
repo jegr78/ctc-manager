@@ -65,6 +65,7 @@ class DiscordPostServiceRefBranchesTest {
 				mock(org.ctc.admin.service.MatchdayResultsGraphicService.class),
 				mock(org.ctc.admin.service.PowerRankingsGraphicService.class),
 				mock(org.ctc.admin.service.StandingsGraphicService.class),
+				mock(org.ctc.admin.service.MatchdayPairingsGraphicService.class),
 				"uploads");
 
 		WebhookMessage msg = new WebhookMessage("msg-1", CHANNEL_ID);

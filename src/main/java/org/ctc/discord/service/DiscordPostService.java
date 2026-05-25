@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.MatchResultsGraphicService;
+import org.ctc.admin.service.MatchdayPairingsGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.PowerRankingsGraphicService;
 import org.ctc.admin.service.ProvisionalScoresGraphicService;
@@ -90,7 +91,15 @@ public class DiscordPostService {
 	private final MatchdayResultsGraphicService matchdayResultsGraphicService;
 	private final PowerRankingsGraphicService powerRankingsGraphicService;
 	private final StandingsGraphicService standingsGraphicService;
+	private final MatchdayPairingsGraphicService matchdayPairingsGraphicService;
 	private final Path uploadDir;
+
+	private static final String DEFAULT_MATCHDAY_PAIRINGS_TEMPLATE =
+			"# {{matchdayNumber}} Pairings\n\n"
+					+ "- Home Teams are on the left hand side.\n"
+					+ "- Deadline for the picks: {{deadline}} (use the pinned form in your private team chat channel)\n"
+					+ "- Scheduled weekend for the races: {{weekend}}\n\n"
+					+ "Game On! :CTC:";
 
 	@SuppressFBWarnings(
 			value = "EI_EXPOSE_REP2",
@@ -98,7 +107,8 @@ public class DiscordPostService {
 					+ "DiscordHostValidator, DiscordGlobalConfigService, TeamCardService, SeasonTeamRepository, "
 					+ "SettingsGraphicService, LineupGraphicService, RaceLineupRepository, MatchResultsGraphicService, "
 					+ "ResultsGraphicService, ProvisionalScoresGraphicService, DiscordTimestamps, DiscordEmojiCache, "
-					+ "MatchdayResultsGraphicService, PowerRankingsGraphicService, StandingsGraphicService) "
+					+ "MatchdayResultsGraphicService, PowerRankingsGraphicService, StandingsGraphicService, "
+					+ "MatchdayPairingsGraphicService) "
 					+ "are intentionally shared by-reference — defensive copying would break framework wiring. "
 					+ "Matches the implicit suppression that lombok.config adds to @RequiredArgsConstructor "
 					+ "(see CLAUDE.md SpotBugs section + lombok.config invariant).")
@@ -122,6 +132,7 @@ public class DiscordPostService {
 			MatchdayResultsGraphicService matchdayResultsGraphicService,
 			PowerRankingsGraphicService powerRankingsGraphicService,
 			StandingsGraphicService standingsGraphicService,
+			MatchdayPairingsGraphicService matchdayPairingsGraphicService,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
 		this.restClient = restClient;
@@ -142,6 +153,7 @@ public class DiscordPostService {
 		this.matchdayResultsGraphicService = matchdayResultsGraphicService;
 		this.powerRankingsGraphicService = powerRankingsGraphicService;
 		this.standingsGraphicService = standingsGraphicService;
+		this.matchdayPairingsGraphicService = matchdayPairingsGraphicService;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
 
@@ -371,6 +383,71 @@ public class DiscordPostService {
 				List.of(attachment),
 				DiscordPostRef.matchday(matchday),
 				threadId);
+	}
+
+	public MatchPreviewPreFlightResult canPostMatchdayPairings(Matchday matchday, DiscordGlobalConfig config) {
+		if (matchday.getPickDeadline() == null) {
+			return new MatchPreviewPreFlightResult(false, "Set pick deadline first");
+		}
+		if (matchday.getScheduledWeekend() == null || matchday.getScheduledWeekend().isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Set scheduled weekend first");
+		}
+		boolean allMatchesHaveTeams = matchday.getMatches().stream()
+				.allMatch(m -> m.getHomeTeam() != null && m.getAwayTeam() != null);
+		if (!allMatchesHaveTeams) {
+			return new MatchPreviewPreFlightResult(false, "Assign teams to all matches first");
+		}
+		String webhookUrl = config.getAnnouncementWebhookUrl();
+		if (webhookUrl == null || webhookUrl.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Configure announcement-webhook in Discord settings");
+		}
+		return new MatchPreviewPreFlightResult(true, null);
+	}
+
+	@Transactional
+	public DiscordPost postMatchdayPairings(Matchday matchday) throws DiscordApiException {
+		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
+		MatchPreviewPreFlightResult pre = canPostMatchdayPairings(matchday, config);
+		if (!pre.canPost()) {
+			throw new BusinessRuleException("Cannot post Matchday Pairings: " + pre.disabledReason());
+		}
+		String webhookUrl = config.getAnnouncementWebhookUrl();
+		String channelId = parseWebhookUrl(webhookUrl).id();
+		String content = buildMatchdayPairingsMarkdown(matchday, config);
+		byte[] png;
+		try {
+			png = matchdayPairingsGraphicService.generatePairings(matchday);
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		String filename = "matchday-pairings-" + slug(matchday.getLabel()) + ".png";
+		NamedAttachment attachment = new NamedAttachment(filename, png);
+		return postOrEdit(
+				channelId,
+				webhookUrl,
+				DiscordPostType.MATCHDAY_PAIRINGS,
+				new WebhookPayload(content, List.of()),
+				List.of(attachment),
+				DiscordPostRef.matchday(matchday));
+	}
+
+	private String buildMatchdayPairingsMarkdown(Matchday matchday, DiscordGlobalConfig config) {
+		String template = (config.getMatchdayPairingsTemplate() != null
+				&& !config.getMatchdayPairingsTemplate().isBlank())
+				? config.getMatchdayPairingsTemplate()
+				: DEFAULT_MATCHDAY_PAIRINGS_TEMPLATE;
+		String matchdayNumber = matchday.getLabel() != null ? matchday.getLabel() : "?";
+		String deadline = matchday.getPickDeadline() != null
+				? discordTimestamps.longDateTime(matchday.getPickDeadline())
+				: "_TBD_";
+		String weekend = (matchday.getScheduledWeekend() != null
+				&& !matchday.getScheduledWeekend().isBlank())
+				? matchday.getScheduledWeekend()
+				: "_TBD_";
+		return template
+				.replace("{{matchdayNumber}}", matchdayNumber)
+				.replace("{{deadline}}", deadline)
+				.replace("{{weekend}}", weekend);
 	}
 
 	@Transactional
