@@ -50,4 +50,7 @@ public class DiscordGlobalConfig extends BaseEntity {
 
 	@Column(name = "current_match_category_id", length = 32, nullable = false)
 	private String currentMatchCategoryId = "";
+
+	@Column(name = "matchday_pairings_template", columnDefinition = "TEXT")
+	private String matchdayPairingsTemplate;
 }
