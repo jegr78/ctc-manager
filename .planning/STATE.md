@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: UAT-08 PASS (all 13 stages green) — Plan 98-04 (schedule-embed layout polish) pending before /gsd-complete-milestone v1.13
-last_updated: "2026-05-25T13:35:00.000Z"
-last_activity: 2026-05-25 -- UAT-08 PASS — all 13 effective stages (match-channel 1–9 + season/matchday 10–13) live-verified against test guild; 4 webhook identities verified; Re-Post-PATCH across 4 post types; Plan 98-04 (schedule-embed layout, in-milestone polish) pending
+stopped_at: Phase 98 re-opened — context gathered for plans 98-05/06/07 (matchday-level announcement posts POST-09 + POST-10) — Plan 98-04 source-fixed, Bundle-Verify + Live-Re-Run deferred to 98-07
+last_updated: "2026-05-25T14:37:09.719Z"
+last_activity: 2026-05-25 -- Phase 98 re-opened with Q-98-06..09 (matchday-level Announcement-Channel posts POST-09 + POST-10); 3 new plans 98-05/06/07 pending; D-97-PREV-2 explicitly overridden; UAT-08 PASS snapshot 2026-05-25 preserved (all 13 stages green); UAT-Re-Run for stages 5c/14/15 part of 98-07
 progress:
   total_phases: 7
-  completed_phases: 7
-  total_plans: 24
-  completed_plans: 24
-  percent: 100
+  completed_phases: 6
+  total_plans: 28
+  completed_plans: 25
+  percent: 89
 ---
 
 # Project State
@@ -315,9 +315,9 @@ At roadmap creation (2026-05-20):
 
 ## Session Continuity
 
-**Last session:** 2026-05-24T17:40:08.550Z
+**Last session:** 2026-05-25T14:37:09.709Z
 
-**Stopped at:** Phase 98 context gathered
+**Stopped at:** Phase 98 re-opened — context gathered for plans 98-05/06/07 (matchday-level announcement posts POST-09 + POST-10)
 
 **Next action:** `/gsd-validate-phase 94` — run Nyquist sampling across all 23 test classes, flip `nyquist_compliant: true` in 94-VALIDATION.md frontmatter. Then stage UAT-04 (Live-Discord Channel Lifecycle Smoke) against the operator's test guild BEFORE `/gsd-discuss-phase 95`.
 
