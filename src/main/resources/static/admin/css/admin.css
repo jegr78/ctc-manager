@@ -169,6 +169,9 @@ h3 { font-size: 16px; margin-bottom: 8px; color: var(--white); }
     border-radius: var(--radius-md);
     padding: 24px;
     margin-bottom: 16px;
+    min-width: 0;
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
 .table-scroll {
@@ -209,9 +212,6 @@ th.sortable[data-sort="desc"]::after { content: ' \2193'; opacity: 1; }
 
 .actions { display: flex; gap: 8px; align-items: center; }
 
-/* Discord-page action cluster — responsive-wrap variant shared by discord-config + match-detail.
-   Closes the UAT-03 mobile-overflow debt: at <= 640 px the buttons stack to a single column
-   so the 4-button bar no longer overflows the 375 px viewport. */
 .discord-actions {
     display: flex;
     flex-wrap: wrap;
@@ -225,6 +225,14 @@ th.sortable[data-sort="desc"]::after { content: ' \2193'; opacity: 1; }
     }
     .discord-actions > * { width: 100%; }
     .discord-actions .btn { width: 100%; }
+    .card { padding: 16px; }
+    .card > table,
+    .card > form > table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        min-width: 0;
+    }
 }
 
 .btn {
@@ -317,6 +325,7 @@ select option {
     background: var(--bg-input);
     color: var(--white);
     transition: border-color 0.2s;
+    min-width: 0;
 }
 
 .form-group input:focus,
@@ -831,6 +840,8 @@ select option {
     border: 1px solid var(--border);
     border-top: none;
     border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .searchable-dropdown .dropdown-item {
@@ -1317,6 +1328,7 @@ a.season-header-title:hover {
     display: flex;
     gap: 8px;
     align-items: flex-end;
+    flex-wrap: wrap;
 }
 
 .form-group--inline {

@@ -62,21 +62,21 @@ does not register slash-commands (per design spec § 2.2 D-Outbound-Only).
 | Permission | Purpose |
 |------------|---------|
 | View Channels | Required for every REST call against a guild |
-| Manage Channels | Phase 94 CHAN-02 — create per-match channels + archive |
-| Manage Webhooks | Phase 94 CHAN-02 — create webhook in new match channel |
-| Send Messages | Phase 95 POST-01..05 — bot-direct posts (when not using webhook) |
-| Embed Links | Phase 95+ — embed previews in match-channel posts |
-| Attach Files | Phase 95+ — Team Cards, Settings, Lineups, race-result graphics |
-| Read Message History | Phase 95 POST-01 edit-path — locate existing `discord_post` row |
-| Manage Messages | Phase 95 POST-01 edit-path — patch existing webhook messages |
-| Pin Messages | Phase 95 POST-01..05 — pin stage posts in match channel |
-| Create Public Threads | Phase 96 FORUM-01 — race-result + standings forum threads |
-| Send Messages in Threads | Phase 96 FORUM-02 — post into forum threads |
-| Manage Threads | Phase 96 FORUM-02 auto-unarchive |
+| Manage Channels | Create per-match channels + archive |
+| Manage Webhooks | Create the per-channel webhook in a new match channel |
+| Send Messages | Bot-direct posts (when not using a webhook) |
+| Embed Links | Embed previews in match-channel posts |
+| Attach Files | Team Cards, Settings, Lineups, race-result graphics |
+| Read Message History | Edit-path — locate existing `discord_post` row |
+| Manage Messages | Edit-path — patch existing webhook messages |
+| Pin Messages | Pin stage posts in the match channel |
+| Create Public Threads | Race-result + standings forum threads |
+| Send Messages in Threads | Post into forum threads |
+| Manage Threads | Auto-unarchive of forum threads (`MANAGE_THREADS`) |
 
 **Explicitly NOT recommended:**
 
-- ❌ `Administrator` — over-privileged; bypasses the post-create permission audit (T-93-03 mitigation in Phase 94)
+- ❌ `Administrator` — over-privileged; bypasses the post-create permission audit
 - ❌ `Create Private Threads` — race-result forum threads are public by design
 - ❌ `Kick Members` / `Ban Members` / `Manage Server` / `Manage Roles` — out of scope; bot only reads roles, never assigns them
 - ❌ All Voice permissions — bot posts in text channels only
@@ -235,8 +235,43 @@ The URL is `https://discord.com/api/webhooks/<id>/<token>` and must match the
 `^https://discord\.com/api/webhooks/\d+/[\w-]+$|^$`.
 
 Production deployments will instead use the webhook auto-created in each match
-channel by Phase 94 CHAN-02 — the configured `announcementWebhookUrl` is only
-the **league-wide** announcement channel (e.g. matchday previews + standings).
+channel — the configured `announcementWebhookUrl` is only the **league-wide**
+announcement channel (e.g. matchday previews + standings).
+
+### 1.9. Forum-Channel + Thread Setup
+
+Two forum channels publish league-wide season content:
+
+- **Race-Results Forum** — one thread per season; every race-result graphic is
+  posted into that thread (and auto-unarchives if Discord archived it).
+- **Standings Forum** — one thread per season; every per-phase standings post
+  (with `MANAGE_THREADS` for auto-unarchive) lands here.
+
+**Bot prerequisite:** the bot role needs `MANAGE_THREADS` in both forum
+channels (already part of the OAuth bitmask above; verify the override is not
+removed at channel-level).
+
+**Per forum, set up the webhook + first thread:**
+
+1. In Discord, pick the target category → **Create Channel** → choose
+   **Forum** → name it `race-results` (or `standings`) → **Create Channel**.
+2. Open the forum channel → **Edit Channel** → **Integrations** →
+   **Webhooks** → **New Webhook** → name it `CTC Manager (race-results)` (or
+   `standings`) → **Copy Webhook URL**.
+3. Open `/admin/discord-config` and paste the URL into
+   **Race-Results Forum Webhook URL** (or **Standings Forum Webhook URL**).
+4. Back in the forum channel: click **New Post** → set the post title
+   (e.g. `Saison 4 – 2026` for race-results, `2026` for standings) → publish.
+5. With Developer Mode enabled (§ 1.6), right-click the new post in the
+   sidebar → **Copy Thread ID**.
+6. Open `/admin/seasons/{id}/edit` → **Discord Integration** card →
+   **Link existing Thread…** → paste the Thread ID → **Save**.
+
+![Season Discord Integration card](images/discord/07-season-edit-forum-threads.png)
+
+The Thread ID lands on `seasons.discord_race_results_thread_id` or
+`seasons.discord_standings_thread_id` (Flyway V12). Every forum post then
+attaches `?thread_id=<id>` so Discord routes it into the same thread.
 
 ---
 
@@ -249,9 +284,9 @@ URL: `/admin/discord-config`.
 | Field | Purpose | Validation |
 |-------|---------|------------|
 | **Guild ID** | Discord server snowflake | snowflake or empty |
-| **Bot Application ID** | snowflake of the application (Developer Portal → General Information → Application ID) — used by Phase 94+ for permission audits | snowflake or empty |
+| **Bot Application ID** | snowflake of the application (Developer Portal → General Information → Application ID) — used for permission audits | snowflake or empty |
 | **Announcement Webhook URL** | League-wide announcement webhook (matchday previews + standings) | `https://discord.com/api/webhooks/…` or empty |
-| **Race-Results Forum Channel ID** | Snowflake of the forum channel where race-result threads land (Phase 96 FORUM-01) | snowflake or empty |
+| **Race-Results Forum Channel ID** | Snowflake of the forum channel where race-result threads land | snowflake or empty |
 | **Standings Forum Channel ID** | Snowflake of the forum channel for season-standings threads | snowflake or empty |
 | **VS Emoji Name** | Short-name of the custom guild emoji used between team names in match previews (e.g. `CTC`, `VS`, `vs`) — resolved at post-time via `DiscordEmojiCache` | `@NotBlank @Size(max=50)`, defaults to `CTC` |
 
@@ -273,6 +308,69 @@ when their prerequisite field is empty.
 All buttons share the same typed-exception → flash-badge wiring described in
 section 3.
 
+### 2.3. Daily Operations
+
+Eleven structured post types cover the full league lifecycle. Buttons live on
+the relevant admin page; every button has a pre-flight gate that disables it
+until prerequisites are met (with a tooltip listing the missing fields).
+
+**Match-Channel lifecycle** (`/admin/matches/{id}`):
+
+![Match-Detail post actions](images/discord/05-match-detail-post-actions.png)
+
+1. **Create Discord Channel** — creates a per-match channel under the
+   configured "Current Match Category", auto-creates the channel webhook,
+   runs the permission audit, and stores `matches.discord_channel_id`.
+   Pre-flight: both teams have `discord_role_id` set.
+2. **Post Team Cards** — multipart POST with 2 PNGs (per-team rosters).
+3. **Post Settings** — multipart POST with N PNGs (one per race-setting
+   sheet).
+4. **Post Lineups** — multipart POST with N PNGs (one per race lineup).
+5. **Post Schedule** — JSON POST with Discord embed (`Date <t:N:F>`,
+   `Lobby Host`, `Race Director`, `Streamer`, `Stream Link`). Pre-flight:
+   `lobbyHost`, `raceDirector`, `streamer` set. Auto-edits the existing
+   embed when any of those fields change.
+6. **Post Provisional Scores** — multipart POST with N PNGs (intermediate
+   results between races). Auto-edits when results change.
+7. **Post Match Results** — multipart POST with `match-results.png`.
+   Pre-flight: `allMatchesFinal == true`. Stale-detection turns the button
+   **yellow** ("Update Match Results") if any race result changed after
+   the last post.
+8. **Move to Archive** — opens a modal listing year-categories (regex
+   `Match Days Archive {year} ({num})`). Each category is capped at 50
+   channels per Discord; if full, the operator picks another or creates a
+   new category in Discord and re-opens the modal.
+
+![Match-Detail archive modal](images/discord/06-match-detail-archive-modal.png)
+
+**Matchday-level posts** (`/admin/matchdays/{id}`):
+
+9. **Match Preview Announcement** (POST-06) — embed posted into the
+   announcement webhook. Pre-flight: `announcementWebhookUrl` configured,
+   `streamLink` and `discordTeaser` set. Auto-edits when `streamLink` or
+   `discordTeaser` change post-creation.
+10. **Match Day Results** (POST-07a) + **Power Rankings** (POST-07b) —
+    multipart POSTs into the announcement webhook after the matchday is
+    finalized. Stale-detection re-renders graphics if upstream scores change.
+
+**Season-level posts** (`/admin/seasons/{id}`):
+
+11. **Standings** (POST-08) — per-phase, multipart into the standings
+    forum thread. For phases with `GROUPS` format, a multipart payload
+    splits across up to 8 attachments.
+
+**Forum-thread posts:**
+
+- **Race Result** (FORUM-02) — per race, posted into the linked race-results
+  thread; auto-unarchives the thread if Discord archived it (requires
+  `MANAGE_THREADS`).
+
+**Listing + audit:** all posts are visible at `/admin/discord/posts` with
+filters by post type, channel, and timestamp. Use this page to confirm a
+post landed, to inspect attachment counts, or to spot stale entries.
+
+![Discord posts listing](images/discord/08-discord-posts-listing.png)
+
 ---
 
 ## 3. Error Categories
@@ -286,7 +384,7 @@ hierarchy:
 | `auth` | `DiscordAuthException` | `Authentication failed. Verify DISCORD_BOT_TOKEN is set in the environment.` | 401, 403 (token-related) | Re-check env-var; reset token in Developer Portal if compromised. |
 | `transient` | `DiscordTransientException` | `Discord is temporarily unavailable. Please retry.` | 5xx after retry exhaustion, or network failure | Wait 30s and retry. If repeating, check [Discord Status](https://discordstatus.com). |
 | `not-found` | `DiscordNotFoundException` | `Discord resource not found. Verify the configured ID is correct.` | 404 | Re-verify the snowflake; confirm bot is a member of the guild. |
-| `category-full` | `DiscordCategoryFullException` | `Discord category is full (50/50 channels). Create a new archive category and retry.` | 400 with body `{"code": 30013}` | Only surfaces from Phase 94 CHAN-02 archive flow — not from Phase 93 test buttons. |
+| `category-full` | `DiscordCategoryFullException` | `Discord category is full (50/50 channels). Create a new archive category and retry.` | 400 with body `{"code": 30013}` | Only surfaces from the match-channel archive flow — not from the discord-config test buttons. |
 
 The mapper deliberately never echoes `e.getMessage()` from the underlying
 RestClient exception — that would risk leaking the bot token in a stacktrace
@@ -297,7 +395,7 @@ fragment (T-91-02-IL invariant + T-93-01 mitigation surface c').
 ## 4. UAT-03 — Live-Discord Smoke (post-deploy)
 
 This is the operator-bound UAT-03 from `STATE.md` "Pending UATs". It MUST run
-before Phase 94 CHAN-02 begins, because WireMock fixtures cannot prove the
+before the match-channel-lifecycle work begins, because WireMock fixtures cannot prove the
 actual Discord-API contract.
 
 **Prerequisites** (all from section 1):
@@ -401,6 +499,117 @@ tokens leaving the JVM should not happen at all).
   appears in any log line (T-93-02 mitigation surface c). If you see an
   **unmasked** webhook URL anywhere in the logs, that is a regression — file
   an issue immediately and revert the Logback change.
+
+## 6. Token-Rotation Procedure
+
+The bot token grants full access to every guild the bot is in. Rotate it on a
+schedule (e.g. quarterly), immediately on suspicion of leakage, and after any
+contributor with token access leaves the project.
+
+**Standard rotation:**
+
+1. In the Discord Developer Portal → your application → **Bot** → click
+   **Reset Token**. Discord invalidates the old token immediately and shows
+   the new one once — copy it.
+2. Update the secret store:
+   - **prod / docker:** set `DISCORD_BOT_TOKEN` in the deployment secret
+     store (env or `.env` mounted into the container).
+   - **dev / local:** update `.env.dev` or `.env.local`.
+3. Restart the app — `./scripts/app.sh restart` (or `./scripts/app.sh
+   restart dev` for the dev profile).
+4. Open `/admin/discord-config` → click **Test Connection** → expect a
+   green `Connected as <bot-username>` badge. If the badge is red `auth`,
+   re-check the env var and restart again.
+
+**Emergency rotation (token leaked or suspected leak):**
+
+1. Reset the token in the Developer Portal immediately (step 1 above) —
+   that revokes the leaked token first, regardless of whether the new one
+   reaches the app right away.
+2. Update the secret store and restart (steps 2–3 above).
+3. Verify with `Test Connection` (step 4).
+4. Check the audit trail: `grep -E 'DISCORD' logs/*` for unexpected
+   access patterns (unknown channels created, unknown messages posted)
+   over the window the leaked token was valid.
+
+## 7. UAT-08 Procedure + Extended Troubleshooting
+
+This is the operator-bound UAT-08 from `STATE.md` "Pending UATs". It MUST
+run before `/gsd-complete-milestone v1.13`, because WireMock fixtures
+cannot prove the live Discord-API contract for the full post matrix.
+
+**Prerequisites** (all from sections 1 and 2):
+
+- App running in the `dev` profile with the test guild's bot token wired.
+- One spare match scheduled in the test guild's category, with both teams
+  having `discord_role_id` set and at least one race lineup populated.
+- Race-results and standings forum threads linked on the test season
+  (see § 1.9).
+
+**Procedure** — 9 stages, each verified by a flash badge in the app and a
+visible artifact in the Discord client:
+
+1. `/admin/matches/{id}` → **Create Discord Channel**. Expect green
+   `Discord channel created` badge; reload to see the post-action
+   buttons; verify the new channel + auto-created webhook in Discord.
+2. **Post Team Cards**. Expect 2 PNG attachments in the new channel.
+3. **Post Settings**. Expect N PNG attachments (one per race-setting
+   sheet).
+4. **Post Lineups**. Expect N PNG attachments.
+5. **Post Schedule**. Expect a Discord embed with Date / Lobby Host /
+   Race Director / Streamer / Stream Link. Edit one of those fields
+   in the admin and re-save — the embed updates in place (auto-edit).
+6. Submit at least one race result, then **Post Provisional Scores**.
+   Expect N PNGs in the channel.
+7. After all races are final and `allMatchesFinal == true`, click
+   **Post Match Results**. Expect `match-results.png` posted, plus the
+   button turning yellow ("Update Match Results") if you tweak a race
+   result and re-render.
+8. Open the Race-Result forum thread → confirm the race-result graphic
+   landed; if Discord archived the thread, confirm the post triggered
+   an auto-unarchive.
+9. `/admin/matches/{id}` → **Move to Archive** → pick a year-category →
+   **Confirm**. Verify the channel moved under that category in Discord.
+
+After all 9 stages succeed, fill in the UAT-08 block in `STATE.md` with
+date + outcome + screenshot links, then run
+`/gsd-complete-milestone v1.13`.
+
+### Extended Troubleshooting
+
+#### `Create Discord Channel` returns the `category-full` badge
+
+The configured "Current Match Category" already holds 50 channels (Discord
+hard limit). Create a new category in Discord (e.g. `Current Matches 2`)
+or archive completed matches via **Move to Archive** to free slots.
+
+#### `Post Race Result` returns `not-found` after the forum thread was archived
+
+Expected behaviour is auto-unarchive (requires `MANAGE_THREADS`). If the
+post still fails:
+
+1. Verify the bot role has `MANAGE_THREADS` server-wide and in the forum
+   channel.
+2. Confirm `seasons.discord_race_results_thread_id` matches a thread that
+   still exists in Discord (operator may have manually deleted it).
+3. If the thread was deleted, create a new one and re-link it via
+   `/admin/seasons/{id}/edit` → **Link existing Thread…**.
+
+#### Match-Preview button disabled with `Configure announcement webhook` tooltip
+
+`/admin/discord-config` → **Announcement Webhook URL** is empty. Paste a
+webhook URL from the league-wide announcement channel and **Save**.
+
+#### Match-Preview button disabled with `discordTeaser missing` tooltip
+
+`/admin/matchdays/{id}/edit` → the **Discord Teaser** textarea is empty.
+Fill it in and **Save**; the button enables on reload.
+
+#### Forum-thread post returns `not-found` despite a linked thread
+
+The linked Discord thread was deleted (operator-side). Re-link a fresh
+thread via `/admin/seasons/{id}/edit` → **Link existing Thread…**, or
+create a new thread first via Discord (see § 1.9 step 4) and link it.
 
 ## Minimum Bot Permissions
 
