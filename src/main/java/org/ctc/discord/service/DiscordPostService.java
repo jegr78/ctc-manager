@@ -507,10 +507,10 @@ public class DiscordPostService {
 		String dateField = discordTimestamps.longDateTime(firstRaceTime)
 				+ " (" + discordTimestamps.relative(firstRaceTime) + ")";
 		List<EmbedField> fields = List.of(
-				new EmbedField("Date", dateField, true),
-				new EmbedField("Lobby Host", orTbd(match.getLobbyHost()), true),
-				new EmbedField("Race Director", orTbd(match.getRaceDirector()), true),
-				new EmbedField("Streamer", streamerField(match), true));
+				new EmbedField("Date", dateField, false),
+				new EmbedField("Lobby Host", orTbd(match.getLobbyHost()), false),
+				new EmbedField("Race Director", orTbd(match.getRaceDirector()), false),
+				new EmbedField("Streamer", streamerField(match), false));
 		Embed embed = new Embed("Match Schedule", null, fields);
 		return new WebhookPayload(null, List.of(embed));
 	}

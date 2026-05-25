@@ -1,6 +1,7 @@
 package org.ctc.discord.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.containing;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.matchingJsonPath;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.post;
@@ -99,9 +100,13 @@ class DiscordPostServiceScheduleIT {
 				.withHeader("Content-Type", containing("application/json"))
 				.withRequestBody(matchingJsonPath("$.embeds[0].title", containing("Match Schedule")))
 				.withRequestBody(matchingJsonPath("$.embeds[0].fields[0].name", containing("Date")))
+				.withRequestBody(matchingJsonPath("$.embeds[0].fields[0].inline", equalTo("false")))
 				.withRequestBody(matchingJsonPath("$.embeds[0].fields[1].value", containing("Alice")))
+				.withRequestBody(matchingJsonPath("$.embeds[0].fields[1].inline", equalTo("false")))
 				.withRequestBody(matchingJsonPath("$.embeds[0].fields[2].value", containing("Bob")))
+				.withRequestBody(matchingJsonPath("$.embeds[0].fields[2].inline", equalTo("false")))
 				.withRequestBody(matchingJsonPath("$.embeds[0].fields[3].value", containing("Charlie")))
+				.withRequestBody(matchingJsonPath("$.embeds[0].fields[3].inline", equalTo("false")))
 				.willReturn(okJson("{\"id\":\"msg-sc1\",\"channel_id\":\"chan-sc-S1\"}")));
 
 		DiscordPost saved = service.postSchedule(match);
