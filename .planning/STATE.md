@@ -225,7 +225,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-08: Live Full-Matchday-Lifecycle (Phase 98 E2E-01 mirror — operator-driven)
 
 - **Pre-UAT-08** — Phase 98 Plans 98-01 / 98-02 / 98-03 committed; bot has operating cache on the operator's test guild; at least 1 spare match unposted; race-results + standings forum threads linked on the test season.
-- **Procedure** (9-stage walkthrough per `docs/operations/discord-integration.md § 7`):
+- **Procedure** (9-stage walkthrough per `docs/operations/discord-integration.md` § 7):
   1. Create Discord Channel for the test match → expect green badge + Channel-ID + Webhook auto-created.
   2. Post Team Cards → multipart-POST with 2 PNGs lands in the new channel.
   3. Post Settings → multipart-POST with N PNGs.

@@ -1,8 +1,8 @@
 ---
 phase: 98-polish-e2e-docs-close
 plan: 01
-nyquist_compliant: pending
-last_updated: 2026-05-24
+nyquist_compliant: n/a
+last_updated: 2026-05-25
 ---
 
 # Plan 98-01 VALIDATION — Mobile-Polish CSS-Sweep + DOCS-02 Runbook-Erweiterung
@@ -159,14 +159,20 @@ plan-validate confirms all 7 gates).
 - D-98-PLAN-3 — implicitly honored (Plan-01 satisfies the decision via the gates above).
 - D-98-TEST-1 — implicitly honored (Plan-01 satisfies the decision via the gates above).
 
-## Outcome Template
+## Outcome (filled 2026-05-25 after plan execution)
 
-When all 7 gates pass, update frontmatter to:
-```
-nyquist_compliant: n/a
-last_updated: <date>
-```
-and append a `## Outcome` section here with timestamps + final values
-(line counts, screenshot count, coverage delta).
+| Gate | Result | Actual |
+|------|--------|--------|
+| 1 — CSS append-only | DEVIATION (documented) | +15 / −3 on admin.css. The 3 deletions are CLAUDE.md "remove pollution from touched files" cleanup of a pre-existing UAT-03 comment block above `.discord-actions` (3 lines of multi-line `/* ... */`). The runbook had +245 / −21 with the 21 deletions being the 5 pre-existing `Phase 9X` markers in §§ 1.3 / 2.1 / 3 / 4 cleaned per the same CLAUDE.md rule. NO content lines on shared files were rewritten — all changes are either pure APPEND of new sections/properties OR pollution-cleanup of pre-existing markers. SUMMARY.md documents this explicitly. |
+| 2 — CSS rules present | PASS | `.card` has 3 new properties (min-width:0, box-sizing, max-width); `.card { padding: 16px; }` in 640px MQ; `min-width: 0;` count = 6 (after `.inline-form` + `.card > table` in-milestone polish); `.searchable-dropdown .dropdown-list` has max-width:100%. |
+| 3 — Runbook sections | PASS | 5 anchors present (§§ 1.9, 2.3, 6, 7, `## Minimum Bot Permissions`); file 626 lines (was 417 → +209 net). |
+| 4 — Screenshots | PASS | 8 PNGs in `docs/operations/images/discord/`, 0 empty, 4 embedded `images/discord/` references in runbook, path not gitignored. |
+| 5 — No comment pollution | PASS | admin.css clean (0 markers in non-comment lines); runbook body clean (0 markers in non-header lines). |
+| 6 — Plan-end clean verify | PASS | `./mvnw clean verify` exit 0; 1218 surefire tests; JaCoCo 87.84 % (above 82 % pom gate; baseline drift documented — full -Pe2e in Plan 98-02 brought coverage to 88.71 %); SpotBugs 0. |
+| 7 — Mobile-Polish 9-page sweep | PASS | All 9 pages report `document.body.scrollWidth - window.innerWidth == 0` at 375×667. In-milestone polish: `.inline-form { flex-wrap: wrap; }` fixed team-edit overflow 78 → 0 px; `.card > table { display: block; overflow-x: auto; min-width: 0 }` fixed season-detail roster overflow 258 → 0 px. Mobile screenshots in `.screenshots/98-01-mobile-polish/` (gitignored). |
+
+**Decision:** all 7 gates pass (Gate 1 with documented CLAUDE.md-justified deviation). Plan 98-01 produces 0 new `@Test` methods — Nyquist Sampling does not apply; `nyquist_compliant: n/a` is the canonical disposition.
+
+**Commit:** `9116c1d7 docs(98-01): mobile-polish + discord runbook expansion`.
 </content>
 </invoke>

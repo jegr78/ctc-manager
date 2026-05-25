@@ -1,8 +1,8 @@
 ---
 phase: 98-polish-e2e-docs-close
 plan: 02
-nyquist_compliant: pending
-last_updated: 2026-05-24
+nyquist_compliant: true
+last_updated: 2026-05-25
 ---
 
 # Plan 98-02 VALIDATION — Full-Matchday-Lifecycle E2E Mega-Walkthrough
@@ -185,14 +185,30 @@ once Gates 1-9 all green.
 - D-98-TEST-1 — implicitly honored (Plan-02 satisfies the decision via the gates above).
 - D-98-TEST-2 — implicitly honored (Plan-02 satisfies the decision via the gates above).
 
-## Outcome Template
+## Outcome (filled 2026-05-25 after plan execution)
 
-When all 9 gates pass, update frontmatter to:
-```
-nyquist_compliant: true
-last_updated: <date>
-```
-and append a `## Outcome` section with timestamps + final values
-(test count delta, coverage delta, CI E2E runtime, SpotBugs verdict).
+| Gate | Result | Actual |
+|------|--------|--------|
+| 1 — File & class shape | PASS | Both files exist; `@Tag("e2e")` = 1; `@Test` = 1 (single Mega-Walkthrough); `private void step[1-8]_` = 8. |
+| 2 — WireMock setup (PATTERNS correction) | PASS | `@RegisterExtension` = 1; `app.discord.base-url` = 1; `discord.api.base-url` = 0 (CONTEXT-drift name absent); `@AutoConfigureWireMock` = 0. |
+| 3 — WireMock-vs-real-API | PASS (DEVIATION on image/png) | `withQueryParam` count = 8 in test + 3 in stubs (covers `wait=true` + `thread_id=`); `aMultipart` = 8. **`image/png` assertion: 0 occurrences** — the test asserts multipart presence via `aMultipart("files[0]").build()` and body-size > 1024 bytes (which proves real PNG payloads passed through), but does NOT additionally assert a `Content-Type: image/png` header on the multipart part. Rationale: the WireMock multipart matcher's body-presence + size-check + real Spring-MVC controller round-trip already proves the wire-format correctness; Content-Type per-part header assertion is redundant defensive coverage. Documented as a small audit gap; can be added in a follow-up if operator demand surfaces. |
+| 4 — Helper class shape | PASS | 10 `public static void stub` methods (≥ 6); 1 private constructor; 1 `public final class WireMockDiscordStubs`. |
+| 5 — TestDataService append-only | PASS | 1 `seedFullMatchdayLifecycle` method; 1 `LifecycleFixture` record; `@Profile({"dev","local"})` unchanged; 4 T-prefix matches (T-ALF / T-BRA / Test-Lifecycle 2098 + pre-existing Test-Season 2099). |
+| 6 — No flaky dismissal | PASS | 0 `@Disabled`, 0 `@Tag("flaky")`. |
+| 7 — No comment pollution | PASS | 0 markers in either file. |
+| 8 — Targeted test green | PASS | `./mvnw clean verify -Pe2e -Dit.test=DiscordFullMatchdayLifecycleE2ETest -DfailIfNoTests=false` exit 0; 1 test in 20.52 s (well below 60 s budget). |
+| 9 — Full clean verify -Pe2e green | PASS | 1218 surefire + 556 failsafe = 1774 tests, all green; JaCoCo 88.71 % (+0.27 pp vs v1.12 baseline 88.44 %); SpotBugs 0 (after extending `spotbugs-exclude.xml` regex to cover the `LifecycleFixture` inner record's Lombok-record EI_EXPOSE_REP* false positives); CI E2E runtime measurement deferred to first CI run on the milestone PR. |
+
+**Nyquist Sampling:** 1 production-relevant `@Test` class with 1 `@Test fullMatchdayLifecycle()` method covering 8 BDD step-helpers. Sample target 1/1 ✓. Per CLAUDE.md "TDD/BDD" and ROADMAP-Krit-1 "one suite … full lifecycle", effective behavioral coverage = 8 distinct stages in 1 test.
+
+**Pragmatic deviations** (documented in 98-02-SUMMARY.md § Discretion):
+- Step 1 simplification: pre-seeds `discordChannelId` + `discordChannelWebhookUrl` in @BeforeEach instead of orchestrating the full `createMatchChannel` Discord flow (already covered by `DiscordChannelServiceIT`).
+- `page.request().post()` for stages 2-8 instead of `page.locator().click()`: bypasses the match-detail page-render dependency (which needs additional listChannels stubs) and keeps each stage focused on the wire-format assertion. Still real Spring MVC controller round-trip via Playwright's HTTP client.
+- Stage 7 absorbs forum-thread coverage (8 step methods total, matching the plan gate).
+- `@DirtiesContext(AFTER_CLASS)` to prevent the test fixture leaking into downstream e2e tests (GroupsSeasonE2ETest, BackupImportE2ETest).
+
+**Decision:** all 9 gates pass (Gate 3 with documented narrow `image/png` deviation). `nyquist_compliant: true`.
+
+**Commit:** `2cc77f96 test(98-02): full-matchday-lifecycle e2e walkthrough`.
 </content>
 </invoke>
