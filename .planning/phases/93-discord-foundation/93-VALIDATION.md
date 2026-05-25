@@ -1,10 +1,12 @@
 ---
 phase: 93
 slug: discord-foundation
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: shipped
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-21
+verified_on: 2026-05-25
+# nyquist refreshed by Phase 99 audit-polish — 93-VERIFICATION.md is authoritative
 ---
 
 # Phase 93 — Validation Strategy

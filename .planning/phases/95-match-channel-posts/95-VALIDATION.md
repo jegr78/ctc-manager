@@ -1,10 +1,12 @@
 ---
 phase: 95
 slug: match-channel-posts
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: shipped
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-05-22
+verified_on: 2026-05-25
+# phase-level frontmatter refreshed by Phase 99 audit-polish — per-plan 95-04-VALIDATION.md (BUILD SUCCESS) is authoritative
 ---
 
 # Phase 95 — Validation Strategy
