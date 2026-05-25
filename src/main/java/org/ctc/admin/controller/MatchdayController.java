@@ -140,11 +140,50 @@ public class MatchdayController {
         boolean matchdayPairingsStale = matchdayPairingsPost != null
                 && isMatchdayPairingsStale(matchday, matchdayPairingsPost);
 
+        MatchPreviewPreFlightResult schedulePreFlight =
+                discordPostService.canPostMatchdaySchedule(matchday, config);
+        DiscordPost matchdaySchedulePost = null;
+        if (matchdayAnnouncementActive) {
+            String announcementChannelId =
+                    discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl);
+            matchdaySchedulePost = discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
+                    announcementChannelId, DiscordPostType.MATCHDAY_SCHEDULE, matchday.getId())
+                    .orElse(null);
+        }
+        boolean matchdayScheduleStale = matchdaySchedulePost != null
+                && isMatchdayScheduleStale(matchday, matchdaySchedulePost);
+
         model.addAttribute("matchdayAnnouncementActive", matchdayAnnouncementActive);
         model.addAttribute("canPostMatchdayPairings", pairingsPreFlight.canPost());
         model.addAttribute("matchdayPairingsDisabledReason", pairingsPreFlight.disabledReason());
         model.addAttribute("matchdayPairingsPost", matchdayPairingsPost);
         model.addAttribute("matchdayPairingsStale", matchdayPairingsStale);
+        model.addAttribute("canPostMatchdaySchedule", schedulePreFlight.canPost());
+        model.addAttribute("matchdayScheduleDisabledReason", schedulePreFlight.disabledReason());
+        model.addAttribute("matchdaySchedulePost", matchdaySchedulePost);
+        model.addAttribute("matchdayScheduleStale", matchdayScheduleStale);
+    }
+
+    private static boolean isMatchdayScheduleStale(Matchday matchday, DiscordPost post) {
+        LocalDateTime postUpdated = post.getUpdatedAt();
+        if (postUpdated == null) {
+            return false;
+        }
+        LocalDateTime latest = null;
+        for (Match match : matchday.getMatches()) {
+            if (match.isBye()) {
+                continue;
+            }
+            if (match.getUpdatedAt() != null && (latest == null || match.getUpdatedAt().isAfter(latest))) {
+                latest = match.getUpdatedAt();
+            }
+            for (var race : match.getRaces()) {
+                if (race.getUpdatedAt() != null && (latest == null || race.getUpdatedAt().isAfter(latest))) {
+                    latest = race.getUpdatedAt();
+                }
+            }
+        }
+        return latest != null && latest.isAfter(postUpdated);
     }
 
     private static boolean isMatchdayPairingsStale(Matchday matchday, DiscordPost post) {
@@ -248,6 +287,20 @@ public class MatchdayController {
             applyErrorFlash(redirectAttributes, e, "Post Matchday Pairings");
         } catch (DiscordApiException e) {
             applyErrorFlash(redirectAttributes, e, "Post Matchday Pairings");
+        }
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    @PostMapping("/{id}/post-matchday-schedule")
+    public String postMatchdaySchedule(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            Matchday matchday = matchdayService.getMatchdayDetail(id).matchday();
+            discordPostService.postMatchdaySchedule(matchday);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday Schedule posted.");
+        } catch (BusinessRuleException e) {
+            applyErrorFlash(redirectAttributes, e, "Post Matchday Schedule");
+        } catch (DiscordApiException e) {
+            applyErrorFlash(redirectAttributes, e, "Post Matchday Schedule");
         }
         return "redirect:/admin/matchdays/" + id;
     }
