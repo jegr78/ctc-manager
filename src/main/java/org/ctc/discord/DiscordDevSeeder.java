@@ -11,6 +11,7 @@ import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
+import org.ctc.discord.DiscordEmojiCache;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.TeamRepository;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -30,6 +31,7 @@ public class DiscordDevSeeder {
 	private final DiscordRestClient restClient;
 	private final DiscordRoleCache roleCache;
 	private final DiscordBotIdentityCache botIdentityCache;
+	private final DiscordEmojiCache emojiCache;
 	private final TeamRepository teamRepository;
 
 	@EventListener(ApplicationReadyEvent.class)
@@ -61,19 +63,29 @@ public class DiscordDevSeeder {
 			return;
 		}
 
+		int assigned = -1;
 		try {
 			List<Role> roles = restClient.fetchGuildRoles(properties.guildId());
 			roleCache.refresh(roles);
 			botIdentityCache.refresh();
-			int assigned = assignTeamRoles(roles);
-			log.info("Discord dev-seed complete: guildId={}, currentMatchCategoryId={}, "
-							+ "team-role-assignments={}",
-					properties.guildId(), properties.currentMatchCategoryId(), assigned);
+			assigned = assignTeamRoles(roles);
 		} catch (DiscordApiException e) {
-			log.warn("Discord dev-seed: live API call failed — config persisted but caches/role-IDs "
-					+ "are not populated. Operator can click 'Refresh Server Roles' on /admin/discord-config "
-					+ "once Discord is reachable. Cause: {}", e.toString());
+			log.warn("Discord dev-seed: roles/identity refresh failed — config persisted but role-cache + "
+					+ "team-roleId assignments are not populated. Operator can click 'Refresh Server Roles' "
+					+ "on /admin/discord-config once Discord is reachable. Cause: {}", e.toString());
 		}
+
+		int emojis = -1;
+		try {
+			emojis = emojiCache.refresh(restClient.fetchGuildEmojis(properties.guildId()));
+		} catch (DiscordApiException e) {
+			log.warn("Discord dev-seed: emoji refresh failed — operator can click 'Refresh Emoji Cache' "
+					+ "on /admin/discord-config once Discord is reachable. Cause: {}", e.toString());
+		}
+
+		log.info("Discord dev-seed complete: guildId={}, currentMatchCategoryId={}, "
+						+ "team-role-assignments={}, emoji-cache-entries={}",
+				properties.guildId(), properties.currentMatchCategoryId(), assigned, emojis);
 	}
 
 	private boolean backfillDefaultTemplates(DiscordGlobalConfig cfg) {

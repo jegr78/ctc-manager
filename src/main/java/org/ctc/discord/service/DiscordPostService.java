@@ -99,7 +99,7 @@ public class DiscordPostService {
 					+ "- Home Teams are on the left hand side.\n"
 					+ "- Deadline for the picks: {{deadline}} (use the pinned form in your private team chat channel)\n"
 					+ "- Scheduled weekend for the races: {{weekend}}\n\n"
-					+ "Game On! :CTC:";
+					+ "Game On! {{ctcEmoji}}";
 
 	@SuppressFBWarnings(
 			value = "EI_EXPOSE_REP2",
@@ -444,10 +444,12 @@ public class DiscordPostService {
 				&& !matchday.getScheduledWeekend().isBlank())
 				? matchday.getScheduledWeekend()
 				: "_TBD_";
+		String ctcEmoji = emojiCache.emojiFor(config.getVsEmojiName());
 		return template
 				.replace("{{matchdayNumber}}", matchdayNumber)
 				.replace("{{deadline}}", deadline)
-				.replace("{{weekend}}", weekend);
+				.replace("{{weekend}}", weekend)
+				.replace("{{ctcEmoji}}", ctcEmoji);
 	}
 
 	@Transactional

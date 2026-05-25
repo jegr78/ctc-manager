@@ -19,6 +19,7 @@ import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import java.time.LocalDateTime;
 import org.ctc.TestHelper;
 import org.ctc.admin.service.MatchdayPairingsGraphicService;
+import org.ctc.discord.DiscordEmojiCache;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.model.DiscordPost;
 import org.ctc.discord.model.DiscordPostType;
@@ -96,11 +97,15 @@ class DiscordPostServiceMatchdayPairingsIT {
 	@MockitoBean
 	MatchdayPairingsGraphicService matchdayPairingsGraphicService;
 
+	@MockitoBean
+	DiscordEmojiCache discordEmojiCache;
+
 	@BeforeEach
 	void resetState() throws Exception {
 		wm.resetAll();
 		discordPostRepository.deleteAll();
 		when(matchdayPairingsGraphicService.generatePairings(any(Matchday.class))).thenReturn(PNG_BYTES);
+		when(discordEmojiCache.emojiFor("CTC")).thenReturn("<:CTC:1234567890>");
 	}
 
 	private Matchday seedMatchday(String suffix, boolean withDeadline, boolean withWeekend, boolean teamsAssigned) {
@@ -161,6 +166,9 @@ class DiscordPostServiceMatchdayPairingsIT {
 		String body = wm.findAll(postRequestedFor(urlPathEqualTo(webhookPath))).get(0).getBodyAsString();
 		assertThat(body).contains("matchday-pairings-match-day-p1.png");
 		assertThat(body.length()).isGreaterThan(1024);
+		assertThat(body).contains("<:CTC:1234567890>");
+		assertThat(body).doesNotContain("Game On! :CTC:");
+		assertThat(body).doesNotContain("{{ctcEmoji}}");
 	}
 
 	@Test
