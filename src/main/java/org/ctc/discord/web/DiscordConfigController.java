@@ -167,6 +167,7 @@ public class DiscordConfigController {
 		form.setVsEmojiName(nullSafe(config.getVsEmojiName()));
 		form.setBotApplicationId(config.getBotApplicationId());
 		form.setCurrentMatchCategoryId(nullSafe(config.getCurrentMatchCategoryId()));
+		form.setMatchdayPairingsTemplate(nullSafe(config.getMatchdayPairingsTemplate()));
 		return form;
 	}
 

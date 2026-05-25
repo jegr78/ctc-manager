@@ -38,6 +38,7 @@ public class DiscordGlobalConfigService {
 		current.setVsEmojiName(nullSafe(form.getVsEmojiName()));
 		current.setBotApplicationId(form.getBotApplicationId());
 		current.setCurrentMatchCategoryId(nullSafe(form.getCurrentMatchCategoryId()));
+		current.setMatchdayPairingsTemplate(blankToNull(form.getMatchdayPairingsTemplate()));
 		DiscordGlobalConfig saved = repo.save(current);
 		log.info("Updated discord_global_config (id={}, guildId={})", saved.getId(), saved.getGuildId());
 		return saved;
@@ -45,5 +46,9 @@ public class DiscordGlobalConfigService {
 
 	private static String nullSafe(String value) {
 		return value == null ? "" : value;
+	}
+
+	private static String blankToNull(String value) {
+		return value == null || value.isBlank() ? null : value;
 	}
 }

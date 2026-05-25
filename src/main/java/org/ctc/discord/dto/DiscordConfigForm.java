@@ -45,4 +45,6 @@ public class DiscordConfigForm {
 
 	@Pattern(regexp = DiscordSnowflake.PATTERN, message = DiscordSnowflake.MESSAGE)
 	private String currentMatchCategoryId = "";
+
+	private String matchdayPairingsTemplate = "";
 }
