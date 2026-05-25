@@ -294,3 +294,27 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 | 96 — Provisional Graphic + Forum Threads | 0/3 | Not started | - |
 | 97 — Matchday-Level Posts | 2/3 | In Progress|  |
 | 98 — Polish + E2E + Docs + Close | 0/3 | Not started | - |
+
+### Phase 99: Pre-merge audit-polish: REQUIREMENTS Flyway-Prose + ROADMAP refresh + retroactive VERIFICATION.md + VALIDATION.md frontmatter + FORUM-01 modal scope
+
+**Goal:** Close the 5 `tech_debt`-tier gaps documented in `.planning/v1.13-MILESTONE-AUDIT.md` (verdict 2026-05-25) before `/gsd-complete-milestone v1.13` archives the milestone. Fix Flyway-version prose drift in REQUIREMENTS.md POST-01 + FORUM-01, rewrite FORUM-01 acceptance text to the shipped surface (drop the never-built "Create new Thread..." modal sub-clause), refresh the ROADMAP v1.13 Progress table to reflect that all 7 phases are complete, retrofill the 6 missing top-level `9N-VERIFICATION.md` files (Phases 92/94/95/96/97/98) per the v1.12 DOCS-01 precedent, refresh stale `93-VALIDATION.md` + `95-VALIDATION.md` frontmatter, and surgically YAGNI-delete the unused `DiscordRestClient.createThread()` surface (method + DTO + orphan IT) so the audit doc's tech_debt list closes to zero.
+**Requirements**: POST-01, FORUM-01 (prose-only updates — no new REQs)
+**Depends on:** Phase 98
+**Plans:** 5 plans (1 wave, sequential inline)
+
+Plans:
+- [ ] 99-01 — REQUIREMENTS.md prose-fix: POST-01 V11→V12, FORUM-01 V12→V13 + acceptance rewrite + audit-doc cross-update (D-01, D-03, D-04, D-05, D-06)
+- [ ] 99-02 — ROADMAP.md v1.13 Progress refresh: top-level row → Complete 2026-05-25 + 7 per-phase rows → Complete with dates (D-07, D-08, D-09, D-10)
+- [ ] 99-03 — Retroactive 9N-VERIFICATION.md retrofill for Phases 92, 94, 95, 96, 97, 98 (D-11, D-12, D-13, D-14, D-15)
+- [ ] 99-04 — Phase 93 + Phase 95 phase-level VALIDATION.md frontmatter refresh (inline edits) (D-16, D-17, D-18)
+- [ ] 99-05 — YAGNI delete `DiscordRestClient.createThread()` + `ThreadCreateRequest` DTO + orphan IT method (D-02, D-23, D-25)
+
+### Phase 100: Match Day Channel Naming Scheme: phase prefix (rs/po/pm) + optional group prefix after mdX-
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 99
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 100 to break down)

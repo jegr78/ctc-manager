@@ -4,12 +4,12 @@ milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
 stopped_at: Phase 99 context gathered
-last_updated: "2026-05-25T20:51:09.139Z"
-last_activity: 2026-05-24 -- Phase 98 planning complete
+last_updated: "2026-05-25T21:24:09.083Z"
+last_activity: 2026-05-25 -- Phase 99 planning complete
 progress:
   total_phases: 9
   completed_phases: 7
-  total_plans: 27
+  total_plans: 32
   completed_plans: 28
   percent: 78
 ---
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 Phase: 97 (matchday-level-posts) — EXECUTING
 Plan: 3 of 3 (97-01 ✅ POST-06 / 97-02 ✅ POST-07a + POST-07b / 97-03 ✅ POST-08)
 Status: Ready to execute
-Last activity: 2026-05-24 -- Phase 98 planning complete
+Last activity: 2026-05-25 -- Phase 99 planning complete
 
 ## Completed Milestones
 
