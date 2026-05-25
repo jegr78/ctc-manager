@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Edit Matchday Pairings', ~{::section})}">
+<body>
+<section>
+    <h1 th:text="'Edit Pairings — ' + ${matchday.label}"></h1>
+    <div class="card">
+        <form th:action="@{/admin/matchdays/{id}/save-pairings(id=${form.id})}"
+              th:object="${form}" method="post"
+              data-testid="matchday-pairings-form">
+            <input type="hidden" th:field="*{id}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="pickDeadline">Pick Deadline</label>
+                    <input type="datetime-local" id="pickDeadline"
+                           th:field="*{pickDeadline}"
+                           data-testid="pickDeadline">
+                </div>
+                <div class="form-group">
+                    <label for="scheduledWeekend">Scheduled Weekend</label>
+                    <input type="text" id="scheduledWeekend"
+                           th:field="*{scheduledWeekend}"
+                           maxlength="64"
+                           placeholder="e.g. 22-24 May or Tue 26 May"
+                           data-testid="scheduledWeekend">
+                </div>
+            </div>
+            <div class="actions mt-md">
+                <button type="submit" class="btn btn-primary"
+                        data-testid="save-pairings">Save Pairings</button>
+                <a th:href="@{/admin/matchdays/{id}(id=${form.id})}"
+                   class="btn btn-secondary">Back to Matchday</a>
+            </div>
+        </form>
+    </div>
+</section>
+</body>
+</html>

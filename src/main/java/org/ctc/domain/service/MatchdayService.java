@@ -108,6 +108,18 @@ public class MatchdayService {
     }
 
     @Transactional
+    public Matchday savePairings(UUID matchdayId, java.time.LocalDateTime pickDeadline, String scheduledWeekend) {
+        var matchday = matchdayRepository.findById(matchdayId)
+                .orElseThrow(() -> new EntityNotFoundException("Matchday", matchdayId));
+        matchday.setPickDeadline(pickDeadline);
+        matchday.setScheduledWeekend(scheduledWeekend);
+        matchdayRepository.save(matchday);
+        log.info("Saved matchday pairings: {} (deadline={}, weekend={})",
+                matchday.getLabel(), pickDeadline, scheduledWeekend);
+        return matchday;
+    }
+
+    @Transactional
     public UUID deleteMatchday(UUID id) {
         var matchday = matchdayRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Matchday", id));

@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.CreateMatchdayRequest;
 import org.ctc.admin.dto.MatchdayForm;
+import org.ctc.admin.dto.MatchdayPairingsForm;
 import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
@@ -120,6 +121,39 @@ public class MatchdayController {
         model.addAttribute("powerRankingsPost", powerRankingsPost);
         model.addAttribute("matchdayResultsStale", matchdayResultsStale);
         model.addAttribute("powerRankingsStale", powerRankingsStale);
+
+        String announcementWebhookUrl = config.getAnnouncementWebhookUrl();
+        boolean matchdayAnnouncementActive = announcementWebhookUrl != null
+                && !announcementWebhookUrl.isBlank();
+
+        MatchPreviewPreFlightResult pairingsPreFlight =
+                discordPostService.canPostMatchdayPairings(matchday, config);
+
+        DiscordPost matchdayPairingsPost = null;
+        if (matchdayAnnouncementActive) {
+            String announcementChannelId =
+                    discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl);
+            matchdayPairingsPost = discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
+                    announcementChannelId, DiscordPostType.MATCHDAY_PAIRINGS, matchday.getId())
+                    .orElse(null);
+        }
+        boolean matchdayPairingsStale = matchdayPairingsPost != null
+                && isMatchdayPairingsStale(matchday, matchdayPairingsPost);
+
+        model.addAttribute("matchdayAnnouncementActive", matchdayAnnouncementActive);
+        model.addAttribute("canPostMatchdayPairings", pairingsPreFlight.canPost());
+        model.addAttribute("matchdayPairingsDisabledReason", pairingsPreFlight.disabledReason());
+        model.addAttribute("matchdayPairingsPost", matchdayPairingsPost);
+        model.addAttribute("matchdayPairingsStale", matchdayPairingsStale);
+    }
+
+    private static boolean isMatchdayPairingsStale(Matchday matchday, DiscordPost post) {
+        LocalDateTime postUpdated = post.getUpdatedAt();
+        LocalDateTime matchdayUpdated = matchday.getUpdatedAt();
+        if (postUpdated == null || matchdayUpdated == null) {
+            return false;
+        }
+        return matchdayUpdated.isAfter(postUpdated);
     }
 
     private static boolean isMatchdayResultsStale(Matchday matchday, DiscordPost post) {
@@ -173,6 +207,47 @@ public class MatchdayController {
             applyErrorFlash(redirectAttributes, e, "Post power rankings");
         } catch (DiscordApiException e) {
             applyErrorFlash(redirectAttributes, e, "Post power rankings");
+        }
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    @GetMapping("/{id}/edit-pairings")
+    public String editPairings(@PathVariable UUID id, Model model) {
+        var matchday = matchdayService.getMatchdayDetail(id).matchday();
+        var form = new MatchdayPairingsForm();
+        form.setId(matchday.getId());
+        form.setPickDeadline(matchday.getPickDeadline());
+        form.setScheduledWeekend(matchday.getScheduledWeekend());
+        model.addAttribute("form", form);
+        model.addAttribute("matchday", matchday);
+        return "admin/matchday-pairings-form";
+    }
+
+    @PostMapping("/{id}/save-pairings")
+    public String savePairings(@PathVariable UUID id,
+                                @Valid @ModelAttribute("form") MatchdayPairingsForm form,
+                                BindingResult result,
+                                RedirectAttributes redirectAttributes,
+                                Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("matchday", matchdayService.getMatchdayDetail(id).matchday());
+            return "admin/matchday-pairings-form";
+        }
+        matchdayService.savePairings(id, form.getPickDeadline(), form.getScheduledWeekend());
+        redirectAttributes.addFlashAttribute("successMessage", "Pairings saved.");
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    @PostMapping("/{id}/post-matchday-pairings")
+    public String postMatchdayPairings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            Matchday matchday = matchdayService.getMatchdayDetail(id).matchday();
+            discordPostService.postMatchdayPairings(matchday);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday Pairings posted.");
+        } catch (BusinessRuleException e) {
+            applyErrorFlash(redirectAttributes, e, "Post Matchday Pairings");
+        } catch (DiscordApiException e) {
+            applyErrorFlash(redirectAttributes, e, "Post Matchday Pairings");
         }
         return "redirect:/admin/matchdays/" + id;
     }
