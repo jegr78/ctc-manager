@@ -16,10 +16,12 @@ import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.Race;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.MatchdayRepository;
+import org.ctc.domain.repository.RaceRepository;
 import org.ctc.e2e.PlaywrightConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +49,9 @@ class MatchdayDetailDiscordAnnouncementE2ETest extends PlaywrightConfig {
 
 	@Autowired
 	MatchdayRepository matchdayRepository;
+
+	@Autowired
+	RaceRepository raceRepository;
 
 	@Autowired
 	TestHelper helper;
@@ -89,6 +94,35 @@ class MatchdayDetailDiscordAnnouncementE2ETest extends PlaywrightConfig {
 
 	private void resetAnnouncementWebhook() {
 		setAnnouncementWebhook("");
+	}
+
+	private Matchday seedScheduleMatchday(String suffix, boolean withRaceTime) {
+		Season season = helper.createSeason("Test-E2E Schedule " + suffix);
+		Matchday md = helper.createMatchdayInRegularPhase(season, "Match Day SCH-" + suffix, 0);
+		Team home = helper.createTeam("T-E2E SH " + suffix, "tesh-" + suffix);
+		Team away = helper.createTeam("T-E2E SA " + suffix, "tesa-" + suffix);
+		Match match = helper.createMatch(md, home, away);
+		Race race = helper.createRace(md, match);
+		if (withRaceTime) {
+			race.setDateTime(LocalDateTime.of(2026, 5, 30, 19, 0));
+			raceRepository.save(race);
+		}
+		match.getRaces().add(race);
+		matchRepository.save(match);
+		md.getMatches().add(match);
+		return matchdayRepository.save(md);
+	}
+
+	private void seedSchedulePost(Matchday md, LocalDateTime postedAt) {
+		DiscordPost p = new DiscordPost();
+		p.setChannelId("900000000000000099");
+		p.setMessageId("msg-sch-" + md.getId().toString().substring(0, 8));
+		p.setWebhookId("900000000000000099");
+		p.setWebhookToken("tok");
+		p.setPostType(DiscordPostType.MATCHDAY_SCHEDULE);
+		p.setMatchdayId(md.getId());
+		p.setPostedAt(postedAt);
+		discordPostRepository.save(p);
 	}
 
 	private void seedPairingsPost(Matchday md, LocalDateTime postedAt) {
@@ -144,6 +178,39 @@ class MatchdayDetailDiscordAnnouncementE2ETest extends PlaywrightConfig {
 
 		assertThat(page.locator("[data-testid='repost-matchday-pairings']")).isVisible();
 		assertThat(page.locator("[data-testid='update-matchday-pairings']")).hasCount(0);
+	}
+
+	@Test
+	void givenMissingRaceDateTime_whenLoadMatchdayDetail_thenScheduleButtonDisabledWithReason() {
+		setAnnouncementWebhook(ANNOUNCEMENT_WEBHOOK_URL);
+		Matchday md = seedScheduleMatchday("D1", false);
+		page.navigate(url("/admin/matchdays/" + md.getId()));
+
+		var disabled = page.locator("[data-testid='post-matchday-schedule-disabled']");
+		assertThat(disabled).isVisible();
+		assertThat(disabled).hasAttribute("title", "Set Race date+time for all matches first");
+		assertThat(page.locator("[data-testid='post-matchday-schedule']")).hasCount(0);
+	}
+
+	@Test
+	void givenAllPreFlightOkNoSchedulePost_whenLoadMatchdayDetail_thenSchedulePostButtonVisible() {
+		setAnnouncementWebhook(ANNOUNCEMENT_WEBHOOK_URL);
+		Matchday md = seedScheduleMatchday("D2", true);
+		page.navigate(url("/admin/matchdays/" + md.getId()));
+
+		assertThat(page.locator("[data-testid='post-matchday-schedule']")).isVisible();
+		assertThat(page.locator("[data-testid='post-matchday-schedule-disabled']")).hasCount(0);
+	}
+
+	@Test
+	void givenFreshSchedulePost_whenLoadMatchdayDetail_thenRePostScheduleLabelVisible() {
+		setAnnouncementWebhook(ANNOUNCEMENT_WEBHOOK_URL);
+		Matchday md = seedScheduleMatchday("D3", true);
+		seedSchedulePost(md, LocalDateTime.now().plusDays(1));
+		page.navigate(url("/admin/matchdays/" + md.getId()));
+
+		assertThat(page.locator("[data-testid='repost-matchday-schedule']")).isVisible();
+		assertThat(page.locator("[data-testid='update-matchday-schedule']")).hasCount(0);
 	}
 
 	@Test
