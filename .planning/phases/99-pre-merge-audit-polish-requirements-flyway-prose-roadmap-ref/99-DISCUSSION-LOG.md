@@ -5,7 +5,7 @@
 
 **Date:** 2026-05-25
 **Phase:** 99-pre-merge-audit-polish-requirements-flyway-prose-roadmap-ref
-**Areas discussed:** FORUM-01 modal scope, 9N-VERIFICATION.md retrofill scope, Phase 93+95 VALIDATION.md frontmatter refresh, Plan structure
+**Areas discussed:** FORUM-01 modal scope, 9N-VERIFICATION.md retrofill scope, Phase 93+95 VALIDATION.md frontmatter refresh, Plan structure, FORUM-01 backend YAGNI follow-up
 
 ---
 
@@ -57,7 +57,21 @@
 | Zwei Plans (Doc-Shape + ggf. Modal) | 99-01 alle Doc-Shape-Polish-Items gebündelt; 99-02 nur falls GA-1='Modal jetzt bauen' für die UI-Implementation. Kompromiss — kleinerer Plan-Overhead, aber Doc-Plan ist immer noch groß. | |
 
 **User's choice:** Split nach Concern (Recommended)
-**Notes:** Driver decision for D-19..D-24. Resolves to exactly 4 plans (no FORUM-01 modal-build → no 99-05). Each plan = one atomic commit on `gsd/v1.13-discord-integration`. Sequential inline, no subagents (CLAUDE.md "Subagent Rules"); execute-phase MUST use `--interactive` per `feedback_chain_inline_milestones.md`.
+**Notes:** Driver decision for D-19..D-25. Initially resolved to 4 plans; user follow-up (see next section) added Plan 99-05 → final 5 plans. Each plan = one atomic commit on `gsd/v1.13-discord-integration`. Sequential inline, no subagents (CLAUDE.md "Subagent Rules"); execute-phase MUST use `--interactive` per `feedback_chain_inline_milestones.md`.
+
+---
+
+## FORUM-01 Backend YAGNI Follow-up (user-initiated)
+
+**Context:** After the four gray-area decisions above were locked, the user re-opened D-02 with: "Create Thread kann weg - YAGNI". This upgraded the original *defer-to-v1.14* outcome to *delete-now-from-Phase-99*.
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Keep `DiscordRestClient.createThread()` for v1.14 | Defer the deletion-vs-keep decision to v1.14 (whichever phase picks up the modal-build, or a standalone YAGNI sweep). Phase 99 stays docs-only. | |
+| Delete `createThread()` now (YAGNI) | Surgical removal in a new Plan 99-05: method + import in `DiscordRestClient.java`, entire `ThreadCreateRequest.java` DTO file, IT method + import in `DiscordRestClientIT.java`. Keep `Thread` record + list endpoints + `ThreadList` (consumed by `DiscordForumService.listThreads()`). | ✓ |
+
+**User's choice:** Delete `createThread()` now (YAGNI)
+**Notes:** Driver decision for revised D-02 + new D-23 (Plan 99-05). `grep -rn createThread src/` confirmed only 2 production-code occurrences (method + IT test) and 1 DTO file with no other consumer. Phase 99 is no longer pure-docs — Plan 99-05 changes `src/`, so the end-of-phase test gate (`./mvnw clean verify -Pe2e`) is genuinely enforcing. Expected test-count delta: −1 (the orphan IT method). Re-build path documented in CONTEXT.md "Deferred Ideas" — *if* FORUM-01 modal is ever built, the method comes back via TDD from git history.
 
 ---
 
@@ -69,5 +83,4 @@
 
 ## Deferred Ideas
 
-- v1.14 backlog: build the FORUM-01 "Create new Thread..." admin-UI modal in `season-form.html` calling `DiscordRestClient.createThread()`.
-- v1.14 (or YAGNI sweep): delete `DiscordRestClient.createThread()` if v1.14 modal-build is also not picked up.
+- v1.14 (only if/when relevant): if FORUM-01 in-app create-modal is ever built, the deleted `DiscordRestClient.createThread()` method comes back via TDD; reference the pre-Phase-99 implementation in git history (Phase 96 FORUM-01 commits). Not auto-booked into v1.14 backlog — only schedule it when product priority warrants.

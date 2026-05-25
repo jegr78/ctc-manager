@@ -24,10 +24,13 @@ code changes:
 5. **Stale phase-level VALIDATION.md frontmatter** on Phases 93 + 95.
 
 **Explicit non-goals (out of scope for Phase 99):**
-- Building the FORUM-01 "Create new Thread" admin-UI modal — booked as v1.14
-  backlog (`DiscordRestClient.createThread()` stays in code, unused, for that
-  future phase).
-- Touching any `src/` production code.
+- Building the FORUM-01 "Create new Thread" admin-UI modal — explicitly not
+  built; YAGNI verdict on 2026-05-25 — see D-02 + Plan 99-05 for the matching
+  `DiscordRestClient.createThread()` deletion.
+- Touching any `src/` production code BEYOND the `createThread` YAGNI deletion
+  in Plan 99-05 (method + DTO + IT test — surgical removal of a single unused
+  surface). Plans 99-01..04 remain pure Markdown-edits; only 99-05 changes
+  `src/`.
 - Running `/gsd-validate-phase 95` rollup-stamp — phase-95 frontmatter is fixed
   inline since the per-plan close (`95-04-VALIDATION.md` BUILD SUCCESS) is
   authoritative.
@@ -56,13 +59,20 @@ code changes:
   Delete the entire "(c) Create new Thread... modal with default-name template"
   sub-clause from the current prose; renumber as needed.
 - **D-02:** Backend `DiscordRestClient.createThread()` (line 110, verified in
-  audit) stays in code as-is — not deleted in Phase 99. Deletion vs. keep-for-
-  v1.14 is explicitly a v1.14-phase decision, not a Phase 99 decision.
+  audit) is **deleted in Plan 99-05 (YAGNI)**, alongside the unused
+  `ThreadCreateRequest` DTO (`src/main/java/org/ctc/discord/dto/ThreadCreateRequest.java`)
+  and the orphan IT test `given200_whenCreateThread_thenReturnsThread()` in
+  `DiscordRestClientIT.java:149-157`. The `Thread` record + `listActiveThreads` /
+  `listArchivedThreads` endpoints + private `ThreadList` record remain — they
+  are consumed by `DiscordForumService.listThreads()`. User verdict 2026-05-25:
+  YAGNI — if v1.14 (or later) builds the in-app create-modal, the method comes
+  back via TDD.
 - **D-03:** Update audit doc `v1.13-MILESTONE-AUDIT.md` tech_debt-bucket-5 + the
   Requirements-Coverage row for FORUM-01: flip "satisfied (partial)" → "satisfied"
-  once the acceptance text matches the shipped surface; record the rewrite + the
-  v1.14-deferred decision so future readers know in-app thread-creation was
-  *consciously* deferred, not *forgotten*.
+  once the acceptance text matches the shipped surface; replace the
+  "v1.14-deferred backend method" note with the YAGNI-deletion record so future
+  readers see the consciously-narrowed surface (operator-workflow only) rather
+  than a phantom deferral.
 
 ### Flyway Prose Drift (POST-01 / FORUM-01)
 
@@ -160,7 +170,7 @@ code changes:
   per-plan close already covers the substance; phase-level frontmatter is the
   only stale signal.
 
-### Plan Structure (4 atomic plans, sequential inline)
+### Plan Structure (5 atomic plans, sequential inline)
 
 - **D-19:** **Plan 99-01 — REQUIREMENTS.md prose-fix.** Single Markdown-edit
   plan. Updates POST-01 (D-04) + FORUM-01 (D-05 + D-01 acceptance rewrite +
@@ -174,25 +184,48 @@ code changes:
   per D-12 + D-13 + D-14. Single atomic commit (`docs(99-03): retroactive top-level VERIFICATION.md for v1.13 phases 92/94-98`).
 - **D-22:** **Plan 99-04 — VALIDATION.md frontmatter refresh.** Inline-edits
   `93-VALIDATION.md` (D-16) + `95-VALIDATION.md` (D-17). Atomic commit.
-- **D-23:** **Sequential inline, no subagents.** Per CLAUDE.md Subagent Rules
+- **D-23:** **Plan 99-05 — YAGNI delete `createThread()` surface.** Surgical
+  removal of the unused thread-creation API:
+  1. Delete method body + signature `DiscordRestClient.java:110-117` (the
+     `createThread(channelId, request)` public method).
+  2. Delete unused import `org.ctc.discord.dto.ThreadCreateRequest` from
+     `DiscordRestClient.java:13`.
+  3. Delete file `src/main/java/org/ctc/discord/dto/ThreadCreateRequest.java`
+     (record; sole consumer was `createThread()`).
+  4. Delete IT method `given200_whenCreateThread_thenReturnsThread()` from
+     `src/test/java/org/ctc/discord/DiscordRestClientIT.java:149-157` plus the
+     now-orphan import on line 24.
+  5. Verify keepers stay intact: `Thread` record + `listActiveThreads` +
+     `listArchivedThreads` + private `ThreadList` record + `DiscordForumService.listThreads()`
+     all still compile and behave identically (no production callers of
+     `createThread` exist — confirmed via `grep -rn createThread src/`).
+  6. Targeted IT run during TDD-green: `./mvnw verify -Dit.test=DiscordRestClientIT -DfailIfNoTests=false`
+     before the plan-level commit.
+  Atomic commit (`refactor(99-05): delete unused DiscordRestClient.createThread + ThreadCreateRequest (YAGNI)`).
+- **D-24:** **Sequential inline, no subagents.** Per CLAUDE.md Subagent Rules
   + `feedback_chain_inline_milestones.md`, `/gsd-execute-phase 99` MUST use
   `--interactive` (NOT `--auto`). Each plan = one commit on
-  `gsd/v1.13-discord-integration`. No worktrees. No parallel waves.
-- **D-24:** **End-of-phase test gate** — `./mvnw clean verify -Pe2e` still
-  required per CLAUDE.md "End-of-Phase Verification" rule, even though no
-  `src/` files change. Expected: same green baseline as Phase 98 close (2244
-  tests, JaCoCo 88.99 %, SpotBugs 0, CodeQL gate-step exit 0). If anything
-  regresses, that signals a non-Phase-99 issue and must be investigated
-  separately.
+  `gsd/v1.13-discord-integration`. No worktrees. No parallel waves. Plan order
+  is recommended 99-01 → 99-02 → 99-03 → 99-04 → 99-05, but they are mutually
+  independent (no `depends_on` between them) — the planner may resequence if
+  it has a reason; default is the listed order.
+- **D-25:** **End-of-phase test gate** — `./mvnw clean verify -Pe2e` required
+  per CLAUDE.md "End-of-Phase Verification" rule. Plan 99-05 changes `src/`
+  (method + DTO + IT deletion), so the gate is *genuinely* enforcing now —
+  not a no-op. Expected: same green baseline as Phase 98 close (2244 tests
+  MINUS 1 deleted IT method → 2243 tests; JaCoCo 88.99 % give-or-take a
+  decimal for the removed branch; SpotBugs 0; CodeQL gate-step exit 0). If
+  the test-count drop is anything other than exactly −1, investigate before
+  declaring close.
 
 ### PR + Milestone Workflow
 
-- **D-25:** **Milestone PR #130 stays open.** No new PR for Phase 99 — pushes
+- **D-26:** **Milestone PR #130 stays open.** No new PR for Phase 99 — pushes
   to `gsd/v1.13-discord-integration` automatically update PR #130. After Phase
-  99 ships all 4 plans, update PR #130 body via `gh pr edit 130 --body "..."`
-  with the Phase 99 entry (4 plans ✓, +6 VERIFICATION.md files, prose-fixes,
-  ROADMAP refresh).
-- **D-26:** **No squash-merge after Phase 99.** Per `feedback_milestone_merge_timing.md`:
+  99 ships all 5 plans, update PR #130 body via `gh pr edit 130 --body "..."`
+  with the Phase 99 entry (5 plans ✓, +6 VERIFICATION.md files, prose-fixes,
+  ROADMAP refresh, YAGNI deletion).
+- **D-27:** **No squash-merge after Phase 99.** Per `feedback_milestone_merge_timing.md`:
   squash-merge only at `/gsd-complete-milestone v1.13`, never after a single
   phase. Phase 99 ships, then operator runs `/gsd-complete-milestone v1.13`
   separately. No `git tag` either — release CI handles tagging post-merge.
@@ -224,6 +257,21 @@ code changes:
 ### REQUIREMENTS.md prose targets (Plan 99-01)
 - `.planning/REQUIREMENTS.md` line 50 (POST-01 — V11 → V12)
 - `.planning/REQUIREMENTS.md` line 66 (FORUM-01 — V12 → V13 + acceptance rewrite)
+
+### YAGNI deletion targets (Plan 99-05)
+- `src/main/java/org/ctc/discord/DiscordRestClient.java` lines 110-117 (method)
+  + line 13 (import) — delete only those; keep everything else.
+- `src/main/java/org/ctc/discord/dto/ThreadCreateRequest.java` — delete entire
+  file (record sole-consumed by deleted `createThread()`).
+- `src/test/java/org/ctc/discord/DiscordRestClientIT.java` lines 149-157
+  (`given200_whenCreateThread_thenReturnsThread()`) + line 24 (orphan import) —
+  delete only those; other ~10 IT methods in the file stay green.
+- Keeper-grep (must still return non-empty after deletion):
+  - `grep -rn "Thread\b" src/main/java/org/ctc/discord/` (record + list endpoints
+    + private `ThreadList` stay).
+  - `grep -rn "listActiveThreads\|listArchivedThreads\|listThreads" src/`
+    (forum-thread listing is still production code consumed by
+    `DiscordForumService`).
 
 ### ROADMAP.md refresh target (Plan 99-02)
 - `.planning/ROADMAP.md` ~line 284 (top-level Progress table — v1.13 row)
@@ -304,10 +352,21 @@ code changes:
   Discipline → In-Milestone Polish — No Deferral". v1.13's debt closes IN
   v1.13 (this phase), not v1.14. Phase 99's existence is the precedent for
   this rule.
+- **YAGNI deletion of unused production surfaces** — CLAUDE.md "Doing tasks":
+  "Don't add features, refactor, or introduce abstractions beyond what the
+  task requires." The deleted `createThread()` surface had no caller (audit
+  verified 2026-05-25); the only fixture was its own IT test. Recoverable
+  from git history if the FORUM-01 modal-build ever happens.
+- **Grep-all-usages discipline** — CLAUDE.md "Architectural Principles → Grep
+  All Usages Before Refactor". Plan 99-05 must re-run `grep -rn createThread src/`
+  + `grep -rn ThreadCreateRequest src/` as a pre-edit safety check; current
+  state shows only the 5 targeted occurrences (DiscordRestClient method+import,
+  ThreadCreateRequest record, IT test+import). If grep returns more, planner
+  STOPS and re-scopes.
 - **Inline sequential execution, no subagents** — CLAUDE.md "Subagent Rules"
   + `feedback_chain_inline_milestones.md`. Phase 99 follows this regardless
   of plan count.
-- **Atomic commit per plan** — each of 4 plans = one commit. Per CLAUDE.md
+- **Atomic commit per plan** — each of 5 plans = one commit. Per CLAUDE.md
   "Atomic Tasks" + Phase 98 precedent.
 
 ### Integration Points
@@ -340,17 +399,13 @@ code changes:
 <deferred>
 ## Deferred Ideas
 
-### v1.14 Backlog (booked)
-- **FORUM-01 "Create new Thread..." admin-UI modal** — actually build the modal
-  in `season-form.html` that calls `DiscordRestClient.createThread()`. Reason
-  deferred: out of v1.13 scope; tech_debt item 5 in audit; operator-workflow
-  (create-in-Discord-then-link) is acceptable for v1.13. Add to v1.14 backlog
-  via `/gsd-capture` or directly in `v1.13-MILESTONE-AUDIT.md` "Optional pre-merge
-  polish" list (already noted there).
-- **`DiscordRestClient.createThread()` deletion-vs-keep decision** — currently
-  unused after the acceptance rewrite. Defer to v1.14 (whichever phase picks up
-  the modal-build, or a standalone YAGNI sweep). Phase 99 does NOT delete it
-  to keep the diff minimal and predictable.
+### v1.14 Backlog (booked, only if/when relevant)
+- **FORUM-01 "Create new Thread..." admin-UI modal** — if v1.14 (or later)
+  decides to build the in-app create-modal in `season-form.html`, the deleted
+  `DiscordRestClient.createThread()` method comes back via TDD (the original
+  Phase 96 implementation is in git history at commit-range matching FORUM-01).
+  Not a "deferral" — a genuine *if-needed-then-rebuild* note. No backlog entry
+  is created automatically; only book it when product priority warrants.
 
 ### Out-of-scope for Phase 99 (covered elsewhere)
 - **MILESTONES.md v1.13 entry** — already authored (Phase 98-07 commit
