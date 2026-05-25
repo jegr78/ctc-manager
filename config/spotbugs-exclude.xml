@@ -12,9 +12,11 @@
         <Class name="org.ctc.CtcManagerApplication"/>
     </Match>
 
-    <!-- @Profile("dev") test-data provider — E2E tested only, not subject to static analysis gate -->
+    <!-- @Profile("dev") test-data provider — E2E tested only, not subject to static analysis gate.
+         Regex covers both the top-level TestDataService class and inner records (e.g.
+         TestDataService$LifecycleFixture) used as test-fixture return values. -->
     <Match>
-        <Class name="org.ctc.admin.TestDataService"/>
+        <Class name="~org\.ctc\.admin\.TestDataService(\$.+)?"/>
     </Match>
 
     <!-- @Profile("dev,demo") demo-data seeder — manual-test-only, not subject to gate -->

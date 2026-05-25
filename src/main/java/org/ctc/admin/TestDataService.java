@@ -52,6 +52,8 @@ public class TestDataService {
 	private final RaceRepository raceRepository;
 	private final RaceLineupRepository raceLineupRepository;
 	private final RaceResultRepository raceResultRepository;
+	private final CarRepository carRepository;
+	private final TrackRepository trackRepository;
 	private final ScoringService scoringService;
 	private final PlayoffService playoffService;
 	private final PlayoffRepository playoffRepository;
@@ -1050,5 +1052,74 @@ public class TestDataService {
 	}
 
 	private record ScoringDefaults(RaceScoring raceScoring, MatchScoring matchScoring) {
+	}
+
+	@Transactional
+	public LifecycleFixture seedFullMatchdayLifecycle() {
+		var raceScoring = raceScoringRepository.findAll().stream().findFirst().orElseGet(
+				() -> raceScoringRepository.save(new RaceScoring("Lifecycle RS", "10,8,6,4,2,1", "3,2,1", 1)));
+		var matchScoring = matchScoringRepository.findAll().stream().findFirst().orElseGet(
+				() -> matchScoringRepository.save(new MatchScoring("Lifecycle MS", 3, 1, 0)));
+
+		var home = teamRepository.save(new Team("Test Alfa", "T-ALF"));
+		home.setDiscordRoleId("100000000000000001");
+		home = teamRepository.save(home);
+
+		var away = teamRepository.save(new Team("Test Bravo", "T-BRA"));
+		away.setDiscordRoleId("100000000000000002");
+		away = teamRepository.save(away);
+
+		var season = new Season("Test-Lifecycle 2098", 2098, 99);
+		season.setDescription("Lifecycle fixture");
+		season.addTeam(home);
+		season.addTeam(away);
+		var phase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 0);
+		phase.setRaceScoring(raceScoring);
+		phase.setMatchScoring(matchScoring);
+		phase.setFormat(SeasonFormat.LEAGUE);
+		phase.setLegs(1);
+		season.getPhases().add(phase);
+		season = seasonRepository.save(season);
+		var regularPhase = season.getPhases().getFirst();
+
+		for (var st : season.getSeasonTeams()) {
+			phaseTeamRepository.save(new PhaseTeam(regularPhase, st.getTeam()));
+		}
+
+		var matchday = matchdayRepository.save(new Matchday(regularPhase, "Test MD 1", 1));
+
+		var match = new Match(matchday, home, away);
+		match.setLobbyHost("TestHost");
+		match.setRaceDirector("TestRD");
+		match.setStreamer("TestStreamer");
+		match.setStreamLink("https://twitch.tv/test");
+		match.setDiscordTeaser("Test teaser for lifecycle");
+		match = matchRepository.save(match);
+
+		var driverHome1 = driver("T-PSN-H1", "TestHome1");
+		var driverHome2 = driver("T-PSN-H2", "TestHome2");
+		var driverAway1 = driver("T-PSN-A1", "TestAway1");
+		var driverAway2 = driver("T-PSN-A2", "TestAway2");
+
+		var car = carRepository.save(new Car("Test", "Lifecycle Car"));
+		var track = trackRepository.save(new Track("Lifecycle Track"));
+		var race = new Race();
+		race.setMatchday(matchday);
+		race.setMatch(match);
+		race.setCar(car);
+		race.setTrack(track);
+		race.setDateTime(java.time.LocalDateTime.now().plusDays(7));
+		race.setSettings(createTestSettings(race));
+		race = raceRepository.save(race);
+		raceLineupRepository.save(new RaceLineup(race, driverHome1, home));
+		raceLineupRepository.save(new RaceLineup(race, driverHome2, home));
+		raceLineupRepository.save(new RaceLineup(race, driverAway1, away));
+		raceLineupRepository.save(new RaceLineup(race, driverAway2, away));
+
+		log.info("Seeded lifecycle fixture: season={} match={}", season.getId(), match.getId());
+		return new LifecycleFixture(season, matchday, match, home, away);
+	}
+
+	public record LifecycleFixture(Season season, Matchday matchday, Match match, Team homeTeam, Team awayTeam) {
 	}
 }
