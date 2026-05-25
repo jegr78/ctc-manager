@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Phase 98 re-opened — context gathered for plans 98-05/06/07 (matchday-level announcement posts POST-09 + POST-10) — Plan 98-04 source-fixed, Bundle-Verify + Live-Re-Run deferred to 98-07
-last_updated: "2026-05-25T14:37:09.719Z"
-last_activity: 2026-05-25 -- Phase 98 re-opened with Q-98-06..09 (matchday-level Announcement-Channel posts POST-09 + POST-10); 3 new plans 98-05/06/07 pending; D-97-PREV-2 explicitly overridden; UAT-08 PASS snapshot 2026-05-25 preserved (all 13 stages green); UAT-Re-Run for stages 5c/14/15 part of 98-07
+stopped_at: Plan 98-05 closed (MATCHDAY_PAIRINGS POST-09) — wave-pause before Plan 98-06 (MATCHDAY_SCHEDULE POST-10)
+last_updated: "2026-05-25T18:08:00.000Z"
+last_activity: 2026-05-25 -- Plan 98-05 (MATCHDAY_PAIRINGS POST-09) closed via /gsd-execute-phase 98 --interactive; 14 atomic commits + 1 V15 table-name fix; Mockito-Unit 7/7 + WireMock IT 6/6 + Playwright E2E 5/5 all green; SpotBugs 0; JaCoCo gate preserved; bundle clean-verify deferred to Plan 98-07 per D-98-VERIFY-1
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 28
-  completed_plans: 25
-  percent: 89
+  completed_plans: 26
+  percent: 93
 ---
 
 # Project State
