@@ -20,6 +20,7 @@ import org.ctc.admin.service.LineupGraphicService;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayPairingsGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
+import org.ctc.admin.service.MatchdayScheduleGraphicService;
 import org.ctc.admin.service.PowerRankingsGraphicService;
 import org.ctc.admin.service.ProvisionalScoresGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
@@ -92,6 +93,7 @@ public class DiscordPostService {
 	private final PowerRankingsGraphicService powerRankingsGraphicService;
 	private final StandingsGraphicService standingsGraphicService;
 	private final MatchdayPairingsGraphicService matchdayPairingsGraphicService;
+	private final MatchdayScheduleGraphicService matchdayScheduleGraphicService;
 	private final Path uploadDir;
 
 	public static final String DEFAULT_MATCHDAY_PAIRINGS_TEMPLATE =
@@ -108,7 +110,7 @@ public class DiscordPostService {
 					+ "SettingsGraphicService, LineupGraphicService, RaceLineupRepository, MatchResultsGraphicService, "
 					+ "ResultsGraphicService, ProvisionalScoresGraphicService, DiscordTimestamps, DiscordEmojiCache, "
 					+ "MatchdayResultsGraphicService, PowerRankingsGraphicService, StandingsGraphicService, "
-					+ "MatchdayPairingsGraphicService) "
+					+ "MatchdayPairingsGraphicService, MatchdayScheduleGraphicService) "
 					+ "are intentionally shared by-reference — defensive copying would break framework wiring. "
 					+ "Matches the implicit suppression that lombok.config adds to @RequiredArgsConstructor "
 					+ "(see CLAUDE.md SpotBugs section + lombok.config invariant).")
@@ -133,6 +135,7 @@ public class DiscordPostService {
 			PowerRankingsGraphicService powerRankingsGraphicService,
 			StandingsGraphicService standingsGraphicService,
 			MatchdayPairingsGraphicService matchdayPairingsGraphicService,
+			MatchdayScheduleGraphicService matchdayScheduleGraphicService,
 			@Value("${app.upload-dir:uploads}") String uploadDir) {
 		this.webhookClient = webhookClient;
 		this.restClient = restClient;
@@ -154,6 +157,7 @@ public class DiscordPostService {
 		this.powerRankingsGraphicService = powerRankingsGraphicService;
 		this.standingsGraphicService = standingsGraphicService;
 		this.matchdayPairingsGraphicService = matchdayPairingsGraphicService;
+		this.matchdayScheduleGraphicService = matchdayScheduleGraphicService;
 		this.uploadDir = Paths.get(uploadDir).toAbsolutePath().normalize();
 	}
 
@@ -427,6 +431,46 @@ public class DiscordPostService {
 				webhookUrl,
 				DiscordPostType.MATCHDAY_PAIRINGS,
 				new WebhookPayload(content, List.of()),
+				List.of(attachment),
+				DiscordPostRef.matchday(matchday));
+	}
+
+	public MatchPreviewPreFlightResult canPostMatchdaySchedule(Matchday matchday, DiscordGlobalConfig config) {
+		boolean allMatchesHaveRaceTime = matchday.getMatches().stream()
+				.filter(m -> !m.isBye())
+				.allMatch(m -> firstRaceTime(m).isPresent());
+		if (!allMatchesHaveRaceTime) {
+			return new MatchPreviewPreFlightResult(false, "Set Race date+time for all matches first");
+		}
+		String webhookUrl = config.getAnnouncementWebhookUrl();
+		if (webhookUrl == null || webhookUrl.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Configure announcement-webhook in Discord settings");
+		}
+		return new MatchPreviewPreFlightResult(true, null);
+	}
+
+	@Transactional
+	public DiscordPost postMatchdaySchedule(Matchday matchday) throws DiscordApiException {
+		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
+		MatchPreviewPreFlightResult pre = canPostMatchdaySchedule(matchday, config);
+		if (!pre.canPost()) {
+			throw new BusinessRuleException("Cannot post Matchday Schedule: " + pre.disabledReason());
+		}
+		String webhookUrl = config.getAnnouncementWebhookUrl();
+		String channelId = parseWebhookUrl(webhookUrl).id();
+		byte[] png;
+		try {
+			png = matchdayScheduleGraphicService.generateSchedule(matchday);
+		} catch (IOException e) {
+			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
+		}
+		String filename = "matchday-schedule-" + slug(matchday.getLabel()) + ".png";
+		NamedAttachment attachment = new NamedAttachment(filename, png);
+		return postOrEdit(
+				channelId,
+				webhookUrl,
+				DiscordPostType.MATCHDAY_SCHEDULE,
+				WebhookPayload.empty(),
 				List.of(attachment),
 				DiscordPostRef.matchday(matchday));
 	}

@@ -61,6 +61,7 @@ class DiscordPostServiceMatchdaySchedulePreFlightTest {
 				mock(PowerRankingsGraphicService.class),
 				mock(StandingsGraphicService.class),
 				mock(MatchdayPairingsGraphicService.class),
+				mock(org.ctc.admin.service.MatchdayScheduleGraphicService.class),
 				"uploads");
 	}
 
