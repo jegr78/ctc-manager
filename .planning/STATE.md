@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Plan 98-06 closed (MATCHDAY_SCHEDULE POST-10) — wave-pause before Plan 98-07 (bundle verify + DOCS-02/03)
-last_updated: "2026-05-25T19:15:00.000Z"
-last_activity: 2026-05-25 -- Plan 98-06 (MATCHDAY_SCHEDULE POST-10) closed via /gsd-execute-phase 98 --interactive; 8 atomic commits; Mockito-Unit 4/4 + WireMock IT 4/4 + Playwright E2E 3 new (8 total in announcement-class) all green; live-Pairings PASS in operator-Discord (Auto-UAT 7/7); :CTC: emoji fix via {{ctcEmoji}} placeholder + DiscordDevSeeder auto-refresh; live-Schedule deferred to UAT-10 (dev seed lacks race.dateTime)
+stopped_at: Phase 99 context gathered
+last_updated: "2026-05-25T20:51:09.139Z"
+last_activity: 2026-05-24 -- Phase 98 planning complete
 progress:
-  total_phases: 7
-  completed_phases: 6
-  total_plans: 28
-  completed_plans: 27
-  percent: 96
+  total_phases: 9
+  completed_phases: 7
+  total_plans: 27
+  completed_plans: 28
+  percent: 78
 ---
 
 # Project State
@@ -293,6 +293,8 @@ Last phase shipped: **91** (v1.12 closer). v1.13 spans phases **92-98** (integer
 - 2026-05-20: v1.12 milestone closed via `/gsd-complete-milestone v1.12`; PR #129 awaits squash-merge.
 - 2026-05-20: v1.13 milestone started. Branch `gsd/v1.13-discord-integration` created off `origin/master`. Brainstorming session (multi-round) resolved 18 design decisions; design spec committed at `docs/superpowers/specs/2026-05-20-discord-integration-design.md`. 25 REQ-IDs defined in `.planning/REQUIREMENTS.md` (5 carry-forward UX-01/COV-01/CLEAN-01/DOCS-01/BOOK-01 + 20 Discord INFRA-01..03/CHAN-01..03/POST-01..08/GRAFX-01/FORUM-01..02/E2E-01/DOCS-02..03).
 - 2026-05-20: v1.13 ROADMAP.md created — 7 phases (92-98), 25/25 REQ-IDs mapped (100 % coverage), no orphans. Per-phase REQ counts: 5+3+3+5+3+3+3 = 25 ✓. Awaiting user approval before `/gsd-discuss-phase 92`.
+- Phase 99 added: Pre-merge audit-polish (REQUIREMENTS Flyway-Prose + ROADMAP refresh + retroactive 9N-VERIFICATION.md + VALIDATION.md frontmatter + FORUM-01 modal scope) — closes v1.13-MILESTONE-AUDIT.md tech_debt
+- Phase 100 added: Match Day Discord channel naming scheme — add phase prefix (rs/po/pm) + optional group prefix after mdX- so Regular Season / Playoff / Placement matchday counts don't collide; current scheme md{N}-{teamA}-vs-{teamB} loses phase context
 
 ### Blockers/Concerns
 
@@ -318,9 +320,9 @@ At roadmap creation (2026-05-20):
 
 ## Session Continuity
 
-**Last session:** 2026-05-25T14:37:09.709Z
+**Last session:** 2026-05-25T20:51:09.133Z
 
-**Stopped at:** Phase 98 re-opened — context gathered for plans 98-05/06/07 (matchday-level announcement posts POST-09 + POST-10)
+**Stopped at:** Phase 99 context gathered
 
 **Next action:** `/gsd-validate-phase 94` — run Nyquist sampling across all 23 test classes, flip `nyquist_compliant: true` in 94-VALIDATION.md frontmatter. Then stage UAT-04 (Live-Discord Channel Lifecycle Smoke) against the operator's test guild BEFORE `/gsd-discuss-phase 95`.
 
