@@ -224,6 +224,25 @@
                             th:attr="data-testid=${matchdayPairingsStale ? 'update-matchday-pairings' : 'repost-matchday-pairings'},title=${matchdayPairingsStale ? 'Matchday has been edited since last post' : null}"
                             th:text="${matchdayPairingsStale ? 'Update Matchday Pairings' : 'Re-Post Matchday Pairings'}"></button>
                 </form>
+
+                <span th:if="${not canPostMatchdaySchedule and matchdaySchedulePost == null}"
+                      class="btn btn-secondary btn-sm disabled"
+                      data-testid="post-matchday-schedule-disabled"
+                      th:title="${matchdayScheduleDisabledReason}">Post Matchday Schedule</span>
+                <form th:if="${canPostMatchdaySchedule and matchdaySchedulePost == null}"
+                      th:action="@{/admin/matchdays/{id}/post-matchday-schedule(id=${matchday.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-matchday-schedule">
+                        Post Matchday Schedule
+                    </button>
+                </form>
+                <form th:if="${matchdaySchedulePost != null}"
+                      th:action="@{/admin/matchdays/{id}/post-matchday-schedule(id=${matchday.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-secondary btn-sm"
+                            th:attr="data-testid=${matchdayScheduleStale ? 'update-matchday-schedule' : 'repost-matchday-schedule'},title=${matchdayScheduleStale ? 'Matchday has been edited since last post' : null}"
+                            th:text="${matchdayScheduleStale ? 'Update Matchday Schedule' : 'Re-Post Matchday Schedule'}"></button>
+                </form>
             </div>
         </div>
     </div>
