@@ -1,7 +1,7 @@
 # Phase 98: Polish + E2E + Docs + Close - Context
 
-**Gathered:** 2026-05-24
-**Status:** Ready for planning
+**Gathered:** 2026-05-24 (initial) / 2026-05-25 (Re-Open Q-98-06..09 for 98-05+)
+**Status:** Re-Opened — 98-01/02/03 shipped + UAT-08 PASS + Plan 98-04 source-fixed; Plans 98-05/06/07 pending per Q-98-06..09 below (matchday-level announcement-channel posts)
 
 <domain>
 ## Phase Boundary
@@ -431,7 +431,133 @@ von Phase 92-97 D-9*-05/07/D-9*-08):
   allen 11 Post-Types (stale-prone, gehört ins Runbook); Marketing-Ton
   (bricht README-Stil).
 
-### Quality Gates (carried forward from Phases 92-97)
+### Q-98-06 — Matchday-Level Announcement Post Output Forms (2026-05-25 Re-Open)
+
+Phase 98 is re-opened with two new matchday-level posts on the **Announcement-Channel** (`DiscordGlobalConfig.announcementWebhookUrl`, "CTC Announcements APP" identity — same channel as MATCH_PREVIEW POST-06, NOT the per-Match-Channel from Phase 94). Operator workflow: PAIRINGS (pre-pick, weeks before matchday) → SCHEDULE (post-pick, days before race weekend) → per-Match-Preview (MATCH_PREVIEW per match) → per-Match-Channel posts (Phase 95) → Forum-Thread results (Phase 96/97).
+
+D-97-PREV-2's "MATCHDAY_PAIRINGS dropped, deferred to v1.14" is **explicitly re-scoped into v1.13** per operator decision 2026-05-25 (in-milestone-polish discovery during UAT-08 Stage 5 verification + operator screenshots of existing manual workflow). Historical 97-CONTEXT.md and STATE.md UAT-08 Stage 11 note remain immutable; this CONTEXT entry is the authoritative re-scope marker.
+
+- **D-98-PAIR-1: MATCHDAY_PAIRINGS = Hybrid (Markdown body + 1 Pairings-PNG attachment) on Announcement-Channel.** Markdown body contains: H1 `Match Day {N} Pairings`, bullet `Home Teams are on the left hand side.`, bullet `Deadline for the picks: <t:UNIX:F> (use the pinned form in your private team chat channel)`, bullet `Scheduled weekend for the races: {weekend}`, line `Game On! :CTC:`. Pairings-PNG via new `MatchdayPairingsGraphicService` (Playwright analog `MatchdayOverviewGraphicService`): matchday-header (`Match Day {N}` + `{year}`), :CTC: watermark logos top-left + top-right, N rows (one per match) with `{rating}` + Team-A logo+name (left) + vs-emoji (center) + Team-B name+logo+{rating} (right), brand-color gradients per team. Reference screenshot in user-message 2026-05-25. REJECTED: Pure-PNG (no Markdown body — operator needs Deadline + Weekend as machine-readable text); Pure-JSON-Embed (loses the visual Pairings-impact); Hybrid with N×2 Team-Card-PNGs (Discord 10-attachment limit at N=7 matches).
+
+- **D-98-PAIR-2: Flyway V15 — 2 new Matchday columns + 1 new DiscordGlobalConfig column.** `V15__add_matchday_pairings_fields.sql`:
+  - `matchday.pick_deadline` (TIMESTAMP / DATETIME, nullable — H2 + MariaDB compatible)
+  - `matchday.scheduled_weekend` (VARCHAR(64), nullable — free-text like "22-24 May" or "Tue 26 May" — operator-chosen format)
+  - `discord_global_config.matchday_pairings_template` (TEXT, nullable — template Markdown body with `{{deadline}}` + `{{weekend}}` placeholders + Default-fallback in service code)
+  REJECTED: free-text-only on matchday (lose structured deadline → no Discord `<t:UNIX:F>` rendering); 3 matchday columns (overkill, global template suffices).
+
+- **D-98-PAIR-3: Template-Resolving in service code, `{{deadline}}` → `<t:UNIX:F>` Discord-timestamp.** `DiscordPostService.buildMatchdayPairingsMarkdown(matchday, config)` reads `config.getMatchdayPairingsTemplate()`, falls back to hardcoded Default if null/blank, replaces `{{deadline}}` with `DiscordTimestamps.longDateTime(matchday.getPickDeadline())` and `{{weekend}}` with `matchday.getScheduledWeekend()`. Empty placeholders render as `_TBD_` (analog MATCH_PREVIEW streamLink fallback). Default-Template hardcoded in service initializer (operator can override globally).
+
+- **D-98-SCHED-1: MATCHDAY_SCHEDULE = pure Multipart-PNG on Announcement-Channel.** No Markdown body, no JSON embed, no template. New `MatchdayScheduleGraphicService` (Playwright analog) generates one PNG: matchday-header (`Match Day {N} Schedule` + `Community Team Cup {year}`), :CTC: watermark logos top-left + top-right, N rows (one per match) with `{Day, DD Mon HH:MM TZ}` (left, formatted from `match.races[0].dateTime` in Europe/London BST/GMT per operator), Team-A logo+name+`{W-L}` record (mid-left), vs-emoji (center), Team-B record+name+logo (right). Reference screenshot in user-message 2026-05-25.
+
+- **D-98-SCHED-2: No new schema for MATCHDAY_SCHEDULE.** Data sources are all pre-existing fields: `match.races[0].dateTime` (Race entity), `match.streamLink` (optional — visual is operator-driven via Stream-Link Match-Edit; not embedded in PNG layout per screenshot), `seasonTeam.{wins,draws,losses}` for `W-L` record (or `W-D-L` if draws are non-zero — Planner-Discretion). Timezone: render in `Europe/London` per `DiscordTimestamps` convention; operator confirmed `BST` suffix in screenshot example.
+
+### Q-98-07 — REQ-IDs + Plan-Decomposition (2026-05-25 Re-Open)
+
+- **D-98-REQ-1: Two new REQ-IDs — POST-09 (MATCHDAY_PAIRINGS) + POST-10 (MATCHDAY_SCHEDULE).** REQUIREMENTS.md gets two new rows under Discord-Posts section, both initially `Pending`, flipped to `Resolved` by Plan 98-07 after live UAT-Re-Run. POST-06 (MATCH_PREVIEW) remains untouched and stays Resolved. v1.13-REQ-coverage rises from 25 → 27. REJECTED: extending POST-06 (would break Phase-97-audit historical immutability + vermix per-match with matchday-level scope); single combined POST-09 covering both (loses Pairings-vs-Schedule traceability — Hybrid vs Pure-PNG are very different surfaces).
+
+- **D-98-REQ-2: ROADMAP-bump — v1.13-ROADMAP Phase-98 gains Erfolgskriterien 7 + 8.** Erfolgskrit 7: "MATCHDAY_PAIRINGS Hybrid-Post on Announcement-Channel + V15-migration + IT + E2E + Pre-Flight-button-state + live-verified Stage 14". Erfolgskrit 8: "MATCHDAY_SCHEDULE pure-PNG Post on Announcement-Channel + IT + E2E + Pre-Flight-button-state + live-verified Stage 15". `.planning/REQUIREMENTS.md` carry-forward block bumps to 27 REQ-IDs.
+
+- **D-98-PLAN-6: Three new plans, sequential inline, Pairings → Schedule → Bundle-Verify.** (Extends D-98-PLAN-1.) Reihenfolge:
+  - **Plan 98-05** — POST-09 MATCHDAY_PAIRINGS: Flyway V15 + new `MatchdayPairingsGraphicService` + Thymeleaf-Template `admin/matchday-pairings-render` + new `matchday-pairings-template.html` custom-template-file + new `DiscordPostService.canPostMatchdayPairings(matchday, config)` + `postMatchdayPairings(matchday)` + `buildMatchdayPairingsMarkdown(...)` + new Button "Post Matchday Pairings" on Matchday-Detail Discord-Actions card + new Form for `pick_deadline` + `scheduled_weekend` on Matchday-Edit OR Matchday-Detail-Inline-Edit (Planner-Discretion which) + new global Template-Edit-Field in Discord-Config-Form + IT `DiscordPostServiceMatchdayPairingsIT` + E2E `MatchdayDetailDiscordAnnouncementE2ETest` + Mockito-Unit `DiscordPostServiceMatchdayPairingsPreFlightTest`. Operator-driven Re-Post-Click, NO Auto-Edit-Hook (per D-98-AUTO-1).
+  - **Plan 98-06** — POST-10 MATCHDAY_SCHEDULE: new `MatchdayScheduleGraphicService` + Thymeleaf-Template `admin/matchday-schedule-render` + new `matchday-schedule-template.html` custom-template-file + new `DiscordPostService.canPostMatchdaySchedule(matchday, config)` + `postMatchdaySchedule(matchday)` (NO `buildMatchdayScheduleMarkdown` — pure PNG) + new Button "Post Matchday Schedule" on Matchday-Detail Discord-Actions card (sibling to Pairings + Results + Power-Rankings) + IT `DiscordPostServiceMatchdayScheduleIT` + EXTEND `MatchdayDetailDiscordAnnouncementE2ETest` with Schedule-button cases + EXTEND `DiscordPostServiceMatchdayPairingsPreFlightTest` with Schedule-Pre-Flight tests OR new sibling class. No schema migration (per D-98-SCHED-2). Operator-driven Re-Post-Click, NO Auto-Edit-Hook.
+  - **Plan 98-07** — Bundle-Verify + Live-UAT-Re-Run + Pre-Merge-Bookkeeping: ONE `./mvnw clean verify -Pe2e` covering 98-04 Schedule-Embed-IT + 98-05 Pairings + 98-06 Schedule (per D-98-VERIFY-1). Operator-Live-UAT-Re-Run for 3 new stages (5c + 14 + 15) per D-98-UAT-1. REQUIREMENTS.md POST-09 + POST-10 flip Pending → Resolved. v1.13-ROADMAP.md Phase-98 Erfolgskriterien 7 + 8 mark ✓. MILESTONES.md v1.13-Entry updated (3 new plans, +6 tests, coverage delta, 27/27 REQ-Coverage). PR #130 body final-update via `gh pr edit 130 --body-file -` (squash-subject locked: `feat(v1.13): discord integration & carry-forwards`). STATE.md UAT-08 in-place edit adds Stages 5c + 14 + 15 (per D-98-UAT-2). DOCS-02 Runbook §§ 2.3 + 7 erweitert um die 2 neuen Buttons + UAT-Stages.
+
+- **D-98-PLAN-7: Wave-Pause nach jedem der 3 neuen Plans.** Konsistent mit [[feedback-wave-pause]]. Inline-sequential auf `gsd/v1.13-discord-integration`, kein Worktree, kein Subagent (per [[feedback-inline-sequential-execution]]).
+
+- **D-98-FILES-1: Files-modified-Whitelist (Append-Only auf shared Files).**
+  - **Plan 98-05:**
+    - NEU: `src/main/resources/db/migration/V15__add_matchday_pairings_fields.sql`
+    - NEU: `src/main/java/org/ctc/admin/service/MatchdayPairingsGraphicService.java`
+    - NEU: `src/main/resources/templates/admin/matchday-pairings-render.html`
+    - NEU: `src/main/java/org/ctc/admin/dto/MatchdayPairingsForm.java` (für `pick_deadline` + `scheduled_weekend` — Planner-Discretion: separater Edit-Endpoint oder integriert in `MatchdayForm`)
+    - NEU: `src/test/java/org/ctc/discord/service/DiscordPostServiceMatchdayPairingsIT.java`
+    - NEU: `src/test/java/org/ctc/e2e/discord/announcement/MatchdayDetailDiscordAnnouncementE2ETest.java`
+    - NEU: `src/test/java/org/ctc/discord/service/DiscordPostServiceMatchdayPairingsPreFlightTest.java`
+    - APPEND: `src/main/java/org/ctc/domain/model/Matchday.java` (2 neue Felder + Getter/Setter via Lombok)
+    - APPEND: `src/main/java/org/ctc/discord/model/DiscordGlobalConfig.java` (1 neues Feld `matchdayPairingsTemplate`)
+    - APPEND: `src/main/java/org/ctc/discord/service/DiscordPostService.java` (`canPostMatchdayPairings` + `postMatchdayPairings` + `buildMatchdayPairingsMarkdown`)
+    - APPEND: `src/main/java/org/ctc/admin/controller/MatchdayController.java` (neuer POST-Endpoint für "Post Matchday Pairings" Button + GET-Page für Pick-Deadline + Scheduled-Weekend-Edit ODER Edit über bestehende Matchday-Form)
+    - APPEND: `src/main/resources/templates/admin/matchday-detail.html` (neuer Button in Discord-Actions card + ggf. Inline-Edit-Felder)
+    - APPEND: `src/main/resources/templates/admin/discord-config.html` (neues globales Template-Edit-Field)
+    - APPEND: `src/main/java/org/ctc/discord/dto/DiscordConfigForm.java` (`matchdayPairingsTemplate` Property)
+    - APPEND: `src/main/java/org/ctc/discord/service/DiscordGlobalConfigService.java` (form → entity Mapping)
+    - APPEND: `src/main/java/org/ctc/discord/web/DiscordConfigController.java` (nullSafe-Wiring)
+  - **Plan 98-06:**
+    - NEU: `src/main/java/org/ctc/admin/service/MatchdayScheduleGraphicService.java`
+    - NEU: `src/main/resources/templates/admin/matchday-schedule-render.html`
+    - NEU: `src/test/java/org/ctc/discord/service/DiscordPostServiceMatchdayScheduleIT.java`
+    - APPEND: `src/test/java/org/ctc/e2e/discord/announcement/MatchdayDetailDiscordAnnouncementE2ETest.java` (Schedule-Button-Cases)
+    - APPEND: `src/test/java/org/ctc/discord/service/DiscordPostServiceMatchdayPairingsPreFlightTest.java` (Schedule-Pre-Flight) ODER NEU `DiscordPostServiceMatchdayScheduleePreFlightTest.java` (Planner-Discretion)
+    - APPEND: `src/main/java/org/ctc/discord/service/DiscordPostService.java` (`canPostMatchdaySchedule` + `postMatchdaySchedule`)
+    - APPEND: `src/main/java/org/ctc/admin/controller/MatchdayController.java` (neuer POST-Endpoint "Post Matchday Schedule")
+    - APPEND: `src/main/resources/templates/admin/matchday-detail.html` (Sibling-Button in Discord-Actions card)
+    - Kein Schema, kein DTO, kein Form.
+  - **Plan 98-07:**
+    - APPEND: `.planning/REQUIREMENTS.md` (POST-09 + POST-10 add Pending → Resolved-Flip, 25/25 → 27/27)
+    - APPEND: `.planning/milestones/v1.13-ROADMAP.md` (Phase-98 Erfolgskriterien 7 + 8 + ✓-Marker)
+    - APPEND: `.planning/MILESTONES.md` (v1.13-Entry update — 3 new plans, test-count + coverage delta)
+    - APPEND: `.planning/STATE.md` (UAT-08 in-place edit + Stages 5c/14/15 + Plan 98-04 Deferred-Item-Resolution-Note)
+    - APPEND: `docs/operations/discord-integration.md` (§ 2.3 Daily Operations 2 neue Buttons + § 7 UAT-08-Stages 14 + 15)
+    - APPEND: `docs/operations/images/discord/*.png` (neue App-UI Screenshots playwright-cli für die 2 neuen Buttons)
+    - APPEND: `.planning/phases/98-polish-e2e-docs-close/98-VALIDATION.md` (Phase-Goal-Backward-Walkthrough + Sub-Deliverables 9 + 10 + Test-Counts + JaCoCo)
+    - GH-API: `gh pr edit 130 --body-file -` (PR-Body Final-Update)
+
+### Q-98-08 — Auto-Edit + Pre-Flight + Test-Architektur (2026-05-25 Re-Open)
+
+- **D-98-AUTO-1: Beide neuen Posts operator-driven (NO AFTER_COMMIT-Listener).** Spiegelt POST-07a (MATCHDAY_OVERVIEW) + POST-07b (POWER_RANKINGS) + POST-08 (STANDINGS) Pattern aus Phase 97. KEIN AFTER_COMMIT-Event, KEIN Listener-PATCH bei Field-Edit. Operator klickt "Re-Post Matchday Pairings" / "Update Matchday Pairings" (Label flip via Stale-Detection) bzw. die Sibling-Buttons für Schedule. REJECTED: Auto-Edit für Pairings only (Markdown-Diff trivial) — User-decision 2026-05-25 für Konsistenz mit Forum-Thread-Posts; Auto-Edit für Schedule (PNG-Re-Render Playwright-teuer 30-60s, operator-driven besser).
+
+- **D-98-PRE-1: MATCHDAY_PAIRINGS Pre-Flight-Predicates.** `canPostMatchdayPairings(matchday, config)` returns `MatchPreviewPreFlightResult(canPost, disabledReason)`:
+  - `matchday.pickDeadline != null` ELSE "Set pick deadline first"
+  - `matchday.scheduledWeekend != null && !blank` ELSE "Set scheduled weekend first"
+  - alle Matches haben HomeTeam + AwayTeam zugewiesen (matchday.matches.allMatch(m -> m.getHomeTeam() != null && m.getAwayTeam() != null)) ELSE "Assign teams to all matches first"
+  - `config.announcementWebhookUrl != null && !blank` ELSE "Configure announcement-webhook in Discord settings"
+  - REJECTED: pre-flight on template (Default-fallback macht Template-set non-Pflicht); pre-flight on `discordTeaser` (matchday-level Post hat kein per-Match-Teaser).
+
+- **D-98-PRE-2: MATCHDAY_SCHEDULE Pre-Flight-Predicates.** `canPostMatchdaySchedule(matchday, config)`:
+  - alle Non-BYE-Matches haben mindestens 1 Race mit `dateTime != null` (matchday.matches.filter(non-bye).allMatch(m -> firstRaceTime(m).isPresent())) ELSE "Set Race date+time for all matches first"
+  - `config.announcementWebhookUrl != null && !blank` ELSE "Configure announcement-webhook in Discord settings"
+  - REJECTED: Pre-Flight on streamLink (operator-driven manual fill, "TBA"-Fallback ist OK aber das PNG zeigt streamLink nicht prominent per Screenshot); Pre-Flight on alle Team-Records (records sind auto-computed, kein operator action erforderlich).
+
+- **D-98-STALE-1: Stale-Detection Pattern.** Für Pairings: `matchday.updatedAt > post.updatedAt` (jede Edit auf pick_deadline / scheduled_weekend / matchday-level field triggert Label-Flip). Für Schedule: `MAX(match.updatedAt, race.updatedAt) > post.updatedAt` über alle Non-BYE-Matches/Races im Matchday. Label-Flip: grey "Re-Post Matchday Pairings/Schedule" → light-yellow "Update Matchday Pairings/Schedule" + warn-tooltip. Spiegelt MATCH_RESULTS Stale-Pattern (Phase 95 D-95-04). Planner-Discretion: ob die Stale-Check als SQL-Predicate-Aggregation auf der Matchday-Detail-Seite live-läuft oder als pre-loaded `lastUpdatedAtVsPost`-Field via Service-Aggregation.
+
+- **D-98-TEST-3: Pro Plan 1 IT + 1 E2E + 1 Mockito-Unit (6 neue Tests total).** Spiegelt Phase 95/97. Test-Klassen:
+  - **98-05:** `DiscordPostServiceMatchdayPairingsIT` (Spring-Boot + WireMock + V15-Migration-Check + Multipart-Body-Verify mit `withQueryParam` falls thread_id, `matchingJsonPath` falls Embed, `bodySize > 1024` für PNG-Attachment per [[feedback-wiremock-vs-real-api]]; covering Initial-Post + Re-Post-PATCH + Pre-Flight-Reject-Branches inkl. 4 sealed `DiscordApiException`-Permits) + `MatchdayDetailDiscordAnnouncementE2ETest` (Playwright sibling-button-state-matrix: Pre-Flight-Disabled-Tooltips × 4 Reject-States, Initial-Post-Success, Re-Post-Stale-Label-Flip nach matchday-Edit) + `DiscordPostServiceMatchdayPairingsPreFlightTest` (Mockito-Unit, alle 4 Pre-Flight-Branches × can/cant + 2 success-state).
+  - **98-06:** `DiscordPostServiceMatchdayScheduleIT` (analog Pairings IT, ohne V15 + ohne Markdown-JSON-Path-Assertions, mit Multipart-PNG-Body-Verify + bodySize-Check) + EXTEND `MatchdayDetailDiscordAnnouncementE2ETest` (Schedule-Button-Cases als zusätzliche `@Test`-Methoden) + EXTEND Mockito-Unit oder NEU `DiscordPostServiceMatchdaySchedulePreFlightTest`.
+  - **`@Tag`-Konvention:** ITs untagged-or-`@Tag("integration")` (Surefire route ist `@Tag`-aware per CLAUDE.md "Test Categorization"), E2E `@Tag("e2e")` in `org.ctc.e2e.discord.announcement` package, Mockito-Unit untagged.
+
+- **D-98-COV-1: Coverage-Erwartung.** Baseline nach Phase 98-03 = 88.71 % JaCoCo line. Plan 98-05 + 98-06 fügen 2 neue Playwright-Services hinzu — `MatchdayPairingsGraphicService` + `MatchdayScheduleGraphicService` werden in `pom.xml` `<excludes>` ergänzt (Playwright-runtime-services sind nicht JaCoCo-instrumentierbar per CLAUDE.md "Excluded from coverage"). Coverage-Delta erwartet zwischen +0.1 und +0.5 pp durch neue IT/E2E-Coverage. Coverage-MUST ≥ 88.71 %.
+
+### Q-98-09 — UAT-08-Re-Run + Bundle-Verify + Bookkeeping (2026-05-25 Re-Open)
+
+- **D-98-VERIFY-1: EIN voller `./mvnw clean verify -Pe2e` in Plan 98-07.** Plans 98-05 + 98-06 nutzen während TDD-Loop nur targeted `-Dit.test=ClassName -DfailIfNoTests=false`. Wave-Pause nach jedem Plan stoppt zum User-Feedback (kein verify required). Plan 98-07 macht EINEN `./mvnw clean verify -Pe2e` der ALLE drei deferred Items abdeckt: 98-04 `DiscordPostServiceScheduleIT` (inline:false invariants) + 98-05 Pairings + 98-06 Schedule. Coverage-Snapshot + Test-Count harvested für MILESTONES + PR-Body.
+
+- **D-98-UAT-1: Inkrementelles UAT-Re-Run — 3 neue Stages + Smoke-Regression.**
+  - **Stage 5c** (98-04 SCHEDULE Re-Post live-PATCH): Operator klickt Re-Post Schedule nach Dev-Server-Restart → verifiziert dass die Discord-Embed-Felder jetzt mit `inline: false` rendern (1 Field pro Zeile) UND dass `messageId` derselbe bleibt (PATCH, nicht POST).
+  - **Stage 14** (98-05 MATCHDAY_PAIRINGS): Operator setzt `pick_deadline` + `scheduled_weekend` + globales Template (oder Default) → klickt "Post Matchday Pairings" → verifiziert Hybrid-Post auf Announcement-Channel (Markdown-Body korrekt, `<t:N:F>` Deadline, Pairings-PNG mit 7 Matches korrekt gerendert, `:CTC:` Emoji rendert nicht als raw text). Edit pick_deadline → Button-Label flip auf "Update" → Update klicken → PATCH verifiziert (same messageId). Plus 1-2 Pre-Flight-Reject-Stichproben (Webhook clear → Tooltip; Team-Pairing unvollständig → Tooltip).
+  - **Stage 15** (98-06 MATCHDAY_SCHEDULE): Operator klickt "Post Matchday Schedule" → verifiziert pure-PNG-Post auf Announcement-Channel (alle 7 Matches mit korrekten Day/Date/HH:MM-BST/GMT-Werten + Team-Records). Edit Race.dateTime → Button-Label flip auf "Update" → Update klicken → PATCH verifiziert.
+  - **Smoke-Regression:** 1-2 Stages aus 1-13 zur Regression-Sicherheit (z.B. Stage 1 create-channel + Stage 9 move-to-archive). 30-45 min Operator-Aufwand.
+
+- **D-98-UAT-2: STATE.md UAT-08 in-place edit, KEINE separate UAT-08b-Sektion.** Der bestehende UAT-08 Block in STATE.md wird APPEND-style erweitert: neue Sub-Sektionen "Stage 5c (Plan 98-04 Re-Post Live-Verifikation)", "Stage 14 (Plan 98-05 MATCHDAY_PAIRINGS)", "Stage 15 (Plan 98-06 MATCHDAY_SCHEDULE)" werden ans Ende des UAT-08-Blocks angehängt mit Date-Stamps 2026-05-25 (oder neueren Date wenn UAT-Re-Run später erfolgt). Originaler UAT-08-PASS-Snapshot 2026-05-25 bleibt textuell unverändert.
+
+- **D-98-BOOK-1: Plan 98-07 Pre-Merge-Bookkeeping-Tasks (alle in PR #130).** Per D-98-PLAN-5 (carry-forward) müssen ALLE bookkeeping-Updates Pre-Squash-Merge in PR #130 sein:
+  1. `.planning/REQUIREMENTS.md` — POST-09 + POST-10 add als Pending (Plan-Start) → flip Resolved nach UAT-Re-Run-PASS (Plan-End). 25/25 → 27/27 REQ-Coverage.
+  2. `.planning/milestones/v1.13-ROADMAP.md` — Phase-98 Erfolgskriterien 7 + 8 add + ✓-Marker.
+  3. `.planning/MILESTONES.md` — v1.13-Entry update: "+3 plans (98-05/06/07), +6 tests, JaCoCo {new}%, 27/27 REQ-Coverage". Plan 98-04 wird als Spezial-Polish-Plan markiert (Plan-Counter total 7 = 98-01..98-07).
+  4. `.planning/STATE.md` — UAT-08 Stages 5c/14/15 (per D-98-UAT-2) + Deferred-Items Schedule-Embed (98-04) als Resolved verlinkt mit Stage-5c-Live-Verifikation.
+  5. `docs/operations/discord-integration.md` — § 2.3 Daily Operations: 2 neue Bullet-Points "Post Matchday Pairings (pre-pick announcement)" + "Post Matchday Schedule (post-pick announcement)" mit Pre-Flight-Predicates + Stale-Detection. § 7 UAT-08 Procedure: Stages 14 + 15 ergänzt.
+  6. `docs/operations/images/discord/` — neue App-UI-Screenshots via playwright-cli für die 2 neuen Buttons.
+  7. PR #130 Body — Final-Update via `gh pr edit 130 --body-file -` mit:
+     - Phase-Tracker update auf 98-01 ✓ / 98-02 ✓ / 98-03 ✓ / 98-04 ✓ (polish) / 98-05 ✓ / 98-06 ✓ / 98-07 ✓
+     - Coverage-Delta von 88.71 % auf {new-%}
+     - Test-Count-Delta +6 neue Tests
+     - 27/27 REQ-Coverage (statt 25/25)
+     - Squash-subject locked: `feat(v1.13): discord integration & carry-forwards`
+  8. 98-VALIDATION.md — Phase-Goal-Backward-Walkthrough refresh mit Sub-Deliverables 9 + 10 + Roll-up der Nyquist-Discipline (98-05 + 98-06 each: 1/0/0 expected; 98-07: n/a — bookkeeping only).
+
+- **D-98-DEV-1: Dev-Server-Restart-Strategie für Live-UAT-Re-Run.** Plan 98-07 verlangt 1 `./mvnw clean` (Bundle-Verify) — per [[feedback-clean-kills-app-pid]] löscht das `data/app-dev.pid`. Operator-Sequenz: (a) Bundle-Verify durchlaufen lassen, (b) `./scripts/app.sh restart --profile dev` (oder `start --profile dev` falls stop fehlschlägt aufgrund pid-loss), (c) Live-UAT-Re-Run 5c+14+15+Smoke. Plan 98-07 dokumentiert das in einem "Live-Verifikation"-Task-Block.
+
+</new_string>
+</invoke>
 
 - **D-98-QG-1: Standard-Gates unverändert.**
   - JaCoCo line coverage ≥ 88.88 % (Phase-97-Baseline). Phase 98 fügt
@@ -618,6 +744,37 @@ von Phase 92-97 D-9*-05/07/D-9*-08):
 - `.planning/phases/93-discord-foundation/93-CONTEXT.md` § D-93-01
   (UAT-03 Pattern) — Template für UAT-08 Procedure in Runbook § 7.
 
+### Re-Open Refs (2026-05-25 — Plans 98-04/05/06/07)
+
+- `.planning/phases/98-polish-e2e-docs-close/98-04-SUMMARY.md` — Plan 98-04
+  Schedule-Embed Layout-Polish (`inline:false`). Operator-Decision 2026-05-25
+  to bundle live re-post + full verify with 98-05/06.
+- `.planning/STATE.md` § Deferred Items "Schedule-Embed Layout asymmetry"
+  + § Pending UATs / UAT-08 PASS — operator screenshots context for the
+  in-milestone re-scope.
+- `src/main/java/org/ctc/discord/model/DiscordPostType.java` — enum
+  `MATCHDAY_PAIRINGS` (Line 11, currently unused) + new value
+  `MATCHDAY_SCHEDULE` (added by Plan 98-06).
+- `src/main/java/org/ctc/admin/service/MatchdayOverviewGraphicService.java`
+  — Pattern-Vorlage für die neuen `MatchdayPairingsGraphicService` +
+  `MatchdayScheduleGraphicService` (Playwright-rendered Matchday-Level
+  PNGs).
+- `src/main/java/org/ctc/discord/service/DiscordPostService.java`
+  § canPostMatchPreview (Lines 227-245) + postMatchPreview (Lines 248-267)
+  + buildMatchPreviewMarkdown (Lines 297-317) — Hybrid-Post Pattern für
+  Plan 98-05 Pairings (Markdown + Multipart).
+- `src/main/java/org/ctc/discord/service/DiscordPostService.java`
+  § canPostMatchdayResults (Lines 319-332) + postMatchdayResults
+  (Lines 349-373) — Pure-PNG-Post Pattern für Plan 98-06 Schedule.
+- `src/main/resources/db/migration/V14__*.sql` — Phase-97 STANDINGS
+  Phase-FK-Migration als Vorlage für Plan 98-05's V15 (H2 + MariaDB
+  syntax compatibility).
+- User-Screenshots 2026-05-25 — 2 Operator-Discord-Screenshots
+  (MATCHDAY_PAIRINGS Hybrid mit Pairings-Grafik + Deadline-Bullet +
+  `Game On! :CTC:` Line | MATCHDAY_SCHEDULE pure PNG mit 7 Match-Zeilen
+  + BST-Timezone-Format + Team-Records `W-L`). Layout-Authoritative
+  für die Grafik-Templates.
+
 ### Convention References
 
 - `CLAUDE.md` § Architectural Principles — Keep Controllers Thin, DTOs
@@ -742,10 +899,38 @@ von Phase 92-97 D-9*-05/07/D-9*-08):
   94..97) — Live-Discord-Test gegen Operator-Test-Guild, dokumentiert
   in Runbook + STATE.md.
 
+- **User-Direktive 2026-05-25 (Channel-Differenzierung)**: "Nicht wieder
+  Match Day und Announcement Kanal durcheinander würfeln." Die neuen
+  matchday-level Posts (MATCHDAY_PAIRINGS + MATCHDAY_SCHEDULE) leben auf
+  dem Announcement-Channel (analog MATCH_PREVIEW), NICHT auf den
+  per-Match-Channels. Siehe Memory `feedback_discord_channel_types`.
+
+- **User-Direktive 2026-05-25 (Re-Open Scope)**: MATCHDAY_PAIRINGS +
+  MATCHDAY_SCHEDULE werden trotz D-97-PREV-2 "deferred to v1.14" jetzt
+  in v1.13 mitgenommen — operator-screenshots zeigen den bestehenden
+  manuellen Workflow, der via 2 neue Buttons automatisiert wird.
+  In-milestone-polish-discovery (per CLAUDE.md "GSD Workflow Discipline")
+  rechtfertigt den Scope-Bump.
+
+- **User-Direktive 2026-05-25 (Post-Output-Form)**: MATCHDAY_PAIRINGS =
+  Hybrid (Markdown body mit Deadline + Weekend + `Game On! :CTC:` +
+  1 Pairings-Grafik-PNG). MATCHDAY_SCHEDULE = pure PNG (kein Markdown,
+  kein Embed). Beide auf Announcement-Channel.
+
+- **User-Direktive 2026-05-25 (Auto-Edit verworfen)**: Beide neuen Posts
+  sind operator-driven Re-Post-Click (analog POST-07a/b/STANDINGS).
+  KEIN AFTER_COMMIT-Listener, KEIN automatischer PATCH. Stale-Detection
+  Label-Flip "Re-Post" → "Update" bleibt.
+
 </specifics>
 
 <deferred>
 ## Deferred Ideas
+
+> **Re-Open-Update 2026-05-25:** `MATCHDAY_PAIRINGS` + `MATCHDAY_SCHEDULE`
+> sind aus Deferred entfernt und in Plans 98-05/06 (POST-09/POST-10)
+> aktive Phase-98-Scope-Items. D-97-PREV-2 bleibt historisch immutabel,
+> ist aber inhaltlich durch Q-98-07 D-98-REQ-1 überschrieben.
 
 - **Touch-Target-44 px-Regel auf `.btn`** (Mobile-Polish-Erweiterung):
   iOS HIG empfiehlt 44 px, existing `.btn { min-height: 36px }` ist

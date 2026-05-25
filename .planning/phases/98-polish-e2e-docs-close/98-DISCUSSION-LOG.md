@@ -416,3 +416,127 @@ falls dieses "post-merge bookkeeping" suggerierte.
 - `/admin/discord/posts` Bulk-Re-Post-Button (Phase 95 deferred → v1.14).
 - Multi-Server/Multi-Guild Support (explicit out of scope, alle v1.x).
 - Inbound Discord Interactions / Slash-Commands / Polls / Reaction-Reads (explicit out of scope).
+
+---
+
+# Re-Open Discussion 2026-05-25
+
+**Date:** 2026-05-25
+**Areas discussed:** Matchday-level announcement-channel post output forms, REQ + plan decomposition, auto-edit + pre-flight + test architecture, UAT-08 re-run + bundle-verify timing
+**Trigger:** Operator decision 2026-05-25 to bundle Plan 98-04 (Schedule-Embed `inline:false`) live re-post + full verify with 2 new matchday-level announcement-channel posts (MATCHDAY_PAIRINGS + MATCHDAY_SCHEDULE), overriding D-97-PREV-2 "deferred to v1.14".
+
+## Area 1: Post-Output-Form
+
+### Q-98-06.1 — MATCHDAY_PAIRINGS Output
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| JSON-Embed mit N Match-Fields | Markdown-Headline + N Embed-Fields, kein PNG | |
+| Multipart-PNG via neue Pairings-Grafik | Pure PNG, kein Markdown | |
+| **Hybrid (Markdown body + 1 Pairings-PNG)** | Wie MATCH_PREVIEW, aber matchday-aggregiert | ✓ (via operator screenshot 1) |
+| Markdown-Body only | Text-Liste, kein Embed/PNG | |
+
+**User's choice:** Hybrid — operator screenshot zeigt Markdown-Header `Match Day 4 Pairings` + 3 Bullet-Points (Home-Teams-left, Deadline + `<t:N:F>`-Format, Scheduled-Weekend-String) + `Game On! :CTC:` + 1 große Pairings-Grafik mit allen 7 Matches.
+**Notes:** Operator-Input identifizierte das Format direkt; ich hatte ursprünglich Pure-PNG vorgeschlagen (falsche Analogie zu POST-07a).
+
+### Q-98-06.2 — Template + Data Storage
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| **2 neue Matchday-Felder + global Template** | `matchday.pick_deadline` + `matchday.scheduled_weekend` + `DiscordGlobalConfig.matchday_pairings_template` | ✓ |
+| 3 neue Matchday-Felder (Free-Text-Ansatz) | + `matchday.discord_announcement_text` als override | |
+| Nur 1 Matchday-Free-Text-Feld | Maximal lean, kein `<t:N:F>` | |
+| Nur globales Template, keine neuen Matchday-Felder | Form-DTO-Input bei jedem Post | |
+
+**User's choice:** 2 Felder + globales Template. Flyway V15 (next migration nach V14). Platzhalter `{{deadline}}` + `{{weekend}}` mit Default-Template-Fallback im Service-Code.
+
+### Q-98-06.3 — MATCHDAY_SCHEDULE Output
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Aggregierter Schedule-Embed | JSON-Embed mit N Embed-Fields | |
+| Hybrid Markdown + Schedule-Grafik PNG | Wie Pairings | |
+| **Pure-PNG (kein Markdown, kein Embed)** | Schedule-Grafik mit `Day, DD Mon HH:MM TZ` + Team-Records `W-L` | ✓ (via operator screenshot 2) |
+| Brauche ich gar nicht | Schedule defer auf v1.14 | |
+
+**User's choice:** Pure PNG — operator screenshot 2 zeigt `Match Day 4 Schedule` / `Community Team Cup 2026` + 7 Match-Zeilen mit BST-Timestamp + Team-Records. Datenquelle: existing `match.races[0].dateTime` + `seasonTeam.{wins,draws,losses}` (kein neues Schema).
+**Notes:** Mein erster Versuch hatte JSON-Embed-Option oben gelistet — User-Korrektur 2026-05-25 "Nicht wieder Match Day und Announcement Kanal durcheinander würfeln" → siehe Memory `feedback_discord_channel_types`.
+
+## Area 2: REQ + Plan-Decomposition
+
+### Q-98-07.1 — REQ-ID Modellierung
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| **Neue POST-09 + POST-10 + 3 Plans** | Saubere Traceability, separater Status pro Post-Type | ✓ |
+| Neue POST-09 + POST-10 + 2 Plans | Bundle-Verify in 98-06 statt eigener Plan | |
+| POST-06 erweitern (Re-Open) | Bricht Phase-97-Audit-Immutabilität | |
+| 1 neue REQ-ID POST-09 (kombiniert) + 2 Plans | Verlustige Traceability für Hybrid vs Pure-PNG | |
+
+**User's choice:** Saubere POST-09 (PAIRINGS) + POST-10 (SCHEDULE), 3 Plans (98-05 + 98-06 + 98-07). POST-06 bleibt Resolved (Match Preview only). v1.13-Coverage 25/25 → 27/27.
+
+## Area 3: Auto-Edit + Pre-Flight + Test-Architektur
+
+### Q-98-08.1 — Auto-Edit-Hooks
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Beide Auto-Edit (MATCH_PREVIEW-Pattern) | AFTER_COMMIT-Listener für beide | |
+| Nur Pairings Auto-Edit | Markdown-Diff trivial, PNG-Re-Render skip | |
+| **Beide operator-driven** | Re-Post-Click-Modell (POST-07a/b/STANDINGS Pattern) | ✓ |
+| Nur Schedule Auto-Edit | Pairings operator-driven | |
+
+**User's choice:** Beide operator-driven. KEIN AFTER_COMMIT-Listener, KEIN automatischer PATCH. Stale-Detection-Label-Flip "Re-Post" → "Update" bleibt für beide.
+
+### Q-98-08.2 — Test-Architektur
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| **Pro Plan: 1 IT + 1 E2E + 1 Mockito-Unit** | Spiegelt Phase 95/97 1:1, ~6 neue Tests | ✓ |
+| Pro Plan nur 1 IT (lean) | ~2-3 Tests, kein UI-State-Verify | |
+| Pro Plan IT + E2E, gemeinsame Mockito-Test-Klasse | Spart File, größere Klasse | |
+| DiscordFullMatchdayLifecycleE2ETest erweitern | Semantic mismatch (match vs announcement channel) | |
+
+**User's choice:** Pro Plan 3 Tests (IT + E2E + Mockito-Unit). ~6 neue Tests total. Klassen:
+- 98-05: `DiscordPostServiceMatchdayPairingsIT` + `MatchdayDetailDiscordAnnouncementE2ETest` + `DiscordPostServiceMatchdayPairingsPreFlightTest`
+- 98-06: `DiscordPostServiceMatchdayScheduleIT` + extend E2E + extend PreFlightTest
+
+## Area 4: UAT-08 + Verify
+
+### Q-98-09.1 — Bundle-Verify-Timing
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| **Einmal in 98-07: voller Verify + voller Live-Re-Run** | 98-05/06 nutzen targeted ITs, 98-07 = clean verify -Pe2e + Live | ✓ |
+| Verify nach jedem Plan + ein Live-Re-Run | 3 volle Verify-Runs, mehr Overhead | |
+| Verify pro Plan + Live-Re-Run pro Plan | Maximum Sicherheit, 6 Dev-Server-Restarts | |
+| Targeted Verify pro Plan + Bundle Verify in 98-07 + Live in 98-07 | Variante (faktisch identisch zu Option 1) | |
+
+**User's choice:** Ein clean verify -Pe2e in 98-07, deckt 98-04 + 98-05 + 98-06 ab. Per Plan 98-04 SUMMARY-Direktive.
+
+### Q-98-09.2 — UAT-Re-Run-Scope
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| **Inkrementell: nur 5c + 14 + 15 + Smoke-Regression** | 30-45 min Operator-Aufwand | ✓ |
+| Voll: alle 13 Stages + 5c + 14 + 15 nochmal | ~2h Operator-Aufwand | |
+| Inkrementell + separate UAT-08b Sektion in STATE.md | Historische Immutabilität | |
+| Inkrementell + dokumentiert in 98-07-VALIDATION | Reference-Note in STATE.md | |
+
+**User's choice:** Inkrementell mit Smoke-Regression. STATE.md UAT-08 in-place edit (D-98-UAT-2), originaler PASS-Snapshot bleibt textuell unverändert, neue Stages 5c/14/15 werden APPENDED.
+
+## Claude's Discretion (Re-Open)
+
+- **Pairings-Grafik-Template Pixel-Werte** — Layout-Vorgaben aus operator-screenshot ableiten (gradient-Farben pro Team, vs-Emoji-Größe, :CTC:-Wasserzeichen-Position), per [[feedback-graphic-pixel-positioning]] pixelgenau übernehmen.
+- **Default-Template-Body** — Hardcoded Default für `discord_global_config.matchday_pairings_template` (Service-Initializer setzt es, wenn null/blank) basierend auf operator-screenshot 1 + Platzhalter-Markern.
+- **`pick_deadline` + `scheduled_weekend` Edit-Surface** — Inline-Edit auf Matchday-Detail-Page ODER neuer Endpoint `/admin/matchdays/{id}/discord-edit` (Planner-Discretion).
+- **Schedule-Grafik Team-Record-Format** — `W-L` vs `W-D-L` (Draws nicht-null-suppression Planner-Discretion).
+- **Schedule-Grafik Timezone-Display** — Hardcoded `Europe/London` mit BST/GMT-Auto-Suffix oder via SeasonConfig (Planner-Discretion; operator-screenshot zeigt `BST`).
+- **MATCHDAY_SCHEDULE enum-value-Position** — neuer Wert in `DiscordPostType.java` (Plan 98-06 fügt zwischen MATCH_PREVIEW und MATCHDAY_OVERVIEW oder am Ende der Liste ein).
+- **Stale-Check Implementation** — SQL-Aggregation live oder pre-computed `lastUpdatedAtVsPost` Field via Service-Aggregation.
+
+## Deferred Ideas (Re-Open)
+
+- **Auto-Edit-Hooks für Pairings + Schedule** — explicit rejected 2026-05-25, kann v1.14 mit operator-feedback re-evaluated werden.
+- **Per-Team-Header-Pairings-Grafik** (1 PNG pro Match statt 1 Aggregat-PNG) — verworfen wegen Discord-10-attachment-Limit.
+- **Touch-Target-44px-Regel auf `.btn`** — bleibt v1.14 DISC-FUTURE (carry-forward aus Phase-98-V1).
