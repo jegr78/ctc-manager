@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: UAT-08 PASS — Plan 98-04 (Schedule-embed layout polish) pending before /gsd-complete-milestone v1.13
-last_updated: "2026-05-25T13:05:00.000Z"
-last_activity: 2026-05-25 -- UAT-08 executed live against test guild (9 stages PASS + Re-Post-PATCH bonus); Schedule-Embed layout deferred to Plan 98-04
+stopped_at: UAT-08 PARTIAL — Match-Channel Stages 1–9 PASS; Season/Matchday Stages 10–14 + Plan 98-04 pending before /gsd-complete-milestone v1.13
+last_updated: "2026-05-25T13:10:00.000Z"
+last_activity: 2026-05-25 -- UAT-08 Stages 1–9 (match-channel lifecycle) PASS + Re-Post-PATCH bonus; Stages 10–14 (season/matchday-level posts) staged for separate live walkthrough
 progress:
   total_phases: 7
   completed_phases: 7
@@ -236,8 +236,8 @@ Post-merge self-resolving items (not tracked further):
   7. After `allMatchesFinal == true`, Post Match Results → multipart-POST with `match-results.png`; tweak a result + re-render and verify the button turns yellow ("Update Match Results").
   8. Open the Race-Result forum thread → confirm the race-result graphic landed (auto-unarchive if Discord archived it).
   9. Move-to-Archive via Modal → channel relocates under year-category.
-- **Status:** ✅ PASS — executed 2026-05-25 against live test guild `1507055541313208320` (bot app `1507053701427367966`).
-- **Result:** ✅ PASS — all 9 stages green, plus bonus Re-Post-PATCH verification (see § Bonus below). One in-milestone UI-polish item surfaced (Schedule-Embed-Layout — tracked in Deferred Items § ui_debt for Plan 98-04, MUST close before `/gsd-complete-milestone v1.13`).
+- **Status:** ⚠️ **PARTIAL PASS** — Stages 1–9 (Match-Channel Lifecycle per `discord-integration.md` § 7) executed 2026-05-25 against live test guild `1507055541313208320` (bot app `1507053701427367966`). **Stages 10–14 PENDING** — Season/Matchday-Level Posts (Match Preview, Matchday Schedule, Matchday Results, Power Rankings, Standings) require separate live walkthrough before `/gsd-complete-milestone v1.13`.
+- **Result:** ⚠️ Match-Channel-Lifecycle (Stages 1–9): **PASS** — all 9 stages green, plus bonus Re-Post-PATCH verification (see § Bonus below). Season/Matchday-Level Posts (Stages 10–14): **PENDING** — 5 post-types not yet live-verified (see § Pending Stages below). One in-milestone UI-polish item surfaced (Schedule-Embed-Layout — tracked in Deferred Items § ui_debt for Plan 98-04, MUST close before `/gsd-complete-milestone v1.13`).
 - **Date:** 2026-05-25 (10:15 – 11:01 UTC)
 - **Test setup:** Match `880eb32e` (ADR vs VRX A, Matchday 1 of season `cad632c4` "2026 | #4 | Regular Season"). Pre-staged: Schedule fields (Lobby Host `@uat-host`, RD `@uat-director`, Streamer `@uat-streamer`, Stream Link `https://twitch.tv/uat-test`, Teaser); Race-Settings (Track Suzuka Circuit, Car AMG — Mercedes-AMG GT3 '20, DateTime 2026-05-26T20:00, Settings imported from DevSeeder); Season-Pool seeded via `POST /admin/seasons/.../cars/add` + `.../tracks/add` (1 car + 1 track minimal). Forum threads linked via "Link existing Thread..." modal (Discord-API discovery auto-matched pinned threads: race-results `1507059154626416690`, standings `1507059367231356978`).
 - **Stage results:**
@@ -254,8 +254,15 @@ Post-merge self-resolving items (not tracked further):
   - **Re-Post-PATCH for all stateful post types** — SCHEDULE (JSON-embed, Stage 5b) AND PROVISIONAL_SCORES (multipart, Stage 6b) AND MATCH_RESULTS (multipart, Stage 7d) confirmed to PATCH the existing message rather than POSTing a new one. `postOrEdit` pattern (Phase 95 POST-01) is end-to-end verified for both content types.
   - **Stale-marker semantics** — Match Results button stale-flip is `lastModifiedAt`-based on the underlying RaceResult, not content-hash. Operator-friendly: any Save on results triggers the visual flag, even if the final aggregate is unchanged.
 - **In-milestone polish surfaced (tracked):** Schedule-Embed Layout asymmetry — see Deferred Items § ui_debt. Resolution: Plan 98-04 (Option A: all 4 fields `inline: false` per operator preference 2026-05-25).
-- **Screenshots:** `.screenshots/uat-08/00-test-connection.png` … `09-stage9-archive.png` (10 screenshots, gitignored locally).
+- **Screenshots:** `.screenshots/uat-08/00-test-connection.png` … `09-stage9-archive.png` (10 screenshots, gitignored locally; more to follow for Stages 10–14).
 - **Live Discord artifacts:** channel `md2-adr-vs-vrx-a` in `Match Days Archive 2026` category; thread `Saison 4 - 2026` in race-results forum.
+- **Pending Stages 10–14 (Season/Matchday-Level Posts):** UAT-08 § 7 in the runbook covers only the match-channel lifecycle. The five remaining post-types must be verified separately against live Discord before `/gsd-complete-milestone v1.13`:
+  - **Stage 10** — Match Preview (Phase 95 POST-04) → announcement webhook (channel `announcements`). Trigger: Match-Detail → "Post Match Preview".
+  - **Stage 11** — Matchday Schedule (Phase 97 POST-06) → announcement webhook. Trigger: Matchday-Detail → "Post Matchday Schedule".
+  - **Stage 12** — Matchday Results (Phase 97 POST-07a) → race-results forum thread `Saison 4 - 2026`. Trigger: Matchday-Detail → "Post Matchday Results".
+  - **Stage 13** — Power Rankings (Phase 97 POST-07b) → race-results forum thread. Trigger: Matchday-Detail (or Power-Rankings tool) → "Post Power Rankings".
+  - **Stage 14** — Standings (Phase 97 POST-08) → standings forum thread `2026`. Trigger: Season-Edit (or Standings page) → "Post Standings".
+  - Each stage to be live-clicked, log-verified (`Posted <TYPE>` line in `data/dev/logs/app.log`), and Discord-side-verified by operator. Stage entries with screenshots + messageIds to be appended to this UAT-08 block before final PASS-flip.
 
 ## Accumulated Context
 
