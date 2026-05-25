@@ -191,6 +191,41 @@
                 </form>
             </div>
         </div>
+
+        <div th:if="${matchdayAnnouncementActive}" class="detail-section mt-lg">
+            <h2>Discord Announcements</h2>
+            <div class="discord-pairings-meta">
+                <p><strong>Pick Deadline:</strong>
+                    <span th:text="${matchday.pickDeadline != null ? #temporals.format(matchday.pickDeadline, 'EEE, dd MMM yyyy HH:mm') : '— not set —'}"></span>
+                </p>
+                <p><strong>Scheduled Weekend:</strong>
+                    <span th:text="${matchday.scheduledWeekend != null and !matchday.scheduledWeekend.isEmpty() ? matchday.scheduledWeekend : '— not set —'}"></span>
+                </p>
+                <a th:href="@{/admin/matchdays/{id}/edit-pairings(id=${matchday.id})}"
+                   class="btn btn-secondary btn-sm"
+                   data-testid="edit-pairings">Edit Pairings</a>
+            </div>
+            <div class="discord-actions discord-actions--posts mt-md">
+                <span th:if="${not canPostMatchdayPairings and matchdayPairingsPost == null}"
+                      class="btn btn-secondary btn-sm disabled"
+                      data-testid="post-matchday-pairings-disabled"
+                      th:title="${matchdayPairingsDisabledReason}">Post Matchday Pairings</span>
+                <form th:if="${canPostMatchdayPairings and matchdayPairingsPost == null}"
+                      th:action="@{/admin/matchdays/{id}/post-matchday-pairings(id=${matchday.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-matchday-pairings">
+                        Post Matchday Pairings
+                    </button>
+                </form>
+                <form th:if="${matchdayPairingsPost != null}"
+                      th:action="@{/admin/matchdays/{id}/post-matchday-pairings(id=${matchday.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-secondary btn-sm"
+                            th:attr="data-testid=${matchdayPairingsStale ? 'update-matchday-pairings' : 'repost-matchday-pairings'},title=${matchdayPairingsStale ? 'Matchday has been edited since last post' : null}"
+                            th:text="${matchdayPairingsStale ? 'Update Matchday Pairings' : 'Re-Post Matchday Pairings'}"></button>
+                </form>
+            </div>
+        </div>
     </div>
 </section>
 </body>
