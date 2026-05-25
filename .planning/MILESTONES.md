@@ -2,10 +2,10 @@
 
 ## v1.13 Discord Integration & Carry-Forwards (Shipped: <YYYY-MM-DD>)
 
-**Phases completed:** 7 phases (92-98), 24 plans, 25/25 requirements satisfied
-**Tests:** 1218 surefire + 556 failsafe (Surefire + Failsafe + Playwright E2E) — 1774 total, all green; JaCoCo line coverage 88.71 % (gate 82 %, v1.12 baseline 88.44 %, Δ +0.27 pp)
-**Timeline:** 6 days (2026-05-20 → <end>)
-**Branch:** `gsd/v1.13-discord-integration` (PR #<num>)
+**Phases completed:** 7 phases (92-98), 27 plans (incl. 3 added in 2026-05-25 re-open: 98-05/06/07), 27/27 requirements satisfied
+**Tests:** 1635 surefire + 609 failsafe (494 IT + 115 Playwright E2E) — **2244 total**, all green; JaCoCo line coverage **88.99 %** (gate 82 %, Phase-92 baseline 88.88 %, Δ +0.11 pp; v1.12 baseline 88.44 %, Δ +0.55 pp)
+**Timeline:** 6 days (2026-05-20 → 2026-05-25)
+**Branch:** `gsd/v1.13-discord-integration` (PR #130)
 **Final-gate CI:** TBA (lands post-`/gsd-complete-milestone v1.13` + squash-merge); SpotBugs 0 BugInstance; CodeQL gate-step exit 0
 **Audit verdict:** TBA (`v1.13-MILESTONE-AUDIT.md` lands post-`/gsd-complete-milestone v1.13`); Nyquist scoreboard 7/0/0 (Phases 92-98)
 
@@ -17,7 +17,7 @@
 - Phase 95 — Match Channel Posts: POST-01 Flyway V11 discord_post + DiscordPostService.postOrEdit + /admin/discord/posts listing; POST-02 Team Cards; POST-03 Settings + Lineups; POST-04 Match Results with stale-detection; POST-05 Schedule embed with auto-edit
 - Phase 96 — Provisional Graphic + Forum Threads: GRAFX-01 ProvisionalScoresGraphicService; FORUM-01 Flyway V12 seasons.discord_*_thread_id + Link-existing-Thread modal; FORUM-02 race-result forum-thread post with `?thread_id=` and auto-unarchive
 - Phase 97 — Matchday-Level Posts: POST-06 Match Preview Announcement with auto-edit hook on streamLink/teaser change; POST-07a Match Day Results + POST-07b Power Rankings on Matchday-Detail; POST-08 phase-aware Standings + StandingsGraphicService + V14 phase_id FK migration
-- Phase 98 — Polish + E2E + Docs + Close: E2E-01 DiscordFullMatchdayLifecycleE2ETest (8-stage Mega-Walkthrough, WireMock-backed); DOCS-02 operator runbook expanded with §§ 1.9 / 2.3 / 6 / 7 + 8 app-UI screenshots; DOCS-03 README + Wiki + MILESTONES + REQUIREMENTS + STATE pre-merge bookkeeping; mobile-viewport `.card` overflow fix (ROADMAP Erfolgskrit 6) including in-milestone polish on `.inline-form` + `.card > table` overflow
+- Phase 98 — Polish + E2E + Docs + Close (7 plans total — 98-01..98-07): E2E-01 DiscordFullMatchdayLifecycleE2ETest (8-stage Mega-Walkthrough, WireMock-backed); DOCS-02 operator runbook expanded with §§ 1.9 / 2.3 / 6 / 7 + 8 app-UI screenshots + UAT Stages 14+15 procedure; DOCS-03 README + Wiki + MILESTONES + REQUIREMENTS + STATE pre-merge bookkeeping; mobile-viewport `.card` overflow fix (ROADMAP Erfolgskrit 6) including in-milestone polish on `.inline-form` + `.card > table` overflow; Plan 98-04 Schedule-Embed `inline:false` layout polish (Deferred Items § ui_debt closed); **Plan 98-05 POST-09 MATCHDAY_PAIRINGS** hybrid Markdown+PNG on Announcement-Channel (Flyway V15 pick_deadline + scheduled_weekend + template field, `{{ctcEmoji}}` resolution via DiscordEmojiCache long-form, operator-driven Re-Post + Update); **Plan 98-06 POST-10 MATCHDAY_SCHEDULE** pure-multipart PNG sibling button (no schema migration, MAX(match,race) stale-detection, operator-driven, no AFTER_COMMIT hook per D-98-AUTO-1); **Plan 98-07** Bundle-Verify + Live-UAT-Re-Run (Stages 5c+14+15 PASS, all same-messageId PATCH verified) + REQUIREMENTS/ROADMAP/MILESTONES/STATE/runbook pre-merge bookkeeping
 
 **Deferred to next milestone (acknowledged at close):**
 
