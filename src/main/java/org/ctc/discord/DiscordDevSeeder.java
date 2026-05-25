@@ -41,6 +41,10 @@ public class DiscordDevSeeder {
 			return;
 		}
 		DiscordGlobalConfig cfg = configService.getOrInitialize();
+		if (cfg == null) {
+			log.warn("Discord dev-seed: configService returned null — skipping (test mock?)");
+			return;
+		}
 		boolean templateBackfilled = backfillDefaultTemplates(cfg);
 		if (!properties.hasGuildId()) {
 			log.info("Discord dev-seed: no guild-id configured — skipping (set DISCORD_DEV_GUILD_ID to enable)");
