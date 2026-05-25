@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Phase 98 closed — UAT-08 staged
-last_updated: "2026-05-25T11:30:00.000Z"
-last_activity: 2026-05-25 -- Phase 98 Plans 98-01/02/03 committed; UAT-08 staged
+stopped_at: UAT-08 PASS — Plan 98-04 (Schedule-embed layout polish) pending before /gsd-complete-milestone v1.13
+last_updated: "2026-05-25T13:05:00.000Z"
+last_activity: 2026-05-25 -- UAT-08 executed live against test guild (9 stages PASS + Re-Post-PATCH bonus); Schedule-Embed layout deferred to Plan 98-04
 progress:
   total_phases: 7
   completed_phases: 7
@@ -85,6 +85,7 @@ Items carried forward into v1.13 (from v1.12 audit + post-merge follow-ups) — 
 | uat | UX-01 visual UAT — 4 error-category badges × Desktop + Mobile (8 Playwright screenshots) | post-deploy operator action (procedure 91-02-SUMMARY.md § Manual UAT) |
 | uat | UAT-03 Live-Discord UAT — `Test Connection` button drives a real Discord `GET /users/@me` against a live `DISCORD_BOT_TOKEN` + test guild; WireMock ITs cover the happy + 4-permit exception paths but cannot prove the actual Discord-API contract | ✅ Resolved 2026-05-21 — all 4 buttons pass on dev profile against the operator's live test bot (procedure `docs/operations/discord-integration.md` § 4); see § Pending UATs UAT-03 for full result detail |
 | ui_debt | Discord-Config page mobile-viewport overflow — at 375 px the form inputs + the 4-button bar in "Connection & cache tests" extend beyond the visible area; horizontal scroll required to reach `Refresh Server Roles` / `Refresh Emoji Cache`. Surfaced during UAT-03 mobile sweep 2026-05-21. Functionality is intact (the underlying typed-catch + flash wiring works on mobile); only the responsive-layout polish is missing. Plan 94-01 shipped `.discord-actions` flex-wrap cluster which closes the BUTTON-BAR overflow, but the `.card` container itself still overflows horizontally at 375 px on `/admin/discord-config` AND on `/admin/teams/{id}/edit` (confirmed in `.screenshots/94-01/discord-config-mobile.png` + `team-form-mobile-cold.png` 2026-05-21). | **Within v1.13 — must NOT defer to v1.14.** Target Phase 98 (Polish + E2E + Docs + Close) — single CSS sweep on the shared `.card` / `.form-group` containers benefits all Discord-touching pages (94 + 95 + 96 + 97). Confirmed user requirement 2026-05-21 wave-pause: "muss noch innerhalb des Meilensteins" |
+| ui_debt | Schedule-Embed layout asymmetry — POST-04 SCHEDULE Discord embed renders 4 fields (Date / Lobby Host / Race Director / Streamer) with `inline: true`, so Discord packs 3 fields into row 1 and the 4th into row 2. Date is the widest value (`Tuesday, 26 May 2026 at 19:00 (in a day)`) — its width plus the short Lobby Host + Race Director values causes a visually "unrund" / asymmetric row 1. Surfaced during UAT-08 Stage 5 verification 2026-05-25 (operator preference: "pro Eintrag eine eigene Zeile"). Initial-post + auto-edit PATCH both functional — only the field-layout is the polish target. | **Within v1.13 — must NOT defer to v1.14.** Target Plan 98-04 (mini-polish bundle after UAT-08 closes): flip all 4 fields in the SCHEDULE embed builder to `inline: false` → one field per row (Option A per operator choice 2026-05-25). Verify via Re-Post Schedule auto-edit (no new message, same `messageId`). Estimated <30 min including verify. |
 
 Post-merge self-resolving items (not tracked further):
 
@@ -235,10 +236,26 @@ Post-merge self-resolving items (not tracked further):
   7. After `allMatchesFinal == true`, Post Match Results → multipart-POST with `match-results.png`; tweak a result + re-render and verify the button turns yellow ("Update Match Results").
   8. Open the Race-Result forum thread → confirm the race-result graphic landed (auto-unarchive if Discord archived it).
   9. Move-to-Archive via Modal → channel relocates under year-category.
-- **Status:** pending operator action — **required before `/gsd-complete-milestone v1.13`** (per CONTEXT D-98-E2E-9).
-- **Result:** _(operator fills after execution)_
-- **Date:** _(operator fills)_
-- **Screenshots:** `.screenshots/uat-08/` (gitignored locally).
+- **Status:** ✅ PASS — executed 2026-05-25 against live test guild `1507055541313208320` (bot app `1507053701427367966`).
+- **Result:** ✅ PASS — all 9 stages green, plus bonus Re-Post-PATCH verification (see § Bonus below). One in-milestone UI-polish item surfaced (Schedule-Embed-Layout — tracked in Deferred Items § ui_debt for Plan 98-04, MUST close before `/gsd-complete-milestone v1.13`).
+- **Date:** 2026-05-25 (10:15 – 11:01 UTC)
+- **Test setup:** Match `880eb32e` (ADR vs VRX A, Matchday 1 of season `cad632c4` "2026 | #4 | Regular Season"). Pre-staged: Schedule fields (Lobby Host `@uat-host`, RD `@uat-director`, Streamer `@uat-streamer`, Stream Link `https://twitch.tv/uat-test`, Teaser); Race-Settings (Track Suzuka Circuit, Car AMG — Mercedes-AMG GT3 '20, DateTime 2026-05-26T20:00, Settings imported from DevSeeder); Season-Pool seeded via `POST /admin/seasons/.../cars/add` + `.../tracks/add` (1 car + 1 track minimal). Forum threads linked via "Link existing Thread..." modal (Discord-API discovery auto-matched pinned threads: race-results `1507059154626416690`, standings `1507059367231356978`).
+- **Stage results:**
+  - **Stage 1** ✅ Channel `md2-adr-vs-vrx-a` (id `1508414873455820800`) created in category `1507055787225124924`; webhook auto-created; permission-overwrite audit passed (only ADR + VRX roles + bot user-overwrite + server owner; `@everyone` View Channel = red X — opposing teams blind, T-93-03 mitigation verified).
+  - **Stage 2** ✅ Team Cards (2 PNGs ADR + VRX A) auto-posted by `@TransactionalEventListener AFTER_COMMIT` hook on channel create (Phase-97 fix); `Posted TEAM_CARDS messageId=1508414877310648460`.
+  - **Stage 3** ✅ Settings PNG (Suzuka + AMG GT3 '20 + all race-settings) posted; `Posted SETTINGS messageId=1508417767294894152`. Button flipped to "Re-Post Settings".
+  - **Stage 4** ✅ Lineups PNG (6 driver slots per team from DevSeeder) posted; `Posted LINEUPS messageId=1508418160116764765`.
+  - **Stage 5** ✅ Schedule JSON-embed posted (`Posted SCHEDULE messageId=1508418568407224370`); Match-Edit Race Director `@uat-director` → `@uat-director-v2` + Save triggered `Edited SCHEDULE messageId=1508418568407224370` — **same `messageId`** confirms PATCH not POST. Discord shows `(edited)` marker; Date renders as `<t:N:F>` ("Tuesday, 26 May 2026 at 19:00 (in a day)" — Discord auto-formats per-viewer-timezone from London-stored value).
+  - **Stage 6** ✅ Provisional Scores PNG posted; `Posted PROVISIONAL_SCORES messageId=1508420351611375821`. **Bonus:** Re-Post Provisional Scores clicked → `Edited PROVISIONAL_SCORES messageId=1508420351611375821` (same id) — confirms **multipart-attachment PATCH** works (`postOrEdit` pattern complete for both JSON embeds AND multipart files). Discord `(edited)` marker on image-message.
+  - **Stage 7** ✅ Initial: `Posted MATCH_RESULTS messageId=1508421649714774110` (match-results.png with 2 cards: aggregate 65:51 + per-driver scorecard). Tweak (POS 1↔2 swap on ADR_Driver01 ↔ VRX_Driver01) → button flipped to **"Update Match Results"** (lighter background = stale indicator). Revert (POS swapped back) → button stayed "Update Match Results" — confirms **stale-marker is `lastModifiedAt`-based**, not content-hash (deterministic + cheap). Update-click triggered `Edited MATCH_RESULTS messageId=1508421649714774110` (same id), button reverted to grey "Re-Post Match Results".
+  - **Stage 8** ✅ Race-Result Forum-Post posted to thread `Saison 4 - 2026` (id `1507059154626416690`) via separate webhook identity "CTC Results APP" (vs match-channel webhook "CTC Manager APP" — confirms per-use-case webhook identity per Phase 96 FORUM-02). `Posted RACE_RESULTS messageId=1508424185222004828`. Auto-unarchive not triggered (thread was not archived); code path is unit-test-covered via `DiscordFullMatchdayLifecycleE2ETest.step7` with `stubFetchChannelNotArchived` stub.
+  - **Stage 9** ✅ Move-to-Archive Modal showed single year-filtered option "Match Days Archive 2026 — 0/50" (pre-checked); Confirm relocated channel `1508414873455820800` to year-archive category; UI shows new pill **"Archived 2026-05-25 11:01"** + all post-buttons grey-disabled. Discord-side: channel moved from "Match Days" → "Match Days Archive 2026" with all 6+ messages intact (PATCH on `parent_id`, no recreate).
+- **Bonus verifications beyond spec:**
+  - **Re-Post-PATCH for all stateful post types** — SCHEDULE (JSON-embed, Stage 5b) AND PROVISIONAL_SCORES (multipart, Stage 6b) AND MATCH_RESULTS (multipart, Stage 7d) confirmed to PATCH the existing message rather than POSTing a new one. `postOrEdit` pattern (Phase 95 POST-01) is end-to-end verified for both content types.
+  - **Stale-marker semantics** — Match Results button stale-flip is `lastModifiedAt`-based on the underlying RaceResult, not content-hash. Operator-friendly: any Save on results triggers the visual flag, even if the final aggregate is unchanged.
+- **In-milestone polish surfaced (tracked):** Schedule-Embed Layout asymmetry — see Deferred Items § ui_debt. Resolution: Plan 98-04 (Option A: all 4 fields `inline: false` per operator preference 2026-05-25).
+- **Screenshots:** `.screenshots/uat-08/00-test-connection.png` … `09-stage9-archive.png` (10 screenshots, gitignored locally).
+- **Live Discord artifacts:** channel `md2-adr-vs-vrx-a` in `Match Days Archive 2026` category; thread `Saison 4 - 2026` in race-results forum.
 
 ## Accumulated Context
 
