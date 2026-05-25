@@ -10,7 +10,6 @@ import org.ctc.discord.dto.ChannelCreateRequest;
 import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.dto.Role;
 import org.ctc.discord.dto.Thread;
-import org.ctc.discord.dto.ThreadCreateRequest;
 import org.ctc.discord.dto.Webhook;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
@@ -105,15 +104,6 @@ public class DiscordRestClient {
 				.retrieve()
 				.body(ThreadList.class));
 		return result == null ? List.of() : result.threads();
-	}
-
-	public Thread createThread(String channelId, ThreadCreateRequest request) throws DiscordApiException {
-		return execute(() -> bot.post()
-				.uri("/channels/{channelId}/threads", channelId)
-				.contentType(MediaType.APPLICATION_JSON)
-				.body(request)
-				.retrieve()
-				.body(Thread.class));
 	}
 
 	public Webhook createWebhook(String channelId, String name) throws DiscordApiException {

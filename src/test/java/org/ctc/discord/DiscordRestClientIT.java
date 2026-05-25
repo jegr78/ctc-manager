@@ -21,7 +21,6 @@ import org.ctc.discord.dto.ChannelCreateRequest;
 import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.dto.Role;
 import org.ctc.discord.dto.Thread;
-import org.ctc.discord.dto.ThreadCreateRequest;
 import org.ctc.discord.dto.Webhook;
 import org.ctc.discord.exception.DiscordAuthException;
 import org.ctc.discord.exception.DiscordCategoryFullException;
@@ -144,16 +143,6 @@ class DiscordRestClientIT {
 		var threads = client.listArchivedThreads("f1");
 
 		assertThat(threads).extracting(Thread::name).containsExactly("old-forum");
-	}
-
-	@Test
-	void given200_whenCreateThread_thenReturnsThread() throws Exception {
-		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/f1/threads"))
-				.willReturn(okJson("{\"id\":\"t100\",\"name\":\"matchday-1\",\"parent_id\":\"f1\"}")));
-
-		Thread th = client.createThread("f1", new ThreadCreateRequest("matchday-1", 11));
-
-		assertThat(th.id()).isEqualTo("t100");
 	}
 
 	@Test
