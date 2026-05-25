@@ -28,6 +28,12 @@
 - **Race Attachments** — Upload files or link external resources to races
 - **Docker** — Local development and production deployment with MariaDB
 - **Backup & Restore** — Export a full ZIP backup of all 24 entity tables; restore via a preview-and-confirm import flow with schema-version locking
+- **Discord Integration** — Per-match Discord channels with 11 structured posts (team cards, settings, lineups, schedule, results, match preview, matchday overview, power rankings, standings), forum-thread linking for race-results + standings, auto-edit on schedule/preview changes, pre-flight gates and stale-detection signals. See [Discord Integration wiki page](../../wiki/Discord-Integration) and [`docs/operations/discord-integration.md`](docs/operations/discord-integration.md).
+
+> **Note (v1.13):** Per-match Discord channels with structured posting workflows are now available
+> under `/admin/matches/{id}`. Operator setup (bot registration, OAuth permissions, token wiring,
+> forum-channel + thread setup, daily operations, troubleshooting) is documented in
+> [`docs/operations/discord-integration.md`](docs/operations/discord-integration.md).
 
 ## Backup & Restore
 

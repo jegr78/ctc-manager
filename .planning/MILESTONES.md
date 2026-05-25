@@ -1,5 +1,41 @@
 # Milestones
 
+## v1.13 Discord Integration & Carry-Forwards (Shipped: <YYYY-MM-DD>)
+
+**Phases completed:** 7 phases (92-98), 24 plans, 25/25 requirements satisfied
+**Tests:** 1218 surefire + 556 failsafe (Surefire + Failsafe + Playwright E2E) — 1774 total, all green; JaCoCo line coverage 88.71 % (gate 82 %, v1.12 baseline 88.44 %, Δ +0.27 pp)
+**Timeline:** 6 days (2026-05-20 → <end>)
+**Branch:** `gsd/v1.13-discord-integration` (PR #<num>)
+**Final-gate CI:** TBA (lands post-`/gsd-complete-milestone v1.13` + squash-merge); SpotBugs 0 BugInstance; CodeQL gate-step exit 0
+**Audit verdict:** TBA (`v1.13-MILESTONE-AUDIT.md` lands post-`/gsd-complete-milestone v1.13`); Nyquist scoreboard 7/0/0 (Phases 92-98)
+
+**Key accomplishments:**
+
+- Phase 92 — Carry-Forwards & Cleanup: UX-01 typed-catch parity on CsvImportController; COV-01 JaCoCo recovery to 88.88 %; CLEAN-01 grep-predicate tightening; DOCS-01 retroactive 89/90/91-VERIFICATION.md; BOOK-01 v1.12-REQUIREMENTS.md flip
+- Phase 93 — Discord Foundation: DiscordRestClient + DiscordWebhookClient + sealed DiscordApiException (4 permits) + DiscordRateLimitInterceptor + DiscordEmojiCache + Flyway V8 discord_global_config + /admin/discord-config (4 test buttons)
+- Phase 94 — Team Roles + Match Channel Lifecycle: CHAN-01 Flyway V9 teams.discord_role_id; CHAN-02 Flyway V10 matches.discord_* + Create-Channel button + permission-audit; CHAN-03 Archive-Modal with year-category regex + 50-channel limit
+- Phase 95 — Match Channel Posts: POST-01 Flyway V11 discord_post + DiscordPostService.postOrEdit + /admin/discord/posts listing; POST-02 Team Cards; POST-03 Settings + Lineups; POST-04 Match Results with stale-detection; POST-05 Schedule embed with auto-edit
+- Phase 96 — Provisional Graphic + Forum Threads: GRAFX-01 ProvisionalScoresGraphicService; FORUM-01 Flyway V12 seasons.discord_*_thread_id + Link-existing-Thread modal; FORUM-02 race-result forum-thread post with `?thread_id=` and auto-unarchive
+- Phase 97 — Matchday-Level Posts: POST-06 Match Preview Announcement with auto-edit hook on streamLink/teaser change; POST-07a Match Day Results + POST-07b Power Rankings on Matchday-Detail; POST-08 phase-aware Standings + StandingsGraphicService + V14 phase_id FK migration
+- Phase 98 — Polish + E2E + Docs + Close: E2E-01 DiscordFullMatchdayLifecycleE2ETest (8-stage Mega-Walkthrough, WireMock-backed); DOCS-02 operator runbook expanded with §§ 1.9 / 2.3 / 6 / 7 + 8 app-UI screenshots; DOCS-03 README + Wiki + MILESTONES + REQUIREMENTS + STATE pre-merge bookkeeping; mobile-viewport `.card` overflow fix (ROADMAP Erfolgskrit 6) including in-milestone polish on `.inline-form` + `.card > table` overflow
+
+**Deferred to next milestone (acknowledged at close):**
+
+- Touch-Target 44 px Audit on `.btn` (CLAUDE.md UI polish; affects 100+ button callsites — too broad for v1.13 polish-sweep)
+- 429-rate-limit-path in Mega-Walkthrough E2E (Phase-93 DiscordRateLimitInterceptorIT already covers; DISC-FUTURE ticket if operator-use-case pressure)
+- Discord-Setup-Walkthrough.md Wiki-Subseite with annotated portal screenshots (v1.13 scope: text-only portal steps; v1.14 if operator wants portal screenshots)
+- Race.dateTime-Trigger for SCHEDULE-Auto-Edit + MATCH_PREVIEW-Auto-Edit (Phase-95 D-95-04a + Phase-97 D-97-PREV-1a deferral)
+- K-von-N Settings/Lineups-Posting (Phase-95 deferred)
+- /admin/discord/posts Bulk-Re-Post-Button (Phase-95 deferred)
+
+**Post-merge self-resolving (not tech debt):**
+
+- v1.13 milestone PR squash-merge to master (CI release workflow handles `v1.13.0` tag + GitHub Release + Docker images — no local `git tag` per CLAUDE.md "No Local Git Tags")
+
+Known deferred items at close: see `STATE.md` Deferred Items + `v1.13-MILESTONE-AUDIT.md` (lands post-`/gsd-complete-milestone v1.13`).
+
+---
+
 ## v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (Shipped: 2026-05-20)
 
 **Phases completed:** 0 phases, 0 plans, 0 tasks

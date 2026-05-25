@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Phase 98 context gathered
-last_updated: "2026-05-24T21:06:54.376Z"
-last_activity: 2026-05-24 -- Phase 98 planning complete
+stopped_at: Phase 98 closed — UAT-08 staged
+last_updated: "2026-05-25T11:30:00.000Z"
+last_activity: 2026-05-25 -- Phase 98 Plans 98-01/02/03 committed; UAT-08 staged
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 24
-  completed_plans: 21
-  percent: 86
+  completed_plans: 24
+  percent: 100
 ---
 
 # Project State
@@ -221,6 +221,24 @@ Post-merge self-resolving items (not tracked further):
   6. `24704d92` — `scripts/app.sh` profile-aware (`data/app-{profile}.pid` statt `target/app.pid`, `--all` flag, orphan-detection) + `LegacyMigratedSeasonE2ETest` Selector-Update auf chip-list
   7. `a59d1c99` — Match-Dropdown auf existing `.searchable-dropdown` typeahead (operator tippt `ADR` / `Matchday 3` zum Filtern)
 - **Plan-End reverify** on `a59d1c99`: 1807 Tests grün (Surefire 1218 + Failsafe 589), JaCoCo 88.60 %, SpotBugs 0, ~9:35 min.
+
+### UAT-08: Live Full-Matchday-Lifecycle (Phase 98 E2E-01 mirror — operator-driven)
+
+- **Pre-UAT-08** — Phase 98 Plans 98-01 / 98-02 / 98-03 committed; bot has operating cache on the operator's test guild; at least 1 spare match unposted; race-results + standings forum threads linked on the test season.
+- **Procedure** (9-stage walkthrough per `docs/operations/discord-integration.md § 7`):
+  1. Create Discord Channel for the test match → expect green badge + Channel-ID + Webhook auto-created.
+  2. Post Team Cards → multipart-POST with 2 PNGs lands in the new channel.
+  3. Post Settings → multipart-POST with N PNGs.
+  4. Post Lineups → multipart-POST with N PNGs.
+  5. Post Schedule → JSON-POST with Discord embed (Date `<t:N:F>` + Lobby Host / RD / Streamer). Edit one field + re-save and confirm the embed auto-edits in place.
+  6. Submit at least one race result → Post Provisional Scores → multipart-POST with N PNGs to the match channel.
+  7. After `allMatchesFinal == true`, Post Match Results → multipart-POST with `match-results.png`; tweak a result + re-render and verify the button turns yellow ("Update Match Results").
+  8. Open the Race-Result forum thread → confirm the race-result graphic landed (auto-unarchive if Discord archived it).
+  9. Move-to-Archive via Modal → channel relocates under year-category.
+- **Status:** pending operator action — **required before `/gsd-complete-milestone v1.13`** (per CONTEXT D-98-E2E-9).
+- **Result:** _(operator fills after execution)_
+- **Date:** _(operator fills)_
+- **Screenshots:** `.screenshots/uat-08/` (gitignored locally).
 
 ## Accumulated Context
 
