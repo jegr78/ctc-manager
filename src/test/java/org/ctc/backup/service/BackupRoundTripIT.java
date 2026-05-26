@@ -30,9 +30,18 @@ import org.ctc.backup.dto.BackupImportResult;
 import org.ctc.backup.schema.BackupManifest;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
+import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.model.DiscordPost;
+import org.ctc.discord.model.DiscordPostType;
+import org.ctc.discord.repository.DiscordGlobalConfigRepository;
+import org.ctc.discord.repository.DiscordPostRepository;
+import org.ctc.domain.model.Match;
+import org.ctc.domain.model.Matchday;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.SeasonDriver;
 import org.ctc.domain.model.Team;
+import org.ctc.domain.repository.MatchRepository;
+import org.ctc.domain.repository.MatchdayRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.SeasonDriverRepository;
 import org.ctc.domain.repository.TeamRepository;
@@ -124,6 +133,72 @@ class BackupRoundTripIT {
 	 * {@code IMPORT_BACKUPS_ROOT/<ts>/auto-backup-before-import.zip} when their
 	 * {@code Instant.now().truncatedTo(SECONDS)} timestamps land in the same second.
 	 */
+	/**
+	 * Seeds a deterministic Discord fixture (1 {@link DiscordGlobalConfig} + 3
+	 * {@link DiscordPost} rows spanning 3 post types). Used by the D-16 byte-equality
+	 * tests in both {@code @Nested} classes. The {@code DiscordGlobalConfig} row is
+	 * loaded-or-created with an explicit null-guard because the prior test's wipe-and-restore
+	 * may have removed the V8 Flyway seed row before this {@code @BeforeEach} fixture seed
+	 * runs.
+	 */
+	static void seedDiscordFixture(
+			DiscordGlobalConfigRepository discordCfgRepo,
+			DiscordPostRepository discordPostRepo,
+			MatchRepository matchRepo,
+			MatchdayRepository matchdayRepo) {
+		Match anchorMatch = matchRepo.findAll(Sort.by(Sort.Order.asc("id"))).get(0);
+		Matchday anchorMatchday = matchdayRepo.findAll(Sort.by(Sort.Order.asc("id"))).get(0);
+
+		DiscordGlobalConfig cfg = discordCfgRepo.findFirstByOrderByIdAsc();
+		if (cfg == null) {
+			cfg = new DiscordGlobalConfig();
+		}
+		cfg.setGuildId("T-guild-101-123456789");
+		cfg.setAnnouncementWebhookUrl("https://discord.com/api/webhooks/T-101/ann");
+		cfg.setRaceResultsForumChannelId("T-forum-rr-101");
+		cfg.setStandingsForumChannelId("T-forum-st-101");
+		cfg.setRaceResultsForumWebhookUrl("https://discord.com/api/webhooks/T-101/rr");
+		cfg.setStandingsForumWebhookUrl("https://discord.com/api/webhooks/T-101/st");
+		cfg.setVsEmojiName("T-CTC-101");
+		cfg.setBotApplicationId("T-bot-101");
+		cfg.setCurrentMatchCategoryId("T-cat-101");
+		cfg.setMatchdayPairingsTemplate("T-Pairings template 101");
+		discordCfgRepo.save(cfg);
+
+		discordPostRepo.deleteAll();
+
+		java.time.LocalDateTime postedAt = java.time.LocalDateTime.parse("2026-05-25T12:00:00");
+		DiscordPost post1 = new DiscordPost();
+		post1.setChannelId("T-ch-101-a");
+		post1.setMessageId("T-msg-a");
+		post1.setWebhookId("T-wh-a");
+		post1.setWebhookToken("T-token-a-0123456789abcdef");
+		post1.setPostType(DiscordPostType.TEAM_CARDS);
+		post1.setMatchId(anchorMatch.getId());
+		post1.setPostedAt(postedAt);
+		discordPostRepo.save(post1);
+
+		DiscordPost post2 = new DiscordPost();
+		post2.setChannelId("T-ch-101-b");
+		post2.setMessageId("T-msg-b");
+		post2.setWebhookId("T-wh-b");
+		post2.setWebhookToken("T-token-b-0123456789abcdef");
+		post2.setPostType(DiscordPostType.SCHEDULE);
+		post2.setPostedAt(postedAt);
+		post2.setAttachmentsReplacedAt(java.time.LocalDateTime.parse("2026-05-25T11:00:00"));
+		discordPostRepo.save(post2);
+
+		DiscordPost post3 = new DiscordPost();
+		post3.setChannelId("T-ch-101-c");
+		post3.setMessageId("T-msg-c");
+		post3.setWebhookId("T-wh-c");
+		post3.setWebhookToken("T-token-c-0123456789abcdef");
+		post3.setPostType(DiscordPostType.MATCHDAY_PAIRINGS);
+		post3.setMatchdayId(anchorMatchday.getId());
+		post3.setPostedAt(postedAt);
+		discordPostRepo.save(post3);
+	}
+
 	static void cleanDirContents(Path dir) throws IOException {
 		if (!Files.exists(dir)) {
 			return;
@@ -309,6 +384,18 @@ class BackupRoundTripIT {
 		@Autowired
 		DataImportAuditRepository dataImportAuditRepository;
 
+		@Autowired
+		DiscordGlobalConfigRepository discordGlobalConfigRepository;
+
+		@Autowired
+		DiscordPostRepository discordPostRepository;
+
+		@Autowired
+		MatchRepository matchRepository;
+
+		@Autowired
+		MatchdayRepository matchdayRepository;
+
 		@Value("${app.backup.staging-dir}")
 		String stagingDirRaw;
 
@@ -425,6 +512,43 @@ class BackupRoundTripIT {
 						.as("row-count parity for table=" + ref.tableName())
 						.isEqualTo(preCounts.get(ref.tableName()));
 			}
+		}
+
+		@Test
+		void givenSeededDiscord_whenExportAndImport_thenDiscordGlobalConfigAndPostByteEqual()
+				throws Exception {
+			// given — seed a deterministic Discord fixture and capture pre-export SHA-256
+			seedDiscordFixture(discordGlobalConfigRepository, discordPostRepository,
+					matchRepository, matchdayRepository);
+			byte[] preCfgJson = backupObjectMapper.writeValueAsBytes(
+					discordGlobalConfigRepository.findAll(Sort.by(Sort.Order.asc("id"))));
+			byte[] prePostJson = backupObjectMapper.writeValueAsBytes(
+					discordPostRepository.findAll(Sort.by(Sort.Order.asc("id"))));
+			byte[] preCfgHash = MessageDigest.getInstance("SHA-256").digest(preCfgJson);
+			byte[] prePostHash = MessageDigest.getInstance("SHA-256").digest(prePostJson);
+
+			// when
+			byte[] zipBytes = exportToBytes();
+			MockMultipartFile file = new MockMultipartFile(
+					"file", "h2-discord-byte-equal-export.zip", "application/zip", zipBytes);
+			BackupImportPreview preview = backupImportService.stage(file);
+			backupImportService.execute(preview.stagingId());
+
+			// then — SHA-256 byte-equality on DiscordGlobalConfig + DiscordPost
+			byte[] postCfgJson = backupObjectMapper.writeValueAsBytes(
+					discordGlobalConfigRepository.findAll(Sort.by(Sort.Order.asc("id"))));
+			byte[] postPostJson = backupObjectMapper.writeValueAsBytes(
+					discordPostRepository.findAll(Sort.by(Sort.Order.asc("id"))));
+			assertThat(MessageDigest.getInstance("SHA-256").digest(postCfgJson))
+					.as("DiscordGlobalConfig byte-equal after H2 round-trip\npre=%s\npost=%s",
+							HexFormat.of().formatHex(preCfgHash),
+							HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(postCfgJson)))
+					.containsExactly(preCfgHash);
+			assertThat(MessageDigest.getInstance("SHA-256").digest(postPostJson))
+					.as("DiscordPost byte-equal after H2 round-trip\npre=%s\npost=%s",
+							HexFormat.of().formatHex(prePostHash),
+							HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(postPostJson)))
+					.containsExactly(prePostHash);
 		}
 
 		// -------------------------------------------------------------------------
@@ -566,6 +690,18 @@ class BackupRoundTripIT {
 		@Autowired
 		DataImportAuditRepository dataImportAuditRepository;
 
+		@Autowired
+		DiscordGlobalConfigRepository discordGlobalConfigRepository;
+
+		@Autowired
+		DiscordPostRepository discordPostRepository;
+
+		@Autowired
+		MatchRepository matchRepository;
+
+		@Autowired
+		MatchdayRepository matchdayRepository;
+
 		@Value("${app.backup.staging-dir}")
 		String stagingDirRaw;
 
@@ -581,6 +717,41 @@ class BackupRoundTripIT {
 		@AfterEach
 		void cleanImportBackupsRoot() throws IOException {
 			cleanDirContents(IMPORT_BACKUPS_ROOT);
+		}
+
+		@Test
+		void givenSeededDiscord_whenExportAndImport_thenDiscordGlobalConfigAndPostByteEqual()
+				throws Exception {
+			// given — seed a deterministic Discord fixture and capture pre-export SHA-256
+			seedDiscordFixture(discordGlobalConfigRepository, discordPostRepository,
+					matchRepository, matchdayRepository);
+			byte[] preCfgJson = backupObjectMapper.writeValueAsBytes(
+					discordGlobalConfigRepository.findAll(Sort.by(Sort.Order.asc("id"))));
+			byte[] prePostJson = backupObjectMapper.writeValueAsBytes(
+					discordPostRepository.findAll(Sort.by(Sort.Order.asc("id"))));
+			byte[] preCfgHash = MessageDigest.getInstance("SHA-256").digest(preCfgJson);
+			byte[] prePostHash = MessageDigest.getInstance("SHA-256").digest(prePostJson);
+
+			// when
+			byte[] zipBytes = exportToBytes();
+			MockMultipartFile file = new MockMultipartFile(
+					"file", "mariadb-discord-byte-equal-export.zip", "application/zip", zipBytes);
+			BackupImportPreview preview = backupImportService.stage(file);
+			backupImportService.execute(preview.stagingId());
+
+			// then — SHA-256 byte-equality on DiscordGlobalConfig + DiscordPost
+			byte[] postCfgJson = backupObjectMapper.writeValueAsBytes(
+					discordGlobalConfigRepository.findAll(Sort.by(Sort.Order.asc("id"))));
+			byte[] postPostJson = backupObjectMapper.writeValueAsBytes(
+					discordPostRepository.findAll(Sort.by(Sort.Order.asc("id"))));
+			assertThat(MessageDigest.getInstance("SHA-256").digest(postCfgJson))
+					.as("DiscordGlobalConfig byte-equal after MariaDB round-trip\npre=%s",
+							HexFormat.of().formatHex(preCfgHash))
+					.containsExactly(preCfgHash);
+			assertThat(MessageDigest.getInstance("SHA-256").digest(postPostJson))
+					.as("DiscordPost byte-equal after MariaDB round-trip\npre=%s",
+							HexFormat.of().formatHex(prePostHash))
+					.containsExactly(prePostHash);
 		}
 
 		@Test
