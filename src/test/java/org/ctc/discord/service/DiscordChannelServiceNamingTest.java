@@ -103,6 +103,24 @@ class DiscordChannelServiceNamingTest {
 				.hasMessageContaining("matchday with phase");
 	}
 
+	@Test
+	void givenPlayoffPhaseWithGroup_whenChannelName_thenPhaseThenGroupOrder() {
+		Match match = buildMatch(PhaseType.PLAYOFF, "Winners Bracket", 0, "alf", "bra");
+
+		String name = DiscordChannelService.channelName(match);
+
+		assertThat(name).isEqualTo("md1-po-winners-bracket-alf-vs-bra");
+	}
+
+	@Test
+	void givenPlacementPhaseWithGroup_whenChannelName_thenPhaseThenGroupOrder() {
+		Match match = buildMatch(PhaseType.PLACEMENT, "Bronze", 0, "alf", "bra");
+
+		String name = DiscordChannelService.channelName(match);
+
+		assertThat(name).isEqualTo("md1-pm-bronze-alf-vs-bra");
+	}
+
 	private static Match buildMatch(PhaseType phaseType, String groupName, int sortIndex,
 			String homeShortName, String awayShortName) {
 		Season season = new Season();
