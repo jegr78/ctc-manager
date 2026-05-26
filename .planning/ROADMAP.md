@@ -311,10 +311,18 @@ Plans:
 
 ### Phase 100: Match Day Channel Naming Scheme: phase prefix (rs/po/pm) + optional group prefix after mdX-
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Extend `DiscordChannelService.channelName(Match)` to emit `md{N}-{phase}-[{group}-]{home}-vs-{away}` per CONTEXT decisions D-01..D-14. New match-channels created post-Phase-100 use the new scheme; existing channels stay as-is (D-08).
+**Requirements**: TBD (decision-driven — D-01..D-14 in 100-CONTEXT.md)
 **Depends on:** Phase 99
-**Plans:** 0 plans
+**Plans:** 3 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 100 to break down)
+
+**Wave 1**
+- [ ] 100-01 — Extend `DiscordChannelService.channelName(Match)` + new helpers `phaseAbbrev(PhaseType)` + `groupSlug(SeasonPhaseGroup)` + 100-char overflow guard + new pure-unit `DiscordChannelServiceNamingTest` (D-01..D-07, D-10..D-13)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+- [ ] 100-02 — Refresh 5 IT files (14 literal occurrences) from old Phase-94 format to new Phase-100 format + add outbound-name pinning assertion on happy-path WireMock IT (D-14, D-11)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+- [ ] 100-03 — STATE.md bookkeeping: record D-08 (leave-as-is, no migration) + D-09 (two-scheme coexistence acceptance) in Deferred Items (D-08, D-09)
