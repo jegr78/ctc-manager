@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -112,6 +113,15 @@ public class BackupImportService {
 
     /** ZIP magic bytes: PK\x03\x04 (local file header signature). */
     private static final byte[] ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04};
+
+    /**
+     * Schema-version acceptance set. The importer accepts any version in this set;
+     * v1 backups carry only the pre-v1.13 entity surface ({@code DiscordGlobalConfig} /
+     * {@code DiscordPost} entries are absent and stay empty after import — the
+     * {@code DiscordGlobalConfigService.getOrInitialize()} fallback self-heals on first
+     * page-load). v3+ backups are refused with {@link Reason#SCHEMA_MISMATCH}.
+     */
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = Set.of(1, 2);
 
     /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;
@@ -828,16 +838,16 @@ public class BackupImportService {
         // Step 2: schema-version gate — BEFORE any DB read
         int backupVersion = manifest.schemaVersion();
         int currentVersion = BackupSchema.SCHEMA_VERSION;
-        if (backupVersion != currentVersion) {
+        if (!SUPPORTED_SCHEMA_VERSIONS.contains(backupVersion)) {
             throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
-                    String.format("Schema version mismatch: backup=%d, expected=%d. Cannot import.",
-                            backupVersion, currentVersion));
+                    String.format("Schema version %d not supported (accepted: %s). Cannot import.",
+                            backupVersion, SUPPORTED_SCHEMA_VERSIONS));
         }
 
         // Step 3: count upload files
         int uploadFileCount = backupArchive.countUploadFiles(staged);
 
-        // Step 4: build 24 entity cards in getExportOrder() order
+        // Step 4: build one entity card per BackupSchema.getExportOrder() entry
         List<EntityRowCount> entityCounts = new ArrayList<>();
         for (EntityRef ref : backupSchema.getExportOrder()) {
             JpaRepository<?, ?> repo = repositoryByTableName.get(ref.tableName());
@@ -854,7 +864,7 @@ public class BackupImportService {
         long totalImportedRows = entityCounts.stream()
                 .mapToLong(EntityRowCount::importedRows)
                 .sum();
-        boolean schemaMatches = true;  // gate at step 2 already ensured this
+        boolean schemaMatches = SUPPORTED_SCHEMA_VERSIONS.contains(backupVersion);
 
         log.info("Backup import staged successfully: stagingId={}, schemaVersion={}, " +
                 "entityCount={}, uploadFileCount={}, totalImportedRows={}",
