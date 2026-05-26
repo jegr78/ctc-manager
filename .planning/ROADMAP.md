@@ -281,7 +281,7 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 | v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | 50 | Complete | 2026-05-16 |
 | v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | 46 | Complete | 2026-05-18 |
 | v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | Complete | 2026-05-20 |
-| v1.13 Discord Integration & Carry-Forwards | 92-100 | 36 | Complete | 2026-05-26 |
+| v1.13 Discord Integration & Carry-Forwards | 92-101 | 42 | In flight | TBD |
 
 ### v1.13 Phase Progress
 
@@ -296,6 +296,7 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 | 98 — Polish + E2E + Docs + Close | 7/7 | Complete | 2026-05-25 |
 | 99 — Pre-merge audit-polish | 5/5 | Complete | 2026-05-26 |
 | 100 — Match Day Channel Naming Scheme | 3/3 | Complete | 2026-05-26 |
+| 101 — Backup/Restore covers Discord schema | 0/6 | Planned | — |
 
 ### Phase 99: Pre-merge audit-polish: REQUIREMENTS Flyway-Prose + ROADMAP refresh + retroactive VERIFICATION.md + VALIDATION.md frontmatter + FORUM-01 modal scope
 
@@ -328,3 +329,30 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 - [x] 100-03 — STATE.md bookkeeping: record D-08 (leave-as-is, no migration) + D-09 (two-scheme coexistence acceptance) in Deferred Items (D-08, D-09)
+
+### Phase 101: Backup/Restore covers Discord schema (V8-V15)
+
+**Goal:** Close the silent-data-loss gap that v1.13's Flyway V8-V15 schema opened in the backup wire contract. Two surfaces close: (a) extend the 4 existing `EntityRestorer.INSERT_SQL` statements (Match/Team/Matchday/Season) to cover all 13 V8-V15 columns (otherwise import silently NULLs them); (b) revisit Phase 72 D-15's `org.ctc.domain.model.*`-only package filter and expand it to also include `org.ctc.discord.model.*` — adds `DiscordGlobalConfig` + `DiscordPost` to the 24-entity scope (→ 26 entities). Bump `BackupSchema.SCHEMA_VERSION` 1 → 2; loosen the importer to accept `schema_version IN (1, 2)` (lenient v1 acceptance for pre-v1.13 backups). 13 per-field regression-fence tests + byte-equality on H2 + MariaDB opt-in. Single-guild restore semantics + webhook_token PII-equivalent secrecy documented in DOCS-02 runbook.
+**Requirements**: D-01 inclusion, D-02 silent-NULL fix, D-03 single-row handling, D-04 topo position, D-05 preserve IDs as-is, D-06 single-guild documented, D-07 no cross-guild guard, D-08 package-filter expansion, D-09 SCHEMA_VERSION 1→2, D-10 lenient `IN (1, 2)`, D-11 v1 imports leave Discord empty, D-12 4 Restorer extensions, D-13 full first-class test coverage, D-14 guard-test flips, D-15 13 per-field regression-fence, D-16 byte-equality DiscordGlobalConfig + DiscordPost, D-17 lenient-v1-acceptance IT
+**Depends on:** Phase 100
+**Plans:** 6 plans (5 waves, sequential inline on `gsd/v1.13-discord-integration` per CLAUDE.md "Inline Sequential is the Default" + v1.13 CONTEXT D-05)
+
+Plans:
+
+**Wave 0** *(MUST land first per RESEARCH §Pitfall 6 — guard test exact-int assertion would block all subsequent work)*
+- [ ] 101-01-PLAN.md — SCHEMA_VERSION 1→2 + paired guard-test assertion flip (D-09, D-14 first half)
+
+**Wave 1** *(atomic 5-change commit — @PostConstruct startup validators require entity-count + restorer-count in lockstep)*
+- [ ] 101-02-PLAN.md — Package-filter expansion + 2 new MixIns + 2 new Restorers + module reg + entity-count test flip (D-01, D-03, D-04, D-08, D-12, D-14 second half)
+
+**Wave 2** *(may run after Plan 02; 03 and 04 share no files)*
+- [ ] 101-03-PLAN.md — Extend 4 existing Restorers (MatchRestorer +8 V10/V11, TeamRestorer +1 V9, MatchdayRestorer +2 V15, SeasonRestorer +2 V13) (D-02, D-12)
+- [ ] 101-04-PLAN.md — Lenient `IN (1, 2)` schema-version check + BackupLenientV1AcceptanceIT (programmatic v1 ZIP, no binary fixture committed) (D-10, D-11, D-17)
+
+**Wave 3** *(after 02 + 03 are merged so the round-trip is end-to-end functional)*
+- [ ] 101-05-PLAN.md — BackupDiscordFieldRoundTripIT (13 per-field regression-fence) + BackupRoundTripIT byte-equality extension on H2 + MariaDB-opt-in (D-13, D-15, D-16)
+
+**Wave 4** *(documentation sweep — depends on 02 + 03 + 04 + 05 to ensure the documented behaviour matches shipped code)*
+- [ ] 101-06-PLAN.md — PROJECT.md wire-contract update + STATE.md baselines flip + docs/operations/discord-integration.md § Backup & Restore semantics (T-101-01 + T-101-02 mitigation) + README.md 24 → 26 (D-06, D-09, D-14)
+
+**UI hint**: no (backup is server-side; no Thymeleaf templates touched)
