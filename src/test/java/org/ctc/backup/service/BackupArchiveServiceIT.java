@@ -82,7 +82,7 @@ class BackupArchiveServiceIT {
 		// given
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		List<EntityRef> exportOrder = backupSchema.getExportOrder();
-		assertThat(exportOrder).as("dev fixture must seed all 24 entities").hasSize(24);
+		assertThat(exportOrder).as("dev fixture must seed all 26 entities").hasSize(26);
 
 		// when
 		archiveService.writeZip(out, Instant.now());

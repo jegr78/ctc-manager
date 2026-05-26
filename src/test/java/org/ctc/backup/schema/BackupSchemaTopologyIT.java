@@ -39,15 +39,12 @@ class BackupSchemaTopologyIT {
     private BackupSchema backupSchema;
 
     @Test
-    void givenSpringContext_whenGetExportOrder_thenReturns24Entities() {
+    void givenSpringContext_whenGetExportOrder_thenReturns26Entities() {
         // when
         List<EntityRef> exportOrder = backupSchema.getExportOrder();
-        // then — 24 operative entities under org.ctc.domain.model
-        // (Car, Track, Season, SeasonPhase, SeasonPhaseGroup, Team, PhaseTeam, SeasonTeam,
-        //  Driver, SeasonDriver, PsnAlias, RaceScoring, MatchScoring, RaceSettings,
-        //  Matchday, Match, Race, RaceLineup, RaceResult, RaceAttachment,
-        //  Playoff, PlayoffRound, PlayoffMatchup, PlayoffSeed). D-03 corrected post-research.
-        assertThat(exportOrder).hasSize(24);
+        // then — 24 league entities under org.ctc.domain.model + 2 Discord entities under
+        // org.ctc.discord.model (DiscordGlobalConfig + DiscordPost) = 26 total.
+        assertThat(exportOrder).hasSize(26);
     }
 
     @Test

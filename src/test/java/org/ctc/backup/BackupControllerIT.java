@@ -41,7 +41,7 @@ class BackupControllerIT {
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/backup"))
 				.andExpect(content().string(Matchers.containsString("Export Backup")))
-				.andExpect(content().string(Matchers.containsString("all 24 entities")));
+				.andExpect(content().string(Matchers.containsString("all 26 entities")));
 	}
 
 	@Test

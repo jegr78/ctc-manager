@@ -33,7 +33,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
  * with {@code WebEnvironment.RANDOM_PORT} + {@code @ActiveProfiles("dev")}):
  * <ol>
  *   <li>Upload a Phase-73 export ZIP (generated at runtime via {@link BackupArchiveService#writeZip}).</li>
- *   <li>Assert the 24-card grid and the schema-match pill are visible — SC#1.</li>
+ *   <li>Assert the 26-card grid and the schema-match pill are visible — SC#1.</li>
  *   <li>Proceed through the confirm page and execute the REAL import — proves D-15 #1
  *       success flash (Phase 75-08; the Phase 74 D-02#5 stub-flash scenario was removed
  *       because the stub no longer exists in production code).</li>
@@ -112,7 +112,7 @@ class BackupImportE2ETest extends PlaywrightConfig {
 
         // schema-match pill — locked UI-SPEC string (IMPORT-02)
         assertThat(page.locator(".alert.alert-success").first())
-                .containsText("Schema version 1 matches.");
+                .containsText("Schema version 2 matches.");
 
         // header card — file metadata visible
         assertThat(page.locator(".card").first()).containsText("File:");
@@ -120,8 +120,8 @@ class BackupImportE2ETest extends PlaywrightConfig {
         assertThat(page.locator(".card").first()).containsText("Uploads:");
         assertThat(page.locator(".card").first()).containsText("Total imported rows:");
 
-        // 24-card grid — one card per entity (D-03/D-21)
-        assertThat(page.locator(".card-grid > .card")).hasCount(24);
+        // 26-card grid — one card per entity (24 league + 2 Discord, D-03/D-21 + Phase 101)
+        assertThat(page.locator(".card-grid > .card")).hasCount(26);
 
         // staging UUID must be present (D-18 stateless staging)
         String stagingUuid = page.locator("input[name='stagingId']").first().getAttribute("value");
@@ -150,7 +150,7 @@ class BackupImportE2ETest extends PlaywrightConfig {
         // then — Phase 75-08 D-15 #1: land on /admin/backup with the real success flash
         // "Import completed. {N} rows restored across {M} tables." (English, locked terse style).
         // The wipe+restore round-trips the dev fixture through H2 — restoredTotal/entityCount
-        // are positive integers because the fixture seeds 24 entities with data.
+        // are positive integers because the fixture seeds 26 entities with data.
         assertThat(page).hasURL(Pattern.compile(".*/admin/backup$"));
         assertThat(page.locator(".alert.alert-success"))
                 .containsText(Pattern.compile("Import completed\\. \\d+ rows restored across \\d+ tables\\."));

@@ -121,8 +121,8 @@ class BackupImportSchemaMismatchIT {
                 .satisfies(t -> assertThat(((BackupArchiveException) t).reason())
                         .as("reason must be SCHEMA_MISMATCH")
                         .isEqualTo(Reason.SCHEMA_MISMATCH))
-                .hasMessageContaining("backup=999")
-                .hasMessageContaining("expected=" + BackupSchema.SCHEMA_VERSION);
+                .hasMessageContaining("Schema version 999 not supported")
+                .hasMessageContaining("accepted: [1, 2]");
 
         Map<String, Long> after = snapshotAllCounts();
 
@@ -156,8 +156,8 @@ class BackupImportSchemaMismatchIT {
                 .satisfies(t -> assertThat(((BackupArchiveException) t).reason())
                         .as("reason must be SCHEMA_MISMATCH for schema_version=-1")
                         .isEqualTo(Reason.SCHEMA_MISMATCH))
-                .hasMessageContaining("backup=-1")
-                .hasMessageContaining("expected=" + BackupSchema.SCHEMA_VERSION);
+                .hasMessageContaining("Schema version -1 not supported")
+                .hasMessageContaining("accepted: [1, 2]");
     }
 
     // =========================================================================

@@ -120,8 +120,13 @@ public class BackupImportService {
      * {@code DiscordPost} entries are absent and stay empty after import — the
      * {@code DiscordGlobalConfigService.getOrInitialize()} fallback self-heals on first
      * page-load). v3+ backups are refused with {@link Reason#SCHEMA_MISMATCH}.
+     *
+     * <p>Declared as a {@link java.util.LinkedHashSet} so the iteration order is stable
+     * (ascending integer order) — used directly inside the error message via
+     * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
+     * a hash-randomised order that breaks message-matching assertions.
      */
-    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = Set.of(1, 2);
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2));
 
     /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;
