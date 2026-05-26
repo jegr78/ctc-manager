@@ -35,11 +35,11 @@ class BackupSchemaGuardTest {
     }
 
     @Test
-    void givenBackupSchema_whenInspected_thenExportOrderHasTwentyFourEntities() {
+    void givenBackupSchema_whenInspected_thenExportOrderHasTwentySixEntities() {
         // when / then
         assertThat(backupSchema.getExportOrder().size())
-                .as("BackupSchema.EXPORT_ORDER size changed from 24 — if a new entity was added, "
+                .as("BackupSchema.EXPORT_ORDER size changed from 26 — if a new entity was added, "
                         + "bump SCHEMA_VERSION and update BackupRoundTripIT expected row-count assertions")
-                .isEqualTo(24);
+                .isEqualTo(26);
     }
 }

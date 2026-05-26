@@ -9,6 +9,10 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
+import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.model.DiscordPost;
+import org.ctc.discord.repository.DiscordGlobalConfigRepository;
+import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,6 +77,8 @@ public class BackupExportService {
 	private final RaceResultRepository raceResultRepository;
 	private final RaceSettingsRepository raceSettingsRepository;
 	private final RaceAttachmentRepository raceAttachmentRepository;
+	private final DiscordGlobalConfigRepository discordGlobalConfigRepository;
+	private final DiscordPostRepository discordPostRepository;
 
 	private final String uploadDirRaw;
 
@@ -105,6 +111,8 @@ public class BackupExportService {
 			RaceResultRepository raceResultRepository,
 			RaceSettingsRepository raceSettingsRepository,
 			RaceAttachmentRepository raceAttachmentRepository,
+			DiscordGlobalConfigRepository discordGlobalConfigRepository,
+			DiscordPostRepository discordPostRepository,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -132,6 +140,8 @@ public class BackupExportService {
 		this.raceResultRepository = raceResultRepository;
 		this.raceSettingsRepository = raceSettingsRepository;
 		this.raceAttachmentRepository = raceAttachmentRepository;
+		this.discordGlobalConfigRepository = discordGlobalConfigRepository;
+		this.discordPostRepository = discordPostRepository;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -163,6 +173,8 @@ public class BackupExportService {
 		this.repositoriesByEntityClass.put(RaceResult.class, raceResultRepository);
 		this.repositoriesByEntityClass.put(RaceSettings.class, raceSettingsRepository);
 		this.repositoriesByEntityClass.put(RaceAttachment.class, raceAttachmentRepository);
+		this.repositoriesByEntityClass.put(DiscordGlobalConfig.class, discordGlobalConfigRepository);
+		this.repositoriesByEntityClass.put(DiscordPost.class, discordPostRepository);
 		log.info("BackupExportService initialized: uploadRoot={}, repositoryCount={}",
 				uploadRoot, repositoriesByEntityClass.size());
 	}
@@ -294,7 +306,8 @@ public class BackupExportService {
 		if (repo == null) {
 			throw new IllegalArgumentException(
 					"No repository registered for entity class " + entityClass.getName()
-							+ " — must be one of the 24 BackupSchema.getExportOrder() entities");
+							+ " — must be one of the " + repositoriesByEntityClass.size()
+							+ " BackupSchema.getExportOrder() entities");
 		}
 		return repo;
 	}

@@ -15,8 +15,8 @@ import org.springframework.stereotype.Component;
  *   <li>{@link #SCHEMA_VERSION} — integer constant; bumped on every wire-incompatible
  *       schema change.</li>
  *   <li>{@link #getExportOrder()} — FK-respecting topological order over all
- *       {@code org.ctc.domain.model.*} entities, generated at startup from the JPA
- *       Metamodel. Used by {@code BackupExportService}.</li>
+ *       {@code org.ctc.domain.model.*} and {@code org.ctc.discord.model.*} entities,
+ *       generated at startup from the JPA Metamodel. Used by {@code BackupExportService}.</li>
  * </ul>
  *
  * <p>Structural exclusion: any entity placed under {@code org.ctc.backup.*} (notably
@@ -39,7 +39,11 @@ public class BackupSchema {
     @PostConstruct
     void initializeExportOrder() {
         var entityTypes = entityManagerFactory.getMetamodel().getEntities().stream()
-                .filter(et -> et.getJavaType().getPackage().getName().startsWith("org.ctc.domain.model"))
+                .filter(et -> {
+                    String pkg = et.getJavaType().getPackage().getName();
+                    return pkg.startsWith("org.ctc.domain.model")
+                            || pkg.startsWith("org.ctc.discord.model");
+                })
                 .toList();
         this.exportOrder = List.copyOf(entityTopoSorter.sort(entityTypes));
         log.info("BackupSchema initialized: SCHEMA_VERSION={}, exportOrder size={}, entities=[{}]",

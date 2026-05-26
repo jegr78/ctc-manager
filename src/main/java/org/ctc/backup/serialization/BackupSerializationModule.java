@@ -1,11 +1,13 @@
 package org.ctc.backup.serialization;
 
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.model.DiscordPost;
 import org.ctc.domain.model.*;
 import org.springframework.stereotype.Component;
 
 /**
- * Jackson {@link com.fasterxml.jackson.databind.Module} that registers all 24 per-entity MixIns
+ * Jackson {@link com.fasterxml.jackson.databind.Module} that registers all 26 per-entity MixIns
  * on the {@code backupObjectMapper} bean via Spring DI. Keeping all mappings in one file makes
  * the entity-to-MixIn mapping reviewable at a glance.
  */
@@ -38,5 +40,7 @@ public class BackupSerializationModule extends SimpleModule {
         setMixInAnnotation(RaceResult.class, RaceResultMixIn.class);
         setMixInAnnotation(RaceSettings.class, RaceSettingsMixIn.class);
         setMixInAnnotation(RaceAttachment.class, RaceAttachmentMixIn.class);
+        setMixInAnnotation(DiscordGlobalConfig.class, DiscordGlobalConfigMixIn.class);
+        setMixInAnnotation(DiscordPost.class, DiscordPostMixIn.class);
     }
 }
