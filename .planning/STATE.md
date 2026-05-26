@@ -4,14 +4,14 @@ milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
 stopped_at: Phase 101 context gathered
-last_updated: "2026-05-26T10:02:56.554Z"
-last_activity: 2026-05-26 -- Phase 100 verified, ROADMAP/STATE flipped to complete
+last_updated: "2026-05-26T12:44:38.086Z"
+last_activity: 2026-05-26 -- Phase 101 execution started
 progress:
   total_phases: 10
   completed_phases: 9
-  total_plans: 35
+  total_plans: 41
   completed_plans: 36
-  percent: 90
+  percent: 88
 ---
 
 # Project State
@@ -22,15 +22,15 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** v1.13 ready to ship — `/gsd-complete-milestone v1.13`
+**Current focus:** Phase 101 — backup-restore-covers-discord-schema-v8-v15
 
 ## Current Position
 
-Phase: 100 (match-day-channel-naming-scheme) — COMPLETE ✓
-Plan: 3 of 3 (100-01 ✅ channelName refactor / 100-02 ✅ IT fixtures + pinning / 100-03 ✅ STATE.md D-08/D-09 bookkeeping)
+Phase: 101 (backup-restore-covers-discord-schema-v8-v15) — EXECUTING
+Plan: 1 of 6
 Verification: passed (14/14 decisions, 6/6 UAT, 7/7 dimensions)
-Status: v1.13 milestone ready to close — all 9 phases (92-100) complete, 36/36 plans, 2255 tests green, JaCoCo 88.98%
-Last activity: 2026-05-26 -- Phase 100 verified, ROADMAP/STATE flipped to complete
+Status: Executing Phase 101
+Last activity: 2026-05-26 -- Phase 101 execution started
 
 ## Completed Milestones
 
@@ -101,7 +101,7 @@ Post-merge self-resolving items (not tracked further):
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Ready to execute
+- **Status:** Executing Phase 101
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
