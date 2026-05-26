@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
-status: executing
-stopped_at: Phase 100 context gathered
-last_updated: "2026-05-26T06:20:33.000Z"
-last_activity: 2026-05-26 -- Phase 100 planned (3 plans, D-08 + D-09 deferred to v1.14+)
+status: ready-to-ship
+stopped_at: Phase 100 verified complete — milestone ready for /gsd-complete-milestone v1.13
+last_updated: "2026-05-26T09:34:36.000Z"
+last_activity: 2026-05-26 -- Phase 100 verified (14/14 decisions, 6/6 UAT, 7/7 dimensions)
 progress:
   total_phases: 9
-  completed_phases: 8
-  total_plans: 35
-  completed_plans: 33
-  percent: 89
+  completed_phases: 9
+  total_plans: 36
+  completed_plans: 36
+  percent: 100
 ---
 
 # Project State
@@ -22,14 +22,15 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 97 — matchday-level-posts
+**Current focus:** v1.13 ready to ship — `/gsd-complete-milestone v1.13`
 
 ## Current Position
 
-Phase: 97 (matchday-level-posts) — EXECUTING
-Plan: 3 of 3 (97-01 ✅ POST-06 / 97-02 ✅ POST-07a + POST-07b / 97-03 ✅ POST-08)
-Status: Ready to execute
-Last activity: 2026-05-26 -- Phase 100 planning complete
+Phase: 100 (match-day-channel-naming-scheme) — COMPLETE ✓
+Plan: 3 of 3 (100-01 ✅ channelName refactor / 100-02 ✅ IT fixtures + pinning / 100-03 ✅ STATE.md D-08/D-09 bookkeeping)
+Verification: passed (14/14 decisions, 6/6 UAT, 7/7 dimensions)
+Status: v1.13 milestone ready to close — all 9 phases (92-100) complete, 36/36 plans, 2255 tests green, JaCoCo 88.98%
+Last activity: 2026-05-26 -- Phase 100 verified, ROADMAP/STATE flipped to complete
 
 ## Completed Milestones
 
@@ -322,17 +323,17 @@ At roadmap creation (2026-05-20):
 
 ## Session Continuity
 
-**Last session:** 2026-05-26T05:13:58.745Z
+**Last session:** 2026-05-26T09:34:36.000Z
 
-**Stopped at:** Phase 100 context gathered
+**Stopped at:** Phase 100 verified complete — milestone v1.13 ready to ship
 
-**Next action:** `/gsd-validate-phase 94` — run Nyquist sampling across all 23 test classes, flip `nyquist_compliant: true` in 94-VALIDATION.md frontmatter. Then stage UAT-04 (Live-Discord Channel Lifecycle Smoke) against the operator's test guild BEFORE `/gsd-discuss-phase 95`.
+**Next action:** `/gsd-complete-milestone v1.13` — archive milestone artifacts, advance MILESTONES.md, prepare squash-merge subject `feat(v1.13): discord integration & carry-forwards` for PR #130. All 9 phases (92-100) verified, 36/36 plans shipped, 2255 tests green, JaCoCo 88.98 %, SpotBugs 0.
 
 **Branch:** `gsd/v1.13-discord-integration` (off `origin/master`)
 
 ## Operator Next Steps
 
-1. Verify v1.13 ROADMAP.md + STATE.md + REQUIREMENTS.md reflect the brainstorming-approved 7-phase / 25-REQ structure (this commit).
-2. Squash-merge v1.12 PR #129 if not yet merged (subject `feat(v1.12): driver-import gap-closure & test performance round 2` for the MINOR bump to `v1.12.0`).
-3. Run `/gsd-discuss-phase 92` to decompose Phase 92 into plans (estimated 4 plans per design spec § 5).
-4. After Phase 92 completes, the JaCoCo baseline is restored to ≥ 88.88 % and Discord-phase development can proceed against a clean coverage gate.
+1. Run `/gsd-complete-milestone v1.13` to archive milestone artifacts + write the canonical MILESTONES.md v1.13 entry.
+2. Update PR #130 description with the final Phase 99 + 100 rows (rolling summary discipline).
+3. Squash-merge PR #130 with subject `feat(v1.13): discord integration & carry-forwards` — triggers Semantic Release MINOR bump to `v1.13.0` + GitHub Release + `ghcr.io/jegr78/ctc-manager:1.13.0` + `:latest`.
+4. Post-merge: clean up local branch (`git switch master && git pull && git branch -d gsd/v1.13-discord-integration`).

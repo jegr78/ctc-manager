@@ -281,7 +281,7 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 | v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | 50 | Complete | 2026-05-16 |
 | v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | 46 | Complete | 2026-05-18 |
 | v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | Complete | 2026-05-20 |
-| v1.13 Discord Integration & Carry-Forwards | 92-98 | ~23 (est.) | Complete | 2026-05-25 |
+| v1.13 Discord Integration & Carry-Forwards | 92-100 | 36 | Complete | 2026-05-26 |
 
 ### v1.13 Phase Progress
 
@@ -294,6 +294,8 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 | 96 — Provisional Graphic + Forum Threads | 3/3 | Complete | 2026-05-23 |
 | 97 — Matchday-Level Posts | 3/3 | Complete | 2026-05-24 |
 | 98 — Polish + E2E + Docs + Close | 7/7 | Complete | 2026-05-25 |
+| 99 — Pre-merge audit-polish | 5/5 | Complete | 2026-05-26 |
+| 100 — Match Day Channel Naming Scheme | 3/3 | Complete | 2026-05-26 |
 
 ### Phase 99: Pre-merge audit-polish: REQUIREMENTS Flyway-Prose + ROADMAP refresh + retroactive VERIFICATION.md + VALIDATION.md frontmatter + FORUM-01 modal scope
 
@@ -309,7 +311,7 @@ Plans:
 - [ ] 99-04 — Phase 93 + Phase 95 phase-level VALIDATION.md frontmatter refresh (inline edits) (D-16, D-17, D-18)
 - [ ] 99-05 — YAGNI delete `DiscordRestClient.createThread()` + `ThreadCreateRequest` DTO + orphan IT method (D-02, D-23, D-25)
 
-### Phase 100: Match Day Channel Naming Scheme: phase prefix (rs/po/pm) + optional group prefix after mdX-
+### Phase 100: Match Day Channel Naming Scheme: phase prefix (rs/po/pm) + optional group prefix after mdX- — Complete ✓ (2026-05-26)
 
 **Goal:** Extend `DiscordChannelService.channelName(Match)` to emit `md{N}-{phase}-[{group}-]{home}-vs-{away}` per CONTEXT decisions D-01..D-14. New match-channels created post-Phase-100 use the new scheme; existing channels stay as-is (D-08).
 **Requirements**: TBD (decision-driven — D-01..D-14 in 100-CONTEXT.md)
@@ -319,10 +321,10 @@ Plans:
 Plans:
 
 **Wave 1**
-- [ ] 100-01 — Extend `DiscordChannelService.channelName(Match)` + new helpers `phaseAbbrev(PhaseType)` + `groupSlug(SeasonPhaseGroup)` + 100-char overflow guard + new pure-unit `DiscordChannelServiceNamingTest` (D-01..D-07, D-10..D-13)
+- [x] 100-01 — Extend `DiscordChannelService.channelName(Match)` + new helpers `phaseAbbrev(PhaseType)` + `groupSlug(SeasonPhaseGroup)` + 100-char overflow guard + new pure-unit `DiscordChannelServiceNamingTest` (D-01..D-07, D-10..D-13)
 
 **Wave 2** *(blocked on Wave 1 completion)*
-- [ ] 100-02 — Refresh 5 IT files (14 literal occurrences) from old Phase-94 format to new Phase-100 format + add outbound-name pinning assertion on happy-path WireMock IT (D-14, D-11)
+- [x] 100-02 — Refresh 5 IT files (14 literal occurrences) from old Phase-94 format to new Phase-100 format + add outbound-name pinning assertion on happy-path WireMock IT (D-14, D-11)
 
 **Wave 3** *(blocked on Wave 2 completion)*
-- [ ] 100-03 — STATE.md bookkeeping: record D-08 (leave-as-is, no migration) + D-09 (two-scheme coexistence acceptance) in Deferred Items (D-08, D-09)
+- [x] 100-03 — STATE.md bookkeeping: record D-08 (leave-as-is, no migration) + D-09 (two-scheme coexistence acceptance) in Deferred Items (D-08, D-09)
