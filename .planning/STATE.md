@@ -299,6 +299,7 @@ Last phase shipped: **91** (v1.12 closer). v1.13 spans phases **92-98** (integer
 - Phase 99 added: Pre-merge audit-polish (REQUIREMENTS Flyway-Prose + ROADMAP refresh + retroactive 9N-VERIFICATION.md + VALIDATION.md frontmatter + FORUM-01 modal scope) — closes v1.13-MILESTONE-AUDIT.md tech_debt
 - Phase 100 added: Match Day Discord channel naming scheme — add phase prefix (rs/po/pm) + optional group prefix after mdX- so Regular Season / Playoff / Placement matchday counts don't collide; current scheme md{N}-{teamA}-vs-{teamB} loses phase context
 - Phase 101 added: Backup/Restore covers Discord schema (V8-V15) — current `BackupSchema` package filter `org.ctc.domain.model.*` excludes `discord_global_config` + `discord_post`, and the V8-V15 columns on matches/seasons/teams/matchdays have no MixIns or round-trip tests. Revisits Phase 72 D-15 exclusion decision in light of v1.13 making Discord first-class.
+- 2026-05-26: Phase 101 closed. Backup wire contract bumped from SCHEMA_VERSION 1 / 24 entities to SCHEMA_VERSION 2 / 26 entities (adds `DiscordGlobalConfig` + `DiscordPost` + V8-V15 columns on Match/Team/Matchday/Season). Importer accepts `schema_version IN (1, 2)` (lenient v1 acceptance). `discord_post` pinned to end of export order to satisfy `@Column UUID` FK constraints on restore. DOCS-02 runbook `docs/operations/discord-integration.md` now documents single-guild restore semantics + webhook_token PII-equivalent secrecy implication.
 
 ### Blockers/Concerns
 
@@ -316,8 +317,8 @@ At roadmap creation (2026-05-20):
 - JaCoCo line coverage: **≥ 88.88%** (v1.11 baseline; Phase 92 restores; subsequent phases must maintain or improve)
 - Test count: **≥ 1696** (v1.12 baseline; Phase 92 adds ~10, Discord phases add ~50-80)
 - `./mvnw verify -Pe2e` CI median (E2E step): **17:39 ± 20 %** (v1.12 baseline; WireMock-only Discord tests, no live Discord in CI)
-- `BackupSchema.SCHEMA_VERSION`: **1** (must remain 1 unless backup wire contract changes — Phase 101 will revisit and likely bump to 2 to include Discord wire fields/sections)
-- `EXPORT_ORDER` size: **24 entities** (guard test active; Discord entities under `org.ctc.discord.*` are structurally excluded by the `org.ctc.domain.model.*` package filter per Phase 72 D-15 — **revisited in Phase 101**: v1.13 promotes Discord to first-class scope (V8-V15 schema, `discord_global_config` + `discord_post` carry idempotency state), so the D-15 exclusion is no longer load-bearing; Phase 101 discuss must explicitly weigh re-including these entities vs. operator-reconfigure-after-restore)
+- `BackupSchema.SCHEMA_VERSION`: **2** (bumped 2026-05-26 in Phase 101 to include Discord wire fields/sections; importer remains lenient on `IN (1, 2)` for pre-v1.13 v1 backups)
+- `EXPORT_ORDER` size: **26 entities** (V1 24 entities + `DiscordGlobalConfig` + `DiscordPost`; package filter accepts `org.ctc.domain.model.*` + `org.ctc.discord.model.*` after Phase 101 closed 2026-05-26; `discord_post` is pinned last so its `@Column UUID` FKs satisfy DB-level constraints on restore)
 - SpotBugs `BugInstance` count: **0** (blocking gate)
 - CodeQL gate-step: **exit 0 on new HIGH/CRITICAL** (3-layer FP suppression invariant maintained)
 - Flyway migrations: V1-V7 immutable; v1.13 adds **V8, V9, V10, V11, V12**
