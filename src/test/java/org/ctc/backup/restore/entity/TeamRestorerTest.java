@@ -152,10 +152,10 @@ class TeamRestorerTest {
                 .isEqualTo("33333333-aaaa-aaaa-aaaa-333333333333");
 
         // Drive Pass-1 setter against one root row — verify NULL is hard-coded in SQL,
-        // so parent_team_id is NOT a setter parameter (9 binds: id, name, short_name,
-        // logo_url, primary_color, secondary_color, accent_color, created_at, updated_at).
-        // Use a separate PreparedStatement mock for each pass to keep the
-        // Mockito invocation tallies independent.
+        // so parent_team_id is NOT a setter parameter (10 binds: id, name, short_name,
+        // logo_url, primary_color, secondary_color, accent_color, discord_role_id,
+        // created_at, updated_at). Use a separate PreparedStatement mock for each pass
+        // to keep the Mockito invocation tallies independent.
         PreparedStatement psPass1 = org.mockito.Mockito.mock(PreparedStatement.class);
         setterCaptor.getAllValues().get(0).setValues(psPass1, rootA);
         verify(psPass1).setObject(1, UUID.fromString("11111111-aaaa-aaaa-aaaa-111111111111"));
@@ -165,9 +165,10 @@ class TeamRestorerTest {
         verify(psPass1).setString(5, "#ff0000");
         verify(psPass1).setString(6, "#00ff00");
         verify(psPass1).setString(7, "#0000ff");
-        verify(psPass1).setTimestamp(8,
-                Timestamp.valueOf(LocalDateTime.parse("2024-01-01T00:00:00")));
+        verify(psPass1).setString(8, null);
         verify(psPass1).setTimestamp(9,
+                Timestamp.valueOf(LocalDateTime.parse("2024-01-01T00:00:00")));
+        verify(psPass1).setTimestamp(10,
                 Timestamp.valueOf(LocalDateTime.parse("2024-01-02T00:00:00")));
 
         // Drive Pass-2 setter — 2 binds: parent_team_id, id (separate mock).
