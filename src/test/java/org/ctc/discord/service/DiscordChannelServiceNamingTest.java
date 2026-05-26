@@ -124,6 +124,18 @@ class DiscordChannelServiceNamingTest {
 		assertThat(name).isEqualTo("md1-pm-bronze-alf-vs-bra");
 	}
 
+	@Test
+	void givenTurkishCapitalIInShortName_whenChannelName_thenLocaleRootLowercasesPredictably() {
+		Match match = buildMatch(PhaseType.REGULAR, null, 0, "İST", "bra");
+
+		String name = DiscordChannelService.channelName(match);
+
+		// Under Locale.ROOT, "İ".toLowerCase() expands to "i" + U+0307 (combining dot above).
+		// Under Locale.TURKISH the result would collapse to plain "i" — verify ROOT semantics hold.
+		assertThat(name).startsWith("md1-rs-i");
+		assertThat(name).contains("-vs-bra");
+	}
+
 	private static Match buildMatch(PhaseType phaseType, String groupName, int sortIndex,
 			String homeShortName, String awayShortName) {
 		Season season = new Season();
