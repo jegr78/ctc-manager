@@ -41,7 +41,10 @@ class DiscordChannelServiceNamingTest {
 			"Bronze,bronze",
 			"Pro Division,pro-division",
 			"Über-Liga,uber-liga",
-			"Group A!!!,group-a"
+			"Group A!!!,group-a",
+			"Straße,stra-e",
+			"Group 42,group-42",
+			"   spaced   ,spaced"
 	})
 	void givenMatchWithGroupName_whenChannelName_thenGroupSlugInsertedAfterPhase(
 			String groupName, String expectedSlug) {
