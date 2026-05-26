@@ -21,9 +21,12 @@ import org.springframework.stereotype.Component;
  * V14 ({@code phase_id} FK). Total: 13 data + 1 id + 2 audit = 15 columns.
  *
  * <p>The five FK columns ({@code match_id}, {@code matchday_id}, {@code race_id},
- * {@code season_id}, {@code phase_id}) are nullable; the V12/V14 DB-level
- * {@code ON DELETE SET NULL} cascade handles wipe-time nullification, so no pre-step
- * {@code UPDATE} is needed in {@code BackupImportService.wipeAllTables}.
+ * {@code season_id}, {@code phase_id}) are exposed on the entity as {@code @Column UUID}
+ * (not {@code @ManyToOne}), so the JPA-Metamodel topo-sort cannot detect the dependency.
+ * {@link org.ctc.backup.schema.BackupSchema} compensates by pinning {@code discord_post}
+ * to the end of the export order — guaranteeing every parent row exists before the
+ * restorer runs. Wipe-time nullification is handled by the V12/V14 DB-level
+ * {@code ON DELETE SET NULL} cascade.
  *
  * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} so
  * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}
