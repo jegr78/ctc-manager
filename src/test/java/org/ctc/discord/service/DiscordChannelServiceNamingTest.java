@@ -81,6 +81,17 @@ class DiscordChannelServiceNamingTest {
 				.hasMessageContaining("111");
 	}
 
+	@Test
+	void givenNameLandsAtExactly100Chars_whenChannelName_thenAccepted() {
+		String group = "a".repeat(84);
+		Match match = buildMatch(PhaseType.REGULAR, group, 0, "ho", "aw");
+
+		String name = DiscordChannelService.channelName(match);
+
+		assertThat(name).hasSize(100);
+		assertThat(name).endsWith("ho-vs-aw");
+	}
+
 	private static Match buildMatch(PhaseType phaseType, String groupName, int sortIndex,
 			String homeShortName, String awayShortName) {
 		Season season = new Season();
