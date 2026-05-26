@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,10 @@ public class DiscordChannelService {
 
 	private static final String WEBHOOK_NAME = "CTC Manager";
 	private static final int CHANNEL_TYPE_TEXT = 0;
+	private static final Pattern COMBINING_MARKS = Pattern.compile("\\p{M}");
+	private static final Pattern NON_SLUG_CHARS = Pattern.compile("[^a-z0-9]");
+	private static final Pattern MULTI_DASH = Pattern.compile("-{2,}");
+	private static final Pattern EDGE_DASH = Pattern.compile("^-|-$");
 
 	private final DiscordRestClient restClient;
 	private final DiscordGlobalConfigService configService;
@@ -162,12 +167,12 @@ public class DiscordChannelService {
 	}
 
 	private static String groupSlug(SeasonPhaseGroup group) {
-		return Normalizer.normalize(group.getName(), Normalizer.Form.NFD)
-				.replaceAll("\\p{M}", "")
-				.toLowerCase(Locale.ROOT)
-				.replaceAll("[^a-z0-9]", "-")
-				.replaceAll("-{2,}", "-")
-				.replaceAll("^-|-$", "");
+		String decomposed = Normalizer.normalize(group.getName(), Normalizer.Form.NFD);
+		String stripped = COMBINING_MARKS.matcher(decomposed).replaceAll("");
+		String lowered = stripped.toLowerCase(Locale.ROOT);
+		String slugged = NON_SLUG_CHARS.matcher(lowered).replaceAll("-");
+		String collapsed = MULTI_DASH.matcher(slugged).replaceAll("-");
+		return EDGE_DASH.matcher(collapsed).replaceAll("");
 	}
 
 	private void assertPermissionAudit(String channelId, Set<String> expectedTeamRoleIds, String botUserId)
