@@ -672,3 +672,75 @@ The bot needs these **server-wide** permissions (set via Discord Server Settings
 **No `Administrator` permission required.** Each match-channel created by the bot includes a 4th permission-overwrite for the bot's own user-ID (member-override, not role-override), granting the bot operational access (`VIEW_CHANNEL`, `MANAGE_CHANNELS`, `MANAGE_WEBHOOKS`, `SEND_MESSAGES`, `EMBED_LINKS`, `ATTACH_FILES`, `READ_MESSAGE_HISTORY`) on only the channels it creates. Other channels in the server are unaffected.
 
 If the bot token is rotated to a different bot account, click **Refresh Server Roles** on `/admin/discord-config` to also refresh the cached bot identity. App restart achieves the same effect.
+
+## 8. Backup & Restore semantics
+
+The application's backup wire contract (`BackupSchema.SCHEMA_VERSION = 2`) includes
+Discord operator state as of v1.13. This section documents the operator-facing
+implications.
+
+### 8.1 Single-guild operation
+
+The backup ZIP preserves Discord identifiers verbatim: `guild_id`, `channel_id`,
+`message_id`, `webhook_id`, `webhook_token`, `role_id`, `thread_id`. **Restore on the
+same Discord guild as the source.** Cross-guild restore produces orphan IDs — the next
+Discord API call from the imported state will throw `DiscordApiException.NotFound`,
+surface a typed-catch error badge in the operator UI, and require manual
+reconfiguration.
+
+**If cross-guild restore is unavoidable** (e.g., guild migration), expect to:
+
+1. Restore the backup (proceeds successfully — no code-level cross-guild guard).
+2. Re-run `/admin/discord-config` "Save" to populate the new guild's `guild_id`,
+   webhook URLs, and forum-channel snowflakes.
+3. For each team, re-open `/admin/teams/{id}/edit` and re-select the new guild's
+   role.
+4. For each active match, click "Create Discord Channel" again — the old
+   `discord_channel_id` points at a 404; the operator manually deletes the stale row
+   or re-runs the channel creation flow which overwrites the FK with a fresh channel.
+
+### 8.2 webhook_token secrecy on backup ZIPs
+
+The exported ZIP includes the 128-character `webhook_token` for every `discord_post`
+row. This token is **PII-equivalent** — an attacker holding the backup can post
+arbitrary messages to the league's Discord channels and forum threads via the
+captured webhook URLs.
+
+**Operator action — required for every backup file:**
+
+- Store backups on operator-only storage with restrictive POSIX permissions
+  (`chmod 600`, filesystem-level ACL, or encrypted storage).
+- Do NOT commit backup ZIPs to source control, share via unencrypted email, or
+  upload to public cloud storage without at-rest encryption.
+- On suspected leak: rotate ALL Discord webhook URLs via the Discord client
+  (Integrations → Webhooks → Delete + Re-create) and re-run "Save" on
+  `/admin/discord-config`.
+
+The app ships no at-rest encryption for backup files in v1.13; operator-side
+filesystem control is the only mitigation. App-level passphrase-based ZIP encryption
+is tracked as a v1.14+ enhancement.
+
+### 8.3 v1-backup compatibility (pre-v1.13 backups)
+
+`BackupImportService` accepts `schema_version IN (1, 2)`. Pre-v1.13 v1 backups
+(24-entity scope, no Discord sections) remain restorable on v1.13+. After a v1
+import:
+
+- `discord_global_config` table is empty immediately after import. On the next
+  operator page-load that touches Discord config (e.g., `GET /admin/discord-config`,
+  `GET /admin/matches/{id}`), `DiscordGlobalConfigService.getOrInitialize()` inserts
+  a fresh empty-default row.
+- `discord_post` table is empty — every "Re-Post" click on a post-button will create
+  a NEW Discord message (idempotency cache is gone).
+- V8-V15 columns on `matches` (`discord_channel_id`, `discord_channel_webhook_url`,
+  `discord_teaser`, `stream_link`, `lobby_host`, `race_director`, `streamer`,
+  `discord_channel_archived_at`), `teams` (`discord_role_id`), `matchdays`
+  (`pick_deadline`, `scheduled_weekend`), and `seasons`
+  (`discord_race_results_thread_id`, `discord_standings_thread_id`) are NULL.
+
+Operator must manually re-configure Discord state after a v1 restore (same flow as
+the cross-guild restore in § 8.1).
+
+Forward-compatibility: SCHEMA_VERSION 3+ backups are NOT accepted by v1.13+. Upgrade
+the target environment to a build at or above the source build's SCHEMA_VERSION
+before restoring.
