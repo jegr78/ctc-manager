@@ -123,6 +123,11 @@ public class DiscordChannelService {
 
 	static String channelName(Match match) {
 		Matchday matchday = match.getMatchday();
+		if (matchday == null || matchday.getPhase() == null
+				|| match.getHomeTeam() == null || match.getAwayTeam() == null) {
+			throw new BusinessRuleException(
+					"Channel name requires matchday with phase and both teams.");
+		}
 		int matchdayNumber = matchday.getSortIndex() + 1;
 		String phaseAbbrev = phaseAbbrev(matchday.getPhase().getPhaseType());
 		SeasonPhaseGroup group = matchday.getGroup();

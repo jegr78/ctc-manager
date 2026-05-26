@@ -92,6 +92,17 @@ class DiscordChannelServiceNamingTest {
 		assertThat(name).endsWith("ho-vs-aw");
 	}
 
+	@Test
+	void givenMatchWithoutMatchday_whenChannelName_thenBusinessRuleException() {
+		Match match = new Match();
+		match.setHomeTeam(team("alf"));
+		match.setAwayTeam(team("bra"));
+
+		assertThatThrownBy(() -> DiscordChannelService.channelName(match))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("matchday with phase");
+	}
+
 	private static Match buildMatch(PhaseType phaseType, String groupName, int sortIndex,
 			String homeShortName, String awayShortName) {
 		Season season = new Season();
