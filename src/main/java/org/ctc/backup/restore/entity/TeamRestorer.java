@@ -29,6 +29,8 @@ import org.springframework.stereotype.Component;
  * <p>JSON shape (from {@code TeamMixIn}): {@code parentTeam} renders as a bare UUID string via
  * {@code @JsonIdentityReference(alwaysAsId=true)} — NOT a nested {@code {id:...}} object.
  * {@code subTeams} and {@code seasonDrivers} back-references are suppressed by the MixIn.
+ *
+ * <p>V9 added a nullable {@code discord_role_id VARCHAR(32)} column; restored in Pass 1.
  */
 @Slf4j
 @Component
@@ -36,8 +38,9 @@ public class TeamRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL_PASS1 =
             "INSERT INTO teams (id, name, short_name, logo_url, primary_color, "
-                    + "secondary_color, accent_color, parent_team_id, created_at, updated_at) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)";
+                    + "secondary_color, accent_color, discord_role_id, parent_team_id, "
+                    + "created_at, updated_at) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)";
 
     private static final String UPDATE_SQL_PASS2 =
             "UPDATE teams SET parent_team_id = ? WHERE id = ?";
@@ -59,8 +62,9 @@ public class TeamRestorer implements EntityRestorer {
                     ps.setString(5, nullableString(row, "primaryColor"));
                     ps.setString(6, nullableString(row, "secondaryColor"));
                     ps.setString(7, nullableString(row, "accentColor"));
-                    ps.setTimestamp(8, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
-                    ps.setTimestamp(9, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+                    ps.setString(8, nullableString(row, "discordRoleId"));
+                    ps.setTimestamp(9, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
+                    ps.setTimestamp(10, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
                 });
 
         // Pass 2: UPDATE parent_team_id for the subset of rows with a non-null parentTeam.
