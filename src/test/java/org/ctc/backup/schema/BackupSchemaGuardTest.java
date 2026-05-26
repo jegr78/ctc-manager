@@ -26,12 +26,12 @@ class BackupSchemaGuardTest {
     BackupSchema backupSchema;
 
     @Test
-    void givenBackupSchema_whenInspected_thenSchemaVersionIsOne() {
+    void givenBackupSchema_whenInspected_thenSchemaVersionIsTwo() {
         // when / then
         assertThat(BackupSchema.SCHEMA_VERSION)
-                .as("BackupSchema.SCHEMA_VERSION changed from 1 — this is a wire contract bump; "
+                .as("BackupSchema.SCHEMA_VERSION changed from 2 — this is a wire contract bump; "
                         + "see Phase 75 SCHEMA_VERSION gate or write a new migration phase")
-                .isEqualTo(1);
+                .isEqualTo(2);
     }
 
     @Test

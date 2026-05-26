@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class BackupSchema {
 
-    public static final int SCHEMA_VERSION = 1;
+    public static final int SCHEMA_VERSION = 2;
 
     private final EntityManagerFactory entityManagerFactory;
     private final EntityTopoSorter entityTopoSorter;
