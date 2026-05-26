@@ -8,6 +8,7 @@ import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_ALLOW_MASK;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_DENY_MASK;
 import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -29,6 +30,9 @@ import org.ctc.discord.exception.DiscordAuthException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
+import org.ctc.domain.model.Matchday;
+import org.ctc.domain.model.PhaseType;
+import org.ctc.domain.model.SeasonPhaseGroup;
 import org.ctc.domain.repository.MatchRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -117,13 +121,47 @@ public class DiscordChannelService {
 		}
 	}
 
-	private static String channelName(Match match) {
-		int matchdayNumber = match.getMatchday().getSortIndex() + 1;
-		return ("md" + matchdayNumber + "-"
+	static String channelName(Match match) {
+		Matchday matchday = match.getMatchday();
+		int matchdayNumber = matchday.getSortIndex() + 1;
+		String phaseAbbrev = phaseAbbrev(matchday.getPhase().getPhaseType());
+		SeasonPhaseGroup group = matchday.getGroup();
+		String groupToken = "";
+		if (group != null) {
+			String slug = groupSlug(group);
+			if (!slug.isEmpty()) {
+				groupToken = slug + "-";
+			}
+		}
+		String name = ("md" + matchdayNumber + "-"
+				+ phaseAbbrev + "-"
+				+ groupToken
 				+ match.getHomeTeam().getShortName()
 				+ "-vs-"
 				+ match.getAwayTeam().getShortName())
 				.toLowerCase(Locale.ROOT);
+		if (name.length() > 100) {
+			throw new BusinessRuleException(
+					"Discord channel name exceeds 100 characters: " + name + " (" + name.length() + ")");
+		}
+		return name;
+	}
+
+	private static String phaseAbbrev(PhaseType type) {
+		return switch (type) {
+			case REGULAR -> "rs";
+			case PLAYOFF -> "po";
+			case PLACEMENT -> "pm";
+		};
+	}
+
+	private static String groupSlug(SeasonPhaseGroup group) {
+		return Normalizer.normalize(group.getName(), Normalizer.Form.NFD)
+				.replaceAll("\\p{M}", "")
+				.toLowerCase(Locale.ROOT)
+				.replaceAll("[^a-z0-9]", "-")
+				.replaceAll("-{2,}", "-")
+				.replaceAll("^-|-$", "");
 	}
 
 	private void assertPermissionAudit(String channelId, Set<String> expectedTeamRoleIds, String botUserId)
