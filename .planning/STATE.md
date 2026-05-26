@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
-status: ready-to-ship
-stopped_at: Phase 100 verified complete — milestone ready for /gsd-complete-milestone v1.13
-last_updated: "2026-05-26T09:34:36.000Z"
-last_activity: 2026-05-26 -- Phase 100 verified (14/14 decisions, 6/6 UAT, 7/7 dimensions)
+status: executing
+stopped_at: Phase 101 context gathered
+last_updated: "2026-05-26T10:02:56.554Z"
+last_activity: 2026-05-26 -- Phase 100 verified, ROADMAP/STATE flipped to complete
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 9
-  total_plans: 36
+  total_plans: 35
   completed_plans: 36
-  percent: 100
+  percent: 90
 ---
 
 # Project State
@@ -298,6 +298,7 @@ Last phase shipped: **91** (v1.12 closer). v1.13 spans phases **92-98** (integer
 - 2026-05-20: v1.13 ROADMAP.md created — 7 phases (92-98), 25/25 REQ-IDs mapped (100 % coverage), no orphans. Per-phase REQ counts: 5+3+3+5+3+3+3 = 25 ✓. Awaiting user approval before `/gsd-discuss-phase 92`.
 - Phase 99 added: Pre-merge audit-polish (REQUIREMENTS Flyway-Prose + ROADMAP refresh + retroactive 9N-VERIFICATION.md + VALIDATION.md frontmatter + FORUM-01 modal scope) — closes v1.13-MILESTONE-AUDIT.md tech_debt
 - Phase 100 added: Match Day Discord channel naming scheme — add phase prefix (rs/po/pm) + optional group prefix after mdX- so Regular Season / Playoff / Placement matchday counts don't collide; current scheme md{N}-{teamA}-vs-{teamB} loses phase context
+- Phase 101 added: Backup/Restore covers Discord schema (V8-V15) — current `BackupSchema` package filter `org.ctc.domain.model.*` excludes `discord_global_config` + `discord_post`, and the V8-V15 columns on matches/seasons/teams/matchdays have no MixIns or round-trip tests. Revisits Phase 72 D-15 exclusion decision in light of v1.13 making Discord first-class.
 
 ### Blockers/Concerns
 
@@ -315,17 +316,17 @@ At roadmap creation (2026-05-20):
 - JaCoCo line coverage: **≥ 88.88%** (v1.11 baseline; Phase 92 restores; subsequent phases must maintain or improve)
 - Test count: **≥ 1696** (v1.12 baseline; Phase 92 adds ~10, Discord phases add ~50-80)
 - `./mvnw verify -Pe2e` CI median (E2E step): **17:39 ± 20 %** (v1.12 baseline; WireMock-only Discord tests, no live Discord in CI)
-- `BackupSchema.SCHEMA_VERSION`: **1** (must remain 1 unless backup wire contract changes)
-- `EXPORT_ORDER` size: **24 entities** (guard test active; Discord entities under `org.ctc.discord.*` are structurally excluded by the `org.ctc.domain.model.*` package filter per Phase 72 D-15)
+- `BackupSchema.SCHEMA_VERSION`: **1** (must remain 1 unless backup wire contract changes — Phase 101 will revisit and likely bump to 2 to include Discord wire fields/sections)
+- `EXPORT_ORDER` size: **24 entities** (guard test active; Discord entities under `org.ctc.discord.*` are structurally excluded by the `org.ctc.domain.model.*` package filter per Phase 72 D-15 — **revisited in Phase 101**: v1.13 promotes Discord to first-class scope (V8-V15 schema, `discord_global_config` + `discord_post` carry idempotency state), so the D-15 exclusion is no longer load-bearing; Phase 101 discuss must explicitly weigh re-including these entities vs. operator-reconfigure-after-restore)
 - SpotBugs `BugInstance` count: **0** (blocking gate)
 - CodeQL gate-step: **exit 0 on new HIGH/CRITICAL** (3-layer FP suppression invariant maintained)
 - Flyway migrations: V1-V7 immutable; v1.13 adds **V8, V9, V10, V11, V12**
 
 ## Session Continuity
 
-**Last session:** 2026-05-26T09:34:36.000Z
+**Last session:** 2026-05-26T10:02:56.548Z
 
-**Stopped at:** Phase 100 verified complete — milestone v1.13 ready to ship
+**Stopped at:** Phase 101 context gathered
 
 **Next action:** `/gsd-complete-milestone v1.13` — archive milestone artifacts, advance MILESTONES.md, prepare squash-merge subject `feat(v1.13): discord integration & carry-forwards` for PR #130. All 9 phases (92-100) verified, 36/36 plans shipped, 2255 tests green, JaCoCo 88.98 %, SpotBugs 0.
 
