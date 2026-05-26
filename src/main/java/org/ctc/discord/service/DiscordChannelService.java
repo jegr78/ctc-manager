@@ -153,6 +153,7 @@ public class DiscordChannelService {
 	}
 
 	private static String phaseAbbrev(PhaseType type) {
+		// No default branch: PhaseType is exhaustive — adding a new value must force a re-mapping here.
 		return switch (type) {
 			case REGULAR -> "rs";
 			case PLAYOFF -> "po";
