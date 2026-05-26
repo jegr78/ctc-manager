@@ -27,10 +27,12 @@ import org.springframework.stereotype.Component;
  * name VARCHAR(255) NOT NULL
  * season_year INT NOT NULL
  * season_number INT NOT NULL
- * description VARCHAR(255)              (nullable)
+ * description VARCHAR(255)                          (nullable)
  * active BOOLEAN NOT NULL DEFAULT FALSE
  * created_at TIMESTAMP
  * updated_at TIMESTAMP
+ * discord_race_results_thread_id VARCHAR(32) NULL   (V13)
+ * discord_standings_thread_id VARCHAR(32) NULL      (V13)
  * </pre>
  *
  * <p>JSON shape (from {@code SeasonMixIn}): {@code {"id":"<uuid>","name":"...","year":<int>,
@@ -48,8 +50,9 @@ public class SeasonRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =
             "INSERT INTO seasons (id, name, season_year, season_number, description, active, "
-                    + "created_at, updated_at) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    + "created_at, updated_at, discord_race_results_thread_id, "
+                    + "discord_standings_thread_id) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -68,6 +71,8 @@ public class SeasonRestorer implements EntityRestorer {
                     ps.setBoolean(6, row.get("active").asBoolean());
                     ps.setTimestamp(7, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
                     ps.setTimestamp(8, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+                    ps.setString(9, nullableString(row, "discordRaceResultsThreadId"));
+                    ps.setString(10, nullableString(row, "discordStandingsThreadId"));
                 });
         log.debug("SeasonRestorer: restored {} rows", rows.size());
     }
