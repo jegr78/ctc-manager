@@ -114,7 +114,7 @@ class DiscordChannelServiceCleanupFailIT {
 
 		wm.stubFor(post(urlPathEqualTo("/api/v10/guilds/g1/channels"))
 				.willReturn(okJson(
-						"{\"id\":\"c1\",\"name\":\"md1-hc-vs-ac\",\"type\":0,\"parent_id\":\"cat1\"}")));
+						"{\"id\":\"c1\",\"name\":\"md1-rs-hc-vs-ac\",\"type\":0,\"parent_id\":\"cat1\"}")));
 		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
 				.willReturn(okJson(
 						"{\"id\":\"w1\",\"token\":\"" + WEBHOOK_SECRET + "\","
@@ -122,7 +122,7 @@ class DiscordChannelServiceCleanupFailIT {
 								+ "\"channel_id\":\"c1\"}")));
 		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
 				.willReturn(okJson(
-						"{\"id\":\"c1\",\"name\":\"md1-hc-vs-ac\",\"type\":0,\"parent_id\":\"cat1\","
+						"{\"id\":\"c1\",\"name\":\"md1-rs-hc-vs-ac\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
 								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"

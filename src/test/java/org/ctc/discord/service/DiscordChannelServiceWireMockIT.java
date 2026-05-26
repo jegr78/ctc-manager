@@ -120,14 +120,14 @@ class DiscordChannelServiceWireMockIT {
 
 		wm.stubFor(post(urlPathEqualTo("/api/v10/guilds/g1/channels"))
 				.willReturn(okJson(
-						"{\"id\":\"c1\",\"name\":\"md1-home-vs-away\",\"type\":0,\"parent_id\":\"cat1\"}")));
+						"{\"id\":\"c1\",\"name\":\"md1-rs-homeh-vs-awayh\",\"type\":0,\"parent_id\":\"cat1\"}")));
 		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
 				.willReturn(okJson(
 						"{\"id\":\"w1\",\"token\":\"tok-abc\","
 								+ "\"url\":\"https://discord.com/api/webhooks/w1/tok-abc\",\"channel_id\":\"c1\"}")));
 		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
 				.willReturn(okJson(
-						"{\"id\":\"c1\",\"name\":\"md1-home-vs-away\",\"type\":0,\"parent_id\":\"cat1\","
+						"{\"id\":\"c1\",\"name\":\"md1-rs-homeh-vs-awayh\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
 								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
@@ -146,6 +146,7 @@ class DiscordChannelServiceWireMockIT {
 
 		// and — 4th permission_overwrite shape verified (type=member, bot-user-id, BOT_ALLOW_MASK)
 		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/guilds/g1/channels"))
+				.withRequestBody(matchingJsonPath("$.name", equalTo("md1-rs-homeh-vs-awayh")))
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[3].type", equalTo("1")))
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[3].id", equalTo(BOT_USER_ID)))
 				.withRequestBody(matchingJsonPath("$.permission_overwrites[3].allow", equalTo(botAllow))));
@@ -179,14 +180,14 @@ class DiscordChannelServiceWireMockIT {
 
 		wm.stubFor(post(urlPathEqualTo("/api/v10/guilds/g1/channels"))
 				.willReturn(okJson(
-						"{\"id\":\"c1\",\"name\":\"md1-home-vs-away\",\"type\":0,\"parent_id\":\"cat1\"}")));
+						"{\"id\":\"c1\",\"name\":\"md1-rs-homeit-vs-awayit\",\"type\":0,\"parent_id\":\"cat1\"}")));
 		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
 				.willReturn(okJson(
 						"{\"id\":\"w1\",\"token\":\"tok-abc\","
 								+ "\"url\":\"https://discord.com/api/webhooks/w1/tok-abc\",\"channel_id\":\"c1\"}")));
 		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
 				.willReturn(okJson(
-						"{\"id\":\"c1\",\"name\":\"md1-home-vs-away\",\"type\":0,\"parent_id\":\"cat1\","
+						"{\"id\":\"c1\",\"name\":\"md1-rs-homeit-vs-awayit\",\"type\":0,\"parent_id\":\"cat1\","
 								+ "\"permission_overwrites\":["
 								+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
 								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
@@ -216,7 +217,7 @@ class DiscordChannelServiceWireMockIT {
 
 		wm.stubFor(post(urlPathEqualTo("/api/v10/guilds/g1/channels"))
 				.willReturn(okJson(
-						"{\"id\":\"c1\",\"name\":\"md1-home-vs-away\",\"type\":0,\"parent_id\":\"cat1\"}")));
+						"{\"id\":\"c1\",\"name\":\"md1-rs-homewf-vs-awaywf\",\"type\":0,\"parent_id\":\"cat1\"}")));
 		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
 				.willReturn(aResponse().withStatus(500)));
 

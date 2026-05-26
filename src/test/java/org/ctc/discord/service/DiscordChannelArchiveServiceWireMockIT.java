@@ -88,7 +88,7 @@ class DiscordChannelArchiveServiceWireMockIT {
 		// given
 		Match match = seedMatchWithChannel("H");
 		wm.stubFor(patch(urlPathEqualTo("/api/v10/channels/c1"))
-				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1-h-vs-a\",\"type\":0,\"parent_id\":\"cat-archive-1\"}")));
+				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1-rs-h-vs-a\",\"type\":0,\"parent_id\":\"cat-archive-1\"}")));
 
 		// when
 		mockMvc.perform(post("/admin/matches/" + match.getId() + "/move-to-archive")
@@ -110,7 +110,7 @@ class DiscordChannelArchiveServiceWireMockIT {
 		// given
 		Match match = seedMatchWithChannel("A");
 		wm.stubFor(patch(urlPathEqualTo("/api/v10/channels/c1"))
-				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1-h-vs-a\",\"type\":0,\"parent_id\":\"cat-archive-1\"}")));
+				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1-rs-h-vs-a\",\"type\":0,\"parent_id\":\"cat-archive-1\"}")));
 		mockMvc.perform(post("/admin/matches/" + match.getId() + "/move-to-archive")
 						.with(csrf())
 						.param("categoryId", "cat-archive-1"))

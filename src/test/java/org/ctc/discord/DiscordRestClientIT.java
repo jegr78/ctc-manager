@@ -203,7 +203,7 @@ class DiscordRestClientIT {
 	@Test
 	void givenChannelId_whenFetchChannel_thenReturnsChannelWithPermissionOverwrites() throws Exception {
 		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
-				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1-h-vs-a\",\"type\":0,"
+				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"md1-rs-h-vs-a\",\"type\":0,"
 						+ "\"parent_id\":\"cat1\","
 						+ "\"permission_overwrites\":["
 						+ "{\"id\":\"g1\",\"type\":0,\"allow\":\"0\",\"deny\":\"1024\"},"
