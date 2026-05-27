@@ -31,6 +31,7 @@ class DiscordGlobalConfigRepositoryIT {
 		seed.setAnnouncementWebhookUrl("");
 		seed.setRaceResultsForumChannelId("");
 		seed.setStandingsForumChannelId("");
+		seed.setCurrentMatchCategoryId("");
 		seed.setVsEmojiName("CTC");
 		seed.setBotApplicationId(null);
 		repo.save(seed);
