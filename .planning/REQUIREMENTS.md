@@ -148,4 +148,4 @@ Items raised during brainstorming that are worth tracking but not for v1.13:
 | POST-09 | 98 | Resolved |
 | POST-10 | 98 | Resolved |
 
-**Total:** 27 requirements across 7 phases (92–98).
+**Total:** 28 requirements across 7 phases (92–98). Phases 99/100/101 are decision-driven and close separately against their CONTEXT.md decisions (D-01..D-08 / D-01..D-14 / D-01..D-17).
