@@ -114,8 +114,9 @@ public class MatchdayService {
         matchday.setPickDeadline(pickDeadline);
         matchday.setScheduledWeekend(scheduledWeekend);
         matchdayRepository.save(matchday);
+        String safeWeekend = scheduledWeekend == null ? null : scheduledWeekend.replaceAll("[\\r\\n]", "_");
         log.info("Saved matchday pairings: {} (deadline={}, weekend={})",
-                matchday.getLabel(), pickDeadline, scheduledWeekend);
+                matchday.getLabel(), pickDeadline, safeWeekend);
         return matchday;
     }
 
