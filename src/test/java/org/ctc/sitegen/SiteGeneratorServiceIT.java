@@ -140,7 +140,7 @@ class SiteGeneratorServiceIT {
         verify(teamProfilePageGenerator, atLeastOnce()).generate(any(), any());
         verify(driverProfilePageGenerator, atLeastOnce()).generate(any(), any());
 
-        // D-23 caller-side contract preserved on the still-inline alltime/overview paths:
+        // Caller-side contract preserved on the still-inline alltime/overview paths:
         // alltime aggregation uses calculateAlltimeStandings (NOT the legacy seasonId overload).
         verify(standingsService, atLeastOnce()).calculateAlltimeStandings(anyList());
         verify(driverRankingService, atLeastOnce()).calculateAlltimeRanking(anyList());

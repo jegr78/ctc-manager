@@ -71,10 +71,10 @@ class BackupImportE2ETest extends PlaywrightConfig {
     }
 
     // =========================================================================
-    // Phase 75-08 Happy-path: full upload → preview → confirm → REAL execute walkthrough.
-    // Replaces the Phase 74 D-02#5 stub-flash scenario. The success flash now binds the
-    // locked D-15 #1 string ("Import completed. {N} rows restored across {M} tables.")
-    // and the real BackupImportService.execute(...) round-trips the dev fixture through
+    // Happy-path: full upload → preview → confirm → REAL execute walkthrough.
+    // The success flash binds the locked string
+    // ("Import completed. {N} rows restored across {M} tables.") and the real
+    // BackupImportService.execute(...) round-trips the dev fixture through
     // wipe + restore on H2.
     // =========================================================================
 

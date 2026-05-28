@@ -140,8 +140,9 @@ class SiteGeneratorServiceTest {
         seasonDriverRepository.save(new SeasonDriver(season, driver3, p1r));
         seasonDriverRepository.save(new SeasonDriver(season, driver4, p1r));
 
-        // Phase setup required by DriverRankingService + StandingsService (D-09 bridge delegates to findAllPhases)
-        // scoring lives on the SeasonPhase, attach the test-class scoring fields here.
+        // Phase-setup is required by DriverRankingService + StandingsService (the bridge
+        // delegates to findAllPhases). Scoring lives on the SeasonPhase, so the test-class
+        // scoring fields are attached here.
         var regularPhase = new SeasonPhase(season, PhaseType.REGULAR, PhaseLayout.LEAGUE, 1);
         regularPhase.setRaceScoring(raceScoring);
         regularPhase.setMatchScoring(matchScoring);
@@ -1360,7 +1361,7 @@ class SiteGeneratorServiceTest {
         }
     }
 
-    // D-01 guard: sub-teams excluded from teams overview
+    // Guard: sub-teams are excluded from the teams overview.
 
     @Test
     void givenSubTeam_whenGenerate_thenSubTeamExcludedFromTeamsOverview() throws IOException {
@@ -1381,7 +1382,7 @@ class SiteGeneratorServiceTest {
                 "Sub-team must NOT appear in teams overview");
     }
 
-    // D-04 guard: test season not in overview filter
+    // Guard: a season with "Test" in its name does not appear in the overview filter.
 
     @Test
     void givenTestSeason_whenGenerate_thenTestSeasonNotInOverviewFilter() throws IOException {

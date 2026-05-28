@@ -135,7 +135,7 @@ class BackupImportSchemaMismatchIT {
                 .as("Schema mismatch must run BEFORE any DB read; row counts must be byte-identical")
                 .isEqualTo(before);
 
-        // D-16: try/finally must have deleted the staging file
+        // try/finally must have deleted the staging file.
         assertThat(Files.list(stagingDir)
                 .filter(p -> p.getFileName().toString().endsWith(".zip"))
                 .count())

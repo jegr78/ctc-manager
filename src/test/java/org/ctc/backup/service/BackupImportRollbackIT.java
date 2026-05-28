@@ -253,10 +253,10 @@ class BackupImportRollbackIT {
                 .as("uploads/ tree must be byte-equal to pre-import snapshot — AFTER_COMMIT listener did NOT fire")
                 .containsExactlyInAnyOrderElementsOf(preImportUploadsFiles);
 
-        // (d) any data/.import-backups/<ts>/uploads-new/ staging dir created BY THIS RUN was
-        // cleaned up by the catch-block finally in BackupImportService.execute() (Plan 75-06
-        // D-12). Pre-existing uploads-new/ directories (left behind by earlier tests in the
-        // same JVM session) are out of this assertion's scope — the cleanup contract is
+        // (d) any data/.import-backups/<ts>/uploads-new/ staging dir created BY THIS RUN
+        // was cleaned up by the catch-block finally in BackupImportService.execute().
+        // Pre-existing uploads-new/ directories (left behind by earlier tests in the same
+        // JVM session) are out of this assertion's scope — the cleanup contract is
         // per-import, scoped to <ts>.
         Set<Path> postImportUploadsNewDirs = snapshotUploadsNewDirs();
         Set<Path> newlyCreated = new HashSet<>(postImportUploadsNewDirs);

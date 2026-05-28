@@ -400,7 +400,7 @@ class BackupRoundTripIT {
 	}
 
 	// =========================================================================
-	// Phase 77 — Full round-trip + SHA-256 on H2
+	// Full round-trip + SHA-256 on H2
 	// =========================================================================
 
 	/**
@@ -487,7 +487,7 @@ class BackupRoundTripIT {
 			// given — capture pre-export counts and sample entity hashes
 			Map<String, Long> preExportCounts = captureRowCounts();
 
-			// D-04: deterministic first-row selection by natural ordering
+			// Deterministic first-row selection by natural ordering.
 			Race preRace = raceRepository.findAll(Sort.by(Sort.Order.asc("id"))).get(0);
 			SeasonDriver preSeasonDriver = seasonDriverRepository.findAll(Sort.by(Sort.Order.asc("id"))).get(0);
 			Team preTeam = teamRepository.findAll(Sort.by(Sort.Order.asc("id"))).stream()
@@ -495,7 +495,7 @@ class BackupRoundTripIT {
 					.findFirst()
 					.orElseThrow(() -> new AssertionError("No root team found in dev fixture"));
 
-			// D-03: SHA-256 over in-DB row via backupObjectMapper
+			// SHA-256 over the in-DB row via backupObjectMapper.
 			byte[] preRaceHash = hashEntity(preRace);
 			byte[] preSeasonDriverHash = hashEntity(preSeasonDriver);
 			byte[] preTeamHash = hashEntity(preTeam);
@@ -633,7 +633,7 @@ class BackupRoundTripIT {
 	}
 
 	// =========================================================================
-	// Phase 77 — Full round-trip + SHA-256 on live MariaDB (Testcontainers)
+	// Full round-trip + SHA-256 on live MariaDB (Testcontainers)
 	// =========================================================================
 
 	/**
@@ -778,7 +778,7 @@ class BackupRoundTripIT {
 			// given — capture pre-export counts and sample entity hashes
 			Map<String, Long> preExportCounts = captureRowCounts();
 
-			// D-04: deterministic first-row selection by natural ordering
+			// Deterministic first-row selection by natural ordering.
 			Race preRace = raceRepository.findAll(Sort.by(Sort.Order.asc("id"))).get(0);
 			SeasonDriver preSeasonDriver = seasonDriverRepository.findAll(Sort.by(Sort.Order.asc("id"))).get(0);
 			Team preTeam = teamRepository.findAll(Sort.by(Sort.Order.asc("id"))).stream()
@@ -786,7 +786,7 @@ class BackupRoundTripIT {
 					.findFirst()
 					.orElseThrow(() -> new AssertionError("No root team found in dev fixture"));
 
-			// D-03: SHA-256 over in-DB row via backupObjectMapper
+			// SHA-256 over the in-DB row via backupObjectMapper.
 			byte[] preRaceHash = hashEntity(preRace);
 			byte[] preSeasonDriverHash = hashEntity(preSeasonDriver);
 			byte[] preTeamHash = hashEntity(preTeam);

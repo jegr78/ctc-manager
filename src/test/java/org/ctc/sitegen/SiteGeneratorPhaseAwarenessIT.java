@@ -161,7 +161,7 @@ class SiteGeneratorPhaseAwarenessIT {
                 .orElseThrow(() -> new AssertionError("Phase-tab row must contain a PLAYOFF tab"));
         assertThat(playoffTab.attr("href")).endsWith("playoff.html");
 
-        // D-08 invariant: standings-playoff.html is NEVER generated
+        // Invariant: standings-playoff.html is NEVER generated.
         assertThat(tempDir.resolve("season").resolve("2023-1-season-2023")
                 .resolve("standings-playoff.html")).doesNotExist();
     }

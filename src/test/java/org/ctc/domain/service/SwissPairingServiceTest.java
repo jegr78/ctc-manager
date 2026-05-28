@@ -209,7 +209,7 @@ class SwissPairingServiceTest {
 		stOld.setSuccessor(stNew);
 		season = seasonRepository.saveAndFlush(season);
 
-		// Phase roster: teams[1], teams[2], teams[3] + replacementTeam (teams[0] excluded)
+		// Roster for this phase: teams[1], teams[2], teams[3] + replacementTeam (teams[0] excluded).
 		phaseTeamRepository.save(new PhaseTeam(regularPhase, teams.get(1)));
 		phaseTeamRepository.save(new PhaseTeam(regularPhase, teams.get(2)));
 		phaseTeamRepository.save(new PhaseTeam(regularPhase, teams.get(3)));

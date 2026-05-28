@@ -61,8 +61,8 @@ class TeamProfilePageGeneratorTest {
         given(youTubeScraperService.scrapeVideoId(anyString(), anyString()))
                 .willReturn("dQw4w9WgXcQ");
 
-        // Plan 1 pattern — Flyway clean+migrate guarantees fresh DB regardless of preceding test
-        // classes seeding the shared H2 in-memory DB (DB_CLOSE_DELAY=-1 keeps it alive across
+        // Flyway clean+migrate guarantees a fresh DB regardless of preceding test classes
+        // seeding the shared H2 in-memory DB (DB_CLOSE_DELAY=-1 keeps it alive across
         // Spring context reloads).
         Flyway.configure()
                 .dataSource(dataSource)

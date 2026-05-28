@@ -182,8 +182,8 @@ class ImportLockBannerAdviceIT {
         MvcResult siteResult = mockMvc.perform(get("/")).andReturn();
 
         // then — the immediate redirect response does not contain the banner wording
-        // D-13: site templates ignore ${importInProgress} — the model attribute is set globally
-        // but site/layout.html has no th:if referencing it
+        // Site templates ignore ${importInProgress} — the model attribute is set globally
+        // but site/layout.html has no th:if referencing it.
         String siteBody = siteResult.getResponse().getContentAsString();
         assertThat(siteBody)
                 .as("GET / response (redirect) must not contain banner wording — site templates are banner-free (D-13)")

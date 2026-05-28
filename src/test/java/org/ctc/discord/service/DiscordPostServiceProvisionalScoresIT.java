@@ -182,7 +182,7 @@ class DiscordPostServiceProvisionalScoresIT {
 
 	@Test
 	void noThreadIdEverAppended() throws Exception {
-		// D-96-GRX-1c: PROVISIONAL_SCORES targets the match-channel only, never a forum-thread.
+		// PROVISIONAL_SCORES targets the match-channel only, never a forum-thread.
 		String webhookPath = "/webhooks/914/tok-ps4";
 		Match match = seedMatchWith3Races("PS4", wm.baseUrl() + webhookPath, 2);
 		wm.stubFor(post(urlPathEqualTo(webhookPath))
