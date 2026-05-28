@@ -12,7 +12,7 @@
 - :white_check_mark: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-79 (shipped 2026-05-16)
 - :white_check_mark: **v1.11 Tooling Infrastructure & Tech-Debt Sweep** — Phases 80-87 (shipped 2026-05-18)
 - :white_check_mark: **v1.12 Driver-Import Gap-Closure & Test Performance Round 2** — Phases 88-91 (shipped 2026-05-20)
-- :hammer: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-102 (in flight; 92-101 shipped, 102 = code-review-fix closeout)
+- :hammer: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (in flight; 92-101 shipped, 102 = code-review-fix closeout, 103 = StringUtils.hasText() readability sweep)
 
 ## Phases
 
@@ -356,3 +356,27 @@ Plans:
 - [x] 101-06-PLAN.md — PROJECT.md wire-contract update + STATE.md baselines flip + docs/operations/discord-integration.md § Backup & Restore semantics (T-101-01 + T-101-02 mitigation) + README.md 24 → 26 (D-06, D-09, D-14)
 
 **UI hint**: no (backup is server-side; no Thymeleaf templates touched)
+
+### Phase 103: StringUtils Blank-Check Sweep — replace manual null-and-isBlank patterns with Spring StringUtils.hasText()
+
+**Goal:** Replace 88 occurrences of the manual `s != null && !s.isBlank()` (41x) and `s == null || s.isBlank()` (47x) blank-check pattern across 43 production-source files with `org.springframework.util.StringUtils.hasText(s)` (and its negation `!hasText(s)`). Pure readability + Spring-Native consistency refactor — no behavior change, no test-coverage regression. Aligns with CLAUDE.md "Spring-Native over JDK-Built-In" principle. Out of scope: the ~10 String `.isEmpty()` callsites (different semantics — case-by-case decision in a separate phase). Collection/MultipartFile `.isEmpty()` is explicitly excluded.
+
+**Hotspots (by occurrence count):**
+
+- `DiscordPostService.java` — 17
+- `DiscordDevSeeder.java` — 10
+- `DiscordRateLimitInterceptor.java` — 6
+- `RaceSettings.isComplete()` — 5
+- 39 further files with 1-3 occurrences each (Discord controllers/services, admin controllers, domain services/models, sitegen, dataimport, backup)
+
+**Special-case bonus:** [DriverService.java:160](src/main/java/org/ctc/domain/service/DriverService.java#L160) `filter(a -> a != null && !a.isBlank())` becomes `filter(StringUtils::hasText)` (method-reference, even cleaner).
+
+**Requirements**: none (pure refactor — no new functional requirement)
+**Depends on:** Phase 102 (parallel review-fix session — must finish first so the diff doesn't collide on shared Discord-package files)
+**Estimated duration:** 1 day
+**Plans:** 1 plan (single sweep across all 43 files per CONTEXT D-01; one atomic commit at plan close)
+**UI hint:** no (no Thymeleaf / CSS / template changes — pure Java refactor)
+**Risk:** low — mechanical 1:1 substitution; OpenRewrite `FindMethods` detector recipe acts as closing validation oracle (D-02); single `./mvnw clean verify -Pe2e` at phase end (D-04).
+
+Plans:
+- [ ] 103-01-PLAN.md — Single-sweep hand-edit of 85 substitutions across 42 files (EntityRef.java:29 verified-skipped) + new `config/rewrite-validate-hasText.yml` detector recipe + Surefire-targeted per-batch tests + phase-end `./mvnw clean verify -Pe2e`
