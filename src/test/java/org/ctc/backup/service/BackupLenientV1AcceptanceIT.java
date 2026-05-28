@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.ctc.backup.exception.BackupArchiveException;
@@ -50,7 +51,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class BackupLenientV1AcceptanceIT {
 
     private static final List<String> V1_TABLES_24 = List.of(
-            "cars", "tracks", "race_scoring", "match_scoring",
+            "cars", "tracks", "race_scorings", "match_scorings",
             "drivers", "psn_aliases", "teams", "seasons",
             "season_phases", "season_phase_groups", "phase_teams", "season_teams",
             "season_drivers", "playoffs", "playoff_rounds", "playoff_matchups",
@@ -85,6 +86,9 @@ class BackupLenientV1AcceptanceIT {
     @Qualifier("backupObjectMapper")
     private ObjectMapper backupObjectMapper;
 
+    @Autowired
+    private org.ctc.backup.schema.BackupSchema backupSchema;
+
     private Path tempZip;
 
     @AfterEach
@@ -92,6 +96,21 @@ class BackupLenientV1AcceptanceIT {
         if (tempZip != null) {
             Files.deleteIfExists(tempZip);
         }
+    }
+
+    @Test
+    void givenV1Tables24_thenEveryNameMatchesAJpaEntityTable() {
+        // given — non-vacuous gate proof: every V1_TABLES_24 name must resolve to a real
+        // @Table-mapped entity in the schema's export-order. A singular name like
+        // "race_scoring" would never appear here because no @Table uses that form.
+        Set<String> schemaTableNames = backupSchema.getExportOrder().stream()
+                .map(org.ctc.backup.schema.EntityRef::tableName)
+                .collect(java.util.stream.Collectors.toSet());
+
+        // then
+        assertThat(schemaTableNames)
+                .as("V1_TABLES_24 lists @Table(name=...) values; mismatch means the test never exercises restore")
+                .containsAll(V1_TABLES_24);
     }
 
     @Test
