@@ -12,7 +12,7 @@
 - :white_check_mark: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-79 (shipped 2026-05-16)
 - :white_check_mark: **v1.11 Tooling Infrastructure & Tech-Debt Sweep** — Phases 80-87 (shipped 2026-05-18)
 - :white_check_mark: **v1.12 Driver-Import Gap-Closure & Test Performance Round 2** — Phases 88-91 (shipped 2026-05-20)
-- :hammer: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (in flight; 92-101 shipped, 102 = code-review-fix closeout, 103 = StringUtils.hasText() readability sweep)
+- :white_check_mark: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (shipped 2026-05-28)
 
 ## Phases
 
@@ -177,95 +177,25 @@ See: milestones/v1.12-ROADMAP.md for full details
 
 </details>
 
-### v1.13 Discord Integration & Carry-Forwards (Phases 92-98) — IN FLIGHT
+<details>
+<summary>v1.13 Discord Integration & Carry-Forwards (Phases 92-103) -- SHIPPED 2026-05-28</summary>
 
-- [ ] **Phase 92: Carry-Forwards & Cleanup** — Close v1.12 audit findings (UX-01 `CsvImportController` parity, COV-01 JaCoCo recovery ≥ 88.88 %, CLEAN-01 grep-predicate tightening to `org.junit.jupiter.api.Assumptions`, DOCS-01 retroactive 89/90/91-VERIFICATION.md authoring) + BOOK-01 bookkeeping flip of 7 stale `[ ]` + 4 stale `Pending` rows in `milestones/v1.12-REQUIREMENTS.md` so v1.13 starts on a clean baseline before Discord migrations land
-- [ ] **Phase 93: Discord Foundation** — INFRA-01 `DiscordRestClient` (Spring `RestClient`, Bot-Token auth) + `DiscordWebhookClient` (multipart for graphics) + sealed `DiscordApiException` (4 permits) + `DiscordRateLimitInterceptor` + `DiscordTimestamps` + `DiscordEmojiCache`; INFRA-02 threat-model surfaces (token env-var, SSRF whitelist `discord.com`, log-mask webhook URLs, `@ToString.Exclude`, CSRF, DTO mass-assignment); INFRA-03 `/admin/discord-config` page with Flyway V8 `discord_global_config` + 4 test/refresh buttons
-- [ ] **Phase 94: Team Roles + Match Channel Lifecycle** — CHAN-01 Flyway V9 `teams.discord_role_id` + Team-Form snowflake-validated field + live-dropdown via cached guild roles; CHAN-02 Flyway V10 `matches.discord_*` + scheduling fields + "Create Discord Channel" button with full permission-overwrite model + webhook creation + post-create permission-audit assertion; CHAN-03 Archive modal with category regex `^Match Days Archive (?<year>\d{4})(?: \((?<num>\d+)\))?$` + live channel-count + default-suggestion of highest-num with `< 50`
-- [x] **Phase 95: Match Channel Posts** — POST-01 Flyway V11 `discord_post` table + `DiscordPostService.postOrEdit` pattern + `/admin/discord/posts` listing; POST-02 Team Cards (one multipart post with 2 PNGs); POST-03 Settings + Lineups graphic posts; POST-04 Match Results with auto-detected re-post on stale-data; POST-05 Schedule embed with auto-edit on host/RD/streamer field changes (completed 2026-05-22)
-- [ ] **Phase 96: Provisional Graphic + Forum Threads** — GRAFX-01 new `ProvisionalScoresGraphicService` + Thymeleaf template (pixel-accurate to existing Google-Sheets screenshot); FORUM-01 Flyway V12 `seasons.discord_*_thread_id` + Season-Detail "Discord Integration" section + Link-existing-Thread modal + Create-new-Thread modal; FORUM-02 Race-Detail "Post Race Result to Forum-Thread" with `?thread_id=` query param + auto-unarchive-if-archived
-- [ ] **Phase 97: Matchday-Level Posts** — POST-06 per-match Match Preview Announcement (Markdown + Settings/Lineups attachments + auto-edit hook on streamLink/teaser change); POST-07a Match Day Results + POST-07b Power Rankings (2 independent buttons on Matchday-Detail to race-results forum-thread); POST-08 phase-aware Standings to standings forum-thread (V14 phase_id FK migration + new StandingsGraphicService with iterative design loop)
-- [ ] **Phase 98: Polish + E2E + Docs + Close** — E2E-01 Playwright + WireMock-backed full-matchday-lifecycle suite (create channel → post all stages → archive); DOCS-02 `docs/operations/discord-integration.md` operator runbook with Bot-application setup screenshots + OAuth-URL-generator + token rotation + troubleshooting; DOCS-03 README + Wiki update + milestone close
+- [x] Phase 92: Carry-Forwards & Cleanup (4/4 plans) -- completed 2026-05-21
+- [x] Phase 93: Discord Foundation (3/3 plans) -- completed 2026-05-21
+- [x] Phase 94: Team Roles + Match Channel Lifecycle (4/4 plans) -- completed 2026-05-22
+- [x] Phase 95: Match Channel Posts (4/4 plans) -- completed 2026-05-23
+- [x] Phase 96: Provisional Graphic + Forum Threads (3/3 plans) -- completed 2026-05-23
+- [x] Phase 97: Matchday-Level Posts (3/3 plans) -- completed 2026-05-24
+- [x] Phase 98: Polish + E2E + Docs + Close (7/7 plans) -- completed 2026-05-25
+- [x] Phase 99: Pre-merge audit-polish (5/5 plans) -- completed 2026-05-26
+- [x] Phase 100: Match Day Channel Naming Scheme (3/3 plans) -- completed 2026-05-26
+- [x] Phase 101: Backup/Restore covers Discord schema V8-V15 (6/6 plans) -- completed 2026-05-26
+- [x] Phase 102: Code-Review Fixes (v1.13 closeout) (4/4 plans) -- completed 2026-05-28
+- [x] Phase 103: StringUtils Blank-Check Sweep (1/1 plan) -- completed 2026-05-28
 
-See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency Graph, REQ-ID coverage)
+See: milestones/v1.13-ROADMAP.md for full details
 
-### Phase 92: Carry-Forwards & Cleanup
-
-**Goal**: Close v1.12 audit findings (UX parity for `CsvImportController`, JaCoCo recovery to ≥ 88.88 %, grep-predicate tightening, optional VERIFICATION.md doc-shape gap) and `milestones/v1.12-REQUIREMENTS.md` bookkeeping drift so v1.13 starts on a clean baseline before Discord migrations land.
-**Depends on**: Nothing (first phase of v1.13)
-**Requirements**: UX-01, COV-01, CLEAN-01, DOCS-01, BOOK-01
-**Estimated duration**: 1-2 days
-**Plans**: 4 plans (all wave 1, sequential inline on `gsd/v1.13-discord-integration` per CONTEXT D-05)
-- [ ] 92-01-PLAN.md — UX-01: typed-catch + errorCategory badge UX for CsvImportController (+ opens rolling Draft milestone PR per CONTEXT D-06)
-- [ ] 92-02-PLAN.md — COV-01: RaceControllerCalendarTest + GoogleSheets/CalendarServiceIT restore JaCoCo to ≥ 88.88 %
-- [ ] 92-03-PLAN.md — CLEAN-01: assumptions-fence build-guard (pom.xml + 2 predicate tests in greenfield org.ctc.build package)
-- [ ] 92-04-PLAN.md — DOCS-01 + BOOK-01: retroactive 89/90/91-VERIFICATION.md + 11-marker flip in v1.12-REQUIREMENTS.md
-
-### Phase 93: Discord Foundation
-
-**Goal**: Deliver the Spring `RestClient` Bot + Webhook client + sealed `DiscordApiException` hierarchy + rate-limit interceptor + emoji cache + admin-config page so Phases 94-97 have a stable platform to build business logic on.
-**Depends on**: Phase 92 (clean JaCoCo baseline + zero stale bookkeeping markers; CLEAN-01 grep-predicate fix means Discord-phase tests register on the right fence)
-**Requirements**: INFRA-01, INFRA-02, INFRA-03
-**Estimated duration**: 2-3 days
-**Plans**: 3 plans (all wave 1, sequential inline on `gsd/v1.13-discord-integration` per CONTEXT D-05)
-- [x] 93-01-PLAN.md — INFRA-01: DiscordRestClient + DiscordWebhookClient + sealed DiscordApiException hierarchy (4 permits) + DiscordRateLimitInterceptor + DiscordEmojiCache + DiscordTimestamps + WireMock-backed ITs
-- [x] 93-02-PLAN.md — INFRA-02: 93-THREAT-MODEL.md artifact + SSRF positive-whitelist constructor guards + Logback %replace webhook-URL mask + DiscordClientHostWhitelistTest + DiscordLogMaskingIT
-- [ ] 93-03-PLAN.md — INFRA-03: Flyway V8 discord_global_config + JPA entity/repository/service + DiscordConfigForm DTO + DiscordConfigController (4 test buttons, CSRF) + Thymeleaf admin/discord-config.html + Playwright E2E
-**UI hint**: yes
-
-### Phase 94: Team Roles + Match Channel Lifecycle
-
-**Goal**: Operator can map teams to Discord roles, create per-match Discord channels with full permission-overwrite model, and archive them via a category-picker modal honoring Discord's 50-channels-per-category limit.
-**Depends on**: Phase 93 (Discord client + sealed exception hierarchy + config page must exist before channel-creation buttons can be wired; CHAN-02 requires INFRA-01's `DiscordRestClient.createChannel` + `createWebhook` methods)
-**Requirements**: CHAN-01, CHAN-02, CHAN-03
-**Estimated duration**: 2-3 days
-**Plans**: 3 plans (sequential inline on `gsd/v1.13-discord-integration` per CONTEXT D-07)
-- [ ] 94-01-PLAN.md — CHAN-01: Team Discord role mapping + DiscordRoleCache + UI polish base (closes UAT-03 mobile-overflow debt)
-- [ ] 94-02-PLAN.md — CHAN-02: Match-Detail page + DiscordChannelService + permission audit (closes T-93-03)
-- [ ] 94-03-PLAN.md — CHAN-03: Archive modal + DiscordCategoryResolver + UAT-04 staged
-**UI hint**: yes
-
-### Phase 95: Match Channel Posts
-
-**Goal**: Five per-match post types (Team Cards, Settings, Lineups, Schedule, Match Results) post via Webhook with stored `message_id` and a uniform in-place edit path via Webhook-PATCH.
-**Depends on**: Phase 94 (a match channel + webhook URL must exist on the match row before posts can target it; `DiscordPostService.postOrEdit` lookup keys on `match.discordChannelId`)
-**Requirements**: POST-01, POST-02, POST-03, POST-04, POST-05
-**Estimated duration**: 2-3 days
-**Plans**: TBD (estimated 4 plans per design spec § 5)
-**UI hint**: yes
-
-### Phase 96: Provisional Graphic + Forum Threads
-
-**Goal**: New `ProvisionalScoresGraphicService` replaces today's manual sheet-screenshot, and operator can link each season's race-results + standings posts to dedicated Discord forum-threads.
-**Depends on**: Phase 95 (`DiscordPost` tracking entity + `DiscordPostService.postOrEdit` from POST-01 is reused by FORUM-02 for race-result forum-thread posts; same pattern with `?thread_id=` query param)
-**Requirements**: GRAFX-01, FORUM-01, FORUM-02
-**Estimated duration**: 2-3 days
-**Plans**: TBD (estimated 3 plans per design spec § 5)
-**UI hint**: yes
-
-### Phase 97: Matchday-Level Posts
-
-**Goal**: Close the matchday- + season-level Discord post matrix on top of the Phase 95 + 96 foundation: per-match Match Preview Announcement (POST-06) with auto-edit hook, two independent Matchday-Detail buttons for Match Day Results + Power Rankings (POST-07a + 07b) to the race-results forum-thread, and phase-aware Standings (POST-08) to the standings forum-thread with a new `StandingsGraphicService` + V14 `discord_post.phase_id` FK migration.
-**Depends on**: Phase 96 (forum-threads must be linkable on the season before POST-07a/07b + POST-08 can target them; POST-07 + POST-08 require `season.discordRaceResultsThreadId` + `season.discordStandingsThreadId`; Plan 97-03 widens Phase 96's `SeasonRef` sealed-record for phase-scoped identity-key)
-**Requirements**: POST-06, POST-07, POST-08
-**Estimated duration**: 2-3 days
-**Plans**: 3 plans
-- [x] 97-01-PLAN.md — POST-06 Match Preview Announcement + Auto-Edit Hook on streamLink/teaser change
-- [x] 97-02-PLAN.md — POST-07a Match Day Results + POST-07b Power Rankings (2 buttons on Matchday-Detail)
-- [ ] 97-03-PLAN.md — POST-08 Standings + StandingsGraphicService + V14 phase_id FK migration + iterative graphic-design loop
-**UI hint**: yes
-
-### Phase 98: Polish + E2E + Docs + Close
-
-**Goal**: Production-ready Discord integration with end-to-end test coverage of the full matchday lifecycle, operator runbook, README/Wiki update, and milestone close.
-**Depends on**: Phase 97 (E2E test exercises the full create-channel → post-all-stages → archive lifecycle spanning Phases 94-97; all 11 post types must exist before the end-to-end suite can run)
-**Requirements**: E2E-01, DOCS-02, DOCS-03
-**Estimated duration**: 2-3 days
-**Plans**: 3 plans (sequential inline on `gsd/v1.13-discord-integration` per CONTEXT D-98-PLAN-1)
-- [ ] 98-01-PLAN.md — Mobile-Polish CSS-Sweep (`.card` / `.form-group` / `.searchable-dropdown` + 640px MQ padding) + DOCS-02 Runbook-Erweiterung (§§ 1.9 Forum-Channel + 2.3 Daily Operations + 6 Token-Rotation + 7 UAT-08 Procedure)
-- [ ] 98-02-PLAN.md — E2E-01 DiscordFullMatchdayLifecycleE2ETest (8-Stage Mega-Walkthrough, WireMockExtension + app.discord.base-url, TestDataService.seedFullMatchdayLifecycle + WireMockDiscordStubs helper)
-- [ ] 98-03-PLAN.md — DOCS-03 README + Wiki (canonical paragraph) + MILESTONES.md v1.13-Entry + REQUIREMENTS.md 22-REQ Pre-Merge-Flip + STATE.md UAT-08-Staging + PR-Body Final-Update (no git tag, no gh pr merge — User-Manual after UAT-08)
-**UI hint**: yes
+</details>
 
 ## Progress
 
@@ -281,102 +211,4 @@ See: milestones/v1.13-ROADMAP.md for full details (Success Criteria, Dependency 
 | v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | 50 | Complete | 2026-05-16 |
 | v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | 46 | Complete | 2026-05-18 |
 | v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | Complete | 2026-05-20 |
-| v1.13 Discord Integration & Carry-Forwards | 92-101 | 42 | In flight | TBD |
-
-### v1.13 Phase Progress
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 92 — Carry-Forwards & Cleanup | 4/4 | Complete | 2026-05-21 |
-| 93 — Discord Foundation | 3/3 | Complete | 2026-05-21 |
-| 94 — Team Roles + Match Channel Lifecycle | 4/4 | Complete | 2026-05-22 |
-| 95 — Match Channel Posts | 4/4 | Complete | 2026-05-23 |
-| 96 — Provisional Graphic + Forum Threads | 3/3 | Complete | 2026-05-23 |
-| 97 — Matchday-Level Posts | 3/3 | Complete | 2026-05-24 |
-| 98 — Polish + E2E + Docs + Close | 7/7 | Complete | 2026-05-25 |
-| 99 — Pre-merge audit-polish | 5/5 | Complete | 2026-05-26 |
-| 100 — Match Day Channel Naming Scheme | 3/3 | Complete | 2026-05-26 |
-| 101 — Backup/Restore covers Discord schema | 6/6 | Complete | 2026-05-26 |
-
-### Phase 99: Pre-merge audit-polish: REQUIREMENTS Flyway-Prose + ROADMAP refresh + retroactive VERIFICATION.md + VALIDATION.md frontmatter + FORUM-01 modal scope
-
-**Goal:** Close the 5 `tech_debt`-tier gaps documented in `.planning/v1.13-MILESTONE-AUDIT.md` (verdict 2026-05-25) before `/gsd-complete-milestone v1.13` archives the milestone. Fix Flyway-version prose drift in REQUIREMENTS.md POST-01 + FORUM-01, rewrite FORUM-01 acceptance text to the shipped surface (drop the never-built "Create new Thread..." modal sub-clause), refresh the ROADMAP v1.13 Progress table to reflect that all 7 phases are complete, retrofill the 6 missing top-level `9N-VERIFICATION.md` files (Phases 92/94/95/96/97/98) per the v1.12 DOCS-01 precedent, refresh stale `93-VALIDATION.md` + `95-VALIDATION.md` frontmatter, and surgically YAGNI-delete the unused `DiscordRestClient.createThread()` surface (method + DTO + orphan IT) so the audit doc's tech_debt list closes to zero.
-**Requirements**: POST-01, FORUM-01 (prose-only updates — no new REQs)
-**Depends on:** Phase 98
-**Plans:** 5 plans (1 wave, sequential inline)
-
-Plans:
-- [ ] 99-01 — REQUIREMENTS.md prose-fix: POST-01 V11→V12, FORUM-01 V12→V13 + acceptance rewrite + audit-doc cross-update (D-01, D-03, D-04, D-05, D-06)
-- [ ] 99-02 — ROADMAP.md v1.13 Progress refresh: top-level row → Complete 2026-05-25 + 7 per-phase rows → Complete with dates (D-07, D-08, D-09, D-10)
-- [ ] 99-03 — Retroactive 9N-VERIFICATION.md retrofill for Phases 92, 94, 95, 96, 97, 98 (D-11, D-12, D-13, D-14, D-15)
-- [ ] 99-04 — Phase 93 + Phase 95 phase-level VALIDATION.md frontmatter refresh (inline edits) (D-16, D-17, D-18)
-- [ ] 99-05 — YAGNI delete `DiscordRestClient.createThread()` + `ThreadCreateRequest` DTO + orphan IT method (D-02, D-23, D-25)
-
-### Phase 100: Match Day Channel Naming Scheme: phase prefix (rs/po/pm) + optional group prefix after mdX- — Complete ✓ (2026-05-26)
-
-**Goal:** Extend `DiscordChannelService.channelName(Match)` to emit `md{N}-{phase}-[{group}-]{home}-vs-{away}` per CONTEXT decisions D-01..D-14. New match-channels created post-Phase-100 use the new scheme; existing channels stay as-is (D-08).
-**Requirements**: TBD (decision-driven — D-01..D-14 in 100-CONTEXT.md)
-**Depends on:** Phase 99
-**Plans:** 3 plans
-
-Plans:
-
-**Wave 1**
-- [x] 100-01 — Extend `DiscordChannelService.channelName(Match)` + new helpers `phaseAbbrev(PhaseType)` + `groupSlug(SeasonPhaseGroup)` + 100-char overflow guard + new pure-unit `DiscordChannelServiceNamingTest` (D-01..D-07, D-10..D-13)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-- [x] 100-02 — Refresh 5 IT files (14 literal occurrences) from old Phase-94 format to new Phase-100 format + add outbound-name pinning assertion on happy-path WireMock IT (D-14, D-11)
-
-**Wave 3** *(blocked on Wave 2 completion)*
-- [x] 100-03 — STATE.md bookkeeping: record D-08 (leave-as-is, no migration) + D-09 (two-scheme coexistence acceptance) in Deferred Items (D-08, D-09)
-
-### Phase 101: Backup/Restore covers Discord schema (V8-V15) — Complete ✓ (2026-05-26)
-
-**Goal:** Close the silent-data-loss gap that v1.13's Flyway V8-V15 schema opened in the backup wire contract. Two surfaces close: (a) extend the 4 existing `EntityRestorer.INSERT_SQL` statements (Match/Team/Matchday/Season) to cover all 13 V8-V15 columns (otherwise import silently NULLs them); (b) revisit Phase 72 D-15's `org.ctc.domain.model.*`-only package filter and expand it to also include `org.ctc.discord.model.*` — adds `DiscordGlobalConfig` + `DiscordPost` to the 24-entity scope (→ 26 entities). Bump `BackupSchema.SCHEMA_VERSION` 1 → 2; loosen the importer to accept `schema_version IN (1, 2)` (lenient v1 acceptance for pre-v1.13 backups). 13 per-field regression-fence tests + byte-equality on H2 + MariaDB opt-in. Single-guild restore semantics + webhook_token PII-equivalent secrecy documented in DOCS-02 runbook.
-**Requirements**: D-01 inclusion, D-02 silent-NULL fix, D-03 single-row handling, D-04 topo position, D-05 preserve IDs as-is, D-06 single-guild documented, D-07 no cross-guild guard, D-08 package-filter expansion, D-09 SCHEMA_VERSION 1→2, D-10 lenient `IN (1, 2)`, D-11 v1 imports leave Discord empty, D-12 4 Restorer extensions, D-13 full first-class test coverage, D-14 guard-test flips, D-15 13 per-field regression-fence, D-16 byte-equality DiscordGlobalConfig + DiscordPost, D-17 lenient-v1-acceptance IT
-**Depends on:** Phase 100
-**Plans:** 6 plans (5 waves, sequential inline on `gsd/v1.13-discord-integration` per CLAUDE.md "Inline Sequential is the Default" + v1.13 CONTEXT D-05)
-
-Plans:
-
-**Wave 0** *(MUST land first per RESEARCH §Pitfall 6 — guard test exact-int assertion would block all subsequent work)*
-- [x] 101-01-PLAN.md — SCHEMA_VERSION 1→2 + paired guard-test assertion flip (D-09, D-14 first half)
-
-**Wave 1** *(atomic 5-change commit — @PostConstruct startup validators require entity-count + restorer-count in lockstep)*
-- [x] 101-02-PLAN.md — Package-filter expansion + 2 new MixIns + 2 new Restorers + module reg + entity-count test flip (D-01, D-03, D-04, D-08, D-12, D-14 second half)
-
-**Wave 2** *(may run after Plan 02; 03 and 04 share no files)*
-- [x] 101-03-PLAN.md — Extend 4 existing Restorers (MatchRestorer +8 V10/V11, TeamRestorer +1 V9, MatchdayRestorer +2 V15, SeasonRestorer +2 V13) (D-02, D-12)
-- [x] 101-04-PLAN.md — Lenient `IN (1, 2)` schema-version check + BackupLenientV1AcceptanceIT (programmatic v1 ZIP, no binary fixture committed) (D-10, D-11, D-17)
-
-**Wave 3** *(after 02 + 03 are merged so the round-trip is end-to-end functional)*
-- [x] 101-05-PLAN.md — BackupDiscordFieldRoundTripIT (13 per-field regression-fence) + BackupRoundTripIT byte-equality extension on H2 + MariaDB-opt-in (D-13, D-15, D-16)
-
-**Wave 4** *(documentation sweep — depends on 02 + 03 + 04 + 05 to ensure the documented behaviour matches shipped code)*
-- [x] 101-06-PLAN.md — PROJECT.md wire-contract update + STATE.md baselines flip + docs/operations/discord-integration.md § Backup & Restore semantics (T-101-01 + T-101-02 mitigation) + README.md 24 → 26 (D-06, D-09, D-14)
-
-**UI hint**: no (backup is server-side; no Thymeleaf templates touched)
-
-### Phase 103: StringUtils Blank-Check Sweep — replace manual null-and-isBlank patterns with Spring StringUtils.hasText()
-
-**Goal:** Replace 88 occurrences of the manual `s != null && !s.isBlank()` (41x) and `s == null || s.isBlank()` (47x) blank-check pattern across 43 production-source files with `org.springframework.util.StringUtils.hasText(s)` (and its negation `!hasText(s)`). Pure readability + Spring-Native consistency refactor — no behavior change, no test-coverage regression. Aligns with CLAUDE.md "Spring-Native over JDK-Built-In" principle. Out of scope: the ~10 String `.isEmpty()` callsites (different semantics — case-by-case decision in a separate phase). Collection/MultipartFile `.isEmpty()` is explicitly excluded.
-
-**Hotspots (by occurrence count):**
-
-- `DiscordPostService.java` — 17
-- `DiscordDevSeeder.java` — 10
-- `DiscordRateLimitInterceptor.java` — 6
-- `RaceSettings.isComplete()` — 5
-- 39 further files with 1-3 occurrences each (Discord controllers/services, admin controllers, domain services/models, sitegen, dataimport, backup)
-
-**Special-case bonus:** [DriverService.java:160](src/main/java/org/ctc/domain/service/DriverService.java#L160) `filter(a -> a != null && !a.isBlank())` becomes `filter(StringUtils::hasText)` (method-reference, even cleaner).
-
-**Requirements**: none (pure refactor — no new functional requirement)
-**Depends on:** Phase 102 (parallel review-fix session — must finish first so the diff doesn't collide on shared Discord-package files)
-**Estimated duration:** 1 day
-**Plans:** 1/1 plans complete
-**UI hint:** no (no Thymeleaf / CSS / template changes — pure Java refactor)
-**Risk:** low — mechanical 1:1 substitution; OpenRewrite `FindMethods` detector recipe acts as closing validation oracle (D-02); single `./mvnw clean verify -Pe2e` at phase end (D-04).
-
-Plans:
-- [x] 103-01-PLAN.md — Single-sweep hand-edit of 85 substitutions across 42 files (EntityRef.java:29 verified-skipped) + new `config/rewrite-validate-hasText.yml` detector recipe + Surefire-targeted per-batch tests + phase-end `./mvnw clean verify -Pe2e`
+| v1.13 Discord Integration & Carry-Forwards | 92-103 | 43 | Complete | 2026-05-28 |
