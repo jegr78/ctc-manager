@@ -154,6 +154,24 @@ fixture better instead (e.g., `"name":"unused-fixture"`).
 
 ---
 
+## Closure (2026-05-28 — post-Phase-102 doc-debt cleanup)
+
+All 6 findings from this review were closed by Phase 102 (code-review fixes / milestone closeout). The historical frontmatter `status: issues_found` is preserved per CONTEXT D-13 ("per-phase REVIEW.md left intact as historical record") — this section documents the resolution per finding.
+
+| Finding | Resolution | Phase 102 commit | Plan |
+|---------|------------|------------------|------|
+| WR-01 — `fetchGuildEmojis` NPE on null `body(...)` | Null-guard added to `fetchGuildEmojis`, `fetchGuildRoles`, and `listChannels` (consistent with thread-list defenders) | `d8d24c6b` | 102-02 Task 8 |
+| WR-02 — `deleteChannel` IT lacks retry-count assertion | `DiscordRestClientIT.deleteChannelReturns500` now asserts explicit 4-attempt `wm.verify(4, deleteRequestedFor(...))` so a regression in `MAX_5XX_RETRIES` becomes visible | `d8d24c6b` | 102-02 Task 8 |
+| IN-01 — `BotUser` missing `@JsonIgnoreProperties` | Added `@JsonIgnoreProperties(ignoreUnknown = true)` to `BotUser` for DTO-surface parity | `bc34bd1d` | 102-03 Task 5 |
+| IN-02 — `WebhookCreateRequest` missing `@JsonInclude(NON_NULL)` | Added `@JsonInclude(JsonInclude.Include.NON_NULL)` to match the project's request-DTO convention | `bc34bd1d` | 102-03 Task 5 |
+| IN-03 — `execute(...)` `null` return for void ops | Inapplicable per CONTEXT D-02 — reviewer rated "low priority — current code is functionally correct"; `executeVoid(Runnable)` refactor is code-quality, not correctness | n/a | 102-03 SUMMARY § Inapplicable findings |
+| IN-04 — IT `fetchChannel` placeholder name "any-name" | Inapplicable per CONTEXT D-02 — comment-level documentation suggestion; not load-bearing for the test contract | n/a | 102-03 SUMMARY § Inapplicable findings |
+
+Net: 4 of 6 findings closed in code (2 W + 2 I); 2 of 6 documented inapplicable with reviewer-acknowledged "low priority" tone. The post-Phase-102 close-loop `gsd-code-reviewer` Pass 2 over the cumulative Phase-102 diff returned `clean` (102-REVIEW.md `status: clean`), confirming no regressions on these surfaces.
+
+---
+
 _Reviewed: 2026-05-28T00:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: deep_
+_Closure note appended: 2026-05-28 (post-Phase-102 doc-debt cleanup)_
