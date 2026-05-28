@@ -199,6 +199,26 @@ class BackupRoundTripIT {
 		discordPostRepo.save(post3);
 	}
 
+	static void cleanDiscordFixture(
+			DiscordGlobalConfigRepository discordCfgRepo,
+			DiscordPostRepository discordPostRepo) {
+		DiscordGlobalConfig cfg = discordCfgRepo.findFirstByOrderByIdAsc();
+		if (cfg != null) {
+			cfg.setGuildId("");
+			cfg.setAnnouncementWebhookUrl("");
+			cfg.setRaceResultsForumChannelId("");
+			cfg.setStandingsForumChannelId("");
+			cfg.setRaceResultsForumWebhookUrl("");
+			cfg.setStandingsForumWebhookUrl("");
+			cfg.setVsEmojiName("CTC");
+			cfg.setBotApplicationId(null);
+			cfg.setCurrentMatchCategoryId("");
+			cfg.setMatchdayPairingsTemplate(null);
+			discordCfgRepo.save(cfg);
+		}
+		discordPostRepo.deleteAll();
+	}
+
 	static void cleanDirContents(Path dir) throws IOException {
 		if (!Files.exists(dir)) {
 			return;
@@ -416,6 +436,7 @@ class BackupRoundTripIT {
 		@AfterEach
 		void cleanImportBackupsRoot() throws IOException {
 			cleanDirContents(IMPORT_BACKUPS_ROOT);
+			cleanDiscordFixture(discordGlobalConfigRepository, discordPostRepository);
 		}
 
 		@Test
@@ -717,6 +738,7 @@ class BackupRoundTripIT {
 		@AfterEach
 		void cleanImportBackupsRoot() throws IOException {
 			cleanDirContents(IMPORT_BACKUPS_ROOT);
+			cleanDiscordFixture(discordGlobalConfigRepository, discordPostRepository);
 		}
 
 		@Test

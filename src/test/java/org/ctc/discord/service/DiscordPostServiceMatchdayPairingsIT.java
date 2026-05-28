@@ -104,6 +104,13 @@ class DiscordPostServiceMatchdayPairingsIT {
 	void resetState() throws Exception {
 		wm.resetAll();
 		discordPostRepository.deleteAll();
+		DiscordGlobalConfig cfg = globalConfigService.getOrInitialize();
+		cfg.setAnnouncementWebhookUrl("");
+		cfg.setRaceResultsForumWebhookUrl("");
+		cfg.setStandingsForumWebhookUrl("");
+		cfg.setMatchdayPairingsTemplate(null);
+		cfg.setVsEmojiName("CTC");
+		globalConfigRepository.save(cfg);
 		when(matchdayPairingsGraphicService.generatePairings(any(Matchday.class))).thenReturn(PNG_BYTES);
 		when(discordEmojiCache.emojiFor("CTC")).thenReturn("<:CTC:1234567890>");
 	}

@@ -106,6 +106,13 @@ class DiscordPostServiceMatchPreviewAutoEditIT {
 	@BeforeEach
 	void resetState() throws Exception {
 		wm.resetAll();
+		DiscordGlobalConfig cfg = globalConfigService.getOrInitialize();
+		cfg.setAnnouncementWebhookUrl("");
+		cfg.setRaceResultsForumWebhookUrl("");
+		cfg.setStandingsForumWebhookUrl("");
+		cfg.setVsEmojiName("CTC");
+		globalConfigRepository.save(cfg);
+		discordPostRepository.deleteAll();
 		Path dummy = Path.of(uploadDir, "preview-dummy.png").toAbsolutePath().normalize();
 		Files.createDirectories(dummy.getParent());
 		Files.write(dummy, PNG_BYTES);
