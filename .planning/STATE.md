@@ -18,11 +18,11 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-20)
+See: .planning/PROJECT.md (updated 2026-05-28 after v1.13 milestone)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 103 — StringUtils.hasText sweep
+**Current focus:** Awaiting next milestone — v1.14 to be defined via `/gsd-new-milestone`
 
 ## Current Position
 
@@ -51,34 +51,13 @@ Last activity: 2026-05-26 -- Phase 101 marked complete (end-of-phase verify -Pe2
 - v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import (9 phases, 50 plans, 39/39 requirements, +77.4k LOC, 87.80% JaCoCo) — shipped 2026-05-16
 - v1.11 Tooling Infrastructure & Tech-Debt Sweep (8 phases 80-87, 46 plans, 46/46 requirements, JaCoCo 88.88%, 1675 tests, CI E2E median 23:00) — shipped 2026-05-18
 - v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (4 phases 88-91, 15 plans, 15/15 requirements substantively satisfied, JaCoCo 88.44%, 1696 tests, CI E2E median **17:39** Δ−23.3 %, Nyquist 4/0/0 compliant) — shipped 2026-05-20
+- v1.13 Discord Integration & Carry-Forwards (12 phases 92-103, 43 plans, 28/28 requirements satisfied, JaCoCo **89.43 %**, **2393 tests**, CI E2E median 17:39 held, Nyquist 12/12 compliant, 399 commits, +93.8k LOC, 9 new Flyway migrations V8-V16) — shipped 2026-05-28
 
 ## Active Milestone
 
-**v1.13 Discord Integration & Carry-Forwards** — Phases 92-102 (in flight; phases 92-101 shipped, Phase 102 added 2026-05-28 as code-review-fix closeout).
+_None — v1.13 archived 2026-05-28. Next milestone (v1.14) to be defined via `/gsd-new-milestone`._
 
-- Branch: `gsd/v1.13-discord-integration` (off `origin/master`)
-- Design spec: `docs/superpowers/specs/2026-05-20-discord-integration-design.md` (18 decisions)
-- Detailed roadmap: `.planning/milestones/v1.13-ROADMAP.md`
-- Coverage: 25/25 REQ-IDs mapped to 7 phases (5 carry-forward + 20 Discord)
-- Estimated duration: 15-20 working days
-- New Flyway migrations: V8 (`discord_global_config`), V9 (`teams.discord_role_id`), V10 (`matches.discord_*`), V11 (`discord_post`), V12 (`seasons.discord_*_thread_id`)
-- Zero new production dependencies (Spring `RestClient` is Spring 6.1+ core)
-
-### Phase Order (Sequenced)
-
-| Phase | Name | REQ-IDs | Depends on |
-| ----- | ---- | ------- | ---------- |
-| 92 | Carry-Forwards & Cleanup | UX-01, COV-01, CLEAN-01, DOCS-01, BOOK-01 | — |
-| 93 | Discord Foundation | INFRA-01, INFRA-02, INFRA-03 | 92 |
-| 94 | Team Roles + Match Channel Lifecycle | CHAN-01, CHAN-02, CHAN-03 | 93 |
-| 95 | Match Channel Posts | POST-01..05 | 94 |
-| 96 | Provisional Graphic + Forum Threads | GRAFX-01, FORUM-01, FORUM-02 | 95 |
-| 97 | Matchday-Level Posts | POST-06, POST-07, POST-08 | 96 |
-| 98 | Polish + E2E + Docs + Close | E2E-01, DOCS-02, DOCS-03, POST-09, POST-10 | 97 |
-| 99 | Pre-Merge Audit Polish | (audit cleanup — VERIFICATION.md retrofill, REQUIREMENTS prose, ROADMAP refresh, FORUM-01 modal scope) | 98 |
-| 100 | Match-Day Channel Naming Scheme | (phase prefix `rs/po/pm` + optional group slug on `md{N}-…`) | 99 |
-| 101 | Backup/Restore covers Discord Schema (V8-V15) | (BackupSchema 1→2, +DiscordGlobalConfig +DiscordPost, lenient v1 import) | 100 |
-| 102 | Code-Review Fixes (v1.13 closeout) | REVIEW-FIX-01 / REVIEW-FIX-02 / REVIEW-FIX-03 | 101 |
+PR #130 is queued for squash-merge to `master` with subject `feat(v1.13): discord integration & carry-forwards` per CLAUDE.md "Git Workflow" + `docs/operations/release-runbook.md § 6`. Release CI tags `v1.13.0`, publishes GitHub Release + `ghcr.io/jegr78/ctc-manager:1.13.0` + `:latest`; no local `git tag` per CLAUDE.md "No Local Git Tags".
 
 ## Deferred Items
 
