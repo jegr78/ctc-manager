@@ -17,7 +17,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -351,5 +354,97 @@ class CsvImportControllerExceptionTest {
 				.andExpect(status().is3xxRedirection())
 				.andExpect(redirectedUrl("/admin/import"))
 				.andExpect(flash().attributeExists("errorMessage"));
+	}
+
+	@Test
+	void givenIllegalStateFromSheetCall_whenPreviewSheet_thenFlashesWhitelistedMessageOnly() throws Exception {
+		// given
+		var leakyMessage = "INTERNAL_GOOGLE_LEAK_state_abc_12345_private_field_xyz";
+		when(googleSheetsService.isAvailable()).thenReturn(true);
+		when(googleSheetsService.extractSpreadsheetId(anyString())).thenReturn("abc123");
+		when(googleSheetsService.getSheetNames(anyString()))
+				.thenThrow(new IllegalStateException(leakyMessage));
+		when(csvImportService.getAllSeasons()).thenReturn(List.of());
+		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
+
+		// when
+		var result = mockMvc.perform(post("/admin/import/preview-sheet")
+						.param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123")
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("matchdayLabel", "MD1"))
+				// then
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/import"))
+				.andExpect(model().attribute("errorMessage", not(containsString("INTERNAL_GOOGLE_LEAK"))))
+				.andReturn();
+
+		var rendered = (String) result.getModelAndView().getModel().get("errorMessage");
+		assertThat(rendered).doesNotContain(leakyMessage);
+	}
+
+	@Test
+	void givenIllegalArgumentFromSheetCall_whenPreviewSheet_thenFlashesWhitelistedMessageOnly() throws Exception {
+		// given
+		var leakyMessage = "INTERNAL_GOOGLE_LEAK_arg_def_67890_private_class_path";
+		when(googleSheetsService.isAvailable()).thenReturn(true);
+		when(googleSheetsService.extractSpreadsheetId(anyString())).thenReturn("abc123");
+		when(googleSheetsService.getSheetNames(anyString()))
+				.thenThrow(new IllegalArgumentException(leakyMessage));
+		when(csvImportService.getAllSeasons()).thenReturn(List.of());
+		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
+
+		// when
+		var result = mockMvc.perform(post("/admin/import/preview-sheet")
+						.param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123")
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("matchdayLabel", "MD1"))
+				// then
+				.andExpect(status().isOk())
+				.andExpect(view().name("admin/import"))
+				.andExpect(model().attribute("errorMessage", not(containsString("INTERNAL_GOOGLE_LEAK"))))
+				.andReturn();
+
+		var rendered = (String) result.getModelAndView().getModel().get("errorMessage");
+		assertThat(rendered).doesNotContain(leakyMessage);
+	}
+
+	@Test
+	void givenIllegalArgumentFromExtractId_whenExecuteSheet_thenFlashesWhitelistedMessageOnly() throws Exception {
+		// given
+		var leakyMessage = "INTERNAL_GOOGLE_LEAK_exec_arg_99999_internal_url_validator";
+		when(googleSheetsService.extractSpreadsheetId(anyString()))
+				.thenThrow(new IllegalArgumentException(leakyMessage));
+
+		// when
+		mockMvc.perform(post("/admin/import/execute")
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("source", "sheet")
+						.param("sheetUrl", "https://docs.google.com/spreadsheets/d/abc123"))
+				// then
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/import"))
+				.andExpect(flash().attribute("errorMessage", not(containsString("INTERNAL_GOOGLE_LEAK"))));
+	}
+
+	@Test
+	void givenBusinessRuleException_whenExecuteImport_thenSurfacesValidationMessage() throws Exception {
+		// given
+		var validationDetail = "duplicate-entry-validation-detail-XYZ";
+		when(csvImportService.parseAndPreview(any(), any()))
+				.thenThrow(new BusinessRuleException(validationDetail));
+		when(csvImportService.getAllSeasons()).thenReturn(List.of());
+		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
+
+		var file = new MockMultipartFile("file", "results.csv", "text/csv", "data".getBytes());
+
+		// when
+		mockMvc.perform(multipart("/admin/import/execute")
+						.file(file)
+						.param("seasonId", UUID.randomUUID().toString())
+						.param("source", "csv"))
+				// then
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/import"))
+				.andExpect(flash().attribute("errorMessage", containsString(validationDetail)));
 	}
 }

@@ -151,10 +151,15 @@ public class CsvImportController {
 			model.addAttribute("errorMessage", "Connection problem — retry");
 			model.addAttribute("errorCategory", "TRANSIENT");
 			return "admin/import";
-		} catch (IllegalArgumentException | IllegalStateException e) {
-			log.error("Error reading Google Sheet", e);
+		} catch (IllegalArgumentException e) {
+			log.error("Invalid Google Sheet URL during CSV import preview-sheet", e);
 			addCommonAttributes(model);
-			model.addAttribute("errorMessage", "Error reading Google Sheet: " + e.getMessage());
+			model.addAttribute("errorMessage", "Invalid Google Sheet URL");
+			return "admin/import";
+		} catch (IllegalStateException e) {
+			log.error("Error reading Google Sheet during CSV import preview-sheet", e);
+			addCommonAttributes(model);
+			model.addAttribute("errorMessage", "Error reading Google Sheet");
 			return "admin/import";
 		}
 	}
@@ -262,9 +267,12 @@ public class CsvImportController {
 			log.error("Unexpected GoogleApiException subtype during CSV import execute", e);
 			redirectAttributes.addFlashAttribute("errorMessage", "Connection problem — retry");
 			redirectAttributes.addFlashAttribute("errorCategory", "TRANSIENT");
-		} catch (BusinessRuleException | ValidationException | IllegalArgumentException e) {
+		} catch (BusinessRuleException | ValidationException e) {
 			log.error("Error executing CSV import", e);
 			redirectAttributes.addFlashAttribute("errorMessage", "Import failed: " + e.getMessage());
+		} catch (IllegalArgumentException e) {
+			log.error("Invalid argument during CSV import execute", e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Import failed due to invalid input. See server logs for details.");
 		} catch (DataIntegrityViolationException e) {
 			log.error("CSV import hit DB constraint — transaction rolled back, no rows inserted", e);
 			redirectAttributes.addFlashAttribute("errorMessage",
