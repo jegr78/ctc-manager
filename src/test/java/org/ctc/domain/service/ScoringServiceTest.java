@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.ctc.domain.model.*;
+import org.ctc.domain.repository.MatchRepository;
+import org.ctc.domain.repository.PlayoffMatchupRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.junit.jupiter.api.Nested;
@@ -26,6 +28,12 @@ class ScoringServiceTest {
 
 	@Mock
 	private RaceRepository raceRepository;
+
+	@Mock
+	private MatchRepository matchRepository;
+
+	@Mock
+	private PlayoffMatchupRepository playoffMatchupRepository;
 
 	@InjectMocks
 	private ScoringService scoringService;

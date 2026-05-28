@@ -5,6 +5,8 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
+import org.ctc.domain.repository.MatchRepository;
+import org.ctc.domain.repository.PlayoffMatchupRepository;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ScoringService {
 
+	private final MatchRepository matchRepository;
+	private final PlayoffMatchupRepository playoffMatchupRepository;
 	private final RaceLineupRepository raceLineupRepository;
 	private final RaceRepository raceRepository;
 
@@ -59,48 +63,58 @@ public class ScoringService {
 		if (race.isBye()) {
 			return;
 		}
-		if (race.getMatch() != null && race.getMatch().getHomeTeam() != null) {
+		if (race.getMatch() != null) {
 			Match match = race.getMatch();
-			UUID hId = match.getHomeTeam().getId();
-			var legs = raceRepository.findByMatchId(match.getId());
-			int matchHome = 0;
-			int matchAway = 0;
-			for (Race leg : legs) {
-				if (leg.getResults().isEmpty()) {
-					continue;
+			if (match.getHomeTeam() == null) {
+				log.warn("Skipping match-score recompute for match {} — homeTeam is null", match.getId());
+			} else {
+				UUID hId = match.getHomeTeam().getId();
+				var legs = raceRepository.findByMatchId(match.getId());
+				int matchHome = 0;
+				int matchAway = 0;
+				for (Race leg : legs) {
+					if (leg.getResults().isEmpty()) {
+						continue;
+					}
+					matchHome += leg.getResults().stream()
+							.filter(r -> isDriverInTeam(r, leg.getId(), hId))
+							.mapToInt(RaceResult::getPointsTotal).sum();
+					matchAway += leg.getResults().stream()
+							.filter(r -> !isDriverInTeam(r, leg.getId(), hId))
+							.mapToInt(RaceResult::getPointsTotal).sum();
 				}
-				matchHome += leg.getResults().stream()
-						.filter(r -> isDriverInTeam(r, leg.getId(), hId))
-						.mapToInt(RaceResult::getPointsTotal).sum();
-				matchAway += leg.getResults().stream()
-						.filter(r -> !isDriverInTeam(r, leg.getId(), hId))
-						.mapToInt(RaceResult::getPointsTotal).sum();
+				match.setHomeScore(matchHome);
+				match.setAwayScore(matchAway);
+				matchRepository.save(match);
+				log.info("Recomputed match scores after clear: {} {} : {} {}",
+						match.getHomeTeam().getShortName(), matchHome, matchAway,
+						match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "?");
 			}
-			match.setHomeScore(matchHome);
-			match.setAwayScore(matchAway);
-			log.info("Recomputed match scores after clear: {} {} : {} {}",
-					match.getHomeTeam().getShortName(), matchHome, matchAway,
-					match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "?");
 		}
-		if (race.getPlayoffMatchup() != null && race.getPlayoffMatchup().getTeam1() != null) {
+		if (race.getPlayoffMatchup() != null) {
 			PlayoffMatchup matchup = race.getPlayoffMatchup();
-			UUID t1Id = matchup.getTeam1().getId();
-			var legs = raceRepository.findByPlayoffMatchupId(matchup.getId());
-			int mHome = 0;
-			int mAway = 0;
-			for (Race leg : legs) {
-				if (leg.getResults().isEmpty()) {
-					continue;
+			if (matchup.getTeam1() == null) {
+				log.warn("Skipping playoff-matchup score recompute for matchup {} — team1 is null", matchup.getId());
+			} else {
+				UUID t1Id = matchup.getTeam1().getId();
+				var legs = raceRepository.findByPlayoffMatchupId(matchup.getId());
+				int mHome = 0;
+				int mAway = 0;
+				for (Race leg : legs) {
+					if (leg.getResults().isEmpty()) {
+						continue;
+					}
+					mHome += leg.getResults().stream()
+							.filter(r -> isDriverInTeam(r, leg.getId(), t1Id))
+							.mapToInt(RaceResult::getPointsTotal).sum();
+					mAway += leg.getResults().stream()
+							.filter(r -> !isDriverInTeam(r, leg.getId(), t1Id))
+							.mapToInt(RaceResult::getPointsTotal).sum();
 				}
-				mHome += leg.getResults().stream()
-						.filter(r -> isDriverInTeam(r, leg.getId(), t1Id))
-						.mapToInt(RaceResult::getPointsTotal).sum();
-				mAway += leg.getResults().stream()
-						.filter(r -> !isDriverInTeam(r, leg.getId(), t1Id))
-						.mapToInt(RaceResult::getPointsTotal).sum();
+				matchup.setHomeScore(mHome);
+				matchup.setAwayScore(mAway);
+				playoffMatchupRepository.save(matchup);
 			}
-			matchup.setHomeScore(mHome);
-			matchup.setAwayScore(mAway);
 		}
 	}
 
