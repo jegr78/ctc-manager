@@ -374,9 +374,9 @@ Plans:
 **Requirements**: none (pure refactor — no new functional requirement)
 **Depends on:** Phase 102 (parallel review-fix session — must finish first so the diff doesn't collide on shared Discord-package files)
 **Estimated duration:** 1 day
-**Plans:** 1 plan (single sweep across all 43 files per CONTEXT D-01; one atomic commit at plan close)
+**Plans:** 1/1 plans complete
 **UI hint:** no (no Thymeleaf / CSS / template changes — pure Java refactor)
 **Risk:** low — mechanical 1:1 substitution; OpenRewrite `FindMethods` detector recipe acts as closing validation oracle (D-02); single `./mvnw clean verify -Pe2e` at phase end (D-04).
 
 Plans:
-- [ ] 103-01-PLAN.md — Single-sweep hand-edit of 85 substitutions across 42 files (EntityRef.java:29 verified-skipped) + new `config/rewrite-validate-hasText.yml` detector recipe + Surefire-targeted per-batch tests + phase-end `./mvnw clean verify -Pe2e`
+- [x] 103-01-PLAN.md — Single-sweep hand-edit of 85 substitutions across 42 files (EntityRef.java:29 verified-skipped) + new `config/rewrite-validate-hasText.yml` detector recipe + Surefire-targeted per-batch tests + phase-end `./mvnw clean verify -Pe2e`
