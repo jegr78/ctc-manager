@@ -22,15 +22,15 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 102 — code-review-fixes
+**Current focus:** v1.13 milestone close — Phase 102 shipped; `/gsd-complete-milestone v1.13` is the next user action.
 
 ## Current Position
 
-Phase: 102 (code-review-fixes) — EXECUTING
-Plan: 3 of 4 (102-01 complete; 102-02 complete + review-clean; 102-03 complete — info-sweep)
-Verification: post-Task-5 `./mvnw clean verify` running in background; per CONTEXT D-04 the per-plan review is SKIPPED (close-loop happens in 102-04)
-Status: Plan 102-03 ready for review; resume via `/gsd-execute-phase 102 --interactive` to start Plan 102-04 (close-loop verify -Pe2e)
-Last activity: 2026-05-28 -- 102-03 closed: 31 substantive closures across 6 commits (`47b7be00`, `ff63b067`, `bafa9bc9`, `17570d75`, `bc34bd1d` + STATE/SUMMARY); 9 closed via grep sweep; 7 demonstrably-inapplicable findings documented (CLAUDE.md "Do Not Modify Flyway Migrations" + cross-file rename blast-radius + reviewer-acknowledged design intentions). Marker grep oracle on src/main + src/test: 0 hits. Only V7 + V10 migration-header markers remain (CLAUDE.md hard rule blocks edit). Plan 102-04 close-loop pending.
+Phase: 102 (code-review-fixes) — COMPLETE ✓
+Plan: 4 of 4 (102-01 + 102-02 + 102-03 + 102-04 all closed)
+Verification: end-of-phase `./mvnw clean verify -Pe2e` exited 0 on `08c505be` (9:51 min) — 2393 tests / 0 failures / 5 skipped, JaCoCo line 89.43 % (above 88.88 % baseline), SpotBugs `BugInstance` count 0. Close-loop `gsd-code-reviewer` returned `clean` on Pass 2 after the 5 first-pass findings (3 warning + 2 info) were remediated inline (commits `5f7f121e`, `baf60c18`, `c09ed49a`, `08c505be`).
+Status: v1.13 unblocked for milestone close — next action `/gsd-complete-milestone v1.13` (no PR description update / no git tag inside this phase per CONTEXT non-goals).
+Last activity: 2026-05-28 -- Phase 102 closed: 102-04 ran close-loop end-gate. First reviewer pass surfaced W1 (TeamManagementService hex-color sanitiser gap), W2 (NPE risk on postRaceResultToForumThread filename), W3 (partial activeRoute sidebar migration), I1 (silent null-team skip in recomputeMatchScoresFromAllLegs), I2 (implicit persistence in same method). All 5 remediated inline via Tasks 2-R1..R5 (4 atomic commits incl. I1+I2 combined per the 102-02 precedent). Second reviewer pass: CLEAN. 102-REVIEW.md authored in commit `1039020c`.
 
 ### Prior position (Phase 101 close)
 
@@ -337,21 +337,18 @@ At roadmap creation (2026-05-20):
 
 ## Session Continuity
 
-**Last session:** 2026-05-28T07:59:24.393Z
+**Last session:** 2026-05-28
 
-**Stopped at:** Phase 102 planned (4 plans, plan-checker passed iteration 2)
+**Stopped at:** Phase 102 closed — close-loop gate green (Pass 2 reviewer clean, clean verify -Pe2e exit 0, 2393 tests / 0 failures, JaCoCo line 89.43 %, SpotBugs 0).
 
-**Next action:** `/gsd-discuss-phase 102` to gather context for the code-review-fix closeout phase (consumes the 9 `*-REVIEW.md` reports under `.planning/phases/{92..101}/{N}-REVIEW.md`).
+**Next action:** `/gsd-complete-milestone v1.13`. v1.13 is now ready to ship.
 
 **Branch:** `gsd/v1.13-discord-integration` (off `origin/master`)
 
 ## Operator Next Steps
 
-1. Run `/gsd-discuss-phase 102` to gather context for the code-review-fix closeout. Reports already on disk: `92-REVIEW.md`, `93-REVIEW.md`, `94-REVIEW.md`, `95-REVIEW.md`, `96-REVIEW.md`, `97-REVIEW.md`, `98-REVIEW.md`, `99-REVIEW.md`, `100-REVIEW.md`, `101-REVIEW.md`.
-2. Run `/gsd-plan-phase 102` to break the 119 findings into 3-5 plans (estimated: one critical-cluster, one warning-sweep, one info-cleanup — finalized during discuss-phase).
-3. Run `/gsd-execute-phase 102 --interactive` to apply fixes inline-sequential.
-4. Run `/gsd-code-review 102` (per the new CLAUDE.md "Code-Review Before Phase Close" rule) — must return clean (zero critical/warning) before Phase 102 closes.
-5. Run `/gsd-complete-milestone v1.13` only after Phase 102 ships green.
-6. Update PR #130 description with Phase 102 row (rolling summary discipline).
-7. Squash-merge PR #130 with subject `feat(v1.13): discord integration & carry-forwards`.
-8. Post-merge: clean up local branch (`git switch master && git pull && git branch -d gsd/v1.13-discord-integration`).
+1. Run `/gsd-complete-milestone v1.13` — archives phases under `milestones/v1.13-phases/`, generates RETROSPECTIVE.md, triggers CI release path. Phase 102 close-loop unblocked this command.
+2. Update PR #130 description with the Phase 102 row + final v1.13 totals (rolling summary discipline per CLAUDE.md "Milestone PR Already Exists").
+3. Squash-merge PR #130 with subject `feat(v1.13): discord integration & carry-forwards` (Conventional Commit form is mandatory for Semantic Release).
+4. Post-merge: clean up local branch (`git switch master && git pull && git branch -d gsd/v1.13-discord-integration`).
+5. Release CI tags `v1.13.0` and builds the Docker image. Do NOT pre-create the tag locally per CLAUDE.md "No Local Git Tags".
