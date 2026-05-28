@@ -91,12 +91,32 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 		if (bucket == null || bucket.isBlank()) {
 			return;
 		}
-		String remainingStr = headers.getFirst("X-RateLimit-Remaining");
-		String resetAfterStr = headers.getFirst("X-RateLimit-Reset-After");
-		int remaining = remainingStr == null ? 0 : Integer.parseInt(remainingStr);
-		double resetAfter = resetAfterStr == null ? 0.0 : Double.parseDouble(resetAfterStr);
+		int remaining = parseIntSafe(headers.getFirst("X-RateLimit-Remaining"), 0);
+		double resetAfter = parseDoubleSafe(headers.getFirst("X-RateLimit-Reset-After"), 0.0);
 		long resetAtMillis = clock.instant().toEpochMilli() + Math.round(resetAfter * 1000.0);
 		buckets.put(bucket, new BucketState(remaining, Instant.ofEpochMilli(resetAtMillis)));
+	}
+
+	private static int parseIntSafe(String value, int defaultValue) {
+		if (value == null || value.isBlank()) {
+			return defaultValue;
+		}
+		try {
+			return Integer.parseInt(value.trim());
+		} catch (NumberFormatException _) {
+			return defaultValue;
+		}
+	}
+
+	private static double parseDoubleSafe(String value, double defaultValue) {
+		if (value == null || value.isBlank()) {
+			return defaultValue;
+		}
+		try {
+			return Double.parseDouble(value.trim());
+		} catch (NumberFormatException _) {
+			return defaultValue;
+		}
 	}
 
 	private long parseRetryAfterMs(HttpHeaders headers) {

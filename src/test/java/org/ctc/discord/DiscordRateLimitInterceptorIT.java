@@ -145,6 +145,21 @@ class DiscordRateLimitInterceptorIT {
 	}
 
 	@Test
+	void givenMalformedBucketHeaders_whenFetchBotUser_thenResponsePropagatesNormally() throws Exception {
+		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))
+				.willReturn(okJson("{\"id\":\"42\",\"username\":\"CTC-Bot\",\"discriminator\":\"0001\"}")
+						.withHeader("X-RateLimit-Bucket", "bucket-garbage")
+						.withHeader("X-RateLimit-Remaining", "not-a-number")
+						.withHeader("X-RateLimit-Reset-After", "")));
+
+		discordRestClient.fetchBotUser();
+
+		BucketState state = interceptor.bucketState("bucket-garbage");
+		assertThat(state).isNotNull();
+		assertThat(state.remaining()).isZero();
+	}
+
+	@Test
 	void given401_whenFetchBotUser_thenNoRetryAndAuthExceptionPropagates() {
 		// given — 401 must NOT trigger interceptor retries
 		wm.stubFor(get(urlPathEqualTo("/api/v10/users/@me"))

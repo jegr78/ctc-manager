@@ -12,6 +12,7 @@ class DiscordConfigControllerErrorCategoryTest {
 	@CsvSource({
 			"TRANSIENT,transient",
 			"AUTH,auth",
+			"MISSING_PERMISSIONS,missing-permissions",
 			"NOT_FOUND,not-found",
 			"CATEGORY_FULL,category-full"
 	})

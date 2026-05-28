@@ -29,21 +29,22 @@ import org.springframework.web.util.UriBuilder;
 @Component
 public class DiscordWebhookClient {
 
-	private static final String USER_AGENT_VALUE =
-			"CTC-Manager (https://github.com/jegr78/ctc-manager, 1.13)";
 	private static final int MAX_ATTACHMENTS = 10;
 
 	private final DiscordRateLimitInterceptor rateLimitInterceptor;
 	private final ObjectMapper objectMapper;
 	private final DiscordHostValidator hostValidator;
+	private final String userAgent;
 
 	public DiscordWebhookClient(
 			DiscordRateLimitInterceptor rateLimitInterceptor,
 			ObjectMapper objectMapper,
-			DiscordHostValidator hostValidator) {
+			DiscordHostValidator hostValidator,
+			@org.springframework.beans.factory.annotation.Qualifier("discordUserAgent") String userAgent) {
 		this.rateLimitInterceptor = rateLimitInterceptor;
 		this.objectMapper = objectMapper;
 		this.hostValidator = hostValidator;
+		this.userAgent = userAgent;
 	}
 
 	public WebhookMessage execute(String webhookUrl, WebhookPayload payload) throws DiscordApiException {
@@ -95,23 +96,7 @@ public class DiscordWebhookClient {
 		} catch (JsonProcessingException e) {
 			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
 		}
-		MultiValueMap<String, HttpEntity<?>> parts = new LinkedMultiValueMap<>();
-		HttpHeaders payloadHeaders = new HttpHeaders();
-		payloadHeaders.setContentType(MediaType.APPLICATION_JSON);
-		parts.add("payload_json", new HttpEntity<>(payloadJson, payloadHeaders));
-		for (int i = 0; i < attachments.size(); i++) {
-			NamedAttachment att = attachments.get(i);
-			final String filename = att.filename();
-			HttpHeaders fileHeaders = new HttpHeaders();
-			fileHeaders.setContentType(MediaType.IMAGE_PNG);
-			ByteArrayResource resource = new ByteArrayResource(att.bytes()) {
-				@Override
-				public String getFilename() {
-					return filename;
-				}
-			};
-			parts.add("files[" + i + "]", new HttpEntity<>(resource, fileHeaders));
-		}
+		MultiValueMap<String, HttpEntity<?>> parts = buildMultipart(payloadJson, attachments);
 		return execute(() -> forWebhookUrl(webhookUrl)
 				.post()
 				.uri(uriBuilder -> appendThreadId(
@@ -182,23 +167,7 @@ public class DiscordWebhookClient {
 		} catch (JsonProcessingException e) {
 			throw new DiscordTransientException(DiscordApiExceptionMapper.TRANSIENT_MESSAGE, e);
 		}
-		MultiValueMap<String, HttpEntity<?>> parts = new LinkedMultiValueMap<>();
-		HttpHeaders payloadHeaders = new HttpHeaders();
-		payloadHeaders.setContentType(MediaType.APPLICATION_JSON);
-		parts.add("payload_json", new HttpEntity<>(payloadJson, payloadHeaders));
-		for (int i = 0; i < attachments.size(); i++) {
-			NamedAttachment att = attachments.get(i);
-			final String filename = att.filename();
-			HttpHeaders fileHeaders = new HttpHeaders();
-			fileHeaders.setContentType(MediaType.IMAGE_PNG);
-			ByteArrayResource resource = new ByteArrayResource(att.bytes()) {
-				@Override
-				public String getFilename() {
-					return filename;
-				}
-			};
-			parts.add("files[" + i + "]", new HttpEntity<>(resource, fileHeaders));
-		}
+		MultiValueMap<String, HttpEntity<?>> parts = buildMultipart(payloadJson, attachments);
 		return execute(() -> forWebhookUrl(webhookUrl)
 				.patch()
 				.uri(uriBuilder -> appendThreadId(
@@ -216,10 +185,33 @@ public class DiscordWebhookClient {
 		return builder;
 	}
 
+	private MultiValueMap<String, HttpEntity<?>> buildMultipart(
+			String payloadJson, List<NamedAttachment> attachments) {
+		MultiValueMap<String, HttpEntity<?>> parts = new LinkedMultiValueMap<>();
+		HttpHeaders payloadHeaders = new HttpHeaders();
+		payloadHeaders.setContentType(MediaType.APPLICATION_JSON);
+		parts.add("payload_json", new HttpEntity<>(payloadJson, payloadHeaders));
+		for (int i = 0; i < attachments.size(); i++) {
+			NamedAttachment att = attachments.get(i);
+			final String filename = att.filename();
+			HttpHeaders fileHeaders = new HttpHeaders();
+			fileHeaders.setContentType(MediaType.IMAGE_PNG);
+			ByteArrayResource resource = new ByteArrayResource(att.bytes()) {
+				@Override
+				public String getFilename() {
+					return filename;
+				}
+			};
+			parts.add("files[" + i + "]", new HttpEntity<>(resource, fileHeaders));
+		}
+		return parts;
+	}
+
 	private RestClient forWebhookUrl(String webhookUrl) {
+		hostValidator.requireAllowed(webhookUrl);
 		return RestClient.builder()
 				.baseUrl(webhookUrl)
-				.defaultHeader(HttpHeaders.USER_AGENT, USER_AGENT_VALUE)
+				.defaultHeader(HttpHeaders.USER_AGENT, userAgent)
 				.requestInterceptor(rateLimitInterceptor)
 				.build();
 	}

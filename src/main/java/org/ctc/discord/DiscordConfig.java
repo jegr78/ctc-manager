@@ -12,25 +12,28 @@ import org.springframework.web.client.RestClient;
 @EnableConfigurationProperties(DiscordDevSeedProperties.class)
 public class DiscordConfig {
 
-	private static final String USER_AGENT_VALUE =
-			"CTC-Manager (https://github.com/jegr78/ctc-manager, 1.13)";
-
 	@Bean
 	public Clock systemClock() {
 		return Clock.systemUTC();
+	}
+
+	@Bean(name = "discordUserAgent")
+	public String discordUserAgent(@Value("${app.version:dev}") String appVersion) {
+		return "CTC-Manager (https://github.com/jegr78/ctc-manager, " + appVersion + ")";
 	}
 
 	@Bean(name = "discordBotRestClient")
 	public RestClient discordBotRestClient(
 			@Value("${app.discord.base-url:https://discord.com/api/v10}") String baseUrl,
 			@Value("${app.discord.bot-token:}") String botToken,
+			@org.springframework.beans.factory.annotation.Qualifier("discordUserAgent") String discordUserAgent,
 			DiscordRateLimitInterceptor rateLimitInterceptor,
 			DiscordHostValidator hostValidator) {
 		hostValidator.requireAllowed(baseUrl);
 		return RestClient.builder()
 				.baseUrl(baseUrl)
 				.defaultHeader(HttpHeaders.AUTHORIZATION, "Bot " + botToken)
-				.defaultHeader(HttpHeaders.USER_AGENT, USER_AGENT_VALUE)
+				.defaultHeader(HttpHeaders.USER_AGENT, discordUserAgent)
 				.requestInterceptor(rateLimitInterceptor)
 				.build();
 	}

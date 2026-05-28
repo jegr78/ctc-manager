@@ -67,7 +67,8 @@ class DiscordClientHostWhitelistTest {
 		DiscordWebhookClient client = new DiscordWebhookClient(
 				Mockito.mock(DiscordRateLimitInterceptor.class),
 				new ObjectMapper(),
-				new DiscordHostValidator("discord.com"));
+				new DiscordHostValidator("discord.com"),
+				"ctc-test-agent");
 
 		// when / then
 		assertThatThrownBy(() -> client.execute(
@@ -82,7 +83,8 @@ class DiscordClientHostWhitelistTest {
 		DiscordWebhookClient client = new DiscordWebhookClient(
 				Mockito.mock(DiscordRateLimitInterceptor.class),
 				new ObjectMapper(),
-				new DiscordHostValidator("discord.com,localhost"));
+				new DiscordHostValidator("discord.com,localhost"),
+				"ctc-test-agent");
 
 		assertThatThrownBy(() -> client.execute(
 				"http://localhost:9999/api/webhooks/100/abc",
