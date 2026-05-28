@@ -74,12 +74,12 @@ import org.springframework.web.multipart.MultipartFile;
  * <ol>
  *   <li>Locates the staged ZIP + sidecar (Phase 74 staging-file contract).</li>
  *   <li>Reads the manifest (re-validates schemaVersion).</li>
- *   <li>Wipes all 24 tables in {@code BackupSchema.getExportOrder().reversed()} order via
+ *   <li>Wipes every table in {@link BackupSchema#getExportOrder()} reverse order via
  *       native {@code DELETE FROM <table>} after three self-FK pre-step UPDATEs
  *       ({@code teams.parent_team_id}, {@code season_teams.successor_season_team_id},
  *       {@code playoff_matchups.next_matchup_id}). {@code em.flush() + em.clear()} drops the
  *       L1 cache.</li>
- *   <li>Restores each entity via {@code JdbcTemplate.batchUpdate} through the 24
+ *   <li>Restores each entity via {@code JdbcTemplate.batchUpdate} through the
  *       {@link EntityRestorer @Component} beans — bypasses {@code AuditingEntityListener} so
  *       imported {@code created_at} / {@code updated_at} survive verbatim.</li>
  *   <li>Extracts the staged {@code uploads/} tree to
@@ -530,7 +530,6 @@ public class BackupImportService {
             Files.createDirectories(uploadsNewDir);
             backupArchive.extractUploadsTo(staged, uploadsNewDir);
 
-            // Step 3: restore (JdbcTemplate.batchUpdate via 24 EntityRestorers; auditing bypass)
             restoreAll(staged, restoredCounts);
 
             // Step 4: publish the success event as the LAST statement inside the try block.
@@ -590,7 +589,7 @@ public class BackupImportService {
     // =========================================================================
 
     /**
-     * Wipes all 24 tables in {@link BackupSchema#getExportOrder()} reverse order.
+     * Wipes every table in {@link BackupSchema#getExportOrder()} reverse order.
      *
      * <p>Step 0: NULL the 3 self-FK columns so the FK-reverse DELETE loop is safe
      * regardless of FK direction:
@@ -632,7 +631,7 @@ public class BackupImportService {
     }
 
     /**
-     * Restores all 24 tables from the staged ZIP via {@code JdbcTemplate.batchUpdate} through
+     * Restores every table from the staged ZIP via {@code JdbcTemplate.batchUpdate} through
      * the per-entity {@link EntityRestorer} beans.
      *
      * <p>For each {@link EntityRef} in {@link BackupSchema#getExportOrder()} (forward), opens
@@ -827,9 +826,9 @@ public class BackupImportService {
      * <ol>
      *   <li>Read and deserialize the manifest (includes ZIP hardening).</li>
      *   <li>Schema-version gate — throws {@link Reason#SCHEMA_MISMATCH} if versions differ,
-     *       BEFORE any of the 24 {@code repo.count()} calls.</li>
+     *       BEFORE any per-repository {@code repo.count()} calls.</li>
      *   <li>Count upload files.</li>
-     *   <li>Build 24 {@link EntityRowCount} cards via {@code repo.count()} +
+     *   <li>Build per-entity {@link EntityRowCount} cards via {@code repo.count()} +
      *       {@code manifest.tableCounts()}.</li>
      *   <li>Assemble and return {@link BackupImportPreview}.</li>
      * </ol>

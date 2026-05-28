@@ -14,6 +14,8 @@ import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
+import org.ctc.discord.repository.DiscordGlobalConfigRepository;
+import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -82,6 +84,8 @@ class BackupImportSchemaMismatchIT {
     @Autowired SeasonTeamRepository seasonTeamRepository;
     @Autowired TeamRepository teamRepository;
     @Autowired TrackRepository trackRepository;
+    @Autowired DiscordGlobalConfigRepository discordGlobalConfigRepository;
+    @Autowired DiscordPostRepository discordPostRepository;
 
     @BeforeEach
     void clearStagingDir() throws IOException {
@@ -197,9 +201,9 @@ class BackupImportSchemaMismatchIT {
     }
 
     /**
-     * Captures current {@code Repository.count()} for all 24 domain tables.
+     * Captures current {@code Repository.count()} for every domain + Discord table.
      *
-     * <p>The 24 repositories are individually {@code @Autowired} (black-box behavioral test;
+     * <p>Repositories are individually {@code @Autowired} (black-box behavioral test;
      * no reflective discovery in test code).
      */
     private Map<String, Long> snapshotAllCounts() {
@@ -228,6 +232,8 @@ class BackupImportSchemaMismatchIT {
         m.put("seasons", seasonRepository.count());
         m.put("teams", teamRepository.count());
         m.put("tracks", trackRepository.count());
+        m.put("discord_global_config", discordGlobalConfigRepository.count());
+        m.put("discord_post", discordPostRepository.count());
         return m;
     }
 }

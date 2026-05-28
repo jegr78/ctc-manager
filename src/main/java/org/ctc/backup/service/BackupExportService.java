@@ -29,8 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
  *       {@code manifest.table_counts} BEFORE serializing payload (RESEARCH §L-5
  *       "count first, serialize second").</li>
  *   <li>{@link #fetchAllForBackup(Class)} — per-entity dispatcher that delegates to
- *       the matching {@code findAllForBackup()} repository method
- *       (provided by Plan 73-02 on each of the 24 repositories).</li>
+ *       the matching {@code findAllForBackup()} repository method on each repository
+ *       enumerated by {@link BackupSchema#getExportOrder()}.</li>
  *   <li>{@link #enumerateReferencedUploads()} — walks Team / SeasonTeam / Car / Track /
  *       RaceAttachment(type=FILE) rows, collects the referenced upload-path URLs,
  *       deduplicates them via {@link LinkedHashSet}, and filters out orphan paths
@@ -217,9 +217,6 @@ public class BackupExportService {
 			String context = "Reflective invocation of findAllForBackup() on "
 					+ entityClass.getSimpleName() + " failed";
 			if (cause instanceof RuntimeException re) {
-				// Wrap to preserve the entity-class context — for backup-debug purposes
-				// (a production export failing on entity 17 of 24) knowing which entity
-				// triggered the failure is critical. The original RE is the cause.
 				throw new IllegalStateException(context, re);
 			}
 			throw new RuntimeException(context, cause);

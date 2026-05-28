@@ -4,8 +4,10 @@ import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.discord.model.DiscordPost;
 import org.springframework.stereotype.Component;
 
 /**
@@ -32,6 +34,8 @@ public class BackupSchema {
 
     public static final int SCHEMA_VERSION = 2;
 
+    private static final Set<Class<?>> FK_TAIL_ENTITIES = Set.of(DiscordPost.class);
+
     private final EntityManagerFactory entityManagerFactory;
     private final EntityTopoSorter entityTopoSorter;
 
@@ -47,7 +51,7 @@ public class BackupSchema {
                 })
                 .toList();
         List<EntityRef> sorted = entityTopoSorter.sort(entityTypes);
-        this.exportOrder = List.copyOf(pinDiscordPostLast(sorted));
+        this.exportOrder = List.copyOf(pinFkEntitiesLast(sorted, FK_TAIL_ENTITIES));
         log.info("BackupSchema initialized: SCHEMA_VERSION={}, exportOrder size={}, entities=[{}]",
                 SCHEMA_VERSION,
                 exportOrder.size(),
@@ -55,30 +59,27 @@ public class BackupSchema {
     }
 
     /**
-     * Moves {@code discord_post} to the end of the topo-sorted order.
+     * Moves entities with {@code @Column UUID} FK fields to the tail of the topo-sorted order.
      *
-     * <p>{@code DiscordPost} exposes its five FK columns ({@code match_id}, {@code matchday_id},
-     * {@code race_id}, {@code season_id}, {@code phase_id}) as {@code @Column UUID} rather than
-     * {@code @ManyToOne} JPA associations, so {@link EntityTopoSorter} cannot detect the
-     * dependency edges and treats {@code DiscordPost} as in-degree-0 — potentially placing it
-     * before its FK parents. Pinning it last guarantees every parent row exists at restore
-     * time and the FK constraints from V12 / V14 hold. Wipe order is the reverse of the export
-     * order, so {@code discord_post} is also wiped first — correct for child-before-parent
-     * deletion.
+     * <p>{@link EntityTopoSorter} only follows {@code @ManyToOne} / {@code @OneToOne} edges, so
+     * an entity that exposes its FKs as bare {@code @Column UUID} columns (e.g.,
+     * {@link DiscordPost}'s {@code match_id} / {@code matchday_id} / {@code race_id} /
+     * {@code season_id} / {@code phase_id}) is treated as in-degree-0 and may land before its
+     * FK parents. Pinning by entity-class identity guarantees the parent rows exist at restore
+     * time and survives a future table-name rename. Wipe order is the reverse of the export
+     * order, so these entities are also wiped first — correct for child-before-parent deletion.
      */
-    private static List<EntityRef> pinDiscordPostLast(List<EntityRef> sorted) {
+    private static List<EntityRef> pinFkEntitiesLast(List<EntityRef> sorted, Set<Class<?>> fkEntities) {
         List<EntityRef> reordered = new ArrayList<>(sorted.size());
-        EntityRef discordPost = null;
+        List<EntityRef> tail = new ArrayList<>();
         for (EntityRef ref : sorted) {
-            if ("discord_post".equals(ref.tableName())) {
-                discordPost = ref;
+            if (fkEntities.contains(ref.entityClass())) {
+                tail.add(ref);
             } else {
                 reordered.add(ref);
             }
         }
-        if (discordPost != null) {
-            reordered.add(discordPost);
-        }
+        reordered.addAll(tail);
         return reordered;
     }
 

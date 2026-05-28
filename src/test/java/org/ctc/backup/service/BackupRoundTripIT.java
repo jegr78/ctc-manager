@@ -105,6 +105,48 @@ class BackupRoundTripIT {
 	/** Defensive table-name allow-list matching the production SAFE_TABLE_NAME guard. */
 	private static final Pattern SAFE_TABLE_NAME = Pattern.compile("^[a-z_]+$");
 
+	private static byte[] exportToBytes(BackupArchiveService backupArchiveService) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		backupArchiveService.writeZip(baos, Instant.now());
+		return baos.toByteArray();
+	}
+
+	private static Map<String, Long> captureRowCounts(BackupSchema backupSchema, JdbcTemplate jdbcTemplate) {
+		Map<String, Long> counts = new LinkedHashMap<>();
+		for (EntityRef ref : backupSchema.getExportOrder()) {
+			String table = ref.tableName();
+			if (!SAFE_TABLE_NAME.matcher(table).matches()) {
+				throw new IllegalStateException("Unsafe table name in BackupSchema: " + table);
+			}
+			Long count = jdbcTemplate.queryForObject(
+					"SELECT COUNT(*) FROM " + table, Long.class);
+			counts.put(table, count == null ? 0L : count);
+		}
+		return counts;
+	}
+
+	private static byte[] hashEntity(ObjectMapper backupObjectMapper, Object entity) throws Exception {
+		byte[] bytes = backupObjectMapper.writeValueAsBytes(entity);
+		return MessageDigest.getInstance("SHA-256").digest(bytes);
+	}
+
+	@SuppressWarnings("unused")
+	private static DataImportAudit awaitAuditRow(DataImportAuditRepository dataImportAuditRepository,
+	                                              UUID auditUuid, Duration timeout) throws InterruptedException {
+		Instant deadline = Instant.now().plus(timeout);
+		Optional<DataImportAudit> maybe;
+		while (Instant.now().isBefore(deadline)) {
+			maybe = dataImportAuditRepository.findById(auditUuid);
+			if (maybe.isPresent()) {
+				return maybe.get();
+			}
+			Thread.sleep(100L);
+		}
+		maybe = dataImportAuditRepository.findById(auditUuid);
+		return maybe.orElseThrow(() -> new AssertionError(
+				"data_import_audit row " + auditUuid + " did not materialize within " + timeout));
+	}
+
 	/** Per-test-class temp root for {@code app.backup.import-backups-dir} — prevents
 	 *  same-second collisions on {@code data/.import-backups/&lt;ts&gt;/auto-backup-before-import.zip}
 	 *  when this IT runs back-to-back with other import-execute ITs. Inherited by
@@ -572,67 +614,21 @@ class BackupRoundTripIT {
 					.containsExactly(prePostHash);
 		}
 
-		// -------------------------------------------------------------------------
-		// Helpers — duplicated per @Nested class (each class has its own ApplicationContext)
-		// -------------------------------------------------------------------------
-
-		/**
-		 * Builds a Phase-73 export ZIP via the real {@link BackupArchiveService} writer.
-		 */
 		private byte[] exportToBytes() throws IOException {
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			backupArchiveService.writeZip(baos, Instant.now());
-			return baos.toByteArray();
+			return BackupRoundTripIT.exportToBytes(backupArchiveService);
 		}
 
-		/**
-		 * Captures per-entity row counts as a {@link LinkedHashMap} keyed by snake_case table
-		 * name. Mirrors the {@code SAFE_TABLE_NAME} regex guard (T-77-01-01) before native
-		 * {@code COUNT(*)} concatenation.
-		 */
 		private Map<String, Long> captureRowCounts() {
-			Map<String, Long> counts = new LinkedHashMap<>();
-			for (EntityRef ref : backupSchema.getExportOrder()) {
-				String table = ref.tableName();
-				if (!SAFE_TABLE_NAME.matcher(table).matches()) {
-					throw new IllegalStateException("Unsafe table name in BackupSchema: " + table);
-				}
-				Long count = jdbcTemplate.queryForObject(
-						"SELECT COUNT(*) FROM " + table, Long.class);
-				counts.put(table, count == null ? 0L : count);
-			}
-			return counts;
+			return BackupRoundTripIT.captureRowCounts(backupSchema, jdbcTemplate);
 		}
 
-		/**
-		 * Computes SHA-256 over the in-DB entity row serialized via
-		 * {@code @Qualifier("backupObjectMapper")} (D-03). Proves wire-shape invariance and
-		 * the Phase 75 {@code AuditingEntityListener} bypass contract ({@code created_at} /
-		 * {@code updated_at} survive verbatim through the round-trip).
-		 */
 		private byte[] hashEntity(Object entity) throws Exception {
-			byte[] bytes = backupObjectMapper.writeValueAsBytes(entity);
-			return MessageDigest.getInstance("SHA-256").digest(bytes);
+			return BackupRoundTripIT.hashEntity(backupObjectMapper, entity);
 		}
 
-		/**
-		 * Polls {@link DataImportAuditRepository} for up to {@code timeout} for the audit
-		 * row. Included for parity with {@code BackupImportMariaDbSmokeIT} (optional use).
-		 */
 		@SuppressWarnings("unused")
 		private DataImportAudit awaitAuditRow(UUID auditUuid, Duration timeout) throws InterruptedException {
-			Instant deadline = Instant.now().plus(timeout);
-			Optional<DataImportAudit> maybe;
-			while (Instant.now().isBefore(deadline)) {
-				maybe = dataImportAuditRepository.findById(auditUuid);
-				if (maybe.isPresent()) {
-					return maybe.get();
-				}
-				Thread.sleep(100L);
-			}
-			maybe = dataImportAuditRepository.findById(auditUuid);
-			return maybe.orElseThrow(() -> new AssertionError(
-					"data_import_audit row " + auditUuid + " did not materialize within " + timeout));
+			return BackupRoundTripIT.awaitAuditRow(dataImportAuditRepository, auditUuid, timeout);
 		}
 	}
 
@@ -872,67 +868,21 @@ class BackupRoundTripIT {
 			}
 		}
 
-		// -------------------------------------------------------------------------
-		// Helpers — duplicated per @Nested class (each class has its own ApplicationContext)
-		// -------------------------------------------------------------------------
-
-		/**
-		 * Builds a Phase-73 export ZIP via the real {@link BackupArchiveService} writer.
-		 */
 		private byte[] exportToBytes() throws IOException {
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			backupArchiveService.writeZip(baos, Instant.now());
-			return baos.toByteArray();
+			return BackupRoundTripIT.exportToBytes(backupArchiveService);
 		}
 
-		/**
-		 * Captures per-entity row counts as a {@link LinkedHashMap} keyed by snake_case table
-		 * name. Mirrors the {@code SAFE_TABLE_NAME} regex guard (T-77-01-01) before native
-		 * {@code COUNT(*)} concatenation.
-		 */
 		private Map<String, Long> captureRowCounts() {
-			Map<String, Long> counts = new LinkedHashMap<>();
-			for (EntityRef ref : backupSchema.getExportOrder()) {
-				String table = ref.tableName();
-				if (!SAFE_TABLE_NAME.matcher(table).matches()) {
-					throw new IllegalStateException("Unsafe table name in BackupSchema: " + table);
-				}
-				Long count = jdbcTemplate.queryForObject(
-						"SELECT COUNT(*) FROM " + table, Long.class);
-				counts.put(table, count == null ? 0L : count);
-			}
-			return counts;
+			return BackupRoundTripIT.captureRowCounts(backupSchema, jdbcTemplate);
 		}
 
-		/**
-		 * Computes SHA-256 over the in-DB entity row serialized via
-		 * {@code @Qualifier("backupObjectMapper")} (D-03). Proves wire-shape invariance and
-		 * the Phase 75 {@code AuditingEntityListener} bypass contract ({@code created_at} /
-		 * {@code updated_at} survive verbatim through the round-trip).
-		 */
 		private byte[] hashEntity(Object entity) throws Exception {
-			byte[] bytes = backupObjectMapper.writeValueAsBytes(entity);
-			return MessageDigest.getInstance("SHA-256").digest(bytes);
+			return BackupRoundTripIT.hashEntity(backupObjectMapper, entity);
 		}
 
-		/**
-		 * Polls {@link DataImportAuditRepository} for up to {@code timeout} for the audit
-		 * row. Included for parity with {@code BackupImportMariaDbSmokeIT} (optional use).
-		 */
 		@SuppressWarnings("unused")
 		private DataImportAudit awaitAuditRow(UUID auditUuid, Duration timeout) throws InterruptedException {
-			Instant deadline = Instant.now().plus(timeout);
-			Optional<DataImportAudit> maybe;
-			while (Instant.now().isBefore(deadline)) {
-				maybe = dataImportAuditRepository.findById(auditUuid);
-				if (maybe.isPresent()) {
-					return maybe.get();
-				}
-				Thread.sleep(100L);
-			}
-			maybe = dataImportAuditRepository.findById(auditUuid);
-			return maybe.orElseThrow(() -> new AssertionError(
-					"data_import_audit row " + auditUuid + " did not materialize within " + timeout));
+			return BackupRoundTripIT.awaitAuditRow(dataImportAuditRepository, auditUuid, timeout);
 		}
 	}
 }
