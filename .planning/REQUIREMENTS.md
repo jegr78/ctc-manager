@@ -43,4 +43,11 @@ Explicit exclusions per user scoping decision 2026-05-29:
 
 ## Traceability
 
-(Filled by `/gsd-roadmapper` when the v1.14 roadmap is created — requirements mapped to phases here.)
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| SAFE-01 | Phase 104 — Data Safety Lockdown | Pending |
+| SAFE-02 | Phase 104 — Data Safety Lockdown | Pending |
+| CARD-01 | Phase 105 — Team Card Visual Redesign | Pending (awaiting external Claude-Design handoff) |
+| CARD-02 | Phase 105 — Team Card Visual Redesign | Pending (awaiting external Claude-Design handoff) |
+
+**Coverage:** 4/4 v1.14 requirements mapped to exactly one phase. No orphans, no duplicates.
