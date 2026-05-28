@@ -28,7 +28,7 @@ class SeasonFormTest {
 	}
 
 	@Test
-	void givenValidNameAndNullThreadIds_whenValidate_thenNoViolations() {
+	void givenValidName_whenValidate_thenNoViolations() {
 		SeasonForm form = newForm("Season 2026");
 
 		Set<ConstraintViolation<SeasonForm>> violations = validator.validate(form);
@@ -37,47 +37,13 @@ class SeasonFormTest {
 	}
 
 	@Test
-	void givenValidSnowflakeThreadIds_whenValidate_thenNoViolations() {
-		SeasonForm form = newForm("Season 2026");
-		form.setDiscordRaceResultsThreadId("12345678901234567");
-		form.setDiscordStandingsThreadId("98765432109876543210");
-
-		Set<ConstraintViolation<SeasonForm>> violations = validator.validate(form);
-
-		assertThat(violations).isEmpty();
-	}
-
-	@Test
-	void givenEmptyThreadIds_whenValidate_thenNoViolations() {
-		SeasonForm form = newForm("Season 2026");
-		form.setDiscordRaceResultsThreadId("");
-		form.setDiscordStandingsThreadId("");
-
-		Set<ConstraintViolation<SeasonForm>> violations = validator.validate(form);
-
-		assertThat(violations).isEmpty();
-	}
-
-	@Test
-	void givenNonSnowflakeRaceResultsThreadId_whenValidate_thenPatternViolation() {
-		SeasonForm form = newForm("Season 2026");
-		form.setDiscordRaceResultsThreadId("abc");
+	void givenBlankName_whenValidate_thenNotBlankViolation() {
+		SeasonForm form = newForm("");
 
 		Set<ConstraintViolation<SeasonForm>> violations = validator.validate(form);
 
 		assertThat(violations)
-				.anyMatch(v -> v.getPropertyPath().toString().equals("discordRaceResultsThreadId"));
-	}
-
-	@Test
-	void givenTooShortStandingsThreadId_whenValidate_thenPatternViolation() {
-		SeasonForm form = newForm("Season 2026");
-		form.setDiscordStandingsThreadId("1234567890");
-
-		Set<ConstraintViolation<SeasonForm>> violations = validator.validate(form);
-
-		assertThat(violations)
-				.anyMatch(v -> v.getPropertyPath().toString().equals("discordStandingsThreadId"));
+				.anyMatch(v -> v.getPropertyPath().toString().equals("name"));
 	}
 
 	private static SeasonForm newForm(String name) {

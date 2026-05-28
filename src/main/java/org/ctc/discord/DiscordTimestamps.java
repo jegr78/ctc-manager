@@ -41,10 +41,6 @@ public class DiscordTimestamps {
 		return format(dt, "R");
 	}
 
-	Clock clock() {
-		return clock;
-	}
-
 	private String format(LocalDateTime dt, String style) {
 		long epoch = dt.atZone(zone).toEpochSecond();
 		return "<t:" + epoch + ":" + style + ">";
