@@ -79,7 +79,7 @@ class MatchDetailPreviewButtonE2ETest extends PlaywrightConfig {
 		Race race = helper.createRace(md, match);
 		if (complete) {
 			race.setDateTime(LocalDateTime.of(2026, 6, 1, 20, 30));
-			race.setSettings(new RaceSettings(race));
+			race.setSettings(helper.completeRaceSettings(race));
 			raceRepository.save(race);
 			RaceLineup lu = new RaceLineup();
 			lu.setRace(race);

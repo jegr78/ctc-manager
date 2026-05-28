@@ -59,7 +59,7 @@ class MatchDetailSettingsLineupsButtonsE2ETest extends PlaywrightConfig {
 		for (int i = 0; i < 2; i++) {
 			Race race = helper.createRace(md, match);
 			if (allHaveSettings || i == 0) {
-				race.setSettings(new RaceSettings(race));
+				race.setSettings(helper.completeRaceSettings(race));
 				raceRepository.save(race);
 			}
 		}

@@ -11,7 +11,6 @@ import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.PostStandingsForm;
 import org.ctc.admin.dto.SeasonForm;
 import org.ctc.admin.service.DiscordSeasonViewService;
-import org.ctc.discord.dto.DiscordSnowflake;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.service.DiscordPostService;
@@ -154,9 +153,6 @@ public class SeasonController {
 		try {
 			if (threadId == null || threadId.isBlank()) {
 				throw new BusinessRuleException("Thread ID must not be empty.");
-			}
-			if (!threadId.matches(DiscordSnowflake.PATTERN)) {
-				throw new BusinessRuleException(DiscordSnowflake.MESSAGE);
 			}
 			switch (type) {
 				case THREAD_TYPE_RACE_RESULTS -> seasonManagementService.linkRaceResultsThread(id, threadId);
