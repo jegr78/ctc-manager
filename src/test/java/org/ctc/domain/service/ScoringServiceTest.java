@@ -351,8 +351,6 @@ class ScoringServiceTest {
 
 		@Test
 		void givenClearedRaceWithOtherCompletedLegs_whenAggregateMatchScores_thenMatchScoreRecomputedFromRemainingLegs() {
-			// 95 WR-02: clearing one race's results must still re-aggregate the
-			// match-level score from the remaining races, not early-return.
 			var homeTeam = createTeam("Home");
 			var awayTeam = createTeam("Away");
 			var match = createMatch(homeTeam, awayTeam);

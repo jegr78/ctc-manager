@@ -198,9 +198,6 @@ class DiscordChannelServicePermissionAuditFailIT {
 
 	@Test
 	void givenFetchChannelReturnsOverwriteWithNullAllow_whenAudit_thenTreatedAsZeroAndAuthExceptionForMissingMember() {
-		// 94 WR-04: null allow must be parsed as 0L instead of throwing NumberFormatException.
-		// The audit still fails (member-set check fails because no bot member), but the failure
-		// is the correct DiscordAuthException, not an uncaught NumberFormatException.
 		seedConfig();
 		Match match = seedMatch("N");
 		stubHappyPathCreate();

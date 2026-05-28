@@ -111,7 +111,6 @@ class DiscordPostServicePreFlightTest {
 
 	@Test
 	void givenRaceHasPartialSettings_whenMatchHasCompleteSettings_thenFalse() {
-		// 94 WR-02: settings row present but required fields null/blank must be rejected
 		Match match = matchWithRaces(List.of(raceWithSettings(true), raceWithPartialSettings()));
 		assertThat(service.matchHasCompleteSettings(match)).isFalse();
 	}

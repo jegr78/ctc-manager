@@ -70,7 +70,6 @@ class DiscordRoleCacheTest {
 
 	@Test
 	void givenPriorEntries_whenRefreshing_thenNoSnapshotEverEmpty() {
-		// 94 WR-03: refresh must never expose an empty cache to concurrent readers
 		DiscordRoleCache cache = new DiscordRoleCache(Clock.fixed(T0, ZoneOffset.UTC));
 		cache.refresh(List.of(new Role("100", "Admin", 5)));
 

@@ -102,8 +102,6 @@ class DiscordPostServiceRefBranchesTest {
 
 	@Test
 	void givenSeasonRefWithNullPhase_whenPostOrEdit_thenDispatchesToPhaseIdIsNullLookup() throws Exception {
-		// 97 WR-02: legacy null-phase lookup must use the PhaseIdIsNull finder so multiple
-		// phase-scoped rows for the same season don't trip the single-result guard.
 		UUID seasonId = UUID.randomUUID();
 		when(repository.findByChannelIdAndPostTypeAndSeasonIdAndPhaseIdIsNull(
 				eq(CHANNEL_ID), eq(DiscordPostType.STANDINGS), eq(seasonId)))

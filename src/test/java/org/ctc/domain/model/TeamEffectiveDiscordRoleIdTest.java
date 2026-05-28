@@ -75,7 +75,7 @@ class TeamEffectiveDiscordRoleIdTest {
 
 	@Test
 	void givenSubTeamWithBlankOwnRoleAndParentHasRole_whenGetEffective_thenReturnsParentRole() {
-		// given — blank string must be treated as absent (94 WR-05 closure)
+		// given
 		Team parent = new Team("VRX", "VRX", null);
 		parent.setDiscordRoleId("100");
 		Team sub = new Team("VRX A", "VRX_A", parent);

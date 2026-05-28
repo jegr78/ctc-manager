@@ -229,8 +229,6 @@ class DiscordPostServiceForumThreadIT {
 	@Test
 	void givenRaceWithMatch_whenPostRaceResultToForumThread_thenFilenameIncludesMatchSlugAndLegNumber()
 			throws Exception {
-		// 95 WR-01: filename must be deterministic per race using match short-names
-		// and the race's leg index within its own match.
 		String webhookPath = "/webhooks/706/abc";
 		Race race = seedRaceWithResults("G", webhookPath);
 		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/" + THREAD_ID))
