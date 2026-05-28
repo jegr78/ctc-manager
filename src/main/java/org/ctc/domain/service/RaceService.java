@@ -6,8 +6,10 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.TeamCardService;
+import org.ctc.discord.event.MatchScheduleFieldsChangedEvent;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class RaceService {
 	private final ScoringService scoringService;
 	private final TeamCardService teamCardService;
 	private final RaceCalendarService raceCalendarService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public RaceListData getRaceListData(UUID matchdayId, UUID seasonId) {
 		List<Race> races;
@@ -184,6 +187,7 @@ public class RaceService {
 		} else {
 			race.setCar(null);
 		}
+		boolean dateTimeChanged = !Objects.equals(race.getDateTime(), dateTime);
 		race.setDateTime(dateTime);
 
 		// Settings
@@ -232,6 +236,9 @@ public class RaceService {
 		}
 
 		raceRepository.save(race);
+		if (dateTimeChanged && race.getMatch() != null) {
+			eventPublisher.publishEvent(new MatchScheduleFieldsChangedEvent(race.getMatch().getId()));
+		}
 		log.info("Saved race: {} vs {} ({})", homeTeam.getShortName(), awayTeam.getShortName(), matchday.getLabel());
 		return new SaveResult(true,
 				"Race saved: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName(),
