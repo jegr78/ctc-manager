@@ -70,7 +70,8 @@ Plan 102-01 close-loop **passes**.
 
 ## Independent Agent Review
 
-**Verdict:** flagged (no blockers; two warnings + two info).
+**Initial verdict:** flagged (no blockers; two warnings + two info).
+**Resolution:** all four findings folded back into Plan 102-01 in commit `716d16db` per CONTEXT D-04. **Final verdict: clean.**
 **Reviewer:** gsd-code-reviewer agent, 2026-05-28, read-only second pass over the 8 commits.
 
 ### WR-IA-01 — `DiscordGlobalConfigRestorer` audit columns left unguarded (`createdAt`, `updatedAt`)
@@ -90,3 +91,14 @@ Audit-fail re-throws a wrapped exception telling the operator to manually delete
 For new races (`id == null`), `race.getDateTime()` is null, so `!Objects.equals(null, dateTime)` is true on any non-null incoming dateTime — event fires for a freshly-created match. Harmless today because `autoEditScheduleIfNeeded` early-returns when no SCHEDULE post exists (line 215), but a future hook subscriber may not be idempotent. Consider `id != null && !Objects.equals(...)`.
 
 _Branch verified: `gsd/v1.13-discord-integration` (read-only)._
+
+### Fold-Back Status (CONTEXT D-04)
+
+| Finding | Status | Fold-back commit |
+|---------|--------|------------------|
+| WR-IA-01 | **Closed** — `requireText` applied to `createdAt`/`updatedAt` in `DiscordGlobalConfigRestorer:60-61` | `716d16db` |
+| WR-IA-02 | **Closed** — bye-guard tests now pin `disabledReason` literal; class renamed `*IT` → `*Test` + tag dropped per CLAUDE.md tag-by-category | `716d16db` |
+| IN-IA-01 | **Closed** — webhook-fail cleanup now wraps as typed `DiscordTransientException` naming the channel when both ops fail | `716d16db` |
+| IN-IA-02 | **Closed** — `RaceService.saveRace` event-fire guarded by `id != null` | `716d16db` |
+
+Post fold-back: `./mvnw test -Dtest='DiscordGlobalConfigRestorerGuardTest,DiscordPostServiceByeMatchdayGuardTest,RaceServiceTest'` (Surefire) — 28/28 green. `./mvnw verify -Dit.test='DiscordChannelServiceWebhookFailIT,DiscordAutoPostListenerScheduleEditIT'` (Failsafe) — 3/3 green.
