@@ -202,7 +202,7 @@ public class DiscordChannelService {
 		}
 		Set<String> rolesWithView = overwrites.stream()
 				.filter(o -> o.type() == OVERWRITE_TYPE_ROLE)
-				.filter(o -> (Long.parseLong(o.allow()) & VIEW_CHANNEL) != 0L)
+				.filter(o -> (parseAllow(o.allow()) & VIEW_CHANNEL) != 0L)
 				.map(PermissionOverwrite::id)
 				.collect(Collectors.toSet());
 		if (!rolesWithView.equals(expectedTeamRoleIds)) {
@@ -210,11 +210,15 @@ public class DiscordChannelService {
 		}
 		Set<String> membersWithView = overwrites.stream()
 				.filter(o -> o.type() == OVERWRITE_TYPE_MEMBER)
-				.filter(o -> (Long.parseLong(o.allow()) & VIEW_CHANNEL) != 0L)
+				.filter(o -> (parseAllow(o.allow()) & VIEW_CHANNEL) != 0L)
 				.map(PermissionOverwrite::id)
 				.collect(Collectors.toSet());
 		if (!membersWithView.equals(Set.of(botUserId))) {
 			throw new DiscordAuthException(DiscordApiExceptionMapper.AUDIT_FAIL_MESSAGE, null);
 		}
+	}
+
+	private static long parseAllow(String allow) {
+		return (allow == null || allow.isBlank()) ? 0L : Long.parseLong(allow);
 	}
 }

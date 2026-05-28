@@ -72,4 +72,34 @@ class TeamEffectiveDiscordRoleIdTest {
 		// then
 		assertThat(effective).isNull();
 	}
+
+	@Test
+	void givenSubTeamWithBlankOwnRoleAndParentHasRole_whenGetEffective_thenReturnsParentRole() {
+		// given — blank string must be treated as absent (94 WR-05 closure)
+		Team parent = new Team("VRX", "VRX", null);
+		parent.setDiscordRoleId("100");
+		Team sub = new Team("VRX A", "VRX_A", parent);
+		sub.setDiscordRoleId("");
+
+		// when
+		String effective = sub.getEffectiveDiscordRoleId();
+
+		// then
+		assertThat(effective).isEqualTo("100");
+	}
+
+	@Test
+	void givenSubTeamWithBlankOwnRoleAndParentHasBlankRole_whenGetEffective_thenReturnsNull() {
+		// given
+		Team parent = new Team("VRX", "VRX", null);
+		parent.setDiscordRoleId("");
+		Team sub = new Team("VRX A", "VRX_A", parent);
+		sub.setDiscordRoleId("");
+
+		// when
+		String effective = sub.getEffectiveDiscordRoleId();
+
+		// then
+		assertThat(effective).isNull();
+	}
 }

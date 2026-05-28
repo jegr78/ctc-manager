@@ -10,7 +10,6 @@ import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
-import org.ctc.discord.exception.DiscordCategoryFullException;
 import org.ctc.discord.service.DiscordChannelService;
 import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
@@ -264,13 +263,15 @@ public class MatchController {
 	                            @RequestParam(required = false) String categoryId,
 	                            RedirectAttributes redirectAttributes) {
 		try {
+			if (categoryId == null || categoryId.isBlank()) {
+				redirectAttributes.addFlashAttribute("errorMessage",
+						"Select an archive category before confirming the move.");
+				redirectAttributes.addFlashAttribute("errorCategory", "data-incomplete");
+				return "redirect:/admin/matches/" + id;
+			}
 			Match match = matchService.findById(id);
 			if (match.getDiscordChannelId() == null) {
 				throw new BusinessRuleException("Match has no Discord channel to archive.");
-			}
-			if (categoryId == null || categoryId.isBlank()) {
-				throw new DiscordCategoryFullException(
-						DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE, null);
 			}
 			discordRestClient.modifyChannel(match.getDiscordChannelId(),
 					new ChannelModifyRequest(null, categoryId));

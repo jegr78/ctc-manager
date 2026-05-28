@@ -76,10 +76,16 @@ public class Team extends BaseEntity {
 	}
 
 	public String getEffectiveDiscordRoleId() {
-		if (discordRoleId != null) {
+		if (discordRoleId != null && !discordRoleId.isBlank()) {
 			return discordRoleId;
 		}
-		return parentTeam != null ? parentTeam.getDiscordRoleId() : null;
+		if (parentTeam != null) {
+			String parentId = parentTeam.getDiscordRoleId();
+			if (parentId != null && !parentId.isBlank()) {
+				return parentId;
+			}
+		}
+		return null;
 	}
 
 }

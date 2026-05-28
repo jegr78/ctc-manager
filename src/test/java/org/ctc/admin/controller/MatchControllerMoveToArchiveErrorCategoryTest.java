@@ -12,7 +12,6 @@ import java.util.UUID;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.exception.DiscordApiException.Category;
-import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.service.DiscordChannelService;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.service.MatchService;
@@ -37,16 +36,13 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 	}
 
 	@Test
-	void givenBlankCategoryId_whenMoveToArchive_thenCategoryFullFlashedAndNoOutbound() throws Exception {
+	void givenBlankCategoryId_whenMoveToArchive_thenDataIncompleteFlashedAndNoOutbound() throws Exception {
 		// given
 		MatchService matchService = mock(MatchService.class);
 		DiscordChannelService channelService = mock(DiscordChannelService.class);
 		DiscordRestClient restClient = mock(DiscordRestClient.class);
 		RedirectAttributes ra = mock(RedirectAttributes.class);
 		UUID id = UUID.randomUUID();
-		Match match = new Match();
-		match.setDiscordChannelId("c1");
-		when(matchService.findById(id)).thenReturn(match);
 
 		MatchController controller = new MatchController(matchService, channelService, restClient,
 				mock(org.ctc.discord.service.DiscordPostService.class),
@@ -56,10 +52,11 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 		// when
 		String view = invokeMoveToArchive(controller, id, "  ", ra);
 
-		// then — CATEGORY_FULL flash, no outbound PATCH
+		// then — distinct data-incomplete flash, no outbound PATCH, no MatchService lookup
 		assertThat(view).isEqualTo("redirect:/admin/matches/" + id);
-		verify(ra).addFlashAttribute("errorMessage", DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE);
-		verify(ra).addFlashAttribute("errorCategory", "category-full");
+		verify(ra).addFlashAttribute("errorMessage",
+				"Select an archive category before confirming the move.");
+		verify(ra).addFlashAttribute("errorCategory", "data-incomplete");
 		verify(restClient, never()).modifyChannel(anyString(), any(ChannelModifyRequest.class));
 	}
 

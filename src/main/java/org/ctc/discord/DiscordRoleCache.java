@@ -2,6 +2,7 @@ package org.ctc.discord;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,11 +44,12 @@ public class DiscordRoleCache {
 
 	public int refresh(List<Role> roles) {
 		Map<String, CachedEntry<Role>> next = new HashMap<>(roles.size());
+		Instant expiry = clock.instant().plus(TTL);
 		for (Role role : roles) {
-			next.put(role.id(), new CachedEntry<>(role, clock.instant().plus(TTL)));
+			next.put(role.id(), new CachedEntry<>(role, expiry));
 		}
-		store.clear();
 		store.putAll(next);
+		store.keySet().retainAll(next.keySet());
 		log.debug("Discord role cache refreshed with {} entries", next.size());
 		return next.size();
 	}

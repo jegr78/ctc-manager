@@ -56,9 +56,32 @@ class DiscordPostServicePreFlightTest {
 		Race race = new Race();
 		race.setId(UUID.randomUUID());
 		if (hasSettings) {
-			race.setSettings(new RaceSettings(race));
+			race.setSettings(completeRaceSettings(race));
 		}
 		return race;
+	}
+
+	private static Race raceWithPartialSettings() {
+		Race race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setSettings(new RaceSettings(race));
+		return race;
+	}
+
+	private static RaceSettings completeRaceSettings(Race race) {
+		RaceSettings settings = new RaceSettings(race);
+		settings.setNumberOfLaps(5);
+		settings.setTyreWearMultiplier(1);
+		settings.setFuelConsumptionMultiplier(1);
+		settings.setRefuelingSpeed(1);
+		settings.setInitialFuel("100%");
+		settings.setNumberOfRequiredPitStops(0);
+		settings.setTimeProgressionMultiplier(1);
+		settings.setWeather("clear");
+		settings.setTimeOfDay("noon");
+		settings.setAvailableTyres("any");
+		settings.setMandatoryTyres("none");
+		return settings;
 	}
 
 	private static Match matchWithRaces(List<Race> races) {
@@ -83,6 +106,13 @@ class DiscordPostServicePreFlightTest {
 	@Test
 	void givenEmptyRaces_whenMatchHasCompleteSettings_thenFalse() {
 		Match match = matchWithRaces(List.of());
+		assertThat(service.matchHasCompleteSettings(match)).isFalse();
+	}
+
+	@Test
+	void givenRaceHasPartialSettings_whenMatchHasCompleteSettings_thenFalse() {
+		// 94 WR-02: settings row present but required fields null/blank must be rejected
+		Match match = matchWithRaces(List.of(raceWithSettings(true), raceWithPartialSettings()));
 		assertThat(service.matchHasCompleteSettings(match)).isFalse();
 	}
 

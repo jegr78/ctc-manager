@@ -195,4 +195,30 @@ class DiscordChannelServicePermissionAuditFailIT {
 		wm.verify(deleteRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
 		assertThat(matchRepository.findById(match.getId()).orElseThrow().getDiscordChannelId()).isNull();
 	}
+
+	@Test
+	void givenFetchChannelReturnsOverwriteWithNullAllow_whenAudit_thenTreatedAsZeroAndAuthExceptionForMissingMember() {
+		// 94 WR-04: null allow must be parsed as 0L instead of throwing NumberFormatException.
+		// The audit still fails (member-set check fails because no bot member), but the failure
+		// is the correct DiscordAuthException, not an uncaught NumberFormatException.
+		seedConfig();
+		Match match = seedMatch("N");
+		stubHappyPathCreate();
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
+				.willReturn(okJson(
+						"{\"id\":\"c1\",\"name\":\"md1-rs-h-vs-a\",\"type\":0,\"parent_id\":\"cat1\","
+								+ "\"permission_overwrites\":["
+								+ "{\"id\":\"g1\",\"type\":0,\"allow\":null,\"deny\":\"1024\"},"
+								+ "{\"id\":\"100\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"200\",\"type\":0,\"allow\":\"1024\",\"deny\":\"0\"},"
+								+ "{\"id\":\"noise\",\"type\":0,\"allow\":null,\"deny\":\"0\"}"
+								+ "]}")));
+
+		assertThatThrownBy(() -> service.createMatchChannel(match))
+				.isInstanceOf(DiscordAuthException.class)
+				.hasMessage(DiscordApiExceptionMapper.AUDIT_FAIL_MESSAGE);
+
+		wm.verify(deleteRequestedFor(urlPathEqualTo("/api/v10/channels/c1")));
+		assertThat(matchRepository.findById(match.getId()).orElseThrow().getDiscordChannelId()).isNull();
+	}
 }

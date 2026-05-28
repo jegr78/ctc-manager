@@ -676,7 +676,7 @@ public class DiscordPostService {
 
 	public boolean matchHasCompleteSettings(Match match) {
 		List<Race> races = match.getRaces();
-		return !races.isEmpty() && races.stream().allMatch(r -> r.getSettings() != null);
+		return !races.isEmpty() && races.stream().allMatch(Race::hasAllSettings);
 	}
 
 	public boolean matchHasCompleteLineups(Match match) {

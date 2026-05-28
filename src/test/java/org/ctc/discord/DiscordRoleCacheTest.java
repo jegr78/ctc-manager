@@ -69,6 +69,19 @@ class DiscordRoleCacheTest {
 	}
 
 	@Test
+	void givenPriorEntries_whenRefreshing_thenNoSnapshotEverEmpty() {
+		// 94 WR-03: refresh must never expose an empty cache to concurrent readers
+		DiscordRoleCache cache = new DiscordRoleCache(Clock.fixed(T0, ZoneOffset.UTC));
+		cache.refresh(List.of(new Role("100", "Admin", 5)));
+
+		cache.refresh(List.of(new Role("200", "Captain", 3)));
+
+		assertThat(cache.snapshot()).isNotEmpty();
+		assertThat(cache.snapshot()).containsOnlyKeys("200");
+		assertThat(cache.get("100")).isNull();
+	}
+
+	@Test
 	void givenClockAtTtlBoundary_whenSnapshot_thenTreatsAsExpired() {
 		// given — at exactly +60min, expiresAt == now → isBefore == false
 		MutableClock clock = new MutableClock(T0);
