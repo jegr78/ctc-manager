@@ -2,6 +2,7 @@ package org.ctc.admin.controller;
 
 import java.util.Map;
 import java.util.UUID;
+import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.RaceGraphicService;
 import org.ctc.dataimport.exception.AuthGoogleApiException;
 import org.ctc.dataimport.exception.NotFoundGoogleApiException;
@@ -83,6 +84,8 @@ class RaceControllerCalendarTest {
 
 	@BeforeEach
 	void setupModelOnlyMockMvc() {
+		when(discordPostService.canPostRaceResultToForum(any(), any()))
+				.thenReturn(new MatchPreviewPreFlightResult(false, "No race results yet"));
 		var controller = new RaceController(
 				raceService, raceFormDataService, raceCalendarService,
 				raceAttachmentService, raceGraphicService,

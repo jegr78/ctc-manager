@@ -53,8 +53,44 @@ public class ScoringService {
 	 * Call this after saving race results to keep match scores in sync.
 	 * Uses database query to ensure all legs are included, even when lazy-loaded collections are incomplete.
 	 */
+	/**
+	 * Re-derive Match home/away scores from the persisted legs of {@code race}'s match,
+	 * even when {@code race} itself has no results. Used by {@code RaceService.saveResults}
+	 * when the operator clears a race so the match score doesn't stay stale.
+	 */
+	@Transactional
+	public void recomputeMatchScoresFromAllLegs(Race race) {
+		if (race.isBye() || race.getMatch() == null || race.getMatch().getHomeTeam() == null) {
+			return;
+		}
+		Match match = race.getMatch();
+		UUID hId = match.getHomeTeam().getId();
+		var legs = raceRepository.findByMatchId(match.getId());
+		int matchHome = 0;
+		int matchAway = 0;
+		for (Race leg : legs) {
+			if (leg.getResults().isEmpty()) {
+				continue;
+			}
+			matchHome += leg.getResults().stream()
+					.filter(r -> isDriverInTeam(r, leg.getId(), hId))
+					.mapToInt(RaceResult::getPointsTotal).sum();
+			matchAway += leg.getResults().stream()
+					.filter(r -> !isDriverInTeam(r, leg.getId(), hId))
+					.mapToInt(RaceResult::getPointsTotal).sum();
+		}
+		match.setHomeScore(matchHome);
+		match.setAwayScore(matchAway);
+		log.info("Recomputed match scores after clear: {} {} : {} {}",
+				match.getHomeTeam().getShortName(), matchHome, matchAway,
+				match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "?");
+	}
+
 	@Transactional
 	public void aggregateMatchScores(Race race) {
+		if (race.getResults().isEmpty()) {
+			return;
+		}
 		if (race.isBye()) {
 			return;
 		}

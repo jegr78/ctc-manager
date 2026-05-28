@@ -94,7 +94,7 @@ public class RaceController {
 		DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
 		MatchPreviewPreFlightResult preFlight = discordPostService.canPostRaceResultToForum(race, config);
 		DiscordPost existingPost = null;
-		String webhookUrl = config.getRaceResultsForumWebhookUrl();
+		String webhookUrl = config != null ? config.getRaceResultsForumWebhookUrl() : null;
 		if (webhookUrl != null && !webhookUrl.isBlank()) {
 			String channelId = discordPostService.resolveAnnouncementChannelId(webhookUrl);
 			existingPost = discordPostRepository

@@ -110,7 +110,7 @@ class DiscordPostServiceSettingsBundleIT {
 		for (int i = 0; i < 3; i++) {
 			Race race = helper.createRace(md, match);
 			if (allHaveSettings || i < 2) {
-				race.setSettings(new RaceSettings(race));
+				race.setSettings(helper.completeRaceSettings(race));
 				raceRepository.save(race);
 			}
 			match.getRaces().add(race);

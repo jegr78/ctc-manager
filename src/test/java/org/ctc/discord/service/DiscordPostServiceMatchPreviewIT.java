@@ -126,13 +126,13 @@ class DiscordPostServiceMatchPreviewIT {
 
 		Race race1 = helper.createRace(md, match);
 		race1.setDateTime(LocalDateTime.of(2026, 6, 1, 20, 30));
-		race1.setSettings(new RaceSettings(race1));
+		race1.setSettings(helper.completeRaceSettings(race1));
 		raceRepository.save(race1);
 		seedLineup(race1, home, driver);
 
 		Race race2 = helper.createRace(md, match);
 		race2.setDateTime(LocalDateTime.of(2026, 6, 1, 21, 30));
-		race2.setSettings(new RaceSettings(race2));
+		race2.setSettings(helper.completeRaceSettings(race2));
 		raceRepository.save(race2);
 		seedLineup(race2, home, driver);
 
@@ -313,7 +313,7 @@ class DiscordPostServiceMatchPreviewIT {
 		org.ctc.domain.model.Driver driver = helper.createDriver("psn-" + suffix, "Drv " + suffix);
 		Race race1 = helper.createRace(md, match);
 		race1.setDateTime(LocalDateTime.of(2026, 6, 1, 20, 30));
-		race1.setSettings(new RaceSettings(race1));
+		race1.setSettings(helper.completeRaceSettings(race1));
 		raceRepository.save(race1);
 		seedLineup(race1, home, driver);
 		match.getRaces().add(race1);

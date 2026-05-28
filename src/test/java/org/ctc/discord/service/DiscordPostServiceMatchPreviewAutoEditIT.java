@@ -131,7 +131,7 @@ class DiscordPostServiceMatchPreviewAutoEditIT {
 
 		Race race1 = helper.createRace(md, match);
 		race1.setDateTime(LocalDateTime.of(2026, 6, 1, 20, 30));
-		race1.setSettings(new RaceSettings(race1));
+		race1.setSettings(helper.completeRaceSettings(race1));
 		raceRepository.save(race1);
 		RaceLineup lu = new RaceLineup();
 		lu.setRace(race1);

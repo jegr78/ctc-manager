@@ -264,7 +264,11 @@ public class RaceService {
 		}
 
 		raceRepository.save(race);
-		scoringService.aggregateMatchScores(race);
+		if (race.getResults().isEmpty()) {
+			scoringService.recomputeMatchScoresFromAllLegs(race);
+		} else {
+			scoringService.aggregateMatchScores(race);
+		}
 
 		var homeScore = race.getHomeScore() != null ? race.getHomeScore() : 0;
 		var awayScore = race.getAwayScore() != null ? race.getAwayScore() : 0;

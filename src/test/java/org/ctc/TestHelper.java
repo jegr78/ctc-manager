@@ -120,6 +120,22 @@ public class TestHelper {
 		return raceRepository.save(race);
 	}
 
+	public org.ctc.domain.model.RaceSettings completeRaceSettings(Race race) {
+		var settings = new org.ctc.domain.model.RaceSettings(race);
+		settings.setNumberOfLaps(5);
+		settings.setTyreWearMultiplier(1);
+		settings.setFuelConsumptionMultiplier(1);
+		settings.setRefuelingSpeed(1);
+		settings.setInitialFuel("100%");
+		settings.setNumberOfRequiredPitStops(0);
+		settings.setTimeProgressionMultiplier(1);
+		settings.setWeather("clear");
+		settings.setTimeOfDay("noon");
+		settings.setAvailableTyres("any");
+		settings.setMandatoryTyres("none");
+		return settings;
+	}
+
 	public Driver createDriver(String psnId, String nickname) {
 		return driverRepository.save(new Driver(psnId, nickname));
 	}

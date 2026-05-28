@@ -350,7 +350,7 @@ class ScoringServiceTest {
 		}
 
 		@Test
-		void givenClearedRaceWithOtherCompletedLegs_whenAggregateMatchScores_thenMatchScoreRecomputedFromRemainingLegs() {
+		void givenClearedRaceWithOtherCompletedLegs_whenRecomputeMatchScoresFromAllLegs_thenMatchScoreRecomputedFromRemainingLegs() {
 			var homeTeam = createTeam("Home");
 			var awayTeam = createTeam("Away");
 			var match = createMatch(homeTeam, awayTeam);
@@ -374,7 +374,7 @@ class ScoringServiceTest {
 			match.setHomeScore(99);
 			match.setAwayScore(99);
 
-			scoringService.aggregateMatchScores(clearedRace);
+			scoringService.recomputeMatchScoresFromAllLegs(clearedRace);
 
 			assertEquals(18, match.getHomeScore());
 			assertEquals(4, match.getAwayScore());
