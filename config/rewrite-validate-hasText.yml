@@ -1,0 +1,13 @@
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.ctc.ValidateHasTextMigration
+displayName: Phase 103 detector — surviving String.isBlank() callsites
+description: >
+  Detector-only recipe activated via -Drewrite.configLocation. Wraps FindMethods
+  over java.lang.String#isBlank() so that any surviving callsite in src/main/java
+  appears as a /*~~>*/ marker in target/site/rewrite/rewrite.patch. Does not
+  rewrite source. matchOverrides is false so it never inspects subtypes.
+recipeList:
+  - org.openrewrite.java.search.FindMethods:
+      methodPattern: java.lang.String isBlank()
+      matchOverrides: false

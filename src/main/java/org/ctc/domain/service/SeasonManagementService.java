@@ -10,6 +10,7 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.domain.util.HexColor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -178,6 +179,46 @@ public class SeasonManagementService {
         return saved;
     }
 
+    @Transactional
+    public Season linkRaceResultsThread(UUID seasonId, String threadId) {
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        season.setDiscordRaceResultsThreadId(threadId);
+        var saved = seasonRepository.save(season);
+        log.info("Linked race-results thread {} to season {}", threadId, seasonId);
+        return saved;
+    }
+
+    @Transactional
+    public Season linkStandingsThread(UUID seasonId, String threadId) {
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        season.setDiscordStandingsThreadId(threadId);
+        var saved = seasonRepository.save(season);
+        log.info("Linked standings thread {} to season {}", threadId, seasonId);
+        return saved;
+    }
+
+    @Transactional
+    public Season unlinkRaceResultsThread(UUID seasonId) {
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        season.setDiscordRaceResultsThreadId(null);
+        var saved = seasonRepository.save(season);
+        log.info("Unlinked race-results thread from season {}", seasonId);
+        return saved;
+    }
+
+    @Transactional
+    public Season unlinkStandingsThread(UUID seasonId) {
+        var season = seasonRepository.findById(seasonId)
+                .orElseThrow(() -> new EntityNotFoundException("Season", seasonId));
+        season.setDiscordStandingsThreadId(null);
+        var saved = seasonRepository.save(season);
+        log.info("Unlinked standings thread from season {}", seasonId);
+        return saved;
+    }
+
     /**
      * Deletes a season. Strict pre-check: if the season has any active phase content
      * (matchdays, playoffs, or {@code phase_teams} rows), the delete is refused with
@@ -341,9 +382,9 @@ public class SeasonManagementService {
         var seasonTeam = seasonTeamRepository.findById(seasonTeamId)
                 .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", seasonTeamId));
         seasonTeam.setRating(rating);
-        seasonTeam.setPrimaryColor(primaryColor != null && !primaryColor.isBlank() ? primaryColor : null);
-        seasonTeam.setSecondaryColor(secondaryColor != null && !secondaryColor.isBlank() ? secondaryColor : null);
-        seasonTeam.setAccentColor(accentColor != null && !accentColor.isBlank() ? accentColor : null);
+        seasonTeam.setPrimaryColor(HexColor.sanitize(primaryColor));
+        seasonTeam.setSecondaryColor(HexColor.sanitize(secondaryColor));
+        seasonTeam.setAccentColor(HexColor.sanitize(accentColor));
 
         if (logoOverride != null && !logoOverride.isEmpty()) {
             if (seasonTeam.getLogoUrl() != null) {

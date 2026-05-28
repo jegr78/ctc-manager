@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -9,6 +11,7 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.domain.util.HexColor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -216,28 +219,36 @@ public class TeamManagementService {
 
 	/**
 	 * Creates or updates a team from primitive parameters.
+	 * `discordRoleId` is per-team (not propagated to sub-teams).
 	 */
 	@Transactional
 	public Team save(UUID id, String name, String shortName,
-	                 String primaryColor, String secondaryColor, String accentColor) {
+	                 String primaryColor, String secondaryColor, String accentColor,
+	                 String discordRoleId) {
 		Team team;
 		if (id != null) {
 			team = findById(id);
 			team.setName(name);
 			team.setShortName(shortName);
-			team.setPrimaryColor(primaryColor);
-			team.setSecondaryColor(secondaryColor);
-			team.setAccentColor(accentColor);
+			team.setPrimaryColor(HexColor.sanitize(primaryColor));
+			team.setSecondaryColor(HexColor.sanitize(secondaryColor));
+			team.setAccentColor(HexColor.sanitize(accentColor));
+			team.setDiscordRoleId(blankToNull(discordRoleId));
 			team = teamRepository.save(team);
 			propagateColorsToSubTeams(team);
 		} else {
 			team = new Team(name, shortName);
-			team.setPrimaryColor(primaryColor);
-			team.setSecondaryColor(secondaryColor);
-			team.setAccentColor(accentColor);
+			team.setPrimaryColor(HexColor.sanitize(primaryColor));
+			team.setSecondaryColor(HexColor.sanitize(secondaryColor));
+			team.setAccentColor(HexColor.sanitize(accentColor));
+			team.setDiscordRoleId(blankToNull(discordRoleId));
 			team = teamRepository.save(team);
 		}
 		return team;
+	}
+
+	private static String blankToNull(String value) {
+		return !hasText(value) ? null : value;
 	}
 
 	/**

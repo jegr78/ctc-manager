@@ -4,6 +4,17 @@
 <body>
 <section>
     <h1>Import Preview</h1>
+
+    <div th:if="${errorMessage}" class="alert alert-error mb-md">
+        <p>
+            <span th:if="${errorCategory}"
+                  class="error-badge"
+                  th:classappend="|error-badge--${#strings.toLowerCase(errorCategory)}|"
+                  th:text="${errorCategory}"></span>
+            <span th:text="${errorMessage}"></span>
+        </p>
+    </div>
+
     <div class="card mb-md">
         <p><strong>Season:</strong> <span th:text="${seasonDisplayLabel}"></span> |
            <strong>Matchday:</strong> <span th:text="${matchdayName ?: metadata.matchdayLabel ?: '-'}"></span></p>
@@ -22,13 +33,13 @@
             <!-- Errors -->
             <div th:if="${preview.hasErrors()}" class="alert alert-error mb-md">
                 <strong>Errors <span th:if="${isMultiRace}" th:text="${raceSheetNames[__${iterStat.index}__] + ':'}"></span></strong>
-                <ul style="margin:8px 0 0 16px;">
+                <ul class="list-tight">
                     <li th:each="error : ${preview.errors}" th:text="${error}"></li>
                 </ul>
             </div>
 
             <!-- Duplicate Warning -->
-            <div th:if="${preview.duplicateDetected}" class="alert alert-error" style="margin-bottom:16px; border-color:#ffa726; background:rgba(255,167,38,0.1); color:#ffa726;">
+            <div th:if="${preview.duplicateDetected}" class="alert alert-error alert--warning-amber">
                 <strong>Duplicate detected <span th:if="${isMultiRace}" th:text="${raceSheetNames[__${iterStat.index}__] + ':'}"></span></strong> A match with the same teams already exists on this matchday.
                 You can overwrite the existing data or cancel.
             </div>
@@ -47,7 +58,7 @@
                     </thead>
                     <tbody>
                         <tr th:each="row : ${preview.rows}"
-                            th:style="${row.matchResult.type.name() == 'NONE' ? 'background:#3a2e1a' : (row.matchResult.type.name() == 'FUZZY' ? 'background:#1a2a3a' : '')}">
+                            th:classappend="${row.matchResult.type.name() == 'NONE' ? 'match-none' : (row.matchResult.type.name() == 'FUZZY' ? 'match-fuzzy' : '')}">
                             <td th:text="${row.teamShortName}"></td>
                             <td><strong th:text="${row.psnId}"></strong></td>
                             <td th:text="${row.position}"></td>
@@ -69,7 +80,7 @@
                                 <!-- No match -->
                                 <span th:if="${row.matchResult.type.name() == 'NONE'}">
                                     <input type="hidden" th:name="'confirm_' + ${row.psnId}" value="new">
-                                    <span class="badge" style="background:#3a2e1a;color:#ffb74d;">Create new</span>
+                                    <span class="badge badge-create-new">Create new</span>
                                 </span>
                             </td>
                         </tr>
@@ -84,13 +95,13 @@
         <!-- Errors -->
         <div th:if="${preview.hasErrors()}" class="alert alert-error mb-md">
             <strong>Errors:</strong>
-            <ul style="margin:8px 0 0 16px;">
+            <ul class="list-tight">
                 <li th:each="error : ${preview.errors}" th:text="${error}"></li>
             </ul>
         </div>
 
         <!-- Duplicate Warning -->
-        <div th:if="${preview.duplicateDetected}" class="alert alert-error" style="margin-bottom:16px; border-color:#ffa726; background:rgba(255,167,38,0.1); color:#ffa726;">
+        <div th:if="${preview.duplicateDetected}" class="alert alert-error alert--warning-amber">
             <strong>Duplicate detected:</strong> A match with the same teams already exists on this matchday.
             You can overwrite the existing data or cancel.
         </div>
@@ -109,7 +120,7 @@
                 </thead>
                 <tbody>
                     <tr th:each="row : ${preview.rows}"
-                        th:style="${row.matchResult.type.name() == 'NONE' ? 'background:#3a2e1a' : (row.matchResult.type.name() == 'FUZZY' ? 'background:#1a2a3a' : '')}">
+                        th:classappend="${row.matchResult.type.name() == 'NONE' ? 'match-none' : (row.matchResult.type.name() == 'FUZZY' ? 'match-fuzzy' : '')}">
                         <td th:text="${row.teamShortName}"></td>
                         <td><strong th:text="${row.psnId}"></strong></td>
                         <td th:text="${row.position}"></td>
@@ -131,7 +142,7 @@
                             <!-- No match -->
                             <span th:if="${row.matchResult.type.name() == 'NONE'}">
                                 <input type="hidden" th:name="'confirm_' + ${row.psnId}" value="new">
-                                <span class="badge" style="background:#3a2e1a;color:#ffb74d;">Create new</span>
+                                <span class="badge badge-create-new">Create new</span>
                             </span>
                         </td>
                     </tr>
@@ -149,7 +160,7 @@
         <input type="hidden" name="sheetUrl" th:if="${sheetUrl}" th:value="${sheetUrl}">
 
         <!-- File re-upload only needed for CSV source -->
-        <div class="form-group" style="margin-bottom:16px;" th:if="${source == null or source == 'csv'}">
+        <div class="form-group form-group--gap16" th:if="${source == null or source == 'csv'}">
             <label for="file">Re-select CSV file (for import)</label>
             <input type="file" id="file" name="file" accept=".csv,.txt,.tsv" required>
         </div>

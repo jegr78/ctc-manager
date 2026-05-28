@@ -1,5 +1,7 @@
 package org.ctc.gt7sync;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -176,7 +178,7 @@ public class Gt7ScraperService {
 			// Primary: look up manufacturer by ID from tuners table
 			String manufacturer = manufacturerId != null ? manufacturerMap.get(manufacturerId) : null;
 			// Fallback: extract from nameLong minus nameShort
-			if (manufacturer == null || manufacturer.isBlank()) {
+			if (!hasText(manufacturer)) {
 				manufacturer = extractManufacturer(nameLong, nameShort);
 			}
 

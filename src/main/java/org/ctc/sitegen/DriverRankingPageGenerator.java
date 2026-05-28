@@ -1,5 +1,7 @@
 package org.ctc.sitegen;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -150,7 +152,7 @@ public class DriverRankingPageGenerator {
             if (entry.ranking().isEmpty() && p.getPhaseType() == PhaseType.PLAYOFF) {
                 continue;
             }
-            String label = p.getLabel() != null && !p.getLabel().isBlank()
+            String label = hasText(p.getLabel())
                     ? p.getLabel()
                     : capitalize(p.getPhaseType().name());
             String href = "driver-ranking-" + phaseSlug(p) + ".html";

@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
+import org.ctc.discord.repository.DiscordGlobalConfigRepository;
+import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +26,7 @@ import static org.mockito.Mockito.when;
 /**
  * Phase 73-03 — Mockito unit test for {@link BackupExportService}.
  *
- * <p>Stubs all 24 repositories, drives the three public methods, and asserts:
+ * <p>Stubs all 26 repositories, drives the three public methods, and asserts:
  * <ul>
  *   <li>{@code countRowsPerTable()} returns a {@link LinkedHashMap} keyed by
  *       {@link EntityRef#tableName()} in the order of {@link BackupSchema#getExportOrder()}.</li>
@@ -62,6 +64,8 @@ class BackupExportServiceTest {
 	@Mock private RaceResultRepository raceResultRepository;
 	@Mock private RaceSettingsRepository raceSettingsRepository;
 	@Mock private RaceAttachmentRepository raceAttachmentRepository;
+	@Mock private DiscordGlobalConfigRepository discordGlobalConfigRepository;
+	@Mock private DiscordPostRepository discordPostRepository;
 
 	private BackupExportService service;
 	private Path uploadRoot;
@@ -78,6 +82,7 @@ class BackupExportServiceTest {
 				playoffRoundRepository, playoffMatchupRepository, playoffSeedRepository,
 				matchdayRepository, matchRepository, raceRepository, raceLineupRepository,
 				raceResultRepository, raceSettingsRepository, raceAttachmentRepository,
+				discordGlobalConfigRepository, discordPostRepository,
 				tempDir.toString()
 		);
 		ReflectionTestUtils.invokeMethod(service, "initialize");

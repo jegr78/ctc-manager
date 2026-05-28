@@ -1,5 +1,7 @@
 package org.ctc.dataimport;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.*;
 import java.util.regex.Pattern;
 import lombok.Getter;
@@ -110,7 +112,7 @@ public class DriverSheetImportService {
 
         for (TabPreview tab : fullPreview.tabPreviews()) {
             String seasonIdStr = allParams.get("seasonId_" + tab.tabName());
-            if (seasonIdStr == null || seasonIdStr.isBlank()) {
+            if (!hasText(seasonIdStr)) {
                 result.addSkippedTab(tab.tabName());
                 continue;
             }
@@ -181,7 +183,7 @@ public class DriverSheetImportService {
                 String acceptKey = "accept_" + row.psnId() + "_" + tab.tabName();
                 String acceptValue = allParams.get(acceptKey);
                 Driver driver;
-                if (acceptValue != null && !acceptValue.isBlank()) {
+                if (hasText(acceptValue)) {
                     UUID suggestedDriverId = UUID.fromString(acceptValue);
                     // Use a tab-scoped cache key for the accept path so that different tabs
                     // can independently accept different drivers for the same sheet PSN.
@@ -287,13 +289,13 @@ public class DriverSheetImportService {
             String rawTeamCode = cellToString(row, 2);
 
             // Step 1: Blank PSN
-            if (rawPsnId.isBlank()) {
+            if (!hasText(rawPsnId)) {
                 errors.add(new ErrorRow(rawPsnId, rawTeamCode, ErrorReason.BLANK_PSN_ID));
                 continue;
             }
 
             // Step 2: Blank team code
-            if (rawTeamCode.isBlank()) {
+            if (!hasText(rawTeamCode)) {
                 errors.add(new ErrorRow(rawPsnId, rawTeamCode, ErrorReason.BLANK_TEAM_CODE));
                 continue;
             }

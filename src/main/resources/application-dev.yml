@@ -27,6 +27,21 @@ spring:
 
 app:
   upload-dir: data/dev/uploads
+  discord:
+    # Dev-profile auto-seed for DiscordGlobalConfig (Plan 94-04). Empty defaults
+    # → seeder silently skips. Set DISCORD_DEV_GUILD_ID (and other vars) via
+    # .env.dev or shell env to activate. See .env.example for the full list.
+    dev-seed:
+      enabled: ${DISCORD_DEV_SEED_ENABLED:true}
+      guild-id: ${DISCORD_DEV_GUILD_ID:}
+      bot-app-id: ${DISCORD_DEV_BOT_APP_ID:}
+      current-match-category-id: ${DISCORD_DEV_CURRENT_MATCH_CATEGORY:}
+      race-results-forum-channel-id: ${DISCORD_DEV_RESULTS_FORUM:}
+      standings-forum-channel-id: ${DISCORD_DEV_STANDINGS_FORUM:}
+      vs-emoji-name: ${DISCORD_DEV_VS_EMOJI:}
+      announcement-webhook-url: ${DISCORD_DEV_ANNOUNCEMENT_WEBHOOK_URL:}
+      race-results-forum-webhook-url: ${DISCORD_DEV_RACE_RESULTS_FORUM_WEBHOOK_URL:}
+      standings-forum-webhook-url: ${DISCORD_DEV_STANDINGS_FORUM_WEBHOOK_URL:}
 
 logging:
   level:

@@ -183,10 +183,10 @@ class BackupImportServiceIT {
                     .isEqualTo(orig.currentRows());
         }
 
-        // D-08: staging file must still exist after reparse
+        // The staging file must still exist after reparse.
         Path staged = stagingDir.resolve("upload-" + stagingId + ".zip");
         assertThat(staged)
-                .as("staging file must still exist after reparse (D-08)")
+                .as("staging file must still exist after reparse")
                 .exists();
     }
 

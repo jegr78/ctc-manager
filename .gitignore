@@ -36,6 +36,7 @@ build/
 ### Superpowers ###
 .superpowers/
 .worktrees/
+.wiki-clone/
 
 ### Skills ###
 .agents/

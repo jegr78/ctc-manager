@@ -1,10 +1,13 @@
 package org.ctc.admin.controller;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.TeamForm;
+import org.ctc.discord.DiscordRoleCache;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.service.TeamManagementService;
 import org.springframework.stereotype.Controller;
@@ -21,6 +24,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class TeamController {
 
 	private final TeamManagementService teamManagementService;
+	private final DiscordRoleCache discordRoleCache;
 
 	@GetMapping
 	public String list(Model model) {
@@ -42,6 +46,7 @@ public class TeamController {
 	@GetMapping("/new")
 	public String create(Model model) {
 		model.addAttribute("teamForm", new TeamForm());
+		model.addAttribute("discordRoles", discordRoleCache.snapshot());
 		return "admin/team-form";
 	}
 
@@ -55,20 +60,24 @@ public class TeamController {
 		form.setPrimaryColor(team.getPrimaryColor());
 		form.setSecondaryColor(team.getSecondaryColor());
 		form.setAccentColor(team.getAccentColor());
+		form.setDiscordRoleId(team.getDiscordRoleId());
 		model.addAttribute("teamForm", form);
 		model.addAttribute("team", team);
+		model.addAttribute("discordRoles", discordRoleCache.snapshot());
 		return "admin/team-form";
 	}
 
 	@PostMapping("/save")
 	public String save(@Valid @ModelAttribute("teamForm") TeamForm form, BindingResult result,
-	                   RedirectAttributes redirectAttributes) {
+	                   Model model, RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
+			model.addAttribute("discordRoles", discordRoleCache.snapshot());
 			return "admin/team-form";
 		}
 		try {
 			teamManagementService.save(form.getId(), form.getName(), form.getShortName(),
-					form.getPrimaryColor(), form.getSecondaryColor(), form.getAccentColor());
+					form.getPrimaryColor(), form.getSecondaryColor(), form.getAccentColor(),
+					form.getDiscordRoleId());
 			redirectAttributes.addFlashAttribute("successMessage", "Team saved: " + form.getName());
 		} catch (BusinessRuleException e) {
 			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -93,7 +102,7 @@ public class TeamController {
 	                         @RequestParam String subName,
 	                         @RequestParam String subShortName,
 	                         RedirectAttributes redirectAttributes) {
-		if (subName.isBlank() || subShortName.isBlank()) {
+		if (!hasText(subName) || !hasText(subShortName)) {
 			redirectAttributes.addFlashAttribute("errorMessage", "Name and short name must not be blank");
 			return "redirect:/admin/teams/" + id + "/edit";
 		}

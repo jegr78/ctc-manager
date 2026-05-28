@@ -6,8 +6,10 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.service.TeamCardService;
+import org.ctc.discord.event.MatchScheduleFieldsChangedEvent;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class RaceService {
 	private final ScoringService scoringService;
 	private final TeamCardService teamCardService;
 	private final RaceCalendarService raceCalendarService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public RaceListData getRaceListData(UUID matchdayId, UUID seasonId) {
 		List<Race> races;
@@ -184,6 +187,7 @@ public class RaceService {
 		} else {
 			race.setCar(null);
 		}
+		boolean dateTimeChanged = id != null && !Objects.equals(race.getDateTime(), dateTime);
 		race.setDateTime(dateTime);
 
 		// Settings
@@ -232,6 +236,9 @@ public class RaceService {
 		}
 
 		raceRepository.save(race);
+		if (dateTimeChanged && race.getMatch() != null) {
+			eventPublisher.publishEvent(new MatchScheduleFieldsChangedEvent(race.getMatch().getId()));
+		}
 		log.info("Saved race: {} vs {} ({})", homeTeam.getShortName(), awayTeam.getShortName(), matchday.getLabel());
 		return new SaveResult(true,
 				"Race saved: " + homeTeam.getShortName() + " vs " + awayTeam.getShortName(),
@@ -243,6 +250,7 @@ public class RaceService {
 		var race = raceRepository.findById(raceId).orElseThrow();
 
 		race.getResults().clear();
+		raceRepository.saveAndFlush(race);
 
 		for (var rd : results) {
 			if (rd.driverId() == null) {
@@ -256,7 +264,11 @@ public class RaceService {
 		}
 
 		raceRepository.save(race);
-		scoringService.aggregateMatchScores(race);
+		if (race.getResults().isEmpty()) {
+			scoringService.recomputeMatchScoresFromAllLegs(race);
+		} else {
+			scoringService.aggregateMatchScores(race);
+		}
 
 		var homeScore = race.getHomeScore() != null ? race.getHomeScore() : 0;
 		var awayScore = race.getAwayScore() != null ? race.getAwayScore() : 0;

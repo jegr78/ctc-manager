@@ -1,5 +1,7 @@
 package org.ctc.admin.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -139,7 +141,7 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 	}
 
 	private String resolveNickname(Driver driver) {
-		return driver.getNickname() != null && !driver.getNickname().isBlank()
+		return hasText(driver.getNickname())
 				? driver.getNickname() : driver.getPsnId();
 	}
 

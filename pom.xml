@@ -227,6 +227,19 @@
 			<artifactId>testcontainers-mariadb</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!--
+		    WireMock 3.x for Discord HTTP/Webhook client integration tests.
+		    Test scope only — never reaches the production classpath. First introduced
+		    in Phase 93 (Discord Foundation): stubs Discord REST + webhook endpoints
+		    so DiscordRateLimitInterceptor, DiscordRestClient, and DiscordWebhookClient
+		    can be verified end-to-end against deterministic responses.
+		-->
+		<dependency>
+			<groupId>org.wiremock</groupId>
+			<artifactId>wiremock-standalone</artifactId>
+			<version>3.9.2</version>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -281,6 +294,12 @@
 						<app.upload-dir>data/${spring.profiles.active:dev}/uploads-fork-${surefire.forkNumber}</app.upload-dir>
 						<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
 						<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
+						<!-- Skip team-card PNG generation during seed in tests: cards aren't needed for
+						     the vast majority of tests, but their ~46 Chromium spawns per Spring context
+						     bootstrap compound across the ~131 @SpringBootTest classes and exhaust
+						     Playwright/macOS file-descriptor budgets ("Protocol error (Page.captureScreenshot)"
+						     flake). Tests that genuinely need rendered team cards can override per-class. -->
+						<app.seed.generate-team-cards>false</app.seed.generate-team-cards>
 					</systemPropertyVariables>
 					<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 					     Surefire runs only tests WITHOUT @Tag("integration") / @Tag("e2e") / @Tag("flaky").
@@ -327,6 +346,7 @@
 								<app.upload-dir>data/${spring.profiles.active:dev}/uploads-fork-${surefire.forkNumber}</app.upload-dir>
 								<app.backup.staging-dir>data/${spring.profiles.active:dev}/backup-staging-fork-${surefire.forkNumber}</app.backup.staging-dir>
 								<app.backup.import-backups-dir>data/${spring.profiles.active:dev}/import-backups-fork-${surefire.forkNumber}</app.backup.import-backups-dir>
+								<app.seed.generate-team-cards>false</app.seed.generate-team-cards>
 							</systemPropertyVariables>
 							<!-- Tag-based test routing (see TESTING.md "Test Categorization"):
 							     run @Tag("integration") tests, exclude @Tag("e2e") and @Tag("flaky").
@@ -357,10 +377,15 @@
 						<exclude>org/ctc/admin/service/OverlayGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/MatchResultsGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/PowerRankingsGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/StandingsGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/ProvisionalScoresGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/AbstractGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/PlaywrightScreenshotter.class</exclude>
 						<exclude>org/ctc/admin/service/PlayoffRoundOverviewGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/PlayoffRoundScheduleGraphicService.class</exclude>
 						<exclude>org/ctc/admin/service/PlayoffRoundResultsGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/MatchdayPairingsGraphicService.class</exclude>
+						<exclude>org/ctc/admin/service/MatchdayScheduleGraphicService.class</exclude>
 					</excludes>
 				</configuration>
 				<executions>
@@ -454,6 +479,29 @@ exit 0;
 							</arguments>
 						</configuration>
 					</execution>
+					<execution>
+						<id>assumptions-fence</id>
+						<phase>validate</phase>
+						<goals><goal>exec</goal></goals>
+						<configuration>
+							<executable>bash</executable>
+							<arguments>
+								<argument>-c</argument>
+								<argument><![CDATA[
+violations=$(grep -rE '^import\s+(static\s+)?org\.junit\.jupiter\.api\.Assumptions(\.|;)' src/test/java/ | grep -v 'src/test/java/org/ctc/build/' || true);
+if [ -n "$violations" ]; then
+  echo "[CLEAN-01 build-guard] Forbidden JUnit-Jupiter Assumptions import detected:";
+  echo "$violations";
+  echo "Remove the JUnit Assumptions usage; either rewrite as an unconditional assertion or use AssertJ org.assertj.core.api.Assumptions.assumeThat (different package, intentional).";
+  echo "See .planning/phases/92-carry-forwards-cleanup/92-CONTEXT.md Decision D-04 for the canonical fix and rationale.";
+  exit 1;
+fi;
+echo "[CLEAN-01 build-guard] OK - no JUnit-Jupiter Assumptions offenders.";
+exit 0;
+]]></argument>
+							</arguments>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 		</plugins>
@@ -486,6 +534,9 @@ exit 0;
 										<include>**/e2e/**/*Test.java</include>
 									</includes>
 									<groups>e2e</groups>
+									<systemPropertyVariables>
+										<app.seed.generate-team-cards>false</app.seed.generate-team-cards>
+									</systemPropertyVariables>
 								</configuration>
 							</execution>
 						</executions>

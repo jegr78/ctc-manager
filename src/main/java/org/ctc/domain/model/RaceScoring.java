@@ -1,5 +1,7 @@
 package org.ctc.domain.model;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.util.Arrays;
@@ -63,7 +65,7 @@ public class RaceScoring extends BaseEntity {
 	}
 
 	public int[] getQualiPointsArray() {
-		if (qualiPoints == null || qualiPoints.isBlank()) {
+		if (!hasText(qualiPoints)) {
 			return new int[]{};
 		}
 		return parseCsv(qualiPoints);

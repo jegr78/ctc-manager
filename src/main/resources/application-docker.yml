@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    # Phase 75 RESEARCH §10: rewriteBatchedStatements=true needed for JdbcTemplate.batchUpdate(...)=500 to compile into a single multi-row INSERT on MariaDB
+    # rewriteBatchedStatements=true is required so JdbcTemplate.batchUpdate(...)=500 compiles into a single multi-row INSERT on MariaDB.
     url: jdbc:mariadb://db:3306/ctcdb?rewriteBatchedStatements=true
     driver-class-name: org.mariadb.jdbc.Driver
     username: ctc

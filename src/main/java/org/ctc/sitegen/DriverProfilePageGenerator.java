@@ -70,10 +70,10 @@ public class DriverProfilePageGenerator {
             // Split results into a LinkedHashMap (REGULAR -> PLAYOFF -> PLACEMENT canonical order),
             // filtered in Java on race.matchday.phase.phaseType (no dedicated repository method).
             //
-            // Phase participation is detected via RaceLineup, NOT RaceResult: TestDataService creates
-            // PLAYOFF Race+RaceLineup but no RaceResult rows yet, so a RaceResult-only check would
-            // miss PLAYOFF participation. Lineups are the single source of truth for participation
-            // (per CLAUDE.md "RaceLineup is Source of Truth").
+            // Phase-participation detection runs against RaceLineup, NOT RaceResult: TestDataService
+            // creates PLAYOFF Race+RaceLineup but no RaceResult rows yet, so a RaceResult-only check
+            // would miss PLAYOFF participation. Lineups are the single source of truth for
+            // participation (per CLAUDE.md "RaceLineup is Source of Truth").
             boolean showPhaseBreakdown = seasonHasMultiplePhases;
             LinkedHashMap<PhaseType, List<RaceResult>> resultsByPhase = new LinkedHashMap<>();
             if (showPhaseBreakdown) {

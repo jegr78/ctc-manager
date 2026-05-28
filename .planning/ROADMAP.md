@@ -12,6 +12,7 @@
 - :white_check_mark: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-79 (shipped 2026-05-16)
 - :white_check_mark: **v1.11 Tooling Infrastructure & Tech-Debt Sweep** — Phases 80-87 (shipped 2026-05-18)
 - :white_check_mark: **v1.12 Driver-Import Gap-Closure & Test Performance Round 2** — Phases 88-91 (shipped 2026-05-20)
+- :white_check_mark: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (shipped 2026-05-28)
 
 ## Phases
 
@@ -176,6 +177,26 @@ See: milestones/v1.12-ROADMAP.md for full details
 
 </details>
 
+<details>
+<summary>v1.13 Discord Integration & Carry-Forwards (Phases 92-103) -- SHIPPED 2026-05-28</summary>
+
+- [x] Phase 92: Carry-Forwards & Cleanup (4/4 plans) -- completed 2026-05-21
+- [x] Phase 93: Discord Foundation (3/3 plans) -- completed 2026-05-21
+- [x] Phase 94: Team Roles + Match Channel Lifecycle (4/4 plans) -- completed 2026-05-22
+- [x] Phase 95: Match Channel Posts (4/4 plans) -- completed 2026-05-23
+- [x] Phase 96: Provisional Graphic + Forum Threads (3/3 plans) -- completed 2026-05-23
+- [x] Phase 97: Matchday-Level Posts (3/3 plans) -- completed 2026-05-24
+- [x] Phase 98: Polish + E2E + Docs + Close (7/7 plans) -- completed 2026-05-25
+- [x] Phase 99: Pre-merge audit-polish (5/5 plans) -- completed 2026-05-26
+- [x] Phase 100: Match Day Channel Naming Scheme (3/3 plans) -- completed 2026-05-26
+- [x] Phase 101: Backup/Restore covers Discord schema V8-V15 (6/6 plans) -- completed 2026-05-26
+- [x] Phase 102: Code-Review Fixes (v1.13 closeout) (4/4 plans) -- completed 2026-05-28
+- [x] Phase 103: StringUtils Blank-Check Sweep (1/1 plan) -- completed 2026-05-28
+
+See: milestones/v1.13-ROADMAP.md for full details
+
+</details>
+
 ## Progress
 
 | Milestone | Phases | Plans | Status | Shipped |
@@ -190,3 +211,4 @@ See: milestones/v1.12-ROADMAP.md for full details
 | v1.10 SB 4.0.6 Upgrade & Data Export/Import | 71-79 | 50 | Complete | 2026-05-16 |
 | v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | 46 | Complete | 2026-05-18 |
 | v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | Complete | 2026-05-20 |
+| v1.13 Discord Integration & Carry-Forwards | 92-103 | 43 | Complete | 2026-05-28 |

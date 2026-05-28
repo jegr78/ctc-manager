@@ -20,3 +20,19 @@ recipeList:
 #
 # org.openrewrite.java.spring.boot4.UpgradeSpringBoot_4_0  — codebase already on Boot 4.0.6;
 #   this recipe migrates FROM Boot 3 and would produce confusing diffs (see PITFALLS Pitfall 1).
+
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: org.ctc.ValidateHasTextMigration
+displayName: Detector — surviving String.isBlank() callsites
+description: >
+  Detector-only recipe activated via -Drewrite.activeRecipes. Wraps FindMethods
+  over java.lang.String#isBlank() so that any surviving callsite in src/main/java
+  appears as a /*~~>*/ marker in target/site/rewrite/rewrite.patch. Does not
+  rewrite source. matchOverrides is false so it never inspects subtypes. Not
+  added to pom.xml activeRecipes, so a plain `./mvnw -Prewrite rewrite:dryRun`
+  still runs only org.ctc.RewriteCleanup.
+recipeList:
+  - org.openrewrite.java.search.FindMethods:
+      methodPattern: java.lang.String isBlank()
+      matchOverrides: false

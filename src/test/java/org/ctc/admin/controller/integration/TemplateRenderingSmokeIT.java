@@ -183,14 +183,14 @@ class TemplateRenderingSmokeIT {
         int status = response.getStatus();
         String body = response.getContentAsString();
 
-        // D-11a relaxed contract: status < 500 (allows 200, 3xx redirects, 4xx for unseeded paths).
+        // Relaxed contract: status < 500 (allows 200, 3xx redirects, 4xx for unseeded paths).
         // A TemplateProcessingException would manifest as 500 — explicitly fail on 5xx.
         assertThat(status)
                 .as("GET %s must not return 5xx (status was %d) — would indicate a TemplateProcessingException "
                         + "or other server error at runtime (PLAT-06)", url, status)
                 .isLessThan(500);
 
-        // D-11a word-boundary anchoring per D-11 literal directive: use doesNotContainPattern
+        // Word-boundary anchoring: use doesNotContainPattern
         // (find-semantics) — NOT doesNotMatch (whole-string-match semantics) — so the assertion
         // works against multi-line HTML response bodies where `.` does not cross newlines by
         // default. The word-boundary `\b` anchors still prevent false positives from narrative

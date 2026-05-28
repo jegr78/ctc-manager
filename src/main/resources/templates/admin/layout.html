@@ -44,36 +44,41 @@
             <nav aria-label="Main navigation">
                 <div class="sidebar-group">
                     <span class="sidebar-group-label">League</span>
-                    <a th:href="@{/admin/seasons}" th:classappend="${title.contains('Season') ? 'active' : ''}">Seasons</a>
-                    <a th:href="@{/admin/matchdays}" th:classappend="${title.contains('Matchday') ? 'active' : ''}">Matchdays</a>
-                    <a th:href="@{/admin/races}" th:classappend="${title.contains('Race') ? 'active' : ''}">Races</a>
-                    <a th:href="@{/admin/playoffs}" th:classappend="${title.contains('Playoff') || title.contains('Matchup') ? 'active' : ''}">Playoffs</a>
+                    <a th:href="@{/admin/seasons}" th:classappend="${activeRoute == 'seasons' ? 'active' : ''}">Seasons</a>
+                    <a th:href="@{/admin/matchdays}" th:classappend="${activeRoute == 'matchdays' ? 'active' : ''}">Matchdays</a>
+                    <a th:href="@{/admin/races}" th:classappend="${activeRoute == 'races' ? 'active' : ''}">Races</a>
+                    <a th:href="@{/admin/playoffs}" th:classappend="${activeRoute == 'playoffs' ? 'active' : ''}">Playoffs</a>
                 </div>
                 <div class="sidebar-group">
                     <span class="sidebar-group-label">Master Data</span>
-                    <a th:href="@{/admin/teams}" th:classappend="${title.contains('Team') and !title.contains('Team Cards') ? 'active' : ''}">Teams</a>
-                    <a th:href="@{/admin/drivers}" th:classappend="${title.contains('Driver') ? 'active' : ''}">Drivers</a>
-                    <a th:href="@{/admin/cars}" th:classappend="${title.contains('Car') and !title.contains('Team Cards') ? 'active' : ''}">Cars</a>
-                    <a th:href="@{/admin/tracks}" th:classappend="${title.contains('Track') ? 'active' : ''}">Tracks</a>
+                    <a th:href="@{/admin/teams}" th:classappend="${activeRoute == 'teams' ? 'active' : ''}">Teams</a>
+                    <a th:href="@{/admin/drivers}" th:classappend="${activeRoute == 'drivers' ? 'active' : ''}">Drivers</a>
+                    <a th:href="@{/admin/cars}" th:classappend="${activeRoute == 'cars' ? 'active' : ''}">Cars</a>
+                    <a th:href="@{/admin/tracks}" th:classappend="${activeRoute == 'tracks' ? 'active' : ''}">Tracks</a>
                 </div>
                 <div class="sidebar-group">
                     <span class="sidebar-group-label">Scoring</span>
-                    <a th:href="@{/admin/race-scorings}" th:classappend="${title.contains('Race-Scoring') ? 'active' : ''}">Race-Scorings</a>
-                    <a th:href="@{/admin/match-scorings}" th:classappend="${title.contains('Match-Scoring') ? 'active' : ''}">Match-Scorings</a>
+                    <a th:href="@{/admin/race-scorings}" th:classappend="${activeRoute == 'race-scorings' ? 'active' : ''}">Race-Scorings</a>
+                    <a th:href="@{/admin/match-scorings}" th:classappend="${activeRoute == 'match-scorings' ? 'active' : ''}">Match-Scorings</a>
                 </div>
                 <div class="sidebar-group">
                     <span class="sidebar-group-label">Tools</span>
-                    <a th:href="@{/admin/standings}" th:classappend="${title.contains('Standing') ? 'active' : ''}">Standings</a>
-                    <a th:href="@{/admin/tools/power-rankings}" th:classappend="${title.contains('Power Rankings') ? 'active' : ''}">Power Rankings</a>
-                    <a th:href="@{/admin/import}" th:classappend="${title.contains('Import') ? 'active' : ''}">Import</a>
-                    <a th:href="@{/admin/gt7-sync}" th:classappend="${title.contains('GT7') ? 'active' : ''}">GT7 Sync</a>
-                    <a th:href="@{/admin/tools/team-cards}" th:classappend="${title.contains('Team Cards') ? 'active' : ''}">Team Cards</a>
-                    <a th:href="@{/admin/tools/template-editors}" th:classappend="${title.contains('Template') ? 'active' : ''}">Template Editors</a>
+                    <a th:href="@{/admin/standings}" th:classappend="${activeRoute == 'standings' ? 'active' : ''}">Standings</a>
+                    <a th:href="@{/admin/tools/power-rankings}" th:classappend="${activeRoute == 'power-rankings' ? 'active' : ''}">Power Rankings</a>
+                    <a th:href="@{/admin/import}" th:classappend="${activeRoute == 'import' ? 'active' : ''}">Import</a>
+                    <a th:href="@{/admin/gt7-sync}" th:classappend="${activeRoute == 'gt7-sync' ? 'active' : ''}">GT7 Sync</a>
+                    <a th:href="@{/admin/tools/team-cards}" th:classappend="${activeRoute == 'team-cards' ? 'active' : ''}">Team Cards</a>
+                    <a th:href="@{/admin/tools/template-editors}" th:classappend="${activeRoute == 'template-editors' ? 'active' : ''}">Template Editors</a>
                     <a th:href="@{/admin/generate}" class="btn-generate">Generate Site</a>
                 </div>
                 <div class="sidebar-group">
                     <span class="sidebar-group-label">Data</span>
-                    <a th:href="@{/admin/backup}" th:classappend="${title.contains('Backup') ? 'active' : ''}">Backup</a>
+                    <a th:href="@{/admin/backup}" th:classappend="${activeRoute == 'backup' ? 'active' : ''}">Backup</a>
+                </div>
+                <div class="sidebar-group">
+                    <span class="sidebar-group-label">Integrations</span>
+                    <a th:href="@{/admin/discord-config}" th:classappend="${activeRoute == 'discord-config' ? 'active' : ''}">Discord Config</a>
+                    <a th:href="@{/admin/discord/posts}" th:classappend="${activeRoute == 'discord-posts' ? 'active' : ''}">Discord Posts</a>
                 </div>
             </nav>
         </aside>

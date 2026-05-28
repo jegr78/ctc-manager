@@ -94,10 +94,9 @@ class BackupImportMariaDbSmokeIT {
     /** Defensive table-name allow-list mirroring {@code BackupImportService.SAFE_TABLE_NAME}. */
     private static final Pattern SAFE_TABLE_NAME = Pattern.compile("^[a-z_]+$");
 
-    // Phase 77 (CI-gating activation): the hardcoded entity count became stale as Phase
-    // 76+ entity removals changed BackupSchema.getExportOrder() from 24 → 21. Source of
-    // truth is now BackupSchema itself (mirrors ROADMAP §"Phase 77" correction
-    // "22 tables → BackupSchema.getExportOrder()"). Captured at @BeforeEach time.
+    // The hardcoded entity count once drifted as entity-removal churn changed
+    // BackupSchema.getExportOrder() from 24 → 21. Source of truth is now BackupSchema
+    // itself; the value is captured at @BeforeEach time.
     private int expectedEntityCount;
 
     @Container

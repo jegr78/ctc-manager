@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +63,7 @@ public class StandingsViewService {
 		if (phase != null) {
 			resolvedPhase = seasonPhaseService.findById(phase);
 			resolvedSeasonId = resolvedPhase.getSeason().getId();
-		} else if (seasonId != null && !seasonId.isBlank()) {
+		} else if (hasText(seasonId)) {
 			try {
 				resolvedSeasonId = UUID.fromString(seasonId);
 				resolvedPhase = seasonPhaseService.findByType(resolvedSeasonId, PhaseType.REGULAR).orElse(null);
@@ -95,7 +97,7 @@ public class StandingsViewService {
 					List.of(), null, false, false, false, false);
 		}
 
-		// Phase resolved — eager-fetch groups inside this readOnly transaction.
+		// Eager-fetch groups now that the phase is resolved (inside the readOnly transaction).
 		var groups = List.copyOf(resolvedPhase.getGroups());
 		boolean isGroupsLayout = resolvedPhase.getLayout() == PhaseLayout.GROUPS;
 		boolean groupSelected = group != null;

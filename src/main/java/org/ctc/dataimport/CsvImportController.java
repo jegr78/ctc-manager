@@ -1,13 +1,21 @@
 package org.ctc.dataimport;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.dataimport.exception.AuthGoogleApiException;
+import org.ctc.dataimport.exception.GoogleApiException;
+import org.ctc.dataimport.exception.NotFoundGoogleApiException;
+import org.ctc.dataimport.exception.PermissionGoogleApiException;
+import org.ctc.dataimport.exception.TransientGoogleApiException;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.ValidationException;
 import org.ctc.domain.service.SeasonManagementService;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -56,7 +64,8 @@ public class CsvImportController {
 		} catch (IOException | IllegalArgumentException | IllegalStateException e) {
 			log.error("Error parsing CSV", e);
 			addCommonAttributes(model);
-			model.addAttribute("errorMessage", "Error reading CSV: " + e.getMessage());
+			model.addAttribute("errorMessage",
+					"Error reading CSV — check the file format and try again. See the server log for details.");
 			return "admin/import";
 		}
 	}
@@ -112,10 +121,48 @@ public class CsvImportController {
 			addMatchdayName(model, metadata);
 			addCommonAttributes(model);
 			return "admin/import-preview";
-		} catch (IOException | IllegalArgumentException | IllegalStateException e) {
-			log.error("Error reading Google Sheet", e);
+		} catch (AuthGoogleApiException e) {
+			log.error("Google Sheets authentication failed during CSV import preview-sheet", e);
 			addCommonAttributes(model);
-			model.addAttribute("errorMessage", "Error reading Google Sheet: " + e.getMessage());
+			model.addAttribute("errorMessage", "Authentication problem — re-link Google account");
+			model.addAttribute("errorCategory", "AUTH");
+			return "admin/import";
+		} catch (NotFoundGoogleApiException e) {
+			log.error("Google Sheet not found during CSV import preview-sheet", e);
+			addCommonAttributes(model);
+			model.addAttribute("errorMessage", "Sheet not found — check ID");
+			model.addAttribute("errorCategory", "NOT_FOUND");
+			return "admin/import";
+		} catch (PermissionGoogleApiException e) {
+			log.error("Permission denied on Google Sheet during CSV import preview-sheet", e);
+			addCommonAttributes(model);
+			model.addAttribute("errorMessage", "Access denied — share the sheet with the service account");
+			model.addAttribute("errorCategory", "PERMISSION");
+			return "admin/import";
+		} catch (TransientGoogleApiException e) {
+			log.warn("Transient Google API failure during CSV import preview-sheet", e);
+			addCommonAttributes(model);
+			model.addAttribute("errorMessage", "Connection problem — retry");
+			model.addAttribute("errorCategory", "TRANSIENT");
+			return "admin/import";
+		} catch (GoogleApiException e) {
+			// Defensive catch on the sealed base — unreachable at runtime (the 4
+			// permits above are exhaustive) but required by javac since sealed
+			// exhaustiveness on catch blocks is not yet a language feature.
+			log.error("Unexpected GoogleApiException subtype during CSV import preview-sheet", e);
+			addCommonAttributes(model);
+			model.addAttribute("errorMessage", "Connection problem — retry");
+			model.addAttribute("errorCategory", "TRANSIENT");
+			return "admin/import";
+		} catch (IllegalArgumentException e) {
+			log.error("Invalid Google Sheet URL during CSV import preview-sheet", e);
+			addCommonAttributes(model);
+			model.addAttribute("errorMessage", "Invalid Google Sheet URL");
+			return "admin/import";
+		} catch (IllegalStateException e) {
+			log.error("Error reading Google Sheet during CSV import preview-sheet", e);
+			addCommonAttributes(model);
+			model.addAttribute("errorMessage", "Error reading Google Sheet");
 			return "admin/import";
 		}
 	}
@@ -136,7 +183,7 @@ public class CsvImportController {
 
 			// Re-parse from original source
 			var previews = new ArrayList<CsvImportService.ImportPreview>();
-			if ("sheet".equals(source) && sheetUrl != null && !sheetUrl.isBlank()) {
+			if ("sheet".equals(source) && hasText(sheetUrl)) {
 				var spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
 				var sheetNames = googleSheetsService.getSheetNames(spreadsheetId);
 				var raceSheets = googleSheetsService.filterRaceSheets(sheetNames);
@@ -201,10 +248,41 @@ public class CsvImportController {
 				}
 				redirectAttributes.addFlashAttribute("successMessage", msg);
 			}
-		} catch (IOException | BusinessRuleException | ValidationException | IllegalArgumentException |
-		         IllegalStateException | DataAccessException e) {
-			log.error("Error executing import", e);
-			redirectAttributes.addFlashAttribute("errorMessage", "Import error: " + e.getMessage());
+		} catch (AuthGoogleApiException e) {
+			log.error("Google Sheets authentication failed during CSV import execute", e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Authentication problem — re-link Google account");
+			redirectAttributes.addFlashAttribute("errorCategory", "AUTH");
+		} catch (NotFoundGoogleApiException e) {
+			log.error("Google Sheet not found during CSV import execute", e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Sheet not found — check ID");
+			redirectAttributes.addFlashAttribute("errorCategory", "NOT_FOUND");
+		} catch (PermissionGoogleApiException e) {
+			log.error("Permission denied on Google Sheet during CSV import execute", e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Access denied — share the sheet with the service account");
+			redirectAttributes.addFlashAttribute("errorCategory", "PERMISSION");
+		} catch (TransientGoogleApiException e) {
+			log.warn("Transient Google API failure during CSV import execute", e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Connection problem — retry");
+			redirectAttributes.addFlashAttribute("errorCategory", "TRANSIENT");
+		} catch (GoogleApiException e) {
+			// Defensive catch on the sealed base — unreachable at runtime (the 4
+			// permits above are exhaustive) but required by javac.
+			log.error("Unexpected GoogleApiException subtype during CSV import execute", e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Connection problem — retry");
+			redirectAttributes.addFlashAttribute("errorCategory", "TRANSIENT");
+		} catch (BusinessRuleException | ValidationException e) {
+			log.error("Error executing CSV import", e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Import failed: " + e.getMessage());
+		} catch (IllegalArgumentException e) {
+			log.error("Invalid argument during CSV import execute", e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Import failed due to invalid input. See server logs for details.");
+		} catch (DataIntegrityViolationException e) {
+			log.error("CSV import hit DB constraint — transaction rolled back, no rows inserted", e);
+			redirectAttributes.addFlashAttribute("errorMessage",
+					"Import failed due to a database constraint. Nothing was imported. See server logs for details.");
+		} catch (IllegalStateException | IOException | DataAccessException e) {
+			log.error("Error executing CSV import", e);
+			redirectAttributes.addFlashAttribute("errorMessage", "Import failed due to an internal error. See server logs for details.");
 		}
 		return "redirect:/admin/import";
 	}

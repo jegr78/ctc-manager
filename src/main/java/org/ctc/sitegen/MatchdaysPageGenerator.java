@@ -1,5 +1,7 @@
 package org.ctc.sitegen;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -109,7 +111,7 @@ public class MatchdaysPageGenerator {
         var season = ctx.season();
         boolean isGroupsLayout = currentPhase.getLayout() == PhaseLayout.GROUPS;
 
-        // Phase tab row (visible when ≥2 phases)
+        // Tab row for season phases (visible when ≥2 phases).
         List<PhaseTabView> phaseTabs = showPhaseTabs
                 ? buildPhaseTabs(allPhases, currentPhase.getPhaseType(), isLegacyView)
                 : List.of();
@@ -164,7 +166,7 @@ public class MatchdaysPageGenerator {
                                               boolean isLegacyView) {
         var tabs = new ArrayList<PhaseTabView>();
         for (SeasonPhase p : phases) {
-            String label = p.getLabel() != null && !p.getLabel().isBlank()
+            String label = hasText(p.getLabel())
                     ? p.getLabel()
                     : capitalize(p.getPhaseType().name());
             String href;

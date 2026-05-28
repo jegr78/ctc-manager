@@ -1,5 +1,7 @@
 package org.ctc.domain.model;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.util.ArrayList;
@@ -38,6 +40,9 @@ public class Team extends BaseEntity {
 
 	private String accentColor;
 
+	@Column(length = 32)
+	private String discordRoleId;
+
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "parent_team_id")
 	private Team parentTeam;
@@ -70,6 +75,19 @@ public class Team extends BaseEntity {
 
 	public Team getParentOrSelf() {
 		return parentTeam != null ? parentTeam : this;
+	}
+
+	public String getEffectiveDiscordRoleId() {
+		if (hasText(discordRoleId)) {
+			return discordRoleId;
+		}
+		if (parentTeam != null) {
+			String parentId = parentTeam.getDiscordRoleId();
+			if (hasText(parentId)) {
+				return parentId;
+			}
+		}
+		return null;
 	}
 
 }

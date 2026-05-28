@@ -8,6 +8,11 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       SPRING_SECURITY_USER_NAME: ${CTC_ADMIN_USER}
       SPRING_SECURITY_USER_PASSWORD: ${CTC_ADMIN_PASSWORD}
+      # Discord integration (v1.13). Token is required for any Discord API call;
+      # webhook URLs and snowflakes are persisted via /admin/discord-config UI
+      # (no dev-seeder in the prod profile).
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      GOOGLE_CALENDAR_ID: ${GOOGLE_CALENDAR_ID:-}
     ports:
       - "8080:8080"
     volumes:

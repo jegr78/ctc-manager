@@ -70,10 +70,10 @@ class DriverSheetImportServiceTransactionIT {
             leftover.forEach(s -> seasonRepository.deleteById(s.getId()));
         }
 
-        // WR-03: create OWN scoring config (NOT NULL FKs on Season) instead of borrowing
-        // from the dev seed via seasonRepository.findAll().findFirst(). This decouples the
-        // regression IT from DevDataSeeder evolution (seed-data drift, ordering changes,
-        // future scoring-bean refactors) without forcing a new test-profile infrastructure.
+        // Create OWN scoring config (NOT NULL FKs on Season) instead of borrowing from the
+        // dev seed via seasonRepository.findAll().findFirst(). Decouples this regression IT
+        // from DevDataSeeder evolution (seed-data drift, ordering changes, future
+        // scoring-bean refactors) without forcing a new test-profile infrastructure.
         var raceScoring = raceScoringRepository.save(
                 new RaceScoring("Phase59-TxIT", "20,17,14,12,10,8,7,6,5,4,3,2", "3,2,1", 2));
         var matchScoring = matchScoringRepository.save(
@@ -92,14 +92,14 @@ class DriverSheetImportServiceTransactionIT {
                 seasonRepository.deleteById(id);
             } catch (Exception ex) {
                 // Best-effort cleanup; a failed test must not block subsequent tests.
-                // WR-02: promote diagnostic visibility — silent ignore once masked the original bug too.
+                // Promote diagnostic visibility — silent ignore once masked the original bug too.
                 System.err.println("Phase59-TxIT cleanup failed for season " + id + ": "
                         + ex.getClass().getSimpleName() + ": " + ex.getMessage());
             }
         }
         createdSeasonIds.clear();
 
-        // WR-03: also clean up the test-owned scoring rows so repeated runs do not pile up.
+        // Also clean up the test-owned scoring rows so repeated runs do not pile up.
         if (createdMatchScoringId != null) {
             try {
                 matchScoringRepository.deleteById(createdMatchScoringId);
@@ -122,11 +122,11 @@ class DriverSheetImportServiceTransactionIT {
 
     @Test
     void givenTestClass_whenCheckingClassAnnotations_thenIsNotTransactional() {
-        // WR-04: self-protection invariant. The entire CI-protection value of this IT
-        // depends on the absence of @Transactional at the class level — any rollback-only
-        // poisoning at the AOP boundary must surface, not be auto-rolled-back. A future
-        // contributor encountering "flaky cleanup" might reach for @Transactional as the
-        // standard fix; this test fails loudly if that ever happens. See class-level Javadoc.
+        // Self-protection invariant. The entire CI-protection value of this IT depends on
+        // the absence of @Transactional at the class level — any rollback-only poisoning at
+        // the AOP boundary must surface, not be auto-rolled-back. A future contributor
+        // encountering "flaky cleanup" might reach for @Transactional as the standard fix;
+        // this test fails loudly if that ever happens. See class-level Javadoc.
         assertThat(DriverSheetImportServiceTransactionIT.class
                 .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class))
                 .as("This IT must NOT carry @Transactional — see class-level Javadoc")

@@ -1,9 +1,21 @@
 app:
   upload-dir: data/dev/uploads
   version: @project.version@
+  timezone: Europe/Berlin
   backup:
     staging-dir: data/${spring.profiles.active:dev}/backup-staging
     import-backups-dir: data/${spring.profiles.active:dev}/import-backups
+  # Discord Integration (v1.13)
+  # bot-token: DISCORD_BOT_TOKEN env-var only — NEVER commit a literal token.
+  # allowed-hosts: positive SSRF whitelist; both clients reject any other host.
+  # base-url: production Discord REST endpoint; WireMock ITs override via @DynamicPropertySource.
+  # rate-limit.jitter-ms: range "min-max" parsed by DiscordRateLimitInterceptor.
+  discord:
+    bot-token: ${DISCORD_BOT_TOKEN:}
+    allowed-hosts: discord.com
+    base-url: https://discord.com/api/v10
+    rate-limit:
+      jitter-ms: 100-500
 
 spring:
   application:

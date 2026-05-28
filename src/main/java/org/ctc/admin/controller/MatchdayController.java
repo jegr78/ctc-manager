@@ -8,10 +8,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.CreateMatchdayRequest;
 import org.ctc.admin.dto.MatchdayForm;
+import org.ctc.admin.dto.MatchdayPairingsForm;
+import org.ctc.admin.service.DiscordMatchdayViewService;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.MatchdayScheduleGraphicService;
+import org.ctc.discord.exception.DiscordApiException;
+import org.ctc.discord.exception.DiscordApiExceptionMapper;
+import org.ctc.discord.service.DiscordPostService;
+import org.ctc.domain.exception.BusinessRuleException;
+import org.ctc.domain.model.Matchday;
 import org.ctc.domain.service.MatchService;
 import org.ctc.domain.service.MatchdayService;
 import org.springframework.http.HttpHeaders;
@@ -36,6 +43,8 @@ public class MatchdayController {
     private final MatchdayResultsGraphicService resultsGraphicService;
     private final MatchResultsGraphicService matchResultsGraphicService;
     private final MatchService matchService;
+    private final DiscordPostService discordPostService;
+    private final DiscordMatchdayViewService discordMatchdayViewService;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
@@ -59,7 +68,111 @@ public class MatchdayController {
         model.addAttribute("scheduleMissingCount", data.scheduleMissingCount());
         model.addAttribute("hasResults", data.hasResults());
         model.addAttribute("pageTitle", "Matchday: " + matchday.getLabel());
+        model.addAllAttributes(discordMatchdayViewService.buildMatchdayDiscordModel(matchday));
         return "admin/matchday-detail";
+    }
+
+    @PostMapping("/{id}/post-matchday-results")
+    public String postMatchdayResults(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            Matchday matchday = matchdayService.getMatchdayDetail(id).matchday();
+            discordPostService.postMatchdayResults(matchday);
+            redirectAttributes.addFlashAttribute("successMessage", "Match day results posted.");
+        } catch (BusinessRuleException e) {
+            applyErrorFlash(redirectAttributes, e, "Post match day results");
+        } catch (DiscordApiException e) {
+            applyErrorFlash(redirectAttributes, e, "Post match day results");
+        }
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    @PostMapping("/{id}/post-power-rankings")
+    public String postPowerRankings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            Matchday matchday = matchdayService.getMatchdayDetail(id).matchday();
+            discordPostService.postPowerRankings(matchday);
+            redirectAttributes.addFlashAttribute("successMessage", "Power rankings posted.");
+        } catch (BusinessRuleException e) {
+            applyErrorFlash(redirectAttributes, e, "Post power rankings");
+        } catch (DiscordApiException e) {
+            applyErrorFlash(redirectAttributes, e, "Post power rankings");
+        }
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    @GetMapping("/{id}/edit-pairings")
+    public String editPairings(@PathVariable UUID id, Model model) {
+        var matchday = matchdayService.getMatchdayDetail(id).matchday();
+        var form = new MatchdayPairingsForm();
+        form.setId(matchday.getId());
+        form.setPickDeadline(matchday.getPickDeadline());
+        form.setScheduledWeekend(matchday.getScheduledWeekend());
+        model.addAttribute("form", form);
+        model.addAttribute("matchday", matchday);
+        return "admin/matchday-pairings-form";
+    }
+
+    @PostMapping("/{id}/save-pairings")
+    public String savePairings(@PathVariable UUID id,
+                                @Valid @ModelAttribute("form") MatchdayPairingsForm form,
+                                BindingResult result,
+                                RedirectAttributes redirectAttributes,
+                                Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("matchday", matchdayService.getMatchdayDetail(id).matchday());
+            return "admin/matchday-pairings-form";
+        }
+        matchdayService.savePairings(id, form.getPickDeadline(), form.getScheduledWeekend());
+        redirectAttributes.addFlashAttribute("successMessage", "Pairings saved.");
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    @PostMapping("/{id}/post-matchday-pairings")
+    public String postMatchdayPairings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            Matchday matchday = matchdayService.getMatchdayDetail(id).matchday();
+            discordPostService.postMatchdayPairings(matchday);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday Pairings posted.");
+        } catch (BusinessRuleException e) {
+            applyErrorFlash(redirectAttributes, e, "Post Matchday Pairings");
+        } catch (DiscordApiException e) {
+            applyErrorFlash(redirectAttributes, e, "Post Matchday Pairings");
+        }
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    @PostMapping("/{id}/post-matchday-schedule")
+    public String postMatchdaySchedule(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+        try {
+            Matchday matchday = matchdayService.getMatchdayDetail(id).matchday();
+            discordPostService.postMatchdaySchedule(matchday);
+            redirectAttributes.addFlashAttribute("successMessage", "Matchday Schedule posted.");
+        } catch (BusinessRuleException e) {
+            applyErrorFlash(redirectAttributes, e, "Post Matchday Schedule");
+        } catch (DiscordApiException e) {
+            applyErrorFlash(redirectAttributes, e, "Post Matchday Schedule");
+        }
+        return "redirect:/admin/matchdays/" + id;
+    }
+
+    private void applyErrorFlash(RedirectAttributes ra, DiscordApiException e, String action) {
+        String message = switch (e.category()) {
+            case TRANSIENT -> DiscordApiExceptionMapper.TRANSIENT_MESSAGE;
+            case AUTH -> DiscordApiExceptionMapper.AUTH_MESSAGE;
+            case MISSING_PERMISSIONS -> DiscordApiExceptionMapper.MISSING_PERMISSIONS_MESSAGE;
+            case NOT_FOUND -> DiscordApiExceptionMapper.NOT_FOUND_MESSAGE;
+            case CATEGORY_FULL -> DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE;
+        };
+        String category = e.category().name().toLowerCase().replace('_', '-');
+        log.warn("{} failed: category={}, exception={}", action, category, e.getClass().getSimpleName());
+        ra.addFlashAttribute("errorMessage", message);
+        ra.addFlashAttribute("errorCategory", category);
+    }
+
+    private void applyErrorFlash(RedirectAttributes ra, BusinessRuleException e, String action) {
+        log.warn("{} failed: category=data-incomplete, message={}", action, e.getMessage());
+        ra.addFlashAttribute("errorMessage", e.getMessage());
+        ra.addFlashAttribute("errorCategory", "data-incomplete");
     }
 
     @GetMapping("/new")

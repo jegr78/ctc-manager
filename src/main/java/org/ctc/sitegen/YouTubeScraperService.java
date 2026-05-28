@@ -1,5 +1,7 @@
 package org.ctc.sitegen;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +25,7 @@ public class YouTubeScraperService {
     }
 
     public String scrapeVideoId(String channelUrl, String fallbackVideoId) {
-        if (channelUrl == null || channelUrl.isBlank()) {
+        if (!hasText(channelUrl)) {
             log.warn("YouTube channel URL is null or blank, using fallback videoId");
             return fallbackVideoId;
         }

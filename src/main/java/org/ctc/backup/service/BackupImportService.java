@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -71,38 +72,38 @@ import org.springframework.web.multipart.MultipartFile;
  *
  * <p>The execute method:
  * <ol>
- *   <li>Locates the staged ZIP + sidecar (Phase 74 staging-file contract).</li>
+ *   <li>Locates the staged ZIP + sidecar.</li>
  *   <li>Reads the manifest (re-validates schemaVersion).</li>
- *   <li>Wipes all 24 tables in {@code BackupSchema.getExportOrder().reversed()} order via
+ *   <li>Wipes every table in {@link BackupSchema#getExportOrder()} reverse order via
  *       native {@code DELETE FROM <table>} after three self-FK pre-step UPDATEs
  *       ({@code teams.parent_team_id}, {@code season_teams.successor_season_team_id},
  *       {@code playoff_matchups.next_matchup_id}). {@code em.flush() + em.clear()} drops the
  *       L1 cache.</li>
- *   <li>Restores each entity via {@code JdbcTemplate.batchUpdate} through the 24
+ *   <li>Restores each entity via {@code JdbcTemplate.batchUpdate} through the
  *       {@link EntityRestorer @Component} beans — bypasses {@code AuditingEntityListener} so
  *       imported {@code created_at} / {@code updated_at} survive verbatim.</li>
  *   <li>Extracts the staged {@code uploads/} tree to
- *       {@code data/.import-backups/<ts>/uploads-new/} (D-11 / D-12).</li>
+ *       {@code data/.import-backups/<ts>/uploads-new/}.</li>
  *   <li>Publishes {@link BackupImportSucceededEvent} as the LAST statement inside the try
- *       block — Spring's TX-aware buffering defers the listener (Plan 07) until AFTER_COMMIT.</li>
- *   <li>On any exception: SLF4J ERROR + REQUIRES_NEW {@code success=false} audit row (Plan 02
- *       contract, survives the outer rollback) + best-effort cleanup of {@code uploads-new/}
- *       + throw {@link BackupImportException} carrying the audit-row UUID for the Plan 08
+ *       block — Spring's TX-aware buffering defers the AFTER_COMMIT listener.</li>
+ *   <li>On any exception: SLF4J ERROR + REQUIRES_NEW {@code success=false} audit row
+ *       (survives the outer rollback) + best-effort cleanup of {@code uploads-new/}
+ *       + throw {@link BackupImportException} carrying the audit-row UUID for the
  *       controller flash.</li>
  * </ol>
  *
- * <p><strong>Staging-file lifecycle (D-16 / D-08):</strong>
+ * <p><strong>Staging-file lifecycle:</strong>
  * <ul>
  *   <li>{@link #stage}: on any {@link BackupArchiveException} or {@link IOException},
  *       the staged file is deleted in a {@code finally} block. On success, the file
  *       survives for the execute step.</li>
- *   <li>{@link #reparse}: never deletes the staging file — execute inherits it
- *       (D-08). The Plan 07 startup-sweep is the safety net for stale files.</li>
+ *   <li>{@link #reparse}: never deletes the staging file — execute inherits it.
+ *       The startup-sweep is the safety net for stale files.</li>
  *   <li>{@link #deleteStagingFile}: idempotent, swallows all {@code IOException}
- *       (never throws). Called from the cancel-button controller (Plan 08).</li>
- *   <li>{@link #execute}: success path delegates staging-file cleanup to the AFTER_COMMIT
- *       listener (Plan 07) via the published event. Failure path leaves the staging file
- *       in place so the operator can retry without re-uploading.</li>
+ *       (never throws). Called from the cancel-button controller.</li>
+ *   <li>{@link #execute}: success path delegates staging-file cleanup to the
+ *       AFTER_COMMIT listener via the published event. Failure path leaves the staging
+ *       file in place so the operator can retry without re-uploading.</li>
  * </ul>
  */
 @Slf4j
@@ -112,6 +113,20 @@ public class BackupImportService {
 
     /** ZIP magic bytes: PK\x03\x04 (local file header signature). */
     private static final byte[] ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04};
+
+    /**
+     * Schema-version acceptance set. The importer accepts any version in this set;
+     * v1 backups carry only the pre-v1.13 entity surface ({@code DiscordGlobalConfig} /
+     * {@code DiscordPost} entries are absent and stay empty after import — the
+     * {@code DiscordGlobalConfigService.getOrInitialize()} fallback self-heals on first
+     * page-load). v3+ backups are refused with {@link Reason#SCHEMA_MISMATCH}.
+     *
+     * <p>Declared as a {@link java.util.LinkedHashSet} so the iteration order is stable
+     * (ascending integer order) — used directly inside the error message via
+     * {@code SUPPORTED_SCHEMA_VERSIONS.toString()}, where {@code Set.of(1, 2)} produces
+     * a hash-randomised order that breaks message-matching assertions.
+     */
+    static final Set<Integer> SUPPORTED_SCHEMA_VERSIONS = new java.util.LinkedHashSet<>(List.of(1, 2));
 
     /** Batch size for the JSON-stream-to-batchUpdate accumulator. */
     private static final int RESTORE_BATCH_SIZE = 500;
@@ -324,7 +339,7 @@ public class BackupImportService {
             Files.writeString(metaFile, originalFilename, java.nio.charset.StandardCharsets.UTF_8);
         }
 
-        // Step 5: build preview — schema gate fires before any DB read (D-09)
+        // Step 5: build preview — schema gate fires before any DB read
         boolean keep = false;
         try {
             BackupImportPreview preview = buildPreview(stagingId, staged,
@@ -367,7 +382,7 @@ public class BackupImportService {
         Path metaFile = stagingDir.resolve("upload-" + stagingId + ".zip.meta");
         if (!Files.exists(staged)) {
             // MANIFEST_MISSING is the closest canonical Reason — the staging file is the
-            // manifest's container; if it's gone the manifest is gone (D-08 semantic overlap).
+            // manifest's container; if it's gone the manifest is gone.
             throw new BackupArchiveException(Reason.MANIFEST_MISSING,
                     "Staging file not found for id=" + stagingId);
         }
@@ -385,7 +400,7 @@ public class BackupImportService {
      *
      * <p>Idempotent: calling twice on the same UUID is safe ({@code Files.deleteIfExists}
      * semantics). Never throws — any {@link IOException} is logged at WARN and swallowed.
-     * Called from the cancel-button controller (Plan 08); a throw here would mask the user's
+     * Called from the cancel-button controller; a throw here would mask the user's
      * cancel intent.
      *
      * @param stagingId UUID of the staging file to delete
@@ -414,10 +429,10 @@ public class BackupImportService {
      * {@link BackupImportSucceededEvent} for the move-triple + audit success-row write.
      *
      * <p>On failure: the JPA transaction rolls back (wipe + restore are undone), a
-     * {@code success=false} audit row is written via REQUIRES_NEW (Plan 02 contract,
-     * survives the outer rollback), the partially-extracted {@code uploads-new/} is
-     * cleaned best-effort, and a {@link BackupImportException} carrying the audit-row UUID
-     * is thrown so the Plan 08 controller can bind the D-15 #2 failure-flash placeholder.
+     * {@code success=false} audit row is written via REQUIRES_NEW (survives the outer
+     * rollback), the partially-extracted {@code uploads-new/} is cleaned best-effort, and
+     * a {@link BackupImportException} carrying the audit-row UUID is thrown so the
+     * controller can bind the failure-flash placeholder.
      *
      * @param stagingId UUID of the staged ZIP (from a previous {@link #stage} call)
      * @return a {@link BackupImportResult} carrying the audit-row UUID + restored counts
@@ -461,10 +476,10 @@ public class BackupImportService {
                     ? Files.readString(metaFile, java.nio.charset.StandardCharsets.UTF_8)
                     : staged.getFileName().toString();
         } catch (IOException ioe) {
-            // WR-04: make the meta-read failure explicit in the audit row so the operator can
-            // tell "no .meta file ever existed" (handled via the Files.exists branch above)
-            // apart from "the .meta file was corrupted / unreadable" (this branch). Falling back
-            // to the staging UUID-filename silently lost the user-friendly upload name.
+            // Make the meta-read failure explicit in the audit row so the operator can tell
+            // "no .meta file ever existed" (the Files.exists branch above) apart from "the
+            // .meta file was corrupted / unreadable" (this branch). Falling back to the
+            // staging UUID-filename silently lost the user-friendly upload name.
             sourceFilename = "<filename-unavailable: meta-read-failed-" + stagingId + ">";
             log.error("Staging .meta sidecar corrupted for id={} — original filename lost",
                     stagingId, ioe);
@@ -478,9 +493,9 @@ public class BackupImportService {
 
         try {
             // Step 0: manifest re-read (schemaVersion validation is implicit — readManifest
-            // does not gate, but Plan 04 contract guarantees the value is the integer from
-            // the staged ZIP; the controller path always invokes reparse() first which
-            // already gates via buildPreview).
+            // does not gate, but the value is the integer from the staged ZIP; the
+            // controller path always invokes reparse() first which already gates via
+            // buildPreview).
             BackupManifest manifest = backupArchive.readManifest(staged);
             schemaVersion = manifest.schemaVersion();
 
@@ -508,29 +523,28 @@ public class BackupImportService {
             // Step 1: wipe (3 self-FK NULLs + native DELETE in reverse export order + flush/clear)
             wipeAllTables(wipedCounts);
 
-            // Step 2: extract staged uploads (D-12) — BEFORE restore so a restore failure leaves
+            // Step 2: extract staged uploads BEFORE restore so a restore failure leaves
             // the FS staging area visible for forensic inspection but the catch-block still
-            // best-effort cleans uploads-new/. importBackupDir was already created in Step 0.5
-            // (D-15 single-source-of-truth), so only the uploadsNewDir sibling needs creation.
+            // best-effort cleans uploads-new/. importBackupDir was already created in Step 0.5,
+            // so only the uploadsNewDir sibling needs creation.
             Files.createDirectories(uploadsNewDir);
             backupArchive.extractUploadsTo(staged, uploadsNewDir);
 
-            // Step 3: restore (JdbcTemplate.batchUpdate via 24 EntityRestorers; auditing bypass)
             restoreAll(staged, restoredCounts);
 
             // Step 4: publish the success event as the LAST statement inside the try block.
             // Spring's TransactionalEventListener(phase=AFTER_COMMIT) buffers delivery until
-            // the outer @Transactional method commits — Plan 07 consumes the event there.
+            // the outer @Transactional method commits.
             String executedBy = executedByResolver.resolve(null);
             long totalRestored = restoredCounts.values().stream().mapToLong(Long::longValue).sum();
-            // WR-02: entityCount documents "entities that contributed rows" — filter to
-            // non-zero counts so the D-15 success flash ("across N tables") tells the truth
-            // on partial imports instead of always reporting the iteration count (24).
+            // entityCount documents "entities that contributed rows" — filter to non-zero
+            // counts so the success flash ("across N tables") tells the truth on partial
+            // imports instead of always reporting the iteration count.
             int entityCount = (int) restoredCounts.values().stream().filter(c -> c > 0).count();
 
-            // CR-01: use unmodifiable LinkedHashMap copies so the audit-row JSON columns preserve
-            // export-order (Map.copyOf returns a hash-table-backed ImmutableCollections.MapN that
-            // strips insertion order — defeating the explicit LinkedHashMap ordering above).
+            // Unmodifiable LinkedHashMap copies preserve export-order on the audit-row JSON
+            // columns; Map.copyOf returns a hash-table-backed ImmutableCollections.MapN that
+            // strips insertion order — defeating the explicit LinkedHashMap ordering above.
             eventPublisher.publishEvent(new BackupImportSucceededEvent(
                     stagingId,
                     auditUuid,
@@ -549,13 +563,14 @@ public class BackupImportService {
 
             return new BackupImportResult(auditUuid, totalRestored, entityCount);
         } catch (Throwable t) {
-            // WR-08: catch Throwable (not Exception) so an OutOfMemoryError or similar JVM-fatal
-            // Error during the 1000-row restore still gets an audit row written via REQUIRES_NEW
-            // before propagating. Spring's @Transactional rollback fires on Error by default;
-            // we preserve the JVM-fatal contract by re-throwing Error unchanged.
-            // AutoBackupBeforeImportException is rethrown unchanged — Step 0.5 already recorded
-            // its own audit row + cleaned up its partial ZIP, and wrapping it here would shadow
-            // the subclass-specific controller catch (superclass-first exception matching).
+            // Catch Throwable (not Exception) so an OutOfMemoryError or similar JVM-fatal
+            // Error during the 1000-row restore still gets an audit row written via
+            // REQUIRES_NEW before propagating. Spring's @Transactional rollback fires on
+            // Error by default; the JVM-fatal contract is preserved by re-throwing Error
+            // unchanged. AutoBackupBeforeImportException is rethrown unchanged — Step 0.5
+            // already recorded its own audit row + cleaned up its partial ZIP, and wrapping
+            // it here would shadow the subclass-specific controller catch (superclass-first
+            // exception matching).
             if (t instanceof AutoBackupBeforeImportException ae) {
                 throw ae;
             }
@@ -575,7 +590,7 @@ public class BackupImportService {
     // =========================================================================
 
     /**
-     * Wipes all 24 tables in {@link BackupSchema#getExportOrder()} reverse order.
+     * Wipes every table in {@link BackupSchema#getExportOrder()} reverse order.
      *
      * <p>Step 0: NULL the 3 self-FK columns so the FK-reverse DELETE loop is safe
      * regardless of FK direction:
@@ -617,7 +632,7 @@ public class BackupImportService {
     }
 
     /**
-     * Restores all 24 tables from the staged ZIP via {@code JdbcTemplate.batchUpdate} through
+     * Restores every table from the staged ZIP via {@code JdbcTemplate.batchUpdate} through
      * the per-entity {@link EntityRestorer} beans.
      *
      * <p>For each {@link EntityRef} in {@link BackupSchema#getExportOrder()} (forward), opens
@@ -633,11 +648,11 @@ public class BackupImportService {
      * @throws IOException on ZIP / JSON parse failure (caller catches and rolls back)
      */
     void restoreAll(Path staged, Map<String, Long> restoredCounts) throws IOException {
-        // WR-05: open the ZIP exactly once (random-access ZipFile) instead of re-opening a
-        // ZipInputStream per entity (24× rescans from the start). This eliminates the on-Windows
-        // race where the listener's Step-4 cleanup can hit the same staging file while a
-        // JVM-internal ZipInputStream lifecycle is still settling, and is a meaningful perf
-        // win on the Saison-2023 ~1000-row fixture.
+        // Open the ZIP exactly once (random-access ZipFile) instead of re-opening a
+        // ZipInputStream per entity (re-scanning from the start every time). This
+        // eliminates the on-Windows race where the listener's cleanup can hit the same
+        // staging file while a JVM-internal ZipInputStream lifecycle is still settling,
+        // and is a meaningful perf win on multi-entity fixtures.
         zipOpenCounter.incrementAndGet();
         try (ZipFile zf = new ZipFile(staged.toFile())) {
             for (EntityRef ref : backupSchema.getExportOrder()) {
@@ -660,8 +675,8 @@ public class BackupImportService {
      * {@link #RESTORE_BATCH_SIZE} rows, and delegating to
      * {@link EntityRestorer#restore(List, JdbcTemplate)} per batch.
      *
-     * <p>WR-05: takes an open {@link ZipFile} so the caller can resolve the entry by name
-     * via the random-access {@link ZipFile#getEntry(String)} lookup, then stream the JSON
+     * <p>Takes an open {@link ZipFile} so the caller can resolve the entry by name via
+     * the random-access {@link ZipFile#getEntry(String)} lookup, then stream the JSON
      * through {@link ZipFile#getInputStream(ZipEntry)} — no per-entity rescan.
      */
     private long restoreOneTable(ZipFile zf, EntityRef ref, EntityRestorer restorer) throws IOException {
@@ -737,7 +752,7 @@ public class BackupImportService {
      * cause must propagate to the caller via {@link BackupImportException}.
      *
      * @return {@code true} when the audit row was persisted; {@code false} on the
-     *         double-failure path (WR-03 — controller flash adjusts wording so the operator
+     *         double-failure path (controller flash adjusts wording so the operator
      *         knows no row exists to query)
      */
     private boolean tryRecordFailure(UUID auditUuid, int schemaVersion, String sourceFilename,
@@ -781,8 +796,8 @@ public class BackupImportService {
     }
 
     /**
-     * Best-effort cleanup of the partially-extracted {@code uploads-new/} directory on the
-     * failure path (D-12 finally / CONTEXT discretion: delete on rollback).
+     * Best-effort cleanup of the partially-extracted {@code uploads-new/} directory on
+     * the failure path — delete on rollback.
      */
     private static void tryCleanupUploadsNew(Path uploadsNewDir) {
         if (uploadsNewDir == null || !Files.exists(uploadsNewDir)) {
@@ -812,9 +827,9 @@ public class BackupImportService {
      * <ol>
      *   <li>Read and deserialize the manifest (includes ZIP hardening).</li>
      *   <li>Schema-version gate — throws {@link Reason#SCHEMA_MISMATCH} if versions differ,
-     *       BEFORE any of the 24 {@code repo.count()} calls.</li>
+     *       BEFORE any per-repository {@code repo.count()} calls.</li>
      *   <li>Count upload files.</li>
-     *   <li>Build 24 {@link EntityRowCount} cards via {@code repo.count()} +
+     *   <li>Build per-entity {@link EntityRowCount} cards via {@code repo.count()} +
      *       {@code manifest.tableCounts()}.</li>
      *   <li>Assemble and return {@link BackupImportPreview}.</li>
      * </ol>
@@ -828,16 +843,16 @@ public class BackupImportService {
         // Step 2: schema-version gate — BEFORE any DB read
         int backupVersion = manifest.schemaVersion();
         int currentVersion = BackupSchema.SCHEMA_VERSION;
-        if (backupVersion != currentVersion) {
+        if (!SUPPORTED_SCHEMA_VERSIONS.contains(backupVersion)) {
             throw new BackupArchiveException(Reason.SCHEMA_MISMATCH,
-                    String.format("Schema version mismatch: backup=%d, expected=%d. Cannot import.",
-                            backupVersion, currentVersion));
+                    String.format("Schema version %d not supported (accepted: %s). Cannot import.",
+                            backupVersion, SUPPORTED_SCHEMA_VERSIONS));
         }
 
         // Step 3: count upload files
         int uploadFileCount = backupArchive.countUploadFiles(staged);
 
-        // Step 4: build 24 entity cards in getExportOrder() order
+        // Step 4: build one entity card per BackupSchema.getExportOrder() entry
         List<EntityRowCount> entityCounts = new ArrayList<>();
         for (EntityRef ref : backupSchema.getExportOrder()) {
             JpaRepository<?, ?> repo = repositoryByTableName.get(ref.tableName());
@@ -854,7 +869,7 @@ public class BackupImportService {
         long totalImportedRows = entityCounts.stream()
                 .mapToLong(EntityRowCount::importedRows)
                 .sum();
-        boolean schemaMatches = true;  // gate at step 2 already ensured this
+        boolean schemaMatches = SUPPORTED_SCHEMA_VERSIONS.contains(backupVersion);
 
         log.info("Backup import staged successfully: stagingId={}, schemaVersion={}, " +
                 "entityCount={}, uploadFileCount={}, totalImportedRows={}",
@@ -868,9 +883,9 @@ public class BackupImportService {
     /**
      * Reads the first 4 bytes of the multipart file via a fresh {@code InputStream}.
      *
-     * <p>Explicitly closes the stream so Spring's {@code StandardMultipartFile} (buffered-to-disk
-     * implementation) can hand out a fresh stream on the next call without resource-leak
-     * warnings (RESEARCH §Pitfall 7).
+     * <p>Explicitly closes the stream so Spring's {@code StandardMultipartFile}
+     * (buffered-to-disk implementation) can hand out a fresh stream on the next call without
+     * resource-leak warnings.
      */
     private byte[] readMagic(MultipartFile file) throws IOException {
         try (InputStream in = file.getInputStream()) {

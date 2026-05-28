@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.validation.Valid;
 import java.util.Map;
 import java.util.UUID;
@@ -240,7 +242,7 @@ public class SeasonPhaseController {
 
             // CREATE — PLAYOFF auto-routes via PlayoffService (which auto-creates the SeasonPhase).
             if (form.getPhaseType() == PhaseType.PLAYOFF) {
-                var playoffName = form.getLabel() != null && !form.getLabel().isBlank()
+                var playoffName = hasText(form.getLabel())
                         ? form.getLabel() : "Playoff";
                 var playoff = playoffService.createPlayoff(seasonId, playoffName,
                         /* numberOfTeams */ 4,
@@ -305,7 +307,7 @@ public class SeasonPhaseController {
 
     /** Effective label fallback: label field → phaseType default name. */
     private static String effectiveLabel(org.ctc.domain.model.SeasonPhase phase) {
-		if (phase.getLabel() != null && !phase.getLabel().isBlank()) {
+		if (hasText(phase.getLabel())) {
 			return phase.getLabel();
 		}
         return switch (phase.getPhaseType()) {

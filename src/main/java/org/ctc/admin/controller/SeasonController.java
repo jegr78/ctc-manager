@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -8,7 +10,13 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGeneratorForm;
+import org.ctc.admin.dto.PostStandingsForm;
 import org.ctc.admin.dto.SeasonForm;
+import org.ctc.admin.service.DiscordSeasonViewService;
+import org.ctc.discord.exception.DiscordApiException;
+import org.ctc.discord.exception.DiscordApiExceptionMapper;
+import org.ctc.discord.service.DiscordPostService;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.PhaseType;
 import org.ctc.domain.service.MatchdayGeneratorService;
 import org.ctc.domain.service.SeasonManagementService;
@@ -27,10 +35,15 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequiredArgsConstructor
 public class SeasonController {
 
+	private static final String THREAD_TYPE_RACE_RESULTS = "race-results";
+	private static final String THREAD_TYPE_STANDINGS = "standings";
+
 	private final SeasonManagementService seasonManagementService;
 	private final SeasonPhaseService seasonPhaseService;
 	private final SwissPairingService swissPairingService;
 	private final MatchdayGeneratorService matchdayGeneratorService;
+	private final DiscordPostService discordPostService;
+	private final DiscordSeasonViewService discordSeasonViewService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable UUID id, Model model) {
@@ -87,7 +100,89 @@ public class SeasonController {
 		model.addAttribute("allTeams", data.allTeams());
 		model.addAttribute("allCars", data.allCars());
 		model.addAttribute("allTracks", data.allTracks());
+		model.addAllAttributes(discordSeasonViewService.buildDiscordIntegrationModel(season.getId()));
 		return "admin/season-form";
+	}
+
+	@PostMapping("/{id}/post-standings")
+	public String postStandings(@PathVariable UUID id,
+	                            @Valid @ModelAttribute PostStandingsForm form,
+	                            BindingResult bindingResult,
+	                            RedirectAttributes redirectAttributes) {
+		if (bindingResult.hasErrors()) {
+			redirectAttributes.addFlashAttribute("errorMessage", "Phase is required.");
+			redirectAttributes.addFlashAttribute("errorCategory", "data-incomplete");
+			return "redirect:/admin/seasons/" + id + "/edit";
+		}
+		try {
+			var season = seasonManagementService.findById(id);
+			var phase = seasonPhaseService.findById(form.getPhaseId());
+			discordPostService.postStandings(season, phase);
+			redirectAttributes.addFlashAttribute("successMessage", "Standings posted.");
+		} catch (BusinessRuleException e) {
+			applyStandingsErrorFlash(redirectAttributes, e, "Post standings");
+		} catch (DiscordApiException e) {
+			applyStandingsErrorFlash(redirectAttributes, e, "Post standings");
+		}
+		return "redirect:/admin/seasons/" + id + "/edit";
+	}
+
+	private void applyStandingsErrorFlash(RedirectAttributes ra, DiscordApiException e, String action) {
+		String message = switch (e.category()) {
+			case TRANSIENT -> DiscordApiExceptionMapper.TRANSIENT_MESSAGE;
+			case AUTH -> DiscordApiExceptionMapper.AUTH_MESSAGE;
+			case MISSING_PERMISSIONS -> DiscordApiExceptionMapper.MISSING_PERMISSIONS_MESSAGE;
+			case NOT_FOUND -> DiscordApiExceptionMapper.NOT_FOUND_MESSAGE;
+			case CATEGORY_FULL -> DiscordApiExceptionMapper.CATEGORY_FULL_MESSAGE;
+		};
+		String category = e.category().name().toLowerCase().replace('_', '-');
+		log.warn("{} failed: category={}, exception={}", action, category, e.getClass().getSimpleName());
+		ra.addFlashAttribute("errorMessage", message);
+		ra.addFlashAttribute("errorCategory", category);
+	}
+
+	private void applyStandingsErrorFlash(RedirectAttributes ra, BusinessRuleException e, String action) {
+		log.warn("{} failed: category=data-incomplete, message={}", action, e.getMessage());
+		ra.addFlashAttribute("errorMessage", e.getMessage());
+		ra.addFlashAttribute("errorCategory", "data-incomplete");
+	}
+
+	@PostMapping("/{id}/link-thread")
+	public String linkThread(@PathVariable UUID id,
+	                         @RequestParam String threadId,
+	                         @RequestParam String type,
+	                         RedirectAttributes redirectAttributes) {
+		try {
+			if (!hasText(threadId)) {
+				throw new BusinessRuleException("Thread ID must not be empty.");
+			}
+			switch (type) {
+				case THREAD_TYPE_RACE_RESULTS -> seasonManagementService.linkRaceResultsThread(id, threadId);
+				case THREAD_TYPE_STANDINGS -> seasonManagementService.linkStandingsThread(id, threadId);
+				default -> throw new BusinessRuleException("Unknown thread type: " + type);
+			}
+			redirectAttributes.addFlashAttribute("successMessage", "Thread linked.");
+		} catch (BusinessRuleException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+		}
+		return "redirect:/admin/seasons/" + id + "/edit";
+	}
+
+	@PostMapping("/{id}/unlink-thread")
+	public String unlinkThread(@PathVariable UUID id,
+	                           @RequestParam String type,
+	                           RedirectAttributes redirectAttributes) {
+		try {
+			switch (type) {
+				case THREAD_TYPE_RACE_RESULTS -> seasonManagementService.unlinkRaceResultsThread(id);
+				case THREAD_TYPE_STANDINGS -> seasonManagementService.unlinkStandingsThread(id);
+				default -> throw new BusinessRuleException("Unknown thread type: " + type);
+			}
+			redirectAttributes.addFlashAttribute("successMessage", "Thread unlinked.");
+		} catch (BusinessRuleException e) {
+			redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+		}
+		return "redirect:/admin/seasons/" + id + "/edit";
 	}
 
 	@PostMapping("/save")

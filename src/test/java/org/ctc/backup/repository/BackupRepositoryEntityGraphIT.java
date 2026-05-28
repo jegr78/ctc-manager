@@ -56,7 +56,8 @@ class BackupRepositoryEntityGraphIT {
 	 * lazy-init probe in method 1 has no attributes to dereference.
 	 */
 	private static final Set<String> ZERO_ASSOCIATION_ENTITIES = Set.of(
-			"Car", "Track", "RaceScoring", "MatchScoring", "Driver"
+			"Car", "Track", "RaceScoring", "MatchScoring", "Driver",
+			"DiscordGlobalConfig", "DiscordPost"
 	);
 
 	@Autowired
@@ -76,7 +77,7 @@ class BackupRepositoryEntityGraphIT {
 	void givenAllExportOrderEntities_whenInvokeFindAllForBackup_thenNoLazyInitExceptionOnDeclaredAttributePaths() {
 		// given
 		List<EntityRef> order = backupSchema.getExportOrder();
-		assertThat(order).as("export order must contain 24 entities").hasSize(24);
+		assertThat(order).as("export order must contain 26 entities").hasSize(26);
 
 		Set<String> missingRepositories = new HashSet<>();
 		Set<String> missingFinder = new HashSet<>();

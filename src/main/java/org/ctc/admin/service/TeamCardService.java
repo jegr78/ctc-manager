@@ -4,6 +4,7 @@ import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserType;
 import com.microsoft.playwright.Page;
 import com.microsoft.playwright.Playwright;
+import com.microsoft.playwright.PlaywrightException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -105,6 +106,40 @@ public class TeamCardService implements TemplateManageable {
 		// See config/spotbugs-exclude.xml TeamCardService NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE entry.
 		Files.createDirectories(outputFile.getParent());
 
+		try {
+			renderCardScreenshotWithRetry(tempFile, outputFile);
+		} finally {
+			Files.deleteIfExists(tempFile);
+		}
+
+		log.info("Generated team card: {}", outputFile);
+		return getCardPath(seasonTeam);
+	}
+
+	// Resource-race defense: under heavy parallel-fork load, Chromium occasionally aborts the
+	// screenshot capture with "Protocol error (Page.captureScreenshot): Unable to capture screenshot".
+	// The root mitigation lives in surefire/failsafe (DevDataSeeder skipped via
+	// app.seed-on-startup=false); this retry is the safety-net for the remaining tail.
+	private void renderCardScreenshotWithRetry(Path tempFile, Path outputFile) {
+		try {
+			renderCardScreenshot(tempFile, outputFile);
+		} catch (PlaywrightException e) {
+			if (!isChromiumCaptureRace(e)) {
+				throw e;
+			}
+			log.warn("Chromium capture-screenshot race on first attempt ({}) — retrying after 500ms",
+					e.getMessage().lines().findFirst().orElse(""));
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException ie) {
+				Thread.currentThread().interrupt();
+				throw e;
+			}
+			renderCardScreenshot(tempFile, outputFile);
+		}
+	}
+
+	private void renderCardScreenshot(Path tempFile, Path outputFile) {
 		try (Playwright pw = Playwright.create();
 		     Browser browser = pw.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
 		     Page page = browser.newPage(new Browser.NewPageOptions()
@@ -113,12 +148,12 @@ public class TeamCardService implements TemplateManageable {
 			page.screenshot(new Page.ScreenshotOptions()
 					.setPath(outputFile)
 					.setFullPage(false));
-		} finally {
-			Files.deleteIfExists(tempFile);
 		}
+	}
 
-		log.info("Generated team card: {}", outputFile);
-		return getCardPath(seasonTeam);
+	private static boolean isChromiumCaptureRace(PlaywrightException e) {
+		String msg = e.getMessage();
+		return msg != null && msg.contains("Protocol error (Page.captureScreenshot)");
 	}
 
 	public List<String> generateAllCards(Season season) throws IOException {

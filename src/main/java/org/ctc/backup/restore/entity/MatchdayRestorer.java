@@ -17,9 +17,13 @@ import org.springframework.stereotype.Component;
  * Restores rows into the {@code matchdays} table from the
  * {@code data/matchdays.json} array in a backup ZIP.
  *
- * <p>Schema (V1 + V3 additions): {@code id UUID PK, phase_id UUID NOT NULL,
- * group_id UUID NULL, label VARCHAR NOT NULL, sort_index INT NOT NULL,
- * created_at TIMESTAMP, updated_at TIMESTAMP}.
+ * <p>Schema:
+ * <ul>
+ *   <li>V1 + V3: {@code id UUID PK, phase_id UUID NOT NULL, group_id UUID NULL,
+ *       label VARCHAR NOT NULL, sort_index INT NOT NULL, created_at TIMESTAMP,
+ *       updated_at TIMESTAMP}.</li>
+ *   <li>V15: {@code pick_deadline TIMESTAMP NULL, scheduled_weekend VARCHAR(64) NULL}.</li>
+ * </ul>
  *
  * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} so
  * {@link org.ctc.domain.model.BaseEntity}'s {@code AuditingEntityListener}
@@ -31,8 +35,8 @@ public class MatchdayRestorer implements EntityRestorer {
 
     private static final String INSERT_SQL =
             "INSERT INTO matchdays (id, phase_id, group_id, label, sort_index, "
-          + "created_at, updated_at) "
-          + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+          + "created_at, updated_at, pick_deadline, scheduled_weekend) "
+          + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     @Override
     public String tableName() {
@@ -49,6 +53,8 @@ public class MatchdayRestorer implements EntityRestorer {
             ps.setInt(5, row.get("sortIndex").asInt());
             ps.setTimestamp(6, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
             ps.setTimestamp(7, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            setNullableTimestamp(ps, 8, row, "pickDeadline");
+            ps.setString(9, nullableString(row, "scheduledWeekend"));
         });
         log.debug("MatchdayRestorer: restored {} rows", rows.size());
     }
@@ -61,5 +67,20 @@ public class MatchdayRestorer implements EntityRestorer {
         } else {
             ps.setObject(idx, UUID.fromString(n.asText()));
         }
+    }
+
+    private static void setNullableTimestamp(PreparedStatement ps, int idx, JsonNode row, String field)
+            throws SQLException {
+        JsonNode n = row.get(field);
+        if (n == null || n.isNull()) {
+            ps.setNull(idx, Types.TIMESTAMP);
+        } else {
+            ps.setTimestamp(idx, Timestamp.valueOf(LocalDateTime.parse(n.asText())));
+        }
+    }
+
+    private static String nullableString(JsonNode row, String field) {
+        JsonNode n = row.get(field);
+        return n == null || n.isNull() ? null : n.asText();
     }
 }

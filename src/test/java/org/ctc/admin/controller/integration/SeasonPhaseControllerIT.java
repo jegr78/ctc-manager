@@ -71,9 +71,9 @@ class SeasonPhaseControllerIT {
                 .andExpect(model().attributeExists("season"));
     }
 
-    // phase edit form must render non-empty option labels for
-    // Phase Type, Layout, and Format dropdowns (Thymeleaf [enumKey] indexer
-    // into Map<Enum, String> regression — labels rendered empty pre-fix).
+    // The phase-edit form must render non-empty option labels for the
+    // phase-type / layout / format dropdowns. The Thymeleaf `[enumKey]` indexer
+    // into `Map<Enum, String>` once regressed and rendered empty labels.
     @Test
     void givenExistingPhase_whenGetEditForm_thenDropdownOptionsHaveNonEmptyLabels() throws Exception {
         // given

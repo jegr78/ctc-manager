@@ -1,5 +1,7 @@
 package org.ctc.backup.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.annotation.PostConstruct;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
@@ -9,6 +11,10 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
+import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.model.DiscordPost;
+import org.ctc.discord.repository.DiscordGlobalConfigRepository;
+import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,21 +28,21 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Owns three responsibilities:
  * <ol>
  *   <li>{@link #countRowsPerTable()} — fast row-count probe to populate
- *       {@code manifest.table_counts} BEFORE serializing payload (RESEARCH §L-5
- *       "count first, serialize second").</li>
+ *       {@code manifest.table_counts} BEFORE serializing payload (count first,
+ *       serialize second).</li>
  *   <li>{@link #fetchAllForBackup(Class)} — per-entity dispatcher that delegates to
- *       the matching {@code findAllForBackup()} repository method
- *       (provided by Plan 73-02 on each of the 24 repositories).</li>
+ *       the matching {@code findAllForBackup()} repository method on each repository
+ *       enumerated by {@link BackupSchema#getExportOrder()}.</li>
  *   <li>{@link #enumerateReferencedUploads()} — walks Team / SeasonTeam / Car / Track /
  *       RaceAttachment(type=FILE) rows, collects the referenced upload-path URLs,
  *       deduplicates them via {@link LinkedHashSet}, and filters out orphan paths
- *       that do not exist on disk (RESEARCH §Streaming ZIP Architecture Pattern 4).</li>
+ *       that do not exist on disk.</li>
  * </ol>
  *
- * <p>Class-level {@code @Transactional(readOnly = true)} is non-negotiable: Plan 73-02
- * could not include {@code Season.tracks} in {@code SeasonRepository.findAllForBackup()}
- * because Hibernate rejects multi-bag fetches ({@code MultipleBagFetchException}).
- * The {@code tracks} collection must therefore materialize lazily inside the still-open
+ * <p>Class-level {@code @Transactional(readOnly = true)} is non-negotiable: Hibernate
+ * rejects multi-bag fetches ({@code MultipleBagFetchException}), so {@code Season.tracks}
+ * cannot be fetched eagerly inside {@code SeasonRepository.findAllForBackup()}. The
+ * {@code tracks} collection must therefore materialize lazily inside the still-open
  * Hibernate session that this annotation provides.
  *
  * <p>Architectural note: this service exposes no HTTP-level state; the public methods
@@ -73,6 +79,8 @@ public class BackupExportService {
 	private final RaceResultRepository raceResultRepository;
 	private final RaceSettingsRepository raceSettingsRepository;
 	private final RaceAttachmentRepository raceAttachmentRepository;
+	private final DiscordGlobalConfigRepository discordGlobalConfigRepository;
+	private final DiscordPostRepository discordPostRepository;
 
 	private final String uploadDirRaw;
 
@@ -105,6 +113,8 @@ public class BackupExportService {
 			RaceResultRepository raceResultRepository,
 			RaceSettingsRepository raceSettingsRepository,
 			RaceAttachmentRepository raceAttachmentRepository,
+			DiscordGlobalConfigRepository discordGlobalConfigRepository,
+			DiscordPostRepository discordPostRepository,
 			@Value("${app.upload-dir:data/dev/uploads}") String uploadDirRaw
 	) {
 		this.backupSchema = backupSchema;
@@ -132,6 +142,8 @@ public class BackupExportService {
 		this.raceResultRepository = raceResultRepository;
 		this.raceSettingsRepository = raceSettingsRepository;
 		this.raceAttachmentRepository = raceAttachmentRepository;
+		this.discordGlobalConfigRepository = discordGlobalConfigRepository;
+		this.discordPostRepository = discordPostRepository;
 		this.uploadDirRaw = uploadDirRaw;
 	}
 
@@ -163,6 +175,8 @@ public class BackupExportService {
 		this.repositoriesByEntityClass.put(RaceResult.class, raceResultRepository);
 		this.repositoriesByEntityClass.put(RaceSettings.class, raceSettingsRepository);
 		this.repositoriesByEntityClass.put(RaceAttachment.class, raceAttachmentRepository);
+		this.repositoriesByEntityClass.put(DiscordGlobalConfig.class, discordGlobalConfigRepository);
+		this.repositoriesByEntityClass.put(DiscordPost.class, discordPostRepository);
 		log.info("BackupExportService initialized: uploadRoot={}, repositoryCount={}",
 				uploadRoot, repositoriesByEntityClass.size());
 	}
@@ -186,8 +200,9 @@ public class BackupExportService {
 	/**
 	 * Dispatches to the right repository's {@code findAllForBackup()} method for the
 	 * given entity class. Throws {@link IllegalArgumentException} if no repository is
-	 * registered — should never happen in production because the Phase 72 export order
-	 * is the contract.
+	 * registered for the class (should never happen in production because
+	 * {@link BackupSchema#getExportOrder()} is the contract) or {@link IllegalStateException}
+	 * if the registered repository does not declare {@code findAllForBackup()}.
 	 */
 	public List<?> fetchAllForBackup(Class<?> entityClass) {
 		JpaRepository<?, ?> repo = lookupRepository(entityClass);
@@ -198,16 +213,12 @@ public class BackupExportService {
 		} catch (NoSuchMethodException ex) {
 			throw new IllegalStateException(
 					"Repository for " + entityClass.getSimpleName()
-							+ " does not declare findAllForBackup() — "
-							+ "Plan 73-02 contract violation", ex);
+							+ " does not declare findAllForBackup() — backup-export contract violation", ex);
 		} catch (ReflectiveOperationException ex) {
 			Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
 			String context = "Reflective invocation of findAllForBackup() on "
 					+ entityClass.getSimpleName() + " failed";
 			if (cause instanceof RuntimeException re) {
-				// Wrap to preserve the entity-class context — for backup-debug purposes
-				// (a production export failing on entity 17 of 24) knowing which entity
-				// triggered the failure is critical. The original RE is the cause.
 				throw new IllegalStateException(context, re);
 			}
 			throw new RuntimeException(context, cause);
@@ -253,12 +264,12 @@ public class BackupExportService {
 			// so we don't leak filesystem-state via timing.
 			if (!absolute.startsWith(uploadRoot)) {
 				log.warn("Skipping path-traversal upload reference: {} (resolved to {} outside {})",
-						relative, absolute, uploadRoot);
+						sanitizeForLog(relative), absolute, uploadRoot);
 				continue;
 			}
 			if (!Files.exists(absolute)) {
 				log.warn("Skipping orphan upload reference: {} (resolved to {})",
-						relative, absolute);
+						sanitizeForLog(relative), absolute);
 				continue;
 			}
 			entries.add(new UploadEntry(absolute, relative));
@@ -275,7 +286,7 @@ public class BackupExportService {
 	 * convention has drifted (e.g. an entity carrying an external CDN reference).
 	 */
 	private static void addIfPresent(Set<String> set, String url) {
-		if (url == null || url.isBlank()) {
+		if (!hasText(url)) {
 			return;
 		}
 		String prefix = "/uploads/";
@@ -283,18 +294,31 @@ public class BackupExportService {
 			return;
 		}
 		String relative = url.substring(prefix.length());
-		if (relative.isBlank()) {
+		if (!hasText(relative)) {
 			return;
 		}
 		set.add(relative);
 	}
 
+	private static String sanitizeForLog(String value) {
+		if (value == null) {
+			return null;
+		}
+		return value.replace('\r', '_').replace('\n', '_');
+	}
+
 	private JpaRepository<?, ?> lookupRepository(Class<?> entityClass) {
 		JpaRepository<?, ?> repo = repositoriesByEntityClass.get(entityClass);
 		if (repo == null) {
+			List<String> registered = repositoriesByEntityClass.keySet().stream()
+					.map(Class::getSimpleName)
+					.sorted()
+					.toList();
 			throw new IllegalArgumentException(
 					"No repository registered for entity class " + entityClass.getName()
-							+ " — must be one of the 24 BackupSchema.getExportOrder() entities");
+							+ " — must be one of the " + repositoriesByEntityClass.size()
+							+ " BackupSchema.getExportOrder() entities. Registered entities: "
+							+ registered);
 		}
 		return repo;
 	}

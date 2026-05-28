@@ -1,12 +1,52 @@
 # Milestones
 
-## v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (Shipped: 2026-05-20)
+## v1.13 Discord Integration & Carry-Forwards (Shipped: 2026-05-28)
 
-**Phases completed:** 0 phases, 0 plans, 0 tasks
+**Phases completed:** 12 phases (92-103), 43 plans, 28/28 requirements satisfied (5 carry-forward + 23 Discord/closeout)
+**Diff:** +93 753 / −1 155 across 559 files (399 commits in milestone range `6e604d2d..12bca5b4`)
+**Tests:** **2393 tests** passing (Surefire unit + Failsafe IT + Playwright E2E combined; +697 net vs v1.12 1696); JaCoCo line coverage **89.43 %** (gate 82 %, comfort buffer 7.43 pp; Δ +0.99 pp vs v1.12 88.44 %)
+**Timeline:** 8 days (2026-05-20 → 2026-05-28)
+**Branch:** `gsd/v1.13-discord-integration` (PR #130 — rolling milestone PR per CLAUDE.md)
+**Final-gate CI:** end-of-phase `./mvnw clean verify -Pe2e` exited 0 at `08c505be` (9:51 min) — 2392 tests / 0 failures / 5 skipped; SpotBugs 0 BugInstance; CodeQL gate-step exit 0
+**Audit verdict:** passed — 28/28 requirements, 9/9 integration seams wired, 10/10 E2E flows, Nyquist 12/12 compliant; see `milestones/v1.13-MILESTONE-AUDIT.md`
 
 **Key accomplishments:**
 
-- (none recorded)
+- Phase 92 — Carry-Forwards & Cleanup: UX-01 typed-catch parity on `CsvImportController`; COV-01 JaCoCo recovery to ≥ 88.88 % via `RaceControllerCalendarTest` + Google service IT; CLEAN-01 grep-predicate tightening to `org.junit.jupiter.api.Assumptions`; DOCS-01 retroactive 89/90/91-VERIFICATION.md; BOOK-01 v1.12-REQUIREMENTS.md 11-marker flip
+- Phase 93 — Discord Foundation: `DiscordRestClient` + `DiscordWebhookClient` + sealed `DiscordApiException` (4 permits) + `DiscordRateLimitInterceptor` + `DiscordTimestamps` + `DiscordEmojiCache` + threat-model surfaces (token env-var, SSRF whitelist, log-mask, CSRF, DTO mass-assignment) + Flyway V8 `discord_global_config` + `/admin/discord-config` (4 test buttons)
+- Phase 94 — Team Roles + Match Channel Lifecycle: CHAN-01 Flyway V9 `teams.discord_role_id` + role dropdown; CHAN-02 Flyway V10 `matches.discord_*` + scheduling fields + Create-Channel button + webhook creation + permission audit; CHAN-03 Archive Modal with year-category regex + 50-channel limit
+- Phase 95 — Match Channel Posts: POST-01 Flyway V11 `discord_post` + `DiscordPostService.postOrEdit` idempotency dispatcher + `/admin/discord/posts` listing; POST-02 Team Cards (auto-post on channel-create + manual Re-Post + Refresh); POST-03 Settings + Lineups multipart with 5th `data-incomplete` error category; POST-04 Match Results with stale-detection; POST-05 Schedule embed with auto-edit on host/RD/streamer change
+- Phase 96 — Provisional Graphic + Forum Threads: GRAFX-01 `ProvisionalScoresGraphicService` replaces manual Google-Sheets screenshot; FORUM-01 Flyway V13 `seasons.discord_*_thread_id` + Link-existing-Thread modal; FORUM-02 race-result forum-thread post with `?thread_id=` and `unarchiveIfArchived`
+- Phase 97 — Matchday-Level Posts: POST-06 per-match Match Preview Announcement with auto-edit on streamLink/teaser/RD change; POST-07a Match Day Results + POST-07b Power Rankings (2 independent Matchday-Detail buttons); POST-08 phase-aware Standings + new `StandingsGraphicService` with dynamic-sizing 14+-team graphic + Flyway V14 `discord_post.phase_id` FK
+- Phase 98 — Polish + E2E + Docs + Close: E2E-01 `DiscordFullMatchdayLifecycleE2ETest` 8-stage Mega-Walkthrough (WireMock-backed); DOCS-02 operator runbook expanded with Bot setup screenshots + OAuth URL generator + token rotation + troubleshooting; DOCS-03 README + Wiki + bookkeeping; mobile-viewport polish; POST-09 MATCHDAY_PAIRINGS hybrid Markdown+PNG (Flyway V15 pick_deadline/scheduled_weekend + template); POST-10 MATCHDAY_SCHEDULE pure-multipart-PNG sibling button
+- Phase 99 — Pre-merge audit-polish: REQUIREMENTS.md Flyway-prose fix (POST-01 V11 → V12, FORUM-01 V12 → V13 + acceptance rewrite scoping out unbuilt modal); ROADMAP v1.13 Progress refresh; retroactive 92/94/95/96/97/98-VERIFICATION.md retrofill per v1.12 DOCS-01 precedent; YAGNI delete `DiscordRestClient.createThread()` + DTO + orphan IT
+- Phase 100 — Match Day Channel Naming Scheme: `DiscordChannelService.channelName(Match)` extended to `md{N}-{phase}-[{group}-]{home}-vs-{away}` with `phaseAbbrev` (rs/po/pm) + `groupSlug` + 100-char overflow guard; 5 IT files refreshed (14 literal occurrences); existing channels stay as-is (no migration, two-scheme coexistence)
+- Phase 101 — Backup/Restore covers Discord schema: `SCHEMA_VERSION` 1 → 2 + lenient `IN (1,2)` accept; package-filter expansion to `org.ctc.discord.model.*` (24-entity → 26-entity scope); 2 new MixIns + 2 new Restorers for `DiscordGlobalConfig` + `DiscordPost`; 4 existing Restorers extended for 13 V8-V15 columns; 13 per-field regression-fence + byte-equality round-trip; single-guild restore documented
+- Phase 102 — Code-Review Fixes (v1.13 closeout): 67 review findings closed (9 critical/blocker + 58 warning/info) across Phases 92-101; 4 plans, 45 commits; close-loop `gsd-code-reviewer` Pass-2 CLEAN after 5 inline remediations; controller-thin extract template applied across 4 sites; lock-IT async-latch dance removal; final 89.43 % / 2392 tests / 0 SpotBugs
+- Phase 103 — StringUtils Blank-Check Sweep: 85 occurrences of manual `s != null && !s.isBlank()` (41×) + `s == null || s.isBlank()` (47×) replaced with `org.springframework.util.StringUtils.hasText(s)` across 42 production files; new `config/rewrite-validate-hasText.yml` OpenRewrite `FindMethods` detector recipe; pure Spring-Native consistency refactor per CLAUDE.md
+- JaCoCo line coverage **89.43 %** (above 82 % pom gate; Δ +0.99 pp vs v1.12 88.44 %); SpotBugs `BugInstance` 0; CodeQL gate-step exit 0; Flyway V8-V16 added (9 new migrations); backup wire contract advanced to `SCHEMA_VERSION = 2` with 26-entity scope; all 18 design decisions from 2026-05-20 brainstorming session shipped
+
+**Deferred to next milestone (acknowledged at close):**
+
+- DISC-FUTURE-01: Inbound Discord interaction (slash commands, polls, reaction reads) — requires deployment model change (always-online endpoint)
+- DISC-FUTURE-02: Auto-trigger pipeline (race-save → post) — operator-control choice for v1.13; revisit once edit-confidence is established
+- DISC-FUTURE-03: Settings-form migration into admin app
+- DISC-FUTURE-04: Multi-guild support
+- DISC-FUTURE-05: Discord-notification webhook for the public site
+- String `.isEmpty()` audit (~10 hits) — different semantics from `.isBlank()` (no whitespace-trim, no null-safety); captured for v1.14 backlog per Phase 103 CONTEXT D-06
+- Touch-Target 44 px Audit on `.btn` (CLAUDE.md UI polish; affects 100+ button callsites — too broad for v1.13 polish-sweep)
+- 429-rate-limit-path in Mega-Walkthrough E2E (`DiscordRateLimitInterceptorIT` already covers in isolation)
+- Discord-Setup-Walkthrough.md Wiki sub-page with annotated portal screenshots
+- Race.dateTime trigger for SCHEDULE-Auto-Edit + MATCH_PREVIEW-Auto-Edit (Phase-95 D-95-04a + Phase-97 D-97-PREV-1a deferral)
+- K-of-N Settings/Lineups-Posting (Phase-95 deferred)
+- `/admin/discord/posts` Bulk-Re-Post-Button (Phase-95 deferred)
+- Pre-existing cross-milestone operator-action UATs (UAT-02 legacy season smoke, QUAL-02 local-profile MariaDB smoke, UX-01 driver-import badge screenshots)
+
+**Post-merge self-resolving (not tech debt):**
+
+- v1.13 milestone PR #130 squash-merge to master with subject `feat(v1.13): discord integration & carry-forwards` — CI release workflow tags `v1.13.0`, publishes GitHub Release, builds GHCR Docker image; no local `git tag` per CLAUDE.md "No Local Git Tags"
+
+Known deferred items at close: see `STATE.md` Deferred Items + `milestones/v1.13-MILESTONE-AUDIT.md`.
 
 ---
 

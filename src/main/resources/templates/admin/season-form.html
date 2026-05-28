@@ -167,6 +167,169 @@
         </div>
     </div>
 
+    <!-- Discord Integration (only when editing AND a forum-channel is configured) -->
+    <div th:if="${seasonForm.id != null and discordIntegrationActive}"
+         class="card mt-md" id="discordIntegration">
+        <h2>Discord Integration</h2>
+        <p th:if="${discordIntegrationWarning}" class="alert alert-warning" th:text="${discordIntegrationWarning}"></p>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label>Race-Results Forum Thread</label>
+                <div th:if="${linkedRaceResultsThread != null}" class="discord-actions">
+                    <span class="badge badge-active"
+                          th:text="${linkedRaceResultsThread.name} + ' (' + ${linkedRaceResultsThread.id} + ')'"></span>
+                    <button type="button" class="btn btn-secondary btn-sm"
+                            data-testid="link-race-results-change"
+                            onclick="document.getElementById('linkRaceResultsModal').style.display='block'">
+                        Change Link
+                    </button>
+                    <form th:action="@{/admin/seasons/{id}/unlink-thread(id=${seasonForm.id})}"
+                          method="post" class="inline-form">
+                        <input type="hidden" name="type" value="race-results">
+                        <button type="submit" class="btn btn-danger btn-sm"
+                                data-testid="unlink-race-results">Unlink</button>
+                    </form>
+                </div>
+                <div th:if="${linkedRaceResultsThread == null}" class="discord-actions">
+                    <span class="badge badge-inactive">not linked</span>
+                    <button type="button" class="btn btn-primary btn-sm"
+                            data-testid="link-race-results-open"
+                            th:disabled="${raceResultsThreadOptions.isEmpty()}"
+                            onclick="document.getElementById('linkRaceResultsModal').style.display='block'">
+                        Link existing Thread...
+                    </button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Standings Forum Thread</label>
+                <div th:if="${linkedStandingsThread != null}" class="discord-actions">
+                    <span class="badge badge-active"
+                          th:text="${linkedStandingsThread.name} + ' (' + ${linkedStandingsThread.id} + ')'"></span>
+                    <button type="button" class="btn btn-secondary btn-sm"
+                            data-testid="link-standings-change"
+                            onclick="document.getElementById('linkStandingsModal').style.display='block'">
+                        Change Link
+                    </button>
+                    <form th:action="@{/admin/seasons/{id}/unlink-thread(id=${seasonForm.id})}"
+                          method="post" class="inline-form">
+                        <input type="hidden" name="type" value="standings">
+                        <button type="submit" class="btn btn-danger btn-sm"
+                                data-testid="unlink-standings">Unlink</button>
+                    </form>
+                </div>
+                <div th:if="${linkedStandingsThread == null}" class="discord-actions">
+                    <span class="badge badge-inactive">not linked</span>
+                    <button type="button" class="btn btn-primary btn-sm"
+                            data-testid="link-standings-open"
+                            th:disabled="${standingsThreadOptions.isEmpty()}"
+                            onclick="document.getElementById('linkStandingsModal').style.display='block'">
+                        Link existing Thread...
+                    </button>
+                </div>
+            </div>
+
+            <div th:if="${canPostStandings and !allPhases.isEmpty()}"
+                 class="discord-actions discord-actions--posts mt-md"
+                 data-testid="standings-post-cluster">
+                <form th:action="@{/admin/seasons/{id}/post-standings(id=${seasonForm.id})}"
+                      method="post" class="form-inline">
+                    <input th:if="${_csrf != null}" type="hidden"
+                           th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <select th:if="${allPhases.size() > 1}" name="phaseId"
+                            class="form-control form-control-sm" data-testid="post-standings-phase-select">
+                        <option th:each="p : ${allPhases}"
+                                th:value="${p.id}"
+                                th:text="${p.phaseType.name()}"></option>
+                    </select>
+                    <input th:if="${allPhases.size() == 1}" type="hidden" name="phaseId"
+                           th:value="${allPhases[0].id}" data-testid="post-standings-phase-hidden"/>
+                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-standings">
+                        Post Standings
+                    </button>
+                </form>
+                <ul class="text-dim text-xs" data-testid="standings-phase-status-list">
+                    <li th:each="row : ${phaseStandingsRows}">
+                        <span th:text="${row.phase.phaseType.name()}"></span>:
+                        <span th:if="${row.post == null}" data-testid="standings-phase-status-none">never posted</span>
+                        <span th:if="${row.post != null and row.stale}"
+                              class="badge badge-warning" data-testid="standings-phase-status-stale">Update needed</span>
+                        <span th:if="${row.post != null and !row.stale}"
+                              class="badge badge-active" data-testid="standings-phase-status-fresh">Posted</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link Race-Results Thread Modal -->
+    <div th:if="${seasonForm.id != null and discordIntegrationActive}"
+         id="linkRaceResultsModal" class="modal-overlay">
+        <div class="modal-body modal-body--md">
+            <h3 class="modal-title">Link Race-Results Forum Thread</h3>
+            <form th:action="@{/admin/seasons/{id}/link-thread(id=${seasonForm.id})}" method="post">
+                <input type="hidden" name="type" value="race-results">
+                <div th:if="${raceResultsThreadOptions.isEmpty()}" class="alert alert-warning"
+                     data-testid="link-race-results-empty">
+                    No threads available in the configured race-results forum channel.
+                </div>
+                <div th:each="t,iter : ${raceResultsThreadOptions}" class="form-check">
+                    <input type="radio"
+                           th:id="'race-results-thread-' + ${iter.index}"
+                           name="threadId"
+                           th:value="${t.id}"
+                           th:checked="${t.pinned()}">
+                    <label th:for="'race-results-thread-' + ${iter.index}"
+                           th:text="${t.name} + ' (' + ${t.id} + ')'
+                                    + (${t.pinned()} ? ' [pinned]' : '')
+                                    + (${t.archived()} ? ' [archived]' : '')"></label>
+                </div>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary"
+                            data-testid="link-race-results-confirm"
+                            th:disabled="${raceResultsThreadOptions.isEmpty()}">Confirm</button>
+                    <button type="button" class="btn btn-secondary"
+                            data-testid="link-race-results-cancel"
+                            onclick="document.getElementById('linkRaceResultsModal').style.display='none'">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Link Standings Thread Modal -->
+    <div th:if="${seasonForm.id != null and discordIntegrationActive}"
+         id="linkStandingsModal" class="modal-overlay">
+        <div class="modal-body modal-body--md">
+            <h3 class="modal-title">Link Standings Forum Thread</h3>
+            <form th:action="@{/admin/seasons/{id}/link-thread(id=${seasonForm.id})}" method="post">
+                <input type="hidden" name="type" value="standings">
+                <div th:if="${standingsThreadOptions.isEmpty()}" class="alert alert-warning"
+                     data-testid="link-standings-empty">
+                    No threads available in the configured standings forum channel.
+                </div>
+                <div th:each="t,iter : ${standingsThreadOptions}" class="form-check">
+                    <input type="radio"
+                           th:id="'standings-thread-' + ${iter.index}"
+                           name="threadId"
+                           th:value="${t.id}"
+                           th:checked="${t.pinned()}">
+                    <label th:for="'standings-thread-' + ${iter.index}"
+                           th:text="${t.name} + ' (' + ${t.id} + ')'
+                                    + (${t.pinned()} ? ' [pinned]' : '')
+                                    + (${t.archived()} ? ' [archived]' : '')"></label>
+                </div>
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary"
+                            data-testid="link-standings-confirm"
+                            th:disabled="${standingsThreadOptions.isEmpty()}">Confirm</button>
+                    <button type="button" class="btn btn-secondary"
+                            data-testid="link-standings-cancel"
+                            onclick="document.getElementById('linkStandingsModal').style.display='none'">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
     (function() {
         function setupFilter(inputId, containerId) {

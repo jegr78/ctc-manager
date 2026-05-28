@@ -18,7 +18,7 @@ import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertTha
  * <p><b>Selector reality vs. plan template:</b> The plan referenced placeholder selectors like
  * {@code .phase-tab}, {@code .matchday-row}, {@code .race-row}, {@code .standings-row}. The
  * real templates (two-row tab nav) use {@code .tab-nav .tab-btn} for phase tabs;
- * matchdays render as {@code <ul><li><a>} inside {@code section#matchdays}; standings render
+ * matchdays render as {@code .chip-list a.chip} inside {@code section#matchdays}; standings render
  * inside {@code table#standingsTable tbody tr.data-row}. The fixtures intentionally seed NO
  * race-results, so the standings table is empty and the controller renders the
  * empty-state card instead -- the legacy URL ({@code /admin/standings?seasonId=}) bridge is
@@ -62,11 +62,11 @@ class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 		assertThat(page.locator(".tab-nav .tab-btn:has-text('PLAYOFF')")).hasCount(0);
 
 		// (c) Matchday list (2 matchdays per fixture) renders inside section#matchdays.
-		assertThat(page.locator("section#matchdays ul li")).hasCount(2);
-		assertThat(page.locator("section#matchdays ul li").first()).containsText("Matchday 1");
+		assertThat(page.locator("section#matchdays .chip-list a.chip")).hasCount(2);
+		assertThat(page.locator("section#matchdays .chip-list a.chip").first()).containsText("Matchday 1");
 
 		// (d) Click the first matchday -> matchday-detail page renders.
-		page.locator("section#matchdays ul li a").first().click();
+		page.locator("section#matchdays .chip-list a.chip").first().click();
 		assertThat(page).hasURL(java.util.regex.Pattern.compile(
 				".*/admin/matchdays/" + MATCHDAY_1_WITHOUT_PLAYOFF_ID + "(\\?.*)?$"));
 		assertThat(page.locator("h1")).containsText("Matchday 1");
@@ -104,10 +104,10 @@ class LegacyMigratedSeasonE2ETest extends PlaywrightConfig {
 		assertThat(page.locator(".tab-nav .tab-btn:has-text('PLAYOFF')")).hasCount(1);
 
 		// (c) Matchday list (2 matchdays on the REGULAR phase) renders.
-		assertThat(page.locator("section#matchdays ul li")).hasCount(2);
+		assertThat(page.locator("section#matchdays .chip-list a.chip")).hasCount(2);
 
 		// (d) Click matchday -> matchday-detail page renders without 500.
-		page.locator("section#matchdays ul li a").first().click();
+		page.locator("section#matchdays .chip-list a.chip").first().click();
 		assertThat(page).hasURL(java.util.regex.Pattern.compile(
 				".*/admin/matchdays/" + MATCHDAY_1_WITH_PLAYOFF_ID + "(\\?.*)?$"));
 		assertThat(page.locator("h1")).containsText("Matchday 1");

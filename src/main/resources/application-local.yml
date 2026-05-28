@@ -1,12 +1,25 @@
+# Local profile (developer machine, MariaDB on localhost:3306).
+#
+# Required env-vars for full functionality:
+#   - GOOGLE_CALENDAR_ID — Google Calendar ID for race-schedule export (optional).
+#   - DISCORD_BOT_TOKEN  — Discord bot token (v1.13 Discord Integration). The bot
+#                          token MUST come from an env-var; never commit a literal.
+#                          Provide via `.env` (base) or `.env.local` (profile-specific);
+#                          `./scripts/app.sh start local` auto-loads both. If absent,
+#                          the application.yml default (empty string) is used and the
+#                          Discord config page surfaces "not configured" badges.
+
 server:
   port: 9091
 
 app:
   upload-dir: data/local/uploads
+  discord:
+    bot-token: ${DISCORD_BOT_TOKEN:}
 
 spring:
   datasource:
-    # Phase 75 RESEARCH §10: rewriteBatchedStatements=true needed for JdbcTemplate.batchUpdate(...)=500 to compile into a single multi-row INSERT on MariaDB
+    # rewriteBatchedStatements=true is required so JdbcTemplate.batchUpdate(...)=500 compiles into a single multi-row INSERT on MariaDB.
     url: jdbc:mariadb://localhost:3306/ctcdb?rewriteBatchedStatements=true
     driver-class-name: org.mariadb.jdbc.Driver
     username: ctc

@@ -95,7 +95,7 @@ class BackupImportZipSlipIT {
                         .as("reason must be PATH_TRAVERSAL for dot-dot entry")
                         .isEqualTo(Reason.PATH_TRAVERSAL));
 
-        // D-16: try/finally must have deleted the staging file
+        // try/finally must have deleted the staging file.
         assertThat(Files.list(stagingDir)
                 .filter(p -> p.getFileName().toString().endsWith(".zip"))
                 .count())

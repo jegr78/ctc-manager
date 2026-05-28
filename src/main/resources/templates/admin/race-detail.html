@@ -171,6 +171,29 @@
         </div>
     </div>
 
+    <!-- Discord Actions -->
+    <div class="card">
+        <h2>Discord Actions</h2>
+        <div class="discord-actions discord-actions--posts">
+            <form th:if="${raceResultsForumPost == null and canPostRaceResultToForum}"
+                  th:action="@{/admin/races/{id}/post-race-result-to-forum(id=${race.id})}"
+                  method="post" class="inline-form">
+                <button type="submit" class="btn btn-primary btn-sm"
+                        data-testid="post-race-result-to-forum">Post Race Result</button>
+            </form>
+            <span th:if="${raceResultsForumPost == null and not canPostRaceResultToForum}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-race-result-to-forum-disabled"
+                  th:title="${forumPostDisabledReason}">Post Race Result</span>
+            <form th:if="${raceResultsForumPost != null}"
+                  th:action="@{/admin/races/{id}/post-race-result-to-forum(id=${race.id})}"
+                  method="post" class="inline-form">
+                <button type="submit" class="btn btn-secondary btn-sm"
+                        data-testid="repost-race-result-to-forum">Re-Post Race Result</button>
+            </form>
+        </div>
+    </div>
+
     <!-- Attachments -->
     <div class="card">
         <h2 th:text="'Attachments (' + ${race.attachments.size()} + ')'"></h2>

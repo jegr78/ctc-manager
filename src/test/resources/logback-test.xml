@@ -4,7 +4,7 @@
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <pattern>%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %replace(%m%n%wEx){'https?://[^/\s]+/api/webhooks/[^/\s]+/[^/\s]+', 'https://***/api/webhooks/***/***'}</pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>

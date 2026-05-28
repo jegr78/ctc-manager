@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +44,7 @@ public class DriverSheetImportController {
 
     @PostMapping("/preview")
     public String preview(@RequestParam String sheetUrl, Model model) {
-        if (sheetUrl == null || sheetUrl.isBlank()) {
+        if (!hasText(sheetUrl)) {
             addCommonAttributes(model);
             model.addAttribute("errorMessage", "Sheet URL must not be blank");
             return "admin/driver-import";
@@ -102,7 +104,7 @@ public class DriverSheetImportController {
     public String execute(@RequestParam String sheetUrl,
                           @RequestParam(required = false) Map<String, String> allParams,
                           RedirectAttributes redirectAttributes) {
-        if (sheetUrl == null || sheetUrl.isBlank()) {
+        if (!hasText(sheetUrl)) {
             redirectAttributes.addFlashAttribute("errorMessage", "Sheet URL must not be blank");
             return "redirect:/admin/drivers/import";
         }

@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${pageTitle}, ~{::section})}">
+<body>
+<section>
+    <div class="toolbar">
+        <div>
+            <a th:href="@{/admin/matchdays/{id}(id=${match.matchday.id})}"
+               class="back-link" data-testid="match-detail-back-link">&larr; Back to [[${match.matchday.label}]]</a>
+            <h1>
+                <span th:text="${match.homeTeam.shortName}"></span>
+                <span th:text="' vs '"></span>
+                <span th:text="${match.awayTeam != null ? match.awayTeam.shortName : 'Bye'}"></span>
+            </h1>
+        </div>
+        <div class="actions">
+            <a th:href="@{/admin/matches/{id}/edit(id=${match.id})}"
+               class="btn btn-primary" data-testid="match-detail-edit">Edit</a>
+        </div>
+    </div>
+
+    <!-- Discord Actions -->
+    <div class="card">
+        <h2>Discord Actions</h2>
+        <div class="discord-actions">
+            <form th:if="${match.discordChannelId == null}"
+                  th:action="@{/admin/matches/{id}/create-discord-channel(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit"
+                        class="btn btn-primary btn-sm"
+                        data-testid="create-discord-channel"
+                        th:disabled="${match.homeTeam.effectiveDiscordRoleId == null
+                                or match.awayTeam == null
+                                or match.awayTeam.effectiveDiscordRoleId == null}">
+                    Create Discord Channel
+                </button>
+            </form>
+            <span th:if="${match.discordChannelId != null}"
+                  class="badge badge-active"
+                  data-testid="discord-channel-id"
+                  th:text="'Channel ' + ${match.discordChannelId}"></span>
+            <span th:if="${match.discordChannelArchivedAt != null}"
+                  class="badge badge-archived"
+                  data-testid="discord-channel-archived"
+                  th:text="'Archived ' + ${#temporals.format(match.discordChannelArchivedAt, 'yyyy-MM-dd HH:mm')}"></span>
+            <button th:if="${match.discordChannelId != null and match.discordChannelArchivedAt == null}"
+                    type="button"
+                    class="btn btn-secondary btn-sm"
+                    data-testid="open-archive-modal"
+                    onclick="document.getElementById('archiveModal').classList.add('is-open')">
+                Move to Archive
+            </button>
+        </div>
+
+        <div class="discord-actions discord-actions--posts" th:if="${match.discordChannelId != null}">
+            <form th:if="${teamCardsPost == null}"
+                  th:action="@{/admin/matches/{id}/post-team-cards(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-team-cards">
+                    Post Team Cards
+                </button>
+            </form>
+            <form th:if="${teamCardsPost != null}"
+                  th:action="@{/admin/matches/{id}/post-team-cards(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-team-cards">
+                    Re-Post Team Cards
+                </button>
+            </form>
+            <form th:if="${teamCardsPost != null}"
+                  th:action="@{/admin/matches/{id}/refresh-team-cards(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="refresh-team-cards">
+                    &#x21bb; Refresh Cards
+                </button>
+            </form>
+
+            <form th:if="${settingsPost == null and matchHasCompleteSettings}"
+                  th:action="@{/admin/matches/{id}/post-settings(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-settings">
+                    Post Settings
+                </button>
+            </form>
+            <span th:if="${settingsPost == null and not matchHasCompleteSettings}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-settings-disabled"
+                  title="Configure settings for all races first">Post Settings</span>
+            <form th:if="${settingsPost != null}"
+                  th:action="@{/admin/matches/{id}/post-settings(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-settings">
+                    Re-Post Settings
+                </button>
+            </form>
+
+            <form th:if="${lineupsPost == null and matchHasCompleteLineups}"
+                  th:action="@{/admin/matches/{id}/post-lineups(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-lineups">
+                    Post Lineups
+                </button>
+            </form>
+            <span th:if="${lineupsPost == null and not matchHasCompleteLineups}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-lineups-disabled"
+                  title="Configure lineups for all races first">Post Lineups</span>
+            <form th:if="${lineupsPost != null}"
+                  th:action="@{/admin/matches/{id}/post-lineups(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-lineups">
+                    Re-Post Lineups
+                </button>
+            </form>
+
+            <form th:if="${provisionalPost == null and matchHasProvisionalData}"
+                  th:action="@{/admin/matches/{id}/post-provisional(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-provisional">
+                    Post Provisional Scores
+                </button>
+            </form>
+            <span th:if="${provisionalPost == null and not matchHasProvisionalData}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-provisional-disabled"
+                  title="Provisional needs at least one completed race">Post Provisional Scores</span>
+            <form th:if="${provisionalPost != null}"
+                  th:action="@{/admin/matches/{id}/post-provisional(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-provisional">
+                    Re-Post Provisional Scores
+                </button>
+            </form>
+
+            <form th:if="${matchResultsPost == null and matchCanRenderResults}"
+                  th:action="@{/admin/matches/{id}/post-match-results(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-match-results">
+                    Post Match Results
+                </button>
+            </form>
+            <span th:if="${matchResultsPost == null and not matchCanRenderResults}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-match-results-disabled"
+                  title="All races must have results first">Post Match Results</span>
+            <form th:if="${matchResultsPost != null}"
+                  th:action="@{/admin/matches/{id}/post-match-results(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm"
+                        th:attr="data-testid=${matchResultsStale ? 'update-match-results' : 'repost-match-results'}"
+                        th:text="${matchResultsStale ? 'Update Match Results' : 'Re-Post Match Results'}"></button>
+            </form>
+
+            <form th:if="${scheduleVisible and schedulePost == null}"
+                  th:action="@{/admin/matches/{id}/post-schedule(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-schedule">
+                    Post Schedule
+                </button>
+            </form>
+            <span th:if="${not scheduleVisible and schedulePost == null}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-schedule-disabled"
+                  title="Schedule a race time first">Post Schedule</span>
+            <form th:if="${schedulePost != null}"
+                  th:action="@{/admin/matches/{id}/post-schedule(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-schedule">
+                    Re-Post Schedule
+                </button>
+            </form>
+
+            <div th:if="${discordAnnouncementsConfigured}" class="discord-post-cluster">
+                <span th:if="${not matchPreviewPreFlight.canPost()}"
+                      class="btn btn-secondary btn-sm disabled"
+                      data-testid="post-match-preview-disabled"
+                      th:title="${matchPreviewPreFlight.disabledReason()}">Post Match Preview</span>
+                <form th:if="${matchPreviewPreFlight.canPost() and matchPreviewPost == null}"
+                      th:action="@{/admin/matches/{id}/post-match-preview(id=${match.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-primary btn-sm" data-testid="post-match-preview">
+                        Post Match Preview
+                    </button>
+                </form>
+                <form th:if="${matchPreviewPreFlight.canPost() and matchPreviewPost != null}"
+                      th:action="@{/admin/matches/{id}/post-match-preview(id=${match.id})}"
+                      method="post" class="form-inline">
+                    <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-match-preview">
+                        Re-Post Match Preview
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="card">
+        <h2>Schedule</h2>
+        <div class="detail-fields">
+            <span class="label">Lobby Host</span>
+            <span th:text="${match.lobbyHost ?: '-'}"></span>
+            <span class="label">Race Director</span>
+            <span th:text="${match.raceDirector ?: '-'}"></span>
+            <span class="label">Streamer</span>
+            <span th:text="${match.streamer ?: '-'}"></span>
+            <span class="label">Stream Link</span>
+            <span th:text="${match.streamLink ?: '-'}"></span>
+            <span class="label">Discord Teaser</span>
+            <span>
+                <pre class="markdown-source"
+                     th:text="${match.discordTeaser ?: '-'}"></pre>
+            </span>
+        </div>
+    </div>
+
+    <!-- Races -->
+    <div class="card">
+        <h2 th:text="'Races (' + ${match.races.size()} + ')'"></h2>
+        <div th:if="${match.races.isEmpty()}" class="empty-state empty-state--compact">
+            <p>No races yet.</p>
+        </div>
+        <ul th:if="${!match.races.isEmpty()}" class="match-races-list">
+            <li th:each="race, iter : ${match.races}">
+                <a th:href="@{/admin/races/{id}(id=${race.id})}" class="detail-link"
+                   th:text="'Leg ' + ${iter.count} + ' · ' + ${race.track?.name ?: '—'}"></a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Archive Modal -->
+    <div id="archiveModal" class="modal-overlay">
+        <div class="modal-body modal-body--md">
+            <h3 class="modal-title">Move Channel to Archive</h3>
+            <form th:action="@{/admin/matches/{id}/move-to-archive(id=${match.id})}" method="post">
+                <div th:if="${archiveCategories.isEmpty()}" class="alert alert-warning"
+                     data-testid="archive-all-full-banner">
+                    All archive categories are full — see
+                    <a th:href="@{/docs/operations/discord-integration.html#creating-archive-category}">runbook</a>.
+                </div>
+                <div th:each="cat,iter : ${archiveCategories}" class="form-check">
+                    <input type="radio"
+                           th:id="'cat-' + ${iter.index}"
+                           name="categoryId"
+                           th:value="${cat.id}"
+                           th:checked="${defaultSelectionId != null and defaultSelectionId.equals(cat.id)}">
+                    <label th:for="'cat-' + ${iter.index}"
+                           th:text="${cat.name} + ' — ' + ${cat.currentChannelCount} + '/50'"></label>
+                </div>
+                <div class="actions">
+                    <button type="submit"
+                            class="btn btn-primary"
+                            data-testid="archive-confirm"
+                            th:disabled="${archiveCategories.isEmpty()}">Confirm</button>
+                    <button type="button"
+                            class="btn btn-secondary"
+                            data-testid="archive-cancel"
+                            onclick="document.getElementById('archiveModal').classList.remove('is-open')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+</body>
+</html>

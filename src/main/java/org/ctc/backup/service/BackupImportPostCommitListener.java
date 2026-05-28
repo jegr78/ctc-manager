@@ -106,7 +106,7 @@ public class BackupImportPostCommitListener {
             log.error("AFTER_COMMIT Step 2 failed: attempting Step-1 revert", e);
             try {
                 if (Files.exists(uploadsOld)) {
-                    // CR-02 defensive sweep: if Step 2 partially materialized uploadsTarget
+                    // Defensive sweep: if Step 2 partially materialized uploadsTarget
                     // (e.g. non-atomic-move fallback on some filesystems, or a third-party
                     // process dropped a metadata inode under uploadsTarget between Step 1
                     // and the revert attempt), ATOMIC_MOVE of uploads-old → uploadsTarget
@@ -132,7 +132,7 @@ public class BackupImportPostCommitListener {
             throw new UploadsRestoreException("Step 2 failed: move uploads-new -> uploads", e);
         }
 
-        // Step 3: success audit row (REQUIRES_NEW via DataImportAuditService — D-01 success-flash semantics).
+        // Step 3: success audit row (REQUIRES_NEW via DataImportAuditService).
         // Do NOT rethrow on failure: files are already moved into place, the operator's signal is
         // the missing audit row (loud ERROR log).
         try {

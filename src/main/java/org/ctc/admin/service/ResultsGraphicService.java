@@ -1,5 +1,7 @@
 package org.ctc.admin.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -34,6 +36,30 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 	}
 
 	public String generateResults(Race race) throws IOException {
+		String html = buildHtml(race);
+
+		Path raceDir = uploadDir.resolve("races").resolve(race.getId().toString());
+		Files.createDirectories(raceDir);
+		Path outputFile = raceDir.resolve("results.png");
+
+		renderScreenshot(html, outputFile);
+
+		log.info("Generated results graphic: {}", outputFile);
+		return "/uploads/races/" + race.getId() + "/results.png";
+	}
+
+	public byte[] generateResultsBytes(Race race) throws IOException {
+		String html = buildHtml(race);
+		Path tempFile = Files.createTempFile("race-result-", ".png");
+		try {
+			renderScreenshot(html, tempFile);
+			return Files.readAllBytes(tempFile);
+		} finally {
+			Files.deleteIfExists(tempFile);
+		}
+	}
+
+	private String buildHtml(Race race) throws IOException {
 		if (race.getHomeTeam() == null || race.getAwayTeam() == null) {
 			throw new IllegalStateException("Race has no teams assigned");
 		}
@@ -77,16 +103,7 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 
-		String html = renderTemplate(ctx);
-
-		Path raceDir = uploadDir.resolve("races").resolve(race.getId().toString());
-		Files.createDirectories(raceDir);
-		Path outputFile = raceDir.resolve("results.png");
-
-		renderScreenshot(html, outputFile);
-
-		log.info("Generated results graphic: {}", outputFile);
-		return "/uploads/races/" + race.getId() + "/results.png";
+		return renderTemplate(ctx);
 	}
 
 	private String renderTemplate(Context ctx) throws IOException {
@@ -159,7 +176,7 @@ public class ResultsGraphicService extends AbstractGraphicService implements Tem
 	}
 
 	private String resolveNickname(Driver driver) {
-		return driver.getNickname() != null && !driver.getNickname().isBlank()
+		return hasText(driver.getNickname())
 				? driver.getNickname() : driver.getPsnId();
 	}
 

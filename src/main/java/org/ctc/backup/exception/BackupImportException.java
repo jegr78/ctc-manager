@@ -1,5 +1,7 @@
 package org.ctc.backup.exception;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.UUID;
 
 /**
@@ -34,7 +36,7 @@ public class BackupImportException extends RuntimeException {
      * <p>This constructor assumes the audit row was written successfully. Use
      * {@link #BackupImportException(UUID, boolean, Throwable)} on the double-failure path
      * where the REQUIRES_NEW audit write itself failed and no row exists for the operator
-     * to query (WR-03).
+     * to query.
      *
      * @param auditUuid id of the {@code data_import_audit} row recorded via REQUIRES_NEW
      * @param cause     the underlying exception that triggered the rollback
@@ -45,7 +47,7 @@ public class BackupImportException extends RuntimeException {
 
     /**
      * Constructs a new {@code BackupImportException} carrying both the pre-allocated audit
-     * UUID and an {@code auditWritten} flag (WR-03: distinguishes "row exists, query by UUID"
+     * UUID and an {@code auditWritten} flag (distinguishes "row exists, query by UUID"
      * from "audit-write itself failed, no row to query").
      *
      * @param auditUuid    pre-allocated UUID; may NOT correspond to a persisted row when
@@ -85,9 +87,9 @@ public class BackupImportException extends RuntimeException {
 
     /**
      * Returns whether the REQUIRES_NEW audit row was successfully persisted before this
-     * exception was thrown (WR-03). When {@code false}, the {@link #getAuditUuid()} value
-     * is the pre-allocated UUID but no matching row exists in {@code data_import_audit};
-     * the controller adjusts the failure-flash text accordingly.
+     * exception was thrown. When {@code false}, the {@link #getAuditUuid()} value is the
+     * pre-allocated UUID but no matching row exists in {@code data_import_audit}; the
+     * controller adjusts the failure-flash text accordingly.
      *
      * @return {@code true} when an audit row exists, {@code false} on the double-failure path
      */
@@ -100,7 +102,7 @@ public class BackupImportException extends RuntimeException {
             return "<no cause>";
         }
         String msg = cause.getMessage();
-        if (msg == null || msg.isBlank()) {
+        if (!hasText(msg)) {
             return cause.getClass().getSimpleName();
         }
         return cause.getClass().getSimpleName() + ": " + msg;

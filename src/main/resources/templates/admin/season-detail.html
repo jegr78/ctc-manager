@@ -389,11 +389,12 @@
         <section id="matchdays" class="card mt-md">
             <h3>Matchdays</h3>
             <p th:if="${#lists.isEmpty(matchdays)}" class="text-dim">No matchdays in this phase yet.</p>
-            <ul th:if="${!#lists.isEmpty(matchdays)}">
-                <li th:each="md : ${matchdays}">
-                    <a th:href="@{/admin/matchdays/{id}(id=${md.id})}" th:text="${md.label}"></a>
-                </li>
-            </ul>
+            <div th:if="${!#lists.isEmpty(matchdays)}" class="chip-list">
+                <a th:each="md : ${matchdays}"
+                   th:href="@{/admin/matchdays/{id}(id=${md.id})}"
+                   th:text="${md.label}"
+                   class="chip"></a>
+            </div>
         </section>
 
         <!-- Standings Section -->

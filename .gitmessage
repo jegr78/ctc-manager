@@ -1,0 +1,35 @@
+# <type>(<optional scope>): <subject — imperative, lowercase, <=72 chars>
+#
+# Why this change is needed (1–3 sentences). Focus on the WHY,
+# not the WHAT — the diff already shows what changed.
+#
+# - Bullet points for notable details, if helpful.
+# - Reference REQ-IDs / plan-IDs sparingly — PR description carries detail.
+#
+# Co-Authored-By: ...
+#
+# ──────────────────────────────────────────────────────────────────────
+# Conventional Commit types (Semantic Release driver):
+#   feat:     New feature                         → Minor bump
+#   fix:      Bug fix                             → Patch bump
+#   docs:     Documentation only                  → Patch bump
+#   chore:    Maintenance / tooling               → Patch bump
+#   refactor: Code change without behavior change → Patch bump
+#   test:     Tests only                          → Patch bump
+#   style:    Formatting / CSS                    → Patch bump
+#   perf:     Performance                         → Patch bump
+#   ci:       CI/CD only                          → No release
+#
+# Breaking changes: add "BREAKING CHANGE: ..." in the footer → Major bump.
+#
+# Format:  <type>(<optional scope>): <description>
+# Example: feat(scoring): add penalty point deduction
+#
+# Subject rules:
+#   - imperative mood ("add", not "added"/"adds")
+#   - no trailing period
+#   - <= 72 chars
+#
+# Squash-merge subjects MUST follow the same format — Semantic Release
+# does not fire on PR titles alone.
+# ──────────────────────────────────────────────────────────────────────

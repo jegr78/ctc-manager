@@ -105,6 +105,10 @@ public class TestHelper {
 		return teamRepository.save(new Team(name, shortName));
 	}
 
+	public Team createSubTeam(String name, String shortName, Team parentTeam) {
+		return teamRepository.save(new Team(name, shortName, parentTeam));
+	}
+
 	public Match createMatch(Matchday matchday, Team homeTeam, Team awayTeam) {
 		return matchRepository.save(new Match(matchday, homeTeam, awayTeam));
 	}
@@ -114,6 +118,22 @@ public class TestHelper {
 		race.setMatchday(matchday);
 		race.setMatch(match);
 		return raceRepository.save(race);
+	}
+
+	public org.ctc.domain.model.RaceSettings completeRaceSettings(Race race) {
+		var settings = new org.ctc.domain.model.RaceSettings(race);
+		settings.setNumberOfLaps(5);
+		settings.setTyreWearMultiplier(1);
+		settings.setFuelConsumptionMultiplier(1);
+		settings.setRefuelingSpeed(1);
+		settings.setInitialFuel("100%");
+		settings.setNumberOfRequiredPitStops(0);
+		settings.setTimeProgressionMultiplier(1);
+		settings.setWeather("clear");
+		settings.setTimeOfDay("noon");
+		settings.setAvailableTyres("any");
+		settings.setMandatoryTyres("none");
+		return settings;
 	}
 
 	public Driver createDriver(String psnId, String nickname) {

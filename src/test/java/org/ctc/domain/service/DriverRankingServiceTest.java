@@ -541,7 +541,7 @@ class DriverRankingServiceTest {
 
 		var sd = new SeasonDriver(season, panicpotato, tnr);
 
-		// D-19 (TDD-GREEN): findByRaceMatchdaySeasonIdIn (no IsNull filter) returns BOTH results.
+		// findByRaceMatchdaySeasonIdIn (no IsNull filter) returns BOTH results.
 		// The old IsNull-filtered finder would only return regularResult — causing racesCount == 1.
 		// The new finder returns both → racesCount == 2, proving PLAYOFF results are included.
 		when(raceResultRepository.findByRaceMatchdaySeasonIdIn(List.of(season.getId())))

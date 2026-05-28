@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout('Discord Config', ~{::section})}">
+<body>
+<section>
+    <h1>Discord Config</h1>
+
+    <p class="text-muted">
+        Operator-facing settings for the Discord integration. The bot token itself stays
+        in the <code>DISCORD_BOT_TOKEN</code> environment variable — never edited on this page.
+    </p>
+
+    <div class="card mb-md">
+        <h2>Connection</h2>
+        <form th:action="@{/admin/discord-config/save}" method="post" th:object="${form}">
+            <div class="form-group">
+                <label for="guildId">Guild ID</label>
+                <input type="text" id="guildId" th:field="*{guildId}" placeholder="Discord server snowflake (17–20 digits)">
+                <span th:if="${#strings.isEmpty(form.guildId)}" class="badge-warning">not configured</span>
+                <span th:errors="*{guildId}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
+                <label for="botApplicationId">Bot Application ID</label>
+                <input type="text" id="botApplicationId" th:field="*{botApplicationId}" placeholder="Discord bot snowflake">
+                <span th:if="${#strings.isEmpty(form.botApplicationId)}" class="badge-warning">not configured</span>
+                <span th:errors="*{botApplicationId}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
+                <label for="announcementWebhookUrl">Announcement Webhook URL</label>
+                <input type="text" id="announcementWebhookUrl" th:field="*{announcementWebhookUrl}"
+                       placeholder="https://discord.com/api/webhooks/…">
+                <span th:if="${#strings.isEmpty(form.announcementWebhookUrl)}" class="badge-warning">not configured</span>
+                <span th:errors="*{announcementWebhookUrl}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
+                <label for="raceResultsForumWebhookUrl">Race-Results Forum Webhook URL</label>
+                <input type="text" id="raceResultsForumWebhookUrl" th:field="*{raceResultsForumWebhookUrl}"
+                       placeholder="https://discord.com/api/webhooks/…">
+                <span th:if="${#strings.isEmpty(form.raceResultsForumWebhookUrl)}" class="badge-warning">not configured</span>
+                <span th:errors="*{raceResultsForumWebhookUrl}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
+                <label for="standingsForumWebhookUrl">Standings Forum Webhook URL</label>
+                <input type="text" id="standingsForumWebhookUrl" th:field="*{standingsForumWebhookUrl}"
+                       placeholder="https://discord.com/api/webhooks/…">
+                <span th:if="${#strings.isEmpty(form.standingsForumWebhookUrl)}" class="badge-warning">not configured</span>
+                <span th:errors="*{standingsForumWebhookUrl}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
+                <label for="raceResultsForumChannelId">Race-Results Forum Channel ID</label>
+                <input type="text" id="raceResultsForumChannelId" th:field="*{raceResultsForumChannelId}"
+                       placeholder="Discord channel snowflake">
+                <span th:if="${#strings.isEmpty(form.raceResultsForumChannelId)}" class="badge-warning">not configured</span>
+                <span th:errors="*{raceResultsForumChannelId}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
+                <label for="standingsForumChannelId">Standings Forum Channel ID</label>
+                <input type="text" id="standingsForumChannelId" th:field="*{standingsForumChannelId}"
+                       placeholder="Discord channel snowflake">
+                <span th:if="${#strings.isEmpty(form.standingsForumChannelId)}" class="badge-warning">not configured</span>
+                <span th:errors="*{standingsForumChannelId}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
+                <label for="currentMatchCategoryId">Current Match Category ID</label>
+                <input type="text" id="currentMatchCategoryId" th:field="*{currentMatchCategoryId}"
+                       placeholder="Discord category snowflake">
+                <span th:if="${#strings.isEmpty(form.currentMatchCategoryId)}" class="badge-warning">not configured</span>
+                <span th:errors="*{currentMatchCategoryId}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
+                <label for="vsEmojiName">VS Emoji Name</label>
+                <input type="text" id="vsEmojiName" th:field="*{vsEmojiName}" placeholder="CTC">
+                <span th:errors="*{vsEmojiName}" class="error-badge error-badge--auth"></span>
+            </div>
+            <div class="form-group">
+                <label for="matchdayPairingsTemplate">Matchday Pairings Template</label>
+                <textarea id="matchdayPairingsTemplate" th:field="*{matchdayPairingsTemplate}"
+                          rows="8" cols="80" class="form-control"
+                          data-testid="matchday-pairings-template"
+                          placeholder="Leave empty to use the built-in default."></textarea>
+                <small class="text-muted">
+                    Markdown body for Matchday Pairings posts. Placeholders:
+                    <code>{{matchdayNumber}}</code>, <code>{{deadline}}</code>
+                    (rendered as Discord timestamp), <code>{{weekend}}</code>,
+                    <code>{{ctcEmoji}}</code> (rendered as the configured
+                    VS-Emoji from your Discord server).
+                </small>
+            </div>
+            <div class="actions mt-md">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card mb-md">
+        <h2>Connection &amp; cache tests</h2>
+        <p class="text-muted">
+            Each button issues exactly one call to the configured Discord surface.
+            Buttons are disabled when their prerequisite field is empty.
+        </p>
+        <div class="discord-actions">
+            <form th:action="@{/admin/discord-config/test-connection}" method="post" class="inline-form">
+                <button type="submit" class="btn btn-secondary">Test Connection</button>
+            </form>
+            <form th:action="@{/admin/discord-config/test-webhook}" method="post" class="inline-form">
+                <button type="submit" class="btn btn-secondary"
+                        th:disabled="${#strings.isEmpty(config.announcementWebhookUrl)}">
+                    Test Announcement Webhook
+                </button>
+            </form>
+            <form th:action="@{/admin/discord-config/refresh-roles-cache}" method="post" class="inline-form">
+                <button type="submit" class="btn btn-secondary"
+                        th:disabled="${#strings.isEmpty(config.guildId)}">
+                    Refresh Server Roles
+                </button>
+            </form>
+            <form th:action="@{/admin/discord-config/refresh-emoji-cache}" method="post" class="inline-form">
+                <button type="submit" class="btn btn-secondary"
+                        th:disabled="${#strings.isEmpty(config.guildId)}">
+                    Refresh Emoji Cache
+                </button>
+            </form>
+        </div>
+    </div>
+</section>
+</body>
+</html>

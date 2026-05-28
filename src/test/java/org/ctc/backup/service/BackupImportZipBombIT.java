@@ -99,7 +99,7 @@ class BackupImportZipBombIT {
                         .as("reason must be ENTRY_TOO_LARGE for per-entry bomb")
                         .isEqualTo(Reason.ENTRY_TOO_LARGE));
 
-        // D-16: staging file must be deleted
+        // Staging file must be deleted.
         assertThat(Files.list(stagingDir)
                 .filter(p -> p.getFileName().toString().endsWith(".zip"))
                 .count())
@@ -130,7 +130,7 @@ class BackupImportZipBombIT {
                         .as("reason must be TOTAL_TOO_LARGE for total inflate bomb")
                         .isEqualTo(Reason.TOTAL_TOO_LARGE));
 
-        // D-16: staging file must be deleted
+        // Staging file must be deleted.
         assertThat(Files.list(stagingDir)
                 .filter(p -> p.getFileName().toString().endsWith(".zip"))
                 .count())
@@ -160,7 +160,7 @@ class BackupImportZipBombIT {
                         .as("reason must be TOO_MANY_ENTRIES for entry-count bomb")
                         .isEqualTo(Reason.TOO_MANY_ENTRIES));
 
-        // D-16: staging file must be deleted
+        // Staging file must be deleted.
         assertThat(Files.list(stagingDir)
                 .filter(p -> p.getFileName().toString().endsWith(".zip"))
                 .count())
