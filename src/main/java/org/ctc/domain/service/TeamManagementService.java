@@ -9,6 +9,7 @@ import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.*;
 import org.ctc.domain.repository.*;
+import org.ctc.domain.util.HexColor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -227,17 +228,17 @@ public class TeamManagementService {
 			team = findById(id);
 			team.setName(name);
 			team.setShortName(shortName);
-			team.setPrimaryColor(primaryColor);
-			team.setSecondaryColor(secondaryColor);
-			team.setAccentColor(accentColor);
+			team.setPrimaryColor(HexColor.sanitize(primaryColor));
+			team.setSecondaryColor(HexColor.sanitize(secondaryColor));
+			team.setAccentColor(HexColor.sanitize(accentColor));
 			team.setDiscordRoleId(blankToNull(discordRoleId));
 			team = teamRepository.save(team);
 			propagateColorsToSubTeams(team);
 		} else {
 			team = new Team(name, shortName);
-			team.setPrimaryColor(primaryColor);
-			team.setSecondaryColor(secondaryColor);
-			team.setAccentColor(accentColor);
+			team.setPrimaryColor(HexColor.sanitize(primaryColor));
+			team.setSecondaryColor(HexColor.sanitize(secondaryColor));
+			team.setAccentColor(HexColor.sanitize(accentColor));
 			team.setDiscordRoleId(blankToNull(discordRoleId));
 			team = teamRepository.save(team);
 		}

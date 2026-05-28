@@ -150,6 +150,128 @@ Per CONTEXT D-14: no CLAUDE.md edits in Phase 102. If the close-loop reviewer su
   <done>Reviewer clean confirmed by orchestrator; proceeds to Task 3.</done>
 </task>
 
+<!-- Inline remediation tasks inserted 2026-05-28 after first reviewer pass surfaced 3 Warning + 2 Info findings.
+     Per plan: "Inline remediation = the orchestrator (working inline-sequential per CONTEXT D-05) adds remediation
+     tasks to this PLAN.md as new <task> elements, executes them, atomic-commits per finding, then re-dispatches
+     the reviewer." User direction 2026-05-28: "Alle 3 Warnungen und beide Info Funde beheben." -->
+
+<task type="auto" tdd="false">
+  <name>Task 2-R1: Extract HexColor sanitizer and apply to TeamManagementService.save (close-loop W1)</name>
+  <files>src/main/java/org/ctc/domain/util/HexColor.java, src/main/java/org/ctc/domain/service/TeamManagementService.java, src/main/java/org/ctc/domain/service/SeasonManagementService.java, src/test/java/org/ctc/domain/util/HexColorTest.java</files>
+  <action>
+    Reviewer Warning 1: Phase 102-03 commit `17570d75` introduced `sanitizeHexColor(...)` in `SeasonManagementService` to close 97 IN-04 (CSS-injection vector on the `th:style` color attributes), but the parallel `Team.primaryColor/secondaryColor/accentColor` ingress in `TeamManagementService.save` (lines 230-232 UPDATE path + 238-240 CREATE path) writes raw form input straight to the entity. The `Team`-level colors flow into five `th:style` injection points in `standings-render.html`, `matchday-pairings-render.html`, `matchday-results-render.html`, `playoff-round-results-render.html`, and `matchday-overview-render.html`.
+
+    Hoist the sanitizer to a new shared utility `org.ctc.domain.util.HexColor` with a single `sanitize(String)` method (returns the validated hex value or null). Apply it from both `TeamManagementService.save` (CREATE + UPDATE) AND `SeasonManagementService.updateSeasonTeam`. Add `HexColorTest` covering: null, blank, untrimmed, `#fff`, `#ffffff`, `#ffffff80` (8-digit), invalid characters, injection payloads.
+  </action>
+  <verify>
+    <automated>./mvnw test -Dtest=HexColorTest,TeamManagementServiceTest -DfailIfNoTests=false</automated>
+  </verify>
+  <acceptance_criteria>
+    - `HexColor.sanitize` exists; covers the 8 cases above.
+    - `TeamManagementService.save` calls `HexColor.sanitize` on the three color fields on BOTH the CREATE and UPDATE paths.
+    - `SeasonManagementService.updateSeasonTeam` calls `HexColor.sanitize` (now via the shared util — the inline private method + regex constant are removed).
+    - Targeted tests pass; no behavior change for valid inputs.
+    - One atomic commit: `fix(102-04): apply hex-color sanitizer to TeamManagementService.save — close-loop W1`.
+  </acceptance_criteria>
+  <done>HexColor util landed; both ingress paths sanitize.</done>
+</task>
+
+<task type="auto" tdd="false">
+  <name>Task 2-R2: Null-guard team-slug in postRaceResultToForumThread filename (close-loop W2)</name>
+  <files>src/main/java/org/ctc/discord/service/DiscordPostService.java, src/test/java/org/ctc/discord/service/DiscordPostServiceForumThreadFilenameTest.java</files>
+  <action>
+    Reviewer Warning 2: `DiscordPostService.postRaceResultToForumThread` (lines 895-898) composes the upload filename via `race.getMatch().getHomeTeam().getShortName() + "-vs-" + race.getMatch().getAwayTeam().getShortName()` when `race.getMatch() != null`. The pre-flight `canPostRaceResultToForum(race, config)` does not verify the parent `Match` has home/away teams assigned. A race attached to a partially-filled match (CSV-result import before pairings are finalized, or team unassigned after results entered) would crash with NPE at line 896 or 897.
+
+    Guard each team access. If either home or away team is null, fall back to `matchSlug = "race"` (the existing fallback for `race.getMatch() == null`). Add a unit test pinning the null-team-path produces the safe filename without throwing.
+  </action>
+  <verify>
+    <automated>./mvnw test -Dtest=DiscordPostServiceForumThreadFilenameTest -DfailIfNoTests=false</automated>
+  </verify>
+  <acceptance_criteria>
+    - `matchSlug` computation null-guards `match.getHomeTeam()` AND `match.getAwayTeam()`.
+    - New unit test seeds a `Race` with a `Match` whose home team is null AND a separate scenario whose away team is null; asserts no NPE and `matchSlug` falls back to the safe default.
+    - One atomic commit: `fix(102-04): null-guard team-slug in postRaceResultToForumThread — close-loop W2`.
+  </acceptance_criteria>
+  <done>Filename composition cannot NPE on partial-match data.</done>
+</task>
+
+<task type="auto" tdd="false">
+  <name>Task 2-R3: Migrate all sidebar links in layout.html to activeRoute via GlobalModelAdvice (close-loop W3)</name>
+  <files>src/main/java/org/ctc/admin/controller/GlobalModelAdvice.java, src/main/java/org/ctc/discord/web/DiscordConfigController.java, src/main/java/org/ctc/discord/web/DiscordPostController.java, src/main/resources/templates/admin/layout.html, src/test/java/org/ctc/admin/controller/GlobalModelAdviceActiveRouteTest.java</files>
+  <action>
+    Reviewer Warning 3: Phase 102 partially migrated the sidebar from `${title.contains(...)}` substring-matching to an explicit `activeRoute` model attribute — but only for the two Discord links (lines 80-81 of `layout.html`). The remaining sidebar links (47-76) still rely on `title.contains` which has known bugs (e.g., "Race" matches "Race-Scoring" page title; "Team" matches "Team Cards" so an explicit `!title.contains('Team Cards')` exclusion is needed; "Car" matches "Team Cards" with the same exclusion). The motivating bug from Phase 102 (Discord links both lighting up) likely existed for other link pairs too.
+
+    Centralize the URL-prefix → activeRoute mapping in `GlobalModelAdvice` so EVERY admin request automatically gets the correct `activeRoute` model attribute. Order matters: more specific prefixes first (e.g., `/admin/tools/team-cards` before `/admin/teams`). Migrate all 16 sidebar links in `layout.html` to the new pattern. Remove the per-controller `model.addAttribute("activeRoute", ...)` calls in `DiscordConfigController` (2 sites) and `DiscordPostController` (1 site).
+
+    Add a unit test exercising `GlobalModelAdvice.activeRoute(HttpServletRequest)` for the full sidebar URL set + an unmapped URL → null. Existing `DiscordPostFilterControllerIT` test asserting `activeRoute=discord-posts` must continue to pass (the global advice resolves the same value).
+  </action>
+  <verify>
+    <automated>./mvnw test -Dtest=GlobalModelAdviceActiveRouteTest -DfailIfNoTests=false &amp;&amp; ./mvnw verify -Dit.test=DiscordPostFilterControllerIT -DfailIfNoTests=false</automated>
+  </verify>
+  <acceptance_criteria>
+    - `GlobalModelAdvice` exposes a `@ModelAttribute("activeRoute")` method that maps `HttpServletRequest.getRequestURI()` to one of: seasons, matchdays, races, playoffs, teams, drivers, cars, tracks, race-scorings, match-scorings, standings, power-rankings, import, gt7-sync, team-cards, template-editors, backup, discord-config, discord-posts, or null.
+    - All 16 sidebar `<a>` elements in `layout.html` use `${activeRoute == 'X' ? 'active' : ''}`.
+    - No `model.addAttribute("activeRoute", ...)` lines remain in any controller.
+    - `GlobalModelAdviceActiveRouteTest` exercises the full mapping.
+    - One atomic commit: `refactor(102-04): migrate sidebar links to activeRoute pattern — close-loop W3`.
+  </acceptance_criteria>
+  <done>Sidebar activation is centralized and url-driven; no cross-page false-positives.</done>
+</task>
+
+<task type="auto" tdd="false">
+  <name>Task 2-R4: log.warn on team1==null skip in recomputeMatchScoresFromAllLegs (close-loop I1)</name>
+  <files>src/main/java/org/ctc/domain/service/ScoringService.java</files>
+  <action>
+    Reviewer Info 1: `ScoringService.recomputeMatchScoresFromAllLegs` (lines 62 + 85) silently skips when the Match `homeTeam` or PlayoffMatchup `team1` is null. The skip is intentional (the score cannot be aggregated without team identity) but a future stale-score report from this branch is hard to diagnose. Add `log.warn` lines on both skip paths surfacing the matchId / matchupId and the missing team-field name, so operators can see at a glance why scores stayed stale.
+  </action>
+  <verify>
+    <automated>./mvnw test -Dtest=ScoringServiceTest -DfailIfNoTests=false</automated>
+  </verify>
+  <acceptance_criteria>
+    - Both skip-branches emit a `log.warn` with parameterized `{}` placeholders identifying the match / matchup and the missing field.
+    - Existing `ScoringServiceTest` cases continue to pass.
+    - One atomic commit: `chore(102-04): log.warn on null-team skip in recomputeMatchScoresFromAllLegs — close-loop I1`.
+  </acceptance_criteria>
+  <done>Stale-score diagnostics improved.</done>
+</task>
+
+<task type="auto" tdd="false">
+  <name>Task 2-R5: Explicit save in recomputeMatchScoresFromAllLegs (close-loop I2)</name>
+  <files>src/main/java/org/ctc/domain/service/ScoringService.java</files>
+  <action>
+    Reviewer Info 2: `ScoringService.recomputeMatchScoresFromAllLegs` mutates `match.setHomeScore/AwayScore` and `matchup.setHomeScore/AwayScore` and relies on Hibernate dirty-checking inside the `@Transactional` context to persist. The reliance is implicit and survives only because the caller (`RaceService.saveResults`) is also `@Transactional`. Inject `MatchRepository` and `PlayoffMatchupRepository`, then call `matchRepository.save(match)` / `playoffMatchupRepository.save(matchup)` explicitly after the mutation. Persistence intent becomes visible at the callsite; the change is behavior-neutral inside the existing transaction boundary.
+  </action>
+  <verify>
+    <automated>./mvnw test -Dtest=ScoringServiceTest -DfailIfNoTests=false &amp;&amp; ./mvnw verify -Dit.test=*Scoring* -DfailIfNoTests=false</automated>
+  </verify>
+  <acceptance_criteria>
+    - `ScoringService` constructor injects `MatchRepository` + `PlayoffMatchupRepository` via the existing `@RequiredArgsConstructor`.
+    - Both score-mutation branches end with an explicit `save(...)` call.
+    - Existing tests continue to pass (no behavior change).
+    - One atomic commit: `chore(102-04): explicit save in recomputeMatchScoresFromAllLegs — close-loop I2`.
+  </acceptance_criteria>
+  <done>Persistence intent visible at the callsite.</done>
+</task>
+
+<task type="checkpoint:decision" gate="blocking">
+  <name>Task 2-R6: Re-dispatch gsd-code-reviewer for second-pass clean confirmation</name>
+  <files>(no source files modified — orchestrator-driven step)</files>
+  <decision>Does the re-dispatched reviewer return clean on the post-remediation Phase-102 cumulative diff?</decision>
+  <action>
+    After Tasks 2-R1..R5 have landed atomic commits on `gsd/v1.13-discord-integration`, the orchestrator re-dispatches `gsd-code-reviewer` over the updated Phase-102 cumulative diff (`d6b5ab01..HEAD`). Required verdict: CLEAN. Any new finding requires another remediation cycle (Tasks 2-R7+ inserted analogously).
+
+    The second-pass review prompt MUST reference this PLAN.md's remediation tasks so the reviewer focuses on whether the 5 fixes are correctly applied AND does not re-flag the same first-pass findings as still-open.
+  </action>
+  <verify>
+    <automated>echo "manual checkpoint — orchestrator dispatches gsd-code-reviewer second pass"</automated>
+  </verify>
+  <acceptance_criteria>
+    - Second-pass reviewer returns `clean` (zero critical + zero warning) on the post-remediation diff.
+    - If not clean, additional remediation tasks land before proceeding to Task 3.
+  </acceptance_criteria>
+  <done>Reviewer clean on second pass; proceeds to Task 3.</done>
+</task>
+
 <task type="auto" tdd="false">
   <name>Task 3: Author 102-REVIEW.md — the close-loop historical record</name>
   <files>.planning/phases/102-code-review-fixes/102-REVIEW.md</files>
