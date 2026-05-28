@@ -125,28 +125,26 @@ public class MatchdayController {
 
         MatchPreviewPreFlightResult pairingsPreFlight =
                 discordPostService.canPostMatchdayPairings(matchday, config);
+        MatchPreviewPreFlightResult schedulePreFlight =
+                discordPostService.canPostMatchdaySchedule(matchday, config);
 
-        DiscordPost matchdayPairingsPost = null;
-        if (matchdayAnnouncementActive) {
-            String announcementChannelId =
-                    discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl);
-            matchdayPairingsPost = discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
-                    announcementChannelId, DiscordPostType.MATCHDAY_PAIRINGS, matchday.getId())
-                    .orElse(null);
-        }
+        String announcementChannelId = matchdayAnnouncementActive
+                ? discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl)
+                : null;
+
+        DiscordPost matchdayPairingsPost = matchdayAnnouncementActive
+                ? discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
+                        announcementChannelId, DiscordPostType.MATCHDAY_PAIRINGS, matchday.getId())
+                        .orElse(null)
+                : null;
         boolean matchdayPairingsStale = matchdayPairingsPost != null
                 && standingsService.isMatchdayPairingsStale(matchday, matchdayPairingsPost);
 
-        MatchPreviewPreFlightResult schedulePreFlight =
-                discordPostService.canPostMatchdaySchedule(matchday, config);
-        DiscordPost matchdaySchedulePost = null;
-        if (matchdayAnnouncementActive) {
-            String announcementChannelId =
-                    discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl);
-            matchdaySchedulePost = discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
-                    announcementChannelId, DiscordPostType.MATCHDAY_SCHEDULE, matchday.getId())
-                    .orElse(null);
-        }
+        DiscordPost matchdaySchedulePost = matchdayAnnouncementActive
+                ? discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
+                        announcementChannelId, DiscordPostType.MATCHDAY_SCHEDULE, matchday.getId())
+                        .orElse(null)
+                : null;
         boolean matchdayScheduleStale = matchdaySchedulePost != null
                 && standingsService.isMatchdayScheduleStale(matchday, matchdaySchedulePost);
 

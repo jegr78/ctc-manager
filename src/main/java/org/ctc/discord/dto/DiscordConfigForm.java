@@ -12,7 +12,8 @@ import lombok.Setter;
 @Setter
 public class DiscordConfigForm {
 
-	private static final String WEBHOOK_REGEX = "^$|^https://discord\\.com/api/webhooks/\\d+/[A-Za-z0-9_-]+$";
+	private static final String WEBHOOK_REGEX =
+			"^$|^https://(?:discord|discordapp)\\.com(?:/api)?(?:/v\\d+)?/webhooks/\\d+/[A-Za-z0-9_-]+(?:\\?.*)?$";
 	private static final String WEBHOOK_MESSAGE = "Must be an empty string or a discord.com webhook URL";
 
 	@Pattern(regexp = DiscordSnowflake.PATTERN, message = DiscordSnowflake.MESSAGE)

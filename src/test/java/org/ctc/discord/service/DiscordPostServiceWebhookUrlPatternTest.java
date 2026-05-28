@@ -3,6 +3,11 @@ package org.ctc.discord.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+import java.util.List;
+import org.ctc.discord.dto.DiscordConfigForm;
 import org.junit.jupiter.api.Test;
 
 class DiscordPostServiceWebhookUrlPatternTest {
@@ -65,5 +70,30 @@ class DiscordPostServiceWebhookUrlPatternTest {
 		assertThatThrownBy(() -> DiscordPostService.parseWebhookUrl(
 				"https://discord.com/api/webhooks/abc/token"))
 				.isInstanceOf(IllegalArgumentException.class);
+	}
+
+	@Test
+	void givenFormAcceptedUrls_whenParsed_thenServiceAlsoAccepts() {
+		// regex parity: anything DiscordConfigForm validates as a webhook URL must also
+		// parse successfully via DiscordPostService.parseWebhookUrl
+		List<String> formAcceptedUrls = List.of(
+				"https://discord.com/api/webhooks/100/abc-token_XYZ",
+				"https://discordapp.com/api/webhooks/555/legacy-token",
+				"https://discord.com/api/v10/webhooks/9876/some-token",
+				"https://discord.com/api/webhooks/123/token?wait=true");
+
+		try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+			Validator validator = factory.getValidator();
+			for (String url : formAcceptedUrls) {
+				DiscordConfigForm form = new DiscordConfigForm();
+				form.setAnnouncementWebhookUrl(url);
+				assertThat(validator.validate(form))
+						.as("Form must accept %s", url)
+						.isEmpty();
+				DiscordPostService.WebhookCredentials creds = DiscordPostService.parseWebhookUrl(url);
+				assertThat(creds.id()).as("Parser must extract id from %s", url).isNotBlank();
+				assertThat(creds.token()).as("Parser must extract token from %s", url).isNotBlank();
+			}
+		}
 	}
 }

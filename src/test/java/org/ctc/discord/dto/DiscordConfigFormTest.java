@@ -144,4 +144,44 @@ class DiscordConfigFormTest {
 		// then
 		assertThat(violations).isEmpty();
 	}
+
+	@Test
+	void givenLegacyDiscordappWebhookUrl_whenValidate_thenNoViolation() {
+		// given — legacy discordapp.com is still served by Discord; parser accepts it, form must too
+		DiscordConfigForm form = new DiscordConfigForm();
+		form.setAnnouncementWebhookUrl("https://discordapp.com/api/webhooks/555/legacy-token");
+
+		// when
+		Set<ConstraintViolation<DiscordConfigForm>> violations = validator.validate(form);
+
+		// then
+		assertThat(violations).isEmpty();
+	}
+
+	@Test
+	void givenVersionedApiWebhookUrl_whenValidate_thenNoViolation() {
+		// given
+		DiscordConfigForm form = new DiscordConfigForm();
+		form.setAnnouncementWebhookUrl("https://discord.com/api/v10/webhooks/9876/some-token");
+
+		// when
+		Set<ConstraintViolation<DiscordConfigForm>> violations = validator.validate(form);
+
+		// then
+		assertThat(violations).isEmpty();
+	}
+
+	@Test
+	void givenWebhookUrlWithQueryString_whenValidate_thenNoViolation() {
+		// given
+		DiscordConfigForm form = new DiscordConfigForm();
+		form.setAnnouncementWebhookUrl("https://discord.com/api/webhooks/123/token?wait=true");
+
+		// when
+		Set<ConstraintViolation<DiscordConfigForm>> violations = validator.validate(form);
+
+		// then
+		assertThat(violations).isEmpty();
+	}
+
 }

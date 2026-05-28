@@ -130,6 +130,9 @@ public sealed interface DiscordPostRef
 		@Override
 		public void applyTo(DiscordPost row) {
 			row.setSeasonId(seasonId);
+			if (phaseId != null) {
+				row.setPhaseId(phaseId);
+			}
 		}
 
 		@Override

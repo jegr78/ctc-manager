@@ -46,7 +46,7 @@ class DiscordPostRefSeasonRefWidenedTest {
 	}
 
 	@Test
-	void givenSeasonRef_whenApplyTo_thenSetsSeasonIdOnly() {
+	void givenSeasonRefWithPhase_whenApplyTo_thenSetsBothSeasonIdAndPhaseId() {
 		UUID seasonId = UUID.randomUUID();
 		UUID phaseId = UUID.randomUUID();
 		DiscordPostRef.SeasonRef ref = new DiscordPostRef.SeasonRef(seasonId, phaseId);
@@ -55,6 +55,7 @@ class DiscordPostRefSeasonRefWidenedTest {
 		ref.applyTo(row);
 
 		verify(row).setSeasonId(seasonId);
+		verify(row).setPhaseId(phaseId);
 		verifyNoMoreInteractions(row);
 	}
 

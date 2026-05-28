@@ -655,15 +655,19 @@ public class DiscordPostService {
 		boolean hasName = name != null && !name.isBlank();
 		boolean hasLink = link != null && !link.isBlank();
 		if (hasName && hasLink) {
-			return "[" + name + "](" + link + ")";
+			return "[" + name + "](" + escapeMarkdownLinkUrl(link) + ")";
 		}
 		if (hasLink) {
-			return "[Watch Stream](" + link + ")";
+			return "[Watch Stream](" + escapeMarkdownLinkUrl(link) + ")";
 		}
 		if (hasName) {
 			return name;
 		}
 		return "_TBD_";
+	}
+
+	private static String escapeMarkdownLinkUrl(String url) {
+		return url.replace(")", "\\)");
 	}
 
 	private static String orTbd(String value) {
@@ -832,9 +836,6 @@ public class DiscordPostService {
 			row.setAttachmentsReplacedAt(now);
 		}
 		ref.applyTo(row);
-		if (ref instanceof DiscordPostRef.SeasonRef s && s.phaseId() != null) {
-			row.setPhaseId(s.phaseId());
-		}
 		DiscordPost saved = discordPostRepository.save(row);
 		log.info("Posted {} for ref {} (messageId={})", type, ref, saved.getMessageId());
 		return saved;
