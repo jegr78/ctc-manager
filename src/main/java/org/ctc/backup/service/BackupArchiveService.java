@@ -46,24 +46,24 @@ import static org.ctc.backup.service.BackupImportLimits.*;
  * <ol>
  *   <li>{@code manifest.json} — pretty-printed {@link BackupManifest}, schema-version 1.
  *       Manifest-first is the wire contract: partial-read consumers can validate the schema
- *       version BEFORE downloading the (potentially large) payload (RESEARCH §L-72.D-14).</li>
+ *       version BEFORE downloading the (potentially large) payload.</li>
  *   <li>{@code data/<slug>.json} — one entry per entity in {@link BackupSchema#getExportOrder()}.
  *       Each is a JSON array of MixIn-shaped entity rows produced by
  *       {@link BackupExportService#fetchAllForBackup(Class)}.</li>
  *   <li>{@code uploads/<rel>} — every {@link UploadEntry} returned by
  *       {@link BackupExportService#enumerateReferencedUploads()}, defensively skipping any
- *       relative path containing {@code ".."} (ZIP-slip-on-EXPORT defense, threat T-73-05).</li>
+ *       relative path containing {@code ".."} (ZIP-slip-on-EXPORT defense).</li>
  * </ol>
  *
  * <p>No JPA injection — repos belong to {@link BackupExportService} and are reached through
  * its public methods. However, the class is annotated {@code @Transactional(readOnly = true)}
  * so that the whole {@link #writeZip(OutputStream, Instant)} call runs inside a single
- * Hibernate session. This is non-negotiable: Plan 73-02 reduced
- * {@code SeasonRepository.findAllForBackup()}'s {@code @EntityGraph} to {@code {"cars"}} to
- * dodge {@code MultipleBagFetchException}, which means {@code season.getTracks()} must
- * materialize lazily during Jackson serialization. Without an open session, the export
- * throws {@code LazyInitializationException} the moment Jackson reaches the
- * {@code seasons.json} array (Wave 1 73-02 deviation rationale).
+ * Hibernate session. This is non-negotiable: {@code SeasonRepository.findAllForBackup()}'s
+ * {@code @EntityGraph} is reduced to {@code {"cars"}} to dodge
+ * {@code MultipleBagFetchException}, which means {@code season.getTracks()} must materialize
+ * lazily during Jackson serialization. Without an open session, the export throws
+ * {@code LazyInitializationException} the moment Jackson reaches the {@code seasons.json}
+ * array.
  *
  * <h2>Reader methods — manifest, counting, uploads extraction</h2>
  *
@@ -131,7 +131,7 @@ public class BackupArchiveService {
 		try (ZipOutputStream zip = new ZipOutputStream(out)) {
 			zip.setLevel(Deflater.DEFAULT_COMPRESSION);
 
-			// Step 1 — manifest.json must be entry #0 (wire contract D-14).
+			// Step 1 — manifest.json must be entry #0 (wire contract).
 			Map<String, Long> tableCounts = backupExportService.countRowsPerTable();
 			BackupManifest manifest = new BackupManifest(
 					BackupSchema.SCHEMA_VERSION, appVersion, exportDate, tableCounts);
@@ -211,10 +211,9 @@ public class BackupArchiveService {
 	 *
 	 * <p><b>Hardening invariants (per entry):</b>
 	 * <ul>
-	 *   <li>ZIP-Slip defense — entry name must not escape the ZIP's parent directory
-	 *       (D-11, SECU-01).</li>
+	 *   <li>ZIP-Slip defense — entry name must not escape the ZIP's parent directory.</li>
 	 *   <li>Per-entry inflate cap — entry may not expand beyond
-	 *       {@code MAX_ENTRY_BYTES} (50 MB) when read (D-12, SECU-02).</li>
+	 *       {@code MAX_ENTRY_BYTES} (50 MB) when read.</li>
 	 *   <li>Total inflate cap — cumulative inflated bytes across all entries must not
 	 *       exceed {@code MAX_TOTAL_BYTES} (500 MB).</li>
 	 *   <li>Entry-count cap — archive must not contain more than {@code MAX_ENTRIES}
@@ -486,10 +485,10 @@ public class BackupArchiveService {
 				// Validate the stripped path resolves inside destDir (ZIP-Slip defense).
 				PathTraversalGuard.assertWithin(absoluteDest, relativePath);
 
-				// WR-07: pre-check the entry-count cap BEFORE materializing the file so a
-				// hostile ZIP with MAX_ENTRIES+1 entries does not bloat the disk with the
-				// first MAX_ENTRIES files before the post-check fires. The total-byte cap
-				// remains fundamentally post-write (we only learn inflated size by inflating);
+				// Pre-check the entry-count cap BEFORE materializing the file so a hostile
+				// ZIP with MAX_ENTRIES+1 entries does not bloat the disk with the first
+				// MAX_ENTRIES files before the post-check fires. The total-byte cap remains
+				// fundamentally post-write (we only learn inflated size by inflating);
 				// LimitedInputStream's per-entry cap (50 MB) bounds the per-write damage.
 				if (entryCount > MAX_ENTRIES) {
 					throw new BackupArchiveException(Reason.TOO_MANY_ENTRIES,

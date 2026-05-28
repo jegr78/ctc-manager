@@ -26,21 +26,21 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Owns three responsibilities:
  * <ol>
  *   <li>{@link #countRowsPerTable()} — fast row-count probe to populate
- *       {@code manifest.table_counts} BEFORE serializing payload (RESEARCH §L-5
- *       "count first, serialize second").</li>
+ *       {@code manifest.table_counts} BEFORE serializing payload (count first,
+ *       serialize second).</li>
  *   <li>{@link #fetchAllForBackup(Class)} — per-entity dispatcher that delegates to
  *       the matching {@code findAllForBackup()} repository method on each repository
  *       enumerated by {@link BackupSchema#getExportOrder()}.</li>
  *   <li>{@link #enumerateReferencedUploads()} — walks Team / SeasonTeam / Car / Track /
  *       RaceAttachment(type=FILE) rows, collects the referenced upload-path URLs,
  *       deduplicates them via {@link LinkedHashSet}, and filters out orphan paths
- *       that do not exist on disk (RESEARCH §Streaming ZIP Architecture Pattern 4).</li>
+ *       that do not exist on disk.</li>
  * </ol>
  *
- * <p>Class-level {@code @Transactional(readOnly = true)} is non-negotiable: Plan 73-02
- * could not include {@code Season.tracks} in {@code SeasonRepository.findAllForBackup()}
- * because Hibernate rejects multi-bag fetches ({@code MultipleBagFetchException}).
- * The {@code tracks} collection must therefore materialize lazily inside the still-open
+ * <p>Class-level {@code @Transactional(readOnly = true)} is non-negotiable: Hibernate
+ * rejects multi-bag fetches ({@code MultipleBagFetchException}), so {@code Season.tracks}
+ * cannot be fetched eagerly inside {@code SeasonRepository.findAllForBackup()}. The
+ * {@code tracks} collection must therefore materialize lazily inside the still-open
  * Hibernate session that this annotation provides.
  *
  * <p>Architectural note: this service exposes no HTTP-level state; the public methods
@@ -198,8 +198,8 @@ public class BackupExportService {
 	/**
 	 * Dispatches to the right repository's {@code findAllForBackup()} method for the
 	 * given entity class. Throws {@link IllegalArgumentException} if no repository is
-	 * registered — should never happen in production because the Phase 72 export order
-	 * is the contract.
+	 * registered — should never happen in production because
+	 * {@link BackupSchema#getExportOrder()} is the contract.
 	 */
 	public List<?> fetchAllForBackup(Class<?> entityClass) {
 		JpaRepository<?, ?> repo = lookupRepository(entityClass);
@@ -210,8 +210,7 @@ public class BackupExportService {
 		} catch (NoSuchMethodException ex) {
 			throw new IllegalStateException(
 					"Repository for " + entityClass.getSimpleName()
-							+ " does not declare findAllForBackup() — "
-							+ "Plan 73-02 contract violation", ex);
+							+ " does not declare findAllForBackup() — backup-export contract violation", ex);
 		} catch (ReflectiveOperationException ex) {
 			Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
 			String context = "Reflective invocation of findAllForBackup() on "

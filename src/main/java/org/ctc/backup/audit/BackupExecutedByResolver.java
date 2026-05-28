@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 /**
  * Shared {@code executedBy} resolver for audit rows.
  *
- * <p>Encapsulates the 4-branch resolution logic previously duplicated in
- * {@link BackupImportService} and {@link DataImportAuditService} (WR-01).
+ * <p>Encapsulates the 4-branch resolution logic shared by {@link BackupImportService}
+ * and {@link DataImportAuditService}.
  */
 @Slf4j
 @Component

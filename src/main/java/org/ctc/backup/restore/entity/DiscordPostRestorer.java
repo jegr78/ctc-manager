@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
  * (not {@code @ManyToOne}), so the JPA-Metamodel topo-sort cannot detect the dependency.
  * {@link org.ctc.backup.schema.BackupSchema} compensates by pinning {@code discord_post}
  * to the end of the export order — guaranteeing every parent row exists before the
- * restorer runs. Wipe-time nullification is handled by the V12/V14 DB-level
+ * restorer runs. Wipe-time nullification is handled by the DB-level
  * {@code ON DELETE SET NULL} cascade.
  *
  * <p>Auditing bypass: written via {@link JdbcTemplate#batchUpdate} so

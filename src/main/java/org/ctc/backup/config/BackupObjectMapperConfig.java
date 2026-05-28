@@ -32,8 +32,8 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
  *       {@code JavaTimeModule} registered).</li>
  * </ol>
  *
- * <p>See Phase 72 RESEARCH §Pitfall P-2 for the verified GitHub-issue trail
- * ({@code spring-projects/spring-boot#47379, #22403, #42598}).
+ * <p>Verified GitHub-issue trail for the Spring Boot 4 Jackson-2 compatibility shim:
+ * {@code spring-projects/spring-boot#47379, #22403, #42598}.
  */
 @Configuration
 public class BackupObjectMapperConfig {
@@ -44,9 +44,8 @@ public class BackupObjectMapperConfig {
      * {@link Jackson2ObjectMapperBuilder#json()} factory rather than autowiring a builder
      * bean — Spring Boot 4 does NOT expose {@code Jackson2ObjectMapperBuilder} as a bean
      * because it has migrated the default REST stack to Jackson 3 ({@code tools.jackson}),
-     * keeping Jackson 2 only as a transitive compatibility layer (RESEARCH §A2 risk
-     * materialised in Phase 72 / Plan 03 verification). Marked {@code @Primary} so
-     * admin REST/AJAX MVC paths still resolve unqualified {@code @Autowired ObjectMapper}
+     * keeping Jackson 2 only as a transitive compatibility layer. Marked {@code @Primary}
+     * so admin REST/AJAX MVC paths still resolve unqualified {@code @Autowired ObjectMapper}
      * to this bean.
      */
     @Bean
