@@ -86,7 +86,7 @@ public class Gt7SyncService {
 		int carsImported = 0;
 		int tracksImported = 0;
 
-		// Phase 1: Create all car entities (fast, DB only)
+		// Step 1: persist all car entities (fast, DB only).
 		var carsToDownload = new ArrayList<CarImageTask>();
 		if (!selectedCarGt7Ids.isEmpty()) {
 			var scrapedCars = scraperService.scrapeCars();
@@ -107,7 +107,7 @@ public class Gt7SyncService {
 			}
 		}
 
-		// Phase 2: Create all track entities (fast, DB only)
+		// Step 2: persist all track entities (fast, DB only).
 		var tracksToDownload = new ArrayList<TrackImageTask>();
 		if (!selectedTrackNames.isEmpty()) {
 			var scrapedTracks = scraperService.scrapeTracks(true);
@@ -128,7 +128,7 @@ public class Gt7SyncService {
 			}
 		}
 
-		// Phase 3: Download images in parallel (IO only), then update DB on main thread
+		// Step 3: download images in parallel (IO only), then switch back to the main thread for DB writes.
 		var carImageResults = Collections.synchronizedList(new ArrayList<ImageResult<CarImageTask>>());
 		var trackImageResults = Collections.synchronizedList(new ArrayList<ImageResult<TrackImageTask>>());
 

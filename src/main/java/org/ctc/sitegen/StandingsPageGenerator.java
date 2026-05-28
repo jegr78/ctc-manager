@@ -131,7 +131,7 @@ public class StandingsPageGenerator {
                     "team/" + siteSlugger.slugify(s.getTeam().getShortName()) + ".html");
         }
 
-        // Phase tab row (visible when ≥2 phases)
+        // Tab row for season phases (visible when ≥2 phases).
         List<PhaseTabView> phaseTabs = showPhaseTabs
                 ? buildPhaseTabs(allPhases, phase.getPhaseType(), isLegacyView)
                 : List.of();

@@ -95,7 +95,7 @@ public class StandingsViewService {
 					List.of(), null, false, false, false, false);
 		}
 
-		// Phase resolved — eager-fetch groups inside this readOnly transaction.
+		// Eager-fetch groups now that the phase is resolved (inside the readOnly transaction).
 		var groups = List.copyOf(resolvedPhase.getGroups());
 		boolean isGroupsLayout = resolvedPhase.getLayout() == PhaseLayout.GROUPS;
 		boolean groupSelected = group != null;

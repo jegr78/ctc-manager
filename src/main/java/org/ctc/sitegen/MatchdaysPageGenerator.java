@@ -109,7 +109,7 @@ public class MatchdaysPageGenerator {
         var season = ctx.season();
         boolean isGroupsLayout = currentPhase.getLayout() == PhaseLayout.GROUPS;
 
-        // Phase tab row (visible when ≥2 phases)
+        // Tab row for season phases (visible when ≥2 phases).
         List<PhaseTabView> phaseTabs = showPhaseTabs
                 ? buildPhaseTabs(allPhases, currentPhase.getPhaseType(), isLegacyView)
                 : List.of();
