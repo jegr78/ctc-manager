@@ -22,6 +22,8 @@ import org.ctc.backup.exception.BackupImportException;
 import org.ctc.backup.exception.RestoreFailureSimulatedException;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
+import javax.sql.DataSource;
+import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -128,17 +130,35 @@ class BackupImportRollbackIT {
     Path importBackupsDir;
     Path stagingDir;
 
+    @Autowired
+    private DataSource dataSource;
+
     Map<String, Long> preImportCounts;
     Set<Path> preImportUploadsFiles;
     Set<Path> preImportUploadsNewDirs;
 
     @BeforeAll
     void seedFixture() throws IOException {
-        // REVISION-iteration-1 (B1): testDataService.seedSaison2023() does NOT exist. The
-        // single entry point seed() loads the full dev fixture (Saison 2023 + 2024 +
-        // 2024-Empty + 2026 per TestDataService.java:60-72 Javadoc). Per memory
+        // The single entry point seed() loads the full dev fixture (Saison 2023 + 2024 +
+        // 2024-Empty + 2026 per TestDataService.java Javadoc). Per memory
         // feedback_test_data_isolation.md, Saison 2023 IS the dev fixture per ROADMAP-locked
         // exception; per-entity row-count parity assertions reflect ALL seeded seasons.
+        //
+        // Flyway clean+migrate guarantees a fresh DB regardless of preceding test classes
+        // seeding the shared H2 in-memory DB (DB_CLOSE_DELAY=-1 keeps it alive across
+        // Spring context reloads); without it, testDataService.seed() short-circuits when
+        // a previous IT in the same JVM partially populated the shared H2.
+        Flyway.configure()
+                .dataSource(dataSource)
+                .cleanDisabled(false)
+                .locations("classpath:db/migration")
+                .load()
+                .clean();
+        Flyway.configure()
+                .dataSource(dataSource)
+                .locations("classpath:db/migration")
+                .load()
+                .migrate();
         testDataService.seed();
 
         uploadsDir = Paths.get(uploadDirRaw).toAbsolutePath().normalize();
