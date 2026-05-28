@@ -24,17 +24,20 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - **Admin Features:** `/admin/backup` page with streamed ZIP export (CSRF-protected `POST /admin/backup/export`, `StreamingResponseBody`, ISO-instant filename) + manifest-first preview + replace-all import (`@Transactional` wipe + `JdbcTemplate.batchUpdate` restore bypassing `AuditingEntityListener` + post-commit upload-tree stage-and-rename); concurrent-import `ReentrantLock` + persistent yellow read-only banner + `ImportLockedWriteRejector` HandlerInterceptor + synchronous auto-backup-before-import safety net; 24h recovery retention at `data/.import-backups/<ts>/`
 - **Docker / CI:** Both Dockerfile stages pinned to `eclipse-temurin:25-{jdk,jre}-noble` (Playwright 1.59.0 compatibility); `dockerfile-noble-pin-guard` CI job (whitelist-on-suffix); full `docker build .` on every PR + push to master; ci.yml concurrency block + `--no-transfer-progress`; Surefire `forkCount=2C` + Failsafe default-it `forkCount=1C` + `excludedGroups=flaky` quarantine
 
-## Next Milestone Goals
+## Current Milestone: v1.14 Team Card Redesign & Data Safety
 
-v1.13 shipped 2026-05-28. The next milestone (v1.14) will be defined via `/gsd-new-milestone`. Carry-forward candidates surfaced during v1.13 close:
+**Goal:** Visual-Redesign der per Playwright generierten Team-Card-PNGs gemäß externem Claude-Design-Handoff und Wiederherstellung der `local`-Profile-Daten-Isolation gegen den v1.11-Drift, der `DevDataSeeder` + `TestDataService` versehentlich auch im `local`-Profil aktiviert hat.
 
-- **DISC-FUTURE-01** — Inbound Discord interaction (slash commands, polls, reaction reads) requires a deployment model change (always-online endpoint instead of outbound webhooks).
-- **DISC-FUTURE-02** — Auto-trigger pipeline (race-save → post) deferred from v1.13 in favor of operator-control; revisit once edit-confidence is established.
-- **DISC-FUTURE-03** — Settings-form migration into the admin app.
-- **DISC-FUTURE-04** — Multi-guild support.
-- **DISC-FUTURE-05** — Discord-notification webhook for the public site.
+**Target features:**
+
+- **Team Card Layout + Visual Redesign — Implementation from Handoff.** Setzt das HTML/CSS-Spec aus der parallel laufenden Claude-Design-Session in `TeamCardService` + Thymeleaf-Template + `admin.css` um. Discuss/Plan/Execute startet erst nach Handoff-Übergabe vom User; bis dahin in der ROADMAP als „awaiting external handoff" markiert.
+- **Data-Safety-Lockdown.** `DevDataSeeder` + `TestDataService` zurück auf `@Profile("dev")` (v1.11 hatte sie auf `@Profile({"dev","local"})` erweitert für „live-MariaDB UAT" — der Mechanismus war unsicher gegen die echte MariaDB) plus Regressions-IT, der bei `@ActiveProfiles("local")` die Abwesenheit beider Beans im Spring-Context asserted und damit jeden Re-Drift künftig direkt rot wirft.
+
+**Out of scope for v1.14 (deferred to a later milestone):**
+
+- **DISC-FUTURE-01..05** — Inbound Discord interaction, auto-trigger pipeline, settings-form migration, multi-guild support, public-site notification webhook (carry-forwards aus v1.13).
 - **String `.isEmpty()` audit** — ~10 callsites with different semantics from `.isBlank()`; case-by-case decision per Phase 103 CONTEXT D-06.
-- **Cross-milestone operator-action UATs from prior milestones** — UAT-02 legacy season smoke, QUAL-02 local-profile MariaDB smoke, UX-01 driver-import badge screenshots.
+- **Cross-milestone operator-action UATs** — UAT-02 legacy season smoke, QUAL-02 local-profile MariaDB smoke, UX-01 driver-import badge screenshots (cross-milestone debt, may cross boundaries per CLAUDE.md "In-Milestone Polish").
 
 ## Requirements
 
@@ -337,4 +340,4 @@ Phase 101 (2026-05-26) raised the scope to 26 entities by extending the package-
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-28 after v1.13 milestone — Discord Integration & Carry-Forwards (Phases 92-103, 43 plans, 399 commits on branch). v1.13 grew from the originally-planned 7 phases (92-98) to 12 phases (92-103) as mid-milestone audit surfaced (a) the need for a pre-merge polish phase (99), (b) channel-naming-scheme refinement (100), (c) backup wire-contract extension for Discord schema (101), (d) code-review-fix closeout (102), and (e) StringUtils-hasText() readability sweep (103). Discord integration shipped end-to-end: hybrid Bot + Webhook architecture, 11 post types with uniform Webhook-PATCH edit-path, match-channel lifecycle with archive-category resolver, forum-thread linking for race-results + standings, native Discord-timestamp rendering, convention-based emoji resolution, new `ProvisionalScoresGraphicService` + `StandingsGraphicService`, 9 new Flyway migrations (V8-V16). Carry-forwards from v1.12 audit closed in Phase 92. Final state: 2393 tests / JaCoCo 89.43 % / 0 SpotBugs findings / 0 CodeQL HIGH+ alerts. PR #130 ready for squash-merge with subject `feat(v1.13): discord integration & carry-forwards` → release CI tags v1.13.0.*
+*Last updated: 2026-05-29 — v1.14 milestone started (Team Card Redesign & Data Safety) via `/gsd-new-milestone` on branch `gsd/v1.14-team-card-redesign`. Phase numbering continues from Phase 104; Phase 105 (Team Card Implementation) awaits external Claude-Design handoff before its discuss/plan/execute cycle starts. Previous entry: 2026-05-28 after v1.13 milestone — Discord Integration & Carry-Forwards (Phases 92-103, 43 plans, 399 commits on branch). v1.13 grew from the originally-planned 7 phases (92-98) to 12 phases (92-103) as mid-milestone audit surfaced (a) the need for a pre-merge polish phase (99), (b) channel-naming-scheme refinement (100), (c) backup wire-contract extension for Discord schema (101), (d) code-review-fix closeout (102), and (e) StringUtils-hasText() readability sweep (103). Discord integration shipped end-to-end: hybrid Bot + Webhook architecture, 11 post types with uniform Webhook-PATCH edit-path, match-channel lifecycle with archive-category resolver, forum-thread linking for race-results + standings, native Discord-timestamp rendering, convention-based emoji resolution, new `ProvisionalScoresGraphicService` + `StandingsGraphicService`, 9 new Flyway migrations (V8-V16). Carry-forwards from v1.12 audit closed in Phase 92. Final state: 2393 tests / JaCoCo 89.43 % / 0 SpotBugs findings / 0 CodeQL HIGH+ alerts. PR #130 ready for squash-merge with subject `feat(v1.13): discord integration & carry-forwards` → release CI tags v1.13.0.*

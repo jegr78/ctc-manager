@@ -1,35 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.13
-milestone_name: Discord Integration & Carry-Forwards
-status: completed
-stopped_at: Phase 103 context gathered
-last_updated: "2026-05-28T20:26:58.605Z"
-last_activity: 2026-05-28 — Milestone v1.13 completed and archived
+milestone: v1.14
+milestone_name: Team Card Redesign & Data Safety
+status: planning
+last_updated: "2026-05-28T22:27:07.010Z"
+last_activity: 2026-05-28
 progress:
-  total_phases: 12
-  completed_phases: 12
-  total_plans: 46
-  completed_plans: 47
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-28 after v1.13 milestone)
+See: .planning/PROJECT.md (updated 2026-05-29 for v1.14 milestone start)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Awaiting next milestone — v1.14 to be defined via `/gsd-new-milestone`
+**Current focus:** v1.14 Team Card Redesign & Data Safety — defining requirements before phase planning.
 
 ## Current Position
 
-Phase: Milestone v1.13 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-28 — Milestone v1.13 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-28 — Milestone v1.14 started
 
 ### Prior position (Phase 101 close)
 
@@ -55,9 +54,14 @@ Last activity: 2026-05-26 -- Phase 101 marked complete (end-of-phase verify -Pe2
 
 ## Active Milestone
 
-_None — v1.13 archived 2026-05-28. Next milestone (v1.14) to be defined via `/gsd-new-milestone`._
+**v1.14 Team Card Redesign & Data Safety** — started 2026-05-29 on branch `gsd/v1.14-team-card-redesign` (branched from `origin/master` `b0b90696`; pom already at `1.14.0-SNAPSHOT` from post-v1.13 release CI).
 
-PR #130 is queued for squash-merge to `master` with subject `feat(v1.13): discord integration & carry-forwards` per CLAUDE.md "Git Workflow" + `docs/operations/release-runbook.md § 6`. Release CI tags `v1.13.0`, publishes GitHub Release + `ghcr.io/jegr78/ctc-manager:1.13.0` + `:latest`; no local `git tag` per CLAUDE.md "No Local Git Tags".
+Two pillars:
+
+1. **Data-Safety-Lockdown** — sofort startbar; `DevDataSeeder` + `TestDataService` zurück auf `@Profile("dev")` (v1.11 `@Profile({"dev","local"})` Drift) plus Regressions-IT, der den Re-Drift fängt. Fix bereits vorbereitet in `stash@{0}` (`v1.14-phase1-seed: scope DevDataSeeder + TestDataService to @Profile('dev')`).
+2. **Team Card Redesign — Implementation from Handoff** — wartet auf externes Claude-Design-Spec (HTML/CSS); Discuss/Plan/Execute startet sobald der User den Handoff hier einbringt.
+
+v1.13 PR #130 squash-merged to master 2026-05-28; release CI tagged `v1.13.0` und bumped pom auf 1.14.0-SNAPSHOT (`b0b90696`).
 
 ## Deferred Items
 
