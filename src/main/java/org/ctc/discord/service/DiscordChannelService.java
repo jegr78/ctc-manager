@@ -85,7 +85,18 @@ public class DiscordChannelService {
 		ChannelCreateRequest req = new ChannelCreateRequest(
 				name, CHANNEL_TYPE_TEXT, cfg.getCurrentMatchCategoryId(), List.copyOf(overwrites));
 		Channel channel = restClient.createChannel(guildId, req);
-		Webhook webhook = restClient.createWebhook(channel.id(), WEBHOOK_NAME);
+		Webhook webhook;
+		try {
+			webhook = restClient.createWebhook(channel.id(), WEBHOOK_NAME);
+		} catch (DiscordApiException webhookEx) {
+			try {
+				restClient.deleteChannel(channel.id());
+			} catch (DiscordApiException cleanupEx) {
+				log.warn("Webhook-fail cleanup DELETE failed for channel {}: {}",
+						channel.id(), cleanupEx.toString());
+			}
+			throw webhookEx;
+		}
 
 		try {
 			assertPermissionAudit(channel.id(), teamRoleIds, botUserId);
