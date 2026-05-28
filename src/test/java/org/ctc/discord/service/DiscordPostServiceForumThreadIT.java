@@ -166,6 +166,24 @@ class DiscordPostServiceForumThreadIT {
 	}
 
 	@Test
+	void givenArchivedThreadStaysArchived_whenPostRaceResultToForumThread_thenThrowsBusinessRuleException() throws Exception {
+		String webhookPath = "/webhooks/799/abc";
+		Race race = seedRaceWithResults("BX", webhookPath);
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/" + THREAD_ID))
+				.willReturn(okJson("{\"id\":\"" + THREAD_ID + "\",\"name\":\"t\",\"type\":11,"
+						+ "\"thread_metadata\":{\"archived\":true}}")));
+		wm.stubFor(patch(urlPathEqualTo("/api/v10/channels/" + THREAD_ID))
+				.willReturn(okJson("{\"id\":\"" + THREAD_ID + "\",\"name\":\"t\",\"type\":11,"
+						+ "\"thread_metadata\":{\"archived\":true}}")));
+
+		assertThatThrownBy(() -> service.postRaceResultToForumThread(race))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("still archived");
+
+		wm.verify(0, postRequestedFor(urlPathEqualTo(webhookPath)));
+	}
+
+	@Test
 	void givenNotArchivedThread_whenPostRaceResultToForumThread_thenNoPatchIssued() throws Exception {
 		String webhookPath = "/webhooks/702/abc";
 		Race race = seedRaceWithResults("C", webhookPath);

@@ -4,10 +4,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.dto.Role;
@@ -21,17 +20,15 @@ public class DiscordRoleCache {
 
 	private static final Duration TTL = Duration.ofMinutes(60);
 
-	private final Map<String, CachedEntry<Role>> store = new ConcurrentHashMap<>();
+	private volatile Map<String, CachedEntry<Role>> store = Map.of();
 	private final Clock clock;
 
+	/** Returns a snapshot of all non-expired role entries from the current store reference. */
 	public Map<String, Role> snapshot() {
-		Map<String, Role> valid = new LinkedHashMap<>();
-		store.forEach((roleId, entry) -> {
-			if (entry.isValid(clock)) {
-				valid.put(roleId, entry.value());
-			}
-		});
-		return Map.copyOf(valid);
+		Map<String, CachedEntry<Role>> current = store;
+		return current.entrySet().stream()
+				.filter(e -> e.getValue().isValid(clock))
+				.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, e -> e.getValue().value()));
 	}
 
 	public Role get(String roleId) {
@@ -48,8 +45,7 @@ public class DiscordRoleCache {
 		for (Role role : roles) {
 			next.put(role.id(), new CachedEntry<>(role, expiry));
 		}
-		store.putAll(next);
-		store.keySet().retainAll(next.keySet());
+		this.store = Map.copyOf(next);
 		log.debug("Discord role cache refreshed with {} entries", next.size());
 		return next.size();
 	}

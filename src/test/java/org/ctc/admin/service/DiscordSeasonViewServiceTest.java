@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -104,6 +106,38 @@ class DiscordSeasonViewServiceTest {
 		assertThat(model.get("standingsThreadOptions")).isEqualTo(List.<Thread>of());
 		assertThat(model.get("linkedRaceResultsThread")).isNull();
 		assertThat(model.get("linkedStandingsThread")).isNull();
+	}
+
+	@Test
+	void givenAnyState_whenBuildDiscordIntegrationModel_thenNoDiscordPostWrites() throws Exception {
+		DiscordGlobalConfigService configService = mock(DiscordGlobalConfigService.class);
+		DiscordForumService forumService = mock(DiscordForumService.class);
+		DiscordPostService postService = mock(DiscordPostService.class);
+		DiscordPostRepository postRepository = mock(DiscordPostRepository.class);
+		SeasonManagementService seasonManagementService = mock(SeasonManagementService.class);
+		SeasonPhaseService seasonPhaseService = mock(SeasonPhaseService.class);
+		StandingsService standingsService = mock(StandingsService.class);
+
+		DiscordSeasonViewService service = new DiscordSeasonViewService(
+				configService, forumService, postService, postRepository,
+				seasonManagementService, seasonPhaseService, standingsService);
+
+		UUID seasonId = UUID.randomUUID();
+		Season season = new Season("Test");
+		season.setId(seasonId);
+		when(seasonManagementService.findById(seasonId)).thenReturn(season);
+		DiscordGlobalConfig config = new DiscordGlobalConfig();
+		config.setRaceResultsForumChannelId("forum-rr");
+		config.setStandingsForumChannelId("forum-st");
+		when(configService.getOrInitialize()).thenReturn(config);
+		when(forumService.listThreads(anyString())).thenReturn(List.of());
+		when(seasonPhaseService.findAllPhases(seasonId)).thenReturn(List.of());
+		when(postService.canPostStandings(any(), any())).thenReturn(new MatchPreviewPreFlightResult(true, null));
+		when(postService.resolveAnnouncementChannelId(anyString())).thenReturn("chan-1");
+
+		service.buildDiscordIntegrationModel(seasonId);
+
+		verify(postRepository, never()).save(any());
 	}
 
 	@Test

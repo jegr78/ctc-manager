@@ -2,7 +2,7 @@
 phase: 102-code-review-fixes
 plan: 02
 type: summary
-status: ready-for-review
+status: review-clean
 ---
 
 # Plan 102-02 — Warning Fixes + Controller-Thin Refactors — Summary
@@ -206,6 +206,44 @@ comment-pollution sweep.
 - **`./mvnw clean verify -Pe2e`** intentionally deferred to Plan 102-04
   per CONTEXT D-11.
 
+## Post-review fold-back — 2 critical + 11 warning + 8 info findings closed
+
+Code-review of the post-regression tree (`102-02-REVIEW.md`) surfaced 2 CR + 11 WR + 8 IN findings. Per user direction "ALL Code Review Funde beheben, nichts übergangen", all 21 were folded back into Plan 102-02 — no deferrals.
+
+- **CR-01 — WR-thin-3 closed for real.** `MatchdayController.populateMatchdayDiscordModel` (75 lines) and its 4 inline `standingsService.is*Stale(...)` calls extracted to new admin-layer view service `org.ctc.admin.service.DiscordMatchdayViewService.buildMatchdayDiscordModel(Matchday)`. The controller's `detail()` GET is now 12 lines of model population (well under the ≤20 plan criterion). `snapshotMatchdayStaleness` is now invoked from the production path (the view service), no longer dead code. Regression coverage: `MatchdayControllerPostEndpointsIT.givenThreadAndWebhookConfigured_whenDetailGet_thenModelHasDiscordEnrichment` exercises the wiring.
+
+- **CR-02 — Legacy STANDINGS phase_id backfill moved to Flyway V16.** New migration `V16__backfill_standings_phase_id.sql` runs once at startup and back-fills every legacy `discord_post` STANDINGS row whose `phase_id IS NULL` to the season's REGULAR phase. `DiscordSeasonViewService.lookupPhaseScopedStandings` is now a pure read, no longer writes during GET-render. New unit test `givenAnyState_whenBuildDiscordIntegrationModel_thenNoDiscordPostWrites` asserts zero `discordPostRepository.save(...)` calls on the happy path.
+
+- **WR-01 / WR-02 / IN-02** — unused imports dropped from `MatchdayController`, `SeasonController`, and the same-package `DiscordEmojiCache` import removed from `DiscordDevSeeder`.
+
+- **WR-03** — `ScoringService.recomputeMatchScoresFromAllLegs` now mirrors `aggregateMatchScores`' playoff branch (`PlayoffMatchup` recomputed via `raceRepository.findByPlayoffMatchupId`). New test `givenClearedPlayoffRace_whenRecomputeMatchScoresFromAllLegs_thenPlayoffMatchupScoresRecomputedFromRemainingLegs`.
+
+- **WR-04 / WR-08 / IN-03** — `DiscordRoleCache` now uses a `volatile Map<String, CachedEntry<Role>>` reference (true atomic swap; closes both no-roles and stale-roles windows). `snapshot()` drops the intermediate `LinkedHashMap` and streams straight to `Collectors.toUnmodifiableMap`; one-line Javadoc added. `refresh(List<Role>)` is now a single volatile write.
+
+- **WR-05** — `MatchService.buildMatchDetailModel` guards the 3 `matchHas*` preflight calls behind `match.getDiscordChannelId() != null`. Matches without a Discord channel no longer trigger per-race lineup queries. New test `givenMatchWithoutDiscordChannel_whenBuildMatchDetailModel_thenPreflightCallsSkippedAndFlagsFalse`.
+
+- **WR-06** — `DiscordPostService.unarchiveIfArchived` now throws `BusinessRuleException("Forum thread {id} is still archived…")` instead of proceeding with the post attempt when Discord still reports `archived=true` after the PATCH. New IT case `givenArchivedThreadStaysArchived_whenPostRaceResultToForumThread_thenThrowsBusinessRuleException`.
+
+- **WR-07** — `DiscordChannelService.parseAllow` now catches `NumberFormatException`, logs a warning, and returns `0L` (fail-closed). New IT case `givenFetchChannelReturnsOverwriteWithNonNumericAllow_whenAudit_thenTreatedAsZeroNotThrown`.
+
+- **WR-09** — `DiscordSeasonViewService` disabled-branch sentinel maps collapsed into a single iteration: `channelId` is `null` when disabled, `lookupPhaseScopedStandings` is skipped, both maps fill via the same loop.
+
+- **WR-10** — Covered by CR-02 move. V16 migration handles every season with a REGULAR phase, not just one phase type at request time.
+
+- **WR-11 + IN-04** — `ScoringService` — the orphaned `aggregateMatchScores` Javadoc now sits directly above the method it documents; `recomputeMatchScoresFromAllLegs` keeps its own contract Javadoc. `MatchService.buildMatchDetailModel` switched `LinkedHashMap` → `HashMap` (no consumer depends on iteration order; Spring `addAllAttributes` uses its own `LinkedHashMap` internally).
+
+- **IN-01** — `CsvImportControllerExceptionTest` Javadoc: `T-91-02-IL invariant` → `typed-catch info-leak invariant`.
+
+- **IN-05** — `DiscordPostService.escapeMarkdownLinkUrl` now escapes `)`, `>`, and `<` per Discord markdown spec; visibility relaxed to package-private. New unit test `DiscordPostServiceEscapeMarkdownLinkUrlTest`.
+
+- **IN-06** — `BackupSchema.pinFkEntitiesLast` visibility relaxed to package-private; new unit test `BackupSchemaPinFkEntitiesLastTest` exercises a synthetic 2-entity FK tail set + a no-match case.
+
+- **IN-07** — `BackupArchiveService.openHardened` renamed to `openZipInputStream` (the original name promised hardening the method doesn't perform; per-entry guards live in `assertEntrySafe`). All 4 call sites updated.
+
+- **IN-08** — `BackupExportService.lookupRepository` error message now appends the sorted list of registered entity simple names, so the operator can see at a glance which entity is missing.
+
+**Verification:** `./mvnw clean verify` exit 0 — Surefire 1293 / 0 failures / 0 errors; Failsafe 491 / 0 / 0; JaCoCo 88% instruction coverage (above the 82% gate); SpotBugs clean.
+
 ## Inadvertent comment-marker pollution + cleanup
 
 Tasks 5-7 introduced 10 WR-/Phase-marker comments in test files as
@@ -227,7 +265,8 @@ should consume the 64-file diff.)
 
 ## Acceptance gate
 
-Before SUMMARY commit lands, the orchestrator runs
-`/gsd-code-review 102 --files=<102-02-files>` per CONTEXT D-04 on the
-**post-regression** tree. Plan 102-02 close-out unblocks Plan 102-03
-info-sweep.
+Orchestrator-level `/gsd-code-review 102 --plan=02` ran on the
+post-regression tree and produced `102-02-REVIEW.md` (2 critical + 11
+warnings + 8 info). All 21 findings were folded back into Plan 102-02
+in a follow-up commit; verify gate passed. Plan 102-02 closeout unblocks
+Plan 102-03 info-sweep.

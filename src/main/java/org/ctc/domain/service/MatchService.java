@@ -3,7 +3,7 @@ package org.ctc.domain.service;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -81,8 +81,9 @@ public class MatchService {
 		MatchDetailData data = getDetailData(id);
 		Match match = data.match();
 		String awayShort = match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "Bye";
+		boolean channelLinked = match.getDiscordChannelId() != null;
 
-		Map<String, Object> model = new LinkedHashMap<>();
+		Map<String, Object> model = new HashMap<>();
 		model.put("match", match);
 		model.put("archiveCategories", data.archiveCategories());
 		model.put("defaultSelectionId", data.defaultSelectionId());
@@ -92,9 +93,12 @@ public class MatchService {
 		model.put("settingsPost", findMatchPost(match, DiscordPostType.SETTINGS));
 		model.put("lineupsPost", findMatchPost(match, DiscordPostType.LINEUPS));
 		model.put("provisionalPost", findMatchPost(match, DiscordPostType.PROVISIONAL_SCORES));
-		model.put("matchHasCompleteSettings", discordPostService.matchHasCompleteSettings(match));
-		model.put("matchHasCompleteLineups", discordPostService.matchHasCompleteLineups(match));
-		model.put("matchHasProvisionalData", discordPostService.matchHasProvisionalData(match));
+		model.put("matchHasCompleteSettings",
+				channelLinked && discordPostService.matchHasCompleteSettings(match));
+		model.put("matchHasCompleteLineups",
+				channelLinked && discordPostService.matchHasCompleteLineups(match));
+		model.put("matchHasProvisionalData",
+				channelLinked && discordPostService.matchHasProvisionalData(match));
 
 		DiscordPost matchResultsPost = findMatchPost(match, DiscordPostType.MATCH_RESULTS);
 		model.put("matchResultsPost", matchResultsPost);

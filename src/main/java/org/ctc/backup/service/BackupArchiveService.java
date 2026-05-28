@@ -231,7 +231,7 @@ public class BackupArchiveService {
 		Path stagingRoot = resolveStagingRoot(zipPath);
 		long[] inflatedAcc = new long[]{0L};
 
-		try (ZipInputStream zis = openHardened(zipPath)) {
+		try (ZipInputStream zis = openZipInputStream(zipPath)) {
 			ZipEntry entry = zis.getNextEntry();
 			if (entry == null || !"manifest.json".equals(entry.getName())) {
 				String got = entry == null ? "<no entries>" : entry.getName();
@@ -300,7 +300,7 @@ public class BackupArchiveService {
 		int entryCount = 0;
 		LinkedHashMap<String, Long> result = new LinkedHashMap<>();
 
-		try (ZipInputStream zis = openHardened(zipPath)) {
+		try (ZipInputStream zis = openZipInputStream(zipPath)) {
 			ZipEntry entry;
 			while ((entry = zis.getNextEntry()) != null) {
 				String name = entry.getName();
@@ -376,7 +376,7 @@ public class BackupArchiveService {
 		int entryCount = 0;
 		int uploadCount = 0;
 
-		try (ZipInputStream zis = openHardened(zipPath)) {
+		try (ZipInputStream zis = openZipInputStream(zipPath)) {
 			ZipEntry entry;
 			while ((entry = zis.getNextEntry()) != null) {
 				String name = entry.getName();
@@ -462,7 +462,7 @@ public class BackupArchiveService {
 		int entryCount = 0;
 		int extracted = 0;
 
-		try (ZipInputStream zis = openHardened(zipPath)) {
+		try (ZipInputStream zis = openZipInputStream(zipPath)) {
 			ZipEntry entry;
 			while ((entry = zis.getNextEntry()) != null) {
 				String name = entry.getName();
@@ -537,15 +537,15 @@ public class BackupArchiveService {
 	/**
 	 * Opens the ZIP at {@code zipPath} wrapped in a {@link ZipInputStream}.
 	 *
-	 * <p>Per-entry guarantees (path-traversal, byte limits, entry count) are NOT applied here;
-	 * they live in {@link #assertEntrySafe(ZipEntry, Path, int, long)} so each public reader
-	 * method retains explicit, inline visibility into the per-entry safety checks.
+	 * <p>Per-entry guarantees (path-traversal, byte limits, entry count) live in
+	 * {@link #assertEntrySafe(ZipEntry, Path, int, long)} so each public reader method
+	 * retains explicit, inline visibility into the per-entry safety checks.
 	 *
 	 * @param zipPath path to the ZIP file to open
 	 * @return an open {@link ZipInputStream}; caller is responsible for closing
 	 * @throws IOException if the file cannot be opened
 	 */
-	private ZipInputStream openHardened(Path zipPath) throws IOException {
+	private ZipInputStream openZipInputStream(Path zipPath) throws IOException {
 		InputStream fis = Files.newInputStream(zipPath);
 		return new ZipInputStream(fis);
 	}

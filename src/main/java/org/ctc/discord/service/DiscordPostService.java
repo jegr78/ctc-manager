@@ -666,8 +666,10 @@ public class DiscordPostService {
 		return "_TBD_";
 	}
 
-	private static String escapeMarkdownLinkUrl(String url) {
-		return url.replace(")", "\\)");
+	static String escapeMarkdownLinkUrl(String url) {
+		return url.replace(")", "\\)")
+				.replace(">", "\\>")
+				.replace("<", "\\<");
 	}
 
 	private static String orTbd(String value) {
@@ -851,6 +853,9 @@ public class DiscordPostService {
 			ThreadMetadata afterMd = after != null ? after.threadMetadata() : null;
 			if (afterMd != null && afterMd.isArchived()) {
 				log.warn("Discord modifyChannel returned archived=true after unarchive attempt for thread {}", threadId);
+				throw new BusinessRuleException(
+						"Forum thread " + threadId
+								+ " is still archived after unarchive attempt — operator must unarchive manually via Discord.");
 			}
 		}
 	}

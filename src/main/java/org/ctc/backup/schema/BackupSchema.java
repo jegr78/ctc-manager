@@ -69,7 +69,7 @@ public class BackupSchema {
      * time and survives a future table-name rename. Wipe order is the reverse of the export
      * order, so these entities are also wiped first — correct for child-before-parent deletion.
      */
-    private static List<EntityRef> pinFkEntitiesLast(List<EntityRef> sorted, Set<Class<?>> fkEntities) {
+    static List<EntityRef> pinFkEntitiesLast(List<EntityRef> sorted, Set<Class<?>> fkEntities) {
         List<EntityRef> reordered = new ArrayList<>(sorted.size());
         List<EntityRef> tail = new ArrayList<>();
         for (EntityRef ref : sorted) {

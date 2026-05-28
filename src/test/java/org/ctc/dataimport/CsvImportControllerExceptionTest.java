@@ -31,8 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Focused tests for CsvImportController exception-handling behavior.
  * Verifies the 5-arm typed-catch surface (4 sealed permits + defensive base) on
- * previewSheet() and execute(), and the T-91-02-IL invariant: typed GoogleApiException
- * arms must render a whitelisted literal — never echo e.getMessage().
+ * previewSheet() and execute(), and the typed-catch info-leak invariant: typed
+ * GoogleApiException arms must render a whitelisted literal — never echo
+ * e.getMessage().
  */
 @SpringBootTest
 @AutoConfigureMockMvc

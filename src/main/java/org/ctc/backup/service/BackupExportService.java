@@ -300,10 +300,15 @@ public class BackupExportService {
 	private JpaRepository<?, ?> lookupRepository(Class<?> entityClass) {
 		JpaRepository<?, ?> repo = repositoriesByEntityClass.get(entityClass);
 		if (repo == null) {
+			List<String> registered = repositoriesByEntityClass.keySet().stream()
+					.map(Class::getSimpleName)
+					.sorted()
+					.toList();
 			throw new IllegalArgumentException(
 					"No repository registered for entity class " + entityClass.getName()
 							+ " — must be one of the " + repositoriesByEntityClass.size()
-							+ " BackupSchema.getExportOrder() entities");
+							+ " BackupSchema.getExportOrder() entities. Registered entities: "
+							+ registered);
 		}
 		return repo;
 	}

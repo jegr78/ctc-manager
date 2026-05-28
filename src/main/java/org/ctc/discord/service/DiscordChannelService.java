@@ -219,6 +219,14 @@ public class DiscordChannelService {
 	}
 
 	private static long parseAllow(String allow) {
-		return (allow == null || allow.isBlank()) ? 0L : Long.parseLong(allow);
+		if (allow == null || allow.isBlank()) {
+			return 0L;
+		}
+		try {
+			return Long.parseLong(allow.trim());
+		} catch (NumberFormatException ex) {
+			log.warn("Discord audit returned non-numeric allow value: {}", allow);
+			return 0L;
+		}
 	}
 }

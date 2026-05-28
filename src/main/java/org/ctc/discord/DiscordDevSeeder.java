@@ -11,7 +11,6 @@ import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordGlobalConfigRepository;
 import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
-import org.ctc.discord.DiscordEmojiCache;
 import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.TeamRepository;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

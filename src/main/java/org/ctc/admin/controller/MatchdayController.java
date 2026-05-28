@@ -2,34 +2,25 @@ package org.ctc.admin.controller;
 
 import jakarta.validation.Valid;
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.CreateMatchdayRequest;
 import org.ctc.admin.dto.MatchdayForm;
 import org.ctc.admin.dto.MatchdayPairingsForm;
-import org.ctc.admin.dto.MatchPreviewPreFlightResult;
+import org.ctc.admin.service.DiscordMatchdayViewService;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.MatchdayOverviewGraphicService;
 import org.ctc.admin.service.MatchdayResultsGraphicService;
 import org.ctc.admin.service.MatchdayScheduleGraphicService;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
-import org.ctc.discord.model.DiscordGlobalConfig;
-import org.ctc.discord.model.DiscordPost;
-import org.ctc.discord.model.DiscordPostType;
-import org.ctc.discord.repository.DiscordPostRepository;
-import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Matchday;
 import org.ctc.domain.service.MatchService;
 import org.ctc.domain.service.MatchdayService;
-import org.ctc.domain.service.StandingsService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -53,9 +44,7 @@ public class MatchdayController {
     private final MatchResultsGraphicService matchResultsGraphicService;
     private final MatchService matchService;
     private final DiscordPostService discordPostService;
-    private final DiscordPostRepository discordPostRepository;
-    private final DiscordGlobalConfigService discordGlobalConfigService;
-    private final StandingsService standingsService;
+    private final DiscordMatchdayViewService discordMatchdayViewService;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
@@ -79,84 +68,8 @@ public class MatchdayController {
         model.addAttribute("scheduleMissingCount", data.scheduleMissingCount());
         model.addAttribute("hasResults", data.hasResults());
         model.addAttribute("pageTitle", "Matchday: " + matchday.getLabel());
-        populateMatchdayDiscordModel(model, matchday);
+        model.addAllAttributes(discordMatchdayViewService.buildMatchdayDiscordModel(matchday));
         return "admin/matchday-detail";
-    }
-
-    private void populateMatchdayDiscordModel(Model model, Matchday matchday) {
-        DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
-        String webhookUrl = config.getRaceResultsForumWebhookUrl();
-        boolean threadLinked = matchday.getSeason().getDiscordRaceResultsThreadId() != null
-                && !matchday.getSeason().getDiscordRaceResultsThreadId().isBlank();
-        boolean webhookConfigured = webhookUrl != null && !webhookUrl.isBlank();
-        boolean matchdayDiscordActive = threadLinked && webhookConfigured;
-
-        MatchPreviewPreFlightResult resultsPreFlight = discordPostService.canPostMatchdayResults(matchday, config);
-        MatchPreviewPreFlightResult rankingsPreFlight = discordPostService.canPostPowerRankings(matchday, config);
-
-        DiscordPost matchdayOverviewPost = null;
-        DiscordPost powerRankingsPost = null;
-        if (matchdayDiscordActive) {
-            String channelId = discordPostService.resolveAnnouncementChannelId(webhookUrl);
-            matchdayOverviewPost = discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
-                    channelId, DiscordPostType.MATCHDAY_OVERVIEW, matchday.getId()).orElse(null);
-            powerRankingsPost = discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
-                    channelId, DiscordPostType.POWER_RANKINGS, matchday.getId()).orElse(null);
-        }
-
-        boolean matchdayResultsStale = matchdayOverviewPost != null
-                && standingsService.isMatchdayResultsStale(matchday, matchdayOverviewPost);
-        boolean powerRankingsStale = powerRankingsPost != null
-                && standingsService.isPowerRankingsStale(matchday.getSeason(), powerRankingsPost);
-
-        model.addAttribute("matchdayDiscordActive", matchdayDiscordActive);
-        model.addAttribute("canPostMatchdayResults", resultsPreFlight.canPost());
-        model.addAttribute("canPostPowerRankings", rankingsPreFlight.canPost());
-        model.addAttribute("matchdayResultsDisabledReason", resultsPreFlight.disabledReason());
-        model.addAttribute("powerRankingsDisabledReason", rankingsPreFlight.disabledReason());
-        model.addAttribute("matchdayOverviewPost", matchdayOverviewPost);
-        model.addAttribute("powerRankingsPost", powerRankingsPost);
-        model.addAttribute("matchdayResultsStale", matchdayResultsStale);
-        model.addAttribute("powerRankingsStale", powerRankingsStale);
-
-        String announcementWebhookUrl = config.getAnnouncementWebhookUrl();
-        boolean matchdayAnnouncementActive = announcementWebhookUrl != null
-                && !announcementWebhookUrl.isBlank();
-
-        MatchPreviewPreFlightResult pairingsPreFlight =
-                discordPostService.canPostMatchdayPairings(matchday, config);
-        MatchPreviewPreFlightResult schedulePreFlight =
-                discordPostService.canPostMatchdaySchedule(matchday, config);
-
-        String announcementChannelId = matchdayAnnouncementActive
-                ? discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl)
-                : null;
-
-        DiscordPost matchdayPairingsPost = matchdayAnnouncementActive
-                ? discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
-                        announcementChannelId, DiscordPostType.MATCHDAY_PAIRINGS, matchday.getId())
-                        .orElse(null)
-                : null;
-        boolean matchdayPairingsStale = matchdayPairingsPost != null
-                && standingsService.isMatchdayPairingsStale(matchday, matchdayPairingsPost);
-
-        DiscordPost matchdaySchedulePost = matchdayAnnouncementActive
-                ? discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(
-                        announcementChannelId, DiscordPostType.MATCHDAY_SCHEDULE, matchday.getId())
-                        .orElse(null)
-                : null;
-        boolean matchdayScheduleStale = matchdaySchedulePost != null
-                && standingsService.isMatchdayScheduleStale(matchday, matchdaySchedulePost);
-
-        model.addAttribute("matchdayAnnouncementActive", matchdayAnnouncementActive);
-        model.addAttribute("canPostMatchdayPairings", pairingsPreFlight.canPost());
-        model.addAttribute("matchdayPairingsDisabledReason", pairingsPreFlight.disabledReason());
-        model.addAttribute("matchdayPairingsPost", matchdayPairingsPost);
-        model.addAttribute("matchdayPairingsStale", matchdayPairingsStale);
-        model.addAttribute("canPostMatchdaySchedule", schedulePreFlight.canPost());
-        model.addAttribute("matchdayScheduleDisabledReason", schedulePreFlight.disabledReason());
-        model.addAttribute("matchdaySchedulePost", matchdaySchedulePost);
-        model.addAttribute("matchdayScheduleStale", matchdayScheduleStale);
     }
 
     @PostMapping("/{id}/post-matchday-results")

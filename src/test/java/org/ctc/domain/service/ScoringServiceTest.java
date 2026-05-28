@@ -381,6 +381,45 @@ class ScoringServiceTest {
 		}
 
 		@Test
+		void givenClearedPlayoffRace_whenRecomputeMatchScoresFromAllLegs_thenPlayoffMatchupScoresRecomputedFromRemainingLegs() {
+			var team1 = createTeam("Team1");
+			var team2 = createTeam("Team2");
+			var matchup = new PlayoffMatchup();
+			matchup.setId(UUID.randomUUID());
+			matchup.setTeam1(team1);
+			matchup.setTeam2(team2);
+
+			var clearedRace = new Race();
+			clearedRace.setId(UUID.randomUUID());
+			clearedRace.setPlayoffMatchup(matchup);
+			clearedRace.setResults(List.of());
+
+			var completedLeg = new Race();
+			completedLeg.setId(UUID.randomUUID());
+			completedLeg.setPlayoffMatchup(matchup);
+			var d1 = createDriver("team1_d");
+			var d2 = createDriver("team2_d");
+			var r1 = createResult(completedLeg, d1, 25);
+			var r2 = createResult(completedLeg, d2, 7);
+			completedLeg.setResults(List.of(r1, r2));
+
+			when(raceLineupRepository.findByRaceIdAndDriverId(completedLeg.getId(), d1.getId()))
+					.thenReturn(Optional.of(new RaceLineup(completedLeg, d1, team1)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(completedLeg.getId(), d2.getId()))
+					.thenReturn(Optional.of(new RaceLineup(completedLeg, d2, team2)));
+			when(raceRepository.findByPlayoffMatchupId(matchup.getId()))
+					.thenReturn(List.of(clearedRace, completedLeg));
+
+			matchup.setHomeScore(99);
+			matchup.setAwayScore(99);
+
+			scoringService.recomputeMatchScoresFromAllLegs(clearedRace);
+
+			assertEquals(25, matchup.getHomeScore());
+			assertEquals(7, matchup.getAwayScore());
+		}
+
+		@Test
 		void givenByeRace_whenAggregateMatchScores_thenReturnsWithoutScoring() {
 			// given
 			var homeTeam = createTeam("Home");

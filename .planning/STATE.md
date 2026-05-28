@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Plan 102-02 closed (SUMMARY written; orchestrator-review pending before 102-03 starts)
-last_updated: "2026-05-28T13:45:00.000Z"
+stopped_at: Plan 102-02 closed + review-clean (21 findings folded back; SUMMARY status=review-clean)
+last_updated: "2026-05-28T16:00:00.000Z"
 last_activity: 2026-05-28
 progress:
   total_phases: 10
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 102 (code-review-fixes) — EXECUTING
-Plan: 2 of 4 (102-01 complete; 102-02 Tasks 1-11 complete + regression fold-back; SUMMARY.md written)
-Verification: orchestrator-level `/gsd-code-review 102 --files=<plan-102-02-files>` pending before 102-03 starts
-Status: Plan 102-02 ready for orchestrator review; resume via `/gsd-execute-phase 102 --interactive` after review-clean
-Last activity: 2026-05-28 -- 102-02 closed: 49 of 58 substantive WR findings landed across 13 atomic commits (`14dcd49a`,`8dd7405e`,`084fa02c`,`3377f0f6`,`78d4ce9a`,`d8d24c6b`,`55b3a360`,`14d6ce93`,`9797b1f1`,`29ac37ff`,`1912ea9c`,`61a9d4e2`,`3eb54417`,`d5dc1fb8`). 6 deferred with rationale in SUMMARY.md; 3 redundant; 1 partial (102-03 sweeps the rest). Full Surefire 1693/0/0; wide IT pass green; SpotBugs 0. Marker-pollution over 64 touched files: 0 hits. Plans 102-03 + 102-04 remain.
+Plan: 2 of 4 (102-01 complete; 102-02 complete + REVIEW.md + 21-finding fold-back; SUMMARY.md status=review-clean)
+Verification: `./mvnw clean verify` exit 0 — Surefire 1293/0/0, Failsafe 491/0/0, JaCoCo 88% (≥82% gate), SpotBugs 0
+Status: Plan 102-02 review-clean; resume via `/gsd-execute-phase 102 --interactive` to start Plan 102-03
+Last activity: 2026-05-28 -- 102-02 closed including post-review fold-back: 2 CR (WR-thin-3 actually wired via new DiscordMatchdayViewService + legacy STANDINGS backfill moved to Flyway V16), 11 WR (playoff branch + volatile-atomic-swap + preflight-guard + BusinessRuleException + parseAllow fail-closed + …), 8 IN (Javadoc, escape extension, helper visibility, error-msg detail, rename). New files: `DiscordMatchdayViewService.java`, `V16__backfill_standings_phase_id.sql`, `DiscordPostServiceEscapeMarkdownLinkUrlTest.java`, `BackupSchemaPinFkEntitiesLastTest.java`. Plans 102-03 + 102-04 remain.
 
 ### Prior position (Phase 101 close)
 
