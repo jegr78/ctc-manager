@@ -77,8 +77,8 @@
                 </div>
                 <div class="sidebar-group">
                     <span class="sidebar-group-label">Integrations</span>
-                    <a th:href="@{/admin/discord-config}" th:classappend="${title.contains('Discord Config') ? 'active' : ''}">Discord Config</a>
-                    <a th:href="@{/admin/discord/posts}" th:classappend="${title.contains('Discord Posts') ? 'active' : ''}">Discord Posts</a>
+                    <a th:href="@{/admin/discord-config}" th:classappend="${activeRoute == 'discord-config' ? 'active' : ''}">Discord Config</a>
+                    <a th:href="@{/admin/discord/posts}" th:classappend="${activeRoute == 'discord-posts' ? 'active' : ''}">Discord Posts</a>
                 </div>
             </nav>
         </aside>

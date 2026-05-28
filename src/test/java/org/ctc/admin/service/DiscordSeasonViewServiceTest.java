@@ -33,7 +33,7 @@ class DiscordSeasonViewServiceTest {
 			"raceResultsThreadOptions", "standingsThreadOptions",
 			"linkedRaceResultsThread", "linkedStandingsThread",
 			"allPhases", "canPostStandings",
-			"standingsPostByPhase", "standingsStaleByPhase");
+			"phaseStandingsRows");
 
 	@Test
 	void givenIntegrationConfigured_whenBuildDiscordIntegrationModel_thenAllControllerKeysPresent() throws Exception {

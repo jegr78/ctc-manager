@@ -162,6 +162,9 @@ h3 { font-size: 16px; margin-bottom: 8px; color: var(--white); }
 .alert-warning { background: #3b2e0e; color: #ffb74d; border: 1px solid #b26a00; }
 .alert-warning ul { margin: 6px 0 0 18px; padding: 0; }
 .alert-warning li { margin: 2px 0; }
+.alert--warning-amber { margin-bottom: 16px; border-color: #ffa726; background: rgba(255, 167, 38, 0.1); color: #ffa726; }
+.list-tight { margin: 8px 0 0 16px; }
+.form-group--gap16 { margin-bottom: 16px; }
 
 .card {
     background: var(--bg-card);
@@ -384,6 +387,9 @@ select option {
 .badge-inactive { background: #222; color: #999; }
 .badge-warning { background: #3b2e0e; color: #ffb74d; }
 .badge-archived { background: #2a2a2a; color: #888; }
+.badge-create-new { background: #3a2e1a; color: #ffb74d; }
+.match-none { background: #3a2e1a; }
+.match-fuzzy { background: #1a2a3a; }
 
 /* Google API error categories (Phase 91 / UX-01) */
 .error-badge {
@@ -1150,6 +1156,8 @@ a.season-header-title:hover {
     align-items: center;
     justify-content: center;
 }
+
+.modal-overlay.is-open { display: flex; }
 
 .modal-body {
     background: var(--bg-card);

@@ -47,7 +47,7 @@
                     type="button"
                     class="btn btn-secondary btn-sm"
                     data-testid="open-archive-modal"
-                    onclick="document.getElementById('archiveModal').style.display='flex'">
+                    onclick="document.getElementById('archiveModal').classList.add('is-open')">
                 Move to Archive
             </button>
         </div>
@@ -254,7 +254,7 @@
                     <button type="button"
                             class="btn btn-secondary"
                             data-testid="archive-cancel"
-                            onclick="document.getElementById('archiveModal').style.display='none'">Cancel</button>
+                            onclick="document.getElementById('archiveModal').classList.remove('is-open')">Cancel</button>
                 </div>
             </form>
         </div>

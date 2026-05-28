@@ -1,5 +1,6 @@
 package org.ctc.admin.dto;
 
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -11,6 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 @Setter
 public class MatchdayPairingsForm {
 
+	@NotNull
 	private UUID id;
 
 	@DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)

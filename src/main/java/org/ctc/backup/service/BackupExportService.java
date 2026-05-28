@@ -198,8 +198,9 @@ public class BackupExportService {
 	/**
 	 * Dispatches to the right repository's {@code findAllForBackup()} method for the
 	 * given entity class. Throws {@link IllegalArgumentException} if no repository is
-	 * registered — should never happen in production because
-	 * {@link BackupSchema#getExportOrder()} is the contract.
+	 * registered for the class (should never happen in production because
+	 * {@link BackupSchema#getExportOrder()} is the contract) or {@link IllegalStateException}
+	 * if the registered repository does not declare {@code findAllForBackup()}.
 	 */
 	public List<?> fetchAllForBackup(Class<?> entityClass) {
 		JpaRepository<?, ?> repo = lookupRepository(entityClass);

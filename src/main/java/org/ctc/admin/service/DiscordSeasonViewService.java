@@ -1,6 +1,6 @@
 package org.ctc.admin.service;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,24 +66,23 @@ public class DiscordSeasonViewService {
 		String channelId = canPostStandings
 				? discordPostService.resolveAnnouncementChannelId(config.getStandingsForumWebhookUrl())
 				: null;
-		Map<UUID, DiscordPost> standingsPostByPhase = new HashMap<>(allPhases.size());
-		Map<UUID, Boolean> standingsStaleByPhase = new HashMap<>(allPhases.size());
+		List<PhaseStandingsRow> phaseStandingsRows = new ArrayList<>(allPhases.size());
 		for (SeasonPhase p : allPhases) {
 			DiscordPost post = channelId != null
 					? lookupPhaseScopedStandings(channelId, season.getId(), p.getId())
 					: null;
-			standingsPostByPhase.put(p.getId(), post);
 			boolean stale = post != null && standingsService.hasNewerResultsSincePhaseScoped(
 					p.getId(), post.getUpdatedAt());
-			standingsStaleByPhase.put(p.getId(), stale);
+			phaseStandingsRows.add(new PhaseStandingsRow(p, post, stale));
 		}
 		model.put("allPhases", allPhases);
 		model.put("canPostStandings", canPostStandings);
-		model.put("standingsPostByPhase", standingsPostByPhase);
-		model.put("standingsStaleByPhase", standingsStaleByPhase);
+		model.put("phaseStandingsRows", phaseStandingsRows);
 
 		return model;
 	}
+
+	public record PhaseStandingsRow(SeasonPhase phase, DiscordPost post, boolean stale) {}
 
 	private DiscordPost lookupPhaseScopedStandings(String channelId, UUID seasonId, UUID phaseId) {
 		return discordPostRepository

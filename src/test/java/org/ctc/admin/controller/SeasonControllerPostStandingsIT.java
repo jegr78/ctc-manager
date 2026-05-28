@@ -175,7 +175,6 @@ class SeasonControllerPostStandingsIT {
 				.andExpect(status().isOk())
 				.andExpect(model().attributeExists("allPhases"))
 				.andExpect(model().attribute("canPostStandings", true))
-				.andExpect(model().attributeExists("standingsPostByPhase"))
-				.andExpect(model().attributeExists("standingsStaleByPhase"));
+				.andExpect(model().attributeExists("phaseStandingsRows"));
 	}
 }

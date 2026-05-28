@@ -1,6 +1,7 @@
 package org.ctc.discord;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -160,6 +161,7 @@ public class DiscordRestClient {
 		T run();
 	}
 
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	public record BotUser(String id, String username, String discriminator) {
 	}
 
@@ -171,6 +173,7 @@ public class DiscordRestClient {
 	private record ThreadList(List<Thread> threads) {
 	}
 
+	@JsonInclude(JsonInclude.Include.NON_NULL)
 	private record WebhookCreateRequest(String name) {
 	}
 }

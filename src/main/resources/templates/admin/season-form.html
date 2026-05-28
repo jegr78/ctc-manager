@@ -249,12 +249,12 @@
                     </button>
                 </form>
                 <ul class="text-dim text-xs" data-testid="standings-phase-status-list">
-                    <li th:each="p : ${allPhases}" th:with="post=${standingsPostByPhase[p.id]},stale=${standingsStaleByPhase[p.id]}">
-                        <span th:text="${p.phaseType.name()}"></span>:
-                        <span th:if="${post == null}" data-testid="standings-phase-status-none">never posted</span>
-                        <span th:if="${post != null and stale}"
+                    <li th:each="row : ${phaseStandingsRows}">
+                        <span th:text="${row.phase.phaseType.name()}"></span>:
+                        <span th:if="${row.post == null}" data-testid="standings-phase-status-none">never posted</span>
+                        <span th:if="${row.post != null and row.stale}"
                               class="badge badge-warning" data-testid="standings-phase-status-stale">Update needed</span>
-                        <span th:if="${post != null and !stale}"
+                        <span th:if="${row.post != null and !row.stale}"
                               class="badge badge-active" data-testid="standings-phase-status-fresh">Posted</span>
                     </li>
                 </ul>
