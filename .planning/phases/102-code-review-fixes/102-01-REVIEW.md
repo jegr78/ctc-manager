@@ -67,3 +67,26 @@ The mandated `gsd-code-reviewer` agent dispatch was attempted twice but blocked 
 No critical / warning findings on the 102-01 diff itself. The single Info item is acceptance-text over-specification, not a defect. Three Out-of-Scope items are documented for traceability: a v1.14-backlog candidate (restorer-class generalisation), a wider-pattern verification result (DiscordPostService allMatch is sound), and a Plan 102-02 hand-off (CsvImportController WR-01).
 
 Plan 102-01 close-loop **passes**.
+
+## Independent Agent Review
+
+**Verdict:** flagged (no blockers; two warnings + two info).
+**Reviewer:** gsd-code-reviewer agent, 2026-05-28, read-only second pass over the 8 commits.
+
+### WR-IA-01 — `DiscordGlobalConfigRestorer` audit columns left unguarded (`createdAt`, `updatedAt`)
+**File:** `src/main/java/org/ctc/backup/restore/entity/DiscordGlobalConfigRestorer.java:60-61`
+Same NPE class the commit just closed: `row.get("createdAt").asText()` / `row.get("updatedAt").asText()` still bypass `requireText`. Both columns are DB-level NOT NULL (V8) and reachable on every restore. The "V8/V9 NOT-NULL columns" scoping in the commit message excluded audit columns, but the bug class is identical and the helper already exists two lines below. `DiscordPostRestorer` correctly routes `postedAt`/`createdAt`/`updatedAt` through `requireText` (line 66, 68, 69) — the asymmetry is the smell. Fix: wrap lines 60-61 with `requireText(row, "createdAt")` / `"updatedAt"`.
+
+### WR-IA-02 — Bye-guard ITs do not pin `disabledReason` literal
+**File:** `src/test/java/org/ctc/discord/service/DiscordPostServiceByeMatchdayGuardIT.java:148,162,176,189`
+Empty/all-BYE assertions check only `result.canPost()` is `false`. A regression that returns `false` for an unrelated reason (e.g., the pre-existing "Set scheduled weekend first" guard, or a future broken guard order) would pass. Add `.extracting(MatchPreviewPreFlightResult::disabledReason).isEqualTo("Add at least one non-bye match to the matchday first")` so the test pins the new invariant. Also: class is named `*IT` + tagged `@Tag("integration")` but has no `@SpringBootTest` / Mockito-extension — it's a unit-style test in IT clothing; per CLAUDE.md tag-by-category, untag and rename or add Spring context.
+
+### IN-IA-01 — Webhook-fail cleanup asymmetric UX vs audit-fail
+**File:** `src/main/java/org/ctc/discord/service/DiscordChannelService.java:91-99` vs `103-115`
+Audit-fail re-throws a wrapped exception telling the operator to manually delete channel `X`. Webhook-fail only logs WARN and rethrows the original — operator gets no actionable hint when cleanup itself fails. Mirror the audit-fail wrap.
+
+### IN-IA-02 — `RaceService.saveRace` fires event on new-race creation
+**File:** `src/main/java/org/ctc/domain/service/RaceService.java:190`
+For new races (`id == null`), `race.getDateTime()` is null, so `!Objects.equals(null, dateTime)` is true on any non-null incoming dateTime — event fires for a freshly-created match. Harmless today because `autoEditScheduleIfNeeded` early-returns when no SCHEDULE post exists (line 215), but a future hook subscriber may not be idempotent. Consider `id != null && !Objects.equals(...)`.
+
+_Branch verified: `gsd/v1.13-discord-integration` (read-only)._

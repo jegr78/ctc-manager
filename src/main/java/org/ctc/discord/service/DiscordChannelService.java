@@ -28,6 +28,7 @@ import org.ctc.discord.event.ChannelCreatedEvent;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordAuthException;
+import org.ctc.discord.exception.DiscordTransientException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
@@ -94,6 +95,11 @@ public class DiscordChannelService {
 			} catch (DiscordApiException cleanupEx) {
 				log.warn("Webhook-fail cleanup DELETE failed for channel {}: {}",
 						channel.id(), cleanupEx.toString());
+				throw new DiscordTransientException(
+						DiscordApiExceptionMapper.TRANSIENT_MESSAGE
+								+ " Cleanup failed: please manually delete channel "
+								+ channel.id() + " via Discord.",
+						webhookEx);
 			}
 			throw webhookEx;
 		}

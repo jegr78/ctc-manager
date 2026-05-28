@@ -187,7 +187,7 @@ public class RaceService {
 		} else {
 			race.setCar(null);
 		}
-		boolean dateTimeChanged = !Objects.equals(race.getDateTime(), dateTime);
+		boolean dateTimeChanged = id != null && !Objects.equals(race.getDateTime(), dateTime);
 		race.setDateTime(dateTime);
 
 		// Settings

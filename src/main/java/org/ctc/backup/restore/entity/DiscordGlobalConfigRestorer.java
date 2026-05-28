@@ -57,8 +57,8 @@ public class DiscordGlobalConfigRestorer implements EntityRestorer {
             setNullableString(ps, 9, row, "botApplicationId");
             ps.setString(10, requireText(row, "currentMatchCategoryId"));
             setNullableString(ps, 11, row, "matchdayPairingsTemplate");
-            ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
-            ps.setTimestamp(13, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(requireText(row, "createdAt"))));
+            ps.setTimestamp(13, Timestamp.valueOf(LocalDateTime.parse(requireText(row, "updatedAt"))));
         });
         log.debug("DiscordGlobalConfigRestorer: restored {} rows", rows.size());
     }

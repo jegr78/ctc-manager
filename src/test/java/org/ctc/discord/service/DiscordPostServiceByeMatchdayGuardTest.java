@@ -34,11 +34,9 @@ import org.ctc.domain.model.Team;
 import org.ctc.domain.repository.RaceLineupRepository;
 import org.ctc.domain.repository.SeasonTeamRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-@Tag("integration")
-class DiscordPostServiceByeMatchdayGuardIT {
+class DiscordPostServiceByeMatchdayGuardTest {
 
 	private DiscordPostService service;
 
@@ -116,8 +114,10 @@ class DiscordPostServiceByeMatchdayGuardIT {
 		return c;
 	}
 
+	private static final String NO_NON_BYE_MATCH_REASON = "Add at least one non-bye match to the matchday first";
+
 	@Test
-	void givenEmptyMatchday_whenCanPostMatchdayPairings_thenFalse() {
+	void givenEmptyMatchday_whenCanPostMatchdayPairings_thenFalseWithNonByeReason() {
 		// given
 		Matchday md = baseMatchday();
 		DiscordGlobalConfig cfg = configWithWebhook();
@@ -127,10 +127,11 @@ class DiscordPostServiceByeMatchdayGuardIT {
 
 		// then
 		assertThat(result.canPost()).isFalse();
+		assertThat(result.disabledReason()).isEqualTo(NO_NON_BYE_MATCH_REASON);
 	}
 
 	@Test
-	void givenEmptyMatchday_whenCanPostMatchdaySchedule_thenFalse() {
+	void givenEmptyMatchday_whenCanPostMatchdaySchedule_thenFalseWithNonByeReason() {
 		// given
 		Matchday md = baseMatchday();
 		DiscordGlobalConfig cfg = configWithWebhook();
@@ -140,10 +141,11 @@ class DiscordPostServiceByeMatchdayGuardIT {
 
 		// then
 		assertThat(result.canPost()).isFalse();
+		assertThat(result.disabledReason()).isEqualTo(NO_NON_BYE_MATCH_REASON);
 	}
 
 	@Test
-	void givenAllByeMatchday_whenCanPostMatchdayPairings_thenFalse() {
+	void givenAllByeMatchday_whenCanPostMatchdayPairings_thenFalseWithNonByeReason() {
 		// given
 		Matchday md = baseMatchday();
 		md.getMatches().add(byeMatch(md, "T-A"));
@@ -155,10 +157,11 @@ class DiscordPostServiceByeMatchdayGuardIT {
 
 		// then
 		assertThat(result.canPost()).isFalse();
+		assertThat(result.disabledReason()).isEqualTo(NO_NON_BYE_MATCH_REASON);
 	}
 
 	@Test
-	void givenAllByeMatchday_whenCanPostMatchdaySchedule_thenFalse() {
+	void givenAllByeMatchday_whenCanPostMatchdaySchedule_thenFalseWithNonByeReason() {
 		// given
 		Matchday md = baseMatchday();
 		md.getMatches().add(byeMatch(md, "T-A"));
@@ -170,6 +173,7 @@ class DiscordPostServiceByeMatchdayGuardIT {
 
 		// then
 		assertThat(result.canPost()).isFalse();
+		assertThat(result.disabledReason()).isEqualTo(NO_NON_BYE_MATCH_REASON);
 	}
 
 	@Test
