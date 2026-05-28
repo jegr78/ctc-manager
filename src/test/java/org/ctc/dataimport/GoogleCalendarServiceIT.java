@@ -10,6 +10,8 @@ import java.util.List;
 import org.ctc.dataimport.exception.AuthGoogleApiException;
 import org.ctc.dataimport.exception.GoogleApiExceptionMapper;
 import org.ctc.dataimport.exception.PermissionGoogleApiException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +43,22 @@ class GoogleCalendarServiceIT {
 
 	@Autowired
 	private GoogleCalendarService googleCalendarService;
+
+	private Calendar originalClient;
+
+	@BeforeEach
+	void snapshotClient() throws Exception {
+		Field field = GoogleCalendarService.class.getDeclaredField("calendarClient");
+		field.setAccessible(true);
+		originalClient = (Calendar) field.get(googleCalendarService);
+	}
+
+	@AfterEach
+	void restoreClient() throws Exception {
+		Field field = GoogleCalendarService.class.getDeclaredField("calendarClient");
+		field.setAccessible(true);
+		field.set(googleCalendarService, originalClient);
+	}
 
 	private static void injectCalendarClient(GoogleCalendarService service, Calendar client) throws Exception {
 		Field field = GoogleCalendarService.class.getDeclaredField("calendarClient");

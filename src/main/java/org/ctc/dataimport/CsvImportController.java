@@ -62,7 +62,8 @@ public class CsvImportController {
 		} catch (IOException | IllegalArgumentException | IllegalStateException e) {
 			log.error("Error parsing CSV", e);
 			addCommonAttributes(model);
-			model.addAttribute("errorMessage", "Error reading CSV: " + e.getMessage());
+			model.addAttribute("errorMessage",
+					"Error reading CSV — check the file format and try again. See the server log for details.");
 			return "admin/import";
 		}
 	}

@@ -2,6 +2,8 @@ package org.ctc.build;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -36,10 +38,7 @@ class AssumptionsFencePredicateTest {
 						+ "class SyntheticPositive { }\n");
 
 		// when
-		var pb = new ProcessBuilder("bash", "-c",
-				"grep -rE '" + FENCE_REGEX + "' " + tmp.resolve("src/test/java"));
-		pb.redirectErrorStream(true);
-		var proc = pb.start();
+		var proc = runGrep(tmp.resolve("src/test/java"));
 		int exit = proc.waitFor();
 		String out = new String(proc.getInputStream().readAllBytes());
 
@@ -58,13 +57,30 @@ class AssumptionsFencePredicateTest {
 						+ "class SyntheticNegative { }\n");
 
 		// when
-		var pb = new ProcessBuilder("bash", "-c",
-				"grep -rE '" + FENCE_REGEX + "' " + tmp.resolve("src/test/java"));
-		pb.redirectErrorStream(true);
-		var proc = pb.start();
-		int exit = proc.waitFor();
+		int exit = runGrep(tmp.resolve("src/test/java")).waitFor();
 
 		// then
 		assertThat(exit).isOne();
+	}
+
+	@Test
+	void givenPomXml_whenAssumptionsFenceRegexExtracted_thenMatchesFenceRegexConstant() throws Exception {
+		String pomContent = Files.readString(Path.of("pom.xml"));
+		Pattern argument = Pattern.compile("grep\\s+-rE\\s+'(\\^import[^']+)'");
+		Matcher matcher = argument.matcher(pomContent);
+
+		assertThat(matcher.find())
+				.as("pom.xml must contain the assumptions-fence grep argument")
+				.isTrue();
+		assertThat(matcher.group(1)).isEqualTo(FENCE_REGEX);
+	}
+
+	private static Process runGrep(Path searchRoot) throws Exception {
+		ProcessBuilder pb = new ProcessBuilder("bash", "-c",
+				"grep -rE \"$REGEX\" \"$ROOT\"");
+		pb.environment().put("REGEX", FENCE_REGEX);
+		pb.environment().put("ROOT", searchRoot.toString());
+		pb.redirectErrorStream(true);
+		return pb.start();
 	}
 }

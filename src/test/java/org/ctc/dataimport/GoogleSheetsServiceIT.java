@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import org.ctc.dataimport.exception.NotFoundGoogleApiException;
 import org.ctc.dataimport.exception.TransientGoogleApiException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,22 @@ class GoogleSheetsServiceIT {
 
 	@Autowired
 	private GoogleSheetsService googleSheetsService;
+
+	private Sheets originalClient;
+
+	@BeforeEach
+	void snapshotClient() throws Exception {
+		Field field = GoogleSheetsService.class.getDeclaredField("sheetsClient");
+		field.setAccessible(true);
+		originalClient = (Sheets) field.get(googleSheetsService);
+	}
+
+	@AfterEach
+	void restoreClient() throws Exception {
+		Field field = GoogleSheetsService.class.getDeclaredField("sheetsClient");
+		field.setAccessible(true);
+		field.set(googleSheetsService, originalClient);
+	}
 
 	private static void injectSheetsClient(GoogleSheetsService service, Sheets client) throws Exception {
 		Field field = GoogleSheetsService.class.getDeclaredField("sheetsClient");

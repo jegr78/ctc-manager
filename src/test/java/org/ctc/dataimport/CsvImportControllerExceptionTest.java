@@ -50,10 +50,11 @@ class CsvImportControllerExceptionTest {
 	private ScorecardParser scorecardParser;
 
 	@Test
-	void givenIoException_whenPreviewCsv_thenRedirectsWithError() throws Exception {
-		// given
+	void givenIoException_whenPreviewCsv_thenGenericErrorWithoutRawCauseEcho() throws Exception {
+		// given — raw exception message must NOT bleed into the user-facing flash
+		String rawCause = "DANGEROUS_PAYLOAD_<script>alert(1)</script>";
 		when(csvImportService.parseAndPreview(any(), any()))
-				.thenThrow(new IOException("file read error"));
+				.thenThrow(new IOException(rawCause));
 		when(csvImportService.getAllSeasons()).thenReturn(List.of());
 		when(csvImportService.getPlayoffMatchups()).thenReturn(List.of());
 
@@ -67,7 +68,10 @@ class CsvImportControllerExceptionTest {
 				// then
 				.andExpect(status().isOk())
 				.andExpect(view().name("admin/import"))
-				.andExpect(model().attributeExists("errorMessage"));
+				.andExpect(model().attribute("errorMessage",
+						org.hamcrest.Matchers.startsWith("Error reading CSV")))
+				.andExpect(model().attribute("errorMessage",
+						org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(rawCause))));
 	}
 
 	@Test
