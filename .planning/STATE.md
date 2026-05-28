@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Phase 101 complete; awaiting /gsd-complete-milestone v1.13
-last_updated: "2026-05-26T14:48:57.369Z"
-last_activity: 2026-05-26 -- Phase 101 marked complete (end-of-phase verify -Pe2e green)
+stopped_at: Phase 102 (code-review fixes) added 2026-05-28 — awaiting /gsd-discuss-phase 102
+last_updated: "2026-05-28T00:00:00.000Z"
+last_activity: 2026-05-28 -- Milestone-wide code review of phases 92-101 complete (9 critical + 58 warning + 52 info = 119 findings across 9 REVIEW.md reports); Phase 102 added to close all findings before milestone close
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 10
   total_plans: 41
   completed_plans: 41
-  percent: 100
+  percent: 91
 ---
 
 # Project State
@@ -22,14 +22,20 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** v1.13 ready to ship — `/gsd-complete-milestone v1.13`
+**Current focus:** v1.13 — close milestone-wide code-review findings via Phase 102 before `/gsd-complete-milestone v1.13`.
 
 ## Current Position
 
+Phase: 102 (code-review-fixes) — NOT STARTED (added 2026-05-28 as v1.13 closeout)
+Plan: 0 of TBD (estimated 3-5 plans; finalized during `/gsd-discuss-phase 102`)
+Verification: n/a (phase not started)
+Status: awaiting `/gsd-discuss-phase 102`
+Last activity: 2026-05-28 -- Phase 102 added to v1.13-ROADMAP + STATE; consumes the 9 milestone-wide `*-REVIEW.md` reports as input
+
+### Prior position (Phase 101 close)
 Phase: 101 (backup-restore-covers-discord-schema-v8-v15) — COMPLETE ✓
 Plan: 6 of 6 (101-01 SCHEMA_VERSION flip / 101-02 Discord MixIns+Restorers / 101-03 V8-V15 carry-forward / 101-04 lenient v1 accept / 101-05 regression-fence + topo-pin / 101-06 docs)
 Verification: passed (17/17 requirements, end-of-phase `clean verify -Pe2e` green — 1842 tests, JaCoCo ≥82 %, SpotBugs 0)
-Status: v1.13 milestone-complete pending /gsd-complete-milestone
 Last activity: 2026-05-26 -- Phase 101 marked complete (end-of-phase verify -Pe2e green)
 
 ## Completed Milestones
@@ -48,7 +54,7 @@ Last activity: 2026-05-26 -- Phase 101 marked complete (end-of-phase verify -Pe2
 
 ## Active Milestone
 
-**v1.13 Discord Integration & Carry-Forwards** — Phases 92-98 (in flight).
+**v1.13 Discord Integration & Carry-Forwards** — Phases 92-102 (in flight; phases 92-101 shipped, Phase 102 added 2026-05-28 as code-review-fix closeout).
 
 - Branch: `gsd/v1.13-discord-integration` (off `origin/master`)
 - Design spec: `docs/superpowers/specs/2026-05-20-discord-integration-design.md` (18 decisions)
@@ -68,7 +74,11 @@ Last activity: 2026-05-26 -- Phase 101 marked complete (end-of-phase verify -Pe2
 | 95 | Match Channel Posts | POST-01..05 | 94 |
 | 96 | Provisional Graphic + Forum Threads | GRAFX-01, FORUM-01, FORUM-02 | 95 |
 | 97 | Matchday-Level Posts | POST-06, POST-07, POST-08 | 96 |
-| 98 | Polish + E2E + Docs + Close | E2E-01, DOCS-02, DOCS-03 | 97 |
+| 98 | Polish + E2E + Docs + Close | E2E-01, DOCS-02, DOCS-03, POST-09, POST-10 | 97 |
+| 99 | Pre-Merge Audit Polish | (audit cleanup — VERIFICATION.md retrofill, REQUIREMENTS prose, ROADMAP refresh, FORUM-01 modal scope) | 98 |
+| 100 | Match-Day Channel Naming Scheme | (phase prefix `rs/po/pm` + optional group slug on `md{N}-…`) | 99 |
+| 101 | Backup/Restore covers Discord Schema (V8-V15) | (BackupSchema 1→2, +DiscordGlobalConfig +DiscordPost, lenient v1 import) | 100 |
+| 102 | Code-Review Fixes (v1.13 closeout) | REVIEW-FIX-01 / REVIEW-FIX-02 / REVIEW-FIX-03 | 101 |
 
 ## Deferred Items
 
@@ -300,6 +310,7 @@ Last phase shipped: **91** (v1.12 closer). v1.13 spans phases **92-98** (integer
 - Phase 100 added: Match Day Discord channel naming scheme — add phase prefix (rs/po/pm) + optional group prefix after mdX- so Regular Season / Playoff / Placement matchday counts don't collide; current scheme md{N}-{teamA}-vs-{teamB} loses phase context
 - Phase 101 added: Backup/Restore covers Discord schema (V8-V15) — current `BackupSchema` package filter `org.ctc.domain.model.*` excludes `discord_global_config` + `discord_post`, and the V8-V15 columns on matches/seasons/teams/matchdays have no MixIns or round-trip tests. Revisits Phase 72 D-15 exclusion decision in light of v1.13 making Discord first-class.
 - 2026-05-26: Phase 101 closed. Backup wire contract bumped from SCHEMA_VERSION 1 / 24 entities to SCHEMA_VERSION 2 / 26 entities (adds `DiscordGlobalConfig` + `DiscordPost` + V8-V15 columns on Match/Team/Matchday/Season). Importer accepts `schema_version IN (1, 2)` (lenient v1 acceptance). `discord_post` pinned to end of export order to satisfy `@Column UUID` FK constraints on restore. DOCS-02 runbook `docs/operations/discord-integration.md` now documents single-guild restore semantics + webhook_token PII-equivalent secrecy implication.
+- 2026-05-28: Milestone-wide code review of phases 92-101 executed via parallel `gsd-code-reviewer` agents. 9 REVIEW.md reports committed (`.planning/phases/{92..99,101}/{N}-REVIEW.md` + pre-existing `100-REVIEW.md`). Aggregate findings: 9 critical/blocker + 58 warning + 52 info = 119 across the milestone. Phase 102 added as the in-milestone-polish closeout (per CLAUDE.md "In-Milestone Polish" rule) — `/gsd-complete-milestone v1.13` blocked until Phase 102 ships.
 
 ### Blockers/Concerns
 
@@ -325,17 +336,21 @@ At roadmap creation (2026-05-20):
 
 ## Session Continuity
 
-**Last session:** 2026-05-26T10:02:56.548Z
+**Last session:** 2026-05-28T00:00:00.000Z
 
-**Stopped at:** Phase 101 context gathered
+**Stopped at:** Phase 102 added to v1.13-ROADMAP + STATE; awaiting `/gsd-discuss-phase 102`
 
-**Next action:** `/gsd-complete-milestone v1.13` — archive milestone artifacts, advance MILESTONES.md, prepare squash-merge subject `feat(v1.13): discord integration & carry-forwards` for PR #130. All 9 phases (92-100) verified, 36/36 plans shipped, 2255 tests green, JaCoCo 88.98 %, SpotBugs 0.
+**Next action:** `/gsd-discuss-phase 102` to gather context for the code-review-fix closeout phase (consumes the 9 `*-REVIEW.md` reports under `.planning/phases/{92..101}/{N}-REVIEW.md`).
 
 **Branch:** `gsd/v1.13-discord-integration` (off `origin/master`)
 
 ## Operator Next Steps
 
-1. Run `/gsd-complete-milestone v1.13` to archive milestone artifacts + write the canonical MILESTONES.md v1.13 entry.
-2. Update PR #130 description with the final Phase 99 + 100 rows (rolling summary discipline).
-3. Squash-merge PR #130 with subject `feat(v1.13): discord integration & carry-forwards` — triggers Semantic Release MINOR bump to `v1.13.0` + GitHub Release + `ghcr.io/jegr78/ctc-manager:1.13.0` + `:latest`.
-4. Post-merge: clean up local branch (`git switch master && git pull && git branch -d gsd/v1.13-discord-integration`).
+1. Run `/gsd-discuss-phase 102` to gather context for the code-review-fix closeout. Reports already on disk: `92-REVIEW.md`, `93-REVIEW.md`, `94-REVIEW.md`, `95-REVIEW.md`, `96-REVIEW.md`, `97-REVIEW.md`, `98-REVIEW.md`, `99-REVIEW.md`, `100-REVIEW.md`, `101-REVIEW.md`.
+2. Run `/gsd-plan-phase 102` to break the 119 findings into 3-5 plans (estimated: one critical-cluster, one warning-sweep, one info-cleanup — finalized during discuss-phase).
+3. Run `/gsd-execute-phase 102 --interactive` to apply fixes inline-sequential.
+4. Run `/gsd-code-review 102` (per the new CLAUDE.md "Code-Review Before Phase Close" rule) — must return clean (zero critical/warning) before Phase 102 closes.
+5. Run `/gsd-complete-milestone v1.13` only after Phase 102 ships green.
+6. Update PR #130 description with Phase 102 row (rolling summary discipline).
+7. Squash-merge PR #130 with subject `feat(v1.13): discord integration & carry-forwards`.
+8. Post-merge: clean up local branch (`git switch master && git pull && git branch -d gsd/v1.13-discord-integration`).

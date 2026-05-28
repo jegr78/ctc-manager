@@ -12,7 +12,7 @@
 - :white_check_mark: **v1.10 Spring Boot 4.0.6 Upgrade & Data Export/Import** — Phases 71-79 (shipped 2026-05-16)
 - :white_check_mark: **v1.11 Tooling Infrastructure & Tech-Debt Sweep** — Phases 80-87 (shipped 2026-05-18)
 - :white_check_mark: **v1.12 Driver-Import Gap-Closure & Test Performance Round 2** — Phases 88-91 (shipped 2026-05-20)
-- :hammer: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-98 (in flight)
+- :hammer: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-102 (in flight; 92-101 shipped, 102 = code-review-fix closeout)
 
 ## Phases
 
