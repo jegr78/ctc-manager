@@ -1061,11 +1061,11 @@ public class TestDataService {
 		var matchScoring = matchScoringRepository.findAll().stream().findFirst().orElseGet(
 				() -> matchScoringRepository.save(new MatchScoring("Lifecycle MS", 3, 1, 0)));
 
-		var home = teamRepository.save(new Team("Test Alfa", "T-ALF"));
+		var home = teamRepository.save(new Team("Test Alfa Lifecycle", "T-ALC"));
 		home.setDiscordRoleId("100000000000000001");
 		home = teamRepository.save(home);
 
-		var away = teamRepository.save(new Team("Test Bravo", "T-BRA"));
+		var away = teamRepository.save(new Team("Test Bravo Lifecycle", "T-BRL"));
 		away.setDiscordRoleId("100000000000000002");
 		away = teamRepository.save(away);
 
