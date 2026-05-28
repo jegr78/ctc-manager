@@ -67,8 +67,9 @@ public class DiscordPostController {
 	}
 
 	private static String matchLabel(Match m) {
+		String awayShort = m.getAwayTeam() != null ? m.getAwayTeam().getShortName() : "Bye";
 		return m.getMatchday().getSeason().getYear() + " | " + m.getMatchday().getLabel()
-				+ " | " + m.getHomeTeam().getShortName() + " vs. " + m.getAwayTeam().getShortName();
+				+ " | " + m.getHomeTeam().getShortName() + " vs. " + awayShort;
 	}
 
 	private static Specification<DiscordPost> buildSpec(DiscordPostFilterForm filter) {
