@@ -47,10 +47,11 @@ public class DiscordRestClient {
 	}
 
 	public List<Role> fetchGuildRoles(String guildId) throws DiscordApiException {
-		return execute(() -> bot.get()
+		List<Role> roles = execute(() -> bot.get()
 				.uri("/guilds/{guildId}/roles", guildId)
 				.retrieve()
 				.body(ROLE_LIST));
+		return roles == null ? List.of() : roles;
 	}
 
 	public Map<String, String> fetchGuildEmojis(String guildId) throws DiscordApiException {
@@ -58,6 +59,9 @@ public class DiscordRestClient {
 				.uri("/guilds/{guildId}/emojis", guildId)
 				.retrieve()
 				.body(EMOJI_LIST));
+		if (emojis == null) {
+			return Map.of();
+		}
 		Map<String, String> out = new HashMap<>(emojis.size());
 		for (Emoji e : emojis) {
 			out.put(e.name(), "<:" + e.name() + ":" + e.id() + ">");
@@ -84,10 +88,11 @@ public class DiscordRestClient {
 	}
 
 	public List<Channel> listChannels(String guildId) throws DiscordApiException {
-		return execute(() -> bot.get()
+		List<Channel> channels = execute(() -> bot.get()
 				.uri("/guilds/{guildId}/channels", guildId)
 				.retrieve()
 				.body(CHANNEL_LIST));
+		return channels == null ? List.of() : channels;
 	}
 
 	public List<Thread> listActiveThreads(String guildId) throws DiscordApiException {

@@ -62,8 +62,7 @@ public class DiscordDevSeeder {
 		try {
 			configRepository.save(cfg);
 		} catch (RuntimeException e) {
-			log.warn("Discord dev-seed: failed to persist DiscordGlobalConfig — aborting seed: {}",
-					e.toString());
+			log.warn("Discord dev-seed: failed to persist DiscordGlobalConfig — aborting seed", e);
 			return;
 		}
 
@@ -76,7 +75,7 @@ public class DiscordDevSeeder {
 		} catch (DiscordApiException e) {
 			log.warn("Discord dev-seed: roles/identity refresh failed — config persisted but role-cache + "
 					+ "team-roleId assignments are not populated. Operator can click 'Refresh Server Roles' "
-					+ "on /admin/discord-config once Discord is reachable. Cause: {}", e.toString());
+					+ "on /admin/discord-config once Discord is reachable.", e);
 		}
 
 		int emojis = -1;
@@ -84,7 +83,7 @@ public class DiscordDevSeeder {
 			emojis = emojiCache.refresh(restClient.fetchGuildEmojis(properties.guildId()));
 		} catch (DiscordApiException e) {
 			log.warn("Discord dev-seed: emoji refresh failed — operator can click 'Refresh Emoji Cache' "
-					+ "on /admin/discord-config once Discord is reachable. Cause: {}", e.toString());
+					+ "on /admin/discord-config once Discord is reachable.", e);
 		}
 
 		log.info("Discord dev-seed complete: guildId={}, currentMatchCategoryId={}, "
@@ -107,7 +106,7 @@ public class DiscordDevSeeder {
 			try {
 				configRepository.save(cfg);
 			} catch (RuntimeException e) {
-				log.warn("Discord dev-seed: failed to persist default-template backfill: {}", e.toString());
+				log.warn("Discord dev-seed: failed to persist default-template backfill", e);
 			}
 		}
 	}

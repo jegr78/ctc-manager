@@ -230,11 +230,13 @@ class DiscordRestClientIT {
 	}
 
 	@Test
-	void givenChannelId_whenDeleteChannelReturns500_thenDiscordTransientExceptionThrown() {
+	void givenChannelId_whenDeleteChannelReturns500_thenDiscordTransientExceptionThrownAfterRetries() {
 		wm.stubFor(delete(urlPathEqualTo("/api/v10/channels/c500"))
 				.willReturn(aResponse().withStatus(500)));
 
 		assertThatThrownBy(() -> client.deleteChannel("c500"))
 				.isInstanceOf(DiscordTransientException.class);
+
+		wm.verify(4, deleteRequestedFor(urlPathEqualTo("/api/v10/channels/c500")));
 	}
 }

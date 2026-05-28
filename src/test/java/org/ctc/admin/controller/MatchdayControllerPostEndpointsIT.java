@@ -212,6 +212,29 @@ class MatchdayControllerPostEndpointsIT {
 	}
 
 	@Test
+	void givenValidMatchday_whenGetEditPairings_thenViewWithPrepopulatedForm() throws Exception {
+		Matchday md = seedMatchday("EP1", "https://discord.com/api/webhooks/720/tok-ep1");
+
+		mockMvc.perform(MockMvcRequestBuilders.get("/admin/matchdays/" + md.getId() + "/edit-pairings"))
+				.andExpect(status().isOk())
+				.andExpect(model().attributeExists("form"))
+				.andExpect(model().attributeExists("matchday"));
+	}
+
+	@Test
+	void givenValidForm_whenPostSavePairings_thenRedirectToDetailWithSuccessFlash() throws Exception {
+		Matchday md = seedMatchday("EP2", "https://discord.com/api/webhooks/721/tok-ep2");
+
+		mockMvc.perform(MockMvcRequestBuilders.post("/admin/matchdays/" + md.getId() + "/save-pairings")
+						.with(csrf())
+						.param("id", md.getId().toString())
+						.param("pickDeadline", "2026-06-01T20:00:00")
+						.param("scheduledWeekend", "2026-06-08"))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attribute("successMessage", "Pairings saved."));
+	}
+
+	@Test
 	void givenNoThreadConfigured_whenDetailGet_thenMatchdayDiscordActiveFalse() throws Exception {
 		Season season = helper.createSeason("Ctrl MD R9");
 		season.setDiscordRaceResultsThreadId(null);

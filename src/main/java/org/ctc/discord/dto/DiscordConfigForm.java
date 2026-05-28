@@ -47,5 +47,6 @@ public class DiscordConfigForm {
 	@Pattern(regexp = DiscordSnowflake.PATTERN, message = DiscordSnowflake.MESSAGE)
 	private String currentMatchCategoryId = "";
 
+	@Size(max = 4000, message = "Template must be at most 4000 characters")
 	private String matchdayPairingsTemplate = "";
 }
