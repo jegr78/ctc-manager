@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Plan 102-03 closed (info-sweep — 31 closures + 7 inapplicable, marker oracle 0 in src/main+src/test); verify pending
-last_updated: "2026-05-28T17:30:00.000Z"
-last_activity: 2026-05-28
+stopped_at: Phase 103 context gathered
+last_updated: "2026-05-28T17:33:29.250Z"
+last_activity: "2026-05-28 -- Phase 102 closed: 102-04 ran close-loop end-gate. First reviewer pass surfaced W1 (TeamManagementService hex-color sanitiser gap), W2 (NPE risk on postRaceResultToForumThread filename), W3 (partial activeRoute sidebar migration), I1 (silent null-team skip in recomputeMatchScoresFromAllLegs), I2 (implicit persistence in same method). All 5 remediated inline via Tasks 2-R1..R5 (4 atomic commits incl. I1+I2 combined per the 102-02 precedent). Second reviewer pass: CLEAN. 102-REVIEW.md authored in commit `1039020c`."
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 10
   total_plans: 41
-  completed_plans: 43
-  percent: 100
+  completed_plans: 42
+  percent: 91
 ---
 
 # Project State
@@ -312,6 +312,7 @@ Last phase shipped: **91** (v1.12 closer). v1.13 spans phases **92-98** (integer
 - Phase 101 added: Backup/Restore covers Discord schema (V8-V15) — current `BackupSchema` package filter `org.ctc.domain.model.*` excludes `discord_global_config` + `discord_post`, and the V8-V15 columns on matches/seasons/teams/matchdays have no MixIns or round-trip tests. Revisits Phase 72 D-15 exclusion decision in light of v1.13 making Discord first-class.
 - 2026-05-26: Phase 101 closed. Backup wire contract bumped from SCHEMA_VERSION 1 / 24 entities to SCHEMA_VERSION 2 / 26 entities (adds `DiscordGlobalConfig` + `DiscordPost` + V8-V15 columns on Match/Team/Matchday/Season). Importer accepts `schema_version IN (1, 2)` (lenient v1 acceptance). `discord_post` pinned to end of export order to satisfy `@Column UUID` FK constraints on restore. DOCS-02 runbook `docs/operations/discord-integration.md` now documents single-guild restore semantics + webhook_token PII-equivalent secrecy implication.
 - 2026-05-28: Milestone-wide code review of phases 92-101 executed via parallel `gsd-code-reviewer` agents. 9 REVIEW.md reports committed (`.planning/phases/{92..99,101}/{N}-REVIEW.md` + pre-existing `100-REVIEW.md`). Aggregate findings: 9 critical/blocker + 58 warning + 52 info = 119 across the milestone. Phase 102 added as the in-milestone-polish closeout (per CLAUDE.md "In-Milestone Polish" rule) — `/gsd-complete-milestone v1.13` blocked until Phase 102 ships.
+- 2026-05-28: Phase 103 added: StringUtils Blank-Check Sweep — replace 88 manual `s != null && !s.isBlank()` / `s == null || s.isBlank()` occurrences across 43 production files with `org.springframework.util.StringUtils.hasText(s)` (Spring-Native readability refactor, pure mechanical 1:1 substitution, depends on Phase 102 to avoid Discord-package diff collision).
 
 ### Blockers/Concerns
 
@@ -337,9 +338,9 @@ At roadmap creation (2026-05-20):
 
 ## Session Continuity
 
-**Last session:** 2026-05-28
+**Last session:** 2026-05-28T17:33:29.239Z
 
-**Stopped at:** Phase 102 closed — close-loop gate green (Pass 2 reviewer clean, clean verify -Pe2e exit 0, 2393 tests / 0 failures, JaCoCo line 89.43 %, SpotBugs 0).
+**Stopped at:** Phase 103 context gathered
 
 **Next action:** `/gsd-complete-milestone v1.13`. v1.13 is now ready to ship.
 
