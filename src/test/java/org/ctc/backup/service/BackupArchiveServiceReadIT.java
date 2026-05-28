@@ -11,12 +11,14 @@ import java.util.Map;
 import java.util.zip.Deflater;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.ctc.admin.TestDataService;
 import org.ctc.backup.exception.BackupArchiveException;
 import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.schema.BackupManifest;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
 import org.ctc.testsupport.CtcDevSpringBootContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -62,8 +64,16 @@ class BackupArchiveServiceReadIT {
     @Qualifier("backupObjectMapper")
     private ObjectMapper backupObjectMapper;
 
+    @Autowired
+    private TestDataService testDataService;
+
     @TempDir
     Path tempDir;
+
+    @BeforeEach
+    void ensureDevFixturePresent() {
+        testDataService.seed();
+    }
 
     // -------------------------------------------------------------------------
     // Test 1 — round-trip: Phase-73 export → readManifest → schemaVersion == 1

@@ -3,12 +3,14 @@ package org.ctc.backup.service;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.ctc.admin.TestDataService;
 import org.ctc.backup.schema.BackupSchema;
 import org.ctc.backup.schema.EntityRef;
 import org.ctc.domain.model.Season;
 import org.ctc.domain.repository.SeasonRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.ctc.testsupport.CtcDevSpringBootContext;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +52,14 @@ class BackupExportServiceIT {
 
 	@Autowired
 	private TeamRepository teamRepository;
+
+	@Autowired
+	private TestDataService testDataService;
+
+	@BeforeEach
+	void ensureDevFixturePresent() {
+		testDataService.seed();
+	}
 
 	@Test
 	void givenDevFixture_whenCountRowsPerTable_thenSeededTablesHaveNonZeroCounts() {
