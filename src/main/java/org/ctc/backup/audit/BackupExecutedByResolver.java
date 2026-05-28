@@ -1,5 +1,7 @@
 package org.ctc.backup.audit;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
@@ -37,11 +39,11 @@ public class BackupExecutedByResolver {
         if (environment.matchesProfiles("dev | local")) {
             return "dev";
         }
-        if (callerOverride != null && !callerOverride.isBlank()) {
+        if (hasText(callerOverride)) {
             return callerOverride;
         }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getName() != null && !auth.getName().isBlank()) {
+        if (auth != null && hasText(auth.getName())) {
             return auth.getName();
         }
         return "unknown";

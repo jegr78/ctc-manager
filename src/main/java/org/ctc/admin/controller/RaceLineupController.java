@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,7 +45,7 @@ public class RaceLineupController {
 	                         RedirectAttributes redirectAttributes) {
 		var driverTeamAssignments = new HashMap<UUID, UUID>();
 		for (var entry : params.entrySet()) {
-			if (!entry.getKey().startsWith("driver_") || entry.getValue().isBlank()) {
+			if (!entry.getKey().startsWith("driver_") || !hasText(entry.getValue())) {
 				continue;
 			}
 			UUID driverId = UUID.fromString(entry.getKey().substring("driver_".length()));

@@ -1,5 +1,7 @@
 package org.ctc.discord.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -242,7 +244,7 @@ public class DiscordPostService {
 
 	public MatchPreviewPreFlightResult canPostMatchPreview(Match match) {
 		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
-		if (match.getDiscordTeaser() == null || match.getDiscordTeaser().isBlank()) {
+		if (!hasText(match.getDiscordTeaser())) {
 			return new MatchPreviewPreFlightResult(false, "Add a teaser text on Match-Edit first");
 		}
 		if (!matchHasCompleteSettings(match)) {
@@ -255,7 +257,7 @@ public class DiscordPostService {
 			return new MatchPreviewPreFlightResult(false, "Set Race date+time first");
 		}
 		String webhookUrl = config.getAnnouncementWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
+		if (!hasText(webhookUrl)) {
 			return new MatchPreviewPreFlightResult(false, "Configure announcement-webhook in Discord settings");
 		}
 		return new MatchPreviewPreFlightResult(true, null);
@@ -286,7 +288,7 @@ public class DiscordPostService {
 	public void autoEditMatchPreviewIfNeeded(Match match) throws DiscordApiException {
 		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
 		String webhookUrl = config.getAnnouncementWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
+		if (!hasText(webhookUrl)) {
 			return;
 		}
 		String channelId = parseWebhookUrl(webhookUrl).id();
@@ -317,7 +319,7 @@ public class DiscordPostService {
 		String awayShort = match.getAwayTeam().getShortName();
 		String teaser = match.getDiscordTeaser();
 		String dateLine = discordTimestamps.longDateTime(firstRaceTime);
-		String streamLine = (match.getStreamLink() != null && !match.getStreamLink().isBlank())
+		String streamLine = hasText(match.getStreamLink())
 				? match.getStreamLink()
 				: "TBA";
 		String homeEmoji = emojiCache.emojiFor(match.getHomeTeam().getParentOrSelf().getShortName());
@@ -337,11 +339,11 @@ public class DiscordPostService {
 			return new MatchPreviewPreFlightResult(false, "Mark all matches as final first");
 		}
 		String threadId = matchday.getSeason().getDiscordRaceResultsThreadId();
-		if (threadId == null || threadId.isBlank()) {
+		if (!hasText(threadId)) {
 			return new MatchPreviewPreFlightResult(false, "Link a race-results thread on the Season page first");
 		}
 		String webhookUrl = config.getRaceResultsForumWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
+		if (!hasText(webhookUrl)) {
 			return new MatchPreviewPreFlightResult(false, "Configure race-results forum-webhook in Discord settings");
 		}
 		return new MatchPreviewPreFlightResult(true, null);
@@ -349,11 +351,11 @@ public class DiscordPostService {
 
 	public MatchPreviewPreFlightResult canPostPowerRankings(Matchday matchday, DiscordGlobalConfig config) {
 		String threadId = matchday.getSeason().getDiscordRaceResultsThreadId();
-		if (threadId == null || threadId.isBlank()) {
+		if (!hasText(threadId)) {
 			return new MatchPreviewPreFlightResult(false, "Link a race-results thread on the Season page first");
 		}
 		String webhookUrl = config.getRaceResultsForumWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
+		if (!hasText(webhookUrl)) {
 			return new MatchPreviewPreFlightResult(false, "Configure race-results forum-webhook in Discord settings");
 		}
 		return new MatchPreviewPreFlightResult(true, null);
@@ -393,7 +395,7 @@ public class DiscordPostService {
 		if (matchday.getPickDeadline() == null) {
 			return new MatchPreviewPreFlightResult(false, "Set pick deadline first");
 		}
-		if (matchday.getScheduledWeekend() == null || matchday.getScheduledWeekend().isBlank()) {
+		if (!hasText(matchday.getScheduledWeekend())) {
 			return new MatchPreviewPreFlightResult(false, "Set scheduled weekend first");
 		}
 		List<Match> nonByeMatches = matchday.getMatches().stream()
@@ -408,7 +410,7 @@ public class DiscordPostService {
 			return new MatchPreviewPreFlightResult(false, "Assign teams to all matches first");
 		}
 		String webhookUrl = config.getAnnouncementWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
+		if (!hasText(webhookUrl)) {
 			return new MatchPreviewPreFlightResult(false, "Configure announcement-webhook in Discord settings");
 		}
 		return new MatchPreviewPreFlightResult(true, null);
@@ -454,7 +456,7 @@ public class DiscordPostService {
 			return new MatchPreviewPreFlightResult(false, "Set Race date+time for all matches first");
 		}
 		String webhookUrl = config.getAnnouncementWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
+		if (!hasText(webhookUrl)) {
 			return new MatchPreviewPreFlightResult(false, "Configure announcement-webhook in Discord settings");
 		}
 		return new MatchPreviewPreFlightResult(true, null);
@@ -487,16 +489,14 @@ public class DiscordPostService {
 	}
 
 	private String buildMatchdayPairingsMarkdown(Matchday matchday, DiscordGlobalConfig config) {
-		String template = (config.getMatchdayPairingsTemplate() != null
-				&& !config.getMatchdayPairingsTemplate().isBlank())
+		String template = hasText(config.getMatchdayPairingsTemplate())
 				? config.getMatchdayPairingsTemplate()
 				: DEFAULT_MATCHDAY_PAIRINGS_TEMPLATE;
 		String matchdayNumber = matchday.getLabel() != null ? matchday.getLabel() : "?";
 		String deadline = matchday.getPickDeadline() != null
 				? discordTimestamps.longDateTime(matchday.getPickDeadline())
 				: "_TBD_";
-		String weekend = (matchday.getScheduledWeekend() != null
-				&& !matchday.getScheduledWeekend().isBlank())
+		String weekend = hasText(matchday.getScheduledWeekend())
 				? matchday.getScheduledWeekend()
 				: "_TBD_";
 		String ctcEmoji = emojiCache.emojiFor(config.getVsEmojiName());
@@ -546,11 +546,11 @@ public class DiscordPostService {
 
 	public MatchPreviewPreFlightResult canPostStandings(Season season, DiscordGlobalConfig config) {
 		String threadId = season.getDiscordStandingsThreadId();
-		if (threadId == null || threadId.isBlank()) {
+		if (!hasText(threadId)) {
 			return new MatchPreviewPreFlightResult(false, "Link a standings forum-thread above first");
 		}
 		String webhookUrl = config.getStandingsForumWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
+		if (!hasText(webhookUrl)) {
 			return new MatchPreviewPreFlightResult(false, "Configure standings forum-webhook in Discord settings");
 		}
 		return new MatchPreviewPreFlightResult(true, null);
@@ -652,8 +652,8 @@ public class DiscordPostService {
 	private static String streamerField(Match match) {
 		String name = match.getStreamer();
 		String link = match.getStreamLink();
-		boolean hasName = name != null && !name.isBlank();
-		boolean hasLink = link != null && !link.isBlank();
+		boolean hasName = hasText(name);
+		boolean hasLink = hasText(link);
 		if (hasName && hasLink) {
 			return "[" + name + "](" + escapeMarkdownLinkUrl(link) + ")";
 		}
@@ -673,7 +673,7 @@ public class DiscordPostService {
 	}
 
 	private static String orTbd(String value) {
-		return (value == null || value.isBlank()) ? "_TBD_" : value;
+		return !hasText(value) ? "_TBD_" : value;
 	}
 
 	public boolean matchHasCompleteSettings(Match match) {
@@ -866,11 +866,11 @@ public class DiscordPostService {
 		}
 		Season season = race.getMatchday().getSeason();
 		String threadId = season.getDiscordRaceResultsThreadId();
-		if (threadId == null || threadId.isBlank()) {
+		if (!hasText(threadId)) {
 			return new MatchPreviewPreFlightResult(false, "Link a race-results thread first");
 		}
 		String webhookUrl = config.getRaceResultsForumWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
+		if (!hasText(webhookUrl)) {
 			return new MatchPreviewPreFlightResult(false, "Configure race-results forum-webhook in Discord settings");
 		}
 		return new MatchPreviewPreFlightResult(true, null);

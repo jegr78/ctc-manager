@@ -1,5 +1,7 @@
 package org.ctc.admin.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -115,7 +117,7 @@ public class DiscordSeasonViewService {
 	}
 
 	private static boolean isNonBlank(String value) {
-		return value != null && !value.isBlank();
+		return hasText(value);
 	}
 
 	private record ThreadListResult(List<Thread> threads, String warning) {}

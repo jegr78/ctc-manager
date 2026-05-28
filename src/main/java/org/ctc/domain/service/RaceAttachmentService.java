@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +38,7 @@ public class RaceAttachmentService {
     @Transactional
     public String uploadAttachment(UUID raceId, MultipartFile file) {
         String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || originalFilename.isBlank()) {
+        if (!hasText(originalFilename)) {
             throw new IllegalArgumentException("Filename is required");
         }
         var race = raceRepository.findById(raceId).orElseThrow();

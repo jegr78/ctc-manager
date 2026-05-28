@@ -1,5 +1,7 @@
 package org.ctc.dataimport;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.client.util.DateTime;
@@ -53,11 +55,9 @@ public class GoogleCalendarService {
 	}
 
 	public boolean isAvailable() {
-		return credentialsPath != null
-				&& !credentialsPath.isBlank()
+		return hasText(credentialsPath)
 				&& Files.exists(Path.of(credentialsPath))
-				&& calendarId != null
-				&& !calendarId.isBlank();
+				&& hasText(calendarId);
 	}
 
 	public String createEvent(String title, LocalDateTime startTime, int durationMinutes) throws GoogleApiException {

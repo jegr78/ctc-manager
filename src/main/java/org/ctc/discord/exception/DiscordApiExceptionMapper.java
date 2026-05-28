@@ -1,5 +1,7 @@
 package org.ctc.discord.exception;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -63,7 +65,7 @@ public final class DiscordApiExceptionMapper {
 	}
 
 	private static Integer parseDiscordErrorCode(String body) {
-		if (body == null || body.isBlank()) {
+		if (!hasText(body)) {
 			return null;
 		}
 		try {

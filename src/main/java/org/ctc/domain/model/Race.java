@@ -1,5 +1,7 @@
 package org.ctc.domain.model;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
@@ -123,6 +125,6 @@ public class Race extends BaseEntity {
 	}
 
 	public boolean hasCalendarEvent() {
-		return calendarEventId != null && !calendarEventId.isBlank();
+		return hasText(calendarEventId);
 	}
 }

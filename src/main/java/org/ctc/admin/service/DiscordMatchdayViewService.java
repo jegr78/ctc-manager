@@ -1,5 +1,7 @@
 package org.ctc.admin.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -83,6 +85,6 @@ public class DiscordMatchdayViewService {
 	}
 
 	private static boolean isNonBlank(String s) {
-		return s != null && !s.isBlank();
+		return hasText(s);
 	}
 }

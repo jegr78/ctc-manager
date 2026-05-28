@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -61,7 +63,7 @@ public class StandingsViewService {
 		if (phase != null) {
 			resolvedPhase = seasonPhaseService.findById(phase);
 			resolvedSeasonId = resolvedPhase.getSeason().getId();
-		} else if (seasonId != null && !seasonId.isBlank()) {
+		} else if (hasText(seasonId)) {
 			try {
 				resolvedSeasonId = UUID.fromString(seasonId);
 				resolvedPhase = seasonPhaseService.findByType(resolvedSeasonId, PhaseType.REGULAR).orElse(null);

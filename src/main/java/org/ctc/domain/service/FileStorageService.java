@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -74,7 +76,7 @@ public class FileStorageService {
 			throw new IllegalArgumentException("File type not allowed. Allowed: PNG, JPG, GIF, WebP, PDF");
 		}
 		String name = file.getOriginalFilename();
-		if (name == null || name.isBlank()) {
+		if (!hasText(name)) {
 			throw new IllegalArgumentException("Filename is required");
 		}
 		String ext = name.contains(".") ? name.substring(name.lastIndexOf('.')).toLowerCase() : "";

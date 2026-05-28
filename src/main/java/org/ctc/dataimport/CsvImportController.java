@@ -1,5 +1,7 @@
 package org.ctc.dataimport;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
@@ -181,7 +183,7 @@ public class CsvImportController {
 
 			// Re-parse from original source
 			var previews = new ArrayList<CsvImportService.ImportPreview>();
-			if ("sheet".equals(source) && sheetUrl != null && !sheetUrl.isBlank()) {
+			if ("sheet".equals(source) && hasText(sheetUrl)) {
 				var spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
 				var sheetNames = googleSheetsService.getSheetNames(spreadsheetId);
 				var raceSheets = googleSheetsService.filterRaceSheets(sheetNames);

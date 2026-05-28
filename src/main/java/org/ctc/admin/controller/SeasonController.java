@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -151,7 +153,7 @@ public class SeasonController {
 	                         @RequestParam String type,
 	                         RedirectAttributes redirectAttributes) {
 		try {
-			if (threadId == null || threadId.isBlank()) {
+			if (!hasText(threadId)) {
 				throw new BusinessRuleException("Thread ID must not be empty.");
 			}
 			switch (type) {

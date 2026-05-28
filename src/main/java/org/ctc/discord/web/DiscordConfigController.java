@@ -1,5 +1,7 @@
 package org.ctc.discord.web;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
@@ -82,7 +84,7 @@ public class DiscordConfigController {
 	public String testWebhook(RedirectAttributes redirectAttributes) {
 		DiscordGlobalConfig current = configService.getOrInitialize();
 		String webhookUrl = current.getAnnouncementWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
+		if (!hasText(webhookUrl)) {
 			redirectAttributes.addFlashAttribute("errorMessage", "Announcement webhook URL is not configured.");
 			redirectAttributes.addFlashAttribute("errorCategory", "not-found");
 			return REDIRECT;
@@ -100,7 +102,7 @@ public class DiscordConfigController {
 	public String refreshRolesCache(RedirectAttributes redirectAttributes) {
 		DiscordGlobalConfig current = configService.getOrInitialize();
 		String guildId = current.getGuildId();
-		if (guildId == null || guildId.isBlank()) {
+		if (!hasText(guildId)) {
 			redirectAttributes.addFlashAttribute("errorMessage", "Guild ID is not configured.");
 			redirectAttributes.addFlashAttribute("errorCategory", "not-found");
 			return REDIRECT;
@@ -121,7 +123,7 @@ public class DiscordConfigController {
 	public String refreshEmojiCache(RedirectAttributes redirectAttributes) {
 		DiscordGlobalConfig current = configService.getOrInitialize();
 		String guildId = current.getGuildId();
-		if (guildId == null || guildId.isBlank()) {
+		if (!hasText(guildId)) {
 			redirectAttributes.addFlashAttribute("errorMessage", "Guild ID is not configured.");
 			redirectAttributes.addFlashAttribute("errorCategory", "not-found");
 			return REDIRECT;

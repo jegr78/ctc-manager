@@ -1,5 +1,7 @@
 package org.ctc.discord;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.discord.dev-seed")
@@ -16,6 +18,6 @@ public record DiscordDevSeedProperties(
 		String standingsForumWebhookUrl) {
 
 	public boolean hasGuildId() {
-		return guildId != null && !guildId.isBlank();
+		return hasText(guildId);
 	}
 }

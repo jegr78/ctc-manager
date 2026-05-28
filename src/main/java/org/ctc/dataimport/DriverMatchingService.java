@@ -1,5 +1,7 @@
 package org.ctc.dataimport;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +23,7 @@ public class DriverMatchingService {
 	private final DriverRepository driverRepository;
 
 	public MatchResult findDriver(String searchTerm) {
-		if (searchTerm == null || searchTerm.isBlank()) {
+		if (!hasText(searchTerm)) {
 			return MatchResult.noMatch(searchTerm);
 		}
 

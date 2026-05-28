@@ -1,5 +1,7 @@
 package org.ctc.dataimport;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.sheets.v4.Sheets;
@@ -53,8 +55,7 @@ public class GoogleSheetsService {
 	 * Returns true when a credentials path is configured and the file exists.
 	 */
 	public boolean isAvailable() {
-		return credentialsPath != null
-				&& !credentialsPath.isBlank()
+		return hasText(credentialsPath)
 				&& Files.exists(Path.of(credentialsPath));
 	}
 
@@ -144,7 +145,7 @@ public class GoogleSheetsService {
 	 * @throws IllegalArgumentException if the URL format is not recognized
 	 */
 	public String extractSpreadsheetId(String url) {
-		if (url == null || url.isBlank()) {
+		if (!hasText(url)) {
 			throw new IllegalArgumentException("URL must not be null or blank");
 		}
 

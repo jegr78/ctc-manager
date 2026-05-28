@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -263,7 +265,7 @@ public class MatchController {
 	                            @RequestParam(required = false) String categoryId,
 	                            RedirectAttributes redirectAttributes) {
 		try {
-			if (categoryId == null || categoryId.isBlank()) {
+			if (!hasText(categoryId)) {
 				redirectAttributes.addFlashAttribute("errorMessage",
 						"Select an archive category before confirming the move.");
 				redirectAttributes.addFlashAttribute("errorCategory", "data-incomplete");

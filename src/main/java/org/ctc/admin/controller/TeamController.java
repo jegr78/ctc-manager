@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -100,7 +102,7 @@ public class TeamController {
 	                         @RequestParam String subName,
 	                         @RequestParam String subShortName,
 	                         RedirectAttributes redirectAttributes) {
-		if (subName.isBlank() || subShortName.isBlank()) {
+		if (!hasText(subName) || !hasText(subShortName)) {
 			redirectAttributes.addFlashAttribute("errorMessage", "Name and short name must not be blank");
 			return "redirect:/admin/teams/" + id + "/edit";
 		}

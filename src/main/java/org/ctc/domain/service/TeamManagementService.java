@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -246,7 +248,7 @@ public class TeamManagementService {
 	}
 
 	private static String blankToNull(String value) {
-		return (value == null || value.isBlank()) ? null : value;
+		return !hasText(value) ? null : value;
 	}
 
 	/**

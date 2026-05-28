@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -126,7 +128,7 @@ public class DriverService {
         var seen = new HashSet<String>();
 
         for (String alias : aliases) {
-			if (alias == null || alias.isBlank()) {
+			if (!hasText(alias)) {
 				continue;
 			}
 
@@ -157,7 +159,7 @@ public class DriverService {
 
     private void syncAliases(Driver driver, List<String> formAliases) {
         var desired = formAliases != null
-                ? formAliases.stream().filter(a -> a != null && !a.isBlank()).map(String::trim).toList()
+                ? formAliases.stream().filter(a -> hasText(a)).map(String::trim).toList()
                 : List.<String>of();
 
         // Remove aliases no longer in form

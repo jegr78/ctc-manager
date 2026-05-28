@@ -1,5 +1,7 @@
 package org.ctc.discord.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -26,7 +28,7 @@ public class DiscordForumService {
 
 	public List<Thread> listThreads(String forumChannelId) throws DiscordApiException {
 		String guildId = globalConfigService.getOrInitialize().getGuildId();
-		if (guildId == null || guildId.isBlank()) {
+		if (!hasText(guildId)) {
 			log.warn("listThreads({}) called with no guildId configured — returning empty list", forumChannelId);
 			return List.of();
 		}

@@ -1,5 +1,7 @@
 package org.ctc.discord;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -50,7 +52,7 @@ public class DiscordDevSeeder {
 			persistIfDirty(cfg, templateBackfilled);
 			return;
 		}
-		if (cfg.getGuildId() != null && !cfg.getGuildId().isBlank()) {
+		if (hasText(cfg.getGuildId())) {
 			log.info("Discord dev-seed: DiscordGlobalConfig already populated (guildId={}) — skipping",
 					cfg.getGuildId());
 			persistIfDirty(cfg, templateBackfilled);
@@ -92,7 +94,7 @@ public class DiscordDevSeeder {
 
 	private boolean backfillDefaultTemplates(DiscordGlobalConfig cfg) {
 		boolean dirty = false;
-		if (cfg.getMatchdayPairingsTemplate() == null || cfg.getMatchdayPairingsTemplate().isBlank()) {
+		if (!hasText(cfg.getMatchdayPairingsTemplate())) {
 			cfg.setMatchdayPairingsTemplate(DiscordPostService.DEFAULT_MATCHDAY_PAIRINGS_TEMPLATE);
 			log.info("Discord dev-seed: seeded default Matchday-Pairings template");
 			dirty = true;
@@ -112,28 +114,28 @@ public class DiscordDevSeeder {
 
 	private void applyConfig(DiscordGlobalConfig cfg) {
 		cfg.setGuildId(properties.guildId());
-		if (properties.botAppId() != null && !properties.botAppId().isBlank()) {
+		if (hasText(properties.botAppId())) {
 			cfg.setBotApplicationId(properties.botAppId());
 		}
-		if (properties.currentMatchCategoryId() != null && !properties.currentMatchCategoryId().isBlank()) {
+		if (hasText(properties.currentMatchCategoryId())) {
 			cfg.setCurrentMatchCategoryId(properties.currentMatchCategoryId());
 		}
-		if (properties.raceResultsForumChannelId() != null && !properties.raceResultsForumChannelId().isBlank()) {
+		if (hasText(properties.raceResultsForumChannelId())) {
 			cfg.setRaceResultsForumChannelId(properties.raceResultsForumChannelId());
 		}
-		if (properties.standingsForumChannelId() != null && !properties.standingsForumChannelId().isBlank()) {
+		if (hasText(properties.standingsForumChannelId())) {
 			cfg.setStandingsForumChannelId(properties.standingsForumChannelId());
 		}
-		if (properties.vsEmojiName() != null && !properties.vsEmojiName().isBlank()) {
+		if (hasText(properties.vsEmojiName())) {
 			cfg.setVsEmojiName(properties.vsEmojiName());
 		}
-		if (properties.announcementWebhookUrl() != null && !properties.announcementWebhookUrl().isBlank()) {
+		if (hasText(properties.announcementWebhookUrl())) {
 			cfg.setAnnouncementWebhookUrl(properties.announcementWebhookUrl());
 		}
-		if (properties.raceResultsForumWebhookUrl() != null && !properties.raceResultsForumWebhookUrl().isBlank()) {
+		if (hasText(properties.raceResultsForumWebhookUrl())) {
 			cfg.setRaceResultsForumWebhookUrl(properties.raceResultsForumWebhookUrl());
 		}
-		if (properties.standingsForumWebhookUrl() != null && !properties.standingsForumWebhookUrl().isBlank()) {
+		if (hasText(properties.standingsForumWebhookUrl())) {
 			cfg.setStandingsForumWebhookUrl(properties.standingsForumWebhookUrl());
 		}
 	}

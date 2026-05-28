@@ -1,5 +1,7 @@
 package org.ctc.backup.exception;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.UUID;
 
 /**
@@ -100,7 +102,7 @@ public class BackupImportException extends RuntimeException {
             return "<no cause>";
         }
         String msg = cause.getMessage();
-        if (msg == null || msg.isBlank()) {
+        if (!hasText(msg)) {
             return cause.getClass().getSimpleName();
         }
         return cause.getClass().getSimpleName() + ": " + msg;

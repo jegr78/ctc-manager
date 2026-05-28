@@ -1,5 +1,7 @@
 package org.ctc.discord;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
@@ -87,7 +89,7 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 
 	private void updateBucket(HttpHeaders headers) {
 		String bucket = headers.getFirst("X-RateLimit-Bucket");
-		if (bucket == null || bucket.isBlank()) {
+		if (!hasText(bucket)) {
 			return;
 		}
 		int remaining = parseIntSafe(headers.getFirst("X-RateLimit-Remaining"), 0);
@@ -97,7 +99,7 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 	}
 
 	private static int parseIntSafe(String value, int defaultValue) {
-		if (value == null || value.isBlank()) {
+		if (!hasText(value)) {
 			return defaultValue;
 		}
 		try {
@@ -108,7 +110,7 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 	}
 
 	private static double parseDoubleSafe(String value, double defaultValue) {
-		if (value == null || value.isBlank()) {
+		if (!hasText(value)) {
 			return defaultValue;
 		}
 		try {
@@ -120,7 +122,7 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 
 	private long parseRetryAfterMs(HttpHeaders headers) {
 		String retryAfter = headers.getFirst("Retry-After");
-		if (retryAfter == null || retryAfter.isBlank()) {
+		if (!hasText(retryAfter)) {
 			return 0L;
 		}
 		try {
@@ -151,7 +153,7 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 	}
 
 	private static long[] parseJitter(String range) {
-		if (range == null || range.isBlank()) {
+		if (!hasText(range)) {
 			return new long[] {100L, 500L};
 		}
 		String trimmed = range.trim();
@@ -166,7 +168,7 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 	}
 
 	private static long[] parseBackoff(String csv) {
-		if (csv == null || csv.isBlank()) {
+		if (!hasText(csv)) {
 			return DEFAULT_FIVE_XX_BACKOFF_MS;
 		}
 		String[] parts = csv.split(",");

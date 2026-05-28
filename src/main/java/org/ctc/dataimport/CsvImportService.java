@@ -1,5 +1,7 @@
 package org.ctc.dataimport;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -491,7 +493,7 @@ public class CsvImportService {
 						continue; // Skip header
 					}
 				}
-				if (line.isBlank()) {
+				if (!hasText(line)) {
 					continue;
 				}
 				lines.add(line.split("[,;\\t]", -1));

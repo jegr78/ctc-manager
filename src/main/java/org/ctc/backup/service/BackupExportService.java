@@ -1,5 +1,7 @@
 package org.ctc.backup.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.annotation.PostConstruct;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
@@ -284,7 +286,7 @@ public class BackupExportService {
 	 * convention has drifted (e.g. an entity carrying an external CDN reference).
 	 */
 	private static void addIfPresent(Set<String> set, String url) {
-		if (url == null || url.isBlank()) {
+		if (!hasText(url)) {
 			return;
 		}
 		String prefix = "/uploads/";
@@ -292,7 +294,7 @@ public class BackupExportService {
 			return;
 		}
 		String relative = url.substring(prefix.length());
-		if (relative.isBlank()) {
+		if (!hasText(relative)) {
 			return;
 		}
 		set.add(relative);

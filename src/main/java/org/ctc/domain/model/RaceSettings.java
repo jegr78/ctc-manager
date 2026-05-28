@@ -1,5 +1,7 @@
 package org.ctc.domain.model;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.persistence.*;
 import java.util.UUID;
 import lombok.Getter;
@@ -40,11 +42,11 @@ public class RaceSettings extends BaseEntity {
 	public boolean isComplete() {
 		return numberOfLaps != null && tyreWearMultiplier != null
 				&& fuelConsumptionMultiplier != null && refuelingSpeed != null
-				&& initialFuel != null && !initialFuel.isBlank()
+				&& hasText(initialFuel)
 				&& numberOfRequiredPitStops != null && timeProgressionMultiplier != null
-				&& weather != null && !weather.isBlank()
-				&& timeOfDay != null && !timeOfDay.isBlank()
-				&& availableTyres != null && !availableTyres.isBlank()
-				&& mandatoryTyres != null && !mandatoryTyres.isBlank();
+				&& hasText(weather)
+				&& hasText(timeOfDay)
+				&& hasText(availableTyres)
+				&& hasText(mandatoryTyres);
 	}
 }

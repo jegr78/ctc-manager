@@ -1,5 +1,7 @@
 package org.ctc.domain.model;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.util.ArrayList;
@@ -76,12 +78,12 @@ public class Team extends BaseEntity {
 	}
 
 	public String getEffectiveDiscordRoleId() {
-		if (discordRoleId != null && !discordRoleId.isBlank()) {
+		if (hasText(discordRoleId)) {
 			return discordRoleId;
 		}
 		if (parentTeam != null) {
 			String parentId = parentTeam.getDiscordRoleId();
-			if (parentId != null && !parentId.isBlank()) {
+			if (hasText(parentId)) {
 				return parentId;
 			}
 		}

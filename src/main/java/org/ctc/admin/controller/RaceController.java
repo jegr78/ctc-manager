@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -95,7 +97,7 @@ public class RaceController {
 		MatchPreviewPreFlightResult preFlight = discordPostService.canPostRaceResultToForum(race, config);
 		DiscordPost existingPost = null;
 		String webhookUrl = config != null ? config.getRaceResultsForumWebhookUrl() : null;
-		if (webhookUrl != null && !webhookUrl.isBlank()) {
+		if (hasText(webhookUrl)) {
 			String channelId = discordPostService.resolveAnnouncementChannelId(webhookUrl);
 			existingPost = discordPostRepository
 					.findByChannelIdAndPostTypeAndRaceId(channelId, DiscordPostType.RACE_RESULTS, race.getId())

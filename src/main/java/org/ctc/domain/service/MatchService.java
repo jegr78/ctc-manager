@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -110,8 +112,7 @@ public class MatchService {
 
 		DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
 		String announcementWebhookUrl = config.getAnnouncementWebhookUrl();
-		boolean discordAnnouncementsConfigured =
-				announcementWebhookUrl != null && !announcementWebhookUrl.isBlank();
+		boolean discordAnnouncementsConfigured = hasText(announcementWebhookUrl);
 		DiscordPost matchPreviewPost = discordAnnouncementsConfigured
 				? discordPostRepository.findByChannelIdAndPostTypeAndMatchId(
 						discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl),

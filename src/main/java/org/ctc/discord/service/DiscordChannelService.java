@@ -7,6 +7,7 @@ import static org.ctc.discord.DiscordPermissions.OVERWRITE_TYPE_ROLE;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_ALLOW_MASK;
 import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_DENY_MASK;
 import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
+import static org.springframework.util.StringUtils.hasText;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -135,8 +136,7 @@ public class DiscordChannelService {
 				|| match.getAwayTeam() == null
 				|| match.getHomeTeam().getEffectiveDiscordRoleId() == null
 				|| match.getAwayTeam().getEffectiveDiscordRoleId() == null
-				|| cfg.getCurrentMatchCategoryId() == null
-				|| cfg.getCurrentMatchCategoryId().isBlank();
+				|| !hasText(cfg.getCurrentMatchCategoryId());
 		if (missing) {
 			throw new BusinessRuleException(
 					"Channel creation requires both team Discord roles and a current match category.");
@@ -219,7 +219,7 @@ public class DiscordChannelService {
 	}
 
 	private static long parseAllow(String allow) {
-		if (allow == null || allow.isBlank()) {
+		if (!hasText(allow)) {
 			return 0L;
 		}
 		try {

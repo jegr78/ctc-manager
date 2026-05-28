@@ -1,5 +1,7 @@
 package org.ctc.discord.service;
 
+import static org.springframework.util.StringUtils.hasText;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.dto.DiscordConfigForm;
@@ -49,6 +51,6 @@ public class DiscordGlobalConfigService {
 	}
 
 	private static String blankToNull(String value) {
-		return value == null || value.isBlank() ? null : value;
+		return !hasText(value) ? null : value;
 	}
 }
