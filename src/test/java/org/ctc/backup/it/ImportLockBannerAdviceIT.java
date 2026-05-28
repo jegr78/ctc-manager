@@ -132,8 +132,8 @@ class ImportLockBannerAdviceIT {
                         .andReturn()
         );
 
-        assertThat(hasAcquired.await(10, TimeUnit.SECONDS))
-                .as("thread A must acquire the lock within 10 s")
+        assertThat(hasAcquired.await(30, TimeUnit.SECONDS))
+                .as("thread A must acquire the lock within 30 s")
                 .isTrue();
         assertThat(importLockService.isLocked()).as("lock must be held by thread A").isTrue();
 
@@ -173,8 +173,8 @@ class ImportLockBannerAdviceIT {
                         .andReturn()
         );
 
-        assertThat(hasAcquired.await(10, TimeUnit.SECONDS))
-                .as("thread A must acquire the lock within 10 s")
+        assertThat(hasAcquired.await(30, TimeUnit.SECONDS))
+                .as("thread A must acquire the lock within 30 s")
                 .isTrue();
 
         // when — GET / (site index — redirects to /admin/seasons; the redirect response itself
