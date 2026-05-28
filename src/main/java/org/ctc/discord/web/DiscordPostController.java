@@ -62,7 +62,6 @@ public class DiscordPostController {
 		model.addAttribute("matches", matches);
 		model.addAttribute("matchLabels", matchLabels);
 		model.addAttribute("postTypes", Arrays.asList(DiscordPostType.values()));
-		model.addAttribute("activeRoute", "discord-posts");
 		return VIEW;
 	}
 

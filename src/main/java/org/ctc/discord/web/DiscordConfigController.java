@@ -49,7 +49,6 @@ public class DiscordConfigController {
 		if (!model.containsAttribute("form")) {
 			model.addAttribute("form", toForm(current));
 		}
-		model.addAttribute("activeRoute", "discord-config");
 		return VIEW;
 	}
 
@@ -61,7 +60,6 @@ public class DiscordConfigController {
 			RedirectAttributes redirectAttributes) {
 		if (bindingResult.hasErrors()) {
 			model.addAttribute("config", configService.getOrInitialize());
-			model.addAttribute("activeRoute", "discord-config");
 			return VIEW;
 		}
 		configService.save(form);
