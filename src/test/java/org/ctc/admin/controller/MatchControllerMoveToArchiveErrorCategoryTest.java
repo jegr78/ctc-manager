@@ -50,10 +50,8 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 
 		MatchController controller = new MatchController(matchService, channelService, restClient,
 				mock(org.ctc.discord.service.DiscordPostService.class),
-				mock(org.ctc.discord.repository.DiscordPostRepository.class),
 				mock(org.ctc.admin.service.TeamCardService.class),
-				mock(org.ctc.domain.repository.SeasonTeamRepository.class),
-				mock(org.ctc.discord.service.DiscordGlobalConfigService.class));
+				mock(org.ctc.domain.repository.SeasonTeamRepository.class));
 
 		// when
 		String view = invokeMoveToArchive(controller, id, "  ", ra);
@@ -86,10 +84,8 @@ class MatchControllerMoveToArchiveErrorCategoryTest {
 
 		MatchController controller = new MatchController(matchService, channelService, restClient,
 				mock(org.ctc.discord.service.DiscordPostService.class),
-				mock(org.ctc.discord.repository.DiscordPostRepository.class),
 				mock(org.ctc.admin.service.TeamCardService.class),
-				mock(org.ctc.domain.repository.SeasonTeamRepository.class),
-				mock(org.ctc.discord.service.DiscordGlobalConfigService.class));
+				mock(org.ctc.domain.repository.SeasonTeamRepository.class));
 
 		// when
 		String view = invokeMoveToArchive(controller, id, "cat-1", ra);

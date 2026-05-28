@@ -5,26 +5,19 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchForm;
-import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.service.TeamCardService;
 import org.ctc.discord.DiscordRestClient;
 import org.ctc.discord.dto.ChannelModifyRequest;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordCategoryFullException;
-import org.ctc.discord.model.DiscordGlobalConfig;
-import org.ctc.discord.model.DiscordPost;
-import org.ctc.discord.model.DiscordPostType;
-import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.discord.service.DiscordChannelService;
-import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.SeasonTeam;
 import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.service.MatchService;
-import org.ctc.domain.service.MatchService.MatchDetailData;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -50,10 +43,8 @@ public class MatchController {
 	private final DiscordChannelService discordChannelService;
 	private final DiscordRestClient discordRestClient;
 	private final DiscordPostService discordPostService;
-	private final DiscordPostRepository discordPostRepository;
 	private final TeamCardService teamCardService;
 	private final SeasonTeamRepository seasonTeamRepository;
-	private final DiscordGlobalConfigService discordGlobalConfigService;
 
 	@GetMapping("/new")
 	public String create(@RequestParam UUID matchdayId, Model model) {
@@ -102,60 +93,8 @@ public class MatchController {
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable UUID id, Model model) {
-		MatchDetailData data = matchService.getDetailData(id);
-		Match match = data.match();
-		String awayShort = match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "Bye";
-		model.addAttribute("match", match);
-		model.addAttribute("archiveCategories", data.archiveCategories());
-		model.addAttribute("defaultSelectionId", data.defaultSelectionId());
-		model.addAttribute("pageTitle",
-				"Match: " + match.getHomeTeam().getShortName() + " vs " + awayShort);
-		model.addAttribute("teamCardsPost", findTeamCardsPost(match));
-		model.addAttribute("settingsPost", findMatchPost(match, DiscordPostType.SETTINGS));
-		model.addAttribute("lineupsPost", findMatchPost(match, DiscordPostType.LINEUPS));
-		model.addAttribute("provisionalPost", findMatchPost(match, DiscordPostType.PROVISIONAL_SCORES));
-		model.addAttribute("matchHasCompleteSettings", discordPostService.matchHasCompleteSettings(match));
-		model.addAttribute("matchHasCompleteLineups", discordPostService.matchHasCompleteLineups(match));
-		model.addAttribute("matchHasProvisionalData", discordPostService.matchHasProvisionalData(match));
-
-		DiscordPost matchResultsPost = findMatchPost(match, DiscordPostType.MATCH_RESULTS);
-		model.addAttribute("matchResultsPost", matchResultsPost);
-		model.addAttribute("matchResultsStale", isStale(matchResultsPost, latestRaceResultUpdate(match)));
-		model.addAttribute("schedulePost", findMatchPost(match, DiscordPostType.SCHEDULE));
-		model.addAttribute("matchCanRenderResults", discordPostService.matchCanRenderResults(match));
-		model.addAttribute("scheduleVisible",
-				match.getRaces().stream().map(r -> r.getDateTime()).anyMatch(t -> t != null));
-
-		DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
-		String announcementWebhookUrl = config.getAnnouncementWebhookUrl();
-		boolean discordAnnouncementsConfigured =
-				announcementWebhookUrl != null && !announcementWebhookUrl.isBlank();
-		DiscordPost matchPreviewPost = discordAnnouncementsConfigured
-				? discordPostRepository.findByChannelIdAndPostTypeAndMatchId(
-						discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl),
-						DiscordPostType.MATCH_PREVIEW, match.getId()).orElse(null)
-				: null;
-		MatchPreviewPreFlightResult matchPreviewPreFlight = discordPostService.canPostMatchPreview(match);
-		model.addAttribute("discordAnnouncementsConfigured", discordAnnouncementsConfigured);
-		model.addAttribute("matchPreviewPost", matchPreviewPost);
-		model.addAttribute("matchPreviewPreFlight", matchPreviewPreFlight);
+		model.addAllAttributes(matchService.buildMatchDetailModel(id));
 		return "admin/match-detail";
-	}
-
-	private static boolean isStale(DiscordPost post, java.time.LocalDateTime latestRaceResultUpdate) {
-		if (post == null || post.getUpdatedAt() == null || latestRaceResultUpdate == null) {
-			return false;
-		}
-		return post.getUpdatedAt().isBefore(latestRaceResultUpdate);
-	}
-
-	private static java.time.LocalDateTime latestRaceResultUpdate(Match match) {
-		return match.getRaces().stream()
-				.flatMap(r -> r.getResults().stream())
-				.map(r -> r.getUpdatedAt())
-				.filter(java.util.Objects::nonNull)
-				.max(java.time.LocalDateTime::compareTo)
-				.orElse(null);
 	}
 
 	@GetMapping("/{id}/edit")
@@ -344,20 +283,6 @@ public class MatchController {
 			applyErrorFlash(redirectAttributes, e, "Move to Archive");
 		}
 		return "redirect:/admin/matches/" + id;
-	}
-
-	private DiscordPost findTeamCardsPost(Match match) {
-		return findMatchPost(match, DiscordPostType.TEAM_CARDS);
-	}
-
-	private DiscordPost findMatchPost(Match match, DiscordPostType type) {
-		if (match.getDiscordChannelId() == null) {
-			return null;
-		}
-		return discordPostRepository
-				.findByChannelIdAndPostTypeAndMatchId(
-						match.getDiscordChannelId(), type, match.getId())
-				.orElse(null);
 	}
 
 	private SeasonTeam resolveSeasonTeam(Match match, UUID teamId) {

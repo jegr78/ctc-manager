@@ -3,17 +3,26 @@ package org.ctc.domain.service;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchForm;
+import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.discord.dto.ArchiveCategory;
 import org.ctc.discord.event.MatchPreviewFieldsChangedEvent;
 import org.ctc.discord.event.MatchScheduleFieldsChangedEvent;
 import org.ctc.discord.exception.DiscordApiException;
+import org.ctc.discord.model.DiscordGlobalConfig;
+import org.ctc.discord.model.DiscordPost;
+import org.ctc.discord.model.DiscordPostType;
+import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.discord.service.DiscordCategoryResolver;
+import org.ctc.discord.service.DiscordGlobalConfigService;
+import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
@@ -37,6 +46,9 @@ public class MatchService {
 	private final TeamRepository teamRepository;
 	private final RaceRepository raceRepository;
 	private final DiscordCategoryResolver discordCategoryResolver;
+	private final DiscordPostService discordPostService;
+	private final DiscordPostRepository discordPostRepository;
+	private final DiscordGlobalConfigService discordGlobalConfigService;
 	private final ApplicationEventPublisher eventPublisher;
 	private final Clock clock;
 
@@ -63,6 +75,74 @@ public class MatchService {
 			log.warn("Failed to resolve archive categories for match {}: {}", id, e.toString());
 			return new MatchDetailData(match, List.of(), null);
 		}
+	}
+
+	public Map<String, Object> buildMatchDetailModel(UUID id) {
+		MatchDetailData data = getDetailData(id);
+		Match match = data.match();
+		String awayShort = match.getAwayTeam() != null ? match.getAwayTeam().getShortName() : "Bye";
+
+		Map<String, Object> model = new LinkedHashMap<>();
+		model.put("match", match);
+		model.put("archiveCategories", data.archiveCategories());
+		model.put("defaultSelectionId", data.defaultSelectionId());
+		model.put("pageTitle", "Match: " + match.getHomeTeam().getShortName() + " vs " + awayShort);
+
+		model.put("teamCardsPost", findMatchPost(match, DiscordPostType.TEAM_CARDS));
+		model.put("settingsPost", findMatchPost(match, DiscordPostType.SETTINGS));
+		model.put("lineupsPost", findMatchPost(match, DiscordPostType.LINEUPS));
+		model.put("provisionalPost", findMatchPost(match, DiscordPostType.PROVISIONAL_SCORES));
+		model.put("matchHasCompleteSettings", discordPostService.matchHasCompleteSettings(match));
+		model.put("matchHasCompleteLineups", discordPostService.matchHasCompleteLineups(match));
+		model.put("matchHasProvisionalData", discordPostService.matchHasProvisionalData(match));
+
+		DiscordPost matchResultsPost = findMatchPost(match, DiscordPostType.MATCH_RESULTS);
+		model.put("matchResultsPost", matchResultsPost);
+		model.put("matchResultsStale", isStale(matchResultsPost, latestRaceResultUpdate(match)));
+		model.put("schedulePost", findMatchPost(match, DiscordPostType.SCHEDULE));
+		model.put("matchCanRenderResults", discordPostService.matchCanRenderResults(match));
+		model.put("scheduleVisible",
+				match.getRaces().stream().map(Race::getDateTime).anyMatch(Objects::nonNull));
+
+		DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
+		String announcementWebhookUrl = config.getAnnouncementWebhookUrl();
+		boolean discordAnnouncementsConfigured =
+				announcementWebhookUrl != null && !announcementWebhookUrl.isBlank();
+		DiscordPost matchPreviewPost = discordAnnouncementsConfigured
+				? discordPostRepository.findByChannelIdAndPostTypeAndMatchId(
+						discordPostService.resolveAnnouncementChannelId(announcementWebhookUrl),
+						DiscordPostType.MATCH_PREVIEW, match.getId()).orElse(null)
+				: null;
+		MatchPreviewPreFlightResult matchPreviewPreFlight = discordPostService.canPostMatchPreview(match);
+		model.put("discordAnnouncementsConfigured", discordAnnouncementsConfigured);
+		model.put("matchPreviewPost", matchPreviewPost);
+		model.put("matchPreviewPreFlight", matchPreviewPreFlight);
+		return model;
+	}
+
+	private DiscordPost findMatchPost(Match match, DiscordPostType type) {
+		if (match.getDiscordChannelId() == null) {
+			return null;
+		}
+		return discordPostRepository
+				.findByChannelIdAndPostTypeAndMatchId(match.getDiscordChannelId(), type, match.getId())
+				.orElse(null);
+	}
+
+	private static boolean isStale(DiscordPost post, LocalDateTime latestRaceResultUpdate) {
+		if (post == null || post.getUpdatedAt() == null || latestRaceResultUpdate == null) {
+			return false;
+		}
+		return post.getUpdatedAt().isBefore(latestRaceResultUpdate);
+	}
+
+	private static LocalDateTime latestRaceResultUpdate(Match match) {
+		return match.getRaces().stream()
+				.flatMap(r -> r.getResults().stream())
+				.map(r -> r.getUpdatedAt())
+				.filter(Objects::nonNull)
+				.max(LocalDateTime::compareTo)
+				.orElse(null);
 	}
 
 	@Transactional
