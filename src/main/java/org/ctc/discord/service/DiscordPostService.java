@@ -396,7 +396,13 @@ public class DiscordPostService {
 		if (matchday.getScheduledWeekend() == null || matchday.getScheduledWeekend().isBlank()) {
 			return new MatchPreviewPreFlightResult(false, "Set scheduled weekend first");
 		}
-		boolean allMatchesHaveTeams = matchday.getMatches().stream()
+		List<Match> nonByeMatches = matchday.getMatches().stream()
+				.filter(m -> !m.isBye())
+				.toList();
+		if (nonByeMatches.isEmpty()) {
+			return new MatchPreviewPreFlightResult(false, "Add at least one non-bye match to the matchday first");
+		}
+		boolean allMatchesHaveTeams = nonByeMatches.stream()
 				.allMatch(m -> m.getHomeTeam() != null && m.getAwayTeam() != null);
 		if (!allMatchesHaveTeams) {
 			return new MatchPreviewPreFlightResult(false, "Assign teams to all matches first");
@@ -436,8 +442,13 @@ public class DiscordPostService {
 	}
 
 	public MatchPreviewPreFlightResult canPostMatchdaySchedule(Matchday matchday, DiscordGlobalConfig config) {
-		boolean allMatchesHaveRaceTime = matchday.getMatches().stream()
+		List<Match> nonByeMatches = matchday.getMatches().stream()
 				.filter(m -> !m.isBye())
+				.toList();
+		if (nonByeMatches.isEmpty()) {
+			return new MatchPreviewPreFlightResult(false, "Add at least one non-bye match to the matchday first");
+		}
+		boolean allMatchesHaveRaceTime = nonByeMatches.stream()
 				.allMatch(m -> firstRaceTime(m).isPresent());
 		if (!allMatchesHaveRaceTime) {
 			return new MatchPreviewPreFlightResult(false, "Set Race date+time for all matches first");
