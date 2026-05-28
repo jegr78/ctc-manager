@@ -12,23 +12,15 @@ import java.util.Map;
 import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.PostStandingsForm;
 import org.ctc.admin.dto.SeasonForm;
-import org.ctc.discord.dto.Thread;
+import org.ctc.admin.service.DiscordSeasonViewService;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
-import org.ctc.discord.model.DiscordGlobalConfig;
-import org.ctc.discord.model.DiscordPost;
-import org.ctc.discord.model.DiscordPostType;
-import org.ctc.discord.repository.DiscordPostRepository;
-import org.ctc.discord.service.DiscordForumService;
-import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.PhaseType;
-import org.ctc.domain.model.SeasonPhase;
 import org.ctc.domain.service.MatchdayGeneratorService;
 import org.ctc.domain.service.SeasonManagementService;
 import org.ctc.domain.service.SeasonPhaseService;
-import org.ctc.domain.service.StandingsService;
 import org.ctc.domain.service.SwissPairingService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -50,11 +42,8 @@ public class SeasonController {
 	private final SeasonPhaseService seasonPhaseService;
 	private final SwissPairingService swissPairingService;
 	private final MatchdayGeneratorService matchdayGeneratorService;
-	private final DiscordForumService discordForumService;
-	private final DiscordGlobalConfigService discordGlobalConfigService;
 	private final DiscordPostService discordPostService;
-	private final DiscordPostRepository discordPostRepository;
-	private final StandingsService standingsService;
+	private final DiscordSeasonViewService discordSeasonViewService;
 
 	@GetMapping("/{id}")
 	public String detail(@PathVariable UUID id, Model model) {
@@ -113,53 +102,8 @@ public class SeasonController {
 		model.addAttribute("allTeams", data.allTeams());
 		model.addAttribute("allCars", data.allCars());
 		model.addAttribute("allTracks", data.allTracks());
-		populateDiscordIntegrationModel(model, season);
+		model.addAllAttributes(discordSeasonViewService.buildDiscordIntegrationModel(season.getId()));
 		return "admin/season-form";
-	}
-
-	private void populateDiscordIntegrationModel(Model model, org.ctc.domain.model.Season season) {
-		DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
-		String raceResultsForumId = config.getRaceResultsForumChannelId();
-		String standingsForumId = config.getStandingsForumChannelId();
-		boolean integrationActive = isNonBlank(raceResultsForumId) || isNonBlank(standingsForumId);
-
-		List<Thread> raceResultsOptions = loadThreadOptions(raceResultsForumId, model, "race-results");
-		List<Thread> standingsOptions = loadThreadOptions(standingsForumId, model, "standings");
-
-		model.addAttribute("discordIntegrationActive", integrationActive);
-		model.addAttribute("raceResultsThreadOptions", raceResultsOptions);
-		model.addAttribute("standingsThreadOptions", standingsOptions);
-		model.addAttribute("linkedRaceResultsThread",
-				resolveLinkedThread(season.getDiscordRaceResultsThreadId(), raceResultsOptions));
-		model.addAttribute("linkedStandingsThread",
-				resolveLinkedThread(season.getDiscordStandingsThreadId(), standingsOptions));
-
-		List<SeasonPhase> allPhases = seasonPhaseService.findAllPhases(season.getId());
-		boolean canPostStandings = discordPostService.canPostStandings(season, config).canPost();
-		Map<UUID, DiscordPost> standingsPostByPhase = new LinkedHashMap<>();
-		Map<UUID, Boolean> standingsStaleByPhase = new LinkedHashMap<>();
-		if (canPostStandings) {
-			String channelId = discordPostService.resolveAnnouncementChannelId(config.getStandingsForumWebhookUrl());
-			for (SeasonPhase p : allPhases) {
-				DiscordPost post = discordPostRepository
-						.findByChannelIdAndPostTypeAndSeasonIdAndPhaseId(
-								channelId, DiscordPostType.STANDINGS, season.getId(), p.getId())
-						.orElse(null);
-				standingsPostByPhase.put(p.getId(), post);
-				boolean stale = post != null && standingsService.hasNewerResultsSincePhaseScoped(
-						season.getId(), p.getId(), post.getUpdatedAt());
-				standingsStaleByPhase.put(p.getId(), stale);
-			}
-		} else {
-			for (SeasonPhase p : allPhases) {
-				standingsPostByPhase.put(p.getId(), null);
-				standingsStaleByPhase.put(p.getId(), false);
-			}
-		}
-		model.addAttribute("allPhases", allPhases);
-		model.addAttribute("canPostStandings", canPostStandings);
-		model.addAttribute("standingsPostByPhase", standingsPostByPhase);
-		model.addAttribute("standingsStaleByPhase", standingsStaleByPhase);
 	}
 
 	@PostMapping("/{id}/post-standings")
@@ -203,34 +147,6 @@ public class SeasonController {
 		log.warn("{} failed: category=data-incomplete, message={}", action, e.getMessage());
 		ra.addFlashAttribute("errorMessage", e.getMessage());
 		ra.addFlashAttribute("errorCategory", "data-incomplete");
-	}
-
-	private List<Thread> loadThreadOptions(String forumChannelId, Model model, String label) {
-		if (!isNonBlank(forumChannelId)) {
-			return List.of();
-		}
-		try {
-			return discordForumService.listThreads(forumChannelId);
-		} catch (DiscordApiException e) {
-			log.warn("Could not load {} forum threads (category={}): {}", label, e.category(), e.getMessage());
-			model.addAttribute("discordIntegrationWarning",
-					"Discord forum threads currently unreachable — list may be empty.");
-			return List.of();
-		}
-	}
-
-	private Thread resolveLinkedThread(String threadId, List<Thread> options) {
-		if (!isNonBlank(threadId)) {
-			return null;
-		}
-		return options.stream()
-				.filter(t -> threadId.equals(t.id()))
-				.findFirst()
-				.orElse(new Thread(threadId, "(unknown)", null, 0, null, null));
-	}
-
-	private static boolean isNonBlank(String value) {
-		return value != null && !value.isBlank();
 	}
 
 	@PostMapping("/{id}/link-thread")
