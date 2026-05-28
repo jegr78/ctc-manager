@@ -892,10 +892,7 @@ public class DiscordPostService {
 			int legNumber = race.getMatch() != null
 					? race.getMatch().getRaces().indexOf(race) + 1
 					: 1;
-			String matchSlug = race.getMatch() != null
-					? race.getMatch().getHomeTeam().getShortName() + "-vs-"
-							+ race.getMatch().getAwayTeam().getShortName()
-					: "race";
+			String matchSlug = teamSlugOrFallback(race.getMatch());
 			String filename = "race-result-" + race.getMatchday().getLabel()
 					+ "-" + matchSlug + "-leg-" + legNumber + ".png";
 			NamedAttachment attachment = new NamedAttachment(filename, png);
@@ -964,6 +961,13 @@ public class DiscordPostService {
 			throw new SecurityException("Path traversal attempt in team card URL: " + uploadsUrl);
 		}
 		return Files.readAllBytes(file);
+	}
+
+	static String teamSlugOrFallback(Match match) {
+		if (match == null || match.getHomeTeam() == null || match.getAwayTeam() == null) {
+			return "race";
+		}
+		return match.getHomeTeam().getShortName() + "-vs-" + match.getAwayTeam().getShortName();
 	}
 
 	static WebhookCredentials parseWebhookUrl(String webhookUrl) {
