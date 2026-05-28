@@ -350,6 +350,39 @@ class ScoringServiceTest {
 		}
 
 		@Test
+		void givenClearedRaceWithOtherCompletedLegs_whenAggregateMatchScores_thenMatchScoreRecomputedFromRemainingLegs() {
+			// 95 WR-02: clearing one race's results must still re-aggregate the
+			// match-level score from the remaining races, not early-return.
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+
+			var clearedRace = createRace(match);
+			clearedRace.setResults(List.of());
+
+			var completedLeg = createRace(match);
+			var homeDriver = createDriver("home_d");
+			var awayDriver = createDriver("away_d");
+			var r1 = createResult(completedLeg, homeDriver, 18);
+			var r2 = createResult(completedLeg, awayDriver, 4);
+			completedLeg.setResults(List.of(r1, r2));
+
+			when(raceLineupRepository.findByRaceIdAndDriverId(completedLeg.getId(), homeDriver.getId()))
+					.thenReturn(Optional.of(new RaceLineup(completedLeg, homeDriver, homeTeam)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(completedLeg.getId(), awayDriver.getId()))
+					.thenReturn(Optional.of(new RaceLineup(completedLeg, awayDriver, awayTeam)));
+			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(clearedRace, completedLeg));
+
+			match.setHomeScore(99);
+			match.setAwayScore(99);
+
+			scoringService.aggregateMatchScores(clearedRace);
+
+			assertEquals(18, match.getHomeScore());
+			assertEquals(4, match.getAwayScore());
+		}
+
+		@Test
 		void givenByeRace_whenAggregateMatchScores_thenReturnsWithoutScoring() {
 			// given
 			var homeTeam = createTeam("Home");

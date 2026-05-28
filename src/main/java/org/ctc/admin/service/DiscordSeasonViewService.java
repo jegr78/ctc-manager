@@ -67,10 +67,7 @@ public class DiscordSeasonViewService {
 		if (canPostStandings) {
 			String channelId = discordPostService.resolveAnnouncementChannelId(config.getStandingsForumWebhookUrl());
 			for (SeasonPhase p : allPhases) {
-				DiscordPost post = discordPostRepository
-						.findByChannelIdAndPostTypeAndSeasonIdAndPhaseId(
-								channelId, DiscordPostType.STANDINGS, season.getId(), p.getId())
-						.orElse(null);
+				DiscordPost post = lookupPhaseScopedStandings(channelId, season.getId(), p);
 				standingsPostByPhase.put(p.getId(), post);
 				boolean stale = post != null && standingsService.hasNewerResultsSincePhaseScoped(
 						season.getId(), p.getId(), post.getUpdatedAt());
@@ -88,6 +85,25 @@ public class DiscordSeasonViewService {
 		model.put("standingsStaleByPhase", standingsStaleByPhase);
 
 		return model;
+	}
+
+	private DiscordPost lookupPhaseScopedStandings(String channelId, UUID seasonId, SeasonPhase phase) {
+		DiscordPost post = discordPostRepository
+				.findByChannelIdAndPostTypeAndSeasonIdAndPhaseId(
+						channelId, DiscordPostType.STANDINGS, seasonId, phase.getId())
+				.orElse(null);
+		if (post != null || phase.getPhaseType() != org.ctc.domain.model.PhaseType.REGULAR) {
+			return post;
+		}
+		DiscordPost legacy = discordPostRepository
+				.findByChannelIdAndPostTypeAndSeasonIdAndPhaseIdIsNull(
+						channelId, DiscordPostType.STANDINGS, seasonId)
+				.orElse(null);
+		if (legacy == null) {
+			return null;
+		}
+		legacy.setPhaseId(phase.getId());
+		return discordPostRepository.save(legacy);
 	}
 
 	private ThreadListResult loadThreadOptions(String forumChannelId, String label) {

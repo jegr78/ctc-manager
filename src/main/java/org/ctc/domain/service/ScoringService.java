@@ -55,9 +55,6 @@ public class ScoringService {
 	 */
 	@Transactional
 	public void aggregateMatchScores(Race race) {
-		if (race.getResults().isEmpty()) {
-			return;
-		}
 		if (race.isBye()) {
 			return;
 		}

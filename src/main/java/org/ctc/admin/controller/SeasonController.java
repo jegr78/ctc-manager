@@ -95,8 +95,6 @@ public class SeasonController {
 		form.setNumber(season.getNumber());
 		form.setDescription(season.getDescription());
 		form.setActive(season.isActive());
-		form.setDiscordRaceResultsThreadId(season.getDiscordRaceResultsThreadId());
-		form.setDiscordStandingsThreadId(season.getDiscordStandingsThreadId());
 		model.addAttribute("seasonForm", form);
 		model.addAttribute("season", season);
 		model.addAttribute("allTeams", data.allTeams());

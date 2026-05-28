@@ -227,6 +227,32 @@ class DiscordPostServiceForumThreadIT {
 	}
 
 	@Test
+	void givenRaceWithMatch_whenPostRaceResultToForumThread_thenFilenameIncludesMatchSlugAndLegNumber()
+			throws Exception {
+		// 95 WR-01: filename must be deterministic per race using match short-names
+		// and the race's leg index within its own match.
+		String webhookPath = "/webhooks/706/abc";
+		Race race = seedRaceWithResults("G", webhookPath);
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/" + THREAD_ID))
+				.willReturn(okJson("{\"id\":\"" + THREAD_ID + "\",\"name\":\"t\",\"type\":11,"
+						+ "\"thread_metadata\":{\"archived\":false}}")));
+		wm.stubFor(post(urlPathEqualTo(webhookPath))
+				.willReturn(okJson("{\"id\":\"msg-forum-name\",\"channel_id\":\"706\"}")));
+
+		service.postRaceResultToForumThread(race);
+
+		String expectedFilename = "race-result-" + race.getMatchday().getLabel()
+				+ "-" + race.getMatch().getHomeTeam().getShortName()
+				+ "-vs-" + race.getMatch().getAwayTeam().getShortName()
+				+ "-leg-1.png";
+		wm.verify(postRequestedFor(urlPathEqualTo(webhookPath))
+				.withRequestBodyPart(aMultipart("files[0]")
+						.withHeader("Content-Disposition",
+								equalTo("form-data; name=\"files[0]\"; filename=\"" + expectedFilename + "\""))
+						.build()));
+	}
+
+	@Test
 	void givenNullThreadId_whenPostOrEditViaSixArg_thenNoThreadIdAppendedAndNoGetChannelCall() throws Exception {
 		String webhookPath = "/webhooks/705/abc";
 		Race race = seedRaceWithResults("F", webhookPath);

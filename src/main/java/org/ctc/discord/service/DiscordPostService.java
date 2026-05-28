@@ -876,8 +876,15 @@ public class DiscordPostService {
 		WebhookCredentials creds = parseWebhookUrl(webhookUrl);
 		try {
 			byte[] png = resultsGraphicService.generateResultsBytes(race);
-			int raceNumber = race.getMatchday().getRaces().indexOf(race) + 1;
-			String filename = "race-result-" + race.getMatchday().getLabel() + "-race-" + raceNumber + ".png";
+			int legNumber = race.getMatch() != null
+					? race.getMatch().getRaces().indexOf(race) + 1
+					: 1;
+			String matchSlug = race.getMatch() != null
+					? race.getMatch().getHomeTeam().getShortName() + "-vs-"
+							+ race.getMatch().getAwayTeam().getShortName()
+					: "race";
+			String filename = "race-result-" + race.getMatchday().getLabel()
+					+ "-" + matchSlug + "-leg-" + legNumber + ".png";
 			NamedAttachment attachment = new NamedAttachment(filename, png);
 			return postOrEdit(
 					creds.id(),
