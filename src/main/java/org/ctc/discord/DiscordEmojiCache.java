@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.util.CachedEntry;
@@ -17,7 +16,7 @@ public class DiscordEmojiCache {
 
 	private static final Duration TTL = Duration.ofMinutes(60);
 
-	private final Map<String, CachedEntry<String>> store = new ConcurrentHashMap<>();
+	private volatile Map<String, CachedEntry<String>> store = Map.of();
 	private final Clock clock;
 
 	public String emojiFor(String shortName) {
@@ -33,8 +32,7 @@ public class DiscordEmojiCache {
 		for (Map.Entry<String, String> e : shortNameToTag.entrySet()) {
 			next.put(e.getKey(), new CachedEntry<>(e.getValue(), clock.instant().plus(TTL)));
 		}
-		store.clear();
-		store.putAll(next);
+		this.store = Map.copyOf(next);
 		log.debug("Discord emoji cache refreshed with {} entries", next.size());
 		return next.size();
 	}

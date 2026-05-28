@@ -3,9 +3,9 @@ package org.ctc.discord;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ThreadLocalRandom;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.exception.DiscordTransientException;
@@ -30,7 +30,6 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 	private final long jitterMaxMs;
 	private final long[] fiveXxBackoffMs;
 	private final ConcurrentMap<String, BucketState> buckets = new ConcurrentHashMap<>();
-	private final Random random = new Random();
 
 	public DiscordRateLimitInterceptor(
 			Clock clock,
@@ -136,7 +135,7 @@ public class DiscordRateLimitInterceptor implements ClientHttpRequestInterceptor
 		if (jitterMaxMs <= jitterMinMs) {
 			return jitterMinMs;
 		}
-		return jitterMinMs + (long) (random.nextDouble() * (jitterMaxMs - jitterMinMs));
+		return jitterMinMs + (long) (ThreadLocalRandom.current().nextDouble() * (jitterMaxMs - jitterMinMs));
 	}
 
 	private void sleep(long ms) throws IOException {

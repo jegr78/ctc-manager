@@ -374,6 +374,17 @@ public class SeasonManagementService {
      * Updates season team properties including optional logo upload.
      * Returns the team's short name for flash messages.
      */
+    private static final java.util.regex.Pattern HEX_COLOR_PATTERN =
+            java.util.regex.Pattern.compile("^#[0-9a-fA-F]{3,8}$");
+
+    private static String sanitizeHexColor(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return HEX_COLOR_PATTERN.matcher(trimmed).matches() ? trimmed : null;
+    }
+
     @Transactional
     public String updateSeasonTeam(UUID seasonTeamId, Integer rating,
                                    String primaryColor, String secondaryColor, String accentColor,
@@ -381,9 +392,9 @@ public class SeasonManagementService {
         var seasonTeam = seasonTeamRepository.findById(seasonTeamId)
                 .orElseThrow(() -> new EntityNotFoundException("SeasonTeam", seasonTeamId));
         seasonTeam.setRating(rating);
-        seasonTeam.setPrimaryColor(primaryColor != null && !primaryColor.isBlank() ? primaryColor : null);
-        seasonTeam.setSecondaryColor(secondaryColor != null && !secondaryColor.isBlank() ? secondaryColor : null);
-        seasonTeam.setAccentColor(accentColor != null && !accentColor.isBlank() ? accentColor : null);
+        seasonTeam.setPrimaryColor(sanitizeHexColor(primaryColor));
+        seasonTeam.setSecondaryColor(sanitizeHexColor(secondaryColor));
+        seasonTeam.setAccentColor(sanitizeHexColor(accentColor));
 
         if (logoOverride != null && !logoOverride.isEmpty()) {
             if (seasonTeam.getLogoUrl() != null) {

@@ -261,12 +261,12 @@ public class BackupExportService {
 			// so we don't leak filesystem-state via timing.
 			if (!absolute.startsWith(uploadRoot)) {
 				log.warn("Skipping path-traversal upload reference: {} (resolved to {} outside {})",
-						relative, absolute, uploadRoot);
+						sanitizeForLog(relative), absolute, uploadRoot);
 				continue;
 			}
 			if (!Files.exists(absolute)) {
 				log.warn("Skipping orphan upload reference: {} (resolved to {})",
-						relative, absolute);
+						sanitizeForLog(relative), absolute);
 				continue;
 			}
 			entries.add(new UploadEntry(absolute, relative));
@@ -295,6 +295,13 @@ public class BackupExportService {
 			return;
 		}
 		set.add(relative);
+	}
+
+	private static String sanitizeForLog(String value) {
+		if (value == null) {
+			return null;
+		}
+		return value.replace('\r', '_').replace('\n', '_');
 	}
 
 	private JpaRepository<?, ?> lookupRepository(Class<?> entityClass) {

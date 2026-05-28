@@ -116,7 +116,7 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	private ProvisionalRow toRow(RaceResult result) {
-		String driverName = result.getDriver().getPsnId();
+		String driverName = result.getDriver() != null ? result.getDriver().getPsnId() : "?";
 		return new ProvisionalRow(
 				driverName,
 				result.getPosition(),
