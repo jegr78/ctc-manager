@@ -26,13 +26,10 @@ import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
 import org.ctc.domain.exception.BusinessRuleException;
-import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
-import org.ctc.domain.model.Season;
-import org.ctc.domain.model.SeasonTeam;
-import org.ctc.domain.repository.SeasonTeamRepository;
 import org.ctc.domain.service.MatchService;
 import org.ctc.domain.service.MatchdayService;
+import org.ctc.domain.service.StandingsService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -58,7 +55,7 @@ public class MatchdayController {
     private final DiscordPostService discordPostService;
     private final DiscordPostRepository discordPostRepository;
     private final DiscordGlobalConfigService discordGlobalConfigService;
-    private final SeasonTeamRepository seasonTeamRepository;
+    private final StandingsService standingsService;
 
     @GetMapping
     public String list(@RequestParam(required = false) UUID seasonId, Model model) {
@@ -108,9 +105,9 @@ public class MatchdayController {
         }
 
         boolean matchdayResultsStale = matchdayOverviewPost != null
-                && isMatchdayResultsStale(matchday, matchdayOverviewPost);
+                && standingsService.isMatchdayResultsStale(matchday, matchdayOverviewPost);
         boolean powerRankingsStale = powerRankingsPost != null
-                && isPowerRankingsStale(matchday.getSeason(), powerRankingsPost);
+                && standingsService.isPowerRankingsStale(matchday.getSeason(), powerRankingsPost);
 
         model.addAttribute("matchdayDiscordActive", matchdayDiscordActive);
         model.addAttribute("canPostMatchdayResults", resultsPreFlight.canPost());
@@ -138,7 +135,7 @@ public class MatchdayController {
                     .orElse(null);
         }
         boolean matchdayPairingsStale = matchdayPairingsPost != null
-                && isMatchdayPairingsStale(matchday, matchdayPairingsPost);
+                && standingsService.isMatchdayPairingsStale(matchday, matchdayPairingsPost);
 
         MatchPreviewPreFlightResult schedulePreFlight =
                 discordPostService.canPostMatchdaySchedule(matchday, config);
@@ -151,7 +148,7 @@ public class MatchdayController {
                     .orElse(null);
         }
         boolean matchdayScheduleStale = matchdaySchedulePost != null
-                && isMatchdayScheduleStale(matchday, matchdaySchedulePost);
+                && standingsService.isMatchdayScheduleStale(matchday, matchdaySchedulePost);
 
         model.addAttribute("matchdayAnnouncementActive", matchdayAnnouncementActive);
         model.addAttribute("canPostMatchdayPairings", pairingsPreFlight.canPost());
@@ -162,64 +159,6 @@ public class MatchdayController {
         model.addAttribute("matchdayScheduleDisabledReason", schedulePreFlight.disabledReason());
         model.addAttribute("matchdaySchedulePost", matchdaySchedulePost);
         model.addAttribute("matchdayScheduleStale", matchdayScheduleStale);
-    }
-
-    private static boolean isMatchdayScheduleStale(Matchday matchday, DiscordPost post) {
-        LocalDateTime postUpdated = post.getUpdatedAt();
-        if (postUpdated == null) {
-            return false;
-        }
-        LocalDateTime latest = null;
-        for (Match match : matchday.getMatches()) {
-            if (match.isBye()) {
-                continue;
-            }
-            if (match.getUpdatedAt() != null && (latest == null || match.getUpdatedAt().isAfter(latest))) {
-                latest = match.getUpdatedAt();
-            }
-            for (var race : match.getRaces()) {
-                if (race.getUpdatedAt() != null && (latest == null || race.getUpdatedAt().isAfter(latest))) {
-                    latest = race.getUpdatedAt();
-                }
-            }
-        }
-        return latest != null && latest.isAfter(postUpdated);
-    }
-
-    private static boolean isMatchdayPairingsStale(Matchday matchday, DiscordPost post) {
-        LocalDateTime postUpdated = post.getUpdatedAt();
-        LocalDateTime matchdayUpdated = matchday.getUpdatedAt();
-        if (postUpdated == null || matchdayUpdated == null) {
-            return false;
-        }
-        return matchdayUpdated.isAfter(postUpdated);
-    }
-
-    private static boolean isMatchdayResultsStale(Matchday matchday, DiscordPost post) {
-        LocalDateTime postUpdated = post.getUpdatedAt();
-        if (postUpdated == null) {
-            return false;
-        }
-        return matchday.getMatches().stream()
-                .flatMap(m -> m.getRaces().stream())
-                .flatMap(r -> r.getResults().stream())
-                .map(r -> r.getUpdatedAt())
-                .filter(Objects::nonNull)
-                .max(LocalDateTime::compareTo)
-                .map(latest -> latest.isAfter(postUpdated))
-                .orElse(false);
-    }
-
-    private boolean isPowerRankingsStale(Season season, DiscordPost post) {
-        LocalDateTime postUpdated = post.getUpdatedAt();
-        if (postUpdated == null) {
-            return false;
-        }
-        Optional<LocalDateTime> latest = seasonTeamRepository.findBySeasonId(season.getId()).stream()
-                .map(SeasonTeam::getUpdatedAt)
-                .filter(Objects::nonNull)
-                .max(LocalDateTime::compareTo);
-        return latest.map(t -> t.isAfter(postUpdated)).orElse(false);
     }
 
     @PostMapping("/{id}/post-matchday-results")

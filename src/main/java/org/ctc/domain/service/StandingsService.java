@@ -7,11 +7,13 @@ import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.*;
+import org.ctc.discord.model.DiscordPost;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.PhaseTeamRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.RaceResultRepository;
 import org.ctc.domain.repository.SeasonRepository;
+import org.ctc.domain.repository.SeasonTeamRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,89 @@ public class StandingsService {
 	private final SeasonPhaseService seasonPhaseService;
 	private final PhaseTeamRepository phaseTeamRepository;
 	private final RaceResultRepository raceResultRepository;
+	private final SeasonTeamRepository seasonTeamRepository;
+
+	public MatchdayStalenessSnapshot snapshotMatchdayStaleness(Matchday matchday,
+	                                                          DiscordPost matchdayResultsPost,
+	                                                          DiscordPost powerRankingsPost,
+	                                                          DiscordPost matchdayPairingsPost,
+	                                                          DiscordPost matchdaySchedulePost) {
+		boolean matchdayResultsStale = matchdayResultsPost != null
+				&& isMatchdayResultsStale(matchday, matchdayResultsPost);
+		boolean powerRankingsStale = powerRankingsPost != null
+				&& isPowerRankingsStale(matchday.getSeason(), powerRankingsPost);
+		boolean matchdayPairingsStale = matchdayPairingsPost != null
+				&& isMatchdayPairingsStale(matchday, matchdayPairingsPost);
+		boolean matchdayScheduleStale = matchdaySchedulePost != null
+				&& isMatchdayScheduleStale(matchday, matchdaySchedulePost);
+		return new MatchdayStalenessSnapshot(
+				matchdayResultsStale, powerRankingsStale, matchdayPairingsStale, matchdayScheduleStale);
+	}
+
+	public boolean isMatchdayScheduleStale(Matchday matchday, DiscordPost post) {
+		LocalDateTime postUpdated = post.getUpdatedAt();
+		if (postUpdated == null) {
+			return false;
+		}
+		LocalDateTime latest = null;
+		for (Match match : matchday.getMatches()) {
+			if (match.isBye()) {
+				continue;
+			}
+			if (match.getUpdatedAt() != null && (latest == null || match.getUpdatedAt().isAfter(latest))) {
+				latest = match.getUpdatedAt();
+			}
+			for (Race race : match.getRaces()) {
+				if (race.getUpdatedAt() != null && (latest == null || race.getUpdatedAt().isAfter(latest))) {
+					latest = race.getUpdatedAt();
+				}
+			}
+		}
+		return latest != null && latest.isAfter(postUpdated);
+	}
+
+	public boolean isMatchdayPairingsStale(Matchday matchday, DiscordPost post) {
+		LocalDateTime postUpdated = post.getUpdatedAt();
+		LocalDateTime matchdayUpdated = matchday.getUpdatedAt();
+		if (postUpdated == null || matchdayUpdated == null) {
+			return false;
+		}
+		return matchdayUpdated.isAfter(postUpdated);
+	}
+
+	public boolean isMatchdayResultsStale(Matchday matchday, DiscordPost post) {
+		LocalDateTime postUpdated = post.getUpdatedAt();
+		if (postUpdated == null) {
+			return false;
+		}
+		return matchday.getMatches().stream()
+				.flatMap(m -> m.getRaces().stream())
+				.flatMap(r -> r.getResults().stream())
+				.map(RaceResult::getUpdatedAt)
+				.filter(Objects::nonNull)
+				.max(LocalDateTime::compareTo)
+				.map(latest -> latest.isAfter(postUpdated))
+				.orElse(false);
+	}
+
+	public boolean isPowerRankingsStale(Season season, DiscordPost post) {
+		LocalDateTime postUpdated = post.getUpdatedAt();
+		if (postUpdated == null) {
+			return false;
+		}
+		return seasonTeamRepository.findBySeasonId(season.getId()).stream()
+				.map(SeasonTeam::getUpdatedAt)
+				.filter(Objects::nonNull)
+				.max(LocalDateTime::compareTo)
+				.map(t -> t.isAfter(postUpdated))
+				.orElse(false);
+	}
+
+	public record MatchdayStalenessSnapshot(
+			boolean matchdayResultsStale,
+			boolean powerRankingsStale,
+			boolean matchdayPairingsStale,
+			boolean matchdayScheduleStale) {}
 
 	@Transactional(readOnly = true)
 	public boolean hasNewerResultsSincePhaseScoped(UUID seasonId, UUID phaseId, LocalDateTime since) {
