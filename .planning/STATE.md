@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Plan 102-02 closed + review-clean (21 findings folded back; SUMMARY status=review-clean)
-last_updated: "2026-05-28T16:00:00.000Z"
+stopped_at: Plan 102-03 closed (info-sweep — 31 closures + 7 inapplicable, marker oracle 0 in src/main+src/test); verify pending
+last_updated: "2026-05-28T17:30:00.000Z"
 last_activity: 2026-05-28
 progress:
   total_phases: 10
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 102 (code-review-fixes) — EXECUTING
-Plan: 2 of 4 (102-01 complete; 102-02 complete + REVIEW.md + 21-finding fold-back; SUMMARY.md status=review-clean)
-Verification: `./mvnw clean verify` exit 0 — Surefire 1293/0/0, Failsafe 491/0/0, JaCoCo 88% (≥82% gate), SpotBugs 0
-Status: Plan 102-02 review-clean; resume via `/gsd-execute-phase 102 --interactive` to start Plan 102-03
-Last activity: 2026-05-28 -- 102-02 closed including post-review fold-back: 2 CR (WR-thin-3 actually wired via new DiscordMatchdayViewService + legacy STANDINGS backfill moved to Flyway V16), 11 WR (playoff branch + volatile-atomic-swap + preflight-guard + BusinessRuleException + parseAllow fail-closed + …), 8 IN (Javadoc, escape extension, helper visibility, error-msg detail, rename). New files: `DiscordMatchdayViewService.java`, `V16__backfill_standings_phase_id.sql`, `DiscordPostServiceEscapeMarkdownLinkUrlTest.java`, `BackupSchemaPinFkEntitiesLastTest.java`. Plans 102-03 + 102-04 remain.
+Plan: 3 of 4 (102-01 complete; 102-02 complete + review-clean; 102-03 complete — info-sweep)
+Verification: post-Task-5 `./mvnw clean verify` running in background; per CONTEXT D-04 the per-plan review is SKIPPED (close-loop happens in 102-04)
+Status: Plan 102-03 ready for review; resume via `/gsd-execute-phase 102 --interactive` to start Plan 102-04 (close-loop verify -Pe2e)
+Last activity: 2026-05-28 -- 102-03 closed: 31 substantive closures across 6 commits (`47b7be00`, `ff63b067`, `bafa9bc9`, `17570d75`, `bc34bd1d` + STATE/SUMMARY); 9 closed via grep sweep; 7 demonstrably-inapplicable findings documented (CLAUDE.md "Do Not Modify Flyway Migrations" + cross-file rename blast-radius + reviewer-acknowledged design intentions). Marker grep oracle on src/main + src/test: 0 hits. Only V7 + V10 migration-header markers remain (CLAUDE.md hard rule blocks edit). Plan 102-04 close-loop pending.
 
 ### Prior position (Phase 101 close)
 
