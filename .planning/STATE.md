@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.13
 milestone_name: Discord Integration & Carry-Forwards
 status: executing
-stopped_at: Phase 102 planned (4 plans, plan-checker passed iteration 2)
-last_updated: "2026-05-28T08:52:15.024Z"
+stopped_at: Plan 102-02 closed (SUMMARY written; orchestrator-review pending before 102-03 starts)
+last_updated: "2026-05-28T13:45:00.000Z"
 last_activity: 2026-05-28
 progress:
   total_phases: 10
   completed_phases: 10
   total_plans: 41
-  completed_plans: 42
+  completed_plans: 43
   percent: 100
 ---
 
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 ## Current Position
 
 Phase: 102 (code-review-fixes) — EXECUTING
-Plan: 2 of 4 (102-01 complete + reviewed + fold-back; 102-02 Tasks 1-3 of 11 complete — 3 controller-thin refactors green)
-Verification: pending (Plans 102-02 Tasks 4-11, 102-03, 102-04 remaining)
-Status: Paused mid-Plan-102-02 at clean refactor boundary; resume via `/gsd-execute-phase 102 --interactive`
-Last activity: 2026-05-28 -- 102-01 closed clean (verdict clean after fold-back of 4 agent-review findings); 102-02 controller-thin extracts (MatchService.buildMatchDetailModel, DiscordSeasonViewService, StandingsService.snapshotMatchdayStaleness) landed with boundary tests; 102-02 Tasks 4-11 (~50 WR point-fixes across Phase 92-99+101) pending
+Plan: 2 of 4 (102-01 complete; 102-02 Tasks 1-11 complete + regression fold-back; SUMMARY.md written)
+Verification: orchestrator-level `/gsd-code-review 102 --files=<plan-102-02-files>` pending before 102-03 starts
+Status: Plan 102-02 ready for orchestrator review; resume via `/gsd-execute-phase 102 --interactive` after review-clean
+Last activity: 2026-05-28 -- 102-02 closed: 49 of 58 substantive WR findings landed across 13 atomic commits (`14dcd49a`,`8dd7405e`,`084fa02c`,`3377f0f6`,`78d4ce9a`,`d8d24c6b`,`55b3a360`,`14d6ce93`,`9797b1f1`,`29ac37ff`,`1912ea9c`,`61a9d4e2`,`3eb54417`,`d5dc1fb8`). 6 deferred with rationale in SUMMARY.md; 3 redundant; 1 partial (102-03 sweeps the rest). Full Surefire 1693/0/0; wide IT pass green; SpotBugs 0. Marker-pollution over 64 touched files: 0 hits. Plans 102-03 + 102-04 remain.
 
 ### Prior position (Phase 101 close)
 
