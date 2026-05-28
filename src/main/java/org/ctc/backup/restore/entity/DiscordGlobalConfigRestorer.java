@@ -8,6 +8,8 @@ import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.exception.BackupArchiveException;
+import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.restore.EntityRestorer;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -45,20 +47,29 @@ public class DiscordGlobalConfigRestorer implements EntityRestorer {
     public void restore(List<JsonNode> rows, JdbcTemplate jdbcTemplate) {
         jdbcTemplate.batchUpdate(INSERT_SQL, rows, 500, (ps, row) -> {
             ps.setLong(1, row.get("id").asLong());
-            ps.setString(2, row.get("guildId").asText());
-            ps.setString(3, row.get("announcementWebhookUrl").asText());
-            ps.setString(4, row.get("raceResultsForumChannelId").asText());
-            ps.setString(5, row.get("standingsForumChannelId").asText());
+            ps.setString(2, requireText(row, "guildId"));
+            ps.setString(3, requireText(row, "announcementWebhookUrl"));
+            ps.setString(4, requireText(row, "raceResultsForumChannelId"));
+            ps.setString(5, requireText(row, "standingsForumChannelId"));
             setNullableString(ps, 6, row, "raceResultsForumWebhookUrl");
             setNullableString(ps, 7, row, "standingsForumWebhookUrl");
-            ps.setString(8, row.get("vsEmojiName").asText());
+            ps.setString(8, requireText(row, "vsEmojiName"));
             setNullableString(ps, 9, row, "botApplicationId");
-            ps.setString(10, row.get("currentMatchCategoryId").asText());
+            ps.setString(10, requireText(row, "currentMatchCategoryId"));
             setNullableString(ps, 11, row, "matchdayPairingsTemplate");
             ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
             ps.setTimestamp(13, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
         });
         log.debug("DiscordGlobalConfigRestorer: restored {} rows", rows.size());
+    }
+
+    private static String requireText(JsonNode row, String field) {
+        JsonNode n = row.get(field);
+        if (n == null || n.isNull()) {
+            throw new BackupArchiveException(Reason.MANIFEST_INVALID,
+                    "missing required column '" + field + "' in discord_global_config row");
+        }
+        return n.asText();
     }
 
     private static void setNullableString(PreparedStatement ps, int idx, JsonNode row, String field)

@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.backup.exception.BackupArchiveException;
+import org.ctc.backup.exception.BackupArchiveException.Reason;
 import org.ctc.backup.restore.EntityRestorer;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -51,22 +53,31 @@ public class DiscordPostRestorer implements EntityRestorer {
     public void restore(List<JsonNode> rows, JdbcTemplate jdbcTemplate) {
         jdbcTemplate.batchUpdate(INSERT_SQL, rows, 500, (ps, row) -> {
             ps.setLong(1, row.get("id").asLong());
-            ps.setString(2, row.get("channelId").asText());
-            ps.setString(3, row.get("messageId").asText());
-            ps.setString(4, row.get("webhookId").asText());
-            ps.setString(5, row.get("webhookToken").asText());
-            ps.setString(6, row.get("postType").asText());
+            ps.setString(2, requireText(row, "channelId"));
+            ps.setString(3, requireText(row, "messageId"));
+            ps.setString(4, requireText(row, "webhookId"));
+            ps.setString(5, requireText(row, "webhookToken"));
+            ps.setString(6, requireText(row, "postType"));
             setNullableUuid(ps, 7, row, "matchId");
             setNullableUuid(ps, 8, row, "matchdayId");
             setNullableUuid(ps, 9, row, "raceId");
             setNullableUuid(ps, 10, row, "seasonId");
             setNullableUuid(ps, 11, row, "phaseId");
-            ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(row.get("postedAt").asText())));
+            ps.setTimestamp(12, Timestamp.valueOf(LocalDateTime.parse(requireText(row, "postedAt"))));
             setNullableTimestamp(ps, 13, row, "attachmentsReplacedAt");
-            ps.setTimestamp(14, Timestamp.valueOf(LocalDateTime.parse(row.get("createdAt").asText())));
-            ps.setTimestamp(15, Timestamp.valueOf(LocalDateTime.parse(row.get("updatedAt").asText())));
+            ps.setTimestamp(14, Timestamp.valueOf(LocalDateTime.parse(requireText(row, "createdAt"))));
+            ps.setTimestamp(15, Timestamp.valueOf(LocalDateTime.parse(requireText(row, "updatedAt"))));
         });
         log.debug("DiscordPostRestorer: restored {} rows", rows.size());
+    }
+
+    private static String requireText(JsonNode row, String field) {
+        JsonNode n = row.get(field);
+        if (n == null || n.isNull()) {
+            throw new BackupArchiveException(Reason.MANIFEST_INVALID,
+                    "missing required column '" + field + "' in discord_post row");
+        }
+        return n.asText();
     }
 
     private static void setNullableUuid(PreparedStatement ps, int idx, JsonNode row, String field)
