@@ -802,7 +802,8 @@ public class DiscordPostService {
 			case DiscordPostRef.SeasonRef s -> s.phaseId() != null
 					? discordPostRepository.findByChannelIdAndPostTypeAndSeasonIdAndPhaseId(
 							channelId, type, s.seasonId(), s.phaseId())
-					: discordPostRepository.findByChannelIdAndPostTypeAndSeasonId(channelId, type, s.seasonId());
+					: discordPostRepository.findByChannelIdAndPostTypeAndSeasonIdAndPhaseIdIsNull(
+							channelId, type, s.seasonId());
 			case DiscordPostRef.MatchdayRef d ->
 					discordPostRepository.findByChannelIdAndPostTypeAndMatchdayId(channelId, type, d.id());
 		};
@@ -846,27 +847,34 @@ public class DiscordPostService {
 		ThreadMetadata md = thread.threadMetadata();
 		if (md != null && md.isArchived()) {
 			log.info("Unarchiving forum thread {} before post", threadId);
-			restClient.modifyChannel(threadId, ChannelModifyRequest.unarchive());
+			Channel after = restClient.modifyChannel(threadId, ChannelModifyRequest.unarchive());
+			ThreadMetadata afterMd = after != null ? after.threadMetadata() : null;
+			if (afterMd != null && afterMd.isArchived()) {
+				log.warn("Discord modifyChannel returned archived=true after unarchive attempt for thread {}", threadId);
+			}
 		}
 	}
 
-	public boolean canPostRaceResultToForum(Race race, DiscordGlobalConfig config) {
+	public MatchPreviewPreFlightResult canPostRaceResultToForum(Race race, DiscordGlobalConfig config) {
 		if (race.getResults().isEmpty()) {
-			return false;
+			return new MatchPreviewPreFlightResult(false, "No race results yet");
 		}
 		Season season = race.getMatchday().getSeason();
 		String threadId = season.getDiscordRaceResultsThreadId();
 		if (threadId == null || threadId.isBlank()) {
-			return false;
+			return new MatchPreviewPreFlightResult(false, "Link a race-results thread first");
 		}
 		String webhookUrl = config.getRaceResultsForumWebhookUrl();
-		return webhookUrl != null && !webhookUrl.isBlank();
+		if (webhookUrl == null || webhookUrl.isBlank()) {
+			return new MatchPreviewPreFlightResult(false, "Configure race-results forum-webhook in Discord settings");
+		}
+		return new MatchPreviewPreFlightResult(true, null);
 	}
 
 	@Transactional
 	public DiscordPost postRaceResultToForumThread(Race race) throws DiscordApiException {
 		DiscordGlobalConfig config = globalConfigService.getOrInitialize();
-		if (!canPostRaceResultToForum(race, config)) {
+		if (!canPostRaceResultToForum(race, config).canPost()) {
 			throw new BusinessRuleException(
 					"Race result cannot be posted to forum-thread — check race results, linked thread, and webhook configuration.");
 		}

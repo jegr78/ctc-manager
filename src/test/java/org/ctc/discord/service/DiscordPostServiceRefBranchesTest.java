@@ -101,16 +101,19 @@ class DiscordPostServiceRefBranchesTest {
 	}
 
 	@Test
-	void givenSeasonRef_whenPostOrEdit_thenDispatchesToFindBySeasonId() throws Exception {
+	void givenSeasonRefWithNullPhase_whenPostOrEdit_thenDispatchesToPhaseIdIsNullLookup() throws Exception {
+		// 97 WR-02: legacy null-phase lookup must use the PhaseIdIsNull finder so multiple
+		// phase-scoped rows for the same season don't trip the single-result guard.
 		UUID seasonId = UUID.randomUUID();
-		when(repository.findByChannelIdAndPostTypeAndSeasonId(
+		when(repository.findByChannelIdAndPostTypeAndSeasonIdAndPhaseIdIsNull(
 				eq(CHANNEL_ID), eq(DiscordPostType.STANDINGS), eq(seasonId)))
 				.thenReturn(Optional.empty());
 
 		service.postOrEdit(CHANNEL_ID, WEBHOOK_URL, DiscordPostType.STANDINGS,
 				WebhookPayload.empty(), List.of(), new DiscordPostRef.SeasonRef(seasonId, null));
 
-		verify(repository).findByChannelIdAndPostTypeAndSeasonId(CHANNEL_ID, DiscordPostType.STANDINGS, seasonId);
+		verify(repository).findByChannelIdAndPostTypeAndSeasonIdAndPhaseIdIsNull(
+				CHANNEL_ID, DiscordPostType.STANDINGS, seasonId);
 	}
 
 	@Test

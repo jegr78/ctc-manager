@@ -5,6 +5,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.admin.dto.RaceForm;
 import org.ctc.admin.dto.RaceResultForm;
 import org.ctc.admin.service.RaceGraphicService;
@@ -91,29 +92,18 @@ public class RaceController {
 
 	private void populateRaceForumPostModel(Model model, Race race) {
 		DiscordGlobalConfig config = discordGlobalConfigService.getOrInitialize();
-		boolean canPost = discordPostService.canPostRaceResultToForum(race, config);
-		String disabledReason = computeForumPostDisabledReason(race, config);
-		DiscordPost existingPost = discordPostRepository
-				.findByPostTypeAndRaceId(DiscordPostType.RACE_RESULTS, race.getId())
-				.orElse(null);
-		model.addAttribute("canPostRaceResultToForum", canPost);
-		model.addAttribute("forumPostDisabledReason", disabledReason);
-		model.addAttribute("raceResultsForumPost", existingPost);
-	}
-
-	private static String computeForumPostDisabledReason(Race race, DiscordGlobalConfig config) {
-		if (race.getResults().isEmpty()) {
-			return "No race results yet";
-		}
-		String threadId = race.getMatchday().getSeason().getDiscordRaceResultsThreadId();
-		if (threadId == null || threadId.isBlank()) {
-			return "Link a race-results thread first";
-		}
+		MatchPreviewPreFlightResult preFlight = discordPostService.canPostRaceResultToForum(race, config);
+		DiscordPost existingPost = null;
 		String webhookUrl = config.getRaceResultsForumWebhookUrl();
-		if (webhookUrl == null || webhookUrl.isBlank()) {
-			return "Configure race-results forum-webhook in Discord settings";
+		if (webhookUrl != null && !webhookUrl.isBlank()) {
+			String channelId = discordPostService.resolveAnnouncementChannelId(webhookUrl);
+			existingPost = discordPostRepository
+					.findByChannelIdAndPostTypeAndRaceId(channelId, DiscordPostType.RACE_RESULTS, race.getId())
+					.orElse(null);
 		}
-		return null;
+		model.addAttribute("canPostRaceResultToForum", preFlight.canPost());
+		model.addAttribute("forumPostDisabledReason", preFlight.disabledReason());
+		model.addAttribute("raceResultsForumPost", existingPost);
 	}
 
 	@PostMapping("/{id}/post-race-result-to-forum")

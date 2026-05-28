@@ -113,7 +113,7 @@ public class StandingsService {
 			boolean matchdayScheduleStale) {}
 
 	@Transactional(readOnly = true)
-	public boolean hasNewerResultsSincePhaseScoped(UUID seasonId, UUID phaseId, LocalDateTime since) {
+	public boolean hasNewerResultsSincePhaseScoped(UUID phaseId, LocalDateTime since) {
 		if (since == null) {
 			return false;
 		}

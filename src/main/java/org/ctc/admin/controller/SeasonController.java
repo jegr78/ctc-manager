@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
@@ -13,6 +14,7 @@ import org.ctc.admin.dto.MatchdayGeneratorForm;
 import org.ctc.admin.dto.PostStandingsForm;
 import org.ctc.admin.dto.SeasonForm;
 import org.ctc.admin.service.DiscordSeasonViewService;
+import org.ctc.discord.dto.DiscordSnowflake;
 import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordApiExceptionMapper;
 import org.ctc.discord.service.DiscordPostService;
@@ -33,6 +35,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/admin/seasons")
 @RequiredArgsConstructor
+@org.springframework.validation.annotation.Validated
 public class SeasonController {
 
 	private static final String THREAD_TYPE_RACE_RESULTS = "race-results";
@@ -149,10 +152,14 @@ public class SeasonController {
 
 	@PostMapping("/{id}/link-thread")
 	public String linkThread(@PathVariable UUID id,
-	                         @RequestParam String threadId,
+	                         @RequestParam @Pattern(regexp = DiscordSnowflake.PATTERN,
+	                                                 message = DiscordSnowflake.MESSAGE) String threadId,
 	                         @RequestParam String type,
 	                         RedirectAttributes redirectAttributes) {
 		try {
+			if (threadId == null || threadId.isBlank()) {
+				throw new BusinessRuleException("Thread ID must not be empty.");
+			}
 			switch (type) {
 				case THREAD_TYPE_RACE_RESULTS -> seasonManagementService.linkRaceResultsThread(id, threadId);
 				case THREAD_TYPE_STANDINGS -> seasonManagementService.linkStandingsThread(id, threadId);

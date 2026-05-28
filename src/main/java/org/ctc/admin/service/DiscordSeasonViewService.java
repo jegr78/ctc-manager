@@ -70,7 +70,7 @@ public class DiscordSeasonViewService {
 				DiscordPost post = lookupPhaseScopedStandings(channelId, season.getId(), p);
 				standingsPostByPhase.put(p.getId(), post);
 				boolean stale = post != null && standingsService.hasNewerResultsSincePhaseScoped(
-						season.getId(), p.getId(), post.getUpdatedAt());
+						p.getId(), post.getUpdatedAt());
 				standingsStaleByPhase.put(p.getId(), stale);
 			}
 		} else {

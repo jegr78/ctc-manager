@@ -30,9 +30,6 @@ public interface DiscordPostRepository
 	Optional<DiscordPost> findByChannelIdAndPostTypeAndRaceId(
 			String channelId, DiscordPostType postType, UUID raceId);
 
-	Optional<DiscordPost> findByChannelIdAndPostTypeAndSeasonId(
-			String channelId, DiscordPostType postType, UUID seasonId);
-
 	Optional<DiscordPost> findByChannelIdAndPostTypeAndSeasonIdAndPhaseId(
 			String channelId, DiscordPostType postType, UUID seasonId, UUID phaseId);
 

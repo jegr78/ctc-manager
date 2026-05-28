@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceResult;
@@ -27,12 +26,12 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	private static final String CUSTOM_TEMPLATE_FILE = "provisional-scores-template.html";
 
 	private final ScoringService scoringService;
-	private final Function<String, byte[]> screenshotter;
+	private final PlaywrightScreenshotter screenshotter;
 
 	public ProvisionalScoresGraphicService(TemplateEngine templateEngine,
 	                                       ScoringService scoringService,
 	                                       @Value("${app.upload-dir:uploads}") String uploadDir,
-	                                       Function<String, byte[]> screenshotter) {
+	                                       PlaywrightScreenshotter screenshotter) {
 		super(templateEngine, uploadDir);
 		this.scoringService = scoringService;
 		this.screenshotter = screenshotter;

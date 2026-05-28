@@ -18,7 +18,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Function;
 import org.ctc.discord.model.DiscordPostType;
 import org.ctc.domain.model.Driver;
 import org.ctc.domain.model.Match;
@@ -39,8 +38,7 @@ class ProvisionalScoresGraphicServiceTest {
 
 	private final ScoringService scoringService = mock(ScoringService.class);
 	private final TemplateEngine templateEngine = mock(TemplateEngine.class);
-	@SuppressWarnings("unchecked")
-	private final Function<String, byte[]> screenshotter = mock(Function.class);
+	private final PlaywrightScreenshotter screenshotter = mock(PlaywrightScreenshotter.class);
 
 	@TempDir
 	Path tempDir;

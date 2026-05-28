@@ -81,9 +81,8 @@ class StandingsServicePhaseScopedStaleDetectionIT {
 		LocalDateTime since = LocalDateTime.of(2026, 5, 1, 12, 0);
 		Race race = seedRaceWithResult("R1", since.plusDays(1));
 		var phaseId = race.getMatchday().getPhase().getId();
-		var seasonId = race.getMatchday().getSeason().getId();
 
-		boolean stale = standingsService.hasNewerResultsSincePhaseScoped(seasonId, phaseId, since);
+		boolean stale = standingsService.hasNewerResultsSincePhaseScoped(phaseId, since);
 
 		assertThat(stale).isTrue();
 	}
@@ -93,9 +92,8 @@ class StandingsServicePhaseScopedStaleDetectionIT {
 		LocalDateTime since = LocalDateTime.of(2026, 5, 10, 12, 0);
 		Race race = seedRaceWithResult("R2", since);
 		var phaseId = race.getMatchday().getPhase().getId();
-		var seasonId = race.getMatchday().getSeason().getId();
 
-		boolean stale = standingsService.hasNewerResultsSincePhaseScoped(seasonId, phaseId, since);
+		boolean stale = standingsService.hasNewerResultsSincePhaseScoped(phaseId, since);
 
 		assertThat(stale).isFalse();
 	}
@@ -105,9 +103,8 @@ class StandingsServicePhaseScopedStaleDetectionIT {
 		LocalDateTime since = LocalDateTime.of(2026, 5, 20, 12, 0);
 		Race race = seedRaceWithResult("R3", since.minusHours(1));
 		var phaseId = race.getMatchday().getPhase().getId();
-		var seasonId = race.getMatchday().getSeason().getId();
 
-		boolean stale = standingsService.hasNewerResultsSincePhaseScoped(seasonId, phaseId, since);
+		boolean stale = standingsService.hasNewerResultsSincePhaseScoped(phaseId, since);
 
 		assertThat(stale).isFalse();
 	}
@@ -119,7 +116,7 @@ class StandingsServicePhaseScopedStaleDetectionIT {
 		var phaseId = md.getPhase().getId();
 
 		boolean stale = standingsService.hasNewerResultsSincePhaseScoped(
-				season.getId(), phaseId, LocalDateTime.of(2026, 5, 1, 12, 0));
+				phaseId, LocalDateTime.of(2026, 5, 1, 12, 0));
 
 		assertThat(stale).isFalse();
 	}
@@ -129,8 +126,7 @@ class StandingsServicePhaseScopedStaleDetectionIT {
 		Race race = seedRaceWithResult("R5", LocalDateTime.now());
 		var phaseId = race.getMatchday().getPhase().getId();
 
-		boolean stale = standingsService.hasNewerResultsSincePhaseScoped(
-				race.getMatchday().getSeason().getId(), phaseId, null);
+		boolean stale = standingsService.hasNewerResultsSincePhaseScoped(phaseId, null);
 
 		assertThat(stale).isFalse();
 	}
