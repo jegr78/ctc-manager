@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.14
-milestone_name: Team Card Redesign & Data Safety
-status: completed
-stopped_at: Phase 105 context gathered (re-scoped to Carbon HUD graphics redesign — 16 templates, CARD-01..04)
-last_updated: "2026-05-29T18:29:38.905Z"
-last_activity: 2026-05-29 — Milestone v1.14 completed and archived
+milestone: v1.15
+milestone_name: CI Optimisation & Race/Match Defaults
+status: planning
+last_updated: "2026-05-29T22:02:48.274Z"
+last_activity: 2026-05-29
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -26,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 ## Current Position
 
-Phase: Milestone v1.14 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-29 — Milestone v1.14 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-29 — Milestone v1.15 started
 
 ### Prior position (Phase 103 close)
 

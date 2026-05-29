@@ -25,10 +25,38 @@ Architectural Consistency: All controllers delegate to services, exception handl
 - **Admin Features:** `/admin/backup` page with streamed ZIP export (CSRF-protected `POST /admin/backup/export`, `StreamingResponseBody`, ISO-instant filename) + manifest-first preview + replace-all import (`@Transactional` wipe + `JdbcTemplate.batchUpdate` restore bypassing `AuditingEntityListener` + post-commit upload-tree stage-and-rename); concurrent-import `ReentrantLock` + persistent yellow read-only banner + `ImportLockedWriteRejector` HandlerInterceptor + synchronous auto-backup-before-import safety net; 24h recovery retention at `data/.import-backups/<ts>/`
 - **Docker / CI:** Both Dockerfile stages pinned to `eclipse-temurin:25-{jdk,jre}-noble` (Playwright 1.59.0 compatibility); `dockerfile-noble-pin-guard` CI job (whitelist-on-suffix); full `docker build .` on every PR + push to master; ci.yml concurrency block + `--no-transfer-progress`; Surefire `forkCount=2C` + Failsafe default-it `forkCount=1C` + `excludedGroups=flaky` quarantine
 
-## Next Milestone (to be defined)
+## Current Milestone: v1.15 CI Optimisation & Race/Match Defaults
 
-v1.14 shipped 2026-05-29. The next milestone is not yet scoped — start it via `/gsd-new-milestone` (questioning → research → requirements → roadmap). Audit-surfaced carry-forwards available as candidate scope:
+**Goal:** Focus the CI pipeline on real code/build changes and speed it up; make the Race/Match workflow more robust through prefill defaults, consistent "n/a" rendering of missing drivers, and explicit walkover handling; introduce a new template-variable-driven "Lobby Settings" graphic.
 
+**Target features:**
+
+*Strand 1 — CI Optimisation:*
+- **Path-aware CI (approach A+C):** `ci.yml` jobs always start (required checks `build-and-test`, `dockerfile-noble-pin-guard`, `docker-build` stay intact), but expensive steps (Maven build / E2E / Docker build) gate behind a `dorny/paths-filter` `changes` job. Non-required workflows (`codeql.yml`, `mariadb-migration-smoke.yml`) get hard `paths-ignore`. Ignore set: `.planning/**`, root `*.md`, `docs/**` (except `docs/site/**` which still triggers deploy), `.gitmessage` + meta files.
+- **E2E runtime reduction** (current median 17:39).
+- **Caching improvements** (Maven / Playwright / Docker layers).
+- **Flaky-test / rerun reduction** — extend quarantine, stabilise.
+
+*Strand 2 — Race/Match Defaults:*
+- **Prefill on create:** scoring scheme, number of legs/races, date/time — inherited from season/matchday.
+- **Missing-driver "n/a":** teams fielding < 6 drivers render "n/a" placeholders in Lineup, Scorecard/Results and Provisional-Scores graphics (Provisional padded to 6 rows); scoring treats missing drivers as 0 points / no position.
+- **Walkover (w/o):** a team that does not compete at all is handled analogously to the existing `Match.bye` logic (auto-win with full match points for the opponent) plus a visible "w/o" label. Likely a new Flyway migration for a `walkover` flag.
+
+*Strand 3 — Lobby Settings graphic (NEW):*
+- **Brand-new standalone graphic** in the Carbon HUD style, delivered as a Claude-Design drop-in HTML.
+- **No new data model** — solved purely via **template variables**; concrete variables arrive with the Claude-Design handoff (not elaborated now).
+- **Integration:** admin preview + download · Discord auto-post (new post type) · template editor (custom override).
+- New `LobbySettingsGraphicService` (Playwright-rendered → coverage-excluded, `extends AbstractGraphicService implements TemplateManageable`).
+
+**Key context:**
+- Required CI checks must never break → no naive `paths-ignore` on `ci.yml`.
+- New Flyway migration only for the `walkover` flag (Lobby Settings needs none). H2 + MariaDB compatible.
+- Missing-driver "n/a" touches 3 graphic services + their Thymeleaf templates; Provisional Scores is currently inconsistent (no padding today).
+- 82 % coverage minimum, existing Flyway migrations immutable, Carbon HUD look preserved, new Discord post type plugs into the existing integration.
+
+### Deferred candidates (NOT in v1.15 scope)
+
+Carry-forwards from prior milestone audits, available for a future milestone:
 - **DISC-FUTURE-01..05** — Inbound Discord interaction, auto-trigger pipeline (race-save → post), settings-form migration into the admin app, multi-guild support, public-site notification webhook (carry-forwards from v1.13).
 - **ISEMPTY-AUDIT** — String `.isEmpty()` audit (~10 callsites with different semantics from `.isBlank()`; case-by-case per Phase 103 CONTEXT D-06).
 - **Discord channel bulk-rename** — admin action on `/admin/discord-config` to PATCH existing match-channels created under the pre-Phase-100 naming scheme (two-scheme coexistence is acceptable today; D-08 verdict 2026-05-26).
@@ -353,4 +381,6 @@ Phase 101 (2026-05-26) raised the scope to 26 entities by extending the package-
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-29 — after v1.14 milestone (Team Card Redesign & Data Safety, Phases 104-105, 5 plans, 51 commits on branch `gsd/v1.14-team-card-redesign`). Two unrelated pillars shipped: (1) Data-Safety Lockdown — `DevDataSeeder` + `TestDataService` reverted to `@Profile("dev")` with `LocalProfileDataSafetyIT` regression fence (SAFE-01/02); (2) Carbon HUD Graphics Redesign — all 16 Playwright-rendered admin graphics restyled to the external Claude-Design Carbon/Gold system as drop-in template replacements with full card-consumer backward-compat and two named backend tweaks (`TeamCardService` color-robustness, `ProvisionalScoresGraphicService` `raceLabel` conditional) (CARD-01..04). Phase 105 was re-scoped mid-milestone from team-card-only to all-graphics after the handoff delivered a coherent system (D-01/D-03). Milestone audit verdict: passed — 6/6 requirements, both phases verified, integration PASS, Nyquist compliant. Final state: JaCoCo ~89.42 % / 0 SpotBugs findings / 0 CodeQL HIGH+ alerts. PR #131 ready for squash-merge with subject `feat(v1.14): team card redesign & data safety` → release CI tags v1.14.0. Previous entry: 2026-05-28 after v1.13 milestone — Discord Integration & Carry-Forwards (Phases 92-103, 43 plans, 399 commits): hybrid Bot + Webhook architecture, 11 post types, match-channel lifecycle, forum-thread linking, 9 new Flyway migrations (V8-V16); shipped at 2393 tests / JaCoCo 89.43 % / 0 SpotBugs.*
+**Branch:** `gsd/v1.15-ci-and-race-defaults` (authoritative — all v1.15 planning, discuss, plan, and execute commits go here)
+
+*Last updated: 2026-05-30 — milestone v1.15 (CI Optimisation & Race/Match Defaults) started on branch `gsd/v1.15-ci-and-race-defaults`. Scope confirmed across three strands: (1) CI Optimisation — path-aware CI (approach A+C: conditional steps on `ci.yml` required jobs + hard `paths-ignore` on non-required CodeQL/MariaDB-smoke), E2E runtime reduction, caching, flaky/rerun reduction; (2) Race/Match Defaults — prefill (scoring scheme / legs-races / date-time inherited from season/matchday), missing-driver "n/a" across Lineup/Scorecard/Provisional graphics + scoring as 0 pts/no position, walkover handling analogous to `Match.bye`; (3) new template-variable-driven Lobby Settings graphic (Carbon HUD drop-in, no new data model, admin preview + Discord auto-post + template editor). Requirements + roadmap next. Previous entry: 2026-05-29 — after v1.14 milestone (Team Card Redesign & Data Safety, Phases 104-105, 5 plans, 51 commits on branch `gsd/v1.14-team-card-redesign`). Two unrelated pillars shipped: (1) Data-Safety Lockdown — `DevDataSeeder` + `TestDataService` reverted to `@Profile("dev")` with `LocalProfileDataSafetyIT` regression fence (SAFE-01/02); (2) Carbon HUD Graphics Redesign — all 16 Playwright-rendered admin graphics restyled to the external Claude-Design Carbon/Gold system as drop-in template replacements with full card-consumer backward-compat and two named backend tweaks (`TeamCardService` color-robustness, `ProvisionalScoresGraphicService` `raceLabel` conditional) (CARD-01..04). Phase 105 was re-scoped mid-milestone from team-card-only to all-graphics after the handoff delivered a coherent system (D-01/D-03). Milestone audit verdict: passed — 6/6 requirements, both phases verified, integration PASS, Nyquist compliant. Final state: JaCoCo ~89.42 % / 0 SpotBugs findings / 0 CodeQL HIGH+ alerts. PR #131 ready for squash-merge with subject `feat(v1.14): team card redesign & data safety` → release CI tags v1.14.0. Previous entry: 2026-05-28 after v1.13 milestone — Discord Integration & Carry-Forwards (Phases 92-103, 43 plans, 399 commits): hybrid Bot + Webhook architecture, 11 post types, match-channel lifecycle, forum-thread linking, 9 new Flyway migrations (V8-V16); shipped at 2393 tests / JaCoCo 89.43 % / 0 SpotBugs.*
