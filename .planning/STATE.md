@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-05-29 for v1.14 milestone start)
 Phase: 104 — COMPLETE
 Plan: —
 Status: Phase 104 complete
-Last activity: 2026-05-29 -- Phase 104 marked complete
+Last activity: 2026-05-29 -- Completed quick task 260529-dc2: favicon /favicon.ico 404 + NoResourceFoundException handling
 
 ### Prior position (Phase 103 close)
 
@@ -144,6 +144,12 @@ At roadmap creation (2026-05-29):
 - **JaCoCo baseline to preserve** — v1.13 closed at **89.43 %**; both v1.14 phases must hold ≥ 89.43 % (Phase 104 adds a small regression IT → coverage neutral/positive; Phase 105 redesigns existing graphic service which is JaCoCo-excluded already per `pom.xml`, so the redesign itself is coverage-neutral but any non-graphic helper additions must come with tests).
 - **`stash@{0}` content must be re-verified before Plan 104-01 executes** — The `v1.14-phase1-seed` stash exists on the user's local machine; the planner/executor for Phase 104 should restore + re-verify before turning it into a commit (`git stash show -p stash@{0}` then `git stash pop` on the milestone branch).
 - **Phase 105 UI surface is `playwright-cli` mandatory** — Per CLAUDE.md "Development Approach", visual verification with `playwright-cli` (Desktop + Mobile) is required for the team-card redesign; screenshots go to `.screenshots/105-*/`.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260529-dc2 | Favicon /favicon.ico 404 + NoResourceFoundException handling | 2026-05-29 | 791c945d | [260529-dc2-favicon-noresource-404](./quick/260529-dc2-favicon-noresource-404/) |
 
 ### Baselines to Preserve
 
