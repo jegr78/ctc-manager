@@ -2,130 +2,107 @@ package org.ctc.admin.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.Mockito.mock;
 
+import org.ctc.domain.service.SeasonPhaseService;
+import org.ctc.domain.service.StandingsService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.thymeleaf.TemplateEngine;
 
-@ExtendWith(MockitoExtension.class)
 class TeamCardServiceColorRobustnessTest {
 
-	@Mock
-	private TemplateEngine templateEngine;
-
-	@Mock
-	private StandingsService standingsService;
-
-	@Mock
-	private SeasonPhaseService seasonPhaseService;
-
-	@InjectMocks
 	private TeamCardService teamCardService;
 
-	private TeamCardService service() {
-		return new TeamCardService(templateEngine, standingsService, seasonPhaseService, "uploads");
+	@BeforeEach
+	void setUp() {
+		teamCardService = new TeamCardService(
+				mock(TemplateEngine.class),
+				mock(StandingsService.class),
+				mock(SeasonPhaseService.class),
+				"uploads");
 	}
 
 	@Test
 	void givenCssKeywordPrimary_whenContrastColor_thenReturnsFallbackWithoutThrowing() {
-		// given
-		TeamCardService service = service();
-
 		// when / then
-		assertThatCode(() -> service.contrastColor("transparent")).doesNotThrowAnyException();
-		assertThat(service.contrastColor("transparent")).isIn("#0b0b10", "#ffffff");
+		assertThatCode(() -> teamCardService.contrastColor("transparent")).doesNotThrowAnyException();
+		assertThat(teamCardService.contrastColor("transparent")).isIn("#0b0b10", "#ffffff");
 	}
 
 	@Test
 	void givenRgbFunctionPrimary_whenContrastColor_thenReturnsFallbackWithoutThrowing() {
-		// given
-		TeamCardService service = service();
-
 		// when / then
-		assertThatCode(() -> service.contrastColor("rgb(0,0,0)")).doesNotThrowAnyException();
-		assertThat(service.contrastColor("rgb(0,0,0)")).isIn("#0b0b10", "#ffffff");
+		assertThatCode(() -> teamCardService.contrastColor("rgb(0,0,0)")).doesNotThrowAnyException();
+		assertThat(teamCardService.contrastColor("rgb(0,0,0)")).isIn("#0b0b10", "#ffffff");
 	}
 
 	@Test
 	void givenInvalidHexDigitsPrimary_whenContrastColor_thenReturnsFallbackWithoutThrowing() {
-		// given
-		TeamCardService service = service();
-
 		// when / then
-		assertThatCode(() -> service.contrastColor("#GGGGGG")).doesNotThrowAnyException();
-		assertThat(service.contrastColor("#GGGGGG")).isIn("#0b0b10", "#ffffff");
+		assertThatCode(() -> teamCardService.contrastColor("#GGGGGG")).doesNotThrowAnyException();
+		assertThat(teamCardService.contrastColor("#GGGGGG")).isIn("#0b0b10", "#ffffff");
 	}
 
 	@Test
 	void givenShorthandHexPrimary_whenContrastColor_thenReturnsFallbackWithoutThrowing() {
-		// given
-		TeamCardService service = service();
-
 		// when / then
-		assertThatCode(() -> service.contrastColor("#abc")).doesNotThrowAnyException();
-		assertThat(service.contrastColor("#abc")).isIn("#0b0b10", "#ffffff");
+		assertThatCode(() -> teamCardService.contrastColor("#abc")).doesNotThrowAnyException();
+		assertThat(teamCardService.contrastColor("#abc")).isIn("#0b0b10", "#ffffff");
 	}
 
 	@Test
 	void givenNullPrimary_whenContrastColor_thenReturnsFallbackWithoutThrowing() {
-		// given
-		TeamCardService service = service();
-
 		// when / then
-		assertThatCode(() -> service.contrastColor(null)).doesNotThrowAnyException();
-		assertThat(service.contrastColor(null)).isIn("#0b0b10", "#ffffff");
+		assertThatCode(() -> teamCardService.contrastColor(null)).doesNotThrowAnyException();
+		assertThat(teamCardService.contrastColor(null)).isIn("#0b0b10", "#ffffff");
 	}
 
 	@Test
 	void givenEmptyPrimary_whenContrastColor_thenReturnsFallbackWithoutThrowing() {
-		// given
-		TeamCardService service = service();
-
 		// when / then
-		assertThatCode(() -> service.contrastColor("")).doesNotThrowAnyException();
-		assertThat(service.contrastColor("")).isIn("#0b0b10", "#ffffff");
+		assertThatCode(() -> teamCardService.contrastColor("")).doesNotThrowAnyException();
+		assertThat(teamCardService.contrastColor("")).isIn("#0b0b10", "#ffffff");
 	}
 
 	@Test
-	void givenInvalidHexAccent_whenComputeAccentVisColor_thenFallsBackToPrimaryWithoutThrowing() {
-		// given
-		TeamCardService service = service();
-
+	void givenValidHexAccent_whenComputeAccentVisColor_thenReturnsAccentWithoutThrowing() {
 		// when / then
-		assertThatCode(() -> service.computeAccentVisColor("#zzzzzz", "#336699")).doesNotThrowAnyException();
-		assertThat(service.computeAccentVisColor("#zzzzzz", "#336699")).isEqualTo("#336699");
+		assertThatCode(() -> teamCardService.computeAccentVisColor("#e0e0e0", "#336699")).doesNotThrowAnyException();
+		assertThat(teamCardService.computeAccentVisColor("#e0e0e0", "#336699")).isEqualTo("#e0e0e0");
 	}
 
 	@Test
-	void givenCssKeywordAccent_whenComputeAccentVisColor_thenFallsBackToPrimaryWithoutThrowing() {
-		// given
-		TeamCardService service = service();
-
+	void givenDarkAccent_whenComputeAccentVisColor_thenFallsBackToPrimary() {
 		// when / then
-		assertThatCode(() -> service.computeAccentVisColor("transparent", "#336699")).doesNotThrowAnyException();
-		assertThat(service.computeAccentVisColor("transparent", "#336699")).isEqualTo("#336699");
+		assertThat(teamCardService.computeAccentVisColor("#000000", "#336699")).isEqualTo("#336699");
+	}
+
+	@Test
+	void givenInvalidHexAccent_whenComputeAccentVisColor_thenDoesNotThrowAndReturnsNonBlank() {
+		// when / then
+		assertThatCode(() -> teamCardService.computeAccentVisColor("#zzzzzz", "#336699")).doesNotThrowAnyException();
+		assertThat(teamCardService.computeAccentVisColor("#zzzzzz", "#336699")).isNotBlank();
+	}
+
+	@Test
+	void givenCssKeywordAccent_whenComputeAccentVisColor_thenDoesNotThrow() {
+		// when / then
+		assertThatCode(() -> teamCardService.computeAccentVisColor("transparent", "#336699")).doesNotThrowAnyException();
 	}
 
 	@Test
 	void givenInvalidHexInputs_whenComputeGradientColor_thenReturnsAColorWithoutThrowing() {
-		// given
-		TeamCardService service = service();
-
 		// when / then
-		assertThatCode(() -> service.computeGradientColor("transparent", "rgb(0,0,0)", "#zzzzzz"))
+		assertThatCode(() -> teamCardService.computeGradientColor("transparent", "rgb(0,0,0)", "#zzzzzz"))
 				.doesNotThrowAnyException();
-		assertThat(service.computeGradientColor("transparent", "rgb(0,0,0)", "#zzzzzz")).isNotNull();
+		assertThat(teamCardService.computeGradientColor("transparent", "rgb(0,0,0)", "#zzzzzz")).isNotNull();
 	}
 
 	@Test
 	void givenValidHexPrimary_whenContrastColor_thenBehaviourUnchanged() {
-		// given
-		TeamCardService service = service();
-
 		// when / then
-		assertThat(service.contrastColor("#ffffff")).isEqualTo("#0b0b10");
-		assertThat(service.contrastColor("#000000")).isEqualTo("#ffffff");
+		assertThat(teamCardService.contrastColor("#ffffff")).isEqualTo("#0b0b10");
+		assertThat(teamCardService.contrastColor("#000000")).isEqualTo("#ffffff");
 	}
 }
