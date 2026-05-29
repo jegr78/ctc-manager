@@ -201,6 +201,8 @@ See: milestones/v1.13-ROADMAP.md for full details
 <details open>
 <summary>v1.14 Team Card Redesign & Data Safety (Phases 104-105) -- ACTIVE on <code>gsd/v1.14-team-card-redesign</code></summary>
 
+### v1.14 Team Card Redesign & Data Safety (Phases 104-105) — ACTIVE on `gsd/v1.14-team-card-redesign`
+
 - [ ] **Phase 104: Data Safety Lockdown** — Revert `DevDataSeeder` + `TestDataService` to `@Profile("dev")` and add a regression IT under `@ActiveProfiles("local")` that fails if either bean re-enters the context. (SAFE-01, SAFE-02)
 - [ ] **Phase 105: Team Card Visual Redesign** — Re-implement the team-card PNG output of `TeamCardService` against the external Claude-Design HTML/CSS handoff while preserving all existing card-consumer integration paths (auto-post, Re-Post, Refresh, admin preview). **Status: awaiting external Claude-Design handoff before discuss/plan/execute.** (CARD-01, CARD-02)
 
@@ -215,7 +217,10 @@ See: milestones/v1.13-ROADMAP.md for full details
   2. Starting the app with `--spring.profiles.active=dev` (and `dev,demo`) continues to seed the fictive teams/drivers/seasons exactly as before — the v1.11 widening is reverted only for `local`, not for `dev`.
   3. A new integration test loads the Spring context with `@ActiveProfiles("local")` and asserts both `DevDataSeeder` AND `TestDataService` beans are absent; the test fails the build (red) if either bean is re-registered in the future via `@Profile` widening, an inherited `@ConditionalOnProperty` flip, or an accidental `@Component` re-introduction.
   4. End-of-phase `./mvnw clean verify -Pe2e` exits 0 with JaCoCo line coverage ≥ 82 % (gate) and ≥ 89.43 % (v1.13 baseline preserved), SpotBugs `BugInstance` count 0, all existing tests still green (no regression in `dev` profile seeding paths).
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 104-01-PLAN.md — Bean-scope revert (DevDataSeeder + TestDataService → @Profile("dev")) + LocalProfileDataSafetyIT regression IT + end-of-phase ./mvnw clean verify -Pe2e gate
 **In-milestone-polish risk**: low — surface limited to two `@Profile`-annotated beans + one new Spring-Boot IT; any seeder-driven test fixtures that implicitly assumed `local`-profile availability (none expected, but worth a `grep -rn "TestDataService\|DevDataSeeder" src/test/`) close in-phase per CLAUDE.md "In-Milestone Polish".
 
 #### Phase 105: Team Card Visual Redesign
@@ -256,5 +261,5 @@ See: milestones/v1.13-ROADMAP.md for full details
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 104. Data Safety Lockdown | 0/TBD | Not started | — |
+| 104. Data Safety Lockdown | 0/1 | Planned | — |
 | 105. Team Card Visual Redesign | 0/TBD | Awaiting external Claude-Design handoff | — |
