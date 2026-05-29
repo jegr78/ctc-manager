@@ -220,7 +220,7 @@ See: milestones/v1.13-ROADMAP.md for full details
 **Plans**: 1 plan
 
 Plans:
-- [ ] 104-01-PLAN.md — Bean-scope revert (DevDataSeeder + TestDataService → @Profile("dev")) + LocalProfileDataSafetyIT regression IT + end-of-phase ./mvnw clean verify -Pe2e gate
+- [x] 104-01-PLAN.md — Bean-scope revert (DevDataSeeder + TestDataService → @Profile("dev")) + LocalProfileDataSafetyIT regression IT + end-of-phase ./mvnw clean verify -Pe2e gate
 **In-milestone-polish risk**: low — surface limited to two `@Profile`-annotated beans + one new Spring-Boot IT; any seeder-driven test fixtures that implicitly assumed `local`-profile availability (none expected, but worth a `grep -rn "TestDataService\|DevDataSeeder" src/test/`) close in-phase per CLAUDE.md "In-Milestone Polish".
 
 #### Phase 105: Team Card Visual Redesign
@@ -261,5 +261,5 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 104. Data Safety Lockdown | 0/1 | Planned | — |
+| 104. Data Safety Lockdown | 1/1 | Complete   | 2026-05-29 |
 | 105. Team Card Visual Redesign | 0/TBD | Awaiting external Claude-Design handoff | — |
