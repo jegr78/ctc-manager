@@ -13,10 +13,10 @@
 
 ### Team Card Redesign (CARD)
 
-- [ ] **CARD-01**: The team card PNG output of `TeamCardService` is regenerated to match the externally-supplied Claude-Design "Carbon HUD" handoff (HTML/CSS spec covering layout, typography, spacing, logo position, and visual hierarchy). Includes the recommended `TeamCardService` color-robustness patch (`accentVisColor` + `onPrimaryColor`). Handoff delivered 2026-05-29; canonical reference in `.planning/phases/105-team-card-visual-redesign/design-handoff/`.
-- [ ] **CARD-02**: The existing card-consumer integration paths remain backward-compatible after the redesign: auto-post on Discord channel create (Phase 95 POST-02), manual Re-Post + Refresh buttons on `/admin/discord/posts` and the team detail page, and the team-card preview in the admin UI continue to work without changes to callers. Extends to all redesigned graphics — no `GraphicService` calling-signature or model-variable changes (except the two named backend tweaks in CARD-03).
-- [ ] **CARD-03**: The five composite/matchup graphics (`settings-`, `lineup-`, `results-`, `match-results-`, `provisional-scores-render.html`) are restyled to the Carbon/Gold system as drop-in template replacements with unchanged `th:*` bindings. Includes the `ProvisionalScoresGraphicService` change to set `raceLabel` only for matches with > 1 race (else `null`), with the existing IT updated to assert the conditional `.race-chip`.
-- [ ] **CARD-04**: The matchday/list graphics and stream overlay (`matchday-schedule-`, `matchday-overview-`, `standings-`, `matchday-results-`, `power-rankings-render.html`, `overlay-render.html`) are restyled to the Carbon/Gold system (overlay geometry/skew/positions and transparency preserved exactly). Additionally, the four templates NOT covered by the handoff — `matchday-pairings-render.html` and the three `playoff-round-*-render.html` — are rebuilt by analogy to the Carbon system using existing bindings only, so no visible old/new style break occurs when graphics are posted together.
+- [x] **CARD-01**: The team card PNG output of `TeamCardService` is regenerated to match the externally-supplied Claude-Design "Carbon HUD" handoff (HTML/CSS spec covering layout, typography, spacing, logo position, and visual hierarchy). Includes the recommended `TeamCardService` color-robustness patch (`accentVisColor` + `onPrimaryColor`). Handoff delivered 2026-05-29; canonical reference in `.planning/phases/105-team-card-visual-redesign/design-handoff/`.
+- [x] **CARD-02**: The existing card-consumer integration paths remain backward-compatible after the redesign: auto-post on Discord channel create (Phase 95 POST-02), manual Re-Post + Refresh buttons on `/admin/discord/posts` and the team detail page, and the team-card preview in the admin UI continue to work without changes to callers. Extends to all redesigned graphics — no `GraphicService` calling-signature or model-variable changes (except the two named backend tweaks in CARD-03).
+- [x] **CARD-03**: The five composite/matchup graphics (`settings-`, `lineup-`, `results-`, `match-results-`, `provisional-scores-render.html`) are restyled to the Carbon/Gold system as drop-in template replacements with unchanged `th:*` bindings. Includes the `ProvisionalScoresGraphicService` change to set `raceLabel` only for matches with > 1 race (else `null`), with the existing IT updated to assert the conditional `.race-chip`.
+- [x] **CARD-04**: The matchday/list graphics and stream overlay (`matchday-schedule-`, `matchday-overview-`, `standings-`, `matchday-results-`, `power-rankings-render.html`, `overlay-render.html`) are restyled to the Carbon/Gold system (overlay geometry/skew/positions and transparency preserved exactly). Additionally, the four templates NOT covered by the handoff — `matchday-pairings-render.html` and the three `playoff-round-*-render.html` — are rebuilt by analogy to the Carbon system using existing bindings only, so no visible old/new style break occurs when graphics are posted together.
 
 ## Future Requirements (deferred to a later milestone)
 
@@ -51,9 +51,9 @@ Explicit exclusions per user scoping decision 2026-05-29:
 |-------------|-------|--------|
 | SAFE-01 | Phase 104 — Data Safety Lockdown | Satisfied (104-VERIFICATION.md passed) |
 | SAFE-02 | Phase 104 — Data Safety Lockdown | Satisfied (104-VERIFICATION.md passed) |
-| CARD-01 | Phase 105 — Carbon HUD Graphics Redesign | Delivered & UAT-verified (105-UAT 12/12, integration PASS); formal 105-VERIFICATION.md pending |
-| CARD-02 | Phase 105 — Carbon HUD Graphics Redesign | Delivered & UAT-verified; integration PASS (+1 preview-fidelity warning); 105-VERIFICATION.md pending |
-| CARD-03 | Phase 105 — Carbon HUD Graphics Redesign | Delivered & UAT-verified (raceLabel both-branch unit tests); 105-VERIFICATION.md pending |
-| CARD-04 | Phase 105 — Carbon HUD Graphics Redesign | Delivered & UAT-verified (AUTO-UAT 16 graphics); 105-VERIFICATION.md pending |
+| CARD-01 | Phase 105 — Carbon HUD Graphics Redesign | Satisfied (105-VERIFICATION.md passed 6/6; UAT 12/12; color-robustness 24 unit tests) |
+| CARD-02 | Phase 105 — Carbon HUD Graphics Redesign | Satisfied (105-VERIFICATION.md passed; integration PASS; preview-fidelity fix 5d621e51) |
+| CARD-03 | Phase 105 — Carbon HUD Graphics Redesign | Satisfied (105-VERIFICATION.md passed; raceLabel both-branch unit tests) |
+| CARD-04 | Phase 105 — Carbon HUD Graphics Redesign | Satisfied (105-VERIFICATION.md passed; AUTO-UAT 16 graphics; overlay geometry byte-verified) |
 
 **Coverage:** 6/6 v1.14 requirements mapped to exactly one phase. No orphans, no duplicates.
