@@ -1,10 +1,11 @@
 ---
 phase: 105
 slug: team-card-visual-redesign
-status: draft
+status: approved
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-05-29
+validated: 2026-05-29
 ---
 
 # Phase 105 — Validation Strategy
@@ -44,19 +45,19 @@ created: 2026-05-29
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 105-01-01 | 01 | 1 | CARD-01 | — | N/A (server-controlled color math, no untrusted input) | unit | `./mvnw clean verify -Dtest=TeamCardServiceTest` | ⚠️ new helper tests (W0) | ⬜ pending |
-| 105-01-02 | 01 | 1 | CARD-02 | — | N/A (template renders server model) | integration | `./mvnw clean verify -Dit.test=TemplateRenderingSmokeIT -DfailIfNoTests=false` | ✅ | ⬜ pending |
-| 105-01-03 | 01 | 1 | CARD-01,02 | — | N/A | manual | `playwright-cli` Desktop+Mobile vs `screenshots/01-team-card.png` | N/A (visual) | ⬜ pending |
-| 105-02-01 | 02 | 2 | CARD-03 | — | N/A | unit | `./mvnw clean verify -Dtest=ProvisionalScoresGraphicServiceTest` | ⚠️ both-branch update + new single-race test (W0) | ⬜ pending |
-| 105-02-02 | 02 | 2 | CARD-02,03 | — | N/A | integration | `./mvnw clean verify -Dit.test=TemplateRenderingSmokeIT -DfailIfNoTests=false` | ✅ | ⬜ pending |
-| 105-02-03 | 02 | 2 | CARD-02,03 | — | N/A | manual | `playwright-cli` vs `screenshots/02-composite-match-results.png`, `03-provisional-scores.png` | N/A (visual) | ⬜ pending |
-| 105-03-01 | 03 | 3 | CARD-02,04 | — | N/A | integration | `./mvnw clean verify -Dit.test=TemplateRenderingSmokeIT -DfailIfNoTests=false` | ✅ | ⬜ pending |
-| 105-03-02 | 03 | 3 | CARD-04 | — | N/A | integration | Same | ✅ | ⬜ pending |
-| 105-03-03 | 03 | 3 | CARD-02,04 | — | N/A | manual | `playwright-cli` vs `screenshots/05-standings.png`, `06-power-rankings.png` | N/A (visual) | ⬜ pending |
-| 105-04-01 | 04 | 4 | CARD-04 | — | N/A (overlay geometry pinned by grep assertion) | integration | `./mvnw clean verify -Dit.test=TemplateRenderingSmokeIT -DfailIfNoTests=false` | ✅ | ⬜ pending |
-| 105-04-02 | 04 | 4 | CARD-04 | — | N/A | integration | Same (4 analogy templates render-smoke) | ✅ | ⬜ pending |
-| 105-04-03 | 04 | 4 | CARD-02,04 | — | N/A | e2e | `./mvnw clean verify -Pe2e` (JaCoCo ≥82%, SpotBugs 0, Discord WireMock ITs green) | ✅ | ⬜ pending |
-| 105-04-04 | 04 | 4 | CARD-04 | — | N/A | manual | `playwright-cli` vs `screenshots/04-matchday-pairings.png` + Carbon-token check on analogy templates | N/A (visual) | ⬜ pending |
+| 105-01-01 | 01 | 1 | CARD-01 | — | N/A (server-controlled color math, no untrusted input) | unit | `./mvnw clean verify -Dtest=TeamCardServiceTest,TeamCardServiceColorRobustnessTest` | ✅ | ✅ green (24 tests) |
+| 105-01-02 | 01 | 1 | CARD-02 | — | N/A (template renders server model) | integration | `./mvnw clean verify -Dit.test=TemplateRenderingSmokeIT -DfailIfNoTests=false` | ✅ | ✅ green (70 IT) |
+| 105-01-03 | 01 | 1 | CARD-01,02 | — | N/A | manual | operator-gated visual (105-UAT tests 2-4 + 105-AUTO-UAT live boot-seeder PNGs ADR/SGM_S) | N/A (visual) | ✅ done |
+| 105-02-01 | 02 | 2 | CARD-03 | — | N/A | unit | `./mvnw clean verify -Dtest=ProvisionalScoresGraphicServiceTest` | ✅ | ✅ green (8 tests, both raceLabel branches) |
+| 105-02-02 | 02 | 2 | CARD-02,03 | — | N/A | integration | `./mvnw clean verify -Dit.test=TemplateRenderingSmokeIT -DfailIfNoTests=false` | ✅ | ✅ green |
+| 105-02-03 | 02 | 2 | CARD-02,03 | — | N/A | manual | operator-gated visual (105-UAT tests 5-6 + 105-AUTO-UAT race-results live render) | N/A (visual) | ✅ done |
+| 105-03-01 | 03 | 3 | CARD-02,04 | — | N/A | integration | `./mvnw clean verify -Dit.test=TemplateRenderingSmokeIT -DfailIfNoTests=false` | ✅ | ✅ green |
+| 105-03-02 | 03 | 3 | CARD-04 | — | N/A | integration | Same | ✅ | ✅ green |
+| 105-03-03 | 03 | 3 | CARD-02,04 | — | N/A | manual | operator-gated visual (105-UAT tests 8-10 + 105-AUTO-UAT standings/power-rankings) | N/A (visual) | ✅ done |
+| 105-04-01 | 04 | 4 | CARD-04 | — | N/A (overlay geometry pinned by grep assertion) | integration | `./mvnw clean verify -Dit.test=TemplateRenderingSmokeIT -DfailIfNoTests=false` | ✅ | ✅ green |
+| 105-04-02 | 04 | 4 | CARD-04 | — | N/A | integration | Same (4 analogy templates render-smoke) | ✅ | ✅ green |
+| 105-04-03 | 04 | 4 | CARD-02,04 | — | N/A | e2e | `./mvnw clean verify -Pe2e` (JaCoCo ≥82%, SpotBugs 0, Discord WireMock ITs green) | ✅ | ✅ green (BUILD SUCCESS) |
+| 105-04-04 | 04 | 4 | CARD-04 | — | N/A | manual | operator-gated visual (105-UAT tests 11-12 + 105-AUTO-UAT overlay/pairings/playoff-trio) | N/A (visual) | ✅ done |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -64,9 +65,9 @@ created: 2026-05-29
 
 ## Wave 0 Requirements
 
-- [ ] New unit tests for `computeAccentVisColor` (accent < 28 → primary fallback) and `contrastColor` (luminance > 140 → `#0b0b10`, else `#ffffff`) in `TeamCardServiceTest`.
-- [ ] Update both existing `ProvisionalScoresGraphicServiceTest` methods (`whenValidRace_thenTemplateContextIncludesRaceLabelAndExpectedVariables`, `givenSameRaceTwice_whenGenerateProvisionalWithSameIndex_thenSameRaceLabel`) to a ≥2-race fixture asserting `"Race N"`.
-- [ ] New `ProvisionalScoresGraphicServiceTest` single-race branch test: `givenSingleRaceMatch_whenBuildContext_thenRaceLabelIsNull()`.
+- [x] New unit tests for `computeAccentVisColor` (accent < 28 → primary fallback) and `contrastColor` (luminance > 140 → `#0b0b10`, else `#ffffff`) — landed in `TeamCardServiceColorRobustnessTest` (12 green) + `TeamCardServiceTest` (12 green).
+- [x] Update both existing `ProvisionalScoresGraphicServiceTest` methods to a ≥2-race fixture asserting `"Race N"`.
+- [x] New `ProvisionalScoresGraphicServiceTest` single-race branch test: `givenSingleRaceMatch_whenBuildContext_thenRaceLabelIsNull()`.
 
 *All other phase behaviors reuse existing infrastructure (`TemplateRenderingSmokeIT`, Discord WireMock ITs).*
 
@@ -84,11 +85,34 @@ created: 2026-05-29
 
 ## Validation Sign-Off
 
-- [ ] All tasks have automated verify or Wave 0 dependencies (visual checkpoints are operator-gated per `feedback_graphic_design_iteration`)
+- [x] All tasks have automated verify or Wave 0 dependencies (visual checkpoints are operator-gated per `feedback_graphic_design_iteration`)
 - [x] Sampling continuity: no 3 consecutive automated tasks without a verify command (each wave's auto tasks carry targeted commands)
-- [ ] Wave 0 covers all MISSING references (`TeamCardServiceTest` helpers, `ProvisionalScoresGraphicServiceTest` both branches)
+- [x] Wave 0 covers all MISSING references (`TeamCardServiceTest`/`TeamCardServiceColorRobustnessTest` helpers, `ProvisionalScoresGraphicServiceTest` both branches)
 - [x] No watch-mode flags
 - [x] Feedback latency < 90 s (targeted) / < 9 min (full `-Pe2e`)
 - [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-05-29
+
+---
+
+## Validation Audit 2026-05-29
+
+State A audit (post-execution reconciliation). VALIDATION.md was draft/pending with all
+per-task statuses unreconciled; the phase was in fact complete with all automated tests green.
+
+| Metric | Count |
+|--------|-------|
+| Requirements | 4 (CARD-01, CARD-02, CARD-03, CARD-04) |
+| Automated tasks | 9 — all ✅ COVERED (re-run green this session) |
+| Manual/operator-gated tasks | 4 — all ✅ done (105-UAT.md 12/12 + 105-AUTO-UAT.md 16 graphics) |
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+No test generation required — every requirement already had automated coverage
+(`TeamCardServiceTest` + `TeamCardServiceColorRobustnessTest` 24, `ProvisionalScoresGraphicServiceTest` 8
+both raceLabel branches, `TemplateRenderingSmokeIT` 70, end-of-phase `clean verify -Pe2e` BUILD SUCCESS).
+Visual fidelity is operator-gated per `feedback_graphic_design_iteration` and was executed via the
+UAT/AUTO-UAT session. Graphic services are JaCoCo-excluded (runtime Playwright). Phase 105 is
+**Nyquist-compliant**.
