@@ -37,7 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
-@Profile({"dev", "local"})
+@Profile("dev")
 @RequiredArgsConstructor
 public class TestDataService {
 

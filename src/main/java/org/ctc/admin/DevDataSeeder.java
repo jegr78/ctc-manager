@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-@Profile({"dev", "local"})
+@Profile("dev")
 @RequiredArgsConstructor
 public class DevDataSeeder implements CommandLineRunner {
 
