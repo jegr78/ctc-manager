@@ -11,205 +11,82 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            width: 1920px;
-            height: 1080px;
-            overflow: hidden;
+            width: 1920px; height: 1080px; overflow: hidden;
             font-family: 'Conthrax', -apple-system, sans-serif;
-            background: transparent;
-            color: white;
-            position: relative;
+            background: transparent; color: #fff; position: relative;
         }
 
-        /* Top bar: Team matchup — exact position from example */
-        .top-bar {
-            position: absolute;
-            left: 500px;
-            top: 0;
-            width: 921px;
-            height: 120px;
-            display: flex;
-            align-items: stretch;
-        }
-
+        /* === Top: Team-Matchup — Position/Größe unverändert === */
+        .top-bar { position: absolute; left: 500px; top: 0; width: 921px; height: 120px; display: flex; align-items: stretch; }
+        .top-bar::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; z-index: 3;
+            background: linear-gradient(90deg, transparent, rgba(245,197,66,.6) 12%, rgba(245,197,66,.6) 88%, transparent); }
         .team-bar {
-            width: 400px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
+            --cv: oklch(from var(--c, #5a5a64) max(l, 0.5) c h);
+            width: 400px; display: flex; align-items: center; justify-content: space-between; padding: 0 22px;
+            position: relative; overflow: hidden;
+            background: linear-gradient(180deg, rgba(22,22,28,.92), rgba(13,13,17,.94));
         }
+        .team-bar.home { border-left: 6px solid var(--cv);
+            background: radial-gradient(circle at 0% 50%, color-mix(in srgb, var(--cv) 32%, transparent) 0%, transparent 46%), linear-gradient(180deg, rgba(22,22,28,.92), rgba(13,13,17,.94)); }
+        .team-bar.away { border-right: 6px solid var(--cv);
+            background: radial-gradient(circle at 100% 50%, color-mix(in srgb, var(--cv) 32%, transparent) 0%, transparent 46%), linear-gradient(180deg, rgba(22,22,28,.92), rgba(13,13,17,.94)); }
 
-        .logo-block {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            flex-shrink: 0;
-        }
+        .logo-block { display: flex; flex-direction: column; align-items: center; gap: 3px; flex-shrink: 0; position: relative; z-index: 2; }
+        .chip { width: 76px; height: 76px; border-radius: 50%; background: #14141a; border: 3px solid var(--cv);
+            display: grid; place-items: center; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,.6); }
+        .chip img { width: 74%; height: 74%; object-fit: contain;
+            filter: drop-shadow(0 0 2px rgba(0,0,0,.85)) drop-shadow(0 0 3px rgba(255,255,255,.5)); }
+        .team-record { font-size: 18px; font-weight: 900; color: #fff; letter-spacing: 1px; line-height: 1; text-shadow: 0 1px 4px rgba(0,0,0,.9); }
+        .team-name { font-size: 22px; font-weight: 700; line-height: 1.15; color: #fff; position: relative; z-index: 2; text-shadow: 0 2px 6px rgba(0,0,0,.85); }
+        .team-bar.home .team-name { text-align: left; }
+        .team-bar.away .team-name { text-align: left; }
 
-        .team-logo {
-            width: 75px;
-            height: 75px;
-            object-fit: contain;
-            background: rgba(255,255,255,0.15);
-            border-radius: 50%;
-            padding: 5px;
-        }
+        .vs-badge { width: 120px; min-width: 120px; display: flex; align-items: center; justify-content: center; position: relative;
+            background: linear-gradient(180deg, rgba(22,22,28,.92), rgba(13,13,17,.94)); }
+        .vs-badge::before, .vs-badge::after { content: ''; position: absolute; top: 12px; bottom: 12px; width: 2px; z-index: 2;
+            background: linear-gradient(180deg, transparent, rgba(245,197,66,.7), transparent); }
+        .vs-badge::before { left: 0; } .vs-badge::after { right: 0; }
+        .vs-badge img { width: 84px; height: 84px; object-fit: contain; position: relative; z-index: 2; filter: drop-shadow(0 0 9px rgba(0,0,0,.55)); }
 
-        .team-record {
-            font-size: 18px;
-            font-weight: 900;
-            color: white;
-            text-shadow: 0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.5);
-            line-height: 1;
-        }
+        /* CTC-Logo oben rechts (weiße Münze — kein Invert) */
+        .ctc-logo-corner { position: absolute; top: 16px; right: 16px; width: 80px; height: 80px; object-fit: contain;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,.6)); }
 
-        .team-name {
-            font-size: 22px;
-            font-weight: 700;
-            color: #111;
-            text-shadow: 0 1px 3px rgba(255,255,255,0.3);
-            line-height: 1.15;
-        }
-
-        .team-bar.home .team-name {
-            text-align: left;
-        }
-
-        .team-bar.away .team-name {
-            text-align: left;
-        }
-
-        .vs-badge {
-            width: 120px;
-            min-width: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(0,0,0,0.75);
-        }
-
-        .vs-badge img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-        }
-
-        /* CTC Logo top-right corner */
-        .ctc-logo-corner {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-        }
-
-        /* Bottom bar: Branding — exact position from example */
-        .bottom-wrapper {
-            position: absolute;
-            left: 218px;
-            top: 924px;
-            width: 1275px;
-            height: 148px;
-        }
-
+        /* === Bottom: Branding — Position/Größe/Skew unverändert === */
+        .bottom-wrapper { position: absolute; left: 218px; top: 924px; width: 1275px; height: 148px; }
         .bottom-bar {
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg, #555 0%, #1a1a1a 100%);
-            display: flex;
-            align-items: center;
-            padding: 0 56px;
-            gap: 36px;
-            transform: skewX(-13deg);
-            border: 2px solid #777;
-            position: relative;
+            width: 100%; height: 100%; display: flex; align-items: center; padding: 0 56px; gap: 36px;
+            transform: skewX(-13deg); position: relative;
+            background: linear-gradient(180deg, #23232c 0%, #101015 100%);
+            border: 1px solid rgba(255,255,255,.10); box-shadow: inset 0 4px 0 rgba(245,197,66,.85);
         }
-
-        .bottom-bar > * {
-            transform: skewX(13deg);
-        }
-
-        .ctc-logo {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-            flex-shrink: 0;
-        }
-
-        .ctc-text-block {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            flex: 1;
-        }
-
-        .ctc-text-line1 {
-            font-size: 40px;
-            font-weight: 700;
-            letter-spacing: 5px;
-            color: white;
-            text-transform: uppercase;
-            line-height: 1.1;
-        }
-
-        .ctc-text-line2 {
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: 4px;
-            color: #ccc;
-            text-transform: uppercase;
-            line-height: 1.1;
-        }
-
-        .matchday-label {
-            position: absolute;
-            left: 804px;
-            top: 21px;
-            width: 134px;
-            height: 57px;
-            font-size: 48px;
-            font-weight: 900;
-            color: white;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transform: skewX(13deg);
-        }
-
-        .commentator-img {
-            position: absolute;
-            left: 1089px;
-            top: 6px;
-            width: 111px;
-            height: 111px;
-            object-fit: contain;
-            transform: skewX(13deg);
-        }
+        .bottom-bar > * { transform: skewX(13deg); }
+        .ctc-logo { width: 80px; height: 80px; object-fit: contain; flex-shrink: 0; }
+        .ctc-text-block { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+        .ctc-text-line1 { font-size: 40px; font-weight: 700; letter-spacing: 5px; color: #fff; text-transform: uppercase; line-height: 1.1; }
+        .ctc-text-line2 { font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #9a9aa6; text-transform: uppercase; line-height: 1.1; }
+        .matchday-label { position: absolute; left: 804px; top: 21px; width: 134px; height: 57px; font-size: 48px; font-weight: 900;
+            color: #fff; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap;
+            display: flex; align-items: center; justify-content: center; transform: skewX(13deg); }
+        .commentator-img { position: absolute; left: 1089px; top: 6px; width: 111px; height: 111px; object-fit: contain; transform: skewX(13deg); }
     </style>
 </head>
 <body>
     <!-- Top: Team matchup bar (absolute positioned) -->
     <div class="top-bar">
-        <div class="team-bar home"
-             th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 80%, black) 0%, color-mix(in srgb, ' + ${homePrimaryColor ?: '#333'} + ' 30%, white) 100%);'">
+        <div class="team-bar home" th:style="'--c: ' + ${homePrimaryColor ?: '#5a5a64'} + ';'">
             <span class="team-name" th:utext="${homeTeamNameHtml}"></span>
             <div class="logo-block">
-                <img th:if="${homeLogoBase64 != null}" th:src="${homeLogoBase64}" alt="" class="team-logo">
+                <div class="chip"><img th:if="${homeLogoBase64 != null}" th:src="${homeLogoBase64}" alt=""></div>
                 <span class="team-record" th:text="${homeRecord}"></span>
             </div>
         </div>
         <div class="vs-badge">
             <img th:if="${vsBadgeBase64 != null}" th:src="${vsBadgeBase64}" alt="VS">
         </div>
-        <div class="team-bar away"
-             th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 80%, black) 0%, color-mix(in srgb, ' + ${awayPrimaryColor ?: '#333'} + ' 30%, white) 100%);'">
+        <div class="team-bar away" th:style="'--c: ' + ${awayPrimaryColor ?: '#5a5a64'} + ';'">
             <div class="logo-block">
-                <img th:if="${awayLogoBase64 != null}" th:src="${awayLogoBase64}" alt="" class="team-logo">
+                <div class="chip"><img th:if="${awayLogoBase64 != null}" th:src="${awayLogoBase64}" alt=""></div>
                 <span class="team-record" th:text="${awayRecord}"></span>
             </div>
             <span class="team-name" th:utext="${awayTeamNameHtml}"></span>
