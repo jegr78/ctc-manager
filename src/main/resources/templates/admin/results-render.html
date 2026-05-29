@@ -62,6 +62,7 @@
         .driver-name { font-size: 26px; font-weight: 700; color: #d4d4da; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .driver-nickname { font-size: 18px; font-weight: 600; color: #7e7e88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .points { font-size: 30px; font-weight: 700; color: #e6e6ec; width: 66px; text-align: center; font-variant-numeric: tabular-nums; }
+        .points.winner { color: #f5c542; }
 
         .footer .team-total { flex: 1; font-size: 56px; font-weight: 900; color: #f2f2f5; }
         .footer .team-total.winner { text-decoration: underline; text-decoration-color: #f5c542; text-underline-offset: 12px; text-decoration-thickness: 6px; }
@@ -95,8 +96,8 @@
                     <span class="driver-name" th:text="${row.homeDriver}"></span>
                     <span class="driver-nickname" th:text="'(' + ${row.homeNickname} + ')'" th:if="${row.homeDriver != ''}"></span>
                 </div>
-                <span class="points" th:text="${row.homeDriver != '' ? row.homePoints : ''}"></span>
-                <span class="points" th:text="${row.awayDriver != '' ? row.awayPoints : ''}"></span>
+                <span class="points" th:classappend="${homeIsWinner ? 'winner' : ''}" th:text="${row.homeDriver != '' ? row.homePoints : ''}"></span>
+                <span class="points" th:classappend="${awayIsWinner ? 'winner' : ''}" th:text="${row.awayDriver != '' ? row.awayPoints : ''}"></span>
                 <div class="driver-info away">
                     <span class="driver-name" th:text="${row.awayDriver}"></span>
                     <span class="driver-nickname" th:text="'(' + ${row.awayNickname} + ')'" th:if="${row.awayDriver != ''}"></span>
