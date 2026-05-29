@@ -91,6 +91,8 @@ public class TeamCardService implements TemplateManageable {
 		ctx.setVariable("secondaryColor", secondaryColor);
 		ctx.setVariable("accentColor", accentColor);
 		ctx.setVariable("gradientColor", computeGradientColor(primaryColor, secondaryColor, accentColor));
+		ctx.setVariable("accentVisColor", computeAccentVisColor(accentColor, primaryColor));
+		ctx.setVariable("onPrimaryColor", contrastColor(primaryColor));
 		ctx.setVariable("logoBase64", logoBase64);
 		ctx.setVariable("fontBase64", fontBase64);
 
@@ -204,6 +206,17 @@ public class TeamCardService implements TemplateManageable {
 			}
 		}
 		return darkest != null ? darkest : "#111111";
+	}
+
+	String computeAccentVisColor(String accent, String primary) {
+		if (accent == null || relativeLuminance(accent) < 28) {
+			return primary;
+		}
+		return accent;
+	}
+
+	String contrastColor(String hex) {
+		return relativeLuminance(hex) > 140 ? "#0b0b10" : "#ffffff";
 	}
 
 	private double relativeLuminance(String hex) {

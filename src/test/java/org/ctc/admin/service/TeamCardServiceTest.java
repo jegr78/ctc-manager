@@ -124,4 +124,33 @@ class TeamCardServiceTest {
 		verify(seasonPhaseService).findRegularPhase(season.getId());
 		verify(standingsService).calculateStandings(eq(regularPhase.getId()), isNull());
 	}
+
+	@Test
+	void givenNullAccent_whenComputeAccentVisColor_thenReturnsPrimary() {
+		assertThat(service.computeAccentVisColor(null, "#336699")).isEqualTo("#336699");
+	}
+
+	@Test
+	void givenVeryDarkAccent_whenComputeAccentVisColor_thenReturnsPrimary() {
+		// #0a0a0a luminance ~10, below the 28 visibility floor
+		assertThat(service.computeAccentVisColor("#0a0a0a", "#336699")).isEqualTo("#336699");
+	}
+
+	@Test
+	void givenNormalAccent_whenComputeAccentVisColor_thenReturnsAccent() {
+		// #ff6600 luminance ~127, above the floor
+		assertThat(service.computeAccentVisColor("#ff6600", "#336699")).isEqualTo("#ff6600");
+	}
+
+	@Test
+	void givenBrightPrimary_whenContrastColor_thenReturnsDarkText() {
+		// #f5c542 luminance ~198, above 140
+		assertThat(service.contrastColor("#f5c542")).isEqualTo("#0b0b10");
+	}
+
+	@Test
+	void givenDarkPrimary_whenContrastColor_thenReturnsWhiteText() {
+		// #1a1a2e luminance ~27, below 140
+		assertThat(service.contrastColor("#1a1a2e")).isEqualTo("#ffffff");
+	}
 }
