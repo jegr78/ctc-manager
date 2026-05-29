@@ -11,204 +11,78 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            width: 1920px;
-            height: 1080px;
-            overflow: hidden;
-            font-family: 'Conthrax', -apple-system, sans-serif;
-            display: flex;
-            flex-direction: column;
-            background: #111111;
+            width: 1920px; height: 1080px; overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif; color: #fff;
+            display: flex; flex-direction: column;
         }
 
-        /* Header */
         .header {
-            background: linear-gradient(180deg, #c0c0c0 0%, #a0a0a0 100%);
-            padding: 20px 96px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 120px;
+            background: linear-gradient(180deg, #202028 0%, #121217 100%);
+            padding: 18px 90px; display: flex; justify-content: space-between;
+            align-items: center; min-height: 112px;
+            box-shadow: inset 0 -3px 0 rgba(245,197,66,.78);
         }
+        .header-left { text-align: left; flex: 1; }
+        .header-left .title { font-size: 27px; font-weight: 900; color: #f2f2f5; text-transform: uppercase; letter-spacing: 3px; line-height: 1.1; }
+        .header-left .year { font-size: 29px; font-weight: 700; color: #9a9aa6; margin-top: 6px; }
 
-        .header-left {
-            text-align: left;
-            flex: 1;
-        }
+        .header-center { text-align: center; flex: 1; }
+        /* einzeilig — etwas kleiner, da längerer Titel */
+        .header-center .scorecard-title { font-size: 40px; font-weight: 900; color: #f2f2f5; letter-spacing: 2px;
+            white-space: nowrap; display: inline-flex; align-items: center; gap: 16px; }
+        .header-center .scorecard-title::before, .header-center .scorecard-title::after {
+            content: ''; width: 4px; height: 32px; background: #f5c542; display: inline-block; border-radius: 1px; }
+        .header-center .matchday { font-size: 28px; font-weight: 700; color: #9a9aa6; margin-top: 2px; }
 
-        .header-left .title {
-            font-size: 26px;
-            font-weight: 900;
-            color: #1a1a1a;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            line-height: 1.1;
-        }
+        .header-right { flex: 1; display: flex; justify-content: flex-end; }
+        .header-right img { width: 80px; height: 80px; object-fit: contain; }
 
-        .header-left .year {
-            font-size: 28px;
-            font-weight: 700;
-            color: white;
-            margin-top: 8px;
-        }
-
-        .header-center {
-            text-align: center;
-            flex: 1;
-        }
-
-        .header-center .scorecard-title {
-            font-size: 50px;
-            font-weight: 900;
-            color: #1a1a1a;
-            letter-spacing: 2px;
-        }
-
-        .header-center .matchday {
-            font-size: 26px;
-            font-weight: 700;
-            color: white;
-        }
-
-        .header-center .race-label {
-            font-size: 22px;
-            font-weight: 700;
-            color: #1a1a1a;
-            letter-spacing: 2px;
-            margin-top: 4px;
-        }
-
-        .header-right {
-            flex: 1;
-            display: flex;
-            justify-content: flex-end;
-        }
-
-        .header-right img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-        }
-
-        /* Main content — 2 stacked team-blocks */
+        /* Mittelteil — Carbon-Vignette, zwei gestapelte Blöcke */
         .main {
-            flex: 1;
-            background: #111111;
-            display: flex;
-            flex-direction: column;
-            padding: 16px 48px;
-            gap: 16px;
-            overflow: hidden;
+            flex: 1; position: relative; display: flex; flex-direction: column; justify-content: space-evenly;
+            padding: 18px 46px; gap: 20px;
+            background:
+                repeating-linear-gradient(118deg, transparent 0 74px, rgba(255,255,255,.013) 74px 76px),
+                radial-gradient(120% 85% at 50% 36%, #15151b 0%, #0d0d11 54%, #08080b 100%);
         }
 
         .team-block {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            background: #1a1a1a;
-            border-radius: 12px;
-            padding: 16px 24px;
-            border-left: 6px solid #c0c0c0;
+            display: flex; align-items: stretch; gap: 26px; position: relative;
+            background: linear-gradient(180deg, #17171d, #111116);
+            border: 1px solid rgba(255,255,255,.05); border-left: 6px solid #f5c542;
+            border-radius: 14px; padding: 16px 26px 16px 22px;
         }
+        /* HUD-Eckbracket oben rechts */
+        .team-block::after { content: ''; position: absolute; top: 12px; right: 12px; width: 28px; height: 28px;
+            border-top: 3px solid rgba(245,197,66,.5); border-right: 3px solid rgba(245,197,66,.5); }
 
-        .team-block--home {
-            border-left-color: #4a90e2;
-        }
-
-        .team-block--away {
-            border-left-color: #e25a4a;
-        }
-
+        /* Karten-Zelle mit Gold-Trennlinie (ohne Teamname) */
         .team-card-cell {
-            flex: 0 0 200px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            flex: 0 0 196px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-right: 2px solid rgba(245,197,66,.28); padding-right: 14px;
         }
+        .team-card-cell img { width: 132px; object-fit: contain; border: 2px solid #fff; border-radius: 10px;
+            box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 12px 30px rgba(0,0,0,.55); }
 
-        .team-card-cell img {
-            max-height: 160px;
-            max-width: 200px;
-            object-fit: contain;
-            border: 3px solid white;
-            border-radius: 12px;
-        }
-
-        .team-card-cell .team-name {
-            font-size: 22px;
-            font-weight: 700;
-            color: white;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            text-align: center;
-        }
-
-        .provisional-table-wrapper {
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .provisional-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-variant-numeric: tabular-nums;
-            color: white;
-        }
-
-        .provisional-table th {
-            background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
-            color: #b2b2b2;
-            font-size: 18px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 10px 8px;
-            text-align: center;
-            border-bottom: 2px solid #333;
-        }
-
-        .provisional-table th.col-driver {
-            text-align: left;
-            padding-left: 16px;
-        }
-
-        .provisional-table td {
-            font-size: 22px;
-            font-weight: 700;
-            color: white;
-            padding: 8px 8px;
-            text-align: center;
-            border-bottom: 1px solid #222;
-        }
-
-        .provisional-table td.col-driver {
-            text-align: left;
-            padding-left: 16px;
-        }
-
+        .provisional-table-wrapper { flex: 1; display: flex; align-items: center; }
+        .provisional-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; color: #fff; }
+        .provisional-table th { background: transparent; color: #9a9aa6; font-size: 18px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px; padding: 8px 8px 12px; text-align: center;
+            border-bottom: 2px solid rgba(245,197,66,.5); }
+        .provisional-table th.col-driver { text-align: left; padding-left: 14px; }
+        .provisional-table tbody tr:nth-child(even) td { background: rgba(255,255,255,.028); }
+        .provisional-table td { font-size: 22px; font-weight: 700; color: #eaeaf0; padding: 7px 8px; text-align: center; }
+        .provisional-table td.col-driver { text-align: left; padding-left: 14px; color: #fff; }
         .provisional-table tfoot .overall-row td {
-            background: linear-gradient(180deg, #2a2a2a 0%, #222 100%);
-            font-size: 22px;
-            font-weight: 900;
-            color: #ffd166;
-            border-top: 2px solid #444;
-            border-bottom: none;
-            padding: 12px 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+            background: rgba(245,197,66,.12); font-size: 22px; font-weight: 900; color: #f5c542;
+            border-top: 2px solid rgba(245,197,66,.6); padding: 11px 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .provisional-table tfoot .overall-row td.col-driver { text-align: left; padding-left: 14px; }
+        .fl-marker { color: #f5c542; font-size: 20px; }
 
-        .provisional-table tfoot .overall-row td.col-driver {
-            text-align: left;
-            padding-left: 16px;
-        }
-
-        .fl-marker {
-            color: #ffd166;
-            font-size: 20px;
-        }
+        /* Race-Chip rechts unten — nur bei mehr als einem Rennen (Service setzt raceLabel sonst null) */
+        .race-chip { position: absolute; right: 50px; bottom: 12px; font-size: 19px; font-weight: 700;
+            letter-spacing: 3px; color: #f5c542; display: inline-flex; align-items: center; gap: 10px; text-transform: uppercase; }
+        .race-chip::before { content: ''; width: 16px; height: 16px; border-left: 3px solid #f5c542; border-bottom: 3px solid #f5c542; }
     </style>
 </head>
 <body>
@@ -220,7 +94,6 @@
         <div class="header-center">
             <div class="scorecard-title">Provisional Scores</div>
             <div class="matchday" th:text="${matchdayName}"></div>
-            <div class="race-label" th:text="${raceLabel}"></div>
         </div>
         <div class="header-right">
             <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC">
@@ -231,7 +104,6 @@
         <div class="team-block team-block--home">
             <div class="team-card-cell">
                 <img th:src="${homeCardBase64}" alt="Home Team Card">
-                <div class="team-name" th:text="${homeTeamName}"></div>
             </div>
             <div class="provisional-table-wrapper">
                 <table class="provisional-table">
@@ -276,7 +148,6 @@
         <div class="team-block team-block--away">
             <div class="team-card-cell">
                 <img th:src="${awayCardBase64}" alt="Away Team Card">
-                <div class="team-name" th:text="${awayTeamName}"></div>
             </div>
             <div class="provisional-table-wrapper">
                 <table class="provisional-table">
@@ -317,6 +188,9 @@
                 </table>
             </div>
         </div>
+
+        <!-- nur anzeigen, wenn das Match mehr als ein Rennen hat (Service: raceLabel sonst null setzen) -->
+        <div class="race-chip" th:if="${raceLabel != null}" th:text="${raceLabel}"></div>
     </div>
 </body>
 </html>

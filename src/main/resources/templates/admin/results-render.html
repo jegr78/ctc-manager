@@ -11,190 +11,62 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            width: 1920px;
-            height: 1080px;
-            overflow: hidden;
-            font-family: 'Conthrax', -apple-system, sans-serif;
-            display: flex;
-            flex-direction: column;
+            width: 1920px; height: 1080px; overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif; color: #fff;
+            display: flex; flex-direction: column;
         }
 
-        /* Header */
-        .header {
-            background: linear-gradient(180deg, #c0c0c0 0%, #a0a0a0 100%);
-            padding: 24px 96px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 130px;
+        .header, .footer {
+            background: linear-gradient(180deg, #202028 0%, #121217 100%);
+            padding: 18px 90px; display: flex; justify-content: space-between;
+            align-items: center; min-height: 112px;
         }
+        .header { box-shadow: inset 0 -3px 0 rgba(245,197,66,.78); }
+        .footer { box-shadow: inset 0 3px 0 rgba(245,197,66,.78); }
 
-        .header-left {
-            text-align: left;
-            flex: 1;
-        }
+        .header-left { text-align: left; flex: 1; }
+        .header-left .title { font-size: 27px; font-weight: 900; color: #f2f2f5; text-transform: uppercase; letter-spacing: 3px; line-height: 1.1; }
+        .header-left .year { font-size: 29px; font-weight: 700; color: #9a9aa6; margin-top: 6px; }
 
-        .header-left .title {
-            font-size: 28px;
-            font-weight: 900;
-            color: #1a1a1a;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            line-height: 1.1;
-        }
+        .header-center { text-align: center; flex: 1; }
+        .header-center .scorecard-title { font-size: 50px; font-weight: 900; color: #f2f2f5; letter-spacing: 2px;
+            white-space: nowrap; display: inline-flex; align-items: center; gap: 18px; }
+        .header-center .scorecard-title::before, .header-center .scorecard-title::after {
+            content: ''; width: 4px; height: 38px; background: #f5c542; display: inline-block; border-radius: 1px; }
+        .header-center .matchday { font-size: 29px; font-weight: 700; color: #9a9aa6; margin-top: 2px; }
 
-        .header-left .year {
-            font-size: 32px;
-            font-weight: 700;
-            color: white;
-            margin-top: 10px;
-        }
+        .header-right { flex: 1; display: flex; justify-content: flex-end; }
+        .header-right img { width: 80px; height: 80px; object-fit: contain; }
 
-        .header-center {
-            text-align: center;
-            flex: 1;
-        }
-
-        .header-center .scorecard-title {
-            font-size: 56px;
-            font-weight: 900;
-            color: #1a1a1a;
-            letter-spacing: 2px;
-        }
-
-        .header-center .matchday {
-            font-size: 36px;
-            font-weight: 700;
-            color: white;
-        }
-
-        .header-right {
-            flex: 1;
-            display: flex;
-            justify-content: flex-end;
-        }
-
-        .header-right img {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-        }
-
-        /* Main content */
         .main {
-            flex: 1;
-            background: #111111;
-            display: flex;
-            align-items: stretch;
-            padding: 20px 32px;
-            gap: 24px;
+            flex: 1; position: relative; display: flex; align-items: stretch; padding: 20px 32px; gap: 24px;
+            background:
+                repeating-linear-gradient(118deg, transparent 0 74px, rgba(255,255,255,.013) 74px 76px),
+                radial-gradient(120% 85% at 50% 36%, #15151b 0%, #0d0d11 54%, #08080b 100%);
         }
 
-        .team-card-container {
-            width: 18%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .team-card-container { width: 18%; display: flex; align-items: center; justify-content: center; }
+        .team-card-container img { max-height: 100%; max-width: 100%; object-fit: contain;
+            border: 3px solid #fff; border-radius: 16px; box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 16px 44px rgba(0,0,0,.55); }
 
-        .team-card-container img {
-            max-height: 100%;
-            max-width: 100%;
-            object-fit: contain;
-            border: 3px solid white;
-            border-radius: 16px;
-        }
+        /* Fahrer-Zeilen + HUD-Eckbrackets */
+        .results { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: space-around; padding: 24px 44px; }
+        .results::before, .results::after { content: ''; position: absolute; width: 36px; height: 36px; border: 3px solid rgba(245,197,66,.55); }
+        .results::before { top: 0; left: 8px; border-right: 0; border-bottom: 0; }
+        .results::after { bottom: 0; right: 8px; border-left: 0; border-top: 0; }
+        .result-row { display: flex; align-items: center; padding: 8px 20px; border-bottom: 1px solid rgba(255,255,255,.055); }
+        .result-row:last-child { border-bottom: 0; }
+        .driver-info { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+        .driver-info.home { align-items: flex-start; }
+        .driver-info.away { align-items: flex-end; }
+        .driver-name { font-size: 26px; font-weight: 700; color: #d4d4da; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .driver-nickname { font-size: 18px; font-weight: 600; color: #7e7e88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .points { font-size: 30px; font-weight: 700; color: #e6e6ec; width: 66px; text-align: center; font-variant-numeric: tabular-nums; }
 
-        .results {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-around;
-            padding: 8px 0;
-        }
-
-        .result-row {
-            display: flex;
-            align-items: center;
-            padding: 4px 32px;
-        }
-
-        .driver-info {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        .driver-info.home {
-            align-items: flex-start;
-        }
-
-        .driver-info.away {
-            align-items: flex-end;
-        }
-
-        .driver-name {
-            font-size: 26px;
-            font-weight: 700;
-            color: #b2b2b2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .driver-nickname {
-            font-size: 18px;
-            font-weight: 600;
-            color: #b2b2b2;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .points {
-            font-size: 28px;
-            font-weight: 700;
-            color: white;
-            width: 60px;
-            text-align: center;
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* Footer */
-        .footer {
-            background: linear-gradient(180deg, #d0d0d0 0%, #b0b0b0 100%);
-            padding: 24px 96px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 130px;
-        }
-
-        .team-total {
-            flex: 1;
-            font-size: 56px;
-            font-weight: 900;
-            color: #1a1a1a;
-        }
-
-        .team-total.winner {
-            text-decoration: underline;
-            text-underline-offset: 12px;
-            text-decoration-thickness: 6px;
-        }
-
-        .team-total:last-child {
-            text-align: right;
-        }
-
-        .season-name {
-            flex: 1;
-            text-align: center;
-            font-size: 42px;
-            font-weight: 700;
-            color: white;
-        }
+        .footer .team-total { flex: 1; font-size: 56px; font-weight: 900; color: #f2f2f5; }
+        .footer .team-total.winner { text-decoration: underline; text-decoration-color: #f5c542; text-underline-offset: 12px; text-decoration-thickness: 6px; }
+        .footer .team-total:last-child { text-align: right; }
+        .footer .season-name { flex: 1; text-align: center; font-size: 42px; font-weight: 700; color: #9a9aa6; }
     </style>
 </head>
 <body>
