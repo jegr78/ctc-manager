@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Team Card Redesign & Data Safety
 status: executing
-stopped_at: Phase 104 complete (SAFE-01 + SAFE-02 closed, REVIEW + VERIFICATION green); Phase 105 awaiting external Claude-Design handoff
-last_updated: "2026-05-29T06:09:56.101Z"
-last_activity: 2026-05-29 -- Phase 104 marked complete
+stopped_at: Phase 105 context gathered (re-scoped to Carbon HUD graphics redesign — 16 templates, CARD-01..04)
+last_updated: "2026-05-29T10:00:13.535Z"
+last_activity: "2026-05-29 -- Phase 105 context gathered + re-scoped to Carbon HUD graphics redesign (handoff delivered)"
 progress:
   total_phases: 2
   completed_phases: 1
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-29 for v1.14 milestone start)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** v1.14 Team Card Redesign & Data Safety — roadmap drafted (2 phases, 4 requirements, 100 % coverage). Phase 104 (Data Safety Lockdown) is immediately startable; Phase 105 (Team Card Visual Redesign) awaits external Claude-Design handoff.
+**Current focus:** v1.14 — Phase 104 complete. Phase 105 re-scoped 2026-05-29 from "Team Card Visual Redesign" to the full **Carbon HUD Graphics Redesign** (16 templates) after the external Claude-Design handoff was delivered; CONTEXT.md captured (D-01..D-07), REQUIREMENTS broadened to CARD-01..04, ROADMAP retitled. Ready for `/gsd-plan-phase 105`.
 
 ## Current Position
 
-Phase: 104 — COMPLETE
-Plan: —
-Status: Phase 104 complete
-Last activity: 2026-05-29 -- Completed quick task 260529-dc2: favicon /favicon.ico 404 + NoResourceFoundException handling
+Phase: 105 — CONTEXT GATHERED (ready for planning)
+Plan: — (plan-phase will split into ~4 plan groups: Team Card / Composites / Matchday-List / Overlay+Analogy)
+Status: Phase 105 discussion complete; handoff vendored to design-handoff/
+Last activity: 2026-05-29 -- Phase 105 context gathered + re-scoped to Carbon HUD graphics redesign
 
 ### Prior position (Phase 103 close)
 
@@ -165,9 +165,9 @@ At roadmap creation (2026-05-29):
 
 ## Session Continuity
 
-**Last session:** 2026-05-29T00:00:00.000Z
+**Last session:** 2026-05-29T10:00:13.527Z
 
-**Stopped at:** v1.14 ROADMAP.md created (2 phases, 4/4 REQ-IDs mapped)
+**Stopped at:** Phase 105 context gathered (re-scoped to Carbon HUD graphics redesign — 16 templates, CARD-01..04)
 
 **Next action:** `/gsd-discuss-phase 104` or `/gsd-plan-phase 104` for Data Safety Lockdown. Phase 105 remains blocked on external Claude-Design handoff — do NOT start discuss/plan/execute for Phase 105 until the user delivers the design spec into this session.
 
