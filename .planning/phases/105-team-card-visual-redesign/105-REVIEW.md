@@ -28,14 +28,14 @@ findings:
   warning: 3
   info: 2
   total: 6
-status: issues_found
+status: fixed
 ---
 
 # Phase 105: Code Review Report
 
 **Reviewed:** 2026-05-29
 **Depth:** standard
-**Status:** issues_found
+**Status:** fixed
 
 ## Summary
 
@@ -114,6 +114,11 @@ Add unit tests asserting `contrastColor("transparent")`,
 `computeAccentVisColor("#zzzzzz", "#336699")`, and a 3-digit `"#abc"` shorthand return a
 fallback rather than throwing.
 
+**Resolution (FIXED):** `relativeLuminance` renamed to `perceivedBrightness255` and guarded
+with a strict `#RRGGBB` regex; non-hex input now returns the same `1.0` fallback the old
+length-only guard produced instead of throwing. Behaviour for valid hex is unchanged.
+Pinned by `TeamCardServiceColorRobustnessTest` (TDD red→green). Commit `22f1b3f8`.
+
 ## Warnings
 
 ### WR-01: `raceLabel` suppression depends on `match.getRaces().size()`; verify against the real persisted graph, not just hand-seeded test collections
@@ -136,6 +141,15 @@ at that point, or derive `totalRaces` from a value the service is certain is eag
 existing IT coverage already loads a real multi-race match through this path, no code
 change is needed.
 
+**Resolution (ACCEPTED — verification gap):** No existing integration test loads a real
+multi-race `Match` through `ProvisionalScoresGraphicService.generateProvisionalScoresGraphic`
+— all graphic services have only mock-based `*Test.java`, none has an `*IT.java`, and the
+method drives Playwright screenshotting (JaCoCo-excluded, heavy). Adding a faithful
+`@SpringBootTest` IT would require substantial new fixture scaffolding with no existing
+graphic-service IT to model on, so per the bounded instruction it was not forced. No
+symptom workaround was added; the code is left as-is. This remains an open verification gap:
+the `match.getRaces().size()` read on the real OSIV/JPA load path is not exercised by a test.
+
 ### WR-02: Undocumented magic-number thresholds and a misleading method name in the new color helpers
 
 **File:** `src/main/java/org/ctc/admin/service/TeamCardService.java:212, 219, 222`
@@ -149,6 +163,11 @@ correctness bug today, but maintainability debt on freshly added code.
 `DARK_TEXT_THRESHOLD = 140`) and either rename `relativeLuminance` to
 `perceivedBrightness255` or add a one-line WHY comment that the return is an
 un-normalized 0–255 weighted sum, not WCAG luminance.
+
+**Resolution (FIXED):** Both done — `relativeLuminance` renamed to `perceivedBrightness255`
+(all call sites updated), thresholds extracted to `ACCENT_VISIBILITY_FLOOR = 28` and
+`DARK_TEXT_THRESHOLD = 140`, plus a single WHY comment that the value is an un-normalized
+0–255 weighted channel sum, not WCAG luminance. Rode along in commit `22f1b3f8`.
 
 ### WR-03: Light data shaping in `th:text` concatenations belongs in the row/data DTO
 
@@ -166,6 +185,13 @@ pattern is not expanded further in new markup.
 existing row/data DTO field. If the lines are untouched pre-existing pattern, leave them
 and capture as backlog — do not add new instances of the pattern.
 
+**Resolution (ACCEPTED / backlog — no code change):** Fixing this by pushing the composed
+strings/points into a DTO field would require introducing NEW model/template variables,
+which the Phase 105 hard constraint forbids (templates may bind only variables the existing
+`*GraphicService` classes already expose). These are also pre-existing, established-pattern
+lines. No template/DTO change was made. Constraint for future work: do not expand this
+pattern in new markup.
+
 ## Info
 
 ### IN-01: `TeamCardServiceColorRobustnessTest` (in the review file list) does not exist on this branch
@@ -179,6 +205,13 @@ untested.
 **Fix:** Add the missing test class (Given-When-Then names, untagged plain unit test)
 pinning the malformed-hex tolerance from CR-01's fix snippet.
 
+**Resolution (FIXED):** Added `TeamCardServiceColorRobustnessTest` — a plain untagged unit
+test (no `@SpringBootTest`, no Playwright) exercising the package-private helpers directly:
+`contrastColor` and `computeAccentVisColor` with `"transparent"`, `"rgb(0,0,0)"`,
+`"#GGGGGG"`, `"#abc"`, `null`, empty, `"#zzzzzz"`, plus a valid-hex regression and a
+`computeGradientColor` mixed-garbage case. Written red first (commit `59cf2eb6`), green
+after the CR-01 fix.
+
 ### IN-02: Backup-file guard (pre-identified Warning could not be reproduced)
 
 **File:** `src/main/resources/templates/admin/standings-render.html.bak` (absent)
@@ -190,6 +223,22 @@ positive.
 **Fix:** No action needed on this branch. As a permanent guard, ensure `.gitignore`
 contains `*.bak`. If a different ref/worktree under review still contains the file,
 `git rm` it there.
+
+**Resolution (FIXED — guard only):** `*.bak` added to `.gitignore` as a permanent guard.
+No `git rm` performed — the file does not exist on this branch. Commit `0f8b3f4e`.
+
+---
+
+## Fixes Applied
+
+| Finding | Resolution | Commit |
+|---------|-----------|--------|
+| CR-01 | FIXED — strict `#RRGGBB` regex guard in `perceivedBrightness255`; non-hex input falls back instead of throwing | `22f1b3f8` |
+| WR-01 | ACCEPTED (verification gap) — no faithful IT exists; one would need substantial new fixture scaffolding; code left as-is, no symptom workaround | — |
+| WR-02 | FIXED — `relativeLuminance` → `perceivedBrightness255`, named threshold constants, one WHY comment | `22f1b3f8` |
+| WR-03 | ACCEPTED / backlog — DTO fix needs new model variables, forbidden by the Phase 105 no-new-variable constraint; pre-existing pattern, not expanded | — |
+| IN-01 | FIXED — `TeamCardServiceColorRobustnessTest` added (TDD red→green) | `59cf2eb6` |
+| IN-02 | FIXED (guard only) — `*.bak` added to `.gitignore`; nothing to `git rm` | `0f8b3f4e` |
 
 ---
 
