@@ -66,38 +66,36 @@ Explicitly excluded for v1.15 to prevent scope creep.
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CI-01 | TBD | Pending |
-| CI-02 | TBD | Pending |
-| CI-03 | TBD | Pending |
-| CI-04 | TBD | Pending |
-| CI-05 | TBD | Pending |
-| CI-06 | TBD | Pending |
-| RACE-01 | TBD | Pending |
-| RACE-02 | TBD | Pending |
-| RACE-03 | TBD | Pending |
-| LINEUP-01 | TBD | Pending |
-| LINEUP-02 | TBD | Pending |
-| LINEUP-03 | TBD | Pending |
-| LINEUP-04 | TBD | Pending |
-| WO-01 | TBD | Pending |
-| WO-02 | TBD | Pending |
-| WO-03 | TBD | Pending |
-| WO-04 | TBD | Pending |
-| LOBBY-01 | TBD | Pending |
-| LOBBY-02 | TBD | Pending |
-| LOBBY-03 | TBD | Pending |
-| LOBBY-04 | TBD | Pending |
-| LOBBY-05 | TBD | Pending |
+| CI-01 | Phase 106 | Pending |
+| CI-02 | Phase 106 | Pending |
+| CI-03 | Phase 106 | Pending |
+| CI-04 | Phase 106 | Pending |
+| CI-05 | Phase 106 | Pending |
+| CI-06 | Phase 106 | Pending |
+| RACE-01 | Phase 107 | Pending |
+| RACE-02 | Phase 107 | Pending |
+| RACE-03 | Phase 107 | Pending |
+| LINEUP-01 | Phase 108 | Pending |
+| LINEUP-02 | Phase 108 | Pending |
+| LINEUP-03 | Phase 108 | Pending |
+| LINEUP-04 | Phase 108 | Pending |
+| WO-01 | Phase 109 | Pending |
+| WO-02 | Phase 109 | Pending |
+| WO-03 | Phase 109 | Pending |
+| WO-04 | Phase 109 | Pending |
+| LOBBY-01 | Phase 110 | Pending |
+| LOBBY-02 | Phase 110 | Pending |
+| LOBBY-03 | Phase 110 | Pending |
+| LOBBY-04 | Phase 110 | Pending |
+| LOBBY-05 | Phase 110 | Pending |
 
 **Coverage:**
 - v1.15 requirements: 22 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 22 ⚠️ (resolved by roadmapper)
+- Mapped to phases: 22 (100%)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-30*
-*Last updated: 2026-05-30 at milestone v1.15 start*
+*Last updated: 2026-05-30 — roadmap created, traceability populated*
