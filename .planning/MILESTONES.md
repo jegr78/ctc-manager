@@ -1,5 +1,26 @@
 # Milestones
 
+## v1.14 Team Card Redesign & Data Safety (Shipped: 2026-05-29)
+
+**Phases completed:** 2 phases (104-105), 5 plans, 6/6 requirements satisfied (2 SAFE + 4 CARD)
+**Diff:** +6 553 / −2 529 across 80 files (51 commits in milestone range `b0b90696..HEAD`, all 2026-05-29)
+**Tests:** **2416 tests** passing (1772 Surefire + 529 Failsafe IT + 115 Playwright E2E; 0 failures / 0 errors / 5 skipped; Δ+23 vs v1.13 2393); JaCoCo line coverage **~89.42 %** (gate 82 %; held vs v1.13 89.43 % — graphics redesign is coverage-neutral, all `*GraphicService` JaCoCo-excluded)
+**Timeline:** 1 day (2026-05-29)
+**Branch:** `gsd/v1.14-team-card-redesign` (PR #131 — rolling milestone PR per CLAUDE.md)
+**Final-gate CI:** end-of-close `./mvnw clean verify -Pe2e` exited 0 (BUILD SUCCESS, 10:29 min) — Surefire 1772/0/0, Failsafe IT 529/0/0, E2E 115/0/0, JaCoCo all coverage checks met; SpotBugs 0 BugInstance; CodeQL gate-step exit 0
+**Audit verdict:** passed (3-pass) — 6/6 requirements, both phases verified, integration PASS (14/14 links), Nyquist 2/2 compliant; see `milestones/v1.14-MILESTONE-AUDIT.md`
+
+**Key accomplishments:**
+
+- Phase 104 — Data Safety Lockdown (SAFE-01, SAFE-02): reverted the v1.11 `@Profile({"dev","local"})` drift (commit `598d1431`) on `DevDataSeeder` + `TestDataService` back to `@Profile("dev")`, so the `local` profile (bound to the real MariaDB) can no longer instantiate either test-data seeder; added `LocalProfileDataSafetyIT` (`@ActiveProfiles("local")` + H2 override) that fails the build red on any future `@Profile`-widening / `@ConditionalOnProperty`-flip / `@Component` re-introduction. `OpenSecurityConfig` deliberately stays `@Profile({"dev","local"})` — auth, not data.
+- Phase 105 — Carbon HUD Graphics Redesign (CARD-01..04): all 16 Playwright-rendered admin graphics restyled to the external Claude-Design "Carbon HUD" Carbon/Gold system as drop-in template replacements (unchanged `th:*` bindings, same dimensions/format/data model) — team card + 5 composites (`settings`/`lineup`/`results`/`match-results`/`provisional-scores`) + 5 matchday/list (`matchday-schedule`/`-overview`/`standings`/`matchday-results`/`power-rankings`) + stream overlay (geometry/skew/transparency byte-locked) + 4 non-handoff analogy rebuilds (`matchday-pairings` + 3 `playoff-round-*`).
+- Backward-compat (CARD-02): every card-consumer path kept working with zero caller changes — Discord channel-create auto-post (POST-02, 2-PNG multipart, WireMock IT green), manual Re-Post + Refresh PATCH on Match-Detail + `/admin/discord/posts`, admin team-card preview, and all template-editor previews (`TemplateRenderingSmokeIT` green).
+- Two named backend tweaks: `TeamCardService` color-robustness patch (`accentVisColor` + `onPrimaryColor`, reusing existing `relativeLuminance`; JaCoCo-excluded) and `ProvisionalScoresGraphicService` `raceLabel`-only-for->1-race conditional (existing IT updated to assert both branches).
+- Phase 105 re-scoped mid-milestone (D-01/D-03) from team-card-only to all 16 graphics after the handoff delivered a coherent system; the 4 non-handoff analogy templates were folded in (D-06) rather than deferred, to avoid a visible old/new style break when graphics post together.
+- Pre-close artifact-audit hygiene root-fixed (not acknowledged): `105-AUTO-UAT.md` gained a `status: complete` frontmatter field, and the quick-task PLAN/SUMMARY were renamed from `{id}-PLAN.md`/`{id}-SUMMARY.md` to canonical `PLAN.md`/`SUMMARY.md` — closing the same AUTO-UAT-status false-positive class that v1.13's retro flagged.
+
+---
+
 ## v1.13 Discord Integration & Carry-Forwards (Shipped: 2026-05-28)
 
 **Phases completed:** 12 phases (92-103), 43 plans, 28/28 requirements satisfied (5 carry-forward + 23 Discord/closeout)

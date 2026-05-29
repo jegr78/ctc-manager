@@ -2,34 +2,34 @@
 gsd_state_version: 1.0
 milestone: v1.14
 milestone_name: Team Card Redesign & Data Safety
-status: executing
+status: completed
 stopped_at: Phase 105 context gathered (re-scoped to Carbon HUD graphics redesign — 16 templates, CARD-01..04)
-last_updated: "2026-05-29T10:46:05.592Z"
-last_activity: 2026-05-29 -- Phase 105 execution started
+last_updated: "2026-05-29T18:29:38.905Z"
+last_activity: 2026-05-29 — Milestone v1.14 completed and archived
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 1
-  percent: 20
+  completed_plans: 5
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-29 for v1.14 milestone start)
+See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 105 — team-card-visual-redesign
+**Current focus:** Planning next milestone — start via `/gsd-new-milestone`.
 
 ## Current Position
 
-Phase: 105 (team-card-visual-redesign) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 105
-Last activity: 2026-05-29 -- Phase 105 execution started
+Phase: Milestone v1.14 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-29 — Milestone v1.14 completed and archived
 
 ### Prior position (Phase 103 close)
 
@@ -52,20 +52,13 @@ Last activity: 2026-05-28 — v1.13 shipped (PR #130 squash-merged to master)
 - v1.11 Tooling Infrastructure & Tech-Debt Sweep (8 phases 80-87, 46 plans, 46/46 requirements, JaCoCo 88.88%, 1675 tests, CI E2E median 23:00) — shipped 2026-05-18
 - v1.12 Driver-Import Gap-Closure & Test Performance Round 2 (4 phases 88-91, 15 plans, 15/15 requirements substantively satisfied, JaCoCo 88.44%, 1696 tests, CI E2E median **17:39** Δ−23.3 %, Nyquist 4/0/0 compliant) — shipped 2026-05-20
 - v1.13 Discord Integration & Carry-Forwards (12 phases 92-103, 43 plans, 28/28 requirements satisfied, JaCoCo **89.43 %**, **2393 tests**, CI E2E median 17:39 held, Nyquist 12/12 compliant, 399 commits, +93.8k LOC, 9 new Flyway migrations V8-V16) — shipped 2026-05-28
+- v1.14 Team Card Redesign & Data Safety (2 phases 104-105, 5 plans, 6/6 requirements satisfied, JaCoCo ~89.42 %, **2416 tests** (1772 Surefire + 529 Failsafe IT + 115 E2E, Δ+23), CI E2E median 17:39 held, Nyquist 2/2 compliant, 51 commits, +6.6k/−2.5k LOC, no new Flyway migrations) — shipped 2026-05-29
 
 ## Active Milestone
 
-**v1.14 Team Card Redesign & Data Safety** — started 2026-05-29 on branch `gsd/v1.14-team-card-redesign` (branched from `origin/master` `b0b90696`; pom already at `1.14.0-SNAPSHOT` from post-v1.13 release CI).
+_None — v1.14 shipped 2026-05-29. Start the next milestone via `/gsd-new-milestone`._
 
-Two pillars (2 phases, 4 requirements, granularity `standard`, phase numbers continue from v1.13):
-
-1. **Phase 104 — Data Safety Lockdown (SAFE-01 + SAFE-02)** — sofort startbar; `DevDataSeeder` + `TestDataService` zurück auf `@Profile("dev")` (v1.11 `@Profile({"dev","local"})` Drift) plus Regressions-IT, der den Re-Drift fängt. Fix bereits vorbereitet in `stash@{0}` (`v1.14-phase1-seed: scope DevDataSeeder + TestDataService to @Profile('dev')`). End-of-phase `./mvnw clean verify -Pe2e` war für den Bean-Scope-Flip allein bereits grün; nur Regressions-IT + Re-verify bleibt als neue technische Arbeit.
-
-2. **Phase 105 — Team Card Visual Redesign (CARD-01 + CARD-02)** — **awaiting external Claude-Design handoff before discuss/plan/execute.** Discuss/Plan/Execute startet erst sobald der User das HTML/CSS-Spec aus der parallel laufenden Claude-Design-Session hier einbringt. CARD-02 sichert Backward-Compat für alle bestehenden Card-Consumer (Discord auto-post POST-02, manueller Re-Post + Refresh auf `/admin/discord/posts` + Team-Detail, Admin-Preview).
-
-Roadmap-Coverage: 4/4 v1.14 requirements mapped to exactly one phase. Traceability section in `.planning/REQUIREMENTS.md` reflects SAFE-01/SAFE-02 → Phase 104, CARD-01/CARD-02 → Phase 105.
-
-v1.13 PR #130 squash-merged to master 2026-05-28; release CI tagged `v1.13.0` und bumped pom auf 1.14.0-SNAPSHOT (`b0b90696`).
+PR #131 (`feat(v1.14): team card redesign & data safety`) squash-merged to master at close; release CI tags `v1.14.0` and bumps pom to the next `-SNAPSHOT`.
 
 ## Deferred Items
 
@@ -94,7 +87,7 @@ Items carried forward into v1.14 from v1.13 close (per `PROJECT.md § Out of sco
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Executing Phase 105
+- **Status:** v1.14 milestone complete
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
@@ -138,12 +131,12 @@ Last phase shipped: **103** (v1.13 closer). v1.14 spans phases **104-105** (inte
 
 ### Blockers/Concerns
 
-At roadmap creation (2026-05-29):
+None open. All v1.14 roadmap-creation concerns resolved at close:
 
-- **Phase 105 blocked on external handoff** — Discuss/plan/execute cannot start until the user delivers the Claude-Design HTML/CSS spec into this session. The branch can make progress on Phase 104 in the meantime.
-- **JaCoCo baseline to preserve** — v1.13 closed at **89.43 %**; both v1.14 phases must hold ≥ 89.43 % (Phase 104 adds a small regression IT → coverage neutral/positive; Phase 105 redesigns existing graphic service which is JaCoCo-excluded already per `pom.xml`, so the redesign itself is coverage-neutral but any non-graphic helper additions must come with tests).
-- **`stash@{0}` content must be re-verified before Plan 104-01 executes** — The `v1.14-phase1-seed` stash exists on the user's local machine; the planner/executor for Phase 104 should restore + re-verify before turning it into a commit (`git stash show -p stash@{0}` then `git stash pop` on the milestone branch).
-- **Phase 105 UI surface is `playwright-cli` mandatory** — Per CLAUDE.md "Development Approach", visual verification with `playwright-cli` (Desktop + Mobile) is required for the team-card redesign; screenshots go to `.screenshots/105-*/`.
+- ✓ Phase 105 external-handoff blocker — handoff delivered 2026-05-29; phase executed (4 waves) and verified.
+- ✓ JaCoCo baseline — held at ~89.42 % (gate 82 %); redesign was coverage-neutral (JaCoCo-excluded graphic services).
+- ✓ `stash@{0}` — applied + committed as Phase 104; no longer outstanding.
+- ✓ Phase 105 `playwright-cli` visual verification — 12/12 UAT + 16/16 AUTO-UAT, screenshots in `.screenshots/105-*/`.
 
 ### Quick Tasks Completed
 
@@ -153,8 +146,8 @@ At roadmap creation (2026-05-29):
 
 ### Baselines to Preserve
 
-- JaCoCo line coverage: **≥ 89.43 %** (v1.13 baseline; v1.14 phases must maintain or improve; gate remains 82 % in pom.xml)
-- Test count: **≥ 2393** (v1.13 baseline; Phase 104 adds 1 regression IT → 2394+, Phase 105 may add visual-snapshot/IT depending on handoff)
+- JaCoCo line coverage: **≥ ~89.42 %** (v1.14 baseline; gate remains 82 % in pom.xml; graphic services JaCoCo-excluded so redesign is coverage-neutral)
+- Test count: **≥ 2416** (v1.14 baseline: 1772 Surefire + 529 Failsafe IT + 115 E2E; was 2393 at v1.13)
 - `./mvnw verify -Pe2e` CI median (E2E step): **17:39 ± 20 %** (v1.12/v1.13 baseline; no expected regression — Phase 104 is a Spring-context IT only, Phase 105 is graphic-service redesign with `TeamCardService` JaCoCo-excluded)
 - `BackupSchema.SCHEMA_VERSION`: **2** (v1.13 Phase 101; no v1.14 changes anticipated)
 - `EXPORT_ORDER` size: **26 entities** (v1.13 Phase 101; no v1.14 schema changes anticipated)
@@ -165,15 +158,14 @@ At roadmap creation (2026-05-29):
 
 ## Session Continuity
 
-**Last session:** 2026-05-29T10:00:13.527Z
+**Last session:** 2026-05-29 — v1.14 milestone close (`/gsd-complete-milestone v1.14`)
 
-**Stopped at:** Phase 105 context gathered (re-scoped to Carbon HUD graphics redesign — 16 templates, CARD-01..04)
+**Stopped at:** Milestone v1.14 complete — archived to `milestones/v1.14-*`, PROJECT.md evolved, RETROSPECTIVE.md updated, PR #131 squash-merged to master.
 
-**Next action:** `/gsd-discuss-phase 104` or `/gsd-plan-phase 104` for Data Safety Lockdown. Phase 105 remains blocked on external Claude-Design handoff — do NOT start discuss/plan/execute for Phase 105 until the user delivers the design spec into this session.
+**Next action:** `/gsd-new-milestone` to scope the next version (questioning → research → requirements → roadmap).
 
-**Branch:** `gsd/v1.14-team-card-redesign` (off `origin/master` `b0b90696`, pom at `1.14.0-SNAPSHOT`)
+**Branch:** `master` after PR #131 squash-merge; release CI tags `v1.14.0`.
 
 ## Operator Next Steps
 
-- Start Phase 104 with `/gsd-discuss-phase 104` (or `/gsd-plan-phase 104` if no discussion needed — fix is well-scoped via the stashed diff).
-- Deliver Claude-Design HTML/CSS handoff for Phase 105 when ready (paste into the session or save into the repo + reference the path).
+- Start the next milestone with /gsd-new-milestone

@@ -389,19 +389,58 @@ Living retrospective across milestones. Updated at each milestone completion.
 - Notable: 5 inline remediations in Phase 102 close-loop = ~30 min total wall-time turnaround from Pass-1 findings to Pass-2 CLEAN
 - Notable: phase 101 backup-fold-back required `./mvnw clean verify -Pe2e` on H2 + opt-in MariaDB (`docker.available=true`) — ~12 min wallclock for the round-trip byte-equality validation across both DBs
 
+## Milestone: v1.14 — Team Card Redesign & Data Safety
+
+**Shipped:** 2026-05-29
+**Phases:** 2 (104-105) | **Plans:** 5 | **Timeline:** 2026-05-29 (1 day · 51 commits · 80 files · +6.6k / −2.5k LOC)
+
+### What Was Built
+- **Phase 104 — Data Safety Lockdown (1 plan):** Reverted the v1.11 `@Profile({"dev","local"})` drift (commit `598d1431`) on `DevDataSeeder` + `TestDataService` back to `@Profile("dev")`, so the `local` profile — which binds to the real MariaDB — can no longer instantiate either test-data seeder. Added `LocalProfileDataSafetyIT` (`@ActiveProfiles("local")` + H2 in-memory override mirroring `SecurityIntegrationTest.ProdProfileSecurityTest`) that asserts both beans absent and goes red on any future `@Profile`-widening / `@ConditionalOnProperty`-flip / `@Component` re-introduction. `OpenSecurityConfig` deliberately stays `@Profile({"dev","local"})` — auth, not data; only data seeders were narrowed (SAFE-01/02).
+- **Phase 105 — Carbon HUD Graphics Redesign (4 plans, wave-ordered):** All 16 Playwright-rendered admin graphics restyled to the external Claude-Design "Carbon HUD" Carbon/Gold system. Wave 1 — `TeamCardService` color-robustness patch (`accentVisColor` + `onPrimaryColor`, reusing existing `relativeLuminance`) + Carbon team-card template (CARD-01/02). Wave 2 — `ProvisionalScoresGraphicService` `raceLabel`-only-for->1-race conditional (both-branch IT) + 5 Carbon composite templates (`settings`/`lineup`/`results`/`match-results`/`provisional-scores`) (CARD-02/03). Wave 3 — 5 Carbon matchday/list templates with standings dynamic-row-height preserved (CARD-02/04). Wave 4 — Carbon stream overlay (geometry/skew/transparency byte-locked) + 4 non-handoff analogy rebuilds (`matchday-pairings` + 3 `playoff-round-*`) (CARD-02/04). All as drop-in template replacements — unchanged `th:*` bindings, no `GraphicService` signature or model-variable changes except the two named backend tweaks. Every card-consumer path (Discord auto-post POST-02 2-PNG multipart, manual Re-Post + Refresh PATCH, admin + template-editor previews) stayed backward-compatible with zero caller changes.
+
+### What Worked
+- **Two-pillar split was honest, not bureaucratic.** Data Safety (104) and Graphics Redesign (105) share no entities, services, templates, or migrations. Separating them gave each its own goal + end-of-phase verify gate, and let Phase 104 establish a clean green baseline on the milestone branch while Phase 105 waited on the external design handoff. Phase 104's fix was pre-staged in `stash@{0}` and shipped in ~25 min including the regression IT.
+- **Mid-milestone scope expansion handled cleanly via D-01/D-03.** Phase 105 was originally team-card-only (CARD-01/02). When the Claude-Design handoff arrived as a coherent Carbon/Gold system for all 12 render-graphics, the operator deliberately expanded scope to all 16 graphics, adding CARD-03 + CARD-04 and retitling the phase "Carbon HUD Graphics Redesign" — rather than deferring the rest to v1.15. The 4 non-handoff analogy templates were folded in (D-06), not deferred, specifically to avoid a visible old/new style break when graphics post together. This is CLAUDE.md "In-Milestone Polish — No Deferral Across Milestones" applied at requirement granularity.
+- **JaCoCo-excluded graphic services made the redesign coverage-neutral.** Because `TeamCardService` + all `*GraphicService` classes are already JaCoCo-excluded (runtime-Playwright can't be instrumented), the template/CSS redesign carried zero coverage risk. The only coverage-relevant additions were Phase 104's IT and Phase 105's color-robustness + raceLabel unit tests — all net-positive.
+- **Iterative visual-approval design loop held (per [[feedback_graphic_design_iteration]] + [[feedback_visual_checkpoint_self_review]]).** Verification grouped by the 4 handoff groups, `playwright-cli` Desktop + Mobile against `design-handoff/screenshots/`, screenshots into `.screenshots/105-*/`, dev server via `./scripts/app.sh start dev` per [[feedback_dev_server_via_app_sh]]. 12/12 UAT + 16/16 AUTO-UAT.
+- **Backward-compat promoted to a first-class requirement (CARD-02) forced explicit consumer verification.** Rather than leaving "don't break the callers" implicit, CARD-02 made the planner enumerate and verify each consumer path (auto-post AFTER_COMMIT hook, Re-Post/Refresh PATCH, admin preview, template-editor preview). The WireMock-backed POST-02 IT stayed green; the 2-PNG multipart contract held.
+
+### What Was Inefficient
+- **The exact same AUTO-UAT `status:` frontmatter false-positive that v1.13 flagged recurred — but this time it was root-fixed.** v1.13's retro recorded "98-AUTO-UAT.md status frontmatter false-positive… a 1-line frontmatter standard would silence the audit cleanly." v1.14's close hit it again on `105-AUTO-UAT.md` (no top-level `status:` field → `audit-open` reports `unknown`). This session added `status: complete` to the frontmatter AND discovered a second false-positive: the quick-task SUMMARY was named `260529-dc2-SUMMARY.md` while `audit-open` + the gsd-quick skill expect an unprefixed `quick/<dir>/SUMMARY.md`. Both root-fixed (status marker added; files renamed to canonical names) so the audit reports clean. The lesson the v1.13 retro flagged was not codified into a guard — it should be: AUTO-UAT.md needs `status:` and quick-task files need canonical names at creation time.
+- **Three audit passes (16:00 → 16:40 → 17:05) to reach `passed`.** The first milestone audit found Phase 105 entirely unverified (`gaps_found`); the 16:40 re-audit (after `/gsd-verify-work` + `/gsd-auto-uat`) narrowed it to artifact hygiene; the 17:05 pass closed the remainder (105-VERIFICATION produced, Nyquist VALIDATION reconciled PARTIAL → COMPLIANT, preview-fidelity warning fixed in `5d621e51`). The redesign shipped before its verification artifacts were complete — the verify/validate/audit chain ran retroactively rather than inline at phase close.
+- **Loose test-count numbers in SUMMARY prose disagreed across sources at close.** 105-04-SUMMARY quoted "Surefire 529 / Failsafe 115", the v1.13 baseline was "1752 + 526 + 115 = 2393", and stale on-disk reports showed yet another figure. Only the authoritative end-of-close `./mvnw clean verify -Pe2e` settled the real count. Free-text test counts in SUMMARY files are unreliable bookkeeping — the build is the source of truth.
+
+### Patterns Established
+- **Requirement-granularity scope expansion is acceptable mid-phase when it prevents a worse outcome (visual inconsistency).** Phase 105 D-01/D-03/D-06: expanding from 1 graphic to 16 (and folding in 4 non-handoff analogy templates) was the right call because a partial redesign would ship a visible old/new style break. Recorded as a Key Decision in PROJECT.md.
+- **A redesign of JaCoCo-excluded surfaces is coverage-neutral by construction** — plan accordingly: the only test work is the non-excluded helper tweaks, not the templates themselves.
+- **Pre-close artifact-audit false-positives should be root-fixed, not acknowledged.** When `audit-open` flags an item that is genuinely complete, fix the marker/filename so the audit reports clean — don't defer it to STATE.md "acknowledged" (which masks the real signal next milestone). v1.14 chose Resolve-first over Acknowledge-all.
+
+### Key Lessons
+1. **Codify the v1.13 retro lesson that recurred.** AUTO-UAT.md MUST carry a `status: passed|failed|partial|complete` frontmatter field, and quick-task PLAN/SUMMARY files MUST use canonical unprefixed names (`quick/<dir>/PLAN.md`, `quick/<dir>/SUMMARY.md`) — the dir name already carries the id. Both are what `gsd-sdk audit-open` and the gsd-quick skill read. A retro lesson that is not promoted to a guard re-occurs.
+2. **Verify inline at phase close, not retroactively at milestone audit.** Phase 105 shipped before its VERIFICATION.md / VALIDATION.md existed; three audit passes were needed to reconcile. Front-loading `/gsd-verify-work` + Nyquist VALIDATION at phase close (as v1.12's strict Nyquist gate did) avoids the audit-cycle churn.
+3. **Promote backward-compat to a first-class requirement when rewriting shared output.** CARD-02 forced explicit per-consumer verification of `TeamCardService`'s output contract. Any future rewrite of a service whose output has multiple consumers should make "no caller churn" a named requirement, not an implicit assumption.
+4. **The build is the only authoritative test count.** SUMMARY-prose test numbers drift and disagree; reconcile MILESTONES.md / STATE.md baselines from the end-of-close `./mvnw clean verify -Pe2e` output, never from free-text.
+5. **`feat(v1.14):` squash-merge subject is mandatory for the `v1.14.0` MINOR bump.** PR #131; release CI tags after merge per CLAUDE.md "No Local Git Tags".
+
+### Cost Observations
+- Model mix: ~100 % opus (Claude Opus 4.8 1M-context — orchestrator + inline-sequential executor across both phases per CLAUDE.md "Inline Sequential is the Default"); read-only verifier / integration-checker / audit agents on the "balanced" profile
+- Sessions: 1 calendar day, dense — discuss/plan/execute for both phases + 3 audit passes + verify/validate retrofill
+- Notable: 51 commits in a single day; graphics-redesign churn concentrated in Thymeleaf render-templates + `admin.css` (JaCoCo-excluded surface), so the +6.6k / −2.5k LOC delta is overwhelmingly template/CSS, not test or production-Java code
+- Notable: the redesign itself was coverage-neutral (JaCoCo-excluded services) — the only coverage-relevant additions were the Phase 104 IT and Phase 105 color-robustness / raceLabel unit tests
+
 ## Cross-Milestone Trends
 
-| Metric | v1.0 | v1.1 | v1.2 | v1.8 | v1.9 | v1.10 | v1.11 | v1.12 | v1.13 |
-| ------ | ---- | ---- | ---- | ---- | ---- | ----- | ----- | ----- | ----- |
-| Phases | 5 | 10 | 4 | 2 | 15 | 9 | 8 | 4 | 12 |
-| Plans | 12 | 20 | 5 | 4 | ~70 | 50 | 46 | 15 | 43 |
-| Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 | 1011 → 1064 | 1064 → 1258 | 1258 → 1652 | 1652 → 1675 | 1675 → 1696 | 1696 → 2393 |
-| Coverage | 82%+ | 82%+ | 82%+ | 82%+ | 87.02% | 87.80% | 88.88% | 88.44% | **89.43%** |
-| CI E2E baseline | n/a | n/a | n/a | n/a | n/a | n/a | 23:00 | **17:39** | 17:39 (held) |
-| Timeline (days) | 8 | 4 | 11 | 2 | 14 | 7 | 2 | 2 | 8 |
-| Files changed | 68 | ~80 | ~15 | 39 | 567 | 521 | 718 | 128 | 559 |
-| LOC delta | +3850 / -962 | +5100 / -1300 | +600 / -30 | +11.2k / -539 | +88.4k / -2.5k | +77.4k / -1.2k | +81.3k / -3.2k | +19.5k / -462 | +93.8k / -1.2k |
-| Nyquist verdict at close | n/a | n/a | n/a | n/a | n/a | partial → compliant (via v1.11 Phase 87) | compliant 8/0/0 | compliant 4/0/0 | compliant 12/0/0 |
+| Metric | v1.0 | v1.1 | v1.2 | v1.8 | v1.9 | v1.10 | v1.11 | v1.12 | v1.13 | v1.14 |
+| ------ | ---- | ---- | ---- | ---- | ---- | ----- | ----- | ----- | ----- | ----- |
+| Phases | 5 | 10 | 4 | 2 | 15 | 9 | 8 | 4 | 12 | 2 |
+| Plans | 12 | 20 | 5 | 4 | ~70 | 50 | 46 | 15 | 43 | 5 |
+| Tests (start → end) | 628 → 753 | 753 → 820 | 832 → 852 | 1011 → 1064 | 1064 → 1258 | 1258 → 1652 | 1652 → 1675 | 1675 → 1696 | 1696 → 2393 | 2393 → 2416 |
+| Coverage | 82%+ | 82%+ | 82%+ | 82%+ | 87.02% | 87.80% | 88.88% | 88.44% | **89.43%** | ~89.42% |
+| CI E2E baseline | n/a | n/a | n/a | n/a | n/a | n/a | 23:00 | **17:39** | 17:39 (held) | 17:39 (held) |
+| Timeline (days) | 8 | 4 | 11 | 2 | 14 | 7 | 2 | 2 | 8 | 1 |
+| Files changed | 68 | ~80 | ~15 | 39 | 567 | 521 | 718 | 128 | 559 | 80 |
+| LOC delta | +3850 / -962 | +5100 / -1300 | +600 / -30 | +11.2k / -539 | +88.4k / -2.5k | +77.4k / -1.2k | +81.3k / -3.2k | +19.5k / -462 | +93.8k / -1.2k | +6.6k / -2.5k |
+| Nyquist verdict at close | n/a | n/a | n/a | n/a | n/a | partial → compliant (via v1.11 Phase 87) | compliant 8/0/0 | compliant 4/0/0 | compliant 12/0/0 | compliant 2/0/0 |
 
 ### Recurring Themes
 
