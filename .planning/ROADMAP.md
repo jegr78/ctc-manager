@@ -236,7 +236,13 @@ _Re-scoped 2026-05-29 from "Team Card Visual Redesign" → full Carbon/Gold rede
   4. The team-card admin preview (Team-Detail page) and all admin template-editor previews render the new designs via the existing controller paths with no template-rendering exceptions; `TemplateRenderingSmokeIT` stays green for all `/admin/teams/**` and template-editor GETs.
   5. `TeamCardService` color-robustness patch (`accentVisColor` + `onPrimaryColor`) applied; `ProvisionalScoresGraphicService` sets `raceLabel` only for > 1-race matches, with the existing IT updated to assert both branches.
   6. End-of-phase `./mvnw clean verify -Pe2e` exits 0 with JaCoCo line coverage ≥ 82 % gate held, SpotBugs `BugInstance` count 0, CodeQL gate-step exit 0, no regression in existing Discord WireMock ITs that exercise the upload paths.
-**Plans**: TBD — `plan-phase` splits into ~4 plan groups (Team Card / Composites / Matchday-List / Overlay+Analogy), wave execution.
+**Plans**: 4 plans (wave-ordered per D-02/D-07)
+
+Plans:
+- [ ] 105-01-PLAN.md — Wave 1: TeamCardService color-robustness patch (D-04) + Carbon HUD V4 team-card template (CARD-01/CARD-02)
+- [ ] 105-02-PLAN.md — Wave 2: ProvisionalScores raceLabel conditional (D-05) + 5 Carbon composite templates (CARD-02/CARD-03)
+- [ ] 105-03-PLAN.md — Wave 3: 5 Carbon matchday/list templates, standings dynamic-row-height preserved (CARD-02/CARD-04)
+- [ ] 105-04-PLAN.md — Wave 4: Carbon overlay (geometry-locked) + 4 analogy rebuilds + end-of-phase clean verify -Pe2e (CARD-02/CARD-04)
 **UI hint**: yes
 **In-milestone-polish risk**: medium-high — full graphics-redesign surfaces typically discover spacing/contrast edge cases and the matchday-overview-vs-pairings naming reconciliation via `playwright-cli` checks; any such polish closes within this phase per CLAUDE.md "In-Milestone Polish" (no deferral to v1.15).
 
