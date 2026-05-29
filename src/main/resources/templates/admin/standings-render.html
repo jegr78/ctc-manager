@@ -3,101 +3,48 @@
 <head>
 <meta charset="UTF-8" />
 <style th:inline="text">
-	@font-face {
-		font-family: 'Conthrax';
-		src: url([[${fontBase64}]]) format('woff2');
-	}
+	@font-face { font-family: 'Conthrax'; src: url([[${fontBase64}]]) format('woff2'); }
 	* { box-sizing: border-box; margin: 0; padding: 0; }
 	html, body {
-		width: 1920px;
-		height: 1080px;
-		background: #0f1115;
-		color: #f5f6f8;
-		font-family: 'Conthrax', 'Helvetica Neue', Arial, sans-serif;
-		overflow: hidden;
+		width: 1920px; height: 1080px; color: #f5f6f8;
+		font-family: 'Conthrax', 'Helvetica Neue', Arial, sans-serif; overflow: hidden;
+		background:
+			repeating-linear-gradient(118deg, transparent 0 74px, rgba(255,255,255,.013) 74px 76px),
+			radial-gradient(120% 80% at 50% 22%, #15151b 0%, #0d0d11 58%, #08080b 100%);
 	}
-	body {
-		display: flex;
-		flex-direction: column;
-		padding: 32px 80px 24px 80px;
-	}
-	header {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		margin-bottom: 18px;
-		min-height: 100px;
-	}
-	header .titles h1 {
-		font-size: 56px;
-		letter-spacing: 5px;
-		text-transform: uppercase;
-		line-height: 1;
-	}
-	header .titles h2 {
-		margin-top: 8px;
-		font-size: 24px;
-		letter-spacing: 5px;
-		color: #4fc3f7;
-		text-transform: uppercase;
-	}
-	header img.ctc-logo {
-		height: 96px;
-		width: auto;
-	}
-	table.standings {
-		width: 100%;
-		border-collapse: collapse;
-		font-variant-numeric: tabular-nums;
-	}
+	body { display: flex; flex-direction: column; padding: 32px 80px 26px 80px; }
+	header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; min-height: 100px; }
+	header .titles h1 { font-size: 56px; letter-spacing: 4px; text-transform: uppercase; line-height: 1; }
+	header .titles h2 { margin-top: 10px; font-size: 24px; letter-spacing: 5px; color: #f5c542; text-transform: uppercase; }
+	header img.ctc-logo { height: 96px; width: auto; }
+
+	table.standings { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 	table.standings thead th {
-		text-align: left;
-		padding: 10px 18px;
-		border-bottom: 2px solid #4fc3f7;
-		font-size: 20px;
-		text-transform: uppercase;
-		letter-spacing: 2px;
-		color: #9aa3ad;
-		background: #131720;
-		line-height: 1;
+		text-align: left; padding: 10px 18px 14px; border-bottom: 2px solid rgba(245,197,66,.55);
+		font-size: 20px; text-transform: uppercase; letter-spacing: 2px; color: #9aa3ad; line-height: 1;
 	}
 	table.standings thead th.num { text-align: center; }
+	table.standings tbody tr:nth-child(even) td { background: rgba(255,255,255,.028); }
+	table.standings tbody tr:first-child td { background: rgba(245,197,66,.09); }
 	table.standings tbody td {
-		padding: 0 18px;
-		border-bottom: 1px solid #1f242b;
-		vertical-align: middle;
-		height: [[${rowHeightPx}]]px;
-		line-height: 1;
+		padding: 0 18px; border-bottom: 1px solid rgba(255,255,255,.05); vertical-align: middle;
+		height: [[${rowHeightPx}]]px; line-height: 1;
 	}
-	td.pos { width: 96px; text-align: center; font-size: [[${posFontSizePx}]]px; color: #4fc3f7; }
+	td.pos { width: 96px; text-align: center; font-size: [[${posFontSizePx}]]px; font-weight: 900; color: #f5c542; }
 	td.team-cell { padding: 0 18px; }
-	td.team-cell .team-flex {
-		display: flex;
-		align-items: center;
-		gap: 16px;
+	td.team-cell .team-flex { display: flex; align-items: center; gap: 16px; }
+	td.team-cell .color-strip { width: 6px; height: [[${logoSizePx}]]px; border-radius: 3px; flex-shrink: 0; }
+	td.team-cell .chip {
+		--cv: oklch(from var(--c, #5a5a64) max(l, 0.5) c h);
+		width: [[${logoSizePx}]]px; height: [[${logoSizePx}]]px; flex-shrink: 0; border-radius: 50%;
+		background: #14141a; border: 3px solid var(--cv); display: grid; place-items: center; overflow: hidden;
+		box-shadow: 0 3px 10px rgba(0,0,0,.5);
 	}
-	td.team-cell .color-strip {
-		width: 6px;
-		height: [[${logoSizePx}]]px;
-		border-radius: 2px;
-		flex-shrink: 0;
-	}
-	td.team-cell img {
-		height: [[${logoSizePx}]]px;
-		width: [[${logoSizePx}]]px;
-		object-fit: contain;
-		flex-shrink: 0;
-	}
-	td.team-cell .name {
-		font-size: [[${fontSizePx}]]px;
-		font-weight: 700;
-	}
-	td.num {
-		width: 110px;
-		text-align: center;
-		font-size: [[${fontSizePx}]]px;
-	}
-	td.num.pts { color: #4fc3f7; font-weight: bold; }
+	td.team-cell .chip img { width: 74%; height: 74%; object-fit: contain;
+		filter: drop-shadow(0 0 2px rgba(0,0,0,.85)) drop-shadow(0 0 3px rgba(255,255,255,.5)); }
+	td.team-cell .name { font-size: [[${fontSizePx}]]px; font-weight: 700; }
+	td.num { width: 110px; text-align: center; font-size: [[${fontSizePx}]]px; }
+	td.num.pts { color: #f5c542; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -125,7 +72,9 @@
 				<td class="team-cell">
 					<div class="team-flex">
 						<div class="color-strip" th:style="'background:' + ${row.primaryColor}"></div>
-						<img th:if="${row.teamLogoBase64}" th:src="${row.teamLogoBase64}" alt="" />
+						<div class="chip" th:style="'--c:' + ${row.primaryColor}">
+							<img th:if="${row.teamLogoBase64}" th:src="${row.teamLogoBase64}" alt="" />
+						</div>
 						<span class="name" th:text="${row.teamName}"></span>
 					</div>
 				</td>

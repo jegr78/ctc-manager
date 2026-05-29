@@ -11,109 +11,41 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            width: 1920px;
-            height: 1080px;
-            overflow: hidden;
-            font-family: 'Conthrax', -apple-system, sans-serif;
-            background: #000;
-            color: white;
-            display: flex;
-            flex-direction: column;
+            width: 1920px; height: 1080px; overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif; color: #fff;
+            display: flex; flex-direction: column;
+            background:
+                repeating-linear-gradient(118deg, transparent 0 74px, rgba(255,255,255,.013) 74px 76px),
+                radial-gradient(120% 80% at 50% 28%, #15151b 0%, #0d0d11 56%, #08080b 100%);
         }
 
-        .header {
-            padding: 28px 64px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 120px;
-        }
+        .header { padding: 30px 64px 22px; display: flex; justify-content: space-between; align-items: center; position: relative; min-height: 120px; }
+        .header::after { content: ''; position: absolute; left: 64px; right: 64px; bottom: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(245,197,66,.7) 18%, rgba(245,197,66,.7) 82%, transparent); }
+        .ctc-logo { width: 80px; height: 80px; object-fit: contain; }
+        .header-center { text-align: center; flex: 1; }
+        .header-center .title { font-size: 46px; font-weight: 900; letter-spacing: 2px;
+            display: inline-flex; align-items: center; gap: 18px; white-space: nowrap; }
+        .header-center .title::before, .header-center .title::after { content: ''; width: 4px; height: 36px; background: #f5c542; border-radius: 1px; }
+        .header-center .subtitle { font-size: 27px; font-weight: 700; color: #9a9aa6; margin-top: 4px; }
 
-        .ctc-logo {
-            width: 80px;
-            height: 80px;
-            object-fit: contain;
-        }
-
-        .header-center {
-            text-align: center;
-            flex: 1;
-        }
-
-        .header-center .title {
-            font-size: 44px;
-            font-weight: 900;
-            letter-spacing: 3px;
-        }
-
-        .header-center .subtitle {
-            font-size: 28px;
-            font-weight: 700;
-            color: #ccc;
-        }
-
-        .content {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            gap: 0;
-            padding: 0 64px;
-        }
-
-        .column {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .team-row {
-            display: flex;
-            align-items: center;
-            height: 100px;
-        }
-
-        .rank {
-            width: 56px;
-            text-align: center;
-            font-size: 28px;
-            font-weight: 700;
-            color: #999;
-        }
+        .content { flex: 1; display: flex; align-items: stretch; gap: 40px; padding: 22px 64px 34px; }
+        .column { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+        .team-row { display: flex; align-items: center; gap: 18px; flex: 1; max-height: 110px; }
+        .rank { width: 56px; flex: 0 0 56px; text-align: center; font-size: 34px; font-weight: 900; color: #f5c542; }
 
         .team-bar {
-            flex: 1;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            border-radius: 4px;
+            --cv: oklch(from var(--c, #5a5a64) max(l, 0.5) c h);
+            flex: 1; height: 100%; display: flex; align-items: center; gap: 18px; padding: 0 22px; position: relative; overflow: hidden;
+            border: 1px solid rgba(255,255,255,.06); border-left: 6px solid var(--cv); border-radius: 13px;
+            background: radial-gradient(circle at 0% 50%, color-mix(in srgb, var(--cv) 30%, transparent) 0%, transparent 42%), linear-gradient(180deg, #191920, #121217);
         }
-
-        .team-logo {
-            width: 64px;
-            height: 64px;
-            object-fit: contain;
-            background: rgba(255,255,255,0.15);
-            border-radius: 50%;
-            padding: 6px;
-        }
-
-        .team-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            margin-left: 16px;
-        }
-
-        .team-name {
-            font-size: 24px;
-            font-weight: 700;
-            color: white;
-            white-space: nowrap;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
+        .chip { width: 64px; height: 64px; flex: 0 0 auto; border-radius: 50%; background: #14141a; border: 3px solid var(--cv);
+            display: grid; place-items: center; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,.5); }
+        .chip img { width: 74%; height: 74%; object-fit: contain;
+            filter: drop-shadow(0 0 2px rgba(0,0,0,.85)) drop-shadow(0 0 3px rgba(255,255,255,.5)); }
+        .team-info { display: flex; flex-direction: column; min-width: 0; }
+        .team-name { font-size: 28px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     </style>
 </head>
 <body>
@@ -130,9 +62,8 @@
         <div class="column">
             <div class="team-row" th:each="entry : ${data.leftColumn}">
                 <span class="rank" th:text="${entry.rank}"></span>
-                <div class="team-bar"
-                     th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${entry.primaryColor ?: '#333'} + ' 70%, black) 0%, #222 100%);'">
-                    <img th:if="${entry.logoBase64 != null}" th:src="${entry.logoBase64}" alt="" class="team-logo">
+                <div class="team-bar" th:style="'--c: ' + ${entry.primaryColor ?: '#5a5a64'} + ';'">
+                    <div class="chip"><img th:if="${entry.logoBase64 != null}" th:src="${entry.logoBase64}" alt=""></div>
                     <div class="team-info">
                         <span class="team-name" th:text="${entry.teamName}"></span>
                     </div>
@@ -142,9 +73,8 @@
         <div class="column">
             <div class="team-row" th:each="entry : ${data.rightColumn}">
                 <span class="rank" th:text="${entry.rank}"></span>
-                <div class="team-bar"
-                     th:style="'background: linear-gradient(90deg, color-mix(in srgb, ' + ${entry.primaryColor ?: '#333'} + ' 70%, black) 0%, #222 100%);'">
-                    <img th:if="${entry.logoBase64 != null}" th:src="${entry.logoBase64}" alt="" class="team-logo">
+                <div class="team-bar" th:style="'--c: ' + ${entry.primaryColor ?: '#5a5a64'} + ';'">
+                    <div class="chip"><img th:if="${entry.logoBase64 != null}" th:src="${entry.logoBase64}" alt=""></div>
                     <div class="team-info">
                         <span class="team-name" th:text="${entry.teamName}"></span>
                     </div>
