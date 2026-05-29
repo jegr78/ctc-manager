@@ -240,7 +240,7 @@ _Re-scoped 2026-05-29 from "Team Card Visual Redesign" → full Carbon/Gold rede
 
 Plans:
 - [x] 105-01-PLAN.md — Wave 1: TeamCardService color-robustness patch (D-04) + Carbon HUD V4 team-card template (CARD-01/CARD-02)
-- [ ] 105-02-PLAN.md — Wave 2: ProvisionalScores raceLabel conditional (D-05) + 5 Carbon composite templates (CARD-02/CARD-03)
+- [x] 105-02-PLAN.md — Wave 2: ProvisionalScores raceLabel conditional (D-05) + 5 Carbon composite templates (CARD-02/CARD-03)
 - [ ] 105-03-PLAN.md — Wave 3: 5 Carbon matchday/list templates, standings dynamic-row-height preserved (CARD-02/CARD-04)
 - [ ] 105-04-PLAN.md — Wave 4: Carbon overlay (geometry-locked) + 4 analogy rebuilds + end-of-phase clean verify -Pe2e (CARD-02/CARD-04)
 **UI hint**: yes
@@ -270,4 +270,4 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 104. Data Safety Lockdown | 1/1 | Complete   | 2026-05-29 |
-| 105. Team Card Visual Redesign | 1/4 | In Progress|  |
+| 105. Team Card Visual Redesign | 2/4 | In Progress|  |
