@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style th:inline="text">
+        @font-face {
+            font-family: 'Conthrax';
+            src: url([[${fontBase64}]]) format('woff2');
+            font-weight: 600;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1920px; height: 1080px; overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif; color: #fff;
+            display: flex; flex-direction: column;
+        }
+
+        .header, .footer {
+            background: linear-gradient(180deg, #202028 0%, #121217 100%);
+            padding: 18px 90px; display: flex; justify-content: space-between;
+            align-items: center; min-height: 112px;
+        }
+        .header { box-shadow: inset 0 -3px 0 rgba(245,197,66,.78); }
+        .footer { box-shadow: inset 0 3px 0 rgba(245,197,66,.78); }
+
+        .header-left { text-align: left; flex: 1; }
+        .header-left .title { font-size: 27px; font-weight: 900; color: #f2f2f5; text-transform: uppercase; letter-spacing: 3px; line-height: 1.1; }
+        .header-left .year { font-size: 29px; font-weight: 700; color: #9a9aa6; margin-top: 6px; }
+
+        .header-center { text-align: center; flex: 1; }
+        .header-center .lineups-title { font-size: 50px; font-weight: 900; color: #f2f2f5; letter-spacing: 2px;
+            white-space: nowrap; display: inline-flex; align-items: center; gap: 18px; }
+        .header-center .lineups-title::before, .header-center .lineups-title::after {
+            content: ''; width: 4px; height: 38px; background: #f5c542; display: inline-block; border-radius: 1px; }
+        .header-center .matchday { font-size: 29px; font-weight: 700; color: #9a9aa6; margin-top: 2px; }
+
+        .header-right { flex: 1; display: flex; justify-content: flex-end; }
+        .header-right img { width: 80px; height: 80px; object-fit: contain; }
+
+        .main {
+            flex: 1; position: relative; display: flex; align-items: stretch; padding: 20px 32px; gap: 24px;
+            background:
+                repeating-linear-gradient(118deg, transparent 0 74px, rgba(255,255,255,.013) 74px 76px),
+                radial-gradient(120% 85% at 50% 36%, #15151b 0%, #0d0d11 54%, #08080b 100%);
+        }
+
+        .team-card-container { width: 18%; display: flex; align-items: center; justify-content: center; }
+        .team-card-container img { max-height: 100%; max-width: 100%; object-fit: contain;
+            border: 3px solid #fff; border-radius: 16px; box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 16px 44px rgba(0,0,0,.55); }
+
+        /* Pairings + HUD-Eckbrackets + Gold-Mittellinie */
+        .pairings { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: space-around; padding: 24px 44px; }
+        .pairings::before, .pairings::after { content: ''; position: absolute; width: 36px; height: 36px; border: 3px solid rgba(245,197,66,.55); }
+        .pairings::before { top: 0; left: 8px; border-right: 0; border-bottom: 0; }
+        .pairings::after { bottom: 0; right: 8px; border-left: 0; border-top: 0; }
+        .pairing { display: flex; justify-content: space-between; align-items: center; padding: 6px 28px; position: relative; }
+        .driver-info { display: flex; flex-direction: column; max-width: 45%; }
+        .driver-info.home { align-items: flex-start; }
+        .driver-info.away { align-items: flex-end; text-align: right; }
+        .driver-name { font-size: 27px; font-weight: 700; color: #d4d4da; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .driver-nickname { font-size: 18px; font-weight: 600; color: #7e7e88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .footer .position { flex: 1; font-size: 56px; font-weight: 900; color: #f2f2f5; }
+        .footer .position:last-child { text-align: right; }
+        .footer .season-name { flex: 1; text-align: center; font-size: 42px; font-weight: 700; color: #9a9aa6; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="title">Community<br>Team Cup</div>
+            <div class="year" th:text="${seasonYear}"></div>
+        </div>
+        <div class="header-center">
+            <div class="lineups-title">Lineups</div>
+            <div class="matchday" th:text="${matchdayName}"></div>
+        </div>
+        <div class="header-right">
+            <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC">
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="team-card-container">
+            <img th:src="${homeCardBase64}" alt="Home Team Card">
+        </div>
+
+        <div class="pairings">
+            <div class="pairing" th:each="p : ${pairings}">
+                <div class="driver-info home">
+                    <span class="driver-name" th:text="${p.homeDriver}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${p.homeNickname} + ')'" th:if="${p.homeDriver != ''}"></span>
+                </div>
+                <div class="driver-info away">
+                    <span class="driver-name" th:text="${p.awayDriver}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${p.awayNickname} + ')'" th:if="${p.awayDriver != ''}"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="team-card-container">
+            <img th:src="${awayCardBase64}" alt="Away Team Card">
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="position" th:text="'P' + ${homePosition}"></div>
+        <div class="season-name" th:text="${seasonName}"></div>
+        <div class="position" th:text="'P' + ${awayPosition}"></div>
+    </div>
+</body>
+</html>

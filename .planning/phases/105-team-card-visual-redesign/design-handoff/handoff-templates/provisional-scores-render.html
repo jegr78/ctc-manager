@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <style th:inline="text">
+        @font-face {
+            font-family: 'Conthrax';
+            src: url([[${fontBase64}]]) format('woff2');
+            font-weight: 600;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1920px; height: 1080px; overflow: hidden;
+            font-family: 'Conthrax', -apple-system, sans-serif; color: #fff;
+            display: flex; flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(180deg, #202028 0%, #121217 100%);
+            padding: 18px 90px; display: flex; justify-content: space-between;
+            align-items: center; min-height: 112px;
+            box-shadow: inset 0 -3px 0 rgba(245,197,66,.78);
+        }
+        .header-left { text-align: left; flex: 1; }
+        .header-left .title { font-size: 27px; font-weight: 900; color: #f2f2f5; text-transform: uppercase; letter-spacing: 3px; line-height: 1.1; }
+        .header-left .year { font-size: 29px; font-weight: 700; color: #9a9aa6; margin-top: 6px; }
+
+        .header-center { text-align: center; flex: 1; }
+        /* einzeilig — etwas kleiner, da längerer Titel */
+        .header-center .scorecard-title { font-size: 40px; font-weight: 900; color: #f2f2f5; letter-spacing: 2px;
+            white-space: nowrap; display: inline-flex; align-items: center; gap: 16px; }
+        .header-center .scorecard-title::before, .header-center .scorecard-title::after {
+            content: ''; width: 4px; height: 32px; background: #f5c542; display: inline-block; border-radius: 1px; }
+        .header-center .matchday { font-size: 28px; font-weight: 700; color: #9a9aa6; margin-top: 2px; }
+
+        .header-right { flex: 1; display: flex; justify-content: flex-end; }
+        .header-right img { width: 80px; height: 80px; object-fit: contain; }
+
+        /* Mittelteil — Carbon-Vignette, zwei gestapelte Blöcke */
+        .main {
+            flex: 1; position: relative; display: flex; flex-direction: column; justify-content: space-evenly;
+            padding: 18px 46px; gap: 20px;
+            background:
+                repeating-linear-gradient(118deg, transparent 0 74px, rgba(255,255,255,.013) 74px 76px),
+                radial-gradient(120% 85% at 50% 36%, #15151b 0%, #0d0d11 54%, #08080b 100%);
+        }
+
+        .team-block {
+            display: flex; align-items: stretch; gap: 26px; position: relative;
+            background: linear-gradient(180deg, #17171d, #111116);
+            border: 1px solid rgba(255,255,255,.05); border-left: 6px solid #f5c542;
+            border-radius: 14px; padding: 16px 26px 16px 22px;
+        }
+        /* HUD-Eckbracket oben rechts */
+        .team-block::after { content: ''; position: absolute; top: 12px; right: 12px; width: 28px; height: 28px;
+            border-top: 3px solid rgba(245,197,66,.5); border-right: 3px solid rgba(245,197,66,.5); }
+
+        /* Karten-Zelle mit Gold-Trennlinie (ohne Teamname) */
+        .team-card-cell {
+            flex: 0 0 196px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border-right: 2px solid rgba(245,197,66,.28); padding-right: 14px;
+        }
+        .team-card-cell img { width: 132px; object-fit: contain; border: 2px solid #fff; border-radius: 10px;
+            box-shadow: 0 0 0 1px rgba(0,0,0,.45), 0 12px 30px rgba(0,0,0,.55); }
+
+        .provisional-table-wrapper { flex: 1; display: flex; align-items: center; }
+        .provisional-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; color: #fff; }
+        .provisional-table th { background: transparent; color: #9a9aa6; font-size: 18px; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 1px; padding: 8px 8px 12px; text-align: center;
+            border-bottom: 2px solid rgba(245,197,66,.5); }
+        .provisional-table th.col-driver { text-align: left; padding-left: 14px; }
+        .provisional-table tbody tr:nth-child(even) td { background: rgba(255,255,255,.028); }
+        .provisional-table td { font-size: 22px; font-weight: 700; color: #eaeaf0; padding: 7px 8px; text-align: center; }
+        .provisional-table td.col-driver { text-align: left; padding-left: 14px; color: #fff; }
+        .provisional-table tfoot .overall-row td {
+            background: rgba(245,197,66,.12); font-size: 22px; font-weight: 900; color: #f5c542;
+            border-top: 2px solid rgba(245,197,66,.6); padding: 11px 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .provisional-table tfoot .overall-row td.col-driver { text-align: left; padding-left: 14px; }
+        .fl-marker { color: #f5c542; font-size: 20px; }
+
+        /* Race-Chip rechts unten — nur bei mehr als einem Rennen (Service setzt raceLabel sonst null) */
+        .race-chip { position: absolute; right: 50px; bottom: 12px; font-size: 19px; font-weight: 700;
+            letter-spacing: 3px; color: #f5c542; display: inline-flex; align-items: center; gap: 10px; text-transform: uppercase; }
+        .race-chip::before { content: ''; width: 16px; height: 16px; border-left: 3px solid #f5c542; border-bottom: 3px solid #f5c542; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="title">Community<br>Team Cup</div>
+            <div class="year" th:text="${seasonYear}"></div>
+        </div>
+        <div class="header-center">
+            <div class="scorecard-title">Provisional Scores</div>
+            <div class="matchday" th:text="${matchdayName}"></div>
+        </div>
+        <div class="header-right">
+            <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC">
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="team-block team-block--home">
+            <div class="team-card-cell">
+                <img th:src="${homeCardBase64}" alt="Home Team Card">
+            </div>
+            <div class="provisional-table-wrapper">
+                <table class="provisional-table">
+                    <thead>
+                        <tr>
+                            <th class="col-driver">Driver</th>
+                            <th>Position</th>
+                            <th>Quali</th>
+                            <th>FL</th>
+                            <th>Pts-Race</th>
+                            <th>Pts-Quali</th>
+                            <th>Pts-FL</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="row : ${homeRows}">
+                            <td class="col-driver" th:text="${row.driverName}"></td>
+                            <td th:text="${row.position}"></td>
+                            <td th:text="${row.qualiPosition}"></td>
+                            <td><span class="fl-marker" th:if="${row.fastestLap}">FL</span></td>
+                            <td th:text="${row.ptsRace}"></td>
+                            <td th:text="${row.ptsQuali}"></td>
+                            <td th:text="${row.ptsFl}"></td>
+                            <td th:text="${row.total}"></td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="overall-row">
+                            <td class="col-driver">Overall</td>
+                            <td colspan="3"></td>
+                            <td th:text="${homeOverallPtsRace}"></td>
+                            <td th:text="${homeOverallPtsQuali}"></td>
+                            <td th:text="${homeOverallPtsFl}"></td>
+                            <td th:text="${homeOverallTotal}"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="team-block team-block--away">
+            <div class="team-card-cell">
+                <img th:src="${awayCardBase64}" alt="Away Team Card">
+            </div>
+            <div class="provisional-table-wrapper">
+                <table class="provisional-table">
+                    <thead>
+                        <tr>
+                            <th class="col-driver">Driver</th>
+                            <th>Position</th>
+                            <th>Quali</th>
+                            <th>FL</th>
+                            <th>Pts-Race</th>
+                            <th>Pts-Quali</th>
+                            <th>Pts-FL</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="row : ${awayRows}">
+                            <td class="col-driver" th:text="${row.driverName}"></td>
+                            <td th:text="${row.position}"></td>
+                            <td th:text="${row.qualiPosition}"></td>
+                            <td><span class="fl-marker" th:if="${row.fastestLap}">FL</span></td>
+                            <td th:text="${row.ptsRace}"></td>
+                            <td th:text="${row.ptsQuali}"></td>
+                            <td th:text="${row.ptsFl}"></td>
+                            <td th:text="${row.total}"></td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="overall-row">
+                            <td class="col-driver">Overall</td>
+                            <td colspan="3"></td>
+                            <td th:text="${awayOverallPtsRace}"></td>
+                            <td th:text="${awayOverallPtsQuali}"></td>
+                            <td th:text="${awayOverallPtsFl}"></td>
+                            <td th:text="${awayOverallTotal}"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <!-- nur anzeigen, wenn das Match mehr als ein Rennen hat (Service: raceLabel sonst null setzen) -->
+        <div class="race-chip" th:if="${raceLabel != null}" th:text="${raceLabel}"></div>
+    </div>
+</body>
+</html>
