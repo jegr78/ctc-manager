@@ -10,8 +10,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -106,6 +108,21 @@ class GlobalExceptionHandlerTest {
 		assertThat(mav.getViewName()).isEqualTo("admin/error");
 		assertThat(mav.getModel().get("status")).isEqualTo(500);
 		assertThat(mav.getModel().get("error")).isEqualTo("Internal Error");
+	}
+
+	@Test
+	void givenNoResourceFound_whenHandled_thenReturns404() {
+		// given
+		var ex = new NoResourceFoundException(HttpMethod.GET, "/favicon.ico", "favicon.ico");
+
+		// when
+		var mav = handler.handleNoResourceFound(ex);
+
+		// then
+		assertThat(mav.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+		assertThat(mav.getViewName()).isEqualTo("admin/error");
+		assertThat(mav.getModel().get("status")).isEqualTo(404);
+		assertThat(mav.getModel().get("error")).isEqualTo("Not Found");
 	}
 
 	@Test
