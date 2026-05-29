@@ -242,7 +242,7 @@ Plans:
 - [x] 105-01-PLAN.md — Wave 1: TeamCardService color-robustness patch (D-04) + Carbon HUD V4 team-card template (CARD-01/CARD-02)
 - [x] 105-02-PLAN.md — Wave 2: ProvisionalScores raceLabel conditional (D-05) + 5 Carbon composite templates (CARD-02/CARD-03)
 - [x] 105-03-PLAN.md — Wave 3: 5 Carbon matchday/list templates, standings dynamic-row-height preserved (CARD-02/CARD-04)
-- [ ] 105-04-PLAN.md — Wave 4: Carbon overlay (geometry-locked) + 4 analogy rebuilds + end-of-phase clean verify -Pe2e (CARD-02/CARD-04)
+- [x] 105-04-PLAN.md — Wave 4: Carbon overlay (geometry-locked) + 4 analogy rebuilds + end-of-phase clean verify -Pe2e (CARD-02/CARD-04)
 **UI hint**: yes
 **In-milestone-polish risk**: medium-high — full graphics-redesign surfaces typically discover spacing/contrast edge cases and the matchday-overview-vs-pairings naming reconciliation via `playwright-cli` checks; any such polish closes within this phase per CLAUDE.md "In-Milestone Polish" (no deferral to v1.15).
 
@@ -270,4 +270,4 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 104. Data Safety Lockdown | 1/1 | Complete   | 2026-05-29 |
-| 105. Team Card Visual Redesign | 3/4 | In Progress|  |
+| 105. Team Card Visual Redesign | 4/4 | Complete   | 2026-05-29 |
