@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
@@ -46,6 +47,12 @@ public class GlobalExceptionHandler {
 	public ModelAndView handleBusinessRule(BusinessRuleException ex) {
 		log.warn("Business rule violation: {}", ex.getMessage());
 		return buildErrorView(HttpStatus.CONFLICT, "Business Rule Violation", ex);
+	}
+
+	@ExceptionHandler(NoResourceFoundException.class)
+	public ModelAndView handleNoResourceFound(NoResourceFoundException ex) {
+		log.debug("No static resource: {}", ex.getResourcePath());
+		return buildErrorView(HttpStatus.NOT_FOUND, "Not Found", ex);
 	}
 
 	@ExceptionHandler(ResponseStatusException.class)

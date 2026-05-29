@@ -13,6 +13,7 @@
 - :white_check_mark: **v1.11 Tooling Infrastructure & Tech-Debt Sweep** — Phases 80-87 (shipped 2026-05-18)
 - :white_check_mark: **v1.12 Driver-Import Gap-Closure & Test Performance Round 2** — Phases 88-91 (shipped 2026-05-20)
 - :white_check_mark: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (shipped 2026-05-28)
+- :white_check_mark: **v1.14 Team Card Redesign & Data Safety** — Phases 104-105 (shipped 2026-05-29)
 
 ## Phases
 
@@ -197,6 +198,16 @@ See: milestones/v1.13-ROADMAP.md for full details
 
 </details>
 
+<details>
+<summary>v1.14 Team Card Redesign & Data Safety (Phases 104-105) -- SHIPPED 2026-05-29</summary>
+
+- [x] Phase 104: Data Safety Lockdown (1/1 plan) -- completed 2026-05-29
+- [x] Phase 105: Carbon HUD Graphics Redesign (4/4 plans) -- completed 2026-05-29
+
+See: milestones/v1.14-ROADMAP.md for full details
+
+</details>
+
 ## Progress
 
 | Milestone | Phases | Plans | Status | Shipped |
@@ -212,3 +223,4 @@ See: milestones/v1.13-ROADMAP.md for full details
 | v1.11 Tooling Infrastructure & Tech-Debt Sweep | 80-87 | 46 | Complete | 2026-05-18 |
 | v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | Complete | 2026-05-20 |
 | v1.13 Discord Integration & Carry-Forwards | 92-103 | 43 | Complete | 2026-05-28 |
+| v1.14 Team Card Redesign & Data Safety | 104-105 | 5 | Complete | 2026-05-29 |

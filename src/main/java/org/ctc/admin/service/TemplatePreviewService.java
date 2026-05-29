@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.ctc.admin.dto.MatchdayGraphicData;
 import org.ctc.admin.dto.MatchdayGraphicData.MatchGraphicRow;
@@ -18,6 +19,7 @@ import org.thymeleaf.templateresolver.StringTemplateResolver;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class TemplatePreviewService {
 
     private static final String FONT_CLASSPATH = "static/admin/fonts/ConthraxSb.woff2";
@@ -32,6 +34,8 @@ public class TemplatePreviewService {
             "ClassLoader", "URLClassLoader", "ScriptEngine",
             "javax.script", "java.lang.reflect"
     );
+
+    private final TeamCardService teamCardService;
 
     private volatile String cachedFontBase64;
     private volatile String cachedLogoBase64;
@@ -66,6 +70,8 @@ public class TemplatePreviewService {
         ctx.setVariable("secondaryColor", "#1D3557");
         ctx.setVariable("accentColor", "#457B9D");
         ctx.setVariable("gradientColor", "#1D3557");
+        ctx.setVariable("accentVisColor", teamCardService.computeAccentVisColor("#457B9D", "#E63946"));
+        ctx.setVariable("onPrimaryColor", teamCardService.contrastColor("#E63946"));
         ctx.setVariable("logoBase64", getLogoBase64());
         ctx.setVariable("fontBase64", getFontBase64());
         return ctx;

@@ -60,6 +60,8 @@ class ProvisionalScoresGraphicServiceTest {
 		race.setId(UUID.randomUUID());
 		race.setMatchday(matchday);
 		race.setMatch(match);
+		match.getRaces().add(race);
+		match.getRaces().add(new Race());
 
 		for (int i = 0; i < homeDrivers; i++) {
 			RaceResult r = newResult(race, i + 1, false, 25 - i, 5 - i, i == 0 ? 1 : 0);
@@ -71,6 +73,31 @@ class ProvisionalScoresGraphicServiceTest {
 			race.getResults().add(r);
 			when(scoringService.isDriverInTeam(eq(r), any(), eq(homeTeam.getId()))).thenReturn(false);
 		}
+
+		writeFakeCard(seasonId, homeTeam.getShortName());
+		writeFakeCard(seasonId, awayTeam.getShortName());
+		return race;
+	}
+
+	private Race createSingleRaceMatch(UUID seasonId, Team homeTeam, Team awayTeam) throws IOException {
+		Season season = new Season(String.valueOf(seasonId));
+		season.setId(seasonId);
+		Matchday matchday = PhaseTestFixtures.matchdayInRegularPhase(season, "MD 1", 1);
+		Match match = new Match(matchday, homeTeam, awayTeam);
+		match.setRaces(new ArrayList<>());
+
+		Race race = new Race();
+		race.setId(UUID.randomUUID());
+		race.setMatchday(matchday);
+		race.setMatch(match);
+		match.getRaces().add(race);
+
+		RaceResult home = newResult(race, 1, false, 25, 5, 1);
+		race.getResults().add(home);
+		when(scoringService.isDriverInTeam(eq(home), any(), eq(homeTeam.getId()))).thenReturn(true);
+		RaceResult away = newResult(race, 2, false, 18, 4, 0);
+		race.getResults().add(away);
+		when(scoringService.isDriverInTeam(eq(away), any(), eq(homeTeam.getId()))).thenReturn(false);
 
 		writeFakeCard(seasonId, homeTeam.getShortName());
 		writeFakeCard(seasonId, awayTeam.getShortName());
@@ -223,5 +250,22 @@ class ProvisionalScoresGraphicServiceTest {
 		assertThat(contexts).hasSize(2);
 		assertThat(contexts.get(0).getVariable("raceLabel")).isEqualTo("Race 2");
 		assertThat(contexts.get(1).getVariable("raceLabel")).isEqualTo("Race 2");
+	}
+
+	@Test
+	void givenSingleRaceMatch_whenBuildContext_thenRaceLabelIsNull() throws IOException {
+		// given
+		var service = createService();
+		Team homeTeam = team("Home", "HOM");
+		Team awayTeam = team("Away", "AWY");
+		Race race = createSingleRaceMatch(UUID.randomUUID(), homeTeam, awayTeam);
+
+		// when
+		service.generateProvisional(race, 1);
+
+		// then
+		ArgumentCaptor<Context> captor = ArgumentCaptor.forClass(Context.class);
+		verify(templateEngine).process(eq("admin/provisional-scores-render"), captor.capture());
+		assertThat(captor.getValue().getVariable("raceLabel")).isNull();
 	}
 }
