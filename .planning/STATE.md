@@ -4,14 +4,14 @@ milestone: v1.14
 milestone_name: Team Card Redesign & Data Safety
 status: executing
 stopped_at: Phase 105 context gathered (re-scoped to Carbon HUD graphics redesign — 16 templates, CARD-01..04)
-last_updated: "2026-05-29T10:00:13.535Z"
-last_activity: "2026-05-29 -- Phase 105 context gathered + re-scoped to Carbon HUD graphics redesign (handoff delivered)"
+last_updated: "2026-05-29T10:46:05.592Z"
+last_activity: 2026-05-29 -- Phase 105 execution started
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 1
+  total_plans: 5
   completed_plans: 1
-  percent: 50
+  percent: 20
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-29 for v1.14 milestone start)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** v1.14 — Phase 104 complete. Phase 105 re-scoped 2026-05-29 from "Team Card Visual Redesign" to the full **Carbon HUD Graphics Redesign** (16 templates) after the external Claude-Design handoff was delivered; CONTEXT.md captured (D-01..D-07), REQUIREMENTS broadened to CARD-01..04, ROADMAP retitled. Ready for `/gsd-plan-phase 105`.
+**Current focus:** Phase 105 — team-card-visual-redesign
 
 ## Current Position
 
-Phase: 105 — CONTEXT GATHERED (ready for planning)
-Plan: — (plan-phase will split into ~4 plan groups: Team Card / Composites / Matchday-List / Overlay+Analogy)
-Status: Phase 105 discussion complete; handoff vendored to design-handoff/
-Last activity: 2026-05-29 -- Phase 105 context gathered + re-scoped to Carbon HUD graphics redesign
+Phase: 105 (team-card-visual-redesign) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 105
+Last activity: 2026-05-29 -- Phase 105 execution started
 
 ### Prior position (Phase 103 close)
 
@@ -94,7 +94,7 @@ Items carried forward into v1.14 from v1.13 close (per `PROJECT.md § Out of sco
 ### UAT-02: Legacy Season Visual Smoke (carry-forward from v1.11 QUAL-05)
 
 - **Procedure:** docs/uat/UAT-02-legacy-season-smoke.md
-- **Status:** Phase 104 complete
+- **Status:** Executing Phase 105
 - **Result:** _(operator fills after execution)_
 - **Date:** _(operator fills)_
 - **Screenshots:** _(operator links)_
