@@ -45,6 +45,9 @@ build/
 .playwright-cli/
 .playwright-mcp/
 .screenshots/
+
+### Editor backups ###
+*.bak
 skills-lock.json
 
 ### Google Credentials ###
