@@ -8,8 +8,8 @@
 
 ### Data Safety (SAFE)
 
-- [ ] **SAFE-01**: `DevDataSeeder` and `TestDataService` Spring beans are only loaded when the active profile contains `dev`. Active profiles `local`, `docker`, and `prod` MUST NOT instantiate either bean, so the test-data seeder cannot run against the real MariaDB or write demo logos into `data/local/uploads/`. (Reverts the v1.11 `@Profile({"dev","local"})` drift introduced by commit `598d1431`.)
-- [ ] **SAFE-02**: An integration test loads the Spring context with `@ActiveProfiles("local")` and asserts that both `DevDataSeeder` and `TestDataService` beans are absent from the context. The test must fail if either bean is registered, so any future re-drift toward including `local` in the seeder's `@Profile` value is caught by `./mvnw verify` instead of by a production data accident.
+- [x] **SAFE-01**: `DevDataSeeder` and `TestDataService` Spring beans are only loaded when the active profile contains `dev`. Active profiles `local`, `docker`, and `prod` MUST NOT instantiate either bean, so the test-data seeder cannot run against the real MariaDB or write demo logos into `data/local/uploads/`. (Reverts the v1.11 `@Profile({"dev","local"})` drift introduced by commit `598d1431`.)
+- [x] **SAFE-02**: An integration test loads the Spring context with `@ActiveProfiles("local")` and asserts that both `DevDataSeeder` and `TestDataService` beans are absent from the context. The test must fail if either bean is registered, so any future re-drift toward including `local` in the seeder's `@Profile` value is caught by `./mvnw verify` instead of by a production data accident.
 
 ### Team Card Redesign (CARD)
 
@@ -49,11 +49,11 @@ Explicit exclusions per user scoping decision 2026-05-29:
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SAFE-01 | Phase 104 — Data Safety Lockdown | Pending |
-| SAFE-02 | Phase 104 — Data Safety Lockdown | Pending |
-| CARD-01 | Phase 105 — Carbon HUD Graphics Redesign | Pending (handoff delivered 2026-05-29) |
-| CARD-02 | Phase 105 — Carbon HUD Graphics Redesign | Pending (handoff delivered 2026-05-29) |
-| CARD-03 | Phase 105 — Carbon HUD Graphics Redesign | Pending (handoff delivered 2026-05-29) |
-| CARD-04 | Phase 105 — Carbon HUD Graphics Redesign | Pending (handoff delivered 2026-05-29) |
+| SAFE-01 | Phase 104 — Data Safety Lockdown | Satisfied (104-VERIFICATION.md passed) |
+| SAFE-02 | Phase 104 — Data Safety Lockdown | Satisfied (104-VERIFICATION.md passed) |
+| CARD-01 | Phase 105 — Carbon HUD Graphics Redesign | Delivered & UAT-verified (105-UAT 12/12, integration PASS); formal 105-VERIFICATION.md pending |
+| CARD-02 | Phase 105 — Carbon HUD Graphics Redesign | Delivered & UAT-verified; integration PASS (+1 preview-fidelity warning); 105-VERIFICATION.md pending |
+| CARD-03 | Phase 105 — Carbon HUD Graphics Redesign | Delivered & UAT-verified (raceLabel both-branch unit tests); 105-VERIFICATION.md pending |
+| CARD-04 | Phase 105 — Carbon HUD Graphics Redesign | Delivered & UAT-verified (AUTO-UAT 16 graphics); 105-VERIFICATION.md pending |
 
 **Coverage:** 6/6 v1.14 requirements mapped to exactly one phase. No orphans, no duplicates.
