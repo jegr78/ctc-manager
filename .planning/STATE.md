@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-05-30T00:00:00.000Z"
 last_activity: 2026-05-30
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 ## Current Position
 
-Phase: 106 of 110 (CI Pipeline Optimisation) — Not started
+Phase: 106 of 111 (CI Pipeline Optimisation) — Not started
 Plan: —
 Status: Roadmap created; ready to plan
-Last activity: 2026-05-30 — v1.15 ROADMAP.md created (5 phases, 22/22 requirements mapped)
+Last activity: 2026-05-30 — Phase 111 (Log-Injection Remediation) added to v1.15 (6 phases, 26/26 requirements mapped)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -43,6 +43,7 @@ Progress: [░░░░░░░░░░] 0%
 | 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Not started |
 | 109 | Walkover Handling | WO-01..04 | Not started |
 | 110 | Lobby Settings Graphic | LOBBY-01..05 | Blocked (external design handoff) |
+| 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Not started |
 
 ## Baselines to Preserve
 
@@ -53,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 - `EXPORT_ORDER` size: **26 entities** (only walkover flag may need Flyway V17 — not a new entity)
 - SpotBugs `BugInstance` count: **0** (blocking gate)
 - CodeQL gate-step: **exit 0** on new HIGH/CRITICAL
+- CodeQL open alerts: **29 `java/log-injection` (medium)** to be driven to **0** in Phase 111 (below the 7.0 gate, so they never blocked the build — closed via source fix, not suppression)
 - Flyway migrations: V1-V16 immutable; next is V17 (walkover flag, Phase 109)
 
 ## Accumulated Context
@@ -66,6 +68,7 @@ Roadmap-level decisions for v1.15 (2026-05-30):
 - **LINEUP before WO (D-Graphic-Sequencing)** — Both phases modify graphic Thymeleaf templates. LINEUP-01..04 establishes the n/a placeholder pattern; WO-03 adds the "w/o" label on top of that stable baseline. Reversing the order would risk clobber on shared template files.
 - **LOBBY last + external-handoff gate (D-Lobby-Blocked)** — LOBBY-01..05 are blocked on the Claude-Design Lobby Settings HTML handoff. Phase 110 is explicitly labelled as requiring the handoff before execution begins (same pattern as Phase 105 CARD-01 in v1.14).
 - **WO reuses bye semantics (D-WO-Bye-Analogy)** — Per the out-of-scope table in REQUIREMENTS.md, a richer walkover model (dedicated points config, forfeit reasons) is out of scope; the implementation mirrors `Match.bye` auto-win logic.
+- **SEC-LOG last + source-fix (D-LogInjection-Last, 2026-05-30)** — Log-injection remediation runs as Phase 111 (after 106-110) so it also captures any log statements added by the feature phases. Strategy is per-callsite sanitization via a central `LogSanitizer` (strips CR/LF + control chars), fixing the CodeQL taint path at source rather than adding `query-filters` suppressions.
 
 ### Blockers/Concerns
 
@@ -73,12 +76,13 @@ Roadmap-level decisions for v1.15 (2026-05-30):
 
 ### Phase Numbering
 
-Last phase shipped: **105** (v1.14 Carbon HUD Graphics Redesign). v1.15 spans phases **106-110** (integer phases, no insertions, no reset).
+Last phase shipped: **105** (v1.14 Carbon HUD Graphics Redesign). v1.15 spans phases **106-111** (integer phases, no insertions, no reset).
 
 ### Roadmap Evolution
 
 - 2026-05-29: v1.14 shipped (PR #131 squash-merged to master; release CI tagged v1.14.0).
 - 2026-05-30: v1.15 milestone started; REQUIREMENTS.md defined (22 requirements across CI/RACE/LINEUP/WO/LOBBY); ROADMAP.md created (5 phases 106-110, 22/22 coverage).
+- 2026-05-30: Phase 111 (Log-Injection Remediation, CodeQL CWE-117) added at end of v1.15 — 29 open `java/log-injection` alerts discovered in GitHub code scanning; SEC-LOG-01..04 added (now 6 phases, 26/26 coverage). Strategy: per-callsite sanitization via central `LogSanitizer` (user decision 2026-05-30).
 
 ## Deferred Items
 

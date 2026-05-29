@@ -44,6 +44,13 @@ Requirements for the v1.15 milestone. Each maps to roadmap phases.
 - [ ] **LOBBY-04**: The Lobby Settings template is editable via the template editor (custom override, `implements TemplateManageable`).
 - [ ] **LOBBY-05**: The service is coverage-excluded (Playwright runtime), consistent with the other graphic services.
 
+### SEC-LOG — Log-Injection Remediation (CodeQL CWE-117)
+
+- [ ] **SEC-LOG-01**: A central `LogSanitizer` utility strips CR/LF and other control characters from user-controlled values before they reach a log statement, with a unit test pinning the stripping behaviour.
+- [ ] **SEC-LOG-02**: All 29 CodeQL `java/log-injection`-flagged call sites (across `dataimport/`, `domain/service/`, `backup/`, `admin/controller/`) wrap their user-controlled log arguments through the sanitizer — fixing the taint path at the source, not suppressing the finding.
+- [ ] **SEC-LOG-03**: A CodeQL re-scan on the milestone branch reports 0 open `java/log-injection` alerts; no new `query-filters` suppressions are added to `codeql-config.yml` for these findings.
+- [ ] **SEC-LOG-04**: `./mvnw clean verify -Pe2e` exits 0 — all existing tests green, SpotBugs/find-sec-bugs gate green, 82% line coverage maintained.
+
 ## Future Requirements
 
 Deferred candidates from prior milestone audits — tracked in PROJECT.md "Deferred candidates", not in this roadmap:
@@ -90,12 +97,16 @@ Explicitly excluded for v1.15 to prevent scope creep.
 | LOBBY-03 | Phase 110 | Pending |
 | LOBBY-04 | Phase 110 | Pending |
 | LOBBY-05 | Phase 110 | Pending |
+| SEC-LOG-01 | Phase 111 | Pending |
+| SEC-LOG-02 | Phase 111 | Pending |
+| SEC-LOG-03 | Phase 111 | Pending |
+| SEC-LOG-04 | Phase 111 | Pending |
 
 **Coverage:**
-- v1.15 requirements: 22 total
-- Mapped to phases: 22 (100%)
+- v1.15 requirements: 26 total
+- Mapped to phases: 26 (100%)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-30*
-*Last updated: 2026-05-30 — roadmap created, traceability populated*
+*Last updated: 2026-05-30 — added SEC-LOG-01..04 (Phase 111, Log-Injection Remediation)*
