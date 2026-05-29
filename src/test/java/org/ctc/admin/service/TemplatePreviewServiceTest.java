@@ -16,7 +16,7 @@ class TemplatePreviewServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TemplatePreviewService();
+        service = new TemplatePreviewService(new TeamCardService(null, null, null, "uploads"));
     }
 
     @Test
@@ -41,6 +41,24 @@ class TemplatePreviewServiceTest {
         assertThat(html).contains("42");
         assertThat(html).contains("3 - 1 - 0");
         assertThat(html).contains("#E63946");
+    }
+
+    @Test
+    void givenTeamCardTemplate_whenRenderPreview_thenAppliesComputedAccentVisAndOnPrimaryColors() {
+        // given — sample accent #457B9D is bright enough to keep; sample primary #E63946 yields white on-primary text
+        String template = """
+                <html><body>
+                <span th:text="${accentVisColor}"></span>
+                <span th:text="${onPrimaryColor}"></span>
+                </body></html>
+                """;
+
+        // when
+        String html = service.renderPreview("team-cards", template);
+
+        // then — preview must apply the same color-robustness math as TeamCardService.generateCard()
+        assertThat(html).contains("#457B9D");
+        assertThat(html).contains("#ffffff");
     }
 
     @Test
