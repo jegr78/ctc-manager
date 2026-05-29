@@ -35,6 +35,10 @@ public class TeamCardService implements TemplateManageable {
 	private static final String DEFAULT_TEMPLATE = "templates/admin/team-card-render.html";
 	private static final String CUSTOM_TEMPLATE_FILE = "team-card-template.html";
 
+	private static final java.util.regex.Pattern HEX_COLOR = java.util.regex.Pattern.compile("(?i)#[0-9a-f]{6}");
+	private static final double ACCENT_VISIBILITY_FLOOR = 28;
+	private static final double DARK_TEXT_THRESHOLD = 140;
+
 	private final TemplateEngine templateEngine;
 	private final StandingsService standingsService;
 	private final SeasonPhaseService seasonPhaseService;
@@ -195,12 +199,12 @@ public class TeamCardService implements TemplateManageable {
 
 	String computeGradientColor(String primary, String secondary, String accent) {
 		String darkest = primary;
-		double darkestLuminance = relativeLuminance(primary);
+		double darkestBrightness = perceivedBrightness255(primary);
 		for (String color : new String[]{secondary, accent}) {
 			if (color != null) {
-				double lum = relativeLuminance(color);
-				if (lum < darkestLuminance) {
-					darkestLuminance = lum;
+				double brightness = perceivedBrightness255(color);
+				if (brightness < darkestBrightness) {
+					darkestBrightness = brightness;
 					darkest = color;
 				}
 			}
@@ -209,18 +213,20 @@ public class TeamCardService implements TemplateManageable {
 	}
 
 	String computeAccentVisColor(String accent, String primary) {
-		if (accent == null || relativeLuminance(accent) < 28) {
+		if (accent == null || perceivedBrightness255(accent) < ACCENT_VISIBILITY_FLOOR) {
 			return primary;
 		}
 		return accent;
 	}
 
 	String contrastColor(String hex) {
-		return relativeLuminance(hex) > 140 ? "#0b0b10" : "#ffffff";
+		return perceivedBrightness255(hex) > DARK_TEXT_THRESHOLD ? "#0b0b10" : "#ffffff";
 	}
 
-	private double relativeLuminance(String hex) {
-		if (hex == null || hex.length() < 7) {
+	// Un-normalized 0-255 weighted channel sum (NOT gamma-corrected WCAG luminance);
+	// unparseable input keeps the same fallback the old length-only guard produced.
+	private double perceivedBrightness255(String hex) {
+		if (hex == null || !HEX_COLOR.matcher(hex).matches()) {
 			return 1.0;
 		}
 		int r = Integer.parseInt(hex.substring(1, 3), 16);
