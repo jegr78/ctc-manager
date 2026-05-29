@@ -117,7 +117,7 @@ fallback rather than throwing.
 **Resolution (FIXED):** `relativeLuminance` renamed to `perceivedBrightness255` and guarded
 with a strict `#RRGGBB` regex; non-hex input now returns the same `1.0` fallback the old
 length-only guard produced instead of throwing. Behaviour for valid hex is unchanged.
-Pinned by `TeamCardServiceColorRobustnessTest` (TDD red→green). Commit `22f1b3f8`.
+Pinned by `TeamCardServiceColorRobustnessTest` (TDD red→green). Commit `29a3e69a`.
 
 ## Warnings
 
@@ -167,7 +167,7 @@ un-normalized 0–255 weighted sum, not WCAG luminance.
 **Resolution (FIXED):** Both done — `relativeLuminance` renamed to `perceivedBrightness255`
 (all call sites updated), thresholds extracted to `ACCENT_VISIBILITY_FLOOR = 28` and
 `DARK_TEXT_THRESHOLD = 140`, plus a single WHY comment that the value is an un-normalized
-0–255 weighted channel sum, not WCAG luminance. Rode along in commit `22f1b3f8`.
+0–255 weighted channel sum, not WCAG luminance. Rode along in commit `29a3e69a`.
 
 ### WR-03: Light data shaping in `th:text` concatenations belongs in the row/data DTO
 
@@ -209,8 +209,10 @@ pinning the malformed-hex tolerance from CR-01's fix snippet.
 test (no `@SpringBootTest`, no Playwright) exercising the package-private helpers directly:
 `contrastColor` and `computeAccentVisColor` with `"transparent"`, `"rgb(0,0,0)"`,
 `"#GGGGGG"`, `"#abc"`, `null`, empty, `"#zzzzzz"`, plus a valid-hex regression and a
-`computeGradientColor` mixed-garbage case. Written red first (commit `59cf2eb6`), green
-after the CR-01 fix.
+`computeGradientColor` mixed-garbage case. Written red first (commit `2b354ba2`), green
+after the CR-01 fix (`29a3e69a`). The initially committed test referenced types without
+imports and a non-existent constructor signature; repaired to the real 4-arg constructor
+in commit `f9f43091` (12 tests, all green under `./mvnw clean verify`).
 
 ### IN-02: Backup-file guard (pre-identified Warning could not be reproduced)
 
@@ -225,7 +227,7 @@ contains `*.bak`. If a different ref/worktree under review still contains the fi
 `git rm` it there.
 
 **Resolution (FIXED — guard only):** `*.bak` added to `.gitignore` as a permanent guard.
-No `git rm` performed — the file does not exist on this branch. Commit `0f8b3f4e`.
+No `git rm` performed — the file does not exist on this branch. Commit `e9e54629`.
 
 ---
 
@@ -233,12 +235,12 @@ No `git rm` performed — the file does not exist on this branch. Commit `0f8b3f
 
 | Finding | Resolution | Commit |
 |---------|-----------|--------|
-| CR-01 | FIXED — strict `#RRGGBB` regex guard in `perceivedBrightness255`; non-hex input falls back instead of throwing | `22f1b3f8` |
+| CR-01 | FIXED — strict `#RRGGBB` regex guard in `perceivedBrightness255`; non-hex input falls back instead of throwing | `29a3e69a` |
 | WR-01 | ACCEPTED (verification gap) — no faithful IT exists; one would need substantial new fixture scaffolding; code left as-is, no symptom workaround | — |
-| WR-02 | FIXED — `relativeLuminance` → `perceivedBrightness255`, named threshold constants, one WHY comment | `22f1b3f8` |
+| WR-02 | FIXED — `relativeLuminance` → `perceivedBrightness255`, named threshold constants | `29a3e69a` |
 | WR-03 | ACCEPTED / backlog — DTO fix needs new model variables, forbidden by the Phase 105 no-new-variable constraint; pre-existing pattern, not expanded | — |
-| IN-01 | FIXED — `TeamCardServiceColorRobustnessTest` added (TDD red→green) | `59cf2eb6` |
-| IN-02 | FIXED (guard only) — `*.bak` added to `.gitignore`; nothing to `git rm` | `0f8b3f4e` |
+| IN-01 | FIXED — `TeamCardServiceColorRobustnessTest` added (TDD red→green); import/constructor repair | `2b354ba2`, `f9f43091` |
+| IN-02 | FIXED (guard only) — `*.bak` added to `.gitignore`; nothing to `git rm` | `e9e54629` |
 
 ---
 
