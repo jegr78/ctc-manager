@@ -71,5 +71,7 @@ class WalkoverE2ETest extends PlaywrightConfig {
 		page.navigate(url("/admin/matchdays/" + md.getId()));
 		assertThat(page.locator(".match-wo").first()).hasText("w/o");
 		assertThat(page.locator(".match-wo")).hasCount(2);
+		// a settled walkover must NOT be flagged as an unplayed "Open" match
+		assertThat(page.locator(".badge-inactive:has-text('Open')")).hasCount(0);
 	}
 }

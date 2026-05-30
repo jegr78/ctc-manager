@@ -69,10 +69,11 @@ class MatchdayControllerTest {
         matchday.getMatches().add(match);
         matchdayRepository.save(matchday);
 
-        // when / then
+        // when / then — renders without NPE and still shows the one known score
         mockMvc.perform(get("/admin/matchdays/" + matchday.getId()))
                 .andExpect(status().isOk())
-                .andExpect(view().name("admin/matchday-detail"));
+                .andExpect(view().name("admin/matchday-detail"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(">50<")));
     }
 
     @Test
