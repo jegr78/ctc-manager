@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Race;
 import org.ctc.domain.model.RaceResult;
 import org.ctc.domain.model.Team;
@@ -39,7 +40,7 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 
 	public byte[] generateProvisional(Race race, int raceIndex) throws IOException {
 		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
-			throw new IllegalStateException("Walkover match has no provisional scores");
+			throw new BusinessRuleException("Walkover match has no provisional scores");
 		}
 		if (race.getResults().isEmpty()) {
 			throw new IllegalStateException("No results for this race");

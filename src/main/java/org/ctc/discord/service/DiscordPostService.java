@@ -164,6 +164,9 @@ public class DiscordPostService {
 	}
 
 	public boolean matchCanRenderResults(Match match) {
+		if (match.getWalkoverTeam() != null) {
+			return false;
+		}
 		List<Race> races = match.getRaces();
 		return !races.isEmpty() && races.stream().allMatch(r -> !r.getResults().isEmpty());
 	}
@@ -688,6 +691,9 @@ public class DiscordPostService {
 	}
 
 	public boolean matchHasProvisionalData(Match match) {
+		if (match.getWalkoverTeam() != null) {
+			return false;
+		}
 		List<Race> races = match.getRaces();
 		return !races.isEmpty() && races.stream().anyMatch(r -> !r.getResults().isEmpty());
 	}

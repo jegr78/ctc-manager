@@ -132,6 +132,22 @@ class DiscordPostServiceProvisionalScoresIT {
 	}
 
 	@Test
+	void matchHasProvisionalData_returnsFalseForWalkoverEvenWithResults() {
+		Match match = seedMatchWith3Races("HP-WO", wm.baseUrl() + "/webhooks/910/tok-hp3", 1);
+		match.setWalkoverTeam(match.getAwayTeam());
+		matchRepository.save(match);
+		assertThat(service.matchHasProvisionalData(match)).isFalse();
+	}
+
+	@Test
+	void matchCanRenderResults_returnsFalseForWalkoverEvenWhenAllRacesScored() {
+		Match match = seedMatchWith3Races("CR-WO", wm.baseUrl() + "/webhooks/910/tok-hp4", 3);
+		match.setWalkoverTeam(match.getHomeTeam());
+		matchRepository.save(match);
+		assertThat(service.matchCanRenderResults(match)).isFalse();
+	}
+
+	@Test
 	void given2of3RacesHaveResults_whenPostProvisionalScores_thenSingleMultipartPostWithTwoNamedAttachments()
 			throws Exception {
 		String webhookPath = "/webhooks/911/tok-ps1";
