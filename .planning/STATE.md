@@ -41,7 +41,7 @@ Progress: [██████████] 100%
 |-------|------|--------------|--------|
 | 106 | CI Pipeline Optimisation | CI-01..06 | Complete (CI-03/04/06 ✓; CI-01/02/05 open-verify) |
 | ~~107~~ | ~~Race/Match Prefill Defaults~~ | ~~RACE-01..03~~ | **Removed 2026-05-30** (RACE-01..03 dropped) |
-| 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Complete (LINEUP-01..04 ✓; REVIEW.md pending) |
+| 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Complete (LINEUP-01..04 ✓; 108-REVIEW.md resolved — WR-01 fixed) |
 | 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
 | 110 | Lobby Settings Graphic | LOBBY-01..05 | Blocked (external design handoff) |
 | 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Not started |
