@@ -20,7 +20,8 @@ findings:
   warning: 1
   info: 0
   total: 1
-status: issues_found
+status: resolved
+resolution: "WR-01 fixed in commit 1943e836 (--fix); clean verify -Pe2e green afterwards (1773 unit + 529 IT + 115 E2E, coverage met, SpotBugs 0)."
 ---
 
 # Phase 108: Code Review Report
@@ -28,6 +29,7 @@ status: issues_found
 **Reviewed:** 2026-05-30
 **Depth:** standard
 **Files Reviewed:** 11
+**Resolution:** WR-01 fixed (`1943e836`) — `winner` class now applies only to real-driver result rows, so an n/a points slot is rendered with only `empty-slot` (dimmed grey), matching the user-approved visual. Re-ran `./mvnw clean verify -Pe2e` → green.
 **Status:** 1 warning, no critical issues
 
 ## Summary
