@@ -183,6 +183,12 @@ public class MatchService {
 	}
 
 	@Transactional
+	public void updateMatchEdit(UUID id, MatchForm form) {
+		updateWalkover(id, form.getWalkoverTeamId());
+		updateDiscordFields(id, form);
+	}
+
+	@Transactional
 	public void updateWalkover(UUID matchId, UUID walkoverTeamId) {
 		Match match = findById(matchId);
 		if (walkoverTeamId == null) {

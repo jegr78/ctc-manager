@@ -125,12 +125,11 @@ public class MatchController {
 			return "admin/match-form-edit";
 		}
 		try {
-			matchService.updateWalkover(id, form.getWalkoverTeamId());
+			matchService.updateMatchEdit(id, form);
 		} catch (BusinessRuleException e) {
 			applyErrorFlash(redirectAttributes, e, "Walkover update");
 			return "redirect:/admin/matches/" + id;
 		}
-		matchService.updateDiscordFields(id, form);
 		redirectAttributes.addFlashAttribute("successMessage", "Match details updated.");
 		return "redirect:/admin/matches/" + id;
 	}
