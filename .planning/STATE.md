@@ -4,13 +4,13 @@ milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
 status: executing
 stopped_at: Phase 109 context gathered
-last_updated: "2026-05-30T17:22:59.070Z"
+last_updated: "2026-05-30T17:44:26.156Z"
 last_activity: 2026-05-30
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 12
-  completed_plans: 8
+  completed_plans: 9
   percent: 33
 ---
 
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 ## Current Position
 
 Phase: 109 (walkover-handling) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
 Last activity: 2026-05-30
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 75%
 
 ## Active Milestone
 
