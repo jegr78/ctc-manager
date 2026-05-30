@@ -35,6 +35,28 @@ class V17MigrationIT {
 		}
 	}
 
+	@Test
+	void givenH2WithV17Applied_whenInspectingWalkoverTeamIdIndex_thenCovered() throws Exception {
+		Set<String> indexedColumns = collectIndexedColumns("MATCHES");
+		assertThat(indexedColumns).contains("walkover_team_id");
+	}
+
+	private Set<String> collectIndexedColumns(String tableName) throws Exception {
+		Set<String> columns = new HashSet<>();
+		try (Connection c = dataSource.getConnection()) {
+			DatabaseMetaData md = c.getMetaData();
+			try (ResultSet rs = md.getIndexInfo(null, null, tableName, false, false)) {
+				while (rs.next()) {
+					String col = rs.getString("COLUMN_NAME");
+					if (col != null) {
+						columns.add(col.toLowerCase(Locale.ROOT));
+					}
+				}
+			}
+		}
+		return columns;
+	}
+
 	private Set<String> collectColumnNames(String tableName) throws Exception {
 		Set<String> columns = new HashSet<>();
 		try (Connection c = dataSource.getConnection()) {
