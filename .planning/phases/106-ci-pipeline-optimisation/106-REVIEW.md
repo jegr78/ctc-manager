@@ -14,7 +14,9 @@ findings:
   warning: 2
   info: 3
   total: 5
-status: issues_found
+warnings_resolved: 2
+status: resolved
+resolution: "WR-01 + WR-02 fixed in commit df50f03c (2026-05-30). Info items IN-01..03 accepted (no action)."
 ---
 
 # Phase 106: Code Review Report
@@ -58,7 +60,10 @@ Two WARNING-level gaps remain in the `changes` path-filter design, plus minor in
 
 ## Warnings
 
-### WR-01: `code` path-filter is not a complete superset — build-affecting files misclassified as non-code
+### WR-01: `code` path-filter is not a complete superset — build-affecting files misclassified as non-code  — ✅ RESOLVED (df50f03c)
+
+> **Resolved 2026-05-30:** the `code` filter was widened to include `lombok.config`, `config/**`, `rewrite.yml`, `.dockerignore`, and `mvnw.cmd` — restoring the T-106-01 safe-superset invariant. `actionlint` green.
+
 
 **File:** `.github/workflows/ci.yml:34-40`
 **Issue:** The `code` filter is `src/**`, `pom.xml`, `Dockerfile`, `.github/workflows/**`,
@@ -98,7 +103,10 @@ filter should be widened.
               - '.mvn/**'
 ```
 
-### WR-02: Stale `docker-build.log` artifact upload — references a file the new build step never creates
+### WR-02: Stale `docker-build.log` artifact upload — references a file the new build step never creates  — ✅ RESOLVED (df50f03c)
+
+> **Resolved 2026-05-30:** the `if: failure()` "Upload docker build log" step was removed (buildx no longer writes `/tmp/docker-build.log`; buildx logs remain in the failed step's own output). `actionlint` green.
+
 
 **File:** `.github/workflows/ci.yml:200-206`
 **Issue:** The "Build Docker image" step was rewritten from the old inline
