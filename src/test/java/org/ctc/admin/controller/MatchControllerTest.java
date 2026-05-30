@@ -2,6 +2,7 @@ package org.ctc.admin.controller;
 
 import org.ctc.TestHelper;
 import org.ctc.TestHelper.SeasonFixture;
+import org.ctc.domain.model.Match;
 import org.ctc.domain.repository.MatchRepository;
 import org.ctc.domain.repository.RaceRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -139,5 +140,84 @@ class MatchControllerTest {
 				// then
 				.andExpect(status().is3xxRedirection())
 				.andExpect(flash().attributeExists("errorMessage"));
+	}
+
+	@Test
+	void givenMatchEditForm_whenSaveEditWithWalkoverTeam_thenWalkoverPersisted() throws Exception {
+		// given
+		var matchId = fixture.match().getId();
+		var awayId = fixture.awayTeam().getId();
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/save-edit")
+						.param("id", matchId.toString())
+						.param("walkoverTeamId", awayId.toString()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/matches/" + matchId))
+				.andExpect(flash().attributeExists("successMessage"));
+
+		// then
+		var reloaded = matchRepository.findById(matchId).orElseThrow();
+		assertNotNull(reloaded.getWalkoverTeam());
+		assertEquals(awayId, reloaded.getWalkoverTeam().getId());
+	}
+
+	@Test
+	void givenByeMatch_whenSaveEditWithWalkoverTeam_thenErrorFlash() throws Exception {
+		// given — a bye match (no away team) cannot become a walkover
+		var byeMatch = new Match(fixture.matchday(), fixture.homeTeam(), null);
+		byeMatch.setBye(true);
+		var byeId = matchRepository.save(byeMatch).getId();
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + byeId + "/save-edit")
+						.param("id", byeId.toString())
+						.param("walkoverTeamId", fixture.homeTeam().getId().toString()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attributeExists("errorMessage"));
+
+		// then
+		var reloaded = matchRepository.findById(byeId).orElseThrow();
+		assertNull(reloaded.getWalkoverTeam());
+	}
+
+	@Test
+	void givenWalkoverMatch_whenSaveEditWithNullWalkoverTeam_thenWalkoverCleared() throws Exception {
+		// given — a match already marked as a walkover
+		var matchId = fixture.match().getId();
+		mockMvc.perform(post("/admin/matches/" + matchId + "/save-edit")
+						.param("id", matchId.toString())
+						.param("walkoverTeamId", fixture.awayTeam().getId().toString()))
+				.andExpect(flash().attributeExists("successMessage"));
+		assertNotNull(matchRepository.findById(matchId).orElseThrow().getWalkoverTeam());
+
+		// when — clear it
+		mockMvc.perform(post("/admin/matches/" + matchId + "/save-edit")
+						.param("id", matchId.toString())
+						.param("walkoverTeamId", ""))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attributeExists("successMessage"));
+
+		// then
+		assertNull(matchRepository.findById(matchId).orElseThrow().getWalkoverTeam());
+	}
+
+	@Test
+	void givenMatchEditFormWithUnrelatedTeam_whenSaveEditWithWalkoverTeam_thenErrorFlash() throws Exception {
+		// given — a third team that is neither home nor away of this match
+		var matchId = fixture.match().getId();
+		var unrelated = testHelper.createTeam("Test_Match Unrelated", "Test_MUR");
+		fixture.season().addTeam(unrelated);
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/save-edit")
+						.param("id", matchId.toString())
+						.param("walkoverTeamId", unrelated.getId().toString()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attributeExists("errorMessage"));
+
+		// then
+		var reloaded = matchRepository.findById(matchId).orElseThrow();
+		assertNull(reloaded.getWalkoverTeam());
 	}
 }
