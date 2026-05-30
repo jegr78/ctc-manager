@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
 status: executing
-stopped_at: Phase 108 context gathered
-last_updated: "2026-05-30T12:13:57.686Z"
-last_activity: 2026-05-30 -- Phase 108 planning complete
+stopped_at: Phase 108 complete (clean verify -Pe2e green)
+last_updated: "2026-05-30T13:05:00.000Z"
+last_activity: 2026-05-30 -- Phase 108 executed (LINEUP-01..04 closed)
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 7
-  completed_plans: 4
-  percent: 17
+  completed_plans: 7
+  percent: 33
 ---
 
 # Project State
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 106 complete (REVIEW.md present). Phase 107 removed after discuss — RACE-01..03 dropped. Next feature work is Phase 108 (Missing-Driver n/a Rendering).
+**Current focus:** Phase 108 complete (LINEUP-01..04 closed; clean verify -Pe2e green). Next feature work is Phase 109 (Walkover Handling) — but per "Code-Review Before New Phase", Phase 108 has no REVIEW.md yet.
 
 ## Current Position
 
-Phase: 106 of 111 (CI Pipeline Optimisation) — Complete (live-CI checkpoint approved). Phase 107 removed; next is Phase 108.
-Plan: 4/4 complete
-Status: Ready to execute
-Last activity: 2026-05-30 -- Phase 108 planning complete
+Phase: 108 of 111 (Missing-Driver n/a Rendering) — Complete. Next is Phase 109 (Walkover Handling).
+Plan: 3/3 complete (108-01, 108-02, 108-03)
+Status: Phase delivered; visual checkpoint approved; full build green
+Last activity: 2026-05-30 -- Phase 108 executed (LINEUP-01..04 closed)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 33%
 
 ## Active Milestone
 
@@ -41,7 +41,7 @@ Progress: [██░░░░░░░░] 20%
 |-------|------|--------------|--------|
 | 106 | CI Pipeline Optimisation | CI-01..06 | Complete (CI-03/04/06 ✓; CI-01/02/05 open-verify) |
 | ~~107~~ | ~~Race/Match Prefill Defaults~~ | ~~RACE-01..03~~ | **Removed 2026-05-30** (RACE-01..03 dropped) |
-| 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Not started |
+| 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Complete (LINEUP-01..04 ✓; REVIEW.md pending) |
 | 109 | Walkover Handling | WO-01..04 | Not started |
 | 110 | Lobby Settings Graphic | LOBBY-01..05 | Blocked (external design handoff) |
 | 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Not started |
@@ -105,10 +105,10 @@ Carried forward from v1.13/v1.14 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-05-30T11:36:37.389Z
+**Last session:** 2026-05-30T13:05:00.000Z
 
-**Stopped at:** Phase 108 context gathered
+**Stopped at:** Phase 108 complete (108-01..03 executed; visual checkpoint approved; clean verify -Pe2e green — 1773 unit + 529 IT + 115 E2E, coverage gate met, SpotBugs 0)
 
-**Next action:** `/gsd-discuss-phase 108` (Missing-Driver n/a Rendering — next feature phase). Phase 106 already has a REVIEW.md.
+**Next action:** `/gsd-code-review 108` (Phase 108 has no REVIEW.md — review before starting Phase 109 per "Code-Review Before New Phase"). Then `/gsd-discuss-phase 109` (Walkover Handling). Phase 106 already has a REVIEW.md.
 
 **Branch:** `gsd/v1.15-ci-and-race-defaults`

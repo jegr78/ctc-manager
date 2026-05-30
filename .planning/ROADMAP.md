@@ -214,7 +214,7 @@ See: milestones/v1.14-ROADMAP.md for full details
 
 - [x] **Phase 106: CI Pipeline Optimisation** - Path-aware step gating, caching improvements, E2E runtime reduction, flaky-test quarantine hardening. (CI-01..06) -- completed 2026-05-30 (CI-03/04/06 verified on live CI; CI-01/02/05 logic-complete, empirical proof tracked as in-milestone open-verify)
 - ~~**Phase 107: Race/Match Prefill Defaults**~~ — **REMOVED 2026-05-30**. RACE-01..03 dropped: scoring scheme and legs are already inherited via `SeasonPhase`, and Matchday has no scheduled date to inherit (no real re-entry problem without a schema change). Number kept as a gap per the integer-phase policy. See REQUIREMENTS.md "Out of Scope".
-- [ ] **Phase 108: Missing-Driver n/a Rendering** - Lineup, Scorecard/Results, and Provisional-Scores graphics render "n/a" for missing driver slots; scoring records 0 points. (LINEUP-01..04)
+- [x] **Phase 108: Missing-Driver n/a Rendering** - Lineup, Scorecard/Results, and Provisional-Scores graphics render "n/a" for missing driver slots; scoring records 0 points. (LINEUP-01..04)
 - [ ] **Phase 109: Walkover Handling** - Flyway V17 walkover flag, auto-win scoring, "w/o" label in standings and graphics, admin UI to mark walkover. (WO-01..04)
 - [ ] **Phase 110: Lobby Settings Graphic** - New LobbySettingsGraphicService (Carbon HUD, template-variable-driven), admin preview/download, Discord post type, template editor. (LOBBY-01..05)
 - [ ] **Phase 111: Log-Injection Remediation (CodeQL CWE-117)** - Close all 29 open CodeQL `java/log-injection` alerts via a central LogSanitizer (strips CR/LF + control chars) at each flagged call site; fix taint at source, no suppressions. (SEC-LOG-01..04)
@@ -257,9 +257,9 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
   3. The Provisional-Scores graphic is padded to 6 rows: if fewer than 6 drivers have results, the remaining rows appear with "n/a" instead of being omitted entirely (fixing the current inconsistency where the graphic simply renders no row at all).
   4. The scoring service records 0 points and no position for a missing driver, consistently across all matches — no controller or template computes a fallback value; the correct data is always written at save time.
 **Plans**: 3 plans
-- [ ] 108-01-PLAN.md — Central TEAM_DRIVERS constant; Lineup & Results padded to 6 rows with "n/a" + template guard migration (LINEUP-01, LINEUP-02)
-- [ ] 108-02-PLAN.md — Provisional-Scores padded to 6 rows with "n/a"/0 (fixes SC3 missing-row bug) (LINEUP-03)
-- [ ] 108-03-PLAN.md — Shared .empty-slot de-emphasis across all three graphics (visual checkpoint) + ScoringService <6-driver safety test + clean verify -Pe2e gate (LINEUP-01..04)
+- [x] 108-01-PLAN.md — Central TEAM_DRIVERS constant; Lineup & Results padded to 6 rows with "n/a" + template guard migration (LINEUP-01, LINEUP-02)
+- [x] 108-02-PLAN.md — Provisional-Scores padded to 6 rows with "n/a"/0 (fixes SC3 missing-row bug) (LINEUP-03)
+- [x] 108-03-PLAN.md — Shared .empty-slot de-emphasis across all three graphics (visual checkpoint) + ScoringService <6-driver safety test + clean verify -Pe2e gate (LINEUP-01..04)
 **Cross-phase risk (with Phase 109)**: Both this phase and Phase 109 (Walkover) modify Thymeleaf graphic templates. Phase 108 must complete and be verified before Phase 109 begins template changes, to avoid clobber on shared graphic files.
 **UI hint**: yes
 
