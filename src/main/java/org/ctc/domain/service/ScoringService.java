@@ -134,6 +134,9 @@ public class ScoringService {
 		if (race.isBye()) {
 			return;
 		}
+		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+			return;
+		}
 
 		if (race.getMatch() != null && race.getMatch().getHomeTeam() != null) {
 			Match match = race.getMatch();

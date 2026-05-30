@@ -463,6 +463,26 @@ class ScoringServiceTest {
 		}
 
 		@Test
+		void givenWalkoverMatchRaceWithResults_whenAggregateMatchScores_thenScoresRemainNull() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			match.setWalkoverTeam(awayTeam);
+			var race = createRace(match);
+			var driver = createDriver("d1");
+			var r1 = createResult(race, driver, 10);
+			race.setResults(List.of(r1));
+
+			// when
+			scoringService.aggregateMatchScores(race);
+
+			// then — walkover wins are awarded at standings read-time; aggregation must not write scores
+			assertNull(match.getHomeScore());
+			assertNull(match.getAwayScore());
+		}
+
+		@Test
 		void givenHomeTeamWithFewerThanSixDrivers_whenAggregateMatchScores_thenTotalsEqualSumOfRealDrivers() {
 			// given
 			var homeTeam = createTeam("Home");
