@@ -39,7 +39,7 @@ Progress: [██████████] 100%
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 106 | CI Pipeline Optimisation | CI-01..06 | Complete (CI-03/04/06 ✓; CI-01/02/05 open-verify) |
+| 106 | CI Pipeline Optimisation | CI-01..06 | Complete (CI-03/04/06 ✓; CI-05 ✓ verified; CI-01/02 ✓ config-sound) |
 | ~~107~~ | ~~Race/Match Prefill Defaults~~ | ~~RACE-01..03~~ | **Removed 2026-05-30** (RACE-01..03 dropped) |
 | 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Complete (LINEUP-01..04 ✓; 108-REVIEW.md resolved — WR-01 fixed) |
 | 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
@@ -100,8 +100,8 @@ Carried forward from v1.13/v1.14 close (unchanged):
 | uat (carry) | QUAL-02 `local`-profile MariaDB manual smoke | Post-deploy operator action |
 | uat (carry) | UX-01 driver-import error-category badge screenshots | Post-deploy operator action |
 | tech_debt | Existing match-channels under old Phase-94 naming scheme | Potential future admin bulk-rename action; two-scheme coexistence accepted |
-| open-verify (v1.15, in-milestone) | **CI-05** warm-cache empirical proof — Docker `CACHED` layers + Maven/Playwright cache hits on a 2nd code run, no cross-eviction | Observe on the next code run on the milestone branch; close before v1.15 milestone close (logic sound via isolated `scope=ctc-docker`) |
-| open-verify (v1.15, in-milestone) | **CI-01/CI-02** docs-only empirical proof — required checks `success` (not skipped) + CodeQL/MariaDB absent | Exercise on any docs-only commit/PR on the branch; close before v1.15 milestone close (logic sound: ungated checkout/uploads + paths-ignore) |
+| ✅ verified (2026-05-31) | **CI-05** warm-cache — CONFIRMED empirically: `docker-build` 0m20s/0m21s full-cache-hit runs + sublinear rebuilds (2–4 min vs ~6–10 min cold); `build-and-test` stable 18–20 min. See `docs/ci/v1.15-open-verify.md`. |
+| ✅ accepted config-sound (2026-05-31) | **CI-01/CI-02** docs-only — path filters verified correct by inspection; not empirically isolable on PR #132 because `pull_request` filters evaluate the cumulative base…head diff (which contains code). Manifests only on a wholly-docs-only PR. Throwaway PR deliberately skipped. See `docs/ci/v1.15-open-verify.md`. |
 
 ## Session Continuity
 
