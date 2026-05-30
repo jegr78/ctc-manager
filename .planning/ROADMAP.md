@@ -219,7 +219,87 @@ See: milestones/v1.14-ROADMAP.md for full details
 - [ ] **Phase 110: Lobby Settings Graphic** - New LobbySettingsGraphicService (Carbon HUD, template-variable-driven), admin preview/download, Discord post type, template editor. (LOBBY-01..05)
 - [ ] **Phase 111: Log-Injection Remediation (CodeQL CWE-117)** - Close all 29 open CodeQL `java/log-injection` alerts via a central LogSanitizer (strips CR/LF + control chars) at each flagged call site; fix taint at source, no suppressions. (SEC-LOG-01..04)
 
-See: milestones/v1.15-ROADMAP.md for full details
+### Phase 106: CI Pipeline Optimisation
+
+**Goal**: The CI pipeline runs expensive work only when code or build files actually changed; non-required workflows skip documentation-only commits; caches are warm on repeat runs; E2E runtime is below the 17:39 baseline; and no stable test is flaky without a root-cause fix.
+**Depends on**: Nothing (CI configuration only — no shared surface with application strands)
+**Requirements**: CI-01, CI-02, CI-03, CI-04, CI-05, CI-06
+**Success Criteria** (what must be TRUE):
+  1. A pull request that touches only `.planning/**`, root `*.md`, `docs/**` (excluding `docs/site/**`), or `.gitmessage` completes CI without running the Maven build, E2E tests, or Docker build — the required checks (`build-and-test`, `dockerfile-noble-pin-guard`, `docker-build`) still report a green status so the PR is not deadlocked.
+  2. A PR that touches both a planning-only file and a Java source file runs full CI, confirming the "code + docs" mixed commit still triggers all steps.
+  3. `codeql.yml` and `mariadb-migration-smoke.yml` are skipped entirely on documentation-only pushes (no yellow "skipped" status for required checks — only non-required workflows use `paths-ignore`).
+  4. The measured CI E2E step median drops below the current 17:39 baseline (concrete target confirmed at plan time; warm-cache Maven + Playwright browser hits are verifiably faster on repeat runs).
+  5. No test that was green before this phase is marked "flaky" without a root-cause fix committed — any stabilisation is achieved by fixing the test, not increasing timeouts or adding retry loops.
+**Plans**: TBD
+**Cross-phase risk**: None — this phase touches only `.github/workflows/*.yml` and `pom.xml` CI config; no Java source files are modified.
+
+### Phase 107: Race/Match Prefill Defaults
+
+**Goal**: The Race/Match create form is pre-populated with the scoring scheme, number of legs/races, and date/time that the parent season/matchday already defines, so an admin does not have to re-enter values that are already known.
+**Depends on**: Nothing (form pre-population is isolated to `RaceFormDataService` / `RaceController` / the create-race template; no schema change required)
+**Requirements**: RACE-01, RACE-02, RACE-03
+**Success Criteria** (what must be TRUE):
+  1. Opening the "Create Race/Match" form for a matchday whose season has a default scoring scheme shows that scheme pre-selected in the form dropdown — the admin does not have to pick it manually.
+  2. The form pre-fills the default number of legs/races from the season or matchday configuration — the admin sees a non-empty value and can accept or override it.
+  3. The form pre-fills date/time from the parent matchday's scheduled date/time where available — no blank date/time field on first open when a matchday date is known.
+  4. All pre-filled values remain editable — submitting the form with an overridden value saves the override, not the default.
+**Plans**: TBD
+
+### Phase 108: Missing-Driver n/a Rendering
+
+**Goal**: When a team fields fewer than 6 drivers, every affected graphic and the scoring engine handle the missing slots consistently — no blank rows, no null errors, and no runtime template workarounds. The fix is at the service and data layer, not in templates or controllers.
+**Depends on**: Phase 107 (clean code baseline; no shared file surface, but sequencing avoids any interference with the create-form changes)
+**Requirements**: LINEUP-01, LINEUP-02, LINEUP-03, LINEUP-04
+**Success Criteria** (what must be TRUE):
+  1. A Lineup graphic rendered for a team with fewer than 6 registered drivers shows exactly 6 rows — missing rows display "n/a" as the driver name, with appropriate empty-state styling (no blank gap, no null text).
+  2. The Scorecard/Results graphic renders "n/a" for any missing driver slot and shows 0 points for that slot — the graphic is self-consistent (no row is absent, no null pointer renders as an error).
+  3. The Provisional-Scores graphic is padded to 6 rows: if fewer than 6 drivers have results, the remaining rows appear with "n/a" instead of being omitted entirely (fixing the current inconsistency where the graphic simply renders no row at all).
+  4. The scoring service records 0 points and no position for a missing driver, consistently across all matches — no controller or template computes a fallback value; the correct data is always written at save time.
+**Plans**: TBD
+**Cross-phase risk (with Phase 109)**: Both this phase and Phase 109 (Walkover) modify Thymeleaf graphic templates. Phase 108 must complete and be verified before Phase 109 begins template changes, to avoid clobber on shared graphic files.
+**UI hint**: yes
+
+### Phase 109: Walkover Handling
+
+**Goal**: A team that does not compete at all in a match can be marked as a walkover; the opponent receives a full auto-win analogous to the existing `Match.bye` logic; a "w/o" label appears in standings and affected graphics; and the walkover state is persisted reliably via a new Flyway migration.
+**Depends on**: Phase 108 (graphic templates stabilised — Phase 109 adds the "w/o" label to the same templates that Phase 108 modified)
+**Requirements**: WO-01, WO-02, WO-03, WO-04
+**Success Criteria** (what must be TRUE):
+  1. An admin can mark a match as a walkover through the match admin UI — the walkover team is selected, and saving the form persists the state without errors.
+  2. After marking a match as a walkover, the opponent's standing is updated automatically with the full match points they would receive for an auto-win — no manual score entry is required.
+  3. The standings page and the relevant graphics display a visible "w/o" label next to the walkover team, distinguishing it from a normally played result.
+  4. The Flyway migration (V17) runs successfully on both H2 (test/dev) and MariaDB (local/prod), and `./mvnw clean verify -Pe2e` exits 0 with all existing tests still green.
+**Plans**: TBD
+**Cross-phase risk**: Phase 109 adds a `walkover` column via Flyway V17 — existing migrations V1-V16 are untouched. Template changes are additive (adding "w/o" label) on top of Phase 108's completed template set.
+**UI hint**: yes
+
+### Phase 110: Lobby Settings Graphic
+
+**Goal**: Admins can generate, preview, and post to Discord a new "Lobby Settings" graphic in the Carbon HUD style, driven entirely by template variables (no new data model, no Flyway migration). The graphic integrates into the existing graphic service, template editor, and Discord post infrastructure.
+**Depends on**: Phase 109 (all other milestone work complete; also depends on the external Claude-Design Lobby Settings HTML handoff being available before execution)
+**Requirements**: LOBBY-01, LOBBY-02, LOBBY-03, LOBBY-04, LOBBY-05
+**Success Criteria** (what must be TRUE):
+  1. An admin can open an admin preview page for the Lobby Settings graphic and see the rendered Carbon HUD output — the preview renders without errors and reflects the template-variable values currently set.
+  2. An admin can download the Lobby Settings graphic as a PNG from the admin UI — the download link works and produces a correctly named file.
+  3. The Lobby Settings graphic is available as a new Discord post type on the relevant admin page — clicking "Post Lobby Settings" sends the graphic to Discord via the existing integration, and the post appears in the expected channel without errors.
+  4. An admin can override the Lobby Settings Thymeleaf template via the template editor (the service `implements TemplateManageable`) — a custom template is loaded and rendered instead of the default.
+  5. `LobbySettingsGraphicService` is listed in the JaCoCo exclusion configuration consistent with all other Playwright-rendered graphic services — `./mvnw verify` coverage report confirms the service is excluded and the 82 % line gate is still met.
+**Plans**: TBD
+**Precondition note**: Phase 110 is blocked on the external Claude-Design Lobby Settings HTML/CSS handoff. Execution begins only after that handoff is delivered into `.planning/phases/110-lobby-settings-graphic/design-handoff/` (analogous to Phase 105 CARD-01 handoff pattern).
+**UI hint**: yes
+
+### Phase 111: Log-Injection Remediation (CodeQL CWE-117)
+
+**Goal**: All 29 open CodeQL `java/log-injection` alerts are closed by sanitizing user-controlled values at the log call sites — a central `LogSanitizer` utility (strips CR/LF + other control characters) wraps each tainted value, eliminating the taint path itself rather than suppressing the finding.
+**Depends on**: Phases 106-110 (runs last so it also captures any new log statements introduced by the feature phases; no shared file surface beyond the log lines themselves).
+**Requirements**: SEC-LOG-01, SEC-LOG-02, SEC-LOG-03, SEC-LOG-04
+**Success Criteria** (what must be TRUE):
+  1. A central `LogSanitizer` utility exists that strips CR/LF and other control characters from a value before it is logged, with a unit test pinning the stripping behaviour (newline, carriage-return, and control-char inputs).
+  2. All 29 flagged call sites — across `dataimport/` (DriverMatchingService×5, CsvImportService×4, DriverSheetImportService×2), `domain/service/` (SeasonPhaseService×2, SeasonManagementService×2, MatchdayService×2, TeamManagementService, StandingsViewService, ScoringService, PlayoffService, FileStorageService), `backup/` (BackupImportService, ImportLockedWriteRejector, BackupUploadExceptionHandler), and `admin/controller/` (TemplateEditorController×2, DriverSheetImportController, DriverController) — wrap their user-controlled log arguments through the sanitizer.
+  3. A CodeQL re-scan on the milestone branch reports 0 open `java/log-injection` alerts; no new `query-filters` suppressions were added to `.github/codeql/codeql-config.yml` for these findings (taint fixed at source, not dismissed).
+  4. `./mvnw clean verify -Pe2e` exits 0 — all existing tests green, SpotBugs/find-sec-bugs gate green, and the 82 % line-coverage gate still met.
+**Plans**: TBD
+**Cross-phase risk**: Touches existing log statements in 17 files that feature phases 107-110 may also edit; running last (after 106-110 are verified) avoids re-introduction of unsanitized log lines and clobber on shared service/controller files.
 
 </details>
 
