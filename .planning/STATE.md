@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
-status: executing
-stopped_at: Phase 108 complete (clean verify -Pe2e green)
-last_updated: "2026-05-30T13:05:00.000Z"
+status: Phase delivered; visual checkpoint approved; full build green
+stopped_at: Phase 109 context gathered
+last_updated: "2026-05-30T15:59:05.010Z"
 last_activity: 2026-05-30 -- Phase 108 executed (LINEUP-01..04 closed)
 progress:
   total_phases: 6
@@ -105,9 +105,9 @@ Carried forward from v1.13/v1.14 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-05-30T13:05:00.000Z
+**Last session:** 2026-05-30T15:59:04.985Z
 
-**Stopped at:** Phase 108 complete (108-01..03 executed; visual checkpoint approved; clean verify -Pe2e green — 1773 unit + 529 IT + 115 E2E, coverage gate met, SpotBugs 0)
+**Stopped at:** Phase 109 context gathered
 
 **Next action:** `/gsd-code-review 108` (Phase 108 has no REVIEW.md — review before starting Phase 109 per "Code-Review Before New Phase"). Then `/gsd-discuss-phase 109` (Walkover Handling). Phase 106 already has a REVIEW.md.
 
