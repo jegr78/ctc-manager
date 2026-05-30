@@ -3,8 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
 status: planning
-last_updated: "2026-05-30T00:00:00.000Z"
-last_activity: 2026-05-30
+stopped_at: Phase 106 context gathered
+last_updated: "2026-05-30T08:49:06.966Z"
+last_activity: 2026-05-30 — Phase 111 (Log-Injection Remediation) added to v1.15 (6 phases, 26/26 requirements mapped)
 progress:
   total_phases: 6
   completed_phases: 0
@@ -99,9 +100,9 @@ Carried forward from v1.13/v1.14 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-05-30 — v1.15 roadmap creation
+**Last session:** 2026-05-30T08:49:06.940Z
 
-**Stopped at:** ROADMAP.md + STATE.md written; REQUIREMENTS.md traceability populated. Roadmap ready for review.
+**Stopped at:** Phase 106 context gathered
 
 **Next action:** `/gsd-discuss-phase 106` or `/gsd-plan-phase 106` to begin CI Pipeline Optimisation.
 
