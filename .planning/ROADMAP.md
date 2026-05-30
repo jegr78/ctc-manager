@@ -210,10 +210,10 @@ See: milestones/v1.14-ROADMAP.md for full details
 </details>
 
 <details open>
-<summary>v1.15 CI Optimisation &amp; Race/Match Defaults (Phases 106-111) -- ACTIVE on <code>gsd/v1.15-ci-and-race-defaults</code></summary>
+<summary>v1.15 CI Optimisation &amp; Race/Match Defaults (Phases 106, 108-111 — 107 removed) -- ACTIVE on <code>gsd/v1.15-ci-and-race-defaults</code></summary>
 
 - [x] **Phase 106: CI Pipeline Optimisation** - Path-aware step gating, caching improvements, E2E runtime reduction, flaky-test quarantine hardening. (CI-01..06) -- completed 2026-05-30 (CI-03/04/06 verified on live CI; CI-01/02/05 logic-complete, empirical proof tracked as in-milestone open-verify)
-- [ ] **Phase 107: Race/Match Prefill Defaults** - Scoring scheme, leg count, and date/time prefilled from parent season/matchday on Race/Match create. (RACE-01..03)
+- ~~**Phase 107: Race/Match Prefill Defaults**~~ — **REMOVED 2026-05-30**. RACE-01..03 dropped: scoring scheme and legs are already inherited via `SeasonPhase`, and Matchday has no scheduled date to inherit (no real re-entry problem without a schema change). Number kept as a gap per the integer-phase policy. See REQUIREMENTS.md "Out of Scope".
 - [ ] **Phase 108: Missing-Driver n/a Rendering** - Lineup, Scorecard/Results, and Provisional-Scores graphics render "n/a" for missing driver slots; scoring records 0 points. (LINEUP-01..04)
 - [ ] **Phase 109: Walkover Handling** - Flyway V17 walkover flag, auto-win scoring, "w/o" label in standings and graphics, admin UI to mark walkover. (WO-01..04)
 - [ ] **Phase 110: Lobby Settings Graphic** - New LobbySettingsGraphicService (Carbon HUD, template-variable-driven), admin preview/download, Discord post type, template editor. (LOBBY-01..05)
@@ -237,22 +237,19 @@ See: milestones/v1.14-ROADMAP.md for full details
 - [x] 106-04-PLAN.md — live-PR verification checkpoint (CI-01..05) — approved 2026-05-30; build-and-test 14:55 < 17:39 baseline
 **Cross-phase risk**: None — this phase touches only `.github/workflows/*.yml` and `pom.xml` CI config; no Java source files are modified.
 
-### Phase 107: Race/Match Prefill Defaults
+### Phase 107: Race/Match Prefill Defaults — REMOVED 2026-05-30
 
-**Goal**: The Race/Match create form is pre-populated with the scoring scheme, number of legs/races, and date/time that the parent season/matchday already defines, so an admin does not have to re-enter values that are already known.
-**Depends on**: Nothing (form pre-population is isolated to `RaceFormDataService` / `RaceController` / the create-race template; no schema change required)
-**Requirements**: RACE-01, RACE-02, RACE-03
-**Success Criteria** (what must be TRUE):
-  1. Opening the "Create Race/Match" form for a matchday whose season has a default scoring scheme shows that scheme pre-selected in the form dropdown — the admin does not have to pick it manually.
-  2. The form pre-fills the default number of legs/races from the season or matchday configuration — the admin sees a non-empty value and can accept or override it.
-  3. The form pre-fills date/time from the parent matchday's scheduled date/time where available — no blank date/time field on first open when a matchday date is known.
-  4. All pre-filled values remain editable — submitting the form with an overridden value saves the override, not the default.
-**Plans**: TBD
+Removed during the Phase 107 discuss. The codebase scout showed the three "prefill" targets do not correspond to a real re-entry problem in the current data model:
+- Scoring scheme is already inherited automatically via `Matchday → SeasonPhase → RaceScoring` — no create-form dropdown to pre-select, no per-race override field.
+- `legs` is a `SeasonPhase` setting (default 1); a Race *is* a single leg — no legs field on the create form.
+- Matchday has no scheduled date/time (only `pickDeadline` + a `scheduledWeekend` label) — no source to inherit date/time from without a schema change, which the roadmap excluded.
+
+RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The phase number 107 is left as a gap (integer-phase policy: no insertions, no reset, no renumbering). v1.15 now delivers 5 phases: 106, 108, 109, 110, 111.
 
 ### Phase 108: Missing-Driver n/a Rendering
 
 **Goal**: When a team fields fewer than 6 drivers, every affected graphic and the scoring engine handle the missing slots consistently — no blank rows, no null errors, and no runtime template workarounds. The fix is at the service and data layer, not in templates or controllers.
-**Depends on**: Phase 107 (clean code baseline; no shared file surface, but sequencing avoids any interference with the create-form changes)
+**Depends on**: Nothing (graphic/scoring changes; independent of the CI-only Phase 106. The former dependency on Phase 107 is void — Phase 107 was removed.)
 **Requirements**: LINEUP-01, LINEUP-02, LINEUP-03, LINEUP-04
 **Success Criteria** (what must be TRUE):
   1. A Lineup graphic rendered for a team with fewer than 6 registered drivers shows exactly 6 rows — missing rows display "n/a" as the driver name, with appropriate empty-state styling (no blank gap, no null text).
@@ -295,7 +292,7 @@ See: milestones/v1.14-ROADMAP.md for full details
 ### Phase 111: Log-Injection Remediation (CodeQL CWE-117)
 
 **Goal**: All 29 open CodeQL `java/log-injection` alerts are closed by sanitizing user-controlled values at the log call sites — a central `LogSanitizer` utility (strips CR/LF + other control characters) wraps each tainted value, eliminating the taint path itself rather than suppressing the finding.
-**Depends on**: Phases 106-110 (runs last so it also captures any new log statements introduced by the feature phases; no shared file surface beyond the log lines themselves).
+**Depends on**: Phases 106, 108-110 (runs last so it also captures any new log statements introduced by the feature phases; no shared file surface beyond the log lines themselves). Phase 107 removed.
 **Requirements**: SEC-LOG-01, SEC-LOG-02, SEC-LOG-03, SEC-LOG-04
 **Success Criteria** (what must be TRUE):
   1. A central `LogSanitizer` utility exists that strips CR/LF and other control characters from a value before it is logged, with a unit test pinning the stripping behaviour (newline, carriage-return, and control-char inputs).
@@ -303,7 +300,7 @@ See: milestones/v1.14-ROADMAP.md for full details
   3. A CodeQL re-scan on the milestone branch reports 0 open `java/log-injection` alerts; no new `query-filters` suppressions were added to `.github/codeql/codeql-config.yml` for these findings (taint fixed at source, not dismissed).
   4. `./mvnw clean verify -Pe2e` exits 0 — all existing tests green, SpotBugs/find-sec-bugs gate green, and the 82 % line-coverage gate still met.
 **Plans**: TBD
-**Cross-phase risk**: Touches existing log statements in 17 files that feature phases 107-110 may also edit; running last (after 106-110 are verified) avoids re-introduction of unsanitized log lines and clobber on shared service/controller files.
+**Cross-phase risk**: Touches existing log statements in 17 files that feature phases 108-110 may also edit; running last (after 106, 108-110 are verified) avoids re-introduction of unsanitized log lines and clobber on shared service/controller files.
 
 </details>
 

@@ -16,11 +16,15 @@ Requirements for the v1.15 milestone. Each maps to roadmap phases.
 - [ ] **CI-05**: Build caching improved (Maven / Playwright browser / Docker layer) for faster warm runs.
 - [ ] **CI-06**: Flaky-test rerun reduction / quarantine extension; unstable tests stabilised at root cause (no symptom hotfixes — see CLAUDE.md "No Flaky Dismissal").
 
-### RACE — Race/Match Prefill Defaults
+### RACE — Race/Match Prefill Defaults (DROPPED 2026-05-30)
 
-- [ ] **RACE-01**: The Race/Match create form prefills the scoring scheme inherited from the season/matchday.
-- [ ] **RACE-02**: The Race/Match create form prefills the default number of legs/races.
-- [ ] **RACE-03**: The Race/Match create form prefills date/time inherited from the matchday.
+Removed after the Phase 107 discussion. The codebase scout showed none of the three "prefill" targets maps to a real re-entry problem in the current data model:
+
+- ~~**RACE-01**: scoring scheme prefill~~ — scoring is already inherited automatically via `Matchday → SeasonPhase → RaceScoring`. There is no scoring dropdown on the create form to pre-select, and no per-race override field. Adding one would mean a new `Race.raceScoring` field + scoring-engine change — out of scope.
+- ~~**RACE-02**: legs/races prefill~~ — `legs` is a `SeasonPhase` setting (default 1); a Race *is* a single leg. There is no legs field on the Race or Match create form.
+- ~~**RACE-03**: date/time prefill from matchday~~ — Matchday has no scheduled date/time field (only `pickDeadline` and a `scheduledWeekend` label string). There is no source to inherit from without a schema change, which the roadmap explicitly excluded.
+
+Phase 107 was removed from the v1.15 roadmap (user decision 2026-05-30: drop permanently, not backlog).
 
 ### LINEUP — Missing-Driver Handling
 
@@ -70,6 +74,7 @@ Explicitly excluded for v1.15 to prevent scope creep.
 | Branch-protection reconfiguration (CI approach B: single aggregation gate) | User chose approach A+C — required-check contract stays intact, no branch-protection change. |
 | Walkover as a fully separate model (dedicated points config, forfeit reasons) | Reuse the existing `bye` semantics; a richer walkover model is out of scope. |
 | E2E runtime: hard sub-target guarantee | CI-04 targets "below 17:39"; a specific number is set at plan time, not pre-committed here. |
+| Race/Match create-form prefill (RACE-01..03) | Dropped after the Phase 107 discuss (2026-05-30): scoring scheme and legs are already inherited via `SeasonPhase`; Matchday has no scheduled date to inherit. No real re-entry problem exists without a schema change. Phase 107 removed from v1.15. |
 
 ## Traceability
 
@@ -81,9 +86,9 @@ Explicitly excluded for v1.15 to prevent scope creep.
 | CI-04 | Phase 106 | Pending |
 | CI-05 | Phase 106 | Pending |
 | CI-06 | Phase 106 | Pending |
-| RACE-01 | Phase 107 | Pending |
-| RACE-02 | Phase 107 | Pending |
-| RACE-03 | Phase 107 | Pending |
+| RACE-01 | — (Phase 107 removed) | Dropped 2026-05-30 |
+| RACE-02 | — (Phase 107 removed) | Dropped 2026-05-30 |
+| RACE-03 | — (Phase 107 removed) | Dropped 2026-05-30 |
 | LINEUP-01 | Phase 108 | Pending |
 | LINEUP-02 | Phase 108 | Pending |
 | LINEUP-03 | Phase 108 | Pending |

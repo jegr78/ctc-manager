@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
 status: executing
-stopped_at: Phase 106 complete (Wave 2 live-CI checkpoint approved)
-last_updated: "2026-05-30T09:55:00.000Z"
-last_activity: 2026-05-30 -- Phase 106 executed (4 plans) and verified on live CI
+stopped_at: Phase 107 removed after discuss (RACE-01..03 dropped); v1.15 now 5 phases
+last_updated: "2026-05-30T10:30:00.000Z"
+last_activity: 2026-05-30 -- Phase 107 discuss concluded "remove phase"; roadmap/requirements updated
 progress:
-  total_phases: 6
+  total_phases: 5
   completed_phases: 1
   total_plans: 4
   completed_plans: 4
-  percent: 17
+  percent: 20
 ---
 
 # Project State
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 106 complete — ready for `/gsd-code-review 106` (no REVIEW.md yet), then `/gsd-discuss-phase 107`.
+**Current focus:** Phase 106 complete (REVIEW.md present). Phase 107 removed after discuss — RACE-01..03 dropped. Next feature work is Phase 108 (Missing-Driver n/a Rendering).
 
 ## Current Position
 
-Phase: 106 of 111 (CI Pipeline Optimisation) — Complete (live-CI checkpoint approved)
+Phase: 106 of 111 (CI Pipeline Optimisation) — Complete (live-CI checkpoint approved). Phase 107 removed; next is Phase 108.
 Plan: 4/4 complete
 Status: Phase done; 2 open verification items tracked below (CI-05 warm-cache, CI-01/CI-02 docs-only)
-Last activity: 2026-05-30 -- Phase 106 executed and verified on live CI run 26680554446
+Last activity: 2026-05-30 -- Phase 107 discuss → removed (RACE-01..03 dropped); roadmap/requirements updated
 
-Progress: [██░░░░░░░░] 17%
+Progress: [██░░░░░░░░] 20%
 
 ## Active Milestone
 
@@ -40,7 +40,7 @@ Progress: [██░░░░░░░░] 17%
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
 | 106 | CI Pipeline Optimisation | CI-01..06 | Complete (CI-03/04/06 ✓; CI-01/02/05 open-verify) |
-| 107 | Race/Match Prefill Defaults | RACE-01..03 | Not started |
+| ~~107~~ | ~~Race/Match Prefill Defaults~~ | ~~RACE-01..03~~ | **Removed 2026-05-30** (RACE-01..03 dropped) |
 | 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Not started |
 | 109 | Walkover Handling | WO-01..04 | Not started |
 | 110 | Lobby Settings Graphic | LOBBY-01..05 | Blocked (external design handoff) |
@@ -70,20 +70,22 @@ Roadmap-level decisions for v1.15 (2026-05-30):
 - **LOBBY last + external-handoff gate (D-Lobby-Blocked)** — LOBBY-01..05 are blocked on the Claude-Design Lobby Settings HTML handoff. Phase 110 is explicitly labelled as requiring the handoff before execution begins (same pattern as Phase 105 CARD-01 in v1.14).
 - **WO reuses bye semantics (D-WO-Bye-Analogy)** — Per the out-of-scope table in REQUIREMENTS.md, a richer walkover model (dedicated points config, forfeit reasons) is out of scope; the implementation mirrors `Match.bye` auto-win logic.
 - **SEC-LOG last + source-fix (D-LogInjection-Last, 2026-05-30)** — Log-injection remediation runs as Phase 111 (after 106-110) so it also captures any log statements added by the feature phases. Strategy is per-callsite sanitization via a central `LogSanitizer` (strips CR/LF + control chars), fixing the CodeQL taint path at source rather than adding `query-filters` suppressions.
+- **Phase 107 removed — RACE-01..03 dropped (D-Race-Drop, 2026-05-30)** — The Phase 107 discuss surfaced that the three "prefill" targets do not map to a real re-entry problem in the current data model: scoring scheme is already inherited via `Matchday → SeasonPhase → RaceScoring` (no create-form dropdown, no per-race override field); `legs` is a `SeasonPhase` setting and a Race *is* a single leg (no legs field); Matchday has no scheduled date/time to inherit from (only `pickDeadline` + a `scheduledWeekend` label). User decision: remove Phase 107 entirely and drop RACE-01..03 permanently (not backlog). v1.15 now delivers 5 phases (106, 108, 109, 110, 111). Phase number 107 left as a gap per the integer-phase policy.
 
 ### Blockers/Concerns
 
-- Phase 110 (Lobby Settings) is blocked on external Claude-Design Lobby Settings HTML/CSS handoff. Phases 106-109 are unblocked and can proceed in order.
+- Phase 110 (Lobby Settings) is blocked on external Claude-Design Lobby Settings HTML/CSS handoff. Phases 108-109 are unblocked and can proceed in order.
 
 ### Phase Numbering
 
-Last phase shipped: **105** (v1.14 Carbon HUD Graphics Redesign). v1.15 spans phases **106-111** (integer phases, no insertions, no reset).
+Last phase shipped: **105** (v1.14 Carbon HUD Graphics Redesign). v1.15 spans phases **106-111** (integer phases, no insertions, no reset). **107 removed 2026-05-30** — number left as a gap (no renumbering); active phases are 106, 108, 109, 110, 111.
 
 ### Roadmap Evolution
 
 - 2026-05-29: v1.14 shipped (PR #131 squash-merged to master; release CI tagged v1.14.0).
 - 2026-05-30: v1.15 milestone started; REQUIREMENTS.md defined (22 requirements across CI/RACE/LINEUP/WO/LOBBY); ROADMAP.md created (5 phases 106-110, 22/22 coverage).
 - 2026-05-30: Phase 111 (Log-Injection Remediation, CodeQL CWE-117) added at end of v1.15 — 29 open `java/log-injection` alerts discovered in GitHub code scanning; SEC-LOG-01..04 added (now 6 phases, 26/26 coverage). Strategy: per-callsite sanitization via central `LogSanitizer` (user decision 2026-05-30).
+- 2026-05-30: Phase 107 (Race/Match Prefill Defaults) **removed** during discuss — RACE-01..03 dropped permanently (data-model mismatch: scoring/legs already inherited via `SeasonPhase`, no Matchday date to inherit). v1.15 now 5 phases (106, 108-111), 23/23 coverage on the remaining requirements.
 
 ## Deferred Items
 
@@ -102,10 +104,10 @@ Carried forward from v1.13/v1.14 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-05-30T09:55:00.000Z
+**Last session:** 2026-05-30T10:30:00.000Z
 
-**Stopped at:** Phase 106 complete (Wave 2 live-CI checkpoint approved; run 26680554446 green, build-and-test 14:55 < 17:39)
+**Stopped at:** Phase 107 discuss → phase removed; RACE-01..03 dropped; ROADMAP.md / REQUIREMENTS.md / STATE.md updated. v1.15 now 5 phases (106, 108-111).
 
-**Next action:** `/gsd-code-review 106` (phase has no REVIEW.md yet), then `/gsd-discuss-phase 107`.
+**Next action:** `/gsd-discuss-phase 108` (Missing-Driver n/a Rendering — next feature phase). Phase 106 already has a REVIEW.md.
 
 **Branch:** `gsd/v1.15-ci-and-race-defaults`
