@@ -37,19 +37,24 @@ commit: dd07fe89
   (mutual-exclusivity respected); gate-step + `if:` unchanged.
 - `git diff --quiet .github/workflows/mariadb-migration-smoke.yml` → UNCHANGED-OK.
 
-## Deviations
+## Deviations / Follow-up
 
-- **Pre-existing actionlint finding on the sacred file (not introduced here):**
-  `actionlint .github/workflows/mariadb-migration-smoke.yml` exits 1 with a
-  shellcheck SC2086 nit at line 74 ("Double quote to prevent globbing"). The file is
-  byte-identical to its committed state (`UNCHANGED-OK`), so this predates Phase 106
-  and is surfaced only because the locally-installed actionlint (1.7.12) bundles
-  shellcheck. The file is marked "sacred — do NOT modify the services block or
-  verification steps" (CLAUDE.md memory + file header), so it is left unchanged. The
-  plan's "actionlint exits 0" criterion is interpreted per its stated intent ("confirm
-  it remains valid and was not accidentally altered") — accidental alteration is ruled
-  out by the unchanged diff. Fixing the SC2086 nit, if desired, belongs in a dedicated
-  task that re-baselines the sacred file, not this docs-skip plan.
+- **Pre-existing shellcheck SC2086 surfaced + fixed by user agreement (separate commit).**
+  During the Task 2 actionlint verification, the locally-installed actionlint (1.7.12,
+  bundled shellcheck — GitHub CI runs no shellcheck over this file) flagged a
+  **pre-existing** SC2086 (info) at the app-start step: `>> $GITHUB_ENV` unquoted. The
+  file was byte-identical at that point (`UNCHANGED-OK`), so this predated Phase 106.
+  The file is marked "sacred", so rather than touch it unilaterally I surfaced the
+  finding and the proposed fix to the user. The user approved fixing it now as a
+  standalone commit (not folded into the docs-skip plan). Fix applied: quote the
+  redirect target → `>> "$GITHUB_ENV"` (no behavioural change; GITHUB_ENV is a
+  GitHub-provided path without spaces/globs). The services block and Flyway
+  verification steps remain untouched. After the fix,
+  `actionlint .github/workflows/mariadb-migration-smoke.yml` exits 0.
+  Commit: `5c32b557` (`ci: quote $GITHUB_ENV in mariadb-migration-smoke (shellcheck SC2086)`).
+  Note: this commit edits the file Task 2 declared a no-op — the D-06/paths no-op
+  verdict still stands (no `paths`/`paths-ignore` change was made); only the unrelated
+  SC2086 style nit was corrected.
 
 ## Notes
 
