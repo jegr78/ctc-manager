@@ -122,11 +122,9 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		ctx.setVariable("awayOverallPtsQuali", awayOverallPtsQuali);
 		ctx.setVariable("awayOverallPtsFl", awayOverallPtsFl);
 		ctx.setVariable("awayOverallTotal", awayOverallTotal);
-		var walkoverTeam = race.getMatch() != null ? race.getMatch().getWalkoverTeam() : null;
-		boolean homeIsWalkover = walkoverTeam != null && walkoverTeam.getId().equals(homeTeam.getId());
-		boolean awayIsWalkover = walkoverTeam != null && !homeIsWalkover;
-		ctx.setVariable("homeIsWalkover", homeIsWalkover);
-		ctx.setVariable("awayIsWalkover", awayIsWalkover);
+		var match = race.getMatch();
+		ctx.setVariable("homeIsWalkover", match != null && match.isWalkoverFor(homeTeam));
+		ctx.setVariable("awayIsWalkover", match != null && match.isWalkoverFor(awayTeam));
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 		return ctx;

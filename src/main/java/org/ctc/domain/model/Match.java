@@ -81,4 +81,8 @@ public class Match extends BaseEntity {
 		this.homeTeam = homeTeam;
 		this.awayTeam = awayTeam;
 	}
+
+	public boolean isWalkoverFor(Team team) {
+		return walkoverTeam != null && team != null && walkoverTeam.getId().equals(team.getId());
+	}
 }

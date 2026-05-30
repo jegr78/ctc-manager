@@ -72,11 +72,8 @@ public class MatchResultsGraphicService extends AbstractGraphicService implement
 		ctx.setVariable("awayTotal", awayTotal);
 		ctx.setVariable("homeIsWinner", homeTotal > awayTotal);
 		ctx.setVariable("awayIsWinner", awayTotal > homeTotal);
-		boolean homeIsWalkover = match.getWalkoverTeam() != null
-				&& match.getWalkoverTeam().getId().equals(homeTeam.getId());
-		boolean awayIsWalkover = match.getWalkoverTeam() != null && !homeIsWalkover;
-		ctx.setVariable("homeIsWalkover", homeIsWalkover);
-		ctx.setVariable("awayIsWalkover", awayIsWalkover);
+		ctx.setVariable("homeIsWalkover", match.isWalkoverFor(homeTeam));
+		ctx.setVariable("awayIsWalkover", match.isWalkoverFor(awayTeam));
 		ctx.setVariable("raceRows", raceRows);
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));

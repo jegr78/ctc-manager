@@ -50,12 +50,13 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 
 		var season = race.getMatchday().getSeason();
 
-		var walkoverTeam = race.getMatch() != null ? race.getMatch().getWalkoverTeam() : null;
-		boolean homeIsWalkover = walkoverTeam != null && walkoverTeam.getId().equals(homeTeam.getId());
-		boolean awayIsWalkover = walkoverTeam != null && !homeIsWalkover;
+		var match = race.getMatch();
+		boolean homeIsWalkover = match != null && match.isWalkoverFor(homeTeam);
+		boolean awayIsWalkover = match != null && match.isWalkoverFor(awayTeam);
+		boolean isWalkover = match != null && match.getWalkoverTeam() != null;
 
 		var lineups = raceLineupRepository.findByRaceId(race.getId());
-		if (lineups.isEmpty() && walkoverTeam == null) {
+		if (lineups.isEmpty() && !isWalkover) {
 			throw new IllegalStateException("No lineup entries for this race");
 		}
 		var pairings = buildPairings(lineups, homeTeam, awayTeam);
