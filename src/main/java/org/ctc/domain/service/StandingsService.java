@@ -30,6 +30,8 @@ public class StandingsService {
 	private final RaceResultRepository raceResultRepository;
 	private final SeasonTeamRepository seasonTeamRepository;
 
+	private static final int WALKOVER_TEAM_POSITIONS = 6;
+
 	public MatchdayStalenessSnapshot snapshotMatchdayStaleness(Matchday matchday,
 	                                                          DiscordPost matchdayResultsPost,
 	                                                          DiscordPost powerRankingsPost,
@@ -142,6 +144,7 @@ public class StandingsService {
 	public List<TeamStanding> calculateStandings(UUID phaseId, UUID groupId) {
 		var phase = seasonPhaseService.findById(phaseId);
 		var matchScoring = phase.getMatchScoring();
+		var raceScoring = phase.getRaceScoring();
 		List<Match> matches = matchRepository.findByMatchdayPhaseId(phaseId);
 
 		// Source teams from PhaseTeam, optionally filtered by groupId
@@ -168,7 +171,7 @@ public class StandingsService {
 				: matches;
 
 		for (Match match : filteredMatches) {
-			processMatch(match, standingsMap, matchScoring, successionMap);
+			processMatch(match, standingsMap, matchScoring, raceScoring, successionMap);
 		}
 
 		List<TeamStanding> standings = new ArrayList<>(standingsMap.values());
@@ -328,7 +331,7 @@ public class StandingsService {
 	}
 
 	private void processMatch(Match match, Map<UUID, TeamStanding> standingsMap,
-	                          MatchScoring matchScoring, Map<UUID, UUID> successionMap) {
+	                          MatchScoring matchScoring, RaceScoring raceScoring, Map<UUID, UUID> successionMap) {
 		if (match.isBye()) {
 			UUID homeId = resolveTeamId(match.getHomeTeam().getId(), successionMap);
 			var homeStanding = standingsMap.get(homeId);
@@ -347,15 +350,18 @@ public class StandingsService {
 			UUID opponentId = forfeiterRaw.equals(homeRaw)
 					? (awayRaw != null ? resolveTeamId(awayRaw, successionMap) : null)
 					: resolveTeamId(homeRaw, successionMap);
+			int walkoverScore = fullTeamRaceScore(raceScoring);
 			var forfeiterStanding = standingsMap.get(forfeiterId);
 			if (forfeiterStanding != null) {
 				forfeiterStanding.addLoss();
 				forfeiterStanding.setHasWalkover(true);
+				forfeiterStanding.addPointsAgainst(walkoverScore);
 			}
 			var opponentStanding = opponentId != null ? standingsMap.get(opponentId) : null;
 			if (opponentStanding != null) {
 				opponentStanding.addWin();
 				opponentStanding.addMatchPoints(matchScoring.getPointsWin());
+				opponentStanding.addPointsFor(walkoverScore);
 			}
 			return;
 		}
@@ -410,6 +416,24 @@ public class StandingsService {
 
 	private UUID resolveTeamId(UUID teamId, Map<UUID, UUID> successionMap) {
 		return successionMap.getOrDefault(teamId, teamId);
+	}
+
+	/**
+	 * Full race score a walkover winner is credited as a team total: the race points for the
+	 * top {@link #WALKOVER_TEAM_POSITIONS} finishing positions its drivers would sweep, plus all
+	 * qualifying points, plus the fastest-lap bonus — never per driver (no driver-ranking impact).
+	 */
+	private int fullTeamRaceScore(RaceScoring raceScoring) {
+		if (raceScoring == null) {
+			return 0;
+		}
+		int[] racePoints = raceScoring.getRacePointsArray();
+		int racePart = 0;
+		for (int i = 0; i < racePoints.length && i < WALKOVER_TEAM_POSITIONS; i++) {
+			racePart += racePoints[i];
+		}
+		int qualiPart = Arrays.stream(raceScoring.getQualiPointsArray()).sum();
+		return racePart + qualiPart + raceScoring.getFastestLapPoints();
 	}
 
 	public static class TeamStanding {

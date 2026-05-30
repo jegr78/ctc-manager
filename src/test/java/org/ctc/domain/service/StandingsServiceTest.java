@@ -254,6 +254,11 @@ class StandingsServiceTest {
             assertEquals(3, opponent.getPoints());
             assertEquals(1, forfeiter.getLosses());
             assertEquals(0, forfeiter.getPoints());
+            // winner is credited the full team race score (P1-6 + all quali + FL), forfeiter gets it against
+            assertEquals(89, opponent.getPointsFor());
+            assertEquals(89, opponent.getPointDifference());
+            assertEquals(89, forfeiter.getPointsAgainst());
+            assertEquals(-89, forfeiter.getPointDifference());
         }
 
         @Test
@@ -301,13 +306,14 @@ class StandingsServiceTest {
             var forfeiter = findStanding(standings, tnr);
             assertEquals(1, opponent.getWins());
             assertEquals(1, forfeiter.getLosses());
-            assertEquals(0, opponent.getPointDifference());
-            assertEquals(0, forfeiter.getPointDifference());
+            // stored 70:50 is ignored; the walkover credits the full team race score (89:0), not the score
+            assertEquals(89, opponent.getPointDifference());
+            assertEquals(-89, forfeiter.getPointDifference());
         }
 
         @Test
-        void givenWalkoverMatch_whenCalculateStandings_thenNoPointDifferenceRecorded() {
-            // given
+        void givenWalkoverMatch_whenCalculateStandings_thenWinnerGetsFullTeamRaceScore() {
+            // given — away (p1r) forfeits; home (tnr) is the opponent
             var matchday = new Matchday(regularPhase, "Matchday1", 1);
             var match = new Match(matchday, tnr, p1r);
             match.setId(UUID.randomUUID());
@@ -321,9 +327,15 @@ class StandingsServiceTest {
             // when
             var standings = standingsService.calculateStandings(regularPhase.getId(), null);
 
-            // then
-            assertEquals(0, findStanding(standings, tnr).getPointDifference());
-            assertEquals(0, findStanding(standings, p1r).getPointDifference());
+            // then — "CTC Standard": P1-6 (20+17+14+12+10+8=81) + all quali (3+2+1=6) + FL (2) = 89
+            var opponent = findStanding(standings, tnr);
+            var forfeiter = findStanding(standings, p1r);
+            assertEquals(89, opponent.getPointsFor());
+            assertEquals(0, opponent.getPointsAgainst());
+            assertEquals(89, opponent.getPointDifference());
+            assertEquals(0, forfeiter.getPointsFor());
+            assertEquals(89, forfeiter.getPointsAgainst());
+            assertEquals(-89, forfeiter.getPointDifference());
         }
 
         @Test
