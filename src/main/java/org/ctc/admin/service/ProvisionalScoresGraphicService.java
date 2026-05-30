@@ -38,6 +38,9 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 	}
 
 	public byte[] generateProvisional(Race race, int raceIndex) throws IOException {
+		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+			throw new IllegalStateException("Walkover match has no provisional scores");
+		}
 		if (race.getResults().isEmpty()) {
 			throw new IllegalStateException("No results for this race");
 		}
@@ -118,6 +121,11 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		ctx.setVariable("awayOverallPtsQuali", awayOverallPtsQuali);
 		ctx.setVariable("awayOverallPtsFl", awayOverallPtsFl);
 		ctx.setVariable("awayOverallTotal", awayOverallTotal);
+		var walkoverTeam = race.getMatch() != null ? race.getMatch().getWalkoverTeam() : null;
+		boolean homeIsWalkover = walkoverTeam != null && walkoverTeam.getId().equals(homeTeam.getId());
+		boolean awayIsWalkover = walkoverTeam != null && !homeIsWalkover;
+		ctx.setVariable("homeIsWalkover", homeIsWalkover);
+		ctx.setVariable("awayIsWalkover", awayIsWalkover);
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 		return ctx;
