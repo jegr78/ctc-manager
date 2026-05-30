@@ -855,17 +855,19 @@ Step 2.6: SKIPPED (no new external dependencies — only existing H2/MariaDB, Ma
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Lineup graphic for walkover match**
    - What we know: `LineupGraphicService` throws if no lineup entries exist, and walkover matches have no lineup
    - What's unclear: Is there a lineup post button exposed on walkover match detail that would trigger this?
    - Recommendation: Add a service-level walkover guard in `generateLineup()` (render the forfeiter side with a "w/o" placeholder), AND check whether `matchHasCompleteLineups()` would gate the button
+   - RESOLVED: Add a walkover guard in `generateLineup()` before the `lineups.isEmpty()` throw; covered by plan 109-05 Task 1.
 
 2. **Provisional graphic for walkover match**
    - What we know: `ProvisionalScoresGraphicService.generateProvisional()` throws if results empty; `matchHasProvisionalData()` gates the UI button
    - What's unclear: Whether the "Re-Post Provisional" button would still appear if a previous provisional was posted before walkover was set
    - Recommendation: Planner should verify whether `provisionalPost != null` could be true for a walkover match and whether re-posting would throw; if so, add a walkover guard to `generateProvisional()`
+   - RESOLVED: Add a walkover guard in `generateProvisional()` with a clear message; covered by plan 109-05 Task 2.
 
 ---
 
