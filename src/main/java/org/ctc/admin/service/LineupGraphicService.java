@@ -50,8 +50,12 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 
 		var season = race.getMatchday().getSeason();
 
+		var walkoverTeam = race.getMatch() != null ? race.getMatch().getWalkoverTeam() : null;
+		boolean homeIsWalkover = walkoverTeam != null && walkoverTeam.getId().equals(homeTeam.getId());
+		boolean awayIsWalkover = walkoverTeam != null && !homeIsWalkover;
+
 		var lineups = raceLineupRepository.findByRaceId(race.getId());
-		if (lineups.isEmpty()) {
+		if (lineups.isEmpty() && walkoverTeam == null) {
 			throw new IllegalStateException("No lineup entries for this race");
 		}
 		var pairings = buildPairings(lineups, homeTeam, awayTeam);
@@ -103,6 +107,8 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 		ctx.setVariable("homePosition", homePosition);
 		ctx.setVariable("awayPosition", awayPosition);
 		ctx.setVariable("pairings", pairings);
+		ctx.setVariable("homeIsWalkover", homeIsWalkover);
+		ctx.setVariable("awayIsWalkover", awayIsWalkover);
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 

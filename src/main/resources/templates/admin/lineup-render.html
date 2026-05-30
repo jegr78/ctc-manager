@@ -67,6 +67,11 @@
         .footer .position { flex: 1; font-size: 56px; font-weight: 900; color: #f2f2f5; }
         .footer .position:last-child { text-align: right; }
         .footer .season-name { flex: 1; text-align: center; font-size: 42px; font-weight: 700; color: #9a9aa6; }
+
+        .team-card-container { position: relative; }
+        .wo-badge { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center;
+            font-size: 40px; font-weight: 700; font-style: italic; color: #f5c542; letter-spacing: 2px;
+            text-shadow: 0 2px 6px rgba(0,0,0,.7); }
     </style>
 </head>
 <body>
@@ -87,6 +92,7 @@
     <div class="main">
         <div class="team-card-container">
             <img th:src="${homeCardBase64}" alt="Home Team Card">
+            <div th:if="${homeIsWalkover}" class="wo-badge">w/o</div>
         </div>
 
         <div class="pairings">
@@ -104,6 +110,7 @@
 
         <div class="team-card-container">
             <img th:src="${awayCardBase64}" alt="Away Team Card">
+            <div th:if="${awayIsWalkover}" class="wo-badge">w/o</div>
         </div>
     </div>
 
