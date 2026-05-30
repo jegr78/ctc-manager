@@ -31,8 +31,14 @@ findings:
   warning: 2
   info: 3
   total: 5
-status: issues_found
+status: resolved
+resolved: 2026-05-30
 ---
+
+> **Resolution (2026-05-30):** Both warnings fixed in `a287e268`.
+> WR-01 — walkover excluded from the match "Open" badge; resultless walkover race shows a "w/o" badge instead of "Open".
+> WR-02 — half-scored score area restored to per-side, null-safe rendering (shows the one known value).
+> Info items accepted as-is: IN-01 (`WALKOVER_TEAM_POSITIONS = 6` mirrors the established `TEAM_DRIVERS` team-size; no per-phase team-size config exists), IN-02 (no-comment-pollution convention — skip), IN-03 (read-time-only credit is the deliberate design choice; "w/o" on the matchday view is intended, the number surfaces on standings).
 
 # Phase 109: Code Review Report (Delta-2)
 
