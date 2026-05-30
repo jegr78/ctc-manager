@@ -16,7 +16,37 @@ permissions:
   pull-requests: write
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v4.0.1
+        with:
+          filters: |
+            code:
+              - 'src/**'
+              - 'pom.xml'
+              - 'Dockerfile'
+              - '.github/workflows/**'
+              - 'mvnw'
+              - '.mvn/**'
+            docs:
+              - '.planning/**'
+              - '*.md'
+              - 'docs/**'
+              - '!docs/site/**'
+              - '.gitmessage'
+
   build-and-test:
+    needs: changes
     runs-on: ubuntu-latest
 
     steps:
@@ -24,6 +54,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Setup JDK 25
+        if: needs.changes.outputs.code == 'true'
         uses: actions/setup-java@v5
         with:
           java-version: '25'
@@ -36,6 +67,7 @@ jobs:
       # Chromium during unit tests (which corrupts the Surefire stdout channel — see
       # CI run 26015174076 / surefire-reports/2026-05-18T05-24-53_082-jvmRun2.dumpstream).
       - name: Cache Playwright Browsers
+        if: needs.changes.outputs.code == 'true'
         id: playwright-cache
         uses: actions/cache@v4
         with:
@@ -58,18 +90,17 @@ jobs:
       # despite Chromium being pre-installed). Pre-installing the full browser set
       # avoids that secondary auto-download path entirely. Cache footprint ~360 MiB.
       - name: Install Playwright Browsers
+        if: needs.changes.outputs.code == 'true'
         run: |
           mvn dependency:build-classpath -DincludeScope=test -Dmdep.outputFile=/tmp/cp.txt -q
           java -cp "$(cat /tmp/cp.txt)" com.microsoft.playwright.CLI install --with-deps
 
-      - name: Build and Unit/Integration Tests
-        run: ./mvnw verify --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true
-
-      - name: E2E Tests
-        run: ./mvnw verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true
+      - name: Build, Test, and E2E
+        if: needs.changes.outputs.code == 'true'
+        run: ./mvnw clean verify -Pe2e --no-transfer-progress -Dspring.profiles.active=dev -Ddocker.available=true
 
       - name: JaCoCo Coverage Report
-        if: github.event_name == 'pull_request'
+        if: needs.changes.outputs.code == 'true' && github.event_name == 'pull_request'
         uses: madrapps/jacoco-report@v1.7.2
         with:
           paths: target/site/jacoco/jacoco.xml
@@ -102,6 +133,7 @@ jobs:
     # Fails if any `FROM eclipse-temurin:` line does not end in `-noble`.
     # Whitelist-on-suffix approach. Cross-platform grep idiom mirrors pom.xml PLAT-07
     # build-guard (commit f451ff4).
+    needs: changes
     runs-on: ubuntu-latest
 
     steps:
@@ -109,6 +141,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Dockerfile -noble pin guard
+        if: needs.changes.outputs.code == 'true'
         run: |
           set -euo pipefail
           # Extract every FROM eclipse-temurin: line (anchored regex via grep -E, cross-platform).
@@ -143,22 +176,26 @@ jobs:
     # `playwright install chromium` RUN step — the exact step that failed in release run
     # 25609204039 before the -noble pin.
     # Full build job, always on. Acceptable cost: +1-3 minutes CI per PR.
-    needs: dockerfile-noble-pin-guard
+    needs: [changes, dockerfile-noble-pin-guard]
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Set up Docker Buildx
+        if: needs.changes.outputs.code == 'true'
+        uses: docker/setup-buildx-action@v4.1.0
+
       - name: Build Docker image (full multi-stage, no push)
-        id: docker_build
-        run: |
-          set -euo pipefail
-          IMAGE_TAG="ctc-manager:ci-${GITHUB_SHA}"
-          echo "Building $IMAGE_TAG from pinned -noble base..."
-          docker build -t "$IMAGE_TAG" . 2>&1 | tee /tmp/docker-build.log
-          echo "Built $IMAGE_TAG successfully."
-          docker image inspect "$IMAGE_TAG" --format 'Image ID: {{.Id}} Size: {{.Size}}'
+        if: needs.changes.outputs.code == 'true'
+        uses: docker/build-push-action@v7.2.0
+        with:
+          context: .
+          push: false
+          tags: ctc-manager:ci-${{ github.sha }}
+          cache-from: type=gha,scope=ctc-docker
+          cache-to: type=gha,scope=ctc-docker,mode=max
 
       - name: Upload docker build log on failure
         if: failure()
