@@ -215,7 +215,7 @@ See: milestones/v1.14-ROADMAP.md for full details
 - [x] **Phase 106: CI Pipeline Optimisation** - Path-aware step gating, caching improvements, E2E runtime reduction, flaky-test quarantine hardening. (CI-01..06) -- completed 2026-05-30 (CI-03/04/06 verified on live CI; CI-01/02/05 logic-complete, empirical proof tracked as in-milestone open-verify)
 - ~~**Phase 107: Race/Match Prefill Defaults**~~ — **REMOVED 2026-05-30**. RACE-01..03 dropped: scoring scheme and legs are already inherited via `SeasonPhase`, and Matchday has no scheduled date to inherit (no real re-entry problem without a schema change). Number kept as a gap per the integer-phase policy. See REQUIREMENTS.md "Out of Scope".
 - [x] **Phase 108: Missing-Driver n/a Rendering** - Lineup, Scorecard/Results, and Provisional-Scores graphics render "n/a" for missing driver slots; scoring records 0 points. (LINEUP-01..04)
-- [ ] **Phase 109: Walkover Handling** - Flyway V17 walkover flag, auto-win scoring, "w/o" label in standings and graphics, admin UI to mark walkover. (WO-01..04)
+- [x] **Phase 109: Walkover Handling** - Flyway V17 walkover flag, auto-win scoring, "w/o" label in standings and graphics, admin UI to mark walkover. (WO-01..04)
 - [ ] **Phase 110: Lobby Settings Graphic** - New LobbySettingsGraphicService (Carbon HUD, template-variable-driven), admin preview/download, Discord post type, template editor. (LOBBY-01..05)
 - [ ] **Phase 111: Log-Injection Remediation (CodeQL CWE-117)** - Close all 29 open CodeQL `java/log-injection` alerts via a central LogSanitizer (strips CR/LF + control chars) at each flagged call site; fix taint at source, no suppressions. (SEC-LOG-01..04)
 
@@ -274,12 +274,11 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
   3. The standings page and the relevant graphics display a visible "w/o" label next to the walkover team, distinguishing it from a normally played result.
   4. The Flyway migration (V17) runs successfully on both H2 (test/dev) and MariaDB (local/prod), and `./mvnw clean verify -Pe2e` exits 0 with all existing tests still green.
 **Plans**: 6 plans
-- [ ] 109-00-PLAN.md — Wave 0 stubs: V17MigrationIT + WalkoverE2ETest
 - [x] 109-01-PLAN.md — Flyway V17 + Match.walkoverTeam entity + ScoringService walkover guard (WO-02)
 - [x] 109-02-PLAN.md — StandingsService walkover branch + TeamStanding.hasWalkover + unit tests (WO-01)
 - [x] 109-03-PLAN.md — MatchForm/MatchService/MatchController + edit-form dropdown + ITs (WO-04)
-- [ ] 109-04-PLAN.md — "w/o" label in matchday-detail + site/standings + .match-wo CSS (WO-03)
-- [ ] 109-05-PLAN.md — "w/o" badge in 3 graphics + walkover guards + visual checkpoint (WO-03)
+- [x] 109-04-PLAN.md — "w/o" label in matchday-detail + site/standings + .match-wo CSS + green E2E (WO-03/WO-04)
+- [x] 109-05-PLAN.md — "w/o" badge in 3 graphics + walkover guards + visual checkpoint (WO-03)
 **Cross-phase risk**: Phase 109 adds a `walkover` column via Flyway V17 — existing migrations V1-V16 are untouched. Template changes are additive (adding "w/o" label) on top of Phase 108's completed template set.
 **UI hint**: yes
 
