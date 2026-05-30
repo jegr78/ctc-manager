@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
-status: planning
+status: executing
 stopped_at: Phase 106 context gathered
-last_updated: "2026-05-30T08:49:06.966Z"
-last_activity: 2026-05-30 — Phase 111 (Log-Injection Remediation) added to v1.15 (6 phases, 26/26 requirements mapped)
+last_updated: "2026-05-30T09:17:22.396Z"
+last_activity: 2026-05-30 -- Phase 106 planning complete
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 Phase: 106 of 111 (CI Pipeline Optimisation) — Not started
 Plan: —
-Status: Roadmap created; ready to plan
-Last activity: 2026-05-30 — Phase 111 (Log-Injection Remediation) added to v1.15 (6 phases, 26/26 requirements mapped)
+Status: Ready to execute
+Last activity: 2026-05-30 -- Phase 106 planning complete
 
 Progress: [░░░░░░░░░░] 0%
 
