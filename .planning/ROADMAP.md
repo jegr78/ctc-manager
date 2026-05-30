@@ -256,7 +256,10 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
   2. The Scorecard/Results graphic renders "n/a" for any missing driver slot and shows 0 points for that slot — the graphic is self-consistent (no row is absent, no null pointer renders as an error).
   3. The Provisional-Scores graphic is padded to 6 rows: if fewer than 6 drivers have results, the remaining rows appear with "n/a" instead of being omitted entirely (fixing the current inconsistency where the graphic simply renders no row at all).
   4. The scoring service records 0 points and no position for a missing driver, consistently across all matches — no controller or template computes a fallback value; the correct data is always written at save time.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 108-01-PLAN.md — Central TEAM_DRIVERS constant; Lineup & Results padded to 6 rows with "n/a" + template guard migration (LINEUP-01, LINEUP-02)
+- [ ] 108-02-PLAN.md — Provisional-Scores padded to 6 rows with "n/a"/0 (fixes SC3 missing-row bug) (LINEUP-03)
+- [ ] 108-03-PLAN.md — Shared .empty-slot de-emphasis across all three graphics (visual checkpoint) + ScoringService <6-driver safety test + clean verify -Pe2e gate (LINEUP-01..04)
 **Cross-phase risk (with Phase 109)**: Both this phase and Phase 109 (Walkover) modify Thymeleaf graphic templates. Phase 108 must complete and be verified before Phase 109 begins template changes, to avoid clobber on shared graphic files.
 **UI hint**: yes
 
