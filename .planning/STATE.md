@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 ## Current Position
 
-Phase: 109 (walkover-handling) — EXECUTED (pending verify gate + REVIEW.md)
+Phase: 109 (walkover-handling) — COMPLETE
 Plan: 5 of 5 complete
-Status: All 5 plans done; visual checkpoint approved. Phase-end `./mvnw clean verify -Pe2e` gate next, then /gsd-code-review 109.
+Status: All 5 plans + 2 code-review passes done (109-REVIEW.md: 8 findings resolved; 109-REVIEW-2.md: 5 findings resolved). Walkover winner credited full team race score (read-time). Full clean verify -Pe2e green.
 Last activity: 2026-05-30
 
 Progress: [██████████] 100%
@@ -42,7 +42,7 @@ Progress: [██████████] 100%
 | 106 | CI Pipeline Optimisation | CI-01..06 | Complete (CI-03/04/06 ✓; CI-01/02/05 open-verify) |
 | ~~107~~ | ~~Race/Match Prefill Defaults~~ | ~~RACE-01..03~~ | **Removed 2026-05-30** (RACE-01..03 dropped) |
 | 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Complete (LINEUP-01..04 ✓; REVIEW.md pending) |
-| 109 | Walkover Handling | WO-01..04 | Executed (109-01..05 ✓; WO-01..04 ✓; verify gate + REVIEW.md pending) |
+| 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
 | 110 | Lobby Settings Graphic | LOBBY-01..05 | Blocked (external design handoff) |
 | 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Not started |
 
