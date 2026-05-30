@@ -48,6 +48,7 @@ public class MatchService {
 	private final MatchdayRepository matchdayRepository;
 	private final TeamRepository teamRepository;
 	private final RaceRepository raceRepository;
+	private final ScoringService scoringService;
 	private final DiscordCategoryResolver discordCategoryResolver;
 	private final DiscordPostService discordPostService;
 	private final DiscordPostRepository discordPostRepository;
@@ -186,7 +187,16 @@ public class MatchService {
 		Match match = findById(matchId);
 		if (walkoverTeamId == null) {
 			match.setWalkoverTeam(null);
-			matchRepository.save(match);
+			List<Race> legs = raceRepository.findByMatchId(matchId);
+			boolean hasResults = legs.stream().anyMatch(race -> !race.getResults().isEmpty());
+			if (hasResults) {
+				matchRepository.save(match);
+				scoringService.recomputeMatchScoresFromAllLegs(legs.getFirst());
+			} else {
+				match.setHomeScore(null);
+				match.setAwayScore(null);
+				matchRepository.save(match);
+			}
 			log.info("Cleared walkover for match {}", matchId);
 			return;
 		}
@@ -204,6 +214,8 @@ public class MatchService {
 		Team team = teamRepository.findById(walkoverTeamId)
 				.orElseThrow(() -> new EntityNotFoundException("Team", walkoverTeamId));
 		match.setWalkoverTeam(team);
+		match.setHomeScore(null);
+		match.setAwayScore(null);
 		matchRepository.save(match);
 		log.info("Set walkover for match {} — team {}", matchId, walkoverTeamId);
 	}

@@ -163,6 +163,30 @@ class MatchControllerTest {
 	}
 
 	@Test
+	void givenScoredMatch_whenSaveEditWithWalkoverTeam_thenScoresCleared() throws Exception {
+		// given — a match that already carries an aggregated scoreline
+		var match = fixture.match();
+		match.setHomeScore(70);
+		match.setAwayScore(46);
+		matchRepository.save(match);
+		var matchId = match.getId();
+		var awayId = fixture.awayTeam().getId();
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/save-edit")
+						.param("id", matchId.toString())
+						.param("walkoverTeamId", awayId.toString()))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(flash().attributeExists("successMessage"));
+
+		// then — walkover semantics: no stored scoreline next to the "w/o" marker
+		var reloaded = matchRepository.findById(matchId).orElseThrow();
+		assertNotNull(reloaded.getWalkoverTeam());
+		assertNull(reloaded.getHomeScore());
+		assertNull(reloaded.getAwayScore());
+	}
+
+	@Test
 	void givenByeMatch_whenSaveEditWithWalkoverTeam_thenErrorFlash() throws Exception {
 		// given — a bye match (no away team) cannot become a walkover
 		var byeMatch = new Match(fixture.matchday(), fixture.homeTeam(), null);

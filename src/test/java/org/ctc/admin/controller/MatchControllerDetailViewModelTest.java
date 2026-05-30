@@ -30,6 +30,7 @@ import org.ctc.domain.repository.RaceRepository;
 import org.ctc.domain.repository.TeamRepository;
 import org.ctc.domain.service.MatchService;
 import org.ctc.domain.service.PhaseTestFixtures;
+import org.ctc.domain.service.ScoringService;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -57,6 +58,7 @@ class MatchControllerDetailViewModelTest {
 				mock(MatchdayRepository.class),
 				mock(TeamRepository.class),
 				mock(RaceRepository.class),
+				mock(ScoringService.class),
 				categoryResolver,
 				discordPostService,
 				discordPostRepository,
@@ -117,6 +119,7 @@ class MatchControllerDetailViewModelTest {
 				mock(MatchdayRepository.class),
 				mock(TeamRepository.class),
 				mock(RaceRepository.class),
+				mock(ScoringService.class),
 				categoryResolver,
 				discordPostService,
 				discordPostRepository,
