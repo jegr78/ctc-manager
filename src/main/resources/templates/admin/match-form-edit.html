@@ -50,6 +50,17 @@
                 </div>
             </div>
 
+            <div class="form-group" th:unless="${match.bye}">
+                <label for="walkoverTeamId">Walkover</label>
+                <select id="walkoverTeamId" th:field="*{walkoverTeamId}" data-testid="match-edit-walkover">
+                    <option value="">Kein Walkover</option>
+                    <option th:value="${match.homeTeam.id}"
+                            th:text="${match.homeTeam.shortName + ' (Home)'}"></option>
+                    <option th:unless="${match.awayTeam == null}" th:value="${match.awayTeam.id}"
+                            th:text="${match.awayTeam.shortName + ' (Away)'}"></option>
+                </select>
+            </div>
+
             <div class="actions">
                 <button type="submit" class="btn btn-primary" data-testid="match-edit-save">Save</button>
                 <a th:href="@{/admin/matches/{id}(id=${match.id})}"

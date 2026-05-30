@@ -108,6 +108,7 @@ public class MatchController {
 		form.setLobbyHost(match.getLobbyHost());
 		form.setRaceDirector(match.getRaceDirector());
 		form.setStreamer(match.getStreamer());
+		form.setWalkoverTeamId(match.getWalkoverTeam() != null ? match.getWalkoverTeam().getId() : null);
 		model.addAttribute("matchForm", form);
 		model.addAttribute("match", match);
 		return "admin/match-form-edit";
@@ -122,6 +123,12 @@ public class MatchController {
 		if (result.hasErrors()) {
 			model.addAttribute("match", matchService.findById(id));
 			return "admin/match-form-edit";
+		}
+		try {
+			matchService.updateWalkover(id, form.getWalkoverTeamId());
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Walkover update");
+			return "redirect:/admin/matches/" + id;
 		}
 		matchService.updateDiscordFields(id, form);
 		redirectAttributes.addFlashAttribute("successMessage", "Match details updated.");
