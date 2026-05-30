@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
-status: Phase delivered; visual checkpoint approved; full build green
+status: executing
 stopped_at: Phase 109 context gathered
-last_updated: "2026-05-30T15:59:05.010Z"
-last_activity: 2026-05-30 -- Phase 108 executed (LINEUP-01..04 closed)
+last_updated: "2026-05-30T17:22:59.070Z"
+last_activity: 2026-05-30
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 12
+  completed_plans: 8
   percent: 33
 ---
 
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 108 complete (LINEUP-01..04 closed; clean verify -Pe2e green). Next feature work is Phase 109 (Walkover Handling) — but per "Code-Review Before New Phase", Phase 108 has no REVIEW.md yet.
+**Current focus:** Phase 109 — walkover-handling
 
 ## Current Position
 
-Phase: 108 of 111 (Missing-Driver n/a Rendering) — Complete. Next is Phase 109 (Walkover Handling).
-Plan: 3/3 complete (108-01, 108-02, 108-03)
-Status: Phase delivered; visual checkpoint approved; full build green
-Last activity: 2026-05-30 -- Phase 108 executed (LINEUP-01..04 closed)
+Phase: 109 (walkover-handling) — EXECUTING
+Plan: 2 of 5
+Status: Ready to execute
+Last activity: 2026-05-30
 
-Progress: [███░░░░░░░] 33%
+Progress: [███████░░░] 67%
 
 ## Active Milestone
 
