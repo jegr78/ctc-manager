@@ -61,6 +61,9 @@
         .driver-name { font-size: 27px; font-weight: 700; color: #d4d4da; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .driver-nickname { font-size: 18px; font-weight: 600; color: #7e7e88; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+        .empty-slot { opacity: 0.32; }
+        .empty-slot .driver-name { color: #6a6a73; }
+
         .footer .position { flex: 1; font-size: 56px; font-weight: 900; color: #f2f2f5; }
         .footer .position:last-child { text-align: right; }
         .footer .season-name { flex: 1; text-align: center; font-size: 42px; font-weight: 700; color: #9a9aa6; }
@@ -88,11 +91,11 @@
 
         <div class="pairings">
             <div class="pairing" th:each="p : ${pairings}">
-                <div class="driver-info home">
+                <div class="driver-info home" th:classappend="${p.homeDriver == 'n/a'} ? 'empty-slot' : ''">
                     <span class="driver-name" th:text="${p.homeDriver}"></span>
                     <span class="driver-nickname" th:text="'(' + ${p.homeNickname} + ')'" th:if="${p.homeDriver != 'n/a'}"></span>
                 </div>
-                <div class="driver-info away">
+                <div class="driver-info away" th:classappend="${p.awayDriver == 'n/a'} ? 'empty-slot' : ''">
                     <span class="driver-name" th:text="${p.awayDriver}"></span>
                     <span class="driver-nickname" th:text="'(' + ${p.awayNickname} + ')'" th:if="${p.awayDriver != 'n/a'}"></span>
                 </div>

@@ -446,6 +446,47 @@ class ScoringServiceTest {
 			assertNull(match.getAwayScore());
 		}
 
+		@Test
+		void givenHomeTeamWithFewerThanSixDrivers_whenAggregateMatchScores_thenTotalsEqualSumOfRealDrivers() {
+			// given
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			var race = createRace(match);
+
+			var h1 = createDriver("h1");
+			var h2 = createDriver("h2");
+			var h3 = createDriver("h3");
+			var a1 = createDriver("a1");
+			var a2 = createDriver("a2");
+
+			var rh1 = createResult(race, h1, 20);
+			var rh2 = createResult(race, h2, 14);
+			var rh3 = createResult(race, h3, 10);
+			var ra1 = createResult(race, a1, 17);
+			var ra2 = createResult(race, a2, 12);
+			race.setResults(List.of(rh1, rh2, rh3, ra1, ra2));
+
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), h1.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, h1, homeTeam)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), h2.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, h2, homeTeam)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), h3.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, h3, homeTeam)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), a1.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, a1, awayTeam)));
+			when(raceLineupRepository.findByRaceIdAndDriverId(race.getId(), a2.getId()))
+					.thenReturn(Optional.of(new RaceLineup(race, a2, awayTeam)));
+			when(raceRepository.findByMatchId(match.getId())).thenReturn(List.of(race));
+
+			// when
+			scoringService.aggregateMatchScores(race);
+
+			// then — home has 3 drivers (fewer than 6); totals equal the sum of real drivers only, no NPE
+			assertEquals(44, match.getHomeScore());
+			assertEquals(29, match.getAwayScore());
+		}
+
 		private Driver createDriver(String psnId) {
 			var driver = new Driver(psnId, psnId);
 			driver.setId(UUID.randomUUID());
