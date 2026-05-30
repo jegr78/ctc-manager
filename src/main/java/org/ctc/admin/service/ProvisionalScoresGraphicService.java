@@ -72,6 +72,13 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 			}
 		}
 
+		while (homeRows.size() < TEAM_DRIVERS) {
+			homeRows.add(emptyRow());
+		}
+		while (awayRows.size() < TEAM_DRIVERS) {
+			awayRows.add(emptyRow());
+		}
+
 		var season = race.getMatchday().getSeason();
 		String homeCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), homeTeam.getShortName()));
 		String awayCardBase64 = encodeCardBase64(buildCardPath(season.getId().toString(), awayTeam.getShortName()));
@@ -114,6 +121,10 @@ public class ProvisionalScoresGraphicService extends AbstractGraphicService impl
 		ctx.setVariable("ctcLogoBase64", encodeClasspathResource(CTC_LOGO_CLASSPATH, "image/png"));
 		ctx.setVariable("fontBase64", encodeClasspathResource(FONT_CLASSPATH, "font/woff2"));
 		return ctx;
+	}
+
+	private ProvisionalRow emptyRow() {
+		return new ProvisionalRow("n/a", 0, 0, false, 0, 0, 0, 0);
 	}
 
 	private ProvisionalRow toRow(RaceResult result) {

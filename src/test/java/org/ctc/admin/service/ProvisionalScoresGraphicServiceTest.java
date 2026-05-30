@@ -10,7 +10,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.assertj.core.api.InstanceOfAssertFactories.list;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -198,6 +197,7 @@ class ProvisionalScoresGraphicServiceTest {
 	}
 
 	@Test
+	@SuppressWarnings("unchecked")
 	void whenValidRace_thenTemplateContextIncludesRaceLabelAndExpectedVariables() throws IOException {
 		// given
 		var service = createService();
@@ -213,8 +213,16 @@ class ProvisionalScoresGraphicServiceTest {
 		verify(templateEngine).process(eq("admin/provisional-scores-render"), captor.capture());
 		Context ctx = captor.getValue();
 		assertThat(ctx.getVariable("raceLabel")).isEqualTo("Race 3");
-		assertThat(ctx.getVariable("homeRows")).asInstanceOf(list(ProvisionalScoresGraphicService.ProvisionalRow.class)).hasSize(2);
-		assertThat(ctx.getVariable("awayRows")).asInstanceOf(list(ProvisionalScoresGraphicService.ProvisionalRow.class)).hasSize(2);
+		var homeRows = (List<ProvisionalScoresGraphicService.ProvisionalRow>) ctx.getVariable("homeRows");
+		var awayRows = (List<ProvisionalScoresGraphicService.ProvisionalRow>) ctx.getVariable("awayRows");
+		assertThat(homeRows).hasSize(6);
+		assertThat(awayRows).hasSize(6);
+		assertThat(homeRows.get(5).driverName()).isEqualTo("n/a");
+		assertThat(homeRows.get(5).total()).isZero();
+		assertThat(awayRows.get(5).driverName()).isEqualTo("n/a");
+		assertThat(awayRows.get(5).total()).isZero();
+		assertThat((int) ctx.getVariable("homeOverallTotal")).isEqualTo(59);
+		assertThat((int) ctx.getVariable("awayOverallTotal")).isEqualTo(42);
 		assertThat(ctx.getVariable("homeTeamName")).isEqualTo("Home");
 		assertThat(ctx.getVariable("awayTeamName")).isEqualTo("Away");
 		assertThat(ctx.getVariable("homeCardBase64")).isNotNull();
