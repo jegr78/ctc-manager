@@ -16,7 +16,7 @@ import lombok.ToString;
 @Getter
 @Setter
 @NoArgsConstructor
-@ToString(exclude = {"matchday", "homeTeam", "awayTeam", "races", "discordChannelWebhookUrl"})
+@ToString(exclude = {"matchday", "homeTeam", "awayTeam", "walkoverTeam", "races", "discordChannelWebhookUrl"})
 public class Match extends BaseEntity {
 
 	@Id
@@ -36,6 +36,10 @@ public class Match extends BaseEntity {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "away_team_id")
 	private Team awayTeam;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "walkover_team_id")
+	private Team walkoverTeam;
 
 	private Integer homeScore;
 
