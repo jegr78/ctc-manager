@@ -31,8 +31,12 @@ findings:
   warning: 4
   info: 4
   total: 8
-status: issues_found
+status: resolved
+resolved: 2026-05-30
 ---
+
+> **Resolution (2026-05-30):** All 8 findings fixed on `gsd/v1.15-ci-and-race-defaults`, each with a regression test where applicable.
+> WR-01 `6c0d4ec6` · WR-02 `a638bc0d` · WR-03 `6d5bf059` · WR-04 `3c4df266` · IN-01 `9c97ecfa` · IN-03 `4bd535f6` · IN-04 `0fe2650b` · IN-02 `9488c290`.
 
 # Phase 109: Code Review Report
 
