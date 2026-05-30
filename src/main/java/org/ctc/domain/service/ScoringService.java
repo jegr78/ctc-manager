@@ -63,6 +63,9 @@ public class ScoringService {
 		if (race.isBye()) {
 			return;
 		}
+		if (race.getMatch() != null && race.getMatch().getWalkoverTeam() != null) {
+			return;
+		}
 		if (race.getMatch() != null) {
 			Match match = race.getMatch();
 			if (match.getHomeTeam() == null) {

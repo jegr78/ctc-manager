@@ -389,6 +389,22 @@ class ScoringServiceTest {
 		}
 
 		@Test
+		void givenWalkoverMatchRace_whenRecomputeMatchScoresFromAllLegs_thenScoresRemainUnchanged() {
+			var homeTeam = createTeam("Home");
+			var awayTeam = createTeam("Away");
+			var match = createMatch(homeTeam, awayTeam);
+			match.setWalkoverTeam(awayTeam);
+
+			var walkoverRace = createRace(match);
+			walkoverRace.setResults(List.of());
+
+			scoringService.recomputeMatchScoresFromAllLegs(walkoverRace);
+
+			assertNull(match.getHomeScore());
+			assertNull(match.getAwayScore());
+		}
+
+		@Test
 		void givenClearedPlayoffRace_whenRecomputeMatchScoresFromAllLegs_thenPlayoffMatchupScoresRecomputedFromRemainingLegs() {
 			var team1 = createTeam("Team1");
 			var team2 = createTeam("Team2");
