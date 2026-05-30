@@ -212,7 +212,7 @@ See: milestones/v1.14-ROADMAP.md for full details
 <details open>
 <summary>v1.15 CI Optimisation &amp; Race/Match Defaults (Phases 106-111) -- ACTIVE on <code>gsd/v1.15-ci-and-race-defaults</code></summary>
 
-- [ ] **Phase 106: CI Pipeline Optimisation** - Path-aware step gating, caching improvements, E2E runtime reduction, flaky-test quarantine hardening. (CI-01..06)
+- [x] **Phase 106: CI Pipeline Optimisation** - Path-aware step gating, caching improvements, E2E runtime reduction, flaky-test quarantine hardening. (CI-01..06) -- completed 2026-05-30 (CI-03/04/06 verified on live CI; CI-01/02/05 logic-complete, empirical proof tracked as in-milestone open-verify)
 - [ ] **Phase 107: Race/Match Prefill Defaults** - Scoring scheme, leg count, and date/time prefilled from parent season/matchday on Race/Match create. (RACE-01..03)
 - [ ] **Phase 108: Missing-Driver n/a Rendering** - Lineup, Scorecard/Results, and Provisional-Scores graphics render "n/a" for missing driver slots; scoring records 0 points. (LINEUP-01..04)
 - [ ] **Phase 109: Walkover Handling** - Flyway V17 walkover flag, auto-win scoring, "w/o" label in standings and graphics, admin UI to mark walkover. (WO-01..04)
@@ -231,10 +231,10 @@ See: milestones/v1.14-ROADMAP.md for full details
   4. The measured CI E2E step median drops below the current 17:39 baseline (concrete target confirmed at plan time; warm-cache Maven + Playwright browser hits are verifiably faster on repeat runs).
   5. No test that was green before this phase is marked "flaky" without a root-cause fix committed — any stabilisation is achieved by fixing the test, not increasing timeouts or adding retry loops.
 **Plans**: 4 plans
-- [ ] 106-01-PLAN.md — ci.yml: changes job + step gating + single clean verify -Pe2e + buildx Docker cache (CI-01/03/04/05)
-- [ ] 106-02-PLAN.md — codeql.yml paths-ignore + mariadb-smoke no-op verification (CI-02)
-- [ ] 106-03-PLAN.md — pom.xml no-rerun build guard + flaky-test policy doc (CI-06)
-- [ ] 106-04-PLAN.md — live-PR + local verification checkpoint (CI-01..05)
+- [x] 106-01-PLAN.md — ci.yml: changes job + step gating + single clean verify -Pe2e + buildx Docker cache (CI-01/03/04/05)
+- [x] 106-02-PLAN.md — codeql.yml paths-ignore + mariadb-smoke no-op verification (CI-02)
+- [x] 106-03-PLAN.md — pom.xml no-rerun build guard + flaky-test policy doc (CI-06)
+- [x] 106-04-PLAN.md — live-PR verification checkpoint (CI-01..05) — approved 2026-05-30; build-and-test 14:55 < 17:39 baseline
 **Cross-phase risk**: None — this phase touches only `.github/workflows/*.yml` and `pom.xml` CI config; no Java source files are modified.
 
 ### Phase 107: Race/Match Prefill Defaults

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
 status: executing
-stopped_at: Phase 106 context gathered
-last_updated: "2026-05-30T09:17:22.396Z"
-last_activity: 2026-05-30 -- Phase 106 planning complete
+stopped_at: Phase 106 complete (Wave 2 live-CI checkpoint approved)
+last_updated: "2026-05-30T09:55:00.000Z"
+last_activity: 2026-05-30 -- Phase 106 executed (4 plans) and verified on live CI
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 0
-  percent: 0
+  completed_plans: 4
+  percent: 17
 ---
 
 # Project State
@@ -22,16 +22,16 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** v1.15 roadmap complete — ready for `/gsd-discuss-phase 106` or `/gsd-plan-phase 106`.
+**Current focus:** Phase 106 complete — ready for `/gsd-code-review 106` (no REVIEW.md yet), then `/gsd-discuss-phase 107`.
 
 ## Current Position
 
-Phase: 106 of 111 (CI Pipeline Optimisation) — Not started
-Plan: —
-Status: Ready to execute
-Last activity: 2026-05-30 -- Phase 106 planning complete
+Phase: 106 of 111 (CI Pipeline Optimisation) — Complete (live-CI checkpoint approved)
+Plan: 4/4 complete
+Status: Phase done; 2 open verification items tracked below (CI-05 warm-cache, CI-01/CI-02 docs-only)
+Last activity: 2026-05-30 -- Phase 106 executed and verified on live CI run 26680554446
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 17%
 
 ## Active Milestone
 
@@ -39,7 +39,7 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
-| 106 | CI Pipeline Optimisation | CI-01..06 | Not started |
+| 106 | CI Pipeline Optimisation | CI-01..06 | Complete (CI-03/04/06 ✓; CI-01/02/05 open-verify) |
 | 107 | Race/Match Prefill Defaults | RACE-01..03 | Not started |
 | 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Not started |
 | 109 | Walkover Handling | WO-01..04 | Not started |
@@ -97,13 +97,15 @@ Carried forward from v1.13/v1.14 close (unchanged):
 | uat (carry) | QUAL-02 `local`-profile MariaDB manual smoke | Post-deploy operator action |
 | uat (carry) | UX-01 driver-import error-category badge screenshots | Post-deploy operator action |
 | tech_debt | Existing match-channels under old Phase-94 naming scheme | Potential future admin bulk-rename action; two-scheme coexistence accepted |
+| open-verify (v1.15, in-milestone) | **CI-05** warm-cache empirical proof — Docker `CACHED` layers + Maven/Playwright cache hits on a 2nd code run, no cross-eviction | Observe on the next code run on the milestone branch; close before v1.15 milestone close (logic sound via isolated `scope=ctc-docker`) |
+| open-verify (v1.15, in-milestone) | **CI-01/CI-02** docs-only empirical proof — required checks `success` (not skipped) + CodeQL/MariaDB absent | Exercise on any docs-only commit/PR on the branch; close before v1.15 milestone close (logic sound: ungated checkout/uploads + paths-ignore) |
 
 ## Session Continuity
 
-**Last session:** 2026-05-30T08:49:06.940Z
+**Last session:** 2026-05-30T09:55:00.000Z
 
-**Stopped at:** Phase 106 context gathered
+**Stopped at:** Phase 106 complete (Wave 2 live-CI checkpoint approved; run 26680554446 green, build-and-test 14:55 < 17:39)
 
-**Next action:** `/gsd-discuss-phase 106` or `/gsd-plan-phase 106` to begin CI Pipeline Optimisation.
+**Next action:** `/gsd-code-review 106` (phase has no REVIEW.md yet), then `/gsd-discuss-phase 107`.
 
 **Branch:** `gsd/v1.15-ci-and-race-defaults`
