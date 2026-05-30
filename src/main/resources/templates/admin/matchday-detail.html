@@ -41,7 +41,10 @@
                     <div class="match-header"
                          th:styleappend="${match.bye ? 'opacity:0.6;' : ''}"
                          th:classappend="${!match.races.isEmpty() ? '' : ''}">
-                        <div class="match-team-name match-team-name--right" th:text="${match.homeTeam.shortName}"></div>
+                        <div class="match-team-name match-team-name--right">
+                            <span th:text="${match.homeTeam.shortName}"></span>
+                            <span th:if="${match.walkoverTeam != null and match.walkoverTeam.id.equals(match.homeTeam.id)}" class="match-wo">w/o</span>
+                        </div>
                         <div th:unless="${match.bye}" class="match-score-area">
                             <span th:if="${match.homeScore != null}" class="match-score-value"
                                   th:classappend="${match.homeScore > match.awayScore ? 'score-win' : (match.homeScore < match.awayScore ? 'score-loss' : 'score-draw')}"
@@ -56,7 +59,10 @@
                         <div th:if="${match.bye}" class="match-score-area">
                             <span class="match-bye">Bye</span>
                         </div>
-                        <div th:unless="${match.bye}" class="match-team-name" th:text="${match.awayTeam?.shortName}"></div>
+                        <div th:unless="${match.bye}" class="match-team-name">
+                            <span th:text="${match.awayTeam?.shortName}"></span>
+                            <span th:if="${match.walkoverTeam != null and match.awayTeam != null and match.walkoverTeam.id.equals(match.awayTeam.id)}" class="match-wo">w/o</span>
+                        </div>
                         <div th:if="${match.bye}" class="flex-spacer"></div>
                         <div class="ml-md">
                             <span th:if="${matchday.phase.legs > 1}" class="badge"
