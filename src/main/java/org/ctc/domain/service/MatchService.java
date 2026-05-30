@@ -25,6 +25,7 @@ import org.ctc.discord.repository.DiscordPostRepository;
 import org.ctc.discord.service.DiscordCategoryResolver;
 import org.ctc.discord.service.DiscordGlobalConfigService;
 import org.ctc.discord.service.DiscordPostService;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.exception.EntityNotFoundException;
 import org.ctc.domain.model.Match;
 import org.ctc.domain.model.Matchday;
@@ -178,6 +179,33 @@ public class MatchService {
 		if (previewFieldsChanged) {
 			eventPublisher.publishEvent(new MatchPreviewFieldsChangedEvent(saved.getId()));
 		}
+	}
+
+	@Transactional
+	public void updateWalkover(UUID matchId, UUID walkoverTeamId) {
+		Match match = findById(matchId);
+		if (walkoverTeamId == null) {
+			match.setWalkoverTeam(null);
+			matchRepository.save(match);
+			log.info("Cleared walkover for match {}", matchId);
+			return;
+		}
+		if (match.isBye()) {
+			throw new BusinessRuleException("A bye match cannot be marked as a walkover.");
+		}
+		if (match.getAwayTeam() == null) {
+			throw new BusinessRuleException("Match has no away team — cannot be a walkover.");
+		}
+		boolean isHome = walkoverTeamId.equals(match.getHomeTeam().getId());
+		boolean isAway = walkoverTeamId.equals(match.getAwayTeam().getId());
+		if (!isHome && !isAway) {
+			throw new BusinessRuleException("Walkover team must be one of the match's two teams.");
+		}
+		Team team = teamRepository.findById(walkoverTeamId)
+				.orElseThrow(() -> new EntityNotFoundException("Team", walkoverTeamId));
+		match.setWalkoverTeam(team);
+		matchRepository.save(match);
+		log.info("Set walkover for match {} — team {}", matchId, walkoverTeamId);
 	}
 
 	@Transactional
