@@ -128,12 +128,11 @@ public class LineupGraphicService extends AbstractGraphicService implements Temp
 				.map(RaceLineup::getDriver)
 				.toList();
 
-		int maxSize = Math.max(homeEntries.size(), awayEntries.size());
 		var pairings = new ArrayList<DriverPairing>();
-		for (int i = 0; i < maxSize; i++) {
-			String homePsn = i < homeEntries.size() ? homeEntries.get(i).getPsnId() : "";
+		for (int i = 0; i < TEAM_DRIVERS; i++) {
+			String homePsn = i < homeEntries.size() ? homeEntries.get(i).getPsnId() : "n/a";
 			String homeNick = i < homeEntries.size() ? resolveNickname(homeEntries.get(i)) : "";
-			String awayPsn = i < awayEntries.size() ? awayEntries.get(i).getPsnId() : "";
+			String awayPsn = i < awayEntries.size() ? awayEntries.get(i).getPsnId() : "n/a";
 			String awayNick = i < awayEntries.size() ? resolveNickname(awayEntries.get(i)) : "";
 			pairings.add(new DriverPairing(homePsn, homeNick, awayPsn, awayNick));
 		}

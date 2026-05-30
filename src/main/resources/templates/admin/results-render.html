@@ -94,13 +94,13 @@
             <div class="result-row" th:each="row : ${resultRows}">
                 <div class="driver-info home">
                     <span class="driver-name" th:text="${row.homeDriver}"></span>
-                    <span class="driver-nickname" th:text="'(' + ${row.homeNickname} + ')'" th:if="${row.homeDriver != ''}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${row.homeNickname} + ')'" th:if="${row.homeDriver != 'n/a'}"></span>
                 </div>
-                <span class="points" th:classappend="${homeIsWinner ? 'winner' : ''}" th:text="${row.homeDriver != '' ? row.homePoints : ''}"></span>
-                <span class="points" th:classappend="${awayIsWinner ? 'winner' : ''}" th:text="${row.awayDriver != '' ? row.awayPoints : ''}"></span>
+                <span class="points" th:classappend="${homeIsWinner ? 'winner' : ''}" th:text="${row.homeDriver != 'n/a' ? row.homePoints : 0}"></span>
+                <span class="points" th:classappend="${awayIsWinner ? 'winner' : ''}" th:text="${row.awayDriver != 'n/a' ? row.awayPoints : 0}"></span>
                 <div class="driver-info away">
                     <span class="driver-name" th:text="${row.awayDriver}"></span>
-                    <span class="driver-nickname" th:text="'(' + ${row.awayNickname} + ')'" th:if="${row.awayDriver != ''}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${row.awayNickname} + ')'" th:if="${row.awayDriver != 'n/a'}"></span>
                 </div>
             </div>
         </div>

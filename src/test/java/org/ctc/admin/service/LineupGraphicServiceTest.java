@@ -77,7 +77,7 @@ class LineupGraphicServiceTest {
 		var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
 
 		// then
-		assertThat(pairings).hasSize(2);
+		assertThat(pairings).hasSize(6);
 		assertThat(pairings.get(0).homeDriver()).isEqualTo("HomeDriver1");
 		assertThat(pairings.get(0).homeNickname()).isEqualTo("Nick_H1");
 		assertThat(pairings.get(0).awayDriver()).isEqualTo("AwayDriver1");
@@ -86,6 +86,8 @@ class LineupGraphicServiceTest {
 		assertThat(pairings.get(1).homeNickname()).isEqualTo("Nick_H2");
 		assertThat(pairings.get(1).awayDriver()).isEqualTo("AwayDriver2");
 		assertThat(pairings.get(1).awayNickname()).isEqualTo("Nick_A2");
+		assertThat(pairings.get(2).homeDriver()).isEqualTo("n/a");
+		assertThat(pairings.get(2).awayDriver()).isEqualTo("n/a");
 	}
 
 	@Test
@@ -116,11 +118,13 @@ class LineupGraphicServiceTest {
 		var pairings = service.buildPairings(lineups, parentHome, awayTeam);
 
 		// then
-		assertThat(pairings).hasSize(1);
+		assertThat(pairings).hasSize(6);
 		assertThat(pairings.get(0).homeDriver()).isEqualTo("SubDriver1");
 		assertThat(pairings.get(0).homeNickname()).isEqualTo("Nick_Sub1");
 		assertThat(pairings.get(0).awayDriver()).isEqualTo("AwayDriver1");
 		assertThat(pairings.get(0).awayNickname()).isEqualTo("Nick_Away1");
+		assertThat(pairings.get(1).homeDriver()).isEqualTo("n/a");
+		assertThat(pairings.get(1).awayDriver()).isEqualTo("n/a");
 	}
 
 	@Test
@@ -161,11 +165,15 @@ class LineupGraphicServiceTest {
 		var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
 
 		// then
-		assertThat(pairings).hasSize(3);
+		assertThat(pairings).hasSize(6);
 		assertThat(pairings.get(2).homeDriver()).isEqualTo("H3");
 		assertThat(pairings.get(2).homeNickname()).isEqualTo("Nick_H3");
-		assertThat(pairings.get(2).awayDriver()).isEmpty();
+		assertThat(pairings.get(2).awayDriver()).isEqualTo("n/a");
 		assertThat(pairings.get(2).awayNickname()).isEmpty();
+		assertThat(pairings.get(3).homeDriver()).isEqualTo("n/a");
+		assertThat(pairings.get(3).awayDriver()).isEqualTo("n/a");
+		assertThat(pairings.get(5).homeDriver()).isEqualTo("n/a");
+		assertThat(pairings.get(5).awayDriver()).isEqualTo("n/a");
 	}
 
 	@Test
@@ -193,7 +201,7 @@ class LineupGraphicServiceTest {
 		var pairings = service.buildPairings(lineups, homeTeam, awayTeam);
 
 		// then
-		assertThat(pairings).hasSize(1);
+		assertThat(pairings).hasSize(6);
 		assertThat(pairings.get(0).homeNickname()).isEqualTo("HomeDriver1");
 		assertThat(pairings.get(0).awayNickname()).isEqualTo("AwayDriver1");
 	}

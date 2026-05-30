@@ -90,11 +90,11 @@
             <div class="pairing" th:each="p : ${pairings}">
                 <div class="driver-info home">
                     <span class="driver-name" th:text="${p.homeDriver}"></span>
-                    <span class="driver-nickname" th:text="'(' + ${p.homeNickname} + ')'" th:if="${p.homeDriver != ''}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${p.homeNickname} + ')'" th:if="${p.homeDriver != 'n/a'}"></span>
                 </div>
                 <div class="driver-info away">
                     <span class="driver-name" th:text="${p.awayDriver}"></span>
-                    <span class="driver-nickname" th:text="'(' + ${p.awayNickname} + ')'" th:if="${p.awayDriver != ''}"></span>
+                    <span class="driver-nickname" th:text="'(' + ${p.awayNickname} + ')'" th:if="${p.awayDriver != 'n/a'}"></span>
                 </div>
             </div>
         </div>
