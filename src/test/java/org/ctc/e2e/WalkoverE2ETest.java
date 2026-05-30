@@ -67,8 +67,9 @@ class WalkoverE2ETest extends PlaywrightConfig {
 		page.selectOption("#walkoverTeamId", away.getId().toString());
 		page.locator("[data-testid='match-edit-save']").click();
 
-		// then — the matchday detail shows the "w/o" marker next to the forfeiter
+		// then — the matchday detail shows the "w/o" marker (forfeiter name + score column)
 		page.navigate(url("/admin/matchdays/" + md.getId()));
-		assertThat(page.locator(".match-wo")).hasText("w/o");
+		assertThat(page.locator(".match-wo").first()).hasText("w/o");
+		assertThat(page.locator(".match-wo")).hasCount(2);
 	}
 }
