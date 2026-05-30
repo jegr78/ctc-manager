@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
-status: executing
-stopped_at: Phase 107 removed after discuss (RACE-01..03 dropped); v1.15 now 5 phases
-last_updated: "2026-05-30T10:30:00.000Z"
-last_activity: 2026-05-30 -- Phase 107 discuss concluded "remove phase"; roadmap/requirements updated
+status: verifying
+stopped_at: Phase 108 context gathered
+last_updated: "2026-05-30T11:36:37.398Z"
+last_activity: 2026-05-30 -- Phase 107 discuss → removed (RACE-01..03 dropped); roadmap/requirements updated
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 1
   total_plans: 4
   completed_plans: 4
-  percent: 20
+  percent: 17
 ---
 
 # Project State
@@ -94,6 +94,7 @@ Carried forward from v1.13/v1.14 close (unchanged):
 | Category | Item | Resolution Plan |
 | -------- | ---- | --------------- |
 | future_req | DISC-FUTURE-01..05 — Inbound Discord, auto-trigger, settings-form, multi-guild, public-site webhook | Later milestone; requires deployment model change |
+| future_req | Per-season configurable team size — `driverSlots` field on `SeasonPhase`/`Season` (default 6) + Flyway migration + admin UI; graphics/scoring read the season value | Own phase (v1.15 backlog or later). Surfaced in Phase 108 discuss; Phase 108 uses a central constant so the later swap stays local |
 | tech_debt | String `.isEmpty()` audit (~10 callsites) | Case-by-case; per Phase 103 CONTEXT D-06 |
 | uat (carry) | UAT-02 legacy season visual smoke | Post-deploy operator action; cross-milestone per CLAUDE.md |
 | uat (carry) | QUAL-02 `local`-profile MariaDB manual smoke | Post-deploy operator action |
@@ -104,9 +105,9 @@ Carried forward from v1.13/v1.14 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-05-30T10:30:00.000Z
+**Last session:** 2026-05-30T11:36:37.389Z
 
-**Stopped at:** Phase 107 discuss → phase removed; RACE-01..03 dropped; ROADMAP.md / REQUIREMENTS.md / STATE.md updated. v1.15 now 5 phases (106, 108-111).
+**Stopped at:** Phase 108 context gathered
 
 **Next action:** `/gsd-discuss-phase 108` (Missing-Driver n/a Rendering — next feature phase). Phase 106 already has a REVIEW.md.
 
