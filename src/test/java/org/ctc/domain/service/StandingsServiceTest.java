@@ -232,6 +232,122 @@ class StandingsServiceTest {
         }
 
         @Test
+        void givenWalkoverMatchHomeForfeit_whenCalculateStandings_thenOpponentWinsAndForfeiterLoses() {
+            // given — home (tnr) does not compete; away (p1r) is the opponent
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
+            var match = new Match(matchday, tnr, p1r);
+            match.setId(UUID.randomUUID());
+            match.setWalkoverTeam(tnr);
+
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
+
+            // then
+            var opponent = findStanding(standings, p1r);
+            var forfeiter = findStanding(standings, tnr);
+            assertEquals(1, opponent.getWins());
+            assertEquals(3, opponent.getPoints());
+            assertEquals(1, forfeiter.getLosses());
+            assertEquals(0, forfeiter.getPoints());
+        }
+
+        @Test
+        void givenWalkoverMatchAwayForfeit_whenCalculateStandings_thenOpponentWinsAndForfeiterLoses() {
+            // given — away (p1r) does not compete; home (tnr) is the opponent
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
+            var match = new Match(matchday, tnr, p1r);
+            match.setId(UUID.randomUUID());
+            match.setWalkoverTeam(p1r);
+
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
+
+            // then
+            var opponent = findStanding(standings, tnr);
+            var forfeiter = findStanding(standings, p1r);
+            assertEquals(1, opponent.getWins());
+            assertEquals(3, opponent.getPoints());
+            assertEquals(1, forfeiter.getLosses());
+            assertTrue(forfeiter.isHasWalkover());
+        }
+
+        @Test
+        void givenWalkoverMatchWithPartialScores_whenCalculateStandings_thenWalkoverTakesPrecedence() {
+            // given — scores are set (home higher) but home forfeits; walkover must win, not the score
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
+            var match = createMatchWithScore(matchday, tnr, p1r, 70, 50);
+            match.setWalkoverTeam(tnr);
+
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
+
+            // then
+            var opponent = findStanding(standings, p1r);
+            var forfeiter = findStanding(standings, tnr);
+            assertEquals(1, opponent.getWins());
+            assertEquals(1, forfeiter.getLosses());
+            assertEquals(0, opponent.getPointDifference());
+            assertEquals(0, forfeiter.getPointDifference());
+        }
+
+        @Test
+        void givenWalkoverMatch_whenCalculateStandings_thenNoPointDifferenceRecorded() {
+            // given
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
+            var match = new Match(matchday, tnr, p1r);
+            match.setId(UUID.randomUUID());
+            match.setWalkoverTeam(p1r);
+
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
+
+            // then
+            assertEquals(0, findStanding(standings, tnr).getPointDifference());
+            assertEquals(0, findStanding(standings, p1r).getPointDifference());
+        }
+
+        @Test
+        void givenWalkoverMatch_whenCalculateStandings_thenHasWalkoverFlagSet() {
+            // given — home (tnr) forfeits
+            var matchday = new Matchday(regularPhase, "Matchday1", 1);
+            var match = new Match(matchday, tnr, p1r);
+            match.setId(UUID.randomUUID());
+            match.setWalkoverTeam(tnr);
+
+            season.addTeam(tnr);
+            season.addTeam(p1r);
+            when(matchRepository.findByMatchdaySeasonId(season.getId())).thenReturn(List.of(match));
+            when(seasonRepository.findById(season.getId())).thenReturn(Optional.of(season));
+
+            // when
+            var standings = standingsService.calculateStandings(regularPhase.getId(), null);
+
+            // then
+            assertTrue(findStanding(standings, tnr).isHasWalkover());
+            assertFalse(findStanding(standings, p1r).isHasWalkover());
+        }
+
+        @Test
         void givenMultipleMatches_whenCalculateStandings_thenSortedByPointsThenPointDifference() {
             // given
             var md1 = new Matchday(regularPhase, "Matchday1", 1);

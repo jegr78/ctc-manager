@@ -339,6 +339,27 @@ public class StandingsService {
 			return;
 		}
 
+		if (match.getWalkoverTeam() != null) {
+			UUID forfeiterRaw = match.getWalkoverTeam().getId();
+			UUID homeRaw = match.getHomeTeam().getId();
+			UUID awayRaw = match.getAwayTeam() != null ? match.getAwayTeam().getId() : null;
+			UUID forfeiterId = resolveTeamId(forfeiterRaw, successionMap);
+			UUID opponentId = forfeiterRaw.equals(homeRaw)
+					? (awayRaw != null ? resolveTeamId(awayRaw, successionMap) : null)
+					: resolveTeamId(homeRaw, successionMap);
+			var forfeiterStanding = standingsMap.get(forfeiterId);
+			if (forfeiterStanding != null) {
+				forfeiterStanding.addLoss();
+				forfeiterStanding.setHasWalkover(true);
+			}
+			var opponentStanding = opponentId != null ? standingsMap.get(opponentId) : null;
+			if (opponentStanding != null) {
+				opponentStanding.addWin();
+				opponentStanding.addMatchPoints(matchScoring.getPointsWin());
+			}
+			return;
+		}
+
 		if (match.getHomeScore() == null || match.getAwayScore() == null) {
 			return;
 		}
@@ -400,6 +421,7 @@ public class StandingsService {
 		private int pointsFor;
 		private int pointsAgainst;
 		private int buchholz;
+		private boolean hasWalkover;
 		private SeasonPhaseGroup group;
 
 		public TeamStanding(Team team) {
@@ -437,6 +459,7 @@ public class StandingsService {
 			this.points += other.points;
 			this.pointsFor += other.pointsFor;
 			this.pointsAgainst += other.pointsAgainst;
+			this.hasWalkover = this.hasWalkover || other.hasWalkover;
 		}
 
 		public Team getTeam() {
@@ -485,6 +508,14 @@ public class StandingsService {
 
 		public void setBuchholz(int buchholz) {
 			this.buchholz = buchholz;
+		}
+
+		public boolean isHasWalkover() {
+			return hasWalkover;
+		}
+
+		public void setHasWalkover(boolean hasWalkover) {
+			this.hasWalkover = hasWalkover;
 		}
 
 		/** Nullable — null for LEAGUE-layout phases, set to team's sub-group for GROUPS-layout. */
