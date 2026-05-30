@@ -769,9 +769,9 @@ Note: `teamRepository` must be injected into `MatchService` — it is currently 
 | WO-01 | Walkover precedes partial results (D-08) | unit | `./mvnw -Dtest=StandingsServiceTest test` | ✅ (add nested test) |
 | WO-01 | No point difference / Buchholz from walkover (D-07) | unit | `./mvnw -Dtest=StandingsServiceTest test` | ✅ (add nested test) |
 | WO-01 | recomputeMatchScoresFromAllLegs skips walkover races | unit | `./mvnw -Dtest=ScoringServiceTest test` | ✅ (add test) |
-| WO-02 | V17 migration adds `walkover_team_id` column (nullable) | integration | `./mvnw -Dit.test=V17MigrationIT -DfailIfNoTests=false verify` | ❌ Wave 0 |
+| WO-02 | V17 migration adds `walkover_team_id` column (nullable) | integration | `./mvnw -Dit.test=V17MigrationIT -DfailIfNoTests=false verify` | new `V17MigrationIT` — authored green with V17 (plan 109-01) |
 | WO-02 | MatchController save-edit persists walkover_team_id FK | integration | `./mvnw -Dit.test=MatchControllerTest -DfailIfNoTests=false verify` | ✅ (add test method) |
-| WO-03 | "w/o" label appears in matchday-detail after marking | e2e | `./mvnw verify -Pe2e` (WalkoverE2ETest) | ❌ Wave 0 |
+| WO-03 | "w/o" label appears in matchday-detail after marking | e2e | `./mvnw verify -Pe2e` (WalkoverE2ETest) | new `WalkoverE2ETest` — authored green after the label exists (plan 109-04) |
 | WO-04 | Admin can mark/clear walkover through edit form | integration | `./mvnw -Dit.test=MatchControllerTest -DfailIfNoTests=false verify` | ✅ (add test method) |
 | WO-04 | Bye match cannot be walkover → errorMessage flash | integration | `./mvnw -Dit.test=MatchControllerTest -DfailIfNoTests=false verify` | ✅ (add test method) |
 
@@ -780,9 +780,10 @@ Note: `teamRepository` must be injected into `MatchService` — it is currently 
 - **Per wave merge:** `./mvnw clean verify` (excludes E2E)
 - **Phase gate:** `./mvnw clean verify -Pe2e` must exit 0 before `/gsd-verify-work`
 
-### Wave 0 Gaps
-- [ ] `src/test/java/db/migration/V17MigrationIT.java` — covers WO-02 (Flyway H2 schema)
-- [ ] `src/test/java/org/ctc/e2e/WalkoverE2ETest.java` — covers WO-03/WO-04 E2E (Playwright)
+### New Test Files (no red/disabled stubs)
+Both new test files are authored in the same plan as the code that makes them pass — committed green, never `@Disabled` or red (CLAUDE.md "Clean Maven Build is the Source of Truth"):
+- `src/test/java/db/migration/V17MigrationIT.java` — WO-02 (Flyway H2 schema); written **with V17 in plan 109-01**.
+- `src/test/java/org/ctc/e2e/WalkoverE2ETest.java` — WO-03/WO-04 E2E (Playwright); written **enabled in plan 109-04** once the dropdown (109-03) and matchday-detail label (109-04) exist.
 
 ---
 
