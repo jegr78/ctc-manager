@@ -38,7 +38,7 @@ Phase 107 was removed from the v1.15 roadmap (user decision 2026-05-30: drop per
 - [x] **WO-01**: A team that does not compete at all is handled analogously to `Match.bye` — the opponent receives an auto-win with full match points.
 - [x] **WO-02**: The walkover state is persisted via a new Flyway migration (H2 + MariaDB compatible; existing migrations untouched).
 - [ ] **WO-03**: A visible "w/o" label appears in standings and the relevant graphics.
-- [ ] **WO-04**: An admin can mark a match as a walkover through the UI/form.
+- [x] **WO-04**: An admin can mark a match as a walkover through the UI/form.
 
 ### LOBBY — Lobby Settings Graphic
 
@@ -96,7 +96,7 @@ Explicitly excluded for v1.15 to prevent scope creep.
 | WO-01 | Phase 109 | Complete |
 | WO-02 | Phase 109 | Complete |
 | WO-03 | Phase 109 | Pending |
-| WO-04 | Phase 109 | Pending |
+| WO-04 | Phase 109 | Complete |
 | LOBBY-01 | Phase 110 | Pending |
 | LOBBY-02 | Phase 110 | Pending |
 | LOBBY-03 | Phase 110 | Pending |

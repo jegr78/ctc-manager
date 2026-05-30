@@ -277,7 +277,7 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
 - [ ] 109-00-PLAN.md — Wave 0 stubs: V17MigrationIT + WalkoverE2ETest
 - [x] 109-01-PLAN.md — Flyway V17 + Match.walkoverTeam entity + ScoringService walkover guard (WO-02)
 - [x] 109-02-PLAN.md — StandingsService walkover branch + TeamStanding.hasWalkover + unit tests (WO-01)
-- [ ] 109-03-PLAN.md — MatchForm/MatchService/MatchController + edit-form dropdown + ITs (WO-04)
+- [x] 109-03-PLAN.md — MatchForm/MatchService/MatchController + edit-form dropdown + ITs (WO-04)
 - [ ] 109-04-PLAN.md — "w/o" label in matchday-detail + site/standings + .match-wo CSS (WO-03)
 - [ ] 109-05-PLAN.md — "w/o" badge in 3 graphics + walkover guards + visual checkpoint (WO-03)
 **Cross-phase risk**: Phase 109 adds a `walkover` column via Flyway V17 — existing migrations V1-V16 are untouched. Template changes are additive (adding "w/o" label) on top of Phase 108's completed template set.
