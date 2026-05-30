@@ -230,7 +230,11 @@ See: milestones/v1.14-ROADMAP.md for full details
   3. `codeql.yml` and `mariadb-migration-smoke.yml` are skipped entirely on documentation-only pushes (no yellow "skipped" status for required checks — only non-required workflows use `paths-ignore`).
   4. The measured CI E2E step median drops below the current 17:39 baseline (concrete target confirmed at plan time; warm-cache Maven + Playwright browser hits are verifiably faster on repeat runs).
   5. No test that was green before this phase is marked "flaky" without a root-cause fix committed — any stabilisation is achieved by fixing the test, not increasing timeouts or adding retry loops.
-**Plans**: TBD
+**Plans**: 4 plans
+- [ ] 106-01-PLAN.md — ci.yml: changes job + step gating + single clean verify -Pe2e + buildx Docker cache (CI-01/03/04/05)
+- [ ] 106-02-PLAN.md — codeql.yml paths-ignore + mariadb-smoke no-op verification (CI-02)
+- [ ] 106-03-PLAN.md — pom.xml no-rerun build guard + flaky-test policy doc (CI-06)
+- [ ] 106-04-PLAN.md — live-PR + local verification checkpoint (CI-01..05)
 **Cross-phase risk**: None — this phase touches only `.github/workflows/*.yml` and `pom.xml` CI config; no Java source files are modified.
 
 ### Phase 107: Race/Match Prefill Defaults
