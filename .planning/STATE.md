@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
-status: verifying
+status: executing
 stopped_at: Phase 108 context gathered
-last_updated: "2026-05-30T11:36:37.398Z"
-last_activity: 2026-05-30 -- Phase 107 discuss → removed (RACE-01..03 dropped); roadmap/requirements updated
+last_updated: "2026-05-30T12:13:57.686Z"
+last_activity: 2026-05-30 -- Phase 108 planning complete
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 4
+  total_plans: 7
   completed_plans: 4
   percent: 17
 ---
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 Phase: 106 of 111 (CI Pipeline Optimisation) — Complete (live-CI checkpoint approved). Phase 107 removed; next is Phase 108.
 Plan: 4/4 complete
-Status: Phase done; 2 open verification items tracked below (CI-05 warm-cache, CI-01/CI-02 docs-only)
-Last activity: 2026-05-30 -- Phase 107 discuss → removed (RACE-01..03 dropped); roadmap/requirements updated
+Status: Ready to execute
+Last activity: 2026-05-30 -- Phase 108 planning complete
 
 Progress: [██░░░░░░░░] 20%
 
