@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.15
-milestone_name: milestone
-status: completed
-stopped_at: Phase 112 complete
-last_updated: "2026-05-31T14:42:42.000Z"
-last_activity: 2026-05-31 -- Phase 112 marked complete
+milestone_name: CI Optimisation & Race/Match Defaults
+status: Awaiting next milestone
+stopped_at: v1.15 milestone shipped
+last_updated: "2026-05-31T16:54:30.364Z"
+last_activity: 2026-05-31 — Milestone v1.15 completed and archived
 progress:
   total_phases: 6
   completed_phases: 6
@@ -18,24 +18,22 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
+See: .planning/PROJECT.md (updated 2026-05-31 after v1.15 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 112 — unused-import-cleanup (COMPLETE — all v1.15 phases done)
+**Current focus:** Planning next milestone — v1.15 shipped 2026-05-31; run `/gsd-new-milestone` (after PR #132 squash-merge → release CI tags v1.15.0).
 
 ## Current Position
 
-Phase: 112 — COMPLETE
-Plan: 1 of 1
-Status: Phase 112 complete — clean verify -Pe2e green
-Last activity: 2026-05-31 -- Phase 112 marked complete
+Phase: Milestone v1.15 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-31 — Milestone v1.15 completed and archived
 
-Progress: [██████████] 100%
+## Shipped Milestone
 
-## Active Milestone
-
-**v1.15 CI Optimisation & Race/Match Defaults** — Branch: `gsd/v1.15-ci-and-race-defaults`
+**v1.15 CI Optimisation & Race/Match Defaults** — SHIPPED 2026-05-31 — Branch: `gsd/v1.15-ci-and-race-defaults` (PR #132)
 
 | Phase | Goal | Requirements | Status |
 |-------|------|--------------|--------|
@@ -107,10 +105,14 @@ Carried forward from v1.13/v1.14 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-05-31T11:01:36.825Z
+**Last session:** 2026-05-31 — v1.15 milestone closed and archived.
 
-**Stopped at:** Phase 111 context gathered
+**Stopped at:** v1.15 shipped — archives written (`milestones/v1.15-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`), ROADMAP collapsed, PROJECT evolved, REQUIREMENTS.md removed.
 
-**Next action:** `/gsd-code-review 108` (Phase 108 has no REVIEW.md — review before starting Phase 109 per "Code-Review Before New Phase"). Then `/gsd-discuss-phase 109` (Walkover Handling). Phase 106 already has a REVIEW.md.
+**Next action:** Squash-merge PR #132 with subject `feat(v1.15): ci optimisation & race/match defaults` (release CI tags v1.15.0). Then `/gsd-new-milestone`.
 
-**Branch:** `gsd/v1.15-ci-and-race-defaults`
+**Branch:** `gsd/v1.15-ci-and-race-defaults` (merges to `master` at close)
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
