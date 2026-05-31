@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
-status: verifying
+status: executing
 stopped_at: Phase 110 context gathered
-last_updated: "2026-05-31T08:10:26.135Z"
-last_activity: 2026-05-30
+last_updated: "2026-05-31T08:47:19.695Z"
+last_activity: 2026-05-31 -- Phase 110 planning complete
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 12
+  total_plans: 17
   completed_plans: 12
   percent: 50
 ---
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 Phase: 109 (walkover-handling) — COMPLETE
 Plan: 5 of 5 complete
-Status: All 5 plans + 2 code-review passes done (109-REVIEW.md: 8 findings resolved; 109-REVIEW-2.md: 5 findings resolved). Walkover winner credited full team race score (read-time). Full clean verify -Pe2e green.
-Last activity: 2026-05-30
+Status: Ready to execute
+Last activity: 2026-05-31 -- Phase 110 planning complete
 
 Progress: [██████████] 100%
 

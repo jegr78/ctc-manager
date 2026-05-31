@@ -44,7 +44,7 @@ Phase 107 was removed from the v1.15 roadmap (user decision 2026-05-30: drop per
 
 - [ ] **LOBBY-01**: A new `LobbySettingsGraphicService` renders a Carbon-HUD Lobby Settings graphic from a Claude-Design drop-in template, driven purely by template variables (no new data model / no Flyway migration).
 - [ ] **LOBBY-02**: An admin can preview and download the Lobby Settings graphic.
-- [ ] **LOBBY-03**: The Lobby Settings graphic is available as a new Discord auto-post type, plugged into the existing Discord integration.
+- [ ] **LOBBY-03**: The Lobby Settings graphic is available as a new Discord post type (manual admin button targeting the match channel, mirroring the existing Settings post — see CONTEXT.md D-01), plugged into the existing Discord integration.
 - [ ] **LOBBY-04**: The Lobby Settings template is editable via the template editor (custom override, `implements TemplateManageable`).
 - [ ] **LOBBY-05**: The service is coverage-excluded (Playwright runtime), consistent with the other graphic services.
 
