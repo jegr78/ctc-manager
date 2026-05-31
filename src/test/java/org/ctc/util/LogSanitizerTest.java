@@ -41,9 +41,16 @@ class LogSanitizerTest {
 		assertThat(LogSanitizer.sanitize("user\r\nINFO")).isEqualTo("user_INFO");
 	}
 
+	@ParameterizedTest
+	@ValueSource(ints = {0x00, 0x07, 0x1B, 0x7F})
+	void givenC0OrDelControlChar_whenSanitize_thenReplacedWithUnderscore(int codePoint) {
+		assertThat(LogSanitizer.sanitize(String.valueOf((char) codePoint))).isEqualTo("_");
+	}
+
 	@Test
 	void givenNonStringObject_whenSanitize_thenToStringUsed() {
+		UUID uuid = UUID.randomUUID();
 		assertThat(LogSanitizer.sanitize(42)).isEqualTo("42");
-		assertThat(LogSanitizer.sanitize(UUID.randomUUID())).isNotBlank();
+		assertThat(LogSanitizer.sanitize(uuid)).isEqualTo(uuid.toString());
 	}
 }

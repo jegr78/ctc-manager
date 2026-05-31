@@ -39,7 +39,7 @@ public class FileStorageService {
 		Path raceDir = uploadDir.resolve("races").resolve(raceId.toString());
 		Files.createDirectories(raceDir);
 
-		String filename = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitize(file.getOriginalFilename());
+		String filename = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(file.getOriginalFilename());
 		Path target = raceDir.resolve(filename);
 		validatePathWithinUploadDir(target);
 		file.transferTo(target);
@@ -96,7 +96,7 @@ public class FileStorageService {
 		Path dir = uploadDir.resolve(subDir).resolve(entityId.toString());
 		validatePathWithinUploadDir(dir);
 		Files.createDirectories(dir);
-		String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitize(filename);
+		String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(filename);
 		Path target = dir.resolve(safeName);
 		validatePathWithinUploadDir(target);
 		try (var in = java.net.URI.create(sourceUrl).toURL().openStream()) {
@@ -111,7 +111,7 @@ public class FileStorageService {
 		validateNoPathTraversal(file.getOriginalFilename());
 		Path dir = uploadDir.resolve(subDir).resolve(entityId.toString());
 		Files.createDirectories(dir);
-		String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitize(file.getOriginalFilename());
+		String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + sanitizeFilename(file.getOriginalFilename());
 		Path target = dir.resolve(safeName);
 		validatePathWithinUploadDir(target);
 		file.transferTo(target);
@@ -119,7 +119,7 @@ public class FileStorageService {
 		return "/uploads/" + subDir + "/" + entityId + "/" + safeName;
 	}
 
-	private String sanitize(String filename) {
+	private String sanitizeFilename(String filename) {
 		if (filename == null) {
 			return "file";
 		}

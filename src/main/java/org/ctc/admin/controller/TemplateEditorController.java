@@ -149,7 +149,7 @@ public class TemplateEditorController {
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Template contains unsafe expressions");
         } catch (RuntimeException e) {
-            log.error("Preview failed for template type: {}", templateType, e);
+            log.error("Preview failed for template type: {}", sanitize(templateType), e);
             return ResponseEntity.internalServerError()
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Preview failed");
