@@ -131,6 +131,30 @@ public class DiscordChannelService {
 		eventPublisher.publishEvent(new ChannelCreatedEvent(match.getId()));
 	}
 
+	@Transactional
+	public void linkExistingChannel(Match match, String channelId) throws DiscordApiException {
+		restClient.fetchChannel(channelId);
+
+		List<Webhook> existing = restClient.listWebhooks(channelId);
+		String webhookUrl = null;
+		for (Webhook webhook : existing) {
+			if (WEBHOOK_NAME.equals(webhook.name()) && hasText(webhook.url())) {
+				webhookUrl = webhook.url();
+				break;
+			}
+		}
+		if (webhookUrl == null) {
+			webhookUrl = restClient.createWebhook(channelId, WEBHOOK_NAME).url();
+		}
+
+		match.setDiscordChannelId(channelId);
+		match.setDiscordChannelWebhookUrl(webhookUrl);
+		matchRepository.save(match);
+		// No ChannelCreatedEvent: linking a prepared channel must not auto-post Team Cards
+		// (DiscordAutoPostListener.onChannelCreated does) — the operator uses the explicit button.
+		log.info("Discord channel linked to match {} → channelId={}", match.getId(), channelId);
+	}
+
 	private static void assertPreconditions(Match match, DiscordGlobalConfig cfg) {
 		boolean missing = match.getHomeTeam() == null
 				|| match.getAwayTeam() == null
