@@ -3,10 +3,11 @@ phase: 106
 slug: ci-pipeline-optimisation
 status: validated
 nyquist_compliant: false
-nyquist_status: partial
+nyquist_status: partial_by_design
 wave_0_complete: true
+open_validation_items: 0
 created: 2026-05-30
-validated: 2026-05-30
+validated: 2026-05-31
 ---
 
 # Phase 106 — Validation Strategy
@@ -42,11 +43,11 @@ validated: 2026-05-30
 
 | Task ID | Plan | Wave | Requirement | Secure Behavior | Test Type | Automated Command | Status |
 |---------|------|------|-------------|-----------------|-----------|-------------------|--------|
-| 106-04-T2 | 106-04 | 2 | CI-01 | Required checks report real `success` (not `skipped`) on docs-only PR | behavior (CI run) — **manual-only** | docs-only test PR → `gh pr checks` shows `build-and-test`/`dockerfile-noble-pin-guard`/`docker-build` = success | ⬜ pending (manual; not tested this session — no throwaway PR) |
-| 106-02-T1 / 106-04-T2 | 106-02, 106-04 | 1, 2 | CI-02 | `codeql.yml`/`mariadb-smoke` do not run on docs-only | behavior (CI run) — **manual-only** | docs-only PR → those workflows absent from checks | ⬜ pending (manual; logic verified — `paths-ignore` present, `paths:` inclusion confirmed) |
+| 106-04-T2 | 106-04 | 2 | CI-01 | Required checks report real `success` (not `skipped`) on docs-only PR | behavior (CI run) — **manual-only** | docs-only test PR → `gh pr checks` shows `build-and-test`/`dockerfile-noble-pin-guard`/`docker-build` = success | ✅ accepted config-sound (2026-05-31; throwaway PR deliberately skipped — docs/ci/v1.15-open-verify.md) |
+| 106-02-T1 / 106-04-T2 | 106-02, 106-04 | 1, 2 | CI-02 | `codeql.yml`/`mariadb-smoke` do not run on docs-only | behavior (CI run) — **manual-only** | docs-only PR → those workflows absent from checks | ✅ accepted config-sound (2026-05-31; cumulative-PR-diff caveat — docs/ci/v1.15-open-verify.md) |
 | 106-01-T1 / 106-04-T2 | 106-01, 106-04 | 1, 2 | CI-03 | Mixed/code PR runs full CI | behavior (CI run) — **manual observation** | code PR → all steps execute | ✅ green (live run 26680554446 — all jobs ran) |
 | 106-01-T1 / 106-04-T2 | 106-01, 106-04 | 1, 2 | CI-04 | E2E median below 17:39; suite runs once | observation — **manual** | compare run duration vs baseline; single `mvnw clean verify -Pe2e` in job | ✅ green (build-and-test 14:55 < 17:39; single Maven run) |
-| 106-01-T2 / 106-04-T2 | 106-01, 106-04 | 1, 2 | CI-05 | Warm Docker/Maven/Playwright caches | observation (cache-hit logs) — **manual-only** | second run shows `CACHED` docker layers + maven/playwright cache hit, isolated scope | ⬜ pending (manual; first run was cold — needs 2nd code run) |
+| 106-01-T2 / 106-04-T2 | 106-01, 106-04 | 1, 2 | CI-05 | Warm Docker/Maven/Playwright caches | observation (cache-hit logs) — **manual-only** | second run shows `CACHED` docker layers + maven/playwright cache hit, isolated scope | ✅ confirmed empirically (2026-05-31; docker-build 0m20s/0m21s full-cache-hit runs — docs/ci/v1.15-open-verify.md) |
 | 106-03-T1/T2 | 106-03 | 1 | CI-06 | No rerun/retry symptom-hotfix | **source guard (automated)** | `mvnw -q validate` `no-rerun-guard` grep fails (exit 1) if `<rerunFailingTestsCount>`/`<retryCount>` present | ✅ green (automated; proven RED→GREEN) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky.*
@@ -70,14 +71,15 @@ live runs. These are manual-only by nature (not a coverage gap).
 
 | Behavior | Requirement | Why Manual | Test Instructions | Status |
 |----------|-------------|------------|-------------------|--------|
-| Required-check status on a real docs-only PR | CI-01 | Branch-protection `success`-vs-`skipped` is only observable on a live PR against `master` | Open a throwaway PR touching only `.planning/**` or a root `*.md`; confirm the three required checks report green (not skipped) and merge is not blocked | ⬜ open (not tested this session) |
-| Non-required workflows absent on docs-only | CI-02 | Trigger evaluation only observable on a live docs-only commit/PR | On a docs-only PR confirm `CodeQL SAST` + `MariaDB Migration Smoke` are absent from the checks list | ⬜ open |
+| Required-check status on a real docs-only PR | CI-01 | Branch-protection `success`-vs-`skipped` is only observable on a live PR against `master` | Open a throwaway PR touching only `.planning/**` or a root `*.md`; confirm the three required checks report green (not skipped) and merge is not blocked | ✅ accepted config-sound (2026-05-31) — path filters verified correct by inspection; not empirically isolable on mixed-diff PR #132 (cumulative `base…head` semantics); throwaway PR deliberately skipped |
+| Non-required workflows absent on docs-only | CI-02 | Trigger evaluation only observable on a live docs-only commit/PR | On a docs-only PR confirm `CodeQL SAST` + `MariaDB Migration Smoke` are absent from the checks list | ✅ accepted config-sound (2026-05-31) — `paths-ignore`/`paths:` confirmed; same cumulative-diff caveat as CI-01 |
 | Code/mixed PR runs full CI | CI-03 | Live workflow-run observation | On a code PR confirm all expensive steps ran | ✅ confirmed (run 26680554446) |
 | E2E median improvement | CI-04 | Runtime measurable only across real runs | Compare the `build-and-test` duration on post-change runs against the 17:39 baseline | ✅ confirmed (14:55) |
-| Warm cache on re-run | CI-05 | Cache-hit logs only on a 2nd live run | Trigger a 2nd code run; confirm Docker `CACHED` layers (`scope=ctc-docker`) + Maven/Playwright `actions/cache` hits, no cross-eviction | ⬜ open (1st run cold) |
+| Warm cache on re-run | CI-05 | Cache-hit logs only on a 2nd live run | Trigger a 2nd code run; confirm Docker `CACHED` layers (`scope=ctc-docker`) + Maven/Playwright `actions/cache` hits, no cross-eviction | ✅ confirmed empirically (2026-05-31) — docker-build 0m20s/0m21s full-cache-hit runs; sublinear rebuilds 2–4 min |
 
-CI-01/CI-02/CI-05 are tracked as in-milestone open-verify items in `.planning/STATE.md`
-(to be closed before v1.15 milestone close).
+CI-01/CI-02/CI-05 were tracked as in-milestone open-verify items in `.planning/STATE.md`;
+all three are now **closed/accepted** (2026-05-31) and documented in
+`docs/ci/v1.15-open-verify.md`. No open validation items remain for this phase.
 
 ---
 
@@ -99,5 +101,27 @@ integration test. No coverage gap to fill with generated tests.
 
 ---
 
+## Validation Audit 2026-05-31
+
+Re-audit during `/gsd-audit-milestone v1.15` follow-up.
+
+| Metric | Count |
+|--------|-------|
+| Gaps found (automatable) | 0 |
+| Resolved | 0 (none automatable) |
+| Escalated | 0 |
+| Manual open items closed since 2026-05-30 | 3 (CI-01, CI-02, CI-05) |
+
+**Outcome:** No automatable Nyquist gap exists. CI-01..05 are GitHub-Actions runtime
+behaviors with no in-stack JUnit/Surefire equivalent — generated tests would be
+artificial. The three previously-open manual items are now closed: **CI-05** confirmed
+empirically (full Docker cache-hit runs) and **CI-01/CI-02** accepted as config-sound
+(cumulative-PR-diff semantics; throwaway docs-only PR deliberately skipped) — see
+`docs/ci/v1.15-open-verify.md`. `nyquist_compliant: false` is retained as the correct,
+terminal **partial-by-design** state; `open_validation_items: 0`. No gsd-nyquist-auditor
+spawn was warranted (nothing to generate).
+
+---
+
 *Phase: 106-ci-pipeline-optimisation*
-*Validation strategy drafted: 2026-05-30 · audited: 2026-05-30*
+*Validation strategy drafted: 2026-05-30 · audited: 2026-05-30, 2026-05-31*
