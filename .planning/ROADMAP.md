@@ -298,7 +298,7 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
 - [x] 110-02-PLAN.md — RaceGraphicService/RaceController/RaceService gate + race-detail generate button (preview/download) (LOBBY-02)
 - [x] 110-03-PLAN.md — Template editor: 3 Map.ofEntries + TemplatePreviewService case + template-editors tab (LOBBY-04)
 - [x] 110-04-PLAN.md — DiscordPostType.LOBBY_SETTINGS + postLobbySettings + MatchController/MatchService + match-detail button (LOBBY-03)
-- [ ] 110-05-PLAN.md — Visual acceptance vs preview PNG + clean verify -Pe2e gate (LOBBY-01..05)
+- [x] 110-05-PLAN.md — Visual acceptance vs preview PNG + clean verify -Pe2e gate (LOBBY-01..05)
 **Precondition note**: Phase 110 is blocked on the external Claude-Design Lobby Settings HTML/CSS handoff. Handoff delivered 2026-05-31 into `.planning/phases/110-lobby-settings-graphic/design-handoff/` (analogous to Phase 105 CARD-01 handoff pattern).
 **UI hint**: yes
 
