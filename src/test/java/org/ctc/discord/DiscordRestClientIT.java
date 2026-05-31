@@ -201,6 +201,40 @@ class DiscordRestClientIT {
 	}
 
 	@Test
+	void given200_whenListWebhooks_thenReturnsWebhooksWithNameAndUrl() throws Exception {
+		// given — Discord returns an array of webhooks; the production payload field is "name" (no underscore)
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
+				.willReturn(okJson("[{\"id\":\"w1\",\"type\":1,\"name\":\"CTC Manager\",\"channel_id\":\"c1\","
+						+ "\"token\":\"tok-abc\",\"url\":\"https://discord.com/api/webhooks/w1/tok-abc\"},"
+						+ "{\"id\":\"w2\",\"type\":1,\"name\":\"Other\",\"channel_id\":\"c1\","
+						+ "\"token\":\"tok-xyz\",\"url\":\"https://discord.com/api/webhooks/w2/tok-xyz\"}]")));
+
+		// when
+		var webhooks = client.listWebhooks("c1");
+
+		// then
+		assertThat(webhooks).hasSize(2);
+		assertThat(webhooks).extracting(Webhook::name).containsExactly("CTC Manager", "Other");
+		assertThat(webhooks.getFirst().url()).isEqualTo("https://discord.com/api/webhooks/w1/tok-abc");
+		assertThat(webhooks.getFirst().id()).isEqualTo("w1");
+		assertThat(webhooks.getFirst().channelId()).isEqualTo("c1");
+		wm.verify(getRequestedFor(urlPathEqualTo("/api/v10/channels/c1/webhooks")));
+	}
+
+	@Test
+	void givenEmptyArray_whenListWebhooks_thenReturnsEmptyList() throws Exception {
+		// given
+		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c2/webhooks"))
+				.willReturn(okJson("[]")));
+
+		// when
+		var webhooks = client.listWebhooks("c2");
+
+		// then
+		assertThat(webhooks).isEmpty();
+	}
+
+	@Test
 	void givenChannelId_whenFetchChannel_thenReturnsChannelWithPermissionOverwrites() throws Exception {
 		wm.stubFor(get(urlPathEqualTo("/api/v10/channels/c1"))
 				.willReturn(okJson("{\"id\":\"c1\",\"name\":\"any-name\",\"type\":0,"

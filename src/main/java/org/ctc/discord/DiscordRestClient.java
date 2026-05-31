@@ -33,6 +33,8 @@ public class DiscordRestClient {
 	};
 	private static final ParameterizedTypeReference<List<Emoji>> EMOJI_LIST = new ParameterizedTypeReference<>() {
 	};
+	private static final ParameterizedTypeReference<List<Webhook>> WEBHOOK_LIST = new ParameterizedTypeReference<>() {
+	};
 
 	private final RestClient bot;
 
@@ -119,6 +121,14 @@ public class DiscordRestClient {
 				.body(new WebhookCreateRequest(name))
 				.retrieve()
 				.body(Webhook.class));
+	}
+
+	public List<Webhook> listWebhooks(String channelId) throws DiscordApiException {
+		List<Webhook> webhooks = execute(() -> bot.get()
+				.uri("/channels/{channelId}/webhooks", channelId)
+				.retrieve()
+				.body(WEBHOOK_LIST));
+		return webhooks == null ? List.of() : webhooks;
 	}
 
 	public Channel fetchChannel(String channelId) throws DiscordApiException {
