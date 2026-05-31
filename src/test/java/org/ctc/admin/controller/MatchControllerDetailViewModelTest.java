@@ -38,7 +38,7 @@ class MatchControllerDetailViewModelTest {
 
 	private static final List<String> EXPECTED_KEYS = List.of(
 			"match", "archiveCategories", "defaultSelectionId", "pageTitle",
-			"teamCardsPost", "settingsPost", "lineupsPost", "provisionalPost",
+			"teamCardsPost", "settingsPost", "lobbySettingsPost", "lineupsPost", "provisionalPost",
 			"matchHasCompleteSettings", "matchHasCompleteLineups", "matchHasProvisionalData",
 			"matchResultsPost", "matchResultsStale", "schedulePost",
 			"matchCanRenderResults", "scheduleVisible",

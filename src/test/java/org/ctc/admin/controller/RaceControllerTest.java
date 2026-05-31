@@ -622,6 +622,17 @@ class RaceControllerTest {
 
 
 	@Test
+	void givenRaceWithoutSettings_whenGenerateLobbySettings_thenRedirectsWithError() throws Exception {
+		// when
+		mockMvc.perform(post("/admin/races/" + race.getId() + "/generate-lobby-settings"))
+				// then
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/races/" + race.getId()))
+				.andExpect(flash().attributeExists("errorMessage"));
+	}
+
+
+	@Test
 	void givenRaceWithNoMatch_whenGenerateOverlay_thenRedirectsWithError() throws Exception {
 		// given — create a race without a match
 		var raceWithoutMatch = new Race();
