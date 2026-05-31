@@ -4,8 +4,8 @@ milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
 status: executing
 stopped_at: Phase 110 context gathered
-last_updated: "2026-05-31T08:47:19.695Z"
-last_activity: 2026-05-31 -- Phase 110 planning complete
+last_updated: "2026-05-31T08:50:20.902Z"
+last_activity: 2026-05-31 -- Phase 110 execution started
 progress:
   total_phases: 6
   completed_phases: 3
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 109 — walkover-handling
+**Current focus:** Phase 110 — lobby-settings-graphic
 
 ## Current Position
 
-Phase: 109 (walkover-handling) — COMPLETE
-Plan: 5 of 5 complete
-Status: Ready to execute
-Last activity: 2026-05-31 -- Phase 110 planning complete
+Phase: 110 (lobby-settings-graphic) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 110
+Last activity: 2026-05-31 -- Phase 110 execution started
 
 Progress: [██████████] 100%
 

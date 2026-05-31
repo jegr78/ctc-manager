@@ -294,7 +294,7 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
   4. An admin can override the Lobby Settings Thymeleaf template via the template editor (the service `implements TemplateManageable`) — a custom template is loaded and rendered instead of the default.
   5. `LobbySettingsGraphicService` is listed in the JaCoCo exclusion configuration consistent with all other Playwright-rendered graphic services — `./mvnw verify` coverage report confirms the service is excluded and the 82 % line gate is still met.
 **Plans**: 5 plans
-- [ ] 110-01-PLAN.md — LobbySettingsGraphicService + Carbon-HUD template (D-07 weather) + weather/room-name unit tests + JaCoCo exclude (LOBBY-01, LOBBY-05)
+- [x] 110-01-PLAN.md — LobbySettingsGraphicService + Carbon-HUD template (D-07 weather) + weather/room-name unit tests + JaCoCo exclude (LOBBY-01, LOBBY-05)
 - [ ] 110-02-PLAN.md — RaceGraphicService/RaceController/RaceService gate + race-detail generate button (preview/download) (LOBBY-02)
 - [ ] 110-03-PLAN.md — Template editor: 3 Map.ofEntries + TemplatePreviewService case + template-editors tab (LOBBY-04)
 - [ ] 110-04-PLAN.md — DiscordPostType.LOBBY_SETTINGS + postLobbySettings + MatchController/MatchService + match-detail button (LOBBY-03)
