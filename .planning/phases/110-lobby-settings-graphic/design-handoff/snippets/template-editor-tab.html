@@ -1,0 +1,95 @@
+<!--
+  Editor-Tab Snippet für templates/admin/template-editors.html
+  ----------------------------------------------------------------
+  1) Tab-Button in die .editor-tab-bar einfügen (z.B. direkt nach dem
+     "Race Settings"-Tab):
+-->
+
+<a th:href="@{/admin/tools/template-editors(tab='lobby-settings')}"
+   th:classappend="${activeTab == 'lobby-settings' ? 'tab-active' : ''}"
+   class="tab-btn">Lobby Settings</a>
+
+
+<!--
+  2) Tab-Content-Block einfügen (analog zum Settings-Tab). Erwartete
+     Model-Attribute (vom TemplateEditorController): lobbySettingsIsCustom,
+     lobbySettingsTemplate.
+-->
+
+<div th:if="${activeTab == 'lobby-settings'}" class="editor-tab-content"
+     data-template-type="lobby-settings" data-preview-mode="landscape">
+    <div class="editor-status-row">
+        <span th:if="${lobbySettingsIsCustom}" class="badge badge-active badge-sm">Custom</span>
+        <span th:unless="${lobbySettingsIsCustom}" class="badge badge-inactive badge-sm">Default</span>
+    </div>
+    <!-- Preview -->
+    <div class="card editor-card-flush">
+        <div class="editor-card-header">
+            <strong>Preview</strong>
+            <button type="button" class="btn btn-sm refresh-preview-btn">Refresh</button>
+        </div>
+        <div class="editor-preview-area">
+            <div class="editor-preview-landscape">
+                <iframe class="preview-frame editor-iframe-landscape" sandbox="allow-same-origin"></iframe>
+            </div>
+        </div>
+    </div>
+    <!-- Editor + Variablen -->
+    <div class="editor-grid">
+        <div class="card editor-card-column">
+            <div class="editor-card-header">
+                <strong>Template (HTML + Thymeleaf)</strong>
+                <form th:action="@{/admin/tools/template-editors/lobby-settings/reset}" method="post"
+                      onsubmit="return confirm('Reset to default template?')">
+                    <button type="submit" class="btn btn-danger btn-sm">Reset</button>
+                </form>
+            </div>
+            <form th:action="@{/admin/tools/template-editors/lobby-settings/save}" method="post" class="editor-form">
+                <textarea name="template" class="template-textarea" th:text="${lobbySettingsTemplate}"></textarea>
+                <div class="editor-card-footer">
+                    <button type="submit" class="btn btn-primary">Save Template</button>
+                </div>
+            </form>
+        </div>
+        <div class="card editor-info-card">
+            <strong>Available Variables</strong>
+            <table class="editor-var-table">
+                <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr><td><code>fontBase64</code></td><td>Conthrax font as data URI</td></tr>
+                    <tr><td><code>ctcLogoBase64</code></td><td>CTC logo as data URI</td></tr>
+                    <tr><td><code>seasonYear</code></td><td>Season year (header)</td></tr>
+                    <tr><td><code>matchdayName</code></td><td>Matchday / event label (header)</td></tr>
+                    <tr><td><code>seasonName</code></td><td>Season name (footer)</td></tr>
+                    <tr><td><code>v.roomName</code></td><td>Room name (match-specific)</td></tr>
+                    <tr><td><code>v.track</code></td><td>Track + layout</td></tr>
+                    <tr><td><code>v.laps</code></td><td>Number of laps</td></tr>
+                    <tr><td><code>v.weather</code></td><td>Preset weather</td></tr>
+                    <tr><td><code>v.timeOfDay</code></td><td>Time of the day</td></tr>
+                    <tr><td><code>v.timeSpeed</code></td><td>Variable time speed rate</td></tr>
+                    <tr><td><code>v.mechDamage</code></td><td>Mechanical damage</td></tr>
+                    <tr><td><code>v.tyreWear</code></td><td>Tyre wear rate</td></tr>
+                    <tr><td><code>v.fuelRate</code></td><td>Fuel consumption rate</td></tr>
+                    <tr><td><code>v.refuelSpeed</code></td><td>Refuelling speed</td></tr>
+                    <tr><td><code>v.initialFuel</code></td><td>Initial fuel</td></tr>
+                    <tr><td><code>v.minPitStops</code></td><td>Minimum no. of pit stops</td></tr>
+                    <tr><td><code>v.category</code></td><td>Filter by category (Gr. 3 …)</td></tr>
+                    <tr><td><code>v.usableTyres</code></td><td>Usable tyre &amp; types</td></tr>
+                    <tr><td><code>v.requiredTyre</code></td><td>Required tyre type</td></tr>
+                </tbody>
+            </table>
+            <div class="editor-tips">
+                <strong>Tips</strong>
+                <ul class="editor-tips-list">
+                    <li>Graphic size is 1920×1080px (Full HD 16:9) — matches the screenshot viewport.</li>
+                    <li>Defaults are plain text; match-specific values use
+                        <code>th:text="${v.key} ?: 'Default'"</code>.</li>
+                    <li>To make a setting match-specific, wrap its value with that
+                        <code>th:text</code>; to pin it, remove the attribute.</li>
+                    <li>Missing <code>v.*</code> keys fall back to the <code>?:</code> default
+                        (no template error).</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

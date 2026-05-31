@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<!--
+  CTC · GT7 Lobby Settings — Render-Template (Variante C "Ledger", 1920×1080 PNG).
+
+  "Natural Template": Default-Werte stehen als fester Text im Element. Match-spezifische
+  Werte tragen zusätzlich ein th:text="${v.key} ?: 'Default'" — im Browser sieht man den
+  festen Text, beim Thymeleaf-Render wird er durch den Variablenwert ersetzt (Default als
+  Fallback, falls die Variable nicht gesetzt ist).
+
+  → Eine Einstellung von FEST auf MATCH-SPEZIFISCH schalten:
+        <span class="set-value">Light</span>
+     wird zu
+        <span class="set-value" th:text="${v.mechDamage} ?: 'Light'">Light</span>
+     (und umgekehrt). Mehr braucht es nicht; pro Zeile mit <!-- spec --> markiert.
+
+  Kontext-Variablen (vom LobbySettingsGraphicService zu setzen):
+    fontBase64      Conthrax-Font als data-URI
+    ctcLogoBase64   CTC-Logo als data-URI
+    seasonYear      z.B. "2026"
+    matchdayName    z.B. "MD4 · P1R vs. VEZ"
+    seasonName      z.B. "Community Team Cup" (Footer)
+    v               Map<String,Object> der match-spezifischen Werte (siehe ?: Defaults)
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+<meta charset="UTF-8">
+<style th:inline="text">
+  @font-face {
+    font-family: 'Conthrax';
+    src: url([[${fontBase64}]]) format('woff2');
+    font-weight: 600 900;
+  }
+
+  :root { --accent: #f5c542; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1920px; height: 1080px; overflow: hidden;
+    font-family: 'Helvetica Neue', Arial, sans-serif; color: #eaeaf0;
+    display: flex; flex-direction: column;
+    background:
+      repeating-linear-gradient(118deg, transparent 0 74px, rgba(255,255,255,.013) 74px 76px),
+      radial-gradient(120% 85% at 50% 32%, #15151b 0%, #0d0d11 54%, #08080b 100%);
+  }
+  .brand { font-family: 'Conthrax', sans-serif; }
+
+  /* ---- Header ---- */
+  .header {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 48px; gap: 20px;
+    background: linear-gradient(180deg, #202028 0%, #121217 100%);
+    box-shadow: inset 0 -3px 0 var(--accent);
+  }
+  .h-left { flex: 1; }
+  .h-league { font-family: 'Conthrax', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; color: #f2f2f5; }
+  .h-year { font-size: 15px; color: #9a9aa6; margin-top: 3px; letter-spacing: 1px; }
+  .h-center { flex: 1; text-align: center; }
+  .h-title {
+    font-family: 'Conthrax', sans-serif; font-size: 38px; font-weight: 900; letter-spacing: 2.5px;
+    text-transform: uppercase; color: #f2f2f5; display: inline-flex; align-items: center; gap: 16px; white-space: nowrap;
+  }
+  .h-title::before, .h-title::after { content: ''; width: 4px; height: 30px; background: var(--accent); border-radius: 1px; }
+  .h-event { font-size: 16px; color: #9a9aa6; margin-top: 5px; letter-spacing: 1.5px; }
+  .h-right { flex: 1; display: flex; justify-content: flex-end; }
+  .h-right img { width: 60px; height: 60px; object-fit: contain; }
+
+  /* ---- Main / columns ---- */
+  .main { flex: 1 1 auto; overflow: hidden; padding: 24px 40px; }
+  .cols { column-count: 4; column-gap: 22px; column-fill: balance; }
+
+  .section { break-inside: avoid; margin-bottom: 13px; padding: 11px 14px;
+             background: rgba(255,255,255,.022); border: 1px solid rgba(255,255,255,.05); border-radius: 10px; }
+  .sec-head { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+  .sec-tick { width: 4px; height: 17px; background: var(--accent); border-radius: 1px; flex: none; }
+  .sec-title { font-family: 'Conthrax', sans-serif; font-size: 15.5px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: #f3f3f6; }
+
+  .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 5px 8px; border-radius: 4px; }
+  .row:nth-child(even) { background: rgba(255,255,255,.022); }
+  .set-label { flex: 1 1 auto; font-family: 'Conthrax', sans-serif; font-size: 10.5px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: #82828e; }
+  .set-value { flex: 0 0 auto; max-width: 58%; text-align: right; font-size: 15px; font-weight: 500; color: #ecedf2; line-height: 1.2; }
+
+  /* ---- Footer ---- */
+  .footer {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 48px; gap: 16px; font-family: 'Conthrax', sans-serif;
+    background: linear-gradient(0deg, #202028 0%, #121217 100%);
+    box-shadow: inset 0 3px 0 var(--accent);
+  }
+  .f-left { flex: 1; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #8a8a96; }
+  .f-center { flex: 1; text-align: center; font-size: 13px; letter-spacing: 1px; color: #9a9aa6; font-family: 'Helvetica Neue', Arial, sans-serif; }
+  .f-right { flex: 1; display: flex; justify-content: flex-end; align-items: center; }
+  .f-right img { width: 34px; height: 34px; object-fit: contain; }
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="h-left">
+      <div class="h-league">Community Team Cup</div>
+      <div class="h-year" th:text="${seasonYear} ?: '2026'">2026</div>
+    </div>
+    <div class="h-center">
+      <div class="h-title">Lobby Settings</div>
+    </div>
+    <div class="h-right">
+      <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC" src="../../static/admin/img/ctc-logo-white.png">
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="cols">
+
+      <!-- ============ GENERAL ============ -->
+      <section class="section">
+        <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">General</span></header>
+        <div class="sec-rows">
+          <div class="row"><span class="set-label">Room Mode</span><span class="set-value">Practice / Qualifier / Race</span></div>
+          <div class="row"><span class="set-label">Room Privacy</span><span class="set-value">Private</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Room Name</span><span class="set-value" th:text="${v.roomName} ?: 'CTC – 2026 – MD4 – P1R vs. VEZ'">CTC – 2026 – MD4 – P1R vs. VEZ</span></div>
+          <div class="row"><span class="set-label">Race Type</span><span class="set-value">Race for Real</span></div>
+          <div class="row"><span class="set-label">Max. Number of Participants</span><span class="set-value">16</span></div>
+          <div class="row"><span class="set-label">Auto-Start</span><span class="set-value">Off</span></div>
+        </div>
+      </section>
+
+      <!-- ============ TRACK SETTINGS ============ -->
+      <section class="section">
+        <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">Track Settings</span></header>
+        <div class="sec-rows">
+          <!-- spec --><div class="row"><span class="set-label">Track</span><span class="set-value" th:text="${v.track} ?: 'Circuit de Sainte-Croix · B Reverse'">Circuit de Sainte-Croix · B Reverse</span></div>
+          <!-- spec --><div class="row"><span class="set-label">No. of Laps</span><span class="set-value" th:text="${v.laps} ?: '19'">19</span></div>
+          <div class="row"><span class="set-label">Time Limit</span><span class="set-value">—</span></div>
+        </div>
+      </section>
+
+      <!-- ============ TIME / WEATHER ============ -->
+      <section class="section">
+        <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">Time / Weather Settings</span></header>
+        <div class="sec-rows">
+          <div class="row"><span class="set-label">Weather Selection Method</span><span class="set-value">Preset Weather</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Preset Weather</span><span class="set-value" th:text="${v.weather} ?: 'S01'">S01</span></div>
+          <div class="row"><span class="set-label">Equal Conditions Mode</span><span class="set-value">—</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Time of the Day</span><span class="set-value" th:text="${v.timeOfDay} ?: 'Afternoon'">Afternoon</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Variable Time Speed Rate</span><span class="set-value" th:text="${v.timeSpeed} ?: '3×'">3×</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Custom Weather</span><span class="set-value" th:text="${v.customWeather} ?: '—'">—</span></div>
+        </div>
+      </section>
+
+      <!-- ============ RACE SETTINGS ============ -->
+      <section class="section">
+        <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">Race Settings</span></header>
+        <div class="sec-rows">
+          <div class="row"><span class="set-label">Start Type</span><span class="set-value">Grid Start With False Start Check</span></div>
+          <div class="row"><span class="set-label">Grid Order</span><span class="set-value">Fastest First</span></div>
+          <div class="row"><span class="set-label">BoP / Tuning Prohibited</span><span class="set-value">On</span></div>
+          <div class="row"><span class="set-label">Settings Options</span><span class="set-value">Some · Brake Balance</span></div>
+          <div class="row"><span class="set-label">Boost</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Slipstream Strength</span><span class="set-value">Real</span></div>
+          <div class="row"><span class="set-label">Visible Damage</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Mechanical Damage</span><span class="set-value">Light</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Tyre Wear Rate</span><span class="set-value" th:text="${v.tyreWear} ?: '4×'">4×</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Fuel Consumption Rate</span><span class="set-value" th:text="${v.fuelRate} ?: '3×'">3×</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Refuelling Speed</span><span class="set-value" th:text="${v.refuelSpeed} ?: '3 Litre/sec'">3 Litre/sec</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Initial Fuel</span><span class="set-value" th:text="${v.initialFuel} ?: 'Default'">Default</span></div>
+          <div class="row"><span class="set-label">Grip Reduction Off Track</span><span class="set-value">Real</span></div>
+          <div class="row"><span class="set-label">Race Finish Delay</span><span class="set-value">180 second(s)</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Minimum No. of Pit Stops</span><span class="set-value" th:text="${v.minPitStops} ?: '0'">0</span></div>
+          <div class="row"><span class="set-label">Required Tyre Type Change</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Nitrous / Overtaking System Usage Time Multiplier</span><span class="set-value">Default</span></div>
+        </div>
+      </section>
+
+      <!-- ============ QUALIFIER SETTINGS ============ -->
+      <section class="section">
+        <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">Qualifier Settings</span></header>
+        <div class="sec-rows">
+          <div class="row"><span class="set-label">Time Limit</span><span class="set-value">10 Minute(s)</span></div>
+          <div class="row"><span class="set-label">Qualifying Continuation Time</span><span class="set-value">60 Seconds</span></div>
+          <div class="row"><span class="set-label">Tyre Wear Rate (Qualifier)</span><span class="set-value">Same as During the Race</span></div>
+          <div class="row"><span class="set-label">Fuel Consumption Rate (Qualifier)</span><span class="set-value">Same as During the Race</span></div>
+          <div class="row"><span class="set-label">Initial Fuel (Qualifier)</span><span class="set-value">Same as During the Race</span></div>
+          <div class="row"><span class="set-label">Slipstream Strength (Qualifier)</span><span class="set-value">Off</span></div>
+        </div>
+      </section>
+
+      <!-- ============ REGULATION SETTINGS ============ -->
+      <section class="section">
+        <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">Regulation Settings</span></header>
+        <div class="sec-rows">
+          <div class="row"><span class="set-label">Filter by Category</span><span class="set-value">—</span></div>
+          <div class="row"><span class="set-label">PP Limit</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Max. Power Output</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Minimum Weight</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Usage Tyres</span><span class="set-value">Racing</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Usable Tyre &amp; Types</span><span class="set-value" th:text="${v.usableTyres} ?: 'Soft, Medium, Hard, Intermediate, Wet'">Soft, Medium, Hard, Intermediate, Wet</span></div>
+          <!-- spec --><div class="row"><span class="set-label">Required Tyre Type</span><span class="set-value" th:text="${v.requiredTyre} ?: 'None'">None</span></div>
+          <div class="row"><span class="set-label">Nitrous</span><span class="set-value">Unrestricted</span></div>
+          <div class="row"><span class="set-label">Kart Usage</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Engine Swap</span><span class="set-value">Prohibited</span></div>
+          <div class="row"><span class="set-label">Tuning Parts</span><span class="set-value">Unrestricted</span></div>
+          <div class="row"><span class="set-label">Year (Lower Limit)</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Year (Upper Limit)</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Drivetrain</span><span class="set-value">Unrestricted</span></div>
+          <div class="row"><span class="set-label">Aspiration</span><span class="set-value">Unrestricted</span></div>
+        </div>
+      </section>
+
+      <!-- ============ PENALTY SETTINGS ============ -->
+      <section class="section">
+        <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">Penalty Settings</span></header>
+        <div class="sec-rows">
+          <div class="row"><span class="set-label">Shortcut Penalty</span><span class="set-value">Weak</span></div>
+          <div class="row"><span class="set-label">Wall Collision Penalty</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Correct Vehicle Course After Wall Collision</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Car Collision Penalty</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Pit Lane Cutting Penalty</span><span class="set-value">On</span></div>
+          <div class="row"><span class="set-label">Ghosting During Race</span><span class="set-value">Off</span></div>
+          <div class="row"><span class="set-label">Flag Rules</span><span class="set-value">Off</span></div>
+        </div>
+      </section>
+
+      <!-- ============ DRIVING OPTIONS ============ -->
+      <section class="section">
+        <header class="sec-head"><span class="sec-tick"></span><span class="sec-title">Driving Options Limitations</span></header>
+        <div class="sec-rows">
+          <div class="row"><span class="set-label">Countersteering Assistance</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Active Stability Management (ASM)</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Driving Line Assist</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Traction Control</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">ABS</span><span class="set-value">No Limit</span></div>
+          <div class="row"><span class="set-label">Auto-Drive</span><span class="set-value">No Limit</span></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="f-left">GT7 Lobby Regulations</div>
+    <div class="f-center" th:text="${seasonName} ?: 'Community Team Cup · 2026'">Community Team Cup · 2026</div>
+    <div class="f-right">
+      <img th:if="${ctcLogoBase64 != null}" th:src="${ctcLogoBase64}" alt="CTC" src="../../static/admin/img/ctc-logo-white.png">
+    </div>
+  </footer>
+</body>
+</html>
