@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
-status: completed
+status: executing
 stopped_at: Phase 111 context gathered
-last_updated: "2026-05-31T11:01:36.835Z"
-last_activity: 2026-05-31 -- Phase 110 marked complete
+last_updated: "2026-05-31T11:45:23.720Z"
+last_activity: 2026-05-31 -- Phase 111 planning complete
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 17
+  total_plans: 20
   completed_plans: 17
   percent: 67
 ---
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 Phase: 110 — COMPLETE
 Plan: 1 of 5
-Status: Phase 110 complete
-Last activity: 2026-05-31 -- Phase 110 marked complete
+Status: Ready to execute
+Last activity: 2026-05-31 -- Phase 111 planning complete
 
 Progress: [██████████] 100%
 
