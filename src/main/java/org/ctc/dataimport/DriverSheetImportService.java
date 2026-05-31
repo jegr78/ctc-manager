@@ -1,5 +1,6 @@
 package org.ctc.dataimport;
 
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.util.*;
@@ -69,7 +70,7 @@ public class DriverSheetImportService {
     @Transactional(readOnly = true)
     public DriverSheetImportPreview preview(String sheetUrl) throws GoogleApiException {
         String spreadsheetId = googleSheetsService.extractSpreadsheetId(sheetUrl);
-        log.info("Building driver sheet import preview for spreadsheet {}", spreadsheetId);
+        log.info("Building driver sheet import preview for spreadsheet {}", sanitize(spreadsheetId));
 
         List<String> allTabs = googleSheetsService.getSheetNames(spreadsheetId);
         List<String> yearTabs = allTabs.stream()
@@ -101,7 +102,7 @@ public class DriverSheetImportService {
      */
     @Transactional
     public ExecuteResult execute(String sheetUrl, Map<String, String> allParams) throws GoogleApiException {
-        log.info("Executing driver sheet import: sheetUrl={}", sheetUrl);
+        log.info("Executing driver sheet import: sheetUrl={}", sanitize(sheetUrl));
         if (allParams == null) {
             allParams = Map.of();
         }

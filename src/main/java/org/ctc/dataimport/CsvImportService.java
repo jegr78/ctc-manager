@@ -1,5 +1,6 @@
 package org.ctc.dataimport;
 
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.io.BufferedReader;
@@ -192,7 +193,7 @@ public class CsvImportService {
 					racesToDelete.forEach(raceRepository::delete);
 					raceRepository.flush();
 					log.info("Overwriting existing match: {} vs {} on {}",
-							homeTeam.getShortName(), effectiveAwayTeam.getShortName(), matchday.getLabel());
+							sanitize(homeTeam.getShortName()), sanitize(effectiveAwayTeam.getShortName()), sanitize(matchday.getLabel()));
 				} else {
 					result.addError("Match already exists: " + homeTeam.getShortName() +
 							" vs " + effectiveAwayTeam.getShortName() + " on " + matchday.getLabel());
@@ -309,7 +310,7 @@ public class CsvImportService {
 						matchRepository.delete(m);
 						matchRepository.flush();
 						log.info("Overwriting existing match: {} vs {} on {}",
-								homeTeam.getShortName(), effectiveAwayTeam.getShortName(), matchday.getLabel());
+								sanitize(homeTeam.getShortName()), sanitize(effectiveAwayTeam.getShortName()), sanitize(matchday.getLabel()));
 					});
 				} else {
 					result.addError("Match already exists: " + homeTeam.getShortName() +
@@ -395,7 +396,7 @@ public class CsvImportService {
 			var newDriver = new Driver(row.psnId(), row.psnId());
 			driverRepository.save(newDriver);
 			result.incrementNewDrivers();
-			log.info("Created new driver: {}", row.psnId());
+			log.info("Created new driver: {}", sanitize(row.psnId()));
 			return newDriver;
 		}
 
@@ -412,11 +413,11 @@ public class CsvImportService {
 		var existing = seasonDriverRepository.findBySeasonIdAndDriverId(season.getId(), driver.getId());
 		if (existing.isEmpty()) {
 			seasonDriverRepository.save(new SeasonDriver(season, driver, team));
-			log.debug("Created SeasonDriver: {} -> {} ({})", driver.getPsnId(), teamShortName, season.getName());
+			log.debug("Created SeasonDriver: {} -> {} ({})", sanitize(driver.getPsnId()), sanitize(teamShortName), sanitize(season.getName()));
 		} else if (!existing.get().getTeam().getId().equals(team.getId())) {
 			existing.get().setTeam(team);
 			seasonDriverRepository.save(existing.get());
-			log.debug("Updated SeasonDriver: {} -> {} ({})", driver.getPsnId(), teamShortName, season.getName());
+			log.debug("Updated SeasonDriver: {} -> {} ({})", sanitize(driver.getPsnId()), sanitize(teamShortName), sanitize(season.getName()));
 		}
 	}
 

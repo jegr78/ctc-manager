@@ -1,5 +1,6 @@
 package org.ctc.admin.controller;
 
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.util.Map;
@@ -113,7 +114,7 @@ public class DriverSheetImportController {
         long acceptKeys = safeParams.keySet().stream().filter(k -> k.startsWith("accept_")).count();
         long skipKeys = safeParams.keySet().stream().filter(k -> k.startsWith("skip_")).count();
         log.info("Driver sheet execute: sheetUrl={}, {} seasonId keys, {} accept keys, {} skip keys",
-                sheetUrl, seasonKeys, acceptKeys, skipKeys);
+                sanitize(sheetUrl), seasonKeys, acceptKeys, skipKeys);
         if (seasonKeys == 0) {
             redirectAttributes.addFlashAttribute("errorMessage",
                     "No tabs were assigned a season. Nothing imported.");

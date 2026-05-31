@@ -1,5 +1,7 @@
 package org.ctc.admin.controller;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -77,7 +79,7 @@ public class DriverController {
 
         driverService.save(driverForm.getId(), driverForm.getPsnId(), driverForm.getNickname(),
                 driverForm.isActive(), driverForm.getAliases());
-        log.info("Saved driver: {}", driverForm.getPsnId());
+        log.info("Saved driver: {}", sanitize(driverForm.getPsnId()));
         redirectAttributes.addFlashAttribute("successMessage", "Driver saved: " + driverForm.getPsnId());
         return "redirect:/admin/drivers";
     }

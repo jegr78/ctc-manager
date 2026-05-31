@@ -1,6 +1,7 @@
 package org.ctc.admin.controller;
 
 import static java.util.Map.entry;
+import static org.ctc.util.LogSanitizer.sanitize;
 
 import java.io.IOException;
 import java.util.Map;
@@ -103,7 +104,7 @@ public class TemplateEditorController {
             redirectAttributes.addFlashAttribute("successMessage",
                 TEMPLATE_TYPE_TO_LABEL.get(templateType) + " template saved");
         } catch (TemplatePreviewService.TemplateSecurityException e) {
-            log.warn("Blocked unsafe template save for type {}: {}", templateType, e.getMessage());
+            log.warn("Blocked unsafe template save for type {}: {}", sanitize(templateType), e.getMessage());
             redirectAttributes.addFlashAttribute("errorMessage", "Template contains unsafe expressions");
         } catch (IOException e) {
             redirectAttributes.addFlashAttribute("errorMessage", "Save failed: " + e.getMessage());
@@ -143,7 +144,7 @@ public class TemplateEditorController {
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Unknown template type");
         } catch (TemplatePreviewService.TemplateSecurityException e) {
-            log.warn("Blocked unsafe template preview: {}", e.getMessage());
+            log.warn("Blocked unsafe template preview: {}", sanitize(e.getMessage()));
             return ResponseEntity.badRequest()
                     .contentType(MediaType.TEXT_PLAIN)
                     .body("Template contains unsafe expressions");
