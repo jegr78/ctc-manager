@@ -3,6 +3,7 @@ phase: 110-lobby-settings-graphic
 plan: 03
 status: complete
 requirements: [LOBBY-04]
+requirements-completed: [LOBBY-04]
 ---
 
 # Plan 110-03 Summary: Template-Editor Registration

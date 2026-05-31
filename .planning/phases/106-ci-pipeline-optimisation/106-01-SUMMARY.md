@@ -3,6 +3,7 @@ phase: 106-ci-pipeline-optimisation
 plan: 01
 status: complete
 requirements: [CI-01, CI-03, CI-04, CI-05]
+requirements-completed: [CI-01, CI-03, CI-04, CI-05]
 files_modified: [.github/workflows/ci.yml]
 commit: 8413a28c
 ---

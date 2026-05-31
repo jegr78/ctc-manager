@@ -3,6 +3,7 @@ phase: 106-ci-pipeline-optimisation
 plan: 02
 status: complete
 requirements: [CI-02]
+requirements-completed: [CI-02]
 files_modified: [.github/workflows/codeql.yml]
 commit: dd07fe89
 ---

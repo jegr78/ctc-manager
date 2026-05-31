@@ -3,6 +3,7 @@ phase: 106-ci-pipeline-optimisation
 plan: 04
 status: complete
 requirements: [CI-01, CI-02, CI-03, CI-04, CI-05]
+requirements-completed: [CI-01, CI-02, CI-03, CI-04, CI-05]
 files_modified: []
 checkpoint: human-verify (approved by user 2026-05-30)
 ---

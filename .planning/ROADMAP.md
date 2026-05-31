@@ -216,8 +216,8 @@ See: milestones/v1.14-ROADMAP.md for full details
 - ~~**Phase 107: Race/Match Prefill Defaults**~~ — **REMOVED 2026-05-30**. RACE-01..03 dropped: scoring scheme and legs are already inherited via `SeasonPhase`, and Matchday has no scheduled date to inherit (no real re-entry problem without a schema change). Number kept as a gap per the integer-phase policy. See REQUIREMENTS.md "Out of Scope".
 - [x] **Phase 108: Missing-Driver n/a Rendering** - Lineup, Scorecard/Results, and Provisional-Scores graphics render "n/a" for missing driver slots; scoring records 0 points. (LINEUP-01..04)
 - [x] **Phase 109: Walkover Handling** - Flyway V17 walkover flag, auto-win scoring, "w/o" label in standings and graphics, admin UI to mark walkover. (WO-01..04)
-- [ ] **Phase 110: Lobby Settings Graphic** - New LobbySettingsGraphicService (Carbon HUD, template-variable-driven), admin preview/download, Discord post type, template editor. (LOBBY-01..05)
-- [ ] **Phase 111: Log-Injection Remediation (CodeQL CWE-117)** - Close all 29 open CodeQL `java/log-injection` alerts via a central LogSanitizer (strips CR/LF + control chars) at each flagged call site; fix taint at source, no suppressions. (SEC-LOG-01..04)
+- [x] **Phase 110: Lobby Settings Graphic** - New LobbySettingsGraphicService (Carbon HUD, template-variable-driven), admin preview/download, Discord post type, template editor. (LOBBY-01..05)
+- [x] **Phase 111: Log-Injection Remediation (CodeQL CWE-117)** - Close all 29 open CodeQL `java/log-injection` alerts via a central LogSanitizer (strips CR/LF + control chars) at each flagged call site; fix taint at source, no suppressions. (SEC-LOG-01..04)
 - [x] **Phase 112: Unused Import Cleanup & Regression Guard** - Remove all unused package imports across `src/main/java` and `src/test/java` (OpenRewrite `RemoveUnusedImports`), then add a build-level guard so future phases cannot reintroduce unused imports. (IMP-01, IMP-02)
 
 ### Phase 106: CI Pipeline Optimisation

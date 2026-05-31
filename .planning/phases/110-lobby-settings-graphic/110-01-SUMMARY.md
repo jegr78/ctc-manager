@@ -3,6 +3,7 @@ phase: 110-lobby-settings-graphic
 plan: 01
 status: complete
 requirements: [LOBBY-01, LOBBY-05]
+requirements-completed: [LOBBY-01, LOBBY-05]
 ---
 
 # Plan 110-01 Summary: LobbySettingsGraphicService Foundation

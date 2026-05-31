@@ -3,6 +3,7 @@ phase: 110-lobby-settings-graphic
 plan: 04
 status: complete
 requirements: [LOBBY-03]
+requirements-completed: [LOBBY-03]
 ---
 
 # Plan 110-04 Summary: Discord LOBBY_SETTINGS Post Type

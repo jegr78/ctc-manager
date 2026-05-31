@@ -4,6 +4,7 @@ plan: 03
 type: execute
 status: complete
 requirements: [SEC-LOG-03, SEC-LOG-04]
+requirements-completed: [SEC-LOG-03, SEC-LOG-04]
 ---
 
 # Plan 111-03 Summary: Final gate + CodeQL re-scan verification

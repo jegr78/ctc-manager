@@ -9,12 +9,12 @@ Requirements for the v1.15 milestone. Each maps to roadmap phases.
 
 ### CI — CI Optimisation
 
-- [ ] **CI-01**: `ci.yml` expensive steps (Maven build, E2E, Docker build) run only when code/build files change; the required checks (`build-and-test`, `dockerfile-noble-pin-guard`, `docker-build`) always report a status so PRs never deadlock — implemented via a `dorny/paths-filter` `changes` job + conditional steps (approach A).
-- [ ] **CI-02**: Non-required workflows (`codeql.yml`, `mariadb-migration-smoke.yml`) skip docs/planning-only changes via `paths-ignore` (approach C).
-- [ ] **CI-03**: Ignore set defined and applied consistently: `.planning/**`, root `*.md`, `docs/**` (except `docs/site/**` which still triggers `deploy-site.yml`), `.gitmessage` + meta files. A commit touching both code and docs still runs full CI.
-- [ ] **CI-04**: E2E test runtime reduced below the current 17:39 median (concrete target set at plan time).
-- [ ] **CI-05**: Build caching improved (Maven / Playwright browser / Docker layer) for faster warm runs.
-- [ ] **CI-06**: Flaky-test rerun reduction / quarantine extension; unstable tests stabilised at root cause (no symptom hotfixes — see CLAUDE.md "No Flaky Dismissal").
+- [x] **CI-01**: `ci.yml` expensive steps (Maven build, E2E, Docker build) run only when code/build files change; the required checks (`build-and-test`, `dockerfile-noble-pin-guard`, `docker-build`) always report a status so PRs never deadlock — implemented via a `dorny/paths-filter` `changes` job + conditional steps (approach A).
+- [x] **CI-02**: Non-required workflows (`codeql.yml`, `mariadb-migration-smoke.yml`) skip docs/planning-only changes via `paths-ignore` (approach C).
+- [x] **CI-03**: Ignore set defined and applied consistently: `.planning/**`, root `*.md`, `docs/**` (except `docs/site/**` which still triggers `deploy-site.yml`), `.gitmessage` + meta files. A commit touching both code and docs still runs full CI.
+- [x] **CI-04**: E2E test runtime reduced below the current 17:39 median (concrete target set at plan time).
+- [x] **CI-05**: Build caching improved (Maven / Playwright browser / Docker layer) for faster warm runs.
+- [x] **CI-06**: Flaky-test rerun reduction / quarantine extension; unstable tests stabilised at root cause (no symptom hotfixes — see CLAUDE.md "No Flaky Dismissal").
 
 ### RACE — Race/Match Prefill Defaults (DROPPED 2026-05-30)
 
@@ -28,37 +28,37 @@ Phase 107 was removed from the v1.15 roadmap (user decision 2026-05-30: drop per
 
 ### LINEUP — Missing-Driver Handling
 
-- [ ] **LINEUP-01**: The Lineup graphic renders an "n/a" placeholder per missing slot when a team fields fewer than 6 drivers.
-- [ ] **LINEUP-02**: The Scorecard/Results graphic renders "n/a" + 0 points for missing drivers.
-- [ ] **LINEUP-03**: The Provisional-Scores graphic is padded to 6 rows with "n/a" placeholders for missing drivers (currently renders no row at all).
-- [ ] **LINEUP-04**: Scoring treats missing drivers consistently as 0 points / no position — root cause fixed in the service, no template/controller fallback calculations (see CLAUDE.md "No Fallback Calculations").
+- [x] **LINEUP-01**: The Lineup graphic renders an "n/a" placeholder per missing slot when a team fields fewer than 6 drivers.
+- [x] **LINEUP-02**: The Scorecard/Results graphic renders "n/a" + 0 points for missing drivers.
+- [x] **LINEUP-03**: The Provisional-Scores graphic is padded to 6 rows with "n/a" placeholders for missing drivers (currently renders no row at all).
+- [x] **LINEUP-04**: Scoring treats missing drivers consistently as 0 points / no position — root cause fixed in the service, no template/controller fallback calculations (see CLAUDE.md "No Fallback Calculations").
 
 ### WO — Walkover
 
 - [x] **WO-01**: A team that does not compete at all is handled analogously to `Match.bye` — the opponent receives an auto-win with full match points.
 - [x] **WO-02**: The walkover state is persisted via a new Flyway migration (H2 + MariaDB compatible; existing migrations untouched).
-- [ ] **WO-03**: A visible "w/o" label appears in standings and the relevant graphics.
+- [x] **WO-03**: A visible "w/o" label appears in standings and the relevant graphics.
 - [x] **WO-04**: An admin can mark a match as a walkover through the UI/form.
 
 ### LOBBY — Lobby Settings Graphic
 
-- [ ] **LOBBY-01**: A new `LobbySettingsGraphicService` renders a Carbon-HUD Lobby Settings graphic from a Claude-Design drop-in template, driven purely by template variables (no new data model / no Flyway migration).
-- [ ] **LOBBY-02**: An admin can preview and download the Lobby Settings graphic.
-- [ ] **LOBBY-03**: The Lobby Settings graphic is available as a new Discord post type (manual admin button targeting the match channel, mirroring the existing Settings post — see CONTEXT.md D-01), plugged into the existing Discord integration.
-- [ ] **LOBBY-04**: The Lobby Settings template is editable via the template editor (custom override, `implements TemplateManageable`).
-- [ ] **LOBBY-05**: The service is coverage-excluded (Playwright runtime), consistent with the other graphic services.
+- [x] **LOBBY-01**: A new `LobbySettingsGraphicService` renders a Carbon-HUD Lobby Settings graphic from a Claude-Design drop-in template, driven purely by template variables (no new data model / no Flyway migration).
+- [x] **LOBBY-02**: An admin can preview and download the Lobby Settings graphic.
+- [x] **LOBBY-03**: The Lobby Settings graphic is available as a new Discord post type (manual admin button targeting the match channel, mirroring the existing Settings post — see CONTEXT.md D-01), plugged into the existing Discord integration.
+- [x] **LOBBY-04**: The Lobby Settings template is editable via the template editor (custom override, `implements TemplateManageable`).
+- [x] **LOBBY-05**: The service is coverage-excluded (Playwright runtime), consistent with the other graphic services.
 
 ### SEC-LOG — Log-Injection Remediation (CodeQL CWE-117)
 
-- [ ] **SEC-LOG-01**: A central `LogSanitizer` utility strips CR/LF and other control characters from user-controlled values before they reach a log statement, with a unit test pinning the stripping behaviour.
-- [ ] **SEC-LOG-02**: All 29 CodeQL `java/log-injection`-flagged call sites (across `dataimport/`, `domain/service/`, `backup/`, `admin/controller/`) wrap their user-controlled log arguments through the sanitizer — fixing the taint path at the source, not suppressing the finding.
-- [ ] **SEC-LOG-03**: A CodeQL re-scan on the milestone branch reports 0 open `java/log-injection` alerts; no new `query-filters` suppressions are added to `codeql-config.yml` for these findings.
-- [ ] **SEC-LOG-04**: `./mvnw clean verify -Pe2e` exits 0 — all existing tests green, SpotBugs/find-sec-bugs gate green, 82% line coverage maintained.
+- [x] **SEC-LOG-01**: A central `LogSanitizer` utility strips CR/LF and other control characters from user-controlled values before they reach a log statement, with a unit test pinning the stripping behaviour.
+- [x] **SEC-LOG-02**: All 29 CodeQL `java/log-injection`-flagged call sites (across `dataimport/`, `domain/service/`, `backup/`, `admin/controller/`) wrap their user-controlled log arguments through the sanitizer — fixing the taint path at the source, not suppressing the finding.
+- [x] **SEC-LOG-03**: A CodeQL re-scan on the milestone branch reports 0 open `java/log-injection` alerts; no new `query-filters` suppressions are added to `codeql-config.yml` for these findings.
+- [x] **SEC-LOG-04**: `./mvnw clean verify -Pe2e` exits 0 — all existing tests green, SpotBugs/find-sec-bugs gate green, 82% line coverage maintained.
 
 ### IMP — Unused Import Cleanup & Regression Guard
 
-- [ ] **IMP-01**: Every `.java` file under `src/main/java` and `src/test/java` is free of unused package imports, removed via the existing OpenRewrite `RemoveUnusedImports` recipe (not hand-edited); an `org.openrewrite.java.RemoveUnusedImports` `rewrite:dryRun` reports zero pending changes after the cleanup commit.
-- [ ] **IMP-02**: A build-level guard, wired into the standard `verify` lifecycle (no opt-in flag, runs locally and in CI), fails the build when a new unused import is introduced — mechanism decided at plan time and documented in CLAUDE.md so future phases inherit the rule.
+- [x] **IMP-01**: Every `.java` file under `src/main/java` and `src/test/java` is free of unused package imports, removed via the existing OpenRewrite `RemoveUnusedImports` recipe (not hand-edited); an `org.openrewrite.java.RemoveUnusedImports` `rewrite:dryRun` reports zero pending changes after the cleanup commit.
+- [x] **IMP-02**: A build-level guard, wired into the standard `verify` lifecycle (no opt-in flag, runs locally and in CI), fails the build when a new unused import is introduced — mechanism decided at plan time and documented in CLAUDE.md so future phases inherit the rule.
 
 ## Future Requirements
 
@@ -85,40 +85,41 @@ Explicitly excluded for v1.15 to prevent scope creep.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CI-01 | Phase 106 | Pending |
-| CI-02 | Phase 106 | Pending |
-| CI-03 | Phase 106 | Pending |
-| CI-04 | Phase 106 | Pending |
-| CI-05 | Phase 106 | Pending |
-| CI-06 | Phase 106 | Pending |
+| CI-01 | Phase 106 | Complete |
+| CI-02 | Phase 106 | Complete |
+| CI-03 | Phase 106 | Complete |
+| CI-04 | Phase 106 | Complete |
+| CI-05 | Phase 106 | Complete |
+| CI-06 | Phase 106 | Complete |
 | RACE-01 | — (Phase 107 removed) | Dropped 2026-05-30 |
 | RACE-02 | — (Phase 107 removed) | Dropped 2026-05-30 |
 | RACE-03 | — (Phase 107 removed) | Dropped 2026-05-30 |
-| LINEUP-01 | Phase 108 | Pending |
-| LINEUP-02 | Phase 108 | Pending |
-| LINEUP-03 | Phase 108 | Pending |
-| LINEUP-04 | Phase 108 | Pending |
+| LINEUP-01 | Phase 108 | Complete |
+| LINEUP-02 | Phase 108 | Complete |
+| LINEUP-03 | Phase 108 | Complete |
+| LINEUP-04 | Phase 108 | Complete |
 | WO-01 | Phase 109 | Complete |
 | WO-02 | Phase 109 | Complete |
-| WO-03 | Phase 109 | Pending |
+| WO-03 | Phase 109 | Complete |
 | WO-04 | Phase 109 | Complete |
-| LOBBY-01 | Phase 110 | Pending |
-| LOBBY-02 | Phase 110 | Pending |
-| LOBBY-03 | Phase 110 | Pending |
-| LOBBY-04 | Phase 110 | Pending |
-| LOBBY-05 | Phase 110 | Pending |
-| SEC-LOG-01 | Phase 111 | Pending |
-| SEC-LOG-02 | Phase 111 | Pending |
-| SEC-LOG-03 | Phase 111 | Pending |
-| SEC-LOG-04 | Phase 111 | Pending |
-| IMP-01 | Phase 112 | Pending |
-| IMP-02 | Phase 112 | Pending |
+| LOBBY-01 | Phase 110 | Complete |
+| LOBBY-02 | Phase 110 | Complete |
+| LOBBY-03 | Phase 110 | Complete |
+| LOBBY-04 | Phase 110 | Complete |
+| LOBBY-05 | Phase 110 | Complete |
+| SEC-LOG-01 | Phase 111 | Complete |
+| SEC-LOG-02 | Phase 111 | Complete |
+| SEC-LOG-03 | Phase 111 | Complete |
+| SEC-LOG-04 | Phase 111 | Complete |
+| IMP-01 | Phase 112 | Complete |
+| IMP-02 | Phase 112 | Complete |
 
 **Coverage:**
-- v1.15 requirements: 28 total
-- Mapped to phases: 28 (100%)
+- v1.15 requirements: 28 total (25 active + 3 RACE dropped)
+- Active requirements satisfied: 25 / 25 (100%)
+- Mapped to phases: 25 active (100%)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-30*
-*Last updated: 2026-05-31 — added IMP-01..02 (Phase 112, Unused Import Cleanup & Regression Guard)*
+*Last updated: 2026-05-31 — all 25 active requirements marked Complete after /gsd-audit-milestone v1.15 (per-phase VERIFICATION.md + VALIDATION.md evidence)*

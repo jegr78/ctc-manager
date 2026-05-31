@@ -3,6 +3,7 @@ phase: 110-lobby-settings-graphic
 plan: 02
 status: complete
 requirements: [LOBBY-02]
+requirements-completed: [LOBBY-02]
 ---
 
 # Plan 110-02 Summary: Per-race Generate/Download Flow

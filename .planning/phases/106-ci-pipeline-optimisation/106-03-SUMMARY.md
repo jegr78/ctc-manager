@@ -3,6 +3,7 @@ phase: 106-ci-pipeline-optimisation
 plan: 03
 status: complete
 requirements: [CI-06]
+requirements-completed: [CI-06]
 files_modified: [pom.xml, docs/ci/FLAKY-TEST-POLICY.md]
 commit: 34e4e35e
 ---

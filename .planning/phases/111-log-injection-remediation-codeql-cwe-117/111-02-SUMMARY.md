@@ -4,6 +4,7 @@ plan: 02
 type: execute
 status: complete
 requirements: [SEC-LOG-02]
+requirements-completed: [SEC-LOG-02]
 ---
 
 # Plan 111-02 Summary: Wrap all flagged log call sites

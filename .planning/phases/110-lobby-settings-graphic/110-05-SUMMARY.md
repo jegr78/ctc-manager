@@ -3,6 +3,7 @@ phase: 110-lobby-settings-graphic
 plan: 05
 status: complete
 requirements: [LOBBY-01, LOBBY-02, LOBBY-03, LOBBY-04, LOBBY-05]
+requirements-completed: [LOBBY-01, LOBBY-02, LOBBY-03, LOBBY-04, LOBBY-05]
 ---
 
 # Plan 110-05 Summary: Phase Verification
