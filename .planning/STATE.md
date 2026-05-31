@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: milestone
 status: completed
-stopped_at: Phase 111 context gathered
-last_updated: "2026-05-31T12:17:23.908Z"
-last_activity: 2026-05-31 -- Phase 111 marked complete
+stopped_at: Phase 112 complete
+last_updated: "2026-05-31T14:42:42.000Z"
+last_activity: 2026-05-31 -- Phase 112 marked complete
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 20
-  completed_plans: 20
-  percent: 83
+  completed_phases: 6
+  total_plans: 21
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 111 — log-injection-remediation-codeql-cwe-117
+**Current focus:** Phase 112 — unused-import-cleanup (COMPLETE — all v1.15 phases done)
 
 ## Current Position
 
-Phase: 111 — COMPLETE
-Plan: 1 of 3
-Status: Phase 111 complete
-Last activity: 2026-05-31 -- Phase 111 marked complete
+Phase: 112 — COMPLETE
+Plan: 1 of 1
+Status: Phase 112 complete — clean verify -Pe2e green
+Last activity: 2026-05-31 -- Phase 112 marked complete
 
 Progress: [██████████] 100%
 
@@ -45,7 +45,7 @@ Progress: [██████████] 100%
 | 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
 | 110 | Lobby Settings Graphic | LOBBY-01..05 | Complete (110-01..05 ✓; 110-REVIEW.md resolved; verify -Pe2e green) |
 | 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Complete (111-01..03 ✓; SEC-LOG-01..04 ✓; 29→0 java/log-injection on PR ref; 111-REVIEW.md resolved — 5 findings fixed; verify -Pe2e green) |
-| 112 | Unused Import Cleanup & Regression Guard | IMP-01..02 | Planned (112-01-PLAN.md; plan-check PASSED 0 blockers; ready for execute) |
+| 112 | Unused Import Cleanup & Regression Guard | IMP-01..02 | Complete (112-01 ✓; IMP-01/02 ✓; Checkstyle UnusedImports gate bound to validate; verify -Pe2e green) |
 
 ## Baselines to Preserve
 

@@ -218,7 +218,7 @@ See: milestones/v1.14-ROADMAP.md for full details
 - [x] **Phase 109: Walkover Handling** - Flyway V17 walkover flag, auto-win scoring, "w/o" label in standings and graphics, admin UI to mark walkover. (WO-01..04)
 - [ ] **Phase 110: Lobby Settings Graphic** - New LobbySettingsGraphicService (Carbon HUD, template-variable-driven), admin preview/download, Discord post type, template editor. (LOBBY-01..05)
 - [ ] **Phase 111: Log-Injection Remediation (CodeQL CWE-117)** - Close all 29 open CodeQL `java/log-injection` alerts via a central LogSanitizer (strips CR/LF + control chars) at each flagged call site; fix taint at source, no suppressions. (SEC-LOG-01..04)
-- [ ] **Phase 112: Unused Import Cleanup & Regression Guard** - Remove all unused package imports across `src/main/java` and `src/test/java` (OpenRewrite `RemoveUnusedImports`), then add a build-level guard so future phases cannot reintroduce unused imports. (IMP-01, IMP-02)
+- [x] **Phase 112: Unused Import Cleanup & Regression Guard** - Remove all unused package imports across `src/main/java` and `src/test/java` (OpenRewrite `RemoveUnusedImports`), then add a build-level guard so future phases cannot reintroduce unused imports. (IMP-01, IMP-02)
 
 ### Phase 106: CI Pipeline Optimisation
 
@@ -330,7 +330,7 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
   3. The cleanup commit changes only `import` lines — no behavioural diff; `./mvnw clean verify -Pe2e` exits 0 with all existing tests green and the 82 % line-coverage gate still met.
   4. The guard is wired into the standard `verify` lifecycle (no separate opt-in flag) so it runs on every local build and in CI, consistent with the SpotBugs/find-sec-bugs gate convention.
 **Plans**: 1 plan
-- [ ] 112-01-PLAN.md — Isolated RemoveUnusedImports cleanup, then Checkstyle UnusedImports gate bound to `validate`, then CLAUDE.md doc, then `clean verify -Pe2e` gate (4 sequential tasks)
+- [x] 112-01-PLAN.md — Isolated RemoveUnusedImports cleanup, then Checkstyle UnusedImports gate bound to `validate`, then CLAUDE.md doc, then `clean verify -Pe2e` gate (4 sequential tasks)
 **Cross-phase risk**: Runs last in v1.15. Touches `import` lines across the whole source tree — must execute only after Phases 106 + 108-111 are merged/verified so no later phase re-introduces unused imports onto an already-cleaned tree. The OpenRewrite recipe edit and the guard config (`rewrite.yml` / `pom.xml` / Checkstyle config) are additive; no Flyway, no behavioural code change.
 
 </details>
