@@ -125,6 +125,8 @@ public class RaceService {
 		boolean hasAllSettings = race.hasAllSettings() && race.getCar() != null && race.getTrack() != null;
 		boolean lobbySettingsGraphicExists = race.getAttachments().stream()
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/lobby-settings.png"));
+		boolean lobbySettingsReady = race.hasAllSettings() && race.getTrack() != null;
+		boolean lobbyTeamsPresent = race.getHomeTeam() != null && race.getAwayTeam() != null;
 
 		boolean overlayExists = race.getAttachments().stream()
 				.anyMatch(a -> a.getType() == AttachmentType.FILE && a.getUrl().endsWith("/overlay.png"));
@@ -146,8 +148,8 @@ public class RaceService {
 				!hasAllSettings, settingsGraphicExists,
 				hasMatch && !overlayExists, overlayExists,
 				calendarAvailable, hasCalendarEvent, canCreateCalendarEvent,
-				hasAllSettings && !lobbySettingsGraphicExists,
-				!hasAllSettings, lobbySettingsGraphicExists);
+				lobbySettingsReady && lobbyTeamsPresent && !lobbySettingsGraphicExists,
+				!lobbySettingsReady, lobbySettingsGraphicExists);
 	}
 
 	@Transactional

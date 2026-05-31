@@ -744,6 +744,9 @@ public class DiscordPostService {
 		if (!matchHasCompleteSettings(match)) {
 			throw new BusinessRuleException("Configure settings for all races first");
 		}
+		if (match.getRaces().stream().anyMatch(race -> race.getTrack() == null)) {
+			throw new BusinessRuleException("Configure a track for all races first");
+		}
 		return postRaceBundle(match, DiscordPostType.LOBBY_SETTINGS, "lobby-settings-race-",
 				race -> readRaceGraphic(lobbySettingsGraphicService.generateLobbySettings(race)));
 	}

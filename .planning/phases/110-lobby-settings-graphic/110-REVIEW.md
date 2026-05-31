@@ -33,8 +33,31 @@ findings:
   warning: 2
   info: 1
   total: 4
-status: issues_found
+status: resolved
+resolved: 2026-05-31
 ---
+
+## Resolution (2026-05-31)
+
+All four findings fixed in-phase before milestone close:
+
+- **CR-01 + WR-01** (`RaceService.getRaceDetailData`): `canGenerateLobbySettings` is now
+  `lobbySettingsReady && lobbyTeamsPresent && !exists`, where
+  `lobbySettingsReady = hasAllSettings() && track != null` (drops the unused `car` requirement,
+  WR-01) and `lobbyTeamsPresent = home != null && away != null` (prevents the bye/team-less NPE
+  in `generateAndSaveGraphic`, CR-01 — consistent with sibling per-race graphics).
+  `lobbySettingsMissing = !lobbySettingsReady` so the "Settings incomplete." hint reflects only
+  the settings/track prerequisite. Covered by two new `RaceServiceTest` cases.
+- **WR-02** (`DiscordPostService.postLobbySettings`): added a pre-check throwing
+  `BusinessRuleException("Configure a track for all races first")` when any race lacks a track,
+  so a track-less match yields a clean flash instead of an HTTP 500. Covered by a new
+  `DiscordPostServicePreFlightTest` case. (The pre-existing `postSettings` shares the same latent
+  pattern but is out of phase-110 scope and left untouched.)
+- **IN-01** (`template-editors.html`): `matchdayName` added to the editor variable table
+  (available for custom templates).
+
+Re-verified: `./mvnw clean verify -Pe2e` green (see 110-05-SUMMARY.md re-run note).
+
 
 # Phase 110: Code Review Report
 
