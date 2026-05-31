@@ -94,6 +94,25 @@
                 </button>
             </form>
 
+            <form th:if="${lobbySettingsPost == null and matchHasCompleteSettings}"
+                  th:action="@{/admin/matches/{id}/post-lobby-settings(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-primary btn-sm" data-testid="post-lobby-settings">
+                    Post Lobby Settings
+                </button>
+            </form>
+            <span th:if="${lobbySettingsPost == null and not matchHasCompleteSettings}"
+                  class="btn btn-secondary btn-sm disabled"
+                  data-testid="post-lobby-settings-disabled"
+                  title="Configure settings for all races first">Post Lobby Settings</span>
+            <form th:if="${lobbySettingsPost != null}"
+                  th:action="@{/admin/matches/{id}/post-lobby-settings(id=${match.id})}"
+                  method="post" class="form-inline">
+                <button type="submit" class="btn btn-secondary btn-sm" data-testid="repost-lobby-settings">
+                    Re-Post Lobby Settings
+                </button>
+            </form>
+
             <form th:if="${lineupsPost == null and matchHasCompleteLineups}"
                   th:action="@{/admin/matches/{id}/post-lineups(id=${match.id})}"
                   method="post" class="form-inline">
