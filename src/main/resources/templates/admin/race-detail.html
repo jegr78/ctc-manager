@@ -60,6 +60,17 @@
             </small>
         </span>
 
+        <!-- Lobby Settings Button -->
+        <form th:if="${canGenerateLobbySettings}" th:action="@{/admin/races/{id}/generate-lobby-settings(id=${race.id})}" method="post">
+            <button type="submit" class="btn btn-primary">Generate Lobby Settings Graphic</button>
+        </form>
+        <span th:if="${!canGenerateLobbySettings && !lobbySettingsExist}" class="btn-with-hint">
+            <button class="btn btn-secondary" disabled>Generate Lobby Settings Graphic</button>
+            <small class="text-dim">
+                <span th:if="${lobbySettingsMissing}">Settings incomplete.</span>
+            </small>
+        </span>
+
         <!-- Overlay Button -->
         <form th:if="${canGenerateOverlay}" th:action="@{/admin/races/{id}/generate-overlay(id=${race.id})}" method="post">
             <button type="submit" class="btn btn-primary">Generate Overlay Graphic</button>
