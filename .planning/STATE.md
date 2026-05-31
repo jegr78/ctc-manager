@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.15
-milestone_name: CI Optimisation & Race/Match Defaults
-status: executing
+milestone_name: milestone
+status: completed
 stopped_at: Phase 111 context gathered
-last_updated: "2026-05-31T11:47:15.010Z"
-last_activity: 2026-05-31 -- Phase 111 execution started
+last_updated: "2026-05-31T12:17:23.908Z"
+last_activity: 2026-05-31 -- Phase 111 marked complete
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 20
-  completed_plans: 17
-  percent: 67
+  completed_plans: 20
+  percent: 83
 ---
 
 # Project State
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 ## Current Position
 
-Phase: 111 (log-injection-remediation-codeql-cwe-117) — EXECUTING
+Phase: 111 — COMPLETE
 Plan: 1 of 3
-Status: Executing Phase 111
-Last activity: 2026-05-31 -- Phase 111 execution started
+Status: Phase 111 complete
+Last activity: 2026-05-31 -- Phase 111 marked complete
 
 Progress: [██████████] 100%
 
