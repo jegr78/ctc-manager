@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
-status: executing
-stopped_at: Phase 109 context gathered
-last_updated: "2026-05-30T17:53:06.859Z"
+status: verifying
+stopped_at: Phase 110 context gathered
+last_updated: "2026-05-31T08:10:26.135Z"
 last_activity: 2026-05-30
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 10
-  percent: 33
+  completed_plans: 12
+  percent: 50
 ---
 
 # Project State
@@ -43,7 +43,7 @@ Progress: [██████████] 100%
 | ~~107~~ | ~~Race/Match Prefill Defaults~~ | ~~RACE-01..03~~ | **Removed 2026-05-30** (RACE-01..03 dropped) |
 | 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Complete (LINEUP-01..04 ✓; 108-REVIEW.md resolved — WR-01 fixed) |
 | 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
-| 110 | Lobby Settings Graphic | LOBBY-01..05 | Blocked (external design handoff) |
+| 110 | Lobby Settings Graphic | LOBBY-01..05 | Context gathered (handoff delivered 2026-05-31; ready for planning) |
 | 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Not started |
 
 ## Baselines to Preserve
@@ -74,7 +74,7 @@ Roadmap-level decisions for v1.15 (2026-05-30):
 
 ### Blockers/Concerns
 
-- Phase 110 (Lobby Settings) is blocked on external Claude-Design Lobby Settings HTML/CSS handoff. Phases 108-109 are unblocked and can proceed in order.
+- Phase 110 (Lobby Settings) handoff delivered 2026-05-31 → unblocked; context gathered (110-CONTEXT.md), ready for planning. Phases 108-109 complete.
 
 ### Phase Numbering
 
@@ -105,9 +105,9 @@ Carried forward from v1.13/v1.14 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-05-30T15:59:04.985Z
+**Last session:** 2026-05-31T08:10:26.125Z
 
-**Stopped at:** Phase 109 context gathered
+**Stopped at:** Phase 110 context gathered
 
 **Next action:** `/gsd-code-review 108` (Phase 108 has no REVIEW.md — review before starting Phase 109 per "Code-Review Before New Phase"). Then `/gsd-discuss-phase 109` (Walkover Handling). Phase 106 already has a REVIEW.md.
 
