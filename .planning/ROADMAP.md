@@ -312,7 +312,10 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
   2. All 29 flagged call sites — across `dataimport/` (DriverMatchingService×5, CsvImportService×4, DriverSheetImportService×2), `domain/service/` (SeasonPhaseService×2, SeasonManagementService×2, MatchdayService×2, TeamManagementService, StandingsViewService, ScoringService, PlayoffService, FileStorageService), `backup/` (BackupImportService, ImportLockedWriteRejector, BackupUploadExceptionHandler), and `admin/controller/` (TemplateEditorController×2, DriverSheetImportController, DriverController) — wrap their user-controlled log arguments through the sanitizer.
   3. A CodeQL re-scan on the milestone branch reports 0 open `java/log-injection` alerts; no new `query-filters` suppressions were added to `.github/codeql/codeql-config.yml` for these findings (taint fixed at source, not dismissed).
   4. `./mvnw clean verify -Pe2e` exits 0 — all existing tests green, SpotBugs/find-sec-bugs gate green, and the 82 % line-coverage gate still met.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 111-01-PLAN.md — LogSanitizer util (org.ctc.util) + untagged unit test (\R-recognised first pass) (SEC-LOG-01)
+- [ ] 111-02-PLAN.md — Wrap all 29 flagged call sites (+ D-06 siblings) across 17 files; eliminate MatchdayService safeWeekend (SEC-LOG-02)
+- [ ] 111-03-PLAN.md — clean verify -Pe2e gate + CodeQL re-scan (0 java/log-injection); conditional barrier model pack only if alerts persist (SEC-LOG-03, SEC-LOG-04)
 **Cross-phase risk**: Touches existing log statements in 17 files that feature phases 108-110 may also edit; running last (after 106, 108-110 are verified) avoids re-introduction of unsanitized log lines and clobber on shared service/controller files.
 
 </details>
