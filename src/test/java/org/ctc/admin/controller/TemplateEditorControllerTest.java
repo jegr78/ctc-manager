@@ -116,6 +116,18 @@ class TemplateEditorControllerTest {
     }
 
     @Test
+    void givenLobbySettingsTabParam_whenGetTemplateEditors_thenReturnsLobbySettingsTab() throws Exception {
+        // when
+        mockMvc.perform(get("/admin/tools/template-editors")
+                        .param("tab", "lobby-settings"))
+                // then
+                .andExpect(status().isOk())
+                .andExpect(view().name("admin/template-editors"))
+                .andExpect(model().attribute("activeTab", "lobby-settings"))
+                .andExpect(model().attributeExists("lobbySettingsTemplate", "lobbySettingsIsCustom"));
+    }
+
+    @Test
     void givenTemplateContent_whenSaveSettingsTemplate_thenRedirectsWithSuccess() throws Exception {
         // when
         mockMvc.perform(post("/admin/tools/template-editors/settings/save")
