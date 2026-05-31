@@ -293,8 +293,13 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
   3. The Lobby Settings graphic is available as a new Discord post type on the relevant admin page — clicking "Post Lobby Settings" sends the graphic to Discord via the existing integration, and the post appears in the expected channel without errors.
   4. An admin can override the Lobby Settings Thymeleaf template via the template editor (the service `implements TemplateManageable`) — a custom template is loaded and rendered instead of the default.
   5. `LobbySettingsGraphicService` is listed in the JaCoCo exclusion configuration consistent with all other Playwright-rendered graphic services — `./mvnw verify` coverage report confirms the service is excluded and the 82 % line gate is still met.
-**Plans**: TBD
-**Precondition note**: Phase 110 is blocked on the external Claude-Design Lobby Settings HTML/CSS handoff. Execution begins only after that handoff is delivered into `.planning/phases/110-lobby-settings-graphic/design-handoff/` (analogous to Phase 105 CARD-01 handoff pattern).
+**Plans**: 5 plans
+- [ ] 110-01-PLAN.md — LobbySettingsGraphicService + Carbon-HUD template (D-07 weather) + weather/room-name unit tests + JaCoCo exclude (LOBBY-01, LOBBY-05)
+- [ ] 110-02-PLAN.md — RaceGraphicService/RaceController/RaceService gate + race-detail generate button (preview/download) (LOBBY-02)
+- [ ] 110-03-PLAN.md — Template editor: 3 Map.ofEntries + TemplatePreviewService case + template-editors tab (LOBBY-04)
+- [ ] 110-04-PLAN.md — DiscordPostType.LOBBY_SETTINGS + postLobbySettings + MatchController/MatchService + match-detail button (LOBBY-03)
+- [ ] 110-05-PLAN.md — Visual acceptance vs preview PNG + clean verify -Pe2e gate (LOBBY-01..05)
+**Precondition note**: Phase 110 is blocked on the external Claude-Design Lobby Settings HTML/CSS handoff. Handoff delivered 2026-05-31 into `.planning/phases/110-lobby-settings-graphic/design-handoff/` (analogous to Phase 105 CARD-01 handoff pattern).
 **UI hint**: yes
 
 ### Phase 111: Log-Injection Remediation (CodeQL CWE-117)
