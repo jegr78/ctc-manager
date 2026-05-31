@@ -45,7 +45,7 @@ Progress: [██████████] 100%
 | 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
 | 110 | Lobby Settings Graphic | LOBBY-01..05 | Complete (110-01..05 ✓; 110-REVIEW.md resolved; verify -Pe2e green) |
 | 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Complete (111-01..03 ✓; SEC-LOG-01..04 ✓; 29→0 java/log-injection on PR ref; 111-REVIEW.md resolved — 5 findings fixed; verify -Pe2e green) |
-| 112 | Unused Import Cleanup & Regression Guard | IMP-01..02 | Not planned (added 2026-05-31; run /gsd-plan-phase 112) |
+| 112 | Unused Import Cleanup & Regression Guard | IMP-01..02 | Planned (112-01-PLAN.md; plan-check PASSED 0 blockers; ready for execute) |
 
 ## Baselines to Preserve
 
