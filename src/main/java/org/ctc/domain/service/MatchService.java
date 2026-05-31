@@ -95,6 +95,7 @@ public class MatchService {
 
 		model.put("teamCardsPost", findMatchPost(match, DiscordPostType.TEAM_CARDS));
 		model.put("settingsPost", findMatchPost(match, DiscordPostType.SETTINGS));
+		model.put("lobbySettingsPost", findMatchPost(match, DiscordPostType.LOBBY_SETTINGS));
 		model.put("lineupsPost", findMatchPost(match, DiscordPostType.LINEUPS));
 		model.put("provisionalPost", findMatchPost(match, DiscordPostType.PROVISIONAL_SCORES));
 		model.put("matchHasCompleteSettings",

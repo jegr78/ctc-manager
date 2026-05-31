@@ -180,6 +180,19 @@ public class MatchController {
 		return "redirect:/admin/matches/" + id;
 	}
 
+	@PostMapping("/{id}/post-lobby-settings")
+	public String postLobbySettings(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+		try {
+			discordPostService.postLobbySettings(matchService.findById(id));
+			redirectAttributes.addFlashAttribute("successMessage", "Lobby settings posted.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Post lobby settings");
+		} catch (DiscordApiException e) {
+			applyErrorFlash(redirectAttributes, e, "Post lobby settings");
+		}
+		return "redirect:/admin/matches/" + id;
+	}
+
 	@PostMapping("/{id}/post-lineups")
 	public String postLineups(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
 		try {
