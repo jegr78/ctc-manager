@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Smoke regression for the Thymeleaf bracket-indexer bug class
- * (`th:text="${labels[enumKey]}"` against `Map<Enum, String>` resolves to null
+ * (`th:text="${labels[enumKey]}"` against {@code Map<Enum, String>} resolves to null
  * and renders an `<option>` with the correct value attribute but empty text).
  * For each curated admin form GET URL, parses the rendered HTML and asserts
  * that every `<option>` carrying a non-empty value attribute also carries
