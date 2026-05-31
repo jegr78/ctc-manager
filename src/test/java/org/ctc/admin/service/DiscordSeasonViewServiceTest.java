@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.ctc.admin.dto.MatchPreviewPreFlightResult;
 import org.ctc.discord.dto.Thread;
-import org.ctc.discord.exception.DiscordApiException;
 import org.ctc.discord.exception.DiscordNotFoundException;
 import org.ctc.discord.model.DiscordGlobalConfig;
 import org.ctc.discord.repository.DiscordPostRepository;
