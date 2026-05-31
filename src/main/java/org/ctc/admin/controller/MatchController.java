@@ -167,6 +167,8 @@ public class MatchController {
 		try {
 			discordChannelService.linkExistingChannel(matchService.findById(id), channelId.trim());
 			redirectAttributes.addFlashAttribute("successMessage", "Discord channel linked.");
+		} catch (BusinessRuleException e) {
+			applyErrorFlash(redirectAttributes, e, "Link Discord Channel");
 		} catch (DiscordApiException e) {
 			applyErrorFlash(redirectAttributes, e, "Link Discord Channel");
 		}

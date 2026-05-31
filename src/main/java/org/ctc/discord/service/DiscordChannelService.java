@@ -133,6 +133,10 @@ public class DiscordChannelService {
 
 	@Transactional
 	public void linkExistingChannel(Match match, String channelId) throws DiscordApiException {
+		if (match.getDiscordChannelId() != null) {
+			throw new BusinessRuleException(
+					"Match already has a Discord channel linked: " + match.getDiscordChannelId());
+		}
 		restClient.fetchChannel(channelId);
 
 		List<Webhook> existing = restClient.listWebhooks(channelId);

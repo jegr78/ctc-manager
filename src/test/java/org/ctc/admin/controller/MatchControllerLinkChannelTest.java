@@ -14,6 +14,7 @@ import org.ctc.TestHelper;
 import org.ctc.TestHelper.SeasonFixture;
 import org.ctc.discord.exception.DiscordNotFoundException;
 import org.ctc.discord.service.DiscordChannelService;
+import org.ctc.domain.exception.BusinessRuleException;
 import org.ctc.domain.model.Match;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,6 +78,23 @@ class MatchControllerLinkChannelTest {
 				.andExpect(flash().attributeExists("successMessage"));
 
 		verify(discordChannelService).linkExistingChannel(any(Match.class), eq("c123"));
+	}
+
+	@Test
+	void givenServiceRejectsAlreadyLinked_whenLinkDiscordChannel_thenErrorCategoryDataIncomplete() throws Exception {
+		// given
+		var matchId = fixture.match().getId();
+		doThrow(new BusinessRuleException("Match already has a Discord channel linked: x"))
+				.when(discordChannelService).linkExistingChannel(any(), any());
+
+		// when
+		mockMvc.perform(post("/admin/matches/" + matchId + "/link-discord-channel")
+						.param("channelId", "c123"))
+				// then
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/admin/matches/" + matchId))
+				.andExpect(flash().attributeExists("errorMessage"))
+				.andExpect(flash().attribute("errorCategory", "data-incomplete"));
 	}
 
 	@Test

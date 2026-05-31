@@ -294,6 +294,24 @@ class DiscordChannelServiceWireMockIT {
 	}
 
 	@Test
+	void givenAlreadyLinkedMatch_whenLinkExistingChannel_thenBusinessRuleExceptionNoOutbound() {
+		// given — match already carries a Discord channel id
+		seedConfig("g1", "cat1");
+		Match match = seedMatch("LA", "100", "200");
+		match.setDiscordChannelId("already-set");
+		matchRepository.save(match);
+
+		// when / then
+		assertThatThrownBy(() -> service.linkExistingChannel(match, "c9"))
+				.isInstanceOf(BusinessRuleException.class)
+				.hasMessageContaining("already has a Discord channel");
+
+		assertThat(matchRepository.findById(match.getId()).orElseThrow().getDiscordChannelId())
+				.isEqualTo("already-set");
+		wm.verify(exactly(0), getRequestedFor(urlPathMatching("/api/v10/channels/.*")));
+	}
+
+	@Test
 	void givenWebhookCreationFails_whenCreateMatchChannel_thenServiceFailsDbUnchanged() {
 		// given — channel created OK, but createWebhook returns 500 transient
 		seedConfig("g1", "cat1");
