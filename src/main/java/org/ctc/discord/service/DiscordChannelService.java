@@ -164,7 +164,7 @@ public class DiscordChannelService {
 	}
 
 	private static String loadWebhookAvatar() {
-		try (InputStream in = DiscordChannelService.class.getResourceAsStream("/static/admin/img/apple-touch-icon.png")) {
+		try (InputStream in = DiscordChannelService.class.getResourceAsStream("/static/admin/img/ctc-logo-white.png")) {
 			if (in == null) {
 				log.warn("Webhook avatar asset not found on classpath; webhooks will be created without a logo");
 				return null;
