@@ -43,8 +43,8 @@ Progress: [██████████] 100%
 | ~~107~~ | ~~Race/Match Prefill Defaults~~ | ~~RACE-01..03~~ | **Removed 2026-05-30** (RACE-01..03 dropped) |
 | 108 | Missing-Driver n/a Rendering | LINEUP-01..04 | Complete (LINEUP-01..04 ✓; 108-REVIEW.md resolved — WR-01 fixed) |
 | 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
-| 110 | Lobby Settings Graphic | LOBBY-01..05 | Context gathered (handoff delivered 2026-05-31; ready for planning) |
-| 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Not started |
+| 110 | Lobby Settings Graphic | LOBBY-01..05 | Complete (110-01..05 ✓; 110-REVIEW.md resolved; verify -Pe2e green) |
+| 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Complete (111-01..03 ✓; SEC-LOG-01..04 ✓; 29→0 java/log-injection on PR ref; 111-REVIEW.md resolved — 5 findings fixed; verify -Pe2e green) |
 
 ## Baselines to Preserve
 
