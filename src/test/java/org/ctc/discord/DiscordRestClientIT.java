@@ -190,12 +190,24 @@ class DiscordRestClientIT {
 				.willReturn(okJson("{\"id\":\"w1\",\"token\":\"tok-abc\","
 						+ "\"url\":\"https://discord.com/api/webhooks/w1/tok-abc\",\"channel_id\":\"c1\"}")));
 
-		Webhook hook = client.createWebhook("c1", "CTC Manager");
+		Webhook hook = client.createWebhook("c1", "CTC Manager", "data:image/png;base64,QUJD");
 
 		assertThat(hook.id()).isEqualTo("w1");
 		assertThat(hook.token()).isEqualTo("tok-abc");
 		assertThat(hook.url()).isEqualTo("https://discord.com/api/webhooks/w1/tok-abc");
 		assertThat(hook.channelId()).isEqualTo("c1");
+		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
+				.withRequestBody(equalToJson("{\"name\":\"CTC Manager\",\"avatar\":\"data:image/png;base64,QUJD\"}")));
+	}
+
+	@Test
+	void givenNullAvatar_whenCreateWebhook_thenAvatarFieldOmitted() throws Exception {
+		wm.stubFor(post(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
+				.willReturn(okJson("{\"id\":\"w1\",\"token\":\"tok-abc\","
+						+ "\"url\":\"https://discord.com/api/webhooks/w1/tok-abc\",\"channel_id\":\"c1\"}")));
+
+		client.createWebhook("c1", "CTC Manager", null);
+
 		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/channels/c1/webhooks"))
 				.withRequestBody(equalToJson("{\"name\":\"CTC Manager\"}")));
 	}

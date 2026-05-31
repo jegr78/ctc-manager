@@ -1,6 +1,7 @@
 package org.ctc.discord.service;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.containing;
 import static com.github.tomakehurst.wiremock.client.WireMock.deleteRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.exactly;
@@ -255,7 +256,8 @@ class DiscordChannelServiceWireMockIT {
 		assertThat(reloaded.getDiscordChannelId()).isEqualTo("c9");
 		assertThat(reloaded.getDiscordChannelWebhookUrl())
 				.isEqualTo("https://discord.com/api/webhooks/w9/tok-9");
-		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/channels/c9/webhooks")));
+		wm.verify(postRequestedFor(urlPathEqualTo("/api/v10/channels/c9/webhooks"))
+				.withRequestBody(containing("\"avatar\":\"data:image/png;base64,")));
 	}
 
 	@Test

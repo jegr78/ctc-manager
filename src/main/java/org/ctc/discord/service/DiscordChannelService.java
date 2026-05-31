@@ -9,8 +9,11 @@ import static org.ctc.discord.DiscordPermissions.TEAM_MEMBER_DENY_MASK;
 import static org.ctc.discord.DiscordPermissions.VIEW_CHANNEL;
 import static org.springframework.util.StringUtils.hasText;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -47,6 +50,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DiscordChannelService {
 
 	private static final String WEBHOOK_NAME = "CTC Manager";
+	private static final String WEBHOOK_AVATAR = loadWebhookAvatar();
 	private static final int CHANNEL_TYPE_TEXT = 0;
 	private static final Pattern COMBINING_MARKS = Pattern.compile("\\p{M}");
 	private static final Pattern NON_SLUG_CHARS = Pattern.compile("[^a-z0-9]");
@@ -89,7 +93,7 @@ public class DiscordChannelService {
 		Channel channel = restClient.createChannel(guildId, req);
 		Webhook webhook;
 		try {
-			webhook = restClient.createWebhook(channel.id(), WEBHOOK_NAME);
+			webhook = restClient.createWebhook(channel.id(), WEBHOOK_NAME, WEBHOOK_AVATAR);
 		} catch (DiscordApiException webhookEx) {
 			try {
 				restClient.deleteChannel(channel.id());
@@ -148,7 +152,7 @@ public class DiscordChannelService {
 			}
 		}
 		if (webhookUrl == null) {
-			webhookUrl = restClient.createWebhook(channelId, WEBHOOK_NAME).url();
+			webhookUrl = restClient.createWebhook(channelId, WEBHOOK_NAME, WEBHOOK_AVATAR).url();
 		}
 
 		match.setDiscordChannelId(channelId);
@@ -157,6 +161,19 @@ public class DiscordChannelService {
 		// No ChannelCreatedEvent: linking a prepared channel must not auto-post Team Cards
 		// (DiscordAutoPostListener.onChannelCreated does) — the operator uses the explicit button.
 		log.info("Discord channel linked to match {} → channelId={}", match.getId(), channelId);
+	}
+
+	private static String loadWebhookAvatar() {
+		try (InputStream in = DiscordChannelService.class.getResourceAsStream("/static/admin/img/apple-touch-icon.png")) {
+			if (in == null) {
+				log.warn("Webhook avatar asset not found on classpath; webhooks will be created without a logo");
+				return null;
+			}
+			return "data:image/png;base64," + Base64.getEncoder().encodeToString(in.readAllBytes());
+		} catch (IOException ex) {
+			log.warn("Failed to load webhook avatar asset: {}", ex.toString());
+			return null;
+		}
 	}
 
 	private static void assertPreconditions(Match match, DiscordGlobalConfig cfg) {

@@ -114,11 +114,11 @@ public class DiscordRestClient {
 		return result == null ? List.of() : result.threads();
 	}
 
-	public Webhook createWebhook(String channelId, String name) throws DiscordApiException {
+	public Webhook createWebhook(String channelId, String name, String avatar) throws DiscordApiException {
 		return execute(() -> bot.post()
 				.uri("/channels/{channelId}/webhooks", channelId)
 				.contentType(MediaType.APPLICATION_JSON)
-				.body(new WebhookCreateRequest(name))
+				.body(new WebhookCreateRequest(name, avatar))
 				.retrieve()
 				.body(Webhook.class));
 	}
@@ -184,6 +184,6 @@ public class DiscordRestClient {
 	}
 
 	@JsonInclude(JsonInclude.Include.NON_NULL)
-	private record WebhookCreateRequest(String name) {
+	private record WebhookCreateRequest(String name, String avatar) {
 	}
 }
