@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.15
-milestone_name: milestone
+milestone_name: CI Optimisation & Race/Match Defaults
 status: completed
-stopped_at: Phase 110 context gathered
-last_updated: "2026-05-31T09:47:03.765Z"
+stopped_at: Phase 111 context gathered
+last_updated: "2026-05-31T11:01:36.835Z"
 last_activity: 2026-05-31 -- Phase 110 marked complete
 progress:
   total_phases: 6
@@ -105,9 +105,9 @@ Carried forward from v1.13/v1.14 close (unchanged):
 
 ## Session Continuity
 
-**Last session:** 2026-05-31T08:10:26.125Z
+**Last session:** 2026-05-31T11:01:36.825Z
 
-**Stopped at:** Phase 110 context gathered
+**Stopped at:** Phase 111 context gathered
 
 **Next action:** `/gsd-code-review 108` (Phase 108 has no REVIEW.md — review before starting Phase 109 per "Code-Review Before New Phase"). Then `/gsd-discuss-phase 109` (Walkover Handling). Phase 106 already has a REVIEW.md.
 
