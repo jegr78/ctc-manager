@@ -4,8 +4,8 @@ milestone: v1.15
 milestone_name: CI Optimisation & Race/Match Defaults
 status: executing
 stopped_at: Phase 111 context gathered
-last_updated: "2026-05-31T11:45:23.720Z"
-last_activity: 2026-05-31 -- Phase 111 planning complete
+last_updated: "2026-05-31T11:47:15.010Z"
+last_activity: 2026-05-31 -- Phase 111 execution started
 progress:
   total_phases: 6
   completed_phases: 4
@@ -22,14 +22,14 @@ See: .planning/PROJECT.md (updated 2026-05-29 after v1.14 milestone close)
 
 **Core value:** Architectural Consistency: All controllers delegate to services, exception handling is centralized, and the production environment is secured.
 
-**Current focus:** Phase 110 — lobby-settings-graphic
+**Current focus:** Phase 111 — log-injection-remediation-codeql-cwe-117
 
 ## Current Position
 
-Phase: 110 — COMPLETE
-Plan: 1 of 5
-Status: Ready to execute
-Last activity: 2026-05-31 -- Phase 111 planning complete
+Phase: 111 (log-injection-remediation-codeql-cwe-117) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 111
+Last activity: 2026-05-31 -- Phase 111 execution started
 
 Progress: [██████████] 100%
 
