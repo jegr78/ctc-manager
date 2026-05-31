@@ -45,6 +45,7 @@ Progress: [██████████] 100%
 | 109 | Walkover Handling | WO-01..04 | Complete (109-01..05 ✓; WO-01..04 ✓; 2 review passes resolved; verify -Pe2e green) |
 | 110 | Lobby Settings Graphic | LOBBY-01..05 | Complete (110-01..05 ✓; 110-REVIEW.md resolved; verify -Pe2e green) |
 | 111 | Log-Injection Remediation (CodeQL CWE-117) | SEC-LOG-01..04 | Complete (111-01..03 ✓; SEC-LOG-01..04 ✓; 29→0 java/log-injection on PR ref; 111-REVIEW.md resolved — 5 findings fixed; verify -Pe2e green) |
+| 112 | Unused Import Cleanup & Regression Guard | IMP-01..02 | Not planned (added 2026-05-31; run /gsd-plan-phase 112) |
 
 ## Baselines to Preserve
 
@@ -78,7 +79,7 @@ Roadmap-level decisions for v1.15 (2026-05-30):
 
 ### Phase Numbering
 
-Last phase shipped: **105** (v1.14 Carbon HUD Graphics Redesign). v1.15 spans phases **106-111** (integer phases, no insertions, no reset). **107 removed 2026-05-30** — number left as a gap (no renumbering); active phases are 106, 108, 109, 110, 111.
+Last phase shipped: **105** (v1.14 Carbon HUD Graphics Redesign). v1.15 spans phases **106-112** (integer phases, no insertions, no reset). **107 removed 2026-05-30** — number left as a gap (no renumbering); active phases are 106, 108, 109, 110, 111, 112.
 
 ### Roadmap Evolution
 
@@ -86,6 +87,7 @@ Last phase shipped: **105** (v1.14 Carbon HUD Graphics Redesign). v1.15 spans ph
 - 2026-05-30: v1.15 milestone started; REQUIREMENTS.md defined (22 requirements across CI/RACE/LINEUP/WO/LOBBY); ROADMAP.md created (5 phases 106-110, 22/22 coverage).
 - 2026-05-30: Phase 111 (Log-Injection Remediation, CodeQL CWE-117) added at end of v1.15 — 29 open `java/log-injection` alerts discovered in GitHub code scanning; SEC-LOG-01..04 added (now 6 phases, 26/26 coverage). Strategy: per-callsite sanitization via central `LogSanitizer` (user decision 2026-05-30).
 - 2026-05-30: Phase 107 (Race/Match Prefill Defaults) **removed** during discuss — RACE-01..03 dropped permanently (data-model mismatch: scoring/legs already inherited via `SeasonPhase`, no Matchday date to inherit). v1.15 now 5 phases (106, 108-111), 23/23 coverage on the remaining requirements.
+- 2026-05-31: Phase 112 (Unused Import Cleanup & Regression Guard) added at end of v1.15 — unused package imports discovered mid-milestone were not cleaned up; IMP-01..02 added (cleanup all `src/main`+`src/test` imports via OpenRewrite `RemoveUnusedImports`, plus a build-level guard so future phases cannot reintroduce them). v1.15 now 6 active phases (106, 108-112), 28/28 coverage. Runs last so the cleaned import set is final.
 
 ## Deferred Items
 

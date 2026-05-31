@@ -55,6 +55,11 @@ Phase 107 was removed from the v1.15 roadmap (user decision 2026-05-30: drop per
 - [ ] **SEC-LOG-03**: A CodeQL re-scan on the milestone branch reports 0 open `java/log-injection` alerts; no new `query-filters` suppressions are added to `codeql-config.yml` for these findings.
 - [ ] **SEC-LOG-04**: `./mvnw clean verify -Pe2e` exits 0 — all existing tests green, SpotBugs/find-sec-bugs gate green, 82% line coverage maintained.
 
+### IMP — Unused Import Cleanup & Regression Guard
+
+- [ ] **IMP-01**: Every `.java` file under `src/main/java` and `src/test/java` is free of unused package imports, removed via the existing OpenRewrite `RemoveUnusedImports` recipe (not hand-edited); an `org.openrewrite.java.RemoveUnusedImports` `rewrite:dryRun` reports zero pending changes after the cleanup commit.
+- [ ] **IMP-02**: A build-level guard, wired into the standard `verify` lifecycle (no opt-in flag, runs locally and in CI), fails the build when a new unused import is introduced — mechanism decided at plan time and documented in CLAUDE.md so future phases inherit the rule.
+
 ## Future Requirements
 
 Deferred candidates from prior milestone audits — tracked in PROJECT.md "Deferred candidates", not in this roadmap:
@@ -106,12 +111,14 @@ Explicitly excluded for v1.15 to prevent scope creep.
 | SEC-LOG-02 | Phase 111 | Pending |
 | SEC-LOG-03 | Phase 111 | Pending |
 | SEC-LOG-04 | Phase 111 | Pending |
+| IMP-01 | Phase 112 | Pending |
+| IMP-02 | Phase 112 | Pending |
 
 **Coverage:**
-- v1.15 requirements: 26 total
-- Mapped to phases: 26 (100%)
+- v1.15 requirements: 28 total
+- Mapped to phases: 28 (100%)
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-05-30*
-*Last updated: 2026-05-30 — added SEC-LOG-01..04 (Phase 111, Log-Injection Remediation)*
+*Last updated: 2026-05-31 — added IMP-01..02 (Phase 112, Unused Import Cleanup & Regression Guard)*

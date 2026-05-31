@@ -14,7 +14,7 @@
 - :white_check_mark: **v1.12 Driver-Import Gap-Closure & Test Performance Round 2** — Phases 88-91 (shipped 2026-05-20)
 - :white_check_mark: **v1.13 Discord Integration & Carry-Forwards** — Phases 92-103 (shipped 2026-05-28)
 - :white_check_mark: **v1.14 Team Card Redesign & Data Safety** — Phases 104-105 (shipped 2026-05-29)
-- :hourglass_flowing_sand: **v1.15 CI Optimisation & Race/Match Defaults** — Phases 106-111 (active on `gsd/v1.15-ci-and-race-defaults`)
+- :hourglass_flowing_sand: **v1.15 CI Optimisation & Race/Match Defaults** — Phases 106-112 (active on `gsd/v1.15-ci-and-race-defaults`)
 
 ## Phases
 
@@ -210,7 +210,7 @@ See: milestones/v1.14-ROADMAP.md for full details
 </details>
 
 <details open>
-<summary>v1.15 CI Optimisation &amp; Race/Match Defaults (Phases 106, 108-111 — 107 removed) -- ACTIVE on <code>gsd/v1.15-ci-and-race-defaults</code></summary>
+<summary>v1.15 CI Optimisation &amp; Race/Match Defaults (Phases 106, 108-112 — 107 removed) -- ACTIVE on <code>gsd/v1.15-ci-and-race-defaults</code></summary>
 
 - [x] **Phase 106: CI Pipeline Optimisation** - Path-aware step gating, caching improvements, E2E runtime reduction, flaky-test quarantine hardening. (CI-01..06) -- completed 2026-05-30 (CI-03/04/06 verified on live CI; CI-01/02/05 logic-complete, empirical proof tracked as in-milestone open-verify)
 - ~~**Phase 107: Race/Match Prefill Defaults**~~ — **REMOVED 2026-05-30**. RACE-01..03 dropped: scoring scheme and legs are already inherited via `SeasonPhase`, and Matchday has no scheduled date to inherit (no real re-entry problem without a schema change). Number kept as a gap per the integer-phase policy. See REQUIREMENTS.md "Out of Scope".
@@ -218,6 +218,7 @@ See: milestones/v1.14-ROADMAP.md for full details
 - [x] **Phase 109: Walkover Handling** - Flyway V17 walkover flag, auto-win scoring, "w/o" label in standings and graphics, admin UI to mark walkover. (WO-01..04)
 - [ ] **Phase 110: Lobby Settings Graphic** - New LobbySettingsGraphicService (Carbon HUD, template-variable-driven), admin preview/download, Discord post type, template editor. (LOBBY-01..05)
 - [ ] **Phase 111: Log-Injection Remediation (CodeQL CWE-117)** - Close all 29 open CodeQL `java/log-injection` alerts via a central LogSanitizer (strips CR/LF + control chars) at each flagged call site; fix taint at source, no suppressions. (SEC-LOG-01..04)
+- [ ] **Phase 112: Unused Import Cleanup & Regression Guard** - Remove all unused package imports across `src/main/java` and `src/test/java` (OpenRewrite `RemoveUnusedImports`), then add a build-level guard so future phases cannot reintroduce unused imports. (IMP-01, IMP-02)
 
 ### Phase 106: CI Pipeline Optimisation
 
@@ -318,6 +319,19 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
 - [x] 111-03-PLAN.md — clean verify -Pe2e gate + CodeQL re-scan (0 java/log-injection); conditional barrier model pack only if alerts persist (SEC-LOG-03, SEC-LOG-04)
 **Cross-phase risk**: Touches existing log statements in 17 files that feature phases 108-110 may also edit; running last (after 106, 108-110 are verified) avoids re-introduction of unsanitized log lines and clobber on shared service/controller files.
 
+### Phase 112: Unused Import Cleanup & Regression Guard
+
+**Goal**: Every `.java` file under `src/main/java` and `src/test/java` is free of unused package imports, and the build fails on any newly introduced unused import — so the cleanup cannot silently regress in future phases. The cleanup is performed via the existing OpenRewrite integration (`RemoveUnusedImports` recipe), not by hand-editing imports file-by-file.
+**Depends on**: Phase 111 (runs last in v1.15 — after all feature/remediation phases have stopped touching source files, so the import set is final and the cleanup is not re-dirtied by later phases).
+**Requirements**: IMP-01, IMP-02
+**Success Criteria** (what must be TRUE):
+  1. No `.java` file in `src/main/java` or `src/test/java` contains an unused import — verified by an `org.openrewrite.java.RemoveUnusedImports` `rewrite:dryRun` reporting zero pending changes after the cleanup commit.
+  2. A build-level guard fails `./mvnw verify` (or a dedicated gate) when a new unused import is introduced — the mechanism is decided at plan time (candidates: OpenRewrite dryRun-as-gate, Checkstyle `UnusedImports`, or the existing static-analysis gate) and documented in CLAUDE.md so future phases inherit the rule.
+  3. The cleanup commit changes only `import` lines — no behavioural diff; `./mvnw clean verify -Pe2e` exits 0 with all existing tests green and the 82 % line-coverage gate still met.
+  4. The guard is wired into the standard `verify` lifecycle (no separate opt-in flag) so it runs on every local build and in CI, consistent with the SpotBugs/find-sec-bugs gate convention.
+**Plans**: TBD (run /gsd-plan-phase 112 to break down)
+**Cross-phase risk**: Runs last in v1.15. Touches `import` lines across the whole source tree — must execute only after Phases 106 + 108-111 are merged/verified so no later phase re-introduces unused imports onto an already-cleaned tree. The OpenRewrite recipe edit and the guard config (`rewrite.yml` / `pom.xml` / Checkstyle config) are additive; no Flyway, no behavioural code change.
+
 </details>
 
 ## Progress
@@ -336,4 +350,4 @@ RACE-01..03 dropped permanently (user decision 2026-05-30, not backlog). The pha
 | v1.12 Driver-Import Gap-Closure & Test Performance Round 2 | 88-91 | 15 | Complete | 2026-05-20 |
 | v1.13 Discord Integration & Carry-Forwards | 92-103 | 43 | Complete | 2026-05-28 |
 | v1.14 Team Card Redesign & Data Safety | 104-105 | 5 | Complete | 2026-05-29 |
-| v1.15 CI Optimisation & Race/Match Defaults | 106-111 | TBD | Active | — |
+| v1.15 CI Optimisation & Race/Match Defaults | 106-112 | TBD | Active | — |
