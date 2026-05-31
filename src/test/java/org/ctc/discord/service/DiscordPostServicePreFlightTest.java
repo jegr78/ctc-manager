@@ -37,6 +37,7 @@ class DiscordPostServicePreFlightTest {
 				mock(org.ctc.admin.service.TeamCardService.class),
 				mock(SeasonTeamRepository.class),
 				mock(org.ctc.admin.service.SettingsGraphicService.class),
+				mock(org.ctc.admin.service.LobbySettingsGraphicService.class),
 				mock(org.ctc.admin.service.LineupGraphicService.class),
 				raceLineupRepository,
 				mock(org.ctc.admin.service.MatchResultsGraphicService.class),

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.ctc.admin.service.LineupGraphicService;
+import org.ctc.admin.service.LobbySettingsGraphicService;
 import org.ctc.admin.service.MatchResultsGraphicService;
 import org.ctc.admin.service.ProvisionalScoresGraphicService;
 import org.ctc.admin.service.ResultsGraphicService;
@@ -55,6 +56,7 @@ class DiscordPostServiceRefBranchesTest {
 				mock(TeamCardService.class),
 				mock(SeasonTeamRepository.class),
 				mock(SettingsGraphicService.class),
+				mock(LobbySettingsGraphicService.class),
 				mock(LineupGraphicService.class),
 				mock(RaceLineupRepository.class),
 				mock(MatchResultsGraphicService.class),
