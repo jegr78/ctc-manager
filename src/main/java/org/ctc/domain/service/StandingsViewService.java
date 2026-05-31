@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.util.List;
@@ -68,7 +69,7 @@ public class StandingsViewService {
 				resolvedSeasonId = UUID.fromString(seasonId);
 				resolvedPhase = seasonPhaseService.findByType(resolvedSeasonId, PhaseType.REGULAR).orElse(null);
 			} catch (IllegalArgumentException ignored) {
-				log.debug("Invalid season ID format: {}", seasonId);
+				log.debug("Invalid season ID format: {}", sanitize(seasonId));
 			}
 		} else {
 			var activeSeason = seasonManagementService.findActiveSeason().orElse(null);

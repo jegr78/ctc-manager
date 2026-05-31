@@ -1,5 +1,7 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -119,7 +121,7 @@ public class PlayoffService {
 		}
 
 		log.info("Created playoff '{}' for season '{}' with {} teams, {} rounds, linked to PLAYOFF phase {}",
-				name, season.getName(), numberOfTeams, numRounds, phase.getId());
+				sanitize(name), sanitize(season.getName()), numberOfTeams, numRounds, phase.getId());
 		return playoff;
 	}
 

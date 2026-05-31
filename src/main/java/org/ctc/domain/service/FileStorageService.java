@@ -1,5 +1,6 @@
 package org.ctc.domain.service;
 
+import static org.ctc.util.LogSanitizer.sanitize;
 import static org.springframework.util.StringUtils.hasText;
 
 import java.io.IOException;
@@ -173,7 +174,7 @@ public class FileStorageService {
 
 	private void validateNoPathTraversal(String filename) {
 		if (filename != null && (filename.contains("..") || filename.startsWith("/"))) {
-			log.warn("Attempted path traversal in filename: {}", filename);
+			log.warn("Attempted path traversal in filename: {}", sanitize(filename));
 			throw new IllegalArgumentException("Path traversal detected in filename: " + filename);
 		}
 	}
