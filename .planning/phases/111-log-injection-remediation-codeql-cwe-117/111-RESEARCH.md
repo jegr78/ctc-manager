@@ -533,22 +533,20 @@ log.debug("Exact match for '{}': {}", sanitize(searchTerm), sanitize(exact.get()
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **CI model pack delivery without GHCR publishing**
    - What we know: `codeql-action@v4` `packs` parameter accepts `scope/name[@version]` registry references, not local paths. A local `qlpack.yml` in the repo is not automatically picked up.
    - What's unclear: Whether `codeql pack install` followed by `codeql pack publish` (with GitHub token) in the workflow pre-step is the right approach, or if there is a simpler method (e.g., bundling the data extension files directly into the CodeQL database step).
-   - Recommendation: The planner should add a Wave 0 task to prototype the `qlpack.yml` approach on the branch with a trial push. If GHCR publishing is impractical, the fallback is inline `replaceAll("\\R","_")` at each call site (no helper method, violates D-09). User decision required if that path is chosen.
+   - **RESOLVED:** The model pack is NOT built upfront. Plan 03 verifies the helper-boundary barrier empirically first (CodeQL re-scan on PR #132). The model pack + its CI delivery is a CONDITIONAL fallback task (Plan 03 Task 3, `checkpoint:human-verify`) that only runs if the first re-scan still shows open alerts — at which point the GHCR-vs-bundled-extension delivery method is decided with the user at that gate. Inline-replaceAll (which would violate D-09) is never adopted without an explicit user decision at the same gate.
 
 2. **`\R` CRLF atomic-match behaviour across Java versions**
    - What we know: Java 9+ `\R` matches CRLF as one unit. Java 8 behaviour may differ.
-   - What's unclear: The project uses Java 25 (confirmed from CLAUDE.md) — this is not a concern.
-   - Recommendation: No action needed; Java 25 uses `\R` as per current spec.
+   - **RESOLVED:** The project uses Java 25 (confirmed from CLAUDE.md) — `\R` matches CRLF atomically per current spec. No concern.
 
 3. **alert 23 (ScoringService:40) — ternary expression**
    - What we know: The tainted arg is `result.getDriver() != null ? result.getDriver().getPsnId() : "unknown"`. `sanitize()` accepts `Object` so `sanitize(result.getDriver() != null ? result.getDriver().getPsnId() : "unknown")` works.
-   - What's unclear: Whether CodeQL sees the ternary result as tainted or only when the non-null branch is taken.
-   - Recommendation: Wrap the whole ternary — defensive, and aligns with D-06.
+   - **RESOLVED:** Wrap the whole ternary in `sanitize(...)` — defensive (covers either branch regardless of CodeQL's branch-sensitivity) and aligns with D-06. Implemented in Plan 02.
 
 ---
 
