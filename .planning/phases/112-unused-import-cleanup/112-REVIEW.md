@@ -13,7 +13,9 @@ findings:
   warning: 3
   info: 2
   total: 5
-status: issues_found
+status: resolved
+resolved: 2026-05-31
+resolution: "WR-01/02/03 fixed; IN-01/IN-02 accepted as-is. clean verify -Pe2e green."
 ---
 
 # Phase 112: Code Review Report
@@ -129,6 +131,16 @@ not a defect, and consistent with the codebase's guard pattern.
 **Fix:** None required. Consistent with existing `validate`-bound guards.
 
 ---
+
+## Resolution (2026-05-31)
+
+All three warnings fixed; both info items accepted. Re-verified with `./mvnw clean verify -Pe2e` → exit 0 (Checkstyle 0 violations, `checkstyle-gate-guard OK`, SpotBugs BugInstance 0, 2472 tests, JaCoCo gate met).
+
+- **WR-01 — fixed.** Added a single-line WHY comment above the `com.puppycrawl.tools:checkstyle:13.5.0` override in `pom.xml` (Java 25 / JEP 513 parse requirement). Phase-free, mirrors the existing dependency-pin comments.
+- **WR-02 — fixed.** Added a `checkstyle-gate-guard` exec execution to `pom.xml` (bound to `validate`, sibling of the existing build-guards) that fails the build if `failOnViolation`/`includeTestSourceDirectory` are weakened to `false` or if the `UnusedImports`/`RedundantImport` modules disappear from `config/checkstyle.xml`. Presence patterns use `[[:space:]]*` between tag and value so the guard's own literals do not self-satisfy the grep. Verified positive (green) and negative (flipping `failOnViolation` to `false` trips it). Guard messages are phase-free per the CONTEXT landmine.
+- **WR-03 — fixed.** Added the `processJavadoc=true` tradeoff clause to the CLAUDE.md Checkstyle subsection (an import referenced only from Javadoc `{@link}`/`@see` is treated as used and won't be flagged — accepted vs. 25 FPs the alternative produced).
+- **IN-01 — accepted.** The Checker-level `severity` + plugin `violationSeverity` duplication is harmless (both `error`); kept for standalone-Checkstyle-CLI clarity.
+- **IN-02 — accepted.** `validate`-phase binding is consistent with the three existing exec-guards and cheap (two TreeWalker modules).
 
 _Reviewed: 2026-05-31_
 _Reviewer: Claude (gsd-code-reviewer)_
