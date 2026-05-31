@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-05-31 after v1.15 milestone close)
 Phase: Milestone v1.15 complete
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-05-31 — Milestone v1.15 completed and archived
+Last activity: 2026-05-31 — Completed quick task 260531-suj: link existing Discord channel to a Match via Admin UI
 
 ## Shipped Milestone
 
@@ -74,6 +74,12 @@ Roadmap-level decisions for v1.15 (2026-05-30):
 ### Blockers/Concerns
 
 - Phase 110 (Lobby Settings) handoff delivered 2026-05-31 → unblocked; context gathered (110-CONTEXT.md), ready for planning. Phases 108-109 complete.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260531-suj | Link existing Discord match channel to a Match via Admin UI | 2026-05-31 | 886b99d9 | [260531-suj-bestehenden-discord-match-kanal-nachtr-g](./quick/260531-suj-bestehenden-discord-match-kanal-nachtr-g/) |
 
 ### Phase Numbering
 
