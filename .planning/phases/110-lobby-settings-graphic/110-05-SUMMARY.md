@@ -55,10 +55,17 @@ No regressions; no new red/@Disabled tests.
 - **LOBBY-04** — template-editor Lobby Settings tab (load/save/reset/live-preview). ✓
 - **LOBBY-05** — service JaCoCo-excluded; 82% line gate met. ✓
 
+## Post-review re-verification (2026-05-31)
+
+`/gsd-code-review 110` found 1 Blocker + 2 Warnings + 1 Info; all four fixed in-phase
+(see `110-REVIEW.md` Resolution + commit `05eb3afd`). Authoritative gate re-run after the
+fixes: **BUILD SUCCESS**, 1802 + 534 + 116 = **2452 tests** green, line coverage **88.95%**
+(>82% gate), SpotBugs **BugInstance size 0**. +3 new tests (2 RaceServiceTest gate cases,
+1 DiscordPostServicePreFlightTest track-guard case).
+
 ## Next steps
 
-- **`/gsd-code-review 110`** — Phase 110 has no `*-REVIEW.md` yet; a code review is required
-  before milestone close (CLAUDE.md "Code-Review Before New Phase / Milestone Close").
+- **`/gsd-code-review 110`** — ✅ done; `110-REVIEW.md` present, all findings resolved.
 - Operator UAT on real data: assign cars/tracks to a live season + link a Discord channel to
   exercise the full generate → download → Discord-post path end-to-end.
 
