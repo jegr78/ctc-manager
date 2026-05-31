@@ -40,6 +40,18 @@ Implemented end-to-end, TDD, 3 atomic commits. `./mvnw clean verify` green — a
 
 Re-ran `./mvnw clean verify` → BUILD SUCCESS, Failsafe IT 544/0, coverage met.
 
+## Follow-up: CTC logo as webhook avatar (user request)
+
+After UAT, the operator asked whether the created webhook can carry the CTC logo instead of Discord's default avatar. Discord's `POST /channels/{id}/webhooks` accepts an optional `avatar` field (image data URI) — implemented:
+- `DiscordRestClient.createWebhook(channelId, name, avatar)` now sends the optional avatar (`@JsonInclude(NON_NULL)` → omitted when null).
+- `DiscordChannelService` loads the CTC logo from the classpath once and passes it on every webhook **creation** (both `createMatchChannel` and the `linkExistingChannel` fallback). Reused webhooks are left untouched. Graceful no-avatar fallback if the asset is unreadable.
+- Asset: `ctc-logo-white.png` (standard CTC mark — switched from the initial `apple-touch-icon.png` blue-bolt icon per operator preference).
+- Tests: RestClient IT pins the `avatar` field in the POST body + the null-omission case; service IT asserts the avatar data URI on creation.
+
+Live-verified against the real Discord API: linking an empty channel created a "CTC Manager" webhook with a non-null `avatar_hash`; operator confirmed the logo visually.
+
+Commits: `67b93724` (avatar support), `4c1354c6` (logo asset swap).
+
 ## Files changed
 
 - `src/main/java/org/ctc/discord/dto/Webhook.java`
